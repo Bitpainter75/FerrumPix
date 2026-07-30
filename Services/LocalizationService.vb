@@ -26,7 +26,7 @@ Namespace Services
         ''' ANGEZEIGTEN Text als Quelle: nach dem ersten Sprachwechsel steht dort die Uebersetzung,
         ''' und die zweite Umschaltung sucht einen Schluessel, den es nicht gibt - die Anzeige bleibt
         ''' dann in der zuvor gewaehlten Sprache stehen.
-        Private Shared ReadOnly Ursprungstexte As New ConditionalWeakTable(Of ILogical, KnotenTexte)()
+        Private Shared ReadOnly Ursprungstexte As New ConditionalWeakTable(Of ILogical, NodeTexts)()
         ''' Eigene Ressourcendatei nur für die Such-Tags der Formen/Symbole-Icons (Resources/IconTags*.resx),
         ''' getrennt von den allgemeinen UI-Texten, damit sich beide unabhängig voneinander pflegen lassen.
         Private Shared ReadOnly IconTags As New ResourceManager("FerrumPix.IconTags", GetType(LocalizationService).Assembly)
@@ -238,7 +238,7 @@ Namespace Services
         Public Const KeineUebersetzung As String = "no-translate"
 
         Private Shared Sub ApplyOne(node As ILogical)
-            Dim merker = Ursprungstexte.GetValue(node, Function(ignoriert) New KnotenTexte())
+            Dim merker = Ursprungstexte.GetValue(node, Function(ignoriert) New NodeTexts())
             Dim textBlock = TryCast(node, TextBlock)
             If textBlock IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBlock.Text) AndAlso
                Not textBlock.Classes.Contains(KeineUebersetzung) Then
@@ -284,7 +284,7 @@ Namespace Services
             If control IsNot Nothing Then
                 Dim tip = ToolTip.GetTip(control)
                 If TypeOf tip Is String Then
-                    ToolTip.SetTip(control, TranslateRemembered(CStr(tip), merker.Tipp, randAnhaengen:=True))
+                    ToolTip.SetTip(control, TranslateRemembered(CStr(tip), merker.Tipp, appendSpace:=True))
                 End If
             End If
         End Sub
@@ -292,7 +292,7 @@ Namespace Services
         ''' <summary>Uebersetzt gegen den GEMERKTEN Ursprungstext. Weicht der aktuelle Text von dem
         ''' ab, was zuletzt gesetzt wurde, hat ihn jemand anders geschrieben - dann ist er die neue
         ''' Quelle.</summary>
-        ''' <param name="randAnhaengen">Ein Leerzeichen ans Ende. NUR fuer Kurzhinweise.
+        ''' <param name="appendSpace">Ein Leerzeichen ans Ende. NUR fuer Kurzhinweise.
         '''
         ''' Ein Kurzhinweis liegt in einem Aufklappfenster, und das wird in ganzen Gerätepunkten
         ''' angelegt. Bei krummer Anwendungsskalierung (1,72 heisst 0,58 Punkte je Geraetepunkt)
@@ -304,21 +304,21 @@ Namespace Services
         ''' Sichtbar ist es nicht. Es hier anzuhaengen und nicht an die Quelltexte ist Absicht: der
         ''' Schluessel wird aus dem deutschen Quelltext berechnet, ein Leerzeichen darin wuerde
         ''' JEDEN Kurzhinweis-Schluessel aendern.</param>
-        Private Shared Function TranslateRemembered(aktuell As String, merker As TextMerker,
-                                                  Optional randAnhaengen As Boolean = False) As String
+        Private Shared Function TranslateRemembered(current As String, merker As TextMerker,
+                                                  Optional appendSpace As Boolean = False) As String
             If merker.Quelle Is Nothing OrElse
-               Not String.Equals(aktuell, merker.Zuletzt, StringComparison.Ordinal) Then
+               Not String.Equals(current, merker.Zuletzt, StringComparison.Ordinal) Then
                 ' Der gemerkte Ursprung darf den Puffer NICHT enthalten, sonst faende der zweite
                 ' Durchlauf keinen Schluessel mehr und haengte bei jedem Sprachwechsel eins an.
-                merker.Quelle = If(randAnhaengen, If(aktuell, "").TrimEnd(), aktuell)
+                merker.Quelle = If(appendSpace, If(current, "").TrimEnd(), current)
             End If
             Dim uebersetzt = T(merker.Quelle)
-            If randAnhaengen Then uebersetzt &= " "
+            If appendSpace Then uebersetzt &= " "
             merker.Zuletzt = uebersetzt
             Return uebersetzt
         End Function
 
-        Private NotInheritable Class KnotenTexte
+        Private NotInheritable Class NodeTexts
             Public ReadOnly Text As New TextMerker()
             Public ReadOnly Inhalt As New TextMerker()
             Public ReadOnly MenueKopf As New TextMerker()

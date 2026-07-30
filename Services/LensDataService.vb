@@ -51,8 +51,8 @@ Namespace Services
 
         Public NotInheritable Class VignettingValue
             Public Property Brennweite As Double
-            Public Property Blende As Double
-            Public Property Entfernung As Double
+            Public Property Aperture As Double
+            Public Property Distance As Double
             Public Property K1 As Double
             Public Property K2 As Double
             Public Property K3 As Double
@@ -63,17 +63,17 @@ Namespace Services
             Public Property Modell As String = ""
             Public Property Namen As New List(Of String)()
             Public Property Anschluesse As New List(Of String)()
-            Public Property CropFaktor As Double = 1.0
+            Public Property CropFactor As Double = 1.0
             Public Property Seitenverhaeltnis As Double = 1.5
             Public Property Distortion As New List(Of DistortionValue)()
             Public Property ChromaticAberration As New List(Of ChromaticAberrationValue)()
             Public Property Vignetting As New List(Of VignettingValue)()
         End Class
 
-        Public NotInheritable Class KameraEintrag
+        Public NotInheritable Class CameraEntry
             Public Property Hersteller As String = ""
             Public Property Modell As String = ""
-            Public Property CropFaktor As Double = 1.0
+            Public Property CropFactor As Double = 1.0
             Public Property Anschluesse As New List(Of String)()
         End Class
 
@@ -87,14 +87,14 @@ Namespace Services
         Public NotInheritable Class Korrektur
             Public Property LensName As String = ""
             Public Property Brennweite As Double
-            Public Property Blende As Double
+            Public Property Aperture As Double
 
             ''' Pixel mal diesem Faktor ergibt den Radius im System der Verzeichnung/des
             ''' Farbquerfehlers (r = 1 an der Mitte der langen Kante).
-            Public Property NormSkala As Double = 1.0
+            Public Property NormScale As Double = 1.0
             ''' Der Radius der Verzeichnung mal diesem Faktor ergibt den Radius der Vignettierung
             ''' (r = 1 in der Ecke).
-            Public Property EckenSkala As Double = 1.0
+            Public Property CornerScale As Double = 1.0
 
             Public Property HasDistortion As Boolean
             Public Property DistortionModel As String = ""
@@ -120,7 +120,7 @@ Namespace Services
             Public Property Vk2 As Double
             Public Property Vk3 As Double
 
-            Public ReadOnly Property HatIrgendetwas As Boolean
+            Public ReadOnly Property HasAnything As Boolean
                 Get
                     Return HasDistortion OrElse HasChromaticAberration OrElse HasVignetting
                 End Get
@@ -174,8 +174,8 @@ Namespace Services
         ''' <summary>Vignettierung: der Helligkeitsabfall an diesem Radius (r = 1 in der ECKE).
         ''' Korrigiert wird durch TEILEN durch diesen Wert - der Wert beschreibt den Fehler, nicht
         ''' seine Behebung.</summary>
-        Public Shared Function VignettingFactor(k As Korrektur, rEcke As Double) As Double
-            Dim r2 = rEcke * rEcke
+        Public Shared Function VignettingFactor(k As Korrektur, rCorner As Double) As Double
+            Dim r2 = rCorner * rCorner
             Dim r4 = r2 * r2
             Dim c = 1.0 + k.Vk1 * r2 + k.Vk2 * r4 + k.Vk3 * r4 * r2
             Return 1.0 + (c - 1.0) * k.VignettingStrength
@@ -186,18 +186,18 @@ Namespace Services
         Private Shared ReadOnly _ladeLock As New Object()
         Private Shared _geladen As Boolean = False
         Private Shared _objektive As New List(Of LensEntry)()
-        Private Shared _kameras As New List(Of KameraEintrag)()
+        Private Shared _kameras As New List(Of CameraEntry)()
         Private Shared _ladeFehler As String = ""
         Private Shared ReadOnly _anschlussVertraegt As New Dictionary(Of String, HashSet(Of String))(StringComparer.OrdinalIgnoreCase)
 
         ''' <summary>Wie viele Objektive und Kameras die Sammlung traegt. Fuer die Einstellungen
         ''' und den Pruefstand; loest das Laden aus.</summary>
         Public Shared Function Inventory() As (Objektive As Integer, Kameras As Integer, Fehler As String)
-            LadeEinmal()
+            LoadOnce()
             Return (_objektive.Count, _kameras.Count, _ladeFehler)
         End Function
 
-        Private Shared Sub LadeEinmal()
+        Private Shared Sub LoadOnce()
             If _geladen Then Return
             SyncLock _ladeLock
                 If _geladen Then Return
@@ -215,9 +215,9 @@ Namespace Services
                     End If
                     Using strom = asm.GetManifestResourceStream(name)
                         Using archiv = New ZipArchive(strom, ZipArchiveMode.Read)
-                            For Each eintrag In archiv.Entries
-                                If Not eintrag.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) Then Continue For
-                                Using leser = New StreamReader(eintrag.Open())
+                            For Each entry In archiv.Entries
+                                If Not entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) Then Continue For
+                                Using leser = New StreamReader(entry.Open())
                                     ReadFile(leser.ReadToEnd())
                                 End Using
                             Next
@@ -259,23 +259,23 @@ Namespace Services
             Next
 
             For Each k In doc.Root.Elements("camera")
-                Dim eintrag = New KameraEintrag With {
+                Dim entry = New CameraEntry With {
                     .Hersteller = TextVon(k, "maker"),
                     .Modell = TextVon(k, "model"),
-                    .CropFaktor = ZahlVon(TextVon(k, "cropfactor"), 1.0)
+                    .CropFactor = ZahlVon(TextVon(k, "cropfactor"), 1.0)
                 }
                 For Each a In k.Elements("mount")
                     Dim n = If(a.Value, "").Trim()
-                    If n.Length > 0 Then eintrag.Anschluesse.Add(n)
+                    If n.Length > 0 Then entry.Anschluesse.Add(n)
                 Next
-                If eintrag.Modell.Length > 0 Then _kameras.Add(eintrag)
+                If entry.Modell.Length > 0 Then _kameras.Add(entry)
             Next
 
             For Each l In doc.Root.Elements("lens")
-                Dim eintrag = New LensEntry With {
+                Dim entry = New LensEntry With {
                     .Hersteller = TextVon(l, "maker"),
                     .Modell = TextVon(l, "model"),
-                    .CropFaktor = ZahlVon(TextVon(l, "cropfactor"), 1.0),
+                    .CropFactor = ZahlVon(TextVon(l, "cropfactor"), 1.0),
                     .Seitenverhaeltnis = ZahlVon(TextVon(l, "aspect-ratio"), 1.5)
                 }
                 ' Ein Objektiv fuehrt oft mehrere <model>-Zeilen (verschiedene Sprachen, alternative
@@ -283,19 +283,19 @@ Namespace Services
                 ' trifft mal die eine, mal die andere.
                 For Each m In l.Elements("model")
                     Dim s = If(m.Value, "").Trim()
-                    If s.Length > 0 AndAlso Not eintrag.Namen.Contains(s) Then eintrag.Namen.Add(s)
+                    If s.Length > 0 AndAlso Not entry.Namen.Contains(s) Then entry.Namen.Add(s)
                 Next
                 For Each a In l.Elements("mount")
                     Dim n = If(a.Value, "").Trim()
-                    If n.Length > 0 Then eintrag.Anschluesse.Add(n)
+                    If n.Length > 0 Then entry.Anschluesse.Add(n)
                 Next
-                If eintrag.Namen.Count = 0 Then Continue For
-                If eintrag.Modell.Length = 0 Then eintrag.Modell = eintrag.Namen(0)
+                If entry.Namen.Count = 0 Then Continue For
+                If entry.Modell.Length = 0 Then entry.Modell = entry.Namen(0)
 
                 Dim kal = l.Element("calibration")
                 If kal IsNot Nothing Then
                     For Each d In kal.Elements("distortion")
-                        eintrag.Distortion.Add(New DistortionValue With {
+                        entry.Distortion.Add(New DistortionValue With {
                             .Brennweite = ZahlVon(AttrVon(d, "focal"), 0),
                             .Modell = AttrVon(d, "model"),
                             .A = ZahlVon(If(AttrVon(d, "a"), AttrVon(d, "k1")), 0),
@@ -306,7 +306,7 @@ Namespace Services
                         ' Das lineare Modell ist ein Sonderfall des kubischen: nur der konstante
                         ' Term, die Attribute heissen dort kr/kb.
                         Dim linear = String.Equals(AttrVon(t, "model"), "linear", StringComparison.OrdinalIgnoreCase)
-                        eintrag.ChromaticAberration.Add(New ChromaticAberrationValue With {
+                        entry.ChromaticAberration.Add(New ChromaticAberrationValue With {
                             .Brennweite = ZahlVon(AttrVon(t, "focal"), 0),
                             .Modell = AttrVon(t, "model"),
                             .Br = ZahlVon(AttrVon(t, "br"), 0),
@@ -317,16 +317,16 @@ Namespace Services
                             .Vb = ZahlVon(If(linear, AttrVon(t, "kb"), AttrVon(t, "vb")), 1.0)})
                     Next
                     For Each v In kal.Elements("vignetting")
-                        eintrag.Vignetting.Add(New VignettingValue With {
+                        entry.Vignetting.Add(New VignettingValue With {
                             .Brennweite = ZahlVon(AttrVon(v, "focal"), 0),
-                            .Blende = ZahlVon(AttrVon(v, "aperture"), 0),
-                            .Entfernung = ZahlVon(AttrVon(v, "distance"), 1000),
+                            .Aperture = ZahlVon(AttrVon(v, "aperture"), 0),
+                            .Distance = ZahlVon(AttrVon(v, "distance"), 1000),
                             .K1 = ZahlVon(AttrVon(v, "k1"), 0),
                             .K2 = ZahlVon(AttrVon(v, "k2"), 0),
                             .K3 = ZahlVon(AttrVon(v, "k3"), 0)})
                     Next
                 End If
-                _objektive.Add(eintrag)
+                _objektive.Add(entry)
             Next
         End Sub
 
@@ -360,15 +360,15 @@ Namespace Services
         ''' und Bestandteile mit Ziffern (Brennweiten, Lichtstaerke) zaehlen dreifach - sie
         ''' unterscheiden zwei Objektive derselben Reihe, waehrend "ef", "usm" oder der
         ''' Herstellername auf Dutzende passen.</summary>
-        Private Shared Function Aehnlichkeit(a As String, b As String) As Double
+        Private Shared Function Similarity(a As String, b As String) As Double
             Dim ta = NormalizedForName(a).Split(" "c).Where(Function(x) x.Length > 0).ToList()
             Dim tb = NormalizedForName(b).Split(" "c).Where(Function(x) x.Length > 0).ToList()
             If ta.Count = 0 OrElse tb.Count = 0 Then Return 0
             Dim satzB = New HashSet(Of String)(tb)
-            Dim treffer As Double = 0, gesamt As Double = 0
+            Dim treffer As Double = 0, total As Double = 0
             For Each t In ta
                 Dim gewicht = If(t.Any(AddressOf Char.IsDigit), 3.0, 1.0)
-                gesamt += gewicht
+                total += gewicht
                 If satzB.Contains(t) Then treffer += gewicht
             Next
             ' Beidseitig bewerten: sonst gewinnt ein sehr kurzer Datenbankname, der in jedem
@@ -380,13 +380,13 @@ Namespace Services
                 gesamt2 += gewicht
                 If satzA.Contains(t) Then treffer2 += gewicht
             Next
-            Return (treffer / gesamt + treffer2 / gesamt2) / 2.0
+            Return (treffer / total + treffer2 / gesamt2) / 2.0
         End Function
 
         ''' <summary>Unterhalb dieser Aehnlichkeit gilt ein Objektiv als NICHT gefunden. Lieber gar
         ''' keine Korrektur als die eines anderen Objektivs: eine falsche Kennlinie verbiegt das Bild
         ''' sichtbar, eine fehlende laesst es wie bisher.</summary>
-        Private Const TrefferSchwelle As Double = 0.62
+        Private Const MatchThreshold As Double = 0.62
 
         ''' <summary>Von Hand gesetzte Zuordnungen: EXIF-Objektivname zu Eintrag in der Sammlung.
         '''
@@ -443,10 +443,10 @@ Namespace Services
         ''' Bajonett anzubieten hiesse, den Nutzer in genau den Fehler zu fuehren, den der
         ''' automatische Weg vermeidet.</summary>
         Public Shared Function MatchingLenses(kameraHersteller As String, kameraModell As String) As List(Of String)
-            LadeEinmal()
-            Dim kamera = BestCamera(kameraHersteller, kameraModell)
+            LoadOnce()
+            Dim camera = BestCamera(kameraHersteller, kameraModell)
             Return _objektive.
-                Where(Function(o) PasstAnschluss(o, kamera)).
+                Where(Function(o) PasstAnschluss(o, camera)).
                 Select(Function(o) o.Modell).
                 Where(Function(n) Not String.IsNullOrWhiteSpace(n)).
                 Distinct(StringComparer.OrdinalIgnoreCase).
@@ -471,32 +471,32 @@ Namespace Services
             If String.IsNullOrWhiteSpace(path) Then Return Nothing
             ' Die Vorgabe gehoert in den Schluessel: sonst liefert der Zwischenspeicher das Ergebnis
             ' der vorigen Wahl zurueck, und die Auswahl saehe wirkungslos aus.
-            Dim schluessel = If(String.IsNullOrWhiteSpace(modellVorgabe), path, path & "|" & modellVorgabe)
+            Dim key = If(String.IsNullOrWhiteSpace(modellVorgabe), path, path & "|" & modellVorgabe)
             Dim gemerkt As Korrektur = Nothing
             SyncLock _dateiCacheLock
                 ' KOPIE herausgeben: der Aufrufer streicht daran die fuer dieses Bild
                 ' abgeschalteten Korrekturen weg (siehe Filtere). Am gemerkten Objekt getan, waere
                 ' die Abschaltung des einen Bildes fuer alle weiteren mit demselben Objektiv gueltig.
-                If _dateiCache.TryGetValue(schluessel, gemerkt) Then Return CloneEntry(gemerkt)
+                If _dateiCache.TryGetValue(key, gemerkt) Then Return CloneEntry(gemerkt)
             End SyncLock
 
-            Dim ergebnis As Korrektur = Nothing
+            Dim result As Korrektur = Nothing
             Try
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
                 Dim sub0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)().FirstOrDefault()
-                Dim hersteller = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake), "")
+                Dim maker = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake), "")
                 Dim modell = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel), "")
-                Dim objektiv = If(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel), "")
-                Dim brennweite = ErsteZahl(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
-                Dim blende = ErsteZahl(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
-                Dim breite = 0, hoehe = 0
+                Dim lens = If(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel), "")
+                Dim brennweite = FirstNumber(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
+                Dim blende = FirstNumber(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
+                Dim width = 0, height = 0
                 For Each d In verzeichnisse
                     Dim w = d.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageWidth)
                     Dim h = d.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageHeight)
-                    Dim wi = CInt(ErsteZahl(w)), hi = CInt(ErsteZahl(h))
-                    If wi > breite Then breite = wi
-                    If hi > hoehe Then hoehe = hi
+                    Dim wi = CInt(FirstNumber(w)), hi = CInt(FirstNumber(h))
+                    If wi > width Then width = wi
+                    If hi > height Then height = hi
                 Next
                 ' Eine von Hand gesetzte Zuordnung ersetzt den EXIF-Namen. Sie ist bewusst
                 ' STAERKER als die Automatik: wer sie gesetzt hat, weiss mehr ueber sein Objektiv
@@ -504,8 +504,8 @@ Namespace Services
                 ' Reihenfolge: die Vorgabe aus dem Rezept schlaegt alles (sie gilt fuer genau
                 ' dieses Bild), danach die dauerhafte Zuordnung ueber den Objektivnamen, zuletzt der
                 ' Name aus den Aufnahmedaten.
-                Dim zugeordnet = ZuordnungFuer(objektiv)
-                Dim suchName = objektiv
+                Dim zugeordnet = ZuordnungFuer(lens)
+                Dim suchName = lens
                 If Not String.IsNullOrWhiteSpace(zugeordnet) Then suchName = zugeordnet
                 If Not String.IsNullOrWhiteSpace(modellVorgabe) Then suchName = modellVorgabe
                 ' Ohne Objektivangabe UND ohne Vorgabe gibt es nichts zu suchen - aber MIT
@@ -513,29 +513,29 @@ Namespace Services
                 ' Ohne Aufnahmedaten fehlen auch die Bildmasse im EXIF. Die stehen aber in der
                 ' DATEI - genau bei diesen Bildern wird die Zuordnung von Hand gebraucht, und ohne
                 ' Masse laesst sich der Radius nicht normieren.
-                If breite <= 1 OrElse hoehe <= 1 Then
-                    Dim ausDatei = ExifService.ReadImageDimensions(path)
-                    breite = ausDatei.Width.GetValueOrDefault()
-                    hoehe = ausDatei.Height.GetValueOrDefault()
+                If width <= 1 OrElse height <= 1 Then
+                    Dim fromFile = ExifService.ReadImageDimensions(path)
+                    width = fromFile.Width.GetValueOrDefault()
+                    height = fromFile.Height.GetValueOrDefault()
                 End If
-                If breite > 1 AndAlso hoehe > 1 Then
-                    ergebnis = FindCorrection(hersteller, modell, suchName, brennweite, blende, breite, hoehe)
+                If width > 1 AndAlso height > 1 Then
+                    result = FindCorrection(maker, modell, suchName, brennweite, blende, width, height)
                 End If
             Catch
-                ergebnis = Nothing
+                result = Nothing
             End Try
 
             SyncLock _dateiCacheLock
-                _dateiCache(schluessel) = ergebnis
+                _dateiCache(key) = result
             End SyncLock
-            Return CloneEntry(ergebnis)
+            Return CloneEntry(result)
         End Function
 
         Private Shared Function CloneEntry(k As Korrektur) As Korrektur
             If k Is Nothing Then Return Nothing
             Return New Korrektur With {
-                .LensName = k.LensName, .Brennweite = k.Brennweite, .Blende = k.Blende,
-                .NormSkala = k.NormSkala, .EckenSkala = k.EckenSkala,
+                .LensName = k.LensName, .Brennweite = k.Brennweite, .Aperture = k.Aperture,
+                .NormScale = k.NormScale, .CornerScale = k.CornerScale,
                 .HasDistortion = k.HasDistortion, .DistortionModel = k.DistortionModel,
                 .Va = k.Va, .Vb = k.Vb, .Vc = k.Vc,
                 .HasChromaticAberration = k.HasChromaticAberration,
@@ -553,7 +553,7 @@ Namespace Services
         ''' <summary>Die erste Zahl aus einem EXIF-Text ("70 mm", "f/5,6"). Die Beschreibungen sind
         ''' bereits nach der Anzeigesprache formatiert, deshalb zaehlen Punkt UND Komma als
         ''' Dezimaltrenner.</summary>
-        Private Shared Function ErsteZahl(s As String) As Double
+        Private Shared Function FirstNumber(s As String) As Double
             If String.IsNullOrWhiteSpace(s) Then Return 0
             Dim m = Regex.Match(s, "[0-9]+([.,][0-9]+)?")
             If Not m.Success Then Return 0
@@ -606,7 +606,7 @@ Namespace Services
             If k.DistortionStrength = 0.0 Then k.HasDistortion = False
             If k.ChromaticAberrationStrength = 0.0 Then k.HasChromaticAberration = False
             If k.VignettingStrength = 0.0 Then k.HasVignetting = False
-            Return If(k.HatIrgendetwas, k, Nothing)
+            Return If(k.HasAnything, k, Nothing)
         End Function
 
         ''' <summary>Sucht die Kennlinien fuer eine konkrete Aufnahme. Rueckgabe Nothing, wenn
@@ -614,10 +614,10 @@ Namespace Services
         Public Shared Function FindCorrection(kameraHersteller As String, kameraModell As String,
                                               objektivName As String,
                                               brennweiteMm As Double, blende As Double,
-                                              breite As Integer, hoehe As Integer) As Korrektur
-            If breite < 2 OrElse hoehe < 2 Then Return Nothing
+                                              width As Integer, height As Integer) As Korrektur
+            If width < 2 OrElse height < 2 Then Return Nothing
             If String.IsNullOrWhiteSpace(objektivName) Then Return Nothing
-            LadeEinmal()
+            LoadOnce()
             If _objektive.Count = 0 Then Return Nothing
 
             ' Erst die Kamera, dann das Objektiv: der Anschluss der Kamera ist der schaerfste
@@ -625,8 +625,8 @@ Namespace Services
             ' FALSCHE Bauform - gemessen am Referenzfoto wurde die spiegellose Fassung eines
             ' Objektivs gefunden, das in Wahrheit an einer Spiegelreflex-Fassung sass. Deren
             ' Kennlinie haette das Bild sichtbar verbogen.
-            Dim kamera = BestCamera(kameraHersteller, kameraModell)
-            Dim obj = BestLens(objektivName, kamera)
+            Dim camera = BestCamera(kameraHersteller, kameraModell)
+            Dim obj = BestLens(objektivName, camera)
             If obj Is Nothing Then Return Nothing
 
             ' Ohne Brennweite laesst sich normalerweise kein Kalibrierpunkt waehlen. Bei einer
@@ -641,27 +641,27 @@ Namespace Services
             ' Der Crop-Faktor der KAMERA, nicht des Objektivs: die Kennlinien sind an einem
             ' bestimmten Sensor gemessen worden, und ein anderer Sensor sieht einen anderen
             ' Ausschnitt desselben Bildkreises.
-            Dim kameraCrop = If(kamera IsNot Nothing, kamera.CropFaktor, obj.CropFaktor)
+            Dim cameraCrop = If(camera IsNot Nothing, camera.CropFactor, obj.CropFactor)
 
             Dim k = New Korrektur With {
                 .LensName = obj.Modell,
                 .Brennweite = brennweiteMm,
-                .Blende = blende
+                .Aperture = blende
             }
-            BerechneNormierung(k, obj, kameraCrop, breite, hoehe)
+            ComputeNormalization(k, obj, cameraCrop, width, height)
             ApplyDistortion(k, obj, brennweiteMm)
             ApplyChromaticAberration(k, obj, brennweiteMm)
             ApplyVignetting(k, obj, brennweiteMm, blende)
-            Return If(k.HatIrgendetwas, k, Nothing)
+            Return If(k.HasAnything, k, Nothing)
         End Function
 
         ''' <summary>Passt dieses Objektiv ueberhaupt an diese Kamera? Kennen wir den Anschluss der
         ''' Kamera nicht, wird nicht gefiltert - sonst faende man bei unbekannten Gehaeusen gar
         ''' nichts mehr.</summary>
-        Private Shared Function PasstAnschluss(obj As LensEntry, kamera As KameraEintrag) As Boolean
-            If kamera Is Nothing OrElse kamera.Anschluesse.Count = 0 Then Return True
+        Private Shared Function PasstAnschluss(obj As LensEntry, camera As CameraEntry) As Boolean
+            If camera Is Nothing OrElse camera.Anschluesse.Count = 0 Then Return True
             If obj.Anschluesse.Count = 0 Then Return True
-            For Each ka In kamera.Anschluesse
+            For Each ka In camera.Anschluesse
                 Dim satz As HashSet(Of String) = Nothing
                 For Each oa In obj.Anschluesse
                     If String.Equals(ka, oa, StringComparison.OrdinalIgnoreCase) Then Return True
@@ -684,7 +684,7 @@ Namespace Services
         ''' sagen kann, WARUM nichts passiert, statt stumm zu bleiben.</summary>
         Public Shared Function BrauchtBrennweite(modell As String, kameraModell As String) As Boolean
             If String.IsNullOrWhiteSpace(modell) Then Return False
-            LadeEinmal()
+            LoadOnce()
             Dim obj = BestLens(modell, BestCamera("", kameraModell))
             If obj Is Nothing Then Return False
             Return EinzigeBrennweite(obj) <= 0
@@ -693,69 +693,69 @@ Namespace Services
         ''' <summary>Die eine Brennweite eines Objektivs, sofern alle Messwerte bei derselben
         ''' aufgenommen wurden (Festbrennweite). Sonst 0.</summary>
         Private Shared Function EinzigeBrennweite(obj As LensEntry) As Double
-            Dim werte = obj.Distortion.Select(Function(x) x.Brennweite).
+            Dim values = obj.Distortion.Select(Function(x) x.Brennweite).
                 Concat(obj.ChromaticAberration.Select(Function(x) x.Brennweite)).
                 Concat(obj.Vignetting.Select(Function(x) x.Brennweite)).
                 Where(Function(f) f > 0).Distinct().ToList()
-            Return If(werte.Count = 1, werte(0), 0.0)
+            Return If(values.Count = 1, values(0), 0.0)
         End Function
 
-        Private Shared Function BestLens(objektivName As String, kamera As KameraEintrag) As LensEntry
+        Private Shared Function BestLens(objektivName As String, camera As CameraEntry) As LensEntry
             Dim bester As LensEntry = Nothing
             Dim besteGuete As Double = 0
-            Dim besterCropAbstand As Double = Double.MaxValue
-            Dim besterUmfang As Integer = -1
-            Dim kameraCrop = If(kamera IsNot Nothing, kamera.CropFaktor, 0.0)
+            Dim bestCropDistance As Double = Double.MaxValue
+            Dim bestExtent As Integer = -1
+            Dim cameraCrop = If(camera IsNot Nothing, camera.CropFactor, 0.0)
 
             For Each o In _objektive
-                If Not PasstAnschluss(o, kamera) Then Continue For
+                If Not PasstAnschluss(o, camera) Then Continue For
                 Dim g As Double = 0
                 For Each n In o.Namen
-                    g = Math.Max(g, Aehnlichkeit(objektivName, n))
+                    g = Math.Max(g, Similarity(objektivName, n))
                 Next
                 If g <= 0 Then Continue For
 
-                Dim cropAbstand = If(kameraCrop > 0, Math.Abs(o.CropFaktor - kameraCrop), 0.0)
+                Dim cropDistance = If(cameraCrop > 0, Math.Abs(o.CropFactor - cameraCrop), 0.0)
                 Dim umfang = o.Distortion.Count + o.ChromaticAberration.Count + o.Vignetting.Count
 
                 Dim besser = False
                 If g > besteGuete + 0.0001 Then
                     besser = True
                 ElseIf Math.Abs(g - besteGuete) <= 0.0001 Then
-                    If cropAbstand < besterCropAbstand - 0.01 Then
+                    If cropDistance < bestCropDistance - 0.01 Then
                         besser = True
-                    ElseIf Math.Abs(cropAbstand - besterCropAbstand) <= 0.01 AndAlso umfang > besterUmfang Then
+                    ElseIf Math.Abs(cropDistance - bestCropDistance) <= 0.01 AndAlso umfang > bestExtent Then
                         besser = True
                     End If
                 End If
 
                 If besser Then
                     besteGuete = g
-                    besterCropAbstand = cropAbstand
-                    besterUmfang = umfang
+                    bestCropDistance = cropDistance
+                    bestExtent = umfang
                     bester = o
                 End If
             Next
-            Return If(besteGuete >= TrefferSchwelle, bester, Nothing)
+            Return If(besteGuete >= MatchThreshold, bester, Nothing)
         End Function
 
-        Private Shared Function BestCamera(hersteller As String, modell As String) As KameraEintrag
+        Private Shared Function BestCamera(maker As String, modell As String) As CameraEntry
             If String.IsNullOrWhiteSpace(modell) Then Return Nothing
-            Dim bester As KameraEintrag = Nothing
+            Dim bester As CameraEntry = Nothing
             Dim besteGuete As Double = 0
             For Each c In _kameras
-                Dim g = Aehnlichkeit(modell, c.Modell)
-                If Not String.IsNullOrWhiteSpace(hersteller) AndAlso
+                Dim g = Similarity(modell, c.Modell)
+                If Not String.IsNullOrWhiteSpace(maker) AndAlso
                    Not String.IsNullOrWhiteSpace(c.Hersteller) Then
                     ' Der Hersteller ist ein starker Filter: "5D" gibt es bei mehreren Marken.
-                    If Aehnlichkeit(hersteller, c.Hersteller) < 0.5 Then Continue For
+                    If Similarity(maker, c.Hersteller) < 0.5 Then Continue For
                 End If
                 If g > besteGuete Then
                     besteGuete = g
                     bester = c
                 End If
             Next
-            Return If(besteGuete >= TrefferSchwelle, bester, Nothing)
+            Return If(besteGuete >= MatchThreshold, bester, Nothing)
         End Function
 
         ''' <summary>Die Umrechnung von Pixeln in den normierten Radius.
@@ -764,21 +764,21 @@ Namespace Services
         ''' kommt der Ausgleich dafuer, dass die Kennlinie an einem anderen Sensor gemessen wurde:
         ''' der Weg fuehrt ueber die Bilddiagonale, weil Crop-Faktoren genau darueber definiert
         ''' sind.</summary>
-        Private Shared Sub BerechneNormierung(k As Korrektur, obj As LensEntry,
-                                              kameraCrop As Double, breite As Integer, hoehe As Integer)
-            Dim w = Math.Max(1, breite - 1)
-            Dim h = Math.Max(1, hoehe - 1)
-            Dim kurzeSeite = CDbl(Math.Min(w, h))
-            Dim bildSeitenverhaeltnis = If(w < h, CDbl(h) / w, CDbl(w) / h)
+        Private Shared Sub ComputeNormalization(k As Korrektur, obj As LensEntry,
+                                              cameraCrop As Double, width As Integer, height As Integer)
+            Dim w = Math.Max(1, width - 1)
+            Dim h = Math.Max(1, height - 1)
+            Dim shortSide = CDbl(Math.Min(w, h))
+            Dim imageAspectRatio = If(w < h, CDbl(h) / w, CDbl(w) / h)
 
             Dim kalibrierAusgleich = Math.Sqrt(obj.Seitenverhaeltnis * obj.Seitenverhaeltnis + 1.0)
-            Dim ausgleich = 1.0 / Math.Sqrt(bildSeitenverhaeltnis * bildSeitenverhaeltnis + 1.0) *
-                            (obj.CropFaktor / Math.Max(0.0001, kameraCrop)) * kalibrierAusgleich
+            Dim ausgleich = 1.0 / Math.Sqrt(imageAspectRatio * imageAspectRatio + 1.0) *
+                            (obj.CropFactor / Math.Max(0.0001, cameraCrop)) * kalibrierAusgleich
 
-            k.NormSkala = 2.0 / kurzeSeite * ausgleich
+            k.NormScale = 2.0 / shortSide * ausgleich
             ' Die Vignettierung rechnet mit r = 1 in der ECKE. Im System oben liegt die Ecke bei
             ' Wurzel(Seitenverhaeltnis^2 + 1) - genau darum wird geteilt.
-            k.EckenSkala = 1.0 / kalibrierAusgleich
+            k.CornerScale = 1.0 / kalibrierAusgleich
         End Sub
 
         ' ── Stuetzstellen ueber die Brennweite mitteln ──────────────────────────
@@ -786,32 +786,32 @@ Namespace Services
         ''' <summary>Sucht die zwei Stuetzstellen, zwischen denen die Brennweite liegt, und gibt den
         ''' Mischanteil zurueck. Liegt sie ausserhalb, gilt die naechstgelegene unveraendert -
         ''' extrapolieren waere bei diesen Polynomen gefaehrlich.</summary>
-        Private Shared Function Umgebung(Of T)(werte As List(Of T), brennweite As Double,
+        Private Shared Function Surrounding(Of T)(values As List(Of T), brennweite As Double,
                                                brennweiteVon As Func(Of T, Double)) _
                                                As (Unten As T, Oben As T, Anteil As Double)
-            Dim sortiert = werte.OrderBy(brennweiteVon).ToList()
+            Dim sortiert = values.OrderBy(brennweiteVon).ToList()
             If sortiert.Count = 0 Then Return (Nothing, Nothing, 0)
             If sortiert.Count = 1 Then Return (sortiert(0), sortiert(0), 0)
             If brennweite <= brennweiteVon(sortiert(0)) Then Return (sortiert(0), sortiert(0), 0)
-            Dim letzter = sortiert(sortiert.Count - 1)
-            If brennweite >= brennweiteVon(letzter) Then Return (letzter, letzter, 0)
+            Dim last = sortiert(sortiert.Count - 1)
+            If brennweite >= brennweiteVon(last) Then Return (last, last, 0)
             For i = 0 To sortiert.Count - 2
                 Dim f0 = brennweiteVon(sortiert(i)), f1 = brennweiteVon(sortiert(i + 1))
                 If brennweite >= f0 AndAlso brennweite <= f1 Then
-                    Dim spanne = f1 - f0
-                    Return (sortiert(i), sortiert(i + 1), If(spanne <= 0, 0, (brennweite - f0) / spanne))
+                    Dim span = f1 - f0
+                    Return (sortiert(i), sortiert(i + 1), If(span <= 0, 0, (brennweite - f0) / span))
                 End If
             Next
-            Return (letzter, letzter, 0)
+            Return (last, last, 0)
         End Function
 
-        Private Shared Function Misch(a As Double, b As Double, anteil As Double) As Double
-            Return a + (b - a) * anteil
+        Private Shared Function Misch(a As Double, b As Double, share As Double) As Double
+            Return a + (b - a) * share
         End Function
 
         Private Shared Sub ApplyDistortion(k As Korrektur, obj As LensEntry, brennweite As Double)
             If obj.Distortion.Count = 0 Then Return
-            Dim u = Umgebung(obj.Distortion, brennweite, Function(x) x.Brennweite)
+            Dim u = Surrounding(obj.Distortion, brennweite, Function(x) x.Brennweite)
             If u.Unten Is Nothing Then Return
             ' Nur mischen, wenn beide Stuetzstellen dasselbe Modell fuehren - a/b/c bedeuten je
             ' Modell etwas anderes, ein Mittelwert daraus waere Unsinn.
@@ -827,7 +827,7 @@ Namespace Services
 
         Private Shared Sub ApplyChromaticAberration(k As Korrektur, obj As LensEntry, brennweite As Double)
             If obj.ChromaticAberration.Count = 0 Then Return
-            Dim u = Umgebung(obj.ChromaticAberration, brennweite, Function(x) x.Brennweite)
+            Dim u = Surrounding(obj.ChromaticAberration, brennweite, Function(x) x.Brennweite)
             If u.Unten Is Nothing Then Return
             k.TcaBr = Misch(u.Unten.Br, u.Oben.Br, u.Anteil)
             k.TcaCr = Misch(u.Unten.Cr, u.Oben.Cr, u.Anteil)
@@ -846,19 +846,19 @@ Namespace Services
         Private Shared Sub ApplyVignetting(k As Korrektur, obj As LensEntry,
                                                   brennweite As Double, blende As Double)
             If obj.Vignetting.Count = 0 Then Return
-            Dim maxEntfernung = obj.Vignetting.Max(Function(x) x.Entfernung)
-            Dim kandidaten = obj.Vignetting.Where(Function(x) x.Entfernung = maxEntfernung).ToList()
-            If kandidaten.Count = 0 Then Return
+            Dim maxEntfernung = obj.Vignetting.Max(Function(x) x.Distance)
+            Dim candidates = obj.Vignetting.Where(Function(x) x.Distance = maxEntfernung).ToList()
+            If candidates.Count = 0 Then Return
 
             ' Ohne Blendenangabe die offenste gemessene nehmen - dort ist die Abdunklung am
             ' staerksten, und eine zu schwache Korrektur ist harmloser als eine zu starke.
-            Dim zielBlende = If(blende > 0, blende, kandidaten.Min(Function(x) x.Blende))
+            Dim targetAperture = If(blende > 0, blende, candidates.Min(Function(x) x.Aperture))
 
             ' Je Brennweiten-Stuetzstelle die passende Blende suchen, dann ueber die Brennweite
             ' mischen. Andersherum (erst Brennweite) verwaesserte die Blendenauswahl.
-            Dim jeBrennweite = kandidaten.GroupBy(Function(x) x.Brennweite).
-                Select(Function(g) NearestAperture(g.ToList(), zielBlende)).ToList()
-            Dim u = Umgebung(jeBrennweite, brennweite, Function(x) x.Brennweite)
+            Dim jeBrennweite = candidates.GroupBy(Function(x) x.Brennweite).
+                Select(Function(g) NearestAperture(g.ToList(), targetAperture)).ToList()
+            Dim u = Surrounding(jeBrennweite, brennweite, Function(x) x.Brennweite)
             If u.Unten Is Nothing Then Return
             k.Vk1 = Misch(u.Unten.K1, u.Oben.K1, u.Anteil)
             k.Vk2 = Misch(u.Unten.K2, u.Oben.K2, u.Anteil)
@@ -866,24 +866,24 @@ Namespace Services
             k.HasVignetting = True
         End Sub
 
-        Private Shared Function NearestAperture(werte As List(Of VignettingValue), blende As Double) As VignettingValue
-            Dim unten = werte.Where(Function(x) x.Blende <= blende).OrderByDescending(Function(x) x.Blende).FirstOrDefault()
-            Dim oben = werte.Where(Function(x) x.Blende >= blende).OrderBy(Function(x) x.Blende).FirstOrDefault()
-            If unten Is Nothing Then Return oben
-            If oben Is Nothing Then Return unten
-            If unten Is oben Then Return unten
+        Private Shared Function NearestAperture(values As List(Of VignettingValue), blende As Double) As VignettingValue
+            Dim bottom = values.Where(Function(x) x.Aperture <= blende).OrderByDescending(Function(x) x.Aperture).FirstOrDefault()
+            Dim top = values.Where(Function(x) x.Aperture >= blende).OrderBy(Function(x) x.Aperture).FirstOrDefault()
+            If bottom Is Nothing Then Return top
+            If top Is Nothing Then Return bottom
+            If bottom Is top Then Return bottom
             ' In Blendenstufen mischen, nicht in Blendenzahlen: der Lichtabfall ist logarithmisch,
             ' zwischen 2.8 und 8 liegt linear gemittelt nicht die Haelfte des Effekts.
-            Dim l0 = Math.Log(Math.Max(0.1, unten.Blende)), l1 = Math.Log(Math.Max(0.1, oben.Blende))
+            Dim l0 = Math.Log(Math.Max(0.1, bottom.Aperture)), l1 = Math.Log(Math.Max(0.1, top.Aperture))
             Dim lz = Math.Log(Math.Max(0.1, blende))
-            Dim anteil = If(Math.Abs(l1 - l0) < 0.000001, 0.0, (lz - l0) / (l1 - l0))
+            Dim share = If(Math.Abs(l1 - l0) < 0.000001, 0.0, (lz - l0) / (l1 - l0))
             Return New VignettingValue With {
-                .Brennweite = unten.Brennweite,
-                .Blende = blende,
-                .Entfernung = unten.Entfernung,
-                .K1 = Misch(unten.K1, oben.K1, anteil),
-                .K2 = Misch(unten.K2, oben.K2, anteil),
-                .K3 = Misch(unten.K3, oben.K3, anteil)}
+                .Brennweite = bottom.Brennweite,
+                .Aperture = blende,
+                .Distance = bottom.Distance,
+                .K1 = Misch(bottom.K1, top.K1, share),
+                .K2 = Misch(bottom.K2, top.K2, share),
+                .K3 = Misch(bottom.K3, top.K3, share)}
         End Function
 
     End Class

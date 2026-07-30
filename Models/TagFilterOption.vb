@@ -38,13 +38,13 @@ Namespace Models
             Set(value As Boolean)
                 If _isSelected = value Then Return
                 _isSelected = value
-                Melden()
+                Notify()
             End Set
         End Property
 
         Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
-        Private Sub Melden(<CallerMemberName> Optional name As String = Nothing)
+        Private Sub Notify(<CallerMemberName> Optional name As String = Nothing)
             RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(name))
         End Sub
 

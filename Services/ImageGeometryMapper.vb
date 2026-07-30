@@ -86,12 +86,12 @@ Namespace Services
             Dim anzeige = DisplaySize(CInt(Math.Round(sourceWidth)), CInt(Math.Round(sourceHeight)), q)
             If Not flipHorizontal AndAlso Not flipVertical Then Return dreh
 
-            Dim spiegel = New SKMatrix(
+            Dim mirror = New SKMatrix(
                 If(flipHorizontal, -1.0F, 1.0F), 0, If(flipHorizontal, CSng(anzeige.Width), 0.0F),
                 0, If(flipVertical, -1.0F, 1.0F), If(flipVertical, CSng(anzeige.Height), 0.0F),
                 0, 0, 1)
             ' Erst drehen, dann spiegeln - dieselbe Reihenfolge wie in SourcePointToDisplay.
-            Return SKMatrix.Concat(spiegel, dreh)
+            Return SKMatrix.Concat(mirror, dreh)
         End Function
 
         ''' <summary>Anzeige nach Quelle. Rueckgabe der Einheitsmatrix, falls sich die Abbildung
@@ -173,12 +173,12 @@ Namespace Services
         ''' an der Bildkante. 0,5 heisst: die obere Kante wird bei Vollausschlag um die halbe
         ''' Bildbreite breiter. Bewusst gross genug, dass sich stuerzende Linien eines echten Fotos
         ''' geraderichten lassen, und klein genug, dass die Mitte des Reglerwegs brauchbar bleibt.</summary>
-        Private Const PerspektiveVollausschlag As Double = 0.5
+        Private Const PerspectiveFullRange As Double = 0.5
 
         ''' <summary>Die acht freien Eckenversaetze eines Rezepts, in Prozent, im Uhrzeigersinn ab
         ''' links oben. Hier gebuendelt, damit die Rufer nicht acht Einzelwerte durchreichen und
         ''' beim Ergaenzen einer Ecke nichts vergessen wird.</summary>
-        Public Shared Function EckenVersatz(adj As ImageAdjustments) As Double()
+        Public Shared Function CornerOffset(adj As ImageAdjustments) As Double()
             If adj Is Nothing Then Return Nothing
             Return New Double() {adj.PerspectiveCorner0X, adj.PerspectiveCorner0Y,
                                  adj.PerspectiveCorner1X, adj.PerspectiveCorner1Y,
@@ -194,10 +194,10 @@ Namespace Services
         ''' Anfasser neben der Bildecke sitzt, die er anfasst.
         '''
         ''' <paramref name="eckenVersatz"/> darf Nothing sein (dann nur die Regler).</summary>
-        Public Shared Function VerzerrungsEcken(width As Double, height As Double,
+        Public Shared Function WarpCorners(width As Double, height As Double,
                                                 waagerecht As Double, senkrecht As Double,
-                                                eckenVersatz As Double()) As SKPoint()
-            Dim ecken = New SKPoint() {
+                                                cornerOffset As Double()) As SKPoint()
+            Dim corners = New SKPoint() {
                 New SKPoint(0, 0), New SKPoint(CSng(width), 0),
                 New SKPoint(CSng(width), CSng(height)), New SKPoint(0, CSng(height))}
 
@@ -205,24 +205,24 @@ Namespace Services
 
             ' SENKRECHT kippt um die waagerechte Achse: die obere Kante wird breiter, die untere
             ' schmaler (oder umgekehrt). Das ist der Griff fuer stuerzende Linien an Gebaeuden.
-            Dim dx = width * s * PerspektiveVollausschlag / 2.0
-            ecken(0).X -= CSng(dx) : ecken(1).X += CSng(dx)
-            ecken(3).X += CSng(dx) : ecken(2).X -= CSng(dx)
+            Dim dx = width * s * PerspectiveFullRange / 2.0
+            corners(0).X -= CSng(dx) : corners(1).X += CSng(dx)
+            corners(3).X += CSng(dx) : corners(2).X -= CSng(dx)
 
             ' WAAGERECHT kippt um die senkrechte Achse: die linke Kante wird hoeher, die rechte
             ' niedriger.
-            Dim dy = height * w * PerspektiveVollausschlag / 2.0
-            ecken(0).Y -= CSng(dy) : ecken(3).Y += CSng(dy)
-            ecken(1).Y += CSng(dy) : ecken(2).Y -= CSng(dy)
+            Dim dy = height * w * PerspectiveFullRange / 2.0
+            corners(0).Y -= CSng(dy) : corners(3).Y += CSng(dy)
+            corners(1).Y += CSng(dy) : corners(2).Y -= CSng(dy)
 
             ' Die freien Versaetze kommen OBENDRAUF: erst kippen, dann die einzelne Ecke nachziehen.
-            If eckenVersatz IsNot Nothing AndAlso eckenVersatz.Length = 8 Then
+            If cornerOffset IsNot Nothing AndAlso cornerOffset.Length = 8 Then
                 For i = 0 To 3
-                    ecken(i).X += CSng(eckenVersatz(i * 2) / 100.0 * width)
-                    ecken(i).Y += CSng(eckenVersatz(i * 2 + 1) / 100.0 * height)
+                    corners(i).X += CSng(cornerOffset(i * 2) / 100.0 * width)
+                    corners(i).Y += CSng(cornerOffset(i * 2 + 1) / 100.0 * height)
                 Next
             End If
-            Return ecken
+            Return corners
         End Function
 
         ''' <summary>Die Verzerrungsmatrix fuer ein Bild dieser Groesse.
@@ -231,34 +231,34 @@ Namespace Services
         ''' freien Eckenversaetze - die Matrix ist dann EXAKT die Einheitsmatrix, nicht nur beinahe.
         ''' Das ist wichtiger, als es aussieht: die Stufe im Renderer darf bei unbenutztem Werkzeug
         ''' kein einziges Pixel anfassen, sonst kostet jedes Bild eine Neuabtastung fuer nichts.</summary>
-        Public Shared Function VerzerrungsMatrix(width As Double, height As Double,
+        Public Shared Function WarpMatrix(width As Double, height As Double,
                                                  waagerecht As Double, senkrecht As Double,
-                                                 seitenverhaeltnis As Double, groesse As Double,
-                                                 Optional eckenVersatz As Double() = Nothing) As SKMatrix
+                                                 seitenverhaeltnis As Double, size As Double,
+                                                 Optional cornerOffset As Double() = Nothing) As SKMatrix
             If width <= 0 OrElse height <= 0 Then Return SKMatrix.Identity
-            Dim sv = seitenverhaeltnis / 100.0, gr = groesse / 100.0
-            Dim eckenFrei = eckenVersatz IsNot Nothing AndAlso eckenVersatz.Length = 8 AndAlso
-                            eckenVersatz.Any(Function(v) Math.Abs(v) >= 0.0001)
+            Dim sv = seitenverhaeltnis / 100.0, gr = size / 100.0
+            Dim cornersFree = cornerOffset IsNot Nothing AndAlso cornerOffset.Length = 8 AndAlso
+                            cornerOffset.Any(Function(v) Math.Abs(v) >= 0.0001)
             If Math.Abs(waagerecht / 100.0) < 0.0001 AndAlso Math.Abs(senkrecht / 100.0) < 0.0001 AndAlso
-               Math.Abs(sv) < 0.0001 AndAlso Math.Abs(gr) < 0.0001 AndAlso Not eckenFrei Then Return SKMatrix.Identity
+               Math.Abs(sv) < 0.0001 AndAlso Math.Abs(gr) < 0.0001 AndAlso Not cornersFree Then Return SKMatrix.Identity
 
-            Dim ecken = VerzerrungsEcken(width, height, waagerecht, senkrecht, eckenVersatz)
+            Dim corners = WarpCorners(width, height, waagerecht, senkrecht, cornerOffset)
 
-            Dim m = EinheitsquadratAufViereck(ecken(0), ecken(1), ecken(2), ecken(3))
+            Dim m = EinheitsquadratAufViereck(corners(0), corners(1), corners(2), corners(3))
             ' Vom Bildraum ins Einheitsquadrat, dann verzerren.
             m = SKMatrix.Concat(m, SKMatrix.CreateScale(CSng(1.0 / width), CSng(1.0 / height)))
 
             ' Seitenverhaeltnis und Groesse wirken um die BILDMITTE, nach der Verzerrung: sie sollen
             ' das Ergebnis dehnen und heranholen, nicht die Kippung selbst veraendern.
-            Dim mitteX = CSng(width / 2.0), mitteY = CSng(height / 2.0)
+            Dim centerX = CSng(width / 2.0), centerY = CSng(height / 2.0)
             Dim sxF = CSng((1.0 + sv * 0.5) * (1.0 + gr * 0.5))
             Dim syF = CSng((1.0 - sv * 0.5) * (1.0 + gr * 0.5))
             If Math.Abs(sxF - 1.0F) > 0.000001F OrElse Math.Abs(syF - 1.0F) > 0.000001F Then
-                Dim umMitte = SKMatrix.Concat(
-                    SKMatrix.CreateTranslation(mitteX, mitteY),
+                Dim aroundCenter = SKMatrix.Concat(
+                    SKMatrix.CreateTranslation(centerX, centerY),
                     SKMatrix.Concat(SKMatrix.CreateScale(sxF, syF),
-                                    SKMatrix.CreateTranslation(-mitteX, -mitteY)))
-                m = SKMatrix.Concat(umMitte, m)
+                                    SKMatrix.CreateTranslation(-centerX, -centerY)))
+                m = SKMatrix.Concat(aroundCenter, m)
             End If
             Return m
         End Function
@@ -293,39 +293,39 @@ Namespace Services
         ''' Hier legt man eine Linie auf eine KANTE im Bild und zieht sie, und die Kante geht als
         ''' Ganzes mit - genau das, was ein Raster nicht kann, ohne dass man ihm ein Dutzend Punkte
         ''' einzeln nachfuehrt.</summary>
-        ''' <param name="quelle">Die Linien, wo sie im Bild liegen: je Linie Ax, Ay, Bx, By in Pixeln.</param>
-        ''' <param name="ziel">Dieselben Linien, wohin sie gezogen wurden.</param>
-        Public Shared Sub LineField(breite As Integer, hoehe As Integer,
-                                     spalten As Integer, zeilen As Integer,
-                                     quelle As Double(), ziel As Double(),
-                                     ByRef quellX As Single(), ByRef quellY As Single())
-            quellX = Nothing
+        ''' <param name="source">Die Linien, wo sie im Bild liegen: je Linie Ax, Ay, Bx, By in Pixeln.</param>
+        ''' <param name="target">Dieselben Linien, wohin sie gezogen wurden.</param>
+        Public Shared Sub LineField(width As Integer, height As Integer,
+                                     columns As Integer, rows As Integer,
+                                     source As Double(), target As Double(),
+                                     ByRef sourceX As Single(), ByRef quellY As Single())
+            sourceX = Nothing
             quellY = Nothing
-            If breite <= 0 OrElse hoehe <= 0 OrElse spalten < 1 OrElse zeilen < 1 Then Return
-            If quelle Is Nothing OrElse ziel Is Nothing Then Return
-            If quelle.Length <> ziel.Length OrElse quelle.Length < 4 OrElse quelle.Length Mod 4 <> 0 Then Return
+            If width <= 0 OrElse height <= 0 OrElse columns < 1 OrElse rows < 1 Then Return
+            If source Is Nothing OrElse target Is Nothing Then Return
+            If source.Length <> target.Length OrElse source.Length < 4 OrElse source.Length Mod 4 <> 0 Then Return
 
-            Dim linien = quelle.Length \ 4
-            Dim anzahl = (spalten + 1) * (zeilen + 1)
-            ReDim quellX(anzahl - 1)
-            ReDim quellY(anzahl - 1)
-            Dim schrittX = breite / CDbl(spalten)
-            Dim schrittY = hoehe / CDbl(zeilen)
+            Dim lines = source.Length \ 4
+            Dim count = (columns + 1) * (rows + 1)
+            ReDim sourceX(count - 1)
+            ReDim quellY(count - 1)
+            Dim stepX = width / CDbl(columns)
+            Dim stepY = height / CDbl(rows)
 
-            For zi = 0 To zeilen
-                For si = 0 To spalten
-                    Dim i = zi * (spalten + 1) + si
-                    Dim px = si * schrittX
-                    Dim py = zi * schrittY
-                    Dim summeX = 0.0, summeY = 0.0, summeW = 0.0
+            For rowIdx = 0 To rows
+                For colIdx = 0 To columns
+                    Dim i = rowIdx * (columns + 1) + colIdx
+                    Dim px = colIdx * stepX
+                    Dim py = rowIdx * stepY
+                    Dim sumX = 0.0, sumY = 0.0, sumW = 0.0
                     ' Der naechstgelegenen Linie ihre Laenge merken: daran haengt, wie weit ihre
                     ' Wirkung reicht.
-                    Dim nahAbstand = Double.MaxValue, nahLaenge = 0.0
+                    Dim nearDistance = Double.MaxValue, nahLaenge = 0.0
 
-                    For k = 0 To linien - 1
+                    For k = 0 To lines - 1
                         Dim j = k * 4
-                        Dim zax = ziel(j), zay = ziel(j + 1), zbx = ziel(j + 2), zby = ziel(j + 3)
-                        Dim qax = quelle(j), qay = quelle(j + 1), qbx = quelle(j + 2), qby = quelle(j + 3)
+                        Dim zax = target(j), zay = target(j + 1), zbx = target(j + 2), zby = target(j + 3)
+                        Dim qax = source(j), qay = source(j + 1), qbx = source(j + 2), qby = source(j + 3)
 
                         Dim zdx = zbx - zax, zdy = zby - zay
                         Dim zlen = Math.Sqrt(zdx * zdx + zdy * zdy)
@@ -351,23 +351,23 @@ Namespace Services
                         ' kurze Linie noch weit ausserhalb ihrer beiden Enden.
                         Dim uk = Math.Max(0.0, Math.Min(1.0, u))
                         Dim nx = zax + uk * zdx, ny = zay + uk * zdy
-                        Dim abstand = Math.Sqrt((px - nx) * (px - nx) + (py - ny) * (py - ny))
+                        Dim distance = Math.Sqrt((px - nx) * (px - nx) + (py - ny) * (py - ny))
 
                         ' Gewicht: nah an der Linie gross, mit dem Abstand fallend. Die Laenge geht
                         ' ein, damit eine lange Linie ueber ihre ganze Ausdehnung mehr zu sagen hat
                         ' als eine kurze daneben.
-                        Dim w = Math.Pow(zlen / (GewichtBasis + abstand), GewichtSteilheit)
-                        summeX += w * (xx - px)
-                        summeY += w * (xy - py)
-                        summeW += w
-                        If abstand < nahAbstand Then
-                            nahAbstand = abstand
+                        Dim w = Math.Pow(zlen / (GewichtBasis + distance), WeightSteepness)
+                        sumX += w * (xx - px)
+                        sumY += w * (xy - py)
+                        sumW += w
+                        If distance < nearDistance Then
+                            nearDistance = distance
                             nahLaenge = zlen
                         End If
                     Next
 
                     Dim sx = px, sy = py
-                    If summeW > 0.0000001 Then
+                    If sumW > 0.0000001 Then
                         ' DAEMPFUNG mit dem Abstand. Ohne sie verzoege eine EINZELNE Linie das ganze
                         ' Bild: der gewichtete Mittelwert einer einzigen Linie ist ueberall genau
                         ' ihre eigene Verschiebung, die Gewichtung kuerzt sich weg. Erst mehrere
@@ -377,17 +377,17 @@ Namespace Services
                         ' Die Reichweite haengt an der LAENGE der Linie: eine lange Kante zieht ihre
                         ' Umgebung weiter mit als ein kurzer Strich. Das entspricht auch der
                         ' Erwartung - wer eine kurze Linie legt, meint eine kleine Stelle.
-                        Dim reichweite = Math.Max(1.0, nahLaenge * ReichweiteFaktor)
-                        Dim q = nahAbstand / reichweite
+                        Dim reichweite = Math.Max(1.0, nahLaenge * RangeFactor)
+                        Dim q = nearDistance / reichweite
                         Dim nenner = 1.0 + q * q
                         Dim daempfung = 1.0 / (nenner * nenner)
-                        sx = px + summeX / summeW * daempfung
-                        sy = py + summeY / summeW * daempfung
+                        sx = px + sumX / sumW * daempfung
+                        sy = py + sumY / sumW * daempfung
                     End If
                     ' In den Bildbereich klemmen: was darueber hinausgriffe, holte Farbe von der
                     ' gegenueberliegenden Kante oder aus dem Nichts.
-                    quellX(i) = CSng(Math.Max(0.0, Math.Min(breite - 0.002, sx)))
-                    quellY(i) = CSng(Math.Max(0.0, Math.Min(hoehe - 0.002, sy)))
+                    sourceX(i) = CSng(Math.Max(0.0, Math.Min(width - 0.002, sx)))
+                    quellY(i) = CSng(Math.Max(0.0, Math.Min(height - 0.002, sy)))
                 Next
             Next
         End Sub
@@ -396,10 +396,10 @@ Namespace Services
         ''' Nenner heisst: direkt an der Linie sehr stark. Der Exponent bestimmt, wie rasch es
         ''' abfaellt - unter 1 bliebe die Wirkung bis in den letzten Winkel des Bildes spuerbar.</summary>
         ''' <summary>Wie weit die Wirkung einer Linie reicht, als Vielfaches ihrer Laenge.</summary>
-        Private Const ReichweiteFaktor As Double = 0.55
+        Private Const RangeFactor As Double = 0.55
 
         Private Const GewichtBasis As Double = 12.0
-        Private Const GewichtSteilheit As Double = 1.8
+        Private Const WeightSteepness As Double = 1.8
 
         ''' <summary>Wie fein das Raster ist, auf dem eine Linienverzerrung ausgewertet wird.
         ''' Zu grob, und eine Linie knickt statt zu biegen; zu fein, und die Vorschau haengt.</summary>
@@ -411,67 +411,67 @@ Namespace Services
         ''' Beim Bild bleibt die Groesse gleich - was aus dem Rahmen faellt, wird abgeschnitten. Ein
         ''' Objekt dagegen darf wachsen: seine Ebene ist nur so gross wie es selbst, und eine
         ''' Verzerrung schiebt es ueber diesen Rand hinaus.</summary>
-        Public Shared Function WarpOverGridTo(quelle As SKBitmap, zielBreite As Integer, zielHoehe As Integer,
-                                                      spalten As Integer, zeilen As Integer,
-                                                      zielX As Single(), zielY As Single(),
-                                                      quellX As Single(), quellY As Single()) As SKBitmap
-            If quelle Is Nothing OrElse spalten < 1 OrElse zeilen < 1 Then Return Nothing
-            If zielBreite <= 0 OrElse zielHoehe <= 0 Then Return Nothing
-            Dim anzahl = (spalten + 1) * (zeilen + 1)
-            If zielX Is Nothing OrElse zielY Is Nothing OrElse zielX.Length <> anzahl OrElse zielY.Length <> anzahl Then Return Nothing
-            If quellX Is Nothing OrElse quellY Is Nothing OrElse quellX.Length <> anzahl OrElse quellY.Length <> anzahl Then Return Nothing
+        Public Shared Function WarpOverGridTo(source As SKBitmap, targetWidth As Integer, targetHeight As Integer,
+                                                      columns As Integer, rows As Integer,
+                                                      targetX As Single(), targetY As Single(),
+                                                      sourceX As Single(), quellY As Single()) As SKBitmap
+            If source Is Nothing OrElse columns < 1 OrElse rows < 1 Then Return Nothing
+            If targetWidth <= 0 OrElse targetHeight <= 0 Then Return Nothing
+            Dim count = (columns + 1) * (rows + 1)
+            If targetX Is Nothing OrElse targetY Is Nothing OrElse targetX.Length <> count OrElse targetY.Length <> count Then Return Nothing
+            If sourceX Is Nothing OrElse quellY Is Nothing OrElse sourceX.Length <> count OrElse quellY.Length <> count Then Return Nothing
 
-            Dim ergebnis = New SKBitmap(zielBreite, zielHoehe, quelle.ColorType, quelle.AlphaType)
-            Using canvas = New SKCanvas(ergebnis)
+            Dim result = New SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
-                Using shader = SKShader.CreateBitmap(quelle, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
+                Using shader = SKShader.CreateBitmap(source, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
                     Using paint = New SKPaint With {.Shader = shader, .IsAntialias = True}
-                        Dim ecken As New List(Of SKPoint)()
+                        Dim corners As New List(Of SKPoint)()
                         Dim texturen As New List(Of SKPoint)()
-                        For zi = 0 To zeilen - 1
-                            For si = 0 To spalten - 1
-                                Dim i00 = zi * (spalten + 1) + si
+                        For rowIdx = 0 To rows - 1
+                            For colIdx = 0 To columns - 1
+                                Dim i00 = rowIdx * (columns + 1) + colIdx
                                 Dim i10 = i00 + 1
-                                Dim i01 = i00 + spalten + 1
+                                Dim i01 = i00 + columns + 1
                                 Dim i11 = i01 + 1
                                 ' Zwei Dreiecke je Masche - dieselbe Aufteilung wie beim Bild.
-                                For Each drei In {({i00, i10, i11}), ({i00, i11, i01})}
-                                    For Each k In drei
-                                        ecken.Add(New SKPoint(zielX(k), zielY(k)))
-                                        texturen.Add(New SKPoint(quellX(k), quellY(k)))
+                                For Each three In {({i00, i10, i11}), ({i00, i11, i01})}
+                                    For Each k In three
+                                        corners.Add(New SKPoint(targetX(k), targetY(k)))
+                                        texturen.Add(New SKPoint(sourceX(k), quellY(k)))
                                     Next
                                 Next
                             Next
                         Next
-                        If ecken.Count = 0 Then
-                            ergebnis.Dispose()
+                        If corners.Count = 0 Then
+                            result.Dispose()
                             Return Nothing
                         End If
-                        Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, ecken.ToArray(), texturen.ToArray(), Nothing)
+                        Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, corners.ToArray(), texturen.ToArray(), Nothing)
                             canvas.DrawVertices(netz, SKBlendMode.SrcOver, paint)
                         End Using
                     End Using
                 End Using
             End Using
-            Return ergebnis
+            Return result
         End Function
 
         ''' <summary>Wohin EIN Punkt durch ein Linienfeld wandert. Dieselbe Rechnung wie in
         ''' <see cref="LinienFeld"/>, nur fuer einen einzelnen Punkt - fuer ein Objekt lohnt kein
         ''' ganzes Raster, und die Formel darf trotzdem nur an einer Stelle stehen.</summary>
         Public Shared Function LinePoint(px As Double, py As Double,
-                                           quelle As Double(), ziel As Double()) As SKPoint
-            If quelle Is Nothing OrElse ziel Is Nothing Then Return New SKPoint(CSng(px), CSng(py))
-            If quelle.Length <> ziel.Length OrElse quelle.Length < 4 OrElse quelle.Length Mod 4 <> 0 Then
+                                           source As Double(), target As Double()) As SKPoint
+            If source Is Nothing OrElse target Is Nothing Then Return New SKPoint(CSng(px), CSng(py))
+            If source.Length <> target.Length OrElse source.Length < 4 OrElse source.Length Mod 4 <> 0 Then
                 Return New SKPoint(CSng(px), CSng(py))
             End If
-            Dim linien = quelle.Length \ 4
-            Dim summeX = 0.0, summeY = 0.0, summeW = 0.0
-            Dim nahAbstand = Double.MaxValue, nahLaenge = 0.0
-            For k = 0 To linien - 1
+            Dim lines = source.Length \ 4
+            Dim sumX = 0.0, sumY = 0.0, sumW = 0.0
+            Dim nearDistance = Double.MaxValue, nahLaenge = 0.0
+            For k = 0 To lines - 1
                 Dim j = k * 4
-                Dim zax = ziel(j), zay = ziel(j + 1), zbx = ziel(j + 2), zby = ziel(j + 3)
-                Dim qax = quelle(j), qay = quelle(j + 1), qbx = quelle(j + 2), qby = quelle(j + 3)
+                Dim zax = target(j), zay = target(j + 1), zbx = target(j + 2), zby = target(j + 3)
+                Dim qax = source(j), qay = source(j + 1), qbx = source(j + 2), qby = source(j + 3)
                 Dim zdx = zbx - zax, zdy = zby - zay
                 Dim zlen = Math.Sqrt(zdx * zdx + zdy * zdy)
                 If zlen < 0.5 Then Continue For
@@ -486,108 +486,108 @@ Namespace Services
                 Dim xy = qay + u * qdy - v * streckung * qdx / qlen
                 Dim uk = Math.Max(0.0, Math.Min(1.0, u))
                 Dim nx = zax + uk * zdx, ny = zay + uk * zdy
-                Dim abstand = Math.Sqrt((px - nx) * (px - nx) + (py - ny) * (py - ny))
-                Dim w = Math.Pow(zlen / (GewichtBasis + abstand), GewichtSteilheit)
-                summeX += w * (xx - px)
-                summeY += w * (xy - py)
-                summeW += w
-                If abstand < nahAbstand Then
-                    nahAbstand = abstand
+                Dim distance = Math.Sqrt((px - nx) * (px - nx) + (py - ny) * (py - ny))
+                Dim w = Math.Pow(zlen / (GewichtBasis + distance), WeightSteepness)
+                sumX += w * (xx - px)
+                sumY += w * (xy - py)
+                sumW += w
+                If distance < nearDistance Then
+                    nearDistance = distance
                     nahLaenge = zlen
                 End If
             Next
-            If summeW <= 0.0000001 Then Return New SKPoint(CSng(px), CSng(py))
-            Dim reichweite = Math.Max(1.0, nahLaenge * ReichweiteFaktor)
-            Dim q = nahAbstand / reichweite
+            If sumW <= 0.0000001 Then Return New SKPoint(CSng(px), CSng(py))
+            Dim reichweite = Math.Max(1.0, nahLaenge * RangeFactor)
+            Dim q = nearDistance / reichweite
             Dim nenner = 1.0 + q * q
             Dim daempfung = 1.0 / (nenner * nenner)
-            Return New SKPoint(CSng(px + summeX / summeW * daempfung), CSng(py + summeY / summeW * daempfung))
+            Return New SKPoint(CSng(px + sumX / sumW * daempfung), CSng(py + sumY / sumW * daempfung))
         End Function
 
 
         ''' <summary>Verzerrt ein Bild ueber ein Stuetzpunktraster.
         '''
-        ''' <paramref name="zielX"/>/<paramref name="zielY"/> sind (spalten+1) mal (zeilen+1) Werte
+        ''' <paramref name="targetX"/>/<paramref name="targetY"/> sind (spalten+1) mal (zeilen+1) Werte
         ''' in BILDPIXELN, zeilenweise ab links oben: wohin der jeweilige Rasterpunkt wandern soll.
         ''' Liegen sie auf ihren Ausgangsstellen, kommt das Bild unveraendert zurueck - und zwar
         ''' dasselbe Objekt, ohne Neuabtastung.</summary>
-        ''' <param name="quellX">Wo die Rasterpunkte HERKOMMEN, ebenfalls in Bildpixeln. Nothing
+        ''' <param name="sourceX">Wo die Rasterpunkte HERKOMMEN, ebenfalls in Bildpixeln. Nothing
         ''' heisst: das gleichmaessige Raster. Fuer die Live-Vorschau wird es gebraucht, weil dort
         ''' das unverzerrte Raster im ANZEIGERAUM liegt und nach Beschnitt oder Drehung nicht mehr
         ''' gleichmaessig ist.</param>
-        Public Shared Function WarpOverGrid(quelle As SKBitmap, spalten As Integer, zeilen As Integer,
-                                                   zielX As Single(), zielY As Single(),
-                                                   Optional quellX As Single() = Nothing,
+        Public Shared Function WarpOverGrid(source As SKBitmap, columns As Integer, rows As Integer,
+                                                   targetX As Single(), targetY As Single(),
+                                                   Optional sourceX As Single() = Nothing,
                                                    Optional quellY As Single() = Nothing) As SKBitmap
-            If quelle Is Nothing OrElse spalten < 1 OrElse zeilen < 1 Then Return quelle
-            Dim anzahl = (spalten + 1) * (zeilen + 1)
-            If zielX Is Nothing OrElse zielY Is Nothing OrElse zielX.Length <> anzahl OrElse zielY.Length <> anzahl Then Return quelle
-            Dim eigeneQuelle = quellX IsNot Nothing AndAlso quellY IsNot Nothing AndAlso
-                               quellX.Length = anzahl AndAlso quellY.Length = anzahl
+            If source Is Nothing OrElse columns < 1 OrElse rows < 1 Then Return source
+            Dim count = (columns + 1) * (rows + 1)
+            If targetX Is Nothing OrElse targetY Is Nothing OrElse targetX.Length <> count OrElse targetY.Length <> count Then Return source
+            Dim ownSource = sourceX IsNot Nothing AndAlso quellY IsNot Nothing AndAlso
+                               sourceX.Length = count AndAlso quellY.Length = count
 
-            Dim breite = quelle.Width, hoehe = quelle.Height
-            Dim schrittX = breite / CSng(spalten), schrittY = hoehe / CSng(zeilen)
-            Dim QX = Function(i As Integer, si As Integer) As Single
-                         Return If(eigeneQuelle, quellX(i), si * schrittX)
+            Dim width = source.Width, height = source.Height
+            Dim stepX = width / CSng(columns), stepY = height / CSng(rows)
+            Dim QX = Function(i As Integer, colIdx As Integer) As Single
+                         Return If(ownSource, sourceX(i), colIdx * stepX)
                      End Function
-            Dim QY = Function(i As Integer, zi As Integer) As Single
-                         Return If(eigeneQuelle, quellY(i), zi * schrittY)
+            Dim QY = Function(i As Integer, rowIdx As Integer) As Single
+                         Return If(ownSource, quellY(i), rowIdx * stepY)
                      End Function
 
             ' Unveraendert heisst unveraendert: kein Umkopieren, keine Interpolationsverluste.
-            Dim bewegt = False
-            For zi = 0 To zeilen
-                For si = 0 To spalten
-                    Dim i = zi * (spalten + 1) + si
-                    If Math.Abs(zielX(i) - QX(i, si)) > 0.01F OrElse
-                       Math.Abs(zielY(i) - QY(i, zi)) > 0.01F Then
-                        bewegt = True
+            Dim moved = False
+            For rowIdx = 0 To rows
+                For colIdx = 0 To columns
+                    Dim i = rowIdx * (columns + 1) + colIdx
+                    If Math.Abs(targetX(i) - QX(i, colIdx)) > 0.01F OrElse
+                       Math.Abs(targetY(i) - QY(i, rowIdx)) > 0.01F Then
+                        moved = True
                         Exit For
                     End If
                 Next
-                If bewegt Then Exit For
+                If moved Then Exit For
             Next
-            If Not bewegt Then Return quelle
+            If Not moved Then Return source
 
             ' Je Masche zwei Dreiecke. Die Texturkoordinaten bleiben auf dem UNVERZERRTEN Raster -
             ' verschoben wird nur die Lage der Punkte.
-            Dim ecken As New List(Of SKPoint)(spalten * zeilen * 6)
-            Dim textur As New List(Of SKPoint)(spalten * zeilen * 6)
-            For zi = 0 To zeilen - 1
-                For si = 0 To spalten - 1
-                    Dim i00 = zi * (spalten + 1) + si
+            Dim corners As New List(Of SKPoint)(columns * rows * 6)
+            Dim textur As New List(Of SKPoint)(columns * rows * 6)
+            For rowIdx = 0 To rows - 1
+                For colIdx = 0 To columns - 1
+                    Dim i00 = rowIdx * (columns + 1) + colIdx
                     Dim i10 = i00 + 1
-                    Dim i01 = (zi + 1) * (spalten + 1) + si
+                    Dim i01 = (rowIdx + 1) * (columns + 1) + colIdx
                     Dim i11 = i01 + 1
-                    Dim t00 = New SKPoint(QX(i00, si), QY(i00, zi))
-                    Dim t10 = New SKPoint(QX(i10, si + 1), QY(i10, zi))
-                    Dim t01 = New SKPoint(QX(i01, si), QY(i01, zi + 1))
-                    Dim t11 = New SKPoint(QX(i11, si + 1), QY(i11, zi + 1))
-                    Dim p00 = New SKPoint(zielX(i00), zielY(i00))
-                    Dim p10 = New SKPoint(zielX(i10), zielY(i10))
-                    Dim p01 = New SKPoint(zielX(i01), zielY(i01))
-                    Dim p11 = New SKPoint(zielX(i11), zielY(i11))
-                    ecken.Add(p00) : ecken.Add(p10) : ecken.Add(p11)
+                    Dim t00 = New SKPoint(QX(i00, colIdx), QY(i00, rowIdx))
+                    Dim t10 = New SKPoint(QX(i10, colIdx + 1), QY(i10, rowIdx))
+                    Dim t01 = New SKPoint(QX(i01, colIdx), QY(i01, rowIdx + 1))
+                    Dim t11 = New SKPoint(QX(i11, colIdx + 1), QY(i11, rowIdx + 1))
+                    Dim p00 = New SKPoint(targetX(i00), targetY(i00))
+                    Dim p10 = New SKPoint(targetX(i10), targetY(i10))
+                    Dim p01 = New SKPoint(targetX(i01), targetY(i01))
+                    Dim p11 = New SKPoint(targetX(i11), targetY(i11))
+                    corners.Add(p00) : corners.Add(p10) : corners.Add(p11)
                     textur.Add(t00) : textur.Add(t10) : textur.Add(t11)
-                    ecken.Add(p00) : ecken.Add(p11) : ecken.Add(p01)
+                    corners.Add(p00) : corners.Add(p11) : corners.Add(p01)
                     textur.Add(t00) : textur.Add(t11) : textur.Add(t01)
                 Next
             Next
 
-            Dim ergebnis = New SKBitmap(breite, hoehe, quelle.ColorType, quelle.AlphaType)
-            Using canvas = New SKCanvas(ergebnis)
+            Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
                 ' Klemmen an den Raendern: ohne das zeigt eine ueber die Kante gezogene Masche
                 ' durchsichtige Streifen, weil die Textur dort zu Ende ist.
-                Using shader = quelle.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
+                Using shader = source.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
                     Using paint = New SKPaint With {.IsAntialias = True, .Shader = shader}
-                        Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, ecken.ToArray(), textur.ToArray(), Nothing)
+                        Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, corners.ToArray(), textur.ToArray(), Nothing)
                             canvas.DrawVertices(netz, SKBlendMode.Src, paint)
                         End Using
                     End Using
                 End Using
             End Using
-            Return ergebnis
+            Return result
         End Function
 
         Public Shared Function SourcePointToDisplay(x As Double, y As Double,

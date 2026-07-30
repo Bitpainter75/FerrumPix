@@ -83,6 +83,7 @@ Namespace Services
             Return NormalizeLoadedAdjustments(JsonSerializer.Deserialize(Of ImageAdjustments)(json, JsonOptions))
         End Function
 
+
         ''' <summary>Migration alter Rezepte: Früher bedeutete HasActiveSelection zugleich Render-Skopus.
         ''' Heute ist es reiner UI-Zustand und wird nie aus einem Dokument wiederhergestellt.</summary>
         Private Shared Function NormalizeLoadedAdjustments(adj As ImageAdjustments) As ImageAdjustments

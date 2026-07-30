@@ -147,29 +147,29 @@ Namespace Services
             Dim count = Math.Max(1, Math.Min(perPage, If(imageAspects Is Nothing, 1, imageAspects.Count)))
             Dim gap = CellGapPoints * Math.Max(0.01F, scale)
 
-            Dim besteSpalten = Math.Min(count, rasterColumns)
-            Dim besteFlaeche = -1.0
+            Dim bestColumns = Math.Min(count, rasterColumns)
+            Dim bestArea = -1.0
             For spalten = 1 To Math.Min(count, rasterColumns)
                 Dim zeilen = CInt(Math.Ceiling(count / CDbl(spalten)))
                 If zeilen > rasterColumns Then Continue For
-                Dim breite = (contentRect.Width - gap * (spalten - 1)) / spalten
-                Dim hoehe = (contentRect.Height - gap * (zeilen - 1)) / zeilen
-                If breite <= 0 OrElse hoehe <= 0 Then Continue For
+                Dim width = (contentRect.Width - gap * (spalten - 1)) / spalten
+                Dim height = (contentRect.Height - gap * (zeilen - 1)) / zeilen
+                If width <= 0 OrElse height <= 0 Then Continue For
 
-                Dim flaeche = 0.0
+                Dim area = 0.0
                 For Each aspect In imageAspects
                     If aspect <= 0 Then Continue For
                     ' Eingepasste Bildfläche in dieser Zelle: die kürzere der beiden Kanten begrenzt.
-                    Dim bildBreite = Math.Min(breite, hoehe * aspect)
-                    flaeche += bildBreite * (bildBreite / aspect)
+                    Dim imageWidth = Math.Min(width, height * aspect)
+                    area += imageWidth * (imageWidth / aspect)
                 Next
-                If flaeche > besteFlaeche Then
-                    besteFlaeche = flaeche
-                    besteSpalten = spalten
+                If area > bestArea Then
+                    bestArea = area
+                    bestColumns = spalten
                 End If
             Next
 
-            Dim columns = besteSpalten
+            Dim columns = bestColumns
             Dim rows = CInt(Math.Ceiling(count / CDbl(columns)))
             Dim cellWidth = (contentRect.Width - gap * (columns - 1)) / columns
             Dim cellHeight = (contentRect.Height - gap * (rows - 1)) / rows

@@ -19,7 +19,7 @@
     </UserControl.Styles>
 
     <Expander Header="Farbgradierung" icons:ExpanderState.Key="color-grading"
-        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=color-grading}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=color-grading}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

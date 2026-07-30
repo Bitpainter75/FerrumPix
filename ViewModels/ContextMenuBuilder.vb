@@ -21,11 +21,11 @@ Namespace ViewModels
         Private Sub New()
         End Sub
 
-        ''' <param name="ort">Wo geklickt wurde.</param>
-        ''' <param name="elemente">Die betroffenen Elemente. In der Galerie die Auswahl, sonst das
+        ''' <param name="place">Wo geklickt wurde.</param>
+        ''' <param name="items">Die betroffenen Elemente. In der Galerie die Auswahl, sonst das
         ''' eine gemeinte Bild. Leer heisst: nur die bildunabhaengigen Eintraege.</param>
-        ''' <param name="istVirtuell">Suchliste oder Immich - es gibt keinen echten Ordner.</param>
-        ''' <param name="kannEinfuegen">Darf in den aktuellen Ordner eingefuegt werden.</param>
+        ''' <param name="isVirtual">Suchliste oder Immich - es gibt keinen echten Ordner.</param>
+        ''' <param name="canPaste">Darf in den aktuellen Ordner eingefuegt werden.</param>
         Public Shared Function Build(site As MenuSite,
                                      items As IList(Of ImageItem),
                                      isVirtual As Boolean,

@@ -916,8 +916,13 @@ Namespace ViewModels
                                                                End Sub)
             SetInfoTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName) SetInfoTab(tabName))
             AddTagCommand = ReactiveCommand.Create(Sub()
-                                                       Dim tag = NewTagText.Trim().ToLowerInvariant()
-                                                       If String.IsNullOrEmpty(tag) OrElse Tags.Contains(tag) Then Return
+                                                       ' Die Schreibweise bleibt, wie sie getippt wurde: aus einer
+                                                       ' Beistelldatei kommen Stichwoerter ebenfalls mit Grossbuchstaben,
+                                                       ' und Immich behaelt sie auch. Verglichen wird dafuer ohne
+                                                       ' Ruecksicht darauf - sonst stuende "Berlin" zweimal da.
+                                                       Dim tag = NewTagText.Trim()
+                                                       If String.IsNullOrEmpty(tag) OrElse
+                                                          Tags.Any(Function(vorhanden) String.Equals(vorhanden, tag, StringComparison.OrdinalIgnoreCase)) Then Return
                                                        Tags.Add(tag)
                                                        NewTagText = ""
                                                        If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
@@ -944,11 +949,11 @@ Namespace ViewModels
             ResizeCurrentCommand = ReactiveCommand.Create(Sub() ResizeCurrent())
             ToggleFullscreenCommand = ReactiveCommand.Create(Sub() _mainVm?.ToggleFullscreen())
             TogglePinCommand = ReactiveCommand.Create(Sub() TogglePin())
-            ApplyWatermarkCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ApplyWatermarkToImageItems(i)))
+            ApplyWatermarkCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ApplyWatermarkToImageItems(i)))
             NewDocumentCommand = ReactiveCommand.Create(Sub() _mainVm?.ShowNewDocumentDialog())
-            ConvertCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ConvertImageItems(i)))
-            ExportCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ExportImageItems(i)))
-            ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ApplyFilterToImageItems(i)))
+            ConvertCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ConvertImageItems(i)))
+            ExportCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ExportImageItems(i)))
+            ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ApplyFilterToImageItems(i)))
             RenameCurrentCommand = ReactiveCommand.Create(Sub() RenameCurrent())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
             OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
@@ -1116,11 +1121,11 @@ Namespace ViewModels
                 _pinnedPath = ""
                 ExitCompare()
             Else
-                Dim pfad = If(_isCompareMode, _compareLeftPath, _currentImagePath)
-                If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+                Dim path = If(_isCompareMode, _compareLeftPath, _currentImagePath)
+                If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
                 ' Sofort in die geteilte Ansicht, zunaechst mit demselben Bild auf beiden Seiten:
                 ' das Anheften wird damit unmittelbar sichtbar, statt erst beim naechsten Blaettern.
-                ActivateCompare(pfad, pfad)
+                ActivateCompare(path, path)
                 Return
             End If
             Me.RaisePropertyChanged(NameOf(IsImagePinned))
@@ -1236,7 +1241,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_focusedComparePane, v)
                 Me.RaisePropertyChanged(NameOf(IsCompareLeftFocused))
                 Me.RaisePropertyChanged(NameOf(IsCompareRightFocused))
-                ZeigeDatenDerFokussiertenFlaeche()
+                ShowDataOfFocusedPane()
             End Set
         End Property
 
@@ -1255,20 +1260,20 @@ Namespace ViewModels
         ''' <summary>Infopanel, Dateiname und Pfad auf die fokussierte Flaeche umstellen - ohne die
         ''' Flaechen selbst anzufassen. BeginInfoPanelSwitch ist dafuer die einzige Stelle; wer hier
         ''' stattdessen das Bild neu laedt, vertauscht die Flaechen.</summary>
-        Private Sub ZeigeDatenDerFokussiertenFlaeche()
-            Dim pfad = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
-            If String.IsNullOrEmpty(pfad) Then Return
-            _currentImagePath = pfad
-            CurrentImagePath = pfad
-            CurrentFileName = IO.Path.GetFileName(pfad)
-            BeginInfoPanelSwitch(pfad)
+        Private Sub ShowDataOfFocusedPane()
+            Dim path = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            If String.IsNullOrEmpty(path) Then Return
+            _currentImagePath = path
+            CurrentImagePath = path
+            CurrentFileName = IO.Path.GetFileName(path)
+            BeginInfoPanelSwitch(path)
             ' Der Dateiname allein reicht nicht: Sterne, Herz und Farbetikett in der Fusszeile
             ' gehoeren zum SELBEN Bild wie der Name daneben. Ohne das zeigte die Fusszeile die
             ' Bewertung der zuletzt in der Einzelansicht geoeffneten Datei, waehrend links der
             ' Name der fokussierten Flaeche stand - und ein Klick auf einen Stern haette sie dem
             ' falschen Bild gegeben.
-            UebernehmeKatalogAttribute(pfad)
-            LoadInfoPanelData(pfad)
+            UebernehmeKatalogAttribute(path)
+            LoadInfoPanelData(path)
             Me.RaisePropertyChanged(NameOf(CanEdit))
         End Sub
 
@@ -1292,8 +1297,8 @@ Namespace ViewModels
         Public Sub OpenComparePaneInEditor(pane As Integer)
             If Not _isCompareMode Then Return
             FocusedComparePane = pane
-            Dim pfad = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
-            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+            Dim path = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             If Not CanEdit Then Return
             EditCommand.Execute(Nothing)
         End Sub
@@ -1389,23 +1394,23 @@ Namespace ViewModels
         ''' <summary>Sterne setzen. Derselbe Stern nochmal loescht die Bewertung - genauso wie auf
         ''' der Galerie-Kachel.</summary>
         Public Sub SetCompareRating(pane As Integer, sterne As Integer)
-            Dim pfad = PathOfPane(pane)
-            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+            Dim path = PathOfPane(pane)
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightRating, _compareLeftRating)
-            Dim neuerWert = If(bisher = sterne, 0, Math.Max(0, Math.Min(5, sterne)))
-            LibraryService.Instance.SetRating(pfad, neuerWert)
+            Dim newValue = If(bisher = sterne, 0, Math.Max(0, Math.Min(5, sterne)))
+            LibraryService.Instance.SetRating(path, newValue)
             LoadCompareMarkers()
             ' Die Fusszeile zeigt die fokussierte Flaeche - sie muss mit, wenn genau die gemeint war.
-            If pane = _focusedComparePane Then UebernehmeKatalogAttribute(pfad)
+            If pane = _focusedComparePane Then UebernehmeKatalogAttribute(path)
         End Sub
 
         Public Sub ToggleCompareFavorite(pane As Integer)
-            Dim pfad = PathOfPane(pane)
-            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
+            Dim path = PathOfPane(pane)
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightFavorite, _compareLeftFavorite)
-            LibraryService.Instance.SetFavorite(pfad, Not bisher)
+            LibraryService.Instance.SetFavorite(path, Not bisher)
             LoadCompareMarkers()
-            If pane = _focusedComparePane Then UebernehmeKatalogAttribute(pfad)
+            If pane = _focusedComparePane Then UebernehmeKatalogAttribute(path)
         End Sub
 
         ''' <summary>Eine Flaeche loeschen. Danach rueckt nach: bei der RECHTEN kommt das naechste
@@ -1414,9 +1419,9 @@ Namespace ViewModels
         ''' Serie laesst sich in einem Zug durchsehen.</summary>
         Public Sub DeleteComparePane(pane As Integer)
             If Not _isCompareMode Then Return
-            Dim pfad = PathOfPane(pane)
-            If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
-            _mainVm.RequestDeletePaths({pfad}, Sub() AfterDeleteInCompare(pane, pfad))
+            Dim path = PathOfPane(pane)
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            _mainVm.RequestDeletePaths({path}, Sub() AfterDeleteInCompare(pane, path))
         End Sub
 
         Private Sub AfterDeleteInCompare(pane As Integer, geloescht As String)
@@ -1481,7 +1486,7 @@ Namespace ViewModels
             _focusedComparePane = 0
             LoadCompareImages(nurRechts:=True)
             LoadCompareMarkers()
-            ZeigeDatenDerFokussiertenFlaeche()
+            ShowDataOfFocusedPane()
             For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
                            NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
@@ -1514,9 +1519,9 @@ Namespace ViewModels
         ''' Prozess faellt. Deshalb hier direkt auf die Felder und die Meldung von Hand - und wer
         ''' wirklich etwas wegwerfen will, tut das ausdruecklich ueber
         ''' <see cref="GibVergleichsBitmapFrei"/>.</summary>
-        Private Sub SetCompareBitmaps(links As Bitmap, rechts As Bitmap)
-            _compareLeftImage = links
-            _compareRightImage = rechts
+        Private Sub SetCompareBitmaps(left As Bitmap, right As Bitmap)
+            _compareLeftImage = left
+            _compareRightImage = right
             Me.RaisePropertyChanged(NameOf(CompareLeftImage))
             Me.RaisePropertyChanged(NameOf(CompareRightImage))
         End Sub
@@ -1566,7 +1571,7 @@ Namespace ViewModels
             Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, _compareRightPath, StringComparison.OrdinalIgnoreCase))
             If idx >= 0 Then _currentIndex = idx
 
-            ZeigeDatenDerFokussiertenFlaeche()
+            ShowDataOfFocusedPane()
             For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
                            NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
@@ -1589,7 +1594,7 @@ Namespace ViewModels
             LoadCompareMarkers()
             LoadCompareImages(nurRechts:=True)
             ' Steht der Fokus rechts, muss auch das Infopanel mit.
-            If _focusedComparePane = 1 Then ZeigeDatenDerFokussiertenFlaeche()
+            If _focusedComparePane = 1 Then ShowDataOfFocusedPane()
         End Sub
 
         ''' <summary>Vergleich beenden. Standardmaessig springt die Einzelansicht auf das Bild, das
@@ -1597,7 +1602,7 @@ Namespace ViewModels
         ''' Oeffnen eines anderen Bildes entfaellt das, sonst laedt der Betrachter zwei nacheinander.</summary>
         Public Sub ExitCompare(Optional zurueckZumFokus As Boolean = True)
             If Not _isCompareMode Then Return
-            Dim fokusPfad = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
+            Dim focusPath = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
             IsCompareMode = False
             CompareLeftImage = Nothing
             CompareRightImage = Nothing
@@ -1614,8 +1619,8 @@ Namespace ViewModels
                            NameOf(HasNoMedia)}
                 Me.RaisePropertyChanged(n)
             Next
-            If Not zurueckZumFokus OrElse String.IsNullOrEmpty(fokusPfad) Then Return
-            Dim idx = _folderPaths.FindIndex(Function(pf) String.Equals(pf, fokusPfad, StringComparison.OrdinalIgnoreCase))
+            If Not zurueckZumFokus OrElse String.IsNullOrEmpty(focusPath) Then Return
+            Dim idx = _folderPaths.FindIndex(Function(pf) String.Equals(pf, focusPath, StringComparison.OrdinalIgnoreCase))
             If idx >= 0 Then LoadPathAt(idx)
         End Sub
 
@@ -1629,8 +1634,8 @@ Namespace ViewModels
         ''' hiess, bei jedem Tastendruck ein RAW ein zweites Mal zu entwickeln.</summary>
         Private Async Sub LoadCompareImages(Optional nurRechts As Boolean = False)
             _vergleichLadeZaehler += 1
-            Dim marke = _vergleichLadeZaehler
-            Dim links = _compareLeftPath, rechts = _compareRightPath
+            Dim token = _vergleichLadeZaehler
+            Dim left = _compareLeftPath, right = _compareRightPath
             Try
                 ' "nurRechts" heisst: das festgehaltene linke Bild NICHT neu laden - es ist die
                 ' Referenz und ein zweiter Decode waere bei RAW Sekunden. Es heisst aber nicht
@@ -1638,16 +1643,16 @@ Namespace ViewModels
                 ' ueberholt diese Anforderung den noch laufenden ersten Ladevorgang, dessen Ergebnis
                 ' dann verworfen wird - die linke Flaeche blieb dauerhaft leer.
                 If Not nurRechts OrElse _compareLeftImage Is Nothing Then
-                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(links, immerEntwickeln:=True))
-                    If Not _isCompareMode OrElse marke <> _vergleichLadeZaehler Then
+                    Dim a = Await Task.Run(Function() DecodeViewerBitmap(left, alwaysDevelop:=True))
+                    If Not _isCompareMode OrElse token <> _vergleichLadeZaehler Then
                         a?.Dispose()
                         Return
                     End If
                     CompareLeftImage = a
                     If _isFitToWindow Then UpdateFitZoom()
                 End If
-                Dim b = Await Task.Run(Function() DecodeViewerBitmap(rechts, immerEntwickeln:=True))
-                If Not _isCompareMode OrElse marke <> _vergleichLadeZaehler Then
+                Dim b = Await Task.Run(Function() DecodeViewerBitmap(right, alwaysDevelop:=True))
+                If Not _isCompareMode OrElse token <> _vergleichLadeZaehler Then
                     b?.Dispose()
                     Return
                 End If
@@ -1836,25 +1841,25 @@ Namespace ViewModels
         ''' Im Vergleich gilt sie IMMER: dort ist die Kamera-Vorschau die falsche Quelle. Sonst nur
         ''' bei eingeschalteter Einstellung UND vorhandener Begleitdatei - ohne Rezept lohnt der
         ''' teure Decode in der Einzelansicht nicht.</summary>
-        Friend Shared Function SollRawEntwickeln(immerEntwickeln As Boolean, libRawVorhanden As Boolean,
+        Friend Shared Function SollRawEntwickeln(alwaysDevelop As Boolean, libRawVorhanden As Boolean,
                                                  einstellungAn As Boolean, begleitdateiDa As Boolean) As Boolean
             If Not libRawVorhanden Then Return False
-            If immerEntwickeln Then Return True
+            If alwaysDevelop Then Return True
             Return einstellungAn AndAlso begleitdateiDa
         End Function
 
-        ''' <param name="immerEntwickeln">Im Bildvergleich gesetzt. Dort ist die eingebettete
+        ''' <param name="alwaysDevelop">Im Bildvergleich gesetzt. Dort ist die eingebettete
         ''' Kamera-Vorschau die falsche Quelle: sie zeigt die Wiedergabe der KAMERA, nicht unsere -
         ''' zwei RAWs nebeneinander waeren damit nach der Kamera beurteilt statt nach der eigenen
         ''' Entwicklung, und ein RAW neben einem JPEG vergliche zwei verschiedene Pipelines. Kostet
         ''' den vollen Decode je Bild; das linke Bild bleibt deshalb stehen und wird beim
         ''' Weiterblaettern nicht neu geladen (siehe LadeVergleichsbilder).</param>
-        Private Shared Function DecodeViewerBitmap(path As String, Optional immerEntwickeln As Boolean = False) As Bitmap
+        Private Shared Function DecodeViewerBitmap(path As String, Optional alwaysDevelop As Boolean = False) As Bitmap
             If RawPreviewService.IsSupportedRaw(path) Then
                 ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
                 ' nur bei aktiver Einstellung und vorhandener .fpxmp. ApplyAdjustments liefert
                 ' bereits orientiert + mit Rezept-Geometrie.
-                If SollRawEntwickeln(immerEntwickeln, RawDecodeService.IsAvailable,
+                If SollRawEntwickeln(alwaysDevelop, RawDecodeService.IsAvailable,
                                      AppSettingsService.Load().DevelopRawInViewer,
                                      RawSidecarService.Exists(path)) Then
                     ' Ohne Begleitdatei die Vorgabewerte: entwickelt wird trotzdem, nur eben ohne
@@ -2677,30 +2682,30 @@ Namespace ViewModels
         ''' <summary>Der Pfad, auf den sich eine Menueaktion bezieht.</summary>
         ''' <summary>Ist das Ziel ein Video? Dann faellt alles weg, was auf Bildpixeln arbeitet.
         ''' Gefragt wird ueber ImageItem, damit dieselbe Erkennung gilt wie in der Galerie.</summary>
-        Private Function ZielIstVideo() As Boolean
-            Dim pfad = TargetPath()
-            If String.IsNullOrWhiteSpace(pfad) Then Return False
-            Return New ImageItem(pfad).IsVideoFile
+        Private Function TargetIsVideo() As Boolean
+            Dim path = TargetPath()
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            Return New ImageItem(path).IsVideoFile
         End Function
 
         Private Function TargetPath() As String
-            Dim ziel = If(ContextTargetPath, "")
-            If ziel <> "" AndAlso IO.File.Exists(ziel) Then Return ziel
+            Dim target = If(ContextTargetPath, "")
+            If target <> "" AndAlso IO.File.Exists(target) Then Return target
             Return _currentImagePath
         End Function
 
-        Private Sub MitAktuellemBild(ablauf As Action(Of GalleryViewModel, IList(Of ImageItem)))
+        Private Sub WithCurrentImage(ablauf As Action(Of GalleryViewModel, IList(Of ImageItem)))
             Try
-                Dim pfad = TargetPath()
-                If String.IsNullOrWhiteSpace(pfad) Then Return
+                Dim path = TargetPath()
+                If String.IsNullOrWhiteSpace(path) Then Return
                 Dim gallery = _mainVm?.Gallery
                 If gallery Is Nothing Then Return
 
                 Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
-                                                             PathIdentity.AreSame(i.FilePath, pfad))
+                                                             PathIdentity.AreSame(i.FilePath, path))
                 If item Is Nothing Then
-                    If Not File.Exists(pfad) Then Return
-                    item = New ImageItem(pfad)
+                    If Not File.Exists(path) Then Return
+                    item = New ImageItem(path)
                 End If
                 If Not item.IsImage Then Return
 
@@ -2763,9 +2768,9 @@ Namespace ViewModels
         Public Property CopyPathToClipboard As Action(Of String)
 
         Private Sub CopyToClipboard()
-            Dim pfad = TargetPath()
-            If String.IsNullOrEmpty(pfad) Then Return
-            CopyPathToClipboard?.Invoke(pfad)
+            Dim path = TargetPath()
+            If String.IsNullOrEmpty(path) Then Return
+            CopyPathToClipboard?.Invoke(path)
         End Sub
 
         ''' <summary>Druckt das gerade angezeigte Bild. Der Betrachter arbeitet auf Pfaden - bei
@@ -2777,10 +2782,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub OpenInFileManager()
-            Dim pfad = TargetPath()
-            If String.IsNullOrEmpty(pfad) Then Return
+            Dim path = TargetPath()
+            If String.IsNullOrEmpty(path) Then Return
             Try
-                Dim folder = IO.Path.GetDirectoryName(pfad)
+                Dim folder = IO.Path.GetDirectoryName(path)
                 Diagnostics.Process.Start(New Diagnostics.ProcessStartInfo() With {
                     .FileName = folder,
                     .UseShellExecute = True
@@ -2834,9 +2839,9 @@ Namespace ViewModels
             ' Einzelbild die kleine eingebettete Vorschau. Mit deren Groesse gerechnet fiel das
             ' Einpassen um den Faktor zwischen beiden daneben.
             If _isCompareMode Then
-                Dim quelle = If(CompareLeftImage, CompareRightImage)
-                If quelle Is Nothing OrElse _compareViewportWidth <= 0 OrElse _compareViewportHeight <= 0 Then Return 1.0
-                Return EinpassenFaktor(quelle.Size.Width, quelle.Size.Height,
+                Dim source = If(CompareLeftImage, CompareRightImage)
+                If source Is Nothing OrElse _compareViewportWidth <= 0 OrElse _compareViewportHeight <= 0 Then Return 1.0
+                Return FitFactor(source.Size.Width, source.Size.Height,
                                        _compareViewportWidth, _compareViewportHeight)
             End If
 
@@ -2858,15 +2863,15 @@ Namespace ViewModels
                 Return 1.0
             End If
 
-            Return EinpassenFaktor(imageWidth, imageHeight, _imageViewportWidth, _imageViewportHeight)
+            Return FitFactor(imageWidth, imageHeight, _imageViewportWidth, _imageViewportHeight)
         End Function
 
         ''' <summary>Die EINE Einpassen-Rechnung fuer Einzelbild und Vergleich. Vorher stand sie nur
         ''' im Einzelbild-Weg; der Vergleich hatte gar keine.</summary>
-        Private Function EinpassenFaktor(bildBreite As Double, bildHoehe As Double,
+        Private Function FitFactor(imageWidth As Double, imageHeight As Double,
                                          flaecheBreite As Double, flaecheHoehe As Double) As Double
-            If bildBreite <= 0 OrElse bildHoehe <= 0 OrElse flaecheBreite <= 0 OrElse flaecheHoehe <= 0 Then Return 1.0
-            Dim fitScale = Math.Max(0.05, Math.Min(flaecheBreite / bildBreite, flaecheHoehe / bildHoehe))
+            If imageWidth <= 0 OrElse imageHeight <= 0 OrElse flaecheBreite <= 0 OrElse flaecheHoehe <= 0 Then Return 1.0
+            Dim fitScale = Math.Max(0.05, Math.Min(flaecheBreite / imageWidth, flaecheHoehe / imageHeight))
 
             ' "Nur wenn größer": kleinere Bilder nicht auf die Darstellungsfläche hochskalieren,
             ' sondern in Originalgröße (100%) zeigen - "Immer einpassen" (Default) skaliert dagegen

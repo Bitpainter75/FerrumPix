@@ -87,17 +87,17 @@ Namespace Services
                 ' jede Fehlermeldung.
                 ' Unbekannte Farbtypen (Gray8, Alpha8 ...) laufen weiterhin nach Bgra8888: der Rest
                 ' der Pipeline kennt nur die hier aufgezaehlten.
-                Dim zielTyp = fullBitmap.ColorType
-                Select Case zielTyp
+                Dim targetType = fullBitmap.ColorType
+                Select Case targetType
                     Case SKColorType.Bgra8888, SKColorType.Rgba8888
                         ' beibehalten
                     Case Else
-                        zielTyp = SKColorType.Bgra8888
+                        targetType = SKColorType.Bgra8888
                 End Select
                 Dim converted As SKBitmap = Nothing
                 Try
                     converted = New SKBitmap(New SKImageInfo(fullBitmap.Width, fullBitmap.Height,
-                                                             zielTyp, SKAlphaType.Premul))
+                                                             targetType, SKAlphaType.Premul))
                     Using cv As New SKCanvas(converted)
                         cv.DrawBitmap(fullBitmap, 0, 0)
                     End Using

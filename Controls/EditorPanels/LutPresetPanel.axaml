@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.LutPresetPanel">
     <Expander Header="LUT (.cube)" icons:ExpanderState.Key="lut"
-        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=lut}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=lut}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">

@@ -32,6 +32,8 @@ Folder tree, grid and list view, fast thumbnails, file operations, ratings, favo
 
 Ratings, colour labels and keywords are read from XMP sidecars written by Lightroom, darktable or digiKam, so a collection you tagged elsewhere arrives with its work intact. Only empty fields are filled and keywords are merged.
 
+An info panel shows the selected picture with its shot data, histogram, rating, label and keywords, and with several selected it shows what they have in common - a rating or a keyword set there applies to all of them. A keyword click lists every picture carrying it, and a button next to the filter holds all keywords in use with their counts, several selectable at once.
+
 Batch work runs from the context menu or the footer menu: rename, convert, resize, watermark, filters, metadata removal - and *Export to*, which puts all of it into one dialog with a name pattern, a look, a size, a watermark and a target format, locally or straight to Immich. `.fpx` projects are one of the targets, so a batch can come out as files you can keep editing.
 
 Photos can also be printed, laid out as contact sheets, or combined into a collage - each of them showing your edits, not the untouched file on disk.

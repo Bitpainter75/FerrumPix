@@ -27,12 +27,7 @@
                    FontSize="{DynamicResource FP.Font.Body}"/>
         <Grid RowDefinitions="Auto,*" RowSpacing="14" IsVisible="{Binding HasInfoContent}">
             <StackPanel Spacing="0">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg"
-                                   Width="18" Height="18" VerticalAlignment="Center"/>
-                    <TextBlock Text="Info" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
+                <TextBlock Text="Info" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
                 <!-- Bei mehreren Bildern gibt es nur die Übersicht: EXIF, IPTC, XMP und ICC
                      beschreiben genau eine Datei, und eine von zwölf zu zeigen wäre falsch. -->
                 <!-- Spacing knapper als sonst: fünf Reiter müssen in die 320px breite Seitenleiste passen,
@@ -86,12 +81,7 @@
 
                     <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
                         <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
-                                               Width="16" Height="16" VerticalAlignment="Center"/>
-                                <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <!-- Dateiname ohne Beschriftung über die volle Breite: er ist die
                                  Überschrift des Blocks, keine Wertzeile - und lange Namen haben so
                                  die ganze Spaltenbreite zum Umbrechen statt der halben. Darunter
@@ -273,12 +263,7 @@
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/tag.svg"
-                                               Width="16" Height="16" VerticalAlignment="Center"/>
-                                <TextBlock Text="Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <TextBlock Text="Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <ItemsControl ItemsSource="{Binding Tags}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>

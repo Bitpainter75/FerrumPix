@@ -50,9 +50,9 @@ Namespace Services
             If ex Is Nothing Then Return
             Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {ex}" & Environment.NewLine &
                         New String("-"c, 80) & Environment.NewLine
-            Dim ausfuehrlich = False
+            Dim verbose = False
             Try
-                ausfuehrlich = AppSettingsService.Load().EnableDiagnosticLogging
+                verbose = AppSettingsService.Load().EnableDiagnosticLogging
             Catch
             End Try
             Try
@@ -60,7 +60,7 @@ Namespace Services
                     Directory.CreateDirectory(LogDirectory)
                     ' Bei eingeschaltetem Diagnose-Log zusätzlich in die Ablaufspur, damit die
                     ' Ausnahme dort an ihrer zeitlichen Stelle steht.
-                    If ausfuehrlich Then File.AppendAllText(LogPath, entry)
+                    If verbose Then File.AppendAllText(LogPath, entry)
                     RotateIfTooLarge()
                     File.AppendAllText(ErrorLogPath, entry)
                 End SyncLock

@@ -89,11 +89,11 @@ Namespace Controls
 
                 ' Markierung fuer ein bearbeitetes Band: ein Punkt in der Mitte des Segments, weiss
                 ' mit dunklem Rand - damit er auf hellen wie auf dunklen Segmentfarben steht.
-                If IstBearbeitet(BandOrder(i)) Then
-                    Dim mitteRad = (segmentStartDeg + 22.5) * Math.PI / 180.0
+                If IsEdited(BandOrder(i)) Then
+                    Dim centerRadius = (segmentStartDeg + 22.5) * Math.PI / 180.0
                     Dim ringRadius = (innerRadius + outerRadius) / 2.0
-                    Dim punkt = New Point(center.X + ringRadius * Math.Cos(mitteRad),
-                                          center.Y + ringRadius * Math.Sin(mitteRad))
+                    Dim punkt = New Point(center.X + ringRadius * Math.Cos(centerRadius),
+                                          center.Y + ringRadius * Math.Sin(centerRadius))
                     Dim r = Math.Max(2.0, outerRadius * 0.055)
                     context.DrawEllipse(New SolidColorBrush(Colors.White),
                                         New Pen(New SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), 1),
@@ -102,11 +102,11 @@ Namespace Controls
             Next
         End Sub
 
-        Private Function IstBearbeitet(band As String) As Boolean
-            Dim liste = AdjustedBands
-            If String.IsNullOrEmpty(liste) Then Return False
-            For Each teil In liste.Split(","c)
-                If String.Equals(teil.Trim(), band, StringComparison.OrdinalIgnoreCase) Then Return True
+        Private Function IsEdited(band As String) As Boolean
+            Dim list = AdjustedBands
+            If String.IsNullOrEmpty(list) Then Return False
+            For Each part In list.Split(","c)
+                If String.Equals(part.Trim(), band, StringComparison.OrdinalIgnoreCase) Then Return True
             Next
             Return False
         End Function

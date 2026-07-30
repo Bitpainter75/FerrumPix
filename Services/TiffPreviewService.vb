@@ -49,23 +49,23 @@ Namespace Services
         Private NotInheritable Class StillerFehlerHandler
             Inherits TiffErrorHandler
 
-            Public Overrides Sub WarningHandler(tif As Tiff, method As String, format As String, ParamArray args() As Object)
+            Public Overrides Sub WarningHandler(tif As Tiff, method As String, fileFormat As String, ParamArray args() As Object)
             End Sub
 
-            Public Overrides Sub WarningHandlerExt(tif As Tiff, clientData As Object, method As String, format As String, ParamArray args() As Object)
+            Public Overrides Sub WarningHandlerExt(tif As Tiff, clientData As Object, method As String, fileFormat As String, ParamArray args() As Object)
             End Sub
 
-            Public Overrides Sub ErrorHandler(tif As Tiff, method As String, format As String, ParamArray args() As Object)
+            Public Overrides Sub ErrorHandler(tif As Tiff, method As String, fileFormat As String, ParamArray args() As Object)
             End Sub
 
-            Public Overrides Sub ErrorHandlerExt(tif As Tiff, clientData As Object, method As String, format As String, ParamArray args() As Object)
+            Public Overrides Sub ErrorHandlerExt(tif As Tiff, clientData As Object, method As String, fileFormat As String, ParamArray args() As Object)
             End Sub
         End Class
 
         Private Shared ReadOnly _handlerLock As New Object()
         Private Shared _handlerGesetzt As Boolean
 
-        Private Shared Sub EnsureStillerHandler()
+        Private Shared Sub EnsureSilentHandler()
             SyncLock _handlerLock
                 If _handlerGesetzt Then Return
                 _handlerGesetzt = True
@@ -80,7 +80,7 @@ Namespace Services
         ''' aus dem TIFF-Tag ist bereits angewandt - KEINE zweite Korrektur nachschalten.</summary>
         Public Shared Function TryDecode(path As String) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
-            EnsureStillerHandler()
+            EnsureSilentHandler()
             Try
                 Using tif = Tiff.Open(path, "r")
                     If tif Is Nothing Then Return Nothing
@@ -103,8 +103,8 @@ Namespace Services
                     Try
                         Dim rowBytes = width * 4
                         Dim row(rowBytes - 1) As Byte
-                        Dim ziel = bitmap.GetPixels()
-                        Dim zielStride = bitmap.RowBytes
+                        Dim target = bitmap.GetPixels()
+                        Dim targetStride = bitmap.RowBytes
                         For y = 0 To height - 1
                             Buffer.BlockCopy(raster, y * rowBytes, row, 0, rowBytes)
                             For x = 0 To rowBytes - 4 Step 4
@@ -114,7 +114,7 @@ Namespace Services
                             Next
                             ' Versatz in Integer, siehe HeifDecodeService: IntPtr addiert nur
                             ' Integer. Die Schranke ist hier MaxPixels (300 Millionen).
-                            Marshal.Copy(row, 0, ziel + y * zielStride, rowBytes)
+                            Marshal.Copy(row, 0, target + y * targetStride, rowBytes)
                         Next
                         Return bitmap
                     Catch
@@ -148,7 +148,7 @@ Namespace Services
         ''' <summary>Maße aus den Kopfdaten, ohne die Bilddaten zu lesen.</summary>
         Public Shared Function TryGetSize(path As String) As (Width As Integer, Height As Integer)
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return (0, 0)
-            EnsureStillerHandler()
+            EnsureSilentHandler()
             Try
                 Using tif = Tiff.Open(path, "r")
                     If tif Is Nothing Then Return (0, 0)

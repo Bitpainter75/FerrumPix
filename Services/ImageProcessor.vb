@@ -203,7 +203,7 @@ Namespace Services
     ''' <summary>Wie ein Objekt mitverzerrt wird. Alle Angaben in Prozent des BILDES, nicht des
     ''' Objekts: die Verzerrung wird ja am Bild eingestellt, und ein Objekt, das man danach
     ''' verschiebt, soll dorthin passen, wo es dann liegt.</summary>
-    Public Class ObjektVerzerrung
+    Public Class ObjectWarp
         ''' <summary>"Perspektive", "Gitter" oder "Linien". Leer heisst: keine.</summary>
         Public Property Art As String = ""
 
@@ -214,7 +214,7 @@ Namespace Services
         ''' <summary>Gitter: Spalten und Zeilen, dann je Knoten x,y in Bildprozent.</summary>
         Public Property Columns As Integer = 0
         Public Property Rows As Integer = 0
-        Public Property Knoten As Double() = New Double() {}
+        Public Property Nodes As Double() = New Double() {}
 
         ''' <summary>Linien: je Linie QuelleAx, QuelleAy, QuelleBx, QuelleBy und dasselbe fuer das
         ''' Ziel, alles in Bildprozent.</summary>
@@ -225,8 +225,8 @@ Namespace Services
             Get
                 Select Case Art
                     Case "Perspektive" : Return Ecken Is Nothing OrElse Ecken.Length <> 8
-                    Case "Gitter" : Return Knoten Is Nothing OrElse Columns < 1 OrElse Rows < 1 OrElse
-                                           Knoten.Length <> (Columns + 1) * (Rows + 1) * 2
+                    Case "Gitter" : Return Nodes Is Nothing OrElse Columns < 1 OrElse Rows < 1 OrElse
+                                           Nodes.Length <> (Columns + 1) * (Rows + 1) * 2
                     Case "Linien" : Return LineSource Is Nothing OrElse LineTarget Is Nothing OrElse
                                            LineSource.Length < 4 OrElse LineSource.Length <> LineTarget.Length
                     Case Else : Return True
@@ -234,12 +234,12 @@ Namespace Services
             End Get
         End Property
 
-        Public Function Clone() As ObjektVerzerrung
-            Return New ObjektVerzerrung With {
+        Public Function Clone() As ObjectWarp
+            Return New ObjectWarp With {
                 .Art = Art,
                 .Ecken = If(Ecken Is Nothing, New Double() {}, CType(Ecken.Clone(), Double())),
                 .Columns = Columns, .Rows = Rows,
-                .Knoten = If(Knoten Is Nothing, New Double() {}, CType(Knoten.Clone(), Double())),
+                .Nodes = If(Nodes Is Nothing, New Double() {}, CType(Nodes.Clone(), Double())),
                 .LineSource = If(LineSource Is Nothing, New Double() {}, CType(LineSource.Clone(), Double())),
                 .LineTarget = If(LineTarget Is Nothing, New Double() {}, CType(LineTarget.Clone(), Double()))}
         End Function
@@ -498,33 +498,33 @@ Namespace Services
             Get
                 Const base As String = "avares://FerrumPix/Assets/Icons/"
                 If _kind IsNot Nothing AndAlso _kind.Equals("Svg", StringComparison.OrdinalIgnoreCase) Then
-                    Return If(String.IsNullOrWhiteSpace(_imagePath), base & "09_FormenSymbole/005_Rechteck.svg", _imagePath)
+                    Return If(String.IsNullOrWhiteSpace(_imagePath), base & "outline/rectangle.svg", _imagePath)
                 End If
                 If _kind IsNot Nothing AndAlso _kind.Equals("Symbol", StringComparison.OrdinalIgnoreCase) Then
                     Select Case _text
-                        Case "♥" : Return base & "09_FormenSymbole/047_Herz.svg"
-                        Case "✓" : Return base & "09_FormenSymbole/107_Check.svg"
-                        Case Else : Return base & "09_FormenSymbole/061_Stern.svg"
+                        Case "♥" : Return base & "outline/heart.svg"
+                        Case "✓" : Return base & "outline/check.svg"
+                        Case Else : Return base & "outline/star.svg"
                     End Select
                 End If
                 Select Case If(_kind, "").Trim().ToLowerInvariant()
-                    Case "text" : Return base & "03_Editor/34_Text.svg"
+                    Case "text" : Return base & "outline/text-size.svg"
                     Case "watermark" : Return "avares://FerrumPix/Assets/Icons/outline/rubber-stamp.svg"
-                    Case "image", "selectionimage" : Return base & "09_FormenSymbole/077_Bild.svg"
-                    Case "qr", "qrcode", "qr-code" : Return base & "03_Editor/37_QR_Code.svg"
-                    Case "rectangle", "rect", "selectionfill" : Return base & "09_FormenSymbole/005_Rechteck.svg"
+                    Case "image", "selectionimage" : Return base & "outline/photo.svg"
+                    Case "qr", "qrcode", "qr-code" : Return base & "outline/qrcode.svg"
+                    Case "rectangle", "rect", "selectionfill" : Return base & "outline/rectangle.svg"
                     Case "roundedrectangle", "rounded-rectangle" : Return base & "outline/square-rounded.svg"
-                    Case "square" : Return base & "09_FormenSymbole/003_Quadrat.svg"
-                    Case "triangle" : Return base & "09_FormenSymbole/007_Dreieck.svg"
-                    Case "ellipse", "circle" : Return base & "09_FormenSymbole/017_Oval.svg"
-                    Case "cone" : Return base & "09_FormenSymbole/018_Halbkreis.svg"
-                    Case "pyramid" : Return base & "09_FormenSymbole/031_Diamant_facette.svg"
+                    Case "square" : Return base & "outline/square.svg"
+                    Case "triangle" : Return base & "outline/triangle.svg"
+                    Case "ellipse", "circle" : Return base & "outline/oval.svg"
+                    Case "cone" : Return base & "outline/cone.svg"
+                    Case "pyramid" : Return base & "outline/diamond.svg"
                     Case "trapezoid" : Return base & "outline/trapezoid.svg"
                     Case "diamond" : Return base & "outline/square-rotated.svg"
                     Case "polygon" : Return base & "outline/hexagon.svg"
                     Case "star" : Return base & "outline/star.svg"
                     Case "doublestar", "double-star" : Return base & "outline/eight-point-star.svg"
-                    Case "spiral" : Return base & "09_FormenSymbole/053_Spirale.svg"
+                    Case "spiral" : Return base & "outline/spiral.svg"
                     Case "droplet" : Return base & "outline/droplet-shape.svg"
                     Case "ellipsespeechbubble", "ellipse-speech-bubble" : Return base & "outline/ellipse-speech-bubble-shape.svg"
                     Case "rectspeechbubble", "rect-speech-bubble" : Return base & "outline/message.svg"
@@ -533,9 +533,9 @@ Namespace Services
                     Case "cloud" : Return base & "outline/cloud.svg"
                     Case "line" : Return base & "outline/line-shape.svg"
                     Case "arrow" : Return base & "outline/arrow-right.svg"
-                    Case "brush" : Return base & "03_Editor/39_Pinsel.svg"
+                    Case "brush" : Return base & "outline/brush.svg"
                     Case "eraser" : Return "avares://FerrumPix/Assets/Icons/outline/eraser.svg"
-                    Case Else : Return base & "09_FormenSymbole/005_Rechteck.svg"
+                    Case Else : Return base & "outline/rectangle.svg"
                 End Select
             End Get
         End Property
@@ -692,7 +692,7 @@ Namespace Services
         ''' als Zahl aufheben laesst. Ein Objekt dagegen wird bei jedem Render neu gezeichnet - es
         ''' kann seine Verzerrung als Angabe behalten und bleibt damit aenderbar: Text laesst sich
         ''' weiter tippen, ein Bildobjekt weiter austauschen.</summary>
-        Public Property Verzerrung As ObjektVerzerrung
+        Public Property Warp As ObjectWarp
 
         ''' <summary>Die EIGENE Verzerrung dieses Objekts - unabhaengig vom Bild.
         '''
@@ -701,7 +701,7 @@ Namespace Services
         ''' Prozent des OBJEKTS und gehoert ihm allein - verschiebt man das Objekt, wandert sie mit,
         ''' statt sich zu aendern. Deshalb zwei Felder und nicht eines: sie beantworten verschiedene
         ''' Fragen und muessen verschieden mitwandern.</summary>
-        Public Property EigeneVerzerrung As ObjektVerzerrung
+        Public Property OwnWarp As ObjectWarp
 
         Public Property BlendIncludesStroke As Boolean
             Get
@@ -1059,8 +1059,8 @@ Namespace Services
                 .Id = Id,
                 .GroupId = GroupId,
                 .WatermarkPresetName = WatermarkPresetName,
-                .Verzerrung = Verzerrung?.Clone(),
-                .EigeneVerzerrung = EigeneVerzerrung?.Clone(),
+                .Warp = Warp?.Clone(),
+                .OwnWarp = OwnWarp?.Clone(),
                 .ImagePath = ImagePath,
                 .SourceFileName = SourceFileName,
                 .XPixels = XPixels,
@@ -1386,7 +1386,7 @@ Namespace Services
         Public Property FarbrauschGrob As Single = 0
 
         ''' <summary>Wie grosse Flecken noch erfasst werden: 0 bis 100.</summary>
-        Public Property FarbrauschGrobSkala As Single = 50
+        Public Property ColorNoiseCoarseScale As Single = 50
         ''' <summary>Farbrauschen HINZUFUEGEN 0-100 - die Plus-Seite desselben Reglers im Panel
         ''' („Farbrauschen" ist bipolar wie „Rauschen": minus entfernt, plus faerbt ein). Getrennt
         ''' gespeichert, damit <see cref="ColorNoiseReduction"/> weiter genau das bleibt, was
@@ -1762,9 +1762,9 @@ Namespace Services
             If look Is Nothing Then Return
             Dim neutral = New ImageAdjustments()
             For Each p In PixelAdjustmentProperties()
-                Dim wert = p.GetValue(look)
+                Dim value = p.GetValue(look)
                 Dim standard = p.GetValue(neutral)
-                If Not Equals(wert, standard) Then p.SetValue(Me, wert)
+                If Not Equals(value, standard) Then p.SetValue(Me, value)
             Next
         End Sub
 
@@ -1869,7 +1869,7 @@ Namespace Services
                 .NoiseReductionMethod = NoiseReductionMethod,
                 .ColorNoiseReduction = ColorNoiseReduction,
                 .FarbrauschGrob = FarbrauschGrob,
-                .FarbrauschGrobSkala = FarbrauschGrobSkala,
+                .ColorNoiseCoarseScale = ColorNoiseCoarseScale,
                 .ColorNoiseAdd = ColorNoiseAdd,
                 .DustScratches = DustScratches,
                 .Haze = Haze,
@@ -2227,16 +2227,16 @@ Namespace Services
         ''' eingebettete JPEG-Vorschau nehmen. Fuer Stapellaeufe, in denen Geschwindigkeit vor
         ''' Aufloesung geht (Einstellung "RAWs ohne Rezept im Stapel entwickeln"). Auf alles
         ''' andere hat der Schalter keine Wirkung.</param>
-        ''' <param name="objektivWahl">Welche Objektivkorrekturen fuer DIESES Bild gelten. Nothing =
+        ''' <param name="lensChoice">Welche Objektivkorrekturen fuer DIESES Bild gelten. Nothing =
         ''' wie in den Einstellungen vorgegeben. Sie gehoert hierher und nicht in die Reglerkette:
         ''' sie veraendert den DECODE, nicht die Nachbearbeitung.</param>
         Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True,
-                                              Optional objektivWahl As LensDataService.Wahl = Nothing) As SKBitmap
+                                              Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
             ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
             If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
-                Dim developed = RawDecodeService.TryDecode(path, objektivWahl)
+                Dim developed = RawDecodeService.TryDecode(path, lensChoice)
                 If developed IsNot Nothing Then Return developed
             ElseIf Not RawPreviewService.IsSupportedRaw(path) Then
                 ' Anderes Hauptbild -> der ~180-MB-Entwicklungs-Cache ist stale und kann weg.
@@ -2845,16 +2845,16 @@ Namespace Services
         Public Shared Function ComputeMaskDirtyRect(sourceWidth As Integer, sourceHeight As Integer,
                                                     mask As ImageMask, adj As ImageAdjustments) As SKRectI
             If mask Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
-            Dim breite = mask.Right - mask.Left
-            Dim hoehe = mask.Bottom - mask.Top
-            If breite <= 0 OrElse hoehe <= 0 Then Return SKRectI.Empty
-            Dim rand = Math.Max(0.0F, mask.FeatherPixels) + 2.0F
+            Dim width = mask.Right - mask.Left
+            Dim height = mask.Bottom - mask.Top
+            If width <= 0 OrElse height <= 0 Then Return SKRectI.Empty
+            Dim border = Math.Max(0.0F, mask.FeatherPixels) + 2.0F
             Dim pseudo As New ImageAnnotation With {
                 .Kind = "Rectangle",
-                .XPixels = mask.Left - rand,
-                .YPixels = mask.Top - rand,
-                .WidthPixels = breite + 2.0F * rand,
-                .HeightPixels = hoehe + 2.0F * rand
+                .XPixels = mask.Left - border,
+                .YPixels = mask.Top - border,
+                .WidthPixels = width + 2.0F * border,
+                .HeightPixels = height + 2.0F * border
             }
             Return ComputeAnnotationDirtyRect(sourceWidth, sourceHeight, pseudo, adj)
         End Function
@@ -3282,9 +3282,9 @@ Namespace Services
         ''' Zugang zum universellen Decode-Chokepoint (RAW/ICO-Sonderfälle + EXIF-Orientierung).
         ''' Der Aufrufer übernimmt den Besitz des Bitmaps.</summary>
         Public Shared Function DecodeWorkingImage(path As String,
-                                                  Optional objektivWahl As LensDataService.Wahl = Nothing) As SKBitmap
+                                                  Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
             Try
-                Return DecodeOriented(path, True, objektivWahl)
+                Return DecodeOriented(path, True, lensChoice)
             Catch
                 Return Nothing
             End Try
@@ -3561,8 +3561,8 @@ Namespace Services
             ' NACH der einstufigen Glaettung: die nimmt das feine Farbkorn, diese Stufe die groben
             ' Flecken. Umgekehrt muesste die grobe Stufe erst durch das feine Korn hindurch.
             If adj.FarbrauschGrob > 0 Then
-                processed = ReplaceBitmap(processed, ApplyMultiskalaEntrauschen(
-                    processed, adj.FarbrauschGrob / 100.0F, adj.FarbrauschGrobSkala / 100.0F))
+                processed = ReplaceBitmap(processed, ApplyMultiScaleDenoise(
+                    processed, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F))
             End If
             If adj.ColorNoiseAdd > 0 Then
                 processed = ReplaceBitmap(processed, ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F))
@@ -3623,9 +3623,9 @@ Namespace Services
         ''' Angefasst werden NUR die Farbkanaele. Das Auge loest Farbdetails ohnehin kaum auf, und
         ''' die Struktur eines Bildes steckt in der Helligkeit - die bleibt hier unberuehrt. Fuer
         ''' Helligkeitsrauschen gibt es die beiden bestehenden Regler.</summary>
-        ''' <param name="staerke">0 bis 1.</param>
-        ''' <param name="grob">0 bis 1: wie grosse Flecken noch erfasst werden.</param>
-        Public Shared Function ApplyMultiskalaEntrauschen(source As SKBitmap, staerke As Single,
+        ''' <param name="strength">0 bis 1.</param>
+        ''' <param name="coarse">0 bis 1: wie grosse Flecken noch erfasst werden.</param>
+        Public Shared Function ApplyMultiScaleDenoise(source As SKBitmap, staerke As Single,
                                                           grob As Single) As SKBitmap
             If source Is Nothing OrElse staerke <= 0.001F Then Return CloneBitmap(source)
             Dim w = source.Width, h = source.Height
@@ -3633,11 +3633,11 @@ Namespace Services
 
             ' Wie viele Stufen. Jede verdoppelt die erfasste Fleckengroesse; sechs Stufen reichen bis
             ' etwa 64 Bildpunkte, und groeber als das ist kein Rauschen mehr, sondern Motiv.
-            Dim stufen = Math.Max(3, Math.Min(7, CInt(Math.Round(3.0 + grob * 4.0))))
+            Dim steps = Math.Max(3, Math.Min(7, CInt(Math.Round(3.0 + grob * 4.0))))
             Dim n = w * h
 
             Dim quelle = CloneBitmap(source)
-            Dim ziel = New SKBitmap(w, h, source.ColorType, source.AlphaType)
+            Dim target = New SKBitmap(w, h, source.ColorType, source.AlphaType)
             Try
                 ' In Helligkeit und zwei Farbdifferenzen zerlegen. Nicht wegen der Norm, sondern weil
                 ' sich nur so unterschiedlich hart schrumpfen laesst.
@@ -3675,9 +3675,9 @@ Namespace Services
                 ' die Wirkung sitzt, und ueber der Saettigung bleibt Luft fuer starkes Rauschen.
                 ' Die Kennlinie steht als Info-Zeile im Pruefstand - sie zeigt sofort, wenn eine
                 ' Aenderung den Bereich wieder zusammenschiebt.
-                Dim schwelleC = 1.0F + 19.0F * CSng(Math.Pow(staerke, 1.5))
-                SchrumpfeStufen(cb, w, h, stufen, schwelleC, 1.0F)
-                SchrumpfeStufen(cr, w, h, stufen, schwelleC, 1.0F)
+                Dim thresholdC = 1.0F + 19.0F * CSng(Math.Pow(staerke, 1.5))
+                ShrinkSteps(cb, w, h, steps, thresholdC, 1.0F)
+                ShrinkSteps(cr, w, h, steps, thresholdC, 1.0F)
 
                 For j = 0 To h - 1
                     For i = 0 To w - 1
@@ -3685,12 +3685,12 @@ Namespace Services
                         Dim r = y(k) + cr(k)
                         Dim b = y(k) + cb(k)
                         Dim g = (y(k) - 0.299F * r - 0.114F * b) / 0.587F
-                        ziel.SetPixel(i, j, New SKColor(KlemmeByte(r), KlemmeByte(g), KlemmeByte(b), alpha(k)))
+                        target.SetPixel(i, j, New SKColor(KlemmeByte(r), KlemmeByte(g), KlemmeByte(b), alpha(k)))
                     Next
                 Next
-                Return ziel
+                Return target
             Catch
-                ziel.Dispose()
+                target.Dispose()
                 Return CloneBitmap(source)
             Finally
                 quelle.Dispose()
@@ -3700,12 +3700,12 @@ Namespace Services
         ''' <summary>Zerlegt einen Kanal in Groessenstufen, schrumpft jede und setzt wieder zusammen.
         ''' Der Kanal wird an Ort und Stelle geaendert.
         '''
-        ''' <paramref name="wachstum"/> sagt, wie die Schwelle von Stufe zu Stufe waechst. Groeber
+        ''' <paramref name="growth"/> sagt, wie die Schwelle von Stufe zu Stufe waechst. Groeber
         ''' heisst mehr Flaeche und damit weniger Zufall - dort steht ein Ausschlag eher fuer etwas
         ''' Echtes und die Schwelle darf mitwachsen, sonst frisst man auf den groben Stufen den
         ''' Farbverlauf des Motivs mit.</summary>
-        Private Shared Sub SchrumpfeStufen(kanal As Single(), w As Integer, h As Integer,
-                                           stufen As Integer, schwelle As Single, wachstum As Single)
+        Private Shared Sub ShrinkSteps(kanal As Single(), w As Integer, h As Integer,
+                                           steps As Integer, schwelle As Single, growth As Single)
             Dim n = w * h
             Dim basis(n - 1) As Single
             Array.Copy(kanal, basis, n)
@@ -3713,17 +3713,17 @@ Namespace Services
             Dim geglaettet(n - 1) As Single
             Dim s = schwelle
 
-            For stufe = 1 To stufen
+            For stufe = 1 To steps
                 Dim radius = CInt(Math.Pow(2, stufe - 1))
                 Array.Copy(basis, geglaettet, n)
                 KastenUnschaerfe(geglaettet, w, h, radius)
                 ' Was die Glaettung wegnimmt, ist der Anteil DIESER Stufe.
                 For i = 0 To n - 1
                     Dim detail = basis(i) - geglaettet(i)
-                    ergebnis(i) += Schrumpfe(detail, s)
+                    ergebnis(i) += Shrink(detail, s)
                 Next
                 Array.Copy(geglaettet, basis, n)
-                s *= wachstum
+                s *= growth
             Next
 
             ' Der Rest ist der grobe Bildaufbau - der bleibt unangetastet.
@@ -3736,7 +3736,7 @@ Namespace Services
         ''' dem Betrag FALLENDER Anteil abgezogen - ein grosser Ausschlag bleibt damit praktisch
         ''' erhalten. Ein glattes Abziehen der Schwelle wuerde jede Kante um denselben Betrag
         ''' abschwaechen.</summary>
-        Private Shared Function Schrumpfe(x As Single, schwelle As Single) As Single
+        Private Shared Function Shrink(x As Single, schwelle As Single) As Single
             Dim a = Math.Abs(x)
             If a <= schwelle Then Return 0.0F
             ' Deutlich ueber der Schwelle: UNANGETASTET lassen. Die weiche Kennlinie zieht auch
@@ -3748,9 +3748,9 @@ Namespace Services
             ' und ein breiter Bereich hat die Kante von 120 auf 43 Stufen fallen lassen - am
             ' sauberen Bild genauso wie am verrauschten. Das war kein Entrauschen mehr.
             If a >= schwelle * 1.5F Then Return x
-            Dim weich = CSng(x - schwelle * schwelle / x)
+            Dim soft = CSng(x - schwelle * schwelle / x)
             Dim t = (a - schwelle) / (schwelle * 0.5F)
-            Return weich * (1.0F - t) + x * t
+            Return soft * (1.0F - t) + x * t
         End Function
 
         ''' <summary>Kastenunschaerfe, zweimal getrennt - waagerecht, dann senkrecht. Ueber laufende
@@ -3759,32 +3759,32 @@ Namespace Services
         Private Shared Sub KastenUnschaerfe(feld As Single(), w As Integer, h As Integer, radius As Integer)
             If radius < 1 Then Return
             Dim zwischen(w * h - 1) As Single
-            Dim breite = radius * 2 + 1
+            Dim width = radius * 2 + 1
 
             For j = 0 To h - 1
-                Dim zeile = j * w
-                Dim summe As Single = 0
+                Dim row = j * w
+                Dim sum As Single = 0
                 For i = -radius To radius
-                    summe += feld(zeile + Math.Max(0, Math.Min(w - 1, i)))
+                    sum += feld(row + Math.Max(0, Math.Min(w - 1, i)))
                 Next
                 For i = 0 To w - 1
-                    zwischen(zeile + i) = summe / breite
+                    zwischen(row + i) = sum / width
                     Dim raus = Math.Max(0, Math.Min(w - 1, i - radius))
                     Dim rein = Math.Max(0, Math.Min(w - 1, i + radius + 1))
-                    summe += feld(zeile + rein) - feld(zeile + raus)
+                    sum += feld(row + rein) - feld(row + raus)
                 Next
             Next
 
             For i = 0 To w - 1
-                Dim summe As Single = 0
+                Dim sum As Single = 0
                 For j = -radius To radius
-                    summe += zwischen(Math.Max(0, Math.Min(h - 1, j)) * w + i)
+                    sum += zwischen(Math.Max(0, Math.Min(h - 1, j)) * w + i)
                 Next
                 For j = 0 To h - 1
-                    feld(j * w + i) = summe / breite
+                    feld(j * w + i) = sum / width
                     Dim raus = Math.Max(0, Math.Min(h - 1, j - radius))
                     Dim rein = Math.Max(0, Math.Min(h - 1, j + radius + 1))
-                    summe += zwischen(rein * w + i) - zwischen(raus * w + i)
+                    sum += zwischen(rein * w + i) - zwischen(raus * w + i)
                 Next
             Next
         End Sub
@@ -3862,23 +3862,23 @@ Namespace Services
                         ' Vereinigung aller ihrer Masken angewendet - an der Stelle der ERSTEN
                         ' Ebene der Gruppe, damit die Reihenfolge gegenueber anderen Korrekturen
                         ' erhalten bleibt.
-                        Dim schluessel = If(layer.GroupId, "") & "|" & PixelAdjustmentsFingerprint(layer.Adjustments)
+                        Dim key = If(layer.GroupId, "") & "|" & PixelAdjustmentsFingerprint(layer.Adjustments)
                         Dim geschwister As List(Of MaskedAdjustmentLayer) = Nothing
-                        If gemeinsam.TryGetValue(schluessel, geschwister) Then
-                            If erledigt.Contains(schluessel) Then Continue For
-                            erledigt.Add(schluessel)
+                        If gemeinsam.TryGetValue(key, geschwister) Then
+                            If erledigt.Contains(key) Then Continue For
+                            erledigt.Add(key)
                         End If
-                        Dim wirkmaske = mask
+                        Dim effectMask = mask
                         Dim eigene As SKBitmap = Nothing
                         Try
                             If geschwister IsNot Nothing Then
                                 eigene = MergeEffectMasks(geschwister, layer, mask, adj, masksById,
                                                              pipelineInputWidth, pipelineInputHeight,
                                                              processed.Width, processed.Height, onlyStackedAboveId)
-                                If eigene IsNot Nothing Then wirkmaske = eigene
+                                If eigene IsNot Nothing Then effectMask = eigene
                             End If
                             Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
-                                processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, wirkmaske))
+                                processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, effectMask))
                             End Using
                         Finally
                             eigene?.Dispose()
@@ -4026,21 +4026,21 @@ Namespace Services
         End Function
 
         ''' <summary>Je Pixel das Maximum aus zwei gleich grossen Alpha8-Masken, in die erste.</summary>
-        Private Shared Sub MaskMaximum(ziel As SKBitmap, quelle As SKBitmap)
-            If ziel Is Nothing OrElse quelle Is Nothing Then Return
-            If ziel.Width <> quelle.Width OrElse ziel.Height <> quelle.Height Then Return
-            If ziel.GetPixels() = IntPtr.Zero OrElse quelle.GetPixels() = IntPtr.Zero Then Return
+        Private Shared Sub MaskMaximum(target As SKBitmap, source As SKBitmap)
+            If target Is Nothing OrElse source Is Nothing Then Return
+            If target.Width <> source.Width OrElse target.Height <> source.Height Then Return
+            If target.GetPixels() = IntPtr.Zero OrElse source.GetPixels() = IntPtr.Zero Then Return
             Dim zStride As Integer, qStride As Integer
-            Dim zb = ReadMaskBytes(ziel, zStride)
-            Dim qb = ReadMaskBytes(quelle, qStride)
-            Dim breite = Math.Min(zStride, qStride)
-            For y = 0 To ziel.Height - 1
+            Dim zb = ReadMaskBytes(target, zStride)
+            Dim qb = ReadMaskBytes(source, qStride)
+            Dim width = Math.Min(zStride, qStride)
+            For y = 0 To target.Height - 1
                 Dim zo = y * zStride, qo = y * qStride
-                For x = 0 To breite - 1
+                For x = 0 To width - 1
                     If qb(qo + x) > zb(zo + x) Then zb(zo + x) = qb(qo + x)
                 Next
             Next
-            Marshal.Copy(zb, 0, ziel.GetPixels(), zb.Length)
+            Marshal.Copy(zb, 0, target.GetPixels(), zb.Length)
         End Sub
 
         Private Shared Function BuildPersistentMaskForOutput(maskData As ImageMask, geometry As ImageAdjustments,
@@ -4063,13 +4063,13 @@ Namespace Services
                 ' Pinselkorrektur eines Verlaufs: die beiden Raster einmal auspacken, danach kostet
                 ' der Zugriff je Pixel nur noch einen Indexzugriff.
                 Dim korrHinzu As Byte() = Nothing, korrWeg As Byte() = Nothing
-                Dim korrBreite = 0, korrHoehe = 0
+                Dim corrWidth = 0, korrHoehe = 0
                 If maskData.IsGradient AndAlso maskData.HasBrushCorrection Then
-                    korrBreite = maskData.BrushRight - maskData.BrushLeft
+                    corrWidth = maskData.BrushRight - maskData.BrushLeft
                     korrHoehe = maskData.BrushBottom - maskData.BrushTop
-                    korrHinzu = DecodeAlphaRaster(maskData.BrushAddPngBase64, korrBreite, korrHoehe)
-                    korrWeg = DecodeAlphaRaster(maskData.BrushSubtractPngBase64, korrBreite, korrHoehe)
-                    If korrHinzu Is Nothing AndAlso korrWeg Is Nothing Then korrBreite = 0
+                    korrHinzu = DecodeAlphaRaster(maskData.BrushAddPngBase64, corrWidth, korrHoehe)
+                    korrWeg = DecodeAlphaRaster(maskData.BrushSubtractPngBase64, corrWidth, korrHoehe)
+                    If korrHinzu Is Nothing AndAlso korrWeg Is Nothing Then corrWidth = 0
                 End If
                 Using decoded = If(raw Is Nothing, Nothing, SKBitmap.Decode(raw))
                     If Not maskData.IsGradient AndAlso (decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8) Then Return Nothing
@@ -4083,7 +4083,7 @@ Namespace Services
                     ' Verlaufsachse EINMAL vorbereiten: Start- und Endpunkt in Quellpixeln, dazu
                     ' der Kehrwert des Achsenquadrats fuer die Projektion je Pixel.
                     Dim gx0, gy0, gAchseX, gAchseY, gInvLen2 As Double
-                    Dim gRadius, gEx, gEy, gRatio, gInnen As Double
+                    Dim gRadius, gEx, gEy, gRatio, gInner As Double
                     If maskData.IsGradient Then
                         gx0 = maskData.GradientStartXPercent / 100.0 * maskData.SourceWidthPixels
                         gy0 = maskData.GradientStartYPercent / 100.0 * maskData.SourceHeightPixels
@@ -4101,7 +4101,7 @@ Namespace Services
                             ' Punkten (Standard), 0 % = harte Kante genau in der Mitte. Ein Weichzeichner
                             ' waere hier der falsche Weg - die Rampe ist schon glatt, und Blur kostet
                             ' bei 45 MP echte Zeit, ohne etwas zu aendern.
-                            gInnen = Math.Max(0.02, Math.Min(1.0, maskData.GradientFeatherPercent / 100.0))
+                            gInner = Math.Max(0.02, Math.Min(1.0, maskData.GradientFeatherPercent / 100.0))
                         End If
                         If maskData.IsRadialGradient Then
                             ' Radial: die Achse ist die erste Halbachse. Ihre Richtung ist zugleich
@@ -4112,7 +4112,7 @@ Namespace Services
                             gEy = gAchseY / gRadius
                             gRatio = Math.Max(0.05, maskData.GradientRadiusRatio)
                             ' Innerer Anteil mit voller Deckung; der Rest ist der weiche Uebergang.
-                            gInnen = Math.Max(0.0, Math.Min(1.0, 1.0 - maskData.GradientFeatherPercent / 100.0))
+                            gInner = Math.Max(0.0, Math.Min(1.0, 1.0 - maskData.GradientFeatherPercent / 100.0))
                         End If
                     End If
 
@@ -4141,8 +4141,8 @@ Namespace Services
                     Dim iStride = inputMask.RowBytes
                     Dim iBuf = New Byte(iStride * pipelineInputHeight - 1) {}
                     For y = 0 To pipelineInputHeight - 1
-                        Dim syQuelle = CInt(Math.Floor((y + 0.5) * maskData.SourceHeightPixels / pipelineInputHeight))
-                        Dim sy = syQuelle - maskData.Top
+                        Dim sySource = CInt(Math.Floor((y + 0.5) * maskData.SourceHeightPixels / pipelineInputHeight))
+                        Dim sy = sySource - maskData.Top
                         Dim iRow = y * iStride
                         For x = 0 To pipelineInputWidth - 1
                             Dim sx = CInt(Math.Floor((x + 0.5) * maskData.SourceWidthPixels / pipelineInputWidth)) - maskData.Left
@@ -4150,16 +4150,16 @@ Namespace Services
                             If maskData.IsRadialGradient Then
                                 ' Abstand im gedrehten Ellipsensystem: 0 = Mittelpunkt, 1 = Rand.
                                 Dim dx = sx + maskData.Left - gx0
-                                Dim dy = syQuelle - gy0
+                                Dim dy = sySource - gy0
                                 Dim laengs = (dx * gEx + dy * gEy) / gRadius
                                 Dim quer = (-dx * gEy + dy * gEx) / (gRadius * gRatio)
                                 Dim d = Math.Sqrt(laengs * laengs + quer * quer)
-                                If d <= gInnen Then
+                                If d <= gInner Then
                                     alpha = 255
                                 ElseIf d >= 1.0 Then
                                     alpha = 0
                                 Else
-                                    Dim t2 = (d - gInnen) / Math.Max(0.000001, 1.0 - gInnen)
+                                    Dim t2 = (d - gInner) / Math.Max(0.000001, 1.0 - gInner)
                                     Dim s2 = t2 * t2 * (3.0 - 2.0 * t2)
                                     alpha = CInt(Math.Round((1.0 - s2) * 255.0))
                                 End If
@@ -4167,10 +4167,10 @@ Namespace Services
                                 ' Projektion des Pixels auf die Verlaufsachse: t = 0 am Startpunkt
                                 ' (volle Deckung), t = 1 am Endpunkt (keine). Ausserhalb wird
                                 ' geklemmt, der Verlauf gilt also fuer das GANZE Bild.
-                                Dim t = ((sx + maskData.Left - gx0) * gAchseX + (syQuelle - gy0) * gAchseY) * gInvLen2
+                                Dim t = ((sx + maskData.Left - gx0) * gAchseX + (sySource - gy0) * gAchseY) * gInvLen2
                                 ' Weichheit um die Mitte: t=0,5 bleibt der Wendepunkt, gInnen ist die
                                 ' Breite des Uebergangs (siehe oben).
-                                t = 0.5 + (t - 0.5) / gInnen
+                                t = 0.5 + (t - 0.5) / gInner
                                 If t <= 0.0 Then
                                     alpha = 255
                                 ElseIf t >= 1.0 Then
@@ -4189,11 +4189,11 @@ Namespace Services
                             ' Pinselkorrektur NACH dem Verlauf und VOR dem Umkehren: "Umkehren"
                             ' soll das fertige Ergebnis spiegeln, nicht nur den Verlaufsanteil -
                             ' sonst kaeme ein weggepinselter Bereich beim Umkehren zurueck.
-                            If korrBreite > 0 Then
+                            If corrWidth > 0 Then
                                 Dim kx = sx + maskData.Left - maskData.BrushLeft
-                                Dim ky = syQuelle - maskData.BrushTop
-                                If kx >= 0 AndAlso ky >= 0 AndAlso kx < korrBreite AndAlso ky < korrHoehe Then
-                                    Dim ki = ky * korrBreite + kx
+                                Dim ky = sySource - maskData.BrushTop
+                                If kx >= 0 AndAlso ky >= 0 AndAlso kx < corrWidth AndAlso ky < korrHoehe Then
+                                    Dim ki = ky * corrWidth + kx
                                     If korrHinzu IsNot Nothing Then alpha += korrHinzu(ki)
                                     If korrWeg IsNot Nothing Then alpha -= korrWeg(ki)
                                     If alpha < 0 Then
@@ -4379,12 +4379,12 @@ Namespace Services
             ' --- Verzerren --- (dieselbe Stelle wie im Bildweg: nach der Begradigung, vor dem
             ' Skalieren; die Stufe laesst die Masse unveraendert, deshalb aendert sich hier nur der
             ' Punkt und nicht w/h)
-            Dim verzerrung = ImageGeometryMapper.VerzerrungsMatrix(w, h,
+            Dim warp = ImageGeometryMapper.WarpMatrix(w, h,
                                  adj.PerspectiveHorizontal, adj.PerspectiveVertical,
                                  adj.PerspectiveAspect, adj.PerspectiveScale,
-                                 ImageGeometryMapper.EckenVersatz(adj))
-            If Not verzerrung.IsIdentity Then
-                Dim v = verzerrung.MapPoint(New SKPoint(CSng(x), CSng(y)))
+                                 ImageGeometryMapper.CornerOffset(adj))
+            If Not warp.IsIdentity Then
+                Dim v = warp.MapPoint(New SKPoint(CSng(x), CSng(y)))
                 x = v.X : y = v.Y
                 ' Was aus dem Rahmen kippt, wird von der Stufe abgeschnitten - fuer so einen Punkt
                 ' gibt es im Ausgabebild keine Stelle. Ohne diese Pruefung meldete der Hinweg einen
@@ -4501,13 +4501,13 @@ Namespace Services
             ' existiert immer, solange die Homographie nicht entartet ist)
             ' outW/outH, NICHT rotW/rotH: an dieser Stelle liegt der Punkt im Raum NACH der
             ' Begradigung, und genau darauf rechnet die Vorwaertsstufe.
-            Dim verzerrung = ImageGeometryMapper.VerzerrungsMatrix(outW, outH,
+            Dim warp = ImageGeometryMapper.WarpMatrix(outW, outH,
                                  adj.PerspectiveHorizontal, adj.PerspectiveVertical,
                                  adj.PerspectiveAspect, adj.PerspectiveScale,
-                                 ImageGeometryMapper.EckenVersatz(adj))
-            If Not verzerrung.IsIdentity Then
+                                 ImageGeometryMapper.CornerOffset(adj))
+            If Not warp.IsIdentity Then
                 Dim umkehr As SKMatrix = Nothing
-                If Not verzerrung.TryInvert(umkehr) Then Return False
+                If Not warp.TryInvert(umkehr) Then Return False
                 Dim v = umkehr.MapPoint(New SKPoint(CSng(x), CSng(y)))
                 x = v.X : y = v.Y
             End If
@@ -4547,44 +4547,44 @@ Namespace Services
         ''' <summary>Packt ein Alpha8-PNG in einen dichten Bytepuffer der erwarteten Groesse aus.
         ''' Nothing bei leerem String, unlesbaren Daten, falschem Farbtyp oder abweichender Groesse -
         ''' ein stiller Rueckfall auf halbe Deckung waere hier schlimmer als gar keine Korrektur.</summary>
-        Private Shared Function DecodeAlphaRaster(base64 As String, breite As Integer, hoehe As Integer) As Byte()
-            If String.IsNullOrWhiteSpace(base64) OrElse breite <= 0 OrElse hoehe <= 0 Then Return Nothing
+        Private Shared Function DecodeAlphaRaster(base64 As String, width As Integer, height As Integer) As Byte()
+            If String.IsNullOrWhiteSpace(base64) OrElse width <= 0 OrElse height <= 0 Then Return Nothing
             Try
                 Using bmp = SKBitmap.Decode(Convert.FromBase64String(base64))
                     If bmp Is Nothing OrElse bmp.ColorType <> SKColorType.Alpha8 Then Return Nothing
-                    If bmp.Width <> breite OrElse bmp.Height <> hoehe Then Return Nothing
+                    If bmp.Width <> width OrElse bmp.Height <> height Then Return Nothing
                     Dim stride = bmp.RowBytes
-                    Dim quelle = New Byte(stride * hoehe - 1) {}
-                    Marshal.Copy(bmp.GetPixels(), quelle, 0, quelle.Length)
-                    If stride = breite Then Return quelle
-                    Dim dicht = New Byte(breite * hoehe - 1) {}
-                    For y = 0 To hoehe - 1
-                        Buffer.BlockCopy(quelle, y * stride, dicht, y * breite, breite)
+                    Dim source = New Byte(stride * height - 1) {}
+                    Marshal.Copy(bmp.GetPixels(), source, 0, source.Length)
+                    If stride = width Then Return source
+                    Dim dense = New Byte(width * height - 1) {}
+                    For y = 0 To height - 1
+                        Buffer.BlockCopy(source, y * stride, dense, y * width, width)
                     Next
-                    Return dicht
+                    Return dense
                 End Using
             Catch
                 Return Nothing
             End Try
         End Function
 
-        Private Shared Function EncodeAlphaRaster(puffer As Byte(), breite As Integer, hoehe As Integer) As String
-            If puffer Is Nothing OrElse breite <= 0 OrElse hoehe <= 0 Then Return ""
-            Dim leer = True
+        Private Shared Function EncodeAlphaRaster(puffer As Byte(), width As Integer, height As Integer) As String
+            If puffer Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return ""
+            Dim empty = True
             For i = 0 To puffer.Length - 1
                 If puffer(i) <> 0 Then
-                    leer = False
+                    empty = False
                     Exit For
                 End If
             Next
-            If leer Then Return ""
-            Using bmp = New SKBitmap(breite, hoehe, SKColorType.Alpha8, SKAlphaType.Premul)
+            If empty Then Return ""
+            Using bmp = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
                 Dim stride = bmp.RowBytes
-                Dim ziel = New Byte(stride * hoehe - 1) {}
-                For y = 0 To hoehe - 1
-                    Buffer.BlockCopy(puffer, y * breite, ziel, y * stride, breite)
+                Dim target = New Byte(stride * height - 1) {}
+                For y = 0 To height - 1
+                    Buffer.BlockCopy(puffer, y * width, target, y * stride, width)
                 Next
-                Marshal.Copy(ziel, 0, bmp.GetPixels(), ziel.Length)
+                Marshal.Copy(target, 0, bmp.GetPixels(), target.Length)
                 Using image = SKImage.FromBitmap(bmp)
                     Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
                         Return Convert.ToBase64String(data.ToArray())
@@ -4622,140 +4622,140 @@ Namespace Services
         ''' WriteSelectionMaskBackToLayer), weil deren Raster zugleich die Quelle des roten Overlays
         ''' ist. MergePaintedMaskStroke ist der vorbereitete Weg dorthin und wird heute nur von der
         ''' Diagnose gefahren - siehe Audits/OFFENE_PUNKTE.md.</summary>
-        Public Shared Function ApplyMaskBrushStroke(ziel As ImageMask, strich As ImageMask,
-                                                    abziehen As Boolean) As Boolean
-            If ziel Is Nothing OrElse strich Is Nothing Then Return False
-            If ziel.IsGradient Then Return MergeGradientBrushCorrection(ziel, strich, abziehen)
-            Return MergePaintedMaskStroke(ziel, strich, abziehen)
+        Public Shared Function ApplyMaskBrushStroke(target As ImageMask, stroke As ImageMask,
+                                                    subtract As Boolean) As Boolean
+            If target Is Nothing OrElse stroke Is Nothing Then Return False
+            If target.IsGradient Then Return MergeGradientBrushCorrection(target, stroke, subtract)
+            Return MergePaintedMaskStroke(target, stroke, subtract)
         End Function
 
         ''' <summary>Strich in eine GEMALTE Maske einrechnen: hinzufügen nimmt das Maximum, abziehen
         ''' zieht ab. Das Rechteck wächst beim Hinzufügen mit; beim Abziehen bleibt es stehen, statt
         ''' es teuer neu zu vermessen - ein zu großes Rechteck mit Nullen kostet nur etwas Speicher,
         ''' ein zu kleines würde Maskenteile abschneiden.</summary>
-        Public Shared Function MergePaintedMaskStroke(mask As ImageMask, strich As ImageMask,
-                                                      abziehen As Boolean) As Boolean
-            If mask Is Nothing OrElse strich Is Nothing OrElse mask.IsGradient Then Return False
-            If strich.Right <= strich.Left OrElse strich.Bottom <= strich.Top Then Return False
-            Dim sBreite = strich.Right - strich.Left, sHoehe = strich.Bottom - strich.Top
-            Dim sPuffer = DecodeAlphaRaster(strich.PngBase64, sBreite, sHoehe)
+        Public Shared Function MergePaintedMaskStroke(mask As ImageMask, stroke As ImageMask,
+                                                      subtract As Boolean) As Boolean
+            If mask Is Nothing OrElse stroke Is Nothing OrElse mask.IsGradient Then Return False
+            If stroke.Right <= stroke.Left OrElse stroke.Bottom <= stroke.Top Then Return False
+            Dim sWidth = stroke.Right - stroke.Left, sHeight = stroke.Bottom - stroke.Top
+            Dim sPuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
             If sPuffer Is Nothing Then Return False
 
-            Dim altBreite = mask.Right - mask.Left, altHoehe = mask.Bottom - mask.Top
+            Dim oldWidth = mask.Right - mask.Left, oldHeight = mask.Bottom - mask.Top
             Dim altPuffer As Byte() = Nothing
-            If altBreite > 0 AndAlso altHoehe > 0 Then altPuffer = DecodeAlphaRaster(mask.PngBase64, altBreite, altHoehe)
+            If oldWidth > 0 AndAlso oldHeight > 0 Then altPuffer = DecodeAlphaRaster(mask.PngBase64, oldWidth, oldHeight)
 
             ' Ohne bisherige Maske ist ein ABZIEHEN gegenstandslos - sonst entstünde aus dem ersten
             ' Radiergummi-Strich eine leere Maske, die als "es gibt eine Maske" gilt.
             If altPuffer Is Nothing Then
-                If abziehen Then Return False
-                mask.SourceWidthPixels = strich.SourceWidthPixels
-                mask.SourceHeightPixels = strich.SourceHeightPixels
-                mask.Left = strich.Left : mask.Top = strich.Top
-                mask.Right = strich.Right : mask.Bottom = strich.Bottom
-                mask.PngBase64 = strich.PngBase64
+                If subtract Then Return False
+                mask.SourceWidthPixels = stroke.SourceWidthPixels
+                mask.SourceHeightPixels = stroke.SourceHeightPixels
+                mask.Left = stroke.Left : mask.Top = stroke.Top
+                mask.Right = stroke.Right : mask.Bottom = stroke.Bottom
+                mask.PngBase64 = stroke.PngBase64
                 Return True
             End If
 
-            Dim links = If(abziehen, mask.Left, Math.Min(mask.Left, strich.Left))
-            Dim oben = If(abziehen, mask.Top, Math.Min(mask.Top, strich.Top))
-            Dim rechts = If(abziehen, mask.Right, Math.Max(mask.Right, strich.Right))
-            Dim unten = If(abziehen, mask.Bottom, Math.Max(mask.Bottom, strich.Bottom))
-            Dim breite = rechts - links, hoehe = unten - oben
-            If breite <= 0 OrElse hoehe <= 0 Then Return False
+            Dim left = If(subtract, mask.Left, Math.Min(mask.Left, stroke.Left))
+            Dim top = If(subtract, mask.Top, Math.Min(mask.Top, stroke.Top))
+            Dim right = If(subtract, mask.Right, Math.Max(mask.Right, stroke.Right))
+            Dim bottom = If(subtract, mask.Bottom, Math.Max(mask.Bottom, stroke.Bottom))
+            Dim width = right - left, height = bottom - top
+            If width <= 0 OrElse height <= 0 Then Return False
 
-            Dim ziel = New Byte(breite * hoehe - 1) {}
-            Dim dx0 = mask.Left - links, dy0 = mask.Top - oben
-            For y = 0 To altHoehe - 1
-                Buffer.BlockCopy(altPuffer, y * altBreite, ziel, (y + dy0) * breite + dx0, altBreite)
+            Dim target = New Byte(width * height - 1) {}
+            Dim dx0 = mask.Left - left, dy0 = mask.Top - top
+            For y = 0 To oldHeight - 1
+                Buffer.BlockCopy(altPuffer, y * oldWidth, target, (y + dy0) * width + dx0, oldWidth)
             Next
 
-            Dim sx0 = strich.Left - links, sy0 = strich.Top - oben
-            For y = 0 To sHoehe - 1
+            Dim sx0 = stroke.Left - left, sy0 = stroke.Top - top
+            For y = 0 To sHeight - 1
                 Dim zy = y + sy0
-                If zy < 0 OrElse zy >= hoehe Then Continue For
-                Dim sRow = y * sBreite, zRow = zy * breite
-                For x = 0 To sBreite - 1
+                If zy < 0 OrElse zy >= height Then Continue For
+                Dim sRow = y * sWidth, zRow = zy * width
+                For x = 0 To sWidth - 1
                     Dim zx = x + sx0
-                    If zx < 0 OrElse zx >= breite Then Continue For
+                    If zx < 0 OrElse zx >= width Then Continue For
                     Dim v = sPuffer(sRow + x)
                     If v = 0 Then Continue For
                     Dim i = zRow + zx
-                    If abziehen Then
-                        ziel(i) = CByte(Math.Max(0, CInt(ziel(i)) - CInt(v)))
-                    ElseIf v > ziel(i) Then
-                        ziel(i) = v
+                    If subtract Then
+                        target(i) = CByte(Math.Max(0, CInt(target(i)) - CInt(v)))
+                    ElseIf v > target(i) Then
+                        target(i) = v
                     End If
                 Next
             Next
 
-            Dim kodiert = EncodeAlphaRaster(ziel, breite, hoehe)
+            Dim kodiert = EncodeAlphaRaster(target, width, height)
             If String.IsNullOrEmpty(kodiert) Then
                 ' Alles weggeradiert: die Maske ist leer, nicht "unverändert".
                 mask.PngBase64 = ""
                 mask.Left = 0 : mask.Top = 0 : mask.Right = 0 : mask.Bottom = 0
                 Return True
             End If
-            mask.Left = links : mask.Top = oben : mask.Right = rechts : mask.Bottom = unten
+            mask.Left = left : mask.Top = top : mask.Right = right : mask.Bottom = bottom
             mask.PngBase64 = kodiert
             Return True
         End Function
 
-        Public Shared Function MergeGradientBrushCorrection(mask As ImageMask, strich As ImageMask,
-                                                            abziehen As Boolean) As Boolean
-            If mask Is Nothing OrElse strich Is Nothing OrElse Not mask.IsGradient Then Return False
-            If strich.Right <= strich.Left OrElse strich.Bottom <= strich.Top Then Return False
-            Dim sBreite = strich.Right - strich.Left, sHoehe = strich.Bottom - strich.Top
-            Dim sPuffer = DecodeAlphaRaster(strich.PngBase64, sBreite, sHoehe)
+        Public Shared Function MergeGradientBrushCorrection(mask As ImageMask, stroke As ImageMask,
+                                                            subtract As Boolean) As Boolean
+            If mask Is Nothing OrElse stroke Is Nothing OrElse Not mask.IsGradient Then Return False
+            If stroke.Right <= stroke.Left OrElse stroke.Bottom <= stroke.Top Then Return False
+            Dim sWidth = stroke.Right - stroke.Left, sHeight = stroke.Bottom - stroke.Top
+            Dim sPuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
             If sPuffer Is Nothing Then Return False
 
-            Dim altBreite = mask.BrushRight - mask.BrushLeft, altHoehe = mask.BrushBottom - mask.BrushTop
+            Dim oldWidth = mask.BrushRight - mask.BrushLeft, oldHeight = mask.BrushBottom - mask.BrushTop
             Dim altHinzu As Byte() = Nothing, altWeg As Byte() = Nothing
             If mask.HasBrushCorrection Then
-                altHinzu = DecodeAlphaRaster(mask.BrushAddPngBase64, altBreite, altHoehe)
-                altWeg = DecodeAlphaRaster(mask.BrushSubtractPngBase64, altBreite, altHoehe)
+                altHinzu = DecodeAlphaRaster(mask.BrushAddPngBase64, oldWidth, oldHeight)
+                altWeg = DecodeAlphaRaster(mask.BrushSubtractPngBase64, oldWidth, oldHeight)
             End If
-            Dim hatAlt = altHinzu IsNot Nothing OrElse altWeg IsNot Nothing
+            Dim hasOld = altHinzu IsNot Nothing OrElse altWeg IsNot Nothing
 
-            Dim links = If(hatAlt, Math.Min(mask.BrushLeft, strich.Left), strich.Left)
-            Dim oben = If(hatAlt, Math.Min(mask.BrushTop, strich.Top), strich.Top)
-            Dim rechts = If(hatAlt, Math.Max(mask.BrushRight, strich.Right), strich.Right)
-            Dim unten = If(hatAlt, Math.Max(mask.BrushBottom, strich.Bottom), strich.Bottom)
-            Dim breite = rechts - links, hoehe = unten - oben
-            If breite <= 0 OrElse hoehe <= 0 Then Return False
+            Dim left = If(hasOld, Math.Min(mask.BrushLeft, stroke.Left), stroke.Left)
+            Dim top = If(hasOld, Math.Min(mask.BrushTop, stroke.Top), stroke.Top)
+            Dim right = If(hasOld, Math.Max(mask.BrushRight, stroke.Right), stroke.Right)
+            Dim bottom = If(hasOld, Math.Max(mask.BrushBottom, stroke.Bottom), stroke.Bottom)
+            Dim width = right - left, height = bottom - top
+            If width <= 0 OrElse height <= 0 Then Return False
 
-            Dim hinzu = New Byte(breite * hoehe - 1) {}
-            Dim weg = New Byte(breite * hoehe - 1) {}
-            If hatAlt Then
-                Dim dx = mask.BrushLeft - links, dy = mask.BrushTop - oben
-                For y = 0 To altHoehe - 1
-                    If altHinzu IsNot Nothing Then Buffer.BlockCopy(altHinzu, y * altBreite, hinzu, (y + dy) * breite + dx, altBreite)
-                    If altWeg IsNot Nothing Then Buffer.BlockCopy(altWeg, y * altBreite, weg, (y + dy) * breite + dx, altBreite)
+            Dim hinzu = New Byte(width * height - 1) {}
+            Dim weg = New Byte(width * height - 1) {}
+            If hasOld Then
+                Dim dx = mask.BrushLeft - left, dy = mask.BrushTop - top
+                For y = 0 To oldHeight - 1
+                    If altHinzu IsNot Nothing Then Buffer.BlockCopy(altHinzu, y * oldWidth, hinzu, (y + dy) * width + dx, oldWidth)
+                    If altWeg IsNot Nothing Then Buffer.BlockCopy(altWeg, y * oldWidth, weg, (y + dy) * width + dx, oldWidth)
                 Next
             End If
 
-            Dim zielHin = If(abziehen, weg, hinzu)
-            Dim gegen = If(abziehen, hinzu, weg)
-            Dim sx0 = strich.Left - links, sy0 = strich.Top - oben
-            For y = 0 To sHoehe - 1
-                Dim sRow = y * sBreite, zRow = (y + sy0) * breite + sx0
-                For x = 0 To sBreite - 1
+            Dim targetTo = If(subtract, weg, hinzu)
+            Dim gegen = If(subtract, hinzu, weg)
+            Dim sx0 = stroke.Left - left, sy0 = stroke.Top - top
+            For y = 0 To sHeight - 1
+                Dim sRow = y * sWidth, zRow = (y + sy0) * width + sx0
+                For x = 0 To sWidth - 1
                     Dim v = sPuffer(sRow + x)
                     If v = 0 Then Continue For
                     Dim i = zRow + x
-                    If v > zielHin(i) Then zielHin(i) = v
+                    If v > targetTo(i) Then targetTo(i) = v
                     ' Gegenrichtung an dieser Stelle zuruecknehmen (siehe Zusammenfassung).
-                    Dim rest = CInt(gegen(i)) - CInt(v)
-                    gegen(i) = CByte(Math.Max(0, rest))
+                    Dim remainder = CInt(gegen(i)) - CInt(v)
+                    gegen(i) = CByte(Math.Max(0, remainder))
                 Next
             Next
 
-            mask.BrushLeft = links
-            mask.BrushTop = oben
-            mask.BrushRight = rechts
-            mask.BrushBottom = unten
-            mask.BrushAddPngBase64 = EncodeAlphaRaster(hinzu, breite, hoehe)
-            mask.BrushSubtractPngBase64 = EncodeAlphaRaster(weg, breite, hoehe)
+            mask.BrushLeft = left
+            mask.BrushTop = top
+            mask.BrushRight = right
+            mask.BrushBottom = bottom
+            mask.BrushAddPngBase64 = EncodeAlphaRaster(hinzu, width, height)
+            mask.BrushSubtractPngBase64 = EncodeAlphaRaster(weg, width, height)
             If String.IsNullOrEmpty(mask.BrushAddPngBase64) AndAlso String.IsNullOrEmpty(mask.BrushSubtractPngBase64) Then
                 mask.BrushLeft = 0 : mask.BrushTop = 0 : mask.BrushRight = 0 : mask.BrushBottom = 0
             End If
@@ -4794,12 +4794,12 @@ Namespace Services
                     Dim db = displayBounds.Value
                     Dim minSx = Double.MaxValue, minSy = Double.MaxValue
                     Dim maxSx = Double.MinValue, maxSy = Double.MinValue
-                    Dim ecken = {(CDbl(db.Left), CDbl(db.Top)), (CDbl(db.Right), CDbl(db.Top)),
+                    Dim corners = {(CDbl(db.Left), CDbl(db.Top)), (CDbl(db.Right), CDbl(db.Top)),
                                  (CDbl(db.Left), CDbl(db.Bottom)), (CDbl(db.Right), CDbl(db.Bottom))}
                     Dim alleGetroffen = True
-                    For Each ecke In ecken
+                    For Each corner In corners
                         Dim sp As SKPoint
-                        If Not TryGeometryOutputToSourcePoint(ecke.Item1, ecke.Item2, sourceW, sourceH, adj, sp) Then
+                        If Not TryGeometryOutputToSourcePoint(corner.Item1, corner.Item2, sourceW, sourceH, adj, sp) Then
                             alleGetroffen = False
                             Exit For
                         End If
@@ -5303,7 +5303,7 @@ Namespace Services
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
                 adj.SharpenMasking,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.ColorNoiseReduction,
-                adj.FarbrauschGrob, adj.FarbrauschGrobSkala,
+                adj.FarbrauschGrob, adj.ColorNoiseCoarseScale,
                 adj.ColorNoiseAdd,
                 adj.DustScratches, adj.Haze, adj.AddNoise, adj.[Structure], adj.Glow,
                 adj.PerspectiveHorizontal, adj.PerspectiveVertical, adj.PerspectiveAspect, adj.PerspectiveScale,
@@ -5378,8 +5378,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                            ' (IsMaskedLayerRenderVisible). Ohne sie war der Schlüssel vor und nach dem
                            ' Umschalten identisch - der Vollrender bekam die gecachte Basis zurück und
                            ' die Korrektur blieb sichtbar.
-                           Dim gruppeSichtbar = adj.IsMaskedLayerRenderVisible(l)
-                           Return String.Join(":", l.Id, l.MaskId, l.IsVisible, gruppeSichtbar, l.Opacity, l.GroupId,
+                           Dim groupVisible = adj.IsMaskedLayerRenderVisible(l)
+                           Return String.Join(":", l.Id, l.MaskId, l.IsVisible, groupVisible, l.Opacity, l.GroupId,
                                               l.StackAboveAnnotationId,
                                               l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
                                               KeyPart(l.FillAngle), l.FillInverted,
@@ -7671,9 +7671,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         targetWidth = 0
                     End If
                 Else
-                    Dim faktor = Math.Min(targetWidth / CDbl(source.Width), targetHeight / CDbl(source.Height))
-                    targetWidth = Math.Max(1, CInt(Math.Round(source.Width * faktor)))
-                    targetHeight = Math.Max(1, CInt(Math.Round(source.Height * faktor)))
+                    Dim factor = Math.Min(targetWidth / CDbl(source.Width), targetHeight / CDbl(source.Height))
+                    targetWidth = Math.Max(1, CInt(Math.Round(source.Width * factor)))
+                    targetHeight = Math.Max(1, CInt(Math.Round(source.Height * factor)))
                 End If
             End If
 
@@ -7685,9 +7685,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' Faktor), sonst wuerde die Deckelung je Achse das Bild doch wieder verzerren.
             If adj.NoResizeUpscale AndAlso source.Width > 0 AndAlso source.Height > 0 Then
                 If adj.LockResizeAspect Then   ' einheitlicher Faktor, sonst verzerrt die Deckelung
-                    Dim deckel = Math.Min(1.0, Math.Min(targetWidth / CDbl(source.Width), targetHeight / CDbl(source.Height)))
-                    targetWidth = Math.Max(1, CInt(Math.Round(source.Width * deckel)))
-                    targetHeight = Math.Max(1, CInt(Math.Round(source.Height * deckel)))
+                    Dim cap = Math.Min(1.0, Math.Min(targetWidth / CDbl(source.Width), targetHeight / CDbl(source.Height)))
+                    targetWidth = Math.Max(1, CInt(Math.Round(source.Width * cap)))
+                    targetHeight = Math.Max(1, CInt(Math.Round(source.Height * cap)))
                 Else
                     targetWidth = Math.Min(targetWidth, source.Width)
                     targetHeight = Math.Min(targetHeight, source.Height)
@@ -7728,14 +7728,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function ApplyDocumentBackground(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
             If String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor) Then Return source
-            Dim farbe As SKColor
-            If Not SKColor.TryParse(adj.CanvasBackgroundColor, farbe) Then Return source
+            Dim color As SKColor
+            If Not SKColor.TryParse(adj.CanvasBackgroundColor, color) Then Return source
             ' Voellig durchsichtig heisst: keine Farbe gewuenscht.
-            If farbe.Alpha = 0 Then Return source
+            If color.Alpha = 0 Then Return source
 
             Dim ergebnis = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(ergebnis)
-                canvas.Clear(farbe)
+                canvas.Clear(color)
                 canvas.DrawBitmap(source, 0, 0)
             End Using
             Return ergebnis
@@ -7882,8 +7882,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim m = ImageGeometryMapper.SourceToDisplayMatrix(preWidth, preHeight, rotationDegrees, flipH, flipV)
             Dim points As New List(Of StrokePoint)(stroke.Points.Count)
             For Each p In stroke.Points
-                Dim abgebildet = m.MapPoint(New SKPoint(CSng(p.X), CSng(p.Y)))
-                points.Add(New StrokePoint(abgebildet.X, abgebildet.Y))
+                Dim mapped = m.MapPoint(New SKPoint(CSng(p.X), CSng(p.Y)))
+                points.Add(New StrokePoint(mapped.X, mapped.Y))
             Next
             Return New BrushStroke(points)
         End Function
@@ -7973,8 +7973,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' ApplyMaskedAdjustmentLayers, zurück) - bei 24 MP rund 300 MB Speicherverkehr pro
             ' Korrektur und Frame. Jetzt bleibt es bei einer Umwandlung am Anfang, einer am Ende und
             ' dem unvermeidbaren Klon je Korrektur.
-            Dim zielFarbtyp = result.ColorType
-            If zielFarbtyp <> SKColorType.Bgra8888 Then
+            Dim targetColorType = result.ColorType
+            If targetColorType <> SKColorType.Bgra8888 Then
                 result = ReplaceBitmap(result, ConvertBitmapToColorType(result, SKColorType.Bgra8888))
             End If
 
@@ -7992,8 +7992,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End If
             Next
 
-            If result.ColorType <> zielFarbtyp Then
-                result = ReplaceBitmap(result, ConvertBitmapToColorType(result, zielFarbtyp))
+            If result.ColorType <> targetColorType Then
+                result = ReplaceBitmap(result, ConvertBitmapToColorType(result, targetColorType))
             End If
             Return result
         End Function
@@ -8086,7 +8086,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
                                            "Normal")
                 ElseIf HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) OrElse
-                       HatVerzerrung(annotation) Then
+                       HasWarp(annotation) Then
                     DrawAnnotationViaLayer(canvas, annotation, renderAnnotation, kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
                                            renderAnnotation.BlendMode)
@@ -8113,32 +8113,32 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Die Ebene WAECHST dabei: eine Verzerrung schiebt Bildpunkte nach aussen, und was ueber den
         ''' bisherigen Rand hinausgeht, waere sonst abgeschnitten. <paramref name="offsetX"/> und
         ''' <paramref name="offsetY"/> werden entsprechend nachgefuehrt.</summary>
-        Friend Shared Function VerzerreObjektEbene(ebene As SKBitmap, v As ObjektVerzerrung,
-                                                   bildBreite As Integer, bildHoehe As Integer,
+        Friend Shared Function WarpObjectLayer(ebene As SKBitmap, v As ObjectWarp,
+                                                   imageWidth As Integer, imageHeight As Integer,
                                                    ByRef offsetX As Integer, ByRef offsetY As Integer) As SKBitmap
             If ebene Is Nothing OrElse v Is Nothing OrElse v.IstLeer Then Return Nothing
-            If bildBreite <= 0 OrElse bildHoehe <= 0 Then Return Nothing
+            If imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
 
-            Const Stufen As Integer = 24
-            Dim knoten = (Stufen + 1) * (Stufen + 1)
+            Const Steps As Integer = 24
+            Dim node = (Steps + 1) * (Steps + 1)
 
             ' Wie weit sich ein Punkt der Ebene verschiebt, in BILDkoordinaten. Erst einmal fuer die
             ' Ecken und den Rand, um zu wissen, wie weit die Ebene wachsen muss.
-            Dim zielX(knoten - 1) As Single, zielY(knoten - 1) As Single
-            Dim quellX(knoten - 1) As Single, quellY(knoten - 1) As Single
+            Dim targetX(node - 1) As Single, targetY(node - 1) As Single
+            Dim quellX(node - 1) As Single, quellY(node - 1) As Single
             Dim minX = Double.MaxValue, minY = Double.MaxValue
             Dim maxX = Double.MinValue, maxY = Double.MinValue
 
-            For zi = 0 To Stufen
-                For si = 0 To Stufen
-                    Dim i = zi * (Stufen + 1) + si
+            For rowIdx = 0 To Steps
+                For colIdx = 0 To Steps
+                    Dim i = rowIdx * (Steps + 1) + colIdx
                     ' Der Knoten in Ebenenkoordinaten, dann in Bildkoordinaten.
-                    Dim ex = si / CDbl(Stufen) * ebene.Width
-                    Dim ey = zi / CDbl(Stufen) * ebene.Height
+                    Dim ex = colIdx / CDbl(Steps) * ebene.Width
+                    Dim ey = rowIdx / CDbl(Steps) * ebene.Height
                     Dim bx = offsetX + ex, by = offsetY + ey
-                    Dim z = VerschiebePunkt(v, bx, by, bildBreite, bildHoehe)
-                    zielX(i) = CSng(z.X)
-                    zielY(i) = CSng(z.Y)
+                    Dim z = MovePoint(v, bx, by, imageWidth, imageHeight)
+                    targetX(i) = CSng(z.X)
+                    targetY(i) = CSng(z.Y)
                     quellX(i) = CSng(ex)
                     quellY(i) = CSng(ey)
                     If z.X < minX Then minX = z.X
@@ -8159,13 +8159,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If neuB <= 0 OrElse neuH <= 0 Then Return Nothing
             If neuB > ebene.Width * 20 + 64 OrElse neuH > ebene.Height * 20 + 64 Then Return Nothing
 
-            For i = 0 To knoten - 1
-                zielX(i) = CSng(zielX(i) - neuX)
-                zielY(i) = CSng(zielY(i) - neuY)
+            For i = 0 To node - 1
+                targetX(i) = CSng(targetX(i) - neuX)
+                targetY(i) = CSng(targetY(i) - neuY)
             Next
 
-            Dim ergebnis = ImageGeometryMapper.WarpOverGridTo(ebene, neuB, neuH, Stufen, Stufen,
-                                                                     zielX, zielY, quellX, quellY)
+            Dim ergebnis = ImageGeometryMapper.WarpOverGridTo(ebene, neuB, neuH, Steps, Steps,
+                                                                     targetX, targetY, quellX, quellY)
             If ergebnis Is Nothing Then Return Nothing
             offsetX = neuX
             offsetY = neuY
@@ -8174,45 +8174,45 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ''' <summary>Wohin ein Bildpunkt durch die Verzerrung wandert. Alle drei Arten an einer
         ''' Stelle, damit die Zuordnung Punkt zu Ziel nur einmal existiert.</summary>
-        Private Shared Function VerschiebePunkt(v As ObjektVerzerrung, bx As Double, by As Double,
-                                                bildBreite As Integer, bildHoehe As Integer) As SKPoint
+        Private Shared Function MovePoint(v As ObjectWarp, bx As Double, by As Double,
+                                                imageWidth As Integer, imageHeight As Integer) As SKPoint
             Select Case v.Art
                 Case "Perspektive"
                     ' Bilineare Abbildung des Einheitsquadrats auf das verzerrte Viereck. Genau genug
                     ' fuer ein Objekt und ohne die Sonderfaelle einer projektiven Matrix.
-                    Dim u = bx / bildBreite, w = by / bildHoehe
+                    Dim u = bx / imageWidth, w = by / imageHeight
                     Dim e = v.Ecken
-                    Dim oben = (e(0) + (e(2) - e(0)) * u, e(1) + (e(3) - e(1)) * u)
-                    Dim unten = (e(6) + (e(4) - e(6)) * u, e(7) + (e(5) - e(7)) * u)
-                    Dim px = oben.Item1 + (unten.Item1 - oben.Item1) * w
-                    Dim py = oben.Item2 + (unten.Item2 - oben.Item2) * w
-                    Return New SKPoint(CSng(px / 100.0 * bildBreite), CSng(py / 100.0 * bildHoehe))
+                    Dim top = (e(0) + (e(2) - e(0)) * u, e(1) + (e(3) - e(1)) * u)
+                    Dim bottom = (e(6) + (e(4) - e(6)) * u, e(7) + (e(5) - e(7)) * u)
+                    Dim px = top.Item1 + (bottom.Item1 - top.Item1) * w
+                    Dim py = top.Item2 + (bottom.Item2 - top.Item2) * w
+                    Return New SKPoint(CSng(px / 100.0 * imageWidth), CSng(py / 100.0 * imageHeight))
 
                 Case "Gitter"
                     ' Zwischen den vier umgebenden Stuetzpunkten interpolieren.
-                    Dim u = Math.Max(0.0, Math.Min(1.0, bx / bildBreite)) * v.Columns
-                    Dim w = Math.Max(0.0, Math.Min(1.0, by / bildHoehe)) * v.Rows
+                    Dim u = Math.Max(0.0, Math.Min(1.0, bx / imageWidth)) * v.Columns
+                    Dim w = Math.Max(0.0, Math.Min(1.0, by / imageHeight)) * v.Rows
                     Dim s0 = Math.Max(0, Math.Min(v.Columns - 1, CInt(Math.Floor(u))))
                     Dim z0 = Math.Max(0, Math.Min(v.Rows - 1, CInt(Math.Floor(w))))
                     Dim tu = u - s0, tw = w - z0
-                    Dim K = Function(si As Integer, zi As Integer) As (X As Double, Y As Double)
-                                Dim i = (zi * (v.Columns + 1) + si) * 2
-                                Return (v.Knoten(i), v.Knoten(i + 1))
+                    Dim K = Function(colIdx As Integer, rowIdx As Integer) As (X As Double, Y As Double)
+                                Dim i = (rowIdx * (v.Columns + 1) + colIdx) * 2
+                                Return (v.Nodes(i), v.Nodes(i + 1))
                             End Function
                     Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
                     Dim oben = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
                     Dim unten = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
                     Dim px = oben.Item1 + (unten.Item1 - oben.Item1) * tw
                     Dim py = oben.Item2 + (unten.Item2 - oben.Item2) * tw
-                    Return New SKPoint(CSng(px / 100.0 * bildBreite), CSng(py / 100.0 * bildHoehe))
+                    Return New SKPoint(CSng(px / 100.0 * imageWidth), CSng(py / 100.0 * imageHeight))
 
                 Case "Linien"
                     Dim qp(v.LineSource.Length - 1) As Double
                     Dim zp(v.LineTarget.Length - 1) As Double
                     For i = 0 To qp.Length - 1
                         Dim istX = (i Mod 2) = 0
-                        qp(i) = v.LineSource(i) / 100.0 * If(istX, bildBreite, bildHoehe)
-                        zp(i) = v.LineTarget(i) / 100.0 * If(istX, bildBreite, bildHoehe)
+                        qp(i) = v.LineSource(i) / 100.0 * If(istX, imageWidth, imageHeight)
+                        zp(i) = v.LineTarget(i) / 100.0 * If(istX, imageWidth, imageHeight)
                     Next
                     ' Das Feld sagt, WOHER ein Zielpunkt seine Farbe holt. Fuer ein Objekt brauchen
                     ' wir die Gegenrichtung - wohin ein Punkt wandert -, also werden Quelle und Ziel
@@ -8228,10 +8228,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' nahm der direkte Weg jedes Objekt ohne Anpassungen und ohne Mischmodus - also die
         ''' allermeisten -, und der zeichnet unverzerrt: die Verzerrung stand im Objekt, kam im Bild
         ''' aber nie an.</summary>
-        Private Shared Function HatVerzerrung(annotation As ImageAnnotation) As Boolean
+        Private Shared Function HasWarp(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
-            If annotation.EigeneVerzerrung IsNot Nothing AndAlso Not annotation.EigeneVerzerrung.IstLeer Then Return True
-            Return annotation.Verzerrung IsNot Nothing AndAlso Not annotation.Verzerrung.IstLeer
+            If annotation.OwnWarp IsNot Nothing AndAlso Not annotation.OwnWarp.IstLeer Then Return True
+            Return annotation.Warp IsNot Nothing AndAlso Not annotation.Warp.IstLeer
         End Function
 
         Private Shared Sub DrawAnnotationViaLayer(canvas As SKCanvas, annotation As ImageAnnotation,
@@ -8250,7 +8250,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' VERZERREN, bevor die Objektanpassungen greifen: die Verzerrung ist Geometrie und
                 ' gehoert vor die Farbe, so wie beim Bild auch. Die Ebene kann dabei wachsen, deshalb
                 ' wandert der Versatz mit.
-                Dim gezeichnet = layer
+                Dim drawn = layer
                 Dim zwischen As SKBitmap = Nothing
                 Dim eigene As SKBitmap = Nothing
                 Dim vx = offsetX, vy = offsetY
@@ -8258,8 +8258,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' ERST die eigene Verzerrung des Objekts, DANN die des Bildes. Die eigene beschreibt
                 ' seine Form, die des Bildes, wo es im Bild liegt - in dieser Reihenfolge gelesen
                 ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
-                If annotation IsNot Nothing AndAlso annotation.EigeneVerzerrung IsNot Nothing AndAlso
-                   Not annotation.EigeneVerzerrung.IstLeer Then
+                If annotation IsNot Nothing AndAlso annotation.OwnWarp IsNot Nothing AndAlso
+                   Not annotation.OwnWarp.IstLeer Then
                     ' Der Bezug ist das OBJEKTRECHTECK, nicht die Ebene: die eigene Verzerrung steht in
                     ' Prozent DES OBJEKTS, die Ebene ist aber so gross wie die gerenderte Flaeche. Mit
                     ' der Ebene als Bezug las eine kleine Verzerrung sich als eine ueber das ganze
@@ -8268,9 +8268,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Dim rw = Math.Max(1, CInt(Math.Round(rect.Width)))
                     Dim rh = Math.Max(1, CInt(Math.Round(rect.Height)))
                     Dim ox = offsetX - rx, oy = offsetY - ry
-                    zwischen = VerzerreObjektEbene(layer, annotation.EigeneVerzerrung, rw, rh, ox, oy)
+                    zwischen = WarpObjectLayer(layer, annotation.OwnWarp, rw, rh, ox, oy)
                     If zwischen IsNot Nothing Then
-                        gezeichnet = zwischen
+                        drawn = zwischen
                         ' Der zurueckgegebene Versatz liegt im Raum des Rechtecks und muss zurueck in
                         ' Bildkoordinaten.
                         vx = rx + ox
@@ -8278,22 +8278,22 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     End If
                 End If
 
-                If annotation IsNot Nothing AndAlso annotation.Verzerrung IsNot Nothing AndAlso
-                   Not annotation.Verzerrung.IstLeer Then
-                    eigene = VerzerreObjektEbene(gezeichnet, annotation.Verzerrung, sourceWidth, sourceHeight, vx, vy)
-                    If eigene IsNot Nothing Then gezeichnet = eigene
+                If annotation IsNot Nothing AndAlso annotation.Warp IsNot Nothing AndAlso
+                   Not annotation.Warp.IstLeer Then
+                    eigene = WarpObjectLayer(drawn, annotation.Warp, sourceWidth, sourceHeight, vx, vy)
+                    If eigene IsNot Nothing Then drawn = eigene
                 End If
 
                 Try
                     If HasObjectAdjustments(annotation) Then
                         Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
-                        objectAdj.SourceWidthPixels = gezeichnet.Width
-                        objectAdj.SourceHeightPixels = gezeichnet.Height
-                        Using processedLayer = ProcessBitmapBase(gezeichnet, objectAdj)
+                        objectAdj.SourceWidthPixels = drawn.Width
+                        objectAdj.SourceHeightPixels = drawn.Height
+                        Using processedLayer = ProcessBitmapBase(drawn, objectAdj)
                             DrawAnnotationLayerAt(canvas, processedLayer, blendModeName, vx - offsetX, vy - offsetY)
                         End Using
                     Else
-                        DrawAnnotationLayerAt(canvas, gezeichnet, blendModeName, vx - offsetX, vy - offsetY)
+                        DrawAnnotationLayerAt(canvas, drawn, blendModeName, vx - offsetX, vy - offsetY)
                     End If
                 Finally
                     eigene?.Dispose()
@@ -8888,8 +8888,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         Using font = CreateFont(annotation.FontFamily, Math.Max(1.0F, annotation.FontSizePixels), annotation.Bold, annotation.Italic)
                             ' Abstand einrechnen - sonst weicht die Einpassung vom gezeichneten
                             ' Text ab, und beim Kreis liefe der Text ueber den Umfang hinaus.
-                            Dim abstand = font.Size * annotation.LetterSpacingPercent / 100.0F
-                            Dim textWidth = MeasureTextSpaced(font, text, abstand)
+                            Dim distance = font.Size * annotation.LetterSpacingPercent / 100.0F
+                            Dim textWidth = MeasureTextSpaced(font, text, distance)
                             If textWidth <= 0 Then Return 1.0F
                             ' StartsWith statt Equals: "CircleInverted" ist geometrisch derselbe
                             ' geschlossene Kreis und braucht dieselbe Deckelung. Mit Equals waere
@@ -8946,10 +8946,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     ' INNEN und dem Fuss nach aussen - der Text liegt gleichsam auf der Innenseite
                     ' des Rings. Es ist derselbe Ort wie bei "Kreis", nur die Schrift ist auf der
                     ' Linie umgeschlagen.
-                    Dim basisRichtung = If(inverted, -1.0, 1.0)
-                    Dim startAngle = Math.PI / 2.0 + basisRichtung * startOffset / 100.0 * 2.0 * Math.PI
+                    Dim baseDirection = If(inverted, -1.0, 1.0)
+                    Dim startAngle = Math.PI / 2.0 + baseDirection * startOffset / 100.0 * 2.0 * Math.PI
                     ' Negative Kruemmung dreht die Laufrichtung wie bisher zusaetzlich um.
-                    Dim direction = If(amount < 0, -basisRichtung, basisRichtung)
+                    Dim direction = If(amount < 0, -baseDirection, baseDirection)
                     For i = 0 To Steps
                         Dim a = startAngle + direction * 2.0 * Math.PI * i / Steps
                         Dim px = CSng(cx + radius * Math.Cos(a))
@@ -10305,8 +10305,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             For col As Integer = 0 To modules(row).Count - 1
                                 If modules(row)(col) Then
                                     ' Math.Ceiling liefert Double, DrawRect nimmt Single.
-                                    Dim kante = CSng(Math.Ceiling(cell))
-                                    canvas.DrawRect(left + col * cell, top + row * cell, kante, kante, fg)
+                                    Dim edge = CSng(Math.Ceiling(cell))
+                                    canvas.DrawRect(left + col * cell, top + row * cell, edge, edge, fg)
                                 End If
                             Next
                         Next
@@ -10361,19 +10361,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim d As Single = 0.0F
                 For Each ch In text
                     Dim einzeln = ch.ToString()
-                    Dim breite = font.MeasureText(einzeln)
-                    Dim mitte = d + breite / 2.0F
-                    If mitte > laenge Then Exit For
+                    Dim width = font.MeasureText(einzeln)
+                    Dim center = d + width / 2.0F
+                    If center > laenge Then Exit For
                     Dim pos As SKPoint, tangente As SKPoint
-                    If measure.GetPositionAndTangent(mitte, pos, tangente) Then
-                        Dim winkel = CSng(Math.Atan2(tangente.Y, tangente.X) * 180.0 / Math.PI)
-                        Dim zustand = canvas.Save()
+                    If measure.GetPositionAndTangent(center, pos, tangente) Then
+                        Dim angle = CSng(Math.Atan2(tangente.Y, tangente.X) * 180.0 / Math.PI)
+                        Dim state = canvas.Save()
                         canvas.Translate(pos.X, pos.Y)
-                        canvas.RotateDegrees(winkel)
-                        canvas.DrawText(einzeln, -breite / 2.0F, 0, font, paint)
-                        canvas.RestoreToCount(zustand)
+                        canvas.RotateDegrees(angle)
+                        canvas.DrawText(einzeln, -width / 2.0F, 0, font, paint)
+                        canvas.RestoreToCount(state)
                     End If
-                    d += breite + spacing
+                    d += width + spacing
                 Next
             End Using
         End Sub
@@ -10539,19 +10539,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim dstBuf = New Byte(srcBuf.Length - 1) {}
             Dim w = source.Width
             Dim h = source.Height
-            Dim mitte = 1.0F + 4.0F * amount
+            Dim center = 1.0F + 4.0F * amount
 
             ForEachRow(w, h,
                 Sub(y)
-                    Dim oben = If(y > 0, (y - 1) * stride, 0)
-                    Dim mittig = y * stride
-                    Dim unten = If(y < h - 1, (y + 1) * stride, (h - 1) * stride)
+                    Dim top = If(y > 0, (y - 1) * stride, 0)
+                    Dim centered = y * stride
+                    Dim bottom = If(y < h - 1, (y + 1) * stride, (h - 1) * stride)
                     For x = 0 To w - 1
-                        Dim o = mittig + x * 4
-                        Dim links = mittig + If(x > 0, (x - 1) * 4, 0)
-                        Dim rechts = mittig + If(x < w - 1, (x + 1) * 4, (w - 1) * 4)
-                        Dim ob = oben + x * 4
-                        Dim un = unten + x * 4
+                        Dim o = centered + x * 4
+                        Dim left = centered + If(x > 0, (x - 1) * 4, 0)
+                        Dim right = centered + If(x < w - 1, (x + 1) * 4, (w - 1) * 4)
+                        Dim ob = top + x * 4
+                        Dim un = bottom + x * 4
 
                         Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
                         ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
@@ -10559,15 +10559,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         Dim rr2 As Integer, rg As Integer, rb As Integer, ra As Integer
                         Dim tr As Integer, tg As Integer, tb As Integer, ta As Integer
                         Dim br As Integer, bg As Integer, bb As Integer, ba As Integer
-                        ReadUnpremultiplied(srcBuf, links, ri, gi, bi, ai, lr, lg, lb, la)
-                        ReadUnpremultiplied(srcBuf, rechts, ri, gi, bi, ai, rr2, rg, rb, ra)
+                        ReadUnpremultiplied(srcBuf, left, ri, gi, bi, ai, lr, lg, lb, la)
+                        ReadUnpremultiplied(srcBuf, right, ri, gi, bi, ai, rr2, rg, rb, ra)
                         ReadUnpremultiplied(srcBuf, ob, ri, gi, bi, ai, tr, tg, tb, ta)
                         ReadUnpremultiplied(srcBuf, un, ri, gi, bi, ai, br, bg, bb, ba)
 
                         WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                            ClampToByte(cr * mitte - amount * (lr + rr2 + tr + br)),
-                            ClampToByte(cg * mitte - amount * (lg + rg + tg + bg)),
-                            ClampToByte(cb * mitte - amount * (lb + rb + tb + bb)), a)
+                            ClampToByte(cr * center - amount * (lr + rr2 + tr + br)),
+                            ClampToByte(cg * center - amount * (lg + rg + tg + bg)),
+                            ClampToByte(cb * center - amount * (lb + rb + tb + bb)), a)
                     Next
                 End Sub)
 
@@ -10638,10 +10638,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' statt zu einer Bedingung, an die jemand denken muss.</summary>
         Private Shared Function ApplyPerspective(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
-            Dim m = ImageGeometryMapper.VerzerrungsMatrix(source.Width, source.Height,
+            Dim m = ImageGeometryMapper.WarpMatrix(source.Width, source.Height,
                                                           adj.PerspectiveHorizontal, adj.PerspectiveVertical,
                                                           adj.PerspectiveAspect, adj.PerspectiveScale,
-                                                          ImageGeometryMapper.EckenVersatz(adj))
+                                                          ImageGeometryMapper.CornerOffset(adj))
             ' Unbenutzt heisst unbenutzt: kein Umkopieren, keine Neuabtastung.
             If m.IsIdentity Then Return source
 
@@ -10775,7 +10775,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             $"refused: .fpx-Ziel nicht moeglich target={IO.Path.GetFileName(targetPath)}")
                         Return False
                     End If
-                    Dim format = If(ext = ".png", SKEncodedImageFormat.Png,
+                    Dim fileFormat = If(ext = ".png", SKEncodedImageFormat.Png,
                                  If(ext = ".webp", SKEncodedImageFormat.Webp,
                                     SKEncodedImageFormat.Jpeg))
 
@@ -10794,7 +10794,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         ' ausgeblendeter Hintergrund) liefen beim Encode auf SCHWARZ
                         '. Auf WEISS flatten - wie Photoshop.
                         Dim toEncode = processed
-                        If isPdf OrElse format = SKEncodedImageFormat.Jpeg Then
+                        If isPdf OrElse fileFormat = SKEncodedImageFormat.Jpeg Then
                             toEncode = FlattenAlphaToWhite(processed)
                         End If
                         Try
@@ -10805,7 +10805,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                                       AppSettingsService.Load().ToPrintOptions()) Then Return False
                             Else
                                 Using image = SKImage.FromBitmap(toEncode)
-                                    Using data = image.Encode(format, quality)
+                                    Using data = image.Encode(fileFormat, quality)
                                         ' Atomar: erst daneben schreiben, dann darüberbewegen - ein
                                         ' abgebrochener Encode darf das Original nicht zerstören.
                                         WriteFileAtomic(targetPath, Sub(fs) data.SaveTo(fs))
@@ -11986,10 +11986,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
             Dim rad = degrees * Math.PI / 180.0
             Dim cosR = Math.Cos(rad), sinR = Math.Sin(rad)
-            Dim ecken = {(CDbl(mask.Left), CDbl(mask.Top)), (CDbl(mask.Right), CDbl(mask.Top)),
+            Dim corners = {(CDbl(mask.Left), CDbl(mask.Top)), (CDbl(mask.Right), CDbl(mask.Top)),
                          (CDbl(mask.Right), CDbl(mask.Bottom)), (CDbl(mask.Left), CDbl(mask.Bottom))}
             Dim minX = Double.MaxValue, minY = Double.MaxValue, maxX = Double.MinValue, maxY = Double.MinValue
-            For Each e In ecken
+            For Each e In corners
                 Dim dx = e.Item1 - pivotX, dy = e.Item2 - pivotY
                 Dim nx = pivotX + dx * cosR - dy * sinR
                 Dim ny = pivotY + dx * sinR + dy * cosR
@@ -12014,8 +12014,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         Using paint = New SKPaint With {.IsAntialias = True}
                             ' Ueber SKImage, weil nur DrawImage die Abtastung entgegennimmt -
                             ' DrawBitmap hat dafuer keine Ueberladung mehr.
-                            Using bild = SKImage.FromBitmap(decoded)
-                                canvas.DrawImage(bild, New SKRect(mask.Left, mask.Top,
+                            Using image = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(image, New SKRect(mask.Left, mask.Top,
                                                                   mask.Left + decoded.Width, mask.Top + decoded.Height),
                                                  New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
                             End Using
@@ -12087,13 +12087,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If mask Is Nothing OrElse String.IsNullOrWhiteSpace(mask.PngBase64) Then Return False
             If scaleX <= 0 OrElse scaleY <= 0 Then Return False
 
-            Dim neuLinks = pivotX + (mask.Left - pivotX) * scaleX + offsetX
-            Dim neuOben = pivotY + (mask.Top - pivotY) * scaleY + offsetY
-            Dim neuRechts = pivotX + (mask.Right - pivotX) * scaleX + offsetX
-            Dim neuUnten = pivotY + (mask.Bottom - pivotY) * scaleY + offsetY
+            Dim newLeft = pivotX + (mask.Left - pivotX) * scaleX + offsetX
+            Dim newTop = pivotY + (mask.Top - pivotY) * scaleY + offsetY
+            Dim newRight = pivotX + (mask.Right - pivotX) * scaleX + offsetX
+            Dim newBottom = pivotY + (mask.Bottom - pivotY) * scaleY + offsetY
 
-            Dim l = CInt(Math.Round(neuLinks)), t = CInt(Math.Round(neuOben))
-            Dim r = CInt(Math.Round(neuRechts)), b = CInt(Math.Round(neuUnten))
+            Dim l = CInt(Math.Round(newLeft)), t = CInt(Math.Round(newTop))
+            Dim r = CInt(Math.Round(newRight)), b = CInt(Math.Round(newBottom))
             Dim w = Math.Max(1, r - l), h = Math.Max(1, b - t)
 
             Dim decoded As SKBitmap = Nothing
@@ -12109,8 +12109,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Using canvas = New SKCanvas(skaliert)
                         canvas.Clear(SKColors.Transparent)
                         Using paint = New SKPaint With {.IsAntialias = True}
-                            Using bild = SKImage.FromBitmap(decoded)
-                                canvas.DrawImage(bild, New SKRect(0, 0, w, h),
+                            Using image = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(image, New SKRect(0, 0, w, h),
                                                  New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
                             End Using
                         End Using
@@ -12158,7 +12158,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' <paramref name="workingFull"/> ist das Arbeitsbild, falls schon eines vorliegt; sonst
         ''' wird die Quelle gelesen. Es wird HIER verbraucht, der Aufrufer gibt es nicht selbst
         ''' frei.</summary>
-        Public Shared Function RenderAnzeigeBild(sourcePath As String, adj As ImageAdjustments,
+        Public Shared Function RenderDisplayImage(sourcePath As String, adj As ImageAdjustments,
                                                  Optional workingFull As SKBitmap = Nothing) As SKBitmap
             Try
                 Using original = If(workingFull, DecodeOriented(sourcePath))
@@ -12175,7 +12175,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                           ByRef bounds As SKRectI,
                                                           Optional workingFull As SKBitmap = Nothing) As SKBitmap
             bounds = SKRectI.Empty
-            Using processed = RenderAnzeigeBild(sourcePath, adj, workingFull)
+            Using processed = RenderDisplayImage(sourcePath, adj, workingFull)
                 If processed Is Nothing Then Return Nothing
                 Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds)
             End Using
@@ -12291,10 +12291,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                         Dim bo = y * blurStride
                                                         Dim co = y * coarseStride
                                                         For x = 0 To source.Width - 1
-                                                            Dim si = so + x * 4
+                                                            Dim colIdx = so + x * 4
                                                             Dim bi = bo + x * 4
                                                             ' Rec.601-Luma in Ganzzahlarithmetik (x1024).
-                                                            Dim lumaSrc = (299 * CInt(srcBuf(si + 2)) + 587 * CInt(srcBuf(si + 1)) + 114 * CInt(srcBuf(si))) \ 1000
+                                                            Dim lumaSrc = (299 * CInt(srcBuf(colIdx + 2)) + 587 * CInt(srcBuf(colIdx + 1)) + 114 * CInt(srcBuf(colIdx))) \ 1000
                                                             Dim mix0 = CDbl(blurBuf(bi))
                                                             Dim mix1 = CDbl(blurBuf(bi + 1))
                                                             Dim mix2 = CDbl(blurBuf(bi + 2))
@@ -12304,7 +12304,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                                 mix1 = CDbl(coarseBuf(ci + 1))
                                                                 mix2 = CDbl(coarseBuf(ci + 2))
                                                             End If
-                                                            Dim chroma = (Math.Abs(CInt(srcBuf(si + 2)) - lumaSrc) + Math.Abs(CInt(srcBuf(si)) - lumaSrc)) / 2.0
+                                                            Dim chroma = (Math.Abs(CInt(srcBuf(colIdx + 2)) - lumaSrc) + Math.Abs(CInt(srcBuf(colIdx)) - lumaSrc)) / 2.0
                                                             Dim schutz = 1.0 - Math.Max(0.0, Math.Min(1.0, (chroma - schutzVon) / (schutzBis - schutzVon)))
                                                             Dim wirkung = fein * schutz
                                                             Dim lumaMix = (299 * mix2 + 587 * mix1 + 114 * mix0) / 1000.0
@@ -12315,10 +12315,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                             Dim nb0 = mix0 + delta
                                                             Dim nb1 = mix1 + delta
                                                             Dim nb2 = mix2 + delta
-                                                            dstBuf(si) = ClampToByte(CInt(srcBuf(si)) + (nb0 - CInt(srcBuf(si))) * wirkung)
-                                                            dstBuf(si + 1) = ClampToByte(CInt(srcBuf(si + 1)) + (nb1 - CInt(srcBuf(si + 1))) * wirkung)
-                                                            dstBuf(si + 2) = ClampToByte(CInt(srcBuf(si + 2)) + (nb2 - CInt(srcBuf(si + 2))) * wirkung)
-                                                            dstBuf(si + 3) = srcBuf(si + 3)
+                                                            dstBuf(colIdx) = ClampToByte(CInt(srcBuf(colIdx)) + (nb0 - CInt(srcBuf(colIdx))) * wirkung)
+                                                            dstBuf(colIdx + 1) = ClampToByte(CInt(srcBuf(colIdx + 1)) + (nb1 - CInt(srcBuf(colIdx + 1))) * wirkung)
+                                                            dstBuf(colIdx + 2) = ClampToByte(CInt(srcBuf(colIdx + 2)) + (nb2 - CInt(srcBuf(colIdx + 2))) * wirkung)
+                                                            dstBuf(colIdx + 3) = srcBuf(colIdx + 3)
                                                         Next
                                                     End Sub)
             blurred.Dispose()
@@ -12558,7 +12558,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End If
 
                 Dim dstBuf = New Byte(srcBuf.Length - 1) {}
-                Dim faktor = amount * strengthMultiplier
+                Dim factor = amount * strengthMultiplier
                 Dim width = source.Width
 
                 ForEachRow(width, source.Height,
@@ -12595,9 +12595,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                 End If
                             End If
 
-                            Dim nr = ClampToByte(cr + (cr - br) * faktor)
-                            Dim ng = ClampToByte(cg + (cg - bg) * faktor)
-                            Dim nb = ClampToByte(cb + (cb - bb) * faktor)
+                            Dim nr = ClampToByte(cr + (cr - br) * factor)
+                            Dim ng = ClampToByte(cg + (cg - bg) * factor)
+                            Dim nb = ClampToByte(cb + (cb - bb) * factor)
 
                             If a <> 255 Then
                                 ' Zurueck nach premultipliziert, wie SetPixel es tut.

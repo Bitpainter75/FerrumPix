@@ -111,18 +111,18 @@ Namespace ViewModels
         Private Shared Function BuildFromItem(item As ImageItem) As ExifData
             Dim name = If(item.ImmichOriginalFileName, "")
             If String.IsNullOrEmpty(name) Then name = If(item.FileName, "")
-            Dim daten As New ExifData With {
+            Dim data As New ExifData With {
                 .FileName = name,
                 .FileType = IO.Path.GetExtension(name).TrimStart("."c).ToUpperInvariant()
             }
             If item.ImageWidth > 0 AndAlso item.ImageHeight > 0 Then
-                daten.ImageWidth = item.ImageWidth.ToString(CultureInfo.InvariantCulture)
-                daten.ImageHeight = item.ImageHeight.ToString(CultureInfo.InvariantCulture)
-                daten.AspectRatio = ImageInfoService.FormatAspectRatio(item.ImageWidth, item.ImageHeight)
-                daten.Megapixels = (item.ImageWidth * item.ImageHeight / 1000000.0).ToString("0.0", CultureInfo.InvariantCulture) & " MP"
+                data.ImageWidth = item.ImageWidth.ToString(CultureInfo.InvariantCulture)
+                data.ImageHeight = item.ImageHeight.ToString(CultureInfo.InvariantCulture)
+                data.AspectRatio = ImageInfoService.FormatAspectRatio(item.ImageWidth, item.ImageHeight)
+                data.Megapixels = (item.ImageWidth * item.ImageHeight / 1000000.0).ToString("0.0", CultureInfo.InvariantCulture) & " MP"
             End If
-            If item.FileSize > 0 Then daten.FileSize = FormatSize(item.FileSize)
-            Return daten
+            If item.FileSize > 0 Then data.FileSize = FormatSize(item.FileSize)
+            Return data
         End Function
 
         ''' <summary>Mehrere Bilder auf einmal.
@@ -592,8 +592,12 @@ Namespace ViewModels
         End Property
 
         Private Sub AddTag()
-            Dim tag = NewTagText.Trim().ToLowerInvariant()
-            If String.IsNullOrEmpty(tag) OrElse Tags.Contains(tag) Then Return
+            ' Die Schreibweise bleibt, wie sie getippt wurde: aus einer Beistelldatei kommen
+            ' Stichwoerter ebenfalls mit Grossbuchstaben, und Immich behaelt sie auch. Verglichen
+            ' wird dafuer ohne Ruecksicht darauf - sonst stuende "Berlin" zweimal da.
+            Dim tag = NewTagText.Trim()
+            If String.IsNullOrEmpty(tag) OrElse
+               Tags.Any(Function(vorhanden) String.Equals(vorhanden, tag, StringComparison.OrdinalIgnoreCase)) Then Return
             Tags.Add(tag)
             NewTagText = ""
             WriteTag(tag, add:=True)

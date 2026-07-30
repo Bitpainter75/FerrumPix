@@ -103,7 +103,7 @@ Namespace Services
 
         ''' <summary>Die Pfade, unter denen eine mitgelieferte LibRaw liegen kann: direkt neben der
         ''' Anwendung oder unter runtimes/&lt;rid&gt;/native, wohin packaging/package.sh sie kopiert.</summary>
-        Private Shared Iterator Function MitgelieferteKandidaten(namen As String()) As IEnumerable(Of String)
+        Private Shared Iterator Function BundledCandidates(namen As String()) As IEnumerable(Of String)
             Dim baseDir = AppContext.BaseDirectory
 
             Dim archSuffix = If(RuntimeInformation.ProcessArchitecture = Architecture.Arm64, "arm64", "x64")
@@ -162,7 +162,7 @@ Namespace Services
                 ' bibliothek. Sie liegt neben der Anwendung bzw. unter runtimes/<rid>/native -
                 ' ein nackter Name findet sie dort NICHT, es braucht den vollen Pfad.
                 If handle = IntPtr.Zero Then
-                    For Each pfad In MitgelieferteKandidaten(candidates)
+                    For Each pfad In BundledCandidates(candidates)
                         If NativeLibrary.TryLoad(pfad, handle) Then
                             geladen = Path.GetFileName(pfad)
                             Exit For
@@ -345,7 +345,7 @@ Namespace Services
 
         ''' <summary>Voll aufgelöster, fertig entwickelter Decode (Besitz beim Aufrufer) oder Nothing.
         ''' Orientierung ist bereits angewandt (libraw dreht nach dem Kamera-Flip).</summary>
-        ''' <param name="objektivWahl">Nothing = die Einstellung entscheidet fuer alle drei
+        ''' <param name="lensChoice">Nothing = die Einstellung entscheidet fuer alle drei
         ''' Korrekturen; sonst uebersteuert sie jede einzeln fuer dieses eine Bild (die Schalter im
         ''' Werkzeug).</param>
         ''' <summary>Entwickelt ein RAW. Laeuft immer nur EINMAL gleichzeitig - siehe
@@ -353,17 +353,17 @@ Namespace Services
         ''' hinter einem laufenden Decode wartet, bekommt danach dessen Ergebnis, statt denselben
         ''' Lauf ein zweites Mal anzuwerfen.</summary>
         Public Shared Function TryDecode(path As String,
-                                         Optional objektivWahl As LensDataService.Wahl = Nothing) As SKBitmap
+                                         Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            Return DecodeGate.Run(Function() DecodeIntern(path, objektivWahl))
+            Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice))
         End Function
 
         Private Shared Function DecodeIntern(path As String,
-                                             objektivWahl As LensDataService.Wahl) As SKBitmap
+                                             lensChoice As LensDataService.Wahl) As SKBitmap
             Try
                 Dim writeTime = File.GetLastWriteTimeUtc(path)
-                Dim grundEv = BaseExposureForFile(path)
-                Dim objektiv = LensCorrectionForFile(path, objektivWahl)
+                Dim baseEv = BaseExposureForFile(path)
+                Dim lens = LensCorrectionForFile(path, lensChoice)
                 ' Der Schluessel MUSS jede Groesse tragen, die das Ergebnis veraendert. Fehlt eine,
                 ' liefert der Cache das Bild der vorigen Einstellung zurueck, und der Schalter
                 ' sieht aus, als tue er nichts.
@@ -371,14 +371,14 @@ Namespace Services
                 ' hinter dem Decode, und im Zwischenspeicher liegt das Bild VOR ihr. Sonst warf ihr
                 ' Ein- und Ausschalten den ganzen Decode weg und liess libraw erneut laufen -
                 ' Sekunden fuer eine Umrechnung, die selbst Millisekunden braucht.
-                Dim objSchluessel = LensKey(objektiv)
+                Dim objKey = LensKey(lens)
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
                        String.Equals(_cachedPath, path, StringComparison.Ordinal) AndAlso
                        _cachedWriteTimeUtc = writeTime AndAlso
-                       _cachedGrundbelichtung = grundEv AndAlso
-                       String.Equals(_cachedObjektiv, objSchluessel, StringComparison.Ordinal) Then
-                        Return WithDistortion(_cachedBitmap.Copy(), objektiv)
+                       _cachedGrundbelichtung = baseEv AndAlso
+                       String.Equals(_cachedObjektiv, objKey, StringComparison.Ordinal) Then
+                        Return WithDistortion(_cachedBitmap.Copy(), lens)
                     End If
                 End SyncLock
 
@@ -386,10 +386,10 @@ Namespace Services
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path, grundEv, objektiv)
+                    decoded = DecodeCore(path, baseEv, lens)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path, grundEv, objektiv)
+                        decoded = DecodeCore(path, baseEv, lens)
                     End SyncLock
                 End If
                 If decoded Is Nothing Then Return Nothing
@@ -398,10 +398,10 @@ Namespace Services
                     _cachedBitmap?.Dispose()
                     _cachedBitmap = decoded
                     _cachedPath = path
-                    _cachedGrundbelichtung = grundEv
-                    _cachedObjektiv = objSchluessel
+                    _cachedGrundbelichtung = baseEv
+                    _cachedObjektiv = objKey
                     _cachedWriteTimeUtc = writeTime
-                    Return WithDistortion(_cachedBitmap.Copy(), objektiv)
+                    Return WithDistortion(_cachedBitmap.Copy(), lens)
                 End SyncLock
             Catch
                 Return Nothing
@@ -410,13 +410,13 @@ Namespace Services
 
         ''' <summary>Die Verzeichnungsstufe auf ein frisch aus dem Zwischenspeicher geholtes Bild.
         ''' Besitz geht an den Aufrufer; das uebergebene Bild wird verbraucht.</summary>
-        Private Shared Function WithDistortion(bild As SKBitmap,
-                                                objektiv As LensDataService.Korrektur) As SKBitmap
-            If bild Is Nothing Then Return Nothing
-            If objektiv Is Nothing OrElse Not objektiv.HasDistortion Then Return bild
-            Dim entzerrt = RemoveDistortion(bild, objektiv)
-            If entzerrt Is Nothing Then Return bild
-            bild.Dispose()
+        Private Shared Function WithDistortion(image As SKBitmap,
+                                                lens As LensDataService.Korrektur) As SKBitmap
+            If image Is Nothing Then Return Nothing
+            If lens Is Nothing OrElse Not lens.HasDistortion Then Return image
+            Dim entzerrt = RemoveDistortion(image, lens)
+            If entzerrt Is Nothing Then Return image
+            image.Dispose()
             Return entzerrt
         End Function
 
@@ -429,7 +429,7 @@ Namespace Services
                 "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}",
                 k.HasChromaticAberration, k.HasVignetting,
                 k.TcaBr, k.TcaCr, k.TcaVr, k.TcaBb, k.TcaCb, k.TcaVb,
-                k.NormSkala, k.Vk1 + k.Vk2 * 3 + k.Vk3 * 7,
+                k.NormScale, k.Vk1 + k.Vk2 * 3 + k.Vk3 * 7,
                 k.ChromaticAberrationStrength, k.VignettingStrength)
         End Function
 
@@ -462,26 +462,26 @@ Namespace Services
         ''' soll nicht passieren, weil die Korrektur eine Anfangs-Entscheidung ist und die
         ''' Bearbeitung danach kommt. Am Rand entstehen dadurch schmale leere Streifen, die mit den
         ''' Randpixeln gefuellt werden.</summary>
-        Public Shared Function RemoveDistortion(quelle As SKBitmap,
+        Public Shared Function RemoveDistortion(source As SKBitmap,
                                                     k As LensDataService.Korrektur) As SKBitmap
-            If quelle Is Nothing OrElse k Is Nothing OrElse Not k.HasDistortion Then Return Nothing
-            Dim breite = quelle.Width, hoehe = quelle.Height
-            If breite < 2 OrElse hoehe < 2 Then Return Nothing
+            If source Is Nothing OrElse k Is Nothing OrElse Not k.HasDistortion Then Return Nothing
+            Dim width = source.Width, height = source.Height
+            If width < 2 OrElse height < 2 Then Return Nothing
 
-            Dim ziel = New SKBitmap(New SKImageInfo(breite, hoehe, SKColorType.Bgra8888, quelle.AlphaType))
+            Dim target = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, source.AlphaType))
             ' VB kann keinen Span als Parameter fuehren, deshalb eine Kopie der Quelle. Bei 20 MP
             ' sind das 80 MB fuer die Dauer der Umrechnung - vertretbar, weil die Stufe nur laeuft,
             ' wenn fuer dieses Objektiv wirklich Messwerte vorliegen.
-            Dim schrittQ = quelle.RowBytes
-            Dim quellPixel(schrittQ * hoehe - 1) As Byte
-            Marshal.Copy(quelle.GetPixels(), quellPixel, 0, quellPixel.Length)
-            Dim zielZeiger = ziel.GetPixels()
-            Dim ausgabe(breite * hoehe * 4 - 1) As Byte
+            Dim stepQ = source.RowBytes
+            Dim quellPixel(stepQ * height - 1) As Byte
+            Marshal.Copy(source.GetPixels(), quellPixel, 0, quellPixel.Length)
+            Dim targetPointer = target.GetPixels()
+            Dim ausgabe(width * height * 4 - 1) As Byte
 
-            Dim cx = (breite - 1) / 2.0, cy = (hoehe - 1) / 2.0
+            Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
             ' Die Kennlinie rechnet im normierten System (r = 1 an der Mitte der langen Kante), die
             ' Bildpunkte in Pixeln - der Faktor bringt beide zusammen.
-            Dim norm = k.NormSkala
+            Dim norm = k.NormScale
             If norm <= 0.0 Then Return Nothing
 
             ' ZEILENWEISE PARALLEL. Jede Zeile schreibt ausschliesslich in ihren eigenen Abschnitt
@@ -489,11 +489,11 @@ Namespace Services
             ' voneinander unabhaengig, es braucht keine Sperre. Der Grund: die Schleife rechnet je
             ' Pixel eine Wurzel und ein Polynom, und bei 45 MP dauerte sie auf einem Kern so lange,
             ' dass ein Objektivwechsel spuerbar stand.
-            Parallel.For(0, hoehe,
+            Parallel.For(0, height,
                 Sub(y)
                     Dim dy = y - cy
-                    Dim z = y * breite * 4
-                    For x = 0 To breite - 1
+                    Dim z = y * width * 4
+                    For x = 0 To width - 1
                         Dim dx = x - cx
                         Dim rPix = Math.Sqrt(dx * dx + dy * dy)
                         Dim sx = cx, sy = cy
@@ -503,38 +503,38 @@ Namespace Services
                             ' fertigen Zielbild rueckwaerts, um in der Quelle nachzuschlagen.
                             Dim rNorm = rPix * norm
                             Dim rVerz = LensDataService.DistortionRadius(k, rNorm)
-                            Dim faktor = rVerz / rNorm
-                            sx = cx + dx * faktor
-                            sy = cy + dy * faktor
+                            Dim factor = rVerz / rNorm
+                            sx = cx + dx * factor
+                            sy = cy + dy * factor
                         End If
-                        ZieheBilinear(quellPixel, breite, hoehe, schrittQ, sx, sy, ausgabe, z)
+                        ZieheBilinear(quellPixel, width, height, stepQ, sx, sy, ausgabe, z)
                         z += 4
                     Next
                 End Sub)
-            Marshal.Copy(ausgabe, 0, zielZeiger, ausgabe.Length)
-            Return ziel
+            Marshal.Copy(ausgabe, 0, targetPointer, ausgabe.Length)
+            Return target
         End Function
 
         ''' <summary>Ein Bgra-Pixel bilinear aus der Quelle ziehen. Ausserhalb wird auf den Rand
         ''' geklemmt: die Korrektur zieht das Bild an den Ecken ueber den Rand hinaus, und ein
         ''' geklemmter Streifen ist unauffaelliger als ein schwarzer.</summary>
-        Private Shared Sub ZieheBilinear(quelle As Byte(), breite As Integer, hoehe As Integer,
+        Private Shared Sub ZieheBilinear(source As Byte(), width As Integer, height As Integer,
                                          schritt As Integer, sx As Double, sy As Double,
-                                         ziel As Byte(), zielOffset As Integer)
+                                         target As Byte(), zielOffset As Integer)
             If sx < 0 Then sx = 0
             If sy < 0 Then sy = 0
-            If sx > breite - 1.001 Then sx = breite - 1.001
-            If sy > hoehe - 1.001 Then sy = hoehe - 1.001
+            If sx > width - 1.001 Then sx = width - 1.001
+            If sy > height - 1.001 Then sy = height - 1.001
             Dim x0 = CInt(Math.Floor(sx)), y0 = CInt(Math.Floor(sy))
             Dim fx = sx - x0, fy = sy - y0
-            Dim x1 = Math.Min(x0 + 1, breite - 1)
-            Dim y1 = Math.Min(y0 + 1, hoehe - 1)
+            Dim x1 = Math.Min(x0 + 1, width - 1)
+            Dim y1 = Math.Min(y0 + 1, height - 1)
             Dim o00 = y0 * schritt + x0 * 4, o01 = y0 * schritt + x1 * 4
             Dim o10 = y1 * schritt + x0 * 4, o11 = y1 * schritt + x1 * 4
             For k = 0 To 3
-                Dim oben = quelle(o00 + k) * (1.0 - fx) + quelle(o01 + k) * fx
-                Dim unten = quelle(o10 + k) * (1.0 - fx) + quelle(o11 + k) * fx
-                ziel(zielOffset + k) = CByte(Math.Min(255.0, Math.Max(0.0, oben * (1.0 - fy) + unten * fy)))
+                Dim top = source(o00 + k) * (1.0 - fx) + source(o01 + k) * fx
+                Dim bottom = source(o10 + k) * (1.0 - fx) + source(o11 + k) * fx
+                target(zielOffset + k) = CByte(Math.Min(255.0, Math.Max(0.0, top * (1.0 - fy) + bottom * fy)))
             Next
         End Sub
 
@@ -581,8 +581,8 @@ Namespace Services
         ''' ist genau diese eine Zahl.</summary>
         Private Const DecodeOutputBits As Integer = 16
 
-        Private Shared Function DecodeCore(path As String, grundEv As Double,
-                                           objektiv As LensDataService.Korrektur) As SKBitmap
+        Private Shared Function DecodeCore(path As String, baseEv As Double,
+                                           lens As LensDataService.Korrektur) As SKBitmap
             Dim handle = _init(0UI)
             If handle = IntPtr.Zero Then Return Nothing
             Dim pathPtr As IntPtr = IntPtr.Zero
@@ -611,7 +611,7 @@ Namespace Services
                 ' und riss das Bild auf: gemessen 0,7 Blendenstufen zu hell und 14 % ausgefressene
                 ' Pixel gegen 0,4 % in der eingebetteten Vorschau. Fuer sie bleibt es bei LibRaws
                 ' eigener Gamma-Ausgabe, nur ohne Histogramm-Stretch.
-                Dim bereitsGerendert = IstFertigGerendertesRgb(path)
+                Dim bereitsGerendert = IsFinishedRgb(path)
                 Dim linearMoeglich = Not bereitsGerendert AndAlso
                                      _setNoAutoBright IsNot Nothing AndAlso _setGamma IsNot Nothing
                 If bereitsGerendert AndAlso _setNoAutoBright IsNot Nothing Then _setNoAutoBright(handle, 1)
@@ -675,7 +675,7 @@ Namespace Services
                         ' nur ein Neuntel des Farbsaums. Mit Messwerten aus der Sammlung sind es
                         ' gemessen 30 bis 45 Prozent (siehe RAW_UND_FARBE.md); damit lohnt die
                         ' Stelle, an der die Korrektur sitzt, obwohl sie hinter dem Demosaic liegt.
-                        Convert16(image + 16, width, height, pixels, objektiv, grundEv)
+                        Convert16(image + 16, width, height, pixels, lens, baseEv)
                     Else
                         Dim rgb(dataSize - 1) As Byte
                         Marshal.Copy(image + 16, rgb, 0, dataSize)
@@ -714,9 +714,9 @@ Namespace Services
         ''' Integer-Schwelle T skaliert, sodass out = (v*255 + T) \ 65535 mittelwerttreu
         ''' quantisiert. Positionsbasiert und damit deterministisch - derselbe Decode liefert
         ''' bitgleiche Ergebnisse, was der Vorschau-Cache voraussetzt.</summary>
-        Private Shared ReadOnly DitherSchwellen As Integer() = BaueDitherSchwellen()
+        Private Shared ReadOnly DitherThresholds As Integer() = BuildDitherThresholds()
 
-        Private Shared Function BaueDitherSchwellen() As Integer()
+        Private Shared Function BuildDitherThresholds() As Integer()
             ' Rekursive Bayer-Konstruktion: M(2n) = [4M(n), 4M(n)+2; 4M(n)+3, 4M(n)+1]
             Dim m = New Integer() {0, 2, 3, 1}
             Dim size = 2
@@ -735,12 +735,12 @@ Namespace Services
                 m = dst
                 size = n2
             End While
-            Dim schwellen = New Integer(63) {}
+            Dim thresholds = New Integer(63) {}
             For i = 0 To 63
                 ' T = ((2*m+1)/128) * 65535: Schwellenmitte je Zelle, Mittelwert exakt 0,5 LSB.
-                schwellen(i) = ((2 * m(i) + 1) * 65535) \ 128
+                thresholds(i) = ((2 * m(i) + 1) * 65535) \ 128
             Next
-            Return schwellen
+            Return thresholds
         End Function
 
         ''' <summary>Packt LibRaws 16-Bit-Ausgabe nach Bgra8888 und quantisiert dabei mit
@@ -819,7 +819,7 @@ Namespace Services
             SyncLock TonTabellenLock
                 Dim vorhanden As Integer() = Nothing
                 If TonTabellen.TryGetValue(k, vorhanden) Then Return vorhanden
-                Dim neu2 = BaueTonTabelle(k / 1000.0)
+                Dim neu2 = BuildToneTable(k / 1000.0)
                 TonTabellen(k) = neu2
                 Return neu2
             End SyncLock
@@ -828,16 +828,16 @@ Namespace Services
         ''' <summary>Tabelle LINEAR (0..65535) -> sRGB-kodiert (0..65535). Getrennt von der
         ''' Tonkurve, weil der mittlere Kanal ZWISCHEN den beiden anderen interpoliert wird - und
         ''' zwar linear, vor der Gamma-Kodierung.</summary>
-        Private Shared ReadOnly GammaTabelle As Integer() = BaueGammaTabelle()
+        Private Shared ReadOnly GammaTabelle As Integer() = BuildGammaTable()
 
-        Private Shared Function BaueTonTabelle(ev As Double) As Integer()
+        Private Shared Function BuildToneTable(ev As Double) As Integer()
             Dim t(65535) As Integer
             Dim weiss = 1.0 / (2.0 ^ ev)
             Dim steigung = 1.0 / (weiss - SchwarzAbzug)
             ' Weicher Fuss wie im DNG-SDK: eine quadratische Anlaufstrecke um den Schwarzpunkt,
             ' sonst entstuende dort eine sichtbare Kante.
             Dim radius = Math.Min(0.5 * SchwarzAbzug, (1.0 / 16.0) / steigung)
-            Dim qskala = If(radius > 0, steigung / (4.0 * radius), 0.0)
+            Dim qScale = If(radius > 0, steigung / (4.0 * radius), 0.0)
             For i = 0 To 65535
                 Dim x = i / 65535.0
                 Dim v As Double
@@ -846,7 +846,7 @@ Namespace Services
                 ElseIf x >= SchwarzAbzug + radius Then
                     v = Math.Min((x - SchwarzAbzug) * steigung, 1.0)
                 Else
-                    v = qskala * (x - (SchwarzAbzug - radius)) ^ 2
+                    v = qScale * (x - (SchwarzAbzug - radius)) ^ 2
                 End If
                 ' ACR3-Kurve mit linearer Interpolation zwischen den 129 Stuetzstellen.
                 Dim pos = Math.Max(0.0, Math.Min(1.0, v)) * (Acr3Kurve.Length - 1)
@@ -859,7 +859,7 @@ Namespace Services
             Return t
         End Function
 
-        Private Shared Function BaueGammaTabelle() As Integer()
+        Private Shared Function BuildGammaTable() As Integer()
             Dim t(65535) As Integer
             For i = 0 To 65535
                 Dim v = i / 65535.0
@@ -879,9 +879,9 @@ Namespace Services
         ''' Der Dither benutzt DIESELBE Schwelle fuer alle drei Kanaele eines Pixels: kanalweise
         ''' verschiedene Schwellen faerben neutrale Flaechen ein.</summary>
         Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte(),
-                                     Optional objektiv As LensDataService.Korrektur = Nothing,
+                                     Optional lens As LensDataService.Korrektur = Nothing,
                                      Optional grundbelichtungEvWert As Double = BaseExposureEv)
-            Dim schwellen = DitherSchwellen
+            Dim thresholds = DitherThresholds
             Dim ton = TonTabelleFuer(grundbelichtungEvWert)
             Dim gamma = GammaTabelle
             Dim rowBytes = width * 6
@@ -895,37 +895,37 @@ Namespace Services
             ' Die Verzeichnung sitzt BEWUSST NICHT hier: sie verschiebt Pixel um Dutzende Zeilen,
             ' waehrend der Zeilenring unten auf Bruchteile eines Pixels ausgelegt ist. Sie ist eine
             ' eigene Stufe hinter dem Decode.
-            Dim korrigiertTca = objektiv IsNot Nothing AndAlso objektiv.HasChromaticAberration
-            Dim korrigiertVignette = objektiv IsNot Nothing AndAlso objektiv.HasVignetting
+            Dim korrigiertTca = lens IsNot Nothing AndAlso lens.HasChromaticAberration
+            Dim korrigiertVignette = lens IsNot Nothing AndAlso lens.HasVignetting
             Dim korrigiert = korrigiertTca OrElse korrigiertVignette
             Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
-            Dim normSkala = If(objektiv IsNot Nothing, objektiv.NormSkala, 0.0)
-            Dim eckenSkala = If(objektiv IsNot Nothing, objektiv.EckenSkala, 1.0)
+            Dim normScale = If(lens IsNot Nothing, lens.NormScale, 0.0)
+            Dim cornerScale = If(lens IsNot Nothing, lens.CornerScale, 1.0)
 
             ' Zeilenring: Gruen kommt aus der eigenen Zeile, Rot und Blau aus benachbarten. Die
             ' Verschiebung ist klein, deshalb reichen wenige Zeilen - und es bleibt bei EINER
             ' Kopie je Quellzeile statt einer je Zugriff.
             Const RingSize = 8
             Dim ring(RingSize - 1)() As Short
-            Dim ringZeile(RingSize - 1) As Integer
+            Dim ringRow(RingSize - 1) As Integer
             For i = 0 To RingSize - 1
-                ReDim ring(i)(width * 3 - 1) : ringZeile(i) = -1
+                ReDim ring(i)(width * 3 - 1) : ringRow(i) = -1
             Next
-            Dim HoleZeile = Function(zy As Integer) As Short()
+            Dim FetchRow = Function(zy As Integer) As Short()
                                 Dim yy = Math.Min(Math.Max(zy, 0), height - 1)
                                 Dim slot = yy Mod RingSize
-                                If ringZeile(slot) <> yy Then
+                                If ringRow(slot) <> yy Then
                                     ' Versatz in Integer, siehe HeifDecodeService: IntPtr addiert
                                     ' nur Integer. Die Schranke des Aufrufers ist auf 6 Byte je
                                     ' Pixel bemessen, also auf genau diese Schrittweite.
                                     Marshal.Copy(data + yy * rowBytes, ring(slot), 0, width * 3)
-                                    ringZeile(slot) = yy
+                                    ringRow(slot) = yy
                                 End If
                                 Return ring(slot)
                             End Function
 
             For y = 0 To height - 1
-                Dim rowShorts = HoleZeile(y)
+                Dim rowShorts = FetchRow(y)
                 Dim d = y * width * 4
                 Dim ditherRow = (y And 7) << 3
                 Dim dyPix = y - cy
@@ -939,7 +939,7 @@ Namespace Services
                         ' EIN Radius fuer beide Korrekturen - die Wurzel ist der teuerste Anteil
                         ' dieser Schleife und wird nicht zweimal gezogen.
                         Dim rPix = Math.Sqrt(dxPix * dxPix + dyPix * dyPix)
-                        Dim rNorm = rPix * normSkala
+                        Dim rNorm = rPix * normScale
 
                         If korrigiertTca AndAlso rPix > 0.0 Then
                             ' ACHTUNG Konvention: der Faktor sagt, WIE WEIT AUSSEN der Kanal
@@ -947,10 +947,10 @@ Namespace Services
                             ' statt dividieren verdoppelt den Farbsaum, statt ihn zu entfernen -
                             ' genau daran ist die erste Fassung gescheitert, und am echten Bild war
                             ' der Unterschied zu klein, um es zu merken.
-                            Dim fr = LensDataService.ChromaticAberrationFactor(objektiv, rNorm, True)
-                            Dim fb = LensDataService.ChromaticAberrationFactor(objektiv, rNorm, False)
-                            r = AbtastenBilinear(HoleZeile, width, height, cx + dxPix / fr, cy + dyPix / fr, 0)
-                            b = AbtastenBilinear(HoleZeile, width, height, cx + dxPix / fb, cy + dyPix / fb, 2)
+                            Dim fr = LensDataService.ChromaticAberrationFactor(lens, rNorm, True)
+                            Dim fb = LensDataService.ChromaticAberrationFactor(lens, rNorm, False)
+                            r = AbtastenBilinear(FetchRow, width, height, cx + dxPix / fr, cy + dyPix / fr, 0)
+                            b = AbtastenBilinear(FetchRow, width, height, cx + dxPix / fb, cy + dyPix / fb, 2)
                         Else
                             r = rowShorts(x * 3) And &HFFFF
                             b = rowShorts(x * 3 + 2) And &HFFFF
@@ -960,7 +960,7 @@ Namespace Services
                             ' Der gemessene Wert beschreibt den ABFALL, korrigiert wird durch
                             ' Teilen. Und er rechnet mit r = 1 in der ECKE, nicht an der langen
                             ' Kante wie der Farbquerfehler - daher die zweite Skala.
-                            Dim abfall = LensDataService.VignettingFactor(objektiv, rNorm * eckenSkala)
+                            Dim abfall = LensDataService.VignettingFactor(lens, rNorm * cornerScale)
                             ' Sehr kleine Werte wuerden das Rauschen der Bildecke ins Unermessliche
                             ' heben; drei Blendenstufen sind die Grenze des Sinnvollen.
                             If abfall < 0.125 Then abfall = 0.125
@@ -976,21 +976,21 @@ Namespace Services
                     ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                     ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
                     ' CByte kann nicht ueberlaufen.
-                    Dim hoch = Math.Max(r, Math.Max(g, b))
+                    Dim high = Math.Max(r, Math.Max(g, b))
                     Dim tief = Math.Min(r, Math.Min(g, b))
-                    Dim tHoch = ton(hoch)
+                    Dim tHoch = ton(high)
                     Dim tTief = ton(tief)
                     Dim rr As Integer, gg As Integer, bb As Integer
-                    If hoch = tief Then
+                    If high = tief Then
                         rr = tHoch : gg = tHoch : bb = tHoch
                     Else
-                        Dim spanne = hoch - tief
+                        Dim span = high - tief
                         Dim delta = tHoch - tTief
-                        rr = tTief + CInt(CLng(delta) * (r - tief) \ spanne)
-                        gg = tTief + CInt(CLng(delta) * (g - tief) \ spanne)
-                        bb = tTief + CInt(CLng(delta) * (b - tief) \ spanne)
+                        rr = tTief + CInt(CLng(delta) * (r - tief) \ span)
+                        gg = tTief + CInt(CLng(delta) * (g - tief) \ span)
+                        bb = tTief + CInt(CLng(delta) * (b - tief) \ span)
                     End If
-                    Dim t = schwellen(ditherRow Or (x And 7))
+                    Dim t = thresholds(ditherRow Or (x And 7))
                     pixels(d) = CByte((gamma(bb) * 255 + t) \ 65535)
                     pixels(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
                     pixels(d + 2) = CByte((gamma(rr) * 255 + t) \ 65535)
@@ -1015,9 +1015,9 @@ Namespace Services
             Dim x1 = Math.Min(x0 + 1, width - 1)
             Dim z0 = holeZeile(y0), z1 = holeZeile(y0 + 1)
             Dim o0 = x0 * 3 + kanal, o1 = x1 * 3 + kanal
-            Dim oben = (z0(o0) And &HFFFF) * (1.0 - fx) + (z0(o1) And &HFFFF) * fx
-            Dim unten = (z1(o0) And &HFFFF) * (1.0 - fx) + (z1(o1) And &HFFFF) * fx
-            Dim v = oben * (1.0 - fy) + unten * fy
+            Dim top = (z0(o0) And &HFFFF) * (1.0 - fx) + (z0(o1) And &HFFFF) * fx
+            Dim bottom = (z1(o0) And &HFFFF) * (1.0 - fx) + (z1(o1) And &HFFFF) * fx
+            Dim v = top * (1.0 - fy) + bottom * fy
             Return CInt(Math.Min(Math.Max(v, 0.0), 65535.0))
         End Function
 
@@ -1034,19 +1034,19 @@ Namespace Services
         ''' durch unsere Basisstufe. Nur die RGB-Variante ist schon fertig.
         ''' Faellt das Lesen aus, gilt die Datei als normal - lieber die Basisstufe anwenden als
         ''' bei jedem unlesbaren Header darauf zu verzichten.</summary>
-        Private Shared Function IstFertigGerendertesRgb(path As String) As Boolean
+        Private Shared Function IsFinishedRgb(path As String) As Boolean
             Try
                 If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return False
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
                 For Each d In verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifDirectoryBase)()
                     ' Ausgeschrieben, weil MetadataExtractor das als Erweiterungsmethode anbietet
                     ' und diese Datei den Namensraum nicht importiert.
-                    Dim wert As Integer
+                    Dim value As Integer
                     If MetadataExtractor.DirectoryExtensions.TryGetInt32(
-                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagPhotometricInterpretation, wert) Then
+                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagPhotometricInterpretation, value) Then
                         ' Bei einer DNG-Huelle um ein RGB-Bild steht 2 im Hauptbild; ein Sensormuster
                         ' (32803) oder LinearRaw (34892) gaebe es dort gar nicht.
-                        If wert = 2 Then Return True
+                        If value = 2 Then Return True
                     End If
                 Next
                 Return False

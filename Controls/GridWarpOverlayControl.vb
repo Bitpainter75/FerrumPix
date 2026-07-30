@@ -14,7 +14,7 @@ Namespace Controls
 
         ''' <summary>Sichtbarer Radius der Griffe. Er soll zur Greifweite in der Ansicht passen -
         ''' ein Punkt, der kleiner aussieht als sein Fangbereich, laesst einen danebenzielen.</summary>
-        Private Const GriffRadius As Double = 7.0
+        Private Const HandleRadius As Double = 7.0
 
         ''' <summary>Die Punkte in EIGENEN Koordinaten (Pixel), zeilenweise ab links oben, dazu
         ''' vorne die Rastergroesse: [spalten, zeilen, x0, y0, x1, y1, ...]. Ein einziges Feld,
@@ -52,13 +52,13 @@ Namespace Controls
         Public Overrides Sub Render(context As DrawingContext)
             Dim g = GridValues
             If g Is Nothing OrElse g.Length < 2 Then Return
-            Dim spalten = CInt(g(0)), zeilen = CInt(g(1))
-            If spalten < 1 OrElse zeilen < 1 Then Return
-            Dim anzahl = (spalten + 1) * (zeilen + 1)
-            If g.Length < 2 + anzahl * 2 Then Return
+            Dim columns = CInt(g(0)), rows = CInt(g(1))
+            If columns < 1 OrElse rows < 1 Then Return
+            Dim count = (columns + 1) * (rows + 1)
+            If g.Length < 2 + count * 2 Then Return
 
-            Dim punkt = Function(si As Integer, zi As Integer) As Point
-                            Dim i = 2 + (zi * (spalten + 1) + si) * 2
+            Dim punkt = Function(colIdx As Integer, rowIdx As Integer) As Point
+                            Dim i = 2 + (rowIdx * (columns + 1) + colIdx) * 2
                             Return New Point(g(i), g(i + 1))
                         End Function
 
@@ -72,29 +72,29 @@ Namespace Controls
             ' Zwei Stifte uebereinander, wie beim Verlaufs-Overlay: ein dunkler breiter darunter,
             ' damit das Raster auch auf hellem Bild sichtbar bleibt.
             Dim schatten = New Pen(New SolidColorBrush(Color.FromArgb(120, 0, 0, 0)), 2.6)
-            Dim linie = New Pen(StrokeBrush, 1.0)
+            Dim line = New Pen(StrokeBrush, 1.0)
 
-            For Each stift In New Pen() {schatten, linie}
-                For zi = 0 To zeilen
-                    For si = 0 To spalten - 1
-                        Dim a = punkt(si, zi), b = punkt(si + 1, zi)
+            For Each stift In New Pen() {schatten, line}
+                For rowIdx = 0 To rows
+                    For colIdx = 0 To columns - 1
+                        Dim a = punkt(colIdx, rowIdx), b = punkt(colIdx + 1, rowIdx)
                         If gilt(a) AndAlso gilt(b) Then context.DrawLine(stift, a, b)
                     Next
                 Next
-                For si = 0 To spalten
-                    For zi = 0 To zeilen - 1
-                        Dim a = punkt(si, zi), b = punkt(si, zi + 1)
+                For colIdx = 0 To columns
+                    For rowIdx = 0 To rows - 1
+                        Dim a = punkt(colIdx, rowIdx), b = punkt(colIdx, rowIdx + 1)
                         If gilt(a) AndAlso gilt(b) Then context.DrawLine(stift, a, b)
                     Next
                 Next
             Next
 
             Dim fuellung = New SolidColorBrush(Color.FromArgb(230, 255, 255, 255))
-            Dim rand = New Pen(New SolidColorBrush(Color.FromArgb(200, 0, 0, 0)), 1.0)
-            For zi = 0 To zeilen
-                For si = 0 To spalten
-                    Dim p = punkt(si, zi)
-                    If gilt(p) Then context.DrawEllipse(fuellung, rand, p, GriffRadius, GriffRadius)
+            Dim border = New Pen(New SolidColorBrush(Color.FromArgb(200, 0, 0, 0)), 1.0)
+            For rowIdx = 0 To rows
+                For colIdx = 0 To columns
+                    Dim p = punkt(colIdx, rowIdx)
+                    If gilt(p) Then context.DrawEllipse(fuellung, border, p, HandleRadius, HandleRadius)
                 Next
             Next
         End Sub

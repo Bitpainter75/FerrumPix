@@ -302,8 +302,8 @@ Namespace Services
                 ' 1036 = Thumbnail (RGB), Kopf 28 Bytes: Format(4) Breite(4) Höhe(4) Zeilenbytes(4)
                 ' Gesamtgröße(4) komprimierte Größe(4) Bits(2) Ebenen(2), danach die JPEG-Daten.
                 If resourceId = 1036 AndAlso dataLen > 28 Then
-                    Dim format = ReadU32(fs)
-                    If format = 1 Then ' kJpegRGB
+                    Dim fileFormat = ReadU32(fs)
+                    If fileFormat = 1 Then ' kJpegRGB
                         If Not SkipBlock(fs, 24) Then Return Nothing
                         Dim jpegLen = CInt(dataLen - 28)
                         Dim jpeg(jpegLen - 1) As Byte

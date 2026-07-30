@@ -87,7 +87,7 @@ Namespace Converters
     ''' Gruppe zeigen, UND sie darf nicht ausgeblendet sein. Zwei IsVisible an einem Element gibt es
     ''' nicht, und die Bedingung im ViewModel zusammenzufassen hiesse, fuer jede Gruppe eine eigene
     ''' Eigenschaft anzulegen.</summary>
-    Public Class AlleWahrConverter
+    Public Class AllTrueConverter
         Implements IMultiValueConverter
 
         Public Function Convert(values As IList(Of Object), targetType As Type, parameter As Object,
@@ -106,17 +106,17 @@ Namespace Converters
     ''' Fuer das Ausblenden von Anpassungsgruppen: gebunden wird die Liste der versteckten
     ''' Schluessel, der Parameter ist der Schluessel dieser Gruppe. Eine Liste statt vieler
     ''' Eigenschaften - eine neue Gruppe kostet dann keine Zeile im ViewModel.</summary>
-    Public Class NichtInListeConverter
+    Public Class NotInListConverter
         Implements IValueConverter
 
         Public Function Convert(value As Object, targetType As Type, parameter As Object,
                                 culture As Globalization.CultureInfo) As Object Implements IValueConverter.Convert
-            Dim schluessel = TryCast(parameter, String)
-            If String.IsNullOrWhiteSpace(schluessel) Then Return True
-            Dim liste = TryCast(value, String)
-            If String.IsNullOrWhiteSpace(liste) Then Return True
-            For Each teil In liste.Split(","c)
-                If String.Equals(teil.Trim(), schluessel.Trim(), StringComparison.OrdinalIgnoreCase) Then Return False
+            Dim key = TryCast(parameter, String)
+            If String.IsNullOrWhiteSpace(key) Then Return True
+            Dim list = TryCast(value, String)
+            If String.IsNullOrWhiteSpace(list) Then Return True
+            For Each part In list.Split(","c)
+                If String.Equals(part.Trim(), key.Trim(), StringComparison.OrdinalIgnoreCase) Then Return False
             Next
             Return True
         End Function

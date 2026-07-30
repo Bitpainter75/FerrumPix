@@ -115,15 +115,15 @@
                 <Border Background="{DynamicResource FP.Bg.Input}"
                         BorderBrush="{DynamicResource FP.Border.Normal}"
                         BorderThickness="1" CornerRadius="6" Margin="0,0,0,8" Padding="8,6"
-                        IsVisible="{Binding VerzerrtDasObjekt}">
+                        IsVisible="{Binding WarpsTheObject}">
                     <StackPanel Spacing="6">
                         <TextBlock Text="Ein Objekt ist markiert - Ecken, Raster und Linien verzerren dieses Objekt, nicht das Bild. Die Verzerrung gehört zum Objekt, wirkt sofort und wird nicht eingebacken."
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Small}" />
                         <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
-                                IsEnabled="{Binding HatObjektVerzerrung}"
-                                Command="{Binding ResetObjektVerzerrungCommand}">
+                                IsEnabled="{Binding HasObjectWarp}"
+                                Command="{Binding ResetObjectWarpCommand}">
                             <TextBlock Text="Objektverzerrung zurücksetzen"
                                        FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
@@ -132,8 +132,8 @@
                 </Border>
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <Button Classes="ghost" Padding="12,6"
-                            Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Perspektive"
-                            Classes.active="{Binding IsVerzerrenPerspektive}"
+                            Command="{Binding SetWarpModeCommand}" CommandParameter="Perspektive"
+                            Classes.active="{Binding IsWarpPerspective}"
                             ToolTip.Tip="Die vier Ecken im Bild ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
@@ -142,7 +142,7 @@
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="1" Classes="ghost" Padding="12,6"
-                            Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Gitter"
+                            Command="{Binding SetWarpModeCommand}" CommandParameter="Gitter"
                             Classes.active="{Binding IsWarpGrid}"
                             ToolTip.Tip="Das Stützpunktraster im Bild ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
@@ -152,7 +152,7 @@
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="2" Classes="ghost" Padding="12,6"
-                            Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Linien"
+                            Command="{Binding SetWarpModeCommand}" CommandParameter="Linien"
                             Classes.active="{Binding IsWarpLines}"
                             ToolTip.Tip="Linien auf Kanten legen und ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
@@ -175,9 +175,9 @@
              beliebig oft aenderbar, die andere wird in die Pixel gebacken. -->
         <Border Classes="adjustment-group" >
             <Border.IsVisible>
-                <MultiBinding Converter="{StaticResource AlleWahrConverter}">
-                    <Binding Path="IsVerzerrenPerspektive"/>
-                    <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="perspektive"/>
+                <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                    <Binding Path="IsWarpPerspective"/>
+                    <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="perspektive"/>
                 </MultiBinding>
             </Border.IsVisible>
             <Expander Header="Perspektive" icons:ExpanderState.Key="perspektive" IsExpanded="True">
@@ -257,9 +257,9 @@
              Pixel gebacken - danach ist sie Teil des Bildes, wie eine Retusche. -->
         <Border Classes="adjustment-group" >
             <Border.IsVisible>
-                <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                <MultiBinding Converter="{StaticResource AllTrueConverter}">
                     <Binding Path="IsWarpGrid"/>
-                    <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="gitterverzerrung"/>
+                    <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="gitterverzerrung"/>
                 </MultiBinding>
             </Border.IsVisible>
             <Expander Header="Gitterverzerrung" icons:ExpanderState.Key="gitterverzerrung" IsExpanded="True">
@@ -298,12 +298,12 @@
                          Verzerrung dort laengst eingetragen und bleibt eine Angabe - es gibt nichts
                          zu backen. -->
                     <TextBlock Text="Die Punkte im Bild ziehen. Anwenden backt die Verzerrung in die Pixel - Masken passen danach nicht mehr genau."
-                               IsVisible="{Binding VerzerrtDasBild}"
+                               IsVisible="{Binding WarpsTheImage}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
                                Margin="0,6,0,6"/>
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
-                            IsVisible="{Binding VerzerrtDasBild}"
+                            IsVisible="{Binding WarpsTheImage}"
                             IsEnabled="{Binding HasWarpGridChanges}"
                             Command="{Binding ApplyWarpGridCommand}">
                         <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
@@ -354,17 +354,17 @@
                                    FontSize="{DynamicResource FP.Font.Small}" />
                     </Grid>
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
-                            Command="{Binding EntferneLetzteLinieCommand}"
+                            Command="{Binding RemoveLastLineCommand}"
                             ToolTip.Tip="Die zuletzt gezogene Linie wieder entfernen">
                         <TextBlock Text="Letzte Linie entfernen" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>
                     <TextBlock Text="Wird beim Anwenden in die Pixel gerechnet, wie eine Retusche. Eingefügte Objekte gehen mit, ohne eingebacken zu werden."
-                               IsVisible="{Binding VerzerrtDasBild}"
+                               IsVisible="{Binding WarpsTheImage}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
-                            IsVisible="{Binding VerzerrtDasBild}"
+                            IsVisible="{Binding WarpsTheImage}"
                             IsEnabled="{Binding HasLineChanges}"
                             Command="{Binding ApplyLinesCommand}">
                         <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"

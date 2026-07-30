@@ -792,10 +792,10 @@ Namespace ViewModels
             ' "Aktueller Ordner" deshalb ganz. Der Ordner, in dem der Nutzer steht, ist aber immer
             ' bekannt: er steht in der Galerie. In einer Suchliste oder in Immich ist er leer, dann
             ' bleibt es beim Ausblenden, denn dort gibt es keinen echten Ordner.
-            Dim ordner = currentFolder
-            If String.IsNullOrWhiteSpace(ordner) Then ordner = If(Gallery?.CurrentFolder, "")
-            _dialogFolderChoiceCurrent = If(Not String.IsNullOrWhiteSpace(ordner) AndAlso Directory.Exists(ordner),
-                                            ordner, "")
+            Dim folder = currentFolder
+            If String.IsNullOrWhiteSpace(folder) Then folder = If(Gallery?.CurrentFolder, "")
+            _dialogFolderChoiceCurrent = If(Not String.IsNullOrWhiteSpace(folder) AndAlso Directory.Exists(folder),
+                                            folder, "")
             _dialogFolderChoiceLastSaved = If(Not String.IsNullOrWhiteSpace(zuletzt) AndAlso Directory.Exists(zuletzt),
                                               zuletzt, "")
             ' Beim ersten Mal gibt es noch keinen zuletzt benutzten Ordner. Dann traegt der Knopf
@@ -1201,7 +1201,7 @@ Namespace ViewModels
             PrepareDialogExportForms(settings, samplePath)
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
-            Dim title = $"{LocalizationService.T("Exportieren nach")} ({fileCount} {LocalizationService.T("Files")})"
+            Dim title = $"{LocalizationService.T("Exportieren nach")} ({fileCount} {LocalizationService.T("Dateien")})"
             Dim result = Await ShowDialogAsync(AppDialogKind.ExportTo,
                                                title,
                                                "Stelle den Export zusammen - die Originale bleiben unangetastet.",
@@ -1233,15 +1233,15 @@ Namespace ViewModels
                 End If
             End If
 
-            Dim breite = 0
-            Dim hoehe = 0
+            Dim width = 0
+            Dim height = 0
             Dim skalierung = 0
             If _dialogExportUseResize Then
-                breite = ParseResizeDimension(_dialogBatchResizeWidthText)
-                hoehe = ParseResizeDimension(_dialogBatchResizeHeightText)
+                width = ParseResizeDimension(_dialogBatchResizeWidthText)
+                height = ParseResizeDimension(_dialogBatchResizeHeightText)
                 skalierung = _dialogBatchResizeScalePercent
-                If breite > 0 OrElse hoehe > 0 Then
-                    AppSettingsService.SaveLastBatchResizeSettings(breite, hoehe, skalierung,
+                If width > 0 OrElse height > 0 Then
+                    AppSettingsService.SaveLastBatchResizeSettings(width, height, skalierung,
                                                                    _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation,
                                                                    _dialogBatchResizeNoUpscale, _dialogBatchResizeLongEdge)
                 End If
@@ -1249,7 +1249,7 @@ Namespace ViewModels
 
             ' Ohne Größenänderung gibt es nichts zu skalieren - der Wasserzeichen-Schalter darf dann
             ' auch nichts bedeuten, sonst wirkte eine unsichtbare Einstellung.
-            Dim wasserzeichenGroesseHalten = _dialogExportUseResize AndAlso _dialogWatermarkKeepSize
+            Dim keepWatermarkSize = _dialogExportUseResize AndAlso _dialogWatermarkKeepSize
 
             Return New ExportToDialogResult With {
                 .AutoEnhance = autoEnhance,
@@ -1262,9 +1262,9 @@ Namespace ViewModels
                                       BuildWatermarkPresetForRun(_dialogWatermarkPresets.FirstOrDefault(
                                           Function(pr) String.Equals(pr.Name, DialogSelectedWatermarkPresetName, StringComparison.OrdinalIgnoreCase))),
                                       Nothing),
-                .WatermarkKeepSize = wasserzeichenGroesseHalten,
-                .ResizeWidth = breite,
-                .ResizeHeight = hoehe,
+                .WatermarkKeepSize = keepWatermarkSize,
+                .ResizeWidth = width,
+                .ResizeHeight = height,
                 .ResizeScalePercent = skalierung,
                 .LockAspect = _dialogBatchResizeLockAspect,
                 .NoUpscale = _dialogBatchResizeNoUpscale,
@@ -1329,7 +1329,7 @@ Namespace ViewModels
 
             ' Titel vorab zusammensetzen: ShowDialogAsync übersetzt ihn zwar, aber ein interpolierter Text
             ' mit der Dateizahl darin hätte in keiner Sprache einen Schlüssel (siehe LocalizationService).
-            Dim title = $"{LocalizationService.T("Filter anwenden")} ({fileCount} {LocalizationService.T("Files")})"
+            Dim title = $"{LocalizationService.T("Filter anwenden")} ({fileCount} {LocalizationService.T("Dateien")})"
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchFilter,
                                                title,
                                                "Wähle den Look und wohin die Bilder geschrieben werden.",
@@ -1958,10 +1958,10 @@ Namespace ViewModels
         ''' unter; wo es nicht in der Auswahlliste steht (Stapel, Export), fällt die Vorgabe auf JPG
         ''' zurück - sonst stünde in der Liste eine Auswahl, die es dort gar nicht gibt.</summary>
         Public Shared Function DefaultSaveFormat(Optional allowFpx As Boolean = False) As String
-            Dim wert = AppSettingsService.NormalizeDefaultSaveFormat(AppSettingsService.Load().DefaultSaveFormat)
-            If String.Equals(wert, "FPX", StringComparison.OrdinalIgnoreCase) AndAlso
+            Dim value = AppSettingsService.NormalizeDefaultSaveFormat(AppSettingsService.Load().DefaultSaveFormat)
+            If String.Equals(value, "FPX", StringComparison.OrdinalIgnoreCase) AndAlso
                (Not allowFpx OrElse Not FpxService.Enabled) Then Return "JPG"
-            Return wert
+            Return value
         End Function
 
         Public ReadOnly Property IsDialogJpgQualityVisible As Boolean
@@ -2002,10 +2002,10 @@ Namespace ViewModels
                 _dialogBatchResizeScalePercent = 0
                 Dim normalized = NormalizeResizeDimensionText(value)
                 ' Das Verhaeltnis VOR der Aenderung merken - danach ist es ja schon verstellt.
-                Dim altBreite = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
-                Dim altHoehe = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
+                Dim oldWidth = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
+                Dim oldHeight = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
                 Me.RaiseAndSetIfChanged(_dialogBatchResizeWidthText, normalized)
-                CoupleBatchResizeEdge(vonBreite:=True, altBreite:=altBreite, altHoehe:=altHoehe)
+                CoupleBatchResizeEdge(vonBreite:=True, oldWidth:=oldWidth, oldHeight:=oldHeight)
             End Set
         End Property
 
@@ -2016,10 +2016,10 @@ Namespace ViewModels
             Set(value As String)
                 _dialogBatchResizeScalePercent = 0
                 Dim normalized = NormalizeResizeDimensionText(value)
-                Dim altBreite = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
-                Dim altHoehe = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
+                Dim oldWidth = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
+                Dim oldHeight = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
                 Me.RaiseAndSetIfChanged(_dialogBatchResizeHeightText, normalized)
-                CoupleBatchResizeEdge(vonBreite:=False, altBreite:=altBreite, altHoehe:=altHoehe)
+                CoupleBatchResizeEdge(vonBreite:=False, oldWidth:=oldWidth, oldHeight:=oldHeight)
             End Set
         End Property
 
@@ -2039,25 +2039,25 @@ Namespace ViewModels
         ''' Gekoppelt wird nur, wenn BEIDE Felder gefuellt sind: ein einzelner Wert bedeutet
         ''' weiterhin "laengste Kante" und haette gar kein Verhaeltnis, aus dem sich etwas ableiten
         ''' liesse.</summary>
-        Private Sub CoupleBatchResizeEdge(vonBreite As Boolean, altBreite As Integer, altHoehe As Integer)
+        Private Sub CoupleBatchResizeEdge(vonBreite As Boolean, oldWidth As Integer, oldHeight As Integer)
             If _dialogBatchResizeSyncing OrElse Not _dialogBatchResizeLockAspect Then Return
-            If altBreite <= 0 OrElse altHoehe <= 0 Then Return
-            Dim verhaeltnis = altBreite / CDbl(altHoehe)
+            If oldWidth <= 0 OrElse oldHeight <= 0 Then Return
+            Dim verhaeltnis = oldWidth / CDbl(oldHeight)
             If verhaeltnis <= 0.0001 Then Return
 
             _dialogBatchResizeSyncing = True
             Try
                 If vonBreite Then
-                    Dim breite = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
-                    If breite <= 0 Then Return
-                    Dim hoehe = Math.Max(1, CInt(Math.Round(breite / verhaeltnis)))
-                    _dialogBatchResizeHeightText = hoehe.ToString(CultureInfo.InvariantCulture)
+                    Dim width = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
+                    If width <= 0 Then Return
+                    Dim height = Math.Max(1, CInt(Math.Round(width / verhaeltnis)))
+                    _dialogBatchResizeHeightText = height.ToString(CultureInfo.InvariantCulture)
                     Me.RaisePropertyChanged(NameOf(DialogBatchResizeHeightText))
                 Else
-                    Dim hoehe = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
-                    If hoehe <= 0 Then Return
-                    Dim breite = Math.Max(1, CInt(Math.Round(hoehe * verhaeltnis)))
-                    _dialogBatchResizeWidthText = breite.ToString(CultureInfo.InvariantCulture)
+                    Dim height = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
+                    If height <= 0 Then Return
+                    Dim width = Math.Max(1, CInt(Math.Round(height * verhaeltnis)))
+                    _dialogBatchResizeWidthText = width.ToString(CultureInfo.InvariantCulture)
                     Me.RaisePropertyChanged(NameOf(DialogBatchResizeWidthText))
                 End If
             Finally
@@ -2066,9 +2066,9 @@ Namespace ViewModels
         End Sub
 
         Private Shared Function ParseBatchResizeDimension(text As String) As Integer
-            Dim wert As Integer
-            If Not Integer.TryParse(If(text, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, wert) Then Return 0
-            Return Math.Max(0, wert)
+            Dim value As Integer
+            If Not Integer.TryParse(If(text, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, value) Then Return 0
+            Return Math.Max(0, value)
         End Function
 
         Public Property DialogBatchResizeLockAspect As Boolean
@@ -2126,10 +2126,10 @@ Namespace ViewModels
         ''' <summary>Führt zwei eingetragene Kanten auf die längere zusammen: sie wird zur Kantenlänge,
         ''' die zweite bleibt leer. Nur so bedeutet der Wert für ApplyResize „längste Kante".</summary>
         Private Sub CollapseBatchResizeToLongEdge()
-            Dim breite = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
-            Dim hoehe = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
-            Dim kante = Math.Max(breite, hoehe)
-            _dialogBatchResizeWidthText = If(kante > 0, kante.ToString(CultureInfo.InvariantCulture), "")
+            Dim width = ParseBatchResizeDimension(_dialogBatchResizeWidthText)
+            Dim height = ParseBatchResizeDimension(_dialogBatchResizeHeightText)
+            Dim edge = Math.Max(width, height)
+            _dialogBatchResizeWidthText = If(edge > 0, edge.ToString(CultureInfo.InvariantCulture), "")
             _dialogBatchResizeHeightText = ""
         End Sub
 
@@ -2242,9 +2242,9 @@ Namespace ViewModels
         ''' Nur Ziffern durchlassen, Laenge begrenzen - dieselbe Haltung wie bei der Bildgroesse:
         ''' das Feld wehrt Unsinn ab, statt ihn erst beim Bestaetigen zu melden.
         Private Shared Function NormalizeWatermarkSizeText(value As String) As String
-            Dim ziffern = New String(If(value, "").Where(AddressOf Char.IsDigit).ToArray())
-            If ziffern.Length > 6 Then ziffern = ziffern.Substring(0, 6)
-            Return ziffern.TrimStart("0"c)
+            Dim digits = New String(If(value, "").Where(AddressOf Char.IsDigit).ToArray())
+            If digits.Length > 6 Then digits = digits.Substring(0, 6)
+            Return digits.TrimStart("0"c)
         End Function
 
         Private Shared Function ParseWatermarkSize(value As String, fallback As Integer) As Integer

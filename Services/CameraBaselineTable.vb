@@ -37,14 +37,14 @@ Namespace Services
 
         ''' <summary>Versatz der Kamera, an der GrundbelichtungEv gefittet wurde (Canon EOS R6).
         ''' Nur diese eine Zahl verankert die Tabelle absolut - alles andere ist relativ.</summary>
-        Private Const ReferenzVersatzEv As Double = -0.26
+        Private Const ReferenceOffsetEv As Double = -0.26
 
         ''' <summary>Aeusserste Grenze der Verschiebung. Ein einzelner Tabellenwert kann durch eine
         ''' unbrauchbare Vorschau danebenliegen; ohne Deckel wuerde daraus ein unbrauchbares Bild.</summary>
-        Private Const MaxVerschiebungEv As Double = 1.0
+        Private Const MaxShiftEv As Double = 1.0
 
         ' Modellschluessel (Marke+Modell, nur Buchstaben und Ziffern, gross) = gemessener Versatz in EV.
-        Private Const Rohdaten As String =
+        Private Const RawData As String =
             "CANONEOS10D=+0.656;CANONEOS1DMARKII=+0.632;CANONEOS1DMARKIII=+0.044;CANONEOS1DMARKIIN=+0.251;" &
             "CANONEOS1DSMARKII=+0.247;CANONEOS1DX=+0.322;CANONEOS20D=+0.213;CANONEOS300DDIGITAL=+0.554;" &
             "CANONEOS30D=+0.138;CANONEOS350DDIGITAL=+0.285;CANONEOS400DDIGITAL=+0.399;CANONEOS50D=+0.575;" &
@@ -99,18 +99,18 @@ Namespace Services
             "SONYNEX5R=+0.115;SONYNEX6=-0.046;SONYNEX7=+0.127;SONYSLTA35=-0.010;SONYSLTA55V=+0.481;" &
             "SONYSLTA58=+0.232;SONYSLTA77V=+0.184;"
 
-        Private Shared ReadOnly Tabelle As Dictionary(Of String, Double) = BaueTabelle()
+        Private Shared ReadOnly Table As Dictionary(Of String, Double) = BuildTable()
 
-        Private Shared Function BaueTabelle() As Dictionary(Of String, Double)
+        Private Shared Function BuildTable() As Dictionary(Of String, Double)
             Dim d As New Dictionary(Of String, Double)(StringComparer.Ordinal)
-            For Each eintrag In Rohdaten.Split(";"c)
-                If eintrag.Length = 0 Then Continue For
-                Dim p = eintrag.IndexOf("="c)
+            For Each entry In RawData.Split(";"c)
+                If entry.Length = 0 Then Continue For
+                Dim p = entry.IndexOf("="c)
                 If p <= 0 Then Continue For
-                Dim wert As Double
-                If Double.TryParse(eintrag.Substring(p + 1), Globalization.NumberStyles.Float,
-                                   Globalization.CultureInfo.InvariantCulture, wert) Then
-                    d(eintrag.Substring(0, p)) = wert
+                Dim value As Double
+                If Double.TryParse(entry.Substring(p + 1), Globalization.NumberStyles.Float,
+                                   Globalization.CultureInfo.InvariantCulture, value) Then
+                    d(entry.Substring(0, p)) = value
                 End If
             Next
             Return d
@@ -119,14 +119,14 @@ Namespace Services
         ''' <summary>Schluessel aus Hersteller und Modell: nur Buchstaben und Ziffern, gross.
         ''' Die Marke wird vorangestellt, wenn das Modell sie nicht schon enthaelt - Nikon schreibt
         ''' "NIKON D800", Fujifilm nur "X-Pro1".</summary>
-        Friend Shared Function Key(hersteller As String, modell As String) As String
-            Dim marke = NurBuchstabenUndZiffern(If(hersteller, "").Split(" "c)(0))
-            Dim m = NurBuchstabenUndZiffern(modell)
+        Friend Shared Function Key(maker As String, modell As String) As String
+            Dim token = LettersAndDigitsOnly(If(maker, "").Split(" "c)(0))
+            Dim m = LettersAndDigitsOnly(modell)
             If m.Length = 0 Then Return ""
-            Return If(marke.Length > 0 AndAlso m.StartsWith(marke, StringComparison.Ordinal), m, marke & m)
+            Return If(token.Length > 0 AndAlso m.StartsWith(token, StringComparison.Ordinal), m, token & m)
         End Function
 
-        Private Shared Function NurBuchstabenUndZiffern(s As String) As String
+        Private Shared Function LettersAndDigitsOnly(s As String) As String
             If String.IsNullOrEmpty(s) Then Return ""
             Dim sb As New StringBuilder(s.Length)
             For Each c In s.ToUpperInvariant()
@@ -138,22 +138,22 @@ Namespace Services
         ''' <summary>Anzahl der hinterlegten Modelle - fuer die Diagnose und die Einstellungsseite.</summary>
         Public Shared ReadOnly Property ModelCount As Integer
             Get
-                Return Tabelle.Count
+                Return Table.Count
             End Get
         End Property
 
         ''' <summary>Die Grundbelichtung fuer diese Kamera. Unbekanntes Modell oder fehlende Angaben:
         ''' der uebergebene Standardwert bleibt unveraendert.</summary>
-        Public Shared Function BaseExposureFor(hersteller As String, modell As String,
+        Public Shared Function BaseExposureFor(maker As String, modell As String,
                                                    standardEv As Double) As Double
-            Dim k = Key(hersteller, modell)
+            Dim k = Key(maker, modell)
             If k.Length = 0 Then Return standardEv
-            Dim versatz As Double
-            If Not Tabelle.TryGetValue(k, versatz) Then Return standardEv
+            Dim offset As Double
+            If Not Table.TryGetValue(k, offset) Then Return standardEv
             ' Relativ zur Referenzkamera: die behaelt exakt ihren bisherigen Wert.
-            Dim delta = versatz - ReferenzVersatzEv
-            If delta > MaxVerschiebungEv Then delta = MaxVerschiebungEv
-            If delta < -MaxVerschiebungEv Then delta = -MaxVerschiebungEv
+            Dim delta = offset - ReferenceOffsetEv
+            If delta > MaxShiftEv Then delta = MaxShiftEv
+            If delta < -MaxShiftEv Then delta = -MaxShiftEv
             Return standardEv - delta
         End Function
 

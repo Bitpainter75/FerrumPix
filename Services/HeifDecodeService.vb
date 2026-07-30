@@ -208,8 +208,8 @@ Namespace Services
                 Try
                     Dim rowBytes = width * 4
                     Dim row(rowBytes - 1) As Byte
-                    Dim ziel = bitmap.GetPixels()
-                    Dim zielStride = bitmap.RowBytes
+                    Dim target = bitmap.GetPixels()
+                    Dim targetStride = bitmap.RowBytes
                     ' Der Versatz wird bewusst in Integer gerechnet und NICHT in Long: IntPtr
                     ' addiert nur Integer, ein Long wuerde ohnehin wieder verengt - das frueher
                     ' hier stehende CLng sah nach 64-Bit-Sicherheit aus, ohne welche zu geben.
@@ -222,7 +222,7 @@ Namespace Services
                             row(x) = row(x + 2)
                             row(x + 2) = r
                         Next
-                        Marshal.Copy(row, 0, ziel + y * zielStride, rowBytes)
+                        Marshal.Copy(row, 0, target + y * targetStride, rowBytes)
                     Next
                     Return bitmap
                 Catch

@@ -117,7 +117,7 @@ Namespace Views
         ''' <summary>Die Marken tragen ihre Flaeche im Tag ("0" links, "1" rechts), die Sterne
         ''' zusaetzlich den Wert ("0:3"). Ohne diese Zuordnung waere am Knopf nicht ablesbar, welches
         ''' der beiden Bilder er meint - und genau dafuer sitzen die Marken auf dem Bild.</summary>
-        Private Shared Function FlaecheAus(sender As Object) As Integer
+        Private Shared Function PaneFrom(sender As Object) As Integer
             Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
             If String.IsNullOrEmpty(tag) Then Return 0
             Return If(tag.Split(":"c)(0) = "1", 1, 0)
@@ -160,11 +160,11 @@ Namespace Views
         Private Sub SetClipboardHook()
             Dim vm = TryCast(DataContext, ViewerViewModel)
             If vm Is Nothing Then Return
-            vm.CopyPathToClipboard = Async Sub(pfad)
+            vm.CopyPathToClipboard = Async Sub(path)
                                           Try
-                                              If String.IsNullOrEmpty(pfad) Then Return
+                                              If String.IsNullOrEmpty(path) Then Return
                                               Dim owner = TopLevel.GetTopLevel(Me)
-                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {pfad}, cut:=False)
+                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {path}, cut:=False)
                                           Catch ex As Exception
                                               DiagnosticLogService.LogException("Viewer.CopyPath", ex)
                                           End Try
@@ -233,37 +233,37 @@ Namespace Views
         ''' <summary>Das Bild auf der Buehne als Element - der Rueckfall, wenn der Klick keine
         ''' Kachel getroffen hat.</summary>
         Private Function StageItem(vm As ViewerViewModel) As ImageItem
-            Dim pfad = vm?.CurrentImagePath
-            If String.IsNullOrWhiteSpace(pfad) Then Return Nothing
+            Dim path = vm?.CurrentImagePath
+            If String.IsNullOrWhiteSpace(path) Then Return Nothing
             Dim aus = vm.FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
-                                                           PathIdentity.AreSame(i.FilePath, pfad))
+                                                           PathIdentity.AreSame(i.FilePath, path))
             If aus IsNot Nothing Then Return aus
-            If Not IO.File.Exists(pfad) Then Return Nothing
-            Return New ImageItem(pfad)
+            If Not IO.File.Exists(path) Then Return Nothing
+            Return New ImageItem(path)
         End Function
 
         Private Sub OnCompareStarClick(sender As Object, e As RoutedEventArgs)
             Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
             If String.IsNullOrEmpty(tag) Then Return
-            Dim teile = tag.Split(":"c)
+            Dim parts = tag.Split(":"c)
             Dim sterne As Integer
-            If teile.Length <> 2 OrElse Not Integer.TryParse(teile(1), sterne) Then Return
-            GetVm()?.SetCompareRating(FlaecheAus(sender), sterne)
+            If parts.Length <> 2 OrElse Not Integer.TryParse(parts(1), sterne) Then Return
+            GetVm()?.SetCompareRating(PaneFrom(sender), sterne)
             e.Handled = True
         End Sub
 
         Private Sub OnCompareFavoriteClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.ToggleCompareFavorite(FlaecheAus(sender))
+            GetVm()?.ToggleCompareFavorite(PaneFrom(sender))
             e.Handled = True
         End Sub
 
         Private Sub OnCompareEditClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.OpenComparePaneInEditor(FlaecheAus(sender))
+            GetVm()?.OpenComparePaneInEditor(PaneFrom(sender))
             e.Handled = True
         End Sub
 
         Private Sub OnCompareDeleteClick(sender As Object, e As RoutedEventArgs)
-            GetVm()?.DeleteComparePane(FlaecheAus(sender))
+            GetVm()?.DeleteComparePane(PaneFrom(sender))
             e.Handled = True
         End Sub
 
@@ -458,9 +458,9 @@ Namespace Views
                 If e.GetCurrentPoint(Me).Properties.IsRightButtonPressed OrElse
                    e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                     _suppressNextImageContextMenu = True
-                    Dim unterMaus = ComparePaneUnder(e)
-                    If unterMaus IsNot Nothing Then
-                        ZoomCompareAtPoint(unterMaus, e.GetPosition(unterMaus), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                    Dim underMouse = ComparePaneUnder(e)
+                    If underMouse IsNot Nothing Then
+                        ZoomCompareAtPoint(underMouse, e.GetPosition(underMouse), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
                     Else
                         vm.ActiveZoomPreset = ZoomPresetMode.Manual
                         vm.ZoomLevel = Math.Max(0.05, vm.ZoomLevel) * If(e.Delta.Y > 0, 1.25, 1.0 / 1.25)
@@ -503,30 +503,30 @@ Namespace Views
         ''' andere folgt ueber die Ausschnitt-Spiegelung.
         ''' Der Offset wird ZWEIMAL gesetzt: einmal sofort und einmal nach dem Layout-Durchlauf - vor
         ''' dem Neu-Vermessen der Bilder kennt der ScrollViewer seinen neuen Umfang noch nicht.</summary>
-        Private Sub ZoomCompareAtPoint(quelle As ScrollViewer, punkt As Point, faktor As Double)
+        Private Sub ZoomCompareAtPoint(source As ScrollViewer, punkt As Point, factor As Double)
             Dim vm = GetVm()
-            If vm Is Nothing OrElse quelle Is Nothing OrElse faktor <= 0 Then Return
+            If vm Is Nothing OrElse source Is Nothing OrElse factor <= 0 Then Return
 
             Dim alterZoom = Math.Max(0.05, vm.ZoomLevel)
-            Dim bildX = (quelle.Offset.X + punkt.X) / alterZoom
-            Dim bildY = (quelle.Offset.Y + punkt.Y) / alterZoom
+            Dim imageX = (source.Offset.X + punkt.X) / alterZoom
+            Dim imageY = (source.Offset.Y + punkt.Y) / alterZoom
 
             vm.ActiveZoomPreset = ZoomPresetMode.Manual
-            vm.ZoomLevel = alterZoom * faktor
+            vm.ZoomLevel = alterZoom * factor
             ApplyCompareFitMode()
 
             Dim setzeOffset =
                 Sub()
                     Dim neuerZoom = Math.Max(0.05, vm.ZoomLevel)
-                    Dim ziel = New Vector(bildX * neuerZoom - punkt.X, bildY * neuerZoom - punkt.Y)
-                    quelle.Offset = New Vector(
-                        Math.Min(Math.Max(ziel.X, 0), Math.Max(0, quelle.Extent.Width - quelle.Viewport.Width)),
-                        Math.Min(Math.Max(ziel.Y, 0), Math.Max(0, quelle.Extent.Height - quelle.Viewport.Height)))
+                    Dim target = New Vector(imageX * neuerZoom - punkt.X, imageY * neuerZoom - punkt.Y)
+                    source.Offset = New Vector(
+                        Math.Min(Math.Max(target.X, 0), Math.Max(0, source.Extent.Width - source.Viewport.Width)),
+                        Math.Min(Math.Max(target.Y, 0), Math.Max(0, source.Extent.Height - source.Viewport.Height)))
                     ' Beim Ziehen mit gedrueckter Taste ist die gemerkte Basis nach dem Zoomen
                     ' veraltet - ohne Neu-Verankern springt die Ansicht beim Weiterziehen zurueck.
                     If _compareZiehtScroll IsNot Nothing Then
                         _compareZiehtVon = punkt
-                        _compareZiehtOffset = quelle.Offset
+                        _compareZiehtOffset = source.Offset
                     End If
                 End Sub
             setzeOffset()
@@ -793,7 +793,7 @@ Namespace Views
 
         ''' <summary>Sperre gegen Rueckkopplung beim Spiegeln des Ausschnitts: das Setzen der einen
         ''' Flaeche loest deren ScrollChanged aus, das sonst sofort wieder zurueckschriebe.</summary>
-        Private _spiegeltAusschnitt As Boolean
+        Private _mirrorsRegion As Boolean
 
         Private Sub OnComparePanePressed(sender As Object, e As PointerPressedEventArgs)
             Dim vm = GetVm()
@@ -863,41 +863,41 @@ Namespace Views
 
 
         Private Sub LinkComparePanes()
-            Dim links = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
-            Dim rechts = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
-            If links Is Nothing OrElse rechts Is Nothing Then Return
-            RemoveHandler links.ScrollChanged, AddressOf OnCompareScrollChanged
-            RemoveHandler rechts.ScrollChanged, AddressOf OnCompareScrollChanged
-            AddHandler links.ScrollChanged, AddressOf OnCompareScrollChanged
-            AddHandler rechts.ScrollChanged, AddressOf OnCompareScrollChanged
+            Dim left = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
+            Dim right = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
+            If left Is Nothing OrElse right Is Nothing Then Return
+            RemoveHandler left.ScrollChanged, AddressOf OnCompareScrollChanged
+            RemoveHandler right.ScrollChanged, AddressOf OnCompareScrollChanged
+            AddHandler left.ScrollChanged, AddressOf OnCompareScrollChanged
+            AddHandler right.ScrollChanged, AddressOf OnCompareScrollChanged
         End Sub
 
         ''' <summary>Der Ausschnitt wird als PIXEL-Offset gespiegelt, nicht als Anteil: zwei Aufnahmen
         ''' derselben Szene liegen damit exakt uebereinander, und genau dafuer ist der Vergleich da.
         ''' Bei sehr verschiedenen Bildgroessen laeuft es auseinander - das ist der bewusste Preis.</summary>
         Private Sub OnCompareScrollChanged(sender As Object, e As ScrollChangedEventArgs)
-            If _spiegeltAusschnitt Then Return
+            If _mirrorsRegion Then Return
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
             ' Entkoppelt scrollt jede Flaeche fuer sich - fuer Aufnahmen, die nicht deckungsgleich
             ' sind (anderer Ausschnitt, anderes Objektiv), wo das Spiegeln die zweite Flaeche vom
             ' interessanten Bildteil wegzieht.
             If Not vm.IsCompareViewportLinked Then Return
-            Dim quelle = TryCast(sender, ScrollViewer)
-            If quelle Is Nothing Then Return
-            Dim links = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
-            Dim rechts = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
-            Dim ziel = If(ReferenceEquals(quelle, links), rechts, links)
-            If ziel Is Nothing Then Return
+            Dim source = TryCast(sender, ScrollViewer)
+            If source Is Nothing Then Return
+            Dim left = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
+            Dim right = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
+            Dim target = If(ReferenceEquals(source, left), right, left)
+            If target Is Nothing Then Return
             Dim neu = New Vector(
-                Math.Min(Math.Max(quelle.Offset.X, 0), Math.Max(0, ziel.Extent.Width - ziel.Viewport.Width)),
-                Math.Min(Math.Max(quelle.Offset.Y, 0), Math.Max(0, ziel.Extent.Height - ziel.Viewport.Height)))
-            If Math.Abs(ziel.Offset.X - neu.X) < 0.5 AndAlso Math.Abs(ziel.Offset.Y - neu.Y) < 0.5 Then Return
-            _spiegeltAusschnitt = True
+                Math.Min(Math.Max(source.Offset.X, 0), Math.Max(0, target.Extent.Width - target.Viewport.Width)),
+                Math.Min(Math.Max(source.Offset.Y, 0), Math.Max(0, target.Extent.Height - target.Viewport.Height)))
+            If Math.Abs(target.Offset.X - neu.X) < 0.5 AndAlso Math.Abs(target.Offset.Y - neu.Y) < 0.5 Then Return
+            _mirrorsRegion = True
             Try
-                ziel.Offset = neu
+                target.Offset = neu
             Finally
-                _spiegeltAusschnitt = False
+                _mirrorsRegion = False
             End Try
         End Sub
 
@@ -908,16 +908,16 @@ Namespace Views
             If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
             Dim zoom = Math.Max(0.05, vm.ZoomLevel)
 
-            Dim setze = Sub(bildName As String, quelle As Avalonia.Media.Imaging.Bitmap)
+            Dim setze = Sub(bildName As String, source As Avalonia.Media.Imaging.Bitmap)
                             Dim bild = Me.FindControl(Of Image)(bildName)
                             If bild Is Nothing Then Return
-                            If quelle Is Nothing Then
+                            If source Is Nothing Then
                                 bild.Width = Double.NaN
                                 bild.Height = Double.NaN
                                 Return
                             End If
-                            bild.Width = Math.Round(quelle.Size.Width * zoom, MidpointRounding.AwayFromZero)
-                            bild.Height = Math.Round(quelle.Size.Height * zoom, MidpointRounding.AwayFromZero)
+                            bild.Width = Math.Round(source.Size.Width * zoom, MidpointRounding.AwayFromZero)
+                            bild.Height = Math.Round(source.Size.Height * zoom, MidpointRounding.AwayFromZero)
                             bild.MaxWidth = Double.PositiveInfinity
                             bild.MaxHeight = Double.PositiveInfinity
                         End Sub

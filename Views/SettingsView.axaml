@@ -241,8 +241,8 @@
                                  Sprache sieht, die er nicht versteht, findet "Deutsch" wieder. -->
                             <ComboBox Grid.Column="1"
                                       Name="LanguageComboBox"
-                                      ItemsSource="{Binding SprachOptionen}"
-                                      SelectedItem="{Binding AusgewaehlteSprache, Mode=TwoWay}"
+                                      ItemsSource="{Binding LanguageOptions}"
+                                      SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
                                       MinWidth="200"
                                       VerticalAlignment="Center"
                                       FontSize="{DynamicResource FP.Font.Body}">
@@ -1311,7 +1311,7 @@
                                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                                     <StackPanel Spacing="2" VerticalAlignment="Center">
                                                         <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}"/>
-                                                        <TextBlock Classes="no-translate" Text="{Binding Beschreibung}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                                        <TextBlock Classes="no-translate" Text="{Binding Description}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                                                         <TextBlock Classes="no-translate" Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                                                     </StackPanel>
                                                     <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding SizeText}" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -1322,7 +1322,7 @@
                                                         <TextBlock Classes="no-translate" Text="{Binding ButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
                                                     </Button>
                                                 </Grid>
-                                                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Fortschritt}"
+                                                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}"
                                                              IsVisible="{Binding Laeuft}" Height="4"/>
                                             </StackPanel>
                                         </Border>

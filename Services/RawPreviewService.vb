@@ -49,7 +49,7 @@ Namespace Services
         ''' liegt. Nicht aufgefuehrt taucht die Datei gar nicht erst auf. Sobald LibRaw das Format
         ''' traegt, gehoert die Endung zurueck in die Liste oben.
         ''' </summary>
-        Public Const NichtUnterstuetztesRawFormat As String = ".x3f"
+        Public Const UnsupportedRawFormat As String = ".x3f"
 
         Public Shared Function IsSupportedRaw(filePath As String) As Boolean
             Dim ext = Path.GetExtension(filePath).ToLowerInvariant()

@@ -176,7 +176,7 @@ Namespace Services
         End Function
 
         <DllImport("libmpv", EntryPoint:="mpv_observe_property", CallingConvention:=CallingConvention.Cdecl)>
-        Friend Shared Function ObserveProperty(handle As IntPtr, replyUserData As ULong, name As IntPtr, format As MpvFormat) As Integer
+        Friend Shared Function ObserveProperty(handle As IntPtr, replyUserData As ULong, name As IntPtr, fileFormat As MpvFormat) As Integer
         End Function
 
         <DllImport("libmpv", EntryPoint:="mpv_command", CallingConvention:=CallingConvention.Cdecl)>

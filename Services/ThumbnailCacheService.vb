@@ -472,7 +472,7 @@ Namespace Services
             Next
 
             Dim freshStats As New Dictionary(Of String, (Count As Integer, SizeBytes As Long, StampUtc As DateTime))(StringComparer.OrdinalIgnoreCase)
-            Dim entfernteTempIds As New List(Of String)()
+            Dim removedTempIds As New List(Of String)()
 
             For Each folder In entries.Values
                 Try
@@ -487,7 +487,7 @@ Namespace Services
                     If IsTemporaryPath(folder.FolderPath) AndAlso Not Directory.Exists(folder.FolderPath) Then
                         Try
                             Directory.Delete(folderCachePath, True)
-                            entfernteTempIds.Add(folder.Id)
+                            removedTempIds.Add(folder.Id)
                         Catch
                         End Try
                         Continue For
@@ -525,7 +525,7 @@ Namespace Services
             Next
 
             MergeFolderStats(freshStats)
-            If entfernteTempIds.Count > 0 Then RemoveFoldersFromRootIndex(entfernteTempIds)
+            If removedTempIds.Count > 0 Then RemoveFoldersFromRootIndex(removedTempIds)
 
             Return result.
                 OrderByDescending(Function(i) i.SizeBytes).
@@ -973,10 +973,10 @@ Namespace Services
             Try
                 SyncLock _rootIndexLock
                     Dim rootIndex = LoadRootIndex()
-                    Dim vorher = rootIndex.Folders.Count
+                    Dim before = rootIndex.Folders.Count
                     rootIndex.Folders.RemoveAll(Function(f) f IsNot Nothing AndAlso
                                                             ids.Contains(f.Id, StringComparer.OrdinalIgnoreCase))
-                    If rootIndex.Folders.Count <> vorher Then SaveRootIndex(rootIndex)
+                    If rootIndex.Folders.Count <> before Then SaveRootIndex(rootIndex)
                 End SyncLock
                 For Each id In ids
                     _registeredFolderIds.TryRemove(id, Nothing)

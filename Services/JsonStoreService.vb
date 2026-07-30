@@ -34,12 +34,12 @@ Namespace Services
         ''' Kleinschreibung, "Path.GetDirectoryName" loeste dann auf den Parameter auf.
         Public Shared Function WriteAtomic(zielPfad As String, json As String, area As String) As Boolean
             Try
-                Dim ordner = Path.GetDirectoryName(zielPfad)
-                If Not String.IsNullOrEmpty(ordner) Then Directory.CreateDirectory(ordner)
+                Dim folder = Path.GetDirectoryName(zielPfad)
+                If Not String.IsNullOrEmpty(folder) Then Directory.CreateDirectory(folder)
 
-                Dim tempPfad = zielPfad & ".tmp"
-                File.WriteAllText(tempPfad, json)
-                File.Move(tempPfad, zielPfad, overwrite:=True)
+                Dim tempPath = zielPfad & ".tmp"
+                File.WriteAllText(tempPath, json)
+                File.Move(tempPath, zielPfad, overwrite:=True)
                 Return True
             Catch ex As Exception
                 ' Volle Platte, fehlende Rechte: frueher fiel das lautlos unter den Tisch und der

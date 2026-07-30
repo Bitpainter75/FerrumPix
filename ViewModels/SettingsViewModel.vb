@@ -601,27 +601,27 @@ Namespace ViewModels
 
         ''' <summary>Die Auswahlliste der Sprachen. Der Systemeintrag traegt seinen Namen aus der
         ''' Uebersetzung, alle anderen ihren eigenen Namen in ihrer eigenen Sprache.</summary>
-        Public ReadOnly Property SprachOptionen As New ObservableCollection(Of SprachOption)()
+        Public ReadOnly Property LanguageOptions As New ObservableCollection(Of LanguageOption)()
 
-        Public Property AusgewaehlteSprache As SprachOption
+        Public Property SelectedLanguage As LanguageOption
             Get
-                Return SprachOptionen.FirstOrDefault(
+                Return LanguageOptions.FirstOrDefault(
                     Function(o) String.Equals(o.Key, _languageMode, StringComparison.Ordinal))
             End Get
-            Set(value As SprachOption)
+            Set(value As LanguageOption)
                 If value Is Nothing Then Return
                 LanguageMode = value.Key
             End Set
         End Property
 
-        Private Sub BaueSprachOptionen()
-            SprachOptionen.Clear()
+        Private Sub BuildLanguageOptions()
+            LanguageOptions.Clear()
             For Each sp In LocalizationService.Languages
-                SprachOptionen.Add(New SprachOption With {
+                LanguageOptions.Add(New LanguageOption With {
                     .Key = sp.Key,
                     .Name = If(sp.Key = "System", LocalizationService.T("Systemsprache"), sp.Name)})
             Next
-            Me.RaisePropertyChanged(NameOf(AusgewaehlteSprache))
+            Me.RaisePropertyChanged(NameOf(SelectedLanguage))
         End Sub
 
         Public Property LanguageMode As String
@@ -633,7 +633,7 @@ Namespace ViewModels
                 If _languageMode = value Then Return
                 Me.RaiseAndSetIfChanged(_languageMode, value)
                 RaiseLanguageModeProperties()
-                Me.RaisePropertyChanged(NameOf(AusgewaehlteSprache))
+                Me.RaisePropertyChanged(NameOf(SelectedLanguage))
                 LocalizationService.LanguageMode = value
                 SaveLanguageSettings()
                 _mainVm?.RefreshLocalization()
@@ -1304,12 +1304,12 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public ReadOnly Property AdjustmentGroupItems As New ObservableCollection(Of AnpassungsgruppeItem)()
+        Public ReadOnly Property AdjustmentGroupItems As New ObservableCollection(Of AdjustmentGroupItem)()
 
         Private Sub BuildAdjustmentGroupItems()
             AdjustmentGroupItems.Clear()
             For Each g In AppSettingsService.HideableAdjustmentGroups
-                Dim item = New AnpassungsgruppeItem With {
+                Dim item = New AdjustmentGroupItem With {
                     .Key = g.Key,
                     .Label = LocalizationService.T(g.Bezeichnung)}
                 item.SetVisible(Not HiddenAdjustmentGroups.Split(","c).Any(
@@ -1347,17 +1347,17 @@ Namespace ViewModels
             End Select
         End Function
 
-        ''' <param name="richtung">-1 = nach oben, +1 = nach unten.</param>
-        Private Sub MoveEditorToolGroup(key As String, richtung As Integer)
+        ''' <param name="direction">-1 = nach oben, +1 = nach unten.</param>
+        Private Sub MoveEditorToolGroup(key As String, direction As Integer)
             Dim namen = AppSettingsService.NormalizeEditorToolGroupOrder(_editorToolGroupOrder).Split(","c).ToList()
             Dim index = namen.FindIndex(Function(n) String.Equals(n, key, StringComparison.OrdinalIgnoreCase))
             If index < 0 Then Return
-            Dim ziel = index + richtung
-            If ziel < 0 OrElse ziel >= namen.Count Then Return
+            Dim target = index + direction
+            If target < 0 OrElse target >= namen.Count Then Return
 
             Dim gemerkt = namen(index)
-            namen(index) = namen(ziel)
-            namen(ziel) = gemerkt
+            namen(index) = namen(target)
+            namen(target) = gemerkt
             EditorToolGroupOrder = String.Join(",", namen)
         End Sub
 
@@ -1766,7 +1766,7 @@ Namespace ViewModels
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
             BuildModelGroups()
             BuildAdjustmentGroupItems()
-            BaueSprachOptionen()
+            BuildLanguageOptions()
             FetchModelCommand = ReactiveCommand.Create(Of ModelGroup)(
                 Sub(g)
                     Dim ignoriert = FetchModelGroupAsync(g)
@@ -2344,7 +2344,7 @@ Namespace ViewModels
             RaiseLanguageModeProperties()
             BuildAdjustmentGroupItems()
             BuildModelGroups()
-            BaueSprachOptionen()
+            BuildLanguageOptions()
             For Each n In {NameOf(ThumbnailCacheSummaryText), NameOf(ThumbnailCacheFolderCountText),
                            NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
                            NameOf(ModelGroups)}
@@ -2487,7 +2487,7 @@ Namespace ViewModels
             Inherits ViewModelBase
 
             Public Property Name As String = ""
-            Public Property Beschreibung As String = ""
+            Public Property Description As String = ""
             Public Property Files As New List(Of AiModelService.ModelEntry)()
 
             Private _fortschritt As Double = 0
@@ -2503,7 +2503,7 @@ Namespace ViewModels
             End Property
 
             ''' <summary>Alle Dateien in einer benutzbaren Fassung vorhanden?</summary>
-            Public ReadOnly Property IstVollstaendig As Boolean
+            Public ReadOnly Property IsComplete As Boolean
                 Get
                     Return Files.All(Function(d) Not String.IsNullOrEmpty(AiModelService.BestFile(d.Key)))
                 End Get
@@ -2511,10 +2511,10 @@ Namespace ViewModels
 
             ''' <summary>Laeuft mindestens eine Datei in einer AELTEREN Fassung? Dann gibt es etwas
             ''' zu aktualisieren - und bis dahin arbeitet alles weiter.</summary>
-            Public ReadOnly Property IstAktualisierbar As Boolean
+            Public ReadOnly Property IsUpdatable As Boolean
                 Get
-                    Return IstVollstaendig AndAlso
-                           Files.Any(Function(d) AiModelService.IstAktualisierbar(d.Key))
+                    Return IsComplete AndAlso
+                           Files.Any(Function(d) AiModelService.IsUpdatable(d.Key))
                 End Get
             End Property
 
@@ -2522,8 +2522,8 @@ Namespace ViewModels
                 Get
                     If _laeuft Then Return LocalizationService.T("Wird geladen…")
                     If Not String.IsNullOrEmpty(_meldung) Then Return _meldung
-                    If IstAktualisierbar Then Return LocalizationService.T("Eine neuere Fassung liegt bereit")
-                    If IstVollstaendig Then Return LocalizationService.T("Vorhanden")
+                    If IsUpdatable Then Return LocalizationService.T("Eine neuere Fassung liegt bereit")
+                    If IsComplete Then Return LocalizationService.T("Vorhanden")
                     Return LocalizationService.T("Nicht vorhanden")
                 End Get
             End Property
@@ -2531,18 +2531,18 @@ Namespace ViewModels
             ''' <summary>Beschriftung des Knopfes: Herunterladen, Aktualisieren oder nichts.</summary>
             Public ReadOnly Property ButtonText As String
                 Get
-                    If IstAktualisierbar Then Return LocalizationService.T("Aktualisieren")
+                    If IsUpdatable Then Return LocalizationService.T("Aktualisieren")
                     Return LocalizationService.T("Herunterladen")
                 End Get
             End Property
 
             Public ReadOnly Property ButtonVisible As Boolean
                 Get
-                    Return Not _laeuft AndAlso (Not IstVollstaendig OrElse IstAktualisierbar)
+                    Return Not _laeuft AndAlso (Not IsComplete OrElse IsUpdatable)
                 End Get
             End Property
 
-            Public Property Fortschritt As Double
+            Public Property Progress As Double
                 Get
                     Return _fortschritt
                 End Get
@@ -2557,7 +2557,7 @@ Namespace ViewModels
                 End Get
                 Set(value As Boolean)
                     Me.RaiseAndSetIfChanged(_laeuft, value)
-                    MeldeZustand()
+                    RaiseStateChanged()
                 End Set
             End Property
 
@@ -2571,8 +2571,8 @@ Namespace ViewModels
                 End Set
             End Property
 
-            Public Sub MeldeZustand()
-                For Each n In {NameOf(IstVollstaendig), NameOf(IstAktualisierbar), NameOf(StatusText),
+            Public Sub RaiseStateChanged()
+                For Each n In {NameOf(IsComplete), NameOf(IsUpdatable), NameOf(StatusText),
                                NameOf(ButtonText), NameOf(ButtonVisible)}
                     Me.RaisePropertyChanged(n)
                 Next
@@ -2598,16 +2598,16 @@ Namespace ViewModels
 
         Private Sub BuildModelGroups()
             ModelGroups.Clear()
-            For Each name In AiModelService.KnownEntries.Select(Function(e) e.Gruppe).Distinct()
-                Dim dateien = AiModelService.KnownEntries.Where(Function(e) e.Gruppe = name).ToList()
-                Dim beschreibung As String
+            For Each name In AiModelService.KnownEntries.Select(Function(e) e.Group).Distinct()
+                Dim files = AiModelService.KnownEntries.Where(Function(e) e.Group = name).ToList()
+                Dim description As String
                 Select Case name
                     Case "Tiefe"
-                        beschreibung = LocalizationService.T("Maske nach Entfernung und Tiefen-Unschärfe")
+                        description = LocalizationService.T("Maske nach Entfernung und Tiefen-Unschärfe")
                     Case "Objekt entfernen"
-                        beschreibung = LocalizationService.T("Markiertes verschwinden lassen, der Hintergrund wird fortgesetzt")
+                        description = LocalizationService.T("Markiertes verschwinden lassen, der Hintergrund wird fortgesetzt")
                     Case Else
-                        beschreibung = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
+                        description = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
                 End Select
                 Dim anzeigeName As String
                 Select Case name
@@ -2617,49 +2617,49 @@ Namespace ViewModels
                 End Select
                 ModelGroups.Add(New ModelGroup With {
                     .Name = anzeigeName,
-                    .Beschreibung = beschreibung,
-                    .Files = dateien})
+                    .Description = description,
+                    .Files = files})
             Next
         End Sub
 
         ''' <summary>Holt alle Dateien einer Gruppe. NUR von hier aus - es gibt keinen anderen Weg,
         ''' auf dem die Anwendung etwas aus dem Netz holt.</summary>
-        Public Async Function FetchModelGroupAsync(gruppe As ModelGroup) As Task
-            If gruppe Is Nothing OrElse gruppe.Laeuft Then Return
-            gruppe.Meldung = ""
-            gruppe.Laeuft = True
-            gruppe.Fortschritt = 0
+        Public Async Function FetchModelGroupAsync(group As ModelGroup) As Task
+            If group Is Nothing OrElse group.Laeuft Then Return
+            group.Meldung = ""
+            group.Laeuft = True
+            group.Progress = 0
             Try
-                Dim gesamt = gruppe.Files.Sum(Function(d) d.Bytes)
+                Dim total = group.Files.Sum(Function(d) d.Bytes)
                 Dim fertig As Long = 0
-                For Each datei In gruppe.Files
-                    Dim dieseDatei = datei
+                For Each file In group.Files
+                    Dim thisFile = file
                     Dim bisher = fertig
-                    Dim melder = New Progress(Of Double)(
-                        Sub(anteil)
-                            If gesamt > 0 Then
-                                gruppe.Fortschritt = Math.Min(1.0, (bisher + anteil * dieseDatei.Bytes) / gesamt)
+                    Dim notifier = New Progress(Of Double)(
+                        Sub(share)
+                            If total > 0 Then
+                                group.Progress = Math.Min(1.0, (bisher + share * thisFile.Bytes) / total)
                             End If
                         End Sub)
-                    Dim ergebnis = Await ModelDownloadService.HoleAsync(dieseDatei, melder)
+                    Dim ergebnis = Await ModelDownloadService.FetchAsync(thisFile, notifier)
                     Select Case ergebnis
-                        Case ModelDownloadService.Ergebnis.Fertig, ModelDownloadService.Ergebnis.SchonDa
-                            fertig += dieseDatei.Bytes
-                        Case ModelDownloadService.Ergebnis.PruefsummeFalsch
-                            gruppe.Meldung = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
+                        Case ModelDownloadService.Result.Done, ModelDownloadService.Result.AlreadyPresent
+                            fertig += thisFile.Bytes
+                        Case ModelDownloadService.Result.ChecksumMismatch
+                            group.Meldung = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
                             Return
-                        Case ModelDownloadService.Ergebnis.Abgebrochen
-                            gruppe.Meldung = LocalizationService.T("Abgebrochen")
+                        Case ModelDownloadService.Result.Cancelled
+                            group.Meldung = LocalizationService.T("Abgebrochen")
                             Return
                         Case Else
-                            gruppe.Meldung = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
+                            group.Meldung = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
                             Return
                     End Select
                 Next
-                gruppe.Fortschritt = 1
+                group.Progress = 1
             Finally
-                gruppe.Laeuft = False
-                gruppe.MeldeZustand()
+                group.Laeuft = False
+                group.RaiseStateChanged()
             End Try
         End Function
 
@@ -2668,7 +2668,7 @@ Namespace ViewModels
     ''' <summary>Eine Zeile der Werkzeuggruppen-Reihenfolge auf der Einstellungsseite: der stabile
     ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
     ''' <summary>Ein Eintrag in der Sprachauswahl.</summary>
-    Public Class SprachOption
+    Public Class LanguageOption
         Public Property Key As String = ""
         Public Property Name As String = ""
         Public Overrides Function ToString() As String
@@ -2683,7 +2683,7 @@ Namespace ViewModels
     End Class
 
     ''' <summary>Eine Anpassungsgruppe im Einstellungsdialog: Beschriftung und Haken.</summary>
-    Public Class AnpassungsgruppeItem
+    Public Class AdjustmentGroupItem
         Inherits ReactiveObject
 
         Public Event VisibilityChanged As EventHandler
@@ -2705,8 +2705,8 @@ Namespace ViewModels
 
         ''' <summary>Setzen OHNE das Ereignis - fuer den Aufbau der Liste. Sonst schriebe schon das
         ''' Fuellen die Einstellung zurueck, und zwar Eintrag fuer Eintrag.</summary>
-        Public Sub SetVisible(wert As Boolean)
-            _istSichtbar = wert
+        Public Sub SetVisible(value As Boolean)
+            _istSichtbar = value
             Me.RaisePropertyChanged(NameOf(IsVisibleEntry))
         End Sub
     End Class

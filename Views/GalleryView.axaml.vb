@@ -75,9 +75,9 @@ Namespace Views
         ''' Schaltflaeche, nicht ueber eine Bindung: der Inhalt eines Aufklappfensters haengt nicht
         ''' im Baum der Ansicht, und eine Bindung ueber den Vorfahren findet dort nichts.</summary>
         Private Sub OnTagFilterItemClick(sender As Object, e As RoutedEventArgs)
-            Dim eintrag = TryCast(TryCast(sender, Button)?.DataContext, TagFilterOption)
-            If eintrag Is Nothing Then Return
-            GetVm()?.ToggleTagFilter(eintrag.Tag)
+            Dim entry = TryCast(TryCast(sender, Button)?.DataContext, TagFilterOption)
+            If entry Is Nothing Then Return
+            GetVm()?.ToggleTagFilter(entry.Tag)
         End Sub
 
         Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
@@ -1059,8 +1059,8 @@ Namespace Views
         ''' LEEREN Bereichs und der Ordner gebraucht - die BILD-Kontextmenues bauen sich dagegen
         ''' als Daten ueber <see cref="ContextMenuBuilder"/> auf und brauchen so etwas nicht mehr.</summary>
         Private Sub SetMenuItemVisible(name As String, visible As Boolean)
-            Dim eintrag = Me.FindControl(Of MenuItem)(name)
-            If eintrag IsNot Nothing Then eintrag.IsVisible = visible
+            Dim entry = Me.FindControl(Of MenuItem)(name)
+            If entry IsNot Nothing Then entry.IsVisible = visible
         End Sub
 
         Private Function ConsumeSuppressedGalleryContextMenu(e As ContextRequestedEventArgs) As Boolean
@@ -1687,7 +1687,7 @@ Namespace Views
                 .Print = vm.PrintSelectedCommand,
                 .Favorite = vm.ToggleSelectedFavoriteCommand,
                 .Rating = vm.SetSelectedRatingCommand,
-                .ColorLabel = New DelegateCommand(Sub(farbe) ApplyColorLabel(vm, farbe)),
+                .ColorLabel = New DelegateCommand(Sub(color) ApplyColorLabel(vm, color)),
                 .CopyPath = vm.CopyPathCommand,
                 .ShowInFileManager = vm.OpenFileManagerCommand,
                 .Delete = vm.DeleteSelectedCommand}
@@ -1924,21 +1924,21 @@ Namespace Views
         Private _dropHighlightRow As Control
 
         Private Sub HighlightDropRow(e As DragEventArgs, erlaubt As Boolean)
-            Dim zeile As Control = Nothing
+            Dim row As Control = Nothing
             If erlaubt Then
                 Dim current = TryCast(e.Source, Control)
                 While current IsNot Nothing
                     If TypeOf current Is TreeViewItem Then
-                        zeile = current
+                        row = current
                         Exit While
                     End If
                     Dim logicalParent = TryCast(current.Parent, Control)
                     current = If(logicalParent, current.GetVisualParent(Of Control)())
                 End While
             End If
-            If Object.ReferenceEquals(zeile, _dropHighlightRow) Then Return
+            If Object.ReferenceEquals(row, _dropHighlightRow) Then Return
             _dropHighlightRow?.Classes.Remove("drop-target")
-            _dropHighlightRow = zeile
+            _dropHighlightRow = row
             _dropHighlightRow?.Classes.Add("drop-target")
         End Sub
 

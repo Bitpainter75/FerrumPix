@@ -10,8 +10,8 @@
     <Application.Resources>
         <conv:EditorToolEqualsConverter x:Key="EditorToolEqualsConverter"/>
         <conv:StringEqualsConverter x:Key="StringEqualsConverter"/>
-        <conv:NichtInListeConverter x:Key="NichtInListeConverter"/>
-        <conv:AlleWahrConverter x:Key="AlleWahrConverter"/>
+        <conv:NotInListConverter x:Key="NotInListConverter"/>
+        <conv:AllTrueConverter x:Key="AllTrueConverter"/>
         <conv:TranslateConverter x:Key="TranslateConverter"/>
         <conv:RatingThresholdConverter x:Key="RatingThresholdConverter"/>
         <conv:RatingStarGlyphConverter x:Key="RatingStarGlyphConverter"/>

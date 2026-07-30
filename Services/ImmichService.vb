@@ -131,14 +131,14 @@ Namespace Services
         Public Shared Function TryParsePseudoPath(path As String, ByRef assetId As String, ByRef fileName As String) As Boolean
             assetId = Nothing : fileName = Nothing
             If Not IsImmichPseudoPath(path) Then Return False
-            Dim rest = path.Substring("immich://".Length)
-            Dim slash = rest.IndexOf("/"c)
+            Dim remainder = path.Substring("immich://".Length)
+            Dim slash = remainder.IndexOf("/"c)
             If slash <= 0 Then
-                assetId = rest
-                fileName = rest
+                assetId = remainder
+                fileName = remainder
             Else
-                assetId = rest.Substring(0, slash)
-                fileName = rest.Substring(slash + 1)
+                assetId = remainder.Substring(0, slash)
+                fileName = remainder.Substring(slash + 1)
             End If
             Return Not String.IsNullOrEmpty(assetId)
         End Function
@@ -388,9 +388,9 @@ Namespace Services
             ' Formatprüfung, das Aufnahmedatum für den Upload und danach Beschreibung/Bewertung/
             ' Stichwörter für das neue Asset.
             Dim source = Await GetAssetDetailRawAsync(assetId, cancellationToken).ConfigureAwait(False)
-            Dim quellEndung = NormalisierteEndung(source?.OriginalFileName)
-            Dim zielEndung = NormalisierteEndung(filePath)
-            Dim formatBleibt = quellEndung.Length = 0 OrElse quellEndung = zielEndung
+            Dim sourceExtension = NormalisierteEndung(source?.OriginalFileName)
+            Dim targetExtension = NormalisierteEndung(filePath)
+            Dim formatStays = sourceExtension.Length = 0 OrElse sourceExtension = targetExtension
 
             ' Unbekannte Version (0) wie eine alte behandeln: der Legacy-Aufruf beantwortet die Frage selbst
             ' - auf einem v3-Server läuft er ins Leere und wir nehmen den Weg darunter.
@@ -398,7 +398,7 @@ Namespace Services
             ' damit gegen ein JPEG zu tauschen wäre unwiderruflich. Bei Formatwechsel fällt der
             ' Aufruf deshalb durch auf den Weg darunter, der ein ZWEITES Asset anlegt.
             Dim major = Await GetServerMajorVersionAsync(cancellationToken).ConfigureAwait(False)
-            If major < 3 AndAlso formatBleibt Then
+            If major < 3 AndAlso formatStays Then
                 If Await ReplaceOriginalLegacyAsync(assetId, filePath, cancellationToken).ConfigureAwait(False) Then
                     InvalidateAssetCaches(assetId)
                     Await RefreshAssetDetailCacheAsync(assetId, "nach ReplaceAsset (bis v2)", cancellationToken).ConfigureAwait(False)
@@ -412,7 +412,7 @@ Namespace Services
             ' ID zurück. Dann gibt es nichts zu kopieren und erst recht nichts zu löschen.
             If String.Equals(newAssetId, assetId, StringComparison.Ordinal) Then Return assetId
 
-            Dim linksOk = Await CopyAssetLinksAsync(assetId, newAssetId, cancellationToken).ConfigureAwait(False)
+            Dim leftOk = Await CopyAssetLinksAsync(assetId, newAssetId, cancellationToken).ConfigureAwait(False)
             Dim metaOk = Await CopyAssetMetadataAsync(source, newAssetId, cancellationToken).ConfigureAwait(False)
 
             ' Das Original verschwindet NUR, wenn der Ersatz wirklich vollstaendig ist. Vorher wurde
@@ -427,11 +427,11 @@ Namespace Services
             ' 2. BUCHHALTUNG. Scheitert das Kopieren von Alben/Stapel/geteilten Links oder von
             '    Beschreibung/Bewertung/Stichwoertern (403, 500), traegt das neue Asset sie nicht.
             '    Dann ist das alte die einzige Stelle, an der sie noch stehen.
-            Dim grund = OriginalBleibtGrund(source?.OriginalFileName, filePath, linksOk, metaOk)
-            If grund IsNot Nothing Then
-                LastReplaceWarning = grund
+            Dim reason = OriginalStaysReason(source?.OriginalFileName, filePath, leftOk, metaOk)
+            If reason IsNot Nothing Then
+                LastReplaceWarning = reason
                 DiagnosticLogService.LogAlways("Immich.ReplaceAsset",
-                    $"Original {assetId} BLEIBT (neu: {newAssetId}) — {grund}")
+                    $"Original {assetId} BLEIBT (neu: {newAssetId}) — {reason}")
                 Return newAssetId
             End If
 
@@ -446,16 +446,16 @@ Namespace Services
         ''' <summary>Der Grund, warum das Original NICHT gelöscht werden darf — Nothing heißt
         ''' „sauber ersetzt, löschen erlaubt". Eigene Funktion, damit die Regel geprüft werden kann,
         ''' ohne einen Server zu brauchen: die Entscheidung selbst hängt an nichts Netzwerkigem.</summary>
-        Friend Shared Function OriginalBleibtGrund(quellName As String, zielPfad As String,
-                                                   linksOk As Boolean, metaOk As Boolean) As String
-            Dim quellEndung = NormalisierteEndung(quellName)
-            Dim zielEndung = NormalisierteEndung(zielPfad)
+        Friend Shared Function OriginalStaysReason(quellName As String, zielPfad As String,
+                                                   leftOk As Boolean, metaOk As Boolean) As String
+            Dim sourceExtension = NormalisierteEndung(quellName)
+            Dim targetExtension = NormalisierteEndung(zielPfad)
             ' Unbekannte Quelle: nicht raten. Ohne Namen ist ein Formatwechsel nicht feststellbar,
             ' und dann entscheidet allein die Buchhaltung.
-            If quellEndung.Length > 0 AndAlso quellEndung <> zielEndung Then
-                Return $"Format {quellEndung} → {zielEndung}"
+            If sourceExtension.Length > 0 AndAlso sourceExtension <> targetExtension Then
+                Return $"Format {sourceExtension} → {targetExtension}"
             End If
-            If Not linksOk Then Return "Alben/Stapel/Links nicht übernommen"
+            If Not leftOk Then Return "Alben/Stapel/Links nicht übernommen"
             If Not metaOk Then Return "Beschreibung/Bewertung/Stichwörter nicht übernommen"
             Return Nothing
         End Function

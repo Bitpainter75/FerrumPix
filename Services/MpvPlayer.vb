@@ -268,9 +268,9 @@ Namespace Services
             End Select
         End Sub
 
-        Private Sub ObservePropertyLocked(replyUserData As ULong, propertyName As String, format As MpvInterop.MpvFormat)
+        Private Sub ObservePropertyLocked(replyUserData As ULong, propertyName As String, fileFormat As MpvInterop.MpvFormat)
             Using namePtr = New Utf8String(propertyName)
-                Dim result = MpvInterop.ObserveProperty(_handle, replyUserData, namePtr.Pointer, format)
+                Dim result = MpvInterop.ObserveProperty(_handle, replyUserData, namePtr.Pointer, fileFormat)
                 If result < 0 Then Throw New InvalidOperationException($"libmpv observe_property({propertyName}) fehlgeschlagen ({result}).")
             End Using
         End Sub

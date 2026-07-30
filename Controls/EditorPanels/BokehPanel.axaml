@@ -8,7 +8,7 @@
          Anwenden hat: sie braucht die Tiefenkarte, und die ist eine Modellausgabe und kein
          Rezeptwert. Erscheint nur, wenn das Tiefenmodell vorliegt. -->
     <Border Classes="adjustment-group"
-        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=bokeh}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=bokeh}">
         <Expander Header="Tiefen-Unschärfe" icons:ExpanderState.Key="bokeh">
             <Expander.HeaderTemplate>
                 <DataTemplate>
@@ -89,25 +89,25 @@
                     <Grid Grid.Column="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="6" Margin="6,0,0,0">
                         <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
                                 Command="{Binding SetBokehApertureCommand}" CommandParameter="0"
-                                Classes.active="{Binding IsBlendeRund}">
+                                Classes.active="{Binding IsApertureRound}">
                             <TextBlock Text="Rund" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
                         </Button>
                         <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
                                 Command="{Binding SetBokehApertureCommand}" CommandParameter="5"
-                                Classes.active="{Binding IsBlendeFuenf}">
+                                Classes.active="{Binding IsApertureFive}">
                             <TextBlock Text="5" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
                         </Button>
                         <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
                                 Command="{Binding SetBokehApertureCommand}" CommandParameter="6"
-                                Classes.active="{Binding IsBlendeSechs}">
+                                Classes.active="{Binding IsApertureSix}">
                             <TextBlock Text="6" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
                         </Button>
                         <Button Grid.Column="3" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
                                 Command="{Binding SetBokehApertureCommand}" CommandParameter="7"
-                                Classes.active="{Binding IsBlendeSieben}">
+                                Classes.active="{Binding IsApertureSeven}">
                             <TextBlock Text="7" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
                         </Button>

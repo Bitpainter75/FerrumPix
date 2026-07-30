@@ -222,13 +222,13 @@
             <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
             Margin="0,10,0,0"
             IsVisible="{Binding IsMoveSelectionMode}"
-                        IsEnabled="{Binding KannArtUmwandeln}"
+                        IsEnabled="{Binding CanConvertKind}"
                         Command="{Binding ConvertKindCommand}"
-                        ToolTip.Tip="{Binding ArtUmwandelnHinweis}">
+                        ToolTip.Tip="{Binding ConvertKindHint}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
                                        Width="16" Height="16" />
-                        <TextBlock Classes="no-translate" Text="{Binding ArtUmwandelnText}" />
+                        <TextBlock Classes="no-translate" Text="{Binding ConvertKindText}" />
                 
             <!-- OBJEKT ENTFERNEN: braucht nur eine Markierung, egal aus welchem Zweig sie kommt -
                  gemalt, per Klick erkannt oder nach Entfernung ausgewaehlt. Deshalb steht der Knopf
@@ -236,9 +236,9 @@
             <StackPanel Spacing="6" Margin="0,4,0,0">
                 <Separator Margin="0,2,0,2" Background="{DynamicResource FP.Border}" Height="1"/>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding KannObjektEntfernen}"
-                        Command="{Binding ObjektEntfernenCommand}"
-                        ToolTip.Tip="{Binding ObjektEntfernenHinweis}">
+                        IsEnabled="{Binding CanRemoveObject}"
+                        Command="{Binding RemoveObjectCommand}"
+                        ToolTip.Tip="{Binding RemoveObjectHint}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
                                        Width="16" Height="16" />

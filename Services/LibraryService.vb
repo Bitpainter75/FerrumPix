@@ -407,9 +407,9 @@ Namespace Services
                         While reader.Read()
                             If reader.IsDBNull(0) Then Continue While
                             For Each tag In ParseTags(reader.GetString(0)).Distinct(StringComparer.OrdinalIgnoreCase)
-                                Dim vorher = 0
-                                counts.TryGetValue(tag, vorher)
-                                counts(tag) = vorher + 1
+                                Dim before = 0
+                                counts.TryGetValue(tag, before)
+                                counts(tag) = before + 1
                             Next
                         End While
                     End Using

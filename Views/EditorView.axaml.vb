@@ -84,7 +84,7 @@ Namespace Views
         Private _isGradientDragging As Boolean = False
         Private _isWarpDragging As Boolean = False
         Private _isLinienDragging As Boolean = False
-        Private _isObjektEckeDragging As Boolean = False
+        Private _isObjectCornerDragging As Boolean = False
         Private _isPerspectiveDragging As Boolean = False
         Private _maskeSchiebtGerade As Boolean = False
         Private _selectionStart As Avalonia.Point
@@ -129,7 +129,7 @@ Namespace Views
         ''' <summary>Greifweite der Verzerrungs-Ecken in Bildschirmpixeln. EINE Zahl fuer das Tor
         ''' "Klick neben dem Bild durchlassen" und fuer die Trefferpruefung selbst - liefen die
         ''' auseinander, faenden sich Punkte, die das Tor passieren und danach niemanden treffen.</summary>
-        Private Const EckGriffTolerance As Double = 16.0
+        Private Const CornerHandleTolerance As Double = 16.0
         Private Shared ReadOnly GuideBrush As IBrush = New SolidColorBrush(Color.Parse("#FF00C8FF"))
         Private Shared ReadOnly GuideCursorVertical As New Cursor(StandardCursorType.SizeWestEast)
         Private Shared ReadOnly GuideCursorHorizontal As New Cursor(StandardCursorType.SizeNorthSouth)
@@ -233,11 +233,11 @@ Namespace Views
         Private Sub SetClipboardHook()
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
-            vm.CopyPathToClipboard = Async Sub(pfad)
+            vm.CopyPathToClipboard = Async Sub(path)
                                           Try
-                                              If String.IsNullOrEmpty(pfad) Then Return
+                                              If String.IsNullOrEmpty(path) Then Return
                                               Dim owner = TopLevel.GetTopLevel(Me)
-                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {pfad}, cut:=False)
+                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {path}, cut:=False)
                                           Catch ex As Exception
                                               DiagnosticLogService.LogException("Editor.CopyPath", ex)
                                           End Try
@@ -301,9 +301,9 @@ Namespace Views
         ''' <summary>Das geoeffnete Bild als Element - der Rueckfall, wenn keine Kachel getroffen
         ''' wurde.</summary>
         Private Shared Function StageItem(vm As EditorViewModel) As ImageItem
-            Dim pfad = vm?.CurrentImagePath
-            If String.IsNullOrWhiteSpace(pfad) OrElse Not IO.File.Exists(pfad) Then Return Nothing
-            Return New ImageItem(pfad)
+            Dim path = vm?.CurrentImagePath
+            If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return Nothing
+            Return New ImageItem(path)
         End Function
 
         Private Sub OnFooterMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
@@ -574,14 +574,14 @@ Namespace Views
                 vm.SelectedAnnotationIndex = -1
                 If vm.HasActiveSelection Then
                     Dim bildRect = GetDisplayedImageRect(canvas, vm)
-                    Dim draussen = True
+                    Dim outside = True
                     If bildRect.Width > 0 AndAlso bildRect.Height > 0 Then
                         Dim xP = (_objectMarqueeStart.X - bildRect.Left) / bildRect.Width * 100.0
                         Dim yP = (_objectMarqueeStart.Y - bildRect.Top) / bildRect.Height * 100.0
-                        draussen = xP < 0 OrElse yP < 0 OrElse xP > 100 OrElse yP > 100 OrElse
+                        outside = xP < 0 OrElse yP < 0 OrElse xP > 100 OrElse yP > 100 OrElse
                                    Not vm.IsPointInsideSelectionPercent(xP, yP)
                     End If
-                    If draussen Then
+                    If outside Then
                         vm.ClearSelection()
                         UpdateSelectionOverlayVisibility()
                     End If
@@ -1066,9 +1066,9 @@ Namespace Views
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If canvas Is Nothing OrElse vm Is Nothing OrElse vm.DisplayImage Is Nothing Then Return
-            Dim groesse = GetEffectiveDisplaySize(vm)
-            Dim fitPct = EditorViewModel.EinpassenZiel(canvas.Bounds.Width, canvas.Bounds.Height,
-                                                       groesse.Width, groesse.Height,
+            Dim size = GetEffectiveDisplaySize(vm)
+            Dim fitPct = EditorViewModel.FitTarget(canvas.Bounds.Width, canvas.Bounds.Height,
+                                                       size.Width, size.Height,
                                                        IsOnlyWhenLargerFitBehavior())
             If fitPct <= 0 Then Return   ' Zoom des Nutzers nicht anfassen
             vm.ActiveZoomPreset = ZoomPresetMode.Fit
@@ -1190,7 +1190,7 @@ Namespace Views
                 Case NameOf(EditorViewModel.WarpGridValues),
                      NameOf(EditorViewModel.PerspectiveCornerValues),
                      NameOf(EditorViewModel.LineValues),
-                     NameOf(EditorViewModel.ObjektEckenValues),
+                     NameOf(EditorViewModel.ObjectCornerValues),
                      NameOf(EditorViewModel.PreviewImage)
                     UpdateSliderLayout()
             End Select
@@ -1251,7 +1251,7 @@ Namespace Views
             ' Einpassen beim ersten Layout - UND erneut, sobald sich die angezeigte Groesse
             ' aendert. Bei RAW ist das der Wechsel von der kleinen eingebetteten Vorschau auf den
             ' vollen Decode; ohne die zweite Bedingung blieb der Zoom auf dem Wert der Vorschau.
-            If EditorViewModel.MussNeuEinpassen(_zoomInitialized, vm.ActiveZoomPreset = ZoomPresetMode.Fit,
+            If EditorViewModel.NeedsRefit(_zoomInitialized, vm.ActiveZoomPreset = ZoomPresetMode.Fit,
                                                 _letzteEinpassBreite, _letzteEinpassHoehe, imgW, imgH) Then
                 _panX = 0
                 _panY = 0
@@ -1593,18 +1593,18 @@ Namespace Views
                     ' der Sache ist. Ohne diese Ausnahme verschluckte der Zweig hier jeden Griff von
                     ' aussen, und die Ecken liessen sich nur von innen und nur zur Haelfte fassen.
                     Dim startsPerspectiveCornerOutside = ZeigtPerspektive(vm) AndAlso
-                                                         TrifftVerzerrungsEcke(vm, canvas, e.GetPosition(canvas))
+                                                         HitsWarpCorner(vm, canvas, e.GetPosition(canvas))
                     ' Dasselbe fuer die Rasterpunkte: die des RANDES liegen genau auf der Bildkante,
                     ' ihre aeussere Haelfte also draussen. Ohne die Ausnahme liess sich jeder
                     ' Randpunkt nur von innen und nur zur Haelfte fassen - genau das Muster, das
                     ' beim Zuschnitt und bei den Ecken schon zweimal aufgetreten ist.
-                    Dim startsGitterPunktOutside = ShowsGrid(vm) AndAlso
-                                                   TrifftRasterpunkt(vm, canvas, e.GetPosition(canvas))
+                    Dim startsGridPointOutside = ShowsGrid(vm) AndAlso
+                                                   HitsGridPoint(vm, canvas, e.GetPosition(canvas))
                     ' Dieselbe Ausnahme fuer die Linien: ihre Griffe duerfen ausserhalb des Bildes
                     ' liegen, und dort muss der Druck ankommen statt geschluckt zu werden. Das ist
                     ' jetzt der VIERTE Fall dieser Art - Zuschnittgriffe, Perspektivecken,
                     ' Rasterpunkte, Linienenden.
-                    Dim startsLinienOutside = ShowsLines(vm)
+                    Dim startsLinesOutside = ShowsLines(vm)
                     Dim startsObjectMarqueeOutside = AllowsObjectMarquee(vm)
                     If startsObjectMarqueeOutside Then
                         BeginObjectMarquee(e.GetPosition(canvas))
@@ -1613,8 +1613,8 @@ Namespace Views
                         Return
                     End If
                     If Not startsSelectionDragOutside AndAlso Not startsCropHandleOutside AndAlso
-                       Not startsPerspectiveCornerOutside AndAlso Not startsGitterPunktOutside AndAlso
-                       Not startsLinienOutside Then
+                       Not startsPerspectiveCornerOutside AndAlso Not startsGridPointOutside AndAlso
+                       Not startsLinesOutside Then
                         ClearEditorSelections(vm)
                         e.Handled = True
                         Return
@@ -1652,15 +1652,15 @@ Namespace Views
             ' Objektrahmens - genau uebereinander. Wer im Verzerren-Werkzeug an einer Ecke zieht,
             ' meint die Verzerrung; das Groessenaendern ist dort ueber die Regler erreichbar, die
             ' Verzerrung nur hier.
-            If vm IsNot Nothing AndAlso vm.ZeigtObjektEcken Then
+            If vm IsNot Nothing AndAlso vm.ShowsObjectCorners Then
                 Dim oRect = GetDisplayedImageRect(canvas, vm)
                 If oRect.Width > 0 AndAlso oRect.Height > 0 Then
                     Dim oPos = e.GetPosition(canvas)
-                    If vm.TryBeginObjektEckeDrag((oPos.X - oRect.Left) / oRect.Width * 100.0,
+                    If vm.TryBeginObjectCornerDrag((oPos.X - oRect.Left) / oRect.Width * 100.0,
                                                  (oPos.Y - oRect.Top) / oRect.Height * 100.0,
-                                                 EckGriffTolerance / oRect.Width * 100.0,
-                                                 EckGriffTolerance / oRect.Height * 100.0) Then
-                        _isObjektEckeDragging = True
+                                                 CornerHandleTolerance / oRect.Width * 100.0,
+                                                 CornerHandleTolerance / oRect.Height * 100.0) Then
+                        _isObjectCornerDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
@@ -1747,8 +1747,8 @@ Namespace Views
                     Dim eckPos = e.GetPosition(canvas)
                     If vm.TryBeginPerspectiveCornerDrag((eckPos.X - eckRect.Left) / eckRect.Width * 100.0,
                                                         (eckPos.Y - eckRect.Top) / eckRect.Height * 100.0,
-                                                        EckGriffTolerance / eckRect.Width * 100.0,
-                                                        EckGriffTolerance / eckRect.Height * 100.0) Then
+                                                        CornerHandleTolerance / eckRect.Width * 100.0,
+                                                        CornerHandleTolerance / eckRect.Height * 100.0) Then
                         _isPerspectiveDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
@@ -1757,20 +1757,20 @@ Namespace Views
                 End If
             End If
             If ShowsGrid(vm) Then
-                Dim gitterRect = GetDisplayedImageRect(canvas, vm)
-                If gitterRect.Width > 0 AndAlso gitterRect.Height > 0 Then
+                Dim gridRect = GetDisplayedImageRect(canvas, vm)
+                If gridRect.Width > 0 AndAlso gridRect.Height > 0 Then
                     ' NICHT klemmen: ein Randpunkt sitzt auf der Kante, und die aeussere Haelfte
                     ' seines Fangbereichs liegt daneben.
-                    Dim gitterPos = e.GetPosition(canvas)
+                    Dim gridPos = e.GetPosition(canvas)
                     ' Dieselbe Greifweite wie bei den Verzerrungs-Ecken. 14 war zu knapp: die
                     ' Randpunkte lassen sich nur LAENGS ihrer Kante bewegen, man zielt also von
                     ' innen auf einen Punkt, der halb ausserhalb liegt - und trifft die aeussere
                     ' Haelfte gar nicht.
-                    Const gridSlopPixels As Double = EckGriffTolerance
-                    If vm.TryBeginWarpDrag((gitterPos.X - gitterRect.Left) / gitterRect.Width * 100.0,
-                                           (gitterPos.Y - gitterRect.Top) / gitterRect.Height * 100.0,
-                                           gridSlopPixels / gitterRect.Width * 100.0,
-                                           gridSlopPixels / gitterRect.Height * 100.0) Then
+                    Const gridSlopPixels As Double = CornerHandleTolerance
+                    If vm.TryBeginWarpDrag((gridPos.X - gridRect.Left) / gridRect.Width * 100.0,
+                                           (gridPos.Y - gridRect.Top) / gridRect.Height * 100.0,
+                                           gridSlopPixels / gridRect.Width * 100.0,
+                                           gridSlopPixels / gridRect.Height * 100.0) Then
                         _isWarpDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
@@ -1780,15 +1780,15 @@ Namespace Views
             End If
 
             If ShowsLines(vm) Then
-                Dim linienRect = GetDisplayedImageRect(canvas, vm)
-                If linienRect.Width > 0 AndAlso linienRect.Height > 0 Then
+                Dim linesRect = GetDisplayedImageRect(canvas, vm)
+                If linesRect.Width > 0 AndAlso linesRect.Height > 0 Then
                     ' NICHT klemmen: eine Linie darf ueber die Bildkante hinaus gezogen werden, und
                     ' ihr Griff liegt dann halb daneben.
                     Dim lPos = e.GetPosition(canvas)
-                    Dim lx = (lPos.X - linienRect.Left) / linienRect.Width * 100.0
-                    Dim ly = (lPos.Y - linienRect.Top) / linienRect.Height * 100.0
-                    Dim slopX = EckGriffTolerance / linienRect.Width * 100.0
-                    Dim slopY = EckGriffTolerance / linienRect.Height * 100.0
+                    Dim lx = (lPos.X - linesRect.Left) / linesRect.Width * 100.0
+                    Dim ly = (lPos.Y - linesRect.Top) / linesRect.Height * 100.0
+                    Dim slopX = CornerHandleTolerance / linesRect.Width * 100.0
+                    Dim slopY = CornerHandleTolerance / linesRect.Height * 100.0
                     ' Erst schauen, ob eine vorhandene Linie gemeint ist - sonst legte jeder Klick
                     ' eine neue an und die bestehende waere nicht mehr zu fassen.
                     If vm.TryBeginLineDrag(lx, ly, slopX, slopY) Then
@@ -2357,14 +2357,14 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
-            If _isObjektEckeDragging Then
+            If _isObjectCornerDragging Then
                 Dim oCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim oVm = TryCast(DataContext, EditorViewModel)
                 If oCanvas Is Nothing OrElse oVm Is Nothing Then Return
                 Dim oRect = GetDisplayedImageRect(oCanvas, oVm)
                 If oRect.Width <= 0 OrElse oRect.Height <= 0 Then Return
                 Dim oPos = e.GetPosition(oCanvas)
-                oVm.UpdateObjektEckeDrag((oPos.X - oRect.Left) / oRect.Width * 100.0,
+                oVm.UpdateObjectCornerDrag((oPos.X - oRect.Left) / oRect.Width * 100.0,
                                          (oPos.Y - oRect.Top) / oRect.Height * 100.0)
                 UpdateSliderLayout()
                 e.Handled = True
@@ -2477,9 +2477,9 @@ Namespace Views
                 _isLinienDragging = False
                 UpdateSliderLayout()
             End If
-            If _isObjektEckeDragging Then
-                TryCast(DataContext, EditorViewModel)?.EndObjektEckeDrag()
-                _isObjektEckeDragging = False
+            If _isObjectCornerDragging Then
+                TryCast(DataContext, EditorViewModel)?.EndObjectCornerDrag()
+                _isObjectCornerDragging = False
                 UpdateSliderLayout()
             End If
             If _isGradientDragging Then
@@ -3032,27 +3032,27 @@ Namespace Views
             ' NICHT auf das Bild klemmen: eine Hilfslinie soll sich auch daneben legen lassen, etwa
             ' um einen Abstand zum Bildrand zu markieren.
             Dim anzeigeProzent = (pointerOnAxis - axisStart) / axisLength * 100.0
-            Dim quelle = If(aufSchirmSenkrecht,
+            Dim source = If(aufSchirmSenkrecht,
                             vm.DisplayToSourcePercent(anzeigeProzent, 50.0),
                             vm.DisplayToSourcePercent(50.0, anzeigeProzent))
             ' Neben dem Bildinhalt gibt es keinen Quellpunkt. Dann linear weiterrechnen: der
             ' Massstab der Anzeige gilt dort naeherungsweise weiter, und die Linie bleibt greifbar.
-            Dim wert As Double
-            If quelle.HasValue Then
-                wert = If(_guideDragIsVertical, CDbl(quelle.Value.X), CDbl(quelle.Value.Y))
+            Dim value As Double
+            If source.HasValue Then
+                value = If(_guideDragIsVertical, CDbl(source.Value.X), CDbl(source.Value.Y))
             Else
                 Dim rand = If(anzeigeProzent < 50.0, 1.0, 99.0)
                 Dim anker = If(aufSchirmSenkrecht,
                                vm.DisplayToSourcePercent(rand, 50.0),
                                vm.DisplayToSourcePercent(50.0, rand))
                 If Not anker.HasValue Then Return
-                Dim ankerWert = If(_guideDragIsVertical, CDbl(anker.Value.X), CDbl(anker.Value.Y))
-                wert = ankerWert + (anzeigeProzent - rand)
+                Dim anchorValue = If(_guideDragIsVertical, CDbl(anker.Value.X), CDbl(anker.Value.Y))
+                value = anchorValue + (anzeigeProzent - rand)
             End If
 
             Dim guides = If(_guideDragIsVertical, _guidesX, _guidesY)
             If _guideDragIndex < 0 OrElse _guideDragIndex >= guides.Count Then Return
-            guides(_guideDragIndex) = wert
+            guides(_guideDragIndex) = value
             UpdateGuideLines()
         End Sub
 
@@ -3304,9 +3304,9 @@ Namespace Views
             ' die Ameisen. Es fehlt aber regelmaessig mit Absicht: beim ersten Reglerdreh wird es
             ' ausgeblendet, weil es sonst verdeckt, was man beurteilt. Genau dann sah man bei einer
             ' Maske ploetzlich Ameisen - die es bei einer Maske nie geben darf.
-            Dim istMaske = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
+            Dim isMask = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
                            (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask)
-            If istMaske Then
+            If isMask Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
                 If maskOverlay IsNot Nothing Then
                     maskOverlay.IsVisible = vm.SelectionMaskPreviewImage IsNot Nothing
@@ -3379,39 +3379,39 @@ Namespace Views
         ''' Bildbereich gerechnet - damit sitzen sie bei jedem Zoom- und Panstand richtig.</summary>
         ''' <summary>Liegt der Zeiger auf einer Ecke des Verzerrungsvierecks? Nur zur Frage, ob ein
         ''' Klick NEBEN dem Bild durchgelassen werden muss - gefasst wird er weiter unten.</summary>
-        Private Function TrifftVerzerrungsEcke(vm As EditorViewModel, canvas As Canvas,
+        Private Function HitsWarpCorner(vm As EditorViewModel, canvas As Canvas,
                                                position As Avalonia.Point) As Boolean
             If vm Is Nothing OrElse canvas Is Nothing Then Return False
             Dim rect = GetDisplayedImageRect(canvas, vm)
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
-            Dim ecken = vm.PerspectiveCornerValues
-            If ecken Is Nothing OrElse ecken.Length < 8 Then Return False
+            Dim corners = vm.PerspectiveCornerValues
+            If corners Is Nothing OrElse corners.Length < 8 Then Return False
             For i = 0 To 3
-                Dim x = rect.Left + ecken(i * 2) / 100.0 * rect.Width
-                Dim y = rect.Top + ecken(i * 2 + 1) / 100.0 * rect.Height
-                If Math.Abs(position.X - x) <= EckGriffTolerance AndAlso
-                   Math.Abs(position.Y - y) <= EckGriffTolerance Then Return True
+                Dim x = rect.Left + corners(i * 2) / 100.0 * rect.Width
+                Dim y = rect.Top + corners(i * 2 + 1) / 100.0 * rect.Height
+                If Math.Abs(position.X - x) <= CornerHandleTolerance AndAlso
+                   Math.Abs(position.Y - y) <= CornerHandleTolerance Then Return True
             Next
             Return False
         End Function
 
         ''' <summary>Liegt der Zeiger auf einem Rasterpunkt? Nur zur Frage, ob ein Klick NEBEN dem
         ''' Bild durchgelassen werden muss - gefasst wird er weiter unten.</summary>
-        Private Function TrifftRasterpunkt(vm As EditorViewModel, canvas As Canvas,
+        Private Function HitsGridPoint(vm As EditorViewModel, canvas As Canvas,
                                            position As Avalonia.Point) As Boolean
             If vm Is Nothing OrElse canvas Is Nothing Then Return False
             Dim rect = GetDisplayedImageRect(canvas, vm)
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
             Dim g = vm.WarpGridValues
             If g Is Nothing OrElse g.Length < 4 Then Return False
-            Dim anzahl = (CInt(g(0)) + 1) * (CInt(g(1)) + 1)
-            For i = 0 To anzahl - 1
+            Dim count = (CInt(g(0)) + 1) * (CInt(g(1)) + 1)
+            For i = 0 To count - 1
                 Dim px = g(2 + i * 2), py = g(3 + i * 2)
                 If Double.IsNaN(px) OrElse Double.IsNaN(py) Then Continue For
                 Dim x = rect.Left + px / 100.0 * rect.Width
                 Dim y = rect.Top + py / 100.0 * rect.Height
-                If Math.Abs(position.X - x) <= EckGriffTolerance AndAlso
-                   Math.Abs(position.Y - y) <= EckGriffTolerance Then Return True
+                If Math.Abs(position.X - x) <= CornerHandleTolerance AndAlso
+                   Math.Abs(position.Y - y) <= CornerHandleTolerance Then Return True
             Next
             Return False
         End Function
@@ -3429,7 +3429,7 @@ Namespace Views
         ''' ist UND im Panel die Perspektive gewaehlt wurde. Beide Overlays gleichzeitig waren ein
         ''' Fehler: die Eck-Anfasser und die Rasterpunkte liegen teils uebereinander.</summary>
         Private Shared Function ZeigtPerspektive(vm As EditorViewModel) As Boolean
-            Return IsWarpTool(vm) AndAlso vm.IsVerzerrenPerspektive
+            Return IsWarpTool(vm) AndAlso vm.IsWarpPerspective
         End Function
 
         Private Shared Function ShowsGrid(vm As EditorViewModel) As Boolean
@@ -3464,8 +3464,8 @@ Namespace Views
             Dim vm = TryCast(DataContext, EditorViewModel)
             ' Ist ein Objekt markiert, gehoeren die Ecken IHM: dann liegen sie auf dem
             ' Objektrechteck, nicht auf dem Bild.
-            If vm IsNot Nothing AndAlso vm.ZeigtObjektEcken AndAlso iw > 0 AndAlso ih > 0 Then
-                Dim ov = vm.ObjektEckenValues
+            If vm IsNot Nothing AndAlso vm.ShowsObjectCorners AndAlso iw > 0 AndAlso ih > 0 Then
+                Dim ov = vm.ObjectCornerValues
                 If ov IsNot Nothing AndAlso ov.Length = 8 Then
                     Dim ow(7) As Double
                     For i = 0 To 3
@@ -3494,12 +3494,12 @@ Namespace Views
             End If
             ' Rand ringsum, damit eine nach aussen gezogene Ecke nicht abgeschnitten wird.
             Const rand As Double = 400.0
-            Dim werte(7) As Double
+            Dim values(7) As Double
             For i = 0 To 3
-                werte(i * 2) = e(i * 2) / 100.0 * iw + rand
-                werte(i * 2 + 1) = e(i * 2 + 1) / 100.0 * ih + rand
+                values(i * 2) = e(i * 2) / 100.0 * iw + rand
+                values(i * 2 + 1) = e(i * 2 + 1) / 100.0 * ih + rand
             Next
-            overlay.CornerValues = werte
+            overlay.CornerValues = values
             Avalonia.Controls.Canvas.SetLeft(overlay, ix - rand)
             Avalonia.Controls.Canvas.SetTop(overlay, iy - rand)
             overlay.Width = iw + rand * 2
@@ -3522,13 +3522,13 @@ Namespace Views
                 overlay.IsVisible = False
                 Return
             End If
-            Dim werte(g.Length - 1) As Double
-            werte(0) = g(0) : werte(1) = g(1)
+            Dim values(g.Length - 1) As Double
+            values(0) = g(0) : values(1) = g(1)
             For i = 2 To g.Length - 2 Step 2
-                werte(i) = g(i) / 100.0 * iw
-                werte(i + 1) = g(i + 1) / 100.0 * ih
+                values(i) = g(i) / 100.0 * iw
+                values(i + 1) = g(i + 1) / 100.0 * ih
             Next
-            overlay.GridValues = werte
+            overlay.GridValues = values
             Avalonia.Controls.Canvas.SetLeft(overlay, ix)
             Avalonia.Controls.Canvas.SetTop(overlay, iy)
             overlay.Width = iw
@@ -3554,13 +3554,13 @@ Namespace Views
                 overlay.IsVisible = False
                 Return
             End If
-            Dim werte(g.Length - 1) As Double
-            werte(0) = g(0)
+            Dim values(g.Length - 1) As Double
+            values(0) = g(0)
             For i = 1 To g.Length - 2 Step 2
-                werte(i) = g(i) / 100.0 * iw
-                werte(i + 1) = g(i + 1) / 100.0 * ih
+                values(i) = g(i) / 100.0 * iw
+                values(i + 1) = g(i + 1) / 100.0 * ih
             Next
-            overlay.LineValues = werte
+            overlay.LineValues = values
             Avalonia.Controls.Canvas.SetLeft(overlay, ix)
             Avalonia.Controls.Canvas.SetTop(overlay, iy)
             overlay.Width = iw
@@ -3947,28 +3947,28 @@ Namespace Views
                                                   ByRef left As Double, ByRef top As Double,
                                                   ByRef right As Double, ByRef bottom As Double)
             If ausgang.Width <= 0 OrElse ausgang.Height <= 0 Then Return
-            Dim ziel = ausgang.Width / ausgang.Height
-            If ziel <= 0 Then Return
+            Dim target = ausgang.Width / ausgang.Height
+            If target <= 0 Then Return
 
-            Dim breite = right - left, hoehe = bottom - top
-            If breite <= 0 OrElse hoehe <= 0 Then Return
+            Dim width = right - left, height = bottom - top
+            If width <= 0 OrElse height <= 0 Then Return
 
             ' Welche Achse fuehrt? Bei einer Kante die, an der gezogen wird; bei einer Ecke die mit
             ' der groesseren Aenderung - sonst sprang das Rechteck, sobald man schraeg zieht.
-            Dim breiteFuehrt As Boolean
+            Dim widthLeads As Boolean
             Select Case modus
                 Case CropDragMode.Left, CropDragMode.Right
-                    breiteFuehrt = True
+                    widthLeads = True
                 Case CropDragMode.Top, CropDragMode.Bottom
-                    breiteFuehrt = False
+                    widthLeads = False
                 Case Else
-                    breiteFuehrt = Math.Abs(breite - ausgang.Width) >= Math.Abs(hoehe - ausgang.Height)
+                    widthLeads = Math.Abs(width - ausgang.Width) >= Math.Abs(height - ausgang.Height)
             End Select
 
-            If breiteFuehrt Then
-                hoehe = breite / ziel
+            If widthLeads Then
+                height = width / target
             Else
-                breite = hoehe * ziel
+                width = height * target
             End If
 
             ' Der feste Punkt.
@@ -3990,45 +3990,45 @@ Namespace Views
                     ankerY = ausgang.Top + ausgang.Height / 2.0
             End Select
 
-            Dim nachLinks = (modus = CropDragMode.Left OrElse modus = CropDragMode.TopLeft OrElse
+            Dim toLeft = (modus = CropDragMode.Left OrElse modus = CropDragMode.TopLeft OrElse
                              modus = CropDragMode.BottomLeft)
-            Dim nachRechts = (modus = CropDragMode.Right OrElse modus = CropDragMode.TopRight OrElse
+            Dim toRight = (modus = CropDragMode.Right OrElse modus = CropDragMode.TopRight OrElse
                               modus = CropDragMode.BottomRight)
-            Dim nachOben = (modus = CropDragMode.Top OrElse modus = CropDragMode.TopLeft OrElse
+            Dim toTop = (modus = CropDragMode.Top OrElse modus = CropDragMode.TopLeft OrElse
                             modus = CropDragMode.TopRight)
-            Dim nachUnten = (modus = CropDragMode.Bottom OrElse modus = CropDragMode.BottomLeft OrElse
+            Dim toBottom = (modus = CropDragMode.Bottom OrElse modus = CropDragMode.BottomLeft OrElse
                              modus = CropDragMode.BottomRight)
 
             ' Wie weit reicht das Rechteck vom festen Punkt aus hoechstens ins Bild?
-            Dim platzX = If(nachLinks, ankerX - imageRect.Left,
-                         If(nachRechts, imageRect.Right - ankerX,
+            Dim platzX = If(toLeft, ankerX - imageRect.Left,
+                         If(toRight, imageRect.Right - ankerX,
                             Math.Min(ankerX - imageRect.Left, imageRect.Right - ankerX) * 2.0))
-            Dim platzY = If(nachOben, ankerY - imageRect.Top,
-                         If(nachUnten, imageRect.Bottom - ankerY,
+            Dim platzY = If(toTop, ankerY - imageRect.Top,
+                         If(toBottom, imageRect.Bottom - ankerY,
                             Math.Min(ankerY - imageRect.Top, imageRect.Bottom - ankerY) * 2.0))
-            If platzX > 0 AndAlso breite > platzX Then
-                breite = platzX
-                hoehe = breite / ziel
+            If platzX > 0 AndAlso width > platzX Then
+                width = platzX
+                height = width / target
             End If
-            If platzY > 0 AndAlso hoehe > platzY Then
-                hoehe = platzY
-                breite = hoehe * ziel
+            If platzY > 0 AndAlso height > platzY Then
+                height = platzY
+                width = height * target
             End If
-            If breite < 12 OrElse hoehe < 12 Then Return
+            If width < 12 OrElse height < 12 Then Return
 
-            If nachLinks Then
-                right = ankerX : left = ankerX - breite
-            ElseIf nachRechts Then
-                left = ankerX : right = ankerX + breite
+            If toLeft Then
+                right = ankerX : left = ankerX - width
+            ElseIf toRight Then
+                left = ankerX : right = ankerX + width
             Else
-                left = ankerX - breite / 2.0 : right = ankerX + breite / 2.0
+                left = ankerX - width / 2.0 : right = ankerX + width / 2.0
             End If
-            If nachOben Then
-                bottom = ankerY : top = ankerY - hoehe
-            ElseIf nachUnten Then
-                top = ankerY : bottom = ankerY + hoehe
+            If toTop Then
+                bottom = ankerY : top = ankerY - height
+            ElseIf toBottom Then
+                top = ankerY : bottom = ankerY + height
             Else
-                top = ankerY - hoehe / 2.0 : bottom = ankerY + hoehe / 2.0
+                top = ankerY - height / 2.0 : bottom = ankerY + height / 2.0
             End If
         End Sub
 
@@ -4172,10 +4172,10 @@ Namespace Views
             ' Gegenstrich in den Luecken: ein schwarz konturiertes Objekt auf dunklem Bild war sonst
             ' gar nicht zu sehen (Nachtaufnahme).
             If frame IsNot Nothing Then
-                Dim rahmenfarbe = ParseAvaloniaColor(vm.AnnotationStrokeColor, Colors.White)
-                frame.Stroke = New SolidColorBrush(rahmenfarbe)
+                Dim frameColor = ParseAvaloniaColor(vm.AnnotationStrokeColor, Colors.White)
+                frame.Stroke = New SolidColorBrush(frameColor)
                 Dim gegen = Me.FindControl(Of Rectangle)("TextOverlayFrameCounter")
-                If gegen IsNot Nothing Then gegen.Stroke = New SolidColorBrush(ContrastPartner(rahmenfarbe))
+                If gegen IsNot Nothing Then gegen.Stroke = New SolidColorBrush(ContrastPartner(frameColor))
             End If
             If overlayImage IsNot Nothing Then
                 overlayImage.Margin = ComputeSelectedOverlayImageMargin(vm, width, height)
@@ -4366,8 +4366,8 @@ Namespace Views
             ' Nicht behandeln heisst durchlassen: der Border liegt im PreviewCanvas, ohne
             ' e.Handled steigt der Druck dorthin auf und der Gitter-Zweig greift. Geprueft wird
             ' geometrisch, weil e.Source hier immer der oben liegende Border ist.
-            If ShowsGrid(vm) AndAlso TrifftRasterpunkt(vm, canvas, pos) Then Return
-            If ZeigtPerspektive(vm) AndAlso TrifftVerzerrungsEcke(vm, canvas, pos) Then Return
+            If ShowsGrid(vm) AndAlso HitsGridPoint(vm, canvas, pos) Then Return
+            If ZeigtPerspektive(vm) AndAlso HitsWarpCorner(vm, canvas, pos) Then Return
 
             Dim rect = GetTextOverlayRect()
             Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
@@ -4490,7 +4490,7 @@ Namespace Views
         ''' auch ohne Ansicht geprueft - ein Zugriff auf den DataContext waere dort ein Fremdkoerper.</summary>
         Private Shared Function NoHandlesWhileWarping(vm As EditorViewModel, mode As TextDragMode) As TextDragMode
             If mode = TextDragMode.None OrElse mode = TextDragMode.Move Then Return mode
-            If vm IsNot Nothing AndAlso vm.VerzerrtDasObjekt Then Return TextDragMode.None
+            If vm IsNot Nothing AndAlso vm.WarpsTheObject Then Return TextDragMode.None
             Return mode
         End Function
 

@@ -60,8 +60,8 @@ Namespace Controls
             ' Zwei Stifte übereinander: ein dunkler, breiter darunter, damit die Achse auch auf
             ' hellem Himmel sichtbar bleibt (dieselbe Überlegung wie bei den Laufameisen).
             Dim schatten = New Pen(New SolidColorBrush(Color.FromArgb(140, 0, 0, 0)), 3.0)
-            Dim linie = New Pen(StrokeBrush, 1.4)
-            Dim zart = New Pen(New SolidColorBrush(Color.FromArgb(150, 255, 255, 255)), 1.0)
+            Dim line = New Pen(StrokeBrush, 1.4)
+            Dim gentle = New Pen(New SolidColorBrush(Color.FromArgb(150, 255, 255, 255)), 1.0)
 
             Dim dx = b.X - a.X, dy = b.Y - a.Y
             Dim laenge = Math.Sqrt(dx * dx + dy * dy)
@@ -71,38 +71,38 @@ Namespace Controls
             If istRadial Then
                 ' Aussenkante der Ellipse und die innere Grenze des Übergangs.
                 Dim r2 = Math.Max(0.05, ratio) * laenge
-                Dim innen = Math.Max(0.0, 1.0 - uebergang)
+                Dim inner = Math.Max(0.0, 1.0 - uebergang)
                 ZeichneEllipse(context, schatten, a, laenge, r2, ex, ey)
-                ZeichneEllipse(context, linie, a, laenge, r2, ex, ey)
-                If innen > 0.02 Then ZeichneEllipse(context, zart, a, laenge * innen, r2 * innen, ex, ey)
+                ZeichneEllipse(context, line, a, laenge, r2, ex, ey)
+                If inner > 0.02 Then ZeichneEllipse(context, gentle, a, laenge * inner, r2 * inner, ex, ey)
             Else
                 context.DrawLine(schatten, a, b)
-                context.DrawLine(linie, a, b)
+                context.DrawLine(line, a, b)
                 ' Grenzen des Übergangs: zwei kurze Querstriche senkrecht zur Achse. Sie machen
                 ' sichtbar, was der Regler "Übergang" tut, ohne die ganze Bildbreite zu queren.
-                Dim halb = laenge * uebergang / 2.0
-                Dim mitte = New Point((a.X + b.X) / 2.0, (a.Y + b.Y) / 2.0)
+                Dim half = laenge * uebergang / 2.0
+                Dim center = New Point((a.X + b.X) / 2.0, (a.Y + b.Y) / 2.0)
                 Dim quer = 26.0
-                For Each s In New Double() {-halb, halb}
-                    Dim p = New Point(mitte.X + ex * s, mitte.Y + ey * s)
+                For Each s In New Double() {-half, half}
+                    Dim p = New Point(center.X + ex * s, center.Y + ey * s)
                     Dim p1 = New Point(p.X - ey * quer, p.Y + ex * quer)
                     Dim p2 = New Point(p.X + ey * quer, p.Y - ex * quer)
-                    context.DrawLine(zart, p1, p2)
+                    context.DrawLine(gentle, p1, p2)
                 Next
             End If
 
-            ZeichneGriff(context, a, False)
-            ZeichneGriff(context, b, True)
+            DrawHandle(context, a, False)
+            DrawHandle(context, b, True)
             ' Beim radialen Verlauf zusaetzlich ein Griff QUER zur Achse: dort endet die zweite
             ' Halbachse, und daran laesst sich die Stauchung ziehen. Ohne ihn waere sie das einzige
             ' Mass der Ellipse, das nur der Regler kann.
             If istRadial Then
                 Dim r2 = Math.Max(0.05, ratio) * laenge
-                ZeichneGriff(context, New Point(a.X - ey * r2, a.Y + ex * r2), True)
+                DrawHandle(context, New Point(a.X - ey * r2, a.Y + ex * r2), True)
             End If
         End Sub
 
-        Private Shared Sub ZeichneEllipse(context As DrawingContext, stift As Pen, mitte As Point,
+        Private Shared Sub ZeichneEllipse(context As DrawingContext, stift As Pen, center As Point,
                                           r1 As Double, r2 As Double, ex As Double, ey As Double)
             ' Avalonia kennt keine gedrehte Ellipse als Grundform - der Umriss wird deshalb aus
             ' Stützpunkten gezogen. 72 Schritte sind auch bei Vollbild-Ellipsen glatt.
@@ -111,7 +111,7 @@ Namespace Controls
                 For i = 0 To 72
                     Dim w = i / 72.0 * 2.0 * Math.PI
                     Dim lx = Math.Cos(w) * r1, ly = Math.Sin(w) * r2
-                    Dim p = New Point(mitte.X + lx * ex - ly * ey, mitte.Y + lx * ey + ly * ex)
+                    Dim p = New Point(center.X + lx * ex - ly * ey, center.Y + lx * ey + ly * ex)
                     If i = 0 Then ctx.BeginFigure(p, False) Else ctx.LineTo(p)
                 Next
                 ctx.EndFigure(True)
@@ -121,11 +121,11 @@ Namespace Controls
 
         ''' <summary>Der Endpunkt ist gefüllt, der Startpunkt hohl - so sieht man auch bei
         ''' gedrehtem Verlauf sofort, welches Ende die volle Wirkung trägt.</summary>
-        Private Sub ZeichneGriff(context As DrawingContext, p As Point, gefuellt As Boolean)
-            Dim rand = New Pen(New SolidColorBrush(Color.FromArgb(180, 0, 0, 0)), 2.5)
+        Private Sub DrawHandle(context As DrawingContext, p As Point, filled As Boolean)
+            Dim border = New Pen(New SolidColorBrush(Color.FromArgb(180, 0, 0, 0)), 2.5)
             Dim stift = New Pen(StrokeBrush, 1.6)
-            context.DrawEllipse(Nothing, rand, p, HandleRadius, HandleRadius)
-            context.DrawEllipse(If(gefuellt, StrokeBrush, New SolidColorBrush(Color.FromArgb(70, 255, 255, 255))),
+            context.DrawEllipse(Nothing, border, p, HandleRadius, HandleRadius)
+            context.DrawEllipse(If(filled, StrokeBrush, New SolidColorBrush(Color.FromArgb(70, 255, 255, 255))),
                                 stift, p, HandleRadius, HandleRadius)
         End Sub
 

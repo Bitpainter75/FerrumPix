@@ -314,8 +314,8 @@ Namespace Services
             Dim Wandeln =
                 Function(p As Single(), hue As Single, sat As Single) As Single()
                     ' +/-100 entsprechen +/-30 Grad - der Bereich, in dem sich Adobes Regler bewegen.
-                    Dim winkel = hue / 100.0 * 30.0 * Math.PI / 180.0
-                    Dim c = Math.Cos(winkel), sn = Math.Sin(winkel)
+                    Dim angle = hue / 100.0 * 30.0 * Math.PI / 180.0
+                    Dim c = Math.Cos(angle), sn = Math.Sin(angle)
                     ' Drehung um die Grauachse (1,1,1)/sqrt(3), Standardform.
                     Dim k = (1.0 - c) / 3.0
                     Dim w = Math.Sqrt(1.0 / 3.0) * sn
@@ -328,11 +328,11 @@ Namespace Services
                     Dim g = CSng(m(3) * p(0) + m(4) * p(1) + m(5) * p(2))
                     Dim b = CSng(m(6) * p(0) + m(7) * p(1) + m(8) * p(2))
                     ' Saettigung: Abstand von der Grauachse skalieren, Helligkeit unangetastet.
-                    Dim faktor = 1.0F + sat / 100.0F
+                    Dim factor = 1.0F + sat / 100.0F
                     Dim grau = 0.299F * r + 0.587F * g + 0.114F * b
-                    Return New Single() {grau + (r - grau) * faktor,
-                                         grau + (g - grau) * faktor,
-                                         grau + (b - grau) * faktor}
+                    Return New Single() {grau + (r - grau) * factor,
+                                         grau + (g - grau) * factor,
+                                         grau + (b - grau) * factor}
                 End Function
 
             Dim pr = Wandeln(New Single() {1, 0, 0}, adj.CalibrationRedHue, adj.CalibrationRedSaturation)
@@ -344,22 +344,22 @@ Namespace Services
             ' (1,1,1); die Matrix bildet es auf die SUMME der drei Primaerfarben ab, und sobald auch
             ' nur eine gedreht wurde, ist die Summe nicht mehr grau. Gemessen wurde aus (128,128,128)
             ' ein (116,170,96) - ein deutlicher Gruenstich auf jeder neutralen Flaeche.
-            Dim zeilen = {
+            Dim rows = {
                 New Single() {pr(0), pg(0), pb(0)},
                 New Single() {pr(1), pg(1), pb(1)},
                 New Single() {pr(2), pg(2), pb(2)}
             }
-            For Each zeile In zeilen
-                Dim summe = zeile(0) + zeile(1) + zeile(2)
-                If Math.Abs(summe) > 0.0001F Then
-                    zeile(0) /= summe : zeile(1) /= summe : zeile(2) /= summe
+            For Each row In rows
+                Dim sum = row(0) + row(1) + row(2)
+                If Math.Abs(sum) > 0.0001F Then
+                    row(0) /= sum : row(1) /= sum : row(2) /= sum
                 End If
             Next
 
             Return New Single() {
-                zeilen(0)(0), zeilen(0)(1), zeilen(0)(2), 0, 0,
-                zeilen(1)(0), zeilen(1)(1), zeilen(1)(2), 0, 0,
-                zeilen(2)(0), zeilen(2)(1), zeilen(2)(2), 0, 0,
+                rows(0)(0), rows(0)(1), rows(0)(2), 0, 0,
+                rows(1)(0), rows(1)(1), rows(1)(2), 0, 0,
+                rows(2)(0), rows(2)(1), rows(2)(2), 0, 0,
                 0, 0, 0, 1, 0
             }
         End Function
@@ -367,24 +367,24 @@ Namespace Services
         ''' <summary>Verkettet zwei Skia-Farbmatrizen zu einer (erst <paramref name="innen"/>, dann
         ''' <paramref name="aussen"/>). So kostet die Kalibrierung KEINEN zweiten Durchlauf pro
         ''' Pixel - sie wird einmal beim Bauen in die vorhandene Matrix hineingerechnet.</summary>
-        Private Shared Function ComposeColorMatrix(aussen As Single(), innen As Single()) As Single()
-            If aussen Is Nothing Then Return innen
-            If innen Is Nothing Then Return aussen
+        Private Shared Function ComposeColorMatrix(outer As Single(), inner As Single()) As Single()
+            If outer Is Nothing Then Return inner
+            If inner Is Nothing Then Return outer
             Dim r = New Single(19) {}
-            For zeile = 0 To 3
-                For spalte = 0 To 3
-                    Dim summe = 0.0F
+            For row = 0 To 3
+                For column = 0 To 3
+                    Dim sum = 0.0F
                     For k = 0 To 3
-                        summe += aussen(zeile * 5 + k) * innen(k * 5 + spalte)
+                        sum += outer(row * 5 + k) * inner(k * 5 + column)
                     Next
-                    r(zeile * 5 + spalte) = summe
+                    r(row * 5 + column) = sum
                 Next
                 ' Offset-Spalte: aussen wirkt auf die Offsets von innen, plus eigener Offset.
-                Dim off = aussen(zeile * 5 + 4)
+                Dim off = outer(row * 5 + 4)
                 For k = 0 To 3
-                    off += aussen(zeile * 5 + k) * innen(k * 5 + 4)
+                    off += outer(row * 5 + k) * inner(k * 5 + 4)
                 Next
-                r(zeile * 5 + 4) = off
+                r(row * 5 + 4) = off
             Next
             Return r
         End Function
@@ -1073,15 +1073,15 @@ Namespace Services
 
                         ' --- Schattentoenung (Kalibrierung): Gruen/Magenta nur in den Tiefen ---
                         If schattenToenung <> 0.0F Then
-                            Dim helligkeit = 0.299F * rr + 0.587F * gg + 0.114F * bb
+                            Dim brightness = 0.299F * rr + 0.587F * gg + 0.114F * bb
                             ' Gewicht faellt linear bis zur Bildmitte auf 0 - darueber unberuehrt.
-                            Dim gewicht = Math.Max(0.0F, 1.0F - helligkeit * 2.0F)
+                            Dim gewicht = Math.Max(0.0F, 1.0F - brightness * 2.0F)
                             If gewicht > 0.0F Then
-                                Dim staerke = schattenToenung / 100.0F * 0.12F * gewicht
+                                Dim strength = schattenToenung / 100.0F * 0.12F * gewicht
                                 ' Positiv = Magenta (Gruen runter), negativ = Gruen. Uebliche Belegung.
-                                gg = Clamp(gg - staerke, 0.0F, 1.0F)
-                                rr = Clamp(rr + staerke * 0.5F, 0.0F, 1.0F)
-                                bb = Clamp(bb + staerke * 0.5F, 0.0F, 1.0F)
+                                gg = Clamp(gg - strength, 0.0F, 1.0F)
+                                rr = Clamp(rr + strength * 0.5F, 0.0F, 1.0F)
+                                bb = Clamp(bb + strength * 0.5F, 0.0F, 1.0F)
                             End If
                         End If
 

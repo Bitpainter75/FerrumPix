@@ -71,13 +71,13 @@
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding KannArtUmwandeln}"
+                        IsEnabled="{Binding CanConvertKind}"
                         Command="{Binding ConvertKindCommand}"
-                        ToolTip.Tip="{Binding ArtUmwandelnHinweis}">
+                        ToolTip.Tip="{Binding ConvertKindHint}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
                                        Width="16" Height="16" />
-                        <TextBlock Classes="no-translate" Text="{Binding ArtUmwandelnText}" />
+                        <TextBlock Classes="no-translate" Text="{Binding ConvertKindText}" />
                     </StackPanel>
                 </Button>
             </StackPanel>
@@ -99,27 +99,27 @@
                     <TextBlock Text="Von" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding TiefeVon}" Margin="0,0" />
+                                       Value="{Binding DepthFrom}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding TiefeVon, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding DepthFrom, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Der nahe Rand des gewählten Bereichs">
                     <TextBlock Text="Bis" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding TiefeBis}" Margin="0,0" />
+                                       Value="{Binding DepthTo}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding TiefeBis, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding DepthTo, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Lässt die Maske an beiden Rändern auslaufen. Ohne das zieht sich eine sichtbare Kante quer durchs Bild">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50"
-                                       Value="{Binding TiefeWeiche}" Margin="0,0" />
+                                       Value="{Binding DepthFeather}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding TiefeWeiche, Mode=TwoWay}" Minimum="0" Maximum="50" />
+                                             Value="{Binding DepthFeather, Mode=TwoWay}" Minimum="0" Maximum="50" />
                 </Grid>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding HasActiveSelection}"
@@ -188,21 +188,21 @@
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                             Command="{Binding SetSubjectGrainCommand}" CommandParameter="0"
-                            Classes.active="{Binding IsKoernungFein}"
+                            Classes.active="{Binding IsGrainFine}"
                             ToolTip.Tip="Nur den getroffenen Teil, etwa ein Ärmel">
                         <TextBlock Text="Teil" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>
                     <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                             Command="{Binding SetSubjectGrainCommand}" CommandParameter="1"
-                            Classes.active="{Binding IsKoernungMittel}"
+                            Classes.active="{Binding IsGrainMedium}"
                             ToolTip.Tip="Den Gegenstand, zu dem der Teil gehört, etwa die Jacke">
                         <TextBlock Text="Mittel" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>
                     <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                             Command="{Binding SetSubjectGrainCommand}" CommandParameter="2"
-                            Classes.active="{Binding IsKoernungGrob}"
+                            Classes.active="{Binding IsGrainCoarse}"
                             ToolTip.Tip="Das ganze Objekt, etwa die Person">
                         <TextBlock Text="Ganzes" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
@@ -379,9 +379,9 @@
             <StackPanel Spacing="6" Margin="0,4,0,0">
                 <Separator Margin="0,2,0,2" Background="{DynamicResource FP.Border}" Height="1"/>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding KannObjektEntfernen}"
-                        Command="{Binding ObjektEntfernenCommand}"
-                        ToolTip.Tip="{Binding ObjektEntfernenHinweis}">
+                        IsEnabled="{Binding CanRemoveObject}"
+                        Command="{Binding RemoveObjectCommand}"
+                        ToolTip.Tip="{Binding RemoveObjectHint}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
                                        Width="16" Height="16" />

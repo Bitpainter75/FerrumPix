@@ -183,9 +183,9 @@ Namespace Services
                           container.Origin = SKEncodedOrigin.RightBottom OrElse container.Origin = SKEncodedOrigin.LeftBottom
             If tauscht AndAlso container.SensorWidth > 0 AndAlso container.SensorHeight > 0 Then
                 Dim sensorQuer = container.SensorWidth >= container.SensorHeight
-                Dim vorschauQuer = previewWidth >= previewHeight
+                Dim previewLandscape = previewWidth >= previewHeight
                 ' Vorschau steht schon anders herum als der Sensor -> sie wurde bereits gedreht.
-                If sensorQuer <> vorschauQuer Then Return previewOrigin
+                If sensorQuer <> previewLandscape Then Return previewOrigin
             End If
             Return container.Origin
         End Function

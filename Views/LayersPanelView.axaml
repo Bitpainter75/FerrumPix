@@ -230,7 +230,7 @@
                             BorderThickness="1"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
                             Background="{DynamicResource FP.Bg.Input}">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/09_FormenSymbole/077_Bild.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
                                        Width="16" Height="16"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>

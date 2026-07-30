@@ -31,7 +31,7 @@ Namespace Services
         End Sub
 
         Private Shared ReadOnly _sperre As New Object()
-        Private Shared ReadOnly _sitzungen As New Dictionary(Of String, InferenceSession)(StringComparer.OrdinalIgnoreCase)
+        Private Shared ReadOnly _sessions As New Dictionary(Of String, InferenceSession)(StringComparer.OrdinalIgnoreCase)
         Private Shared _laufzeitGeprueft As Boolean = False
         Private Shared _laufzeitDa As Boolean = False
         Private Shared _laufzeitFehler As String = ""
@@ -152,7 +152,7 @@ Namespace Services
             ''' welche Datei das gerade ist, entscheidet dieser Dienst.</summary>
             Public Property Key As String = ""
             ''' <summary>Die AKTUELLE Datei. Ihr Name traegt die Version.</summary>
-            Public Property Datei As String = ""
+            Public Property FileName As String = ""
             ''' <summary>Aeltere Fassungen, die weiterhin laufen. Wer nicht aktualisiert hat, soll
             ''' weiterarbeiten koennen - ein Modellwechsel darf niemandem sein Werkzeug wegnehmen,
             ''' nur weil er den Knopf noch nicht gedrueckt hat.</summary>
@@ -168,16 +168,16 @@ Namespace Services
             Public Property Sha256 As String = ""
             ''' <summary>Alle Dateien eines Bausteins - erst wenn ALLE vorliegen, gibt es die
             ''' Funktion. Ein halbes Modell ist keins.</summary>
-            Public Property Gruppe As String = ""
+            Public Property Group As String = ""
             ''' <summary>Eigene Adresse, falls dieses Modell nicht bei den anderen liegt. Leer heisst:
             ''' <see cref="HerkunftBasis"/> plus Dateiname.</summary>
             Public Property Herkunft As String = ""
 
             ''' <summary>Die Adresse, von der diese Datei geholt wird.</summary>
-            Public ReadOnly Property Adresse As String
+            Public ReadOnly Property Address As String
                 Get
                     If Not String.IsNullOrWhiteSpace(Herkunft) Then Return Herkunft
-                    Return HerkunftBasis & Datei
+                    Return HerkunftBasis & FileName
                 End Get
             End Property
         End Class
@@ -187,19 +187,19 @@ Namespace Services
         Public Shared ReadOnly Property KnownEntries As IReadOnlyList(Of ModelEntry) =
             New List(Of ModelEntry) From {
                 New ModelEntry With {.Key = "mobilesam-encoder",
-                                        .Datei = "mobilesam-encoder-v1.onnx", .Gruppe = "Objektauswahl",
+                                        .FileName = "mobilesam-encoder-v1.onnx", .Group = "Objektauswahl",
                                         .Zweck = "Bildkodierer", .Bytes = 27982937,
                                         .Sha256 = "fec144aeb820a5a2f45ff4d6f3c46362ebd09227fdab1e6e42ae569ffa7cc3d6"},
                 New ModelEntry With {.Key = "mobilesam-decoder",
-                                        .Datei = "mobilesam-decoder-v1.onnx", .Gruppe = "Objektauswahl",
+                                        .FileName = "mobilesam-decoder-v1.onnx", .Group = "Objektauswahl",
                                         .Zweck = "Maskendekodierer", .Bytes = 16496934,
                                         .Sha256 = "a21b65b6e1b75e2c6265b36835747a0ab9169ec1ed725139a78ce90297f95126"},
                 New ModelEntry With {.Key = "midas-small",
-                                        .Datei = "midas-small-v1.onnx", .Gruppe = "Tiefe",
+                                        .FileName = "midas-small-v1.onnx", .Group = "Tiefe",
                                         .Zweck = "Tiefenkarte", .Bytes = 66339845,
                                         .Sha256 = "007d73146ac82eb424d7306fb2e9d15fb4d2702d5129040d9e68adeb28bc384e"},
                 New ModelEntry With {.Key = "lama",
-                                        .Datei = "lama-v1.onnx", .Gruppe = "Objekt entfernen",
+                                        .FileName = "lama-v1.onnx", .Group = "Objekt entfernen",
                                         .Zweck = "Lücken füllen", .Bytes = 110513159,
                                         .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"}}
 
@@ -217,10 +217,10 @@ Namespace Services
             "https://github.com/Bitpainter75/FerrumPix-Models/releases/download/modelle-v1/"
 
         ''' <summary>Der Eintrag zu einem Schluessel, oder Nothing.</summary>
-        Public Shared Function EintragFuer(schluessel As String) As ModelEntry
-            If String.IsNullOrWhiteSpace(schluessel) Then Return Nothing
+        Public Shared Function EntryFor(key As String) As ModelEntry
+            If String.IsNullOrWhiteSpace(key) Then Return Nothing
             Return KnownEntries.FirstOrDefault(
-                Function(e) String.Equals(e.Key, schluessel, StringComparison.OrdinalIgnoreCase))
+                Function(e) String.Equals(e.Key, key, StringComparison.OrdinalIgnoreCase))
         End Function
 
         ''' <summary>Welche Datei dieses Modells gerade BENUTZT wird: die aktuelle, wenn sie da ist,
@@ -228,10 +228,10 @@ Namespace Services
         '''
         ''' Die Reihenfolge ist der ganze Punkt: wer aktualisiert hat, bekommt die neue; wer nicht,
         ''' arbeitet mit der alten weiter, statt vor einem verschwundenen Werkzeug zu stehen.</summary>
-        Public Shared Function BestFile(schluessel As String) As String
-            Dim e = EintragFuer(schluessel)
+        Public Shared Function BestFile(key As String) As String
+            Dim e = EntryFor(key)
             If e Is Nothing Then Return ""
-            If ModelPresent(e.Datei) Then Return e.Datei
+            If ModelPresent(e.FileName) Then Return e.FileName
             If e.Vorgaenger IsNot Nothing Then
                 For Each alt In e.Vorgaenger
                     If ModelPresent(alt) Then Return alt
@@ -242,24 +242,24 @@ Namespace Services
 
         ''' <summary>Liegt eine AELTERE Fassung vor, waehrend es eine neuere gibt? Dann erscheint der
         ''' Aktualisieren-Knopf - und alles laeuft in der Zwischenzeit weiter.</summary>
-        Public Shared Function IstAktualisierbar(schluessel As String) As Boolean
-            Dim e = EintragFuer(schluessel)
+        Public Shared Function IsUpdatable(key As String) As Boolean
+            Dim e = EntryFor(key)
             If e Is Nothing Then Return False
-            If ModelPresent(e.Datei) Then Return False
-            Return Not String.IsNullOrEmpty(BestFile(schluessel))
+            If ModelPresent(e.FileName) Then Return False
+            Return Not String.IsNullOrEmpty(BestFile(key))
         End Function
 
         ''' <summary>Die Sitzung zum gerade benutzten Stand eines Modells.</summary>
-        Public Shared Function SitzungFuer(schluessel As String) As InferenceSession
-            Dim datei = BestFile(schluessel)
-            If String.IsNullOrEmpty(datei) Then Return Nothing
-            Return Sitzung(datei)
+        Public Shared Function SessionFor(key As String) As InferenceSession
+            Dim file = BestFile(key)
+            If String.IsNullOrEmpty(file) Then Return Nothing
+            Return Session(file)
         End Function
 
         ''' <summary>Die Pruefsumme einer Datei, oder leer. Kleinbuchstaben, ohne Trenner.</summary>
-        Public Shared Function ChecksumOf(pfad As String) As String
+        Public Shared Function ChecksumOf(path As String) As String
             Try
-                Using strom = File.OpenRead(pfad)
+                Using strom = File.OpenRead(path)
                     Using sha = Security.Cryptography.SHA256.Create()
                         Return BitConverter.ToString(sha.ComputeHash(strom)).Replace("-", "").ToLowerInvariant()
                     End Using
@@ -270,16 +270,16 @@ Namespace Services
         End Function
 
         ''' <summary>Stimmt die Datei mit dem ueberein, was die Anwendung erwartet?</summary>
-        Public Shared Function IstUnversehrt(eintrag As ModelEntry) As Boolean
-            If eintrag Is Nothing Then Return False
-            Dim pfad = ModelPath(eintrag.Datei)
-            If String.IsNullOrEmpty(pfad) Then Return False
+        Public Shared Function IsIntact(entry As ModelEntry) As Boolean
+            If entry Is Nothing Then Return False
+            Dim path = ModelPath(entry.FileName)
+            If String.IsNullOrEmpty(path) Then Return False
             Try
-                If New IO.FileInfo(pfad).Length <> eintrag.Bytes Then Return False
+                If New IO.FileInfo(path).Length <> entry.Bytes Then Return False
             Catch
                 Return False
             End Try
-            Return String.Equals(ChecksumOf(pfad), eintrag.Sha256, StringComparison.OrdinalIgnoreCase)
+            Return String.Equals(ChecksumOf(path), entry.Sha256, StringComparison.OrdinalIgnoreCase)
         End Function
 
         ''' <summary>Alle Dateinamen, nach denen beim Start gesucht wird - die aktuellen UND die
@@ -287,7 +287,7 @@ Namespace Services
         Private Shared ReadOnly Property KnownFiles As String()
             Get
                 Return KnownEntries.
-                    SelectMany(Function(e) New String() {e.Datei}.Concat(If(e.Vorgaenger, New String() {}))).
+                    SelectMany(Function(e) New String() {e.FileName}.Concat(If(e.Vorgaenger, New String() {}))).
                     Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
             End Get
         End Property
@@ -302,9 +302,9 @@ Namespace Services
         Public Shared Sub CheckInventory()
             Dim gefunden = New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
             For Each name In KnownFiles
-                For Each ort In Suchorte
-                    If String.IsNullOrEmpty(ort) Then Continue For
-                    Dim p = Path.Combine(ort, name)
+                For Each place In Suchorte
+                    If String.IsNullOrEmpty(place) Then Continue For
+                    Dim p = Path.Combine(place, name)
                     If File.Exists(p) Then
                         gefunden(name) = p
                         Exit For
@@ -327,27 +327,27 @@ Namespace Services
 
         ''' <summary>Vollstaendiger Pfad einer Modelldatei, am ersten Ort, an dem sie liegt. Leer,
         ''' wenn sie nirgends liegt.</summary>
-        Public Shared Function ModelPath(dateiName As String) As String
-            If String.IsNullOrWhiteSpace(dateiName) Then Return ""
-            Dim tabelle As Dictionary(Of String, String)
+        Public Shared Function ModelPath(fileName As String) As String
+            If String.IsNullOrWhiteSpace(fileName) Then Return ""
+            Dim table As Dictionary(Of String, String)
             SyncLock _sperre
-                tabelle = _bestand
+                table = _bestand
             End SyncLock
             ' Noch nie geprueft (Pruefstand, frueher Aufruf): dann jetzt, statt Nichts zu melden.
-            If tabelle Is Nothing Then
+            If table Is Nothing Then
                 CheckInventory()
                 SyncLock _sperre
-                    tabelle = _bestand
+                    table = _bestand
                 End SyncLock
             End If
             Dim p As String = Nothing
-            If tabelle IsNot Nothing AndAlso tabelle.TryGetValue(dateiName, p) Then Return p
+            If table IsNot Nothing AndAlso table.TryGetValue(fileName, p) Then Return p
             Return ""
         End Function
 
         ''' <summary>Liegt dieses Modell irgendwo vor?</summary>
-        Public Shared Function ModelPresent(dateiName As String) As Boolean
-            Return Not String.IsNullOrEmpty(ModelPath(dateiName))
+        Public Shared Function ModelPresent(fileName As String) As Boolean
+            Return Not String.IsNullOrEmpty(ModelPath(fileName))
         End Function
 
         ''' <summary>Die Sitzung zu einem Modell, oder Nothing.
@@ -355,13 +355,13 @@ Namespace Services
         ''' Sitzungen bleiben offen und werden geteilt: das Laden kostet je nach Modell hunderte
         ''' Millisekunden, und ein Klick-fuer-Klick neu geladenes Modell waere unbenutzbar. Der
         ''' Besitz bleibt HIER - der Aufrufer darf sie nicht schliessen.</summary>
-        Public Shared Function Sitzung(dateiName As String) As InferenceSession
+        Public Shared Function Session(fileName As String) As InferenceSession
             If Not RuntimeAvailable Then Return Nothing
-            Dim pfad = ModelPath(dateiName)
+            Dim pfad = ModelPath(fileName)
             If String.IsNullOrEmpty(pfad) Then Return Nothing
             SyncLock _sperre
                 Dim vorhanden As InferenceSession = Nothing
-                If _sitzungen.TryGetValue(pfad, vorhanden) Then Return vorhanden
+                If _sessions.TryGetValue(pfad, vorhanden) Then Return vorhanden
                 Try
                     Dim optionen = New SessionOptions()
                     ' Ein Modell laeuft waehrend der Bearbeitung neben der Vorschau. Alle Kerne zu
@@ -373,7 +373,7 @@ Namespace Services
                     ' die niemanden etwas angehen und echte Meldungen zudecken.
                     optionen.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
                     Dim neu = New InferenceSession(pfad, optionen)
-                    _sitzungen(pfad) = neu
+                    _sessions(pfad) = neu
                     Return neu
                 Catch ex As Exception
                     DiagnosticLogService.LogAlways("KiModell", $"laedt nicht: {Path.GetFileName(pfad)} - {ex.Message}")
@@ -385,39 +385,39 @@ Namespace Services
         ''' <summary>Alle Sitzungen schliessen. Fuer den Prueftstand und das Beenden.</summary>
         Public Shared Sub GibFrei()
             SyncLock _sperre
-                For Each s In _sitzungen.Values
+                For Each s In _sessions.Values
                     Try
                         s.Dispose()
                     Catch
                     End Try
                 Next
-                _sitzungen.Clear()
+                _sessions.Clear()
             End SyncLock
         End Sub
 
         ''' <summary>Ein Bild als Tensor in der Form [1, 3, h, w], Kanaele getrennt, Werte 0..1 und
         ''' danach normiert. So erwarten es die allermeisten Bildmodelle.
         '''
-        ''' <paramref name="mittel"/> und <paramref name="streuung"/> je Kanal in RGB-Reihenfolge.
+        ''' <paramref name="average"/> und <paramref name="spread"/> je Kanal in RGB-Reihenfolge.
         ''' Ohne Normierung 0 und 1 uebergeben.</summary>
-        Public Shared Function AlsTensor(bild As SkiaSharp.SKBitmap,
-                                         mittel As Single(), streuung As Single()) As DenseTensor(Of Single)
-            If bild Is Nothing Then Return Nothing
-            Dim w = bild.Width, h = bild.Height
+        Public Shared Function AlsTensor(image As SkiaSharp.SKBitmap,
+                                         average As Single(), spread As Single()) As DenseTensor(Of Single)
+            If image Is Nothing Then Return Nothing
+            Dim w = image.Width, h = image.Height
             If w <= 0 OrElse h <= 0 Then Return Nothing
-            Dim m = If(mittel IsNot Nothing AndAlso mittel.Length = 3, mittel, New Single() {0.0F, 0.0F, 0.0F})
-            Dim s = If(streuung IsNot Nothing AndAlso streuung.Length = 3, streuung, New Single() {1.0F, 1.0F, 1.0F})
+            Dim m = If(average IsNot Nothing AndAlso average.Length = 3, average, New Single() {0.0F, 0.0F, 0.0F})
+            Dim s = If(spread IsNot Nothing AndAlso spread.Length = 3, spread, New Single() {1.0F, 1.0F, 1.0F})
 
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, h, w})
-            Dim ziel = tensor.Buffer.Span
-            Dim ebene = w * h
+            Dim target = tensor.Buffer.Span
+            Dim layer = w * h
             For y = 0 To h - 1
                 For x = 0 To w - 1
-                    Dim p = bild.GetPixel(x, y)
+                    Dim p = image.GetPixel(x, y)
                     Dim i = y * w + x
-                    ziel(i) = (p.Red / 255.0F - m(0)) / s(0)
-                    ziel(ebene + i) = (p.Green / 255.0F - m(1)) / s(1)
-                    ziel(ebene * 2 + i) = (p.Blue / 255.0F - m(2)) / s(2)
+                    target(i) = (p.Red / 255.0F - m(0)) / s(0)
+                    target(layer + i) = (p.Green / 255.0F - m(1)) / s(1)
+                    target(layer * 2 + i) = (p.Blue / 255.0F - m(2)) / s(2)
                 Next
             Next
             Return tensor

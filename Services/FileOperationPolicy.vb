@@ -52,28 +52,28 @@ Namespace Services
         ''' </summary>
         Friend Shared Function ResolveLinks(path As String) As String
             If String.IsNullOrEmpty(path) Then Return ""
-            Dim voll As String
+            Dim full As String
             Try
-                voll = IO.Path.GetFullPath(path)
+                full = IO.Path.GetFullPath(path)
             Catch
                 Return path
             End Try
 
-            Dim eltern = IO.Path.GetDirectoryName(voll)
-            If String.IsNullOrEmpty(eltern) Then Return voll   ' Wurzel erreicht
+            Dim parent = IO.Path.GetDirectoryName(full)
+            If String.IsNullOrEmpty(parent) Then Return full   ' Wurzel erreicht
 
-            Dim basis = ResolveLinks(eltern)
-            Dim kandidat = IO.Path.Combine(basis, IO.Path.GetFileName(voll))
+            Dim basis = ResolveLinks(parent)
+            Dim candidate = IO.Path.Combine(basis, IO.Path.GetFileName(full))
             Try
                 Dim info As FileSystemInfo =
-                    If(Directory.Exists(kandidat),
-                       CType(New DirectoryInfo(kandidat), FileSystemInfo),
-                       New FileInfo(kandidat))
-                Dim ziel = info.ResolveLinkTarget(returnFinalTarget:=True)
-                If ziel IsNot Nothing Then Return IO.Path.GetFullPath(ziel.FullName)
+                    If(Directory.Exists(candidate),
+                       CType(New DirectoryInfo(candidate), FileSystemInfo),
+                       New FileInfo(candidate))
+                Dim target = info.ResolveLinkTarget(returnFinalTarget:=True)
+                If target IsNot Nothing Then Return IO.Path.GetFullPath(target.FullName)
             Catch
             End Try
-            Return kandidat
+            Return candidate
         End Function
 
         Public Shared Function CanCopy(path As String) As Boolean

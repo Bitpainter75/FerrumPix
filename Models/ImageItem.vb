@@ -716,9 +716,9 @@ Namespace Models
         ''' Reihenfolge erfolgen.</summary>
         Private Shared Sub DisposeEvictedThumbnails(evicted As List(Of KeyValuePair(Of ImageItem, Bitmap)))
             If evicted IsNot Nothing Then
-                For Each eintrag In evicted
-                    Dim oldest = eintrag.Key
-                    Dim bmp = eintrag.Value
+                For Each entry In evicted
+                    Dim oldest = entry.Key
+                    Dim bmp = entry.Value
                     If bmp IsNot Nothing Then
                         Dispatcher.UIThread.Post(Sub()
                                                       oldest.RaisePropertyChanged(NameOf(Thumbnail))

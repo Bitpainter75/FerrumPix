@@ -39,7 +39,7 @@ Namespace Services
         Public Const ModelEdge As Integer = 1024
 
         ''' <summary>Steht die Funktion zur Verfuegung? Nur wenn Laufzeit UND beide Modelle da sind.</summary>
-        Public Shared ReadOnly Property Verfuegbar As Boolean
+        Public Shared ReadOnly Property Available As Boolean
             Get
                 Return AiModelService.RuntimeAvailable AndAlso
                        Not String.IsNullOrEmpty(AiModelService.BestFile(EncoderFile)) AndAlso
@@ -59,45 +59,45 @@ Namespace Services
 
         ''' <summary>Bild einmal durch den Kodierer. Teuer - das Ergebnis gehoert gemerkt.
         ''' Nothing, wenn die Funktion nicht verfuegbar ist oder das Modell nicht laeuft.</summary>
-        Public Shared Function Kodiere(bild As SKBitmap) As Einbettung
-            If bild Is Nothing OrElse bild.Width <= 0 OrElse bild.Height <= 0 Then Return Nothing
-            Dim sitzung = AiModelService.SitzungFuer(EncoderFile)
-            If sitzung Is Nothing Then Return Nothing
+        Public Shared Function Kodiere(image As SKBitmap) As Einbettung
+            If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
+            Dim session = AiModelService.SessionFor(EncoderFile)
+            If session Is Nothing Then Return Nothing
 
-            Dim massstab = ModelEdge / CDbl(Math.Max(bild.Width, bild.Height))
-            Dim nb = Math.Max(1, CInt(Math.Round(bild.Width * massstab)))
-            Dim nh = Math.Max(1, CInt(Math.Round(bild.Height * massstab)))
+            Dim scale = ModelEdge / CDbl(Math.Max(image.Width, image.Height))
+            Dim nb = Math.Max(1, CInt(Math.Round(image.Width * scale)))
+            Dim nh = Math.Max(1, CInt(Math.Round(image.Height * scale)))
 
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
-            Using klein = New SKBitmap(nb, nh, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                If Not bild.ScalePixels(klein, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+            Using small = New SKBitmap(nb, nh, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                If Not image.ScalePixels(small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                 ' Die Normierung stammt aus dem Training des Modells und darf nicht geraten werden.
-                Dim mittel = New Single() {123.675F, 116.28F, 103.53F}
-                Dim streuung = New Single() {58.395F, 57.12F, 57.375F}
-                Dim ziel = tensor.Buffer.Span
-                Dim ebene = ModelEdge * ModelEdge
+                Dim average = New Single() {123.675F, 116.28F, 103.53F}
+                Dim spread = New Single() {58.395F, 57.12F, 57.375F}
+                Dim target = tensor.Buffer.Span
+                Dim layer = ModelEdge * ModelEdge
                 For y = 0 To nh - 1
                     For x = 0 To nb - 1
-                        Dim p = klein.GetPixel(x, y)
+                        Dim p = small.GetPixel(x, y)
                         Dim i = y * ModelEdge + x
-                        ziel(i) = (p.Red - mittel(0)) / streuung(0)
-                        ziel(ebene + i) = (p.Green - mittel(1)) / streuung(1)
-                        ziel(ebene * 2 + i) = (p.Blue - mittel(2)) / streuung(2)
+                        target(i) = (p.Red - average(0)) / spread(0)
+                        target(layer + i) = (p.Green - average(1)) / spread(1)
+                        target(layer * 2 + i) = (p.Blue - average(2)) / spread(2)
                     Next
                 Next
             End Using
 
             Try
-                Dim eingabe = New List(Of NamedOnnxValue) From {
+                Dim input = New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor("image", tensor)}
-                Using ergebnis = sitzung.Run(eingabe)
-                    Dim raus = TryCast(ergebnis.First().Value, DenseTensor(Of Single))
-                    If raus Is Nothing Then Return Nothing
+                Using result = session.Run(input)
+                    Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
+                    If output Is Nothing Then Return Nothing
                     ' Der Tensor gehoert der Ergebnisliste und stirbt mit ihr - also kopieren.
-                    Dim kopie = New DenseTensor(Of Single)(raus.Dimensions.ToArray())
-                    raus.Buffer.Span.CopyTo(kopie.Buffer.Span)
-                    Return New Einbettung With {.Values = kopie, .Massstab = massstab,
-                                                .SourceWidth = bild.Width, .SourceHeight = bild.Height}
+                    Dim kopie = New DenseTensor(Of Single)(output.Dimensions.ToArray())
+                    output.Buffer.Span.CopyTo(kopie.Buffer.Span)
+                    Return New Einbettung With {.Values = kopie, .Massstab = scale,
+                                                .SourceWidth = image.Width, .SourceHeight = image.Height}
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("MotivMaske", "Kodierer: " & ex.Message)
@@ -108,7 +108,7 @@ Namespace Services
         ''' <summary>Ein angeklickter Punkt. <paramref name="Dazu"/> False heisst: diese Stelle
         ''' gehoert AUSDRUECKLICH nicht dazu - so schneidet man eine zu gross geratene Maske wieder
         ''' zurecht, ohne von vorn anzufangen.</summary>
-        Public Structure Punkt
+        Public Structure Point
             Public XPixel As Double
             Public YPixel As Double
             Public Dazu As Boolean
@@ -121,7 +121,7 @@ Namespace Services
 
         ''' <summary>Maske zu den angeklickten Punkten, als Alpha8-Bild in der Groesse des
         ''' Quellbildes. Nothing bei jedem Fehlschlag - eine halbe Maske waere schlimmer als keine.</summary>
-        ''' <param name="kantePct">Wie steil die Kante ist, 0 bis 100. Klein = breiter, weicher
+        ''' <param name="edgePct">Wie steil die Kante ist, 0 bis 100. Klein = breiter, weicher
         ''' Uebergang (Haare, Zweige, Fell), gross = knapp und knackig (harte Gegenstaende). Das ist
         ''' KEINE Weichzeichnung im Nachhinein: es aendert, wie die Rohwerte des Modells in Deckung
         ''' uebersetzt werden, und folgt damit dem, was das Modell an dieser Stelle wirklich
@@ -129,27 +129,27 @@ Namespace Services
         ''' <param name="umfangPct">Verschiebt die Entscheidungsgrenze, -100 bis 100. Positiv laesst
         ''' die Maske wachsen, negativ schrumpfen. Modelle dieser Art schneiden gern eine Haaresbreite
         ''' INNERHALB des Objekts; damit holt man das zurueck, ohne von vorn anzufangen.</param>
-        ''' <param name="koernung">Welche der drei Koernungen: 0 = fein (ein Teil), 1 = mittel (ein
+        ''' <param name="grain">Welche der drei Koernungen: 0 = fein (ein Teil), 1 = mittel (ein
         ''' Unterobjekt), 2 = grob (das ganze Objekt). Ein Klick ist mehrdeutig - meint man die
         ''' Jacke, die Person oder die Gruppe? Das Modell beantwortet alle drei auf einmal, und der
         ''' Nutzer waehlt aus, statt neu zu klicken.</param>
-        Public Shared Function MaskFor(einbettung As Einbettung, punkte As IList(Of Punkt),
-                                         Optional kantePct As Double = 50.0,
+        Public Shared Function MaskFor(einbettung As Einbettung, points As IList(Of Point),
+                                         Optional edgePct As Double = 50.0,
                                          Optional umfangPct As Double = 0.0,
-                                         Optional koernung As Integer = 2) As SKBitmap
+                                         Optional grain As Integer = 2) As SKBitmap
             If einbettung Is Nothing OrElse einbettung.Values Is Nothing Then Return Nothing
-            If punkte Is Nothing OrElse punkte.Count = 0 Then Return Nothing
-            Dim sitzung = AiModelService.SitzungFuer(DecoderFile)
-            If sitzung Is Nothing Then Return Nothing
+            If points Is Nothing OrElse points.Count = 0 Then Return Nothing
+            Dim session = AiModelService.SessionFor(DecoderFile)
+            If session Is Nothing Then Return Nothing
 
             ' Das Modell erwartet die Punkte im MODELL-Massstab, nicht in Bildpixeln.
-            Dim n = punkte.Count
+            Dim n = points.Count
             Dim coords = New DenseTensor(Of Single)(New Integer() {1, n + 1, 2})
             Dim labels = New DenseTensor(Of Single)(New Integer() {1, n + 1})
             For i = 0 To n - 1
-                coords(0, i, 0) = CSng(punkte(i).XPixel * einbettung.Massstab)
-                coords(0, i, 1) = CSng(punkte(i).YPixel * einbettung.Massstab)
-                labels(0, i) = If(punkte(i).Dazu, 1.0F, 0.0F)
+                coords(0, i, 0) = CSng(points(i).XPixel * einbettung.Massstab)
+                coords(0, i, 1) = CSng(points(i).YPixel * einbettung.Massstab)
+                labels(0, i) = If(points(i).Dazu, 1.0F, 0.0F)
             Next
             ' Der Abschlusspunkt mit der Marke -1 gehoert zum Aufbau des Modells: ohne ihn rechnet
             ' es mit einem Rahmen statt mit Punkten.
@@ -158,7 +158,7 @@ Namespace Services
             labels(0, n) = -1.0F
 
             Try
-                Dim eingabe = New List(Of NamedOnnxValue) From {
+                Dim input = New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor("image_embeddings", einbettung.Values),
                     NamedOnnxValue.CreateFromTensor("point_coords", coords),
                     NamedOnnxValue.CreateFromTensor("point_labels", labels),
@@ -169,10 +169,10 @@ Namespace Services
                     NamedOnnxValue.CreateFromTensor("orig_im_size",
                         New DenseTensor(Of Single)(New Single() {CSng(ModelEdge), CSng(ModelEdge)},
                                                    New Integer() {2}))}
-                Using ergebnis = sitzung.Run(eingabe)
-                    Dim masken = TryCast(ergebnis.First(Function(r) r.Name = "masks").Value, DenseTensor(Of Single))
-                    If masken Is Nothing Then Return Nothing
-                    Return AlsAlphaBild(masken, einbettung, kantePct, umfangPct, koernung)
+                Using result = session.Run(input)
+                    Dim masks = TryCast(result.First(Function(r) r.Name = "masks").Value, DenseTensor(Of Single))
+                    If masks Is Nothing Then Return Nothing
+                    Return AsAlphaImage(masks, einbettung, edgePct, umfangPct, grain)
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("MotivMaske", "Dekodierer: " & ex.Message)
@@ -187,11 +187,11 @@ Namespace Services
         ''' weicher Verlauf um die Schwelle herum - eine harte Kante saehe an Haaren und Zweigen
         ''' ausgeschnitten aus, und die Maske laesst sich hinterher ohnehin mit dem Pinsel
         ''' nachbessern.</summary>
-        Private Shared Function AlsAlphaBild(masken As DenseTensor(Of Single), einbettung As Einbettung,
-                                             kantePct As Double, umfangPct As Double,
-                                             koernung As Integer) As SKBitmap
+        Private Shared Function AsAlphaImage(masks As DenseTensor(Of Single), einbettung As Einbettung,
+                                             edgePct As Double, umfangPct As Double,
+                                             grain As Integer) As SKBitmap
             ' Als Feld statt als Span - siehe unten, VB kann einen Span nicht indizieren.
-            Dim d = masken.Dimensions.ToArray()
+            Dim d = masks.Dimensions.ToArray()
             If d.Length < 2 Then Return Nothing
             Dim mh = d(d.Length - 2), mw = d(d.Length - 1)
             If mh <= 0 OrElse mw <= 0 Then Return Nothing
@@ -200,7 +200,7 @@ Namespace Services
             ' erste ist seine Einzelantwort, danach kommen fein, mittel, grob. Ein aelteres Modell
             ' liefert nur einen. Beides muss gehen, sonst waere ein Modelltausch ein Absturz.
             Dim kanaele = If(d.Length >= 3, d(d.Length - 3), 1)
-            Dim gewaehlt = If(kanaele >= 4, 1 + Math.Max(0, Math.Min(2, koernung)), kanaele - 1)
+            Dim gewaehlt = If(kanaele >= 4, 1 + Math.Max(0, Math.Min(2, grain)), kanaele - 1)
             gewaehlt = Math.Max(0, Math.Min(kanaele - 1, gewaehlt))
 
             ' Nur der Teil, in dem wirklich Bild lag - der Rest der 1024er Flaeche ist Auffuellung.
@@ -223,8 +223,8 @@ Namespace Services
             ' Bildpunkte breit - das ist der helle Saum, der bei einer Himmelsauswahl um jedes Objekt
             ' steht und den man am fertigen Bild als Rand sieht. Die Mitte des Reglers ist der
             ' Wert, der sich an echten Fotos als brauchbarster Ausgangspunkt gezeigt hat.
-            Dim k = Math.Max(0.0, Math.Min(100.0, kantePct))
-            Dim Steilheit = CSng(1.0 + k / 100.0 * 90.0)
+            Dim k = Math.Max(0.0, Math.Min(100.0, edgePct))
+            Dim Steepness = CSng(1.0 + k / 100.0 * 90.0)
             ' Der Umfang verschiebt die Grenze. Ein Rohwert von etwa 1 entspricht dem Uebergang
             ' selbst - mehr als das waere kein Feinschliff mehr, sondern ein anderes Objekt.
             Dim Verschiebung = CSng(Math.Max(-100.0, Math.Min(100.0, umfangPct)) / 100.0 * 12.0)
@@ -243,43 +243,43 @@ Namespace Services
             ' Nulldurchgang liegt dann dort, wo die Grenze wirklich verlaeuft, und nicht auf dem
             ' naechsten Rasterpunkt. Deshalb wird je Bildpunkt zwischen vier Rohwerten gemittelt und
             ' erst danach entschieden.
-            Dim quelle = masken.Buffer.ToArray()
-            Dim versatz = quelle.Length - kanaele * mw * mh + gewaehlt * mw * mh
-            Dim zielB = einbettung.SourceWidth, zielH = einbettung.SourceHeight
-            If zielB <= 0 OrElse zielH <= 0 Then Return Nothing
+            Dim source = masks.Buffer.ToArray()
+            Dim offset = source.Length - kanaele * mw * mh + gewaehlt * mw * mh
+            Dim targetB = einbettung.SourceWidth, zielH = einbettung.SourceHeight
+            If targetB <= 0 OrElse zielH <= 0 Then Return Nothing
 
-            Dim gross = New SKBitmap(New SKImageInfo(zielB, zielH, SKColorType.Alpha8, SKAlphaType.Premul))
-            Dim puffer(zielB * zielH - 1) As Byte
+            Dim large = New SKBitmap(New SKImageInfo(targetB, zielH, SKColorType.Alpha8, SKAlphaType.Premul))
+            Dim puffer(targetB * zielH - 1) As Byte
             ' Umrechnung Bildpunkt -> Rasterfeld. Das halbe Feld Versatz sorgt dafuer, dass die
             ' Rohwerte in der MITTE ihres Feldes sitzen und nicht an dessen Ecke.
-            Dim sx = gb / CDbl(zielB), sy = gh / CDbl(zielH)
+            Dim sx = gb / CDbl(targetB), sy = gh / CDbl(zielH)
             For y = 0 To zielH - 1
                 Dim fy = (y + 0.5) * sy - 0.5
                 Dim y0 = CInt(Math.Floor(fy))
                 Dim ty = CSng(fy - y0)
                 Dim ya = Math.Max(0, Math.Min(gh - 1, y0))
                 Dim yb = Math.Max(0, Math.Min(gh - 1, y0 + 1))
-                Dim zeileA = versatz + ya * mw
-                Dim zeileB = versatz + yb * mw
-                Dim zielZeile = y * zielB
-                For x = 0 To zielB - 1
+                Dim rowA = offset + ya * mw
+                Dim rowB = offset + yb * mw
+                Dim targetRow = y * targetB
+                For x = 0 To targetB - 1
                     Dim fx = (x + 0.5) * sx - 0.5
                     Dim x0 = CInt(Math.Floor(fx))
                     Dim tx = CSng(fx - x0)
                     Dim xa = Math.Max(0, Math.Min(gb - 1, x0))
                     Dim xb = Math.Max(0, Math.Min(gb - 1, x0 + 1))
-                    Dim oben = quelle(zeileA + xa) * (1.0F - tx) + quelle(zeileA + xb) * tx
-                    Dim unten = quelle(zeileB + xa) * (1.0F - tx) + quelle(zeileB + xb) * tx
-                    Dim roh = oben * (1.0F - ty) + unten * ty
+                    Dim top = source(rowA + xa) * (1.0F - tx) + source(rowA + xb) * tx
+                    Dim bottom = source(rowB + xa) * (1.0F - tx) + source(rowB + xb) * tx
+                    Dim roh = top * (1.0F - ty) + bottom * ty
 
-                    Dim v = (roh + Verschiebung) * Steilheit
-                    Dim sWert = 1.0F / (1.0F + CSng(Math.Exp(-v)))
-                    If sWert < Mindestdeckung Then sWert = 0.0F
-                    puffer(zielZeile + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(sWert * 255.0F)))))
+                    Dim v = (roh + Verschiebung) * Steepness
+                    Dim sValue = 1.0F / (1.0F + CSng(Math.Exp(-v)))
+                    If sValue < Mindestdeckung Then sValue = 0.0F
+                    puffer(targetRow + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(sValue * 255.0F)))))
                 Next
             Next
-            Runtime.InteropServices.Marshal.Copy(puffer, 0, gross.GetPixels(), puffer.Length)
-            Return gross
+            Runtime.InteropServices.Marshal.Copy(puffer, 0, large.GetPixels(), puffer.Length)
+            Return large
         End Function
 
     End Class

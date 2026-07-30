@@ -1521,12 +1521,12 @@ Namespace ViewModels
 
         ''' <summary>Persistiert eine Bewertung ans passende Backend: Immich-Items an den Server
         ''' (Rückrichtung), lokale Dateien in den SQLite-Katalog samt XMP-Sidecar.</summary>
-        Private Sub PersistRating(item As ImageItem, rating As Integer, vorher As Integer)
+        Private Sub PersistRating(item As ImageItem, rating As Integer, before As Integer)
             If item Is Nothing Then Return
             If item.IsImmichAsset Then
-                SchreibeNachImmich(Function() ImmichService.SetRatingAsync(item.ImmichAssetId, rating),
+                WriteToImmich(Function() ImmichService.SetRatingAsync(item.ImmichAssetId, rating),
                                    Sub()
-                                       item.Rating = vorher
+                                       item.Rating = before
                                        Me.RaisePropertyChanged(NameOf(SelectedRating))
                                    End Sub)
             Else
@@ -1535,12 +1535,12 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Persistiert den Favoriten-Status ans passende Backend (Immich-Server bzw. Katalog).</summary>
-        Private Sub PersistFavorite(item As ImageItem, value As Boolean, vorher As Boolean)
+        Private Sub PersistFavorite(item As ImageItem, value As Boolean, before As Boolean)
             If item Is Nothing Then Return
             If item.IsImmichAsset Then
-                SchreibeNachImmich(Function() ImmichService.SetFavoriteAsync(item.ImmichAssetId, value),
+                WriteToImmich(Function() ImmichService.SetFavoriteAsync(item.ImmichAssetId, value),
                                    Sub()
-                                       item.IsFavorite = vorher
+                                       item.IsFavorite = before
                                        Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
                                    End Sub)
             Else
@@ -1557,7 +1557,7 @@ Namespace ViewModels
         ''' gleich für viele Fotos. Der Dienst selbst wirft nicht (er fängt intern und liefert
         ''' False); das Try/Catch hier deckt nur den Rest ab.
         ''' </summary>
-        Private Async Sub SchreibeNachImmich(vorgang As Func(Of Task(Of Boolean)), zuruecknehmen As Action)
+        Private Async Sub WriteToImmich(vorgang As Func(Of Task(Of Boolean)), zuruecknehmen As Action)
             Dim ok As Boolean = False
             Try
                 ok = Await vorgang()
@@ -1624,9 +1624,9 @@ Namespace ViewModels
         Public Sub SetItemRating(item As ImageItem, rating As Integer)
             If item Is Nothing OrElse Not item.IsImage Then Return
             Dim targetRating = If(item.Rating = rating, 0, rating)
-            Dim vorher = item.Rating
+            Dim before = item.Rating
             item.Rating = targetRating
-            PersistRating(item, targetRating, vorher)
+            PersistRating(item, targetRating, before)
 
             If Object.ReferenceEquals(item, _selectedItem) OrElse (SelectedItems IsNot Nothing AndAlso SelectedItems.Contains(item)) Then
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
@@ -2255,21 +2255,21 @@ Namespace ViewModels
         Public Async Function OpenImmichStartupTargetAsync(token As String) As Task
             Try
                 If Not ImmichService.IsConfigured OrElse String.IsNullOrWhiteSpace(token) Then Return
-                Dim rest = token.Substring("immich://".Length)
+                Dim remainder = token.Substring("immich://".Length)
                 Dim node As VirtualNavigationNode = Nothing
-                If String.Equals(rest, "all", StringComparison.OrdinalIgnoreCase) Then
+                If String.Equals(remainder, "all", StringComparison.OrdinalIgnoreCase) Then
                     node = New VirtualNavigationNode(LocalizationService.T("Alle Fotos"), "ImmichAll")
-                ElseIf rest.StartsWith("album/", StringComparison.OrdinalIgnoreCase) Then
-                    Dim parts = rest.Substring(6).Split("/"c, 2)
+                ElseIf remainder.StartsWith("album/", StringComparison.OrdinalIgnoreCase) Then
+                    Dim parts = remainder.Substring(6).Split("/"c, 2)
                     node = New VirtualNavigationNode(If(parts.Length > 1, parts(1), "Album"), "ImmichAlbum") With {.Id = parts(0)}
-                ElseIf rest.StartsWith("person/", StringComparison.OrdinalIgnoreCase) Then
-                    Dim parts = rest.Substring(7).Split("/"c, 2)
+                ElseIf remainder.StartsWith("person/", StringComparison.OrdinalIgnoreCase) Then
+                    Dim parts = remainder.Substring(7).Split("/"c, 2)
                     node = New VirtualNavigationNode(If(parts.Length > 1, parts(1), "Person"), "ImmichPerson") With {.Id = parts(0)}
-                ElseIf rest.StartsWith("place/", StringComparison.OrdinalIgnoreCase) Then
-                    Dim placeName = rest.Substring(6)
+                ElseIf remainder.StartsWith("place/", StringComparison.OrdinalIgnoreCase) Then
+                    Dim placeName = remainder.Substring(6)
                     node = New VirtualNavigationNode(placeName, "ImmichPlace") With {.Id = placeName}
                 End If
-                If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) AndAlso Not String.Equals(rest, "all", StringComparison.OrdinalIgnoreCase) Then Return
+                If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) AndAlso Not String.Equals(remainder, "all", StringComparison.OrdinalIgnoreCase) Then Return
                 Await OpenVirtualNavigationNode(node)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.ImmichStartup", ex)
@@ -2669,11 +2669,11 @@ Namespace ViewModels
             _activeTagFilters = New List(Of String)()
             RefreshTagFilterState()
 
-            Dim zurueck = _folderBeforeTagFilter
+            Dim back = _folderBeforeTagFilter
             _folderBeforeTagFilter = ""
             If returnToFolder AndAlso _isVirtualFolder AndAlso
-               Not String.IsNullOrEmpty(zurueck) AndAlso Directory.Exists(zurueck) Then
-                NavigateToFolder(zurueck)
+               Not String.IsNullOrEmpty(back) AndAlso Directory.Exists(back) Then
+                NavigateToFolder(back)
             End If
         End Sub
 
@@ -2697,9 +2697,9 @@ Namespace ViewModels
         Public Sub RefreshTagFilterOptions()
             TagFilterOptions.Clear()
             Try
-                For Each eintrag In LibraryService.Instance.GetTagCounts()
-                    TagFilterOptions.Add(New TagFilterOption(eintrag.Tag, eintrag.Count,
-                                                             IsTagFilterSelected(eintrag.Tag)))
+                For Each entry In LibraryService.Instance.GetTagCounts()
+                    TagFilterOptions.Add(New TagFilterOption(entry.Tag, entry.Count,
+                                                             IsTagFilterSelected(entry.Tag)))
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshTagFilterOptions", ex)
@@ -2723,8 +2723,8 @@ Namespace ViewModels
         Private Sub RefreshTagFilterState()
             Me.RaisePropertyChanged(NameOf(HasTagFilter))
             ' NICHT "option" als Schleifenvariable: Option ist ein VB-Schluesselwort.
-            For Each eintrag In TagFilterOptions
-                eintrag.IsSelected = IsTagFilterSelected(eintrag.Tag)
+            For Each entry In TagFilterOptions
+                entry.IsSelected = IsTagFilterSelected(entry.Tag)
             Next
         End Sub
 
@@ -3744,9 +3744,9 @@ Namespace ViewModels
 
             Dim target = Not SelectedIsFavorite
             For Each item In images
-                Dim vorher = item.IsFavorite
+                Dim before = item.IsFavorite
                 item.IsFavorite = target
-                PersistFavorite(item, target, vorher)
+                PersistFavorite(item, target, before)
             Next
 
             Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
@@ -6063,9 +6063,9 @@ Namespace ViewModels
             Dim gebauterName As String = Nothing
             If nameBuilder IsNot Nothing Then gebauterName = nameBuilder(sourcePath)
             If Not String.IsNullOrWhiteSpace(gebauterName) Then
-                Dim eigenerOrdner = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch", Guid.NewGuid().ToString("N"))
-                Directory.CreateDirectory(eigenerOrdner)
-                Return IO.Path.Combine(eigenerOrdner, gebauterName & ext)
+                Dim ownFolder = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch", Guid.NewGuid().ToString("N"))
+                Directory.CreateDirectory(ownFolder)
+                Return IO.Path.Combine(ownFolder, gebauterName & ext)
             End If
 
             Dim dir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch")
@@ -6080,12 +6080,12 @@ Namespace ViewModels
         ''' verloren. Eindeutigkeit stellt stattdessen ein eigener Unterordner je Bild her.</summary>
         ''' <summary>Raeumt den je Datei angelegten Temp-Unterordner weg - aber nur den, nicht den
         ''' gemeinsamen "ImmichBatch"-Ordner (dort koennen parallele Laeufe noch Dateien haben).</summary>
-        Private Shared Sub DeleteEmptyTempFolder(ordner As String)
-            If String.IsNullOrEmpty(ordner) OrElse Not Directory.Exists(ordner) Then Return
-            If String.Equals(IO.Path.GetFileName(ordner), "ImmichBatch", StringComparison.OrdinalIgnoreCase) Then Return
-            If Directory.EnumerateFileSystemEntries(ordner).Any() Then Return
+        Private Shared Sub DeleteEmptyTempFolder(folder As String)
+            If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then Return
+            If String.Equals(IO.Path.GetFileName(folder), "ImmichBatch", StringComparison.OrdinalIgnoreCase) Then Return
+            If Directory.EnumerateFileSystemEntries(folder).Any() Then Return
             Try
-                Directory.Delete(ordner)
+                Directory.Delete(folder)
             Catch
             End Try
         End Sub

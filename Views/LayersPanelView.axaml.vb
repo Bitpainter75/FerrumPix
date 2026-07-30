@@ -40,9 +40,9 @@ Namespace Views
             ' darunter bekam das Ereignis deshalb nie zu sehen, und eine markierte Maskenebene liess
             ' sich so nicht abwaehlen. Mit dem Tunnel laeuft er davor - Klicks auf echte Zeilen
             ' erkennt er an ihrem ListBoxItem und laesst sie durch.
-            Dim flaeche = Me.FindControl(Of Grid)("LayerListArea")
-            If flaeche IsNot Nothing Then
-                flaeche.AddHandler(InputElement.PointerPressedEvent,
+            Dim area = Me.FindControl(Of Grid)("LayerListArea")
+            If area IsNot Nothing Then
+                area.AddHandler(InputElement.PointerPressedEvent,
                                    New EventHandler(Of PointerPressedEventArgs)(AddressOf OnLayerListAreaPointerPressed),
                                    RoutingStrategies.Tunnel)
             End If
@@ -184,10 +184,10 @@ Namespace Views
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
             End If
             ' Sperren gilt für alles Markierte - bei einer Gruppen-Kopfzeile also für die ganze Gruppe.
-            Dim sperrEintrag = MakeLayerMenuItem(vm.SelectionLockLabel,
+            Dim lockEntry = MakeLayerMenuItem(vm.SelectionLockLabel,
                                                  If(vm.IsSelectionGeometryLocked, "lock-open", "lock"), Nothing)
-            AddHandler sperrEintrag.Click, Sub(s2, e2) vm.ToggleSelectionLocked()
-            items.Add(sperrEintrag)
+            AddHandler lockEntry.Click, Sub(s2, e2) vm.ToggleSelectionLocked()
+            items.Add(lockEntry)
             ' Umbenennen gilt für die angeklickte ZEILE - eine Gruppen-Kopfzeile also auch, obwohl mit
             ' ihr alle Mitglieder markiert sind (sonst wäre eine Gruppe nur per F2 umbenennbar).
             If row.IsGroupHeader Then

@@ -33,18 +33,18 @@ Namespace Services
         ''' <summary>Groesste Kante, mit der gerechnet wird. Das Modell nimmt jede Groesse an, aber
         ''' die Rechenzeit waechst mit der Flaeche - und ein Ausschnitt, der viel groesser ist als
         ''' das, was die Luecke braucht, kostet nur Zeit.</summary>
-        Public Const MaxKante As Integer = 768
+        Public Const MaxEdge As Integer = 768
 
         ''' <summary>Auf dieses Vielfache muessen Breite und Hoehe aufgerundet werden.</summary>
         Public Const ModelGrid As Integer = 32
 
         ''' <summary>Wie viel Umgebung mindestens um die Luecke herum mitgegeben wird, als Vielfaches
         ''' ihrer laengsten Kante. Ohne Umgebung hat das Modell nichts, was es fortsetzen koennte.</summary>
-        Private Const UmgebungFaktor As Double = 1.6
+        Private Const SurroundingFactor As Double = 1.6
 
         ''' <summary>Und mindestens so viele Bildpunkte, damit auch eine winzige Luecke noch
         ''' Zusammenhang bekommt.</summary>
-        Private Const UmgebungMindestens As Integer = 96
+        Private Const SurroundingMinimum As Integer = 96
 
         ''' <summary>Ab welcher Deckung ein Bildpunkt als LUECKE gilt.
         '''
@@ -54,7 +54,7 @@ Namespace Services
         ''' gross, und das Modell soll auf 512 Pixeln das halbe Bild neu erfinden. Heraus kommt eine
         ''' verwaschene, verzogene Fassung dessen, was da war - der Fehler, der wie ein Geometrie-
         ''' fehler aussieht und keiner ist.</summary>
-        Private Const LueckenSchwelleFest As Byte = 96
+        Private Const GapThresholdFixed As Byte = 96
 
         ''' <summary>Die Schwelle, ab der ein Punkt als Luecke gilt - abgeleitet aus der Maske
         ''' SELBST, nicht fest.
@@ -67,21 +67,21 @@ Namespace Services
         ''' Die Haelfte des HOECHSTEN vorkommenden Wertes trifft beides: bei einer vollen Maske sind
         ''' das rund 128, bei einer schwachen entsprechend weniger. Nach unten und oben begrenzt,
         ''' damit weder ein Rauschen noch eine fast leere Maske die Schwelle bestimmt.</summary>
-        Private Shared Function SchwelleFuer(maske As SKBitmap) As Byte
-            If maske Is Nothing Then Return LueckenSchwelleFest
-            Dim hoechst As Integer = 0
+        Private Shared Function ThresholdFor(mask As SKBitmap) As Byte
+            If mask Is Nothing Then Return GapThresholdFixed
+            Dim highest As Integer = 0
             ' Grob abtasten: fuer den Hoechstwert reicht jeder vierte Punkt, und das spart bei einem
             ' 40-Megapixel-Bild einen kompletten Durchlauf.
-            For y = 0 To maske.Height - 1 Step 2
-                For x = 0 To maske.Width - 1 Step 2
-                    Dim a = maske.GetPixel(x, y).Alpha
-                    If a > hoechst Then hoechst = a
-                    If hoechst >= 255 Then Exit For
+            For y = 0 To mask.Height - 1 Step 2
+                For x = 0 To mask.Width - 1 Step 2
+                    Dim a = mask.GetPixel(x, y).Alpha
+                    If a > highest Then highest = a
+                    If highest >= 255 Then Exit For
                 Next
-                If hoechst >= 255 Then Exit For
+                If highest >= 255 Then Exit For
             Next
-            If hoechst <= 0 Then Return LueckenSchwelleFest
-            Return CByte(Math.Max(24, Math.Min(160, hoechst \ 2)))
+            If highest <= 0 Then Return GapThresholdFixed
+            Return CByte(Math.Max(24, Math.Min(160, highest \ 2)))
         End Function
 
         ''' <summary>Um wie viel die Maske VOR dem Fuellen waechst, als Anteil der laengsten
@@ -95,11 +95,11 @@ Namespace Services
         '''
         ''' Deshalb waechst die Maske vorher. Mit einer grosszuegig gemalten Maske passiert das von
         ''' selbst - genau daran hat sich der Unterschied gezeigt.</summary>
-        Private Const WachstumAnteil As Double = 0.02
+        Private Const GrowthShare As Double = 0.02
 
         ''' <summary>Und mindestens so viele Bildpunkte, damit auch eine kleine Luecke ihren Saum
         ''' verliert.</summary>
-        Private Const WachstumMindestens As Integer = 4
+        Private Const GrowthMinimum As Integer = 4
 
         ''' <summary>Breite des weichen Randes beim Zurueckschreiben, Ohne ihn zeigt
         ''' sich die Kante der Maske als Naht - die gefuellte Flaeche kommt aus einer Skalierung und
@@ -112,9 +112,9 @@ Namespace Services
         ''' Nicht nur ins Protokoll: eine Ferndiagnose, die voraussetzt, dass jemand erst einen
         ''' Schalter findet und eine Datei heraussucht, ist keine. Die sechs Zahlen entscheiden den
         ''' Fall, und sie gehoeren dorthin, wo man sie ohne Umweg sieht.</summary>
-        Public Shared Property LetzterBericht As String = ""
+        Public Shared Property LastReport As String = ""
 
-        Public Shared ReadOnly Property Verfuegbar As Boolean
+        Public Shared ReadOnly Property Available As Boolean
             Get
                 Return AiModelService.RuntimeAvailable AndAlso
                        Not String.IsNullOrEmpty(AiModelService.BestFile(ModelFile))
@@ -122,13 +122,13 @@ Namespace Services
         End Property
 
         ''' <summary>Das umschliessende Rechteck aller gesetzten Maskenpunkte, oder ein leeres.</summary>
-        Public Shared Function LueckenRechteck(maske As SKBitmap) As SKRectI
-            If maske Is Nothing OrElse maske.Width <= 0 OrElse maske.Height <= 0 Then Return SKRectI.Empty
-            Dim LueckenSchwelle = SchwelleFuer(maske)
+        Public Shared Function GapRect(mask As SKBitmap) As SKRectI
+            If mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return SKRectI.Empty
+            Dim GapThreshold = ThresholdFor(mask)
             Dim l = Integer.MaxValue, t = Integer.MaxValue, r = Integer.MinValue, b = Integer.MinValue
-            For y = 0 To maske.Height - 1
-                For x = 0 To maske.Width - 1
-                    If maske.GetPixel(x, y).Alpha < LueckenSchwelle Then Continue For
+            For y = 0 To mask.Height - 1
+                For x = 0 To mask.Width - 1
+                    If mask.GetPixel(x, y).Alpha < GapThreshold Then Continue For
                     If x < l Then l = x
                     If x > r Then r = x
                     If y < t Then t = y
@@ -149,100 +149,100 @@ Namespace Services
         ''' Die Umgebung betraegt das Anderthalbfache der Luecke, mindestens aber 128 Punkte. Sie ist
         ''' der Zusammenhang, aus dem das Modell fortsetzt: ohne sie hat es nichts, mit zu viel davon
         ''' verschwindet die Luecke in der Verkleinerung.</summary>
-        Public Shared Function AusschnittFuer(luecke As SKRectI, bildBreite As Integer, bildHoehe As Integer) As SKRectI
-            If luecke.Width <= 0 OrElse luecke.Height <= 0 Then Return SKRectI.Empty
-            If bildBreite <= 0 OrElse bildHoehe <= 0 Then Return SKRectI.Empty
+        Public Shared Function RegionFor(gap As SKRectI, imageWidth As Integer, imageHeight As Integer) As SKRectI
+            If gap.Width <= 0 OrElse gap.Height <= 0 Then Return SKRectI.Empty
+            If imageWidth <= 0 OrElse imageHeight <= 0 Then Return SKRectI.Empty
 
-            Dim randX = Math.Max(UmgebungMindestens, CInt(luecke.Width * UmgebungFaktor))
-            Dim randY = Math.Max(UmgebungMindestens, CInt(luecke.Height * UmgebungFaktor))
-            Dim l = Math.Max(0, luecke.Left - randX)
-            Dim t = Math.Max(0, luecke.Top - randY)
-            Dim r = Math.Min(bildBreite, luecke.Right + randX)
-            Dim b = Math.Min(bildHoehe, luecke.Bottom + randY)
+            Dim marginX = Math.Max(SurroundingMinimum, CInt(gap.Width * SurroundingFactor))
+            Dim marginY = Math.Max(SurroundingMinimum, CInt(gap.Height * SurroundingFactor))
+            Dim l = Math.Max(0, gap.Left - marginX)
+            Dim t = Math.Max(0, gap.Top - marginY)
+            Dim r = Math.Min(imageWidth, gap.Right + marginX)
+            Dim b = Math.Min(imageHeight, gap.Bottom + marginY)
             If r <= l OrElse b <= t Then Return SKRectI.Empty
             Return New SKRectI(l, t, r, b)
         End Function
 
-        ''' <summary>Die Luecke fuellen. <paramref name="maske"/> hat Bildgroesse; alles ueber der
+        ''' <summary>Die Luecke fuellen. <paramref name="mask"/> hat Bildgroesse; alles ueber der
         ''' Schwelle gilt als zu fuellen. Zurueck kommt eine KOPIE des Bildes mit gefuellter Luecke,
         ''' oder Nothing bei jedem Fehlschlag.</summary>
-        Public Shared Function Fuelle(bild As SKBitmap, maske As SKBitmap) As SKBitmap
-            If bild Is Nothing OrElse maske Is Nothing Then Return Nothing
-            If bild.Width <= 0 OrElse bild.Height <= 0 Then Return Nothing
-            Dim sitzung = AiModelService.SitzungFuer(ModelFile)
-            If sitzung Is Nothing Then Return Nothing
+        Public Shared Function Fill(image As SKBitmap, mask As SKBitmap) As SKBitmap
+            If image Is Nothing OrElse mask Is Nothing Then Return Nothing
+            If image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
+            Dim session = AiModelService.SessionFor(ModelFile)
+            If session Is Nothing Then Return Nothing
 
-            Dim eigeneMaske As SKBitmap = Nothing
-            Dim m = maske
+            Dim ownMask As SKBitmap = Nothing
+            Dim m = mask
             Try
-                If maske.Width <> bild.Width OrElse maske.Height <> bild.Height Then
-                    eigeneMaske = New SKBitmap(New SKImageInfo(bild.Width, bild.Height,
+                If mask.Width <> image.Width OrElse mask.Height <> image.Height Then
+                    ownMask = New SKBitmap(New SKImageInfo(image.Width, image.Height,
                                                                SKColorType.Alpha8, SKAlphaType.Premul))
-                    If Not maske.ScalePixels(eigeneMaske, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
-                    m = eigeneMaske
+                    If Not mask.ScalePixels(ownMask, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                    m = ownMask
                 End If
 
-                Dim rohLuecke = LueckenRechteck(m)
-                If rohLuecke.Width <= 0 OrElse rohLuecke.Height <= 0 Then Return Nothing
+                Dim rawGap = GapRect(m)
+                If rawGap.Width <= 0 OrElse rawGap.Height <= 0 Then Return Nothing
                 ' Die Maske WACHSEN lassen, bevor irgendetwas anderes passiert - sonst bleibt der
                 ' Saum aus halb zum Objekt gehoerenden Punkten stehen.
-                Dim wachstum = Math.Max(WachstumMindestens,
-                                        CInt(Math.Round(Math.Max(rohLuecke.Width, rohLuecke.Height) * WachstumAnteil)))
-                Dim gewachsen = Erweitere(m, wachstum)
-                If gewachsen IsNot Nothing Then
-                    eigeneMaske?.Dispose()
-                    eigeneMaske = gewachsen
-                    m = gewachsen
+                Dim growth = Math.Max(GrowthMinimum,
+                                        CInt(Math.Round(Math.Max(rawGap.Width, rawGap.Height) * GrowthShare)))
+                Dim grown = Grow(m, growth)
+                If grown IsNot Nothing Then
+                    ownMask?.Dispose()
+                    ownMask = grown
+                    m = grown
                 End If
 
-                Dim luecke = LueckenRechteck(m)
-                If luecke.Width <= 0 OrElse luecke.Height <= 0 Then Return Nothing
-                Dim fenster = AusschnittFuer(luecke, bild.Width, bild.Height)
-                If fenster.Width <= 0 Then Return Nothing
+                Dim gap = GapRect(m)
+                If gap.Width <= 0 OrElse gap.Height <= 0 Then Return Nothing
+                Dim window = RegionFor(gap, image.Width, image.Height)
+                If window.Width <= 0 Then Return Nothing
 
                 ' Das Modell rechnet auf FREIER Groesse - nur ein Vielfaches von 32 muss es sein.
                 ' Deshalb wird der Ausschnitt nicht mehr in ein festes Quadrat gequetscht, sondern
                 ' nur so weit verkleinert, wie die Obergrenze es verlangt. Genau daran ist die
                 ' erste Fassung gescheitert: ein grosses Objekt auf 512 Punkte gestaucht ergab
                 ' einen weichen Verlauf statt Hintergrund.
-                Dim faktor = Math.Min(1.0, MaxKante / CDbl(Math.Max(fenster.Width, fenster.Height)))
-                Dim aw = Math.Max(32, CInt(Math.Round(fenster.Width * faktor)))
-                Dim ah = Math.Max(32, CInt(Math.Round(fenster.Height * faktor)))
-                Dim pw = AufVielfaches(aw), ph = AufVielfaches(ah)
+                Dim factor = Math.Min(1.0, MaxEdge / CDbl(Math.Max(window.Width, window.Height)))
+                Dim aw = Math.Max(32, CInt(Math.Round(window.Width * factor)))
+                Dim ah = Math.Max(32, CInt(Math.Round(window.Height * factor)))
+                Dim pw = ToMultipleOf(aw), ph = ToMultipleOf(ah)
 
-                Using klein = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                    Using c = New SKCanvas(klein)
+                Using small = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                    Using c = New SKCanvas(small)
                         c.Clear(SKColors.Black)
-                        Using img = SKImage.FromBitmap(bild)
-                            c.DrawImage(img, New SKRect(fenster.Left, fenster.Top, fenster.Right, fenster.Bottom),
+                        Using img = SKImage.FromBitmap(image)
+                            c.DrawImage(img, New SKRect(window.Left, window.Top, window.Right, window.Bottom),
                                         New SKRect(0, 0, aw, ah),
                                         New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), Nothing)
                         End Using
                     End Using
 
-                    Using kleinMaske = New SKBitmap(New SKImageInfo(aw, ah, SKColorType.Alpha8, SKAlphaType.Premul))
-                        Using c = New SKCanvas(kleinMaske)
+                    Using smallMask = New SKBitmap(New SKImageInfo(aw, ah, SKColorType.Alpha8, SKAlphaType.Premul))
+                        Using c = New SKCanvas(smallMask)
                             c.Clear(SKColors.Transparent)
                             Using img = SKImage.FromBitmap(m)
-                                c.DrawImage(img, New SKRect(fenster.Left, fenster.Top, fenster.Right, fenster.Bottom),
+                                c.DrawImage(img, New SKRect(window.Left, window.Top, window.Right, window.Bottom),
                                             New SKRect(0, 0, aw, ah),
                                             New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), Nothing)
                             End Using
                         End Using
 
-                        Dim schwelle = SchwelleFuer(kleinMaske)
-                        Dim gesetzt As Long = 0
+                        Dim threshold = ThresholdFor(smallMask)
+                        Dim setPixels As Long = 0
                         For y = 0 To ah - 1
                             For x = 0 To aw - 1
-                                If kleinMaske.GetPixel(x, y).Alpha >= schwelle Then gesetzt += 1
+                                If smallMask.GetPixel(x, y).Alpha >= threshold Then setPixels += 1
                             Next
                         Next
-                        Dim bericht = $"Bild {bild.Width}x{bild.Height}, Lücke {luecke.Width}x{luecke.Height}, " &
-                                      $"Ausschnitt {fenster.Width}x{fenster.Height}, gerechnet auf {pw}x{ph}, " &
-                                      $"Schwelle {schwelle}, Maske {gesetzt} von {aw * ah} Punkten"
-                        LetzterBericht = bericht
-                        DiagnosticLogService.LogAlways("ObjektEntfernen", bericht)
-                        If gesetzt <= 0 Then
+                        Dim report = $"Bild {image.Width}x{image.Height}, Lücke {gap.Width}x{gap.Height}, " &
+                                      $"Ausschnitt {window.Width}x{window.Height}, gerechnet auf {pw}x{ph}, " &
+                                      $"Schwelle {threshold}, Maske {setPixels} von {aw * ah} Punkten"
+                        LastReport = report
+                        DiagnosticLogService.LogAlways("ObjektEntfernen", report)
+                        If setPixels <= 0 Then
                             DiagnosticLogService.LogAlways("ObjektEntfernen",
                                 "Maske im Modelleingang LEER - es gibt nichts zu fuellen")
                             Return Nothing
@@ -252,12 +252,12 @@ Namespace Services
                         ' so, wie sie ins Modell gehen. Ob die Umgebung mitgeht oder nur die Luecke
                         ' ankommt, sieht man an zwei Bildern in einer Sekunde - und muss es nicht aus
                         ' Zahlen erschliessen.
-                        SchreibeDiagnoseBilder(klein, kleinMaske, schwelle)
+                        WriteDiagnosticImages(small, smallMask, threshold)
 
-                        Dim gefuellt = Rechne(sitzung, klein, kleinMaske, aw, ah, pw, ph, schwelle)
-                        If gefuellt Is Nothing Then Return Nothing
-                        Using gefuellt
-                            Return InsertInto(bild, m, gefuellt, fenster)
+                        Dim filled = Compute(session, small, smallMask, aw, ah, pw, ph, threshold)
+                        If filled Is Nothing Then Return Nothing
+                        Using filled
+                            Return InsertInto(image, m, filled, window)
                         End Using
                     End Using
                 End Using
@@ -265,7 +265,7 @@ Namespace Services
                 DiagnosticLogService.LogAlways("ObjektEntfernen", ex.Message)
                 Return Nothing
             Finally
-                eigeneMaske?.Dispose()
+                ownMask?.Dispose()
             End Try
         End Function
 
@@ -274,49 +274,49 @@ Namespace Services
         ''' Ueber eine Unschaerfe mit anschliessender niedriger Schwelle: was auch nur ein wenig
         ''' Deckung abbekommt, gilt danach als voll gedeckt. Das ist eine Ausdehnung um ungefaehr den
         ''' Radius und kostet nichts, waehrend ein echter Maximumfilter mit dem Radius waechst.</summary>
-        Private Shared Function Erweitere(maske As SKBitmap, radius As Integer) As SKBitmap
-            If maske Is Nothing OrElse radius < 1 Then Return Nothing
-            Dim schwelle = SchwelleFuer(maske)
+        Private Shared Function Grow(mask As SKBitmap, radius As Integer) As SKBitmap
+            If mask Is Nothing OrElse radius < 1 Then Return Nothing
+            Dim threshold = ThresholdFor(mask)
             Try
-                Dim ziel = New SKBitmap(New SKImageInfo(maske.Width, maske.Height,
+                Dim target = New SKBitmap(New SKImageInfo(mask.Width, mask.Height,
                                                         SKColorType.Alpha8, SKAlphaType.Premul))
-                Using hart = New SKBitmap(New SKImageInfo(maske.Width, maske.Height,
+                Using hard = New SKBitmap(New SKImageInfo(mask.Width, mask.Height,
                                                           SKColorType.Alpha8, SKAlphaType.Premul))
-                    Dim n = maske.Width * maske.Height
+                    Dim n = mask.Width * mask.Height
                     Dim puffer(n - 1) As Byte
-                    Runtime.InteropServices.Marshal.Copy(maske.GetPixels(), puffer, 0, n)
+                    Runtime.InteropServices.Marshal.Copy(mask.GetPixels(), puffer, 0, n)
                     For i = 0 To n - 1
-                        puffer(i) = If(puffer(i) >= schwelle, CByte(255), CByte(0))
+                        puffer(i) = If(puffer(i) >= threshold, CByte(255), CByte(0))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(puffer, 0, hart.GetPixels(), n)
+                    Runtime.InteropServices.Marshal.Copy(puffer, 0, hard.GetPixels(), n)
 
-                    Using canvas = New SKCanvas(ziel)
+                    Using canvas = New SKCanvas(target)
                         canvas.Clear(SKColors.Transparent)
                         Using paint = New SKPaint()
                             paint.ImageFilter = SKImageFilter.CreateBlur(radius * 0.6F, radius * 0.6F)
-                            canvas.DrawBitmap(hart, 0, 0, paint)
+                            canvas.DrawBitmap(hard, 0, 0, paint)
                         End Using
                     End Using
 
                     ' Niedrig schwellen: aus dem weichen Rand der Unschaerfe wird wieder eine volle
                     ' Deckung, und die Maske ist um rund einen Radius groesser als vorher.
-                    Runtime.InteropServices.Marshal.Copy(ziel.GetPixels(), puffer, 0, n)
+                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), puffer, 0, n)
                     For i = 0 To n - 1
                         puffer(i) = If(puffer(i) >= 40, CByte(255), CByte(0))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(puffer, 0, ziel.GetPixels(), n)
+                    Runtime.InteropServices.Marshal.Copy(puffer, 0, target.GetPixels(), n)
                 End Using
-                Return ziel
+                Return target
             Catch
                 Return Nothing
             End Try
         End Function
 
         ''' <summary>Auf das naechste Vielfache aufrunden, das das Modell verlangt.</summary>
-        Private Shared Function AufVielfaches(wert As Integer) As Integer
-            Dim r = wert Mod ModelGrid
-            If r = 0 Then Return wert
-            Return wert + (ModelGrid - r)
+        Private Shared Function ToMultipleOf(value As Integer) As Integer
+            Dim r = value Mod ModelGrid
+            If r = 0 Then Return value
+            Return value + (ModelGrid - r)
         End Function
 
         ''' <summary>Ein Durchlauf des Modells.
@@ -329,10 +329,10 @@ Namespace Services
         ''' <paramref name="pw"/> und <paramref name="ph"/> sind auf das Modellraster aufgerundet;
         ''' was ueber aw und ah hinausgeht, wird mit dem Randwert gefuellt und danach
         ''' weggeschnitten.</summary>
-        Private Shared Function Rechne(sitzung As InferenceSession, klein As SKBitmap,
-                                       kleinMaske As SKBitmap, aw As Integer, ah As Integer,
-                                       pw As Integer, ph As Integer, schwelle As Byte) As SKBitmap
-            Dim ebene = pw * ph
+        Private Shared Function Compute(session As InferenceSession, small As SKBitmap,
+                                       smallMask As SKBitmap, aw As Integer, ah As Integer,
+                                       pw As Integer, ph As Integer, threshold As Byte) As SKBitmap
+            Dim layer = pw * ph
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 4, ph, pw})
             Dim z = tensor.Buffer.Span
             For y = 0 To ph - 1
@@ -340,99 +340,99 @@ Namespace Services
                 For x = 0 To pw - 1
                     Dim qx = Math.Min(x, aw - 1)
                     Dim i = y * pw + x
-                    Dim p = klein.GetPixel(qx, qy)
+                    Dim p = small.GetPixel(qx, qy)
                     ' Die Maske ist ein SCHALTER, kein Deckungsgrad. Ausserhalb des belegten Teils
                     ' bleibt sie null - dort soll nichts gefuellt werden.
-                    Dim drin = x < aw AndAlso y < ah
-                    Dim loch = If(drin AndAlso kleinMaske.GetPixel(qx, qy).Alpha >= schwelle, 1.0F, 0.0F)
-                    Dim sichtbar = 1.0F - loch
-                    z(i) = p.Red / 255.0F * sichtbar
-                    z(ebene + i) = p.Green / 255.0F * sichtbar
-                    z(ebene * 2 + i) = p.Blue / 255.0F * sichtbar
-                    z(ebene * 3 + i) = loch
+                    Dim inside = x < aw AndAlso y < ah
+                    Dim hole = If(inside AndAlso smallMask.GetPixel(qx, qy).Alpha >= threshold, 1.0F, 0.0F)
+                    Dim visible = 1.0F - hole
+                    z(i) = p.Red / 255.0F * visible
+                    z(layer + i) = p.Green / 255.0F * visible
+                    z(layer * 2 + i) = p.Blue / 255.0F * visible
+                    z(layer * 3 + i) = hole
                 Next
             Next
 
-            Dim name = sitzung.InputMetadata.Keys.First()
-            Dim eingabe = New List(Of NamedOnnxValue) From {NamedOnnxValue.CreateFromTensor(name, tensor)}
-            Using ergebnis = sitzung.Run(eingabe)
-                Dim raus = TryCast(ergebnis.First().Value, DenseTensor(Of Single))
-                If raus Is Nothing Then Return Nothing
-                Dim masse = raus.Dimensions.ToArray()
-                Dim rh = masse(masse.Length - 2), rw = masse(masse.Length - 1)
-                Dim rebene = rw * rh
-                Dim werte = raus.Buffer.Span
-                If werte.Length < rebene * 3 Then Return Nothing
+            Dim name = session.InputMetadata.Keys.First()
+            Dim input = New List(Of NamedOnnxValue) From {NamedOnnxValue.CreateFromTensor(name, tensor)}
+            Using result = session.Run(input)
+                Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
+                If output Is Nothing Then Return Nothing
+                Dim dims = output.Dimensions.ToArray()
+                Dim rh = dims(dims.Length - 2), rw = dims(dims.Length - 1)
+                Dim rLayer = rw * rh
+                Dim values = output.Buffer.Span
+                If values.Length < rLayer * 3 Then Return Nothing
                 ' Die Ausgabe steht in 0 bis 1 - anders als bei der Vorgaengerin, die 0 bis 255 gab.
-                Dim ziel = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                Dim target = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 For y = 0 To ah - 1
                     Dim sy = Math.Min(y, rh - 1)
                     For x = 0 To aw - 1
                         Dim sx = Math.Min(x, rw - 1)
                         Dim i = sy * rw + sx
-                        ziel.SetPixel(x, y, New SKColor(Klemme(werte(i) * 255.0F),
-                                                        Klemme(werte(rebene + i) * 255.0F),
-                                                        Klemme(werte(rebene * 2 + i) * 255.0F), 255))
+                        target.SetPixel(x, y, New SKColor(ClampByte(values(i) * 255.0F),
+                                                        ClampByte(values(rLayer + i) * 255.0F),
+                                                        ClampByte(values(rLayer * 2 + i) * 255.0F), 255))
                     Next
                 Next
 
                 ' NACHRECHNEN, ob ueberhaupt etwas passiert ist.
-                Dim summe As Long = 0, zahl As Long = 0
+                Dim sum As Long = 0, number As Long = 0
                 For y = 0 To ah - 1
                     For x = 0 To aw - 1
-                        If kleinMaske.GetPixel(x, y).Alpha < schwelle Then Continue For
-                        Dim vorher = klein.GetPixel(x, y)
-                        Dim nachher = ziel.GetPixel(x, y)
-                        summe += Math.Abs(CInt(vorher.Red) - nachher.Red) +
-                                 Math.Abs(CInt(vorher.Green) - nachher.Green) +
-                                 Math.Abs(CInt(vorher.Blue) - nachher.Blue)
-                        zahl += 1
+                        If smallMask.GetPixel(x, y).Alpha < threshold Then Continue For
+                        Dim before = small.GetPixel(x, y)
+                        Dim after = target.GetPixel(x, y)
+                        sum += Math.Abs(CInt(before.Red) - after.Red) +
+                                 Math.Abs(CInt(before.Green) - after.Green) +
+                                 Math.Abs(CInt(before.Blue) - after.Blue)
+                        number += 1
                     Next
                 Next
-                Dim mittel = If(zahl > 0, summe / CDbl(zahl * 3), 0.0)
-                LetzterBericht &= $", Änderung {mittel:F1} Stufen"
+                Dim average = If(number > 0, sum / CDbl(number * 3), 0.0)
+                LastReport &= $", Änderung {average:F1} Stufen"
                 DiagnosticLogService.LogAlways("ObjektEntfernen",
-                    $"Aenderung in der Luecke: {mittel:F1} Stufen ueber {zahl} Punkte")
-                If zahl > 0 AndAlso mittel < 4.0 Then
-                    LetzterBericht &= " - das Modell hat nur wiederholt statt zu füllen"
+                    $"Aenderung in der Luecke: {average:F1} Stufen ueber {number} Punkte")
+                If number > 0 AndAlso average < 4.0 Then
+                    LastReport &= " - das Modell hat nur wiederholt statt zu füllen"
                     DiagnosticLogService.LogAlways("ObjektEntfernen",
                         "Das Modell hat den Ausschnitt nur WIEDERHOLT statt zu fuellen.")
                 End If
-                Return ziel
+                Return target
             End Using
         End Function
 
         ''' <summary>Legt Ausschnitt und Maske als PNG neben das Protokoll - nur bei
         ''' eingeschalteter Diagnose. Zwei Bilder beantworten die Frage "bekommt das Modell die
         ''' Umgebung?" unmittelbar; aus Zahlen laesst sie sich nur erschliessen.</summary>
-        Private Shared Sub SchreibeDiagnoseBilder(klein As SKBitmap, kleinMaske As SKBitmap, schwelle As Byte)
+        Private Shared Sub WriteDiagnosticImages(small As SKBitmap, smallMask As SKBitmap, threshold As Byte)
             Try
                 If Not AppSettingsService.Load().EnableDiagnosticLogging Then Return
-                Dim ordner = IO.Path.Combine(
+                Dim folder = IO.Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "FerrumPix", "logs")
-                IO.Directory.CreateDirectory(ordner)
+                IO.Directory.CreateDirectory(folder)
 
-                Using bild = SKImage.FromBitmap(klein)
-                    Using daten = bild.Encode(SKEncodedImageFormat.Png, 92)
-                        IO.File.WriteAllBytes(IO.Path.Combine(ordner, "entfernen-ausschnitt.png"), daten.ToArray())
+                Using image = SKImage.FromBitmap(small)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, 92)
+                        IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-ausschnitt.png"), data.ToArray())
                     End Using
                 End Using
 
                 ' Die Maske als Graustufenbild, damit man sie ueberhaupt sehen kann - ein
                 ' Alphakanal allein ist in jedem Betrachter unsichtbar.
-                Using sichtbar = New SKBitmap(kleinMaske.Width, kleinMaske.Height,
+                Using visible = New SKBitmap(smallMask.Width, smallMask.Height,
                                               SKColorType.Bgra8888, SKAlphaType.Opaque)
-                    For y = 0 To kleinMaske.Height - 1
-                        For x = 0 To kleinMaske.Width - 1
-                            Dim a = kleinMaske.GetPixel(x, y).Alpha
-                            Dim v = If(a >= schwelle, CByte(255), CByte(a \ 3))
-                            sichtbar.SetPixel(x, y, New SKColor(v, v, v, 255))
+                    For y = 0 To smallMask.Height - 1
+                        For x = 0 To smallMask.Width - 1
+                            Dim a = smallMask.GetPixel(x, y).Alpha
+                            Dim v = If(a >= threshold, CByte(255), CByte(a \ 3))
+                            visible.SetPixel(x, y, New SKColor(v, v, v, 255))
                         Next
                     Next
-                    Using bild = SKImage.FromBitmap(sichtbar)
-                        Using daten = bild.Encode(SKEncodedImageFormat.Png, 92)
-                            IO.File.WriteAllBytes(IO.Path.Combine(ordner, "entfernen-maske.png"), daten.ToArray())
+                    Using image = SKImage.FromBitmap(visible)
+                        Using data = image.Encode(SKEncodedImageFormat.Png, 92)
+                            IO.File.WriteAllBytes(IO.Path.Combine(folder, "entfernen-maske.png"), data.ToArray())
                         End Using
                     End Using
                 End Using
@@ -442,7 +442,7 @@ Namespace Services
             End Try
         End Sub
 
-        Private Shared Function Klemme(v As Single) As Byte
+        Private Shared Function ClampByte(v As Single) As Byte
             If Single.IsNaN(v) Then Return 0
             Return CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v)))))
         End Function
@@ -452,13 +452,13 @@ Namespace Services
         ''' Der weiche Rand ist kein Schoenheitsmittel: die gefuellte Flaeche kommt aus einer
         ''' Skalierung und trifft die Helligkeit der Nachbarschaft nie auf den Punkt genau. Ohne
         ''' Ueberblendung steht an der Maskenkante eine sichtbare Naht.</summary>
-        Private Shared Function InsertInto(bild As SKBitmap, maske As SKBitmap,
-                                         gefuellt As SKBitmap, fenster As SKRectI) As SKBitmap
-            Dim ergebnis = New SKBitmap(bild.Width, bild.Height, bild.ColorType, bild.AlphaType)
-            Using canvas = New SKCanvas(ergebnis)
+        Private Shared Function InsertInto(image As SKBitmap, mask As SKBitmap,
+                                         filled As SKBitmap, window As SKRectI) As SKBitmap
+            Dim result = New SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType)
+            Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
                 Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                    canvas.DrawBitmap(bild, 0, 0, paint)
+                    canvas.DrawBitmap(image, 0, 0, paint)
                 End Using
 
                 ' Die Maske mit weicher Kante als Schablone. Sie wird ueber einen Weichzeichner
@@ -467,22 +467,22 @@ Namespace Services
                 ' der Uebergang, den man haben will - eine eigene Naht darueberzulegen macht ihn nur
                 ' unschaerfer. Die Schwelle gilt weiter fuer das umschliessende Rechteck und fuer
                 ' das, was das Modell als Luecke sieht; hier zaehlt der Verlauf.
-                Using gross = New SKBitmap(fenster.Width, fenster.Height, bild.ColorType, bild.AlphaType)
-                    If Not gefuellt.ScalePixels(gross, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then
-                        ergebnis.Dispose()
+                Using large = New SKBitmap(window.Width, window.Height, image.ColorType, image.AlphaType)
+                    If Not filled.ScalePixels(large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then
+                        result.Dispose()
                         Return Nothing
                     End If
-                    Using gefuellteQuelle = SKShader.CreateBitmap(gross, SKShaderTileMode.Clamp,
+                    Using filledSource = SKShader.CreateBitmap(large, SKShaderTileMode.Clamp,
                                                                   SKShaderTileMode.Clamp,
-                                                                  SKMatrix.CreateTranslation(fenster.Left, fenster.Top))
-                        Using paint = New SKPaint With {.Shader = gefuellteQuelle}
+                                                                  SKMatrix.CreateTranslation(window.Left, window.Top))
+                        Using paint = New SKPaint With {.Shader = filledSource}
                             ' Die Maske bestimmt WO und WIE STARK, der Schattierer WAS.
-                            canvas.DrawBitmap(maske, 0, 0, paint)
+                            canvas.DrawBitmap(mask, 0, 0, paint)
                         End Using
                     End Using
                 End Using
             End Using
-            Return ergebnis
+            Return result
         End Function
 
     End Class

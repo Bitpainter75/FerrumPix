@@ -31,7 +31,7 @@ Namespace Controls
         ''' Das Element unter dem Zeiger, oder Nothing wenn dort keines liegt.
         ''' </summary>
         ''' <param name="e">Das Ereignis mit der Zeigerposition.</param>
-        ''' <param name="behaelter">Worin gesucht wird - die Liste oder das Raster. Nothing oder
+        ''' <param name="container">Worin gesucht wird - die Liste oder das Raster. Nothing oder
         ''' unsichtbar heisst: kein Treffer.</param>
         Public Shared Function UnderPointer(e As ContextRequestedEventArgs, container As Control) As ImageItem
             If e Is Nothing OrElse container Is Nothing OrElse Not container.IsVisible Then Return Nothing
@@ -67,9 +67,9 @@ Namespace Controls
         ''' dieses eine. Wer auf ein Element der Auswahl klickt, meint die ganze Auswahl. Genau so
         ''' verhaelt sich jeder Dateimanager, und genau das erwartet man beim Loeschen.
         ''' </summary>
-        ''' <param name="getroffen">Das Element unter dem Zeiger, oder Nothing.</param>
-        ''' <param name="auswahl">Die aktuelle Auswahl des Bereichs, kann leer sein.</param>
-        ''' <param name="rueckfall">Was gilt, wenn weder getroffen noch ausgewaehlt etwas ist -
+        ''' <param name="hit">Das Element unter dem Zeiger, oder Nothing.</param>
+        ''' <param name="selection">Die aktuelle Auswahl des Bereichs, kann leer sein.</param>
+        ''' <param name="fallback">Was gilt, wenn weder getroffen noch ausgewaehlt etwas ist -
         ''' etwa das Bild auf der Buehne des Betrachters.</param>
         Public Shared Function Affected(hit As ImageItem,
                                           selection As IEnumerable(Of ImageItem),

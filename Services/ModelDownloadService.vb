@@ -30,7 +30,7 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        Private Shared ReadOnly _klient As New Lazy(Of HttpClient)(
+        Private Shared ReadOnly _client As New Lazy(Of HttpClient)(
             Function()
                 Dim k = New HttpClient()
                 k.Timeout = TimeSpan.FromMinutes(30)
@@ -39,47 +39,47 @@ Namespace Services
                 Return k
             End Function)
 
-        Public Enum Ergebnis
-            Fertig
-            SchonDa
-            Netzfehler
-            PruefsummeFalsch
-            Abgebrochen
+        Public Enum Result
+            Done
+            AlreadyPresent
+            NetworkError
+            ChecksumMismatch
+            Cancelled
         End Enum
 
-        ''' <summary>Ein Modell holen. <paramref name="fortschritt"/> bekommt 0 bis 1.</summary>
-        Public Shared Async Function HoleAsync(eintrag As AiModelService.ModelEntry,
-                                               Optional fortschritt As IProgress(Of Double) = Nothing,
-                                               Optional abbruch As CancellationToken = Nothing) As Task(Of Ergebnis)
-            If eintrag Is Nothing Then Return Ergebnis.Netzfehler
-            If AiModelService.IstUnversehrt(eintrag) Then Return Ergebnis.SchonDa
+        ''' <summary>Ein Modell holen. <paramref name="progress"/> bekommt 0 bis 1.</summary>
+        Public Shared Async Function FetchAsync(entry As AiModelService.ModelEntry,
+                                               Optional progress As IProgress(Of Double) = Nothing,
+                                               Optional cancel As CancellationToken = Nothing) As Task(Of Result)
+            If entry Is Nothing Then Return Result.NetworkError
+            If AiModelService.IsIntact(entry) Then Return Result.AlreadyPresent
 
-            Dim ordner = AiModelService.ModelFolder
-            Dim ziel = Path.Combine(ordner, eintrag.Datei)
+            Dim folder = AiModelService.ModelFolder
+            Dim target = Path.Combine(folder, entry.FileName)
             ' Die Nachbardatei liegt im SELBEN Ordner - nur dann ist das Umbenennen ein
             ' Verzeichniseintrag und keine Kopie ueber Dateisystemgrenzen hinweg.
-            Dim halb = ziel & ".unvollstaendig"
+            Dim half = target & ".unvollstaendig"
             Try
-                Directory.CreateDirectory(ordner)
-                If File.Exists(halb) Then File.Delete(halb)
+                Directory.CreateDirectory(folder)
+                If File.Exists(half) Then File.Delete(half)
 
-                Using antwort = Await _klient.Value.GetAsync(eintrag.Adresse,
-                                                             HttpCompletionOption.ResponseHeadersRead, abbruch)
-                    If Not antwort.IsSuccessStatusCode Then Return Ergebnis.Netzfehler
-                    Dim gesamt = If(antwort.Content.Headers.ContentLength.HasValue,
-                                    antwort.Content.Headers.ContentLength.Value, eintrag.Bytes)
-                    Using quelle = Await antwort.Content.ReadAsStreamAsync(abbruch)
-                        Using senke = New FileStream(halb, FileMode.CreateNew, FileAccess.Write, FileShare.None)
-                            Dim puffer(81919) As Byte
-                            Dim gelesen As Integer
-                            Dim summe As Long = 0
+                Using response = Await _client.Value.GetAsync(entry.Address,
+                                                             HttpCompletionOption.ResponseHeadersRead, cancel)
+                    If Not response.IsSuccessStatusCode Then Return Result.NetworkError
+                    Dim total = If(response.Content.Headers.ContentLength.HasValue,
+                                    response.Content.Headers.ContentLength.Value, entry.Bytes)
+                    Using source = Await response.Content.ReadAsStreamAsync(cancel)
+                        Using sink = New FileStream(half, FileMode.CreateNew, FileAccess.Write, FileShare.None)
+                            Dim buffer(81919) As Byte
+                            Dim bytesRead As Integer
+                            Dim sum As Long = 0
                             Do
-                                gelesen = Await quelle.ReadAsync(puffer, 0, puffer.Length, abbruch)
-                                If gelesen <= 0 Then Exit Do
-                                Await senke.WriteAsync(puffer, 0, gelesen, abbruch)
-                                summe += gelesen
-                                If fortschritt IsNot Nothing AndAlso gesamt > 0 Then
-                                    fortschritt.Report(Math.Min(1.0, summe / CDbl(gesamt)))
+                                bytesRead = Await source.ReadAsync(buffer, 0, buffer.Length, cancel)
+                                If bytesRead <= 0 Then Exit Do
+                                Await sink.WriteAsync(buffer, 0, bytesRead, cancel)
+                                sum += bytesRead
+                                If progress IsNot Nothing AndAlso total > 0 Then
+                                    progress.Report(Math.Min(1.0, sum / CDbl(total)))
                                 End If
                             Loop
                         End Using
@@ -88,34 +88,34 @@ Namespace Services
 
                 ' ERST pruefen, DANN an den Zielort. Eine Datei, die den Namen des Modells traegt,
                 ' soll nie einen Augenblick lang ungeprueft dort liegen.
-                Dim summeIst = AiModelService.ChecksumOf(halb)
-                If Not String.Equals(summeIst, eintrag.Sha256, StringComparison.OrdinalIgnoreCase) Then
+                Dim actualSum = AiModelService.ChecksumOf(half)
+                If Not String.Equals(actualSum, entry.Sha256, StringComparison.OrdinalIgnoreCase) Then
                     Try
-                        File.Delete(halb)
+                        File.Delete(half)
                     Catch
                     End Try
                     DiagnosticLogService.LogAlways("ModellDownload",
-                        $"{eintrag.Datei}: Pruefsumme {summeIst} statt {eintrag.Sha256}")
-                    Return Ergebnis.PruefsummeFalsch
+                        $"{entry.FileName}: Pruefsumme {actualSum} statt {entry.Sha256}")
+                    Return Result.ChecksumMismatch
                 End If
 
-                If File.Exists(ziel) Then File.Delete(ziel)
-                File.Move(halb, ziel)
+                If File.Exists(target) Then File.Delete(target)
+                File.Move(half, target)
                 AiModelService.CheckAgain()
-                Return Ergebnis.Fertig
+                Return Result.Done
             Catch ex As OperationCanceledException
                 Try
-                    If File.Exists(halb) Then File.Delete(halb)
+                    If File.Exists(half) Then File.Delete(half)
                 Catch
                 End Try
-                Return Ergebnis.Abgebrochen
+                Return Result.Cancelled
             Catch ex As Exception
                 Try
-                    If File.Exists(halb) Then File.Delete(halb)
+                    If File.Exists(half) Then File.Delete(half)
                 Catch
                 End Try
-                DiagnosticLogService.LogAlways("ModellDownload", eintrag.Datei & ": " & ex.Message)
-                Return Ergebnis.Netzfehler
+                DiagnosticLogService.LogAlways("ModellDownload", entry.FileName & ": " & ex.Message)
+                Return Result.NetworkError
             End Try
         End Function
 

@@ -88,13 +88,13 @@ Namespace Services
                     End Try
                 End If
 
-                Dim format = If(String.Equals(options.Format, "PNG", StringComparison.OrdinalIgnoreCase),
+                Dim fileFormat = If(String.Equals(options.Format, "PNG", StringComparison.OrdinalIgnoreCase),
                                 SKEncodedImageFormat.Png,
                                 If(String.Equals(options.Format, "WEBP", StringComparison.OrdinalIgnoreCase),
                                    SKEncodedImageFormat.Webp,
                                    SKEncodedImageFormat.Jpeg))
                 Using image = SKImage.FromBitmap(surfaceBitmap)
-                    Using data = image.Encode(format, Math.Max(1, Math.Min(100, options.Quality)))
+                    Using data = image.Encode(fileFormat, Math.Max(1, Math.Min(100, options.Quality)))
                         ' Atomar schreiben: eine bestehende Collage bleibt heil,
                         ' wenn das Schreiben abbricht.
                         ImageProcessor.WriteFileAtomic(options.OutputPath, Sub(fs) data.SaveTo(fs))

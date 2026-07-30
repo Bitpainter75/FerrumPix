@@ -756,8 +756,8 @@ Namespace Services
         ''' einmal anders geheissen hat.</summary>
         Public Shared Function NormalizeHiddenAdjustmentGroups(value As String) As String
             Dim result As New List(Of String)()
-            For Each teil In If(value, "").Split(","c)
-                Dim name = teil.Trim()
+            For Each part In If(value, "").Split(","c)
+                Dim name = part.Trim()
                 If name.Length = 0 Then Continue For
                 Dim treffer = HideableAdjustmentGroups.FirstOrDefault(
                     Function(e) String.Equals(e.Key, name, StringComparison.OrdinalIgnoreCase))
@@ -774,8 +774,8 @@ Namespace Services
         ''' aus der Leiste verschwinden lassen - und mit ihr die Werkzeuge darin.</summary>
         Public Shared Function NormalizeEditorToolGroupOrder(value As String) As String
             Dim result As New List(Of String)()
-            For Each teil In If(value, "").Split(","c)
-                Dim name = teil.Trim()
+            For Each part In If(value, "").Split(","c)
+                Dim name = part.Trim()
                 Dim treffer = EditorToolGroupNames.FirstOrDefault(
                     Function(e) String.Equals(e, name, StringComparison.OrdinalIgnoreCase))
                 If treffer IsNot Nothing AndAlso Not result.Contains(treffer) Then result.Add(treffer)

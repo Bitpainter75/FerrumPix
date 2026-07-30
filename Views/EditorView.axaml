@@ -960,7 +960,7 @@
                          anfaengt. Erscheint erst nach einer Viertelsekunde - sonst blitzt es bei
                          jeder Reglerbewegung auf. -->
                     <Border Grid.Row="1" Grid.Column="1"
-                            IsVisible="{Binding ZeigtBeschaeftigt}"
+                            IsVisible="{Binding ShowsBusy}"
                             Background="#66000000"
                             IsHitTestVisible="True">
                         <Border Background="{DynamicResource FP.Bg.Elevated}"
@@ -974,7 +974,7 @@
                                 <ProgressBar IsIndeterminate="True" Width="120" Height="4"
                                              VerticalAlignment="Center" />
                                 <TextBlock Classes="no-translate"
-                                           Text="{Binding BeschaeftigtText}"
+                                           Text="{Binding BusyText}"
                                            VerticalAlignment="Center"
                                            FontSize="{DynamicResource FP.Font.Body}" />
                             </StackPanel>
@@ -1053,9 +1053,9 @@
                                  Kopieren weg. -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0">
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="adjust-presets"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="adjust-presets"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <Expander Header="Anpassungen" icons:ExpanderState.Key="adjust-presets">
@@ -1167,9 +1167,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="light"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="light"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:LightPanel />
@@ -1178,9 +1178,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="color"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="color"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:ColorPanel />
@@ -1190,9 +1190,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowDetailAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="details"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="details"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:DetailsPanel />
@@ -1222,9 +1222,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowEffectsAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="frame"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="frame"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:FramePanel />
@@ -1233,9 +1233,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="filter"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="filter"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:FilterPanel />
@@ -1245,9 +1245,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="xmp-preset"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="xmp-preset"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:XmpPresetPanel />
@@ -1256,9 +1256,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="lut"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="lut"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:LutPresetPanel />
@@ -1268,9 +1268,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="curve"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="curve"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:CurvePanel />
@@ -1281,9 +1281,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="objektivkorrektur"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="objektivkorrektur"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:LensCorrectionPanel />
@@ -1294,9 +1294,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="film-negative"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="film-negative"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:FilmNegativePanel />
@@ -1306,9 +1306,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="hsl"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="hsl"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:HslPanel />
@@ -1317,9 +1317,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="color-grading"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="color-grading"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:ColorGradingPanel />
@@ -1328,9 +1328,9 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     >
                                 <Border.IsVisible>
-                                    <MultiBinding Converter="{StaticResource AlleWahrConverter}">
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="calibration"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="calibration"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:CalibrationPanel />

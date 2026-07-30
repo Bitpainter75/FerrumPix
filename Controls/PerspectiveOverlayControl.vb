@@ -12,7 +12,7 @@ Namespace Controls
     Public Class PerspectiveOverlayControl
         Inherits Control
 
-        Private Const GriffRadius As Double = 7.0
+        Private Const HandleRadius As Double = 7.0
 
         ''' <summary>Die vier Ecken in EIGENEN Koordinaten (Pixel), im Uhrzeigersinn ab links oben:
         ''' [x0, y0, x1, y1, x2, y2, x3, y3]. Ein einziges Feld, damit die Bindung EINE Eigenschaft
@@ -59,8 +59,8 @@ Namespace Controls
             ' Zwei Stifte uebereinander, wie beim Verlaufs-Overlay: ein dunkler breiter darunter,
             ' damit die Linie auch auf hellem Bild sichtbar bleibt.
             Dim schatten = New Pen(New SolidColorBrush(Color.FromArgb(120, 0, 0, 0)), 3.0)
-            Dim linie = New Pen(StrokeBrush, 1.4)
-            For Each stift In New Pen() {schatten, linie}
+            Dim line = New Pen(StrokeBrush, 1.4)
+            For Each stift In New Pen() {schatten, line}
                 For i = 0 To 3
                     context.DrawLine(stift, p(i), p((i + 1) Mod 4))
                 Next
@@ -73,9 +73,9 @@ Namespace Controls
             context.DrawLine(hilfe, p(1), p(3))
 
             Dim fuellung = New SolidColorBrush(Color.FromArgb(235, 255, 255, 255))
-            Dim rand = New Pen(New SolidColorBrush(Color.FromArgb(210, 0, 0, 0)), 1.2)
+            Dim border = New Pen(New SolidColorBrush(Color.FromArgb(210, 0, 0, 0)), 1.2)
             For i = 0 To 3
-                context.DrawEllipse(fuellung, rand, p(i), GriffRadius, GriffRadius)
+                context.DrawEllipse(fuellung, border, p(i), HandleRadius, HandleRadius)
             Next
         End Sub
     End Class
