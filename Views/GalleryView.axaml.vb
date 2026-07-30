@@ -51,6 +51,7 @@ Namespace Views
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             AddHandler DataContextChanged, AddressOf OnViewDataContextChanged
+            ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("GalleryRootGrid"), AddressOf OnContextRequested)
             AddHandler AttachedToVisualTree, AddressOf OnGalleryAttachedToVisualTree
             AddHandler DetachedFromVisualTree, AddressOf OnGalleryDetachedFromVisualTree
             Me.AddHandler(InputElement.GotFocusEvent, AddressOf OnDescendantGotFocus, RoutingStrategies.Bubble)
@@ -61,6 +62,22 @@ Namespace Views
             ' Das Control gehört dieser View-Instanz - kein Abmelden nötig, sie sterben gemeinsam.
             Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
             If scrubber IsNot Nothing Then AddHandler scrubber.ScrubRequested, AddressOf OnTimelineScrubRequested
+        End Sub
+
+        ''' <summary>Die Stichwortliste vor dem Aufklappen neu einlesen. Sie kommt aus dem Katalog
+        ''' und aendert sich, sobald irgendwo ein Stichwort vergeben oder entfernt wird - eine
+        ''' einmal gebaute Liste waere schon beim naechsten Bild veraltet.</summary>
+        Private Sub OnTagFilterButtonClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.RefreshTagFilterOptions()
+        End Sub
+
+        ''' <summary>Ein Stichwort dazunehmen oder abwaehlen. Ueber den Datenkontext der
+        ''' Schaltflaeche, nicht ueber eine Bindung: der Inhalt eines Aufklappfensters haengt nicht
+        ''' im Baum der Ansicht, und eine Bindung ueber den Vorfahren findet dort nichts.</summary>
+        Private Sub OnTagFilterItemClick(sender As Object, e As RoutedEventArgs)
+            Dim eintrag = TryCast(TryCast(sender, Button)?.DataContext, TagFilterOption)
+            If eintrag Is Nothing Then Return
+            GetVm()?.ToggleTagFilter(eintrag.Tag)
         End Sub
 
         Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
@@ -112,6 +129,9 @@ Namespace Views
             RebindViewModel()
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
             RestoreFolderTreeSelectionAfterRecreation()
+            ' Den Stand der Info-Leiste aus den Einstellungen holen. Erst hier steht alles bereit:
+            ' im Konstruktor des ViewModels gibt es die Einstellungen unter Umstaenden noch nicht.
+            GetVm()?.RefreshInfoSidebarState()
 
             If _scrollHandlersAttached Then
                 QueueViewportThumbnailRefresh()
@@ -580,9 +600,10 @@ Namespace Views
 
                 Dim targetOffset = Math.Max(0.0, itemTop + itemSlotHeight / 2 - viewHeight / 2)
                 Dim totalRows = CInt(Math.Ceiling(vm.Items.Count / CDbl(cols)))
-                ' Expand the virtualization window around the target row first so the spacer heights
-                ' (and therefore the ScrollViewer's own Extent) are already correct before we set Offset -
-                ' otherwise Avalonia clamps Offset against its own stale Extent regardless of maxOffset above.
+                ' Erst das Virtualisierungsfenster um die Zielzeile aufziehen, damit die Hoehen der
+                ' Platzhalter - und damit die Gesamthoehe, mit der der ScrollViewer rechnet - schon
+                ' stimmen, BEVOR der Versatz gesetzt wird. Sonst klemmt Avalonia ihn gegen seine
+                ' eigene veraltete Gesamthoehe, ganz gleich was oben als Hoechstwert steht.
                 Dim windowRowRadius = CInt(Math.Ceiling(viewHeight / itemSlotHeight)) + 4
                 Dim windowFirstRow = Math.Max(0, row - windowRowRadius)
                 Dim windowLastRow = Math.Min(totalRows - 1, row + windowRowRadius)
@@ -603,9 +624,10 @@ Namespace Views
                 If itemTop >= scrollViewer.Offset.Y AndAlso itemBottom <= scrollViewer.Offset.Y + viewHeight Then Return
 
                 Dim targetOffset = Math.Max(0.0, itemTop + itemSlotHeight / 2 - viewHeight / 2)
-                ' Expand the virtualization window around the target index first so the spacer heights
-                ' (and therefore the ScrollViewer's own Extent) are already correct before we set Offset -
-                ' otherwise Avalonia clamps Offset against its own stale Extent regardless of maxOffset above.
+                ' Erst das Virtualisierungsfenster um das Zielelement aufziehen, damit die Hoehen der
+                ' Platzhalter - und damit die Gesamthoehe, mit der der ScrollViewer rechnet - schon
+                ' stimmen, BEVOR der Versatz gesetzt wird. Sonst klemmt Avalonia ihn gegen seine
+                ' eigene veraltete Gesamthoehe, ganz gleich was oben als Hoechstwert steht.
                 Dim windowRadius = CInt(Math.Ceiling(viewHeight / itemSlotHeight)) + 8
                 Dim windowFirst = Math.Max(0, idx - windowRadius)
                 Dim windowLast = Math.Min(vm.Items.Count - 1, idx + windowRadius)
@@ -1011,22 +1033,6 @@ Namespace Views
             End If
         End Sub
 
-        Public Sub OnThumbnailContextRequested(sender As Object, e As ContextRequestedEventArgs)
-            If ConsumeSuppressedGalleryContextMenu(e) Then Return
-            Dim vm = GetVm()
-            If vm Is Nothing Then Return
-            Dim item = GetItemFromSender(sender)
-            If item Is Nothing Then Return
-            _contextMenuItem = item
-
-            If Not item.IsParentFolderEntry AndAlso
-               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(item)) Then
-                vm.SelectOnly(item)
-                _selectionAnchor = item
-            End If
-            UpdateGalleryItemContextMenu(sender, item)
-        End Sub
-
         ''' <summary>Klick in den LEEREN Bereich der Galerie hebt die Auswahl auf.
         '''
         ''' Läuft in der Blasenphase am ScrollViewer: ein Klick auf eine Kachel wird in
@@ -1049,22 +1055,12 @@ Namespace Views
             _selectionAnchor = Nothing
         End Sub
 
-        Public Sub OnGalleryAreaContextRequested(sender As Object, e As ContextRequestedEventArgs)
-            If ConsumeSuppressedGalleryContextMenu(e) Then Return
-            Dim vm = GetVm()
-            If vm Is Nothing Then Return
-            If HasImageItemContext(e.Source) Then Return
-            _contextMenuItem = Nothing
-
-            Dim canPasteIntoCurrent = vm.CanPasteIntoFolder(vm.CurrentFolder)
-            SetMenuItemVisible("GalleryGridCreateFolderMenuItem", canPasteIntoCurrent)
-            SetMenuItemVisible("GalleryGridPasteMenuItem", canPasteIntoCurrent)
-            SetMenuItemVisible("GalleryGridViewportCreateFolderMenuItem", canPasteIntoCurrent)
-            SetMenuItemVisible("GalleryGridViewportPasteMenuItem", canPasteIntoCurrent)
-            SetMenuItemVisible("GalleryListCreateFolderMenuItem", canPasteIntoCurrent)
-            SetMenuItemVisible("GalleryListPasteMenuItem", canPasteIntoCurrent)
-            SetMenuItemVisible("GalleryListViewportCreateFolderMenuItem", canPasteIntoCurrent)
-            SetMenuItemVisible("GalleryListViewportPasteMenuItem", canPasteIntoCurrent)
+        ''' <summary>Sichtbarkeit eines benannten Menueeintrags. Wird noch von den Menues des
+        ''' LEEREN Bereichs und der Ordner gebraucht - die BILD-Kontextmenues bauen sich dagegen
+        ''' als Daten ueber <see cref="ContextMenuBuilder"/> auf und brauchen so etwas nicht mehr.</summary>
+        Private Sub SetMenuItemVisible(name As String, visible As Boolean)
+            Dim eintrag = Me.FindControl(Of MenuItem)(name)
+            If eintrag IsNot Nothing Then eintrag.IsVisible = visible
         End Sub
 
         Private Function ConsumeSuppressedGalleryContextMenu(e As ContextRequestedEventArgs) As Boolean
@@ -1282,7 +1278,8 @@ Namespace Views
         End Sub
 
         Public Sub OnItemsSelectionChanged(sender As Object, e As SelectionChangedEventArgs)
-            ' Selection is intentionally driven by thumbnail clicks and selection badges.
+            ' Absichtlich leer: die Auswahl entsteht ueber Klicks auf die Kacheln und ueber die
+            ' Auswahl-Abzeichen, nicht ueber dieses Ereignis der Liste.
         End Sub
 
         Private Async Sub ShowQuickPreview(item As ImageItem)
@@ -1343,17 +1340,27 @@ Namespace Views
             vm.OpenSelectedInEditor()
         End Sub
 
+        ''' <summary>Ohne Auswahl meint beides den OFFENEN ORDNER - so bietet der Bauplan die
+        ''' Eintraege auch an. Mit Auswahl geht es um das eine markierte Element.</summary>
         Public Sub OnContextCopyPath(sender As Object, e As RoutedEventArgs)
             Dim vm = GetVm()
-            If vm Is Nothing OrElse Not IsSingleGallerySelection(vm) Then Return
-            Dim paths = vm.GetSelectedPaths()
-            If paths.Count = 0 Then Return
-            CopyPathsToClipboard(paths, False)
+            If vm Is Nothing Then Return
+            If IsSingleGallerySelection(vm) Then
+                Dim paths = vm.GetSelectedPaths()
+                If paths.Count = 0 Then Return
+                CopyPathsToClipboard(paths, False)
+                Return
+            End If
+            If vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Count > 0 Then Return
+            If String.IsNullOrEmpty(vm.CurrentFolder) Then Return
+            CopyPathsToClipboard(New List(Of String) From {vm.CurrentFolder}, False)
         End Sub
 
         Public Sub OnContextReveal(sender As Object, e As RoutedEventArgs)
             Dim vm = GetVm()
-            If vm Is Nothing OrElse Not IsSingleGallerySelection(vm) Then Return
+            If vm Is Nothing Then Return
+            ' Der Befehl faellt selbst auf den offenen Ordner zurueck, wenn nichts markiert ist.
+            If vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Count > 1 Then Return
             vm.OpenFileManagerCommand.Execute(Nothing)
         End Sub
 
@@ -1631,171 +1638,156 @@ Namespace Views
             Return If(_folderTreeContextNode, GetVm()?.SelectedFolderNode)
         End Function
 
-        Private Sub SetMenuItemVisible(name As String, visible As Boolean)
-            Dim item = Me.FindControl(Of MenuItem)(name)
-            If item IsNot Nothing Then item.IsVisible = visible
-        End Sub
 
-        ''' Dieselben Sichtbarkeitsregeln für alle drei Kopien des Menüs: Kachel-Ansicht (GridContext*),
-        ''' Listen-Ansicht (ListContext*) und den Menü-Button der Werkzeugleiste (MenuContext*). Nicht
-        ''' gefundene Namen überspringt SetMenuItemVisible, deshalb darf hier alles nebeneinander stehen.
-        Private Sub UpdateGalleryItemContextMenu(sender As Object, item As ImageItem)
-            Dim menu = TryCast(sender, Control)?.ContextMenu
-            If menu Is Nothing OrElse item Is Nothing Then Return
-
-            Dim vm = GetVm()
-            Dim singleSelection = vm IsNot Nothing AndAlso IsSingleGallerySelection(vm)
-            Dim isVirtual = vm IsNot Nothing AndAlso vm.IsVirtualFolder
-            Dim isParentEntry = item.IsParentFolderEntry
-            Dim showSingleItemActions = singleSelection AndAlso Not isParentEntry
-            ''' Ein einziger "Umbenennen"-Eintrag für Einzel- UND Mehrfachauswahl (RenameSelectedCommand
-            ''' entscheidet selbst, ob Einzel- oder Stapel-Umbenennen greift) - bei Mehrfachauswahl
-            ''' müssen alle ausgewählten Elemente umbenennbar sein, bei Einzelauswahl nur das eine.
-            Dim showRename = Not isVirtual AndAlso Not isParentEntry AndAlso
-                              vm IsNot Nothing AndAlso vm.SelectedItems IsNot Nothing AndAlso
-                              If(vm.SelectedItems.Count > 1,
-                                 vm.SelectedItems.All(Function(i) i IsNot Nothing AndAlso Not i.IsParentFolderEntry AndAlso i.CanFileOperationRename),
-                                 item.CanFileOperationRename)
-            Dim showCollage = vm IsNot Nothing AndAlso
-                              vm.SelectedItems IsNot Nothing AndAlso
-                              vm.SelectedItems.Count >= 2 AndAlso
-                              vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).Count() >= 2
-            Dim showImageBatchActions = Not isParentEntry AndAlso
-                                        vm IsNot Nothing AndAlso
-                                        vm.SelectedItems IsNot Nothing AndAlso
-                                        vm.SelectedItems.Any(Function(i) i IsNot Nothing AndAlso i.IsImage)
-            ' Bildgroesse/Wasserzeichen/Filter lesen JPG/PNG/WEBP/BMP/GIF - gefragt wird genau die
-            ' Funktion, die auch die Verarbeitung benutzt (IsBatchImageEditReadable). Eine eigene
-            ' Ausschlussliste hier lief auseinander: .tif/.heic blieben sichtbar und taten beim
-            ' Klick still nichts. Ob ZURUECKgeschrieben werden darf, entscheidet der Dialog
-            ' getrennt (IsBatchImageEditWritable - BMP/GIF haben keinen Encoder).
-            Dim showResize = showImageBatchActions AndAlso
-                              vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).
-                                  All(Function(i) GalleryViewModel.IsBatchImageEditReadable(i.FilePath))
-            Dim showApplyFilter = showResize
-            ' "Exportieren nach"/"Konvertieren nach" lesen JEDE Bildquelle (Render ueber
-            ' DecodeOriented bzw. das .fpx-Rezept) - nur Videos und SVG koennen sie nicht.
-            Dim showExport = showImageBatchActions AndAlso
-                              vm.SelectedItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).
-                                  Any(Function(i) GalleryViewModel.IsBatchExportable(i.FilePath))
-            ' Vergleichen braucht GENAU zwei markierte Bilder - bei einem gibt es nichts zu
-            ' vergleichen, bei mehr waere die Buehne nicht mehr lesbar. Sonst gar nicht erst zeigen.
-            Dim showCompare = vm IsNot Nothing AndAlso vm.SelectedItems IsNot Nothing AndAlso
-                              vm.SelectedItems.Count = 2 AndAlso
-                              vm.SelectedItems.All(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso
-                                                               Not i.IsImmichAsset AndAlso
-                                                               Not String.IsNullOrEmpty(i.FilePath))
-            SetMenuItemVisible(menu, "GridContextCompareMenuItem", showCompare)
-            SetMenuItemVisible(menu, "ListContextCompareMenuItem", showCompare)
-            SetMenuItemVisible(menu, "MenuContextCompareMenuItem", showCompare)
-            SetMenuItemVisible(menu, "GridContextOpenMenuItem", showSingleItemActions)
-            SetMenuItemVisible(menu, "GridContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
-            SetMenuControlVisible(menu, "GridContextTopSeparator", showSingleItemActions)
-            SetMenuItemVisible(menu, "GridContextCreateFolderMenuItem", Not isParentEntry AndAlso Not isVirtual AndAlso vm IsNot Nothing AndAlso vm.CanPasteIntoFolder(vm.CurrentFolder))
-            SetMenuItemVisible(menu, "GridContextRenameMenuItem", showRename)
-            SetMenuItemVisible(menu, "GridContextCopyMenuItem", Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "GridContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
-            SetMenuItemVisible(menu, "GridContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
-            SetMenuItemVisible(menu, "GridContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "GridContextResizeMenuItem", showResize)
-            SetMenuItemVisible(menu, "GridContextApplyWatermarkMenuItem", showResize)
-            SetMenuItemVisible(menu, "GridContextApplyFilterMenuItem", showApplyFilter)
-            SetMenuItemVisible(menu, "GridContextBatchConvertMenuItem", showExport)
-            SetMenuItemVisible(menu, "GridContextExportToMenuItem", showExport)
-            SetMenuItemVisible(menu, "GridContextRemoveMetadataMenuItem", showImageBatchActions)
-            SetMenuItemVisible(menu, "GridContextCreateCollageMenuItem", showCollage)
-            SetMenuControlVisible(menu, "GridContextPathSeparator", showSingleItemActions)
-            SetMenuItemVisible(menu, "GridContextCopyPathMenuItem", showSingleItemActions)
-            SetMenuItemVisible(menu, "GridContextRevealMenuItem", showSingleItemActions)
-            SetMenuControlVisible(menu, "GridContextDeleteSeparator", Not isParentEntry AndAlso item.CanFileOperationDelete)
-            SetMenuItemVisible(menu, "ListContextOpenMenuItem", showSingleItemActions)
-            SetMenuItemVisible(menu, "ListContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
-            SetMenuControlVisible(menu, "ListContextTopSeparator", showSingleItemActions)
-            SetMenuItemVisible(menu, "ListContextCreateFolderMenuItem", Not isParentEntry AndAlso Not isVirtual AndAlso vm IsNot Nothing AndAlso vm.CanPasteIntoFolder(vm.CurrentFolder))
-            SetMenuItemVisible(menu, "ListContextRenameMenuItem", showRename)
-            SetMenuItemVisible(menu, "ListContextCopyMenuItem", Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "ListContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
-            SetMenuItemVisible(menu, "ListContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
-            SetMenuItemVisible(menu, "ListContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "ListContextResizeMenuItem", showResize)
-            SetMenuItemVisible(menu, "ListContextApplyWatermarkMenuItem", showResize)
-            SetMenuItemVisible(menu, "ListContextApplyFilterMenuItem", showApplyFilter)
-            SetMenuItemVisible(menu, "ListContextBatchConvertMenuItem", showExport)
-            SetMenuItemVisible(menu, "ListContextExportToMenuItem", showExport)
-            SetMenuItemVisible(menu, "ListContextRemoveMetadataMenuItem", showImageBatchActions)
-            SetMenuItemVisible(menu, "ListContextCreateCollageMenuItem", showCollage)
-            SetMenuItemVisible(menu, "ListContextPrintMenuItem", showImageBatchActions)
-            SetMenuControlVisible(menu, "ListContextPathSeparator", showSingleItemActions)
-            SetMenuItemVisible(menu, "ListContextCopyPathMenuItem", showSingleItemActions)
-            SetMenuItemVisible(menu, "ListContextRevealMenuItem", showSingleItemActions)
-            SetMenuControlVisible(menu, "ListContextDeleteSeparator", Not isParentEntry AndAlso item.CanFileOperationDelete)
-            SetMenuItemVisible(menu, "MenuContextOpenMenuItem", showSingleItemActions)
-            SetMenuItemVisible(menu, "MenuContextEditMenuItem", showSingleItemActions AndAlso item.CanEditFile AndAlso item.IsImage)
-            SetMenuControlVisible(menu, "MenuContextTopSeparator", showSingleItemActions)
-            SetMenuItemVisible(menu, "MenuContextCreateFolderMenuItem", Not isParentEntry AndAlso Not isVirtual AndAlso vm IsNot Nothing AndAlso vm.CanPasteIntoFolder(vm.CurrentFolder))
-            SetMenuItemVisible(menu, "MenuContextRenameMenuItem", showRename)
-            SetMenuItemVisible(menu, "MenuContextCopyMenuItem", Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "MenuContextCutMenuItem", Not isParentEntry AndAlso item.CanFileOperationRename)
-            SetMenuItemVisible(menu, "MenuContextPasteMenuItem", Not isVirtual AndAlso item.CanFileOperationPasteInto)
-            SetMenuItemVisible(menu, "MenuContextDuplicateMenuItem", Not isVirtual AndAlso Not isParentEntry AndAlso item.CanFileOperationCopy)
-            SetMenuItemVisible(menu, "MenuContextResizeMenuItem", showResize)
-            SetMenuItemVisible(menu, "MenuContextApplyWatermarkMenuItem", showResize)
-            SetMenuItemVisible(menu, "MenuContextApplyFilterMenuItem", showApplyFilter)
-            SetMenuItemVisible(menu, "MenuContextBatchConvertMenuItem", showExport)
-            SetMenuItemVisible(menu, "MenuContextExportToMenuItem", showExport)
-            SetMenuItemVisible(menu, "MenuContextRemoveMetadataMenuItem", showImageBatchActions)
-            SetMenuItemVisible(menu, "MenuContextCreateCollageMenuItem", showCollage)
-            SetMenuItemVisible(menu, "MenuContextPrintMenuItem", showImageBatchActions)
-            SetMenuControlVisible(menu, "MenuContextPathSeparator", showSingleItemActions)
-            SetMenuItemVisible(menu, "MenuContextCopyPathMenuItem", showSingleItemActions)
-            SetMenuItemVisible(menu, "MenuContextRevealMenuItem", showSingleItemActions)
-            SetMenuControlVisible(menu, "MenuContextDeleteSeparator", Not isParentEntry AndAlso item.CanFileOperationDelete)
-            SetMenuItemVisible(menu, "MenuContextDeleteMenuItem", Not isParentEntry AndAlso item.CanFileOperationDelete)
-        End Sub
 
         ''' Der Menü-Button der Werkzeugleiste zeigt dasselbe Menü wie ein Rechtsklick auf das Bild - viele
         ''' Funktionen stecken inzwischen nur dort. Anders als in den Kachel-/Listen-Vorlagen ist der
         ''' DataContext hier das ViewModel, nicht das Bild: die IsVisible-Bindungen der Einträge
         ''' (CanEditFile, CanFileOperationCopy, ...) hängen aber am Bild, deshalb wird er vor dem Öffnen
         ''' auf das ausgewählte Element gesetzt.
+        ''' <summary>Neues Bild und Vollbild. Bewusst ueber Click und nicht ueber eine Bindung:
+        ''' alle uebrigen Eintraege dieses Menues arbeiten so, und im Popup ist nicht garantiert,
+        ''' dass der DataContext ankommt - ein leeres Kommando faerbt den Eintrag stumm grau.</summary>
+        Private Sub OnContextNewDocument(sender As Object, e As RoutedEventArgs)
+            GetVm()?.NewDocumentCommand.Execute(Nothing)
+        End Sub
+
+        Private Sub OnContextToggleFullscreen(sender As Object, e As RoutedEventArgs)
+            GetVm()?.ToggleFullscreenCommand.Execute(Nothing)
+        End Sub
+
+        ''' <summary>Das Kommando-Buendel fuer das Kontextmenue. Es entsteht HIER und nicht im
+        ''' ViewModel, weil ein grosser Teil der Galerie-Aktionen an der View haengt: Zwischenablage,
+        ''' Ordner anlegen, Vergleichen und das Farbetikett arbeiten mit dem Fensterrahmen.
+        '''
+        ''' Die vorhandenen Behandler werden dabei WIEDERVERWENDET statt nachgebaut - sie sind
+        ''' erprobt, und zwei Umsetzungen derselben Aktion liefen hier schon einmal auseinander.</summary>
+        Private Function BuildContextCommands() As MenuCommands
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return Nothing
+            Return New MenuCommands With {
+                .NewImage = vm.NewDocumentCommand,
+                .Fullscreen = vm.ToggleFullscreenCommand,
+                .ShowImage = New DelegateCommand(Sub() OnContextOpen(Nothing, Nothing)),
+                .Adjust = New DelegateCommand(Sub() OnContextEdit(Nothing, Nothing)),
+                .Compare = New DelegateCommand(Sub() OnContextCompare(Nothing, Nothing)),
+                .NewFolder = New DelegateCommand(Sub() OnGalleryAreaCreateFolder(Nothing, Nothing)),
+                .Rename = vm.RenameSelectedCommand,
+                .Copy = New DelegateCommand(Sub() OnContextCopy(Nothing, Nothing)),
+                .Cut = New DelegateCommand(Sub() OnContextCut(Nothing, Nothing)),
+                .Paste = New DelegateCommand(Sub() OnContextPaste(Nothing, Nothing)),
+                .Duplicate = vm.DuplicateSelectedCommand,
+                .ResizeImage = vm.ResizeSelectedCommand,
+                .ApplyWatermark = vm.ApplyWatermarkSelectedCommand,
+                .ApplyFilter = vm.ApplyFilterSelectedCommand,
+                .ConvertTo = vm.BatchConvertSelectedCommand,
+                .ExportTo = vm.ExportSelectedCommand,
+                .RemoveMetadata = vm.RemoveMetadataSelectedCommand,
+                .CreateCollage = New DelegateCommand(Sub() OnContextCreateCollage(Nothing, Nothing)),
+                .Print = vm.PrintSelectedCommand,
+                .Favorite = vm.ToggleSelectedFavoriteCommand,
+                .Rating = vm.SetSelectedRatingCommand,
+                .ColorLabel = New DelegateCommand(Sub(farbe) ApplyColorLabel(vm, farbe)),
+                .CopyPath = vm.CopyPathCommand,
+                .ShowInFileManager = vm.OpenFileManagerCommand,
+                .Delete = vm.DeleteSelectedCommand}
+        End Function
+
+        ''' <summary>Farbetikett aus dem Kontextmenue setzen.
+        '''
+        ''' NUR EIN Aufruf, auch bei Mehrfachauswahl: SetItemColorLabel nimmt sich die ganze Auswahl
+        ''' selbst vor und SCHALTET dabei um - dieselbe Farbe noch einmal nimmt sie weg. Eine
+        ''' Schleife darueber setzte und entfernte das Etikett abwechselnd, bei gerader Anzahl
+        ''' markierter Bilder blieb am Ende alles beim Alten.</summary>
+        Private Shared Sub ApplyColorLabel(vm As GalleryViewModel, color As Object)
+            If vm Is Nothing Then Return
+            Dim first = vm.ContextItems?.FirstOrDefault(Function(i) i IsNot Nothing AndAlso i.IsImage)
+            If first Is Nothing Then Return
+            vm.SetItemColorLabel(first, If(color, "").ToString())
+        End Sub
+
+        ''' <summary>Rechtsklick irgendwo in der Galerie. EIN Handler fuer Kachel, Zeile und
+        ''' Fusszeile. Welche Elemente gemeint sind, beantwortet <see cref="ContextTarget"/>.</summary>
+        Private Sub OnContextRequested(sender As Object, e As Avalonia.Input.ContextRequestedEventArgs)
+            If ConsumeSuppressedGalleryContextMenu(e) Then Return
+
+            Dim vm = GetVm()
+            Dim menu = Me.FindControl(Of ContextMenu)("GalleryContextMenu")
+            If vm Is Nothing OrElse menu Is Nothing Then Return
+
+            Dim grid = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+            Dim rows = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
+            Dim hit = ContextTarget.UnderPointer(e, grid)
+            Dim fromGrid = hit IsNot Nothing
+            If hit Is Nothing Then hit = ContextTarget.UnderPointer(e, rows)
+
+            ' Bisheriges Verhalten beibehalten: ein Rechtsklick auf ein Element AUSSERHALB der
+            ' Auswahl macht es zur Auswahl. Das sieht der Nutzer, und es entscheidet danach, worauf
+            ' die Stapelaktionen wirken.
+            If hit IsNot Nothing AndAlso Not hit.IsParentFolderEntry AndAlso
+               (vm.SelectedItems Is Nothing OrElse Not vm.SelectedItems.Contains(hit)) Then
+                vm.SelectOnly(hit)
+                _selectionAnchor = hit
+            End If
+
+            ' Rechtsklick in den LEEREN Bereich: die Auswahl bleibt bestehen, das Menue meint aber
+            ' nicht sie, sondern den Ordner. Sonst zeigte ein Klick ins Nichts alle Stapelaktionen
+            ' fuer Bilder, die man gar nicht angeklickt hat. Uebrig bleiben die Eintraege, die ohne
+            ' Bild auskommen - Neuer Ordner, Einfuegen, Neues Bild, Vollbild.
+            Dim inEmptyArea = hit Is Nothing AndAlso
+                              (PointerIsWithin(e, grid) OrElse PointerIsWithin(e, rows))
+
+            _contextMenuItem = hit
+            vm.ContextSite = If(hit Is Nothing AndAlso Not inEmptyArea, MenuSite.GalleryFooter,
+                                If(fromGrid OrElse Not vm.IsListView, MenuSite.GalleryTile, MenuSite.GalleryRow))
+            vm.ContextItems = If(inEmptyArea, New List(Of ImageItem)(),
+                                 ContextTarget.Affected(hit, vm.SelectedItems, Nothing))
+            vm.ContextCommands = BuildContextCommands()
+            vm.RefreshContextActions()
+
+            ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
+            ' Element und oeffnet sich gleich nach diesem Handler von allein - siehe
+            ' ContextMenuAttachment. Die Lage muss zurueckgesetzt werden, weil die Schaltflaeche
+            ' in der Fusszeile sie vorher auf eine feste Kante gestellt haben kann.
+            menu.PlacementTarget = Nothing
+            menu.Placement = PlacementMode.Pointer
+        End Sub
+
+        ''' <summary>Die Schaltflaeche in der Fusszeile oeffnet DAS Menue der Ansicht, nicht ein
+        ''' zweites daneben. Sie meldet nur den Aufrufort; gebaut wird wie beim Rechtsklick.</summary>
         Private Sub OnGalleryMenuButtonClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             Dim vm = GetVm()
-            If button Is Nothing OrElse vm Is Nothing Then Return
+            Dim menu = Me.FindControl(Of ContextMenu)("GalleryContextMenu")
+            If button Is Nothing OrElse vm Is Nothing OrElse menu Is Nothing Then Return
 
-            Dim item = If(vm.SelectedItem, vm.SelectedItems?.FirstOrDefault())
-            If item Is Nothing Then Return
+            _contextMenuItem = If(vm.SelectedItem, vm.SelectedItems?.FirstOrDefault())
+            vm.ContextSite = MenuSite.GalleryFooter
+            vm.ContextItems = ContextTarget.Affected(Nothing, vm.SelectedItems, Nothing)
+            vm.ContextCommands = BuildContextCommands()
+            vm.RefreshContextActions()
 
-            _contextMenuItem = item
-            Dim menu = button.ContextMenu
-            If menu Is Nothing Then Return
-            menu.DataContext = item
-            UpdateGalleryItemContextMenu(button, item)
-            menu.Open(button)
+            ' Open(control) besteht darauf, dass control genau das Element ist, an dem das Menue
+            ' haengt - das ist die Wurzel, nicht die Schaltflaeche. Der parameterlose Aufruf oeffnet
+            ' dort; wo es erscheint, steuert PlacementTarget.
+            menu.PlacementTarget = button
+            menu.Placement = PlacementMode.TopEdgeAlignedLeft
+            menu.Open()
             e.Handled = True
         End Sub
 
-        Private Sub SetMenuItemVisible(menu As ContextMenu, name As String, visible As Boolean)
-            Dim item = FindMenuItem(menu.Items, name)
-            If item IsNot Nothing Then item.IsVisible = visible
-        End Sub
-
-        Private Sub SetMenuControlVisible(menu As ContextMenu, name As String, visible As Boolean)
-            Dim item = FindMenuControl(menu.Items, name)
-            If item IsNot Nothing Then item.IsVisible = visible
-        End Sub
-
-        Private Function FindMenuItem(items As IEnumerable, name As String) As MenuItem
-            If items Is Nothing Then Return Nothing
-            For Each entry In items
-                Dim menuItem = TryCast(entry, MenuItem)
-                If menuItem Is Nothing Then Continue For
-                If String.Equals(menuItem.Name, name, StringComparison.Ordinal) Then Return menuItem
-                Dim child = FindMenuItem(menuItem.Items, name)
-                If child IsNot Nothing Then Return child
-            Next
-            Return Nothing
+        ''' <summary>Liegt der Zeiger ueber diesem Bereich? Rein geometrisch geprueft, weil die
+        ''' Quelle des Ereignisses bei geschachtelten Elementen nichts darueber sagt.</summary>
+        Private Shared Function PointerIsWithin(e As Avalonia.Input.ContextRequestedEventArgs, area As Control) As Boolean
+            If area Is Nothing OrElse Not area.IsVisible Then Return False
+            Dim pos As Avalonia.Point
+            If Not e.TryGetPosition(area, pos) Then Return False
+            Return pos.X >= 0 AndAlso pos.Y >= 0 AndAlso
+                   pos.X <= area.Bounds.Width AndAlso pos.Y <= area.Bounds.Height
         End Function
+
+
+
 
         Private Function FindMenuControl(items As IEnumerable, name As String) As Control
             If items Is Nothing Then Return Nothing
@@ -2136,22 +2128,10 @@ Namespace Views
                 End Select
             End If
 
-            If PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) Then
-                Select Case e.Key
-                    Case Key.W
-                        ' Strg+W: Filter anwenden (vorher Strg+Umschalt+F).
-                        DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+W hasSelectedImage={vm.HasSelectedImage}")
-                        If vm.HasSelectedImage Then vm.ApplyFilterSelectedCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                    Case Key.D
-                        ' Strg+D: Konvertieren nach.
-                        DiagnosticLogService.LogAlways("Gallery.Shortcut", $"key=Ctrl+D hasSelectedImage={vm.HasSelectedImage}")
-                        If vm.HasSelectedImage Then vm.BatchConvertSelectedCommand.Execute(Nothing)
-                        e.Handled = True
-                        Return
-                End Select
-            End If
+            ' Strg+W (Filter), Strg+D (Konvertieren) und Strg+T (Exportieren) liegen im
+            ' Fenster-Tunnel, nicht mehr hier: sie gelten in Galerie UND Betrachter, und im Tunnel
+            ' greifen sie unabhaengig vom Fokus, im Vollbild und nach einem Overlay-Dialog. Zwei
+            ' Stellen fuer dasselbe Kuerzel waeren eine doppelte Ausfuehrung.
 
             Select Case e.Key
                 Case Key.Return, Key.Enter
@@ -2297,8 +2277,9 @@ Namespace Views
                 _selectionAnchor = vm.SelectedItem
             End If
 
-            ' PageUp/PageDown get clamped onto the first/last item once they overshoot the list bounds -
-            ' in that case jump straight to the true edge instead of the "already visible" heuristic below.
+            ' Bild auf und Bild ab landen auf dem ersten oder letzten Element, sobald sie ueber das
+            ' Listenende hinausschiessen. In dem Fall direkt an den echten Rand springen statt ueber
+            ' die Faustregel "schon sichtbar" weiter unten.
             Dim landedIdx = If(vm.SelectedItem IsNot Nothing, vm.Items.IndexOf(vm.SelectedItem), -1)
             If landedIdx = 0 Then
                 Dispatcher.UIThread.Post(Sub() ScrollToExtreme(toEnd:=False), DispatcherPriority.Loaded)
@@ -2445,8 +2426,9 @@ Namespace Views
             Dispatcher.UIThread.Post(Sub() ScrollToExtreme(toLast), DispatcherPriority.Loaded)
         End Sub
 
-        ' Home/End must always reach the true first/last pixel of the list, so this bypasses the
-        ' "already visible" heuristic in ScrollToSelectedItem and jumps straight to Offset 0 / max.
+        ' Pos1 und Ende muessen IMMER den echten ersten bzw. letzten Bildpunkt der Liste erreichen.
+        ' Deshalb umgeht das hier die Faustregel "schon sichtbar" und springt direkt auf Versatz 0
+        ' oder auf den Hoechstwert.
         Private Sub ScrollToExtreme(toEnd As Boolean)
             Dim vm = GetVm()
             If vm Is Nothing OrElse vm.Items Is Nothing OrElse vm.Items.Count = 0 Then Return
@@ -2498,10 +2480,21 @@ Namespace Views
             If item.IsFolder Then
                 vm.NavigateToFolder(item.FilePath)
                 SelectFolderInTree(item.FilePath)
+            ElseIf ShouldOpenInEditor(item) Then
+                vm.OpenSelectedInEditor()
             Else
                 vm.OpenSelectedInViewer()
             End If
         End Sub
+
+        ''' <summary>Womit ein Bild geoeffnet wird. Diese eine Stelle entscheidet fuer ALLE Wege
+        ''' hinein - Doppelklick, Eingabetaste und die Kacheln. Videos gehen immer in den
+        ''' Betrachter: der Editor kann sie nicht, und ein leerer Editor waere schlechter als eine
+        ''' Einstellung, die einmal nicht greift.</summary>
+        Private Shared Function ShouldOpenInEditor(item As ImageItem) As Boolean
+            If item Is Nothing OrElse item.IsVideoFile Then Return False
+            Return AppSettingsService.Load().GalleryOpenTarget = "Editor"
+        End Function
 
         ''' Selektiert und expandiert den Ordner im Baum. Bewusst OHNE Auto-Scrollen: das Nachziehen
         ''' in die Mitte bei jeder Navigation stoerte (Nutzer-Feedback) - nur das initiale

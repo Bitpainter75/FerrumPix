@@ -67,7 +67,7 @@
                             <!-- Angezeigt wird uebersetzt, gespeichert bleibt der deutsche WERT: er
                                  steht im Rezept und in jedem Select Case. -->
                             <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource UebersetzenConverter}}"
+                                <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}"
                                            VerticalAlignment="Center" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
@@ -156,7 +156,7 @@
         </Border>
 
         <Border Classes="adjustment-group"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=resize-canvas}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=resize-canvas}">
             <Expander Header="Leinwand" icons:ExpanderState.Key="resize-canvas">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -330,7 +330,7 @@
              Sie fuellt aber ALLES Durchsichtige, auch die leeren Ecken von Begradigen und Verzerren
              und weggeradierte Stellen. -->
         <Border Classes="adjustment-group"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=hintergrund}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=hintergrund}">
             <Expander Header="Hintergrund" icons:ExpanderState.Key="hintergrund">
                 <Expander.HeaderTemplate>
                     <DataTemplate>

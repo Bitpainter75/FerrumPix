@@ -558,9 +558,9 @@ Namespace Views
                 Cursor = HiddenCursor
             Else
                 Cursor = Nothing
-                ' Delay the window resize by one render cycle so the FullscreenViewport
-                ' can be hidden first, preventing the image from being briefly clipped
-                ' to the normal window bounds while still visible.
+                ' Die Groessenaenderung des Fensters um einen Bilddurchlauf verzoegern, damit die
+                ' Vollbildflaeche vorher ausgeblendet werden kann. Sonst ist das Bild fuer einen
+                ' Augenblick auf die normale Fenstergroesse beschnitten zu sehen.
                 '
                 ' Nur zurueckschalten, wenn wir wirklich im Vollbild SIND. Vorher lief das
                 ' bedingungslos - und weil HandleDataContextChanged diese Methode beim Start
@@ -732,6 +732,40 @@ Namespace Views
                             e.Handled = True
                             Return
                     End Select
+                End If
+
+                ' Dieselbe Bauart wie Strg+R darueber, fuer die drei Stapel-Ablaeufe: in der Galerie
+                ' fuer die Auswahl, im Betrachter fuer das angezeigte Bild. Im Editor fallen sie
+                ' bewusst durch - dort ist Strg+D „Objekt duplizieren" und Strg+T das Textwerkzeug.
+                If PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) AndAlso
+                   Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso Not IsTextInputSource(e.Source) AndAlso
+                   (e.Key = Key.D OrElse e.Key = Key.T OrElse e.Key = Key.W) Then
+                    Dim inGalerie = vm.CurrentMode = AppMode.Gallery
+                    Dim imBetrachter = vm.CurrentMode = AppMode.Viewer
+                    If inGalerie OrElse imBetrachter Then
+                        Select Case e.Key
+                            Case Key.D
+                                If inGalerie Then
+                                    If vm.Gallery IsNot Nothing AndAlso vm.Gallery.HasSelectedImage Then vm.Gallery.BatchConvertSelectedCommand.Execute(Nothing)
+                                Else
+                                    vm.Viewer?.ConvertCurrentCommand.Execute(Nothing)
+                                End If
+                            Case Key.T
+                                If inGalerie Then
+                                    If vm.Gallery IsNot Nothing AndAlso vm.Gallery.HasSelectedImage Then vm.Gallery.ExportSelectedCommand.Execute(Nothing)
+                                Else
+                                    vm.Viewer?.ExportCurrentCommand.Execute(Nothing)
+                                End If
+                            Case Key.W
+                                If inGalerie Then
+                                    If vm.Gallery IsNot Nothing AndAlso vm.Gallery.HasSelectedImage Then vm.Gallery.ApplyFilterSelectedCommand.Execute(Nothing)
+                                Else
+                                    vm.Viewer?.ApplyFilterCurrentCommand.Execute(Nothing)
+                                End If
+                        End Select
+                        e.Handled = True
+                        Return
+                    End If
                 End If
 
                 ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,

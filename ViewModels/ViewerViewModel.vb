@@ -378,6 +378,45 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Info-Leiste zeigt hier immer etwas: der Betrachter hat stets ein Bild auf
+        ''' der Buehne. Die beiden Eigenschaften gibt es nur, weil sich die Leiste die Galerie teilt,
+        ''' wo bei mehreren markierten Bildern oder einem Ordner nichts anzuzeigen ist.</summary>
+        Public ReadOnly Property HasInfoContent As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
+        Public ReadOnly Property InfoPlaceholderText As String
+            Get
+                Return ""
+            End Get
+        End Property
+
+        ''' <summary>Der Betrachter zeigt immer genau EIN Bild - die Uebersicht ueber mehrere gibt
+        ''' es nur in der Galerie.</summary>
+        Public ReadOnly Property IsSummary As Boolean
+            Get
+                Return False
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSingleImage As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
+        Public ReadOnly Property Name As String
+            Get
+                Return If(_exifInfo?.FileName, "")
+            End Get
+        End Property
+
+        ''' <summary>Bleibt leer: die Uebersicht ueber mehrere Bilder gibt es nur in der Galerie.
+        ''' Die Info-Leiste ist dieselbe, also muss die Eigenschaft da sein.</summary>
+        Public ReadOnly Property SummaryFacts As New ObservableCollection(Of ExifTag)()
+
         Public Property ExifInfo As ExifData
             Get
                 Return _exifInfo
@@ -552,6 +591,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsColorLabelGreen))
             Me.RaisePropertyChanged(NameOf(IsColorLabelYellow))
             Me.RaisePropertyChanged(NameOf(HasColorLabel))
+            _mainVm?.RefreshWindowTitle()
             Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
         End Sub
 
@@ -772,12 +812,58 @@ Namespace ViewModels
         Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property AddTagCommand As ICommand
         Public ReadOnly Property RemoveTagCommand As ICommand
+        Public ReadOnly Property OpenTagSearchCommand As ICommand
         Public ReadOnly Property RotateLeftCommand As ICommand
         Public ReadOnly Property RotateRightCommand As ICommand
         Public ReadOnly Property FlipHorizontalCommand As ICommand
         Public ReadOnly Property BackToGalleryCommand As ICommand
         Public ReadOnly Property DeleteCurrentCommand As ICommand
         Public ReadOnly Property ResizeCurrentCommand As ICommand
+        Public ReadOnly Property ToggleFullscreenCommand As ICommand
+        Public ReadOnly Property TogglePinCommand As ICommand
+        Public ReadOnly Property ApplyWatermarkCurrentCommand As ICommand
+
+        ''' <summary>Wo das Kontextmenue zuletzt geoeffnet wurde und welche Elemente es meint.
+        ''' Beides setzt die View, bevor sie oeffnet.</summary>
+        Public Property ContextSite As MenuSite = MenuSite.ViewerFooter
+        Public Property ContextItems As IList(Of ImageItem) = New List(Of ImageItem)()
+
+        ''' <summary>Die Eintraege des Kontextmenues. Wird bei jedem Oeffnen neu gelesen, damit
+        ''' Aufrufort, Auswahl und Sprache ankommen - der Aufbau ist billig.</summary>
+        Public ReadOnly Property ContextActions As IReadOnlyList(Of Object)
+            Get
+                Return ContextMenuBuilder.Build(ContextSite, ContextItems,
+                                                isVirtual:=False, canPaste:=False,
+                                                commands:=New MenuCommands With {
+                                                    .NewImage = NewDocumentCommand,
+                                                    .Fullscreen = ToggleFullscreenCommand,
+                                                    .Adjust = EditCommand,
+                                                    .PinImage = TogglePinCommand,
+                                                    .Rename = RenameCurrentCommand,
+                                                    .ResizeImage = ResizeCurrentCommand,
+                                                    .ApplyWatermark = ApplyWatermarkCurrentCommand,
+                                                    .ApplyFilter = ApplyFilterCurrentCommand,
+                                                    .ConvertTo = ConvertCurrentCommand,
+                                                    .ExportTo = ExportCurrentCommand,
+                                                    .Print = PrintCommand,
+                                                    .RotateLeft = RotateLeftCommand,
+                                                    .RotateRight = RotateRightCommand,
+                                                    .Favorite = ToggleFavoriteCommand,
+                                                    .Rating = SetRatingCommand,
+                                                    .ColorLabel = SetColorLabelCommand,
+                                                    .CopyPath = CopyPathCommand,
+                                                    .ShowInFileManager = OpenFileManagerCommand,
+                                                    .Delete = DeleteCurrentCommand})
+            End Get
+        End Property
+
+        Public Sub RefreshContextActions()
+            Me.RaisePropertyChanged(NameOf(ContextActions))
+        End Sub
+        Public ReadOnly Property NewDocumentCommand As ICommand
+        Public ReadOnly Property ConvertCurrentCommand As ICommand
+        Public ReadOnly Property ExportCurrentCommand As ICommand
+        Public ReadOnly Property ApplyFilterCurrentCommand As ICommand
         Public ReadOnly Property RenameCurrentCommand As ICommand
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
@@ -849,12 +935,20 @@ Namespace ViewModels
                                                                          LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
                                                                      End If
                                                                  End Sub)
+            OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) _mainVm?.OpenTagSearchInGallery(tag))
             RotateLeftCommand = ReactiveCommand.Create(Sub() RotationAngle = RotationAngle - 90)
             RotateRightCommand = ReactiveCommand.Create(Sub() RotationAngle = RotationAngle + 90)
             FlipHorizontalCommand = ReactiveCommand.Create(Sub() ScaleX = ScaleX * -1)
             BackToGalleryCommand = ReactiveCommand.Create(Sub() _mainVm.BackToGallery(_currentImagePath))
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
             ResizeCurrentCommand = ReactiveCommand.Create(Sub() ResizeCurrent())
+            ToggleFullscreenCommand = ReactiveCommand.Create(Sub() _mainVm?.ToggleFullscreen())
+            TogglePinCommand = ReactiveCommand.Create(Sub() TogglePin())
+            ApplyWatermarkCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ApplyWatermarkToImageItems(i)))
+            NewDocumentCommand = ReactiveCommand.Create(Sub() _mainVm?.ShowNewDocumentDialog())
+            ConvertCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ConvertImageItems(i)))
+            ExportCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ExportImageItems(i)))
+            ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i) g.ApplyFilterToImageItems(i)))
             RenameCurrentCommand = ReactiveCommand.Create(Sub() RenameCurrent())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
             OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
@@ -1026,7 +1120,7 @@ Namespace ViewModels
                 If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
                 ' Sofort in die geteilte Ansicht, zunaechst mit demselben Bild auf beiden Seiten:
                 ' das Anheften wird damit unmittelbar sichtbar, statt erst beim naechsten Blaettern.
-                AktiviereVergleich(pfad, pfad)
+                ActivateCompare(pfad, pfad)
                 Return
             End If
             Me.RaisePropertyChanged(NameOf(IsImagePinned))
@@ -1214,20 +1308,20 @@ Namespace ViewModels
             If Not File.Exists(leftPath) OrElse Not File.Exists(rightPath) Then Return
 
             OpenImage(leftPath, allPaths, cacheScopeId, cacheScopeName)
-            AktiviereVergleich(leftPath, rightPath)
+            ActivateCompare(leftPath, rightPath)
         End Sub
 
         ''' <summary>Den Vergleich einschalten, ohne das Bild neu zu oeffnen. Das linke Bild gilt dabei
         ''' als angeheftet - egal ob der Vergleich ueber den Knopf oder ueber die Galerie begann. So
         ''' ist der Knopf der EINE sichtbare Zustand fuer "Vergleich laeuft", und Loesen fuehrt in
         ''' beiden Faellen zurueck zur Einzelansicht.</summary>
-        Private Sub AktiviereVergleich(leftPath As String, rightPath As String)
+        Private Sub ActivateCompare(leftPath As String, rightPath As String)
             _compareLeftPath = leftPath
             _compareRightPath = rightPath
             _focusedComparePane = 0
             _pinnedPath = leftPath
             IsCompareMode = True
-            LadeVergleichsMarken()
+            LoadCompareMarkers()
             For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
                            NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
                            NameOf(IsImagePinned), NameOf(PinnedFileName),
@@ -1235,7 +1329,7 @@ Namespace ViewModels
                            NameOf(HasNoMedia)}
                 Me.RaisePropertyChanged(n)
             Next
-            LadeVergleichsbilder()
+            LoadCompareImages()
         End Sub
 
         ' ── Marken auf den Vergleichsflaechen ───────────────────────────────────
@@ -1277,7 +1371,7 @@ Namespace ViewModels
         ''' <summary>Bewertung und Favorit beider Flaechen aus dem Katalog nachziehen. Jede Stelle,
         ''' die einen der beiden Pfade aendert, ruft das - sonst zeigen die Marken die Werte des
         ''' vorherigen Bildes.</summary>
-        Private Sub LadeVergleichsMarken()
+        Private Sub LoadCompareMarkers()
             _compareLeftRating = If(String.IsNullOrEmpty(_compareLeftPath), 0, LibraryService.Instance.GetRating(_compareLeftPath))
             _compareRightRating = If(String.IsNullOrEmpty(_compareRightPath), 0, LibraryService.Instance.GetRating(_compareRightPath))
             _compareLeftFavorite = Not String.IsNullOrEmpty(_compareLeftPath) AndAlso LibraryService.Instance.GetFavorite(_compareLeftPath)
@@ -1288,29 +1382,29 @@ Namespace ViewModels
             Next
         End Sub
 
-        Private Function PfadDerFlaeche(pane As Integer) As String
+        Private Function PathOfPane(pane As Integer) As String
             Return If(pane = 1, _compareRightPath, _compareLeftPath)
         End Function
 
         ''' <summary>Sterne setzen. Derselbe Stern nochmal loescht die Bewertung - genauso wie auf
         ''' der Galerie-Kachel.</summary>
         Public Sub SetCompareRating(pane As Integer, sterne As Integer)
-            Dim pfad = PfadDerFlaeche(pane)
+            Dim pfad = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
             Dim bisher = If(pane = 1, _compareRightRating, _compareLeftRating)
             Dim neuerWert = If(bisher = sterne, 0, Math.Max(0, Math.Min(5, sterne)))
             LibraryService.Instance.SetRating(pfad, neuerWert)
-            LadeVergleichsMarken()
+            LoadCompareMarkers()
             ' Die Fusszeile zeigt die fokussierte Flaeche - sie muss mit, wenn genau die gemeint war.
             If pane = _focusedComparePane Then UebernehmeKatalogAttribute(pfad)
         End Sub
 
         Public Sub ToggleCompareFavorite(pane As Integer)
-            Dim pfad = PfadDerFlaeche(pane)
+            Dim pfad = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
             Dim bisher = If(pane = 1, _compareRightFavorite, _compareLeftFavorite)
             LibraryService.Instance.SetFavorite(pfad, Not bisher)
-            LadeVergleichsMarken()
+            LoadCompareMarkers()
             If pane = _focusedComparePane Then UebernehmeKatalogAttribute(pfad)
         End Sub
 
@@ -1320,12 +1414,12 @@ Namespace ViewModels
         ''' Serie laesst sich in einem Zug durchsehen.</summary>
         Public Sub DeleteComparePane(pane As Integer)
             If Not _isCompareMode Then Return
-            Dim pfad = PfadDerFlaeche(pane)
+            Dim pfad = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(pfad) OrElse Not File.Exists(pfad) Then Return
-            _mainVm.RequestDeletePaths({pfad}, Sub() NachDemLoeschenImVergleich(pane, pfad))
+            _mainVm.RequestDeletePaths({pfad}, Sub() AfterDeleteInCompare(pane, pfad))
         End Sub
 
-        Private Sub NachDemLoeschenImVergleich(pane As Integer, geloescht As String)
+        Private Sub AfterDeleteInCompare(pane As Integer, geloescht As String)
             ' Die Stelle in der Liste MERKEN, bevor der Pfad herausfaellt - "das naechste Bild" ist
             ' genau das, was danach an dieser Stelle steht.
             Dim stelle = _folderPaths.FindIndex(Function(p) String.Equals(p, geloescht, StringComparison.OrdinalIgnoreCase))
@@ -1351,7 +1445,7 @@ Namespace ViewModels
                 ' Datei. Mit ihr faellt das Bezugsbild weg, also gibt es nichts mehr zu vergleichen.
                 ' Frueher blieb der geloeschte Pfad links stehen und die Flaeche zeigte eine Datei,
                 ' die es nicht mehr gibt.
-                Dim weiter = NaechsterPfadAb(stelle, "")
+                Dim weiter = NextPathFrom(stelle, "")
                 ExitCompare(zurueckZumFokus:=False)
                 Dim wIdx = _folderPaths.FindIndex(Function(p) String.Equals(p, weiter, StringComparison.OrdinalIgnoreCase))
                 If wIdx >= 0 Then LoadPathAt(wIdx)
@@ -1363,8 +1457,8 @@ Namespace ViewModels
                 ' Decode fuer ein Bild, das schon da ist, waere bei RAW Sekunden.
                 _compareLeftPath = _compareRightPath
                 Dim wegwerfen = CompareLeftImage
-                SetzeVergleichsBitmaps(CompareRightImage, Nothing)
-                GibVergleichsBitmapFrei(wegwerfen)
+                SetCompareBitmaps(CompareRightImage, Nothing)
+                ReleaseCompareBitmap(wegwerfen)
                 _pinnedPath = _compareLeftPath
                 _vergleichLadeZaehler += 1
             End If
@@ -1372,7 +1466,7 @@ Namespace ViewModels
             ' Das Bild, das jetzt LINKS steht, darf nicht als "das naechste" rechts landen - beim
             ' Loeschen der linken Flaeche ist die rechte gerade dorthin gewandert und stuende sonst
             ' auf beiden Seiten.
-            Dim naechster = NaechsterPfadAb(stelle, _compareLeftPath)
+            Dim naechster = NextPathFrom(stelle, _compareLeftPath)
             If String.IsNullOrEmpty(naechster) Then
                 ' Nur noch EIN Bild uebrig - ein Vergleich mit sich selbst hat keinen Sinn.
                 Dim bleibt = If(String.IsNullOrEmpty(_compareLeftPath), naechster, _compareLeftPath)
@@ -1385,8 +1479,8 @@ Namespace ViewModels
             _compareRightPath = naechster
             _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, naechster, StringComparison.OrdinalIgnoreCase))
             _focusedComparePane = 0
-            LadeVergleichsbilder(nurRechts:=True)
-            LadeVergleichsMarken()
+            LoadCompareImages(nurRechts:=True)
+            LoadCompareMarkers()
             ZeigeDatenDerFokussiertenFlaeche()
             For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName),
                            NameOf(IsCompareLeftFocused), NameOf(IsCompareRightFocused),
@@ -1401,7 +1495,7 @@ Namespace ViewModels
         ''' <summary>Das Bild, das nach dem Loeschen an dieser Stelle steht. Ist die Liste dort zu
         ''' Ende, wird vorne weitergesucht - sonst endete eine Serie am letzten Bild in einer leeren
         ''' Flaeche.</summary>
-        Private Function NaechsterPfadAb(stelle As Integer, ausser As String) As String
+        Private Function NextPathFrom(stelle As Integer, ausser As String) As String
             If _folderPaths.Count = 0 Then Return ""
             Dim start = Math.Max(0, Math.Min(stelle, _folderPaths.Count - 1))
             For i = 0 To _folderPaths.Count - 1
@@ -1420,7 +1514,7 @@ Namespace ViewModels
         ''' Prozess faellt. Deshalb hier direkt auf die Felder und die Meldung von Hand - und wer
         ''' wirklich etwas wegwerfen will, tut das ausdruecklich ueber
         ''' <see cref="GibVergleichsBitmapFrei"/>.</summary>
-        Private Sub SetzeVergleichsBitmaps(links As Bitmap, rechts As Bitmap)
+        Private Sub SetCompareBitmaps(links As Bitmap, rechts As Bitmap)
             _compareLeftImage = links
             _compareRightImage = rechts
             Me.RaisePropertyChanged(NameOf(CompareLeftImage))
@@ -1430,7 +1524,7 @@ Namespace ViewModels
         ''' <summary>Ein abgelegtes Vergleichsbild freigeben - erst NACH der Benachrichtigung, damit
         ''' kein laufender Layoutdurchlauf mehr darauf zugreift (dieselbe Regel wie bei den
         ''' Vorschaubildern).</summary>
-        Private Shared Sub GibVergleichsBitmapFrei(bmp As Bitmap)
+        Private Shared Sub ReleaseCompareBitmap(bmp As Bitmap)
             If bmp Is Nothing Then Return
             Dispatcher.UIThread.Post(Sub() bmp.Dispose(), DispatcherPriority.Background)
         End Sub
@@ -1460,12 +1554,12 @@ Namespace ViewModels
             _compareLeftPath = _compareRightPath
             _compareRightPath = alterLinker
 
-            SetzeVergleichsBitmaps(CompareRightImage, CompareLeftImage)
+            SetCompareBitmaps(CompareRightImage, CompareLeftImage)
 
             _vergleichLadeZaehler += 1
             _pinnedPath = _compareLeftPath
             _focusedComparePane = 0
-            LadeVergleichsMarken()
+            LoadCompareMarkers()
 
             ' Das Weiterblaettern haengt am Index der RECHTEN Flaeche - er muss dem getauschten
             ' Bild folgen, sonst springt der naechste Tastendruck an eine fremde Stelle im Ordner.
@@ -1492,8 +1586,8 @@ Namespace ViewModels
             _compareRightPath = path
             Me.RaisePropertyChanged(NameOf(CompareRightFileName))
             Me.RaisePropertyChanged(NameOf(CanSwapComparePanes))
-            LadeVergleichsMarken()
-            LadeVergleichsbilder(nurRechts:=True)
+            LoadCompareMarkers()
+            LoadCompareImages(nurRechts:=True)
             ' Steht der Fokus rechts, muss auch das Infopanel mit.
             If _focusedComparePane = 1 Then ZeigeDatenDerFokussiertenFlaeche()
         End Sub
@@ -1533,7 +1627,7 @@ Namespace ViewModels
         ''' <summary>Die Vergleichsbilder laden. <paramref name="nurRechts"/> beim Weiterblaettern:
         ''' das linke ist die festgehaltene Referenz und aendert sich dabei NICHT - es mitzuladen
         ''' hiess, bei jedem Tastendruck ein RAW ein zweites Mal zu entwickeln.</summary>
-        Private Async Sub LadeVergleichsbilder(Optional nurRechts As Boolean = False)
+        Private Async Sub LoadCompareImages(Optional nurRechts As Boolean = False)
             _vergleichLadeZaehler += 1
             Dim marke = _vergleichLadeZaehler
             Dim links = _compareLeftPath, rechts = _compareRightPath
@@ -2090,58 +2184,6 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsInfoTabIcc))
         End Sub
 
-        Private Shared Function BuildImageInfo(imagePath As String, imageWidth As Integer, imageHeight As Integer) As ExifData
-            Dim data = ExifService.ReadExif(imagePath)
-
-            Dim effectiveWidth = imageWidth
-            Dim effectiveHeight = imageHeight
-            If effectiveWidth <= 0 OrElse effectiveHeight <= 0 Then
-                ' Beim asynchronen FPX-Wechsel ist die Composite-Vorschau unter Umstaenden noch nicht
-                ' publiziert. Dann die soeben aus composite.png gelesenen Masse verwenden, statt MP
-                ' und Seitenverhaeltnis im Infopanel leer zu lassen.
-                Dim sourceDimensions = ExifService.ExtractSearchFields(data)
-                effectiveWidth = sourceDimensions.ImageWidth.GetValueOrDefault()
-                effectiveHeight = sourceDimensions.ImageHeight.GetValueOrDefault()
-            End If
-
-            If effectiveWidth > 0 AndAlso effectiveHeight > 0 Then
-                If String.IsNullOrWhiteSpace(data.ImageWidth) Then data.ImageWidth = effectiveWidth.ToString()
-                If String.IsNullOrWhiteSpace(data.ImageHeight) Then data.ImageHeight = effectiveHeight.ToString()
-
-                Dim mp = effectiveWidth * effectiveHeight / 1_000_000.0
-                data.Megapixels = $"{mp:F1} MP"
-                data.AspectRatio = FormatAspectRatio(effectiveWidth, effectiveHeight)
-            End If
-
-            If String.IsNullOrWhiteSpace(data.FileType) Then
-                data.FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
-            End If
-
-            If String.IsNullOrWhiteSpace(data.ColorSpace) Then data.ColorSpace = "Unbekannt"
-
-            Return data
-        End Function
-
-        Private Shared Function FormatAspectRatio(width As Integer, height As Integer) As String
-            If width <= 0 OrElse height <= 0 Then Return ""
-
-            Dim divisor = GreatestCommonDivisor(width, height)
-            Return $"{width \ divisor}:{height \ divisor}"
-        End Function
-
-        Private Shared Function GreatestCommonDivisor(a As Integer, b As Integer) As Integer
-            a = Math.Abs(a)
-            b = Math.Abs(b)
-
-            While b <> 0
-                Dim remainder = a Mod b
-                a = b
-                b = remainder
-            End While
-
-            Return Math.Max(1, a)
-        End Function
-
         ' Erhöht sich bei jedem LoadInfoPanelData-Aufruf - läuft der Nutzer währenddessen zum
         ' nächsten Bild weiter, verwirft der Dispatcher.UIThread.Post-Rücksprung unten das dann
         ' veraltete Ergebnis, statt EXIF/Histogramm eines längst verlassenen Bildes anzuzeigen.
@@ -2208,7 +2250,7 @@ Namespace ViewModels
                          Dim headerSize = ImageProcessor.GetOrientedImageSize(imagePath)
                          Dim infoWidth = If(headerSize.Width > 0, headerSize.Width, capturedWidth)
                          Dim infoHeight = If(headerSize.Height > 0, headerSize.Height, capturedHeight)
-                         Dim info = BuildImageInfo(imagePath, infoWidth, infoHeight)
+                         Dim info = ImageInfoService.BuildImageInfo(imagePath, infoWidth, infoHeight)
                          ' In einer Immich-Sitzung sind Größe und Zeitstempel die der Temp-Kopie -
                          ' keines davon beschreibt das Asset, das der Nutzer sieht.
                          If _isImmichSession Then
@@ -2249,63 +2291,13 @@ Namespace ViewModels
         End Function
 
         Private Sub SetProvisionalInfoPanelForPath(imagePath As String, Optional provisionalInfo As ExifData = Nothing)
-            ExifInfo = If(provisionalInfo, BuildProvisionalInfoFromCatalog(imagePath))
+            ExifInfo = If(provisionalInfo, ImageInfoService.BuildProvisionalFromCatalog(imagePath))
             _infoPanelShownForPath = imagePath
             ' Das Histogramm des alten Bildes ebenfalls sofort raus - es käme sonst als letztes
             ' Relikt des vorherigen Bildes erst mit dem Nachschub-Post weg.
             _histogramLoadedForPath = ""
             HistogramImage = Nothing
         End Sub
-
-        ''' <summary>Provisorischer Infopanel-Stand aus dem Katalog (SQLite, ein Zeilen-Lookup) -
-        ''' zeigt beim Bildwechsel sofort die Daten des RICHTIGEN Bildes, bis der vollständige
-        ''' EXIF-Read sie ersetzt. Kennt der Katalog das Bild nicht, kommt ein MINIMAL-Objekt
-        ''' (Dateiname/Typ, Rest leer) zurück - NIE Nothing: Bindings wie „ExifInfo.Camera"
-        ''' aktualisieren bei Nothing nicht auf leer, sondern behalten stumpf den letzten Wert -
-        ''' genau so blieb das Panel beim Filmstrip-Wechsel auf dem Vorgängerbild stehen
-        ''' (3. Runde).</summary>
-        Private Shared Function BuildProvisionalInfoFromCatalog(imagePath As String) As ExifData
-            Try
-                Dim meta = LibraryService.Instance.GetMetaForPaths({imagePath}).Values.FirstOrDefault()
-                If meta Is Nothing Then
-                    Dim minimal As New ExifData With {
-                        .FileName = IO.Path.GetFileName(imagePath),
-                        .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
-                    }
-                    ExifService.FillFileFacts(minimal, imagePath)
-                    Return minimal
-                End If
-
-                Dim data As New ExifData With {
-                    .FileName = IO.Path.GetFileName(imagePath),
-                    .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant(),
-                    .DateTaken = If(meta.DateTaken, ""),
-                    .DateModifiedExif = If(meta.DateModifiedExif, ""),
-                    .Camera = If(meta.Camera, ""),
-                    .Lens = If(meta.Lens, ""),
-                    .ShutterSpeed = If(meta.ShutterSpeed, "")
-                }
-                If meta.Aperture.HasValue Then data.Aperture = "f/" & meta.Aperture.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture)
-                If meta.FocalLengthMm.HasValue Then data.FocalLength = meta.FocalLengthMm.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture) & " mm"
-                If meta.Iso.HasValue Then data.ISO = meta.Iso.Value.ToString(Globalization.CultureInfo.InvariantCulture)
-                ExifService.FillFileFacts(data, imagePath)
-                If meta.ImageWidth.GetValueOrDefault() > 0 AndAlso meta.ImageHeight.GetValueOrDefault() > 0 Then
-                    Dim w = meta.ImageWidth.Value
-                    Dim h = meta.ImageHeight.Value
-                    data.ImageWidth = w.ToString(Globalization.CultureInfo.InvariantCulture)
-                    data.ImageHeight = h.ToString(Globalization.CultureInfo.InvariantCulture)
-                    data.Megapixels = $"{w * h / 1_000_000.0:F1} MP"
-                    data.AspectRatio = FormatAspectRatio(w, h)
-                End If
-                Return data
-            Catch
-                ' Auch im Fehlerfall nie Nothing (siehe Methodenkommentar - Bindings blieben sonst
-                ' auf dem Vorgängerbild stehen).
-                Return New ExifData With {
-                    .FileName = IO.Path.GetFileName(If(imagePath, ""))
-                }
-            End Try
-        End Function
 
         Private Sub RefreshTagSuggestions()
             TagSuggestions.Clear()
@@ -2674,6 +2666,50 @@ Namespace ViewModels
         ''' das angezeigte Bild. Bewusst über die Galerie-Umsetzung, damit Dialog, Überschreiben/Kopie und
         ''' der Immich-Weg an EINER Stelle stehen. Danach wird das Bild neu geladen - beim Überschreiben
         ''' liegt auf dem Pfad jetzt eine andere Datei.</summary>
+        ''' <summary>Reicht das ANGEZEIGTE Bild an einen Stapel-Ablauf der Galerie weiter.
+        ''' Konvertieren, Exportieren und Filter unterscheiden sich nur in der Zeile, die sie
+        ''' aufrufen - der Weg zum Element ist derselbe wie bei ResizeCurrent.</summary>
+        ''' <summary>Auf WELCHES Bild sich die naechste Menueaktion bezieht. Leer heisst: das
+        ''' auf der Buehne. Gesetzt wird es beim Oeffnen des Kontextmenues, wenn der Klick auf
+        ''' einer Filmstreifen-Kachel lag - dann meint der Nutzer diese und nicht die Buehne.</summary>
+        Public Property ContextTargetPath As String = ""
+
+        ''' <summary>Der Pfad, auf den sich eine Menueaktion bezieht.</summary>
+        ''' <summary>Ist das Ziel ein Video? Dann faellt alles weg, was auf Bildpixeln arbeitet.
+        ''' Gefragt wird ueber ImageItem, damit dieselbe Erkennung gilt wie in der Galerie.</summary>
+        Private Function ZielIstVideo() As Boolean
+            Dim pfad = TargetPath()
+            If String.IsNullOrWhiteSpace(pfad) Then Return False
+            Return New ImageItem(pfad).IsVideoFile
+        End Function
+
+        Private Function TargetPath() As String
+            Dim ziel = If(ContextTargetPath, "")
+            If ziel <> "" AndAlso IO.File.Exists(ziel) Then Return ziel
+            Return _currentImagePath
+        End Function
+
+        Private Sub MitAktuellemBild(ablauf As Action(Of GalleryViewModel, IList(Of ImageItem)))
+            Try
+                Dim pfad = TargetPath()
+                If String.IsNullOrWhiteSpace(pfad) Then Return
+                Dim gallery = _mainVm?.Gallery
+                If gallery Is Nothing Then Return
+
+                Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                             PathIdentity.AreSame(i.FilePath, pfad))
+                If item Is Nothing Then
+                    If Not File.Exists(pfad) Then Return
+                    item = New ImageItem(pfad)
+                End If
+                If Not item.IsImage Then Return
+
+                ablauf(gallery, New List(Of ImageItem) From {item})
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.StapelAblauf", ex)
+            End Try
+        End Sub
+
         Private Async Sub ResizeCurrent()
             Try
                 If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
@@ -2720,8 +2756,16 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Die Zwischenablage haengt am TopLevel und ist nur von der View aus
+        ''' erreichbar. Frueher stand hier ein LEERER Rumpf mit genau diesem Hinweis - das Kommando
+        ''' gab es, es tat nur nichts, und ein Menueeintrag darauf waere still wirkungslos gewesen.
+        ''' Die View setzt den Haken beim Anhaengen.</summary>
+        Public Property CopyPathToClipboard As Action(Of String)
+
         Private Sub CopyToClipboard()
-            ' Clipboard-Zugriff erfolgt über TopLevel in der View (ViewModel hat keinen UI-Zugriff)
+            Dim pfad = TargetPath()
+            If String.IsNullOrEmpty(pfad) Then Return
+            CopyPathToClipboard?.Invoke(pfad)
         End Sub
 
         ''' <summary>Druckt das gerade angezeigte Bild. Der Betrachter arbeitet auf Pfaden - bei
@@ -2733,9 +2777,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub OpenInFileManager()
-            If String.IsNullOrEmpty(_currentImagePath) Then Return
+            Dim pfad = TargetPath()
+            If String.IsNullOrEmpty(pfad) Then Return
             Try
-                Dim folder = IO.Path.GetDirectoryName(_currentImagePath)
+                Dim folder = IO.Path.GetDirectoryName(pfad)
                 Diagnostics.Process.Start(New Diagnostics.ProcessStartInfo() With {
                     .FileName = folder,
                     .UseShellExecute = True

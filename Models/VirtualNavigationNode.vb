@@ -17,6 +17,13 @@ Namespace Models
         Public Property Query As String
         Public Property Id As String
         Public Property TextQuery As String
+        ''' <summary>Genau diese Stichwoerter, nicht als Text gesucht sondern als Stichwort
+        ''' verglichen. Mehrere wirken als ODER: gezeigt wird, was MINDESTENS eines davon traegt.
+        '''
+        ''' Ueber TextQuery ginge das nicht: die durchsucht Dateiname UND Stichwoerter, ein Bild
+        ''' "urlaub.jpg" ohne das Stichwort "urlaub" waere dann dabei. Nicht gespeichert -
+        ''' Stichwortsuchen entstehen im Vorbeigehen.</summary>
+        Public Property TagQueries As New List(Of String)()
         Public Property RootFolder As String
         Public Property IncludeSubfolders As Boolean = True
         Public Property FavoriteMode As String = "Any"

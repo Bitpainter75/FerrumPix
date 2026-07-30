@@ -11,8 +11,69 @@ Namespace Services
         Public Shared ReadOnly Property PersonalFolder As String =
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
 
+        ''' <summary>
+        ''' Liegt der Pfad im Benutzerordner? Geprueft wird ZWEIMAL: einmal so, wie er geschrieben
+        ''' steht, und einmal mit aufgeloesten Verweisen.
+        '''
+        ''' Der zweite Durchgang ist der eigentliche Schutz. `Path.GetFullPath` loest ".." auf,
+        ''' aber KEINE Symlinks und Junctions. Ein Verweis im Bilderordner, der nach draussen zeigt,
+        ''' bestand die rein buchstaebliche Pruefung - und Kopieren, Verschieben oder Loeschen
+        ''' griffen dann ausserhalb des Benutzerordners zu.
+        '''
+        ''' Aufgeloest wird erst NACH der buchstaeblichen Pruefung: was schon dem Namen nach
+        ''' draussen liegt, ist ohnehin abgelehnt, und der Weg ueber das Dateisystem kostet Zeit.
+        ''' </summary>
+        ''' <summary>
+        ''' Darf Dateiarbeit einem Verweis folgen, der aus dem Benutzerordner hinausfuehrt?
+        '''
+        ''' Standard AUS. Ein Verweis kann irgendwohin zeigen, und dann greifen Loeschen oder
+        ''' Verschieben ausserhalb dessen zu, was der Nutzer als seinen Bestand ansieht. Wer den
+        ''' Bilderordner aber bewusst auf eine andere Platte legt, braucht genau das - deshalb ist
+        ''' es eine Einstellung und keine feste Regel.
+        '''
+        ''' Gesetzt wird der Wert beim Start und bei jeder Aenderung aus den Einstellungen.
+        ''' </summary>
+        Public Shared Property FollowLinkedFolders As Boolean = False
+
         Public Shared Function IsInPersonalFolder(path As String) As Boolean
-            Return IsAncestorOrSelf(PersonalFolder, path)
+            If Not IsAncestorOrSelf(PersonalFolder, path) Then Return False
+            If FollowLinkedFolders Then Return True
+            Return IsAncestorOrSelf(ResolveLinks(PersonalFolder), ResolveLinks(path))
+        End Function
+
+        ''' <summary>
+        ''' Loest Verweise auf, auch solche MITTEN im Pfad: jeder Abschnitt wird einzeln geprueft,
+        ''' von der Wurzel her. Ein Verweis nur auf den letzten Abschnitt zu pruefen reichte nicht -
+        ''' der Ausbruch kann schon eine Ebene darueber sitzen.
+        '''
+        ''' Ringe aus Verweisen fangen wir nicht selbst ab; `ResolveLinkTarget` wirft dabei, und der
+        ''' Abschnitt bleibt dann unaufgeloest stehen. Das ist die sichere Richtung: im Zweifel
+        ''' bleibt der Pfad, wie er ist, und die buchstaebliche Pruefung entscheidet.
+        ''' </summary>
+        Friend Shared Function ResolveLinks(path As String) As String
+            If String.IsNullOrEmpty(path) Then Return ""
+            Dim voll As String
+            Try
+                voll = IO.Path.GetFullPath(path)
+            Catch
+                Return path
+            End Try
+
+            Dim eltern = IO.Path.GetDirectoryName(voll)
+            If String.IsNullOrEmpty(eltern) Then Return voll   ' Wurzel erreicht
+
+            Dim basis = ResolveLinks(eltern)
+            Dim kandidat = IO.Path.Combine(basis, IO.Path.GetFileName(voll))
+            Try
+                Dim info As FileSystemInfo =
+                    If(Directory.Exists(kandidat),
+                       CType(New DirectoryInfo(kandidat), FileSystemInfo),
+                       New FileInfo(kandidat))
+                Dim ziel = info.ResolveLinkTarget(returnFinalTarget:=True)
+                If ziel IsNot Nothing Then Return IO.Path.GetFullPath(ziel.FullName)
+            Catch
+            End Try
+            Return kandidat
         End Function
 
         Public Shared Function CanCopy(path As String) As Boolean

@@ -8,7 +8,7 @@
          Anwenden hat: sie braucht die Tiefenkarte, und die ist eine Modellausgabe und kein
          Rezeptwert. Erscheint nur, wenn das Tiefenmodell vorliegt. -->
     <Border Classes="adjustment-group"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=bokeh}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=bokeh}">
         <Expander Header="Tiefen-Unschärfe" icons:ExpanderState.Key="bokeh">
             <Expander.HeaderTemplate>
                 <DataTemplate>
@@ -33,52 +33,52 @@
                     </Grid>
                 </DataTemplate>
             </Expander.HeaderTemplate>
-            <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding IsBokehVerfuegbar}"
-                        ToolTip.Tip="{Binding BokehHinweis}">
+            <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding IsBokehAvailable}"
+                        ToolTip.Tip="{Binding BokehHint}">
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Untere Grenze des scharfen Bereichs. 0 ist am weitesten weg">
                     <TextBlock Text="Scharf von" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BokehVon}" Margin="0,0" />
+                                       Value="{Binding BokehFrom}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding BokehVon, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding BokehFrom, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Obere Grenze des scharfen Bereichs. 100 ist am nächsten">
                     <TextBlock Text="Scharf bis" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BokehBis}" Margin="0,0" />
+                                       Value="{Binding BokehTo}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding BokehBis, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding BokehTo, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Wie stark die Unschärfe am fernsten Punkt wird">
                     <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BokehStaerke}" Margin="0,0" />
+                                       Value="{Binding BokehStrength}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding BokehStaerke, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding BokehStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Wie weich der Übergang vom scharfen Bereich in die Unschärfe verläuft">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
-                                       Value="{Binding BokehUebergang}" Margin="0,0" />
+                                       Value="{Binding BokehTransition}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding BokehUebergang, Mode=TwoWay}" Minimum="1" Maximum="100" />
+                                             Value="{Binding BokehTransition, Mode=TwoWay}" Minimum="1" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" Margin="0,4,0,0"
                       ToolTip.Tip="Wie stark Lichtpunkte als leuchtende Scheiben erhalten bleiben, statt sich zu einem matten Fleck zu mitteln">
                     <TextBlock Text="Lichter" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       Value="{Binding BokehLichter}" Margin="0,0" />
+                                       Value="{Binding BokehHighlights}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding BokehLichter, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding BokehHighlights, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <!-- Die Form der Blende bestimmt, wie ein Lichtpunkt im unscharfen Bereich aussieht.
                      Als Knopfreihe statt Regler, weil es zwischen Rund und Dreieck nichts gibt. -->
@@ -88,25 +88,25 @@
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <Grid Grid.Column="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="6" Margin="6,0,0,0">
                         <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="0"
+                                Command="{Binding SetBokehApertureCommand}" CommandParameter="0"
                                 Classes.active="{Binding IsBlendeRund}">
                             <TextBlock Text="Rund" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
                         </Button>
                         <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="5"
+                                Command="{Binding SetBokehApertureCommand}" CommandParameter="5"
                                 Classes.active="{Binding IsBlendeFuenf}">
                             <TextBlock Text="5" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
                         </Button>
                         <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="6"
+                                Command="{Binding SetBokehApertureCommand}" CommandParameter="6"
                                 Classes.active="{Binding IsBlendeSechs}">
                             <TextBlock Text="6" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>
                         </Button>
                         <Button Grid.Column="3" Classes="ghost" HorizontalAlignment="Stretch" Padding="6,4"
-                                Command="{Binding SetBokehBlendeCommand}" CommandParameter="7"
+                                Command="{Binding SetBokehApertureCommand}" CommandParameter="7"
                                 Classes.active="{Binding IsBlendeSieben}">
                             <TextBlock Text="7" FontSize="{DynamicResource FP.Font.Small}"
                                        HorizontalAlignment="Center"/>

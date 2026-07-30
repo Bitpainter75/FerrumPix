@@ -27,6 +27,9 @@ Namespace ViewModels
         ReadOnly Property Editor As EditorViewModel
 
         Property CurrentMode As AppMode
+        Sub ToggleFullscreen()
+        Sub RefreshWindowTitle()
+        Sub ShowNewDocumentDialog()
         ReadOnly Property IsFullscreen As Boolean
         Sub EnterFullscreen()
 
@@ -37,6 +40,8 @@ Namespace ViewModels
                                    Optional forceSaveAsOnly As Boolean = False,
                                    Optional immichAlbumId As String = Nothing) As Task
         Sub BackToGallery(Optional sourcePath As String = Nothing)
+        ''' <summary>Zur Galerie wechseln und dort alle Bilder mit diesem Stichwort zeigen.</summary>
+        Sub OpenTagSearchInGallery(tag As String)
 
         Function ShowMessageAsync(titleText As String, messageText As String,
                                   Optional confirmText As String = "OK") As Task

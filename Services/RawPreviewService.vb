@@ -5,10 +5,10 @@ Imports SkiaSharp
 
 Namespace Services
 
-    ''' Extracts embedded JPEG preview from RAW camera files without external libraries.
-    ''' Strategy: scan the first 16 MB of each file for embedded JPEG data,
-    ''' filtering out lossless-JPEG-encoded RAW sensor data (SOF3/SOF5-7/SOF11/SOF13-15).
-    ''' CR3 (Canon BMFF) is additionally parsed via its ISO BMFF box structure.
+    ''' Holt die eingebettete JPEG-Vorschau aus einer RAW-Datei, ohne fremde Bibliotheken.
+    ''' Vorgehen: die ersten 16 MB der Datei nach eingebetteten JPEG-Daten absuchen und dabei die
+    ''' verlustfrei gepackten Sensordaten aussortieren (SOF3, SOF5 bis 7, SOF11, SOF13 bis 15).
+    ''' Bei CR3 von Canon kommt der Weg ueber die BMFF-Kastenstruktur dazu.
     Public Class RawPreviewService
 
         ''' <summary>DIE kanonische Liste der RAW-Endungen - alle anderen Stellen (Galerie,
@@ -35,9 +35,21 @@ Namespace Services
             ".erf",                            ' Epson
             ".mef",                            ' Mamiya
             ".mos",                            ' Leaf
-            ".kdc", ".dcr",                    ' Kodak
-            ".x3f"                             ' Sigma (Foveon; LibRaw-Unterstuetzung eingeschraenkt)
+            ".kdc", ".dcr"                     ' Kodak
         }
+
+        ''' <summary>
+        ''' .x3f (Sigma Foveon) steht bewusst NICHT in der Liste. Gemessen am Pruefbestand mit 335
+        ''' RAW-Dateien aus 21 Formaten und 19 Herstellern dekodieren 327 sauber; ALLE acht
+        ''' Fehlschlaege sind x3f, und auch die eingebettete Vorschau laesst sich dort nicht
+        ''' auslesen. Das ist eine Grenze von LibRaw, kein Fehler bei uns.
+        '''
+        ''' Aufgefuehrt und nicht funktionierend war die schlechtere der beiden Moeglichkeiten: ein
+        ''' Sigma-Nutzer bekam eine leere Kachel statt eines Bildes und keinen Hinweis, woran es
+        ''' liegt. Nicht aufgefuehrt taucht die Datei gar nicht erst auf. Sobald LibRaw das Format
+        ''' traegt, gehoert die Endung zurueck in die Liste oben.
+        ''' </summary>
+        Public Const NichtUnterstuetztesRawFormat As String = ".x3f"
 
         Public Shared Function IsSupportedRaw(filePath As String) As Boolean
             Dim ext = Path.GetExtension(filePath).ToLowerInvariant()
@@ -117,18 +129,21 @@ Namespace Services
             End Try
         End Function
 
-        ''' Returns a MemoryStream with JPEG bytes (positioned at 0), or Nothing on failure.
+        ''' Liefert einen Speicherstrom mit den JPEG-Bytes, auf Position 0 gestellt - oder
+        ''' Nothing, wenn nichts zu finden war.
         Public Shared Function ExtractPreview(filePath As String) As MemoryStream
             Try
                 Dim ext = Path.GetExtension(filePath).ToLowerInvariant()
 
-                ' CR3: try BMFF walker first (faster, targets specific boxes)
+                ' CR3: zuerst ueber die Kastenstruktur - schneller, weil sie gezielt die
+                ' richtigen Kaesten ansteuert statt die Datei abzusuchen.
                 If ext = ".cr3" Then
                     Dim r = ExtractBmffPreview(filePath)
                     If r IsNot Nothing Then Return r
                 End If
 
-                ' Universal: scan file for the largest embedded displayable JPEG
+                ' Fuer alle anderen: die Datei nach dem groessten eingebetteten und anzeigbaren
+                ' JPEG absuchen.
                 Return ScanForJpeg(filePath)
             Catch
                 Return Nothing
@@ -176,11 +191,11 @@ Namespace Services
             End Using
         End Function
 
-        ''' True when the JPEG at <offset> uses a standard (displayable) SOF type.
-        ''' Lossless JPEG (SOF3/5-7/11/13-15) is used to compress RAW sensor data
-        ''' and cannot be decoded by normal image decoders.
+        ''' Wahr, wenn das JPEG an dieser Stelle eine ANZEIGBARE Rahmenart benutzt. Verlustfreies
+        ''' JPEG (SOF3, SOF5 bis 7, SOF11, SOF13 bis 15) dient zum Packen der Sensordaten einer RAW
+        ''' und laesst sich mit einem gewoehnlichen Bilddecoder nicht lesen.
         Private Shared Function IsDisplayableJpeg(data As Byte(), offset As Integer) As Boolean
-            Dim pos = offset + 2           ' skip SOI (FF D8)
+            Dim pos = offset + 2           ' die Startmarke SOI (FF D8) ueberspringen
             Dim limit = Math.Min(data.Length, offset + 8192)
             Do While pos + 3 < limit
                 If data(pos) <> &HFF Then Return True   ' unexpected – assume OK
@@ -240,9 +255,9 @@ Namespace Services
         End Function
 
         ' ── BMFF-based (CR3) ─────────────────────────────────────────────────────
-        ' CR3 structure (Canon EOS):
-        '   ftyp → moov → uuid[85c0b687...] → THMB (160×120 thumb)
-        '                → uuid[eaf42b5e...] → Canon data block with large JPEG at offset 32
+        ' Aufbau einer CR3 (Canon EOS):
+        '   ftyp → moov → uuid[85c0b687...] → THMB (Miniatur 160×120)
+        '                → uuid[eaf42b5e...] → Canon-Datenblock, grosses JPEG ab Position 32
 
         Private Shared Function ExtractBmffPreview(filePath As String) As MemoryStream
             Dim best As MemoryStream = Nothing
@@ -292,7 +307,8 @@ Namespace Services
                         Dim uuidContent = dataStart + 16
                         If uuidContent < boxEnd Then
                             CollectBmffJpegs(fs, br, uuidContent, boxEnd, best)
-                            ' Canon uuid blocks embed JPEG as raw data (not sub-boxes) – scan content
+                            ' Canon legt das JPEG in den uuid-Kaesten als rohe Daten ab, nicht als
+                            ' Unterkaesten - deshalb den Inhalt absuchen.
                             Dim scanLen = CInt(Math.Min(boxEnd - uuidContent, 8 * 1024 * 1024L))
                             fs.Seek(uuidContent, SeekOrigin.Begin)
                             Dim buf(scanLen - 1) As Byte
@@ -324,7 +340,8 @@ Namespace Services
             End If
         End Sub
 
-        ''' Quick backward-scan JPEG finder used by the BMFF walker for bounded buffers.
+        ''' Schnelle Suche nach einem JPEG in einem begrenzten Puffer, von hinten nach vorn.
+        ''' Wird vom Durchlauf durch die Kastenstruktur benutzt.
         Private Shared Function FindJpeg(data As Byte(), length As Integer) As MemoryStream
             length = Math.Max(0, Math.Min(length, data.Length))
             For i = 0 To length - 4

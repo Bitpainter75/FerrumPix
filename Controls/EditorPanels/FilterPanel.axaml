@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.FilterPanel">
     <Expander Header="Filter" icons:ExpanderState.Key="filter"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=filter}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=filter}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

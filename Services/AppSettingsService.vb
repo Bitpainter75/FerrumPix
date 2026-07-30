@@ -135,6 +135,10 @@ Namespace Services
         Public Property EditorShowRulers As Boolean = False
         Public Property EditorShowGrid As Boolean = False
         Public Property ShowHiddenFolders As Boolean = False
+        ''' Ob Dateiarbeit einem Verweis folgen darf, der aus dem Benutzerordner hinausfuehrt.
+        ''' Standard AUS: das ist die sichere Richtung. Wer seinen Bilderordner bewusst per Verweis
+        ''' auf eine andere Platte legt, schaltet es ein.
+        Public Property FollowLinkedFolders As Boolean = False
         ' Löschen: standardmäßig in den Papierkorb und mit Sicherheitsabfrage. Beide Schalter können das
         ' einzeln abschalten (True = überspringen).
         Public Property DeleteSkipTrash As Boolean = False
@@ -142,6 +146,8 @@ Namespace Services
         Public Property ThemeMode As String = "Dark"
         Public Property AccentColor As String = "#F08A1A"
         Public Property StartupImageMode As String = "Viewer"
+        ''' Womit ein Bild aus der Galerie geoeffnet wird: "Viewer" oder "Editor".
+        Public Property GalleryOpenTarget As String = "Viewer"
         ''' <summary>Was beim Start OHNE Bildparameter erscheint. "Viewer" öffnet das erste Bild des
         ''' Startordners, "Editor" den leeren Editor mit dem Dialog „Neues Bild".</summary>
         Public Property StartupNoImageMode As String = "Gallery"
@@ -195,7 +201,7 @@ Namespace Services
         ''' Anpassungsgruppen, die im Editor NICHT erscheinen sollen, als Komma-Liste ihrer
         ''' Schluessel. Leer heisst: alle sind da. Ausblenden aendert nur die Anzeige - eingestellte
         ''' Werte bleiben erhalten und wirken weiter.
-        Public Property VersteckteAnpassungsgruppen As String = ""
+        Public Property HiddenAdjustmentGroups As String = ""
         ''' Gemerkter Auf-/Zuklapp-Zustand jeder Editor-Gruppe (Expander), Schlüssel = stabiler
         ''' Gruppenname (siehe Controls.ExpanderState). Fehlt ein Schlüssel, gilt der XAML-Standard.
         Public Property EditorExpanderStates As New Dictionary(Of String, Boolean)()
@@ -228,6 +234,9 @@ Namespace Services
         ''' (wie die Info-Leiste), kein Schalter in den Einstellungen.
         Public Property EditorShowComparison As Boolean = True
         Public Property ViewerInfoSidebarExpanded As Boolean = True
+        ''' In der Galerie ist die Info-Leiste ab Werk ZU: dort stehen links schon Ordnerbaum und
+        ''' Filter, und wer die Galerie oeffnet, sucht ein Bild und liest keine Metadaten.
+        Public Property GalleryInfoSidebarExpanded As Boolean = False
         ''' Ganzzahliger Versatz auf alle Text-Schriftgrößen (siehe FontScaleService). 0 = Auslieferung.
         Public Property FontSizeOffset As Integer = 0
         Public Property ApplicationScale As Double = 1.0
@@ -402,6 +411,7 @@ Namespace Services
                 settings.ThemeMode = NormalizeThemeMode(settings.ThemeMode)
                 settings.AccentColor = NormalizeAccentColor(settings.AccentColor)
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
+                settings.GalleryOpenTarget = NormalizeGalleryOpenTarget(settings.GalleryOpenTarget)
                 settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
@@ -416,7 +426,7 @@ Namespace Services
                 settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
-                settings.VersteckteAnpassungsgruppen = NormalizeVersteckteAnpassungsgruppen(settings.VersteckteAnpassungsgruppen)
+                settings.HiddenAdjustmentGroups = NormalizeHiddenAdjustmentGroups(settings.HiddenAdjustmentGroups)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
@@ -487,6 +497,7 @@ Namespace Services
                 settings.ThemeMode = NormalizeThemeMode(settings.ThemeMode)
                 settings.AccentColor = NormalizeAccentColor(settings.AccentColor)
                 settings.StartupImageMode = NormalizeStartupImageMode(settings.StartupImageMode)
+                settings.GalleryOpenTarget = NormalizeGalleryOpenTarget(settings.GalleryOpenTarget)
                 settings.StartupNoImageMode = NormalizeStartupNoImageMode(settings.StartupNoImageMode)
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
@@ -501,7 +512,7 @@ Namespace Services
                 settings.EditorFitBehavior = NormalizeViewerFitBehavior(settings.EditorFitBehavior)
                 settings.EditorStartupTool = NormalizeEditorStartupTool(settings.EditorStartupTool)
                 settings.EditorToolGroupOrder = NormalizeEditorToolGroupOrder(settings.EditorToolGroupOrder)
-                settings.VersteckteAnpassungsgruppen = NormalizeVersteckteAnpassungsgruppen(settings.VersteckteAnpassungsgruppen)
+                settings.HiddenAdjustmentGroups = NormalizeHiddenAdjustmentGroups(settings.HiddenAdjustmentGroups)
                 settings.MainWindowWidth = NormalizeWindowDimension(settings.MainWindowWidth, 1536)
                 settings.MainWindowHeight = NormalizeWindowDimension(settings.MainWindowHeight, 1024)
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
@@ -692,7 +703,7 @@ Namespace Services
         ''' NICHT dabei sind Gruppen, die IHR Werkzeug ausmachen: Zuschneiden, Maske, Auswahl,
         ''' Objekte, Zeichnen, Drehen und Bildgroesse. Sie auszublenden liesse ein leeres Werkzeug
         ''' zurueck, und das ist kein Aufraeumen mehr, sondern ein kaputter Zustand.</summary>
-        Public Shared ReadOnly Property AusblendbareAnpassungsgruppen As (Schluessel As String, Bezeichnung As String)()
+        Public Shared ReadOnly Property HideableAdjustmentGroups As (Key As String, Bezeichnung As String)()
             Get
                 Return {
                     ("adjust-presets", "Anpassungen"),
@@ -729,7 +740,7 @@ Namespace Services
         ''' das dann ein leeres Panel zeigt. Dann verschwindet es besser mit. Drehen und Bildgroesse
         ''' stehen bewusst NICHT hier: sie tragen je eine Gruppe, die sich nicht ausblenden laesst,
         ''' und koennen deshalb nie leer werden.</summary>
-        Public Shared ReadOnly Property WerkzeugGruppen As (Werkzeug As String, Gruppen As String())()
+        Public Shared ReadOnly Property ToolGroups As (Werkzeug As String, Gruppen As String())()
             Get
                 Return {
                     ("Adjust", New String() {"adjust-presets", "light", "curve", "objektivkorrektur", "film-negative"}),
@@ -743,15 +754,15 @@ Namespace Services
         ''' <summary>Nur bekannte Schluessel, jeder hoechstens einmal. Ein Schluessel, den es nicht
         ''' mehr gibt, verschwindet still - sonst bliebe eine Gruppe fuer immer versteckt, weil sie
         ''' einmal anders geheissen hat.</summary>
-        Public Shared Function NormalizeVersteckteAnpassungsgruppen(value As String) As String
+        Public Shared Function NormalizeHiddenAdjustmentGroups(value As String) As String
             Dim result As New List(Of String)()
             For Each teil In If(value, "").Split(","c)
                 Dim name = teil.Trim()
                 If name.Length = 0 Then Continue For
-                Dim treffer = AusblendbareAnpassungsgruppen.FirstOrDefault(
-                    Function(e) String.Equals(e.Schluessel, name, StringComparison.OrdinalIgnoreCase))
-                If treffer.Schluessel IsNot Nothing AndAlso Not result.Contains(treffer.Schluessel) Then
-                    result.Add(treffer.Schluessel)
+                Dim treffer = HideableAdjustmentGroups.FirstOrDefault(
+                    Function(e) String.Equals(e.Key, name, StringComparison.OrdinalIgnoreCase))
+                If treffer.Key IsNot Nothing AndAlso Not result.Contains(treffer.Key) Then
+                    result.Add(treffer.Key)
                 End If
             Next
             Return String.Join(",", result)
@@ -878,6 +889,17 @@ Namespace Services
             Dim trimmed = value.Trim()
             If Not System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$") Then Return fallback
             Return trimmed.ToUpperInvariant()
+        End Function
+
+        ''' <summary>Womit ein Bild aus der Galerie geoeffnet wird (Doppelklick und Eingabetaste).
+        ''' Videos gehen unabhaengig davon immer in den Betrachter - der Editor kann sie nicht.</summary>
+        Public Shared Function NormalizeGalleryOpenTarget(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Editor"
+                    Return "Editor"
+                Case Else
+                    Return "Viewer"
+            End Select
         End Function
 
         Public Shared Function NormalizeStartupImageMode(value As String) As String

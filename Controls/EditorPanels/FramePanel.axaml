@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.FramePanel">
     <Expander Header="Rahmen" icons:ExpanderState.Key="frame"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=frame}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=frame}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
@@ -58,7 +58,7 @@
                             <!-- Angezeigt wird uebersetzt, gespeichert bleibt der deutsche WERT: er
                                  steht im Rezept und in jedem Select Case. -->
                             <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource UebersetzenConverter}}"
+                                <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}"
                                            VerticalAlignment="Center" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>

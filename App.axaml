@@ -12,7 +12,7 @@
         <conv:StringEqualsConverter x:Key="StringEqualsConverter"/>
         <conv:NichtInListeConverter x:Key="NichtInListeConverter"/>
         <conv:AlleWahrConverter x:Key="AlleWahrConverter"/>
-        <conv:UebersetzenConverter x:Key="UebersetzenConverter"/>
+        <conv:TranslateConverter x:Key="TranslateConverter"/>
         <conv:RatingThresholdConverter x:Key="RatingThresholdConverter"/>
         <conv:RatingStarGlyphConverter x:Key="RatingStarGlyphConverter"/>
         <conv:BoolToWidthConverter x:Key="BoolToWidthConverter"/>

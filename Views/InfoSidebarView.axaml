@@ -4,20 +4,41 @@
              xmlns:services="clr-namespace:FerrumPix.Services"
              x:Class="FerrumPix.Views.InfoSidebarView">
 
-    <!-- Gemeinsame Info-Seitenleiste (Allgemein/EXIF/IPTC/XMP) für Viewer und Editor - beide
-         ViewModels exponieren dieselben Property-/Command-Namen (ExifInfo, Tags, HistogramImage,
+    <!-- Gemeinsame Info-Seitenleiste (Allgemein/EXIF/IPTC/XMP) für Viewer, Editor und Galerie -
+         alle drei stellen dieselben Property-/Command-Namen bereit (ExifInfo, Tags, HistogramImage,
          IsInfoTab*, ToggleFavoriteCommand, SetRatingCommand, SetColorLabelCommand, AddTagCommand,
          RemoveTagCommand, Rating, IsFavorite, ColorLabel/IsColorLabel*, IsInfoSidebarVisible),
          daher genügt ein einziges, DataContext-loses UserControl statt der zuvor doppelt
-         gepflegten Markup-Kopie in ViewerView/EditorView. -->
+         gepflegten Markup-Kopie in ViewerView/EditorView. Viewer und Editor tragen den Zustand
+         selbst, die Galerie reicht ihn über InfoPanelViewModel herein. -->
     <Border x:Name="InfoSidebarBorder" Classes="panel-right" Padding="14,14"
             IsVisible="{Binding IsInfoSidebarVisible}">
-        <Grid RowDefinitions="Auto,*" RowSpacing="14">
+        <!-- Ohne Bild zeigt die Leiste NUR einen Hinweis in der Mitte. Reiter und Felder
+             abgeblendet stehen zu lassen sah aus wie ein Fehler; leer wäre es ein Rätsel.
+             Der Panel darum ist noetig, weil ein Rahmen nur EIN Kind aufnimmt. -->
+        <Panel>
+        <TextBlock Text="{Binding InfoPlaceholderText}"
+                   IsVisible="{Binding !HasInfoContent}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   TextAlignment="Center" TextWrapping="Wrap"
+                   Margin="16,0"
+                   Classes="no-translate"
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Body}"/>
+        <Grid RowDefinitions="Auto,*" RowSpacing="14" IsVisible="{Binding HasInfoContent}">
             <StackPanel Spacing="0">
-                <TextBlock Text="Info" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg"
+                                   Width="18" Height="18" VerticalAlignment="Center"/>
+                    <TextBlock Text="Info" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <!-- Bei mehreren Bildern gibt es nur die Übersicht: EXIF, IPTC, XMP und ICC
+                     beschreiben genau eine Datei, und eine von zwölf zu zeigen wäre falsch. -->
                 <!-- Spacing knapper als sonst: fünf Reiter müssen in die 320px breite Seitenleiste passen,
                      auch bei längeren Übersetzungen von "Allgemein". -->
-                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,14,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,14,0,0"
+                            IsVisible="{Binding IsSingleImage}">
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="General" Classes.active="{Binding IsInfoTabGeneral}">
                         <TextBlock Text="Allgemein"/>
                     </Button>
@@ -39,9 +60,38 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
                 <StackPanel Spacing="18">
+                    <!-- Übersicht über mehrere Bilder. Gleiche Namen/Wert-Darstellung wie die
+                         EXIF-Zeilen, damit die Leiste in beiden Fällen gleich aussieht. -->
+                    <StackPanel Spacing="10" IsVisible="{Binding IsSummary}" Margin="0,0,12,0">
+                        <TextBlock Text="{Binding Name}" Classes="no-translate"
+                                   FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding SummaryFacts}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type services:ExifTag}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding Name}" Classes="no-translate"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="no-translate"
+                                                   HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
                     <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                        <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
+                                               Width="16" Height="16" VerticalAlignment="Center"/>
+                                <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
                             <!-- Dateiname ohne Beschriftung über die volle Breite: er ist die
                                  Überschrift des Blocks, keine Wertzeile - und lange Namen haben so
                                  die ganze Spaltenbreite zum Umbrechen statt der halben. Darunter
@@ -77,9 +127,12 @@
                             </Grid>
                         </StackPanel>
 
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+                        <!-- Die Trennlinien gehoeren zu den Bloecken, die sie abgrenzen: sonst
+                             stehen bei ausgeblendetem Histogramm zwei uebereinander. -->
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
+                                IsVisible="{Binding IsSingleImage}"/>
 
-                        <StackPanel Spacing="10">
+                        <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
                             <TextBlock Text="Histogramm" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <Border Height="92" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
                                 <Image Source="{Binding HistogramImage}"
@@ -220,7 +273,12 @@
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <StackPanel Spacing="10">
-                            <TextBlock Text="Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/tag.svg"
+                                               Width="16" Height="16" VerticalAlignment="Center"/>
+                                <TextBlock Text="Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
                             <ItemsControl ItemsSource="{Binding Tags}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -229,19 +287,52 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Classes="metric-pill" Margin="0,0,6,6">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <TextBlock Text="{Binding}"
-                                                           Foreground="{DynamicResource FP.Text.Secondary}"
-                                                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"/>
-                                                <Button Background="Transparent" BorderThickness="0" Padding="0"
-                                                        VerticalAlignment="Center"
+                                        <!-- Aufbau wie die Preset-Kaertchen im Editor (LUT und XMP):
+                                             derselbe Rahmen, dasselbe Raster aus zwei Spalten und das
+                                             Kreuz als Ghost-Knopf mit knappem linken Abstand. Die
+                                             frueher hier benutzte Pille trug beidseitig 10 Punkt
+                                             Innenabstand, dadurch stand das Kreuz weit vom Rand ab. -->
+                                        <!-- Die Polsterung sitzt in den SCHALTFLAECHEN, nicht am Rahmen.
+                                             Lag sie aussen, war nur der Text selbst anklickbar und ein
+                                             Treffer knapp darueber oder darunter tat nichts. -->
+                                        <Border CornerRadius="12"
+                                                Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                Margin="0,0,6,6"
+                                                Padding="0">
+                                            <Grid ColumnDefinitions="Auto,Auto">
+                                                <!-- Das Stichwort selbst ist eine Schaltflaeche: ein Klick zeigt
+                                                     alle Bilder mit diesem Stichwort. Das Kreuz daneben entfernt
+                                                     es - deshalb liegen beide getrennt und nicht ineinander. -->
+                                                <Button Grid.Column="0"
+                                                        Classes="ghost"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Padding="8,4,4,4"
+                                                        MinWidth="0"
+                                                        MinHeight="0"
+                                                        Cursor="Hand"
+                                                        Command="{Binding DataContext.OpenTagSearchCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="Alle Bilder mit diesem Stichwort zeigen">
+                                                    <TextBlock Text="{Binding}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               VerticalAlignment="Center"
+                                                               FontSize="{DynamicResource FP.Font.Small}"/>
+                                                </Button>
+                                                <Button Grid.Column="1"
+                                                        Classes="ghost"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Padding="0,4,8,4"
                                                         Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        CommandParameter="{Binding}">
-                                                    <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.Medium}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="Stichwort entfernen">
+                                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                Foreground="{DynamicResource FP.Text.Muted}"/>
                                                 </Button>
-                                            </StackPanel>
+                                            </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -349,5 +440,6 @@
                 </StackPanel>
             </ScrollViewer>
         </Grid>
+        </Panel>
     </Border>
 </UserControl>

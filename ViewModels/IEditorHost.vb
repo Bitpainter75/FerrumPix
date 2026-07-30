@@ -33,7 +33,15 @@ Namespace ViewModels
         ReadOnly Property Viewer As ViewerViewModel
 
         Property CurrentMode As AppMode
+        Sub ToggleFullscreen()
+        Sub RefreshWindowTitle()
+        ''' <summary>Zur Galerie wechseln und dort alle Bilder mit diesem Stichwort zeigen.</summary>
+        Sub OpenTagSearchInGallery(tag As String)
+        Sub ShowNewDocumentDialog()
         Sub ShowGalleryAtRealFolder()
+        ''' <summary>Umbenennen laeuft ueber den Rahmen, weil dort der Dialog sitzt. Der
+        ''' Rueckruf bekommt den NEUEN Pfad - der Editor muss sein geoeffnetes Bild nachziehen.</summary>
+        Sub RequestRenamePath(itemPath As String, Optional afterRename As Action(Of String) = Nothing)
 
         Function ShowMessageAsync(titleText As String, messageText As String,
                                   Optional confirmText As String = "OK") As Task

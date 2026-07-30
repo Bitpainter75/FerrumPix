@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.LightPanel">
     <Expander Header="Licht" icons:ExpanderState.Key="light"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=light}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=light}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

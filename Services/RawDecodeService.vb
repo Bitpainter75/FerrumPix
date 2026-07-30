@@ -348,13 +348,22 @@ Namespace Services
         ''' <param name="objektivWahl">Nothing = die Einstellung entscheidet fuer alle drei
         ''' Korrekturen; sonst uebersteuert sie jede einzeln fuer dieses eine Bild (die Schalter im
         ''' Werkzeug).</param>
+        ''' <summary>Entwickelt ein RAW. Laeuft immer nur EINMAL gleichzeitig - siehe
+        ''' <see cref="DecodeGate"/>. Der Zwischenspeicher wird INNERHALB der Schleuse gefragt: wer
+        ''' hinter einem laufenden Decode wartet, bekommt danach dessen Ergebnis, statt denselben
+        ''' Lauf ein zweites Mal anzuwerfen.</summary>
         Public Shared Function TryDecode(path As String,
-                                         Optional objektivWahl As ObjektivDatenService.Wahl = Nothing) As SKBitmap
+                                         Optional objektivWahl As LensDataService.Wahl = Nothing) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            Return DecodeGate.Run(Function() DecodeIntern(path, objektivWahl))
+        End Function
+
+        Private Shared Function DecodeIntern(path As String,
+                                             objektivWahl As LensDataService.Wahl) As SKBitmap
             Try
                 Dim writeTime = File.GetLastWriteTimeUtc(path)
-                Dim grundEv = GrundbelichtungFuerDatei(path)
-                Dim objektiv = ObjektivKorrekturFuerDatei(path, objektivWahl)
+                Dim grundEv = BaseExposureForFile(path)
+                Dim objektiv = LensCorrectionForFile(path, objektivWahl)
                 ' Der Schluessel MUSS jede Groesse tragen, die das Ergebnis veraendert. Fehlt eine,
                 ' liefert der Cache das Bild der vorigen Einstellung zurueck, und der Schalter
                 ' sieht aus, als tue er nichts.
@@ -362,14 +371,14 @@ Namespace Services
                 ' hinter dem Decode, und im Zwischenspeicher liegt das Bild VOR ihr. Sonst warf ihr
                 ' Ein- und Ausschalten den ganzen Decode weg und liess libraw erneut laufen -
                 ' Sekunden fuer eine Umrechnung, die selbst Millisekunden braucht.
-                Dim objSchluessel = ObjektivSchluessel(objektiv)
+                Dim objSchluessel = LensKey(objektiv)
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
                        String.Equals(_cachedPath, path, StringComparison.Ordinal) AndAlso
                        _cachedWriteTimeUtc = writeTime AndAlso
                        _cachedGrundbelichtung = grundEv AndAlso
                        String.Equals(_cachedObjektiv, objSchluessel, StringComparison.Ordinal) Then
-                        Return MitVerzeichnung(_cachedBitmap.Copy(), objektiv)
+                        Return WithDistortion(_cachedBitmap.Copy(), objektiv)
                     End If
                 End SyncLock
 
@@ -392,7 +401,7 @@ Namespace Services
                     _cachedGrundbelichtung = grundEv
                     _cachedObjektiv = objSchluessel
                     _cachedWriteTimeUtc = writeTime
-                    Return MitVerzeichnung(_cachedBitmap.Copy(), objektiv)
+                    Return WithDistortion(_cachedBitmap.Copy(), objektiv)
                 End SyncLock
             Catch
                 Return Nothing
@@ -401,11 +410,11 @@ Namespace Services
 
         ''' <summary>Die Verzeichnungsstufe auf ein frisch aus dem Zwischenspeicher geholtes Bild.
         ''' Besitz geht an den Aufrufer; das uebergebene Bild wird verbraucht.</summary>
-        Private Shared Function MitVerzeichnung(bild As SKBitmap,
-                                                objektiv As ObjektivDatenService.Korrektur) As SKBitmap
+        Private Shared Function WithDistortion(bild As SKBitmap,
+                                                objektiv As LensDataService.Korrektur) As SKBitmap
             If bild Is Nothing Then Return Nothing
-            If objektiv Is Nothing OrElse Not objektiv.HatVerzeichnung Then Return bild
-            Dim entzerrt = EntferneVerzeichnung(bild, objektiv)
+            If objektiv Is Nothing OrElse Not objektiv.HasDistortion Then Return bild
+            Dim entzerrt = RemoveDistortion(bild, objektiv)
             If entzerrt Is Nothing Then Return bild
             bild.Dispose()
             Return entzerrt
@@ -414,25 +423,25 @@ Namespace Services
         ''' <summary>Alles, was am Ergebnis der Objektivkorrektur haengt UND schon im Decode steckt,
         ''' in einer Zeichenkette - fuer den Decode-Zwischenspeicher. Die Verzeichnung fehlt hier
         ''' absichtlich: sie laeuft erst danach, siehe MitVerzeichnung.</summary>
-        Private Shared Function ObjektivSchluessel(k As ObjektivDatenService.Korrektur) As String
+        Private Shared Function LensKey(k As LensDataService.Korrektur) As String
             If k Is Nothing Then Return ""
             Return String.Format(Globalization.CultureInfo.InvariantCulture,
                 "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}",
-                k.HatFarbquerfehler, k.HatVignettierung,
+                k.HasChromaticAberration, k.HasVignetting,
                 k.TcaBr, k.TcaCr, k.TcaVr, k.TcaBb, k.TcaCb, k.TcaVb,
                 k.NormSkala, k.Vk1 + k.Vk2 * 3 + k.Vk3 * 7,
-                k.StaerkeFarbquerfehler, k.StaerkeVignettierung)
+                k.ChromaticAberrationStrength, k.VignettingStrength)
         End Function
 
         ''' <summary>Die Kennlinien fuer diese Datei, sofern die Korrektur gilt. Die Verzeichnung
         ''' bleibt hier aussen vor - sie ist eine eigene Stufe hinter dem Decode.</summary>
-        Private Shared Function ObjektivKorrekturFuerDatei(path As String,
-                                                           wahl As ObjektivDatenService.Wahl) As ObjektivDatenService.Korrektur
+        Private Shared Function LensCorrectionForFile(path As String,
+                                                           wahl As LensDataService.Wahl) As LensDataService.Korrektur
             Try
                 Dim vorgabe = AppSettingsService.Load().LensCorrectionEnabled
-                Dim modell = If(wahl IsNot Nothing, wahl.ObjektivModell, "")
-                Return ObjektivDatenService.Filtere(
-                    ObjektivDatenService.FindeKorrekturFuerDatei(path, modell), wahl, vorgabe)
+                Dim modell = If(wahl IsNot Nothing, wahl.LensModel, "")
+                Return LensDataService.Filtere(
+                    LensDataService.FindCorrectionForFile(path, modell), wahl, vorgabe)
             Catch
                 Return Nothing
             End Try
@@ -453,9 +462,9 @@ Namespace Services
         ''' soll nicht passieren, weil die Korrektur eine Anfangs-Entscheidung ist und die
         ''' Bearbeitung danach kommt. Am Rand entstehen dadurch schmale leere Streifen, die mit den
         ''' Randpixeln gefuellt werden.</summary>
-        Public Shared Function EntferneVerzeichnung(quelle As SKBitmap,
-                                                    k As ObjektivDatenService.Korrektur) As SKBitmap
-            If quelle Is Nothing OrElse k Is Nothing OrElse Not k.HatVerzeichnung Then Return Nothing
+        Public Shared Function RemoveDistortion(quelle As SKBitmap,
+                                                    k As LensDataService.Korrektur) As SKBitmap
+            If quelle Is Nothing OrElse k Is Nothing OrElse Not k.HasDistortion Then Return Nothing
             Dim breite = quelle.Width, hoehe = quelle.Height
             If breite < 2 OrElse hoehe < 2 Then Return Nothing
 
@@ -493,7 +502,7 @@ Namespace Services
                             ' Das sieht verkehrt herum aus, ist aber genau richtig: gerechnet wird vom
                             ' fertigen Zielbild rueckwaerts, um in der Quelle nachzuschlagen.
                             Dim rNorm = rPix * norm
-                            Dim rVerz = ObjektivDatenService.VerzeichnungsRadius(k, rNorm)
+                            Dim rVerz = LensDataService.DistortionRadius(k, rNorm)
                             Dim faktor = rVerz / rNorm
                             sx = cx + dx * faktor
                             sy = cy + dy * faktor
@@ -573,7 +582,7 @@ Namespace Services
         Private Const DecodeOutputBits As Integer = 16
 
         Private Shared Function DecodeCore(path As String, grundEv As Double,
-                                           objektiv As ObjektivDatenService.Korrektur) As SKBitmap
+                                           objektiv As LensDataService.Korrektur) As SKBitmap
             Dim handle = _init(0UI)
             If handle = IntPtr.Zero Then Return Nothing
             Dim pathPtr As IntPtr = IntPtr.Zero
@@ -793,7 +802,7 @@ Namespace Services
         ''' Aufrufstelle - 2 ist beim Farbrauschen gemessen schlechter als 1.</summary>
         Private Const FbddRauschminderung As Integer = 1
 
-        Private Const GrundbelichtungEv As Double = 0.5
+        Private Const BaseExposureEv As Double = 0.5
         Private Const SchwarzAbzug As Double = 0.003
         ''' <summary>Tabelle LINEAR (0..65535) -> Belichtungsrampe + ACR3-Tonkurve, wieder linear
         ''' in 0..65535. Einmal gebaut statt pro Pixel gerechnet: die Kurve wird je Pixel ZWEIMAL
@@ -870,8 +879,8 @@ Namespace Services
         ''' Der Dither benutzt DIESELBE Schwelle fuer alle drei Kanaele eines Pixels: kanalweise
         ''' verschiedene Schwellen faerben neutrale Flaechen ein.</summary>
         Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte(),
-                                     Optional objektiv As ObjektivDatenService.Korrektur = Nothing,
-                                     Optional grundbelichtungEvWert As Double = GrundbelichtungEv)
+                                     Optional objektiv As LensDataService.Korrektur = Nothing,
+                                     Optional grundbelichtungEvWert As Double = BaseExposureEv)
             Dim schwellen = DitherSchwellen
             Dim ton = TonTabelleFuer(grundbelichtungEvWert)
             Dim gamma = GammaTabelle
@@ -886,8 +895,8 @@ Namespace Services
             ' Die Verzeichnung sitzt BEWUSST NICHT hier: sie verschiebt Pixel um Dutzende Zeilen,
             ' waehrend der Zeilenring unten auf Bruchteile eines Pixels ausgelegt ist. Sie ist eine
             ' eigene Stufe hinter dem Decode.
-            Dim korrigiertTca = objektiv IsNot Nothing AndAlso objektiv.HatFarbquerfehler
-            Dim korrigiertVignette = objektiv IsNot Nothing AndAlso objektiv.HatVignettierung
+            Dim korrigiertTca = objektiv IsNot Nothing AndAlso objektiv.HasChromaticAberration
+            Dim korrigiertVignette = objektiv IsNot Nothing AndAlso objektiv.HasVignetting
             Dim korrigiert = korrigiertTca OrElse korrigiertVignette
             Dim cx = (width - 1) / 2.0, cy = (height - 1) / 2.0
             Dim normSkala = If(objektiv IsNot Nothing, objektiv.NormSkala, 0.0)
@@ -896,15 +905,15 @@ Namespace Services
             ' Zeilenring: Gruen kommt aus der eigenen Zeile, Rot und Blau aus benachbarten. Die
             ' Verschiebung ist klein, deshalb reichen wenige Zeilen - und es bleibt bei EINER
             ' Kopie je Quellzeile statt einer je Zugriff.
-            Const RingGroesse = 8
-            Dim ring(RingGroesse - 1)() As Short
-            Dim ringZeile(RingGroesse - 1) As Integer
-            For i = 0 To RingGroesse - 1
+            Const RingSize = 8
+            Dim ring(RingSize - 1)() As Short
+            Dim ringZeile(RingSize - 1) As Integer
+            For i = 0 To RingSize - 1
                 ReDim ring(i)(width * 3 - 1) : ringZeile(i) = -1
             Next
             Dim HoleZeile = Function(zy As Integer) As Short()
                                 Dim yy = Math.Min(Math.Max(zy, 0), height - 1)
-                                Dim slot = yy Mod RingGroesse
+                                Dim slot = yy Mod RingSize
                                 If ringZeile(slot) <> yy Then
                                     ' Versatz in Integer, siehe HeifDecodeService: IntPtr addiert
                                     ' nur Integer. Die Schranke des Aufrufers ist auf 6 Byte je
@@ -938,8 +947,8 @@ Namespace Services
                             ' statt dividieren verdoppelt den Farbsaum, statt ihn zu entfernen -
                             ' genau daran ist die erste Fassung gescheitert, und am echten Bild war
                             ' der Unterschied zu klein, um es zu merken.
-                            Dim fr = ObjektivDatenService.FarbquerfehlerFaktor(objektiv, rNorm, True)
-                            Dim fb = ObjektivDatenService.FarbquerfehlerFaktor(objektiv, rNorm, False)
+                            Dim fr = LensDataService.ChromaticAberrationFactor(objektiv, rNorm, True)
+                            Dim fb = LensDataService.ChromaticAberrationFactor(objektiv, rNorm, False)
                             r = AbtastenBilinear(HoleZeile, width, height, cx + dxPix / fr, cy + dyPix / fr, 0)
                             b = AbtastenBilinear(HoleZeile, width, height, cx + dxPix / fb, cy + dyPix / fb, 2)
                         Else
@@ -951,7 +960,7 @@ Namespace Services
                             ' Der gemessene Wert beschreibt den ABFALL, korrigiert wird durch
                             ' Teilen. Und er rechnet mit r = 1 in der ECKE, nicht an der langen
                             ' Kante wie der Farbquerfehler - daher die zweite Skala.
-                            Dim abfall = ObjektivDatenService.VignettierungsFaktor(objektiv, rNorm * eckenSkala)
+                            Dim abfall = LensDataService.VignettingFactor(objektiv, rNorm * eckenSkala)
                             ' Sehr kleine Werte wuerden das Rauschen der Bildecke ins Unermessliche
                             ' heben; drei Blendenstufen sind die Grenze des Sinnvollen.
                             If abfall < 0.125 Then abfall = 0.125
@@ -1049,18 +1058,18 @@ Namespace Services
         ''' <summary>Die Grundbelichtung fuer DIESE Datei. Ohne die Einstellung bleibt es beim
         ''' festen Wert; mit ihr entscheidet das Kameramodell aus den EXIF-Daten. Ein unbekanntes
         ''' Modell oder eine unlesbare Datei fuehrt IMMER auf den festen Wert zurueck - nie raten.</summary>
-        Private Shared Function GrundbelichtungFuerDatei(path As String) As Double
+        Private Shared Function BaseExposureForFile(path As String) As Double
             Try
-                If Not AppSettingsService.Load().UseCameraBaselineTable Then Return GrundbelichtungEv
+                If Not AppSettingsService.Load().UseCameraBaselineTable Then Return BaseExposureEv
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
-                If ifd0 Is Nothing Then Return GrundbelichtungEv
-                Return CameraBaselineTable.GrundbelichtungFuer(
+                If ifd0 Is Nothing Then Return BaseExposureEv
+                Return CameraBaselineTable.BaseExposureFor(
                     ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake),
                     ifd0.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel),
-                    GrundbelichtungEv)
+                    BaseExposureEv)
             Catch
-                Return GrundbelichtungEv
+                Return BaseExposureEv
             End Try
         End Function
 

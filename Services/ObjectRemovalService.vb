@@ -23,12 +23,12 @@ Namespace Services
     ''' Original Pixel fuer Pixel stehen: das Modell gibt sein ganzes Quadrat neu aus, und das
     ''' unbesehen zu uebernehmen hiesse, das halbe Foto durch eine 512er Fassung seiner selbst zu
     ''' ersetzen.</summary>
-    Public NotInheritable Class ObjektEntfernenService
+    Public NotInheritable Class ObjectRemovalService
 
         Private Sub New()
         End Sub
 
-        Public Const ModellDatei As String = "lama"
+        Public Const ModelFile As String = "lama"
 
         ''' <summary>Groesste Kante, mit der gerechnet wird. Das Modell nimmt jede Groesse an, aber
         ''' die Rechenzeit waechst mit der Flaeche - und ein Ausschnitt, der viel groesser ist als
@@ -36,7 +36,7 @@ Namespace Services
         Public Const MaxKante As Integer = 768
 
         ''' <summary>Auf dieses Vielfache muessen Breite und Hoehe aufgerundet werden.</summary>
-        Public Const ModellRaster As Integer = 32
+        Public Const ModelGrid As Integer = 32
 
         ''' <summary>Wie viel Umgebung mindestens um die Luecke herum mitgegeben wird, als Vielfaches
         ''' ihrer laengsten Kante. Ohne Umgebung hat das Modell nichts, was es fortsetzen koennte.</summary>
@@ -104,7 +104,7 @@ Namespace Services
         ''' <summary>Breite des weichen Randes beim Zurueckschreiben, Ohne ihn zeigt
         ''' sich die Kante der Maske als Naht - die gefuellte Flaeche kommt aus einer Skalierung und
         ''' trifft die Nachbarschaft nie ganz genau.</summary>
-        Private Const NahtBreite As Single = 2.5F
+        Private Const SeamWidth As Single = 2.5F
 
         ''' <summary>Was der letzte Durchlauf gerechnet hat, in einem Satz. Wird nach dem Entfernen
         ''' angezeigt.
@@ -116,8 +116,8 @@ Namespace Services
 
         Public Shared ReadOnly Property Verfuegbar As Boolean
             Get
-                Return KiModellService.LaufzeitVerfuegbar AndAlso
-                       Not String.IsNullOrEmpty(KiModellService.BesteDatei(ModellDatei))
+                Return AiModelService.RuntimeAvailable AndAlso
+                       Not String.IsNullOrEmpty(AiModelService.BestFile(ModelFile))
             End Get
         End Property
 
@@ -169,7 +169,7 @@ Namespace Services
         Public Shared Function Fuelle(bild As SKBitmap, maske As SKBitmap) As SKBitmap
             If bild Is Nothing OrElse maske Is Nothing Then Return Nothing
             If bild.Width <= 0 OrElse bild.Height <= 0 Then Return Nothing
-            Dim sitzung = KiModellService.SitzungFuer(ModellDatei)
+            Dim sitzung = AiModelService.SitzungFuer(ModelFile)
             If sitzung Is Nothing Then Return Nothing
 
             Dim eigeneMaske As SKBitmap = Nothing
@@ -257,7 +257,7 @@ Namespace Services
                         Dim gefuellt = Rechne(sitzung, klein, kleinMaske, aw, ah, pw, ph, schwelle)
                         If gefuellt Is Nothing Then Return Nothing
                         Using gefuellt
-                            Return SetzeEin(bild, m, gefuellt, fenster)
+                            Return InsertInto(bild, m, gefuellt, fenster)
                         End Using
                     End Using
                 End Using
@@ -314,9 +314,9 @@ Namespace Services
 
         ''' <summary>Auf das naechste Vielfache aufrunden, das das Modell verlangt.</summary>
         Private Shared Function AufVielfaches(wert As Integer) As Integer
-            Dim r = wert Mod ModellRaster
+            Dim r = wert Mod ModelGrid
             If r = 0 Then Return wert
-            Return wert + (ModellRaster - r)
+            Return wert + (ModelGrid - r)
         End Function
 
         ''' <summary>Ein Durchlauf des Modells.
@@ -452,7 +452,7 @@ Namespace Services
         ''' Der weiche Rand ist kein Schoenheitsmittel: die gefuellte Flaeche kommt aus einer
         ''' Skalierung und trifft die Helligkeit der Nachbarschaft nie auf den Punkt genau. Ohne
         ''' Ueberblendung steht an der Maskenkante eine sichtbare Naht.</summary>
-        Private Shared Function SetzeEin(bild As SKBitmap, maske As SKBitmap,
+        Private Shared Function InsertInto(bild As SKBitmap, maske As SKBitmap,
                                          gefuellt As SKBitmap, fenster As SKRectI) As SKBitmap
             Dim ergebnis = New SKBitmap(bild.Width, bild.Height, bild.ColorType, bild.AlphaType)
             Using canvas = New SKCanvas(ergebnis)

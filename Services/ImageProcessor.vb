@@ -212,23 +212,23 @@ Namespace Services
         Public Property Ecken As Double() = New Double() {}
 
         ''' <summary>Gitter: Spalten und Zeilen, dann je Knoten x,y in Bildprozent.</summary>
-        Public Property Spalten As Integer = 0
-        Public Property Zeilen As Integer = 0
+        Public Property Columns As Integer = 0
+        Public Property Rows As Integer = 0
         Public Property Knoten As Double() = New Double() {}
 
         ''' <summary>Linien: je Linie QuelleAx, QuelleAy, QuelleBx, QuelleBy und dasselbe fuer das
         ''' Ziel, alles in Bildprozent.</summary>
-        Public Property LinienQuelle As Double() = New Double() {}
-        Public Property LinienZiel As Double() = New Double() {}
+        Public Property LineSource As Double() = New Double() {}
+        Public Property LineTarget As Double() = New Double() {}
 
         Public ReadOnly Property IstLeer As Boolean
             Get
                 Select Case Art
                     Case "Perspektive" : Return Ecken Is Nothing OrElse Ecken.Length <> 8
-                    Case "Gitter" : Return Knoten Is Nothing OrElse Spalten < 1 OrElse Zeilen < 1 OrElse
-                                           Knoten.Length <> (Spalten + 1) * (Zeilen + 1) * 2
-                    Case "Linien" : Return LinienQuelle Is Nothing OrElse LinienZiel Is Nothing OrElse
-                                           LinienQuelle.Length < 4 OrElse LinienQuelle.Length <> LinienZiel.Length
+                    Case "Gitter" : Return Knoten Is Nothing OrElse Columns < 1 OrElse Rows < 1 OrElse
+                                           Knoten.Length <> (Columns + 1) * (Rows + 1) * 2
+                    Case "Linien" : Return LineSource Is Nothing OrElse LineTarget Is Nothing OrElse
+                                           LineSource.Length < 4 OrElse LineSource.Length <> LineTarget.Length
                     Case Else : Return True
                 End Select
             End Get
@@ -238,10 +238,10 @@ Namespace Services
             Return New ObjektVerzerrung With {
                 .Art = Art,
                 .Ecken = If(Ecken Is Nothing, New Double() {}, CType(Ecken.Clone(), Double())),
-                .Spalten = Spalten, .Zeilen = Zeilen,
+                .Columns = Columns, .Rows = Rows,
                 .Knoten = If(Knoten Is Nothing, New Double() {}, CType(Knoten.Clone(), Double())),
-                .LinienQuelle = If(LinienQuelle Is Nothing, New Double() {}, CType(LinienQuelle.Clone(), Double())),
-                .LinienZiel = If(LinienZiel Is Nothing, New Double() {}, CType(LinienZiel.Clone(), Double()))}
+                .LineSource = If(LineSource Is Nothing, New Double() {}, CType(LineSource.Clone(), Double())),
+                .LineTarget = If(LineTarget Is Nothing, New Double() {}, CType(LineTarget.Clone(), Double()))}
         End Function
     End Class
 
@@ -2231,7 +2231,7 @@ Namespace Services
         ''' wie in den Einstellungen vorgegeben. Sie gehoert hierher und nicht in die Reglerkette:
         ''' sie veraendert den DECODE, nicht die Nachbearbeitung.</param>
         Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True,
-                                              Optional objektivWahl As ObjektivDatenService.Wahl = Nothing) As SKBitmap
+                                              Optional objektivWahl As LensDataService.Wahl = Nothing) As SKBitmap
             ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
@@ -2333,7 +2333,7 @@ Namespace Services
         End Sub
 
         Public Shared Function ApplyAdjustments(sourcePath As String, adj As ImageAdjustments) As Bitmap
-            Using original = DecodeOriented(sourcePath, True, ObjektivWahlAus(adj))
+            Using original = DecodeOriented(sourcePath, True, LensChoiceFrom(adj))
                 If original Is Nothing Then Return Nothing
 
                 Using processed = ProcessBitmap(original, adj)
@@ -2436,16 +2436,16 @@ Namespace Services
 
         ''' <summary>Die Objektiv-Wahl aus einem Rezept. Eigene Stelle, damit jeder Weg, der aus
         ''' einem Rezept dekodiert, dieselbe Umsetzung benutzt.</summary>
-        Friend Shared Function ObjektivWahlAus(adj As ImageAdjustments) As ObjektivDatenService.Wahl
+        Friend Shared Function LensChoiceFrom(adj As ImageAdjustments) As LensDataService.Wahl
             If adj Is Nothing Then Return Nothing
-            Return New ObjektivDatenService.Wahl With {
-                .Verzeichnung = adj.LensDistortion,
-                .Farbquerfehler = adj.LensTca,
-                .Vignettierung = adj.LensVignetting,
-                .StaerkeVerzeichnung = adj.LensDistortionAmount / 100.0,
-                .StaerkeFarbquerfehler = adj.LensTcaAmount / 100.0,
-                .StaerkeVignettierung = adj.LensVignettingAmount / 100.0,
-                .ObjektivModell = adj.LensModel}
+            Return New LensDataService.Wahl With {
+                .Distortion = adj.LensDistortion,
+                .ChromaticAberration = adj.LensTca,
+                .Vignetting = adj.LensVignetting,
+                .DistortionStrength = adj.LensDistortionAmount / 100.0,
+                .ChromaticAberrationStrength = adj.LensTcaAmount / 100.0,
+                .VignettingStrength = adj.LensVignettingAmount / 100.0,
+                .LensModel = adj.LensModel}
         End Function
 
         Public Shared Function ApplyAdjustments(source As SKBitmap, adj As ImageAdjustments) As Bitmap
@@ -3282,7 +3282,7 @@ Namespace Services
         ''' Zugang zum universellen Decode-Chokepoint (RAW/ICO-Sonderfälle + EXIF-Orientierung).
         ''' Der Aufrufer übernimmt den Besitz des Bitmaps.</summary>
         Public Shared Function DecodeWorkingImage(path As String,
-                                                  Optional objektivWahl As ObjektivDatenService.Wahl = Nothing) As SKBitmap
+                                                  Optional objektivWahl As LensDataService.Wahl = Nothing) As SKBitmap
             Try
                 Return DecodeOriented(path, True, objektivWahl)
             Catch
@@ -3662,7 +3662,20 @@ Namespace Services
                 ' auf 43 Stufen - am sauberen Bild genauso wie am verrauschten, es lag also nicht am
                 ' Rauschen, sondern am Verfahren. Fuer die Helligkeit gibt es die beiden bestehenden
                 ' Regler; hier geht es um das grobfleckige FARBrauschen, an das die nicht herankommen.
-                Dim schwelleC = 4.0F + staerke * 34.0F
+                ' Kennlinie, gemessen an Flecken der Hoehe plus/minus 26. Vorher lief die Schwelle
+                ' linear von 4 auf 38, und der Regler war damit bei Stellung 25 fertig: von 25 bis
+                ' 100 aenderte sich NICHTS mehr, und fast 60 Prozent der Wirkung lagen schon im
+                ' ersten Schritt. Drei Viertel des Weges waren wirkungslos.
+                '
+                ' Der Grund ist das Verfahren, nicht die Zahl: geschrumpft wird auf mehreren Stufen
+                ' nacheinander, die Ausschlaege je Stufe sind viel kleiner als der Fleck im Bild.
+                ' Der nutzbare Schwellenbereich liegt deshalb bei etwa 0 bis 13 und nicht bei 38.
+                '
+                ' Jetzt 1 bis 20 mit einem Exponenten von 1,5: der untere Bereich wird gedehnt, wo
+                ' die Wirkung sitzt, und ueber der Saettigung bleibt Luft fuer starkes Rauschen.
+                ' Die Kennlinie steht als Info-Zeile im Pruefstand - sie zeigt sofort, wenn eine
+                ' Aenderung den Bereich wieder zusammenschiebt.
+                Dim schwelleC = 1.0F + 19.0F * CSng(Math.Pow(staerke, 1.5))
                 SchrumpfeStufen(cb, w, h, stufen, schwelleC, 1.0F)
                 SchrumpfeStufen(cr, w, h, stufen, schwelleC, 1.0F)
 
@@ -3859,7 +3872,7 @@ Namespace Services
                         Dim eigene As SKBitmap = Nothing
                         Try
                             If geschwister IsNot Nothing Then
-                                eigene = VereinigeWirkmasken(geschwister, layer, mask, adj, masksById,
+                                eigene = MergeEffectMasks(geschwister, layer, mask, adj, masksById,
                                                              pipelineInputWidth, pipelineInputHeight,
                                                              processed.Width, processed.Height, onlyStackedAboveId)
                                 If eigene IsNot Nothing Then wirkmaske = eigene
@@ -3977,7 +3990,7 @@ Namespace Services
         ''' Maximum, nicht Addition: die Deckung eines Pixels soll die STAERKSTE der beteiligten
         ''' Masken sein. Zwei Masken mit je 60 % ergeben 60 %, nicht 120 % - sonst waere die
         ''' Ueberschneidung wieder ein Sonderfall, nur ein leiserer.</summary>
-        Private Shared Function VereinigeWirkmasken(geschwister As List(Of MaskedAdjustmentLayer),
+        Private Shared Function MergeEffectMasks(geschwister As List(Of MaskedAdjustmentLayer),
                                                     ersteEbene As MaskedAdjustmentLayer,
                                                     ersteMaske As SKBitmap,
                                                     adj As ImageAdjustments,
@@ -4006,14 +4019,14 @@ Namespace Services
                     If m Is Nothing Then Continue For
                     If m.Width <> ersteMaske.Width OrElse m.Height <> ersteMaske.Height Then Continue For
                     If ergebnis Is Nothing Then ergebnis = CloneBitmap(ersteMaske)
-                    MaskeMaximum(ergebnis, m)
+                    MaskMaximum(ergebnis, m)
                 End Using
             Next
             Return ergebnis
         End Function
 
         ''' <summary>Je Pixel das Maximum aus zwei gleich grossen Alpha8-Masken, in die erste.</summary>
-        Private Shared Sub MaskeMaximum(ziel As SKBitmap, quelle As SKBitmap)
+        Private Shared Sub MaskMaximum(ziel As SKBitmap, quelle As SKBitmap)
             If ziel Is Nothing OrElse quelle Is Nothing Then Return
             If ziel.Width <> quelle.Width OrElse ziel.Height <> quelle.Height Then Return
             If ziel.GetPixels() = IntPtr.Zero OrElse quelle.GetPixels() = IntPtr.Zero Then Return
@@ -8151,7 +8164,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 zielY(i) = CSng(zielY(i) - neuY)
             Next
 
-            Dim ergebnis = ImageGeometryMapper.VerzerreUeberGitterAuf(ebene, neuB, neuH, Stufen, Stufen,
+            Dim ergebnis = ImageGeometryMapper.WarpOverGridTo(ebene, neuB, neuH, Stufen, Stufen,
                                                                      zielX, zielY, quellX, quellY)
             If ergebnis Is Nothing Then Return Nothing
             offsetX = neuX
@@ -8177,13 +8190,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
                 Case "Gitter"
                     ' Zwischen den vier umgebenden Stuetzpunkten interpolieren.
-                    Dim u = Math.Max(0.0, Math.Min(1.0, bx / bildBreite)) * v.Spalten
-                    Dim w = Math.Max(0.0, Math.Min(1.0, by / bildHoehe)) * v.Zeilen
-                    Dim s0 = Math.Max(0, Math.Min(v.Spalten - 1, CInt(Math.Floor(u))))
-                    Dim z0 = Math.Max(0, Math.Min(v.Zeilen - 1, CInt(Math.Floor(w))))
+                    Dim u = Math.Max(0.0, Math.Min(1.0, bx / bildBreite)) * v.Columns
+                    Dim w = Math.Max(0.0, Math.Min(1.0, by / bildHoehe)) * v.Rows
+                    Dim s0 = Math.Max(0, Math.Min(v.Columns - 1, CInt(Math.Floor(u))))
+                    Dim z0 = Math.Max(0, Math.Min(v.Rows - 1, CInt(Math.Floor(w))))
                     Dim tu = u - s0, tw = w - z0
                     Dim K = Function(si As Integer, zi As Integer) As (X As Double, Y As Double)
-                                Dim i = (zi * (v.Spalten + 1) + si) * 2
+                                Dim i = (zi * (v.Columns + 1) + si) * 2
                                 Return (v.Knoten(i), v.Knoten(i + 1))
                             End Function
                     Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
@@ -8194,17 +8207,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Return New SKPoint(CSng(px / 100.0 * bildBreite), CSng(py / 100.0 * bildHoehe))
 
                 Case "Linien"
-                    Dim qp(v.LinienQuelle.Length - 1) As Double
-                    Dim zp(v.LinienZiel.Length - 1) As Double
+                    Dim qp(v.LineSource.Length - 1) As Double
+                    Dim zp(v.LineTarget.Length - 1) As Double
                     For i = 0 To qp.Length - 1
                         Dim istX = (i Mod 2) = 0
-                        qp(i) = v.LinienQuelle(i) / 100.0 * If(istX, bildBreite, bildHoehe)
-                        zp(i) = v.LinienZiel(i) / 100.0 * If(istX, bildBreite, bildHoehe)
+                        qp(i) = v.LineSource(i) / 100.0 * If(istX, bildBreite, bildHoehe)
+                        zp(i) = v.LineTarget(i) / 100.0 * If(istX, bildBreite, bildHoehe)
                     Next
                     ' Das Feld sagt, WOHER ein Zielpunkt seine Farbe holt. Fuer ein Objekt brauchen
                     ' wir die Gegenrichtung - wohin ein Punkt wandert -, also werden Quelle und Ziel
                     ' vertauscht.
-                    Return ImageGeometryMapper.LinienPunkt(bx, by, zp, qp)
+                    Return ImageGeometryMapper.LinePoint(bx, by, zp, qp)
             End Select
             Return New SKPoint(CSng(bx), CSng(by))
         End Function

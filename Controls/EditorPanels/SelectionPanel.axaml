@@ -223,7 +223,7 @@
             Margin="0,10,0,0"
             IsVisible="{Binding IsMoveSelectionMode}"
                         IsEnabled="{Binding KannArtUmwandeln}"
-                        Command="{Binding WandleArtUmCommand}"
+                        Command="{Binding ConvertKindCommand}"
                         ToolTip.Tip="{Binding ArtUmwandelnHinweis}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"

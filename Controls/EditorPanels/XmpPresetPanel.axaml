@@ -3,7 +3,7 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.XmpPresetPanel">
     <Expander Header="XMP-Preset" icons:ExpanderState.Key="xmp-preset"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=xmp-preset}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=xmp-preset}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
@@ -70,13 +70,16 @@
                                 BorderBrush="{DynamicResource FP.Border.Normal}"
                                 BorderThickness="1"
                                 Margin="0,0,6,6"
-                                Padding="8,4">
+                                Padding="0">
+                            <!-- Die Polsterung sitzt in den Schaltflaechen, nicht am Rahmen: lag sie
+                                 aussen, war nur der Text selbst anklickbar und ein Treffer knapp
+                                 darueber oder darunter tat nichts. -->
                             <Grid ColumnDefinitions="Auto,Auto">
                                 <Button Grid.Column="0"
                                         Classes="ghost"
                                         Background="Transparent"
                                         BorderThickness="0"
-                                        Padding="0"
+                                        Padding="8,4,4,4"
                                         Click="OnApplySavedXmpPresetClick">
                                     <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Small}" />
                                 </Button>
@@ -84,10 +87,10 @@
                                         Classes="ghost"
                                         Background="Transparent"
                                         BorderThickness="0"
-                                        Padding="4,0,0,0"
+                                        Padding="0,4,8,4"
                                         Click="OnRemoveSavedXmpPresetClick"
                                         ToolTip.Tip="Preset entfernen">
-                                    <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.Large}"
+                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Foreground="{DynamicResource FP.Text.Muted}" />
                                 </Button>
                             </Grid>

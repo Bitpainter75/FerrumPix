@@ -15,6 +15,42 @@
 
     <Grid x:Name="ViewerRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="*,320">
 
+        <!-- EIN Kontextmenue fuer Buehne, Filmstreifen und Fusszeile. Welcher Ort gemeint ist
+             und welche Elemente, entscheidet OnContextRequested. -->
+        <Grid.ContextMenu>
+            <ContextMenu x:Name="ViewerKontextMenu" Opened="OnFooterMenuOpened" ItemsSource="{Binding ContextActions}">
+            <!-- Eine Vorlage fuer alle Eintraege. Symbol und Text liegen zusammen im
+            Header statt in MenuItem.Icon: die eingebaute Symbolspalte ist breiter
+            als 16 Punkte und schob das Zeichen sichtbar nach links weg. So bestimmt
+            der Abstand hier die Lage, und zwar fuer jeden Eintrag gleich.
+
+            Die Zeilen mit Sternen, Herz und Farbkreisen tragen die Klasse "widget" und
+            bleiben ausgenommen: sie bringen ihren Inhalt selbst mit. Ohne diese Ausnahme
+            ueberschrieb die Vorlage ihn - erst waren sie leer, dann nicht bedienbar. -->
+            <ContextMenu.Styles>
+            <Style Selector="MenuItem:not(.widget)">
+            <!-- Schmaler als die Vorgabe des Erscheinungsbilds (208): die Eintraege sind kurz,
+                 und ein Menue, das breiter ist als sein laengster Text, wirkt leer. -->
+            <Setter Property="MinWidth" Value="178"/>
+            <Setter Property="Command" Value="{Binding Command}"/>
+            <Setter Property="CommandParameter" Value="{Binding Parameter}"/>
+            <Setter Property="ItemsSource" Value="{Binding Children}"/>
+            <Setter Property="Header">
+            <Template>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+            <icons:SvgIcon Source="{Binding IconSource}"
+            Width="16" Height="16"
+            VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+            </StackPanel>
+            </Template>
+            </Setter>
+            </Style>
+            </ContextMenu.Styles>
+            </ContextMenu>
+        </Grid.ContextMenu>
+
+
         <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="toolbar" Height="60" Padding="24,0">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
@@ -191,7 +227,6 @@
                                        PointerReleased="OnImagePointerReleased"
                                        PointerCaptureLost="OnImagePointerCaptureLost"
                                        PointerExited="OnImagePointerExited"
-                                       ContextRequested="OnImageContextRequested"
                                        DoubleTapped="OnImageDoubleTapped" />
                             </Border>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
@@ -456,7 +491,11 @@
                 Background="{DynamicResource FP.Bg.Dark}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="0,1,0,0"
-                Padding="24,8,24,8">
+                Padding="24,8,24,8"
+                >
+            <!-- Dasselbe Menue wie hinter der Schaltflaeche, hier als Rechtsklick auf die
+                 Fussleiste. Bewusst NICHT auf der Bildflaeche: dort ist die rechte Taste
+                 bereits belegt (im Betrachter zoomt sie, im Editor hebt sie die Auswahl auf). -->
             <Grid RowDefinitions="Auto,28">
                 <ListBox Name="FilmstripListBox"
                          Classes="filmstrip-list"
@@ -491,13 +530,19 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                        <!-- Farbetikett des Bildes (gleiche Darstellung wie auf der Galerie-Kachel). -->
-                        <Ellipse Width="10" Height="10" Fill="{Binding ColorLabelBrush}"
-                                 IsVisible="{Binding HasColorLabel}" VerticalAlignment="Center" Margin="0,0,-10,0"/>
-                        <!-- Gleiche Kollisionsgefahr wie im Editor: rechts daneben stehen die mittig
-                             zentrierten Zoom-Bedienelemente, ein langer Dateiname liefe hinein. -->
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"
-                                   MaxWidth="260" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding CurrentFileName}"/>
+                        <!-- Farbetikett steht jetzt als Fenstertitel oben in der Mitte, neben dem
+                             Dateinamen - wie im Editor. -->
+                        <!-- Dasselbe Fussmenue wie in der Galerie, aber nur mit dem, was fuer EIN
+                             angezeigtes Bild sinnvoll ist. Alles haengt an vorhandenen Kommandos des
+                             Betrachters, es gibt also keinen zweiten Satz Behandler. -->
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Margin="-14,0,0,0"
+                                ToolTip.Tip="Menü für dieses Bild"
+                                Click="OnFooterMenuButtonClick">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"
+                                           Width="20" Height="20"/>
+                        </Button>
+                        <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                     </StackPanel>

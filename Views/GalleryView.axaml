@@ -26,14 +26,45 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="60,*,60">
+    <Grid x:Name="GalleryRootGrid" RowDefinitions="60,*,60">
+
+        <!-- EIN Kontextmenue fuer Kachel, Zeile und Fusszeile. -->
+        <Grid.ContextMenu>
+            <ContextMenu x:Name="GalleryContextMenu" ItemsSource="{Binding ContextActions}">
+            <!-- Die Zeilen mit Sternen, Herz und Farbkreisen tragen die Klasse "widget" und
+                 bleiben von der Vorlage ausgenommen: sie bringen ihren Inhalt selbst mit. Ohne
+                 diese Ausnahme ueberschrieb die Vorlage ihn - erst leer, dann nicht bedienbar. -->
+            <ContextMenu.Styles>
+            <Style Selector="MenuItem:not(.widget)">
+            <!-- Schmaler als die Vorgabe des Erscheinungsbilds (208): die Eintraege sind kurz,
+                 und ein Menue, das breiter ist als sein laengster Text, wirkt leer. -->
+            <Setter Property="MinWidth" Value="178"/>
+            <Setter Property="Command" Value="{Binding Command}"/>
+            <Setter Property="CommandParameter" Value="{Binding Parameter}"/>
+            <Setter Property="ItemsSource" Value="{Binding Children}"/>
+            <Setter Property="Header">
+            <Template>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+            <icons:SvgIcon Source="{Binding IconSource}" Width="16" Height="16" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+            </StackPanel>
+            </Template>
+            </Setter>
+            </Style>
+            </ContextMenu.Styles>
+            </ContextMenu>
+        </Grid.ContextMenu>
+
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="288" MinWidth="220" MaxWidth="520"/>
             <ColumnDefinition Width="6"/>
             <ColumnDefinition Width="*"/>
+            <!-- Auto statt fester Breite: eingeklappt belegt die Info-Leiste dann gar nichts,
+                 und die Kacheln bekommen den Platz zurueck. -->
+            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="2" Classes="toolbar" Height="60" Padding="16,0">
+        <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Classes="toolbar" Height="60" Padding="16,0">
             <Grid ColumnDefinitions="Auto,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <Button Classes="icon-btn" Width="36" Height="36"
@@ -101,7 +132,7 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
                     <Border Grid.Column="0"
                             Background="{DynamicResource FP.Bg.Input}"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
@@ -136,16 +167,77 @@
                                     IsVisible="{Binding SearchText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                     ToolTip.Tip="Suche zurücksetzen">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
-                                               Width="12"
-                                               Height="12"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
+                                               Width="12" Height="12"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Opacity="0.75"/>
                             </Button>
                         </Grid>
                     </Border>
 
+                    <!-- Stichwörter. Steht links vom Filter, weil es dieselbe Sorte Einschränkung
+                         ist, nur über den ganzen Bestand statt über den offenen Ordner. Die Liste
+                         entsteht beim Öffnen neu, damit frisch vergebene Stichwörter dabei sind. -->
                     <Button Grid.Column="1" Padding="10,7" Margin="0,0,8,0"
+                            Classes="filter-btn"
+                            Classes.active="{Binding HasTagFilter}"
+                            Click="OnTagFilterButtonClick"
+                            ToolTip.Tip="Stichwörter">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight"
+                                    VerticalOffset="2"
+                                    Opened="OnLocalizedFlyoutOpened">
+                                <StackPanel Spacing="1" MinWidth="248" MaxHeight="520">
+                                    <TextBlock Text="STICHWÖRTER" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               Margin="10,8,10,4"/>
+
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding ClearTagFilterCommand}">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Auswahl aufheben" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding !HasTagFilter}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+
+                                    <Separator Margin="4,6"/>
+
+                                    <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding TagFilterOptions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type models:TagFilterOption}">
+                                                    <!-- Click statt Command: der Inhalt eines Aufklappfensters haengt
+                                                         NICHT im Baum der Ansicht, eine Bindung ueber den Vorfahren
+                                                         findet dort nichts und die Schaltflaeche bleibt tot. -->
+                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                            Click="OnTagFilterItemClick">
+                                                        <Grid ColumnDefinitions="*,20">
+                                                            <TextBlock Text="{Binding Label}" Classes="no-translate"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <TextBlock Text="Keine Stichwörter vergeben"
+                                               IsVisible="{Binding !TagFilterOptions.Count}"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               Margin="10,8,10,10"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/tag.svg"
+                                       Width="18" Height="18"/>
+                    </Button>
+
+                    <Button Grid.Column="2" Padding="10,7" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasActiveFilter}"
                             ToolTip.Tip="Filter">
@@ -206,7 +298,12 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="1">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="★" VerticalAlignment="Center"/>
+                                                <!-- Dieselben Sterne wie auf der Kachel und im Kontextmenue,
+                                                     nicht das Schriftzeichen. -->
+                                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating1Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -215,7 +312,12 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="2">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="★★" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating2Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -224,7 +326,14 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="3">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="★★★" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating3Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -233,7 +342,16 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="4">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="★★★★" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating4Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -242,7 +360,18 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRatingCommand}" CommandParameter="5">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="★★★★★" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
+                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating5}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -392,7 +521,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="2"
+                    <Button Grid.Column="3"
                             MinWidth="156" MaxWidth="260"
                             Padding="10,7" Margin="0,0,8,0"
                             ToolTip.Tip="Sortieren">
@@ -577,7 +706,7 @@
                         </StackPanel>
                     </Button>
 
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
                         <Button Classes="icon-btn" Width="36" Height="36"
                                 Classes.active="{Binding IsListView}"
                                 Command="{Binding SetViewModeCommand}" CommandParameter="List"
@@ -590,6 +719,13 @@
                                 Command="{Binding SetViewModeCommand}" CommandParameter="Grid"
                                 ToolTip.Tip="Rasteransicht">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-grid.svg"
+                                   Width="20" Height="20"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="36" Height="36"
+                                Classes.active="{Binding IsInfoSidebarVisible}"
+                                Command="{Binding ToggleInfoSidebarCommand}"
+                                ToolTip.Tip="Info">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg"
                                    Width="20" Height="20"/>
                         </Button>
                         <Button Classes="icon-btn" Width="36" Height="36"
@@ -675,10 +811,8 @@
                                                       Click="OnRemoveVirtualSearchClick"
                                                       ToolTip.Tip="Suche entfernen">
                                                   <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
-                                                                 Width="12"
-                                                                 Height="12"
-                                                                 HorizontalAlignment="Center"
-                                                                 VerticalAlignment="Center"
+                                                                 Width="12" Height="12"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                  Opacity="0.75"/>
                                               </Button>
                                           </Grid>
@@ -806,10 +940,8 @@
                                                       Click="OnRemoveVirtualSearchClick"
                                                       ToolTip.Tip="Suche entfernen">
                                                   <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
-                                                                 Width="12"
-                                                                 Height="12"
-                                                                 HorizontalAlignment="Center"
-                                                                 VerticalAlignment="Center"
+                                                                 Width="12" Height="12"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                  Opacity="0.75"/>
                                               </Button>
                                           </Grid>
@@ -1012,6 +1144,17 @@
                       ShowsPreview="False"
                       Cursor="SizeWestEast"/>
 
+        <!-- Dieselbe Info-Leiste wie in Betrachter und Editor. Ihren Zustand traegt hier ein
+             eigenes ViewModel, das dem markierten Bild folgt. -->
+        <!-- IsVisible MUSS hier stehen, nicht nur innen: die Info-Leiste blendet intern nur ihren
+             Rahmen aus, das Steuerelement selbst blieb 320 Punkte breit und hielt die Spalte
+             besetzt. Erst so gibt der eingeklappte Zustand den Platz an die Kacheln zurueck. -->
+        <!-- Sichtbarkeit ueber den Vorfahren, nicht ueber den eigenen Datenkontext: der Zustand
+             gehoert der Galerie und wird beim Start aus den Einstellungen gelesen. -->
+        <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320"
+                               IsVisible="{Binding DataContext.IsInfoSidebarVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               DataContext="{Binding InfoPanel}"/>
+
         <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource FP.Bg.Root}" ClipToBounds="True">
             <Grid>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
@@ -1025,17 +1168,10 @@
                               VerticalScrollBarVisibility="Auto"
                               PointerPressed="OnGalleryAreaPointerPressed"
                               IsVisible="{Binding IsGridView}"
-                              ContextRequested="OnGalleryAreaContextRequested"
                               DragDrop.AllowDrop="True"
                               DragDrop.DragOver="OnGalleryAreaDragOver"
                               DragDrop.Drop="OnGalleryAreaDrop"
                               Margin="0,0,8,0">
-                    <ScrollViewer.ContextMenu>
-                        <ContextMenu Opened="OnLocalizedMenuOpened">
-                            <MenuItem Name="GalleryGridViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
-                            <MenuItem Name="GalleryGridViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
-                        </ContextMenu>
-                    </ScrollViewer.ContextMenu>
                     <!-- VerticalAlignment=Top ist Pflicht: mit EXPLIZITER Höhe (ContentHeight-Virtualisierung)
                          zentriert das Standard-Alignment (Stretch) das Panel im größeren Viewport - bei
                          wenigen Bildern rutschte das ganze Raster in die vertikale Mitte. -->
@@ -1043,14 +1179,7 @@
                                 VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
-                        <ItemsControl ItemsSource="{Binding DisplayItems}"
-                                      ContextRequested="OnGalleryAreaContextRequested">
-                            <ItemsControl.ContextMenu>
-                            <ContextMenu Opened="OnLocalizedMenuOpened">
-                                <MenuItem Name="GalleryGridCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
-                                <MenuItem Name="GalleryGridPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
-                            </ContextMenu>
-                            </ItemsControl.ContextMenu>
+                        <ItemsControl ItemsSource="{Binding DisplayItems}">
                             <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel Orientation="Horizontal"/>
@@ -1065,76 +1194,12 @@
                                         AttachedToVisualTree="OnGalleryItemAttachedToVisualTree"
                                         Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Cursor="Hand"
-                                        ContextRequested="OnThumbnailContextRequested"
                                         PointerPressed="OnThumbnailPointerPressed"
                                         PointerMoved="OnThumbnailPointerMoved"
                                         DoubleTapped="OnThumbnailDoubleTapped"
                                         DragDrop.AllowDrop="True"
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
-                                    <Border.ContextMenu>
-                                        <ContextMenu Opened="OnLocalizedMenuOpened">
-                                            <MenuItem Name="GridContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
-                                            <MenuItem Name="GridContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
-                                            <MenuItem Name="GridContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
-                                            <Separator Name="GridContextTopSeparator"/>
-                                            <MenuItem Name="GridContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
-                                            <MenuItem Name="GridContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename" IsVisible="{Binding CanFileOperationRename}"/>
-                                            <MenuItem Name="GridContextCopyMenuItem" Header="Kopieren" Click="OnContextCopy" IsVisible="{Binding CanFileOperationCopy}"/>
-                                            <MenuItem Name="GridContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut" IsVisible="{Binding CanFileOperationRename}"/>
-                                            <MenuItem Name="GridContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
-                                            <MenuItem Name="GridContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
-                                            <MenuItem Name="GridContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
-                                            <MenuItem Name="GridContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
-                                            <MenuItem Name="GridContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
-                                            <MenuItem Name="GridContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
-                                            <MenuItem Name="GridContextExportToMenuItem" Header="Exportieren nach..." Click="OnContextExportTo"/>
-                                            <MenuItem Name="GridContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
-                                            <MenuItem Name="GridContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
-                                            <MenuItem Name="GridContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint" IsVisible="{Binding IsImage}"/>
-                                            <Separator Name="GridContextPathSeparator"/>
-                                            <MenuItem Name="GridContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
-                                            <MenuItem Name="GridContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
-                                            <Separator Name="GridContextDeleteSeparator"/>
-                                            <MenuItem Header="Löschen" Click="OnContextDelete" IsVisible="{Binding CanFileOperationDelete}"/>
-                                            <Separator IsVisible="{Binding IsImage}"/>
-                                            <!-- Farbetiketten: dieselben Farben wie die Akzentauswahl in den Einstellungen,
-                                                 direkt nebeneinander wie im Filter-Menü; × entfernt das Etikett. -->
-                                            <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,4" IsVisible="{Binding IsImage}">
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnContextSetColorLabel" ToolTip.Tip="Orange">
-                                                    <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnContextSetColorLabel" ToolTip.Tip="Rot">
-                                                    <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnContextSetColorLabel" ToolTip.Tip="Pink">
-                                                    <Ellipse Width="16" Height="16" Fill="#F03B88"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnContextSetColorLabel" ToolTip.Tip="Lila">
-                                                    <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnContextSetColorLabel" ToolTip.Tip="Blau">
-                                                    <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnContextSetColorLabel" ToolTip.Tip="Cyan">
-                                                    <Ellipse Width="16" Height="16" Fill="#0891B2"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnContextSetColorLabel" ToolTip.Tip="Türkis">
-                                                    <Ellipse Width="16" Height="16" Fill="#0F766E"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
-                                                    <Ellipse Width="16" Height="16" Fill="#22C55E"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnContextSetColorLabel" ToolTip.Tip="Gelb">
-                                                    <Ellipse Width="16" Height="16" Fill="#FACC15"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
-                                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                                </Button>
-                                            </StackPanel>
-                                        </ContextMenu>
-                                    </Border.ContextMenu>
                                     <!-- Beschriftungszeile: AUTO, damit der Streifen exakt so hoch ist wie sein Inhalt.
                                          Eine feste Höhe hinterließ unter dem Text einen sichtbaren Leerstreifen und
                                          würde bei größerer Schrift klemmen. -->
@@ -1461,31 +1526,17 @@
                               VerticalScrollBarVisibility="Auto"
                               PointerPressed="OnGalleryAreaPointerPressed"
                               IsVisible="{Binding IsListView}"
-                              ContextRequested="OnGalleryAreaContextRequested"
                               DragDrop.AllowDrop="True"
                               DragDrop.DragOver="OnGalleryAreaDragOver"
                               DragDrop.Drop="OnGalleryAreaDrop"
                               Margin="0,0,8,0">
-                    <ScrollViewer.ContextMenu>
-                        <ContextMenu Opened="OnLocalizedMenuOpened">
-                            <MenuItem Name="GalleryListViewportCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
-                            <MenuItem Name="GalleryListViewportPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
-                        </ContextMenu>
-                    </ScrollViewer.ContextMenu>
                     <!-- VerticalAlignment=Top: siehe Kommentar an der Raster-Ansicht (explizite Höhe
                          + Stretch-Default = vertikal zentriert bei kurzem Inhalt). -->
                     <StackPanel Margin="12,12,18,150"
                                 VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
-                        <ItemsControl ItemsSource="{Binding DisplayItems}"
-                                      ContextRequested="OnGalleryAreaContextRequested">
-                            <ItemsControl.ContextMenu>
-                            <ContextMenu Opened="OnLocalizedMenuOpened">
-                                <MenuItem Name="GalleryListCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
-                                <MenuItem Name="GalleryListPasteMenuItem" Header="Einfügen" Click="OnGalleryAreaPaste"/>
-                            </ContextMenu>
-                            </ItemsControl.ContextMenu>
+                        <ItemsControl ItemsSource="{Binding DisplayItems}">
                             <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Orientation="Vertical"/>
@@ -1499,75 +1550,12 @@
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
                                         AttachedToVisualTree="OnGalleryItemAttachedToVisualTree"
                                         Cursor="Hand"
-                                        ContextRequested="OnThumbnailContextRequested"
                                         PointerPressed="OnThumbnailPointerPressed"
                                         PointerMoved="OnThumbnailPointerMoved"
                                         DoubleTapped="OnThumbnailDoubleTapped"
                                         DragDrop.AllowDrop="True"
                                         DragDrop.DragOver="OnItemDragOver"
                                         DragDrop.Drop="OnItemDrop">
-                                    <Border.ContextMenu>
-                                        <ContextMenu Opened="OnLocalizedMenuOpened">
-                                            <MenuItem Name="ListContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
-                                            <MenuItem Name="ListContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
-                                            <MenuItem Name="ListContextEditMenuItem" Header="Anpassen" Click="OnContextEdit" IsVisible="{Binding CanEditFile}"/>
-                                            <Separator Name="ListContextTopSeparator"/>
-                                            <MenuItem Name="ListContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
-                                            <MenuItem Name="ListContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename" IsVisible="{Binding CanFileOperationRename}"/>
-                                            <MenuItem Name="ListContextCopyMenuItem" Header="Kopieren" Click="OnContextCopy" IsVisible="{Binding CanFileOperationCopy}"/>
-                                            <MenuItem Name="ListContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut" IsVisible="{Binding CanFileOperationRename}"/>
-                                            <MenuItem Name="ListContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste" IsVisible="{Binding CanFileOperationPasteInto}"/>
-                                            <MenuItem Name="ListContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate" IsVisible="{Binding CanFileOperationCopy}"/>
-                                            <MenuItem Name="ListContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
-                                            <MenuItem Name="ListContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
-                                            <MenuItem Name="ListContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
-                                            <MenuItem Name="ListContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
-                                            <MenuItem Name="ListContextExportToMenuItem" Header="Exportieren nach..." Click="OnContextExportTo"/>
-                                            <MenuItem Name="ListContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata" IsVisible="{Binding CanRemoveMetadata}"/>
-                                            <MenuItem Name="ListContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
-                                            <MenuItem Name="ListContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint"/>
-                                            <Separator Name="ListContextPathSeparator"/>
-                                            <MenuItem Name="ListContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
-                                            <MenuItem Name="ListContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
-                                            <Separator Name="ListContextDeleteSeparator"/>
-                                            <MenuItem Header="Löschen" Click="OnContextDelete" IsVisible="{Binding CanFileOperationDelete}"/>
-                                            <Separator IsVisible="{Binding IsImage}"/>
-                                            <!-- Farbetiketten: siehe Raster-Kontextmenü (Akzentfarben-Palette). -->
-                                            <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,4" IsVisible="{Binding IsImage}">
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnContextSetColorLabel" ToolTip.Tip="Orange">
-                                                    <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnContextSetColorLabel" ToolTip.Tip="Rot">
-                                                    <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnContextSetColorLabel" ToolTip.Tip="Pink">
-                                                    <Ellipse Width="16" Height="16" Fill="#F03B88"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnContextSetColorLabel" ToolTip.Tip="Lila">
-                                                    <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnContextSetColorLabel" ToolTip.Tip="Blau">
-                                                    <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnContextSetColorLabel" ToolTip.Tip="Cyan">
-                                                    <Ellipse Width="16" Height="16" Fill="#0891B2"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnContextSetColorLabel" ToolTip.Tip="Türkis">
-                                                    <Ellipse Width="16" Height="16" Fill="#0F766E"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
-                                                    <Ellipse Width="16" Height="16" Fill="#22C55E"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnContextSetColorLabel" ToolTip.Tip="Gelb">
-                                                    <Ellipse Width="16" Height="16" Fill="#FACC15"/>
-                                                </Button>
-                                                <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
-                                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                                </Button>
-                                            </StackPanel>
-                                        </ContextMenu>
-                                    </Border.ContextMenu>
                                     <Grid ColumnDefinitions="76,*,150,90,90,Auto,Auto,28" Height="72">
                                         <Border Grid.Column="0"
                                                 Width="56"
@@ -1873,81 +1861,20 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Grid.Column="2" Classes="statusbar window-drag" Height="60" Padding="20,10">
+        <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Classes="statusbar window-drag" Height="60" Padding="20,10">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
                     <!-- Zeigt dasselbe Menü wie ein Rechtsklick auf ein Bild: dort stecken inzwischen die
                          meisten Stapelfunktionen, und ein Rechtsklick ist nicht auf jedem Gerät bequem.
                          Die Einträge tragen keine IsVisible-Bindungen - OnGalleryMenuButtonClick setzt
                          jede Sichtbarkeit über UpdateGalleryItemContextMenu selbst. -->
+                    <!-- Immer bedienbar, auch ohne Auswahl: es bleiben Aktionen, die kein Bild
+                         brauchen - neuer Ordner, einfügen, neues Bild, Vollbild. Der Bauplan
+                         entscheidet, was davon erscheint. -->
                     <Button Classes="icon-btn" Width="34" Height="34"
+                            Margin="-10,0,0,0"
                             Click="OnGalleryMenuButtonClick"
-                            IsEnabled="{Binding HasSelection}"
-                            ToolTip.Tip="Menü für die Auswahl">
-                        <Button.ContextMenu>
-                            <ContextMenu Opened="OnLocalizedMenuOpened">
-                                <MenuItem Name="MenuContextOpenMenuItem" Header="Anzeigen" Click="OnContextOpen"/>
-                                <MenuItem Name="MenuContextCompareMenuItem" Header="Vergleichen" Click="OnContextCompare"/>
-                                <MenuItem Name="MenuContextEditMenuItem" Header="Anpassen" Click="OnContextEdit"/>
-                                <Separator Name="MenuContextTopSeparator"/>
-                                <MenuItem Name="MenuContextCreateFolderMenuItem" Header="Neuer Ordner" Click="OnGalleryAreaCreateFolder"/>
-                                <MenuItem Name="MenuContextRenameMenuItem" Header="Umbenennen" Click="OnContextRename"/>
-                                <MenuItem Name="MenuContextCopyMenuItem" Header="Kopieren" Click="OnContextCopy"/>
-                                <MenuItem Name="MenuContextCutMenuItem" Header="Ausschneiden" Click="OnContextCut"/>
-                                <MenuItem Name="MenuContextPasteMenuItem" Header="Einfügen" Click="OnContextPaste"/>
-                                <MenuItem Name="MenuContextDuplicateMenuItem" Header="Duplizieren" Click="OnContextDuplicate"/>
-                                <MenuItem Name="MenuContextResizeMenuItem" Header="Bildgröße ändern..." Click="OnContextResize"/>
-                                <MenuItem Name="MenuContextApplyWatermarkMenuItem" Header="Wasserzeichen anwenden..." Click="OnContextApplyWatermark"/>
-                                <MenuItem Name="MenuContextApplyFilterMenuItem" Header="Filter anwenden..." Click="OnContextApplyFilter"/>
-                                <MenuItem Name="MenuContextBatchConvertMenuItem" Header="Konvertieren nach..." Click="OnContextBatchConvert"/>
-                                            <MenuItem Name="MenuContextExportToMenuItem" Header="Exportieren nach..." Click="OnContextExportTo"/>
-                                <MenuItem Name="MenuContextRemoveMetadataMenuItem" Header="Metadaten entfernen" Click="OnContextRemoveMetadata"/>
-                                <MenuItem Name="MenuContextCreateCollageMenuItem" Header="Collage erstellen..." Click="OnContextCreateCollage"/>
-                                <MenuItem Name="MenuContextPrintMenuItem" Header="Drucken..." Click="OnContextPrint"/>
-                                <Separator Name="MenuContextPathSeparator"/>
-                                <MenuItem Name="MenuContextCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyPath"/>
-                                <MenuItem Name="MenuContextRevealMenuItem" Header="Im Dateimanager zeigen" Click="OnContextReveal"/>
-                                <Separator Name="MenuContextDeleteSeparator"/>
-                                <MenuItem Name="MenuContextDeleteMenuItem" Header="Löschen" Click="OnContextDelete"/>
-                                <Separator IsVisible="{Binding IsImage}"/>
-                                <!-- Farbetiketten wie im Rechtsklick-Menü der Kacheln
-                                     (Footermenü == Kontextmenü). DataContext ist vor dem
-                                     Öffnen das ausgewählte Element (OnGalleryMenuButtonClick). -->
-                                <StackPanel Orientation="Horizontal" Spacing="5" Margin="10,4,10,4" IsVisible="{Binding IsImage}">
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnContextSetColorLabel" ToolTip.Tip="Orange">
-                                        <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#E74C3C" Click="OnContextSetColorLabel" ToolTip.Tip="Rot">
-                                        <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F03B88" Click="OnContextSetColorLabel" ToolTip.Tip="Pink">
-                                        <Ellipse Width="16" Height="16" Fill="#F03B88"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#8B5CF6" Click="OnContextSetColorLabel" ToolTip.Tip="Lila">
-                                        <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#3B82F6" Click="OnContextSetColorLabel" ToolTip.Tip="Blau">
-                                        <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0891B2" Click="OnContextSetColorLabel" ToolTip.Tip="Cyan">
-                                        <Ellipse Width="16" Height="16" Fill="#0891B2"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#0F766E" Click="OnContextSetColorLabel" ToolTip.Tip="Türkis">
-                                        <Ellipse Width="16" Height="16" Fill="#0F766E"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#22C55E" Click="OnContextSetColorLabel" ToolTip.Tip="Grün">
-                                        <Ellipse Width="16" Height="16" Fill="#22C55E"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#FACC15" Click="OnContextSetColorLabel" ToolTip.Tip="Gelb">
-                                        <Ellipse Width="16" Height="16" Fill="#FACC15"/>
-                                    </Button>
-                                    <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="" Click="OnContextSetColorLabel" ToolTip.Tip="Kein Etikett">
-                                        <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                    </Button>
-                                </StackPanel>
-                            </ContextMenu>
-                        </Button.ContextMenu>
+                            ToolTip.Tip="Menü">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"
                                        Width="20" Height="20"/>
                     </Button>

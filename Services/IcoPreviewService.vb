@@ -34,7 +34,7 @@ Namespace Services
         Public Shared Function ExtractPreview(filePath As String) As MemoryStream
             Try
                 Dim data = File.ReadAllBytes(filePath)
-                Dim bitmap = DecodeBestEntry(data)
+                Dim bitmap = DecodeLargestEntry(data)
                 If bitmap Is Nothing Then Return Nothing
 
                 Using bitmap
@@ -53,7 +53,7 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function DecodeBestEntry(data As Byte()) As SKBitmap
+        Private Shared Function DecodeLargestEntry(data As Byte()) As SKBitmap
             If data Is Nothing OrElse data.Length < IconDirSize Then Return Nothing
             ' Reserviert muss 0 sein, Typ 1 = Icon (2 wäre ein Mauszeiger).
             If BitConverter.ToUInt16(data, 0) <> 0US OrElse BitConverter.ToUInt16(data, 2) <> 1US Then Return Nothing

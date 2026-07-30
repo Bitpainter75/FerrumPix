@@ -552,16 +552,16 @@ Namespace ViewModels
         ''' anfassen - eine Vorschau dagegen entsteht genau deshalb, WEIL man am Regler zieht. Sie zu
         ''' sperren hiesse, den Regler beim Ziehen zu blockieren. Man soll nur sehen, dass noch
         ''' gerechnet wird, sonst wartet man vor einem Bild, das sich scheinbar nicht ruehrt.</summary>
-        Public ReadOnly Property ZeigtVorschauArbeit As Boolean
+        Public ReadOnly Property ShowsPreviewBusy As Boolean
             Get
                 Return _vorschauRechnet AndAlso Not _zeigtBeschaeftigt
             End Get
         End Property
 
-        Public Sub SetzeVorschauRechnet(wert As Boolean)
+        Public Sub SetPreviewBusy(wert As Boolean)
             If _vorschauRechnet = wert Then Return
             _vorschauRechnet = wert
-            Me.RaisePropertyChanged(NameOf(ZeigtVorschauArbeit))
+            Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
         End Sub
 
         ''' <summary>Umgekehrt, fuer die Bedienbarkeit ganzer Panelbereiche.</summary>
@@ -580,7 +580,7 @@ Namespace ViewModels
 
         ''' <summary>Was gerade laeuft, in einem Wort. Wird von den langen Wegen gesetzt, bevor sie
         ''' anfangen - sonst stuende dort nur "Wird berechnet".</summary>
-        Public Sub SetzeBeschaeftigtGrund(text As String)
+        Public Sub SetBusyReason(text As String)
             If String.Equals(_beschaeftigtGrund, text, StringComparison.Ordinal) Then Return
             _beschaeftigtGrund = If(text, "")
             Me.RaisePropertyChanged(NameOf(BeschaeftigtText))
@@ -597,10 +597,10 @@ Namespace ViewModels
                 _beschaeftigtLauf += 1
                 If _zeigtBeschaeftigt Then
                     _zeigtBeschaeftigt = False
-                    SetzeBeschaeftigtGrund("")
+                    SetBusyReason("")
                     Me.RaisePropertyChanged(NameOf(ZeigtBeschaeftigt))
                     Me.RaisePropertyChanged(NameOf(BedienbarWaehrendArbeit))
-                    Me.RaisePropertyChanged(NameOf(ZeigtVorschauArbeit))
+                    Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
                 End If
                 Return
             End If
@@ -616,7 +616,7 @@ Namespace ViewModels
             _zeigtBeschaeftigt = True
             Me.RaisePropertyChanged(NameOf(ZeigtBeschaeftigt))
             Me.RaisePropertyChanged(NameOf(BedienbarWaehrendArbeit))
-            Me.RaisePropertyChanged(NameOf(ZeigtVorschauArbeit))
+            Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
         End Function
 
         Private Sub EnqueueWorkingCommit(work As Func(Of WorkingImagePatch), onDoneUi As Action(Of WorkingImagePatch))
@@ -3477,9 +3477,14 @@ Namespace ViewModels
 
         ''' <summary>Breite der linken Werkzeugleiste: eingeklappt bleibt genau Platz für die Symbole
         ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18).</summary>
+        ''' <summary>Breite der Werkzeugleiste. Ausgeklappt waechst sie mit der Schriftgroesse mit:
+        ''' bei fester Breite schnitt der laengste Eintrag ("Drehen und Verzerren") ab einem
+        ''' Schriftversatz von etwa +3 sein letztes Wort ab, und das sah aus wie ein fehlender Text.
+        ''' Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.</summary>
         Public ReadOnly Property ToolSidebarWidth As Double
             Get
-                Return If(IsToolSidebarCollapsed, 54.0, 190.0)
+                If IsToolSidebarCollapsed Then Return 54.0
+                Return 190.0 + Math.Max(0, FontScaleService.CurrentOffset) * 10.0
             End Get
         End Property
 
@@ -3490,6 +3495,7 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_currentImagePath, value)
                 Me.RaisePropertyChanged(NameOf(CurrentFileName))
+                _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
@@ -3795,7 +3801,7 @@ Namespace ViewModels
                     ' Die Vorschau der Tiefen-Unschaerfe gehoert zum Detailwerkzeug. Sie liegt ueber
                     ' dem Bild und wuerde sonst in einem anderen Werkzeug stehen bleiben, wo ihre
                     ' Regler gar nicht mehr zu sehen sind.
-                    RaeumeBokehVorschauAb()
+                    DisposeBokehPreview()
                     ' Dasselbe fuer das Verzerren: die Live-Vorschau, das Gitternetz und der
                     ' Perspektivrahmen gehoeren zu einem Werkzeug, das man gerade verlaesst.
                     VerzerrenModus = ""
@@ -3805,7 +3811,7 @@ Namespace ViewModels
                     ' naechsten Anwenden ueberrascht. Die Perspektive bleibt - sie steht in Reglern,
                     ' die man auch nach dem Wechsel noch sieht.
                     If HasWarpGridChanges Then
-                        SetzeGitterZurueck()
+                        ResetGrid()
                         Me.RaisePropertyChanged(NameOf(WarpGridValues))
                         Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
                     End If
@@ -3813,7 +3819,7 @@ Namespace ViewModels
                     ' sieht man nur im Werkzeug.
                     If _linien.Count > 0 Then
                         _linien.Clear()
-                        MeldeLinien()
+                        RaiseLinesChanged()
                     End If
                     ' Werkzeugwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe
                     ' AddBrushStroke) - auch zwischen zwei Ebenen-Werkzeugen (Draw -> Text usw.), wo
@@ -3821,7 +3827,7 @@ Namespace ViewModels
                     _pixelEditLayer.ResetActiveStroke()
                     ' Objekt-, Retusche-, Pinsel- und Transformwerkzeuge verdecken mit dem roten
                     ' Overlay genau das, woran man arbeitet - dort verschwindet es sofort.
-                    If VerdecktDasMaskenOverlay(value) Then VerbergeMaskenOverlay()
+                    If CoversMaskOverlay(value) Then HideMaskOverlay()
                 End If
                 If Not IsLayerTool(value) Then SelectedAnnotationIndex = -1
                 If Not CanShowBeforeAfter AndAlso _showBeforeImage Then
@@ -3844,7 +3850,7 @@ Namespace ViewModels
                 ' Maske der markierten Ebene, und SetSelectionMaskData loescht dabei die Anzeige und
                 ' baut nur die Ameisenlinie neu auf - das rote Overlay bliebe sonst weg. In den
                 ' Werkzeugen, die es ohnehin verdecken, wird bewusst NICHT veroeffentlicht.
-                If Not VerdecktDasMaskenOverlay(value) Then PublishMaskBrushOverlay(nurWennSichtbar:=True)
+                If Not CoversMaskOverlay(value) Then PublishMaskBrushOverlay(nurWennSichtbar:=True)
                 RequestOverlayStateNotify()
                 ' STEMPEL-LIVE: Live-Puffer (Ziel + Sample, 2 Pipeline-Renders)
                 ' schon beim Werkzeugwechsel asynchron vorwaermen - erst beim ersten Spot gebaut,
@@ -4064,12 +4070,12 @@ Namespace ViewModels
                     SelectionMode = "Brush"
                 ElseIf String.Equals(normalized, "Tiefe", StringComparison.Ordinal) Then
                     ' Beim Betreten gleich rechnen - ohne Klick gibt es hier nichts anzustossen.
-                    Dim ignoriertT = ZeichneTiefenMaskeNeu()
+                    Dim ignoriertT = RedrawDepthMask()
                 ElseIf String.Equals(normalized, "Objekt", StringComparison.Ordinal) Then
                     ' Die Objektauswahl sammelt Punkte fuer GENAU EIN Objekt. Beim Betreten des
                     ' Modus faengt sie frisch an - sonst haetten die Klicks des vorigen Objekts
                     ' noch Einfluss, und der erste Klick ergaebe etwas Unerwartetes.
-                    VergissMotivPunkte()
+                    ForgetSubjectPoints()
                 End If
             End Set
         End Property
@@ -4662,7 +4668,7 @@ Namespace ViewModels
         Private _lensDistortion As Boolean? = Nothing
         Private _lensTca As Boolean? = Nothing
         Private _lensVignetting As Boolean? = Nothing
-        Private _objektivKorrektur As ObjektivDatenService.Korrektur = Nothing
+        Private _objektivKorrektur As LensDataService.Korrektur = Nothing
         Private _objektivExifName As String = ""
         ' Von Hand gewaehltes Objektiv, wenn die Aufnahmedaten keines nennen (Rezeptfeld).
         Private _lensModel As String = ""
@@ -4681,13 +4687,13 @@ Namespace ViewModels
             Get
                 If String.IsNullOrWhiteSpace(_objektivExifName) Then
                     If _objektivKorrektur IsNot Nothing Then
-                        Return _objektivKorrektur.ObjektivName & " - " &
+                        Return _objektivKorrektur.LensName & " - " &
                                LocalizationService.T("von Hand gewählt, nur für dieses Bild")
                     End If
                     ' Ein gewaehltes Objektiv OHNE Ergebnis hat einen Grund - den soll die Zeile
                     ' nennen, statt so auszusehen, als sei der Knopf kaputt.
                     If Not String.IsNullOrWhiteSpace(_lensModel) Then
-                        If ObjektivDatenService.BrauchtBrennweite(_lensModel, _objektivKamera.Modell) Then
+                        If LensDataService.BrauchtBrennweite(_lensModel, _objektivKamera.Modell) Then
                             Return _lensModel & " - " &
                                    LocalizationService.T("Zoom ohne Brennweitenangabe: nicht zuzuordnen")
                         End If
@@ -4698,29 +4704,29 @@ Namespace ViewModels
                 If _objektivKorrektur Is Nothing Then
                     Return _objektivExifName & " - " & LocalizationService.T("keine Messwerte vorhanden")
                 End If
-                Dim zugeordnet = ObjektivDatenService.ZuordnungFuer(_objektivExifName)
+                Dim zugeordnet = LensDataService.ZuordnungFuer(_objektivExifName)
                 If Not String.IsNullOrWhiteSpace(zugeordnet) Then
-                    Return _objektivKorrektur.ObjektivName & " - " & LocalizationService.T("von Hand zugeordnet")
+                    Return _objektivKorrektur.LensName & " - " & LocalizationService.T("von Hand zugeordnet")
                 End If
-                Return _objektivKorrektur.ObjektivName
+                Return _objektivKorrektur.LensName
             End Get
         End Property
 
         Public ReadOnly Property HasLensDistortionData As Boolean
             Get
-                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HatVerzeichnung
+                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HasDistortion
             End Get
         End Property
 
         Public ReadOnly Property HasLensTcaData As Boolean
             Get
-                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HatFarbquerfehler
+                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HasChromaticAberration
             End Get
         End Property
 
         Public ReadOnly Property HasLensVignettingData As Boolean
             Get
-                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HatVignettierung
+                Return _objektivKorrektur IsNot Nothing AndAlso _objektivKorrektur.HasVignetting
             End Get
         End Property
 
@@ -4759,7 +4765,7 @@ Namespace ViewModels
             Dim alle = LensCandidates
             If alle.Count = 0 Then Return
 
-            Dim treffer = WaehleObjektiv(text, alle)
+            Dim treffer = SelectLens(text, alle)
             If Not String.IsNullOrEmpty(treffer) Then LensAssignment = treffer
         End Sub
 
@@ -4772,7 +4778,7 @@ Namespace ViewModels
         ''' der erste genommen und NICHT geschwiegen: die Zeile darunter zeigt sofort, was gilt, und
         ''' das Zuruecksetzen im Kopf loest es wieder. Ein Knopf, der manchmal nichts tut, ist
         ''' schlimmer als eine sichtbare Vorauswahl.</summary>
-        Friend Shared Function WaehleObjektiv(eingabe As String, kandidaten As List(Of String)) As String
+        Friend Shared Function SelectLens(eingabe As String, kandidaten As List(Of String)) As String
             If kandidaten Is Nothing OrElse kandidaten.Count = 0 Then Return ""
             If String.IsNullOrWhiteSpace(eingabe) Then Return ""
             Dim text = eingabe.Trim()
@@ -4803,7 +4809,7 @@ Namespace ViewModels
             Get
                 Dim schluessel = _objektivKamera.Hersteller & "|" & _objektivKamera.Modell
                 If _lensCandidates Is Nothing OrElse Not String.Equals(_lensCandidatesFuer, schluessel, StringComparison.Ordinal) Then
-                    _lensCandidates = ObjektivDatenService.PassendeObjektive(_objektivKamera.Hersteller, _objektivKamera.Modell)
+                    _lensCandidates = LensDataService.MatchingLenses(_objektivKamera.Hersteller, _objektivKamera.Modell)
                     _lensCandidatesFuer = schluessel
                 End If
                 Return _lensCandidates
@@ -4822,7 +4828,7 @@ Namespace ViewModels
         Public Property LensAssignment As String
             Get
                 If String.IsNullOrWhiteSpace(_objektivExifName) Then Return _lensModel
-                Return ObjektivDatenService.ZuordnungFuer(_objektivExifName)
+                Return LensDataService.ZuordnungFuer(_objektivExifName)
             End Get
             Set(value As String)
                 ' Leer und Nothing sind DASSELBE ("automatisch erkennen"). Ohne diese Angleichung
@@ -4835,37 +4841,37 @@ Namespace ViewModels
                 If String.IsNullOrWhiteSpace(_objektivExifName) Then
                     _lensModel = neuerWert
                 Else
-                    ObjektivDatenService.SetzeZuordnung(_objektivExifName, neuerWert)
+                    LensDataService.SetAssignment(_objektivExifName, neuerWert)
                 End If
-                AktualisiereObjektivKorrektur()
-                BaueArbeitsbildNeuWegenObjektiv()
+                RefreshLensCorrection()
+                RebuildWorkingImageForLens()
             End Set
         End Property
 
         Public Property LensDistortionEnabled As Boolean
             Get
-                Return LoeseObjektivSchalter(_lensDistortion)
+                Return ReleaseLensSwitch(_lensDistortion)
             End Get
             Set(value As Boolean)
-                SetzeObjektivSchalter(_lensDistortion, value, NameOf(LensDistortionEnabled))
+                SetLensSwitch(_lensDistortion, value, NameOf(LensDistortionEnabled))
             End Set
         End Property
 
         Public Property LensTcaEnabled As Boolean
             Get
-                Return LoeseObjektivSchalter(_lensTca)
+                Return ReleaseLensSwitch(_lensTca)
             End Get
             Set(value As Boolean)
-                SetzeObjektivSchalter(_lensTca, value, NameOf(LensTcaEnabled))
+                SetLensSwitch(_lensTca, value, NameOf(LensTcaEnabled))
             End Set
         End Property
 
         Public Property LensVignettingEnabled As Boolean
             Get
-                Return LoeseObjektivSchalter(_lensVignetting)
+                Return ReleaseLensSwitch(_lensVignetting)
             End Get
             Set(value As Boolean)
-                SetzeObjektivSchalter(_lensVignetting, value, NameOf(LensVignettingEnabled))
+                SetLensSwitch(_lensVignetting, value, NameOf(LensVignettingEnabled))
             End Set
         End Property
 
@@ -4882,7 +4888,7 @@ Namespace ViewModels
                 Return _lensDistortionAmount
             End Get
             Set(value As Double)
-                SetzeObjektivStaerke(_lensDistortionAmount, value, NameOf(LensDistortionAmount))
+                SetLensStrength(_lensDistortionAmount, value, NameOf(LensDistortionAmount))
             End Set
         End Property
 
@@ -4891,7 +4897,7 @@ Namespace ViewModels
                 Return _lensTcaAmount
             End Get
             Set(value As Double)
-                SetzeObjektivStaerke(_lensTcaAmount, value, NameOf(LensTcaAmount))
+                SetLensStrength(_lensTcaAmount, value, NameOf(LensTcaAmount))
             End Set
         End Property
 
@@ -4900,46 +4906,46 @@ Namespace ViewModels
                 Return _lensVignettingAmount
             End Get
             Set(value As Double)
-                SetzeObjektivStaerke(_lensVignettingAmount, value, NameOf(LensVignettingAmount))
+                SetLensStrength(_lensVignettingAmount, value, NameOf(LensVignettingAmount))
             End Set
         End Property
 
         ''' <summary>Wie SetUndoableDouble, aber mit Neuaufbau des Arbeitsbilds statt eines
         ''' Nachrenderns: die Objektivkorrektur sitzt VOR der Reglerkette.</summary>
-        Private Sub SetzeObjektivStaerke(ByRef feld As Double, wert As Double, name As String)
+        Private Sub SetLensStrength(ByRef feld As Double, wert As Double, name As String)
             Dim geklemmt = Math.Max(0, Math.Min(200, wert))
             If Math.Abs(feld - geklemmt) < 0.0001 Then Return
             CaptureUndoState(name)
             feld = geklemmt
             Me.RaisePropertyChanged(name)
             RaiseResetButtonStateChanged()
-            BaueArbeitsbildNeuWegenObjektiv()
+            RebuildWorkingImageForLens()
         End Sub
 
         ''' <summary>Die Objektiv-Wahl aus den Editor-Feldern. Eigene Stelle, damit jeder Weg, der
         ''' das Arbeitsbild neu dekodiert, dieselben Werte benutzt.</summary>
-        Private Function ObjektivWahlAusFeldern() As ObjektivDatenService.Wahl
-            Return New ObjektivDatenService.Wahl With {
-                .Verzeichnung = _lensDistortion,
-                .Farbquerfehler = _lensTca,
-                .Vignettierung = _lensVignetting,
-                .StaerkeVerzeichnung = _lensDistortionAmount / 100.0,
-                .StaerkeFarbquerfehler = _lensTcaAmount / 100.0,
-                .StaerkeVignettierung = _lensVignettingAmount / 100.0}
+        Private Function LensChoiceFromFields() As LensDataService.Wahl
+            Return New LensDataService.Wahl With {
+                .Distortion = _lensDistortion,
+                .ChromaticAberration = _lensTca,
+                .Vignetting = _lensVignetting,
+                .DistortionStrength = _lensDistortionAmount / 100.0,
+                .ChromaticAberrationStrength = _lensTcaAmount / 100.0,
+                .VignettingStrength = _lensVignettingAmount / 100.0}
         End Function
 
-        Private Shared Function LoeseObjektivSchalter(feld As Boolean?) As Boolean
+        Private Shared Function ReleaseLensSwitch(feld As Boolean?) As Boolean
             If feld.HasValue Then Return feld.Value
             Return AppSettingsService.Load().LensCorrectionEnabled
         End Function
 
-        Private Sub SetzeObjektivSchalter(ByRef feld As Boolean?, wert As Boolean, name As String)
-            If LoeseObjektivSchalter(feld) = wert AndAlso feld.HasValue Then Return
+        Private Sub SetLensSwitch(ByRef feld As Boolean?, wert As Boolean, name As String)
+            If ReleaseLensSwitch(feld) = wert AndAlso feld.HasValue Then Return
             CaptureUndoState(name)
             feld = wert
             Me.RaisePropertyChanged(name)
             RaiseResetButtonStateChanged()
-            BaueArbeitsbildNeuWegenObjektiv()
+            RebuildWorkingImageForLens()
         End Sub
 
         ''' <summary>Das Arbeitsbild neu dekodieren. Die Objektivkorrektur sitzt VOR der Reglerkette,
@@ -4962,14 +4968,14 @@ Namespace ViewModels
             _lensVignettingAmount = 100
             _lensModel = ""
             If hatteZuordnung AndAlso Not String.IsNullOrWhiteSpace(_objektivExifName) Then
-                ObjektivDatenService.SetzeZuordnung(_objektivExifName, "")
+                LensDataService.SetAssignment(_objektivExifName, "")
             End If
-            AktualisiereObjektivKorrektur()
+            RefreshLensCorrection()
             RaiseResetButtonStateChanged()
-            BaueArbeitsbildNeuWegenObjektiv()
+            RebuildWorkingImageForLens()
         End Sub
 
-        Private Sub BaueArbeitsbildNeuWegenObjektiv()
+        Private Sub RebuildWorkingImageForLens()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             ' Die Anzeigeeinstellung ueberlebt den Neuaufbau: sie gehoert zur ANSICHT, nicht zum
             ' Bild. Ohne das sprang die Anzeige von "Einpassen" auf einen festen Prozentwert -
@@ -4981,7 +4987,7 @@ Namespace ViewModels
 
         ''' <summary>Kamera, Objektiv und die gefundenen Kennlinien fuer das aktuelle Bild neu
         ''' ermitteln. Wird beim Oeffnen und nach einer Zuordnung gerufen.</summary>
-        Private Sub AktualisiereObjektivKorrektur()
+        Private Sub RefreshLensCorrection()
             _objektivExifName = ""
             _objektivKamera = ("", "")
             _objektivKorrektur = Nothing
@@ -4990,7 +4996,7 @@ Namespace ViewModels
                     Dim daten = ExifService.ReadExif(_currentImagePath)
                     _objektivExifName = If(daten?.Lens, "")
                     _objektivKamera = ("", If(daten?.Camera, ""))
-                    _objektivKorrektur = ObjektivDatenService.FindeKorrekturFuerDatei(_currentImagePath, _lensModel)
+                    _objektivKorrektur = LensDataService.FindCorrectionForFile(_currentImagePath, _lensModel)
                 End If
             Catch
             End Try
@@ -5115,11 +5121,11 @@ Namespace ViewModels
                 _warpDragIndex = -1
                 _linienDragIndex = -1
                 _linienDragTeil = -1
-                RaeumeGitterVorschauAb()
-                RaeumeLinienVorschauAb()
+                DisposeGridPreview()
+                DisposeLinePreview()
                 For Each n In {NameOf(VerzerrenModus), NameOf(IsVerzerrenPerspektive),
-                               NameOf(IsVerzerrenGitter), NameOf(IsVerzerrenLinien),
-                               NameOf(PerspectiveCornerValues), NameOf(LinienValues),
+                               NameOf(IsWarpGrid), NameOf(IsWarpLines),
+                               NameOf(PerspectiveCornerValues), NameOf(LineValues),
                                NameOf(WarpGridValues)}
                     Me.RaisePropertyChanged(n)
                 Next
@@ -5136,13 +5142,13 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property IsVerzerrenLinien As Boolean
+        Public ReadOnly Property IsWarpLines As Boolean
             Get
                 Return String.Equals(_verzerrenModus, "Linien", StringComparison.Ordinal)
             End Get
         End Property
 
-        Public ReadOnly Property IsVerzerrenGitter As Boolean
+        Public ReadOnly Property IsWarpGrid As Boolean
             Get
                 Return String.Equals(_verzerrenModus, "Gitter", StringComparison.Ordinal)
             End Get
@@ -5167,7 +5173,7 @@ Namespace ViewModels
                 Return _perspectiveCorners(0)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(0, value)
+                SetCornerOffset(0, value)
             End Set
         End Property
 
@@ -5176,7 +5182,7 @@ Namespace ViewModels
                 Return _perspectiveCorners(1)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(1, value)
+                SetCornerOffset(1, value)
             End Set
         End Property
 
@@ -5185,7 +5191,7 @@ Namespace ViewModels
                 Return _perspectiveCorners(2)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(2, value)
+                SetCornerOffset(2, value)
             End Set
         End Property
 
@@ -5194,7 +5200,7 @@ Namespace ViewModels
                 Return _perspectiveCorners(3)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(3, value)
+                SetCornerOffset(3, value)
             End Set
         End Property
 
@@ -5203,7 +5209,7 @@ Namespace ViewModels
                 Return _perspectiveCorners(4)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(4, value)
+                SetCornerOffset(4, value)
             End Set
         End Property
 
@@ -5212,7 +5218,7 @@ Namespace ViewModels
                 Return _perspectiveCorners(5)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(5, value)
+                SetCornerOffset(5, value)
             End Set
         End Property
 
@@ -5221,7 +5227,7 @@ Namespace ViewModels
                 Return _perspectiveCorners(6)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(6, value)
+                SetCornerOffset(6, value)
             End Set
         End Property
 
@@ -5230,14 +5236,14 @@ Namespace ViewModels
                 Return _perspectiveCorners(7)
             End Get
             Set(value As Double)
-                SetzeEckenVersatz(7, value)
+                SetCornerOffset(7, value)
             End Set
         End Property
 
         ''' <summary>Ein Eckenversatz. Der Bereich ist mit plus/minus 60 Prozent bewusst weiter als
         ''' der der Regler: eine Ecke soll sich auch weit ueber die Bildkante hinausziehen lassen,
         ''' sonst laesst sich eine schraeg fotografierte Flaeche nicht geradeziehen.</summary>
-        Private Sub SetzeEckenVersatz(index As Integer, wert As Double)
+        Private Sub SetCornerOffset(index As Integer, wert As Double)
             Dim v = Math.Max(-60.0, Math.Min(60.0, wert))
             If Math.Abs(_perspectiveCorners(index) - v) < 0.0001 Then Return
             CaptureUndoState("Verzerren")
@@ -5266,7 +5272,7 @@ Namespace ViewModels
         ''' Skalierung genau auf seiner Ecke. Nothing, solange kein Bild offen ist.</summary>
         Public ReadOnly Property PerspectiveCornerValues As Double()
             Get
-                Dim vorStufe = VerzerrungsStufenGroesse()
+                Dim vorStufe = WarpStepSize()
                 If vorStufe.Width <= 0 OrElse vorStufe.Height <= 0 Then Return Nothing
                 Dim anzeige = GetAnnotationDisplayPixelSize()
                 If anzeige.Width <= 0 OrElse anzeige.Height <= 0 Then Return Nothing
@@ -5299,7 +5305,7 @@ Namespace ViewModels
         ''' <summary>Die Groesse, auf der die Verzerrungsstufe rechnet: nach Beschnitt, Vierteldrehung
         ''' und Begradigung, VOR Skalierung und Leinwand. Genau die Stufe, an der ApplyPerspective im
         ''' Renderer sitzt.</summary>
-        Private Function VerzerrungsStufenGroesse() As (Width As Double, Height As Double)
+        Private Function WarpStepSize() As (Width As Double, Height As Double)
             Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (0, 0)
             Dim adj = BuildAppliedGeometryAdjustments()
@@ -5345,7 +5351,7 @@ Namespace ViewModels
         ''' Versatz gegenueber der Ausgangsecke, damit die Regler daneben ihre Bedeutung behalten.</summary>
         Public Sub UpdatePerspectiveCornerDrag(xPercent As Double, yPercent As Double)
             If _perspectiveCornerDrag < 0 Then Return
-            Dim vorStufe = VerzerrungsStufenGroesse()
+            Dim vorStufe = WarpStepSize()
             If vorStufe.Width <= 0 OrElse vorStufe.Height <= 0 Then Return
 
             ' Der Zielpunkt in der Stufengroesse. Er kommt aus dem ANZEIGE-Prozent, das dieselbe
@@ -5416,10 +5422,10 @@ Namespace ViewModels
                 Dim v = Math.Max(2, Math.Min(12, value))
                 If v = _warpColumns AndAlso v = _warpRows Then Return
                 CaptureUndoState("Gitter")
-                RaeumeGitterVorschauAb()
+                DisposeGridPreview()
                 _warpColumns = v
                 _warpRows = v
-                SetzeGitterZurueck()
+                ResetGrid()
                 Me.RaisePropertyChanged(NameOf(WarpGridSize))
                 Me.RaisePropertyChanged(NameOf(WarpGridValues))
                 Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
@@ -5432,7 +5438,7 @@ Namespace ViewModels
         ''' NaN heraus - die Anzeige laesst sie dann aus.</summary>
         Public ReadOnly Property WarpGridValues As Double()
             Get
-                StelleGitterBereit()
+                PrepareGrid()
                 Dim werte(1 + _warpX.Length * 2) As Double
                 werte(0) = _warpColumns
                 werte(1) = _warpRows
@@ -5452,7 +5458,7 @@ Namespace ViewModels
 
         Public ReadOnly Property HasWarpGridChanges As Boolean
             Get
-                StelleGitterBereit()
+                PrepareGrid()
                 For zi = 0 To _warpRows
                     For si = 0 To _warpColumns
                         Dim i = zi * (_warpColumns + 1) + si
@@ -5464,13 +5470,13 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private Sub StelleGitterBereit()
+        Private Sub PrepareGrid()
             Dim anzahl = (_warpColumns + 1) * (_warpRows + 1)
             If _warpX IsNot Nothing AndAlso _warpX.Length = anzahl Then Return
-            SetzeGitterZurueck()
+            ResetGrid()
         End Sub
 
-        Private Sub SetzeGitterZurueck()
+        Private Sub ResetGrid()
             Dim anzahl = (_warpColumns + 1) * (_warpRows + 1)
             ReDim _warpX(anzahl - 1)
             ReDim _warpY(anzahl - 1)
@@ -5511,7 +5517,7 @@ Namespace ViewModels
         ''' Bilder uebereinander waeren nur eine Gelegenheit, dass eines haengen bleibt. Wer den Kanal
         ''' gerade haelt, steht in <see cref="_vorschauQuelle"/>: nur der eigene Halter raeumt ihn ab,
         ''' sonst loescht ein Werkzeug beim Verlassen die Vorschau des naechsten.</summary>
-        Public Property VorschauBild As Bitmap
+        Public Property ToolPreviewImage As Bitmap
             Get
                 Return _vorschauBild
             End Get
@@ -5519,14 +5525,14 @@ Namespace ViewModels
                 If Object.ReferenceEquals(_vorschauBild, value) Then Return
                 Dim alt = _vorschauBild
                 _vorschauBild = value
-                Me.RaisePropertyChanged(NameOf(VorschauBild))
-                Me.RaisePropertyChanged(NameOf(HatVorschau))
+                Me.RaisePropertyChanged(NameOf(ToolPreviewImage))
+                Me.RaisePropertyChanged(NameOf(HasPreview))
                 ' ERST melden, DANN freigeben: die Anzeige haelt sonst kurz ein totes Bitmap.
                 alt?.Dispose()
             End Set
         End Property
 
-        Public ReadOnly Property HatVorschau As Boolean
+        Public ReadOnly Property HasPreview As Boolean
             Get
                 Return _vorschauBild IsNot Nothing
             End Get
@@ -5535,8 +5541,8 @@ Namespace ViewModels
         ''' <summary>Die Grundlage der Vorschau anlegen: das Anzeigebild ohne Objekte, dazu die Lage
         ''' des UNVERZERRTEN Rasters im Anzeigeraum. Letztere ist noetig, weil das Raster im
         ''' Quellraum gleichmaessig ist, im Anzeigeraum nach Beschnitt oder Drehung aber nicht.</summary>
-        Private Sub BereiteGitterVorschauVor()
-            RaeumeGitterVorschauAb()
+        Private Sub PrepareGridPreview()
+            DisposeGridPreview()
             Dim groesse = GetAnnotationDisplayPixelSize()
             If groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return
             Dim quelle = TryCast(DisplayImage, Bitmap)
@@ -5553,7 +5559,7 @@ Namespace ViewModels
                     _gitterVorschauBasis = roh
                 End Using
             Catch
-                RaeumeGitterVorschauAb()
+                DisposeGridPreview()
                 Return
             End Try
 
@@ -5561,7 +5567,7 @@ Namespace ViewModels
             ' Anwenden nicht mitverzerrt wurden - jetzt gehen sie mit, und dieselbe Verzerrung auf
             ' dem Anzeigebild zeigt genau das Ergebnis.
 
-            StelleGitterBereit()
+            PrepareGrid()
             Dim n = (_warpColumns + 1) * (_warpRows + 1)
             ReDim _gitterVorschauQuellX(n - 1)
             ReDim _gitterVorschauQuellY(n - 1)
@@ -5576,16 +5582,16 @@ Namespace ViewModels
                         _gitterVorschauQuellY(i) = CSng(anzeige.Value.Y / 100.0 * bh)
                     Else
                         ' Weggeschnitten: dann taugt die Vorschau nicht, lieber gar keine.
-                        RaeumeGitterVorschauAb()
+                        DisposeGridPreview()
                         Return
                     End If
                 Next
             Next
         End Sub
 
-        Private Sub RaeumeGitterVorschauAb()
+        Private Sub DisposeGridPreview()
             If String.Equals(_vorschauQuelle, "Gitter", StringComparison.Ordinal) Then
-                VorschauBild = Nothing
+                ToolPreviewImage = Nothing
                 _vorschauQuelle = ""
             End If
             _gitterVorschauBasis?.Dispose()
@@ -5595,7 +5601,7 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Die Vorschau zum aktuellen Raster neu zeichnen.</summary>
-        Private Sub AktualisiereGitterVorschau()
+        Private Sub RefreshGridPreview()
             If _gitterVorschauBasis Is Nothing OrElse _gitterVorschauQuellX Is Nothing Then Return
             Dim werte = WarpGridValues
             If werte Is Nothing OrElse werte.Length < 4 Then Return
@@ -5610,18 +5616,18 @@ Namespace ViewModels
                 zy(i) = CSng(y / 100.0 * bh)
             Next
 
-            Dim verzerrt = ImageGeometryMapper.VerzerreUeberGitter(
+            Dim verzerrt = ImageGeometryMapper.WarpOverGrid(
                 _gitterVorschauBasis, _warpColumns, _warpRows, zx, zy,
                 _gitterVorschauQuellX, _gitterVorschauQuellY)
             ' Gleiches Objekt zurueck heisst: unbewegt, also nichts zu zeigen.
             If verzerrt Is Nothing OrElse Object.ReferenceEquals(verzerrt, _gitterVorschauBasis) Then
-                RaeumeGitterVorschauAb()
+                DisposeGridPreview()
                 Return
             End If
             Using verzerrt
                 Using daten = SKImage.FromBitmap(verzerrt).Encode(SKEncodedImageFormat.Png, 90)
                     Using strom = New IO.MemoryStream(daten.ToArray())
-                        VorschauBild = New Bitmap(strom)
+                        ToolPreviewImage = New Bitmap(strom)
                         _vorschauQuelle = "Gitter"
                     End Using
                 End Using
@@ -5670,13 +5676,13 @@ Namespace ViewModels
         Private _linienDragZielBx As Double = 0
         Private _linienDragZielBy As Double = 0
 
-        Public ReadOnly Property HasLinienChanges As Boolean
+        Public ReadOnly Property HasLineChanges As Boolean
             Get
                 Return _linien.Any(Function(l) l.IstBewegt)
             End Get
         End Property
 
-        Public ReadOnly Property LinienAnzahl As Integer
+        Public ReadOnly Property LineCount As Integer
             Get
                 Return _linien.Count
             End Get
@@ -5687,7 +5693,7 @@ Namespace ViewModels
         '''
         ''' Punkte ohne Anzeigeort (weggeschnitten, leere Begradigungsecke) kommen als NaN heraus
         ''' und werden nicht gezeichnet - genau wie beim Raster.</summary>
-        Public ReadOnly Property LinienValues As Double()
+        Public ReadOnly Property LineValues As Double()
             Get
                 Dim werte(_linien.Count * 8) As Double
                 werte(0) = _linien.Count
@@ -5710,10 +5716,10 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private Sub MeldeLinien()
-            Me.RaisePropertyChanged(NameOf(LinienValues))
-            Me.RaisePropertyChanged(NameOf(HasLinienChanges))
-            Me.RaisePropertyChanged(NameOf(LinienAnzahl))
+        Private Sub RaiseLinesChanged()
+            Me.RaisePropertyChanged(NameOf(LineValues))
+            Me.RaisePropertyChanged(NameOf(HasLineChanges))
+            Me.RaisePropertyChanged(NameOf(LineCount))
         End Sub
 
         ''' <summary>Eine neue Linie beginnen. Quelle und Ziel sind dabei gleich - die Linie tut noch
@@ -5721,7 +5727,7 @@ Namespace ViewModels
         Public Function BeginneNeueLinie(xPercent As Double, yPercent As Double) As Boolean
             Dim quelle = AnzeigeZuVerzerrRaum(xPercent, yPercent)
             If Not quelle.HasValue Then Return False
-            If _linien.Count >= MaxLinien Then Return False
+            If _linien.Count >= MaxLines Then Return False
             CaptureUndoState("Linien")
             Dim l = New VerzerrLinie With {
                 .QuelleAx = quelle.Value.X, .QuelleAy = quelle.Value.Y,
@@ -5733,18 +5739,18 @@ Namespace ViewModels
             ' Beim Aufziehen wandert das ENDE, und zwar in Quelle und Ziel gleichzeitig: es wird ja
             ' gerade erst festgelegt, wo die Linie liegt.
             _linienDragTeil = 3
-            MeldeLinien()
-            BereiteLinienVorschauVor()
+            RaiseLinesChanged()
+            PrepareLinePreview()
             Return True
         End Function
 
         ''' <summary>Hoechstzahl der Linien. Jede kostet bei jedem Rasterknoten eine Auswertung -
         ''' mit einem Dutzend faengt die Vorschau an zu haengen, und mehr braucht man auch nicht.</summary>
-        Public Const MaxLinien As Integer = 12
+        Public Const MaxLines As Integer = 12
 
         ''' <summary>Eine vorhandene Linie anfassen: an einem Ende oder in der Mitte. Getroffen wird
         ''' die ZIELlinie - die Quelle bleibt liegen, wo sie liegt.</summary>
-        Public Function TryBeginLinienDrag(xPercent As Double, yPercent As Double,
+        Public Function TryBeginLineDrag(xPercent As Double, yPercent As Double,
                                            slopXPercent As Double, slopYPercent As Double) As Boolean
             Dim besterAbstand = Double.MaxValue
             Dim besteLinie = -1, besterTeil = -1
@@ -5794,7 +5800,7 @@ Namespace ViewModels
             _linienDragZielAy = gefasst.ZielAy
             _linienDragZielBx = gefasst.ZielBx
             _linienDragZielBy = gefasst.ZielBy
-            BereiteLinienVorschauVor()
+            PrepareLinePreview()
             Return True
         End Function
 
@@ -5817,7 +5823,7 @@ Namespace ViewModels
             Return ex * ex + ey * ey
         End Function
 
-        Public Sub UpdateLinienDrag(xPercent As Double, yPercent As Double)
+        Public Sub UpdateLineDrag(xPercent As Double, yPercent As Double)
             If _linienDragIndex < 0 OrElse _linienDragIndex >= _linien.Count Then Return
             Dim l = _linien(_linienDragIndex)
 
@@ -5851,12 +5857,12 @@ Namespace ViewModels
                 End Select
             End If
 
-            MeldeLinien()
+            RaiseLinesChanged()
             If VerzerrtDasObjekt Then
-                SchreibeObjektLinien()
+                WriteObjectLines()
                 SchedulePreviewUpdate()
             Else
-                AktualisiereLinienVorschau()
+                RefreshLinePreview()
             End If
         End Sub
 
@@ -5864,7 +5870,7 @@ Namespace ViewModels
             Return Math.Max(0.0, Math.Min(100.0, wert))
         End Function
 
-        Public Sub EndLinienDrag()
+        Public Sub EndLineDrag()
             If _linienDragIndex < 0 Then Return
             ' Eine Linie, die beim Aufziehen zu kurz geblieben ist, war ein Klick und keine Linie.
             ' Sie stehen zu lassen hiesse, dass jeder Fehlklick einen Griff auf dem Bild hinterlaesst.
@@ -5872,13 +5878,13 @@ Namespace ViewModels
                 Dim l = _linien(_linienDragIndex)
                 If Math.Abs(l.QuelleBx - l.QuelleAx) < 1.0 AndAlso Math.Abs(l.QuelleBy - l.QuelleAy) < 1.0 Then
                     _linien.RemoveAt(_linienDragIndex)
-                    MeldeLinien()
+                    RaiseLinesChanged()
                 End If
             End If
             _linienDragIndex = -1
             _linienDragTeil = -1
             If VerzerrtDasObjekt Then
-                SchreibeObjektLinien()
+                WriteObjectLines()
                 RefreshPreviewImmediately()
             End If
         End Sub
@@ -5888,26 +5894,26 @@ Namespace ViewModels
             If _linien.Count = 0 Then Return
             CaptureUndoState("Linien")
             _linien.RemoveAt(_linien.Count - 1)
-            RaeumeLinienVorschauAb()
-            MeldeLinien()
+            DisposeLinePreview()
+            RaiseLinesChanged()
         End Sub
 
-        Public Sub ResetLinien()
+        Public Sub ResetLines()
             If _linien.Count = 0 Then Return
             CaptureUndoState("Linien")
             _linien.Clear()
             _linienDragIndex = -1
             _linienDragTeil = -1
-            RaeumeLinienVorschauAb()
-            MeldeLinien()
+            DisposeLinePreview()
+            RaiseLinesChanged()
             If VerzerrtDasObjekt Then
-                SchreibeObjektLinien()
+                WriteObjectLines()
                 RefreshPreviewImmediately()
             End If
         End Sub
 
         ''' <summary>Die Linien als flache Felder in PIXELN des uebergebenen Bildes.</summary>
-        Private Function LinienAlsPixel(breite As Integer, hoehe As Integer,
+        Private Function LinesAsPixels(breite As Integer, hoehe As Integer,
                                         ByRef quelle As Double(), ByRef ziel As Double()) As Boolean
             Dim bewegte = _linien.Where(Function(l) l.IstBewegt).ToList()
             If bewegte.Count = 0 Then Return False
@@ -5952,7 +5958,7 @@ Namespace ViewModels
                         ' ERST die bestehende Verzerrung, DANN die neue - in der Reihenfolge, in der
                         ' sie eingestellt wurden.
                         If alt IsNot Nothing AndAlso Not alt.IstLeer Then
-                            Dim v = BestehendeVerzerrung(alt, px, py)
+                            Dim v = ExistingWarp(alt, px, py)
                             px = v.X : py = v.Y
                         End If
                         Dim n = abbildung(px, py)
@@ -5961,21 +5967,21 @@ Namespace ViewModels
                     Next
                 Next
                 a.Verzerrung = New ObjektVerzerrung With {
-                    .Art = "Gitter", .Spalten = Stufen, .Zeilen = Stufen, .Knoten = knoten}
+                    .Art = "Gitter", .Columns = Stufen, .Rows = Stufen, .Knoten = knoten}
             Next
         End Sub
 
         ''' <summary>Wohin ein Punkt durch eine BEREITS eingetragene Objektverzerrung wandert. Alles
         ''' in Bildprozent.</summary>
-        Private Shared Function BestehendeVerzerrung(v As ObjektVerzerrung, px As Double, py As Double) As (X As Double, Y As Double)
+        Private Shared Function ExistingWarp(v As ObjektVerzerrung, px As Double, py As Double) As (X As Double, Y As Double)
             If v Is Nothing OrElse v.IstLeer OrElse v.Art <> "Gitter" Then Return (px, py)
-            Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * v.Spalten
-            Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * v.Zeilen
-            Dim s0 = Math.Max(0, Math.Min(v.Spalten - 1, CInt(Math.Floor(u))))
-            Dim z0 = Math.Max(0, Math.Min(v.Zeilen - 1, CInt(Math.Floor(w))))
+            Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * v.Columns
+            Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * v.Rows
+            Dim s0 = Math.Max(0, Math.Min(v.Columns - 1, CInt(Math.Floor(u))))
+            Dim z0 = Math.Max(0, Math.Min(v.Rows - 1, CInt(Math.Floor(w))))
             Dim tu = u - s0, tw = w - z0
             Dim K = Function(si As Integer, zi As Integer) As (X As Double, Y As Double)
-                        Dim i = (zi * (v.Spalten + 1) + si) * 2
+                        Dim i = (zi * (v.Columns + 1) + si) * 2
                         Return (v.Knoten(i), v.Knoten(i + 1))
                     End Function
             Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
@@ -5987,7 +5993,7 @@ Namespace ViewModels
 
         ''' <summary>Die Abbildung des GITTERWERKZEUGS: das Raster liegt im Quellraum in Prozent, ein
         ''' Punkt wandert also zwischen seinen vier Stuetzpunkten.</summary>
-        Private Function GitterAbbildung() As Func(Of Double, Double, (X As Double, Y As Double))
+        Private Function GridMapping() As Func(Of Double, Double, (X As Double, Y As Double))
             Dim spalten = _warpColumns, zeilen = _warpRows
             Dim xs = CType(_warpX.Clone(), Double())
             Dim ys = CType(_warpY.Clone(), Double())
@@ -6010,7 +6016,7 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Die Abbildung des LINIENWERKZEUGS.</summary>
-        Private Function LinienAbbildung() As Func(Of Double, Double, (X As Double, Y As Double))
+        Private Function LineMapping() As Func(Of Double, Double, (X As Double, Y As Double))
             Dim bewegte = _linien.Where(Function(l) l.IstBewegt).ToList()
             Dim q(bewegte.Count * 4 - 1) As Double
             Dim z(bewegte.Count * 4 - 1) As Double
@@ -6024,35 +6030,35 @@ Namespace ViewModels
             Return Function(px As Double, py As Double) As (X As Double, Y As Double)
                        ' Das Feld sagt, WOHER ein Punkt seine Farbe holt. Ein Objekt soll dorthin
                        ' WANDERN, also werden Quelle und Ziel getauscht.
-                       Dim p = ImageGeometryMapper.LinienPunkt(px, py, z, q)
+                       Dim p = ImageGeometryMapper.LinePoint(px, py, z, q)
                        Return (CDbl(p.X), CDbl(p.Y))
                    End Function
         End Function
 
         ''' <summary>Die Linienverzerrung ins Arbeitsbild backen - derselbe Weg wie beim Raster und
         ''' aus demselben Grund: sie ist keine Matrix und laesst sich nicht als Zahl aufheben.</summary>
-        Public Sub ApplyLinienVerzerrung()
+        Public Sub ApplyLineWarp()
             ' Gilt die Verzerrung einem Objekt, ist sie dort laengst eingetragen und bleibt eine
             ' Angabe - es gibt nichts zu backen.
             If VerzerrtDasObjekt Then Return
-            If Not HasLinienChanges Then Return
+            If Not HasLineChanges Then Return
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
             PushUndo()
             Dim undoEintrag = _lastPushedUndoEntry
             ' Die OBJEKTE gehen mit, ohne eingebacken zu werden.
-            UebertrageVerzerrungAufObjekte(LinienAbbildung())
-            SetzeBeschaeftigtGrund(LocalizationService.T("Verzerrung wird angewendet"))
+            UebertrageVerzerrungAufObjekte(LineMapping())
+            SetBusyReason(LocalizationService.T("Verzerrung wird angewendet"))
             StatusText = LocalizationService.T("Verzerrung wird angewendet…")
             EnqueueWorkingCommit(
                 Function()
                     Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                         Sub(full)
                             Dim qp As Double() = Nothing, zp As Double() = Nothing
-                            If Not LinienAlsPixel(full.Width, full.Height, qp, zp) Then Return
-                            Dim stufen = ImageGeometryMapper.LinienRasterStufen
+                            If Not LinesAsPixels(full.Width, full.Height, qp, zp) Then Return
+                            Dim stufen = ImageGeometryMapper.LineGridSteps
                             Dim quellX As Single() = Nothing, quellY As Single() = Nothing
-                            ImageGeometryMapper.LinienFeld(full.Width, full.Height, stufen, stufen,
+                            ImageGeometryMapper.LineField(full.Width, full.Height, stufen, stufen,
                                                            qp, zp, quellX, quellY)
                             If quellX Is Nothing Then Return
                             Dim zielX(quellX.Length - 1) As Single
@@ -6065,7 +6071,7 @@ Namespace ViewModels
                                 Next
                             Next
                             Using kopie = full.Copy()
-                                Using verzerrt = ImageGeometryMapper.VerzerreUeberGitter(
+                                Using verzerrt = ImageGeometryMapper.WarpOverGrid(
                                         kopie, stufen, stufen, zielX, zielY, quellX, quellY)
                                     If verzerrt Is Nothing OrElse Object.ReferenceEquals(verzerrt, kopie) Then Return
                                     Using canvas = New SKCanvas(full)
@@ -6084,9 +6090,9 @@ Namespace ViewModels
                         Return
                     End If
                     If undoEintrag IsNot Nothing Then undoEintrag.Patch = patch
-                    RaeumeLinienVorschauAb()
+                    DisposeLinePreview()
                     _linien.Clear()
-                    MeldeLinien()
+                    RaiseLinesChanged()
                     StatusText = LocalizationService.T("Verzerrung angewendet")
                     _hasChanges = True
                     SchedulePreviewUpdate()
@@ -6101,8 +6107,8 @@ Namespace ViewModels
 
         Private _linienVorschauBasis As SKBitmap
 
-        Private Sub BereiteLinienVorschauVor()
-            RaeumeLinienVorschauAb()
+        Private Sub PrepareLinePreview()
+            DisposeLinePreview()
             Dim quelle = TryCast(DisplayImage, Bitmap)
             If quelle Is Nothing Then Return
             Try
@@ -6112,28 +6118,28 @@ Namespace ViewModels
                     _linienVorschauBasis = SKBitmap.Decode(strom)
                 End Using
             Catch
-                RaeumeLinienVorschauAb()
+                DisposeLinePreview()
                 Return
             End Try
         End Sub
 
 
-        Private Sub RaeumeLinienVorschauAb()
+        Private Sub DisposeLinePreview()
             If String.Equals(_vorschauQuelle, "Linien", StringComparison.Ordinal) Then
-                VorschauBild = Nothing
+                ToolPreviewImage = Nothing
                 _vorschauQuelle = ""
             End If
             _linienVorschauBasis?.Dispose()
             _linienVorschauBasis = Nothing
         End Sub
 
-        Private Sub AktualisiereLinienVorschau()
+        Private Sub RefreshLinePreview()
             If _linienVorschauBasis Is Nothing Then Return
             Dim bw = _linienVorschauBasis.Width, bh = _linienVorschauBasis.Height
             ' Die Vorschau rechnet im ANZEIGEraum: die Linien werden dafuer ueber ihre Anzeigelage
             ' genommen, nicht ueber die Quelllage. Sonst saesse die Verzerrung bei beschnittenem
             ' oder gedrehtem Bild woanders als der Griff, den man gerade zieht.
-            Dim werte = LinienValues
+            Dim werte = LineValues
             If werte Is Nothing OrElse werte.Length < 9 Then Return
             Dim anzahl = CInt(werte(0))
             Dim qp As New List(Of Double)(), zp As New List(Of Double)()
@@ -6151,13 +6157,13 @@ Namespace ViewModels
                 zp.AddRange({v(4) / 100.0 * bw, v(5) / 100.0 * bh, v(6) / 100.0 * bw, v(7) / 100.0 * bh})
             Next
             If qp.Count = 0 Then
-                RaeumeLinienVorschauAb()
+                DisposeLinePreview()
                 Return
             End If
 
-            Dim stufen = ImageGeometryMapper.LinienRasterStufen
+            Dim stufen = ImageGeometryMapper.LineGridSteps
             Dim quellX As Single() = Nothing, quellY As Single() = Nothing
-            ImageGeometryMapper.LinienFeld(bw, bh, stufen, stufen, qp.ToArray(), zp.ToArray(), quellX, quellY)
+            ImageGeometryMapper.LineField(bw, bh, stufen, stufen, qp.ToArray(), zp.ToArray(), quellX, quellY)
             If quellX Is Nothing Then Return
             Dim zielX(quellX.Length - 1) As Single
             Dim zielY(quellY.Length - 1) As Single
@@ -6168,16 +6174,16 @@ Namespace ViewModels
                     zielY(i) = CSng(zi / CDbl(stufen) * bh)
                 Next
             Next
-            Dim verzerrt = ImageGeometryMapper.VerzerreUeberGitter(
+            Dim verzerrt = ImageGeometryMapper.WarpOverGrid(
                 _linienVorschauBasis, stufen, stufen, zielX, zielY, quellX, quellY)
             If verzerrt Is Nothing OrElse Object.ReferenceEquals(verzerrt, _linienVorschauBasis) Then
-                RaeumeLinienVorschauAb()
+                DisposeLinePreview()
                 Return
             End If
             Using verzerrt
                 Using daten = SKImage.FromBitmap(verzerrt).Encode(SKEncodedImageFormat.Png, 90)
                     Using strom = New IO.MemoryStream(daten.ToArray())
-                        VorschauBild = New Bitmap(strom)
+                        ToolPreviewImage = New Bitmap(strom)
                         _vorschauQuelle = "Linien"
                     End Using
                 End Using
@@ -6228,7 +6234,7 @@ Namespace ViewModels
         ''' der Zug je nach getroffenem Pixel das eine oder das andere meint - und der Rahmen zeigt
         ''' Griffe, die dort gar nichts tun sollen. Der Rahmen selbst bleibt: man soll sehen, welches
         ''' Objekt gemeint ist.</summary>
-        Public ReadOnly Property ZeigtObjektRahmenGriffe As Boolean
+        Public ReadOnly Property ShowsObjectFrameHandles As Boolean
             Get
                 Return Not VerzerrtDasObjekt
             End Get
@@ -6370,7 +6376,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(VerzerrtDasObjekt))
             Me.RaisePropertyChanged(NameOf(VerzerrtDasBild))
             Me.RaisePropertyChanged(NameOf(ZeigtObjektEcken))
-            Me.RaisePropertyChanged(NameOf(ZeigtObjektRahmenGriffe))
+            Me.RaisePropertyChanged(NameOf(ShowsObjectFrameHandles))
         End Sub
 
         ' ── Gitter und Linien auf ein markiertes Objekt ─────────────────────────
@@ -6384,10 +6390,10 @@ Namespace ViewModels
         ' aenderbar - ein verzerrter Text laesst sich weiter tippen. Ein "Anwenden" gibt es hier
         ' deshalb nicht; es steht nur, wenn das BILD gemeint ist.
 
-        Private Sub SchreibeObjektGitter()
+        Private Sub WriteObjectGrid()
             Dim a = AktuellesObjekt()
             If a Is Nothing Then Return
-            StelleGitterBereit()
+            PrepareGrid()
             Dim knoten(_warpX.Length * 2 - 1) As Double
             For i = 0 To _warpX.Length - 1
                 knoten(i * 2) = _warpX(i)
@@ -6397,12 +6403,12 @@ Namespace ViewModels
                 a.EigeneVerzerrung = Nothing
             Else
                 a.EigeneVerzerrung = New ObjektVerzerrung With {
-                    .Art = "Gitter", .Spalten = _warpColumns, .Zeilen = _warpRows, .Knoten = knoten}
+                    .Art = "Gitter", .Columns = _warpColumns, .Rows = _warpRows, .Knoten = knoten}
             End If
             MeldeObjektVerzerrung()
         End Sub
 
-        Private Sub SchreibeObjektLinien()
+        Private Sub WriteObjectLines()
             Dim a = AktuellesObjekt()
             If a Is Nothing Then Return
             Dim bewegte = _linien.Where(Function(l) l.IstBewegt).ToList()
@@ -6421,7 +6427,7 @@ Namespace ViewModels
                 z(i * 4 + 2) = l.ZielBx : z(i * 4 + 3) = l.ZielBy
             Next
             a.EigeneVerzerrung = New ObjektVerzerrung With {
-                .Art = "Linien", .LinienQuelle = q, .LinienZiel = z}
+                .Art = "Linien", .LineSource = q, .LineTarget = z}
             MeldeObjektVerzerrung()
         End Sub
 
@@ -6443,7 +6449,7 @@ Namespace ViewModels
             If jetzt = _verzerrRaumObjekt Then Return
 
             If _verzerrRaumObjekt < 0 Then
-                StelleGitterBereit()
+                PrepareGrid()
                 _gitterBildX = CType(_warpX.Clone(), Double())
                 _gitterBildY = CType(_warpY.Clone(), Double())
                 _linienBild.Clear()
@@ -6454,8 +6460,8 @@ Namespace ViewModels
             _warpDragIndex = -1
             _linienDragIndex = -1
             _linienDragTeil = -1
-            RaeumeGitterVorschauAb()
-            RaeumeLinienVorschauAb()
+            DisposeGridPreview()
+            DisposeLinePreview()
             _linien.Clear()
 
             If jetzt < 0 Then
@@ -6464,14 +6470,14 @@ Namespace ViewModels
                     _warpX = CType(_gitterBildX.Clone(), Double())
                     _warpY = CType(_gitterBildY.Clone(), Double())
                 Else
-                    SetzeGitterZurueck()
+                    ResetGrid()
                 End If
                 _linien.AddRange(_linienBild)
             Else
                 LadeVerzerrungAusObjekt()
             End If
 
-            MeldeLinien()
+            RaiseLinesChanged()
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
         End Sub
@@ -6479,23 +6485,23 @@ Namespace ViewModels
         ''' <summary>Gitter und Linien aus der eigenen Verzerrung des markierten Objekts holen. Was
         ''' nicht passt (andere Art, andere Rastergroesse), faengt neutral an.</summary>
         Private Sub LadeVerzerrungAusObjekt()
-            SetzeGitterZurueck()
+            ResetGrid()
             Dim a = AktuellesObjekt()
             Dim v = a?.EigeneVerzerrung
             If v Is Nothing OrElse v.IstLeer Then Return
 
-            If v.Art = "Gitter" AndAlso v.Spalten = _warpColumns AndAlso v.Zeilen = _warpRows Then
+            If v.Art = "Gitter" AndAlso v.Columns = _warpColumns AndAlso v.Rows = _warpRows Then
                 For i = 0 To _warpX.Length - 1
                     _warpX(i) = v.Knoten(i * 2)
                     _warpY(i) = v.Knoten(i * 2 + 1)
                 Next
             ElseIf v.Art = "Linien" Then
-                For i = 0 To v.LinienQuelle.Length \ 4 - 1
+                For i = 0 To v.LineSource.Length \ 4 - 1
                     _linien.Add(New VerzerrLinie With {
-                        .QuelleAx = v.LinienQuelle(i * 4), .QuelleAy = v.LinienQuelle(i * 4 + 1),
-                        .QuelleBx = v.LinienQuelle(i * 4 + 2), .QuelleBy = v.LinienQuelle(i * 4 + 3),
-                        .ZielAx = v.LinienZiel(i * 4), .ZielAy = v.LinienZiel(i * 4 + 1),
-                        .ZielBx = v.LinienZiel(i * 4 + 2), .ZielBy = v.LinienZiel(i * 4 + 3)})
+                        .QuelleAx = v.LineSource(i * 4), .QuelleAy = v.LineSource(i * 4 + 1),
+                        .QuelleBx = v.LineSource(i * 4 + 2), .QuelleBy = v.LineSource(i * 4 + 3),
+                        .ZielAx = v.LineTarget(i * 4), .ZielAy = v.LineTarget(i * 4 + 1),
+                        .ZielBx = v.LineTarget(i * 4 + 2), .ZielBy = v.LineTarget(i * 4 + 3)})
                 Next
             End If
         End Sub
@@ -6506,7 +6512,7 @@ Namespace ViewModels
         ''' Bild ein anderer.</summary>
         Public Function TryBeginWarpDrag(xPercent As Double, yPercent As Double,
                                          slopXPercent As Double, slopYPercent As Double) As Boolean
-            StelleGitterBereit()
+            PrepareGrid()
             Dim besterAbstand = Double.MaxValue
             Dim bester = -1
             For i = 0 To _warpX.Length - 1
@@ -6523,7 +6529,7 @@ Namespace ViewModels
             If bester < 0 Then Return False
             PushUndo()
             _warpDragIndex = bester
-            BereiteGitterVorschauVor()
+            PrepareGridPreview()
             Return True
         End Function
 
@@ -6552,10 +6558,10 @@ Namespace ViewModels
             ' Gilt der Zug einem OBJEKT, gibt es keine Bildvorschau zu rechnen: die Verzerrung
             ' steht sofort am Objekt, und das Bild darunter bleibt unangetastet.
             If VerzerrtDasObjekt Then
-                SchreibeObjektGitter()
+                WriteObjectGrid()
                 SchedulePreviewUpdate()
             Else
-                AktualisiereGitterVorschau()
+                RefreshGridPreview()
             End If
         End Sub
 
@@ -6564,7 +6570,7 @@ Namespace ViewModels
             _warpDragIndex = -1
             If warZug AndAlso VerzerrtDasObjekt Then
                 ' Loslassen heisst anwenden - wie bei den Eck-Anfassern.
-                SchreibeObjektGitter()
+                WriteObjectGrid()
                 RefreshPreviewImmediately()
                 Return
             End If
@@ -6576,14 +6582,14 @@ Namespace ViewModels
         Public Sub ResetWarpGrid()
             If Not HasWarpGridChanges Then Return
             CaptureUndoState("Gitter")
-            RaeumeGitterVorschauAb()
-            SetzeGitterZurueck()
+            DisposeGridPreview()
+            ResetGrid()
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
             ' Am Objekt ist das Raster die Verzerrung selbst - ein gerades Raster heisst also, dass
             ' auch am Objekt nichts mehr stehen darf.
             If VerzerrtDasObjekt Then
-                SchreibeObjektGitter()
+                WriteObjectGrid()
                 RefreshPreviewImmediately()
             End If
         End Sub
@@ -6605,8 +6611,8 @@ Namespace ViewModels
             Dim undoEintrag = _lastPushedUndoEntry
             ' Die OBJEKTE gehen mit, ohne eingebacken zu werden: sie bekommen die Verzerrung als
             ' Angabe ins Rezept und bleiben damit aenderbar - Text laesst sich weiter tippen.
-            UebertrageVerzerrungAufObjekte(GitterAbbildung())
-            SetzeBeschaeftigtGrund(LocalizationService.T("Verzerrung wird angewendet"))
+            UebertrageVerzerrungAufObjekte(GridMapping())
+            SetBusyReason(LocalizationService.T("Verzerrung wird angewendet"))
             StatusText = LocalizationService.T("Verzerrung wird angewendet…")
             EnqueueWorkingCommit(
                 Function()
@@ -6622,7 +6628,7 @@ Namespace ViewModels
                             ' des Zeichnens gleichzeitig als Textur zu lesen und zu beschreiben gaebe
                             ' Schlieren.
                             Using kopie = full.Copy()
-                                Using verzerrt = ImageGeometryMapper.VerzerreUeberGitter(kopie, spalten, zeilen, zx, zy)
+                                Using verzerrt = ImageGeometryMapper.WarpOverGrid(kopie, spalten, zeilen, zx, zy)
                                     If verzerrt Is Nothing Then Return
                                     Using canvas = New SKCanvas(full)
                                         canvas.Clear(SKColors.Transparent)
@@ -6640,8 +6646,8 @@ Namespace ViewModels
                         Return
                     End If
                     If undoEintrag IsNot Nothing Then undoEintrag.Patch = patch
-                    RaeumeGitterVorschauAb()
-                    SetzeGitterZurueck()
+                    DisposeGridPreview()
+                    ResetGrid()
                     Me.RaisePropertyChanged(NameOf(WarpGridValues))
                     Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
                     StatusText = LocalizationService.T("Verzerrung angewendet")
@@ -9552,7 +9558,7 @@ Namespace ViewModels
         Private _maskOverlayBasisBreite As Integer
         Private _maskOverlayBasisHoehe As Integer
 
-        Private Sub VerwirfMaskenOverlayBasis()
+        Private Sub DiscardMaskOverlayBase()
             _maskOverlayBasis?.Dispose()
             _maskOverlayBasis = Nothing
             _maskOverlayBasisBreite = 0
@@ -9587,7 +9593,7 @@ Namespace ViewModels
 
             ' Waehrend eines Strichs die eingefaerbte Maske einmal bauen und danach nur kopieren.
             Dim liveStrich = livePts IsNot Nothing AndAlso livePts.Count > 0
-            If Not liveStrich Then VerwirfMaskenOverlayBasis()
+            If Not liveStrich Then DiscardMaskOverlayBase()
             Dim basisTaugt = liveStrich AndAlso _maskOverlayBasis IsNot Nothing AndAlso
                              _maskOverlayBasisBreite = ow AndAlso _maskOverlayBasisHoehe = oh
 
@@ -9621,7 +9627,7 @@ Namespace ViewModels
                     ' Basis fuer die naechsten Bewegungen desselben Strichs festhalten - VOR dem
                     ' Zeichnen des Strichs, sonst waere er beim naechsten Mal doppelt drin.
                     If liveStrich AndAlso Not basisTaugt Then
-                        VerwirfMaskenOverlayBasis()
+                        DiscardMaskOverlayBase()
                         _maskOverlayBasis = overlay.Copy()
                         _maskOverlayBasisBreite = ow
                         _maskOverlayBasisHoehe = oh
@@ -10373,7 +10379,7 @@ Namespace ViewModels
                 ' Der Startpunkt gewinnt NICHT gegen den Endpunkt: bei einem ganz kurzen Verlauf
                 ' liegen beide fast aufeinander, und der Endpunkt ist der, den man dann meint.
                 griff = 0
-            ElseIf IstAufStauchungsGriff(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
+            ElseIf IsOnSqueezeHandle(geo, xPercent, yPercent, slopXPercent, slopYPercent) Then
                 ' VOR der inneren Ellipse pruefen: der Griff liegt auf der aeusseren, und bei
                 ' schmalem Uebergang liegen beide dicht beieinander - dann meint man den Griff.
                 griff = 4
@@ -10465,7 +10471,7 @@ Namespace ViewModels
         ''' verschiedene Pixelmasse, ein "senkrecht" in Prozent waere im Bild schief. Denselben
         ''' Massstab benutzen Trefferpruefung und Zeichnung, sonst springt der Griff beim
         ''' Anfassen.</summary>
-        Friend Shared Function StauchungsGriff(geo As Double(), slopXPercent As Double, slopYPercent As Double) _
+        Friend Shared Function SqueezeHandle(geo As Double(), slopXPercent As Double, slopYPercent As Double) _
                                                As Double()
             If geo Is Nothing OrElse geo.Length < 7 OrElse geo(6) <= 0.5 Then Return Nothing
             If slopXPercent <= 0.0 OrElse slopYPercent <= 0.0 Then Return Nothing
@@ -10482,9 +10488,9 @@ Namespace ViewModels
             Return New Double() {px * slopXPercent, py * slopYPercent}
         End Function
 
-        Private Shared Function IstAufStauchungsGriff(geo As Double(), xPercent As Double, yPercent As Double,
+        Private Shared Function IsOnSqueezeHandle(geo As Double(), xPercent As Double, yPercent As Double,
                                                       slopXPercent As Double, slopYPercent As Double) As Boolean
-            Dim g = StauchungsGriff(geo, slopXPercent, slopYPercent)
+            Dim g = SqueezeHandle(geo, slopXPercent, slopYPercent)
             If g Is Nothing Then Return False
             Return Math.Abs(xPercent - g(0)) <= slopXPercent AndAlso Math.Abs(yPercent - g(1)) <= slopYPercent
         End Function
@@ -10493,7 +10499,7 @@ Namespace ViewModels
         ''' Achse, gemessen in Vielfachen der Achsenlaenge. Geklemmt auf denselben Bereich wie der
         ''' Regler - sonst liesse sich mit der Maus etwas einstellen, das der Regler nicht anzeigen
         ''' kann.</summary>
-        Friend Shared Function StauchungAusZeiger(geo As Double(), xPercent As Double, yPercent As Double,
+        Friend Shared Function SqueezeFromPointer(geo As Double(), xPercent As Double, yPercent As Double,
                                                   slopXPercent As Double, slopYPercent As Double) As Double
             If geo Is Nothing OrElse geo.Length < 7 Then Return -1.0
             If slopXPercent <= 0.0 OrElse slopYPercent <= 0.0 Then Return -1.0
@@ -10573,7 +10579,7 @@ Namespace ViewModels
                 ' Stauchung: der Abstand des Zeigers QUER zur Achse ist die zweite Halbachse.
                 Dim geoS = GradientGeometry
                 If geoS Is Nothing Then Return
-                Dim neu = StauchungAusZeiger(geoS, xPercent, yPercent, _gradientSlopX, _gradientSlopY)
+                Dim neu = SqueezeFromPointer(geoS, xPercent, yPercent, _gradientSlopX, _gradientSlopY)
                 If neu < 0.0 Then Return
                 If rasten Then neu = Math.Round(neu * 20.0) / 20.0
                 maske.GradientRadiusRatio = neu
@@ -10883,16 +10889,16 @@ Namespace ViewModels
         ' kodiert. Ohne den Schluessel zeigte ein Klick nach einem Zuschnitt die Maske der alten
         ' Bildlage - und das saehe aus wie ein Modellfehler.
 
-        Private _motivEinbettung As MotivMaskeService.Einbettung
+        Private _motivEinbettung As SubjectMaskService.Einbettung
         Private _motivSchluessel As String = ""
         Private ReadOnly _motivTor As New SemaphoreSlim(1, 1)
-        Private ReadOnly _motivPunkte As New List(Of MotivMaskeService.Punkt)()
+        Private ReadOnly _motivPunkte As New List(Of SubjectMaskService.Punkt)()
 
         ''' <summary>Steht die Maske per Klick zur Verfuegung? Falsch heisst: Laufzeit oder
         ''' Modelldateien fehlen, und der Knopf bleibt weg.</summary>
-        Public ReadOnly Property IsMotivMaskeVerfuegbar As Boolean
+        Public ReadOnly Property IsSubjectMaskAvailable As Boolean
             Get
-                Return MotivMaskeService.Verfuegbar
+                Return SubjectMaskService.Verfuegbar
             End Get
         End Property
 
@@ -10908,7 +10914,7 @@ Namespace ViewModels
         Private _maskeSchiebt As Boolean = False
 
         ''' <summary>Fasst die Maske an, wenn der Punkt in ihr liegt.</summary>
-        Public Function TryBeginMaskeVerschieben(xPercent As Double, yPercent As Double) As Boolean
+        Public Function TryBeginMaskMove(xPercent As Double, yPercent As Double) As Boolean
             If Not _hasActiveSelection OrElse _selectionMask Is Nothing Then Return False
             If Not IsPointInsideSelectionPercent(xPercent, yPercent) Then Return False
             PushUndo()
@@ -10919,7 +10925,7 @@ Namespace ViewModels
             Return True
         End Function
 
-        Public Sub UpdateMaskeVerschieben(xPercent As Double, yPercent As Double)
+        Public Sub UpdateMaskMove(xPercent As Double, yPercent As Double)
             If Not _maskeSchiebt OrElse _selectionMask Is Nothing Then Return
             Dim groesse = GetAnnotationDisplayPixelSize()
             If groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return
@@ -10937,7 +10943,7 @@ Namespace ViewModels
             SetSelectionMaskData(_selectionMask.Copy(), neu)
         End Sub
 
-        Public Sub EndMaskeVerschieben()
+        Public Sub EndMaskMove()
             If Not _maskeSchiebt Then Return
             _maskeSchiebt = False
             ' Beim Bearbeiten einer Ebenen-Maske wandert die verschobene Form zurueck in die Ebene -
@@ -10991,7 +10997,7 @@ Namespace ViewModels
         '''
         ''' Eine bereits zur Ebene gewordene Auswahl wird MITgewandelt: sonst stuende die Ebene
         ''' danach als das eine da und die aktive Auswahl als das andere.</summary>
-        Public Sub WandleAuswahlArt(zuMaske As Boolean)
+        Public Sub ConvertSelectionKind(zuMaske As Boolean)
             If Not _hasActiveSelection Then Return
             If _activeSelectionIsMask = zuMaske Then Return
             PushUndo()
@@ -11023,7 +11029,7 @@ Namespace ViewModels
 
         ''' <summary>Laeuft gerade eine Kodierung? Fuer die Anzeige - sie dauert sichtbar lange.</summary>
         Private _motivRechnet As Boolean = False
-        Public ReadOnly Property IsMotivMaskeRechnend As Boolean
+        Public ReadOnly Property IsSubjectMaskRunning As Boolean
             Get
                 Return _motivRechnet
             End Get
@@ -11031,14 +11037,14 @@ Namespace ViewModels
 
         ''' <summary>Setzt die gemerkte Einbettung zurueck. Beim Bildwechsel und bei jeder
         ''' Aenderung, die das Anzeigebild veraendert.</summary>
-        Public Sub VergissMotivEinbettung()
+        Public Sub ForgetSubjectEmbedding()
             _motivEinbettung = Nothing
             _motivSchluessel = ""
             _motivPunkte.Clear()
         End Sub
 
         ''' <summary>Nur die gesammelten Klicks vergessen, die teure Einbettung behalten.</summary>
-        Public Sub VergissMotivPunkte()
+        Public Sub ForgetSubjectPoints()
             _motivPunkte.Clear()
         End Sub
 
@@ -11055,9 +11061,9 @@ Namespace ViewModels
         Private _bokehBlende As Integer = 0
         Private _bokehLichter As Double = 60.0
 
-        Public ReadOnly Property IsBokehVerfuegbar As Boolean
+        Public ReadOnly Property IsBokehAvailable As Boolean
             Get
-                Return TiefenKarteService.Verfuegbar
+                Return DepthMapService.Verfuegbar
             End Get
         End Property
 
@@ -11065,7 +11071,7 @@ Namespace ViewModels
         '''
         ''' Zwei Grenzen statt einer Ebene mit Breite: eine echte Schaerfentiefe reicht nach hinten
         ''' weiter als nach vorn, und das laesst sich nur so einstellen.</summary>
-        Public Property BokehVon As Double
+        Public Property BokehFrom As Double
             Get
                 Return _bokehVon
             End Get
@@ -11077,15 +11083,15 @@ Namespace ViewModels
                 ' der oberen ist kein Band, sondern ein Zustand, den man nicht meinen kann.
                 If _bokehVon > _bokehBis Then
                     _bokehBis = _bokehVon
-                    Me.RaisePropertyChanged(NameOf(BokehBis))
+                    Me.RaisePropertyChanged(NameOf(BokehTo))
                 End If
-                Me.RaisePropertyChanged(NameOf(BokehVon))
-                PlaneBokehVorschau()
+                Me.RaisePropertyChanged(NameOf(BokehFrom))
+                ScheduleBokehPreview()
             End Set
         End Property
 
         ''' <summary>Obere Grenze des scharfen Bandes. 100 ist am naechsten.</summary>
-        Public Property BokehBis As Double
+        Public Property BokehTo As Double
             Get
                 Return _bokehBis
             End Get
@@ -11095,15 +11101,15 @@ Namespace ViewModels
                 _bokehBis = v
                 If _bokehBis < _bokehVon Then
                     _bokehVon = _bokehBis
-                    Me.RaisePropertyChanged(NameOf(BokehVon))
+                    Me.RaisePropertyChanged(NameOf(BokehFrom))
                 End If
-                Me.RaisePropertyChanged(NameOf(BokehBis))
-                PlaneBokehVorschau()
+                Me.RaisePropertyChanged(NameOf(BokehTo))
+                ScheduleBokehPreview()
             End Set
         End Property
 
         ''' <summary>Wie stark die Unschaerfe am fernsten Punkt wird.</summary>
-        Public Property BokehStaerke As Double
+        Public Property BokehStrength As Double
             Get
                 Return _bokehStaerke
             End Get
@@ -11111,15 +11117,15 @@ Namespace ViewModels
                 Dim v = Math.Max(0.0, Math.Min(100.0, value))
                 If Math.Abs(_bokehStaerke - v) < 0.0001 Then Return
                 _bokehStaerke = v
-                Me.RaisePropertyChanged(NameOf(BokehStaerke))
+                Me.RaisePropertyChanged(NameOf(BokehStrength))
                 Me.RaisePropertyChanged(NameOf(HasBokehChanges))
-                PlaneBokehVorschau()
+                ScheduleBokehPreview()
             End Set
         End Property
 
         ''' <summary>Wie breit die Schaerfeebene ist: klein ergibt einen schmalen scharfen Bereich,
         ''' gross einen breiten.</summary>
-        Public Property BokehUebergang As Double
+        Public Property BokehTransition As Double
             Get
                 Return _bokehUebergang
             End Get
@@ -11127,14 +11133,14 @@ Namespace ViewModels
                 Dim v = Math.Max(1.0, Math.Min(100.0, value))
                 If Math.Abs(_bokehUebergang - v) < 0.0001 Then Return
                 _bokehUebergang = v
-                Me.RaisePropertyChanged(NameOf(BokehUebergang))
-                PlaneBokehVorschau()
+                Me.RaisePropertyChanged(NameOf(BokehTransition))
+                ScheduleBokehPreview()
             End Set
         End Property
 
         ''' <summary>Die Form der Blende: 0 rund, sonst die Zahl der Lamellen. Sie bestimmt, wie ein
         ''' Lichtpunkt im unscharfen Bereich aussieht - rund oder als Vieleck.</summary>
-        Public Property BokehBlende As Integer
+        Public Property BokehAperture As Integer
             Get
                 Return _bokehBlende
             End Get
@@ -11144,12 +11150,12 @@ Namespace ViewModels
                 If v = 1 OrElse v = 2 Then v = 0
                 If v = _bokehBlende Then Return
                 _bokehBlende = v
-                Me.RaisePropertyChanged(NameOf(BokehBlende))
+                Me.RaisePropertyChanged(NameOf(BokehAperture))
                 For Each n In {NameOf(IsBlendeRund), NameOf(IsBlendeFuenf),
                                NameOf(IsBlendeSechs), NameOf(IsBlendeSieben)}
                     Me.RaisePropertyChanged(n)
                 Next
-                PlaneBokehVorschau()
+                ScheduleBokehPreview()
             End Set
         End Property
 
@@ -11179,7 +11185,7 @@ Namespace ViewModels
 
         ''' <summary>Wie stark Lichtpunkte als leuchtende Scheiben erhalten bleiben, statt sich
         ''' zu einem matten Fleck zu mitteln.</summary>
-        Public Property BokehLichter As Double
+        Public Property BokehHighlights As Double
             Get
                 Return _bokehLichter
             End Get
@@ -11187,8 +11193,8 @@ Namespace ViewModels
                 Dim v = Math.Max(0.0, Math.Min(100.0, value))
                 If Math.Abs(_bokehLichter - v) < 0.0001 Then Return
                 _bokehLichter = v
-                Me.RaisePropertyChanged(NameOf(BokehLichter))
-                PlaneBokehVorschau()
+                Me.RaisePropertyChanged(NameOf(BokehHighlights))
+                ScheduleBokehPreview()
             End Set
         End Property
 
@@ -11207,9 +11213,9 @@ Namespace ViewModels
             _bokehUebergang = 25.0
             _bokehBlende = 0
             _bokehLichter = 60.0
-            RaeumeBokehVorschauAb()
-            For Each n In {NameOf(BokehVon), NameOf(BokehBis), NameOf(BokehStaerke), NameOf(BokehUebergang),
-                           NameOf(BokehBlende), NameOf(BokehLichter), NameOf(HasBokehChanges),
+            DisposeBokehPreview()
+            For Each n In {NameOf(BokehFrom), NameOf(BokehTo), NameOf(BokehStrength), NameOf(BokehTransition),
+                           NameOf(BokehAperture), NameOf(BokehHighlights), NameOf(HasBokehChanges),
                            NameOf(IsBlendeRund), NameOf(IsBlendeFuenf), NameOf(IsBlendeSechs),
                            NameOf(IsBlendeSieben)}
                 Me.RaisePropertyChanged(n)
@@ -11227,15 +11233,15 @@ Namespace ViewModels
         ' zieht sie ohnehin auf den Bildbereich.
 
         ''' <summary>Laengste Kante der Vorschaukopie.</summary>
-        Private Const BokehVorschauKante As Integer = 900
+        Private Const BokehPreviewEdge As Integer = 900
 
         Private _bokehVorschauBasis As SKBitmap
         Private _bokehVorschauSchluessel As String = ""
         Private _bokehVorschauLauf As Integer = 0
 
-        Public Sub RaeumeBokehVorschauAb()
+        Public Sub DisposeBokehPreview()
             If String.Equals(_vorschauQuelle, "Bokeh", StringComparison.Ordinal) Then
-                VorschauBild = Nothing
+                ToolPreviewImage = Nothing
                 _vorschauQuelle = ""
             End If
             _bokehVorschauBasis?.Dispose()
@@ -11250,27 +11256,27 @@ Namespace ViewModels
         ''' Mit Wartezeit: waehrend man am Regler zieht, kommen Dutzende Aenderungen, und jede eine
         ''' Faltung ueber das ganze Bild zu starten hiesse, dass die Anzeige immer der Maus
         ''' hinterherhinkt. Es zaehlt nur der zuletzt angestossene Lauf.</summary>
-        Private Sub PlaneBokehVorschau()
-            If Not IsBokehVerfuegbar Then Return
+        Private Sub ScheduleBokehPreview()
+            If Not IsBokehAvailable Then Return
             _bokehVorschauLauf += 1
             Dim lauf = _bokehVorschauLauf
-            Dim ignoriert = ZeichneBokehVorschauNeu(lauf)
+            Dim ignoriert = RedrawBokehPreview(lauf)
         End Sub
 
-        Private Async Function ZeichneBokehVorschauNeu(lauf As Integer) As Task
+        Private Async Function RedrawBokehPreview(lauf As Integer) As Task
             Await Task.Delay(220)
             If lauf <> _bokehVorschauLauf Then Return
-            If Not IsBokehVerfuegbar OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            If Not IsBokehAvailable OrElse String.IsNullOrWhiteSpace(_currentImagePath) Then Return
 
             If Not HasBokehChanges Then
-                RaeumeBokehVorschauAb()
+                DisposeBokehPreview()
                 Return
             End If
 
             Await _tiefeTor.WaitAsync()
             Try
                 If lauf <> _bokehVorschauLauf Then Return
-                If Not Await StelleBokehGrundlageBereit() Then Return
+                If Not Await PrepareBokehBase() Then Return
                 If lauf <> _bokehVorschauLauf Then Return
 
                 Dim basis = _bokehVorschauBasis
@@ -11280,12 +11286,12 @@ Namespace ViewModels
                 Dim staerke = _bokehStaerke, uebergang = _bokehUebergang
                 Dim ecken = _bokehBlende, lichter = _bokehLichter
 
-                SetzeVorschauRechnet(True)
+                SetPreviewBusy(True)
                 Dim daten As Byte()
                 Try
                     daten = Await Task.Run(
                     Function() As Byte()
-                        Using unscharf = TiefenKarteService.TiefenUnschaerfe(basis, karte, von, bis,
+                        Using unscharf = DepthMapService.TiefenUnschaerfe(basis, karte, von, bis,
                                                                             staerke, uebergang, ecken, lichter)
                             If unscharf Is Nothing Then Return Nothing
                             Using bild = SKImage.FromBitmap(unscharf)
@@ -11296,17 +11302,17 @@ Namespace ViewModels
                         End Using
                     End Function)
                 Finally
-                    SetzeVorschauRechnet(False)
+                    SetPreviewBusy(False)
                 End Try
 
                 If daten Is Nothing OrElse lauf <> _bokehVorschauLauf Then Return
                 Using strom = New IO.MemoryStream(daten)
-                    VorschauBild = New Bitmap(strom)
+                    ToolPreviewImage = New Bitmap(strom)
                     _vorschauQuelle = "Bokeh"
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("BokehVorschau", ex.Message)
-                RaeumeBokehVorschauAb()
+                DisposeBokehPreview()
             Finally
                 _tiefeTor.Release()
             End Try
@@ -11315,7 +11321,7 @@ Namespace ViewModels
         ''' <summary>Die verkleinerte Kopie und die Tiefenkarte fuer den aktuellen Bildstand.
         ''' Beide haengen am selben Schluessel: aendert sich das Rezept, gelten beide nicht mehr.
         ''' Der Aufrufer haelt <c>_tiefeTor</c>.</summary>
-        Private Async Function StelleBokehGrundlageBereit() As Task(Of Boolean)
+        Private Async Function PrepareBokehBase() As Task(Of Boolean)
             Dim groesse = GetAnnotationDisplayPixelSize()
             If groesse.Width <= 0 OrElse groesse.Height <= 0 Then Return False
             Dim rezept = RezeptOhneObjekte()
@@ -11329,10 +11335,10 @@ Namespace ViewModels
             End If
 
             _tiefeRechnet = True
-            Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+            Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     AktualisiereBeschaeftigt()
             StatusText = LocalizationService.T("Tiefe wird berechnet…")
-                SetzeBeschaeftigtGrund(LocalizationService.T("Tiefe wird berechnet"))
+                SetBusyReason(LocalizationService.T("Tiefe wird berechnet"))
             Dim quellPfad = RenderSourcePath
             Dim arbeitsbild = CloneWorkingFullForRender()
             Dim brauchtKarte = _tiefenKarte Is Nothing OrElse
@@ -11346,13 +11352,13 @@ Namespace ViewModels
                             ' EIN Render fuer beides: die Tiefenkarte und die Vorschaukopie kommen aus
                             ' demselben Bild, sonst passten sie im Zweifel nicht zusammen.
                             Dim k As SKBitmap = Nothing
-                            If brauchtKarte Then k = TiefenKarteService.Berechne(fertig)
-                            Return Tuple.Create(VerkleinerteKopie(fertig, BokehVorschauKante), k)
+                            If brauchtKarte Then k = DepthMapService.Berechne(fertig)
+                            Return Tuple.Create(ScaledDownCopy(fertig, BokehPreviewEdge), k)
                         End Using
                     End Function)
             Finally
                 _tiefeRechnet = False
-                Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     AktualisiereBeschaeftigt()
             End Try
 
@@ -11394,7 +11400,7 @@ Namespace ViewModels
 
         ''' <summary>Eine Kopie, deren laengste Kante hoechstens <paramref name="kante"/> misst.
         ''' Ist das Bild schon kleiner, wird es nur kopiert, nicht hochgezogen.</summary>
-        Private Shared Function VerkleinerteKopie(quelle As SKBitmap, kante As Integer) As SKBitmap
+        Private Shared Function ScaledDownCopy(quelle As SKBitmap, kante As Integer) As SKBitmap
             If quelle Is Nothing OrElse quelle.Width <= 0 OrElse quelle.Height <= 0 Then Return Nothing
             Dim f = Math.Min(1.0, kante / CDbl(Math.Max(quelle.Width, quelle.Height)))
             Dim w = Math.Max(1, CInt(Math.Round(quelle.Width * f)))
@@ -11408,17 +11414,17 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Die Tiefen-Unschaerfe ins Arbeitsbild backen. Ab hier ist sie Teil der Pixel.</summary>
-        Public Async Function WendeBokehAn() As Task
-            If Not TiefenKarteService.Verfuegbar OrElse Not HasBokehChanges Then Return
+        Public Async Function ApplyBokeh() As Task
+            If Not DepthMapService.Verfuegbar OrElse Not HasBokehChanges Then Return
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
             Await _tiefeTor.WaitAsync()
             Try
                 _tiefeRechnet = True
-                Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     AktualisiereBeschaeftigt()
                 StatusText = LocalizationService.T("Tiefe wird berechnet…")
-                SetzeBeschaeftigtGrund(LocalizationService.T("Tiefe wird berechnet"))
+                SetBusyReason(LocalizationService.T("Tiefe wird berechnet"))
                 Dim quellPfad = RenderSourcePath
                 Dim rezept = RezeptOhneObjekte()
                 Dim arbeitsbild = CloneWorkingFullForRender()
@@ -11428,12 +11434,12 @@ Namespace ViewModels
                         Function()
                             Using fertig = ImageProcessor.RenderAnzeigeBild(quellPfad, rezept, arbeitsbild)
                                 If fertig Is Nothing Then Return Nothing
-                                Return TiefenKarteService.Berechne(fertig)
+                                Return DepthMapService.Berechne(fertig)
                             End Using
                         End Function)
                 Finally
                     _tiefeRechnet = False
-                    Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     AktualisiereBeschaeftigt()
                 End Try
                 If karte Is Nothing Then
@@ -11448,12 +11454,12 @@ Namespace ViewModels
                 ' Der Schritt zurueck merkt sich nur das Rezept - der Flicken traegt die PIXEL.
                 Dim undoEintrag = _lastPushedUndoEntry
                 StatusText = LocalizationService.T("Unschärfe wird angewendet…")
-                SetzeBeschaeftigtGrund(LocalizationService.T("Unschärfe wird angewendet"))
+                SetBusyReason(LocalizationService.T("Unschärfe wird angewendet"))
                 EnqueueWorkingCommit(
                     Function()
                         Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                             Sub(full)
-                                Using unscharf = TiefenKarteService.TiefenUnschaerfe(full, karte, von, bis,
+                                Using unscharf = DepthMapService.TiefenUnschaerfe(full, karte, von, bis,
                                                                                     staerke, uebergang, ecken, lichter)
                                     If unscharf Is Nothing Then Return
                                     Using canvas = New SKCanvas(full)
@@ -11472,8 +11478,8 @@ Namespace ViewModels
                             Return
                         End If
                         If undoEintrag IsNot Nothing Then undoEintrag.Patch = patch
-                        BokehStaerke = 0
-                        RaeumeBokehVorschauAb()
+                        BokehStrength = 0
+                        DisposeBokehPreview()
                         StatusText = LocalizationService.T("Unschärfe angewendet")
                         SchedulePreviewUpdate()
                     End Sub)
@@ -11490,7 +11496,7 @@ Namespace ViewModels
 
         Public ReadOnly Property IstObjektEntfernenVerfuegbar As Boolean
             Get
-                Return ObjektEntfernenService.Verfuegbar
+                Return ObjectRemovalService.Verfuegbar
             End Get
         End Property
 
@@ -11500,7 +11506,7 @@ Namespace ViewModels
         ''' Knopf sei schlimmer als keiner - das stimmt, solange es keinen Weg gibt, ihn zum Leben zu
         ''' erwecken. Den gibt es: der Einstellungsdialog laedt die Datei. Ein verschwundener Knopf
         ''' verschweigt, dass es die Funktion ueberhaupt gibt.</summary>
-        Public Shared ReadOnly Property ModellFehltHinweis As String
+        Public Shared ReadOnly Property MissingModelHint As String
             Get
                 Return LocalizationService.T("Dafür fehlt eine Modelldatei. Sie lässt sich in den Einstellungen unter Modelle herunterladen.")
             End Get
@@ -11508,35 +11514,35 @@ Namespace ViewModels
 
         Public ReadOnly Property ObjektEntfernenHinweis As String
             Get
-                If Not ObjektEntfernenService.Verfuegbar Then Return ModellFehltHinweis
+                If Not ObjectRemovalService.Verfuegbar Then Return MissingModelHint
                 Return LocalizationService.T("Lässt das Markierte verschwinden und setzt den Hintergrund fort. Wird in die Pixel gerechnet, wie eine Retusche.")
             End Get
         End Property
 
-        Public ReadOnly Property BokehHinweis As String
+        Public ReadOnly Property BokehHint As String
             Get
-                If Not TiefenKarteService.Verfuegbar Then Return ModellFehltHinweis
+                If Not DepthMapService.Verfuegbar Then Return MissingModelHint
                 Return LocalizationService.T("Die Unschärfe kommt je Bildpunkt aus seiner Entfernung.")
             End Get
         End Property
 
-        Public ReadOnly Property MotivMaskeHinweis As String
+        Public ReadOnly Property SubjectMaskHint As String
             Get
-                If Not MotivMaskeService.Verfuegbar Then Return ModellFehltHinweis
+                If Not SubjectMaskService.Verfuegbar Then Return MissingModelHint
                 Return LocalizationService.T("Objekt im Bild anklicken, die Maske entsteht von selbst.")
             End Get
         End Property
 
-        Public ReadOnly Property TiefenMaskeHinweis As String
+        Public ReadOnly Property DepthMaskHint As String
             Get
-                If Not TiefenKarteService.Verfuegbar Then Return ModellFehltHinweis
+                If Not DepthMapService.Verfuegbar Then Return MissingModelHint
                 Return LocalizationService.T("Wählt alles, was in einem Entfernungsbereich liegt.")
             End Get
         End Property
 
         Public ReadOnly Property KannObjektEntfernen As Boolean
             Get
-                Return ObjektEntfernenService.Verfuegbar AndAlso _hasActiveSelection
+                Return ObjectRemovalService.Verfuegbar AndAlso _hasActiveSelection
             End Get
         End Property
 
@@ -11544,7 +11550,7 @@ Namespace ViewModels
         ''' Anzeigeraum; ueber CreateSourceMaskFromSelection wird sie zurueckgelegt, und zwar ueber
         ''' denselben Weg wie beim Anlegen einer Maskenebene - eine zweite Umrechnung daneben waere
         ''' eine zweite Gelegenheit, sich um ein paar Bildpunkte zu vertun.</summary>
-        Private Shared Function MaskeAlsQuellbild(m As ImageMask, breite As Integer, hoehe As Integer) As SKBitmap
+        Private Shared Function MaskAsSourceImage(m As ImageMask, breite As Integer, hoehe As Integer) As SKBitmap
             If m Is Nothing OrElse breite <= 0 OrElse hoehe <= 0 Then Return Nothing
             If String.IsNullOrWhiteSpace(m.PngBase64) Then Return Nothing
             Dim w = m.Right - m.Left, h = m.Bottom - m.Top
@@ -11603,7 +11609,7 @@ Namespace ViewModels
             ' Gitterverzerrung.
             Dim undoEintrag = _lastPushedUndoEntry
             StatusText = LocalizationService.T("Objekt wird entfernt…")
-                SetzeBeschaeftigtGrund(LocalizationService.T("Objekt wird entfernt"))
+                SetBusyReason(LocalizationService.T("Objekt wird entfernt"))
             ' Der Grund eines Fehlschlags muss aus dem Hintergrund herauskommen. Ein stiller Rueck-
             ' sprung im Commit sieht von aussen aus wie "hat funktioniert, aber nichts geaendert" -
             ' und das ist die Meldung, die man am wenigsten gebrauchen kann.
@@ -11622,12 +11628,12 @@ Namespace ViewModels
                     End If
                     Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                         Sub(full)
-                            Using maske = MaskeAlsQuellbild(m, full.Width, full.Height)
+                            Using maske = MaskAsSourceImage(m, full.Width, full.Height)
                                 If maske Is Nothing Then
                                     grund = "Maske"
                                     Return
                                 End If
-                                Using gefuellt = ObjektEntfernenService.Fuelle(full, maske)
+                                Using gefuellt = ObjectRemovalService.Fuelle(full, maske)
                                     If gefuellt Is Nothing Then
                                         grund = "Modell"
                                         Return
@@ -11660,7 +11666,7 @@ Namespace ViewModels
                     ' Mit den Zahlen des Durchlaufs. Sie stehen im VERLAUF und nicht nur im Fuss:
                     ' der Statustext wird von der gleich darauf startenden Vorschau ueberschrieben,
                     ' bevor man ihn gelesen hat.
-                    Dim bericht = ObjektEntfernenService.LetzterBericht
+                    Dim bericht = ObjectRemovalService.LetzterBericht
                     StatusText = LocalizationService.T("Objekt entfernt") &
                                  If(String.IsNullOrEmpty(bericht), "", " - " & bericht)
                     _hasChanges = True
@@ -11684,9 +11690,9 @@ Namespace ViewModels
         Private _tiefeRechnet As Boolean = False
         Private ReadOnly _tiefeTor As New SemaphoreSlim(1, 1)
 
-        Public ReadOnly Property IsTiefenMaskeVerfuegbar As Boolean
+        Public ReadOnly Property IsDepthMaskAvailable As Boolean
             Get
-                Return TiefenKarteService.Verfuegbar
+                Return DepthMapService.Verfuegbar
             End Get
         End Property
 
@@ -11696,7 +11702,7 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property IsTiefenMaskeRechnend As Boolean
+        Public ReadOnly Property IsDepthMaskRunning As Boolean
             Get
                 Return _tiefeRechnet
             End Get
@@ -11712,7 +11718,7 @@ Namespace ViewModels
                 If Math.Abs(_tiefeVon - v) < 0.0001 Then Return
                 _tiefeVon = v
                 Me.RaisePropertyChanged(NameOf(TiefeVon))
-                Dim ignoriert = ZeichneTiefenMaskeNeu()
+                Dim ignoriert = RedrawDepthMask()
             End Set
         End Property
 
@@ -11725,7 +11731,7 @@ Namespace ViewModels
                 If Math.Abs(_tiefeBis - v) < 0.0001 Then Return
                 _tiefeBis = v
                 Me.RaisePropertyChanged(NameOf(TiefeBis))
-                Dim ignoriert = ZeichneTiefenMaskeNeu()
+                Dim ignoriert = RedrawDepthMask()
             End Set
         End Property
 
@@ -11741,7 +11747,7 @@ Namespace ViewModels
                 If Math.Abs(_tiefeWeiche - v) < 0.0001 Then Return
                 _tiefeWeiche = v
                 Me.RaisePropertyChanged(NameOf(TiefeWeiche))
-                Dim ignoriert = ZeichneTiefenMaskeNeu()
+                Dim ignoriert = RedrawDepthMask()
             End Set
         End Property
 
@@ -11753,8 +11759,8 @@ Namespace ViewModels
 
         ''' <summary>Die Maske aus dem gewaehlten Tiefenbereich. Rechnet die Tiefenkarte, falls sie
         ''' fuer diesen Bildstand noch fehlt.</summary>
-        Public Async Function ZeichneTiefenMaskeNeu() As Task
-            If Not TiefenKarteService.Verfuegbar Then Return
+        Public Async Function RedrawDepthMask() As Task
+            If Not DepthMapService.Verfuegbar Then Return
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
 
             Await _tiefeTor.WaitAsync()
@@ -11770,10 +11776,10 @@ Namespace ViewModels
                                              ImageProcessor.ComputeBaseKey(rezept))
                 If _tiefenKarte Is Nothing OrElse Not String.Equals(_tiefenSchluessel, schluessel, StringComparison.Ordinal) Then
                     _tiefeRechnet = True
-                    Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                    Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     AktualisiereBeschaeftigt()
                     StatusText = LocalizationService.T("Tiefe wird berechnet…")
-                SetzeBeschaeftigtGrund(LocalizationService.T("Tiefe wird berechnet"))
+                SetBusyReason(LocalizationService.T("Tiefe wird berechnet"))
                     Dim quellPfad = RenderSourcePath
                     Dim arbeitsbild = CloneWorkingFullForRender()
                     Dim neu As SKBitmap = Nothing
@@ -11782,12 +11788,12 @@ Namespace ViewModels
                             Function()
                                 Using fertig = ImageProcessor.RenderAnzeigeBild(quellPfad, rezept, arbeitsbild)
                                     If fertig Is Nothing Then Return Nothing
-                                    Return TiefenKarteService.Berechne(fertig)
+                                    Return DepthMapService.Berechne(fertig)
                                 End Using
                             End Function)
                     Finally
                         _tiefeRechnet = False
-                        Me.RaisePropertyChanged(NameOf(IsTiefenMaskeRechnend))
+                        Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     AktualisiereBeschaeftigt()
                     End Try
                     If neu Is Nothing Then
@@ -11801,10 +11807,10 @@ Namespace ViewModels
 
                 Dim karte = _tiefenKarte
                 Dim von = _tiefeVon, bis = _tiefeBis, weich = _tiefeWeiche
-                Dim maske = Await Task.Run(Function() TiefenKarteService.MaskeAusTiefe(karte, von, bis, weich))
+                Dim maske = Await Task.Run(Function() DepthMapService.MaskFromDepth(karte, von, bis, weich))
                 If maske Is Nothing Then Return
                 Using maske
-                    Dim rechteck = MaskenRechteck(maske)
+                    Dim rechteck = MaskRect(maske)
                     If rechteck.Width <= 0 OrElse rechteck.Height <= 0 Then
                         StatusText = LocalizationService.T("In diesem Tiefenbereich liegt nichts")
                         Return
@@ -11824,7 +11830,7 @@ Namespace ViewModels
         ''' <summary>Kantenschaerfe der Objektmaske, 0 bis 100. Aendert nur die Umrechnung der
         ''' Modellausgabe in Deckung, nicht die Erkennung - das Modell wird deshalb NICHT erneut
         ''' gefragt, die Maske entsteht in Millisekunden neu.</summary>
-        Public Property MotivMaskeKante As Double
+        Public Property SubjectMaskEdge As Double
             Get
                 Return _motivKante
             End Get
@@ -11832,14 +11838,14 @@ Namespace ViewModels
                 Dim v = Math.Max(0.0, Math.Min(100.0, value))
                 If Math.Abs(_motivKante - v) < 0.0001 Then Return
                 _motivKante = v
-                Me.RaisePropertyChanged(NameOf(MotivMaskeKante))
-                Dim ignoriert = ZeichneMotivMaskeNeu()
+                Me.RaisePropertyChanged(NameOf(SubjectMaskEdge))
+                Dim ignoriert = RedrawSubjectMask()
             End Set
         End Property
 
         ''' <summary>Umfang der Objektmaske, -100 bis 100: waechst oder schrumpft sie um die
         ''' Kante herum.</summary>
-        Public Property MotivMaskeUmfang As Double
+        Public Property SubjectMaskExtent As Double
             Get
                 Return _motivUmfang
             End Get
@@ -11847,8 +11853,8 @@ Namespace ViewModels
                 Dim v = Math.Max(-100.0, Math.Min(100.0, value))
                 If Math.Abs(_motivUmfang - v) < 0.0001 Then Return
                 _motivUmfang = v
-                Me.RaisePropertyChanged(NameOf(MotivMaskeUmfang))
-                Dim ignoriert = ZeichneMotivMaskeNeu()
+                Me.RaisePropertyChanged(NameOf(SubjectMaskExtent))
+                Dim ignoriert = RedrawSubjectMask()
             End Set
         End Property
 
@@ -11862,7 +11868,7 @@ Namespace ViewModels
         ''' <summary>Welche Koernung gewaehlt ist: 0 fein, 1 mittel, 2 grob. Ein Klick ist
         ''' mehrdeutig - meint man die Jacke, die Person oder die Gruppe? Das Modell beantwortet
         ''' alle drei auf einmal, und die Wahl kostet keinen neuen Klick und keine Modellabfrage.</summary>
-        Public Property MotivMaskeKoernung As Integer
+        Public Property SubjectMaskGrain As Integer
             Get
                 Return _motivKoernung
             End Get
@@ -11870,11 +11876,11 @@ Namespace ViewModels
                 Dim v = Math.Max(0, Math.Min(2, value))
                 If _motivKoernung = v Then Return
                 _motivKoernung = v
-                For Each n In {NameOf(MotivMaskeKoernung), NameOf(IsKoernungFein),
+                For Each n In {NameOf(SubjectMaskGrain), NameOf(IsKoernungFein),
                                NameOf(IsKoernungMittel), NameOf(IsKoernungGrob)}
                     Me.RaisePropertyChanged(n)
                 Next
-                Dim ignoriert = ZeichneMotivMaskeNeu()
+                Dim ignoriert = RedrawSubjectMask()
             End Set
         End Property
 
@@ -11898,17 +11904,17 @@ Namespace ViewModels
 
         ''' <summary>Die Maske aus den bereits gesammelten Klicks neu zeichnen. Ohne das Modell
         ''' erneut zu fragen: die Einbettung und die Punkte stehen, nur die Umrechnung aendert sich.</summary>
-        Private Async Function ZeichneMotivMaskeNeu() As Task
+        Private Async Function RedrawSubjectMask() As Task
             If _motivEinbettung Is Nothing OrElse _motivPunkte.Count = 0 Then Return
             Await _motivTor.WaitAsync()
             Try
                 Dim einbettung = _motivEinbettung
                 Dim punkte = _motivPunkte.ToList()
                 Dim kante = _motivKante, umfang = _motivUmfang, koernung = _motivKoernung
-                Dim maske = Await Task.Run(Function() MotivMaskeService.MaskeFuer(einbettung, punkte, kante, umfang, koernung))
+                Dim maske = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, punkte, kante, umfang, koernung))
                 If maske Is Nothing Then Return
                 Using maske
-                    Dim rechteck = MaskenRechteck(maske)
+                    Dim rechteck = MaskRect(maske)
                     If rechteck.Width <= 0 OrElse rechteck.Height <= 0 Then Return
                     Using ausschnitt = AusschnittAus(maske, rechteck)
                         If ausschnitt Is Nothing Then Return
@@ -11926,9 +11932,9 @@ Namespace ViewModels
         ''' <paramref name="dazu"/> False heisst "gehoert ausdruecklich nicht dazu" - damit schneidet
         ''' man eine zu gross geratene Maske zurecht, ohne von vorn anzufangen. Die Punkte sammeln
         ''' sich, bis der Modus verlassen oder die Auswahl geleert wird.</summary>
-        Public Async Function SetSelectionMotivMaske(xPercent As Double, yPercent As Double,
+        Public Async Function SetSelectionSubjectMask(xPercent As Double, yPercent As Double,
                                                      dazu As Boolean) As Task
-            If Not MotivMaskeService.Verfuegbar Then Return
+            If Not SubjectMaskService.Verfuegbar Then Return
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
 
             Await _motivTor.WaitAsync()
@@ -11943,10 +11949,10 @@ Namespace ViewModels
                 If _motivEinbettung Is Nothing OrElse Not String.Equals(_motivSchluessel, schluessel, StringComparison.Ordinal) Then
                     _motivPunkte.Clear()
                     _motivRechnet = True
-                    Me.RaisePropertyChanged(NameOf(IsMotivMaskeRechnend))
+                    Me.RaisePropertyChanged(NameOf(IsSubjectMaskRunning))
                     AktualisiereBeschaeftigt()
                     StatusText = LocalizationService.T("Bild wird für die Objektauswahl gelesen…")
-                SetzeBeschaeftigtGrund(LocalizationService.T("Bild wird gelesen"))
+                SetBusyReason(LocalizationService.T("Bild wird gelesen"))
                     Dim quellPfad = RenderSourcePath
                     Dim arbeitsbild = CloneWorkingFullForRender()
                     Try
@@ -11954,12 +11960,12 @@ Namespace ViewModels
                             Function()
                                 Using fertig = ImageProcessor.RenderAnzeigeBild(quellPfad, rezept, arbeitsbild)
                                     If fertig Is Nothing Then Return Nothing
-                                    Return MotivMaskeService.Kodiere(fertig)
+                                    Return SubjectMaskService.Kodiere(fertig)
                                 End Using
                             End Function)
                     Finally
                         _motivRechnet = False
-                        Me.RaisePropertyChanged(NameOf(IsMotivMaskeRechnend))
+                        Me.RaisePropertyChanged(NameOf(IsSubjectMaskRunning))
                     AktualisiereBeschaeftigt()
                     End Try
                     If _motivEinbettung Is Nothing Then
@@ -11982,19 +11988,19 @@ Namespace ViewModels
                     StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
                     Return
                 End If
-                _motivPunkte.Add(New MotivMaskeService.Punkt(
+                _motivPunkte.Add(New SubjectMaskService.Punkt(
                     bw * xPercent / 100.0, bh * yPercent / 100.0, gehoertDazu))
 
                 Dim einbettung = _motivEinbettung
                 Dim punkte = _motivPunkte.ToList()
                 Dim kante = _motivKante, umfang = _motivUmfang, koernung = _motivKoernung
-                Dim maske = Await Task.Run(Function() MotivMaskeService.MaskeFuer(einbettung, punkte, kante, umfang, koernung))
+                Dim maske = Await Task.Run(Function() SubjectMaskService.MaskFor(einbettung, punkte, kante, umfang, koernung))
                 If maske Is Nothing Then
                     StatusText = LocalizationService.T("Objektauswahl nicht möglich")
                     Return
                 End If
                 Using maske
-                    Dim rechteck = MaskenRechteck(maske)
+                    Dim rechteck = MaskRect(maske)
                     If rechteck.Width <= 0 OrElse rechteck.Height <= 0 Then
                         StatusText = LocalizationService.T("An dieser Stelle wurde kein Objekt gefunden")
                         _motivPunkte.RemoveAt(_motivPunkte.Count - 1)
@@ -12036,7 +12042,7 @@ Namespace ViewModels
         ''' <summary>Das umschliessende Rechteck aller Stellen, an denen die Maske ueberhaupt etwas
         ''' traegt. Die Schwelle liegt bei der halben Deckung: der weiche Saum gehoert dazu, das
         ''' Rauschen darunter nicht.</summary>
-        Private Shared Function MaskenRechteck(maske As SKBitmap) As SKRectI
+        Private Shared Function MaskRect(maske As SKBitmap) As SKRectI
             If maske Is Nothing Then Return SKRectI.Empty
             Dim w = maske.Width, h = maske.Height
             Dim links = w, oben = h, rechts = -1, unten = -1
@@ -13732,6 +13738,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsColorLabelGreen))
             Me.RaisePropertyChanged(NameOf(IsColorLabelYellow))
             Me.RaisePropertyChanged(NameOf(HasColorLabel))
+            _mainVm?.RefreshWindowTitle()
             Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
         End Sub
 
@@ -13942,6 +13949,45 @@ Namespace ViewModels
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
+
+        ''' <summary>Die Info-Leiste zeigt hier immer etwas: der Editor hat stets ein geladenes Bild.
+        ''' Die beiden Eigenschaften gibt es nur, weil sich die Leiste die Galerie teilt, wo bei
+        ''' mehreren markierten Bildern oder einem Ordner nichts anzuzeigen ist.</summary>
+        Public ReadOnly Property HasInfoContent As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
+        Public ReadOnly Property InfoPlaceholderText As String
+            Get
+                Return ""
+            End Get
+        End Property
+
+        ''' <summary>Der Editor zeigt immer genau EIN Bild - die Uebersicht ueber mehrere gibt es
+        ''' nur in der Galerie.</summary>
+        Public ReadOnly Property IsSummary As Boolean
+            Get
+                Return False
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSingleImage As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
+        Public ReadOnly Property Name As String
+            Get
+                Return If(_exifInfo?.FileName, "")
+            End Get
+        End Property
+
+        ''' <summary>Bleibt leer: die Uebersicht ueber mehrere Bilder gibt es nur in der Galerie.
+        ''' Die Info-Leiste ist dieselbe, also muss die Eigenschaft da sein.</summary>
+        Public ReadOnly Property SummaryFacts As New ObservableCollection(Of ExifTag)()
 
         Public Property ExifInfo As ExifData
             Get
@@ -14533,7 +14579,7 @@ Namespace ViewModels
         ''' sich das Format geändert hat oder Alben/Metadaten nicht mitkamen), MUSS der Nutzer das
         ''' erfahren — sonst hält er ein RAW für ersetzt, das noch da ist, und sein Album hängt
         ''' weiterhin am alten Asset.</summary>
-        Private Shared Function ImmichStatusNachErsetzen() As String
+        Private Shared Function ImmichStatusAfterReplace() As String
             Dim hinweis = ImmichService.LastReplaceWarning
             If String.IsNullOrEmpty(hinweis) Then Return LocalizationService.T("Immich-Asset aktualisiert")
             Return LocalizationService.T("Als neues Immich-Asset gespeichert, das Original bleibt: ") & hinweis
@@ -14679,6 +14725,7 @@ Namespace ViewModels
         Public ReadOnly Property SetColorLabelCommand As ICommand
         Public ReadOnly Property AddTagCommand As ICommand
         Public ReadOnly Property RemoveTagCommand As ICommand
+        Public ReadOnly Property OpenTagSearchCommand As ICommand
         Public ReadOnly Property SaveCommand As ICommand
         Public ReadOnly Property SaveAsCommand As ICommand
         Public ReadOnly Property ShowNewDocumentDialogCommand As ICommand
@@ -14792,9 +14839,10 @@ Namespace ViewModels
             If Not AdjustmentPresetNames.Contains(zuletzt) Then zuletzt = If(AdjustmentPresetNames.FirstOrDefault(), "")
             _selectedAdjustmentPresetName = zuletzt
             If Not String.IsNullOrWhiteSpace(zuletzt) Then _adjustmentPresetNameDraft = zuletzt
-            For Each name In {NameOf(SelectedAdjustmentPresetName), NameOf(AdjustmentPresetNameDraft),
-                              NameOf(CanSaveAdjustmentPreset), NameOf(CanApplyAdjustmentPreset)}
-                Me.RaisePropertyChanged(name)
+            ' NICHT "name": seit es eine Eigenschaft Name gibt, loest VB den Namen dorthin auf.
+            For Each propertyName In {NameOf(SelectedAdjustmentPresetName), NameOf(AdjustmentPresetNameDraft),
+                                      NameOf(CanSaveAdjustmentPreset), NameOf(CanApplyAdjustmentPreset)}
+                Me.RaisePropertyChanged(propertyName)
             Next
         End Sub
 
@@ -14924,18 +14972,18 @@ Namespace ViewModels
         Public ReadOnly Property ResetColorCommand As ICommand
         Public ReadOnly Property ResetDetailCommand As ICommand
         Public ReadOnly Property ResetWarpGridCommand As ICommand
-        Public ReadOnly Property ResetLinienCommand As ICommand
+        Public ReadOnly Property ResetLinesCommand As ICommand
         Public ReadOnly Property ResetObjektVerzerrungCommand As ICommand
-        Public ReadOnly Property ApplyLinienCommand As ICommand
+        Public ReadOnly Property ApplyLinesCommand As ICommand
         Public ReadOnly Property EntferneLetzteLinieCommand As ICommand
         Public ReadOnly Property ClearDocumentBackgroundCommand As ICommand
         Public ReadOnly Property ApplyBokehCommand As ICommand
         Public ReadOnly Property ResetBokehCommand As ICommand
         Public ReadOnly Property ObjektEntfernenCommand As ICommand
-        Public ReadOnly Property SetBokehBlendeCommand As ICommand
-        Public ReadOnly Property SetMotivKoernungCommand As ICommand
+        Public ReadOnly Property SetBokehApertureCommand As ICommand
+        Public ReadOnly Property SetSubjectGrainCommand As ICommand
         Public ReadOnly Property SetVerzerrenModusCommand As ICommand
-        Public ReadOnly Property WandleArtUmCommand As ICommand
+        Public ReadOnly Property ConvertKindCommand As ICommand
         Public ReadOnly Property SetDocumentBackgroundCommand As ICommand
         Public ReadOnly Property ApplyWarpGridCommand As ICommand
         Public ReadOnly Property ResetPerspectiveCommand As ICommand
@@ -14987,6 +15035,16 @@ Namespace ViewModels
         Public ReadOnly Property NextCommand As ICommand
         Public ReadOnly Property PrintCommand As ICommand
         Public ReadOnly Property DeleteCurrentCommand As ICommand
+        Public ReadOnly Property RenameCurrentCommand As ICommand
+        Public ReadOnly Property ToggleFullscreenCommand As ICommand
+        Public ReadOnly Property CopyPathCommand As ICommand
+        Public ReadOnly Property ApplyWatermarkCurrentCommand As ICommand
+        Public ReadOnly Property NewDocumentCommand As ICommand
+        Public ReadOnly Property ResizeCurrentCommand As ICommand
+        Public ReadOnly Property ApplyFilterCurrentCommand As ICommand
+        Public ReadOnly Property ConvertCurrentCommand As ICommand
+        Public ReadOnly Property ExportCurrentCommand As ICommand
+        Public ReadOnly Property OpenFileManagerCommand As ICommand
 
         Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
@@ -15049,6 +15107,7 @@ Namespace ViewModels
                                                                          LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
                                                                      End If
                                                                  End Sub)
+            OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) _mainVm?.OpenTagSearchInGallery(tag))
 
             SetToolCommand = ReactiveCommand.Create(Of String)(Sub(toolName)
                                                                    Dim normalizedToolName = If(toolName, "").Trim().ToLowerInvariant()
@@ -15252,26 +15311,26 @@ Namespace ViewModels
             ResetWarpGridCommand = ReactiveCommand.Create(Sub() ResetWarpGrid())
             ClearDocumentBackgroundCommand = ReactiveCommand.Create(Sub() CanvasBackgroundColor = "#00000000")
             SetVerzerrenModusCommand = ReactiveCommand.Create(Of String)(Sub(m) VerzerrenModus = m)
-            WandleArtUmCommand = ReactiveCommand.Create(Sub() WandleAuswahlArt(Not ActiveSelectionIsMask))
-            SetMotivKoernungCommand = ReactiveCommand.Create(Of String)(
+            ConvertKindCommand = ReactiveCommand.Create(Sub() ConvertSelectionKind(Not ActiveSelectionIsMask))
+            SetSubjectGrainCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
-                    If Integer.TryParse(wert, n) Then MotivMaskeKoernung = n
+                    If Integer.TryParse(wert, n) Then SubjectMaskGrain = n
                 End Sub)
             ApplyBokehCommand = ReactiveCommand.Create(
                 Sub()
-                    Dim ignoriert = WendeBokehAn()
+                    Dim ignoriert = ApplyBokeh()
                 End Sub)
             ResetBokehCommand = ReactiveCommand.Create(Sub() ResetBokeh())
-            ResetLinienCommand = ReactiveCommand.Create(Sub() ResetLinien())
+            ResetLinesCommand = ReactiveCommand.Create(Sub() ResetLines())
             ResetObjektVerzerrungCommand = ReactiveCommand.Create(Sub() ResetObjektVerzerrung())
-            ApplyLinienCommand = ReactiveCommand.Create(Sub() ApplyLinienVerzerrung())
+            ApplyLinesCommand = ReactiveCommand.Create(Sub() ApplyLineWarp())
             EntferneLetzteLinieCommand = ReactiveCommand.Create(Sub() EntferneLetzteLinie())
             ObjektEntfernenCommand = ReactiveCommand.Create(Sub() WendeObjektEntfernenAn())
-            SetBokehBlendeCommand = ReactiveCommand.Create(Of String)(
+            SetBokehApertureCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
-                    If Integer.TryParse(wert, n) Then BokehBlende = n
+                    If Integer.TryParse(wert, n) Then BokehAperture = n
                 End Sub)
             ' Die drei haeufigsten Faelle als eigene Knoepfe - Schwarz, Weiss und wieder
             ' durchsichtig. Der Farbwaehler daneben bleibt fuer alles andere.
@@ -15442,6 +15501,16 @@ Namespace ViewModels
                                                      Await NavigateNextAsync()
                                                  End Function)
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
+            RenameCurrentCommand = ReactiveCommand.Create(Sub() RenameCurrent())
+            ToggleFullscreenCommand = ReactiveCommand.Create(Sub() _mainVm?.ToggleFullscreen())
+            CopyPathCommand = ReactiveCommand.Create(Sub() CopyPathToClipboard?.Invoke(TargetPath()))
+            ApplyWatermarkCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i2) g.ApplyWatermarkToImageItems(i2)))
+            NewDocumentCommand = ReactiveCommand.Create(Sub() _mainVm?.ShowNewDocumentDialog())
+            ResizeCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i2) g.ResizeImageItemsAsync(i2).ConfigureAwait(False)))
+            ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i2) g.ApplyFilterToImageItems(i2)))
+            ConvertCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i2) g.ConvertImageItems(i2)))
+            ExportCurrentCommand = ReactiveCommand.Create(Sub() MitAktuellemBild(Sub(g, i2) g.ExportImageItems(i2)))
+            OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
             PrintCommand = ReactiveCommand.CreateFromTask(Function() PrintCurrentAsync())
 
             ShowNewDocumentDialogCommand = ReactiveCommand.Create(Sub() ShowNewDocumentDialog())
@@ -15510,6 +15579,91 @@ Namespace ViewModels
             _mainVm?.ShowPrintDialog(New List(Of String) From {tempPath},
                                      tempFile:=tempPath)
         End Function
+
+        ''' <summary>Reicht das GEOEFFNETE Bild an einen Stapel-Ablauf der Galerie weiter, wie es
+        ''' der Betrachter tut. Gearbeitet wird auf der DATEI: ungespeicherte Aenderungen im Editor
+        ''' sind darin nicht enthalten, das ist bei allen diesen Ablaeufen so.</summary>
+        ''' <summary>Auf WELCHES Bild sich die naechste Menueaktion bezieht. Leer heisst: das
+        ''' auf der Buehne. Gesetzt wird es beim Oeffnen des Kontextmenues, wenn der Klick auf
+        ''' einer Filmstreifen-Kachel lag - dann meint der Nutzer diese und nicht die Buehne.</summary>
+        Public Property ContextTargetPath As String = ""
+
+        ''' <summary>Der Pfad, auf den sich eine Menueaktion bezieht.</summary>
+        Private Function TargetPath() As String
+            Dim ziel = If(ContextTargetPath, "")
+            If ziel <> "" AndAlso IO.File.Exists(ziel) Then Return ziel
+            Return _currentImagePath
+        End Function
+
+        Private Sub MitAktuellemBild(ablauf As Action(Of GalleryViewModel, IList(Of ImageItem)))
+            Try
+                Dim pfad = TargetPath()
+                If String.IsNullOrWhiteSpace(pfad) OrElse Not IO.File.Exists(pfad) Then Return
+                Dim gallery = _mainVm?.Gallery
+                If gallery Is Nothing Then Return
+                Dim item = New ImageItem(pfad)
+                If Not item.IsImage Then Return
+                ablauf(gallery, New List(Of ImageItem) From {item})
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.StapelAblauf", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Die Zwischenablage haengt am TopLevel und ist nur von der View aus
+        ''' erreichbar. Die View setzt den Haken beim Anhaengen.</summary>
+        Public Property CopyPathToClipboard As Action(Of String)
+
+        Public Property ContextSite As MenuSite = MenuSite.EditorFooter
+        Public Property ContextItems As IList(Of ImageItem) = New List(Of ImageItem)()
+
+        Public ReadOnly Property ContextActions As IReadOnlyList(Of Object)
+            Get
+                Return ContextMenuBuilder.Build(ContextSite, ContextItems,
+                                                isVirtual:=False, canPaste:=False,
+                                                commands:=New MenuCommands With {
+                                                    .NewImage = ShowNewDocumentDialogCommand,
+                                                    .Fullscreen = ToggleFullscreenCommand,
+                                                    .Save = SaveCommand,
+                                                    .SaveAs = SaveAsCommand,
+                                                    .Rename = RenameCurrentCommand,
+                                                    .ResizeImage = ResizeCurrentCommand,
+                                                    .ApplyWatermark = ApplyWatermarkCurrentCommand,
+                                                    .ApplyFilter = ApplyFilterCurrentCommand,
+                                                    .ConvertTo = ConvertCurrentCommand,
+                                                    .ExportTo = ExportCurrentCommand,
+                                                    .Print = PrintCommand,
+                                                    .RotateLeft = RotateLeftCommand,
+                                                    .RotateRight = RotateRightCommand,
+                                                    .Favorite = ToggleFavoriteCommand,
+                                                    .Rating = SetRatingCommand,
+                                                    .ColorLabel = SetColorLabelCommand,
+                                                    .CopyPath = CopyPathCommand,
+                                                    .ShowInFileManager = OpenFileManagerCommand,
+                                                    .Delete = DeleteCurrentCommand})
+            End Get
+        End Property
+
+        Public Sub RefreshContextActions()
+            Me.RaisePropertyChanged(NameOf(ContextActions))
+        End Sub
+
+        Private Sub RenameCurrent()
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            _mainVm?.RequestRenamePath(_currentImagePath, Sub(neuerPfad) CurrentImagePath = neuerPfad)
+        End Sub
+
+        Private Sub OpenInFileManager()
+            Dim pfad = TargetPath()
+            If String.IsNullOrWhiteSpace(pfad) Then Return
+            Try
+                Dim ordner = IO.Path.GetDirectoryName(pfad)
+                Diagnostics.Process.Start(New Diagnostics.ProcessStartInfo() With {
+                    .FileName = ordner,
+                    .UseShellExecute = True
+                })
+            Catch
+            End Try
+        End Sub
 
         Private Sub DeleteCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
@@ -15678,68 +15832,68 @@ Namespace ViewModels
         ''' fragt ueber einen Wandler mit dem Gruppenschluessel als Parameter, genau wie beim
         ''' Vergleich von Werkzeugnamen. So kostet eine neue Gruppe eine Zeile in der Liste und
         ''' eine im Panel - keinen neuen Code im ViewModel.</summary>
-        Public ReadOnly Property VersteckteAnpassungsgruppen As String
+        Public ReadOnly Property HiddenAdjustmentGroups As String
             Get
-                Return AppSettingsService.NormalizeVersteckteAnpassungsgruppen(
-                    If(_mainVm?.Settings?.VersteckteAnpassungsgruppen, ""))
+                Return AppSettingsService.NormalizeHiddenAdjustmentGroups(
+                    If(_mainVm?.Settings?.HiddenAdjustmentGroups, ""))
             End Get
         End Property
 
         ''' <summary>Ist von diesem Werkzeug noch eine Gruppe uebrig? Sonst waere es ein Knopf, der
         ''' ein leeres Panel oeffnet.</summary>
-        Public Function HatSichtbareGruppen(werkzeug As String) As Boolean
-            Dim eintrag = AppSettingsService.WerkzeugGruppen.FirstOrDefault(
+        Public Function HasVisibleGroups(werkzeug As String) As Boolean
+            Dim eintrag = AppSettingsService.ToolGroups.FirstOrDefault(
                 Function(w) String.Equals(w.Werkzeug, werkzeug, StringComparison.OrdinalIgnoreCase))
             If eintrag.Gruppen Is Nothing Then Return True
-            Dim versteckt = VersteckteAnpassungsgruppen.Split(","c).Select(Function(k) k.Trim()).ToList()
+            Dim versteckt = HiddenAdjustmentGroups.Split(","c).Select(Function(k) k.Trim()).ToList()
             Return eintrag.Gruppen.Any(Function(g) Not versteckt.Contains(g, StringComparer.OrdinalIgnoreCase))
         End Function
 
-        Public ReadOnly Property ZeigtWerkzeugAnpassen As Boolean
+        Public ReadOnly Property ShowsToolAdjust As Boolean
             Get
-                Return HatSichtbareGruppen("Adjust")
+                Return HasVisibleGroups("Adjust")
             End Get
         End Property
 
-        Public ReadOnly Property ZeigtWerkzeugFarbe As Boolean
+        Public ReadOnly Property ShowsToolColor As Boolean
             Get
-                Return HatSichtbareGruppen("Color")
+                Return HasVisibleGroups("Color")
             End Get
         End Property
 
-        Public ReadOnly Property ZeigtWerkzeugDetails As Boolean
+        Public ReadOnly Property ShowsToolDetails As Boolean
             Get
-                Return HatSichtbareGruppen("Details")
+                Return HasVisibleGroups("Details")
             End Get
         End Property
 
-        Public ReadOnly Property ZeigtWerkzeugEffekte As Boolean
+        Public ReadOnly Property ShowsToolEffects As Boolean
             Get
-                Return HatSichtbareGruppen("Effects")
+                Return HasVisibleGroups("Effects")
             End Get
         End Property
 
-        Public ReadOnly Property ZeigtWerkzeugFilter As Boolean
+        Public ReadOnly Property ShowsToolFilter As Boolean
             Get
-                Return HatSichtbareGruppen("Filters")
+                Return HasVisibleGroups("Filters")
             End Get
         End Property
 
-        Public Sub RefreshVersteckteAnpassungsgruppen()
-            Me.RaisePropertyChanged(NameOf(VersteckteAnpassungsgruppen))
-            For Each n In {NameOf(ZeigtWerkzeugAnpassen), NameOf(ZeigtWerkzeugFarbe),
-                           NameOf(ZeigtWerkzeugDetails), NameOf(ZeigtWerkzeugEffekte),
-                           NameOf(ZeigtWerkzeugFilter)}
+        Public Sub RefreshHiddenAdjustmentGroups()
+            Me.RaisePropertyChanged(NameOf(HiddenAdjustmentGroups))
+            For Each n In {NameOf(ShowsToolAdjust), NameOf(ShowsToolColor),
+                           NameOf(ShowsToolDetails), NameOf(ShowsToolEffects),
+                           NameOf(ShowsToolFilter)}
                 Me.RaisePropertyChanged(n)
             Next
             ' Steht man gerade IN einem Werkzeug, das eben verschwunden ist, muss man da raus -
             ' sonst blickt man auf ein leeres Panel und kommt ueber die Leiste nicht zurueck.
             Dim jetzt = _currentTool
-            If (jetzt = EditorTool.Adjust AndAlso Not ZeigtWerkzeugAnpassen) OrElse
-               (jetzt = EditorTool.Color AndAlso Not ZeigtWerkzeugFarbe) OrElse
-               (jetzt = EditorTool.Details AndAlso Not ZeigtWerkzeugDetails) OrElse
-               (jetzt = EditorTool.Effects AndAlso Not ZeigtWerkzeugEffekte) OrElse
-               (jetzt = EditorTool.Filters AndAlso Not ZeigtWerkzeugFilter) Then
+            If (jetzt = EditorTool.Adjust AndAlso Not ShowsToolAdjust) OrElse
+               (jetzt = EditorTool.Color AndAlso Not ShowsToolColor) OrElse
+               (jetzt = EditorTool.Details AndAlso Not ShowsToolDetails) OrElse
+               (jetzt = EditorTool.Effects AndAlso Not ShowsToolEffects) OrElse
+               (jetzt = EditorTool.Filters AndAlso Not ShowsToolFilter) Then
                 CurrentTool = EditorTool.Selection
             End If
         End Sub
@@ -16049,7 +16203,7 @@ Namespace ViewModels
             ResetAdjustmentsInternal(resetEditorUi:=True)
             ' Nach dem Zuruecksetzen: die Rezeptfelder sind dann auf "wie vorgegeben", und die
             ' Statuszeile zeigt das Objektiv DIESES Bildes statt des vorigen.
-            AktualisiereObjektivKorrektur()
+            RefreshLensCorrection()
             ClearUndoHistory()
             Dim previousSuppressPreviewDirty = _suppressPreviewDirty
             _suppressPreviewDirty = True
@@ -16161,7 +16315,7 @@ Namespace ViewModels
 
                     Dim mp = width * height / 1_000_000.0
                     data.Megapixels = $"{mp:F1} MP"
-                    data.AspectRatio = FormatAspectRatio(width, height)
+                    data.AspectRatio = ImageInfoService.FormatAspectRatio(width, height)
                 End If
             End If
 
@@ -16192,25 +16346,6 @@ Namespace ViewModels
             Return data
         End Function
 
-        Private Shared Function FormatAspectRatio(width As Integer, height As Integer) As String
-            If width <= 0 OrElse height <= 0 Then Return ""
-
-            Dim divisor = GreatestCommonDivisor(width, height)
-            Return $"{width \ divisor}:{height \ divisor}"
-        End Function
-
-        Private Shared Function GreatestCommonDivisor(a As Integer, b As Integer) As Integer
-            a = Math.Abs(a)
-            b = Math.Abs(b)
-
-            While b <> 0
-                Dim remainder = a Mod b
-                a = b
-                b = remainder
-            End While
-
-            Return Math.Max(1, a)
-        End Function
 
         Private Sub LoadLibraryMeta(imagePath As String)
             ' Auch beim direkten Oeffnen ohne Galerie-Scan zuerst den portablen .fpxmp-Katalog
@@ -16339,9 +16474,9 @@ Namespace ViewModels
             ' alten Bildstand gerechnet. Sie stehen zu lassen hiesse, ueber dem gerade geaenderten
             ' Bild eine Fassung von vorhin zu zeigen - und die Aenderung waere unsichtbar. Hier ist
             ' die eine Stelle, durch die jede Aenderung geht.
-            RaeumeBokehVorschauAb()
-            RaeumeGitterVorschauAb()
-            RaeumeLinienVorschauAb()
+            DisposeBokehPreview()
+            DisposeGridPreview()
+            DisposeLinePreview()
             If markDirty AndAlso Not _suppressPreviewDirty Then
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -17712,7 +17847,7 @@ Namespace ViewModels
         ''' sie veraendert den DECODE, nicht die Reglerkette - ohne sie taeten die Schalter und
         ''' Regler der Gruppe schlicht nichts.</param>
         Private Shared Function DecodeForPreviewSource(imagePath As String, overridePath As String,
-                                                       objektivWahl As ObjektivDatenService.Wahl) As (Full As SKBitmap, Baked As Boolean)
+                                                       objektivWahl As LensDataService.Wahl) As (Full As SKBitmap, Baked As Boolean)
             Dim fullDecode As SKBitmap = Nothing
             Dim bakedFromFpx = False
             If Not String.IsNullOrEmpty(overridePath) AndAlso File.Exists(overridePath) Then
@@ -17798,7 +17933,7 @@ Namespace ViewModels
         Private Sub PreparePreviewSource(imagePath As String, Optional scheduleInitialRender As Boolean = True)
             Dim token = BeginPreviewSourceSwap(imagePath)
             If token < 0 Then Return
-            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, ObjektivWahlAusFeldern()),
+            CompletePreviewSourceSwap(DecodeForPreviewSource(imagePath, _workingImageOverridePath, LensChoiceFromFields()),
                                       token, scheduleInitialRender)
         End Sub
 
@@ -17833,7 +17968,7 @@ Namespace ViewModels
 
             ' Feld VOR dem Wechsel in den Hintergrund lesen - es gehört dem UI-Thread.
             Dim overridePath = _workingImageOverridePath
-            Dim wahl = ObjektivWahlAusFeldern()
+            Dim wahl = LensChoiceFromFields()
             Dim decoded = Await Task.Run(Function() DecodeForPreviewSource(imagePath, overridePath, wahl))
             CompletePreviewSourceSwap(decoded, token, scheduleInitialRender)
         End Function
@@ -18613,7 +18748,7 @@ Namespace ViewModels
                         ' Auf das ERGEBNIS umschalten (wie beim direkten Speichern): die alte
                         ' Temp-Kopie zeigt ein Asset, das es auf dem Server nicht mehr gibt.
                         Await SwitchToReplacedImmichAssetAsync(newAssetId, IO.Path.GetFileName(targetPath))
-                        StatusText = ImmichStatusNachErsetzen()
+                        StatusText = ImmichStatusAfterReplace()
                         Return True
                     End If
 
@@ -18728,7 +18863,7 @@ Namespace ViewModels
                 ClearPreviewSource()
                 ' Mit dem Namen des ERGEBNISSES weiterarbeiten (kann die Endung gewechselt haben).
                 Await SwitchToReplacedImmichAssetAsync(newAssetId, resultFileName)
-                StatusText = ImmichStatusNachErsetzen()
+                StatusText = ImmichStatusAfterReplace()
                 Return True
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.SaveBackToImmich", ex)
@@ -19063,7 +19198,7 @@ Namespace ViewModels
             field = value
             Me.RaisePropertyChanged(propertyName)
             RaiseResetButtonStateChanged()
-            VerbergeMaskenOverlayNachAenderung()
+            HideMaskOverlayAfterChange()
             If HasSelectedAnnotation AndAlso IsObjectAdjustTool(_currentTool) Then
                 RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
             Else
@@ -21809,7 +21944,7 @@ Namespace ViewModels
         ''' am Bild oder an einem Objekt, und eine rote Flaeche darueber verdeckt genau das, was man
         ''' beurteilen will. Anpassungswerkzeuge gehoeren NICHT dazu - dort bleibt es stehen, bis der
         ''' erste Regler bewegt wird (siehe VerbergeMaskenOverlayNachAenderung).</summary>
-        Private Shared Function VerdecktDasMaskenOverlay(tool As EditorTool) As Boolean
+        Private Shared Function CoversMaskOverlay(tool As EditorTool) As Boolean
             Return tool = EditorTool.Insert OrElse tool = EditorTool.Text OrElse
                    tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
                    tool = EditorTool.Retouch OrElse tool = EditorTool.Transform
@@ -21818,10 +21953,10 @@ Namespace ViewModels
         ''' <summary>Das rote Overlay ausblenden - eine Stelle fuer alle Anlaesse. Die Maske selbst
         ''' bleibt unangetastet; nur ihre Anzeige verschwindet, bis ein Zustandswechsel sie wieder
         ''' veroeffentlicht (PublishMaskBrushOverlay).</summary>
-        Private Sub VerbergeMaskenOverlay()
+        Private Sub HideMaskOverlay()
             ' Auch die Strich-Basis fallen lassen: sie ist bis zu 1600x1600 gross und wird ohne
             ' sichtbares Overlay nicht gebraucht.
-            VerwirfMaskenOverlayBasis()
+            DiscardMaskOverlayBase()
             If _selectionMaskPreviewImage Is Nothing Then Return
             SetSelectionMaskPreviewImage(Nothing)
         End Sub
@@ -21830,10 +21965,10 @@ Namespace ViewModels
         ''' Overlay: bis dahin zeigt es, WO die Anpassung wirkt, danach verdeckt es die Wirkung, die
         ''' man gerade beurteilen will. Gilt nur bei markierter Maskenebene - ohne sie gibt es nichts
         ''' auszublenden.</summary>
-        Private Sub VerbergeMaskenOverlayNachAenderung()
+        Private Sub HideMaskOverlayAfterChange()
             If Not IsObjectAdjustTool(_currentTool) Then Return
             If Not _activeSelectionIsMask AndAlso SelectedGradientMask Is Nothing Then Return
-            VerbergeMaskenOverlay()
+            HideMaskOverlay()
         End Sub
 
         ''' <summary>Der Zoom, mit dem ein Bild in die Bearbeitungsflaeche passt - in Prozent.
@@ -23943,7 +24078,8 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseExtendedAdjustmentProperties()
-            For Each name In {
+            ' NICHT "name": seit es eine Eigenschaft Name gibt, loest VB den Namen dorthin auf.
+            For Each propertyName In {
                 NameOf(Clarity), NameOf(ActiveCurvePoints), NameOf(ActiveCurveHistogramCounts),
                 NameOf(NegativeEnabled), NameOf(NegativeMonochrome), NameOf(NegativeGamma),
                 NameOf(NegativeBaseBrush), NameOf(HasNegativeBaseColor),
@@ -23963,7 +24099,7 @@ Namespace ViewModels
                 NameOf(ColorGradeHighlightHue), NameOf(ColorGradeHighlightSaturation), NameOf(ColorGradeBalance),
                 NameOf(ColorGradeShadowLuminance), NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance), NameOf(ColorGradeHighlightLuminance), NameOf(ColorGradeGlobalHue), NameOf(ColorGradeGlobalSaturation), NameOf(ColorGradeGlobalLuminance), NameOf(ColorGradeBlending),
                 NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)}
-                Me.RaisePropertyChanged(name)
+                Me.RaisePropertyChanged(propertyName)
             Next
             RaiseResetButtonStateChanged()
         End Sub
@@ -24561,6 +24697,7 @@ Namespace ViewModels
 
         Public Sub RefreshLocalization()
             Me.RaisePropertyChanged(NameOf(CurrentFileName))
+            _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(StatusText))

@@ -7,7 +7,7 @@
          auf zwei Gruppen. Das Weichzeichnen bleibt bewusst, wo es war: es ist ein Werkzeug fuer sich
          und nicht nur eine Rauschminderung. -->
     <Border Classes="adjustment-group"
-            IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=rauschen}">
+            IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=rauschen}">
         <Expander Header="Rauschen" icons:ExpanderState.Key="rauschen">
             <Expander.HeaderTemplate>
                 <DataTemplate>

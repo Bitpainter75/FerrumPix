@@ -38,8 +38,9 @@ Namespace Models
         ' nicht mehrere CPU-Kerne gleichzeitig auslastet.
         Private Const MaxConcurrentBackgroundJobs As Integer = 1
         Private Shared ReadOnly _thumbnailQueueLock As New Object()
-        ' Separate queues: viewport items (high priority) and background items
-        ' Workers always drain the viewport queue first (LIFO within each)
+        ' Zwei getrennte Warteschlangen: was im sichtbaren Bereich liegt, und der Rest. Die
+        ' Arbeiter nehmen IMMER zuerst aus der sichtbaren, innerhalb einer Schlange das zuletzt
+        ' Eingereihte zuerst - beim Scrollen ist das die Zeile, die gerade ins Bild kommt.
         Private Shared ReadOnly _viewportQueue As New List(Of ImageItem)()
         Private Shared ReadOnly _backgroundQueue As New List(Of ImageItem)()
         Private Shared _runningThumbnailWorkers As Integer = 0
@@ -976,7 +977,8 @@ Namespace Models
                 TouchResident(Me)
                 Return
             End If
-            ' Already in queue at background priority and no upgrade requested — skip the lock
+            ' Steht schon als Hintergrundarbeit in der Schlange und soll nicht hochgestuft
+            ' werden - dann gar nicht erst sperren.
             If state = 1 AndAlso priority = BackgroundThumbnailPriority Then Return
 
             SyncLock _thumbnailQueueLock
@@ -997,7 +999,7 @@ Namespace Models
                         _backgroundQueue.Add(Me)
                     End If
                 ElseIf _thumbState = 1 AndAlso priority >= ViewportThumbnailPriority AndAlso _inBackgroundQueue Then
-                    ' Upgrade from background queue to viewport queue
+                    ' Aus der Hintergrundschlange in die sichtbare hochstufen.
                     _backgroundQueue.Remove(Me)
                     _inViewportQueue = True
                     _inBackgroundQueue = False

@@ -6,7 +6,7 @@
          nicht noch einmal darum herum rahmen. -->
     <StackPanel Spacing="7">
         <Border Classes="adjustment-group"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=vignette}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=vignette}">
         <Expander Header="Vignette" icons:ExpanderState.Key="vignette">
             <Expander.HeaderTemplate>
                 <DataTemplate>
@@ -102,7 +102,7 @@
         </Expander>
         </Border>
         <Border Classes="adjustment-group"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=grain}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=grain}">
             <Expander Header="Körnung" icons:ExpanderState.Key="grain">
                 <Expander.HeaderTemplate>
                     <DataTemplate>

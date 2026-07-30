@@ -9,10 +9,10 @@ Imports System.Runtime.CompilerServices
 Namespace Services
 
     ''' <summary>
-    ''' Maps shortcuts by intent instead of replacing every Control modifier
-    ''' with Command. Standard commands and range selection use Command on macOS,
-    ''' while FerrumPix-specific bindings keep Control so reserved shortcuts such
-    ''' as Command+Q and Command+W remain available to the operating system.
+    ''' Bildet Tastenkuerzel nach ihrer ABSICHT ab, statt stumpf jedes Strg durch Command zu
+    ''' ersetzen. Die uebliche Handvoll Befehle und die Bereichsauswahl nehmen auf macOS Command;
+    ''' die eigenen Kuerzel von FerrumPix behalten Strg, damit belegte Kombinationen wie Command+Q
+    ''' und Command+W dem Betriebssystem erhalten bleiben.
     ''' </summary>
     Public NotInheritable Class PlatformShortcutService
 
@@ -81,9 +81,9 @@ Namespace Services
         End Function
 
         ''' <summary>
-        ''' Restores the translated text that existed before macOS shortcut glyphs
-        ''' were applied. Localization can then safely recognise its own last value
-        ''' and switch languages repeatedly.
+        ''' Stellt den uebersetzten Text wieder her, wie er vor dem Einsetzen der macOS-Zeichen fuer
+        ''' Tastenkuerzel aussah. Die Lokalisierung erkennt danach ihren eigenen letzten Wert wieder
+        ''' und kann die Sprache beliebig oft wechseln.
         ''' </summary>
         Public Shared Sub RestoreMacPresentation(root As Visual)
             If Not IsMacOS OrElse root Is Nothing Then Return
@@ -113,8 +113,8 @@ Namespace Services
         End Sub
 
         ''' <summary>
-        ''' Applies macOS shortcut glyphs after localization while retaining the
-        ''' unformatted value for the next localization pass.
+        ''' Setzt die macOS-Zeichen fuer Tastenkuerzel nach der Uebersetzung ein und behaelt den
+        ''' unformatierten Wert fuer den naechsten Uebersetzungsdurchlauf.
         ''' </summary>
         Public Shared Sub ApplyMacPresentation(root As Visual)
             If Not IsMacOS OrElse root Is Nothing Then Return

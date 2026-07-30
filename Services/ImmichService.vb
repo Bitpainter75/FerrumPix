@@ -928,9 +928,10 @@ Namespace Services
                     End Using
                 End Using
 
-                ' Older Immich servers may reject the optional withExif field instead of ignoring
-                ' it. Retry only for that specific contract error; network failures and invalid
-                ' filters must not cause a second request or hide the original failure.
+                ' Aeltere Immich-Server weisen das freiwillige Feld withExif ab, statt es zu
+                ' ignorieren. NUR fuer genau diesen Vertragsfehler ein zweites Mal fragen -
+                ' Netzausfaelle und ungueltige Filter duerfen keine zweite Anfrage ausloesen und
+                ' den urspruenglichen Fehlschlag nicht verdecken.
                 If IsWithExifRejected(statusCode, body) Then
                     DiagnosticLogService.LogAlways("Immich.GetAssetsPage",
                                                    $"HTTP {statusCode} für withExif - Wiederholung ohne EXIF")

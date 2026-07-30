@@ -27,7 +27,7 @@
                     Command="{Binding DeleteSelectedAnnotationCommand}"
                     IsEnabled="{Binding HasSelectedAnnotation}"
                     ToolTip.Tip="Objekt löschen (Entf)">
-                <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.XLarge}" Foreground="{DynamicResource FP.Text.Muted}" />
+                <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Muted}" />
             </Button>
         </StackPanel>
 
@@ -94,7 +94,7 @@
                                             Command="{Binding DataContext.DeleteAnnotationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}"
                                             ToolTip.Tip="Objekt löschen">
-                                        <TextBlock Text="×" FontSize="{DynamicResource FP.Glyph.Large}"
+                                        <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                    Foreground="{DynamicResource FP.Text.Muted}" />
                                     </Button>
                                 </Grid>

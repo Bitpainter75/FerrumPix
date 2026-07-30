@@ -525,8 +525,8 @@
   <data name="Enter_file_name_f2637be0" xml:space="preserve">
     <value>Dateiname eingeben</value>
   </data>
-  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Tags_vo_e5f7741e" xml:space="preserve">
-    <value>Entfernt Metadaten (Bewertungen, Favoriten, Tags) von Bildern, die nicht mehr existieren.</value>
+  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Stichw__ef4f9787" xml:space="preserve">
+    <value>Entfernt Metadaten (Bewertungen, Favoriten, Stichwörter) von Bildern, die nicht mehr existieren.</value>
   </data>
   <data name="Error_787aa161" xml:space="preserve">
     <value>Fehler:</value>
@@ -1617,8 +1617,8 @@
   <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
     <value>Ausschnitt auf die Vorschau anwenden</value>
   </data>
-  <data name="Dateimuster_oder_Tags_b897e226" xml:space="preserve">
-    <value>Dateimuster oder Tags</value>
+  <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
+    <value>Dateimuster oder Stichwörter</value>
   </data>
   <data name="Eigene_Konturfarbe_w_hlen_7954549e" xml:space="preserve">
     <value>Eigene Konturfarbe wählen</value>
@@ -2555,8 +2555,8 @@
   <data name="Speichert_FerrumPix_Bewertungen_in_einem_abgegre_d73d5de9" xml:space="preserve">
     <value>Speichert FerrumPix-Bewertungen in einem abgegrenzten Block der Immich-Beschreibung statt im Immich-Rating-Feld.</value>
   </data>
-  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_0b05b5ee" xml:space="preserve">
-    <value>Speichert FerrumPix-Stichwörter in einem abgegrenzten Block der Immich-Beschreibung statt als Immich-Tags.</value>
+  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_583a342f" xml:space="preserve">
+    <value>Speichert FerrumPix-Stichwörter in einem abgegrenzten Block der Immich-Beschreibung statt als Immich-Stichwörter.</value>
   </data>
   <data name="Ordner_ausw_hlen_0d705794" xml:space="preserve">
     <value>Ordner auswählen</value>
@@ -3764,8 +3764,8 @@
   <data name="SVG_Symbole_darstellen_3fe48291" xml:space="preserve">
     <value>SVG-Symbole darstellen</value>
   </data>
-  <data name="Datenbank_f_r_Bewertungen_Tags_und_Zwischenspeic_dcd39467" xml:space="preserve">
-    <value>Datenbank für Bewertungen, Tags und Zwischenspeicher</value>
+  <data name="Datenbank_f_r_Bewertungen_Stichw_rter_und_Zwisch_099e8dcc" xml:space="preserve">
+    <value>Datenbank für Bewertungen, Stichwörter und Zwischenspeicher</value>
   </data>
   <data name="EXIF_und_IPTC_Daten_lesen_e97651d2" xml:space="preserve">
     <value>EXIF- und IPTC-Daten lesen</value>
@@ -5614,5 +5614,77 @@
   </data>
   <data name="Einf_gen_aus_der_Zwischenablage_ist_fehlgeschlag_b55d44e1" xml:space="preserve">
     <value>Einfügen aus der Zwischenablage ist fehlgeschlagen</value>
+  </data>
+  <data name="Verweisen_aus_dem_pers_nlichen_Ordner_folgen_7e5c8b3f" xml:space="preserve">
+    <value>Verweisen aus dem persönlichen Ordner folgen</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_359a497b" xml:space="preserve">
+    <value>Erlaubt Kopieren, Verschieben, Umbenennen und Löschen auch dann, wenn ein Ordner nur ein Verweis auf einen Ort außerhalb des persönlichen Ordners ist, etwa auf eine zweite Festplatte. Ausgeschaltet bleibt die Dateiarbeit auf den persönlichen Ordner beschränkt. Ansehen und Bearbeiten sind nie eingeschränkt.</value>
+  </data>
+  <data name="Bild_aus_der_Galerie_ffnen_mit_725b7f93" xml:space="preserve">
+    <value>Bild aus der Galerie öffnen mit</value>
+  </data>
+  <data name="Gilt_f_r_den_Doppelklick_auf_ein_Bild_und_f_r_di_8fbf05b5" xml:space="preserve">
+    <value>Gilt für den Doppelklick auf ein Bild und für die Eingabetaste. Videos werden immer im Viewer geöffnet.</value>
+  </data>
+  <data name="Aktueller_Ordner_19c25698" xml:space="preserve">
+    <value>Aktueller Ordner</value>
+  </data>
+  <data name="Zuletzt_gespeichert_863fbe6e" xml:space="preserve">
+    <value>Zuletzt gespeichert</value>
+  </data>
+  <data name="Stichwort_entfernen_74eca6af" xml:space="preserve">
+    <value>Stichwort entfernen</value>
+  </data>
+  <data name="Bearbeitung_kopieren_0dea2c86" xml:space="preserve">
+    <value>Bearbeitung kopieren</value>
+  </data>
+  <data name="Bearbeitung_einf_gen_4a1543cd" xml:space="preserve">
+    <value>Bearbeitung einfügen</value>
+  </data>
+  <data name="Bild_anheften_0328857a" xml:space="preserve">
+    <value>Bild anheften</value>
+  </data>
+  <data name="Men_f_r_dieses_Bild_67e696fe" xml:space="preserve">
+    <value>Menü für dieses Bild</value>
+  </data>
+  <data name="Keine_Bewertung_e8ec4c44" xml:space="preserve">
+    <value>Keine Bewertung</value>
+  </data>
+  <data name="Info_Leiste_in_der_Galerie_3adced10" xml:space="preserve">
+    <value>Info-Leiste in der Galerie</value>
+  </data>
+  <data name="Zeigt_rechts_die_Angaben_zum_markierten_Bild_Auf_ed118ec2" xml:space="preserve">
+    <value>Zeigt rechts die Angaben zum markierten Bild: Aufnahmedaten, Histogramm, Bewertung, Etikett und Stichwörter. Lässt sich in der Galerie auch über das Info-Symbol oben rechts umschalten.</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_Stichwort_zeigen_3a573715" xml:space="preserve">
+    <value>Alle Bilder mit diesem Stichwort zeigen</value>
+  </data>
+  <data name="Kein_einzelnes_Bild_ausgew_hlt_15ae372f" xml:space="preserve">
+    <value>Kein einzelnes Bild ausgewählt</value>
+  </data>
+  <data name="0_Bilder_ausgew_hlt_8baa3978" xml:space="preserve">
+    <value>{0} Bilder ausgewählt</value>
+  </data>
+  <data name="Gesamtgr_e_b5752d6f" xml:space="preserve">
+    <value>Gesamtgröße</value>
+  </data>
+  <data name="Kameras_826ed0ba" xml:space="preserve">
+    <value>Kameras</value>
+  </data>
+  <data name="STICHW_RTER_1ae38abc" xml:space="preserve">
+    <value>STICHWÖRTER</value>
+  </data>
+  <data name="Keine_Stichw_rter_vergeben_658ceef3" xml:space="preserve">
+    <value>Keine Stichwörter vergeben</value>
+  </data>
+  <data name="Men_0ebbd1b8" xml:space="preserve">
+    <value>Menü</value>
+  </data>
+  <data name="F_r_diese_Dateien_lassen_sich_keine_Metadaten_en_b04d6505" xml:space="preserve">
+    <value>Für diese Dateien lassen sich keine Metadaten entfernen.</value>
+  </data>
+  <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
+    <value>Aus {0} Datei(en) werden Aufnahmedaten, XMP und Farbprofil entfernt. Die Dateien werden dabei neu geschrieben, das lässt sich nicht rückgängig machen.</value>
   </data>
 </root>

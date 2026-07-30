@@ -6,7 +6,7 @@
          damit vor Weißabgleich und Sättigung. Sie macht einen guten Teil des charakteristischen
          Farbstichs vieler Presets aus - ohne sie kam ein importiertes Preset unvollständig an. -->
     <Expander Header="Kalibrierung" icons:ExpanderState.Key="calibration"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=calibration}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=calibration}">
         <Expander.HeaderTemplate>
             <DataTemplate>
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

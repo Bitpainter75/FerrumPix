@@ -66,13 +66,15 @@ Namespace Services
         Private Shared ReadOnly RootIndexPath As String = IO.Path.Combine(CacheRoot, IndexFileName)
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}
 
-        ' Settings cache: avoids reading the settings file from disk for every thumbnail
+        ' Zwischenspeicher der Einstellungen: erspart es, fuer JEDE Kachel die
+        ' Einstellungsdatei von der Platte zu lesen.
         Private Shared _cachedEnabled As Boolean = True
         Private Shared _cachedQuality As Integer = 80
         Private Shared _cachedDevelopRawThumbnails As Boolean = False
         Private Shared _settingsCacheExpiry As Long = 0   ' Environment.TickCount64
 
-        ' Per-session debounce: each cache scope is registered in the root index at most once
+        ' Einmal je Sitzung: jeder Zwischenspeicher-Bereich wird hoechstens einmal im
+        ' Wurzelverzeichnis eingetragen.
         Private Shared ReadOnly _registeredFolderIds As New ConcurrentDictionary(Of String, Boolean)()
 
         ''' <summary>
@@ -375,7 +377,7 @@ Namespace Services
 
             Try
                 Directory.CreateDirectory(folderCachePath)
-                ' Register the folder in the root index once per session (not per thumbnail)
+                ' Den Ordner einmal je Sitzung im Wurzelverzeichnis eintragen, nicht je Kachel.
                 EnsureFolderRegistered(folderId, folderDisplayPath)
                 DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
                 cancellationToken.ThrowIfCancellationRequested()
@@ -917,7 +919,7 @@ Namespace Services
             Return IO.Path.GetDirectoryName(filePath)
         End Function
 
-        ' Registers the folder in the root index once per session per cache scope
+        ' Traegt den Ordner einmal je Sitzung und je Zwischenspeicher-Bereich im Wurzelverzeichnis ein.
         Private Shared Sub EnsureFolderRegistered(folderId As String, folderPath As String)
             If String.IsNullOrEmpty(folderId) OrElse String.IsNullOrEmpty(folderPath) Then Return
             If Not _registeredFolderIds.TryAdd(folderId, True) Then Return

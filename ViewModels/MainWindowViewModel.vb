@@ -44,6 +44,8 @@ Namespace ViewModels
         Private _dialogSelectedFormat As String = "JPG"
         Private _dialogSaveAsTarget As String = "Local"
         Private _dialogSaveAsTargetFolder As String = ""
+        Private _dialogFolderChoiceCurrent As String = ""
+        Private _dialogFolderChoiceLastSaved As String = ""
         Private _dialogJpgQuality As Integer = AppSettingsService.Load().JpgSaveQuality
         Private _dialogExistingFile As FileConflictInfo
         Private _dialogIncomingFile As FileConflictInfo
@@ -114,6 +116,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_currentMode, value)
                 Me.RaisePropertyChanged(NameOf(CurrentContent))
                 Me.RaisePropertyChanged(NameOf(TitleSuffix))
+                RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsFullscreenViewer))
 
                 ' Beim Verlassen des Viewers (egal ob aus Fenster- oder Vollbildmodus heraus)
@@ -133,6 +136,47 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Dateiname und Farbetikett des gerade offenen Bildes, fuer die Mitte der
+        ''' Fensterleiste. Der Rahmen liest sie aus dem AKTIVEN Modus - Betrachter und Editor
+        ''' bieten dieselben Eigenschaften, die Galerie hat kein einzelnes Bild.</summary>
+        Public ReadOnly Property WindowTitleFileName As String
+            Get
+                Select Case CurrentMode
+                    Case AppMode.Viewer : Return If(Viewer?.CurrentFileName, "")
+                    Case AppMode.Editor : Return If(Editor?.CurrentFileName, "")
+                    Case Else : Return ""
+                End Select
+            End Get
+        End Property
+
+        Public ReadOnly Property HasWindowTitleColorLabel As Boolean
+            Get
+                Select Case CurrentMode
+                    Case AppMode.Viewer : Return Viewer IsNot Nothing AndAlso Viewer.HasColorLabel
+                    Case AppMode.Editor : Return Editor IsNot Nothing AndAlso Editor.HasColorLabel
+                    Case Else : Return False
+                End Select
+            End Get
+        End Property
+
+        Public ReadOnly Property WindowTitleColorLabelBrush As Object
+            Get
+                Select Case CurrentMode
+                    Case AppMode.Viewer : Return Viewer?.ColorLabelBrush
+                    Case AppMode.Editor : Return Editor?.ColorLabelBrush
+                    Case Else : Return Nothing
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Meldet die drei Titel-Eigenschaften neu. Wird beim Moduswechsel und bei jedem
+        ''' Bildwechsel gerufen - sie leiten sich ab und melden sonst nie von selbst.</summary>
+        Public Sub RefreshWindowTitle() Implements IViewerHost.RefreshWindowTitle, IEditorHost.RefreshWindowTitle
+            Me.RaisePropertyChanged(NameOf(WindowTitleFileName))
+            Me.RaisePropertyChanged(NameOf(HasWindowTitleColorLabel))
+            Me.RaisePropertyChanged(NameOf(WindowTitleColorLabelBrush))
+        End Sub
+
         Public Property Title As String
             Get
                 Return _title
@@ -151,13 +195,13 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsWindowChromeVisible))
                 Me.RaisePropertyChanged(NameOf(IsFullscreenViewer))
                 If value Then
-                    ' Entering fullscreen: delay showing the viewport overlay until after
-                    ' the OS has actually expanded the window to avoid the image being
-                    ' briefly visible clipped to the normal window bounds.
+                    ' Ins Vollbild: die Vollbildflaeche erst zeigen, wenn das Betriebssystem das
+                    ' Fenster wirklich aufgezogen hat. Sonst ist das Bild kurz auf die normale
+                    ' Fenstergroesse beschnitten zu sehen.
                     Dispatcher.UIThread.Post(Sub() Viewer?.RaiseFullscreenChanged(), DispatcherPriority.Background)
                 Else
-                    ' Exiting fullscreen: hide viewport immediately; the window shrink
-                    ' is already delayed in ApplyFullscreenState (MainWindow code-behind).
+                    ' Aus dem Vollbild: die Flaeche sofort ausblenden. Das Verkleinern des Fensters
+                    ' ist bereits in ApplyFullscreenState verzoegert.
                     Viewer?.RaiseFullscreenChanged()
                 End If
             End Set
@@ -373,6 +417,25 @@ Namespace ViewModels
             CurrentMode = _previousModeBeforeSettings
         End Sub
 
+        ''' <summary>Aus Betrachter oder Editor zur Galerie wechseln und dort alle Bilder mit diesem
+        ''' Stichwort zeigen. Bewusst OHNE den Umweg ueber den Ordner des aktuellen Bildes: das Ziel
+        ''' ist der ganze Bestand, nicht der Ort, an dem man gerade stand.</summary>
+        Public Async Sub OpenTagSearchInGallery(tag As String) Implements IViewerHost.OpenTagSearchInGallery, IEditorHost.OpenTagSearchInGallery
+            Try
+                If String.IsNullOrWhiteSpace(tag) OrElse Gallery Is Nothing Then Return
+                If CurrentMode = AppMode.Editor Then
+                    If Not Await ConfirmEditorLeaveAsync("zur Galerie zu wechseln") Then Return
+                End If
+                If CurrentMode = AppMode.Viewer Then
+                    If Not Await ConfirmViewerLeaveAsync("zur Galerie wechselst") Then Return
+                End If
+                CurrentMode = AppMode.Gallery
+                Gallery.OpenTagSearch(tag)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.OpenTagSearchInGallery", ex)
+            End Try
+        End Sub
+
         Public Async Sub BackToGallery(Optional sourcePath As String = Nothing) Implements IViewerHost.BackToGallery
             Try
                 If CurrentMode = AppMode.Editor Then
@@ -403,6 +466,19 @@ Namespace ViewModels
                 ' und beendet den Prozess.
                 DiagnosticLogService.LogException("MainWindowViewModel.BackToGallery", ex)
             End Try
+        End Sub
+
+        ''' <summary>Vollbild umschalten. Dieselbe Wirkung wie F11, aber aus einem Menue heraus
+        ''' aufrufbar - Galerie, Betrachter und Editor teilen sich diesen einen Weg.</summary>
+        Public Sub ToggleFullscreen() Implements IViewerHost.ToggleFullscreen, IEditorHost.ToggleFullscreen
+            If IsFullscreen Then ExitFullscreen() Else EnterFullscreen()
+        End Sub
+
+        ''' <summary>In den Editor wechseln und dort den Dialog fuer ein neues Bild oeffnen.
+        ''' Aus Galerie und Betrachter gab es dafuer bisher keinen Weg.</summary>
+        Public Sub ShowNewDocumentDialog() Implements IViewerHost.ShowNewDocumentDialog, IEditorHost.ShowNewDocumentDialog
+            CurrentMode = AppMode.Editor
+            Editor?.ShowNewDocumentDialogCommand.Execute(Nothing)
         End Sub
 
         Public Async Sub EnterFullscreen() Implements IViewerHost.EnterFullscreen
@@ -557,6 +633,7 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorGridSize))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowRulers))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowGrid))
+            Gallery?.RefreshInfoSidebarState()
         End Sub
 
         Public Sub RefreshDisplayBindings()
@@ -638,6 +715,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetLocal))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetImmich))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetFolderVisible))
+                Me.RaisePropertyChanged(NameOf(IsSaveAsTargetRowVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedActive))
             End Set
         End Property
 
@@ -647,11 +727,112 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_dialogSaveAsTargetFolder, AppSettingsService.NormalizeFolderPath(value))
+                ' Die beiden Schnellwahlen zeigen sich nur, solange sie etwas ANDERES anbieten als
+                ' das, was schon im Feld steht - deshalb hier und nicht nur beim Oeffnen melden.
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedActive))
             End Set
         End Property
 
+        ''' <summary>Die zwei Ordner, zwischen denen ein Overlay-Dialog umschalten laesst: der
+        ''' Ordner, in dem der Nutzer gerade steht, und der zuletzt als Ziel benutzte. Vorbelegt
+        ''' bleibt der aktuelle - wer regelmaessig in denselben Ausgabeordner schreibt, kommt mit
+        ''' einem Klick dorthin, statt den Pfad jedes Mal neu zu suchen.</summary>
+        Public ReadOnly Property DialogFolderChoiceCurrent As String
+            Get
+                Return _dialogFolderChoiceCurrent
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogFolderChoiceLastSaved As String
+            Get
+                Return _dialogFolderChoiceLastSaved
+            End Get
+        End Property
+
+        ''' <summary>Sichtbar, sobald es den Ordner gibt - NICHT erst, wenn er etwas anderes
+        ''' anbietet als das Feld. Die erste Fassung versteckte die Schaltfläche genau dann, wenn
+        ''' ihr Ordner schon eingetragen war, und beim Öffnen ist das der Normalfall: man sah die
+        ''' Wahlmöglichkeit dadurch fast nie. Welche gerade gilt, zeigt stattdessen die
+        ''' Hervorhebung.</summary>
+        Public ReadOnly Property IsDialogFolderChoiceCurrentVisible As Boolean
+            Get
+                Return _dialogFolderChoiceCurrent <> ""
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogFolderChoiceLastSavedVisible As Boolean
+            Get
+                Return _dialogFolderChoiceLastSaved <> ""
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogFolderChoiceCurrentActive As Boolean
+            Get
+                Return IsSaveAsTargetLocal AndAlso _dialogFolderChoiceCurrent <> "" AndAlso
+                       PathIdentity.AreSame(_dialogFolderChoiceCurrent, _dialogSaveAsTargetFolder)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogFolderChoiceLastSavedActive As Boolean
+            Get
+                Return IsSaveAsTargetLocal AndAlso _dialogFolderChoiceLastSaved <> "" AndAlso
+                       PathIdentity.AreSame(_dialogFolderChoiceLastSaved, _dialogSaveAsTargetFolder)
+            End Get
+        End Property
+
+        ''' <summary>Belegt den Zielordner vor und merkt sich beide Wahlmoeglichkeiten. Alle
+        ''' Dialoge, die einen Zielordner zeigen, gehen hier durch - sonst haetten die einen die
+        ''' Schnellwahl und die anderen nicht.</summary>
+        Private Sub InitDialogTargetFolder(currentFolder As String)
+            Dim zuletzt = AppSettingsService.Load().LastSaveAsTargetFolder
+            ' Die Haelfte der Dialoge bekommt gar keinen Ordner uebergeben - dort fehlte der Knopf
+            ' "Aktueller Ordner" deshalb ganz. Der Ordner, in dem der Nutzer steht, ist aber immer
+            ' bekannt: er steht in der Galerie. In einer Suchliste oder in Immich ist er leer, dann
+            ' bleibt es beim Ausblenden, denn dort gibt es keinen echten Ordner.
+            Dim ordner = currentFolder
+            If String.IsNullOrWhiteSpace(ordner) Then ordner = If(Gallery?.CurrentFolder, "")
+            _dialogFolderChoiceCurrent = If(Not String.IsNullOrWhiteSpace(ordner) AndAlso Directory.Exists(ordner),
+                                            ordner, "")
+            _dialogFolderChoiceLastSaved = If(Not String.IsNullOrWhiteSpace(zuletzt) AndAlso Directory.Exists(zuletzt),
+                                              zuletzt, "")
+            ' Beim ersten Mal gibt es noch keinen zuletzt benutzten Ordner. Dann traegt der Knopf
+            ' denselben wie der aktuelle, statt zu fehlen: eine Zeile mit wechselnder Knopfzahl ist
+            ' schwerer zu lesen als eine, in der einmal beide dasselbe meinen.
+            If _dialogFolderChoiceLastSaved = "" Then _dialogFolderChoiceLastSaved = _dialogFolderChoiceCurrent
+            DialogSaveAsTargetFolder = If(_dialogFolderChoiceCurrent <> "",
+                                          _dialogFolderChoiceCurrent,
+                                          ResolveDefaultSaveAsTargetFolder())
+            Me.RaisePropertyChanged(NameOf(DialogFolderChoiceCurrent))
+            Me.RaisePropertyChanged(NameOf(DialogFolderChoiceLastSaved))
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentVisible))
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedVisible))
+            Me.RaisePropertyChanged(NameOf(IsSaveAsTargetRowVisible))
+        End Sub
+
+        Public Sub SetDialogTargetFolderChoice(welche As String)
+            If String.Equals(welche, "Current", StringComparison.Ordinal) Then
+                If _dialogFolderChoiceCurrent <> "" Then DialogSaveAsTargetFolder = _dialogFolderChoiceCurrent
+            ElseIf String.Equals(welche, "LastSaved", StringComparison.Ordinal) Then
+                If _dialogFolderChoiceLastSaved <> "" Then DialogSaveAsTargetFolder = _dialogFolderChoiceLastSaved
+            End If
+        End Sub
+
+        ''' <summary>Ein Klick in der Ziel-Zeile. "Immich" schaltet das Ziel um, die beiden
+        ''' Ordner-Knoepfe setzen das Ziel auf lokal UND tragen ihren Ordner ein - sonst muesste
+        ''' der Nutzer zwei Dinge anklicken, um dasselbe zu meinen.</summary>
         Public Sub SetDialogSaveAsTarget(target As String)
-            DialogSaveAsTarget = target
+            Select Case target
+                Case "Current", "LastSaved"
+                    DialogSaveAsTarget = "Local"
+                    SetDialogTargetFolderChoice(target)
+                Case Else
+                    DialogSaveAsTarget = target
+            End Select
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedActive))
         End Sub
 
         Public ReadOnly Property IsSaveAsImmichAvailable As Boolean
@@ -677,9 +858,21 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das Ordner-FELD. Bei Ziel Immich wird kein Ordner gebraucht, es faellt weg.</summary>
         Public ReadOnly Property IsSaveAsTargetFolderVisible As Boolean
             Get
                 Return IsSaveAsTargetLocal
+            End Get
+        End Property
+
+        ''' <summary>Die ZIEL-ZEILE mit ihren Knoepfen. Sie haengt ausdruecklich NICHT am gewaehlten
+        ''' Ziel: an die Sichtbarkeit des Ordner-Feldes gebunden verschwand sie bei Immich mitsamt
+        ''' dem Immich-Knopf, und es gab keinen Weg zurueck zu einem Ordner.</summary>
+        Public ReadOnly Property IsSaveAsTargetRowVisible As Boolean
+            Get
+                Return IsDialogFolderChoiceCurrentVisible OrElse
+                       IsDialogFolderChoiceLastSavedVisible OrElse
+                       IsSaveAsImmichAvailable
             End Get
         End Property
 
@@ -1004,13 +1197,11 @@ Namespace ViewModels
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat(allowFpx:=True))
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
-            DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
-                                          currentFolder,
-                                          ResolveDefaultSaveAsTargetFolder())
+            InitDialogTargetFolder(currentFolder)
             PrepareDialogExportForms(settings, samplePath)
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
-            Dim title = $"{LocalizationService.T("Exportieren nach")} ({fileCount} {LocalizationService.T("Dateien")})"
+            Dim title = $"{LocalizationService.T("Exportieren nach")} ({fileCount} {LocalizationService.T("Files")})"
             Dim result = Await ShowDialogAsync(AppDialogKind.ExportTo,
                                                title,
                                                "Stelle den Export zusammen - die Originale bleiben unangetastet.",
@@ -1118,9 +1309,7 @@ Namespace ViewModels
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
-            DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
-                                          currentFolder,
-                                          ResolveDefaultSaveAsTargetFolder())
+            InitDialogTargetFolder(currentFolder)
             ' Nach dem Neuaufbau steht der erste Filter in der Auswahl - dessen Setter setzt die Stärke.
             RebuildDialogFilterChoices()
             ' IsDialogFilterSourceAuto/IsDialogFilterChoiceVisible MUESSEN mitgemeldet werden: das
@@ -1140,7 +1329,7 @@ Namespace ViewModels
 
             ' Titel vorab zusammensetzen: ShowDialogAsync übersetzt ihn zwar, aber ein interpolierter Text
             ' mit der Dateizahl darin hätte in keiner Sprache einen Schlüssel (siehe LocalizationService).
-            Dim title = $"{LocalizationService.T("Filter anwenden")} ({fileCount} {LocalizationService.T("Dateien")})"
+            Dim title = $"{LocalizationService.T("Filter anwenden")} ({fileCount} {LocalizationService.T("Files")})"
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchFilter,
                                                title,
                                                "Wähle den Look und wohin die Bilder geschrieben werden.",
@@ -2249,8 +2438,13 @@ Namespace ViewModels
 
         ''' <param name="currentFolder">Der Ordner, in dem die Galerie gerade steht - Vorgabe für den
         ''' Zielordner, wenn Kopien geschrieben werden (wie beim Stapel-Filter).</param>
+        ''' <param name="singleImage">Genau EIN Bild. Dann tragen Breite und Höhe seine tatsächliche
+        ''' Größe, nicht die zuletzt benutzten Werte: bei einem einzelnen Bild ist die aktuelle Größe
+        ''' der Ausgangspunkt, den man ändern will. Bei einem Stapel gibt es die eine Größe nicht,
+        ''' dort bleiben die zuletzt benutzten Werte richtig.</param>
         Public Async Function ShowBatchResizeAsync(Optional samplePath As String = Nothing, Optional currentFolder As String = "",
-                                                   Optional allowOverwrite As Boolean = True) As Task(Of BatchResizeResult)
+                                                   Optional allowOverwrite As Boolean = True,
+                                                   Optional singleImage As Boolean = False) As Task(Of BatchResizeResult)
             Dim settings = AppSettingsService.Load()
             _dialogBatchOverwriteAvailable = allowOverwrite
             _dialogBatchResizeWidthText = If(settings.LastBatchResizeWidth > 0, settings.LastBatchResizeWidth.ToString(CultureInfo.InvariantCulture), "")
@@ -2269,9 +2463,7 @@ Namespace ViewModels
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
-            DialogSaveAsTargetFolder = If(Not String.IsNullOrWhiteSpace(currentFolder) AndAlso Directory.Exists(currentFolder),
-                                          currentFolder,
-                                          ResolveDefaultSaveAsTargetFolder())
+            InitDialogTargetFolder(currentFolder)
 
             If Not String.IsNullOrWhiteSpace(samplePath) AndAlso File.Exists(samplePath) Then
                 Try
@@ -2280,6 +2472,15 @@ Namespace ViewModels
                     _dialogBatchResizeSourceHeight = size.Height
                 Catch
                 End Try
+            End If
+
+            ' Einzelbild: die Felder zeigen seine tatsaechliche Groesse. Der gemerkte
+            ' Prozentsatz wird dabei zurueckgesetzt - sonst rechnete er sofort wieder darueber
+            ' hinweg, und der Nutzer saehe erneut nicht, wie gross das Bild ueberhaupt ist.
+            If singleImage AndAlso _dialogBatchResizeSourceWidth > 0 AndAlso _dialogBatchResizeSourceHeight > 0 Then
+                _dialogBatchResizeWidthText = _dialogBatchResizeSourceWidth.ToString(CultureInfo.InvariantCulture)
+                _dialogBatchResizeHeightText = _dialogBatchResizeSourceHeight.ToString(CultureInfo.InvariantCulture)
+                _dialogBatchResizeScalePercent = 0
             End If
 
             If _dialogBatchResizeScalePercent > 0 Then SetDialogBatchResizeTextsFromScale(_dialogBatchResizeScalePercent)
@@ -2339,7 +2540,7 @@ Namespace ViewModels
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = DefaultJpgQuality()
             DialogSaveAsTarget = "Local"
-            DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
+            InitDialogTargetFolder("")
 
             For Each preset In settings.WatermarkPresets
                 _dialogWatermarkPresets.Add(preset)
@@ -2565,7 +2766,7 @@ Namespace ViewModels
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
-            DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
+            InitDialogTargetFolder("")
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
@@ -2596,7 +2797,7 @@ Namespace ViewModels
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
-            DialogSaveAsTargetFolder = ResolveDefaultSaveAsTargetFolder()
+            InitDialogTargetFolder("")
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
@@ -3088,7 +3289,7 @@ Namespace ViewModels
         ''' Bei Dateien (nicht Ordnern) wird nur der Basisname ohne Endung im Eingabefeld angezeigt -
         ''' die Endung wird nach der Eingabe automatisch wieder angehängt, damit sie beim Umbenennen
         ''' nicht versehentlich mit überschrieben/entfernt werden kann.
-        Public Async Sub RequestRenamePath(itemPath As String, Optional afterRename As Action(Of String) = Nothing) Implements IViewerHost.RequestRenamePath
+        Public Async Sub RequestRenamePath(itemPath As String, Optional afterRename As Action(Of String) = Nothing) Implements IViewerHost.RequestRenamePath, IEditorHost.RequestRenamePath
             If String.IsNullOrEmpty(itemPath) OrElse Not (IO.File.Exists(itemPath) OrElse IO.Directory.Exists(itemPath)) Then Return
             If Not FileOperationPolicy.CanRename(itemPath) Then Return
             Dim oldName = IO.Path.GetFileName(itemPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))

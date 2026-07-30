@@ -50,6 +50,8 @@ Namespace Views
         Private _isPanMode As Boolean = False
         Private _spacePanActive As Boolean = False
         Private _isPanDragging As Boolean = False
+        ''' Nach einem echten Zug mit der rechten Taste ist kein Kontextmenue gemeint.
+        Private _rightButtonDragged As Boolean = False
         Private _panStartX As Double = 0
         Private _panStartY As Double = 0
         Private _panStartOffsetX As Double = 0
@@ -178,6 +180,136 @@ Namespace Views
             Return Math.Max(0, Math.Min(100, Math.Log(clamped / ZoomSliderMinPercent) /
                                              Math.Log(ZoomSliderMaxPercent / ZoomSliderMinPercent) * 100.0))
         End Function
+
+        ''' <summary>Das Fussmenue zeigen. Wie in der Galerie ueber die Schaltflaeche statt ueber
+        ''' einen Rechtsklick: ein Rechtsklick ist nicht auf jedem Geraet bequem. Dasselbe Menue
+        ''' haengt zusaetzlich als Kontextmenue am Bild.</summary>
+        ''' <summary>Pfad in die Zwischenablage. Muss in der VIEW liegen: die Zwischenablage
+        ''' haengt am TopLevel, das ViewModel kommt nicht daran.</summary>
+        Public Async Sub OnCopyPathClick(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If vm Is Nothing OrElse String.IsNullOrEmpty(vm.CurrentImagePath) Then Return
+                Dim owner = TopLevel.GetTopLevel(Me)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {vm.CurrentImagePath}, cut:=False)
+            Catch ex As Exception
+                ' Eine Ausnahme in einem Async Sub landet sonst beim Dispatcher und beendet den Prozess.
+                DiagnosticLogService.LogException("EditorView.OnCopyPathClick", ex)
+            End Try
+        End Sub
+
+        Private Sub OnFooterMenuButtonClick(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            ' Es gibt nur EIN Menue je Ansicht, und es haengt an der Wurzel. Die Schaltflaeche
+            ' oeffnet dasselbe wie ein Rechtsklick und meldet nur den Aufrufort.
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim menu = Me.FindControl(Of ContextMenu)("EditorKontextMenu")
+            If menu Is Nothing OrElse button Is Nothing OrElse vm Is Nothing Then Return
+
+            vm.ContextSite = MenuSite.EditorFooter
+            vm.ContextItems = ContextTarget.Affected(Nothing, Nothing, StageItem(vm))
+
+            ' Open(control) besteht darauf, dass control GENAU das Element ist, an dem das Menue
+            ' haengt - das ist hier die Fussleiste, nicht die Schaltflaeche. Der parameterlose
+            ' Aufruf oeffnet am angehaengten Element; die Lage steuert PlacementTarget.
+            menu.PlacementTarget = button
+            menu.Placement = PlacementMode.BottomEdgeAlignedLeft
+            menu.Open()
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Menues entstehen erst beim Oeffnen und verpassen den einmaligen
+        ''' Fenster-Durchlauf der Lokalisierung - deshalb hier ihren eigenen Unterbaum.</summary>
+        Private Sub OnLocalizedMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            Dim menu = TryCast(sender, Avalonia.LogicalTree.ILogical)
+            If menu IsNot Nothing Then LocalizationService.ApplyTo(menu)
+        End Sub
+
+        ''' <summary>Die Eintraege kommen als Daten und tragen ihre Beschriftung bereits uebersetzt.
+        ''' Beim Oeffnen einmal neu lesen lassen, damit ein Sprachwechsel ankommt.</summary>
+        ''' <summary>Den Zwischenablage-Haken des ViewModels fuellen. Muss hier passieren: die
+        ''' Zwischenablage haengt am TopLevel, das ViewModel kommt nicht daran. Ohne das waere
+        ''' "Pfad kopieren" ein Eintrag, den es gibt und der nichts tut.</summary>
+        Private Sub SetClipboardHook()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            vm.CopyPathToClipboard = Async Sub(pfad)
+                                          Try
+                                              If String.IsNullOrEmpty(pfad) Then Return
+                                              Dim owner = TopLevel.GetTopLevel(Me)
+                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {pfad}, cut:=False)
+                                          Catch ex As Exception
+                                              DiagnosticLogService.LogException("Editor.CopyPath", ex)
+                                          End Try
+                                      End Sub
+        End Sub
+
+
+
+
+        ''' <summary>Rechtsklick irgendwo im Editor. EIN Handler fuer alle drei Aufruforte:
+        ''' Buehne, Filmstreifen und Fusszeile. Die betroffenen Elemente kommen aus
+        ''' <see cref="ContextTarget"/>, der einen Stelle, die das fuer die ganze Anwendung
+        ''' beantwortet.</summary>
+        Private Sub OnContextRequested(sender As Object, e As Avalonia.Input.ContextRequestedEventArgs)
+            ' Die rechte Taste schwenkt hier das Bild. Wurde wirklich gezogen, ist kein Menue
+            ' gemeint - ein Klick auf der Stelle dagegen schon.
+            If _rightButtonDragged Then
+                _rightButtonDragged = False
+                e.Handled = True
+                Return
+            End If
+
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim menu = Me.FindControl(Of ContextMenu)("EditorKontextMenu")
+            If vm Is Nothing OrElse menu Is Nothing Then Return
+
+            Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
+            Dim hit = ContextTarget.UnderPointer(e, filmstrip)
+
+            ' Ein Rechtsklick im Filmstreifen meint DIESES Bild. Die Kommandos des Editors
+            ' arbeiten aber alle auf dem geladenen Bild - es reicht also nicht, das getroffene
+            ' Element zu kennen, es muss auch das geladene werden.
+            If hit IsNot Nothing AndAlso Not Object.ReferenceEquals(hit, StageItem(vm)) Then
+                vm.NavigateToFilmstripItem(hit)
+            End If
+
+            Dim stage = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim onStage = hit Is Nothing AndAlso PointerIsWithin(e, stage)
+
+            vm.ContextSite = If(hit IsNot Nothing, MenuSite.EditorFilmstrip,
+                                If(onStage, MenuSite.EditorStage, MenuSite.EditorFooter))
+            vm.ContextItems = ContextTarget.Affected(hit, Nothing, StageItem(vm))
+
+            ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
+            ' Element und oeffnet sich gleich nach diesem Handler von allein - siehe
+            ' ContextMenuAttachment. Die Lage muss zurueckgesetzt werden, weil die Schaltflaeche
+            ' in der Fusszeile sie vorher auf eine feste Kante gestellt haben kann.
+            menu.PlacementTarget = Nothing
+            menu.Placement = PlacementMode.Pointer
+        End Sub
+
+        ''' <summary>Liegt der Zeiger ueber diesem Bereich? Rein geometrisch geprueft.</summary>
+        Private Shared Function PointerIsWithin(e As Avalonia.Input.ContextRequestedEventArgs, area As Control) As Boolean
+            If area Is Nothing OrElse Not area.IsVisible Then Return False
+            Dim pos As Avalonia.Point
+            If Not e.TryGetPosition(area, pos) Then Return False
+            Return pos.X >= 0 AndAlso pos.Y >= 0 AndAlso
+                   pos.X <= area.Bounds.Width AndAlso pos.Y <= area.Bounds.Height
+        End Function
+
+        ''' <summary>Das geoeffnete Bild als Element - der Rueckfall, wenn keine Kachel getroffen
+        ''' wurde.</summary>
+        Private Shared Function StageItem(vm As EditorViewModel) As ImageItem
+            Dim pfad = vm?.CurrentImagePath
+            If String.IsNullOrWhiteSpace(pfad) OrElse Not IO.File.Exists(pfad) Then Return Nothing
+            Return New ImageItem(pfad)
+        End Function
+
+        Private Sub OnFooterMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            SetClipboardHook()
+            TryCast(DataContext, EditorViewModel)?.RefreshContextActions()
+        End Sub
 
         Private Sub SetZoom(sliderValue As Double)
             _zoomSliderValue = Math.Max(0, Math.Min(100, sliderValue))
@@ -759,6 +891,7 @@ Namespace Views
                 Function() TryCast(DataContext, EditorViewModel)?.FilmstripItems,
                 Function() If(TryCast(DataContext, EditorViewModel) Is Nothing, -1, TryCast(DataContext, EditorViewModel).CurrentFilmstripIndex))
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
+            ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("EditorRootGrid"), AddressOf OnContextRequested)
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnEditorKeyDownTunnel, RoutingStrategies.Tunnel)
             ' Tunnel direkt auf dem Text-Overlay-Editor: siehe OnTextOverlayEditorKeyDown.
             Me.FindControl(Of TextBox)("TextOverlayEditor")?.AddHandler(InputElement.KeyDownEvent, AddressOf OnTextOverlayEditorKeyDown, RoutingStrategies.Tunnel)
@@ -768,7 +901,7 @@ Namespace Views
                 Dim ignored = SvgIcon.PreloadOutlineIconsAsync()
                 RestoreRulerAndGridState()
                 UpdateSliderLayout()
-                UpdateInfoSidebarLayout()
+                UpdateInfoSidebarLayoutState()
                 UpdateLayersPanelLayout()
                 Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
                 _filmstripController.AttachTo(filmstrip)
@@ -1024,7 +1157,7 @@ Namespace Views
                 Case NameOf(EditorViewModel.CurrentFilmstripIndex)
                     _filmstripController.ScrollToCurrent()
                 Case NameOf(EditorViewModel.IsInfoSidebarVisible)
-                    UpdateInfoSidebarLayout()
+                    UpdateInfoSidebarLayoutState()
                 Case NameOf(EditorViewModel.IsLayersPanelVisible)
                     UpdateLayersPanelLayout()
                 Case NameOf(EditorViewModel.EditorGridSize)
@@ -1056,9 +1189,9 @@ Namespace Views
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.WarpGridValues),
                      NameOf(EditorViewModel.PerspectiveCornerValues),
-                     NameOf(EditorViewModel.LinienValues),
+                     NameOf(EditorViewModel.LineValues),
                      NameOf(EditorViewModel.ObjektEckenValues),
-                     NameOf(EditorViewModel.VorschauBild)
+                     NameOf(EditorViewModel.PreviewImage)
                     UpdateSliderLayout()
             End Select
         End Sub
@@ -1142,7 +1275,7 @@ Namespace Views
             Dim iw = Math.Round(imgW * scale, MidpointRounding.AwayFromZero)
             Dim ih = Math.Round(imgH * scale, MidpointRounding.AwayFromZero)
 
-            ' Clamp pan so image stays partially on screen
+            ' Das Schwenken begrenzen, damit ein Teil des Bildes immer sichtbar bleibt.
             Dim maxPanX = Math.Max(0, (iw - cw) / 2.0)
             Dim maxPanY = Math.Max(0, (ih - ch) / 2.0)
             _panX = Math.Max(-maxPanX, Math.Min(maxPanX, _panX))
@@ -1387,6 +1520,7 @@ Namespace Views
                 _panStartOffsetX = _panX
                 _panStartOffsetY = _panY
                 _isPanDragging = True
+                _rightButtonDragged = False
                 e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
@@ -1426,7 +1560,7 @@ Namespace Views
                     If vm.HasSelectedAnnotation Then
                         Dim overlayOutside = Me.FindControl(Of Border)("TextOverlay")
                         If overlayOutside IsNot Nothing AndAlso overlayOutside.IsVisible Then
-                            Dim outsideMode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
+                            Dim outsideMode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
                             If outsideMode <> TextDragMode.None Then
                                 OnTextOverlayPointerPressed(overlayOutside, e)
                                 Return
@@ -1464,13 +1598,13 @@ Namespace Views
                     ' ihre aeussere Haelfte also draussen. Ohne die Ausnahme liess sich jeder
                     ' Randpunkt nur von innen und nur zur Haelfte fassen - genau das Muster, das
                     ' beim Zuschnitt und bei den Ecken schon zweimal aufgetreten ist.
-                    Dim startsGitterPunktOutside = ZeigtGitter(vm) AndAlso
+                    Dim startsGitterPunktOutside = ShowsGrid(vm) AndAlso
                                                    TrifftRasterpunkt(vm, canvas, e.GetPosition(canvas))
                     ' Dieselbe Ausnahme fuer die Linien: ihre Griffe duerfen ausserhalb des Bildes
                     ' liegen, und dort muss der Druck ankommen statt geschluckt zu werden. Das ist
                     ' jetzt der VIERTE Fall dieser Art - Zuschnittgriffe, Perspektivecken,
                     ' Rasterpunkte, Linienenden.
-                    Dim startsLinienOutside = ZeigtLinien(vm)
+                    Dim startsLinienOutside = ShowsLines(vm)
                     Dim startsObjectMarqueeOutside = AllowsObjectMarquee(vm)
                     If startsObjectMarqueeOutside Then
                         BeginObjectMarquee(e.GetPosition(canvas))
@@ -1545,7 +1679,7 @@ Namespace Views
                 Dim overlayForHandles = Me.FindControl(Of Border)("TextOverlay")
                 If overlayForHandles IsNot Nothing AndAlso overlayForHandles.IsVisible Then
                     Dim handleRect = GetTextOverlayRect()
-                    Dim handleMode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), handleRect, OverlayHitRotation(vm)), TextDragMode.None))
+                    Dim handleMode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), handleRect, OverlayHitRotation(vm)), TextDragMode.None))
                     If handleMode <> TextDragMode.None AndAlso handleMode <> TextDragMode.Move Then
                         OnTextOverlayPointerPressed(overlayForHandles, e)
                         Return
@@ -1622,7 +1756,7 @@ Namespace Views
                     End If
                 End If
             End If
-            If ZeigtGitter(vm) Then
+            If ShowsGrid(vm) Then
                 Dim gitterRect = GetDisplayedImageRect(canvas, vm)
                 If gitterRect.Width > 0 AndAlso gitterRect.Height > 0 Then
                     ' NICHT klemmen: ein Randpunkt sitzt auf der Kante, und die aeussere Haelfte
@@ -1632,11 +1766,11 @@ Namespace Views
                     ' Randpunkte lassen sich nur LAENGS ihrer Kante bewegen, man zielt also von
                     ' innen auf einen Punkt, der halb ausserhalb liegt - und trifft die aeussere
                     ' Haelfte gar nicht.
-                    Const gitterSlopPixels As Double = EckGriffTolerance
+                    Const gridSlopPixels As Double = EckGriffTolerance
                     If vm.TryBeginWarpDrag((gitterPos.X - gitterRect.Left) / gitterRect.Width * 100.0,
                                            (gitterPos.Y - gitterRect.Top) / gitterRect.Height * 100.0,
-                                           gitterSlopPixels / gitterRect.Width * 100.0,
-                                           gitterSlopPixels / gitterRect.Height * 100.0) Then
+                                           gridSlopPixels / gitterRect.Width * 100.0,
+                                           gridSlopPixels / gitterRect.Height * 100.0) Then
                         _isWarpDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
@@ -1645,7 +1779,7 @@ Namespace Views
                 End If
             End If
 
-            If ZeigtLinien(vm) Then
+            If ShowsLines(vm) Then
                 Dim linienRect = GetDisplayedImageRect(canvas, vm)
                 If linienRect.Width > 0 AndAlso linienRect.Height > 0 Then
                     ' NICHT klemmen: eine Linie darf ueber die Bildkante hinaus gezogen werden, und
@@ -1657,7 +1791,7 @@ Namespace Views
                     Dim slopY = EckGriffTolerance / linienRect.Height * 100.0
                     ' Erst schauen, ob eine vorhandene Linie gemeint ist - sonst legte jeder Klick
                     ' eine neue an und die bestehende waere nicht mehr zu fassen.
-                    If vm.TryBeginLinienDrag(lx, ly, slopX, slopY) Then
+                    If vm.TryBeginLineDrag(lx, ly, slopX, slopY) Then
                         _isLinienDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
@@ -1691,7 +1825,7 @@ Namespace Views
                     ' Zuerst die MASKE selbst: liegt der Druckpunkt in ihr, wird sie verschoben.
                     ' Nur wenn nicht, geht der Klick an die Objekte weiter unten - so bleibt beides
                     ' im selben Modus erreichbar, ohne dass man umschalten muss.
-                    If vm.TryBeginMaskeVerschieben((pos.X - imageRect.Left) / imageRect.Width * 100.0,
+                    If vm.TryBeginMaskMove((pos.X - imageRect.Left) / imageRect.Width * 100.0,
                                                    (pos.Y - imageRect.Top) / imageRect.Height * 100.0) Then
                         _maskeSchiebtGerade = True
                         e.Pointer.Capture(canvas)
@@ -1702,7 +1836,7 @@ Namespace Views
                     Dim mPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                     Dim nPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                     Dim dazu = Not e.KeyModifiers.HasFlag(KeyModifiers.Alt)
-                    Dim laeuft = vm.SetSelectionMotivMaske(mPct, nPct, dazu)
+                    Dim laeuft = vm.SetSelectionSubjectMask(mPct, nPct, dazu)
                     e.Handled = True
                     Return
                 End If
@@ -2041,7 +2175,7 @@ Namespace Views
                Not _isRetouching AndAlso Not _isTextDragging AndAlso Not _isDraggingSlider AndAlso Not _isSelectionDragging AndAlso Not _isSelectionMoveDragging AndAlso Not _isLassoDrawing AndAlso
                cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso
                cursorVm.HasSelectedAnnotation AndAlso IsLayerPlacementTool(cursorVm.CurrentTool) Then
-                Dim mode = OhneGriffeBeimVerzerren(cursorVm, If(SelectionAcceptsDrag(cursorVm), GetTextDragMode(e.GetPosition(cursorCanvas), GetTextOverlayRect(), OverlayHitRotation(cursorVm)), TextDragMode.None))
+                Dim mode = NoHandlesWhileWarping(cursorVm, If(SelectionAcceptsDrag(cursorVm), GetTextDragMode(e.GetPosition(cursorCanvas), GetTextOverlayRect(), OverlayHitRotation(cursorVm)), TextDragMode.None))
                 cursorCanvas.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(cursorVm))
             ElseIf cursorCanvas IsNot Nothing Then
                 cursorCanvas.Cursor = Nothing
@@ -2057,6 +2191,11 @@ Namespace Views
                 Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 If canvas Is Nothing Then Return
                 Dim pos = e.GetPosition(canvas)
+                ' Wurde wirklich GEZOGEN, ist kein Kontextmenue gemeint. Ein paar Bildpunkte
+                ' Wackeln beim Klicken duerfen dagegen nicht schon als Zug gelten.
+                If Math.Abs(pos.X - _panStartX) > 3 OrElse Math.Abs(pos.Y - _panStartY) > 3 Then
+                    _rightButtonDragged = True
+                End If
                 _panX = _panStartOffsetX + (pos.X - _panStartX)
                 _panY = _panStartOffsetY + (pos.Y - _panStartY)
                 UpdateSliderLayout()
@@ -2186,7 +2325,7 @@ Namespace Views
                 Dim mRect = GetDisplayedImageRect(mCanvas, mVm)
                 If mRect.Width <= 0 OrElse mRect.Height <= 0 Then Return
                 Dim mPos = e.GetPosition(mCanvas)
-                mVm.UpdateMaskeVerschieben((mPos.X - mRect.Left) / mRect.Width * 100.0,
+                mVm.UpdateMaskMove((mPos.X - mRect.Left) / mRect.Width * 100.0,
                                            (mPos.Y - mRect.Top) / mRect.Height * 100.0)
                 e.Handled = True
                 Return
@@ -2239,7 +2378,7 @@ Namespace Views
                 If lRect.Width <= 0 OrElse lRect.Height <= 0 Then Return
                 ' Ungeklemmt: eine Linie ueber die Bildkante zu ziehen ist erlaubt und oft gewollt.
                 Dim lPos = e.GetPosition(lCanvas)
-                lVm.UpdateLinienDrag((lPos.X - lRect.Left) / lRect.Width * 100.0,
+                lVm.UpdateLineDrag((lPos.X - lRect.Left) / lRect.Width * 100.0,
                                      (lPos.Y - lRect.Top) / lRect.Height * 100.0)
                 UpdateSliderLayout()
                 e.Handled = True
@@ -2322,7 +2461,7 @@ Namespace Views
                 _maskBrushPoints.Clear()
             End If
             If _maskeSchiebtGerade Then
-                TryCast(DataContext, EditorViewModel)?.EndMaskeVerschieben()
+                TryCast(DataContext, EditorViewModel)?.EndMaskMove()
                 _maskeSchiebtGerade = False
             End If
             If _isPerspectiveDragging Then
@@ -2334,7 +2473,7 @@ Namespace Views
                 _isWarpDragging = False
             End If
             If _isLinienDragging Then
-                TryCast(DataContext, EditorViewModel)?.EndLinienDrag()
+                TryCast(DataContext, EditorViewModel)?.EndLineDrag()
                 _isLinienDragging = False
                 UpdateSliderLayout()
             End If
@@ -2618,7 +2757,7 @@ Namespace Views
             UpdateSliderLayout()
         End Sub
 
-        Private Sub UpdateInfoSidebarLayout()
+        Private Sub UpdateInfoSidebarLayoutState()
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
             Dim sidebar = Me.FindControl(Of Border)("InfoSidebarBorder")
@@ -3082,8 +3221,8 @@ Namespace Views
         End Function
 
         ''' Pipette: nimmt die Farbe an der Zeigerposition direkt aus dem aktuell angezeigten
-        ''' DisplayImage (voll bearbeitete Live-Vorschau inkl. Objekte) - "what you see is what you
-        ''' get". Avalonia-Bitmaps erlauben keinen direkten Pixelzugriff, daher über PNG-Bytes nach
+        ''' DisplayImage (voll bearbeitete Live-Vorschau inkl. Objekte) - man bekommt also genau die
+        ''' Farbe, die man sieht. Avalonia-Bitmaps erlauben keinen direkten Pixelzugriff, daher über PNG-Bytes nach
         ''' SkiaSharp dekodiert - die Live-Vorschau fragt bei jeder Mausbewegung, deshalb hält
         ''' GetPickSampleBitmap das Ergebnis fest, bis eine andere Bildfassung angezeigt wird.
         Private Function SampleDisplayedColor(vm As EditorViewModel, imageRect As Avalonia.Rect, screenPoint As Avalonia.Point) As Color?
@@ -3154,7 +3293,7 @@ Namespace Views
             ' Anzeigebereich ab (BuildSelectionRedOverlayBitmap) und wird per Stretch=Fill gestreckt.
             ' Ein Verlauf hat KEINE aktive Auswahl (er ist gerechnet, nicht gemalt) - trotzdem zeigt
             ' er dieselbe rote Deckung. Deshalb reicht hier auch ein markierter Verlauf als Grund.
-            PositionVorschau(ix, iy, iw, ih)
+            PositionPreview(ix, iy, iw, ih)
             PositionPerspectiveOverlay(ix, iy, iw, ih)
             PositionGridWarpOverlay(ix, iy, iw, ih)
             PositionLineWarpOverlay(ix, iy, iw, ih)
@@ -3282,7 +3421,7 @@ Namespace Views
         ''' nicht zusammen. Genau das war der Fall: die Anfasser hingen an EditorTool.Transform, der
         ''' Knopf in der Leiste schaltet aber auf EditorTool.Rotate - das Panel erschien, im Bild war
         ''' nichts zu sehen.</summary>
-        Private Shared Function IstVerzerrenWerkzeug(vm As EditorViewModel) As Boolean
+        Private Shared Function IsWarpTool(vm As EditorViewModel) As Boolean
             Return vm IsNot Nothing AndAlso vm.ShowTransformAdjustments
         End Function
 
@@ -3290,22 +3429,22 @@ Namespace Views
         ''' ist UND im Panel die Perspektive gewaehlt wurde. Beide Overlays gleichzeitig waren ein
         ''' Fehler: die Eck-Anfasser und die Rasterpunkte liegen teils uebereinander.</summary>
         Private Shared Function ZeigtPerspektive(vm As EditorViewModel) As Boolean
-            Return IstVerzerrenWerkzeug(vm) AndAlso vm.IsVerzerrenPerspektive
+            Return IsWarpTool(vm) AndAlso vm.IsVerzerrenPerspektive
         End Function
 
-        Private Shared Function ZeigtGitter(vm As EditorViewModel) As Boolean
-            Return IstVerzerrenWerkzeug(vm) AndAlso vm.IsVerzerrenGitter
+        Private Shared Function ShowsGrid(vm As EditorViewModel) As Boolean
+            Return IsWarpTool(vm) AndAlso vm.IsWarpGrid
         End Function
 
-        Private Shared Function ZeigtLinien(vm As EditorViewModel) As Boolean
-            Return IstVerzerrenWerkzeug(vm) AndAlso vm.IsVerzerrenLinien
+        Private Shared Function ShowsLines(vm As EditorViewModel) As Boolean
+            Return IsWarpTool(vm) AndAlso vm.IsWarpLines
         End Function
 
         ''' <summary>Legt die Live-Vorschau der Gitterverzerrung genau ueber den dargestellten
         ''' Bildbereich. Sie liegt unter den Overlays, damit die Rasterpunkte darauf sichtbar
         ''' bleiben.</summary>
-        Private Sub PositionVorschau(ix As Double, iy As Double, iw As Double, ih As Double)
-            Dim bild = Me.FindControl(Of Image)("VorschauImage")
+        Private Sub PositionPreview(ix As Double, iy As Double, iw As Double, ih As Double)
+            Dim bild = Me.FindControl(Of Image)("ToolPreviewImage")
             If bild Is Nothing Then Return
             If iw <= 0 OrElse ih <= 0 Then Return
             Avalonia.Controls.Canvas.SetLeft(bild, ix)
@@ -3373,7 +3512,7 @@ Namespace Views
             Dim overlay = Me.FindControl(Of GridWarpOverlayControl)("GridWarpOverlay")
             If overlay Is Nothing Then Return
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing OrElse Not ZeigtGitter(vm) OrElse iw <= 0 OrElse ih <= 0 Then
+            If vm Is Nothing OrElse Not ShowsGrid(vm) OrElse iw <= 0 OrElse ih <= 0 Then
                 overlay.IsVisible = False
                 overlay.GridValues = Nothing
                 Return
@@ -3405,12 +3544,12 @@ Namespace Views
             Dim overlay = Me.FindControl(Of LineWarpOverlayControl)("LineWarpOverlay")
             If overlay Is Nothing Then Return
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If vm Is Nothing OrElse Not ZeigtLinien(vm) OrElse iw <= 0 OrElse ih <= 0 Then
+            If vm Is Nothing OrElse Not ShowsLines(vm) OrElse iw <= 0 OrElse ih <= 0 Then
                 overlay.IsVisible = False
                 overlay.LineValues = Nothing
                 Return
             End If
-            Dim g = vm.LinienValues
+            Dim g = vm.LineValues
             If g Is Nothing OrElse g.Length < 1 Then
                 overlay.IsVisible = False
                 Return
@@ -4218,8 +4357,20 @@ Namespace Views
                 Return
             End If
 
+            ' Dieselbe Falle, zweiter Fall: beim Verzerren eines OBJEKTS liegen die Rasterpunkte
+            ' bzw. die Perspektiv-Ecken ueber dem Objekt - und der TextOverlay-Border liegt
+            ' darueber. Ein Druck genau auf einen Anfasser landete deshalb hier statt im
+            ' Canvas-Zweig, und bei Text-Objekten liess sich das Gitter gar nicht fassen: seine
+            ' Punkte sitzen fast alle INNERHALB des Textkastens.
+            '
+            ' Nicht behandeln heisst durchlassen: der Border liegt im PreviewCanvas, ohne
+            ' e.Handled steigt der Druck dorthin auf und der Gitter-Zweig greift. Geprueft wird
+            ' geometrisch, weil e.Source hier immer der oben liegende Border ist.
+            If ShowsGrid(vm) AndAlso TrifftRasterpunkt(vm, canvas, pos) Then Return
+            If ZeigtPerspektive(vm) AndAlso TrifftVerzerrungsEcke(vm, canvas, pos) Then Return
+
             Dim rect = GetTextOverlayRect()
-            Dim mode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
+            Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
             If mode = TextDragMode.None Then Return
 
             ' Doppelklick auf den Drehgriff stellt die Lage wieder gerade.
@@ -4337,7 +4488,7 @@ Namespace Views
         '''
         ''' Bewusst NICHT in GetTextDragMode: die Trefferzonen dort sind reine Geometrie und werden
         ''' auch ohne Ansicht geprueft - ein Zugriff auf den DataContext waere dort ein Fremdkoerper.</summary>
-        Private Shared Function OhneGriffeBeimVerzerren(vm As EditorViewModel, mode As TextDragMode) As TextDragMode
+        Private Shared Function NoHandlesWhileWarping(vm As EditorViewModel, mode As TextDragMode) As TextDragMode
             If mode = TextDragMode.None OrElse mode = TextDragMode.Move Then Return mode
             If vm IsNot Nothing AndAlso vm.VerzerrtDasObjekt Then Return TextDragMode.None
             Return mode
@@ -4431,7 +4582,7 @@ Namespace Views
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If canvas Is Nothing OrElse vm Is Nothing Then Return
-            Dim mode = OhneGriffeBeimVerzerren(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
+            Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
             overlay.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(vm))
         End Sub
 

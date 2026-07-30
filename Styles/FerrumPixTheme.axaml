@@ -1071,13 +1071,22 @@
         <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Small}"/>
         <Setter Property="MinWidth" Value="0"/>
-        <Setter Property="MaxWidth" Value="260"/>
+        <!-- Krumme Skalierung, Teil 3: 260 war zu knapp. Zusammen mit dem Umbruch weiter unten
+             wurde aus einem um wenige Punkte zu breiten Text ein FEHLENDES WORT - es rutschte auf
+             eine zweite Zeile, die das Popup nicht mehr zeigte ("Drehen und Verzerren" ->
+             "Drehen und"). Breiter gefasst bleiben die Beschriftungen der Werkzeuge auch bei
+             groesster Schrift einzeilig; nur die langen Erklaertexte brechen noch um, und die
+             sollen es. -->
+        <Setter Property="MaxWidth" Value="440"/>
     </Style>
     <!-- Tooltip-Texte dürfen umbrechen: Texte über MaxWidth (260) wurden bisher bei JEDER
          Skalierung hart abgeschnitten (TextBlock ohne Wrapping, z.B. die langen Erklär-Tooltips
          im Transformieren-Panel). Mit Umbruch bestimmt die Messung die nötige Höhe gleich mit. -->
     <Style Selector="ToolTip TextBlock">
         <Setter Property="TextWrapping" Value="Wrap"/>
+        <!-- Krumme Skalierung, Teil 4: Den Puffer gegen die Rundung liefert ein Leerzeichen, das
+             LocalizationService beim Übersetzen an jeden Kurzhinweis hängt - es wird mitgemessen
+             und ist nicht sichtbar. Hier steht bewusst kein zweiter Kniff dagegen. -->
     </Style>
 
     <Style Selector="Border.sidebar">

@@ -34,12 +34,18 @@ Namespace Services
         ''' die Zahlen stehen, und ein späterer Wechsel dort wirkt automatisch hier.
         Private Shared _baseSizes As Dictionary(Of String, Double)
 
+        ''' <summary>Der zuletzt angewandte Versatz. Wer eine feste Breite fuer Text vorhaelt, muss
+        ''' ihn kennen - eine Leiste mit fester Breite schneidet sonst bei groesserer Schrift das
+        ''' letzte Wort ab, und im Bild sieht das aus wie ein fehlender Text.</summary>
+        Public Shared ReadOnly Property CurrentOffset As Integer
+
         Public Shared Sub Apply(offset As Integer)
             Dim app = Application.Current
             If app Is Nothing Then Return
 
             EnsureBaseSizes(app)
             offset = AppSettingsService.NormalizeFontSizeOffset(offset)
+            _CurrentOffset = offset
 
             For Each key In TextSizeKeys
                 Dim baseSize As Double

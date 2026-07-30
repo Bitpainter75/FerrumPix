@@ -7,7 +7,9 @@ Namespace Models
     Public Class BulkObservableCollection(Of T)
         Inherits ObservableCollection(Of T)
 
-        ''' Replaces all items and fires exactly one Reset event instead of N Add + 1 Clear.
+        ''' Tauscht ALLE Elemente aus und meldet dabei genau EINE Ruecksetzung statt N Zugaenge
+        ''' und ein Leeren. Bei einem Ordner mit tausend Bildern ist das der Unterschied zwischen
+        ''' einem Neuaufbau der Liste und tausend.
         Public Sub ReplaceAll(newItems As IEnumerable(Of T))
             CheckReentrancy()
             Items.Clear()

@@ -119,7 +119,7 @@ Namespace Services
         ''' <summary>Schluessel aus Hersteller und Modell: nur Buchstaben und Ziffern, gross.
         ''' Die Marke wird vorangestellt, wenn das Modell sie nicht schon enthaelt - Nikon schreibt
         ''' "NIKON D800", Fujifilm nur "X-Pro1".</summary>
-        Friend Shared Function Schluessel(hersteller As String, modell As String) As String
+        Friend Shared Function Key(hersteller As String, modell As String) As String
             Dim marke = NurBuchstabenUndZiffern(If(hersteller, "").Split(" "c)(0))
             Dim m = NurBuchstabenUndZiffern(modell)
             If m.Length = 0 Then Return ""
@@ -136,7 +136,7 @@ Namespace Services
         End Function
 
         ''' <summary>Anzahl der hinterlegten Modelle - fuer die Diagnose und die Einstellungsseite.</summary>
-        Public Shared ReadOnly Property ModellAnzahl As Integer
+        Public Shared ReadOnly Property ModelCount As Integer
             Get
                 Return Tabelle.Count
             End Get
@@ -144,9 +144,9 @@ Namespace Services
 
         ''' <summary>Die Grundbelichtung fuer diese Kamera. Unbekanntes Modell oder fehlende Angaben:
         ''' der uebergebene Standardwert bleibt unveraendert.</summary>
-        Public Shared Function GrundbelichtungFuer(hersteller As String, modell As String,
+        Public Shared Function BaseExposureFor(hersteller As String, modell As String,
                                                    standardEv As Double) As Double
-            Dim k = Schluessel(hersteller, modell)
+            Dim k = Key(hersteller, modell)
             If k.Length = 0 Then Return standardEv
             Dim versatz As Double
             If Not Tabelle.TryGetValue(k, versatz) Then Return standardEv

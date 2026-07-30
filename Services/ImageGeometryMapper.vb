@@ -295,7 +295,7 @@ Namespace Services
         ''' einzeln nachfuehrt.</summary>
         ''' <param name="quelle">Die Linien, wo sie im Bild liegen: je Linie Ax, Ay, Bx, By in Pixeln.</param>
         ''' <param name="ziel">Dieselben Linien, wohin sie gezogen wurden.</param>
-        Public Shared Sub LinienFeld(breite As Integer, hoehe As Integer,
+        Public Shared Sub LineField(breite As Integer, hoehe As Integer,
                                      spalten As Integer, zeilen As Integer,
                                      quelle As Double(), ziel As Double(),
                                      ByRef quellX As Single(), ByRef quellY As Single())
@@ -403,7 +403,7 @@ Namespace Services
 
         ''' <summary>Wie fein das Raster ist, auf dem eine Linienverzerrung ausgewertet wird.
         ''' Zu grob, und eine Linie knickt statt zu biegen; zu fein, und die Vorschau haengt.</summary>
-        Public Const LinienRasterStufen As Integer = 48
+        Public Const LineGridSteps As Integer = 48
 
 
         ''' <summary>Wie <see cref="VerzerreUeberGitter"/>, aber mit frei waehlbarer AUSGABEgroesse.
@@ -411,7 +411,7 @@ Namespace Services
         ''' Beim Bild bleibt die Groesse gleich - was aus dem Rahmen faellt, wird abgeschnitten. Ein
         ''' Objekt dagegen darf wachsen: seine Ebene ist nur so gross wie es selbst, und eine
         ''' Verzerrung schiebt es ueber diesen Rand hinaus.</summary>
-        Public Shared Function VerzerreUeberGitterAuf(quelle As SKBitmap, zielBreite As Integer, zielHoehe As Integer,
+        Public Shared Function WarpOverGridTo(quelle As SKBitmap, zielBreite As Integer, zielHoehe As Integer,
                                                       spalten As Integer, zeilen As Integer,
                                                       zielX As Single(), zielY As Single(),
                                                       quellX As Single(), quellY As Single()) As SKBitmap
@@ -459,7 +459,7 @@ Namespace Services
         ''' <summary>Wohin EIN Punkt durch ein Linienfeld wandert. Dieselbe Rechnung wie in
         ''' <see cref="LinienFeld"/>, nur fuer einen einzelnen Punkt - fuer ein Objekt lohnt kein
         ''' ganzes Raster, und die Formel darf trotzdem nur an einer Stelle stehen.</summary>
-        Public Shared Function LinienPunkt(px As Double, py As Double,
+        Public Shared Function LinePoint(px As Double, py As Double,
                                            quelle As Double(), ziel As Double()) As SKPoint
             If quelle Is Nothing OrElse ziel Is Nothing Then Return New SKPoint(CSng(px), CSng(py))
             If quelle.Length <> ziel.Length OrElse quelle.Length < 4 OrElse quelle.Length Mod 4 <> 0 Then
@@ -515,7 +515,7 @@ Namespace Services
         ''' heisst: das gleichmaessige Raster. Fuer die Live-Vorschau wird es gebraucht, weil dort
         ''' das unverzerrte Raster im ANZEIGERAUM liegt und nach Beschnitt oder Drehung nicht mehr
         ''' gleichmaessig ist.</param>
-        Public Shared Function VerzerreUeberGitter(quelle As SKBitmap, spalten As Integer, zeilen As Integer,
+        Public Shared Function WarpOverGrid(quelle As SKBitmap, spalten As Integer, zeilen As Integer,
                                                    zielX As Single(), zielY As Single(),
                                                    Optional quellX As Single() = Nothing,
                                                    Optional quellY As Single() = Nothing) As SKBitmap

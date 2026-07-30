@@ -22,21 +22,21 @@ Namespace Services
     ''' Die Werte werden auf 0 bis 255 GESPREIZT, jedes Bild fuer sich. Absolute Vergleichbarkeit
     ''' zwischen zwei Fotos gibt es bei relativer Tiefe ohnehin nicht; ohne Spreizung laege ein Bild
     ''' mit geringer Tiefenstaffelung in einem schmalen Band und waere als Maske unbrauchbar.</summary>
-    Public NotInheritable Class TiefenKarteService
+    Public NotInheritable Class DepthMapService
 
         Private Sub New()
         End Sub
 
-        Public Const ModellDatei As String = "midas-small"
+        Public Const ModelFile As String = "midas-small"
 
         ''' <summary>Kantenlaenge, auf die das Modell rechnet. Fest: die kleine Fassung ist auf
         ''' 256 Pixel trainiert.</summary>
-        Public Const ModellKante As Integer = 256
+        Public Const ModelEdge As Integer = 256
 
         Public Shared ReadOnly Property Verfuegbar As Boolean
             Get
-                Return KiModellService.LaufzeitVerfuegbar AndAlso
-                       Not String.IsNullOrEmpty(KiModellService.BesteDatei(ModellDatei))
+                Return AiModelService.RuntimeAvailable AndAlso
+                       Not String.IsNullOrEmpty(AiModelService.BestFile(ModelFile))
             End Get
         End Property
 
@@ -44,24 +44,24 @@ Namespace Services
         ''' jedem Fehlschlag - eine halbe Tiefenkarte waere schlimmer als keine.</summary>
         Public Shared Function Berechne(bild As SKBitmap) As SKBitmap
             If bild Is Nothing OrElse bild.Width <= 0 OrElse bild.Height <= 0 Then Return Nothing
-            Dim sitzung = KiModellService.SitzungFuer(ModellDatei)
+            Dim sitzung = AiModelService.SitzungFuer(ModelFile)
             If sitzung Is Nothing Then Return Nothing
 
             ' Das Modell rechnet auf einem festen Quadrat. Das Bild wird darauf VERZERRT, nicht
             ' eingepasst: eine Auffuellung mit Schwarz haette das Netz als sehr weit entfernte
             ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt.
-            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModellKante, ModellKante})
-            Using klein = New SKBitmap(ModellKante, ModellKante, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
+            Using klein = New SKBitmap(ModelEdge, ModelEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 If Not bild.ScalePixels(klein, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                 ' Normierung aus dem Training des Modells - nicht geraten.
                 Dim mittel = New Single() {0.485F, 0.456F, 0.406F}
                 Dim streuung = New Single() {0.229F, 0.224F, 0.225F}
                 Dim ziel = tensor.Buffer.Span
-                Dim ebene = ModellKante * ModellKante
-                For y = 0 To ModellKante - 1
-                    For x = 0 To ModellKante - 1
+                Dim ebene = ModelEdge * ModelEdge
+                For y = 0 To ModelEdge - 1
+                    For x = 0 To ModelEdge - 1
                         Dim p = klein.GetPixel(x, y)
-                        Dim i = y * ModellKante + x
+                        Dim i = y * ModelEdge + x
                         ziel(i) = (p.Red / 255.0F - mittel(0)) / streuung(0)
                         ziel(ebene + i) = (p.Green / 255.0F - mittel(1)) / streuung(1)
                         ziel(ebene * 2 + i) = (p.Blue / 255.0F - mittel(2)) / streuung(2)
@@ -84,8 +84,8 @@ Namespace Services
         End Function
 
         Private Shared Function AlsGraustufen(werte As Single(), zielBreite As Integer, zielHoehe As Integer) As SKBitmap
-            If werte Is Nothing OrElse werte.Length < ModellKante * ModellKante Then Return Nothing
-            Dim versatz = werte.Length - ModellKante * ModellKante
+            If werte Is Nothing OrElse werte.Length < ModelEdge * ModelEdge Then Return Nothing
+            Dim versatz = werte.Length - ModelEdge * ModelEdge
 
             Dim min = Single.MaxValue, max = Single.MinValue
             For i = versatz To werte.Length - 1
@@ -98,8 +98,8 @@ Namespace Services
             ' Ein voellig flaches Ergebnis ist keine Tiefenkarte, sondern ein Fehlschlag.
             If spanne <= 0.0001F Then Return Nothing
 
-            Using klein = New SKBitmap(New SKImageInfo(ModellKante, ModellKante, SKColorType.Alpha8, SKAlphaType.Premul))
-                Dim puffer(ModellKante * ModellKante - 1) As Byte
+            Using klein = New SKBitmap(New SKImageInfo(ModelEdge, ModelEdge, SKColorType.Alpha8, SKAlphaType.Premul))
+                Dim puffer(ModelEdge * ModelEdge - 1) As Byte
                 For i = 0 To puffer.Length - 1
                     Dim v = (werte(versatz + i) - min) / spanne
                     puffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
@@ -121,7 +121,7 @@ Namespace Services
         ''' <paramref name="weichePct"/> laesst die Maske an beiden Grenzen auslaufen, statt hart
         ''' abzuschneiden. Ohne das entstuende an jeder Tiefenstufe eine sichtbare Kante quer durchs
         ''' Bild - eine Tiefenkarte ist stetig, eine harte Schwelle darin ist immer zu sehen.</summary>
-        Public Shared Function MaskeAusTiefe(tiefe As SKBitmap, vonPct As Double, bisPct As Double,
+        Public Shared Function MaskFromDepth(tiefe As SKBitmap, vonPct As Double, bisPct As Double,
                                              weichePct As Double) As SKBitmap
             If tiefe Is Nothing OrElse tiefe.Width <= 0 OrElse tiefe.Height <= 0 Then Return Nothing
             Dim von = Math.Max(0.0, Math.Min(100.0, Math.Min(vonPct, bisPct)))
@@ -424,7 +424,7 @@ Namespace Services
                         Dim anteil = stufe / CDbl(Stufen)
                         ' Die Maske dieser Stufe: wie weit ist dieser Punkt von der Fokusebene weg,
                         ' gemessen in Anteilen des Uebergangs, geklemmt auf diese Stufe.
-                        Using maske = StufenMaske(karte, von, bis, uebergang, anteil, 1.0 / Stufen)
+                        Using maske = StepMask(karte, von, bis, uebergang, anteil, 1.0 / Stufen)
                             If maske Is Nothing Then Continue For
                             Using verwischt = VerwischeMitScheibe(quelle, maxRadius * anteil,
                                                                   eckenZahl, lichterPct)
@@ -448,7 +448,7 @@ Namespace Services
 
         ''' <summary>Wie stark diese Unschaerfestufe an jedem Punkt beitraegt. Die Stufen ueberlappen
         ''' sich bewusst und laufen weich aus - ohne das saehe man ihre Grenzen als Ringe.</summary>
-        Private Shared Function StufenMaske(tiefe As SKBitmap, vonPct As Double, bisPct As Double,
+        Private Shared Function StepMask(tiefe As SKBitmap, vonPct As Double, bisPct As Double,
                                             uebergangPct As Double,
                                             anteil As Double, breite As Double) As SKBitmap
             Dim w = tiefe.Width, h = tiefe.Height

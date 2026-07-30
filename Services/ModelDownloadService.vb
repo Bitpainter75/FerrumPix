@@ -25,7 +25,7 @@ Namespace Services
     ''' Geschrieben wird ATOMAR: erst in eine Nachbardatei, dann umbenannt. Ein abgebrochener
     ''' Download darf keine halbe Datei am Zielort hinterlassen, die beim naechsten Start als
     ''' vorhandenes Modell gilt.</summary>
-    Public NotInheritable Class ModellDownloadService
+    Public NotInheritable Class ModelDownloadService
 
         Private Sub New()
         End Sub
@@ -48,13 +48,13 @@ Namespace Services
         End Enum
 
         ''' <summary>Ein Modell holen. <paramref name="fortschritt"/> bekommt 0 bis 1.</summary>
-        Public Shared Async Function HoleAsync(eintrag As KiModellService.ModellEintrag,
+        Public Shared Async Function HoleAsync(eintrag As AiModelService.ModelEntry,
                                                Optional fortschritt As IProgress(Of Double) = Nothing,
                                                Optional abbruch As CancellationToken = Nothing) As Task(Of Ergebnis)
             If eintrag Is Nothing Then Return Ergebnis.Netzfehler
-            If KiModellService.IstUnversehrt(eintrag) Then Return Ergebnis.SchonDa
+            If AiModelService.IstUnversehrt(eintrag) Then Return Ergebnis.SchonDa
 
-            Dim ordner = KiModellService.ModellOrdner
+            Dim ordner = AiModelService.ModelFolder
             Dim ziel = Path.Combine(ordner, eintrag.Datei)
             ' Die Nachbardatei liegt im SELBEN Ordner - nur dann ist das Umbenennen ein
             ' Verzeichniseintrag und keine Kopie ueber Dateisystemgrenzen hinweg.
@@ -88,7 +88,7 @@ Namespace Services
 
                 ' ERST pruefen, DANN an den Zielort. Eine Datei, die den Namen des Modells traegt,
                 ' soll nie einen Augenblick lang ungeprueft dort liegen.
-                Dim summeIst = KiModellService.PruefsummeVon(halb)
+                Dim summeIst = AiModelService.ChecksumOf(halb)
                 If Not String.Equals(summeIst, eintrag.Sha256, StringComparison.OrdinalIgnoreCase) Then
                     Try
                         File.Delete(halb)
@@ -101,7 +101,7 @@ Namespace Services
 
                 If File.Exists(ziel) Then File.Delete(ziel)
                 File.Move(halb, ziel)
-                KiModellService.ErneutPruefen()
+                AiModelService.CheckAgain()
                 Return Ergebnis.Fertig
             Catch ex As OperationCanceledException
                 Try

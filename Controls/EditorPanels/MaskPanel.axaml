@@ -47,19 +47,19 @@
                 <!-- Ohne Modelldatei GRAU statt weg, mit dem Weg zur Datei im Hinweis. Ein
                      verschwundener Knopf verschweigt, dass es die Funktion gibt. -->
                 <Button Classes="ghost" Padding="8,6"
-                        IsEnabled="{Binding IsTiefenMaskeVerfuegbar}"
+                        IsEnabled="{Binding IsDepthMaskAvailable}"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Tiefe"
                         Classes.active="{Binding IsMaskDepthMode}"
-                        ToolTip.Tip="{Binding TiefenMaskeHinweis}">
+                        ToolTip.Tip="{Binding DepthMaskHint}">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-3.svg" Width="16" Height="16" />
                 </Button>
                 <!-- Objektauswahl: der Bestand wird beim Programmstart einmal erhoben - siehe
-                     KiModellService.PruefeBestand. -->
+                     AiModelService.CheckInventory. -->
                 <Button Classes="ghost" Padding="8,6"
-                        IsEnabled="{Binding IsMotivMaskeVerfuegbar}"
+                        IsEnabled="{Binding IsSubjectMaskAvailable}"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Objekt"
                         Classes.active="{Binding IsMaskObjectMode}"
-                        ToolTip.Tip="{Binding MotivMaskeHinweis}">
+                        ToolTip.Tip="{Binding SubjectMaskHint}">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
                 </Button>
             </StackPanel>
@@ -72,7 +72,7 @@
                            FontSize="{DynamicResource FP.Font.Small}" />
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding KannArtUmwandeln}"
-                        Command="{Binding WandleArtUmCommand}"
+                        Command="{Binding ConvertKindCommand}"
                         ToolTip.Tip="{Binding ArtUmwandelnHinweis}">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
@@ -91,7 +91,7 @@
                            FontSize="{DynamicResource FP.Font.Small}" />
                 <TextBlock Text="Die Tiefe wird einmal je Bild berechnet, das dauert einen Moment."
                            TextWrapping="Wrap"
-                           IsVisible="{Binding IsTiefenMaskeRechnend}"
+                           IsVisible="{Binding IsDepthMaskRunning}"
                            Foreground="{DynamicResource FP.Text.Muted}"
                            FontSize="{DynamicResource FP.Font.Caption}" />
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
@@ -177,7 +177,7 @@
                 </StackPanel>
                 <TextBlock Text="Das erste Anklicken eines Bildes dauert einen Moment, danach geht es schnell."
                            TextWrapping="Wrap"
-                           IsVisible="{Binding IsMotivMaskeRechnend}"
+                           IsVisible="{Binding IsSubjectMaskRunning}"
                            Foreground="{DynamicResource FP.Text.Muted}"
                            FontSize="{DynamicResource FP.Font.Caption}" />
                 <!-- Ein Klick ist mehrdeutig: die Jacke, die Person oder die Gruppe? Das Modell
@@ -187,21 +187,21 @@
                            FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                            Command="{Binding SetMotivKoernungCommand}" CommandParameter="0"
+                            Command="{Binding SetSubjectGrainCommand}" CommandParameter="0"
                             Classes.active="{Binding IsKoernungFein}"
                             ToolTip.Tip="Nur den getroffenen Teil, etwa ein Ärmel">
                         <TextBlock Text="Teil" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>
                     <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                            Command="{Binding SetMotivKoernungCommand}" CommandParameter="1"
+                            Command="{Binding SetSubjectGrainCommand}" CommandParameter="1"
                             Classes.active="{Binding IsKoernungMittel}"
                             ToolTip.Tip="Den Gegenstand, zu dem der Teil gehört, etwa die Jacke">
                         <TextBlock Text="Mittel" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>
                     <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                            Command="{Binding SetMotivKoernungCommand}" CommandParameter="2"
+                            Command="{Binding SetSubjectGrainCommand}" CommandParameter="2"
                             Classes.active="{Binding IsKoernungGrob}"
                             ToolTip.Tip="Das ganze Objekt, etwa die Person">
                         <TextBlock Text="Ganzes" FontSize="{DynamicResource FP.Font.Small}"
@@ -216,18 +216,18 @@
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                        DefaultValue="50"
-                                       Value="{Binding MotivMaskeKante}" Margin="0,0" />
+                                       Value="{Binding SubjectMaskEdge}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding MotivMaskeKante, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                             Value="{Binding SubjectMaskEdge, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Lässt die Maske um die Kante herum wachsen oder schrumpfen. Erkennt das Modell eine Haaresbreite zu wenig, holt man sie damit zurück.">
                     <TextBlock Text="Umfang" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                     <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
-                                       Value="{Binding MotivMaskeUmfang}" Margin="0,0" />
+                                       Value="{Binding SubjectMaskExtent}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding MotivMaskeUmfang, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                                             Value="{Binding SubjectMaskExtent, Mode=TwoWay}" Minimum="-100" Maximum="100" />
                 </Grid>
                 <!-- Derselbe Knopf wie beim Pinsel-Zweig: sitzt die Maske, wird sie zur Ebene. -->
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"

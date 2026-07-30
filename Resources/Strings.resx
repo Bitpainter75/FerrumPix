@@ -525,7 +525,7 @@
   <data name="Enter_file_name_f2637be0" xml:space="preserve">
     <value>Enter file name</value>
   </data>
-  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Tags_vo_e5f7741e" xml:space="preserve">
+  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Stichw__ef4f9787" xml:space="preserve">
     <value>Removes metadata (ratings, favorites, tags) from images that no longer exist.</value>
   </data>
   <data name="Error_787aa161" xml:space="preserve">
@@ -1617,7 +1617,7 @@
   <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
     <value>Apply crop to preview</value>
   </data>
-  <data name="Dateimuster_oder_Tags_b897e226" xml:space="preserve">
+  <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>File pattern or tags</value>
   </data>
   <data name="Eigene_Konturfarbe_w_hlen_7954549e" xml:space="preserve">
@@ -2556,7 +2556,7 @@
   <data name="Speichert_FerrumPix_Bewertungen_in_einem_abgegre_d73d5de9" xml:space="preserve">
     <value>Stores FerrumPix ratings in a delimited block of the Immich description instead of the Immich rating field.</value>
   </data>
-  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_0b05b5ee" xml:space="preserve">
+  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_583a342f" xml:space="preserve">
     <value>Stores FerrumPix keywords in a delimited block of the Immich description instead of as Immich tags.</value>
   </data>
   <data name="Ordner_ausw_hlen_0d705794" xml:space="preserve">
@@ -3765,7 +3765,7 @@
   <data name="SVG_Symbole_darstellen_3fe48291" xml:space="preserve">
     <value>Rendering SVG icons</value>
   </data>
-  <data name="Datenbank_f_r_Bewertungen_Tags_und_Zwischenspeic_dcd39467" xml:space="preserve">
+  <data name="Datenbank_f_r_Bewertungen_Stichw_rter_und_Zwisch_099e8dcc" xml:space="preserve">
     <value>Database for ratings, tags and caches</value>
   </data>
   <data name="EXIF_und_IPTC_Daten_lesen_e97651d2" xml:space="preserve">
@@ -5615,5 +5615,77 @@
   </data>
   <data name="Einf_gen_aus_der_Zwischenablage_ist_fehlgeschlag_b55d44e1" xml:space="preserve">
     <value>Pasting from the clipboard failed</value>
+  </data>
+  <data name="Verweisen_aus_dem_pers_nlichen_Ordner_folgen_7e5c8b3f" xml:space="preserve">
+    <value>Follow links out of the personal folder</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_359a497b" xml:space="preserve">
+    <value>Allows copying, moving, renaming and deleting even when a folder is only a link to a place outside the personal folder, such as a second hard disk. When off, file work stays inside the personal folder. Viewing and editing are never restricted.</value>
+  </data>
+  <data name="Bild_aus_der_Galerie_ffnen_mit_725b7f93" xml:space="preserve">
+    <value>Open an image from the gallery with</value>
+  </data>
+  <data name="Gilt_f_r_den_Doppelklick_auf_ein_Bild_und_f_r_di_8fbf05b5" xml:space="preserve">
+    <value>Applies to double-clicking an image and to the Enter key. Videos always open in the viewer.</value>
+  </data>
+  <data name="Aktueller_Ordner_19c25698" xml:space="preserve">
+    <value>Current folder</value>
+  </data>
+  <data name="Zuletzt_gespeichert_863fbe6e" xml:space="preserve">
+    <value>Last used</value>
+  </data>
+  <data name="Stichwort_entfernen_74eca6af" xml:space="preserve">
+    <value>Remove keyword</value>
+  </data>
+  <data name="Bearbeitung_kopieren_0dea2c86" xml:space="preserve">
+    <value>Copy adjustments</value>
+  </data>
+  <data name="Bearbeitung_einf_gen_4a1543cd" xml:space="preserve">
+    <value>Paste adjustments</value>
+  </data>
+  <data name="Bild_anheften_0328857a" xml:space="preserve">
+    <value>Pin image</value>
+  </data>
+  <data name="Men_f_r_dieses_Bild_67e696fe" xml:space="preserve">
+    <value>Menu for this image</value>
+  </data>
+  <data name="Keine_Bewertung_e8ec4c44" xml:space="preserve">
+    <value>No rating</value>
+  </data>
+  <data name="Info_Leiste_in_der_Galerie_3adced10" xml:space="preserve">
+    <value>Info bar in the gallery</value>
+  </data>
+  <data name="Zeigt_rechts_die_Angaben_zum_markierten_Bild_Auf_ed118ec2" xml:space="preserve">
+    <value>Shows the details of the selected image on the right: capture data, histogram, rating, colour label and keywords. Can also be toggled in the gallery using the info icon at the top right.</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_Stichwort_zeigen_3a573715" xml:space="preserve">
+    <value>Show all images with this keyword</value>
+  </data>
+  <data name="Kein_einzelnes_Bild_ausgew_hlt_15ae372f" xml:space="preserve">
+    <value>No single image selected</value>
+  </data>
+  <data name="0_Bilder_ausgew_hlt_8baa3978" xml:space="preserve">
+    <value>{0} images selected</value>
+  </data>
+  <data name="Gesamtgr_e_b5752d6f" xml:space="preserve">
+    <value>Total size</value>
+  </data>
+  <data name="Kameras_826ed0ba" xml:space="preserve">
+    <value>Cameras</value>
+  </data>
+  <data name="STICHW_RTER_1ae38abc" xml:space="preserve">
+    <value>KEYWORDS</value>
+  </data>
+  <data name="Keine_Stichw_rter_vergeben_658ceef3" xml:space="preserve">
+    <value>No keywords assigned</value>
+  </data>
+  <data name="Men_0ebbd1b8" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="F_r_diese_Dateien_lassen_sich_keine_Metadaten_en_b04d6505" xml:space="preserve">
+    <value>No metadata can be removed from these files.</value>
+  </data>
+  <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
+    <value>Capture data, XMP and colour profile will be removed from {0} file(s). The files are rewritten in the process; this cannot be undone.</value>
   </data>
 </root>

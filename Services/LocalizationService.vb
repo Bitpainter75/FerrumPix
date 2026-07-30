@@ -74,7 +74,7 @@ Namespace Services
         ''' Die Namen stehen bewusst in ihrer eigenen Sprache und werden NICHT uebersetzt. Wer die
         ''' Oberflaeche in einer Sprache sieht, die er nicht versteht, findet "Deutsch" wieder -
         ''' "Tedesco" nicht.</summary>
-        Public Shared ReadOnly Property Sprachen As (Schluessel As String, Name As String)()
+        Public Shared ReadOnly Property Languages As (Key As String, Name As String)()
             Get
                 Return {
                     ("System", ""),
@@ -90,10 +90,10 @@ Namespace Services
 
         Public Shared Function NormalizeLanguageMode(value As String) As String
             Dim wert = If(value, "").Trim()
-            For Each sprache In Sprachen
-                If sprache.Schluessel <> "System" AndAlso
-                   String.Equals(sprache.Schluessel, wert, StringComparison.Ordinal) Then
-                    Return sprache.Schluessel
+            For Each sprache In Languages
+                If sprache.Key <> "System" AndAlso
+                   String.Equals(sprache.Key, wert, StringComparison.Ordinal) Then
+                    Return sprache.Key
                 End If
             Next
             Return "System"
@@ -242,60 +242,78 @@ Namespace Services
             Dim textBlock = TryCast(node, TextBlock)
             If textBlock IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBlock.Text) AndAlso
                Not textBlock.Classes.Contains(KeineUebersetzung) Then
-                textBlock.Text = UebersetzeGemerkt(textBlock.Text, merker.Text)
+                textBlock.Text = TranslateRemembered(textBlock.Text, merker.Text)
             End If
 
             Dim content = TryCast(node, ContentControl)
             If content IsNot Nothing AndAlso TypeOf content.Content Is String Then
-                content.Content = UebersetzeGemerkt(CStr(content.Content), merker.Inhalt)
+                content.Content = TranslateRemembered(CStr(content.Content), merker.Inhalt)
             End If
 
             Dim menuItem = TryCast(node, MenuItem)
             If menuItem IsNot Nothing AndAlso TypeOf menuItem.Header Is String Then
-                menuItem.Header = UebersetzeGemerkt(CStr(menuItem.Header), merker.MenueKopf)
+                menuItem.Header = TranslateRemembered(CStr(menuItem.Header), merker.MenueKopf)
             End If
 
             ' Expander und TabItem erben Header nicht von MenuItem, sondern von
             ' HeaderedContentControl - ohne diesen Zweig blieben ihre Überschriften deutsch.
             Dim headered = TryCast(node, HeaderedContentControl)
             If headered IsNot Nothing AndAlso TypeOf headered.Header Is String Then
-                headered.Header = UebersetzeGemerkt(CStr(headered.Header), merker.Kopf)
+                headered.Header = TranslateRemembered(CStr(headered.Header), merker.Kopf)
             End If
 
             Dim textBox = TryCast(node, TextBox)
             If textBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBox.PlaceholderText) Then
-                textBox.PlaceholderText = UebersetzeGemerkt(textBox.PlaceholderText, merker.Platzhalter)
+                textBox.PlaceholderText = TranslateRemembered(textBox.PlaceholderText, merker.Platzhalter)
             End If
 
             ' AutoCompleteBox ist keine TextBox, hat aber denselben Platzhalter.
             Dim autoComplete = TryCast(node, AutoCompleteBox)
             If autoComplete IsNot Nothing AndAlso Not String.IsNullOrEmpty(autoComplete.PlaceholderText) Then
-                autoComplete.PlaceholderText = UebersetzeGemerkt(autoComplete.PlaceholderText, merker.Platzhalter)
+                autoComplete.PlaceholderText = TranslateRemembered(autoComplete.PlaceholderText, merker.Platzhalter)
             End If
 
             ' ComboBox erbt ihren Platzhalter ebenfalls nicht von TextBox - ohne diesen Zweig bliebe der
             ' Text einer noch leeren Auswahlliste deutsch.
             Dim comboBox = TryCast(node, ComboBox)
             If comboBox IsNot Nothing AndAlso Not String.IsNullOrEmpty(comboBox.PlaceholderText) Then
-                comboBox.PlaceholderText = UebersetzeGemerkt(comboBox.PlaceholderText, merker.Platzhalter)
+                comboBox.PlaceholderText = TranslateRemembered(comboBox.PlaceholderText, merker.Platzhalter)
             End If
 
             Dim control = TryCast(node, Control)
             If control IsNot Nothing Then
                 Dim tip = ToolTip.GetTip(control)
-                If TypeOf tip Is String Then ToolTip.SetTip(control, UebersetzeGemerkt(CStr(tip), merker.Tipp))
+                If TypeOf tip Is String Then
+                    ToolTip.SetTip(control, TranslateRemembered(CStr(tip), merker.Tipp, randAnhaengen:=True))
+                End If
             End If
         End Sub
 
         ''' <summary>Uebersetzt gegen den GEMERKTEN Ursprungstext. Weicht der aktuelle Text von dem
         ''' ab, was zuletzt gesetzt wurde, hat ihn jemand anders geschrieben - dann ist er die neue
         ''' Quelle.</summary>
-        Private Shared Function UebersetzeGemerkt(aktuell As String, merker As TextMerker) As String
+        ''' <param name="randAnhaengen">Ein Leerzeichen ans Ende. NUR fuer Kurzhinweise.
+        '''
+        ''' Ein Kurzhinweis liegt in einem Aufklappfenster, und das wird in ganzen Gerätepunkten
+        ''' angelegt. Bei krummer Anwendungsskalierung (1,72 heisst 0,58 Punkte je Geraetepunkt)
+        ''' fehlt dem Text beim Anordnen ein Bruchteil, den die Messung noch hatte: ohne Umbruch
+        ''' verschwand das letzte ZEICHEN, mit Umbruch das ganze letzte WORT auf einer zweiten
+        ''' Zeile, die nicht mehr gezeigt wird.
+        '''
+        ''' Das Leerzeichen wird MITGEMESSEN und ist genau der Puffer, der den Bruchteil auffaengt.
+        ''' Sichtbar ist es nicht. Es hier anzuhaengen und nicht an die Quelltexte ist Absicht: der
+        ''' Schluessel wird aus dem deutschen Quelltext berechnet, ein Leerzeichen darin wuerde
+        ''' JEDEN Kurzhinweis-Schluessel aendern.</param>
+        Private Shared Function TranslateRemembered(aktuell As String, merker As TextMerker,
+                                                  Optional randAnhaengen As Boolean = False) As String
             If merker.Quelle Is Nothing OrElse
                Not String.Equals(aktuell, merker.Zuletzt, StringComparison.Ordinal) Then
-                merker.Quelle = aktuell
+                ' Der gemerkte Ursprung darf den Puffer NICHT enthalten, sonst faende der zweite
+                ' Durchlauf keinen Schluessel mehr und haengte bei jedem Sprachwechsel eins an.
+                merker.Quelle = If(randAnhaengen, If(aktuell, "").TrimEnd(), aktuell)
             End If
             Dim uebersetzt = T(merker.Quelle)
+            If randAnhaengen Then uebersetzt &= " "
             merker.Zuletzt = uebersetzt
             Return uebersetzt
         End Function

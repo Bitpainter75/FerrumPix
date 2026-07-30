@@ -28,6 +28,9 @@ Namespace ViewModels
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentFolder As String = Nothing
         Private _selectedItem As ImageItem
+        ' Die aktive Stichwortauswahl. Sie ueberlebt keinen Wechsel im Baum - siehe ClearTagFilter.
+        Private _activeTagFilters As New List(Of String)()
+        Private _folderBeforeTagFilter As String = ""
         Private _thumbnailSize As Double = 260
         Private _statusText As String = LocalizationService.T("Willkommen bei FerrumPix")
         Private _hoveredMetadataTitle As String = ""
@@ -178,8 +181,60 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(HasSelectedImage))
                 Me.RaisePropertyChanged(NameOf(HasSelection))
                 Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+                UpdateInfoPanelTarget()
             End Set
         End Property
+
+        ''' <summary>Das Infopanel folgt der Auswahl: ein Bild zeigt seine Aufnahmedaten, mehrere
+        ''' eine Uebersicht. Ordner und die Zeile zum uebergeordneten Ordner haben keine Angaben -
+        ''' dann steht nur ein Hinweis in der Mitte.</summary>
+        Public ReadOnly Property IsInfoPanelActive As Boolean
+            Get
+                Return InfoPanelTargets().Count > 0
+            End Get
+        End Property
+
+        Private Function InfoPanelTargets() As IList(Of ImageItem)
+            If SelectedItems Is Nothing Then Return New List(Of ImageItem)()
+            Return SelectedItems.Where(Function(i) i IsNot Nothing AndAlso
+                                                   Not i.IsFolder AndAlso Not i.IsParentFolderEntry).ToList()
+        End Function
+
+        Private Sub UpdateInfoPanelTarget()
+            Dim targets = InfoPanelTargets()
+            ' EIN Satz fuer beide Faelle - keine Auswahl oder nur Ordner. Er trifft auf beide zu,
+            ' und ein Hinweisfeld ist kein Ort fuer Erklaerungen.
+            If targets.Count = 0 Then
+                InfoPanel.InfoPlaceholderText = LocalizationService.T("Kein einzelnes Bild ausgewählt")
+            End If
+            InfoPanel.ShowItems(targets)
+            Me.RaisePropertyChanged(NameOf(IsInfoPanelActive))
+        End Sub
+
+        ''' <summary>Das Infopanel der Galerie. Eigener Zustand, damit es beim Blaettern nicht die
+        ''' Daten des vorherigen Bildes stehen laesst.</summary>
+        Public ReadOnly Property InfoPanel As New InfoPanelViewModel()
+
+        ''' <summary>Ob die Info-Leiste offen ist. Wie in Betrachter und Editor liegt der Zustand in
+        ''' den Einstellungen - er ueberlebt damit den Programmstart und laesst sich dort setzen.</summary>
+        Public ReadOnly Property IsInfoSidebarVisible As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.GalleryInfoSidebarExpanded
+            End Get
+        End Property
+
+        Public Sub ToggleInfoSidebar()
+            If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+            _mainVm.Settings.GalleryInfoSidebarExpanded = Not _mainVm.Settings.GalleryInfoSidebarExpanded
+            RefreshInfoSidebarState()
+        End Sub
+
+        ''' <summary>Nach einer Aenderung in den Einstellungen den Stand nachziehen.</summary>
+        Public Sub RefreshInfoSidebarState()
+            Me.RaisePropertyChanged(NameOf(IsInfoSidebarVisible))
+            InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
+        End Sub
 
         Private Sub OnSelectedItemPropertyChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
             If e.PropertyName = NameOf(ImageItem.Rating) Then
@@ -1067,6 +1122,9 @@ Namespace ViewModels
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property ToggleSelectedFavoriteCommand As ICommand
+        Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
+        Public ReadOnly Property ToggleTagFilterCommand As ICommand
+        Public ReadOnly Property ClearTagFilterCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
@@ -1074,6 +1132,35 @@ Namespace ViewModels
         Public ReadOnly Property ApplyWatermarkSelectedCommand As ICommand
         Public ReadOnly Property PrintSelectedCommand As ICommand
         Public ReadOnly Property BatchConvertSelectedCommand As ICommand
+        ''' <summary>Wo das Kontextmenue geoeffnet wurde und welche Elemente es meint. Beides
+        ''' setzt die View, bevor sie oeffnet.</summary>
+        Public Property ContextSite As MenuSite = MenuSite.GalleryTile
+        Public Property ContextItems As IList(Of ImageItem) = New List(Of ImageItem)()
+
+        ''' <summary>Die Kommandos fuer das Kontextmenue. Gefuellt von der VIEW, weil ein grosser
+        ''' Teil der Galerie-Aktionen dort liegt: Zwischenablage, Ordner anlegen, Vergleichen und
+        ''' das Farbetikett arbeiten mit dem Fensterrahmen. Sie hier nachzubauen hiesse, sie in das
+        ''' ViewModel zu verschieben, wo sie nicht hingehoeren.</summary>
+        Public Property ContextCommands As MenuCommands
+
+        ''' <summary>Die Eintraege des Kontextmenues, gebaut aus Aufrufort und Auswahl. Die Regeln
+        ''' stehen in Audits/KONTEXTMENUE.md und gelten fuer alle Bereiche gleich - die Galerie ist
+        ''' dabei die fuehrende Vorlage.</summary>
+        Public ReadOnly Property ContextActions As IReadOnlyList(Of Object)
+            Get
+                Return ContextMenuBuilder.Build(ContextSite, ContextItems,
+                                                isVirtual:=IsVirtualFolder,
+                                                canPaste:=CanPasteIntoFolder(CurrentFolder),
+                                                commands:=ContextCommands)
+            End Get
+        End Property
+
+        Public Sub RefreshContextActions()
+            Me.RaisePropertyChanged(NameOf(ContextActions))
+        End Sub
+
+        Public ReadOnly Property ToggleFullscreenCommand As ICommand
+        Public ReadOnly Property NewDocumentCommand As ICommand
         Public ReadOnly Property ExportSelectedCommand As ICommand
         Public ReadOnly Property ApplyFilterSelectedCommand As ICommand
         Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
@@ -1119,6 +1206,10 @@ Namespace ViewModels
         Private Sub RaiseSelectionMetadataChanged()
             Me.RaisePropertyChanged(NameOf(SelectedRating))
             Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+            ' Hier und nicht an jeder Auswahlstelle einzeln: alle Wege, die die Auswahl aendern,
+            ' laufen ueber diese Meldung. Der Setter von SelectedItem allein genuegt nicht - beim
+            ' Abwaehlen auf ein einzelnes Bild bleibt er unveraendert.
+            UpdateInfoPanelTarget()
         End Sub
 
         Public ReadOnly Property HasSelection As Boolean
@@ -1292,11 +1383,17 @@ Namespace ViewModels
             CopyPathCommand = ReactiveCommand.Create(Sub() CopySelectedPath())
             ToggleFavoriteCommand = ReactiveCommand.Create(Of ImageItem)(Sub(item) DoToggleFavorite(item))
             ToggleSelectedFavoriteCommand = ReactiveCommand.Create(Sub() ToggleSelectedFavorite())
+            ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub() ToggleInfoSidebar())
+            ToggleTagFilterCommand = ReactiveCommand.Create(Of String)(Sub(tag) ToggleTagFilter(tag))
+            ClearTagFilterCommand = ReactiveCommand.Create(Sub() ClearTagFilter())
+            InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
             ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
+            ToggleFullscreenCommand = ReactiveCommand.Create(Sub() _mainVm?.ToggleFullscreen())
+            NewDocumentCommand = ReactiveCommand.Create(Sub() _mainVm?.ShowNewDocumentDialog())
             ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
             PrintSelectedCommand = ReactiveCommand.CreateFromTask(Function() PrintSelectedAsync())
             ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() ApplyFilterSelected())
@@ -2358,6 +2455,9 @@ Namespace ViewModels
 
         Public Function NavigateToFolderAsync(folderPath As String) As Task
             CancelActiveSearch()
+            ' Ein Wechsel im Baum beendet die Stichwortauswahl - der Knopf verliert die
+            ' Akzentfarbe, sonst behauptete er einen Filter, der gar nicht mehr gilt.
+            ClearTagFilter(returnToFolder:=False)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) AndAlso _currentFolder <> folderPath Then
                 _historyBack.Push(_currentFolder)
                 _historyForward.Clear()
@@ -2518,6 +2618,116 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Alle Bilder mit diesem Stichwort zeigen.
+        '''
+        ''' Der Klick auf ein Stichwort im Infopanel landet hier. Es entsteht eine Suche wie jede
+        ''' andere, nur wird sie NICHT gespeichert - sie ist ein Sprung, keine Liste. Ohne Startordner
+        ''' laeuft sie ueber den ganzen Bestand, denn wer auf ein Stichwort klickt, sucht nicht im
+        ''' gerade offenen Ordner.</summary>
+        Public Sub OpenTagSearch(tag As String)
+            Dim wanted = If(tag, "").Trim()
+            If String.IsNullOrEmpty(wanted) Then Return
+            SetTagFilter({wanted})
+        End Sub
+
+        ''' <summary>Alle Bilder zeigen, die MINDESTENS eines dieser Stichwoerter tragen. Leere
+        ''' Liste hebt die Auswahl auf und laesst den zuletzt offenen Ordner stehen.</summary>
+        Public Sub SetTagFilter(tags As IEnumerable(Of String))
+            Dim wanted = If(tags, Enumerable.Empty(Of String)()).
+                         Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+                         Select(Function(t) t.Trim()).
+                         Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+
+            ' Den Ordner merken, aus dem heraus die Auswahl begonnen hat - "Auswahl aufheben"
+            ' kehrt dorthin zurueck, statt die Trefferliste stehen zu lassen.
+            If wanted.Count > 0 AndAlso _activeTagFilters.Count = 0 AndAlso Not _isVirtualFolder Then
+                _folderBeforeTagFilter = If(_currentFolder, "")
+            End If
+
+            _activeTagFilters = wanted
+            RefreshTagFilterState()
+            If wanted.Count = 0 Then Return
+
+            Dim node As New VirtualNavigationNode(String.Join(", ", wanted), "SavedSearch") With {
+                .Source = "Local",
+                .TagQueries = wanted,
+                .RootFolder = "",
+                .IncludeSubfolders = True,
+                .IsRemovable = False
+            }
+            SidebarTab = TabForNode(node)
+            OpenSavedSearch(node)
+        End Sub
+
+        ''' <summary>Die Stichwortauswahl aufheben. Der Knopf verliert die Akzentfarbe, und die
+        ''' Ansicht kehrt in den Ordner zurueck, aus dem die Auswahl begonnen hat - sonst bliebe die
+        ''' Trefferliste stehen, obwohl nichts mehr ausgewaehlt ist.</summary>
+        ''' <param name="returnToFolder">Aus, wenn der Aufruf SELBST aus einer Navigation kommt.
+        ''' Sonst riefe das Zurueckkehren die Navigation erneut auf.</param>
+        Public Sub ClearTagFilter(Optional returnToFolder As Boolean = True)
+            If _activeTagFilters.Count = 0 Then Return
+            _activeTagFilters = New List(Of String)()
+            RefreshTagFilterState()
+
+            Dim zurueck = _folderBeforeTagFilter
+            _folderBeforeTagFilter = ""
+            If returnToFolder AndAlso _isVirtualFolder AndAlso
+               Not String.IsNullOrEmpty(zurueck) AndAlso Directory.Exists(zurueck) Then
+                NavigateToFolder(zurueck)
+            End If
+        End Sub
+
+        ''' <summary>Ein Stichwort dazunehmen oder abwaehlen.</summary>
+        Public Sub ToggleTagFilter(tag As String)
+            Dim wanted = If(tag, "").Trim()
+            If String.IsNullOrEmpty(wanted) Then Return
+            Dim next_ = _activeTagFilters.ToList()
+            Dim vorhanden = next_.FirstOrDefault(Function(t) String.Equals(t, wanted, StringComparison.OrdinalIgnoreCase))
+            If vorhanden IsNot Nothing Then
+                next_.Remove(vorhanden)
+            Else
+                next_.Add(wanted)
+            End If
+            SetTagFilter(next_)
+        End Sub
+
+        ''' <summary>Die Liste fuer das Aufklappmenue: jedes benutzte Stichwort mit der Anzahl
+        ''' Bilder. Sie entsteht beim Oeffnen neu, damit frisch vergebene Stichwoerter sofort
+        ''' dabei sind.</summary>
+        Public Sub RefreshTagFilterOptions()
+            TagFilterOptions.Clear()
+            Try
+                For Each eintrag In LibraryService.Instance.GetTagCounts()
+                    TagFilterOptions.Add(New TagFilterOption(eintrag.Tag, eintrag.Count,
+                                                             IsTagFilterSelected(eintrag.Tag)))
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RefreshTagFilterOptions", ex)
+            End Try
+        End Sub
+
+        Public Function IsTagFilterSelected(tag As String) As Boolean
+            Return _activeTagFilters.Any(Function(t) String.Equals(t, If(tag, ""), StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        ''' <summary>Traegt der Knopf die Akzentfarbe? Genau dann, wenn eine Stichwortauswahl
+        ''' aktiv ist.</summary>
+        Public ReadOnly Property HasTagFilter As Boolean
+            Get
+                Return _activeTagFilters.Count > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property TagFilterOptions As New ObservableCollection(Of TagFilterOption)()
+
+        Private Sub RefreshTagFilterState()
+            Me.RaisePropertyChanged(NameOf(HasTagFilter))
+            ' NICHT "option" als Schleifenvariable: Option ist ein VB-Schluesselwort.
+            For Each eintrag In TagFilterOptions
+                eintrag.IsSelected = IsTagFilterSelected(eintrag.Tag)
+            Next
+        End Sub
+
         Private Sub OpenSavedSearch(node As VirtualNavigationNode)
             If node Is Nothing Then Return
             If String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase) Then
@@ -2617,7 +2827,8 @@ Namespace ViewModels
             _activeSearchCts = New CancellationTokenSource()
             Dim searchCts = _activeSearchCts
             Dim token = _activeSearchCts.Token
-            ' Saved results are loaded inside Task.Run below — no synchronous I/O on UI thread
+            ' Die gemerkten Treffer werden unten in einem Hintergrundlauf geladen - auf dem
+            ' UI-Thread wird nichts von der Platte gelesen.
             Dim savedPaths = If(node.Results, New List(Of String)())
             Dim textQuery = If(node.TextQuery, "").Trim()
             Dim rootFolder = If(node.RootFolder, "").Trim()
@@ -2633,7 +2844,8 @@ Namespace ViewModels
 
             Try
                 Await Task.Run(Async Function()
-                                   ' Phase 0: restore previously found paths — all I/O on background thread
+                                   ' Erste Stufe: die zuletzt gefundenen Pfade wiederherstellen,
+                                   ' der Plattenzugriff dazu laeuft im Hintergrund.
                                    If savedPaths.Count > 0 Then
                                        Dim seenSaved As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
                                        Dim published = 0
@@ -2788,6 +3000,7 @@ Namespace ViewModels
                 searchToken.ThrowIfCancellationRequested()
                 If meta Is Nothing Then Continue For
                 If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Continue For
+                If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
                 If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
                 If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
                 If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
@@ -2838,6 +3051,7 @@ Namespace ViewModels
                 End If
 
                 If Not MatchesSavedSearchText(file, meta.Tags, textQuery) Then Continue For
+                If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
                 If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
                 If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
                 If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
@@ -3185,6 +3399,18 @@ Namespace ViewModels
         ''' egal) trennt Begriffs-GRUPPEN (mind. eine muss zutreffen), innerhalb einer Gruppe müssen
         ''' alle durch Leerzeichen getrennten Begriffe zutreffen (AND) - Anführungszeichen erlauben
         ''' Begriffe mit Leerzeichen. Wildcard (*/?) funktioniert weiterhin pro Einzelbegriff.
+        ''' <summary>Traegt das Bild mindestens eines dieser Stichwoerter? Leere Liste heisst: keine
+        ''' Einschraenkung. Verglichen wird das ganze Stichwort, nicht ein Teil davon - "urlaub"
+        ''' soll nicht auch "urlaub2019" mitbringen.</summary>
+        Private Shared Function MatchesTagQuery(tags As IEnumerable(Of String), tagQueries As IList(Of String)) As Boolean
+            If tagQueries Is Nothing OrElse tagQueries.Count = 0 Then Return True
+            If tags Is Nothing Then Return False
+            Dim own = tags.Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+                           Select(Function(t) t.Trim()).ToList()
+            Return tagQueries.Any(Function(wanted) own.Any(
+                Function(t) String.Equals(t, wanted.Trim(), StringComparison.OrdinalIgnoreCase)))
+        End Function
+
         Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String), textQuery As String) As Boolean
             If String.IsNullOrWhiteSpace(textQuery) Then Return True
             Dim fileName = IO.Path.GetFileName(filePath)
@@ -3291,8 +3517,9 @@ Namespace ViewModels
             If added Then FilterAndSort()
         End Sub
 
-        ''' Adds pre-built ImageItem objects (constructed on a background thread) to the virtual
-        ''' folder without any filesystem I/O — only dedup check and collection mutation.
+        ''' Nimmt fertig gebaute Elemente - im Hintergrund erzeugt - in den virtuellen Ordner auf,
+        ''' ohne einen einzigen Dateizugriff. Hier wird nur auf Dubletten geprueft und die Liste
+        ''' geaendert.
         Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem), Optional sortNow As Boolean = True)
             ' Siehe AddMetasToVirtualFolder: Zielpruefung, kein Vertrauen auf den Aufrufer.
             If Not _isVirtualFolder Then Return
@@ -3340,7 +3567,8 @@ Namespace ViewModels
             Next
             If changed Then
                 node.Results = target.Results.ToList()
-                ' Write off the UI thread so disk I/O doesn't stall the UI during search
+                ' Abseits des UI-Threads schreiben, damit der Plattenzugriff die Oberflaeche
+                ' waehrend der Suche nicht anhaelt.
                 Dim snapshot = _savedSearches.ToList()
                 Task.Run(Sub() SearchListService.Save(snapshot))
             End If
@@ -4878,19 +5106,36 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim paths = New List(Of String)()
+            Dim beschafft = Await ResolveLocalPathsAsync(items)
+            Dim paths = beschafft.Paths
+            Dim skipped = beschafft.Skipped
+
+            If paths.Count = 0 Then
+                StatusText = LocalizationService.T("Es sind keine druckbaren Bilder ausgewählt.")
+                Return
+            End If
+
+            StatusText = If(skipped > 0, LocalizationService.T("Einige Bilder konnten nicht geladen werden."), "")
+            _mainVm?.ShowPrintDialog(paths)
+        End Function
+
+        ''' <summary>Bilder auf den Datentraeger holen, damit eine Ausgabe sie lesen kann.
+        '''
+        ''' Ein Immich-Asset traegt nur einen Pseudopfad; das Original wird bei Bedarf in den
+        ''' Temp-Ordner geladen und am Element gemerkt, damit ein zweiter Aufruf es wiederverwendet.
+        ''' Steht an EINER Stelle, weil Drucken und Collage dieselbe Beschaffung brauchen - vorher
+        ''' hatte nur das Drucken sie, und die Collage lief bei Immich ins Leere.</summary>
+        Private Async Function ResolveLocalPathsAsync(items As IList(Of ImageItem)) As Task(Of (Paths As List(Of String), Skipped As Integer))
+            Dim paths As New List(Of String)()
             Dim skipped = 0
             Try
                 For Each item In items
                     If item.IsImmichAsset Then
-                        ' Bereits heruntergeladene Kopie wiederverwenden, sonst laden.
                         Dim localPath = item.ImmichLocalPath
                         If String.IsNullOrEmpty(localPath) OrElse Not File.Exists(localPath) Then
-                            If items.Count > 1 Then
-                                StatusText = LocalizationService.T("Lade Bilder aus Immich…")
-                            Else
-                                StatusText = LocalizationService.T("Lade Bild aus Immich…")
-                            End If
+                            StatusText = LocalizationService.T(If(items.Count > 1,
+                                                                  "Lade Bilder aus Immich…",
+                                                                  "Lade Bild aus Immich…"))
                             IsLoading = True
                             localPath = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId, item.ImmichOriginalFileName)
                             If Not String.IsNullOrEmpty(localPath) Then item.ImmichLocalPath = localPath
@@ -4909,20 +5154,26 @@ Namespace ViewModels
             Finally
                 IsLoading = False
             End Try
-
-            If paths.Count = 0 Then
-                StatusText = LocalizationService.T("Es sind keine druckbaren Bilder ausgewählt.")
-                Return
-            End If
-
-            StatusText = If(skipped > 0, LocalizationService.T("Einige Bilder konnten nicht geladen werden."), "")
-            _mainVm?.ShowPrintDialog(paths)
+            Return (paths, skipped)
         End Function
 
-        Public Sub OpenCollageDialog()
-            Dim paths = GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso IsCollageSourcePath(p)).
+        Public Async Sub OpenCollageDialog()
+            Try
+                Await OpenCollageDialogAsync()
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("Gallery.OpenCollageDialog", ex)
+            End Try
+        End Sub
+
+        Private Async Function OpenCollageDialogAsync() As Task
+            Dim items = If(SelectedItems, Enumerable.Empty(Of ImageItem)()).
+                Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsVideoFile).
                 ToList()
+
+            Dim beschafft = Await ResolveLocalPathsAsync(items)
+            Dim paths = beschafft.Paths.Where(AddressOf IsCollageSourcePath).ToList()
             If paths.Count < 2 Then
                 StatusText = LocalizationService.T("Für eine Collage müssen mindestens zwei Bilder ausgewählt sein.")
                 Return
@@ -4942,7 +5193,7 @@ Namespace ViewModels
             CollageOrderSeed = Nothing
             CollagePreviewZoom = 1.0
             IsCollageDialogOpen = True
-        End Sub
+        End Function
 
         ''' "Neu mischen" - würfelt sowohl die Bild-REIHENFOLGE (in allen Layouts, im Hero-Layout
         ''' bleibt nur das gewählte Hero-Bild selbst unberührt) als auch, nur im Zufallsmodus
@@ -4981,9 +5232,7 @@ Namespace ViewModels
                 Dim requestId = Interlocked.Increment(_collagePreviewRequestId)
                 If Not IsCollageDialogOpen Then Return
 
-                Dim paths = GetSelectedPaths().
-                    Where(Function(p) File.Exists(p) AndAlso IsCollageSourcePath(p)).
-                    ToList()
+                Dim paths = CollageSourcePaths()
                 If paths.Count < 2 Then
                     CollagePreviewImage = Nothing
                     Return
@@ -5015,9 +5264,7 @@ Namespace ViewModels
 
         Public Async Sub CreateCollage()
             Try
-                Dim paths = GetSelectedPaths().
-                    Where(Function(p) File.Exists(p) AndAlso IsCollageSourcePath(p)).
-                    ToList()
+                Dim paths = CollageSourcePaths()
                 If paths.Count < 2 Then
                     StatusText = LocalizationService.T("Für eine Collage müssen mindestens zwei Bilder ausgewählt sein.")
                     Return
@@ -5080,6 +5327,20 @@ Namespace ViewModels
         ''' Endungsliste hier kannte weder RAW noch .fpx, obwohl das Menü sie anbot: die Auswahl
         ''' schrumpfte still auf null und der Dialog verlangte "mindestens zwei Bilder". ICO steht
         ''' zusätzlich drin, weil der Renderer es lesen kann und die Collage es bisher annahm.</summary>
+        ''' <summary>Die Quellpfade der Collage aus der Auswahl, OHNE zu laden.
+        '''
+        ''' Fuer ein Immich-Asset steht hier die Kopie, die beim Oeffnen des Dialogs in den
+        ''' Temp-Ordner geholt wurde. Vorschau und Speichern laufen nach dem Oeffnen, das Laden ist
+        ''' also schon passiert - sie duerfen es nur nicht erneut anstossen, sonst laedt jede
+        ''' Vorschau-Aktualisierung von vorn.</summary>
+        Private Function CollageSourcePaths() As List(Of String)
+            Return If(SelectedItems, Enumerable.Empty(Of ImageItem)()).
+                   Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsVideoFile).
+                   Select(Function(i) If(i.IsImmichAsset, If(i.ImmichLocalPath, ""), If(i.FilePath, ""))).
+                   Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso File.Exists(p) AndAlso IsCollageSourcePath(p)).
+                   ToList()
+        End Function
+
         Private Shared Function IsCollageSourcePath(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
             If IO.Path.GetExtension(path).ToLowerInvariant() = ".ico" Then Return True
@@ -5315,6 +5576,29 @@ Namespace ViewModels
         ''' <summary>Der komplette "Bildgröße ändern"-Ablauf für eine Liste von Bildern - Dialog,
         ''' Überschreiben oder Kopie, lokal oder nach Immich. Öffentlich, weil der Betrachter mit
         ''' Strg+R denselben Ablauf für das gerade angezeigte Bild auslöst: eine Umsetzung, nicht zwei.</summary>
+        ''' <summary>Die drei Stapel-Ablaeufe fuer eine VORGEGEBENE Liste. Der Betrachter loest damit
+        ''' dasselbe fuer das angezeigte Bild aus, was die Galerie fuer ihre Auswahl tut - dieselbe
+        ''' Umsetzung, nur ein anderer Ausgangspunkt (wie bei ResizeImageItemsAsync).</summary>
+        Public Sub ConvertImageItems(items As IList(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            BatchConvertSelected(items)
+        End Sub
+
+        Public Sub ExportImageItems(items As IList(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            ExportSelected(items)
+        End Sub
+
+        Public Sub ApplyWatermarkToImageItems(items As IList(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            ApplyWatermarkSelected(items)
+        End Sub
+
+        Public Sub ApplyFilterToImageItems(items As IList(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            ApplyFilterSelected(items)
+        End Sub
+
         Public Async Function ResizeImageItemsAsync(items As IList(Of ImageItem)) As Task
             Dim targetItems = If(items, New List(Of ImageItem)()).Where(Function(i) i IsNot Nothing).ToList()
             If targetItems.Count = 0 Then Return
@@ -5326,7 +5610,8 @@ Namespace ViewModels
             ' Ueberschreiben nur anbieten, wenn JEDE Quelle ihr eigenes Format auch schreiben kann
             ' (BMP/GIF koennen es nicht - dort entstehen neue Dateien).
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
-            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar)
+            Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
+                                                           singleImage:=targetItems.Count = 1)
             If resize Is Nothing Then Return
 
             StatusText = LocalizationService.T("Ändere Bildgröße...")
@@ -5423,8 +5708,9 @@ Namespace ViewModels
         ''' <summary>Stapel: einen eingebauten Filter, ein XMP-Preset (.xmp) oder eine LUT (.cube) auf
         ''' die Auswahl anwenden - entweder in die Originale hinein oder in neue Dateien (mit dem Namen der
         ''' Vorgabe im Dateinamen).</summary>
-        Private Async Sub ApplyFilterSelected()
-            Dim targetItems = GetSelectedBatchEditableImageItems()
+        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
+        Private Async Sub ApplyFilterSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
+            Dim targetItems = If(vorgabe IsNot Nothing, vorgabe.ToList(), GetSelectedBatchEditableImageItems())
             If targetItems.Count = 0 Then Return
 
             ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die Vorgabe des
@@ -5554,7 +5840,19 @@ Namespace ViewModels
         Private Async Sub RemoveMetadataSelected()
             Try
                 Dim targets = GetSelectedEditableImagePaths()
-                If targets.Count = 0 Then Return
+                If targets.Count = 0 Then
+                    StatusText = LocalizationService.T("Für diese Dateien lassen sich keine Metadaten entfernen.")
+                    Return
+                End If
+
+                ' Rueckfrage: die Dateien werden AN ORT UND STELLE neu geschrieben, EXIF, XMP und
+                ' ICC sind danach weg. Das laesst sich nicht zuruecknehmen.
+                Dim frage = String.Format(
+                    LocalizationService.T("Aus {0} Datei(en) werden Aufnahmedaten, XMP und Farbprofil entfernt. Die Dateien werden dabei neu geschrieben, das lässt sich nicht rückgängig machen."),
+                    targets.Count)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Metadaten entfernen"), frage,
+                                                      LocalizationService.T("Entfernen"),
+                                                      LocalizationService.T("Abbrechen")) Then Return
 
                 StatusText = LocalizationService.T("Entferne Metadaten...")
                 Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
@@ -5570,8 +5868,9 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Async Sub ApplyWatermarkSelected()
-            Dim targetItems = GetSelectedBatchEditableImageItems()
+        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
+        Private Async Sub ApplyWatermarkSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
+            Dim targetItems = If(vorgabe IsNot Nothing, vorgabe.ToList(), GetSelectedBatchEditableImageItems())
             If targetItems.Count = 0 Then Return
 
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
@@ -5688,9 +5987,14 @@ Namespace ViewModels
             }
         End Function
 
+        ''' <summary>Bilder, die AN ORT UND STELLE neu geschrieben werden duerfen.
+        '''
+        ''' Massgeblich ist IsBatchImageEditWritable, nicht ...Readable: lesen koennen wir auch TIFF,
+        ''' HEIC, BMP und GIF, schreiben nicht. Mit der Lese-Pruefung landete eine solche Datei in
+        ''' der Liste und wurde im falschen Format zurueckgeschrieben.</summary>
         Private Function GetSelectedEditableImagePaths() As List(Of String)
             Return GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso IsBatchImageEditReadable(p)).
+                Where(Function(p) File.Exists(p) AndAlso IsBatchImageEditWritable(p)).
                 ToList()
         End Function
 
@@ -5776,7 +6080,7 @@ Namespace ViewModels
         ''' verloren. Eindeutigkeit stellt stattdessen ein eigener Unterordner je Bild her.</summary>
         ''' <summary>Raeumt den je Datei angelegten Temp-Unterordner weg - aber nur den, nicht den
         ''' gemeinsamen "ImmichBatch"-Ordner (dort koennen parallele Laeufe noch Dateien haben).</summary>
-        Private Shared Sub LoescheLeerenTempOrdner(ordner As String)
+        Private Shared Sub DeleteEmptyTempFolder(ordner As String)
             If String.IsNullOrEmpty(ordner) OrElse Not Directory.Exists(ordner) Then Return
             If String.Equals(IO.Path.GetFileName(ordner), "ImmichBatch", StringComparison.OrdinalIgnoreCase) Then Return
             If Directory.EnumerateFileSystemEntries(ordner).Any() Then Return
@@ -5876,7 +6180,7 @@ Namespace ViewModels
                             If File.Exists(outputPath) Then File.Delete(outputPath)
                             ' Ersetzte Assets UND Uploads mit Namensmuster bekommen einen eigenen
                             ' Unterordner (Namensgleichheit), der mit weg muss.
-                            LoescheLeerenTempOrdner(IO.Path.GetDirectoryName(outputPath))
+                            DeleteEmptyTempFolder(IO.Path.GetDirectoryName(outputPath))
                         Catch
                         End Try
                     End Try
@@ -5993,7 +6297,7 @@ Namespace ViewModels
                     Finally
                         Try
                             If File.Exists(outputPath) Then File.Delete(outputPath)
-                            LoescheLeerenTempOrdner(IO.Path.GetDirectoryName(outputPath))
+                            DeleteEmptyTempFolder(IO.Path.GetDirectoryName(outputPath))
                         Catch
                         End Try
                     End Try
@@ -6069,11 +6373,11 @@ Namespace ViewModels
         ''' neue Datei, vorhandene Namen bekommen automatisch einen Zähler.</summary>
         ''' Async Sub: eine durchgereichte Ausnahme landet beim Dispatcher und beendet den Prozess
         ''' (siehe ResizeSelected/RemoveMetadataSelected) - deshalb der aeussere Schutz.
-        Private Async Sub ExportSelected()
+        Private Async Sub ExportSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
             ' Await darf in VB nicht im Catch stehen - die Meldung deshalb danach.
             Dim fehler As String = Nothing
             Try
-                Await ExportSelectedAsync()
+                Await ExportSelectedAsync(vorgabe)
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Gallery.ExportTo", "failed: " & ex.ToString())
                 fehler = ex.Message
@@ -6081,8 +6385,9 @@ Namespace ViewModels
             If fehler IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), fehler)
         End Sub
 
-        Private Async Function ExportSelectedAsync() As Task
-            Dim targetItems = GetSelectedImageItems().
+        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
+        Private Async Function ExportSelectedAsync(Optional vorgabe As IList(Of ImageItem) = Nothing) As Task
+            Dim targetItems = If(vorgabe, GetSelectedImageItems()).
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
                 Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
                 ToList()
@@ -6239,8 +6544,10 @@ Namespace ViewModels
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
-        Private Async Sub BatchConvertSelected()
-            Dim targetItems = GetSelectedImageItems().
+        ''' <param name="vorgabe">Wenn gesetzt, gilt DIESE Liste statt der Galerie-Auswahl. So loest
+        ''' der Betrachter denselben Ablauf fuer das angezeigte Bild aus - eine Umsetzung, nicht zwei.</param>
+        Private Async Sub BatchConvertSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
+            Dim targetItems = If(vorgabe, GetSelectedImageItems()).
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
                 Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
                 ToList()

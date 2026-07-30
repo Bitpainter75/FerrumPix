@@ -525,7 +525,7 @@
   <data name="Enter_file_name_f2637be0" xml:space="preserve">
     <value>Inserisci nome file</value>
   </data>
-  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Tags_vo_e5f7741e" xml:space="preserve">
+  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Stichw__ef4f9787" xml:space="preserve">
     <value>Rimuove metadati (valutazioni, preferiti, tag) da immagini che non esistono piu.</value>
   </data>
   <data name="Error_787aa161" xml:space="preserve">
@@ -1617,7 +1617,7 @@
   <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
     <value>Applica il ritaglio all'anteprima</value>
   </data>
-  <data name="Dateimuster_oder_Tags_b897e226" xml:space="preserve">
+  <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>Modello di file o tag</value>
   </data>
   <data name="Eigene_Konturfarbe_w_hlen_7954549e" xml:space="preserve">
@@ -2555,7 +2555,7 @@
   <data name="Speichert_FerrumPix_Bewertungen_in_einem_abgegre_d73d5de9" xml:space="preserve">
     <value>Salva le valutazioni di FerrumPix in un blocco delimitato della descrizione di Immich anziché nel campo valutazione di Immich.</value>
   </data>
-  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_0b05b5ee" xml:space="preserve">
+  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_583a342f" xml:space="preserve">
     <value>Salva le parole chiave di FerrumPix in un blocco delimitato della descrizione di Immich anziché come tag di Immich.</value>
   </data>
   <data name="Ordner_ausw_hlen_0d705794" xml:space="preserve">
@@ -3764,7 +3764,7 @@
   <data name="SVG_Symbole_darstellen_3fe48291" xml:space="preserve">
     <value>Visualizzazione delle icone SVG</value>
   </data>
-  <data name="Datenbank_f_r_Bewertungen_Tags_und_Zwischenspeic_dcd39467" xml:space="preserve">
+  <data name="Datenbank_f_r_Bewertungen_Stichw_rter_und_Zwisch_099e8dcc" xml:space="preserve">
     <value>Database per valutazioni, tag e cache</value>
   </data>
   <data name="EXIF_und_IPTC_Daten_lesen_e97651d2" xml:space="preserve">
@@ -5614,5 +5614,77 @@
   </data>
   <data name="Einf_gen_aus_der_Zwischenablage_ist_fehlgeschlag_b55d44e1" xml:space="preserve">
     <value>Incolla dagli appunti non riuscito</value>
+  </data>
+  <data name="Verweisen_aus_dem_pers_nlichen_Ordner_folgen_7e5c8b3f" xml:space="preserve">
+    <value>Segui i collegamenti fuori dalla cartella personale</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_359a497b" xml:space="preserve">
+    <value>Consente di copiare, spostare, rinominare ed eliminare anche quando una cartella è solo un collegamento a una posizione fuori dalla cartella personale, ad esempio un secondo disco. Disattivato, il lavoro sui file resta nella cartella personale. Visualizzazione e modifica non sono mai limitate.</value>
+  </data>
+  <data name="Bild_aus_der_Galerie_ffnen_mit_725b7f93" xml:space="preserve">
+    <value>Aprire un'immagine della galleria con</value>
+  </data>
+  <data name="Gilt_f_r_den_Doppelklick_auf_ein_Bild_und_f_r_di_8fbf05b5" xml:space="preserve">
+    <value>Vale per il doppio clic su un'immagine e per il tasto Invio. I video si aprono sempre nel visualizzatore.</value>
+  </data>
+  <data name="Aktueller_Ordner_19c25698" xml:space="preserve">
+    <value>Cartella attuale</value>
+  </data>
+  <data name="Zuletzt_gespeichert_863fbe6e" xml:space="preserve">
+    <value>Ultimo usato</value>
+  </data>
+  <data name="Stichwort_entfernen_74eca6af" xml:space="preserve">
+    <value>Rimuovi parola chiave</value>
+  </data>
+  <data name="Bearbeitung_kopieren_0dea2c86" xml:space="preserve">
+    <value>Copia regolazioni</value>
+  </data>
+  <data name="Bearbeitung_einf_gen_4a1543cd" xml:space="preserve">
+    <value>Incolla regolazioni</value>
+  </data>
+  <data name="Bild_anheften_0328857a" xml:space="preserve">
+    <value>Fissa immagine</value>
+  </data>
+  <data name="Men_f_r_dieses_Bild_67e696fe" xml:space="preserve">
+    <value>Menu per questa immagine</value>
+  </data>
+  <data name="Keine_Bewertung_e8ec4c44" xml:space="preserve">
+    <value>Nessuna valutazione</value>
+  </data>
+  <data name="Info_Leiste_in_der_Galerie_3adced10" xml:space="preserve">
+    <value>Barra informazioni nella galleria</value>
+  </data>
+  <data name="Zeigt_rechts_die_Angaben_zum_markierten_Bild_Auf_ed118ec2" xml:space="preserve">
+    <value>Mostra a destra i dati dell'immagine selezionata: dati di scatto, istogramma, valutazione, etichetta colore e parole chiave. Si può attivare anche nella galleria con l'icona delle informazioni in alto a destra.</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_Stichwort_zeigen_3a573715" xml:space="preserve">
+    <value>Mostra tutte le immagini con questa parola chiave</value>
+  </data>
+  <data name="Kein_einzelnes_Bild_ausgew_hlt_15ae372f" xml:space="preserve">
+    <value>Nessuna singola immagine selezionata</value>
+  </data>
+  <data name="0_Bilder_ausgew_hlt_8baa3978" xml:space="preserve">
+    <value>{0} immagini selezionate</value>
+  </data>
+  <data name="Gesamtgr_e_b5752d6f" xml:space="preserve">
+    <value>Dimensione totale</value>
+  </data>
+  <data name="Kameras_826ed0ba" xml:space="preserve">
+    <value>Fotocamere</value>
+  </data>
+  <data name="STICHW_RTER_1ae38abc" xml:space="preserve">
+    <value>PAROLE CHIAVE</value>
+  </data>
+  <data name="Keine_Stichw_rter_vergeben_658ceef3" xml:space="preserve">
+    <value>Nessuna parola chiave assegnata</value>
+  </data>
+  <data name="Men_0ebbd1b8" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="F_r_diese_Dateien_lassen_sich_keine_Metadaten_en_b04d6505" xml:space="preserve">
+    <value>Da questi file non è possibile rimuovere metadati.</value>
+  </data>
+  <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
+    <value>Da {0} file verranno rimossi dati di scatto, XMP e profilo colore. I file vengono riscritti; l'operazione non è annullabile.</value>
   </data>
 </root>

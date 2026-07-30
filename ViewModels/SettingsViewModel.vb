@@ -36,6 +36,7 @@ Namespace ViewModels
         Private _editorFitBehavior As String = "Always"
         Private _defaultSaveFormat As String = "JPG"
         Private _showHiddenFolders As Boolean = False
+        Private _followLinkedFolders As Boolean = False
         Private _deleteSkipTrash As Boolean = False
         Private _deleteSkipConfirmation As Boolean = False
         Private _galleryShowFolders As Boolean = True
@@ -60,6 +61,7 @@ Namespace ViewModels
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _versteckteAnpassungsgruppen As String = ""
         Private _viewerInfoSidebarExpanded As Boolean = True
+        Private _galleryInfoSidebarExpanded As Boolean = False
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
         Private _languageMode As String = "System"
@@ -115,6 +117,7 @@ Namespace ViewModels
         Private _savedDevelopRawInViewer As Boolean = False
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
+        Private _savedFollowLinkedFolders As Boolean = False
         Private _savedDeleteSkipTrash As Boolean = False
         Private _savedDeleteSkipConfirmation As Boolean = False
         Private _savedGalleryShowFolders As Boolean = True
@@ -135,7 +138,10 @@ Namespace ViewModels
         Private _savedEditorInfoSidebarExpanded As Boolean = True
         Private _savedEditorLayersPanelExpanded As Boolean = False
         Private _savedViewerInfoSidebarExpanded As Boolean = True
+        Private _savedGalleryInfoSidebarExpanded As Boolean = False
         Private _savedStartupImageMode As String = "Viewer"
+        Private _savedGalleryOpenTarget As String = "Viewer"
+        Private _galleryOpenTarget As String = "Viewer"
         Private _savedStartupNoImageMode As String = "Gallery"
         Private _savedLanguageMode As String = "System"
         Private _savedFontSizeOffset As Integer = 0
@@ -403,7 +409,7 @@ Namespace ViewModels
         ''' unter dem Schalter.</summary>
         Public ReadOnly Property LensDatabaseInfo As String
             Get
-                Dim b = ObjektivDatenService.Bestand()
+                Dim b = LensDataService.Inventory()
                 Return LocalizationService.T("Mitgelieferte Messwerte") & ": " & b.Objektive & " " &
                        LocalizationService.T("Objektive")
             End Get
@@ -600,20 +606,20 @@ Namespace ViewModels
         Public Property AusgewaehlteSprache As SprachOption
             Get
                 Return SprachOptionen.FirstOrDefault(
-                    Function(o) String.Equals(o.Schluessel, _languageMode, StringComparison.Ordinal))
+                    Function(o) String.Equals(o.Key, _languageMode, StringComparison.Ordinal))
             End Get
             Set(value As SprachOption)
                 If value Is Nothing Then Return
-                LanguageMode = value.Schluessel
+                LanguageMode = value.Key
             End Set
         End Property
 
         Private Sub BaueSprachOptionen()
             SprachOptionen.Clear()
-            For Each sp In LocalizationService.Sprachen
+            For Each sp In LocalizationService.Languages
                 SprachOptionen.Add(New SprachOption With {
-                    .Schluessel = sp.Schluessel,
-                    .Name = If(sp.Schluessel = "System", LocalizationService.T("Systemsprache"), sp.Name)})
+                    .Key = sp.Key,
+                    .Name = If(sp.Key = "System", LocalizationService.T("Systemsprache"), sp.Name)})
             Next
             Me.RaisePropertyChanged(NameOf(AusgewaehlteSprache))
         End Sub
@@ -810,6 +816,34 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Womit ein Bild aus der Galerie geoeffnet wird: Doppelklick UND Eingabetaste.
+        ''' Videos gehen unabhaengig davon in den Betrachter, der Editor kann sie nicht.</summary>
+        Public Property GalleryOpenTarget As String
+            Get
+                Return _galleryOpenTarget
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeGalleryOpenTarget(value)
+                If _galleryOpenTarget = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryOpenTarget, value)
+                Me.RaisePropertyChanged(NameOf(IsGalleryOpenViewer))
+                Me.RaisePropertyChanged(NameOf(IsGalleryOpenEditor))
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsGalleryOpenViewer As Boolean
+            Get
+                Return _galleryOpenTarget = "Viewer"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGalleryOpenEditor As Boolean
+            Get
+                Return _galleryOpenTarget = "Editor"
+            End Get
+        End Property
+
         Public ReadOnly Property IsStartupEditorMode As Boolean
             Get
                 Return _startupImageMode = "Editor"
@@ -974,6 +1008,21 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Ob Dateiarbeit einem Verweis folgen darf, der aus dem Benutzerordner
+        ''' hinausfuehrt. Betrifft NUR Kopieren, Verschieben, Umbenennen und Loeschen - Ansehen
+        ''' und Bearbeiten gehen ohnehin ueberall.</summary>
+        Public Property FollowLinkedFolders As Boolean
+            Get
+                Return _followLinkedFolders
+            End Get
+            Set(value As Boolean)
+                If _followLinkedFolders = value Then Return
+                Me.RaiseAndSetIfChanged(_followLinkedFolders, value)
+                FileOperationPolicy.FollowLinkedFolders = value
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
         Public Property GalleryShowFolders As Boolean
             Get
                 Return _galleryShowFolders
@@ -1066,8 +1115,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        ' Called by GalleryViewModel when the view mode changes from the Gallery toolbar itself,
-        ' so the Settings dialog reflects it without pushing the value back and forth.
+        ' Wird von der Galerie gerufen, wenn die Ansichtsart ueber ihre eigene Werkzeugleiste
+        ' gewechselt wird - so zeigt der Einstellungsdialog denselben Stand, ohne dass der Wert
+        ' zwischen beiden hin und her geschoben wird.
         Public Sub SyncGalleryViewMode(value As String)
             value = AppSettingsService.NormalizeGalleryViewMode(value)
             If _galleryViewMode = value Then Return
@@ -1241,37 +1291,37 @@ Namespace ViewModels
 
         ''' <summary>Welche Anpassungsgruppen im Editor NICHT erscheinen. Nur die Anzeige ist
         ''' betroffen: eingestellte Werte bleiben erhalten und wirken weiter.</summary>
-        Public Property VersteckteAnpassungsgruppen As String
+        Public Property HiddenAdjustmentGroups As String
             Get
                 Return _versteckteAnpassungsgruppen
             End Get
             Set(value As String)
-                value = AppSettingsService.NormalizeVersteckteAnpassungsgruppen(value)
+                value = AppSettingsService.NormalizeHiddenAdjustmentGroups(value)
                 If _versteckteAnpassungsgruppen = value Then Return
                 Me.RaiseAndSetIfChanged(_versteckteAnpassungsgruppen, value)
                 SaveLayoutSettings()
-                _mainVm?.Editor?.RefreshVersteckteAnpassungsgruppen()
+                _mainVm?.Editor?.RefreshHiddenAdjustmentGroups()
             End Set
         End Property
 
-        Public ReadOnly Property AnpassungsgruppenItems As New ObservableCollection(Of AnpassungsgruppeItem)()
+        Public ReadOnly Property AdjustmentGroupItems As New ObservableCollection(Of AnpassungsgruppeItem)()
 
-        Private Sub BaueAnpassungsgruppenItems()
-            AnpassungsgruppenItems.Clear()
-            For Each g In AppSettingsService.AusblendbareAnpassungsgruppen
+        Private Sub BuildAdjustmentGroupItems()
+            AdjustmentGroupItems.Clear()
+            For Each g In AppSettingsService.HideableAdjustmentGroups
                 Dim item = New AnpassungsgruppeItem With {
-                    .Key = g.Schluessel,
+                    .Key = g.Key,
                     .Label = LocalizationService.T(g.Bezeichnung)}
-                item.SetzeSichtbar(Not VersteckteAnpassungsgruppen.Split(","c).Any(
-                    Function(k) String.Equals(k.Trim(), g.Schluessel, StringComparison.OrdinalIgnoreCase)))
-                AddHandler item.SichtbarGeaendert, AddressOf UebernehmeAnpassungsgruppen
-                AnpassungsgruppenItems.Add(item)
+                item.SetVisible(Not HiddenAdjustmentGroups.Split(","c).Any(
+                    Function(k) String.Equals(k.Trim(), g.Key, StringComparison.OrdinalIgnoreCase)))
+                AddHandler item.VisibilityChanged, AddressOf ApplyAdjustmentGroups
+                AdjustmentGroupItems.Add(item)
             Next
         End Sub
 
-        Private Sub UebernehmeAnpassungsgruppen(sender As Object, e As EventArgs)
-            VersteckteAnpassungsgruppen = String.Join(",",
-                AnpassungsgruppenItems.Where(Function(i) Not i.IstSichtbar).Select(Function(i) i.Key))
+        Private Sub ApplyAdjustmentGroups(sender As Object, e As EventArgs)
+            HiddenAdjustmentGroups = String.Join(",",
+                AdjustmentGroupItems.Where(Function(i) Not i.IsVisibleEntry).Select(Function(i) i.Key))
         End Sub
 
         Public ReadOnly Property EditorToolGroupItems As New ObservableCollection(Of EditorToolGroupItem)()
@@ -1333,6 +1383,18 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _viewerInfoSidebarExpanded = value Then Return
                 Me.RaiseAndSetIfChanged(_viewerInfoSidebarExpanded, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property GalleryInfoSidebarExpanded As Boolean
+            Get
+                Return _galleryInfoSidebarExpanded
+            End Get
+            Set(value As Boolean)
+                If _galleryInfoSidebarExpanded = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryInfoSidebarExpanded, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -1576,13 +1638,14 @@ Namespace ViewModels
 
         Public ReadOnly Property TestImmichConnectionCommand As ICommand
 
-        Public ReadOnly Property HoleModellCommand As ICommand
+        Public ReadOnly Property FetchModelCommand As ICommand
         Public ReadOnly Property ResetCommand As ICommand
         Public ReadOnly Property ApplyCommand As ICommand
         Public ReadOnly Property CancelCommand As ICommand
         Public ReadOnly Property SetThemeModeCommand As ICommand
         Public ReadOnly Property SetAccentColorCommand As ICommand
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
+        Public ReadOnly Property SetGalleryOpenTargetCommand As ICommand
         Public ReadOnly Property SetStartupNoImageModeCommand As ICommand
         Public ReadOnly Property SetGalleryViewModeCommand As ICommand
         Public ReadOnly Property SetGalleryTimelineModeCommand As ICommand
@@ -1633,6 +1696,7 @@ Namespace ViewModels
             _themeMode = _appSettings.ThemeMode
             _accentColor = _appSettings.AccentColor
             _startupImageMode = _appSettings.StartupImageMode
+            _galleryOpenTarget = _appSettings.GalleryOpenTarget
             _startupNoImageMode = _appSettings.StartupNoImageMode
             _languageMode = _appSettings.LanguageMode
             _fontSizeOffset = AppSettingsService.NormalizeFontSizeOffset(_appSettings.FontSizeOffset)
@@ -1653,6 +1717,7 @@ Namespace ViewModels
             _jpgSaveQuality = _appSettings.JpgSaveQuality
             _preserveMetadataOnSave = _appSettings.PreserveMetadataOnSave
             _showHiddenFolders = _appSettings.ShowHiddenFolders
+            _followLinkedFolders = _appSettings.FollowLinkedFolders
             _deleteSkipTrash = _appSettings.DeleteSkipTrash
             _deleteSkipConfirmation = _appSettings.DeleteSkipConfirmation
             _galleryShowFolders = _appSettings.GalleryShowFolders
@@ -1679,10 +1744,11 @@ Namespace ViewModels
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
-            _versteckteAnpassungsgruppen = AppSettingsService.NormalizeVersteckteAnpassungsgruppen(_appSettings.VersteckteAnpassungsgruppen)
+            _versteckteAnpassungsgruppen = AppSettingsService.NormalizeHiddenAdjustmentGroups(_appSettings.HiddenAdjustmentGroups)
             RebuildEditorToolGroupItems()
             _editorSnapMarginPercent = Math.Max(0, Math.Min(20, _appSettings.EditorSnapMarginPercent))
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
+            _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
@@ -1696,13 +1762,14 @@ Namespace ViewModels
             _immichAllowDelete = _appSettings.ImmichAllowDelete
             _immichDeletePermanently = _appSettings.ImmichDeletePermanently
             FolderNode.ShowHiddenFolders = _showHiddenFolders
+            FileOperationPolicy.FollowLinkedFolders = _followLinkedFolders
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
-            BaueModellGruppen()
-            BaueAnpassungsgruppenItems()
+            BuildModelGroups()
+            BuildAdjustmentGroupItems()
             BaueSprachOptionen()
-            HoleModellCommand = ReactiveCommand.Create(Of ModellGruppe)(
+            FetchModelCommand = ReactiveCommand.Create(Of ModelGroup)(
                 Sub(g)
-                    Dim ignoriert = HoleModellGruppeAsync(g)
+                    Dim ignoriert = FetchModelGroupAsync(g)
                 End Sub)
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
             ApplyCommand = ReactiveCommand.Create(Sub()
@@ -1716,6 +1783,7 @@ Namespace ViewModels
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
             SetAccentColorCommand = ReactiveCommand.Create(Of String)(Sub(c) AccentColor = c)
             SetStartupImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupImageMode = m)
+            SetGalleryOpenTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryOpenTarget = m)
             SetStartupNoImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupNoImageMode = m)
             SetGalleryViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryViewMode = m)
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
@@ -1851,6 +1919,7 @@ Namespace ViewModels
             _savedImmichAllowDelete = _immichAllowDelete
             _savedImmichDeletePermanently = _immichDeletePermanently
             _savedShowHiddenFolders = _showHiddenFolders
+            _savedFollowLinkedFolders = _followLinkedFolders
             _savedDeleteSkipTrash = _deleteSkipTrash
             _savedDeleteSkipConfirmation = _deleteSkipConfirmation
             _savedGalleryShowFolders = _galleryShowFolders
@@ -1871,7 +1940,9 @@ Namespace ViewModels
             _savedEditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             _savedEditorLayersPanelExpanded = _editorLayersPanelExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
+            _savedGalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
             _savedStartupImageMode = _startupImageMode
+            _savedGalleryOpenTarget = _galleryOpenTarget
             _savedStartupNoImageMode = _startupNoImageMode
             _savedLanguageMode = _languageMode
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
@@ -1909,6 +1980,7 @@ Namespace ViewModels
             ImmichDeletePermanently = _savedImmichDeletePermanently
             ImmichEnabled = _savedImmichEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
+            FollowLinkedFolders = _savedFollowLinkedFolders
             DeleteSkipTrash = _savedDeleteSkipTrash
             DeleteSkipConfirmation = _savedDeleteSkipConfirmation
             GalleryShowFolders = _savedGalleryShowFolders
@@ -1929,7 +2001,9 @@ Namespace ViewModels
             EditorInfoSidebarExpanded = _savedEditorInfoSidebarExpanded
             EditorLayersPanelExpanded = _savedEditorLayersPanelExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
+            GalleryInfoSidebarExpanded = _savedGalleryInfoSidebarExpanded
             StartupImageMode = _savedStartupImageMode
+            GalleryOpenTarget = _savedGalleryOpenTarget
             StartupNoImageMode = _savedStartupNoImageMode
             LanguageMode = _savedLanguageMode
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
@@ -1970,6 +2044,7 @@ Namespace ViewModels
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             StartupImageMode = "Viewer"
+            GalleryOpenTarget = "Viewer"
             StartupNoImageMode = "Gallery"
             SyncCatalogToXmp = False
             CreateXmpSidecarIfMissing = False
@@ -1986,6 +2061,7 @@ Namespace ViewModels
             ImmichAllowDelete = False
             ImmichDeletePermanently = False
             ShowHiddenFolders = False
+            FollowLinkedFolders = False
             DeleteSkipTrash = False
             DeleteSkipConfirmation = False
             GalleryShowFolders = True
@@ -2005,6 +2081,7 @@ Namespace ViewModels
             EditorInfoSidebarExpanded = True
             EditorLayersPanelExpanded = False
             ViewerInfoSidebarExpanded = True
+            GalleryInfoSidebarExpanded = False
             LanguageMode = "System"
             VideoHardwareAcceleration = False
             TransparencyBackgroundMode = "Checkerboard"
@@ -2073,6 +2150,7 @@ Namespace ViewModels
         Private Sub SaveStartupSettings()
             Dim settings = AppSettingsService.Load()
             settings.StartupImageMode = _startupImageMode
+            settings.GalleryOpenTarget = _galleryOpenTarget
             settings.StartupNoImageMode = _startupNoImageMode
             AppSettingsService.Save(settings)
         End Sub
@@ -2087,6 +2165,7 @@ Namespace ViewModels
         Private Sub SaveFileBrowserSettings()
             Dim settings = AppSettingsService.Load()
             settings.ShowHiddenFolders = _showHiddenFolders
+            settings.FollowLinkedFolders = _followLinkedFolders
             settings.GalleryShowFolders = _galleryShowFolders
             settings.GalleryShowParentFolder = _galleryShowParentFolder
             settings.GalleryRatingBadgesAlwaysVisible = _galleryRatingBadgesAlwaysVisible
@@ -2115,9 +2194,10 @@ Namespace ViewModels
             settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
             settings.EditorStartupTool = _editorStartupTool
             settings.EditorToolGroupOrder = _editorToolGroupOrder
-            settings.VersteckteAnpassungsgruppen = _versteckteAnpassungsgruppen
+            settings.HiddenAdjustmentGroups = _versteckteAnpassungsgruppen
             settings.DefaultSaveFormat = _defaultSaveFormat
             settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
+            settings.GalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
             AppSettingsService.Save(settings)
         End Sub
 
@@ -2262,12 +2342,12 @@ Namespace ViewModels
         ''' gemeldet. Ohne das stand die halbe Einstellungsseite weiter in der alten Sprache.</summary>
         Public Sub RefreshLocalization()
             RaiseLanguageModeProperties()
-            BaueAnpassungsgruppenItems()
-            BaueModellGruppen()
+            BuildAdjustmentGroupItems()
+            BuildModelGroups()
             BaueSprachOptionen()
             For Each n In {NameOf(ThumbnailCacheSummaryText), NameOf(ThumbnailCacheFolderCountText),
-                           NameOf(LensDatabaseInfo), NameOf(AnpassungsgruppenItems),
-                           NameOf(ModellGruppen)}
+                           NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
+                           NameOf(ModelGroups)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -2403,21 +2483,21 @@ Namespace ViewModels
         ' nicht die Frage, ob das aus zwei Dateien besteht. Fehlt eine davon, fehlt der Baustein.
 
         ''' <summary>Ein Baustein aus einer oder mehreren Modelldateien.</summary>
-        Public Class ModellGruppe
+        Public Class ModelGroup
             Inherits ViewModelBase
 
             Public Property Name As String = ""
             Public Property Beschreibung As String = ""
-            Public Property Dateien As New List(Of KiModellService.ModellEintrag)()
+            Public Property Files As New List(Of AiModelService.ModelEntry)()
 
             Private _fortschritt As Double = 0
             Private _laeuft As Boolean = False
             Private _meldung As String = ""
 
             ''' <summary>Was zusammen geholt werden muesste, in MiB.</summary>
-            Public ReadOnly Property GroesseText As String
+            Public ReadOnly Property SizeText As String
                 Get
-                    Dim summe = Dateien.Sum(Function(d) d.Bytes)
+                    Dim summe = Files.Sum(Function(d) d.Bytes)
                     Return (summe / 1048576.0).ToString("F0", Globalization.CultureInfo.CurrentCulture) & " MiB"
                 End Get
             End Property
@@ -2425,7 +2505,7 @@ Namespace ViewModels
             ''' <summary>Alle Dateien in einer benutzbaren Fassung vorhanden?</summary>
             Public ReadOnly Property IstVollstaendig As Boolean
                 Get
-                    Return Dateien.All(Function(d) Not String.IsNullOrEmpty(KiModellService.BesteDatei(d.Schluessel)))
+                    Return Files.All(Function(d) Not String.IsNullOrEmpty(AiModelService.BestFile(d.Key)))
                 End Get
             End Property
 
@@ -2434,7 +2514,7 @@ Namespace ViewModels
             Public ReadOnly Property IstAktualisierbar As Boolean
                 Get
                     Return IstVollstaendig AndAlso
-                           Dateien.Any(Function(d) KiModellService.IstAktualisierbar(d.Schluessel))
+                           Files.Any(Function(d) AiModelService.IstAktualisierbar(d.Key))
                 End Get
             End Property
 
@@ -2449,14 +2529,14 @@ Namespace ViewModels
             End Property
 
             ''' <summary>Beschriftung des Knopfes: Herunterladen, Aktualisieren oder nichts.</summary>
-            Public ReadOnly Property KnopfText As String
+            Public ReadOnly Property ButtonText As String
                 Get
                     If IstAktualisierbar Then Return LocalizationService.T("Aktualisieren")
                     Return LocalizationService.T("Herunterladen")
                 End Get
             End Property
 
-            Public ReadOnly Property KnopfSichtbar As Boolean
+            Public ReadOnly Property ButtonVisible As Boolean
                 Get
                     Return Not _laeuft AndAlso (Not IstVollstaendig OrElse IstAktualisierbar)
                 End Get
@@ -2493,33 +2573,33 @@ Namespace ViewModels
 
             Public Sub MeldeZustand()
                 For Each n In {NameOf(IstVollstaendig), NameOf(IstAktualisierbar), NameOf(StatusText),
-                               NameOf(KnopfText), NameOf(KnopfSichtbar)}
+                               NameOf(ButtonText), NameOf(ButtonVisible)}
                     Me.RaisePropertyChanged(n)
                 Next
             End Sub
         End Class
 
-        Public ReadOnly Property ModellGruppen As ObservableCollection(Of ModellGruppe) =
-            New ObservableCollection(Of ModellGruppe)()
+        Public ReadOnly Property ModelGroups As ObservableCollection(Of ModelGroup) =
+            New ObservableCollection(Of ModelGroup)()
 
-        Public ReadOnly Property ModellOrdner As String
+        Public ReadOnly Property ModelFolder As String
             Get
-                Return KiModellService.ModellOrdner
+                Return AiModelService.ModelFolder
             End Get
         End Property
 
         ''' <summary>Steht die Laufzeit ueberhaupt zur Verfuegung? Ohne sie waeren die Knoepfe
         ''' sinnlos - die Dateien liessen sich holen und nichts koennte sie ausfuehren.</summary>
-        Public ReadOnly Property ModellLaufzeitDa As Boolean
+        Public ReadOnly Property ModelRuntimeAvailable As Boolean
             Get
-                Return KiModellService.LaufzeitVerfuegbar
+                Return AiModelService.RuntimeAvailable
             End Get
         End Property
 
-        Private Sub BaueModellGruppen()
-            ModellGruppen.Clear()
-            For Each name In KiModellService.BekannteEintraege.Select(Function(e) e.Gruppe).Distinct()
-                Dim dateien = KiModellService.BekannteEintraege.Where(Function(e) e.Gruppe = name).ToList()
+        Private Sub BuildModelGroups()
+            ModelGroups.Clear()
+            For Each name In AiModelService.KnownEntries.Select(Function(e) e.Gruppe).Distinct()
+                Dim dateien = AiModelService.KnownEntries.Where(Function(e) e.Gruppe = name).ToList()
                 Dim beschreibung As String
                 Select Case name
                     Case "Tiefe"
@@ -2535,24 +2615,24 @@ Namespace ViewModels
                     Case "Objekt entfernen" : anzeigeName = LocalizationService.T("Objekt entfernen")
                     Case Else : anzeigeName = LocalizationService.T("Objektauswahl")
                 End Select
-                ModellGruppen.Add(New ModellGruppe With {
+                ModelGroups.Add(New ModelGroup With {
                     .Name = anzeigeName,
                     .Beschreibung = beschreibung,
-                    .Dateien = dateien})
+                    .Files = dateien})
             Next
         End Sub
 
         ''' <summary>Holt alle Dateien einer Gruppe. NUR von hier aus - es gibt keinen anderen Weg,
         ''' auf dem die Anwendung etwas aus dem Netz holt.</summary>
-        Public Async Function HoleModellGruppeAsync(gruppe As ModellGruppe) As Task
+        Public Async Function FetchModelGroupAsync(gruppe As ModelGroup) As Task
             If gruppe Is Nothing OrElse gruppe.Laeuft Then Return
             gruppe.Meldung = ""
             gruppe.Laeuft = True
             gruppe.Fortschritt = 0
             Try
-                Dim gesamt = gruppe.Dateien.Sum(Function(d) d.Bytes)
+                Dim gesamt = gruppe.Files.Sum(Function(d) d.Bytes)
                 Dim fertig As Long = 0
-                For Each datei In gruppe.Dateien
+                For Each datei In gruppe.Files
                     Dim dieseDatei = datei
                     Dim bisher = fertig
                     Dim melder = New Progress(Of Double)(
@@ -2561,14 +2641,14 @@ Namespace ViewModels
                                 gruppe.Fortschritt = Math.Min(1.0, (bisher + anteil * dieseDatei.Bytes) / gesamt)
                             End If
                         End Sub)
-                    Dim ergebnis = Await ModellDownloadService.HoleAsync(dieseDatei, melder)
+                    Dim ergebnis = Await ModelDownloadService.HoleAsync(dieseDatei, melder)
                     Select Case ergebnis
-                        Case ModellDownloadService.Ergebnis.Fertig, ModellDownloadService.Ergebnis.SchonDa
+                        Case ModelDownloadService.Ergebnis.Fertig, ModelDownloadService.Ergebnis.SchonDa
                             fertig += dieseDatei.Bytes
-                        Case ModellDownloadService.Ergebnis.PruefsummeFalsch
+                        Case ModelDownloadService.Ergebnis.PruefsummeFalsch
                             gruppe.Meldung = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
                             Return
-                        Case ModellDownloadService.Ergebnis.Abgebrochen
+                        Case ModelDownloadService.Ergebnis.Abgebrochen
                             gruppe.Meldung = LocalizationService.T("Abgebrochen")
                             Return
                         Case Else
@@ -2589,7 +2669,7 @@ Namespace ViewModels
     ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
     ''' <summary>Ein Eintrag in der Sprachauswahl.</summary>
     Public Class SprachOption
-        Public Property Schluessel As String = ""
+        Public Property Key As String = ""
         Public Property Name As String = ""
         Public Overrides Function ToString() As String
             Return Name
@@ -2606,28 +2686,28 @@ Namespace ViewModels
     Public Class AnpassungsgruppeItem
         Inherits ReactiveObject
 
-        Public Event SichtbarGeaendert As EventHandler
+        Public Event VisibilityChanged As EventHandler
 
         Public Property Key As String = ""
         Public Property Label As String = ""
 
         Private _istSichtbar As Boolean = True
-        Public Property IstSichtbar As Boolean
+        Public Property IsVisibleEntry As Boolean
             Get
                 Return _istSichtbar
             End Get
             Set(value As Boolean)
                 If _istSichtbar = value Then Return
                 Me.RaiseAndSetIfChanged(_istSichtbar, value)
-                RaiseEvent SichtbarGeaendert(Me, EventArgs.Empty)
+                RaiseEvent VisibilityChanged(Me, EventArgs.Empty)
             End Set
         End Property
 
         ''' <summary>Setzen OHNE das Ereignis - fuer den Aufbau der Liste. Sonst schriebe schon das
         ''' Fuellen die Einstellung zurueck, und zwar Eintrag fuer Eintrag.</summary>
-        Public Sub SetzeSichtbar(wert As Boolean)
+        Public Sub SetVisible(wert As Boolean)
             _istSichtbar = wert
-            Me.RaisePropertyChanged(NameOf(IstSichtbar))
+            Me.RaisePropertyChanged(NameOf(IsVisibleEntry))
         End Sub
     End Class
 

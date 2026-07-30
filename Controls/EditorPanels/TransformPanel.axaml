@@ -143,7 +143,7 @@
                     </Button>
                     <Button Grid.Column="1" Classes="ghost" Padding="12,6"
                             Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Gitter"
-                            Classes.active="{Binding IsVerzerrenGitter}"
+                            Classes.active="{Binding IsWarpGrid}"
                             ToolTip.Tip="Das Stützpunktraster im Bild ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-dots.svg"
@@ -153,7 +153,7 @@
                     </Button>
                     <Button Grid.Column="2" Classes="ghost" Padding="12,6"
                             Command="{Binding SetVerzerrenModusCommand}" CommandParameter="Linien"
-                            Classes.active="{Binding IsVerzerrenLinien}"
+                            Classes.active="{Binding IsWarpLines}"
                             ToolTip.Tip="Linien auf Kanten legen und ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector.svg"
@@ -177,7 +177,7 @@
             <Border.IsVisible>
                 <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                     <Binding Path="IsVerzerrenPerspektive"/>
-                    <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="perspektive"/>
+                    <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="perspektive"/>
                 </MultiBinding>
             </Border.IsVisible>
             <Expander Header="Perspektive" icons:ExpanderState.Key="perspektive" IsExpanded="True">
@@ -258,8 +258,8 @@
         <Border Classes="adjustment-group" >
             <Border.IsVisible>
                 <MultiBinding Converter="{StaticResource AlleWahrConverter}">
-                    <Binding Path="IsVerzerrenGitter"/>
-                    <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="gitterverzerrung"/>
+                    <Binding Path="IsWarpGrid"/>
+                    <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="gitterverzerrung"/>
                 </MultiBinding>
             </Border.IsVisible>
             <Expander Header="Gitterverzerrung" icons:ExpanderState.Key="gitterverzerrung" IsExpanded="True">
@@ -317,7 +317,7 @@
              neuen Platz; die Kante geht als Ganzes mit, die Umgebung folgt weich. Das ist der
              Unterschied zum Stuetzpunktraster darueber: dort muesste man einer Kante ein Dutzend
              Punkte einzeln nachfuehren. Wie das Raster wird sie GEBACKEN, nicht als Zahl gemerkt. -->
-        <Border Classes="adjustment-group" IsVisible="{Binding IsVerzerrenLinien}">
+        <Border Classes="adjustment-group" IsVisible="{Binding IsWarpLines}">
             <Expander Header="Linienverzerrung" icons:ExpanderState.Key="linienverzerrung" IsExpanded="True">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -331,7 +331,7 @@
                             <Button Grid.Column="1"
                                     Classes="icon-btn group-reset"
                                     Width="28" Height="28" Padding="0"
-                                    Command="{Binding DataContext.ResetLinienCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Command="{Binding DataContext.ResetLinesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Alle Linien entfernen">
                                 <icons:SvgIcon
                                     Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
@@ -349,7 +349,7 @@
                         <TextBlock Text="Linien" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <TextBlock Grid.Column="1" Classes="no-translate"
-                                   Text="{Binding LinienAnzahl}"
+                                   Text="{Binding LineCount}"
                                    VerticalAlignment="Center"
                                    FontSize="{DynamicResource FP.Font.Small}" />
                     </Grid>
@@ -365,8 +365,8 @@
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
                             IsVisible="{Binding VerzerrtDasBild}"
-                            IsEnabled="{Binding HasLinienChanges}"
-                            Command="{Binding ApplyLinienCommand}">
+                            IsEnabled="{Binding HasLineChanges}"
+                            Command="{Binding ApplyLinesCommand}">
                         <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>

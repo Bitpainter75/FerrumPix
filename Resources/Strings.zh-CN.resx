@@ -525,7 +525,7 @@
   <data name="Enter_file_name_f2637be0" xml:space="preserve">
     <value>输入文件名</value>
   </data>
-  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Tags_vo_e5f7741e" xml:space="preserve">
+  <data name="Entfernt_Metadaten_Bewertungen_Favoriten_Stichw__ef4f9787" xml:space="preserve">
     <value>清理已不存在图像的元数据（星级、收藏和标签）。</value>
   </data>
   <data name="Error_787aa161" xml:space="preserve">
@@ -1617,7 +1617,7 @@
   <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
     <value>将裁剪应用到预览</value>
   </data>
-  <data name="Dateimuster_oder_Tags_b897e226" xml:space="preserve">
+  <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>文件名模式或标签</value>
   </data>
   <data name="Eigene_Konturfarbe_w_hlen_7954549e" xml:space="preserve">
@@ -2553,7 +2553,7 @@
   <data name="Speichert_FerrumPix_Bewertungen_in_einem_abgegre_d73d5de9" xml:space="preserve">
     <value>将 FerrumPix 星级保存到 Immich 描述中的独立区块，而不是 Immich 星级字段。</value>
   </data>
-  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_0b05b5ee" xml:space="preserve">
+  <data name="Speichert_FerrumPix_Stichw_rter_in_einem_abgegre_583a342f" xml:space="preserve">
     <value>将 FerrumPix 关键词保存到 Immich 描述中的独立区块，而不是 Immich 标签。</value>
   </data>
   <data name="Ordner_ausw_hlen_0d705794" xml:space="preserve">
@@ -3762,7 +3762,7 @@
   <data name="SVG_Symbole_darstellen_3fe48291" xml:space="preserve">
     <value>渲染 SVG 图标</value>
   </data>
-  <data name="Datenbank_f_r_Bewertungen_Tags_und_Zwischenspeic_dcd39467" xml:space="preserve">
+  <data name="Datenbank_f_r_Bewertungen_Stichw_rter_und_Zwisch_099e8dcc" xml:space="preserve">
     <value>星级、标签和缓存数据库</value>
   </data>
   <data name="EXIF_und_IPTC_Daten_lesen_e97651d2" xml:space="preserve">
@@ -5612,5 +5612,77 @@
   </data>
   <data name="Einf_gen_aus_der_Zwischenablage_ist_fehlgeschlag_b55d44e1" xml:space="preserve">
     <value>从剪贴板粘贴失败</value>
+  </data>
+  <data name="Verweisen_aus_dem_pers_nlichen_Ordner_folgen_7e5c8b3f" xml:space="preserve">
+    <value>跟随指向个人文件夹之外的链接</value>
+  </data>
+  <data name="Erlaubt_Kopieren_Verschieben_Umbenennen_und_L_sc_359a497b" xml:space="preserve">
+    <value>即使某个文件夹只是指向个人文件夹之外位置（例如第二块硬盘）的链接，也允许复制、移动、重命名和删除。关闭时，文件操作仅限于个人文件夹内。查看和编辑始终不受限制。</value>
+  </data>
+  <data name="Bild_aus_der_Galerie_ffnen_mit_725b7f93" xml:space="preserve">
+    <value>从图库打开图像时使用</value>
+  </data>
+  <data name="Gilt_f_r_den_Doppelklick_auf_ein_Bild_und_f_r_di_8fbf05b5" xml:space="preserve">
+    <value>适用于双击图像和回车键。视频始终在查看器中打开。</value>
+  </data>
+  <data name="Aktueller_Ordner_19c25698" xml:space="preserve">
+    <value>当前文件夹</value>
+  </data>
+  <data name="Zuletzt_gespeichert_863fbe6e" xml:space="preserve">
+    <value>上次使用</value>
+  </data>
+  <data name="Stichwort_entfernen_74eca6af" xml:space="preserve">
+    <value>移除关键词</value>
+  </data>
+  <data name="Bearbeitung_kopieren_0dea2c86" xml:space="preserve">
+    <value>复制调整</value>
+  </data>
+  <data name="Bearbeitung_einf_gen_4a1543cd" xml:space="preserve">
+    <value>粘贴调整</value>
+  </data>
+  <data name="Bild_anheften_0328857a" xml:space="preserve">
+    <value>固定图像</value>
+  </data>
+  <data name="Men_f_r_dieses_Bild_67e696fe" xml:space="preserve">
+    <value>此图像的菜单</value>
+  </data>
+  <data name="Keine_Bewertung_e8ec4c44" xml:space="preserve">
+    <value>无评分</value>
+  </data>
+  <data name="Info_Leiste_in_der_Galerie_3adced10" xml:space="preserve">
+    <value>图库中的信息栏</value>
+  </data>
+  <data name="Zeigt_rechts_die_Angaben_zum_markierten_Bild_Auf_ed118ec2" xml:space="preserve">
+    <value>在右侧显示所选图像的信息：拍摄数据、直方图、评分、色标和关键词。也可通过图库右上角的信息图标切换显示。</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_Stichwort_zeigen_3a573715" xml:space="preserve">
+    <value>显示带有此关键词的所有图像</value>
+  </data>
+  <data name="Kein_einzelnes_Bild_ausgew_hlt_15ae372f" xml:space="preserve">
+    <value>未选择单张图像</value>
+  </data>
+  <data name="0_Bilder_ausgew_hlt_8baa3978" xml:space="preserve">
+    <value>已选择 {0} 张图像</value>
+  </data>
+  <data name="Gesamtgr_e_b5752d6f" xml:space="preserve">
+    <value>总大小</value>
+  </data>
+  <data name="Kameras_826ed0ba" xml:space="preserve">
+    <value>相机</value>
+  </data>
+  <data name="STICHW_RTER_1ae38abc" xml:space="preserve">
+    <value>关键词</value>
+  </data>
+  <data name="Keine_Stichw_rter_vergeben_658ceef3" xml:space="preserve">
+    <value>未分配关键词</value>
+  </data>
+  <data name="Men_0ebbd1b8" xml:space="preserve">
+    <value>菜单</value>
+  </data>
+  <data name="F_r_diese_Dateien_lassen_sich_keine_Metadaten_en_b04d6505" xml:space="preserve">
+    <value>无法从这些文件中移除元数据。</value>
+  </data>
+  <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
+    <value>将从 {0} 个文件中移除拍摄数据、XMP 和颜色配置文件。文件会被重新写入，此操作无法撤销。</value>
   </data>
 </root>

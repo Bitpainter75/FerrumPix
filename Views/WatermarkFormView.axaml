@@ -117,8 +117,7 @@
                      Text="{Binding DialogWatermarkWidthText, Mode=TwoWay}"
                      MinHeight="36"
                      ToolTip.Tip="Breite des Wasserzeichens in Bildpunkten. Die Höhe folgt dem Seitenverhältnis der Vorlage."/>
-            <TextBlock Grid.Column="2" Text="×"
-                       VerticalAlignment="Center"
+            <TextBlock Grid.Column="2" Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
             <!-- Nur Anzeige: die Höhe ergibt sich aus Breite und Seitenverhältnis der Vorlage.
                  Als Feld statt als Fließtext, damit sie neben der Breite auf derselben Linie

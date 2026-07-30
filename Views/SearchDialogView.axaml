@@ -5,7 +5,7 @@
 
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
           RowSpacing="14">
-        <Grid ColumnDefinitions="160,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
+        <Grid ColumnDefinitions="200,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
             <TextBlock Text="Name" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <TextBox Grid.Column="1"
                      Grid.ColumnSpan="2"
@@ -27,7 +27,10 @@
                         Tag="Immich">Immich</Button>
             </StackPanel>
 
-            <TextBlock Grid.Row="2" Text="Dateimuster oder Tags" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <!-- Umbruch als Sicherheitsnetz: "Dateimuster oder Stichwörter" ist die längste
+                 Beschriftung im Dialog und wächst mit der eingestellten Schriftgröße. -->
+            <TextBlock Grid.Row="2" Text="Dateimuster oder Stichwörter" VerticalAlignment="Center"
+                       TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <TextBox Grid.Row="2"
                      Grid.Column="1"
                      Grid.ColumnSpan="2"
@@ -51,7 +54,7 @@
                     ToolTip.Tip="Ordner wählen">...</Button>
         </Grid>
 
-        <Grid Grid.Row="1" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0"
+        <Grid Grid.Row="1" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0"
               IsVisible="{Binding IsDialogSourceLocal}">
             <TextBlock Text="Umfang" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <CheckBox Grid.Column="1"
@@ -59,7 +62,7 @@
                       Content="Unterordner durchsuchen"/>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+        <Grid Grid.Row="2" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
             <TextBlock Text="Favoriten" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                 <Button Classes="segmented"
@@ -73,7 +76,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0">
+        <Grid Grid.Row="3" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
             <TextBlock Text="Bewertung" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <Button Grid.Column="1"
                     x:Name="SearchRatingDropDownButton"
@@ -133,7 +136,7 @@
             </Button>
         </Grid>
 
-        <Grid Grid.Row="4" ColumnDefinitions="160,*" ColumnSpacing="8" Margin="0,2,0,0"
+        <Grid Grid.Row="4" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0"
               IsVisible="{Binding IsDialogSourceLocal}">
             <TextBlock Text="Bedingungen" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <StackPanel Grid.Column="1" Spacing="8">

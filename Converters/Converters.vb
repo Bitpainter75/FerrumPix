@@ -30,7 +30,7 @@ Namespace Converters
     ''' den deutschen Text gleichzeitig als gespeicherten Wert: er steht in der Einstellungsdatei, im
     ''' Rezept und in jedem Select Case. Uebersetzt man die Liste selbst, passt der Vergleich nicht
     ''' mehr. Deshalb wird nur die ANZEIGE uebersetzt, der Wert bleibt, wie er ist.</summary>
-    Public Class UebersetzenConverter
+    Public Class TranslateConverter
         Implements IValueConverter
 
         Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert

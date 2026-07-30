@@ -26,60 +26,60 @@ Namespace Services
     ''' darauf gebracht und der Rest mit Null aufgefuellt - genau so, wie es trainiert wurde. Fuer
     ''' eine Maske reicht das: sie wird ohnehin als weiches Raster gespeichert und beim Rendern
     ''' skaliert.</summary>
-    Public NotInheritable Class MotivMaskeService
+    Public NotInheritable Class SubjectMaskService
 
         Private Sub New()
         End Sub
 
-        Public Const KodiererDatei As String = "mobilesam-encoder"   ' Schluessel, nicht Dateiname
-        Public Const DekodiererDatei As String = "mobilesam-decoder"
+        Public Const EncoderFile As String = "mobilesam-encoder"   ' Schluessel, nicht Dateiname
+        Public Const DecoderFile As String = "mobilesam-decoder"
 
         ''' <summary>Kantenlaenge, auf die das Modell rechnet. Fest, nicht verhandelbar: die
         ''' Lagekodierung des Netzes ist darauf trainiert.</summary>
-        Public Const ModellKante As Integer = 1024
+        Public Const ModelEdge As Integer = 1024
 
         ''' <summary>Steht die Funktion zur Verfuegung? Nur wenn Laufzeit UND beide Modelle da sind.</summary>
         Public Shared ReadOnly Property Verfuegbar As Boolean
             Get
-                Return KiModellService.LaufzeitVerfuegbar AndAlso
-                       Not String.IsNullOrEmpty(KiModellService.BesteDatei(KodiererDatei)) AndAlso
-                       Not String.IsNullOrEmpty(KiModellService.BesteDatei(DekodiererDatei))
+                Return AiModelService.RuntimeAvailable AndAlso
+                       Not String.IsNullOrEmpty(AiModelService.BestFile(EncoderFile)) AndAlso
+                       Not String.IsNullOrEmpty(AiModelService.BestFile(DecoderFile))
             End Get
         End Property
 
         ''' <summary>Die Einbettung eines Bildes samt dem Massstab, mit dem sie entstanden ist.
         ''' Ein Sitzungswert, kein Rezeptwert - sie gehoert zu genau diesem Bildinhalt.</summary>
         Public NotInheritable Class Einbettung
-            Public Property Werte As DenseTensor(Of Single)
+            Public Property Values As DenseTensor(Of Single)
             ''' <summary>Faktor Bildpixel auf Modellpixel. Ein Klick im Bild wird damit umgerechnet.</summary>
             Public Property Massstab As Double
-            Public Property QuellBreite As Integer
-            Public Property QuellHoehe As Integer
+            Public Property SourceWidth As Integer
+            Public Property SourceHeight As Integer
         End Class
 
         ''' <summary>Bild einmal durch den Kodierer. Teuer - das Ergebnis gehoert gemerkt.
         ''' Nothing, wenn die Funktion nicht verfuegbar ist oder das Modell nicht laeuft.</summary>
         Public Shared Function Kodiere(bild As SKBitmap) As Einbettung
             If bild Is Nothing OrElse bild.Width <= 0 OrElse bild.Height <= 0 Then Return Nothing
-            Dim sitzung = KiModellService.SitzungFuer(KodiererDatei)
+            Dim sitzung = AiModelService.SitzungFuer(EncoderFile)
             If sitzung Is Nothing Then Return Nothing
 
-            Dim massstab = ModellKante / CDbl(Math.Max(bild.Width, bild.Height))
+            Dim massstab = ModelEdge / CDbl(Math.Max(bild.Width, bild.Height))
             Dim nb = Math.Max(1, CInt(Math.Round(bild.Width * massstab)))
             Dim nh = Math.Max(1, CInt(Math.Round(bild.Height * massstab)))
 
-            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModellKante, ModellKante})
+            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
             Using klein = New SKBitmap(nb, nh, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 If Not bild.ScalePixels(klein, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                 ' Die Normierung stammt aus dem Training des Modells und darf nicht geraten werden.
                 Dim mittel = New Single() {123.675F, 116.28F, 103.53F}
                 Dim streuung = New Single() {58.395F, 57.12F, 57.375F}
                 Dim ziel = tensor.Buffer.Span
-                Dim ebene = ModellKante * ModellKante
+                Dim ebene = ModelEdge * ModelEdge
                 For y = 0 To nh - 1
                     For x = 0 To nb - 1
                         Dim p = klein.GetPixel(x, y)
-                        Dim i = y * ModellKante + x
+                        Dim i = y * ModelEdge + x
                         ziel(i) = (p.Red - mittel(0)) / streuung(0)
                         ziel(ebene + i) = (p.Green - mittel(1)) / streuung(1)
                         ziel(ebene * 2 + i) = (p.Blue - mittel(2)) / streuung(2)
@@ -96,8 +96,8 @@ Namespace Services
                     ' Der Tensor gehoert der Ergebnisliste und stirbt mit ihr - also kopieren.
                     Dim kopie = New DenseTensor(Of Single)(raus.Dimensions.ToArray())
                     raus.Buffer.Span.CopyTo(kopie.Buffer.Span)
-                    Return New Einbettung With {.Werte = kopie, .Massstab = massstab,
-                                                .QuellBreite = bild.Width, .QuellHoehe = bild.Height}
+                    Return New Einbettung With {.Values = kopie, .Massstab = massstab,
+                                                .SourceWidth = bild.Width, .SourceHeight = bild.Height}
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("MotivMaske", "Kodierer: " & ex.Message)
@@ -133,13 +133,13 @@ Namespace Services
         ''' Unterobjekt), 2 = grob (das ganze Objekt). Ein Klick ist mehrdeutig - meint man die
         ''' Jacke, die Person oder die Gruppe? Das Modell beantwortet alle drei auf einmal, und der
         ''' Nutzer waehlt aus, statt neu zu klicken.</param>
-        Public Shared Function MaskeFuer(einbettung As Einbettung, punkte As IList(Of Punkt),
+        Public Shared Function MaskFor(einbettung As Einbettung, punkte As IList(Of Punkt),
                                          Optional kantePct As Double = 50.0,
                                          Optional umfangPct As Double = 0.0,
                                          Optional koernung As Integer = 2) As SKBitmap
-            If einbettung Is Nothing OrElse einbettung.Werte Is Nothing Then Return Nothing
+            If einbettung Is Nothing OrElse einbettung.Values Is Nothing Then Return Nothing
             If punkte Is Nothing OrElse punkte.Count = 0 Then Return Nothing
-            Dim sitzung = KiModellService.SitzungFuer(DekodiererDatei)
+            Dim sitzung = AiModelService.SitzungFuer(DecoderFile)
             If sitzung Is Nothing Then Return Nothing
 
             ' Das Modell erwartet die Punkte im MODELL-Massstab, nicht in Bildpixeln.
@@ -159,7 +159,7 @@ Namespace Services
 
             Try
                 Dim eingabe = New List(Of NamedOnnxValue) From {
-                    NamedOnnxValue.CreateFromTensor("image_embeddings", einbettung.Werte),
+                    NamedOnnxValue.CreateFromTensor("image_embeddings", einbettung.Values),
                     NamedOnnxValue.CreateFromTensor("point_coords", coords),
                     NamedOnnxValue.CreateFromTensor("point_labels", labels),
                     NamedOnnxValue.CreateFromTensor("mask_input",
@@ -167,7 +167,7 @@ Namespace Services
                     NamedOnnxValue.CreateFromTensor("has_mask_input",
                         New DenseTensor(Of Single)(New Single() {0.0F}, New Integer() {1})),
                     NamedOnnxValue.CreateFromTensor("orig_im_size",
-                        New DenseTensor(Of Single)(New Single() {CSng(ModellKante), CSng(ModellKante)},
+                        New DenseTensor(Of Single)(New Single() {CSng(ModelEdge), CSng(ModelEdge)},
                                                    New Integer() {2}))}
                 Using ergebnis = sitzung.Run(eingabe)
                     Dim masken = TryCast(ergebnis.First(Function(r) r.Name = "masks").Value, DenseTensor(Of Single))
@@ -204,8 +204,8 @@ Namespace Services
             gewaehlt = Math.Max(0, Math.Min(kanaele - 1, gewaehlt))
 
             ' Nur der Teil, in dem wirklich Bild lag - der Rest der 1024er Flaeche ist Auffuellung.
-            Dim gb = Math.Max(1, CInt(Math.Round(einbettung.QuellBreite * einbettung.Massstab)))
-            Dim gh = Math.Max(1, CInt(Math.Round(einbettung.QuellHoehe * einbettung.Massstab)))
+            Dim gb = Math.Max(1, CInt(Math.Round(einbettung.SourceWidth * einbettung.Massstab)))
+            Dim gh = Math.Max(1, CInt(Math.Round(einbettung.SourceHeight * einbettung.Massstab)))
             gb = Math.Min(gb, mw) : gh = Math.Min(gh, mh)
 
             ' Die Modellausgabe ist ein ROHWERT, kein Deckungsgrad: positiv heisst "gehoert dazu",
@@ -245,7 +245,7 @@ Namespace Services
             ' erst danach entschieden.
             Dim quelle = masken.Buffer.ToArray()
             Dim versatz = quelle.Length - kanaele * mw * mh + gewaehlt * mw * mh
-            Dim zielB = einbettung.QuellBreite, zielH = einbettung.QuellHoehe
+            Dim zielB = einbettung.SourceWidth, zielH = einbettung.SourceHeight
             If zielB <= 0 OrElse zielH <= 0 Then Return Nothing
 
             Dim gross = New SKBitmap(New SKImageInfo(zielB, zielH, SKColorType.Alpha8, SKAlphaType.Premul))

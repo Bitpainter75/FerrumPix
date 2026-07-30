@@ -4,7 +4,7 @@
              x:Class="FerrumPix.Controls.EditorPanels.SharpnessPanel">
     <StackPanel Spacing="7">
         <Border Classes="adjustment-group"
-        IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=sharpen}">
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=sharpen}">
             <Expander Header="Schärfe" icons:ExpanderState.Key="sharpen">
                 <Expander.HeaderTemplate>
                     <DataTemplate>
@@ -70,7 +70,7 @@
         </Border>
 
         <Border Classes="adjustment-group"
-            IsVisible="{Binding VersteckteAnpassungsgruppen, Converter={StaticResource NichtInListeConverter}, ConverterParameter=soften}">
+            IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NichtInListeConverter}, ConverterParameter=soften}">
             <Expander Header="Weichzeichnen" icons:ExpanderState.Key="soften">
                 <Expander.HeaderTemplate>
                     <DataTemplate>

@@ -14,7 +14,7 @@
         <CheckBox Content="Originale überschreiben"
                   IsVisible="{Binding IsDialogBatchOverwriteAvailable}"
                   IsChecked="{Binding DialogBatchFilterOverwrite, Mode=TwoWay}"
-                  ToolTip.Tip="Schreibt den Filter direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
+                  ToolTip.Tip="Schreibt den Filter direkt in die Bilddateien. Ohne Haken entstehen neue Files und die Originale bleiben unangetastet."/>
 
         <CheckBox Content="Namen der Vorgabe an den Dateinamen anhängen"
                   IsChecked="{Binding DialogBatchFilterAppendName, Mode=TwoWay}"

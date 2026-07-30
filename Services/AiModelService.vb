@@ -25,7 +25,7 @@ Namespace Services
     ''' Zweitens laufen sie auf der CPU. Eine Grafikkarte waere schneller, verlangt aber je nach
     ''' Hersteller eigene Pakete und eigene Fehlerbilder. Der CPU-Weg laeuft ueberall, und fuer eine
     ''' Maske reicht er: eine Maske braucht keine volle Aufloesung.</summary>
-    Public NotInheritable Class KiModellService
+    Public NotInheritable Class AiModelService
 
         Private Sub New()
         End Sub
@@ -40,7 +40,7 @@ Namespace Services
         ''' <summary>Der Ordner des NUTZERS. Was hier liegt, gewinnt: wer ein Modell selbst
         ''' exportiert oder gegen ein neueres tauscht, soll das ohne Schreibrechte im System
         ''' koennen.</summary>
-        Public Shared ReadOnly Property ModellOrdner As String
+        Public Shared ReadOnly Property ModelFolder As String
             Get
                 Return Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -58,7 +58,7 @@ Namespace Services
         ''' leer. Beide bauen aus demselben Quelltext, und der Pruefstand laeuft nur einmal.</summary>
         Public Shared ReadOnly Iterator Property Suchorte As IEnumerable(Of String)
             Get
-                Yield ModellOrdner
+                Yield ModelFolder
                 ' Neben der Anwendung - so liefert ein Paket sie aus.
                 Dim neben = AppContext.BaseDirectory
                 If Not String.IsNullOrEmpty(neben) Then Yield Path.Combine(neben, "Modelle")
@@ -75,22 +75,22 @@ Namespace Services
         ''' Die native Bibliothek der Laufzeit kann fehlen oder zur Plattform nicht passen. Das darf
         ''' die Anwendung NICHT mitreissen - ohne sie fehlt eine Funktion, alles andere geht weiter.
         ''' Deshalb wird hier einmal wirklich etwas gebaut statt nur eine Datei gesucht.</summary>
-        Public Shared ReadOnly Property LaufzeitVerfuegbar As Boolean
+        Public Shared ReadOnly Property RuntimeAvailable As Boolean
             Get
-                PruefeLaufzeit()
+                CheckRuntime()
                 Return _laufzeitDa
             End Get
         End Property
 
         ''' <summary>Warum die Laufzeit nicht laeuft, sonst leer. Fuer die Technologie-Anzeige.</summary>
-        Public Shared ReadOnly Property LaufzeitFehler As String
+        Public Shared ReadOnly Property RuntimeError As String
             Get
-                PruefeLaufzeit()
+                CheckRuntime()
                 Return _laufzeitFehler
             End Get
         End Property
 
-        Private Shared Sub PruefeLaufzeit()
+        Private Shared Sub CheckRuntime()
             SyncLock _sperre
                 If _laufzeitGeprueft Then Return
                 _laufzeitGeprueft = True
@@ -121,7 +121,7 @@ Namespace Services
         ''' unbemerkt dazu fuehren, dass er uebersprungen wird.</summary>
         Public Shared ReadOnly Property TelemetrieAbgeschaltet As Boolean
             Get
-                PruefeLaufzeit()
+                CheckRuntime()
                 Return _telemetrieAus
             End Get
         End Property
@@ -147,10 +147,10 @@ Namespace Services
         ''' Die PRUEFSUMME steht in der Anwendung, nicht neben der Datei. Ein Modell wird einer
         ''' nativen Laufzeit zum Fressen gegeben; wer die Datei unterschiebt, bestimmt, was dort
         ''' laeuft. Eine Pruefsumme, die mit der Datei kommt, wuerde derselbe Angreifer mitliefern.</summary>
-        Public NotInheritable Class ModellEintrag
+        Public NotInheritable Class ModelEntry
             ''' <summary>Der bestaendige Name des Modells, OHNE Version. Danach fragen die Dienste -
             ''' welche Datei das gerade ist, entscheidet dieser Dienst.</summary>
-            Public Property Schluessel As String = ""
+            Public Property Key As String = ""
             ''' <summary>Die AKTUELLE Datei. Ihr Name traegt die Version.</summary>
             Public Property Datei As String = ""
             ''' <summary>Aeltere Fassungen, die weiterhin laufen. Wer nicht aktualisiert hat, soll
@@ -184,21 +184,21 @@ Namespace Services
 
         ''' <summary>Alle Modelle, die die Anwendung kennt. Wer eines hinzufuegt, traegt es hier ein;
         ''' sonst wird es beim Start nicht gesucht und die Funktion bliebe unsichtbar.</summary>
-        Public Shared ReadOnly Property BekannteEintraege As IReadOnlyList(Of ModellEintrag) =
-            New List(Of ModellEintrag) From {
-                New ModellEintrag With {.Schluessel = "mobilesam-encoder",
+        Public Shared ReadOnly Property KnownEntries As IReadOnlyList(Of ModelEntry) =
+            New List(Of ModelEntry) From {
+                New ModelEntry With {.Key = "mobilesam-encoder",
                                         .Datei = "mobilesam-encoder-v1.onnx", .Gruppe = "Objektauswahl",
                                         .Zweck = "Bildkodierer", .Bytes = 27982937,
                                         .Sha256 = "fec144aeb820a5a2f45ff4d6f3c46362ebd09227fdab1e6e42ae569ffa7cc3d6"},
-                New ModellEintrag With {.Schluessel = "mobilesam-decoder",
+                New ModelEntry With {.Key = "mobilesam-decoder",
                                         .Datei = "mobilesam-decoder-v1.onnx", .Gruppe = "Objektauswahl",
                                         .Zweck = "Maskendekodierer", .Bytes = 16496934,
                                         .Sha256 = "a21b65b6e1b75e2c6265b36835747a0ab9169ec1ed725139a78ce90297f95126"},
-                New ModellEintrag With {.Schluessel = "midas-small",
+                New ModelEntry With {.Key = "midas-small",
                                         .Datei = "midas-small-v1.onnx", .Gruppe = "Tiefe",
                                         .Zweck = "Tiefenkarte", .Bytes = 66339845,
                                         .Sha256 = "007d73146ac82eb424d7306fb2e9d15fb4d2702d5129040d9e68adeb28bc384e"},
-                New ModellEintrag With {.Schluessel = "lama",
+                New ModelEntry With {.Key = "lama",
                                         .Datei = "lama-v1.onnx", .Gruppe = "Objekt entfernen",
                                         .Zweck = "Lücken füllen", .Bytes = 110513159,
                                         .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"}}
@@ -217,10 +217,10 @@ Namespace Services
             "https://github.com/Bitpainter75/FerrumPix-Models/releases/download/modelle-v1/"
 
         ''' <summary>Der Eintrag zu einem Schluessel, oder Nothing.</summary>
-        Public Shared Function EintragFuer(schluessel As String) As ModellEintrag
+        Public Shared Function EintragFuer(schluessel As String) As ModelEntry
             If String.IsNullOrWhiteSpace(schluessel) Then Return Nothing
-            Return BekannteEintraege.FirstOrDefault(
-                Function(e) String.Equals(e.Schluessel, schluessel, StringComparison.OrdinalIgnoreCase))
+            Return KnownEntries.FirstOrDefault(
+                Function(e) String.Equals(e.Key, schluessel, StringComparison.OrdinalIgnoreCase))
         End Function
 
         ''' <summary>Welche Datei dieses Modells gerade BENUTZT wird: die aktuelle, wenn sie da ist,
@@ -228,13 +228,13 @@ Namespace Services
         '''
         ''' Die Reihenfolge ist der ganze Punkt: wer aktualisiert hat, bekommt die neue; wer nicht,
         ''' arbeitet mit der alten weiter, statt vor einem verschwundenen Werkzeug zu stehen.</summary>
-        Public Shared Function BesteDatei(schluessel As String) As String
+        Public Shared Function BestFile(schluessel As String) As String
             Dim e = EintragFuer(schluessel)
             If e Is Nothing Then Return ""
-            If ModellVorhanden(e.Datei) Then Return e.Datei
+            If ModelPresent(e.Datei) Then Return e.Datei
             If e.Vorgaenger IsNot Nothing Then
                 For Each alt In e.Vorgaenger
-                    If ModellVorhanden(alt) Then Return alt
+                    If ModelPresent(alt) Then Return alt
                 Next
             End If
             Return ""
@@ -245,19 +245,19 @@ Namespace Services
         Public Shared Function IstAktualisierbar(schluessel As String) As Boolean
             Dim e = EintragFuer(schluessel)
             If e Is Nothing Then Return False
-            If ModellVorhanden(e.Datei) Then Return False
-            Return Not String.IsNullOrEmpty(BesteDatei(schluessel))
+            If ModelPresent(e.Datei) Then Return False
+            Return Not String.IsNullOrEmpty(BestFile(schluessel))
         End Function
 
         ''' <summary>Die Sitzung zum gerade benutzten Stand eines Modells.</summary>
         Public Shared Function SitzungFuer(schluessel As String) As InferenceSession
-            Dim datei = BesteDatei(schluessel)
+            Dim datei = BestFile(schluessel)
             If String.IsNullOrEmpty(datei) Then Return Nothing
             Return Sitzung(datei)
         End Function
 
         ''' <summary>Die Pruefsumme einer Datei, oder leer. Kleinbuchstaben, ohne Trenner.</summary>
-        Public Shared Function PruefsummeVon(pfad As String) As String
+        Public Shared Function ChecksumOf(pfad As String) As String
             Try
                 Using strom = File.OpenRead(pfad)
                     Using sha = Security.Cryptography.SHA256.Create()
@@ -270,23 +270,23 @@ Namespace Services
         End Function
 
         ''' <summary>Stimmt die Datei mit dem ueberein, was die Anwendung erwartet?</summary>
-        Public Shared Function IstUnversehrt(eintrag As ModellEintrag) As Boolean
+        Public Shared Function IstUnversehrt(eintrag As ModelEntry) As Boolean
             If eintrag Is Nothing Then Return False
-            Dim pfad = ModellPfad(eintrag.Datei)
+            Dim pfad = ModelPath(eintrag.Datei)
             If String.IsNullOrEmpty(pfad) Then Return False
             Try
                 If New IO.FileInfo(pfad).Length <> eintrag.Bytes Then Return False
             Catch
                 Return False
             End Try
-            Return String.Equals(PruefsummeVon(pfad), eintrag.Sha256, StringComparison.OrdinalIgnoreCase)
+            Return String.Equals(ChecksumOf(pfad), eintrag.Sha256, StringComparison.OrdinalIgnoreCase)
         End Function
 
         ''' <summary>Alle Dateinamen, nach denen beim Start gesucht wird - die aktuellen UND die
         ''' aelteren. Nur so kann festgestellt werden, dass jemand mit einer alten Fassung arbeitet.</summary>
-        Private Shared ReadOnly Property BekannteDateien As String()
+        Private Shared ReadOnly Property KnownFiles As String()
             Get
-                Return BekannteEintraege.
+                Return KnownEntries.
                     SelectMany(Function(e) New String() {e.Datei}.Concat(If(e.Vorgaenger, New String() {}))).
                     Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
             End Get
@@ -299,9 +299,9 @@ Namespace Services
         ''' auftaucht oder verschwindet, weil jemand eine Datei verschoben hat, ist schlimmer als
         ''' eine, die erst nach einem Neustart erscheint. Wer ein Modell nachlegt, kann ueber
         ''' <see cref="ErneutPruefen"/> auch ohne Neustart nachsehen lassen.</summary>
-        Public Shared Sub PruefeBestand()
+        Public Shared Sub CheckInventory()
             Dim gefunden = New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
-            For Each name In BekannteDateien
+            For Each name In KnownFiles
                 For Each ort In Suchorte
                     If String.IsNullOrEmpty(ort) Then Continue For
                     Dim p = Path.Combine(ort, name)
@@ -315,19 +315,19 @@ Namespace Services
                 _bestand = gefunden
             End SyncLock
             DiagnosticLogService.LogAlways("KiModell",
-                $"Modelle: {gefunden.Count} von {BekannteEintraege.Count} gefunden" &
+                $"Modelle: {gefunden.Count} von {KnownEntries.Count} gefunden" &
                 If(gefunden.Count = 0, "", " (" & String.Join(", ", gefunden.Keys) & ")"))
         End Sub
 
         ''' <summary>Noch einmal nachsehen - fuer den Fall, dass jemand waehrend der Sitzung ein
         ''' Modell abgelegt hat. Bereits offene Sitzungen bleiben, sie sind ja gueltig.</summary>
-        Public Shared Sub ErneutPruefen()
-            PruefeBestand()
+        Public Shared Sub CheckAgain()
+            CheckInventory()
         End Sub
 
         ''' <summary>Vollstaendiger Pfad einer Modelldatei, am ersten Ort, an dem sie liegt. Leer,
         ''' wenn sie nirgends liegt.</summary>
-        Public Shared Function ModellPfad(dateiName As String) As String
+        Public Shared Function ModelPath(dateiName As String) As String
             If String.IsNullOrWhiteSpace(dateiName) Then Return ""
             Dim tabelle As Dictionary(Of String, String)
             SyncLock _sperre
@@ -335,7 +335,7 @@ Namespace Services
             End SyncLock
             ' Noch nie geprueft (Pruefstand, frueher Aufruf): dann jetzt, statt Nichts zu melden.
             If tabelle Is Nothing Then
-                PruefeBestand()
+                CheckInventory()
                 SyncLock _sperre
                     tabelle = _bestand
                 End SyncLock
@@ -346,8 +346,8 @@ Namespace Services
         End Function
 
         ''' <summary>Liegt dieses Modell irgendwo vor?</summary>
-        Public Shared Function ModellVorhanden(dateiName As String) As Boolean
-            Return Not String.IsNullOrEmpty(ModellPfad(dateiName))
+        Public Shared Function ModelPresent(dateiName As String) As Boolean
+            Return Not String.IsNullOrEmpty(ModelPath(dateiName))
         End Function
 
         ''' <summary>Die Sitzung zu einem Modell, oder Nothing.
@@ -356,8 +356,8 @@ Namespace Services
         ''' Millisekunden, und ein Klick-fuer-Klick neu geladenes Modell waere unbenutzbar. Der
         ''' Besitz bleibt HIER - der Aufrufer darf sie nicht schliessen.</summary>
         Public Shared Function Sitzung(dateiName As String) As InferenceSession
-            If Not LaufzeitVerfuegbar Then Return Nothing
-            Dim pfad = ModellPfad(dateiName)
+            If Not RuntimeAvailable Then Return Nothing
+            Dim pfad = ModelPath(dateiName)
             If String.IsNullOrEmpty(pfad) Then Return Nothing
             SyncLock _sperre
                 Dim vorhanden As InferenceSession = Nothing

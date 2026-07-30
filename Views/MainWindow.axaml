@@ -47,6 +47,35 @@
                                    IsVisible="{Binding IsLightLogoVisible}"/>
                         </StackPanel>
 
+                        <!-- Dateiname und Farbetikett des offenen Bildes als Fenstertitel. Sie
+                             standen vorher links in der Fusszeile von Betrachter und Editor, wo
+                             sie mit den mittig zentrierten Zoom-Bedienelementen um Platz stritten.
+                             Hier ist der Platz frei und die Angabe steht in beiden Modi an
+                             derselben Stelle. In der Galerie bleibt sie leer - dort gibt es kein
+                             einzelnes Bild. -->
+                        <!-- Ueber ALLE Spalten und darin zentriert. In Spalte 1 zentriert sass der
+                             Titel nicht in der Fenstermitte: die Spalte beginnt erst hinter dem
+                             Logo, und die dritte Spalte ist leer - ihre Mitte liegt also um die
+                             halbe Logobreite nach rechts versetzt. -->
+                        <StackPanel Grid.Column="0"
+                                    Grid.ColumnSpan="3"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    IsHitTestVisible="False">
+                            <Ellipse Width="10" Height="10"
+                                     Fill="{Binding WindowTitleColorLabelBrush}"
+                                     IsVisible="{Binding HasWindowTitleColorLabel}"
+                                     VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding WindowTitleFileName}"
+                                       VerticalAlignment="Center"
+                                       MaxWidth="420"
+                                       TextTrimming="CharacterEllipsis"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </StackPanel>
+
                     </Grid>
                 </Border>
 

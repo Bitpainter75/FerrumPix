@@ -46,6 +46,15 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' Schnellwahl des Zielordners: aktueller Ordner oder zuletzt gespeicherter.
+        Private Sub OnTargetFolderChoiceClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If button Is Nothing OrElse vm Is Nothing Then Return
+            vm.SetDialogTargetFolderChoice(TryCast(button.Tag, String))
+            e.Handled = True
+        End Sub
+
         ''' Einzeloption „Katalog-Metadaten übernehmen" umschalten (Akzent = aktiv).
         Private Sub OnDialogMetaCopyToggleClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)

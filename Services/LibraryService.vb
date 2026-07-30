@@ -391,6 +391,34 @@ Namespace Services
             Return result.OrderBy(Function(t) t, StringComparer.OrdinalIgnoreCase).ToList()
         End Function
 
+        ''' <summary>Jedes benutzte Stichwort mit der Anzahl Bilder, die es tragen.
+        '''
+        ''' Gezaehlt wird in der Anwendung und nicht in SQL: die Stichwoerter stehen als eine
+        ''' Zeichenkette je Zeile, eine Aufteilung in SQLite waere eine rekursive Abfrage fuer
+        ''' dasselbe Ergebnis. Eine Datei zaehlt je Stichwort einmal, auch wenn sie es doppelt
+        ''' traegt.</summary>
+        Public Function GetTagCounts() As List(Of (Tag As String, Count As Integer))
+            Dim counts As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT Tags FROM ImageMeta WHERE Tags<>''"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.IsDBNull(0) Then Continue While
+                            For Each tag In ParseTags(reader.GetString(0)).Distinct(StringComparer.OrdinalIgnoreCase)
+                                Dim vorher = 0
+                                counts.TryGetValue(tag, vorher)
+                                counts(tag) = vorher + 1
+                            Next
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return counts.OrderBy(Function(p) p.Key, StringComparer.OrdinalIgnoreCase).
+                          Select(Function(p) (p.Key, p.Value)).ToList()
+        End Function
+
         Public Sub SetTags(filePath As String, tags As IEnumerable(Of String), Optional syncToXmp As Boolean = False)
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()

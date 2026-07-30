@@ -20,6 +20,41 @@
          Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen). -->
     <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="Auto,*,330,320,300">
 
+        <!-- EIN Kontextmenue fuer Buehne, Filmstreifen und Fusszeile. -->
+        <Grid.ContextMenu>
+            <ContextMenu x:Name="EditorKontextMenu" Opened="OnFooterMenuOpened" ItemsSource="{Binding ContextActions}">
+            <!-- Eine Vorlage fuer alle Eintraege. Symbol und Text liegen zusammen im
+            Header statt in MenuItem.Icon: die eingebaute Symbolspalte ist breiter
+            als 16 Punkte und schob das Zeichen sichtbar nach links weg. So bestimmt
+            der Abstand hier die Lage, und zwar fuer jeden Eintrag gleich.
+
+            Die Zeilen mit Sternen, Herz und Farbkreisen tragen die Klasse "widget" und
+            bleiben ausgenommen: sie bringen ihren Inhalt selbst mit. Ohne diese Ausnahme
+            ueberschrieb die Vorlage ihn - erst waren sie leer, dann nicht bedienbar. -->
+            <ContextMenu.Styles>
+            <Style Selector="MenuItem:not(.widget)">
+            <!-- Schmaler als die Vorgabe des Erscheinungsbilds (208): die Eintraege sind kurz,
+                 und ein Menue, das breiter ist als sein laengster Text, wirkt leer. -->
+            <Setter Property="MinWidth" Value="178"/>
+            <Setter Property="Command" Value="{Binding Command}"/>
+            <Setter Property="CommandParameter" Value="{Binding Parameter}"/>
+            <Setter Property="ItemsSource" Value="{Binding Children}"/>
+            <Setter Property="Header">
+            <Template>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+            <icons:SvgIcon Source="{Binding IconSource}"
+            Width="16" Height="16"
+            VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+            </StackPanel>
+            </Template>
+            </Setter>
+            </Style>
+            </ContextMenu.Styles>
+            </ContextMenu>
+        </Grid.ContextMenu>
+
+
         <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="60" Padding="24,0">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
@@ -257,7 +292,7 @@
                     <TextBlock Text="ANPASSUNGEN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
-                            IsVisible="{Binding ZeigtWerkzeugAnpassen}"
+                            IsVisible="{Binding ShowsToolAdjust}"
                             ToolTip.Tip="Anpassen"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Adjust"
@@ -269,7 +304,7 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
-                            IsVisible="{Binding ZeigtWerkzeugFarbe}"
+                            IsVisible="{Binding ShowsToolColor}"
                             ToolTip.Tip="Farbe"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Color"
@@ -282,7 +317,7 @@
                     </Button>
 
                     <Button Classes="tool-btn-row"
-                            IsVisible="{Binding ZeigtWerkzeugDetails}"
+                            IsVisible="{Binding ShowsToolDetails}"
                             ToolTip.Tip="Details"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Details"
@@ -294,7 +329,7 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
-                            IsVisible="{Binding ZeigtWerkzeugEffekte}"
+                            IsVisible="{Binding ShowsToolEffects}"
                             ToolTip.Tip="Effekte"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Effects"
@@ -306,7 +341,7 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
-                            IsVisible="{Binding ZeigtWerkzeugFilter}"
+                            IsVisible="{Binding ShowsToolFilter}"
                             ToolTip.Tip="Filter"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Filters"
@@ -720,11 +755,11 @@
                                                           IsVisible="False" />
                         <!-- Live-Vorschau der Gitterverzerrung: liegt UEBER dem Bild und unter den
                              Overlays, damit die Rasterpunkte darauf sichtbar bleiben. -->
-                        <Image x:Name="VorschauImage"
-                               Source="{Binding VorschauBild}"
+                        <Image x:Name="ToolPreviewImage"
+                               Source="{Binding ToolPreviewImage}"
                                Stretch="Fill"
                                IsHitTestVisible="False"
-                               IsVisible="{Binding HatVorschau}"
+                               IsVisible="{Binding HasPreview}"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
                         <!-- ZIndex: die Verzerrungs-Overlays liegen OBEN. Ihre Ecken sitzen bei
                              einem markierten Objekt auf demselben Rechteck wie die Griffe des
@@ -816,10 +851,10 @@
                                                FontWeight="SemiBold" />
                                 </Border>
                                 <!-- Die GRIFFE des Rahmens in einer eigenen Flaeche: beim Verzerren am
-                                     Objekt sind sie weg (ZeigtObjektRahmenGriffe). Ihre Stellen sind
+                                     Objekt sind sie weg (ShowsObjectFrameHandles). Ihre Stellen sind
                                      dann von den Verzerrungsecken belegt, und greifbar ist dort die
                                      Verzerrung. Der Rahmen selbst bleibt stehen. -->
-                                <Panel x:Name="TextOverlayHandles" IsVisible="{Binding ZeigtObjektRahmenGriffe}">
+                                <Panel x:Name="TextOverlayHandles" IsVisible="{Binding ShowsObjectFrameHandles}">
                                 <Border Width="1" Height="20" Background="{DynamicResource FP.Accent}"
                                         HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-20,0,0"
                                         IsHitTestVisible="False" />
@@ -901,7 +936,7 @@
                          nachdem die Tiefenkarte einmal berechnet ist und der langsame Teil danach
                          gar nicht mehr auffaellt. -->
                     <Border Grid.Row="1" Grid.Column="1"
-                            IsVisible="{Binding ZeigtVorschauArbeit}"
+                            IsVisible="{Binding ShowsPreviewBusy}"
                             IsHitTestVisible="False"
                             HorizontalAlignment="Right" VerticalAlignment="Top"
                             Margin="0,10,10,0"
@@ -1020,7 +1055,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="adjust-presets"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="adjust-presets"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <Expander Header="Anpassungen" icons:ExpanderState.Key="adjust-presets">
@@ -1134,7 +1169,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="light"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="light"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:LightPanel />
@@ -1145,7 +1180,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="color"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="color"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:ColorPanel />
@@ -1157,7 +1192,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowDetailAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="details"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="details"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:DetailsPanel />
@@ -1189,7 +1224,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowEffectsAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="frame"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="frame"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:FramePanel />
@@ -1200,7 +1235,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="filter"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="filter"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:FilterPanel />
@@ -1212,7 +1247,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="xmp-preset"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="xmp-preset"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:XmpPresetPanel />
@@ -1223,7 +1258,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowFilterAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="lut"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="lut"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:LutPresetPanel />
@@ -1235,7 +1270,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="curve"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="curve"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:CurvePanel />
@@ -1248,7 +1283,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="objektivkorrektur"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="objektivkorrektur"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:LensCorrectionPanel />
@@ -1261,7 +1296,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowLightAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="film-negative"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="film-negative"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:FilmNegativePanel />
@@ -1273,7 +1308,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="hsl"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="hsl"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:HslPanel />
@@ -1284,7 +1319,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="color-grading"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="color-grading"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:ColorGradingPanel />
@@ -1295,7 +1330,7 @@
                                 <Border.IsVisible>
                                     <MultiBinding Converter="{StaticResource AlleWahrConverter}">
                                         <Binding Path="ShowColorAdjustments"/>
-                                        <Binding Path="VersteckteAnpassungsgruppen" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="calibration"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NichtInListeConverter}" ConverterParameter="calibration"/>
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:CalibrationPanel />
@@ -1369,6 +1404,9 @@
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="0,1,0,0"
                 Padding="24,8,24,8">
+            <!-- Dasselbe Menue wie hinter der Schaltflaeche, hier als Rechtsklick auf die
+                 Fussleiste. Bewusst NICHT auf der Bildflaeche: dort ist die rechte Taste
+                 bereits belegt (im Editor hebt sie die Auswahl auf, im Betrachter zoomt sie). -->
             <Grid RowDefinitions="Auto,28">
                 <ListBox Name="FilmstripListBox"
                          Classes="filmstrip-list"
@@ -1402,21 +1440,18 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                        <!-- Farbetikett des Bildes (gleiche Darstellung wie auf der Galerie-Kachel). -->
-                        <Ellipse Width="10" Height="10" Fill="{Binding ColorLabelBrush}"
-                                 IsVisible="{Binding HasColorLabel}" VerticalAlignment="Center" Margin="0,0,-10,0"/>
-                        <!-- Akzentfarbe = dieses RAW wurde WIRKLICH ueber libraw entwickelt (echte Sensordaten),
-                             Standardfarbe = normale Datei oder nur die eingebettete RAW-Vorschau. -->
-                        <TextBlock Text="{Binding CurrentFileName}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"
-                                   Classes.raw-developed="{Binding IsRawDeveloped}"
-                                   ToolTip.Tip="{Binding RawFooterTooltip}">
-                            <TextBlock.Styles>
-                                <Style Selector="TextBlock.raw-developed">
-                                    <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
-                                    <Setter Property="FontWeight" Value="SemiBold"/>
-                                </Style>
-                            </TextBlock.Styles>
-                        </TextBlock>
+                        <!-- Fussmenue wie in Galerie und Betrachter, hier bewusst KURZ: die
+                             Stapelfunktionen der Galerie arbeiten auf der Datei, waehrend im Editor
+                             ungespeicherte Aenderungen offen sein koennen. Was bleibt, ist das, was
+                             sich auf das gerade bearbeitete Bild bezieht. -->
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Margin="-14,0,0,0"
+                                ToolTip.Tip="Menü für dieses Bild"
+                                Click="OnFooterMenuButtonClick">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"
+                                           Width="20" Height="20"/>
+                        </Button>
+                        <!-- Dateiname und Farbetikett stehen jetzt als Fenstertitel oben in der Mitte. -->
                         <!-- KEIN StatusText hier: die Fußzeile ist die linke Spalte eines *,Auto,*-Rasters
                              und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
                              überdeckt („Gespeichert als <langer Dateiname>"). Der Status steht ohnehin

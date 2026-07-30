@@ -51,11 +51,12 @@ Namespace Views
                 Function() GetVm()?.FilmstripItems,
                 Function() If(GetVm() Is Nothing, -1, GetVm().CurrentFilmstripIndex))
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
+            ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("ViewerRootGrid"), AddressOf OnContextRequested)
             AddHandler Loaded, Sub(s, e)
                                    Me.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnPointerWheel, Avalonia.Interactivity.RoutingStrategies.Tunnel)
                                    Me.AddHandler(InputElement.PointerMovedEvent, AddressOf OnGlobalPointerActivity, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo:=True)
                                    Me.AddHandler(InputElement.PointerPressedEvent, AddressOf OnGlobalPointerActivity, Avalonia.Interactivity.RoutingStrategies.Tunnel, handledEventsToo:=True)
-                                   UpdateInfoSidebarLayout()
+                                   UpdateInfoSidebarLayoutState()
                                    _filmstripController.AttachTo(Me.FindControl(Of ListBox)("FilmstripListBox"))
                                    _filmstripController.QueueThumbnailRefresh()
                                    Dispatcher.UIThread.Post(Sub() _filmstripController.RefreshThumbnails(), DispatcherPriority.Background)
@@ -120,6 +121,125 @@ Namespace Views
             Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
             If String.IsNullOrEmpty(tag) Then Return 0
             Return If(tag.Split(":"c)(0) = "1", 1, 0)
+        End Function
+
+        ''' <summary>Das Fussmenue zeigen. Wie in der Galerie ueber die Schaltflaeche statt ueber
+        ''' einen Rechtsklick: ein Rechtsklick ist nicht auf jedem Geraet bequem.</summary>
+        Private Sub OnFooterMenuButtonClick(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            ' Es gibt nur EIN Menue je Ansicht, und es haengt an der Wurzel. Die Schaltflaeche
+            ' oeffnet dasselbe wie ein Rechtsklick und meldet nur den Aufrufort.
+            Dim vm = GetVm()
+            Dim menu = Me.FindControl(Of ContextMenu)("ViewerKontextMenu")
+            If menu Is Nothing OrElse button Is Nothing OrElse vm Is Nothing Then Return
+
+            vm.ContextSite = MenuSite.ViewerFooter
+            vm.ContextItems = ContextTarget.Affected(Nothing, Nothing, StageItem(vm))
+
+            ' Open(control) besteht darauf, dass control GENAU das Element ist, an dem das Menue
+            ' haengt - das ist hier die Fussleiste, nicht die Schaltflaeche. Der parameterlose
+            ' Aufruf oeffnet am angehaengten Element; die Lage steuert PlacementTarget.
+            menu.PlacementTarget = button
+            menu.Placement = PlacementMode.BottomEdgeAlignedLeft
+            menu.Open()
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Menues entstehen erst beim Oeffnen und verpassen den einmaligen
+        ''' Fenster-Durchlauf der Lokalisierung - deshalb hier ihren eigenen Unterbaum.</summary>
+        Private Sub OnLocalizedMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            Dim menu = TryCast(sender, Avalonia.LogicalTree.ILogical)
+            If menu IsNot Nothing Then LocalizationService.ApplyTo(menu)
+        End Sub
+
+        ''' <summary>Die Eintraege kommen als Daten und tragen ihre Beschriftung bereits uebersetzt.
+        ''' Beim Oeffnen einmal neu lesen lassen, damit ein Sprachwechsel ankommt.</summary>
+        ''' <summary>Den Zwischenablage-Haken des ViewModels fuellen. Muss hier passieren: die
+        ''' Zwischenablage haengt am TopLevel, das ViewModel kommt nicht daran. Ohne das waere
+        ''' "Pfad kopieren" ein Eintrag, den es gibt und der nichts tut.</summary>
+        Private Sub SetClipboardHook()
+            Dim vm = TryCast(DataContext, ViewerViewModel)
+            If vm Is Nothing Then Return
+            vm.CopyPathToClipboard = Async Sub(pfad)
+                                          Try
+                                              If String.IsNullOrEmpty(pfad) Then Return
+                                              Dim owner = TopLevel.GetTopLevel(Me)
+                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {pfad}, cut:=False)
+                                          Catch ex As Exception
+                                              DiagnosticLogService.LogException("Viewer.CopyPath", ex)
+                                          End Try
+                                      End Sub
+        End Sub
+
+
+        Private Sub OnFooterMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            SetClipboardHook()
+            TryCast(DataContext, ViewerViewModel)?.RefreshContextActions()
+        End Sub
+
+        ''' <summary>Rechtsklick irgendwo im Betrachter. EIN Handler fuer alle drei Aufruforte:
+        ''' Buehne, Filmstreifen und Fusszeile. Wo geklickt wurde, entscheidet sich hier, und die
+        ''' betroffenen Elemente kommen aus <see cref="ContextTarget"/> - der einen Stelle, die das
+        ''' fuer die ganze Anwendung beantwortet.</summary>
+        Private Sub OnContextRequested(sender As Object, e As Avalonia.Input.ContextRequestedEventArgs)
+            ' Nach einem Zoom mit gehaltener rechter Taste ist KEIN Menue gemeint. Das Merkmal war
+            ' laengst gesetzt und wurde bisher nie ausgewertet.
+            If _suppressNextImageContextMenu Then
+                _suppressNextImageContextMenu = False
+                e.Handled = True
+                Return
+            End If
+
+            Dim vm = GetVm()
+            Dim menu = Me.FindControl(Of ContextMenu)("ViewerKontextMenu")
+            If vm Is Nothing OrElse menu Is Nothing Then Return
+
+            Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
+            Dim hit = ContextTarget.UnderPointer(e, filmstrip)
+
+            ' Ein Rechtsklick im Filmstreifen meint DIESES Bild. Die Kommandos des Betrachters
+            ' arbeiten aber alle auf dem Bild der Buehne - es reicht also nicht, das getroffene
+            ' Element zu kennen, es muss auch das aktuelle werden. Genauso verhaelt sich die
+            ' Galerie, wo ein Rechtsklick daneben die Auswahl umsetzt.
+            If hit IsNot Nothing AndAlso Not Object.ReferenceEquals(hit, StageItem(vm)) Then
+                vm.NavigateToItem(hit)
+            End If
+
+            Dim stage = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
+            Dim onStage = hit Is Nothing AndAlso PointerIsWithin(e, stage)
+
+            vm.ContextSite = If(hit IsNot Nothing, MenuSite.ViewerFilmstrip,
+                                If(onStage, MenuSite.ViewerStage, MenuSite.ViewerFooter))
+            vm.ContextItems = ContextTarget.Affected(hit, Nothing, StageItem(vm))
+
+            ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
+            ' Element und oeffnet sich gleich nach diesem Handler von allein - siehe
+            ' ContextMenuAttachment. Die Lage muss zurueckgesetzt werden, weil die Schaltflaeche
+            ' in der Fusszeile sie vorher auf eine feste Kante gestellt haben kann.
+            menu.PlacementTarget = Nothing
+            menu.Placement = PlacementMode.Pointer
+        End Sub
+
+        ''' <summary>Liegt der Zeiger ueber diesem Bereich? Rein geometrisch geprueft, weil die
+        ''' Quelle des Ereignisses bei geschachtelten Elementen nichts darueber sagt.</summary>
+        Private Shared Function PointerIsWithin(e As Avalonia.Input.ContextRequestedEventArgs, area As Control) As Boolean
+            If area Is Nothing OrElse Not area.IsVisible Then Return False
+            Dim pos As Avalonia.Point
+            If Not e.TryGetPosition(area, pos) Then Return False
+            Return pos.X >= 0 AndAlso pos.Y >= 0 AndAlso
+                   pos.X <= area.Bounds.Width AndAlso pos.Y <= area.Bounds.Height
+        End Function
+
+        ''' <summary>Das Bild auf der Buehne als Element - der Rueckfall, wenn der Klick keine
+        ''' Kachel getroffen hat.</summary>
+        Private Function StageItem(vm As ViewerViewModel) As ImageItem
+            Dim pfad = vm?.CurrentImagePath
+            If String.IsNullOrWhiteSpace(pfad) Then Return Nothing
+            Dim aus = vm.FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                           PathIdentity.AreSame(i.FilePath, pfad))
+            If aus IsNot Nothing Then Return aus
+            If Not IO.File.Exists(pfad) Then Return Nothing
+            Return New ImageItem(pfad)
         End Function
 
         Private Sub OnCompareStarClick(sender As Object, e As RoutedEventArgs)
@@ -338,9 +458,9 @@ Namespace Views
                 If e.GetCurrentPoint(Me).Properties.IsRightButtonPressed OrElse
                    e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                     _suppressNextImageContextMenu = True
-                    Dim unterMaus = VergleichsflaecheUnter(e)
+                    Dim unterMaus = ComparePaneUnder(e)
                     If unterMaus IsNot Nothing Then
-                        ZoomVergleichAnPunkt(unterMaus, e.GetPosition(unterMaus), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                        ZoomCompareAtPoint(unterMaus, e.GetPosition(unterMaus), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
                     Else
                         vm.ActiveZoomPreset = ZoomPresetMode.Manual
                         vm.ZoomLevel = Math.Max(0.05, vm.ZoomLevel) * If(e.Delta.Y > 0, 1.25, 1.0 / 1.25)
@@ -383,7 +503,7 @@ Namespace Views
         ''' andere folgt ueber die Ausschnitt-Spiegelung.
         ''' Der Offset wird ZWEIMAL gesetzt: einmal sofort und einmal nach dem Layout-Durchlauf - vor
         ''' dem Neu-Vermessen der Bilder kennt der ScrollViewer seinen neuen Umfang noch nicht.</summary>
-        Private Sub ZoomVergleichAnPunkt(quelle As ScrollViewer, punkt As Point, faktor As Double)
+        Private Sub ZoomCompareAtPoint(quelle As ScrollViewer, punkt As Point, faktor As Double)
             Dim vm = GetVm()
             If vm Is Nothing OrElse quelle Is Nothing OrElse faktor <= 0 Then Return
 
@@ -415,7 +535,7 @@ Namespace Views
 
         ''' <summary>Die Vergleichsflaeche unter dem Mauszeiger. Verankert wird dort, wo die Maus
         ''' steht - nicht an der fokussierten Flaeche: man zoomt auf das, worauf man zeigt.</summary>
-        Private Function VergleichsflaecheUnter(e As PointerEventArgs) As ScrollViewer
+        Private Function ComparePaneUnder(e As PointerEventArgs) As ScrollViewer
             For Each flaechenName In {"CompareLeftScroll", "CompareRightScroll"}
                 Dim sv = Me.FindControl(Of ScrollViewer)(flaechenName)
                 If sv Is Nothing Then Continue For
@@ -456,11 +576,6 @@ Namespace Views
                 End Sub
             applyOffset()
             Dispatcher.UIThread.Post(applyOffset, DispatcherPriority.Background)
-        End Sub
-
-        Public Sub OnImageContextRequested(sender As Object, e As ContextRequestedEventArgs)
-            _suppressNextImageContextMenu = False
-            e.Handled = True
         End Sub
 
         Private Function IsWithinInfoSidebar(source As Object) As Boolean
@@ -747,7 +862,7 @@ Namespace Views
         End Sub
 
 
-        Private Sub VerbindeVergleichsflaechen()
+        Private Sub LinkComparePanes()
             Dim links = Me.FindControl(Of ScrollViewer)("CompareLeftScroll")
             Dim rechts = Me.FindControl(Of ScrollViewer)("CompareRightScroll")
             If links Is Nothing OrElse rechts Is Nothing Then Return
@@ -812,7 +927,7 @@ Namespace Views
 
         Protected Overrides Sub OnAttachedToVisualTree(e As VisualTreeAttachmentEventArgs)
             MyBase.OnAttachedToVisualTree(e)
-            VerbindeVergleichsflaechen()
+            LinkComparePanes()
             _isAttached = True
             RebindViewModel()
             ApplyVideoLayout()
@@ -896,7 +1011,7 @@ Namespace Views
             End If
 
             If e.PropertyName = NameOf(ViewerViewModel.IsInfoSidebarVisible) Then
-                UpdateInfoSidebarLayout()
+                UpdateInfoSidebarLayoutState()
             End If
         End Sub
 
@@ -1101,7 +1216,7 @@ Namespace Views
             If vm.SeekVideoCommand.CanExecute(slider.Value) Then vm.SeekVideoCommand.Execute(slider.Value)
         End Sub
 
-        Private Sub UpdateInfoSidebarLayout()
+        Private Sub UpdateInfoSidebarLayoutState()
             Dim vm = GetVm()
             Dim root = Me.FindControl(Of Grid)("ViewerRootGrid")
             Dim sidebar = Me.FindControl(Of Border)("ViewerInfoSidebarBorder")
