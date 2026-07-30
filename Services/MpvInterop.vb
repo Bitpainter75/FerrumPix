@@ -47,10 +47,32 @@ Namespace Services
         ''' Systems. Die mitgelieferte Fassung ist der Rückfall für Umgebungen, die keine haben -
         ''' Windows und die portablen Pakete.</summary>
         Private Shared Function TryLoadPreferSystem(assembly As Assembly, searchPath As DllImportSearchPath?, ByRef handle As IntPtr) As Boolean
-            For Each candidate In LibraryNames()
+            For Each candidate In SystemLibraryCandidates()
                 If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then Return True
             Next
             Return TryLoadBundledLibrary(handle)
+        End Function
+
+        Private Shared Iterator Function SystemLibraryCandidates() As IEnumerable(Of String)
+            Dim names = LibraryNames()
+            For Each name In names
+                Yield name
+            Next
+
+            If Not OperatingSystem.IsMacOS() Then Return
+
+            Dim libraryDirectories = {
+                "/opt/homebrew/opt/mpv/lib",
+                "/opt/homebrew/lib",
+                "/usr/local/opt/mpv/lib",
+                "/usr/local/lib",
+                "/opt/local/lib"
+            }
+            For Each directory In libraryDirectories
+                For Each name In names
+                    Yield Path.Combine(directory, name)
+                Next
+            Next
         End Function
 
         Private Shared Function LibraryNames() As String()
