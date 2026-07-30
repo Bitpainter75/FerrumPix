@@ -750,10 +750,7 @@ Namespace Views
 
                 If vm.IsFullscreen Then
                     Select Case e.Key
-                        Case Key.Escape
-                            vm.ExitFullscreen()
-                            e.Handled = True
-                        Case Key.Back
+                        Case Key.Escape, Key.Back
                             vm.ExitFullscreen()
                             e.Handled = True
                         Case Key.Left, Key.PageUp

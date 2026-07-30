@@ -42,7 +42,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" Exclude="Assets\Objektivdaten\**" />
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\Objektivdaten\**;Assets\FerrumPix_Icon.icns" />
+    <!-- Die macOS-Symboldatei wird ausschliesslich beim Paketieren gelesen und nie zur
+         Laufzeit. Ohne diesen Ausschluss laege sie in JEDEM Build mit drin, auch im
+         Windows- und Linux-Binary, und das ohne einen einzigen Zugriff darauf. -->
     <!-- Die Objektivdaten liegen als gewoehnliche Assembly-Ressource und NICHT als
          Avalonia-Ressource: sie werden auch ohne laufende Anwendung gelesen (Pruefstand,
          Messwerkzeuge), und Avaloniens Ressourcenlader setzt eine gestartete App voraus. -->

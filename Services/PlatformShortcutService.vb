@@ -2,6 +2,7 @@ Imports Avalonia
 Imports Avalonia.Input
 Imports Avalonia.Controls
 Imports Avalonia.VisualTree
+Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Runtime.CompilerServices
 
@@ -21,6 +22,10 @@ Namespace Services
         Public Shared ReadOnly Property IsMacOS As Boolean = OperatingSystem.IsMacOS()
         Private Shared ReadOnly ShortcutLabelStates As New ConditionalWeakTable(Of TextBlock, PresentationTextState)()
         Private Shared ReadOnly ToolTipStates As New ConditionalWeakTable(Of Control, PresentationTextState)()
+
+        ''' Austauschliste der Kurzinfo-Kuerzel samt der Sprache, fuer die sie gebaut wurde.
+        Private Shared _replacements As List(Of KeyValuePair(Of String, String))
+        Private Shared _replacementCulture As String
 
         Public Shared Function HasPrimaryModifier(modifiers As KeyModifiers) As Boolean
             Dim modifier = If(IsMacOS, KeyModifiers.Meta, KeyModifiers.Control)
@@ -56,11 +61,15 @@ Namespace Services
                    Not modifiers.HasFlag(KeyModifiers.Shift)
         End Function
 
+        ''' <summary>
+        ''' Liefert die macOS-Schreibweise eines Kuerzels. Auf allen anderen Plattformen
+        ''' bleibt der uebersetzte Text unveraendert, weil FormatShortcutInLabel dort gar
+        ''' nicht erst umschreibt. Hier steht deshalb bewusst KEINE eigene Ersatzschreibung
+        ''' fuer Windows und Linux: sie waere eine feste Sprache im Quelltext und liefe an
+        ''' den Ressourcendateien vorbei.
+        ''' </summary>
         Public Shared Function FormatPrimaryShortcut(keyText As String,
                                                      Optional includeShift As Boolean = False) As String
-            If Not IsMacOS Then
-                Return "Strg+" & If(includeShift, "Umschalt+", "") & keyText
-            End If
             Return If(includeShift, "⇧⌘", "⌘") & keyText
         End Function
 
@@ -170,31 +179,84 @@ Namespace Services
             Return text
         End Function
 
+        ''' <summary>
+        ''' Schreibt die Kuerzel in einer Kurzinfo auf die macOS-Zeichen um. Die Suchmuster
+        ''' stammen aus den Ressourcendateien und nicht aus fest verdrahteten Zeichenketten:
+        ''' die Tastennamen sind uebersetzt ("Pfeil links", "Flèche gauche", "Flecha
+        ''' izquierda", "Freccia sinistra", "Seta esquerda"), eine feste Liste traefe nur
+        ''' Deutsch und Englisch.
+        ''' </summary>
         Public Shared Function FormatMacToolTip(text As String) As String
             If Not IsMacOS OrElse String.IsNullOrEmpty(text) Then Return text
 
-            text = ReplaceShortcutToken(text, "Strg+Pfeil links", "⌘R")
-            text = ReplaceShortcutToken(text, "Ctrl+Left", "⌘R")
-            text = ReplaceShortcutToken(text, "Strg+Pfeil rechts", "⌥⌘R")
-            text = ReplaceShortcutToken(text, "Ctrl+Right", "⌥⌘R")
-            text = ReplaceShortcutToken(text, "Strg+Umschalt+G", "⇧⌘G")
-            text = ReplaceShortcutToken(text, "Ctrl+Shift+G", "⇧⌘G")
-            text = ReplaceShortcutToken(text, "Strg+Enter", "⌃Enter")
-            text = ReplaceShortcutToken(text, "Ctrl+Enter", "⌃Enter")
-
-            For Each key In {"A", "C", "D", "F", "G", "N", "P", "S", "V", "X", "Z"}
-                text = ReplaceShortcutToken(text, "Strg+" & key, "⌘" & key)
-                text = ReplaceShortcutToken(text, "Ctrl+" & key, "⌘" & key)
+            For Each ersetzung In ShortcutReplacements()
+                text = text.Replace(ersetzung.Key, ersetzung.Value, StringComparison.Ordinal)
             Next
 
             Return text
         End Function
 
+        ''' <summary>
+        ''' Baut die Austauschliste fuer die aktuell eingestellte Sprache und behaelt sie,
+        ''' bis umgeschaltet wird. Laeuft nur auf dem Oberflaechen-Thread, daher ohne Sperre.
+        '''
+        ''' Sortiert wird nach Laenge ABSTEIGEND, und das ist der eigentliche Punkt: das kurze
+        ''' "Ctrl+F" steckt als Anfang in "Ctrl+Flèche gauche" und "Ctrl+Flecha izquierda",
+        ''' "Ctrl+S" in "Ctrl+Seta esquerda". Ungeordnet ersetzt die kurze Marke zuerst und
+        ''' setzt ein FALSCHES Kuerzel ein - schlimmer als gar keine Umschrift.
+        ''' </summary>
+        Private Shared Function ShortcutReplacements() As List(Of KeyValuePair(Of String, String))
+            Dim culture = LocalizationService.EffectiveCulture.Name
+            If _replacements IsNot Nothing AndAlso
+               String.Equals(_replacementCulture, culture, StringComparison.Ordinal) Then
+                Return _replacements
+            End If
+
+            Dim map As New Dictionary(Of String, String)(StringComparer.Ordinal)
+            AddShortcut(map, "Strg+Pfeil links", "⌘R")
+            AddShortcut(map, "Strg+Pfeil rechts", "⌥⌘R")
+            AddShortcut(map, "Strg+Umschalt+G", "⇧⌘G")
+            AddShortcut(map, "Strg+Enter", "⌃Enter")
+            For Each key In {"A", "C", "D", "F", "G", "N", "P", "S", "V", "X", "Z"}
+                AddShortcut(map, "Strg+" & key, "⌘" & key)
+            Next
+
+            Dim liste = map.ToList()
+            liste.Sort(Function(a, b) b.Key.Length.CompareTo(a.Key.Length))
+            _replacements = liste
+            _replacementCulture = culture
+            Return liste
+        End Function
+
+        ''' <summary>
+        ''' Nimmt den deutschen Ausgangstext UND seine Uebersetzung auf. Der Ausgangstext
+        ''' bleibt noetig, weil eine noch nicht uebersetzte Kurzinfo im deutschen Wortlaut
+        ''' in der Oberflaeche steht.
+        ''' </summary>
+        Private Shared Sub AddShortcut(map As Dictionary(Of String, String),
+                                       germanSource As String,
+                                       macShortcut As String)
+            map(germanSource) = macShortcut
+            Dim translated = LocalizationService.T(germanSource)
+            If Not String.IsNullOrEmpty(translated) Then map(translated) = macShortcut
+        End Sub
+
+        ''' <summary>
+        ''' Ersetzt die Modifikatortaste durch ihr macOS-Zeichen. Welches Wort das ist,
+        ''' steht im Text selbst (alles vor dem ersten Pluszeichen), deshalb funktioniert
+        ''' das in jeder Sprache ohne eine Liste im Quelltext.
+        '''
+        ''' Ersetzt werden ALLE Nennungen, nicht nur die erste: eine Zeile kann zwei
+        ''' Kuerzel tragen ("Strg+1 bis Strg+5"), und dann bliebe sonst die zweite Haelfte
+        ''' in der Schreibweise der anderen Plattform stehen.
+        ''' </summary>
         Private Shared Function ReplaceLeadingModifier(text As String, symbol As String) As String
-            Dim alreadyFormatted = text.Length > 0 AndAlso "⌘⌃⌥⇧".Contains(text(0))
-            Dim separator = If(alreadyFormatted, -1, text.IndexOf("+"c))
-            Dim keyText = If(separator >= 0, text.Substring(separator + 1), TrimLeadingModifierGlyphs(text))
-            Return symbol & keyText
+            If text.Length = 0 Then Return text
+            If "⌘⌃⌥⇧".Contains(text(0)) Then Return symbol & TrimLeadingModifierGlyphs(text)
+
+            Dim separator = text.IndexOf("+"c)
+            If separator < 0 Then Return symbol & text
+            Return text.Replace(text.Substring(0, separator + 1), symbol, StringComparison.Ordinal)
         End Function
 
         Private Shared Function ReplaceThroughLastModifier(text As String, symbols As String) As String
@@ -210,12 +272,6 @@ Namespace Services
                 offset += 1
             End While
             Return text.Substring(offset)
-        End Function
-
-        Private Shared Function ReplaceShortcutToken(text As String,
-                                                     oldValue As String,
-                                                     newValue As String) As String
-            Return text.Replace(oldValue, newValue, StringComparison.Ordinal)
         End Function
 
         Private NotInheritable Class PresentationTextState
