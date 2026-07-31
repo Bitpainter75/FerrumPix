@@ -5692,4 +5692,7 @@
   <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
     <value>Girar os símbolos com o traçado</value>
   </data>
+  <data name="Jedes_Symbol_dreht_sich_in_die_Laufrichtung_des__92c61e19" xml:space="preserve">
+    <value>Cada símbolo gira no sentido da moldura. Desativado: ficam todos na vertical.</value>
+  </data>
 </root>

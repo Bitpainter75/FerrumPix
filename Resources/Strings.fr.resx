@@ -5693,4 +5693,7 @@
   <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
     <value>Faire pivoter les symboles avec le tracé</value>
   </data>
+  <data name="Jedes_Symbol_dreht_sich_in_die_Laufrichtung_des__92c61e19" xml:space="preserve">
+    <value>Chaque symbole pivote dans le sens du cadre. Désactivé : ils restent tous droits.</value>
+  </data>
 </root>

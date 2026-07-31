@@ -5693,4 +5693,7 @@
   <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
     <value>Ruota i simboli con il tracciato</value>
   </data>
+  <data name="Jedes_Symbol_dreht_sich_in_die_Laufrichtung_des__92c61e19" xml:space="preserve">
+    <value>Ogni simbolo ruota nel senso della cornice. Disattivato: restano tutti dritti.</value>
+  </data>
 </root>

@@ -5694,4 +5694,7 @@
   <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
     <value>Turn symbols with the path</value>
   </data>
+  <data name="Jedes_Symbol_dreht_sich_in_die_Laufrichtung_des__92c61e19" xml:space="preserve">
+    <value>Each symbol turns with the direction the frame runs in. Off: they all stand upright.</value>
+  </data>
 </root>

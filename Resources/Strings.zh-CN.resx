@@ -5691,4 +5691,7 @@
   <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
     <value>符号随路径旋转</value>
   </data>
+  <data name="Jedes_Symbol_dreht_sich_in_die_Laufrichtung_des__92c61e19" xml:space="preserve">
+    <value>每个符号随边框走向旋转。关闭时全部保持直立。</value>
+  </data>
 </root>
