@@ -16593,6 +16593,19 @@ Namespace ViewModels
             Return k = "Text" OrElse k = "Watermark"
         End Function
 
+        ''' <summary>Braucht die AKTUELLE Auswahl einen Render der ganzen Szene statt eines
+        ''' Region-Patches? Ein VERZERRTES Objekt schiebt seine Pixel beliebig weit aus dem
+        ''' Objektrechteck heraus - ein Patch raeumt die alte Lage dann nicht ab, und die Reste
+        ''' bleiben als Fragmente ueber dem ganzen Bild stehen (Nutzer-Screenshot 2026-07-31,
+        ''' Text unter Bildverzerrung). Das Rechteck laesst sich nicht sinnvoll vorausberechnen:
+        ''' die Verzerrung bildet Punkte frei ab.</summary>
+        Private Function SelectedAnnotationsNeedFullRender() As Boolean
+            For Each annotation In SelectedAnnotations
+                If ImageProcessor.HasWarp(annotation) Then Return True
+            Next
+            Return False
+        End Function
+
         Private Shared Function AnnotationRequiresBakedPreview(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
             Return Not String.Equals(If(annotation.BlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
@@ -17489,6 +17502,12 @@ Namespace ViewModels
         End Function
 
         Private Sub RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+            ' Verzerrte Objekte kennen kein brauchbares Dirty-Rechteck (siehe
+            ' SelectedAnnotationsNeedFullRender) - fuer sie gilt immer der Vollrender.
+            If SelectedAnnotationsNeedFullRender() Then
+                SchedulePreviewUpdate()
+                Return
+            End If
             ' Die Region ZUERST bestimmen: nur mit ihr kann die Weiche entscheiden, ob eine
             ' eingehängte Korrektur diesen Bereich überhaupt berührt.
             If RequiresFullRenderForStackedCorrections(CandidateAnnotationDirtyRect()) Then
@@ -17574,6 +17593,12 @@ Namespace ViewModels
             ' kein Region-Patch mehr durchkam (daher der leere Rahmen beim nächsten Zug).
             Dim endRegion = CandidateAnnotationDirtyRect()
             If HasStackedCorrections() AndAlso RequiresFullRenderForStackedCorrections(endRegion) Then
+                SchedulePreviewUpdate(markDirty:=False)
+                Return
+            End If
+            ' Verzerrtes Objekt: siehe SelectedAnnotationsNeedFullRender - der Patch liesse die
+            ' alte, weit verstreute Fassung stehen.
+            If SelectedAnnotationsNeedFullRender() Then
                 SchedulePreviewUpdate(markDirty:=False)
                 Return
             End If
@@ -22419,10 +22444,12 @@ Namespace ViewModels
                 a.BrushPreset = If(normalizedKind = "Eraser", "soft", _brushPreset)
                 a.EraserFillColor = _eraserFillColor
             End If
-            ' Ein Mischmodus-Wechsel verschiebt Objekte ueber die Kompositor-Grenze (Normal =
-            ' Kompositor, alles andere = gebackener Block) - dann muss die SZENE neu, ein blosser
-            ' Blit liesse die alte gebackene Fassung stehen.
-            Dim blendChanged = Not String.Equals(If(a.BlendMode, "Normal"), If(_annotationBlendMode, "Normal"), StringComparison.Ordinal)
+            ' Wechselt ein Objekt die SEITE der Kompositor-Grenze (Mischmodus, Verzerrung,
+            ' Sichtbarkeit), reicht weder ein Blit noch ein Region-Patch: die alte Fassung bliebe
+            ' in der Szene stehen und das Objekt stuende doppelt da. Die Grenze wird deshalb vor
+            ' und nach der Aenderung bestimmt und verglichen.
+            Dim compositorStartBefore = OverlaySceneRenderer.ComputeCompositorStartIndex(
+                _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive)
             a.BlendMode = _annotationBlendMode
             a.BlendIncludesStroke = _annotationBlendIncludesStroke
             ' GESPERRT: Lage, Größe, Drehung und Spiegelung bleiben, wie sie sind. Alles andere
@@ -22503,7 +22530,6 @@ Namespace ViewModels
                     other.BlendMode = a.BlendMode
                     other.BlendIncludesStroke = a.BlendIncludesStroke
                     other.IsVisible = a.IsVisible
-                    blendChanged = blendChanged OrElse otherBlendChanged
                     If otherChanged AndAlso previewSource IsNot Nothing Then
                         _annotationDirtyRect = ImageProcessor.UnionRects(
                             _annotationDirtyRect,
@@ -22514,6 +22540,15 @@ Namespace ViewModels
             End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
             RaiseResetButtonStateChanged()
+            Dim needsFullRender = SelectedAnnotationsNeedFullRender() OrElse
+                                  OverlaySceneRenderer.ComputeCompositorStartIndex(
+                                      _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive) <> compositorStartBefore
+            If needsFullRender Then
+                ' Ganze Szene neu: siehe SelectedAnnotationsNeedFullRender. Der Zeitgeber buendelt
+                ' die Anforderungen eines laufenden Zuges zu EINEM Render.
+                SchedulePreviewUpdate(markDirty:=Not _annotationPlacementEditActive)
+                Return
+            End If
             If _annotationPlacementEditActive Then
                 _previewTimer.Stop()
                 ' KOMPOSITOR: das Objekt steht nicht in der Szene - die Bewegung ist ein blosser
@@ -22529,13 +22564,6 @@ Namespace ViewModels
                 ' Gebackener Block (Mischmodus, unter einer eingehaengten Korrektur): das Objekt
                 ' bleibt in der Szene und wird waehrend des Zuges an Ort und Stelle nachgerendert.
                 ' Der Region-Worker koalesziert die Anforderungen von selbst.
-                If Not TryRenderAnnotationPatchSync() Then ScheduleAnnotationCompositePreviewUpdate(40.0)
-                Return
-            End If
-            ' Mischmodus-Wechsel: Objekte wandern zwischen gebackenem Block und Kompositor, die
-            ' Szene selbst muss neu gerendert werden - der Blit-Kurzweg des Kompositors wuerde die
-            ' alte gebackene Fassung stehen lassen (bzw. die neue nie backen).
-            If blendChanged Then
                 If Not TryRenderAnnotationPatchSync() Then ScheduleAnnotationCompositePreviewUpdate(40.0)
                 Return
             End If

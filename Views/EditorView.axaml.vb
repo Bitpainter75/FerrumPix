@@ -1124,6 +1124,7 @@ Namespace Views
                     UpdateSelectionOverlayVisibility()
                     _hideBrushPreviewAfterBake = False
                     ShowBrushPreviewLine(False)
+                    ScrollAdjustmentsToTop()
                 Case NameOf(EditorViewModel.SelectedAnnotationIndex),
                      NameOf(EditorViewModel.HasSelectedAnnotation),
                      NameOf(EditorViewModel.HasMultiAnnotationSelection),
@@ -4982,6 +4983,12 @@ Namespace Views
                 vm?.EndSelectedAnnotationPlacementEdit()
                 vm?.CommitSelectedAnnotationPlacementEdit()
             End If
+            ' Rahmen und Live-Textbox wieder AUS DEM MODELL setzen: waehrend des Zuges fuehrt die
+            ' View den Border direkt mit der Maus (siehe UpdateSliderLayout), das Modell kommt dabei
+            ' nicht zum Zug. Danach stand der Rahmen auf der gezogenen Groesse statt auf dem
+            ' eingepassten Textkasten, und die Schriftgroesse der Textbox blieb auf dem Wert von VOR
+            ' dem Zug stehen - sichtbar an einem viel zu kleinen Schreibcursor (Nutzer-Screenshot).
+            UpdateSliderLayout()
             e.Pointer.Capture(Nothing)
             e.Handled = True
         End Sub
@@ -5002,6 +5009,19 @@ Namespace Views
                 vm?.EndSelectedAnnotationPlacementEdit()
                 vm?.CommitSelectedAnnotationPlacementEdit()
             End If
+            ' Wie beim Loslassen: Rahmen und Textbox zurueck auf den Modellstand.
+            UpdateSliderLayout()
+        End Sub
+
+        ''' <summary>Beim Werkzeugwechsel das Anpassungspanel wieder ganz nach oben stellen: die
+        ''' Gruppen des neuen Werkzeugs beginnen oben, und ein stehengebliebener Scrollstand des
+        ''' vorigen zeigte mitten in die Liste - die ersten Regler waren dann nicht zu sehen.
+        ''' Verzoegert, weil die Gruppen des neuen Werkzeugs erst nach diesem Durchlauf
+        ''' eingeblendet werden und der Inhalt bis dahin die alte Hoehe hat.</summary>
+        Private Sub ScrollAdjustmentsToTop()
+            Dispatcher.UIThread.Post(Sub()
+                                         Me.FindControl(Of ScrollViewer)("AdjustmentsScrollViewer")?.ScrollToHome()
+                                     End Sub, DispatcherPriority.Background)
         End Sub
 
         Private Function GetTextOverlayRect() As Avalonia.Rect

@@ -807,11 +807,18 @@
                                 <!-- Kein AcceptsReturn/Wrap: neue Zeile nur per Strg+Enter (Handler im
                                      Code-Behind), damit die Anzeige exakt den Zeilen des Renderers
                                      entspricht - der bricht nicht automatisch um. -->
+                                <!-- KEINE Bildlaufleisten: die Textbox ist nur Eingabefeld und liegt
+                                     unsichtbar ueber dem gezeichneten Text. Ist der Text breiter als
+                                     der Rahmen, blendete Avalonia sonst die waagerechte Leiste ein -
+                                     sichtbar als grauer Strich unter dem Auswahlrahmen, der beim
+                                     Verschieben und Groessenaendern mitwandert (Nutzer-Screenshot). -->
                                 <TextBox x:Name="TextOverlayEditor"
                                          Classes="overlay-editor"
                                          Text="{Binding AnnotationText}"
                                          AcceptsReturn="True"
                                          TextWrapping="NoWrap"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                                         ScrollViewer.VerticalScrollBarVisibility="Hidden"
                                          Background="Transparent"
                                          BorderThickness="0"
                                          Padding="0"
@@ -968,7 +975,8 @@
         <Border Grid.Row="1" Grid.Column="2" Classes="panel-right">
             <Grid RowDefinitions="*">
                 <Grid Grid.Row="0">
-                    <ScrollViewer HorizontalContentAlignment="Stretch"
+                    <ScrollViewer x:Name="AdjustmentsScrollViewer"
+                                  HorizontalContentAlignment="Stretch"
                                   VerticalScrollBarVisibility="Auto"
                                   AllowAutoHide="True"
                                   FocusAdorner="{x:Null}"
