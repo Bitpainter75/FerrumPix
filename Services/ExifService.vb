@@ -283,7 +283,9 @@ Namespace Services
                 For Each gpsDir In captureDirectories.OfType(Of GpsDirectory)()
                     Dim geoLoc = gpsDir.GetGeoLocation()
                     If geoLoc IsNot Nothing Then
-                        data.GPS = $"{geoLoc.Latitude:F5}°, {geoLoc.Longitude:F5}°"
+                        ' GetGeoLocation liefert seit MetadataExtractor 2.9 einen Nullable-Struct
+                        ' statt einer Klasse: der Zugriff geht jetzt ueber Value.
+                        data.GPS = $"{geoLoc.Value.Latitude:F5}°, {geoLoc.Value.Longitude:F5}°"
                         Exit For
                     End If
                 Next

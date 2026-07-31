@@ -229,7 +229,10 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent.Light}"/>
         <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent.Light}"/>
     </Style>
-    <Style Selector="Button.filter-btn.active icons|SvgIcon">
+    <!-- Nur das Symbol AUF dem Knopf, deshalb die eigene Klasse. Der Inhalt eines Flyouts haengt
+         im Logikbaum unter dem Knopf, der ihn oeffnet: ohne diese Einschraenkung faerbte die Regel
+         bei aktivem Filter JEDES Symbol im Aufklapper mit, auch die Bewertungssterne. -->
+    <Style Selector="Button.filter-btn.active icons|SvgIcon.filter-glyph">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
     <Style Selector="Button.ghost">

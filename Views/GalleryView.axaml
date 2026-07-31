@@ -234,7 +234,7 @@
                             </Flyout>
                         </Button.Flyout>
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/tag.svg"
-                                       Width="18" Height="18"/>
+                                       Classes="filter-glyph" Width="18" Height="18"/>
                     </Button>
 
                     <Button Grid.Column="2" Padding="10,7" Margin="0,0,8,0"
@@ -302,7 +302,7 @@
                                                      nicht das Schriftzeichen. -->
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating1Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -314,9 +314,9 @@
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating2Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -328,11 +328,11 @@
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating3Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -344,13 +344,13 @@
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating4Plus}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -362,15 +362,15 @@
                                             <Grid ColumnDefinitions="*,20">
                                                 <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
-                                                                   Classes="rating-star active" Width="15" Height="15"/>
+                                                                   Classes="rating-star" Width="15" Height="15"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRating5}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -516,7 +516,7 @@
                         </Button.Flyout>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/filter.svg"
-                                   Width="20" Height="20"/>
+                                   Classes="filter-glyph" Width="20" Height="20"/>
                             <TextBlock Text="{Binding FilterLabel}"/>
                         </StackPanel>
                     </Button>

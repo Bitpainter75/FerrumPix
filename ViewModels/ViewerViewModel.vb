@@ -122,6 +122,9 @@ Namespace ViewModels
                 ' Zustand nicht kurz für eine XMP/FPXMP-Begleitdatei weitergelten.
                 Me.RaisePropertyChanged(NameOf(ShowBitmapLoading))
                 Me.RaisePropertyChanged(NameOf(HasNoMedia))
+                ' Der Histogramm-Block der Info-Leiste haengt am Dateityp: er verschwindet beim
+                ' Wechsel auf ein Video und kommt beim naechsten Bild wieder.
+                Me.RaisePropertyChanged(NameOf(HasHistogram))
             End Set
         End Property
 
@@ -404,6 +407,15 @@ Namespace ViewModels
         Public ReadOnly Property IsSingleImage As Boolean
             Get
                 Return True
+            End Get
+        End Property
+
+        ''' <summary>Ein Histogramm gibt es nur zu einem BILD. Ein Video hat keines: es wuerde einen
+        ''' Standbild-Decode kosten, und ein leerer Kasten mit Ueberschrift sieht aus wie ein Fehler.
+        ''' Deshalb entfaellt fuer Videos beides - das Rechnen und das Anzeigen.</summary>
+        Public ReadOnly Property HasHistogram As Boolean
+            Get
+                Return Not VideoPreviewService.IsSupportedVideo(_currentImagePath)
             End Get
         End Property
 
@@ -2216,7 +2228,9 @@ Namespace ViewModels
             Dim token = System.Threading.Interlocked.Increment(_infoPanelLoadToken)
             Dim capturedWidth = _imageWidth
             Dim capturedHeight = _imageHeight
-            Dim loadHistogram = IsInfoSidebarVisible
+            ' Videos bleiben aussen vor: der Histogramm-Lauf dekodiert die Datei komplett neu, und
+            ' fuer ein Video gibt es dabei nichts zu holen.
+            Dim loadHistogram = IsInfoSidebarVisible AndAlso Not VideoPreviewService.IsSupportedVideo(imagePath)
 
             ' Eine vorhandene .fpxmp ist fuer RAW/PSD die portable Katalogquelle. Vor dem Laden der
             ' UI-Felder importieren, damit auch ein direkt im Viewer geoeffnetes Bild (ohne vorherigen
@@ -2316,6 +2330,8 @@ Namespace ViewModels
         ''' aufgerufen von ToggleInfoSidebarCommand beim Einblenden.
         Private Sub EnsureHistogramLoaded()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Fuer ein Video gibt es keines - auch nicht beim nachtraeglichen Einblenden der Leiste.
+            If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then Return
             ' Während eines Immich-Wechsels zeigt das Infopanel bereits den neuen Pseudo-Pfad,
             ' _currentImagePath verweist aber bis zum Downloadende noch auf die alte Temp-Datei.
             ' In dieser Zwischenzeit kein Histogramm nachladen, sonst erscheint wieder das alte Bild.

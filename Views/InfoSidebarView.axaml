@@ -120,9 +120,9 @@
                         <!-- Die Trennlinien gehoeren zu den Bloecken, die sie abgrenzen: sonst
                              stehen bei ausgeblendetem Histogramm zwei uebereinander. -->
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
-                                IsVisible="{Binding IsSingleImage}"/>
+                                IsVisible="{Binding HasHistogram}"/>
 
-                        <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
+                        <StackPanel Spacing="10" IsVisible="{Binding HasHistogram}">
                             <TextBlock Text="Histogramm" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <Border Height="92" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
                                 <Image Source="{Binding HistogramImage}"

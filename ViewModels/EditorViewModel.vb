@@ -13930,6 +13930,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Gehoert zum gemeinsamen Vertrag der Info-Leiste. Im Editor liegt nie ein Video
+        ''' auf der Buehne, die Antwort ist hier also immer Ja - die Eigenschaft muss es aber geben,
+        ''' sonst liefe die Bindung der Leiste in diesem Modus ins Leere.</summary>
+        Public ReadOnly Property HasHistogram As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
         Public ReadOnly Property Name As String
             Get
                 Return If(_exifInfo?.FileName, "")

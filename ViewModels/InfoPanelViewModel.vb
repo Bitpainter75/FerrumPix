@@ -180,7 +180,7 @@ Namespace ViewModels
 
         ''' <summary>Alles melden, was von Auswahl und Betriebsart abhaengt.</summary>
         Private Sub RaiseStateChanged()
-            For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasInfoContent),
+            For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasHistogram), NameOf(HasInfoContent),
                                       NameOf(Name), NameOf(IsInfoTabGeneral), NameOf(IsInfoTabExif),
                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc)}
                 Me.RaisePropertyChanged(propertyName)
@@ -198,6 +198,15 @@ Namespace ViewModels
         Public ReadOnly Property IsSingleImage As Boolean
             Get
                 Return Not _isSummary AndAlso Not String.IsNullOrEmpty(_path)
+            End Get
+        End Property
+
+        ''' <summary>Ein Histogramm gibt es nur zu einem BILD. Ein Video hat keines: es wuerde einen
+        ''' Standbild-Decode kosten, und ein leerer Kasten mit Ueberschrift sieht aus wie ein Fehler.
+        ''' Deshalb entfaellt fuer Videos beides - das Rechnen und das Anzeigen.</summary>
+        Public ReadOnly Property HasHistogram As Boolean
+            Get
+                Return IsSingleImage AndAlso Not VideoPreviewService.IsSupportedVideo(_path)
             End Get
         End Property
 
@@ -405,6 +414,9 @@ Namespace ViewModels
                          ' Lauf aus, und alle liefen gleichzeitig weiter - der Rechner stand auf
                          ' Anschlag. Die Pruefung des Merkmals stand damals erst NACH dem Decode
                          ' und verwarf nur noch das Ergebnis.
+                         ' Ein Video bekommt gar kein Histogramm - weder gerechnet noch gezeigt.
+                         If VideoPreviewService.IsSupportedVideo(path) Then Return
+
                          Thread.Sleep(HistogramDelayMs)
                          If token <> _loadToken OrElse _isSummary OrElse Not _isVisible Then Return
 
