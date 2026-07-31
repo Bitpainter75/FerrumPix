@@ -212,11 +212,16 @@
                              Dafuer braucht das Panel einen transparenten Hintergrund - ohne ihn ist
                              die freie Flaeche nicht treffbar. Doppelklick und Verlassen bleiben am
                              Bild: ein Doppelklick ins Leere soll nicht den Editor oeffnen. -->
+                        <!-- Auch der Doppelklick haengt am PANEL: der Zuschneide-Zug faengt den Zeiger
+                             dort, und ein am Bild angemeldeter DoubleTapped kam dadurch nie mehr an
+                             (Befund: Doppelklick oeffnete den Editor nicht mehr). Ob der Klick das
+                             BILD traf, prueft der Handler geometrisch - ins Leere oeffnet weiter nichts. -->
                         <Panel Background="Transparent"
                                PointerPressed="OnImagePointerPressed"
                                PointerMoved="OnImagePointerMoved"
                                PointerReleased="OnImagePointerReleased"
-                               PointerCaptureLost="OnImagePointerCaptureLost">
+                               PointerCaptureLost="OnImagePointerCaptureLost"
+                               DoubleTapped="OnImageDoubleTapped">
                             <Border Name="MainImageBackgroundBorder"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
@@ -232,8 +237,7 @@
                                        Stretch="Uniform"
                                        Margin="-1"
                                        RenderOptions.BitmapInterpolationMode="HighQuality"
-                                       PointerExited="OnImagePointerExited"
-                                       DoubleTapped="OnImageDoubleTapped" />
+                                       PointerExited="OnImagePointerExited" />
                             </Border>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"

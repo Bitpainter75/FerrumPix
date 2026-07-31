@@ -354,6 +354,14 @@ Namespace Services
         ''' Konfliktvorschau). FALSCH fuer den Editor: der laedt dasselbe Sidecar als Rezept und
         ''' dreht in seiner Render-Pipeline - beides zusammen ergaebe eine doppelte Drehung.
         Public Shared Function LoadOrientedAvaloniaBitmapAuto(filePath As String, Optional applySidecarRotation As Boolean = True) As Bitmap
+            If FpxService.IsFpx(filePath) Then
+                ' Ein Buendel ist kein dekodierbares Bild - das eingebettete Komposit zeigt den
+                ' bearbeiteten Stand (derselbe Weg wie Thumbnail und Betrachter).
+                Using stream = FpxService.ExtractComposite(filePath)
+                    If stream Is Nothing Then Return Nothing
+                    Return LoadOrientedAvaloniaBitmap(stream, 0)
+                End Using
+            End If
             If RawPreviewService.IsSupportedRaw(filePath) Then
                 Using stream = RawPreviewService.ExtractPreviewWithFallback(filePath)
                     If stream Is Nothing Then Return Nothing

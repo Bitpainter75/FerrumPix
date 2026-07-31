@@ -1980,12 +1980,13 @@
         <views:CollageDialogOverlayView Grid.Row="0"
                                         Grid.RowSpan="3"
                                         Grid.Column="0"
-                                        Grid.ColumnSpan="3"
+                                        Grid.ColumnSpan="4"
                                         ZIndex="180"/>
 
-        <!-- Schnellvorschau-Overlay (Mausrad-Klick) -->
+        <!-- Schnellvorschau-Overlay (Mausrad-Klick). ColumnSpan 4: die Info-Leiste in Spalte 3
+             gehoert mit abgedeckt. -->
         <Panel x:Name="PreviewOverlay"
-               Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3"
+               Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="4"
                IsVisible="False"
                Background="#D9000000"
                ZIndex="200">

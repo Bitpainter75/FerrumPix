@@ -135,7 +135,8 @@ Namespace Controls
             ' Thumbnail (Standbild) sichtbar.
             If item.IsVideoFile Then Return
             Try
-                ' Auto-Variante: erkennt RAW und PSD, die SkiaSharp nicht direkt dekodiert.
+                ' Auto-Variante: erkennt Buendel (Komposit), RAW und PSD, die SkiaSharp nicht
+                ' direkt dekodiert.
                 Dim bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(item.FilePath))
                 If overlay.IsVisible Then img.Source = bmp
             Catch

@@ -2757,14 +2757,26 @@ Namespace Services
         Public Shared Function TryRenderAnnotationsPatchSkOnCachedBase(source As SKBitmap, adj As ImageAdjustments, dirtyRect As SKRectI,
                                                                        ByRef clampedRect As SKRectI) As SKBitmap
             Dim ignored = AnnotationPatchCacheState.Unknown
-            Return TryRenderAnnotationsPatchSkOnCachedBase(source, adj, dirtyRect, clampedRect, ignored)
+            Dim ignoredDrawn = 0
+            Return TryRenderAnnotationsPatchSkOnCachedBase(source, adj, dirtyRect, clampedRect, ignored, ignoredDrawn)
         End Function
 
         Public Shared Function TryRenderAnnotationsPatchSkOnCachedBase(source As SKBitmap, adj As ImageAdjustments, dirtyRect As SKRectI,
                                                                        ByRef clampedRect As SKRectI,
                                                                        ByRef cacheState As AnnotationPatchCacheState) As SKBitmap
+            Dim ignoredDrawn = 0
+            Return TryRenderAnnotationsPatchSkOnCachedBase(source, adj, dirtyRect, clampedRect, cacheState, ignoredDrawn)
+        End Function
+
+        ''' <param name="drawnObjects">Messpunkt fuer den Kompositor-Umbau: wie viele Objekte dieser
+        ''' Patch WIRKLICH gezeichnet hat (nach Sichtbarkeits- und Clip-Pruefung).</param>
+        Public Shared Function TryRenderAnnotationsPatchSkOnCachedBase(source As SKBitmap, adj As ImageAdjustments, dirtyRect As SKRectI,
+                                                                       ByRef clampedRect As SKRectI,
+                                                                       ByRef cacheState As AnnotationPatchCacheState,
+                                                                       ByRef drawnObjects As Integer) As SKBitmap
             clampedRect = SKRectI.Empty
             cacheState = AnnotationPatchCacheState.Unknown
+            drawnObjects = 0
             If source Is Nothing OrElse dirtyRect.IsEmpty Then
                 cacheState = AnnotationPatchCacheState.Stale
                 Return Nothing
@@ -2800,8 +2812,8 @@ Namespace Services
                                           New SKRect(0, 0, rect.Width, rect.Height))
                     End If
                     If adj IsNot Nothing AndAlso adj.Annotations IsNot Nothing AndAlso adj.Annotations.Count > 0 Then
-                        DrawAnnotationsOnCanvas(canvas, adj, _baseCacheBitmap.Width, _baseCacheBitmap.Height,
-                                                rect.Left, rect.Top, rect.Width, rect.Height, adj.Annotations)
+                        drawnObjects = DrawAnnotationsOnCanvas(canvas, adj, _baseCacheBitmap.Width, _baseCacheBitmap.Height,
+                                                               rect.Left, rect.Top, rect.Width, rect.Height, adj.Annotations)
                     End If
                 End Using
                 clampedRect = rect
@@ -3033,10 +3045,47 @@ Namespace Services
             Public Property ObjectHeight As Double
         End Class
 
+        ''' <summary>Ergebnis des Skia-Kerns: die Bitmap (Eigentum geht an den Aufrufer) und die Lage
+        ''' des Objekts darin, in Bitmap-Pixeln. Grundlage fuer das Auswahl-Overlay (Avalonia-Fassung
+        ''' unten) UND fuer den Objekt-Bitmap-Cache des Kompositor-Umbaus - beide muessen dieselbe
+        ''' Zeichnung sehen, eine zweite Formel liefe auseinander.</summary>
+        Public NotInheritable Class AnnotationOverlaySkRender
+            Public Property Bitmap As SKBitmap
+            Public Property ObjectX As Integer
+            Public Property ObjectY As Integer
+            Public Property ObjectWidth As Integer
+            Public Property ObjectHeight As Integer
+        End Class
+
         ''' <summary>Zeichnet das selektierte Objekt so, wie es im gebackenen Bild aussieht - Silhouette
         ''' mit Schatten und Glühen, darüber das Objekt selbst. Die View legt das Bitmap deckungsgleich
         ''' über die Objekt-Border (siehe AnnotationOverlayRender).</summary>
         Public Shared Function RenderAnnotationOverlay(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer) As AnnotationOverlayRender
+            Dim sk = RenderAnnotationOverlaySk(annotation, pixelWidth, pixelHeight)
+            If sk Is Nothing Then Return Nothing
+            Using sk.Bitmap
+                Return New AnnotationOverlayRender With {
+                    .Image = ToAvaloniaBitmap(sk.Bitmap),
+                    .BitmapWidth = sk.Bitmap.Width,
+                    .BitmapHeight = sk.Bitmap.Height,
+                    .ObjectX = sk.ObjectX,
+                    .ObjectY = sk.ObjectY,
+                    .ObjectWidth = sk.ObjectWidth,
+                    .ObjectHeight = sk.ObjectHeight
+                }
+            End Using
+        End Function
+
+        ''' <summary>Der Skia-Kern: Objekt inkl. Effekten und eigenen Pixel-Anpassungen, Drehung bewusst
+        ''' NICHT eingerechnet (die legt der Anzeiger als Transformation darueber), Lage nicht enthalten.
+        ''' Genau die Eigenschaften, die den Objekt-Bitmap-Cache tragen.
+        '''
+        ''' <paramref name="maxRenderDimension"/>: Deckel der internen Aufloesung. Der GHOST nimmt die
+        ''' 720 (er wird ohnehin auf die Bildschirmgroesse gestreckt und bei jedem Effektregler-Tick
+        ''' neu gerendert); der Objekt-Bitmap-Cache rendert UNGEDECKELT in Szenenaufloesung - das
+        ''' komponierte Bild muss pixelgleich zur gebackenen Qualitaet sein.</summary>
+        Public Shared Function RenderAnnotationOverlaySk(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
+                                                         Optional maxRenderDimension As Single = MaxOverlayRenderDim) As AnnotationOverlaySkRender
             If annotation Is Nothing Then Return Nothing
 
             Dim renderAnnotation = annotation.Clone()
@@ -3046,7 +3095,8 @@ Namespace Services
             ' Bitmap-Pixeln bemessen, nicht in Display-Pixeln; die View rechnet sie über das zurückgegebene
             ' Objekt-Rechteck um, statt die Formel nachzubauen.
             Dim requestedLongest = CSng(Math.Max(1, Math.Max(pixelWidth, pixelHeight)))
-            Dim renderScale = If(requestedLongest > MaxOverlayRenderDim, MaxOverlayRenderDim / requestedLongest, 1.0F)
+            Dim cap = If(maxRenderDimension > 0, maxRenderDimension, MaxOverlayRenderDim)
+            Dim renderScale = If(requestedLongest > cap, cap / requestedLongest, 1.0F)
             Dim objW = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelWidth) * renderScale)))
             Dim objH = Math.Max(1, CInt(Math.Round(Math.Max(1, pixelHeight) * renderScale)))
 
@@ -3097,52 +3147,42 @@ Namespace Services
             Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
             Dim strokeWidth = Math.Max(1.0F, renderAnnotation.StrokeWidth)
 
-            Using bitmap = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
-                Using canvas = New SKCanvas(bitmap)
-                    canvas.Clear(SKColors.Transparent)
-                    ' Die DREHUNG legt die View über eine RenderTransform auf das Overlay (oben deshalb auf 0
-                    ' gesetzt) - die SPIEGELUNG aber nicht. Ohne sie zeigte das Overlay ein markiertes Objekt
-                    ' ungespiegelt an, und Spiegeln sah aus, als täte es gar nichts: das gebackene Bild, in
-                    ' dem die Spiegelung längst drin war, blendet das markierte Objekt ja aus.
-                    If renderAnnotation.FlipHorizontal OrElse renderAnnotation.FlipVertical Then
-                        canvas.Translate(rect.MidX, rect.MidY)
-                        canvas.Scale(If(renderAnnotation.FlipHorizontal, -1.0F, 1.0F),
-                                     If(renderAnnotation.FlipVertical, -1.0F, 1.0F))
-                        canvas.Translate(-rect.MidX, -rect.MidY)
-                    End If
-                    If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
-                        DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height)
-                    End If
-                    DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
-                End Using
-
-                If HasObjectAdjustments(renderAnnotation) Then
-                    Dim objectAdj = renderAnnotation.Adjustments.ExtractPixelAdjustments()
-                    objectAdj.SourceWidthPixels = width
-                    objectAdj.SourceHeightPixels = height
-                    Using processed = ProcessBitmapBase(bitmap, objectAdj)
-                        Return New AnnotationOverlayRender With {
-                            .Image = ToAvaloniaBitmap(processed),
-                            .BitmapWidth = width,
-                            .BitmapHeight = height,
-                            .ObjectX = leftPad,
-                            .ObjectY = topPad,
-                            .ObjectWidth = objW,
-                            .ObjectHeight = objH
-                        }
-                    End Using
+            ' KEIN Using: das Bitmap gehoert ab hier dem Aufrufer (Overlay-Fassung oder Cache).
+            Dim bitmap = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Using canvas = New SKCanvas(bitmap)
+                canvas.Clear(SKColors.Transparent)
+                ' Die DREHUNG legt die View über eine RenderTransform auf das Overlay (oben deshalb auf 0
+                ' gesetzt) - die SPIEGELUNG aber nicht. Ohne sie zeigte das Overlay ein markiertes Objekt
+                ' ungespiegelt an, und Spiegeln sah aus, als täte es gar nichts: das gebackene Bild, in
+                ' dem die Spiegelung längst drin war, blendet das markierte Objekt ja aus.
+                If renderAnnotation.FlipHorizontal OrElse renderAnnotation.FlipVertical Then
+                    canvas.Translate(rect.MidX, rect.MidY)
+                    canvas.Scale(If(renderAnnotation.FlipHorizontal, -1.0F, 1.0F),
+                                 If(renderAnnotation.FlipVertical, -1.0F, 1.0F))
+                    canvas.Translate(-rect.MidX, -rect.MidY)
                 End If
-
-                Return New AnnotationOverlayRender With {
-                    .Image = ToAvaloniaBitmap(bitmap),
-                    .BitmapWidth = width,
-                    .BitmapHeight = height,
-                    .ObjectX = leftPad,
-                    .ObjectY = topPad,
-                    .ObjectWidth = objW,
-                    .ObjectHeight = objH
-                }
+                If renderAnnotation.ShadowEnabled OrElse renderAnnotation.GlowEnabled Then
+                    DrawAnnotationEffects(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor, width, height)
+                End If
+                DrawAnnotationShape(canvas, kind, renderAnnotation, rect, x, y, maxWidth, fontSize, fill, stroke, strokeWidth, alphaFactor)
             End Using
+
+            If HasObjectAdjustments(renderAnnotation) Then
+                Dim objectAdj = renderAnnotation.Adjustments.ExtractPixelAdjustments()
+                objectAdj.SourceWidthPixels = width
+                objectAdj.SourceHeightPixels = height
+                Dim processed = ProcessBitmapBase(bitmap, objectAdj)
+                If Not Object.ReferenceEquals(processed, bitmap) Then bitmap.Dispose()
+                bitmap = processed
+            End If
+
+            Return New AnnotationOverlaySkRender With {
+                .Bitmap = bitmap,
+                .ObjectX = leftPad,
+                .ObjectY = topPad,
+                .ObjectWidth = objW,
+                .ObjectHeight = objH
+            }
         End Function
 
         ''' DrawWrappedText setzt die Grundlinie der ersten Zeile auf rect.Top + fontSize, die Glyphen-
@@ -7998,16 +8038,22 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        Friend Shared Sub DrawAnnotationsOnCanvas(canvas As SKCanvas, adj As ImageAdjustments,
+        ''' <summary>Zeichnet die Objekte in Z-Reihenfolge und gibt zurueck, WIE VIELE wirklich
+        ''' gezeichnet wurden (sichtbar, mit Geometrie, nicht vom Clip verworfen). Die Zahl ist der
+        ''' Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1): sie zeigt je
+        ''' Patch, wie viel Objektarbeit der Region-Weg heute leistet. Aufrufer duerfen den
+        ''' Rueckgabewert ignorieren.</summary>
+        Friend Shared Function DrawAnnotationsOnCanvas(canvas As SKCanvas, adj As ImageAdjustments,
                                                    sourceWidth As Integer, sourceHeight As Integer,
                                                    offsetX As Integer, offsetY As Integer,
                                                    layerWidth As Integer, layerHeight As Integer,
-                                                   Optional renderAnnotations As IReadOnlyList(Of ImageAnnotation) = Nothing)
-            If canvas Is Nothing OrElse adj Is Nothing Then Return
+                                                   Optional renderAnnotations As IReadOnlyList(Of ImageAnnotation) = Nothing) As Integer
+            If canvas Is Nothing OrElse adj Is Nothing Then Return 0
             Dim annotations = If(renderAnnotations, adj.Annotations)
-            If annotations Is Nothing OrElse annotations.Count = 0 Then Return
-            If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse layerWidth <= 0 OrElse layerHeight <= 0 Then Return
+            If annotations Is Nothing OrElse annotations.Count = 0 Then Return 0
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse layerWidth <= 0 OrElse layerHeight <= 0 Then Return 0
 
+            Dim drawn = 0
             For Each annotation In annotations
                 ' Sichtbarkeit IMMER über den Chokepoint: er verundet das eigene IsVisible mit dem
                 ' Schalter der Gruppe, zu der das Objekt gehört.
@@ -8026,6 +8072,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                               eigenRect.Right - offsetX, eigenRect.Bottom - offsetY)
                     If canvas.QuickReject(clipTest) Then Continue For
                 End If
+                drawn += 1
                 Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
 
                 If IsPaintKind(kind) Then
@@ -8097,7 +8144,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     canvas.Restore()
                 End If
             Next
-        End Sub
+            Return drawn
+        End Function
 
         ''' <summary>Zeichnet ein Objekt auf eine eigene transparente Ebene, laesst - falls vorhanden - die
         ''' Pixel-Anpassungen des Objekts darauf laufen und komponiert sie mit dem angegebenen Mischmodus
@@ -8228,7 +8276,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' nahm der direkte Weg jedes Objekt ohne Anpassungen und ohne Mischmodus - also die
         ''' allermeisten -, und der zeichnet unverzerrt: die Verzerrung stand im Objekt, kam im Bild
         ''' aber nie an.</summary>
-        Private Shared Function HasWarp(annotation As ImageAnnotation) As Boolean
+        ''' Friend statt Private: der Kompositor-Grenzschnitt (OverlaySceneRenderer) braucht dieselbe
+        ''' Frage - ein verzerrtes Objekt bleibt im gebackenen Block, weil der Objekt-Bitmap-Cache
+        ''' die Verzerrung nicht zeichnet.
+        Friend Shared Function HasWarp(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
             If annotation.OwnWarp IsNot Nothing AndAlso Not annotation.OwnWarp.IsEmpty Then Return True
             Return annotation.Warp IsNot Nothing AndAlso Not annotation.Warp.IsEmpty

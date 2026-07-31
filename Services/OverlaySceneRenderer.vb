@@ -105,5 +105,120 @@ Namespace Services
             ' bereiche begrenzt. Die Versatz-Frage wird spaeter BEGRENZT/gezielt geloest.
             Return (requiresComposite, rect)
         End Function
+
+        ' ===================== Kompositor (OFFENE_PUNKTE Abschnitt 2, Stufe 3) =====================
+
+        ''' <summary>Die EINE Stelle, die den gebackenen Block vom Kompositor trennt (Vorgriff auf
+        ''' Stufe 5 des Umbaus): Objekte AB diesem Stapel-Index zeichnet der Kompositor aus dem
+        ''' Objekt-Bitmap-Cache ueber die Szene, alles darunter bleibt in der Szene gebacken.
+        '''
+        ''' Gebacken bleiben MUSS, was das Komposit unter sich braucht oder was der Cache nicht
+        ''' zeichnet - und wegen der Z-REIHENFOLGE zwingend auch ALLES DARUNTER, als
+        ''' zusammenhaengender Block am unteren Stapelende. Sonst zeichnete der Kompositor ein
+        ''' tiefer liegendes Objekt OBEN auf ein gebacken gemischtes:
+        ''' - Mischmodus (braucht das fertige Komposit unter sich),
+        ''' - Pinsel-/Radierer-Ebenen (Striche im Bildraum, keine freistehende Objektflaeche),
+        ''' - verzerrte Objekte (der Cache zeichnet die Verzerrung nicht),
+        ''' - Objekte, ueber denen eine eingehaengte Korrektur liegt (sie wirkt auf das Komposit).</summary>
+        Public Shared Function ComputeCompositorStartIndex(adj As ImageAdjustments) As Integer
+            If adj Is Nothing Then Return 0
+            Return ComputeCompositorStartIndex(adj.Annotations, adj.MaskedAdjustmentLayers,
+                                               Function(a) adj.IsAnnotationRenderVisible(a))
+        End Function
+
+        ''' <summary>Dieselbe Grenze auf den LEBENDEN Listen des Editors - die Sichtbarkeitsfrage
+        ''' kommt als Funktion herein, weil die Gruppensichtbarkeit beim Rezept-Klon in
+        ''' ImageAdjustments steckt, im Editor aber in dessen eigener Gruppenliste.</summary>
+        Public Shared Function ComputeCompositorStartIndex(annotations As IReadOnlyList(Of ImageAnnotation),
+                                                           maskedLayers As IEnumerable(Of MaskedAdjustmentLayer),
+                                                           isRenderVisible As Func(Of ImageAnnotation, Boolean)) As Integer
+            If annotations Is Nothing OrElse annotations.Count = 0 Then Return 0
+            Dim stackedAboveIds As New HashSet(Of String)(StringComparer.Ordinal)
+            If maskedLayers IsNot Nothing Then
+                For Each layer In maskedLayers
+                    If layer IsNot Nothing AndAlso Not String.IsNullOrEmpty(layer.StackAboveAnnotationId) Then
+                        stackedAboveIds.Add(layer.StackAboveAnnotationId)
+                    End If
+                Next
+            End If
+
+            Dim startIndex = 0
+            For i = 0 To annotations.Count - 1
+                Dim annotation = annotations(i)
+                If annotation Is Nothing Then Continue For
+                ' UNSICHTBARE Objekte erzwingen nichts: sie werden weder gebacken noch komponiert.
+                If isRenderVisible IsNot Nothing AndAlso Not isRenderVisible(annotation) Then Continue For
+                Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
+                Dim mustBake = kind = "brush" OrElse kind = "eraser" OrElse
+                               IsNonNormalBlend(annotation) OrElse
+                               ImageProcessor.HasWarp(annotation) OrElse
+                               stackedAboveIds.Contains(If(annotation.Id, ""))
+                If mustBake Then startIndex = i + 1
+            Next
+            Return startIndex
+        End Function
+
+        ''' <summary>Zeichnet die Kompositor-Objekte (ab <see cref="ComputeCompositorStartIndex"/>)
+        ''' aus dem Objekt-Bitmap-Cache ueber die Szene. Die PLATZIERUNG ist dieselbe wie beim
+        ''' Backen: TransformAnnotationForGeometry liefert das Objekt im Szenenraum (Schriftgrad und
+        ''' Konturbreite bereits skaliert), ComputeAnnotationRect loest den Anker auf, die Drehung
+        ''' liegt als Matrix um die Rechteckmitte (die Spiegelung steckt in der Cache-Bitmap, wie
+        ''' beim Ghost). Rueckgabe: wie viele Objekte gezeichnet wurden (Messpunkt).
+        '''
+        ''' NUR auf dem UI-Thread aufrufen - der Cache entsorgt Bitmaps bei Invalidierung sofort,
+        ''' und genau dieser Thread ist der einzige, der invalidiert (Vertrag des Caches).</summary>
+        Public Shared Function DrawCachedAnnotations(canvas As SKCanvas, adj As ImageAdjustments,
+                                                     sceneWidth As Integer, sceneHeight As Integer,
+                                                     cache As AnnotationBitmapCache) As Integer
+            If canvas Is Nothing OrElse adj Is Nothing OrElse cache Is Nothing Then Return 0
+            If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return 0
+            If sceneWidth <= 0 OrElse sceneHeight <= 0 Then Return 0
+
+            Dim drawn = 0
+            Dim startIndex = ComputeCompositorStartIndex(adj)
+            For i = startIndex To adj.Annotations.Count - 1
+                Dim annotation = adj.Annotations(i)
+                If annotation Is Nothing OrElse Not IsOverlayAnnotation(annotation) Then Continue For
+                If Not adj.IsAnnotationRenderVisible(annotation) Then Continue For
+
+                Dim renderAnnotation = ImageProcessor.TransformAnnotationForGeometry(annotation, adj, sceneWidth, sceneHeight)
+                If renderAnnotation Is Nothing Then Continue For
+                Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
+                ' Modul-Funktion (gleiches Namespace): loest auch den Anker eines Wasserzeichens auf.
+                Dim rect = ComputeAnnotationRect(sceneWidth, sceneHeight, kind, renderAnnotation)
+                If rect.Width <= 0 OrElse rect.Height <= 0 Then Continue For
+
+                Dim targetW = Math.Max(1, CInt(Math.Round(rect.Width)))
+                Dim targetH = Math.Max(1, CInt(Math.Round(rect.Height)))
+                Dim entry = cache.GetOrRender(renderAnnotation, targetW, targetH)
+                If entry Is Nothing OrElse entry.Image Is Nothing Then Continue For
+                If entry.ObjectWidth <= 0 OrElse entry.ObjectHeight <= 0 Then Continue For
+
+                ' Das Bild so legen, dass seine OBJEKTflaeche exakt auf dem Rechteck landet - die
+                ' Effektraender (Schatten/Gluehen) liegen aussen herum und ragen entsprechend
+                ' darueber hinaus, wie beim gebackenen Bild.
+                Dim scaleX = rect.Width / CSng(entry.ObjectWidth)
+                Dim scaleY = rect.Height / CSng(entry.ObjectHeight)
+                Dim dest = New SKRect(rect.Left - entry.ObjectX * scaleX,
+                                      rect.Top - entry.ObjectY * scaleY,
+                                      rect.Left - entry.ObjectX * scaleX + entry.Image.Width * scaleX,
+                                      rect.Top - entry.ObjectY * scaleY + entry.Image.Height * scaleY)
+
+                canvas.Save()
+                If Math.Abs(renderAnnotation.RotationDegrees) > 0.01F Then
+                    canvas.RotateDegrees(renderAnnotation.RotationDegrees, rect.MidX, rect.MidY)
+                End If
+                ' LINEAR abtasten: ohne Sampling zeichnet Skia das gedrehte Bild mit
+                ' Naechster-Nachbar-Abtastung, und jede Kante wird zur Treppe
+                ' (Nutzer-Screenshot 2026-07-31). Mit linearer Abtastung entspricht die Qualitaet
+                ' dem Ghost von frueher; unverdreht ist die Abbildung ohnehin 1:1.
+                Using paint As New SKPaint With {.IsAntialias = True}
+                    canvas.DrawImage(entry.Image, dest, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), paint)
+                End Using
+                canvas.Restore()
+                drawn += 1
+            Next
+            Return drawn
+        End Function
     End Class
 End Namespace

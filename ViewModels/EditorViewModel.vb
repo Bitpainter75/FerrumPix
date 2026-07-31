@@ -76,9 +76,7 @@ Namespace ViewModels
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
         Private _isDocumentLoading As Boolean = False
-        Private _selectedAnnotationOverlayImage As Bitmap
         Private _retouchLivePatchImage As Bitmap
-        Private _selectedAnnotationOverlayMetrics As ImageProcessor.AnnotationOverlayRender
         Private _currentTool As EditorTool = EditorTool.Crop
         Private _maskMode As String = "Brush"
         Private _brightness As Double = 0
@@ -705,8 +703,6 @@ Namespace ViewModels
         ' geblittet werden. Ein neues 40-MB-Bitmap pro Update (fruehere Vollkonvertierung) erzeugte
         ' GC-/Textur-Upload-Stalls, die Maus-Events schluckten - Regler sprangen grob.
         Private _sceneDisplay As WriteableBitmap = Nothing
-        ' Sequenz fuer asynchrone Ghost-Renders (Drag-Start): nur das juengste Ergebnis zaehlt.
-        Private _ghostRenderSeq As Long = 0
 
         ' STUFE 3 (Zoom-Detail): Bei Zoom ueber Szenen-1:1 wird asynchron EINE hochaufgeloeste
         ' Detail-Szene gerendert (voller Renderer auf separat geladener Quelle, Deckel
@@ -763,7 +759,7 @@ Namespace ViewModels
         ''' <summary>ZUSÄTZLICH markierte Objekte neben dem Anker (`_selectedAnnotationIndex`).
         ''' Bewusst als REFERENZEN und nicht als Indizes: Umsortieren, Anlegen und Löschen verschieben
         ''' Indizes laufend, Referenzen überleben das. Der Anker steht NICHT in dieser Liste - er bleibt
-        ''' der Index, mit dem alle bestehenden Pfade (Eigenschaften-Panel, Ghost, Anpassungsmodus)
+        ''' der Index, mit dem alle bestehenden Pfade (Eigenschaften-Panel, Anpassungsmodus)
         ''' rechnen; die Liste beschreibt nur die Erweiterung auf eine Mehrfachauswahl.</summary>
         Private ReadOnly _extraSelectedAnnotations As New List(Of ImageAnnotation)()
         ' Verfolgt den Raster-Paint-Eintrag, an den die aktuell laufende Pinsel-/Radiergummi-"Sitzung"
@@ -835,10 +831,6 @@ Namespace ViewModels
         Private _retouchLivePatchHeightPercent As Double = 0
         Private _annotationDirtyRect As SKRectI = SKRectI.Empty
         Private _annotationPlacementEditActive As Boolean = False
-        Private _annotationPlacementStartDirtyRect As SKRectI = SKRectI.Empty
-        ''' Ob die Startregion des laufenden Zuges bereits ohne das Objekt neu gerendert wurde
-        ''' (das Objekt haengt dann nur noch am Ghost) - siehe ClearPlacementStartRegionFromScene.
-        Private _placementStartRegionCleared As Boolean = False
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
         ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
@@ -1574,57 +1566,6 @@ Namespace ViewModels
         Public ReadOnly Property IsWatermarkImageSource As Boolean
             Get
                 Return EffectiveAnnotationKind = "Watermark" AndAlso Not String.IsNullOrWhiteSpace(_watermarkImagePath)
-            End Get
-        End Property
-
-        ''' <summary>STUFE 2: Die Szene enthaelt IMMER alle Objekte. Das Selektions-Overlay ist nur noch
-        ''' der transiente Drag-GHOST waehrend eines Placement-Edits (die Szene blendet das aktiv
-        ''' bearbeitete Objekt dann aus, siehe GetSceneAdjustments). Ausserhalb des Ziehens wuerde das
-        ''' Overlay das bereits in der Szene gerenderte Objekt doppeln (Schatten doppelt deckend usw.).</summary>
-        ''' Ghost nach Drag-Ende STEHEN LASSEN, bis der Szene-Render mit dem Objekt gelandet ist
-        ''' (Region-Renders brauchen je nach Effekten 300-700 ms) - sonst fehlt das Objekt für
-        ''' diese Spanne im Bild: das "Flackern nach dem Verschieben".
-        Private _placementGhostLinger As Boolean = False
-
-        ''' <summary>Der Ghost darf waehrend eines Zuges erst sichtbar werden, wenn die Szene ihre Kopie
-        ''' des Objekts an der Startstelle WIRKLICH verloren hat (_placementStartRegionCleared). Beide
-        ''' Seiten haengen damit an EINEM Zustand: entweder zeichnet die Szene das Objekt oder der Ghost -
-        ''' nie beide. Die frueheren Doppelbilder ("Kopie an der alten Stelle") kamen genau daher, dass
-        ''' der Ghost sofort erschien und die Szene ihre Kopie erst nach einem Hintergrund-Render verlor.</summary>
-        Public ReadOnly Property ShowSelectedSvgOverlay As Boolean
-            Get
-                Return _selectedAnnotationOverlayImage IsNot Nothing AndAlso
-                       Not HasMultiAnnotationSelection AndAlso
-                       ((_annotationPlacementEditActive AndAlso _placementStartRegionCleared) OrElse _placementGhostLinger)
-            End Get
-        End Property
-
-        ''' Vom Szene-Worker/Vollrender aufgerufen, sobald frischer Szeneninhalt sichtbar ist:
-        ''' der nachlaufende Ghost darf jetzt weg.
-        Private Sub ClearPlacementGhostLinger()
-            If Not _placementGhostLinger Then Return
-            _placementGhostLinger = False
-            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-        End Sub
-
-        Public Property SelectedAnnotationOverlayImage As Bitmap
-            Get
-                Return _selectedAnnotationOverlayImage
-            End Get
-            Set(value As Bitmap)
-                Dim previous = _selectedAnnotationOverlayImage
-                Me.RaiseAndSetIfChanged(_selectedAnnotationOverlayImage, value)
-                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
-            End Set
-        End Property
-
-        ''' Lage des Objekts innerhalb von SelectedAnnotationOverlayImage (Bitmap-Pixel). Das Bitmap ist um
-        ''' die Schatten-/Glow-Ränder größer als das Objekt; die View braucht dieses Rechteck, um das Bitmap
-        ''' deckungsgleich mit dem gebackenen Bild über die Objekt-Border zu legen.
-        Public ReadOnly Property SelectedAnnotationOverlayMetrics As ImageProcessor.AnnotationOverlayRender
-            Get
-                Return _selectedAnnotationOverlayMetrics
             End Get
         End Property
 
@@ -2366,7 +2307,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationXLabel))
                 Me.RaisePropertyChanged(NameOf(AnnotationYLabel))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
-                UpdateSelectedAnnotationOverlayPreview()
                 RaiseWatermarkUiChanged()
                 UpdateShapeIconStates()
                 ' Ein anderes (oder gar kein) Objekt heißt: die Regler bedienen ein anderes Ziel.
@@ -3390,13 +3330,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property PositionText As String
-            Get
-                If _folderPaths.Count = 0 Then Return ""
-                Return $"{_currentIndex + 1} / {_folderPaths.Count}"
-            End Get
-        End Property
-
         ''' <summary>Bei einem neuen, nie gespeicherten Bild bleibt der Filmstreifen AUS: er zeigte
         ''' nur die eigene Temp-Datei („1 / 1"), und jede Navigation darin verwürfe das Dokument.
         ''' Die Einstellung des Nutzers wird dabei nicht verändert - sie greift wieder, sobald ein
@@ -3841,7 +3774,6 @@ Namespace ViewModels
                 End If
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
-                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
                 RaiseToolContextProperties()
                 ' Werkzeugwechsel kann das Ziel der Regler umschalten (Objekt <-> Bild).
                 RefreshObjectAdjustMode()
@@ -3856,22 +3788,21 @@ Namespace ViewModels
                 ' schon beim Werkzeugwechsel asynchron vorwaermen - erst beim ersten Spot gebaut,
                 ' war ein kurzer Zug vorbei, bevor sie landeten (Aenderung erst nach dem Commit
                 ' sichtbar).
-                ' Zurück ins AUSWAHL-Werkzeug mit bestehender Auswahl oder Maske: dann will man sie
-                ' benutzen, nicht sofort eine neue aufziehen - also den Untermodus VERSCHIEBEN
-                ' aktivieren. Ohne aktive Auswahl bleibt der zuletzt gewählte
-                ' Modus stehen, und wer innerhalb des Werkzeugs den Modus umschaltet, wird nicht
-                ' zurückgeworfen - der Zweig läuft nur beim WECHSEL in das Werkzeug.
+                ' Ins AUSWAHL-Werkzeug: immer mit denselben Vorgaben starten - Untermodus
+                ' VERSCHIEBEN und Verknüpfung NEUE AUSWAHL. Wer innerhalb des Werkzeugs den Modus
+                ' umschaltet, wird nicht zurückgeworfen - der Zweig läuft nur beim WECHSEL in das
+                ' Werkzeug.
                 If value = EditorTool.Selection AndAlso previousTool <> EditorTool.Selection Then
-                    ' Der Pinsel wohnt im MASKEN-Werkzeug. Käme man von dort mit "Brush" zurück, stünde
-                    ' das Auswahlwerkzeug in einem Modus, den es gar nicht mehr anbietet.
-                    If String.Equals(_selectionMode, "Brush", StringComparison.Ordinal) Then SelectionMode = "Rectangle"
-                    If _hasActiveSelection Then SelectionMode = "Move"
+                    SelectionMode = "Move"
+                    SelectionCombineMode = "New"
                 End If
-                ' Ins Masken-Werkzeug: den gewählten Untermodus wirklich scharfstellen. MaskMode wirkt
-                ' sonst nur beim Umschalten, und beim ersten Betreten stünde die Auswahl noch auf
-                ' Rechteck - der Pinsel malte dann nicht.
-                If value = EditorTool.Mask AndAlso previousTool <> EditorTool.Mask AndAlso IsMaskBrushMode Then
-                    SelectionMode = "Brush"
+                ' Ins Masken-Werkzeug: dieselben Vorgaben. MaskMode stellt den geteilten
+                ' Auswahl-Untermodus über seinen Setter scharf; steht er schon auf Verschieben,
+                ' kehrt der Setter früh um, deshalb wird SelectionMode zusätzlich direkt gesetzt.
+                If value = EditorTool.Mask AndAlso previousTool <> EditorTool.Mask Then
+                    MaskMode = "Verschieben"
+                    SelectionMode = "Move"
+                    SelectionCombineMode = "New"
                 End If
                 If value = EditorTool.Retouch AndAlso previousTool <> EditorTool.Retouch AndAlso Not IsRepairMode Then
                     BeginRetouchLiveBuffersAsync()
@@ -8157,7 +8088,14 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Dim normalized = NormalizeAnnotationBlendMode(value)
-                If String.Equals(_annotationBlendMode, normalized, StringComparison.Ordinal) Then Return
+                ' Weitergabe auch, wenn der ANKER schon stimmt: in einer Mehrfachauswahl koennen
+                ' andere Mitglieder abweichen (Gruppe mit gemischtem Zustand). Ohne diese Pruefung
+                ' liess sich eine Gruppe nie wieder komplett auf einen Wert bringen, sobald der
+                ' Anker ihn bereits trug - der Setter kehrte als "keine Aenderung" um.
+                Dim spreadNeeded = HasMultiAnnotationSelection AndAlso
+                                   SelectedAnnotations.Any(Function(o) o IsNot Nothing AndAlso
+                                       Not String.Equals(NormalizeAnnotationBlendMode(o.BlendMode), normalized, StringComparison.Ordinal))
+                If String.Equals(_annotationBlendMode, normalized, StringComparison.Ordinal) AndAlso Not spreadNeeded Then Return
                 Dim wasBakedOnly = HasSelectedAnnotation AndAlso
                                    Not String.Equals(If(_annotationBlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
                 Dim willBeBakedOnly = HasSelectedAnnotation AndAlso
@@ -8166,7 +8104,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
                 Me.RaisePropertyChanged(NameOf(UsesAnnotationBlendMode))
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
-                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
                 SyncSelectedAnnotation()
                 If wasBakedOnly <> willBeBakedOnly Then RequestOverlayStateNotify()
             End Set
@@ -8197,12 +8134,31 @@ Namespace ViewModels
 
         Public Property SelectedAnnotationBlendModeOption As AnnotationBlendModeOption
             Get
+                ' Gemischte Mehrfachauswahl: keinen Wert vortaeuschen. Die Auswahlbox meldet ein
+                ' erneutes Waehlen des angezeigten Eintrags nicht - stuende hier der Ankerwert,
+                ' liesse sich genau dieser Wert nie auf alle Mitglieder anwenden.
+                If HasMultiAnnotationSelection AndAlso SelectedAnnotationsHaveMixedBlend() Then Return Nothing
                 Return _annotationBlendModeOptions.FirstOrDefault(Function(o) String.Equals(o.Key, _annotationBlendMode, StringComparison.Ordinal))
             End Get
             Set(value As AnnotationBlendModeOption)
-                AnnotationBlendMode = If(value?.Key, "Normal")
+                If value Is Nothing Then Return
+                AnnotationBlendMode = value.Key
             End Set
         End Property
+
+        Private Function SelectedAnnotationsHaveMixedBlend() As Boolean
+            Dim first As String = Nothing
+            For Each a In SelectedAnnotations
+                If a Is Nothing Then Continue For
+                Dim v = NormalizeAnnotationBlendMode(a.BlendMode)
+                If first Is Nothing Then
+                    first = v
+                ElseIf Not String.Equals(first, v, StringComparison.Ordinal) Then
+                    Return True
+                End If
+            Next
+            Return False
+        End Function
 
         ''' <summary>Sichtbarkeit der Hintergrund-Ebene (Basisbild) im Ebenen-Panel. True = sichtbar. Das
         ''' Auge in der Hintergrundzeile bindet hierauf; Umschalten läuft über ToggleBackgroundVisibilityCommand.</summary>
@@ -8277,7 +8233,7 @@ Namespace ViewModels
                 ' Der Begradigen-Regler zeigt bei markiertem Objekt dessen Drehung - mitziehen, damit
                 ' er nach den 90°-Knöpfen und beim freien Drehen am Anfasser aktuell bleibt.
                 Me.RaisePropertyChanged(NameOf(StraightenDegrees))
-                SyncSelectedAnnotation(refreshOverlay:=False)
+                SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -8295,9 +8251,7 @@ Namespace ViewModels
                     Return
                 End If
                 Me.RaiseAndSetIfChanged(_annotationFlipH, value)
-                ' refreshOverlay:=True - anders als die Drehung (die legt die View als Transformation über das
-                ' Overlay) muss die Spiegelung in das Overlay-Bitmap hineingerendert werden.
-                SyncSelectedAnnotation(refreshOverlay:=True)
+                SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -8310,9 +8264,7 @@ Namespace ViewModels
             Set(value As Boolean)
                 Dim turnedOn = value AndAlso Not _annotationLockAspect
                 Me.RaiseAndSetIfChanged(_annotationLockAspect, value)
-                ' refreshOverlay:=True - das Flag steuert auch das Zeichnen (ohne Sperre wird das
-                ' Bild auf die Box gestreckt statt uniform eingepasst), nicht nur das Ziehen.
-                SyncSelectedAnnotation(refreshOverlay:=True)
+                SyncSelectedAnnotation()
                 If turnedOn Then SnapAnnotationBoxToImageAspect()
             End Set
         End Property
@@ -8373,7 +8325,7 @@ Namespace ViewModels
                     Return
                 End If
                 Me.RaiseAndSetIfChanged(_annotationFlipV, value)
-                SyncSelectedAnnotation(refreshOverlay:=True)
+                SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -8430,7 +8382,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_annotationXPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationXSliderValue))
-                SyncSelectedAnnotation(refreshOverlay:=False)
+                SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -8450,7 +8402,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_annotationYPercent, normalized)
                 Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationYSliderValue))
-                SyncSelectedAnnotation(refreshOverlay:=False)
+                SyncSelectedAnnotation()
             End Set
         End Property
 
@@ -12883,7 +12835,7 @@ Namespace ViewModels
             RaiseAnnotationPositionControlProperties()
             Dim sizeChanged = Math.Abs(previousWidth - _annotationWidthPercent) > 0.0001 OrElse
                               Math.Abs(previousHeight - _annotationHeightPercent) > 0.0001
-            SyncSelectedAnnotation(refreshOverlay:=sizeChanged)
+            SyncSelectedAnnotation()
         End Sub
 
         ' ===================== Transformationen der Mehrfachauswahl =====================
@@ -13146,7 +13098,7 @@ Namespace ViewModels
                     a.FontSizePixels = CSng(Math.Max(1.0, a.FontSizePixels * fontScale))
                 End If
             Next
-            AfterGroupTransform(refreshOverlay:=scales, beforeRect:=before)
+            AfterGroupTransform(beforeRect:=before)
         End Sub
 
         ''' <summary>Dreht die Mehrfachauswahl um die Mitte der gemeinsamen Box: die Mittelpunkte wandern
@@ -13187,7 +13139,7 @@ Namespace ViewModels
                 display = ((display + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
                 a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(NormalizeAnnotationKind(a.Kind), display))
             Next
-            AfterGroupTransform(refreshOverlay:=True, beforeRect:=before)
+            AfterGroupTransform(beforeRect:=before)
         End Sub
 
         ''' <summary>Spiegelt die Mehrfachauswahl an der Mittelachse der gemeinsamen Box: die Objekte
@@ -13215,14 +13167,14 @@ Namespace ViewModels
                     a.FlipVertical = Not a.FlipVertical
                 End If
             Next
-            AfterGroupTransform(refreshOverlay:=True, beforeRect:=before)
+            AfterGroupTransform(beforeRect:=before)
         End Sub
 
         ''' <summary>Nachbereitung jeder Gruppen-Transformation: Anker zurück in die Editor-Puffer (das
         ''' Eigenschaften-Panel zeigt weiter den Anker), Szene nachziehen. Das Dirty-Rect ist die
         ''' Vereinigung aus ALTER und NEUER Lage aller Mitglieder - die alte Lage steckt bereits in
         ''' _annotationDirtyRect, wenn der Zug läuft; hier kommt die neue dazu.</summary>
-        Private Sub AfterGroupTransform(refreshOverlay As Boolean, Optional beforeRect As SKRectI = Nothing)
+        Private Sub AfterGroupTransform(Optional beforeRect As SKRectI = Nothing)
             ' ALTE und NEUE Lage: die verlassene Stelle muss mit neu gezeichnet werden, sonst bleiben
             ' dort Reste stehen (der Region-Renderer zeichnet nur, was im Rect liegt).
             Dim dirty = ImageProcessor.UnionRects(_annotationDirtyRect, beforeRect)
@@ -13241,12 +13193,11 @@ Namespace ViewModels
             Finally
                 _isLoadingAnnotation = False
             End Try
-            If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
-            ' AUCH waehrend des Zuges rendern: bei einer Mehrfachauswahl gibt es keinen Ghost, der die
-            ' Live-Darstellung uebernimmt (siehe BeginSelectedAnnotationPlacementEdit) - ohne diesen
-            ' Render sieht man Drehen und Groessenaendern erst beim Loslassen. Der Region-Worker
-            ' koalesziert die Anforderungen von selbst, ein Zug erzeugt also keine Renderflut.
+            ' AUCH waehrend des Zuges rendern - ohne diesen Render sieht man Drehen und
+            ' Groessenaendern einer Mehrfachauswahl im gebackenen Block erst beim Loslassen. Der
+            ' Region-Worker koalesziert die Anforderungen von selbst, ein Zug erzeugt also keine
+            ' Renderflut; faellt die Auswahl in den Kompositor, ist es ohnehin nur ein Blit.
             RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
         End Sub
 
@@ -15549,7 +15500,7 @@ Namespace ViewModels
             ' Wie im Speichern-Pfad: laufenden Strich und die Eigenschaften des ausgewählten
             ' Objekts erst ins Modell übernehmen, sonst fehlen sie im Druck.
             If _retouchStrokeActive Then CommitRetouchStroke()
-            If HasSelectedAnnotation Then SyncSelectedAnnotation(refreshOverlay:=False)
+            If HasSelectedAnnotation Then SyncSelectedAnnotation()
             CommitObjectAdjustModeToModel()
 
             Dim adj = GetCurrentAdjustments()
@@ -16091,7 +16042,6 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(assetStem) Then Await LoadImmichMetaAsync(assetStem)
             End If
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
-            Me.RaisePropertyChanged(NameOf(PositionText))
             MarkCurrentFilmstripItem()
             Try
                 ' PreparePreviewSource leitet CurrentImage bereits aus dem Arbeitsbild ab - ein
@@ -16422,7 +16372,6 @@ Namespace ViewModels
                     _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
                     If _currentIndex < 0 Then _currentIndex = 0
                     Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
-                    Me.RaisePropertyChanged(NameOf(PositionText))
                     MarkCurrentFilmstripItem()
                     Dim itemsSnapshotAllPaths = FilmstripItems.ToList()
                     Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshotAllPaths), DispatcherPriority.Background)
@@ -16442,7 +16391,6 @@ Namespace ViewModels
                 _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
                 If _currentIndex < 0 Then _currentIndex = 0
                 Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
-                Me.RaisePropertyChanged(NameOf(PositionText))
                 MarkCurrentFilmstripItem()
                 Dim itemsSnapshot = FilmstripItems.ToList()
                 Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
@@ -16645,37 +16593,6 @@ Namespace ViewModels
             Return k = "Text" OrElse k = "Watermark"
         End Function
 
-        ''' <summary>
-        ''' Die Glyphen eines selektierten Text-/Wasserzeichenobjekts kommen aus dem gerenderten Overlay,
-        ''' nicht aus der Live-Textbox. Die Textbox bleibt darüber liegen, zeichnet aber nichts mehr - sie
-        ''' liefert nur Eingabe, Schreibmarke und Textauswahl.
-        '''
-        ''' Der Grund: Avalonia und Skia setzen Text nicht gleich. Avalonia kann Glyphen weder umranden noch
-        ''' mit einem Verlauf füllen (Foreground ist eine einzelne Farbe), es shaped über HarfBuzz mit Kerning,
-        ''' und es hängt die Zeile in einen Zeilenkasten, dessen Grundlinie nicht dort liegt, wo Skia sie setzt
-        ''' (rect.Top + fontSize). Jede dieser Abweichungen einzeln nachzustellen hat sich als Reihe von
-        ''' Ein-Pixel-Korrekturen erwiesen. Zeichnet der Renderer selbst, zeigt der Editor exakt das Ergebnis.
-        ''' </summary>
-        Private Function TextRendersInOverlay(annotation As ImageAnnotation) As Boolean
-            If annotation Is Nothing Then Return False
-            If Not IsTextualAnnotationKind(annotation.Kind) Then Return False
-            Return Not UsesRenderedSelectionOverlay(annotation)
-        End Function
-
-
-        Private Function UsesRenderedSelectionOverlay(annotation As ImageAnnotation) As Boolean
-            If annotation Is Nothing Then Return False
-
-            Select Case NormalizeAnnotationKind(annotation.Kind)
-                Case "Text", "Brush", "Eraser"
-                    Return False
-                Case "Watermark"
-                    Return Not String.IsNullOrWhiteSpace(annotation.ImagePath)
-                Case Else
-                    Return True
-            End Select
-        End Function
-
         Private Shared Function AnnotationRequiresBakedPreview(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
             Return Not String.Equals(If(annotation.BlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
@@ -16690,20 +16607,77 @@ Namespace ViewModels
             Return AnnotationRequiresBakedPreview(_annotations(_selectedAnnotationIndex))
         End Function
 
-        ''' <summary>STUFE 2: Anpassungssatz fuer die SZENE - wie die Vorschau, aber MIT allen
-        ''' Overlay-Objekten (dieselbe Zeichnung wie beim Export). Waehrend eines Placement-Edits wird
-        ''' das aktiv bearbeitete Objekt ausgeblendet: seine Live-Darstellung kommt vom Ghost
-        ''' (Selektions-Overlay), in der Szene stuende es doppelt bzw. stale an der alten Position.</summary>
+        ''' <summary>Der Objekt-Bitmap-Cache des Kompositors. Lebt je Editor; geleert beim
+        ''' Quellwechsel (die Eintraege haengen an Objekt-Ids des Dokuments).</summary>
+        Private ReadOnly _annotationBitmapCache As New AnnotationBitmapCache()
+
+        ''' <summary>Faellt die AKTUELLE Auswahl komplett in den Kompositor? Nur dann darf eine
+        ''' Objektaenderung auf den blossen Blit verkuerzt werden (Stufe 4 des Umbaus: ein Zug
+        ''' aendert keine einzige Renderanforderung). Beruehrt sie den gebackenen Block oder wandern
+        ''' Korrektur-Masken mit (die aendern die BASIS), muss weiter gerendert werden.</summary>
+        Private Function CompositorCoversSelection() As Boolean
+            If _sceneSk Is Nothing Then Return False
+            Dim selected = SelectedAnnotations
+            If selected.Count = 0 Then Return False
+            If MasksOfSelectedCorrections().Count > 0 Then Return False
+            Dim startIndex = OverlaySceneRenderer.ComputeCompositorStartIndex(
+                _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive)
+            For Each annotation In selected
+                Dim index = _annotations.IndexOf(annotation)
+                If index < startIndex Then Return False
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Sichtbarkeit wie im Renderer (eigenes IsVisible UND das der Gruppe), aber auf
+        ''' den LEBENDEN Editor-Listen statt am Rezept-Klon.</summary>
+        Private Function IsAnnotationRenderVisibleLive(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing OrElse Not annotation.IsVisible Then Return False
+            If String.IsNullOrEmpty(annotation.GroupId) Then Return True
+            Dim group = FindAnnotationGroup(annotation.GroupId)
+            Return group Is Nothing OrElse group.IsVisible
+        End Function
+
+        ''' <summary>Das Rechteck des VORHERIGEN Kompositor-Blits. Ein schneller, gebogener Zug
+        ''' springt weiter, als ein einzelnes Dirty-Rect (Start plus aktuelle Lage) abdeckt - die
+        ''' Zwischenstempel lagen ausserhalb und blieben als Geisterkopien in der Anzeige stehen
+        ''' (Nutzer-Screenshot 2026-07-31). Die Vereinigung mit dem Vorgaenger-Rechteck macht die
+        ''' Zugbahn Segment fuer Segment lueckenlos, ohne dass die Blits kumulativ wachsen.</summary>
+        Private _compositorPreviousBlitRect As SKRectI = SKRectI.Empty
+
+        ''' <summary>Der Blit-Kurzweg des Kompositors MIT Geometrie-Waechter: passt die Szene nicht
+        ''' mehr zum Rezept (verlorener Vollrender nach einem Werkzeugwechsel, etwa Live-Zuschnitt),
+        ''' wuerde der Blit in die falsch grosse Szene komponieren - genau die Fehlerklasse, die der
+        ''' Waechter in den Render-Wegen schon abfaengt. Dann stattdessen den Vollrender planen.
+        ''' Der Massvergleich laeuft ueber das REINE Geometrie-Rezept (BuildAppliedGeometry-
+        ''' Adjustments) - kein Klonen der Objektlisten je Mausbewegung.</summary>
+        Private Sub CompositorBlitOrSchedule(rect As SKRectI)
+            Dim source = GetPreviewSource()
+            If source Is Nothing OrElse Not SceneMatchesCurrentGeometry(source, BuildAppliedGeometryAdjustments()) Then
+                _compositorPreviousBlitRect = SKRectI.Empty
+                DiagnosticLogService.LogAlways("Editor.Compositor",
+                    $"blitGuard=schedule tool={_currentTool} crop={_cropLeft:F1}/{_cropTop:F1}/{_cropRight:F1}/{_cropBottom:F1} szene={_sceneSk?.Width}x{_sceneSk?.Height}")
+                SchedulePreviewUpdate(markDirty:=False)
+                Return
+            End If
+            Dim blitRect = ImageProcessor.UnionRects(rect, _compositorPreviousBlitRect)
+            _compositorPreviousBlitRect = rect
+            BlitSceneRegionToDisplay(blitRect)
+        End Sub
+
+        ''' <summary>Anpassungssatz fuer die SZENE - wie die Vorschau, aber mit dem GEBACKENEN BLOCK:
+        ''' alle Objekte oberhalb der Kompositor-Grenze werden am Klon ausgeblendet (das Rezept selbst
+        ''' bleibt unberuehrt), die Blit-Stufe zeichnet sie aus dem Objekt-Bitmap-Cache darueber.</summary>
         Private Function GetSceneAdjustments() As ImageAdjustments
             Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
-            ' Nur bei EINEM gezogenen Objekt übernimmt der Ghost die Live-Darstellung. Bei einer
-            ' Mehrfachauswahl gibt es keinen Ghost (es müssten mehrere sein): dort bleiben alle Objekte
-            ' in der Szene und wandern mit - der Zug schreibt ohnehin direkt in die Objekte und stösst
-            ' je Bewegung einen Region-Render an.
-            If _annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection AndAlso
-               _selectedAnnotationIndex >= 0 AndAlso adj.Annotations IsNot Nothing AndAlso
-               _selectedAnnotationIndex < adj.Annotations.Count Then
-                adj.Annotations(_selectedAnnotationIndex).IsVisible = False
+            If adj.Annotations IsNot Nothing Then
+                Dim startIndex = OverlaySceneRenderer.ComputeCompositorStartIndex(adj)
+                For i = startIndex To adj.Annotations.Count - 1
+                    Dim annotation = adj.Annotations(i)
+                    If annotation IsNot Nothing AndAlso OverlaySceneRenderer.IsOverlayAnnotation(annotation) Then
+                        annotation.IsVisible = False
+                    End If
+                Next
             End If
             ' WÄHREND EINES ZUGES bleiben eingehängte Korrekturen draussen. Sie zwingen sonst zum
             ' Vollrender, und der ist zu langsam für eine Live-Darstellung: beim Drehen einer Gruppe
@@ -16721,6 +16695,9 @@ Namespace ViewModels
         ''' die persistente Anzeige. Uebernimmt die Ownership von sceneSk.</summary>
         Private Sub SetSceneBitmap(sceneSk As SKBitmap)
             If sceneSk Is Nothing Then Return
+            ' Ein Vollrender malt die ganze Anzeige neu - die Zugbahn-Verkettung der Blits beginnt
+            ' danach frisch.
+            _compositorPreviousBlitRect = SKRectI.Empty
             Dim previous = _sceneSk
             _sceneSk = sceneSk
             If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, sceneSk) Then previous.Dispose()
@@ -16728,9 +16705,6 @@ Namespace ViewModels
             InvalidateZoomDetail()
             EnsureSceneDisplay()
             BlitSceneRegionToDisplay(New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height))
-            ' Die Ghost-Übergabe meldet NICHT diese Stelle: hier ist nicht bekannt, ob die Aufnahme
-            ' des Renders das gezogene Objekt überhaupt ausgeblendet hat. Das entscheidet der
-            ' Aufrufer (UpdatePreviewAsync merkt sich das beim Erstellen der Aufnahme).
         End Sub
 
         ''' <summary>Stellt sicher, dass die persistente Anzeige-Bitmap existiert und zur Szene passt
@@ -16772,17 +16746,41 @@ Namespace ViewModels
             Dim clamped = New SKRectI(Math.Max(0, rect.Left), Math.Max(0, rect.Top),
                                       Math.Min(_sceneSk.Width, rect.Right), Math.Min(_sceneSk.Height, rect.Bottom))
             If clamped.Width <= 0 OrElse clamped.Height <= 0 Then Return
+            ' KOMPOSITOR: die Region erst aus der Szene kopieren, dann die Cache-Objekte
+            ' darueberzeichnen und DIESE Fassung hochladen. Die Szene selbst bleibt ohne die
+            ' Kompositor-Objekte - genau das macht ihren Zug renderfrei.
+            Dim composed As SKBitmap = Nothing
             Try
-                Using fb = _sceneDisplay.Lock()
-                    Dim srcStride = _sceneSk.RowBytes
-                    Dim dstStride = fb.RowBytes
-                    Dim srcBase = _sceneSk.GetPixels()
-                    Dim bytes = clamped.Width * 4
-                    Dim buffer(bytes - 1) As Byte
-                    For y = clamped.Top To clamped.Bottom - 1
-                        Runtime.InteropServices.Marshal.Copy(IntPtr.Add(srcBase, y * srcStride + clamped.Left * 4), buffer, 0, bytes)
-                        Runtime.InteropServices.Marshal.Copy(buffer, 0, IntPtr.Add(fb.Address, y * dstStride + clamped.Left * 4), bytes)
-                    Next
+                composed = New SKBitmap(clamped.Width, clamped.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(composed)
+                    canvas.Translate(-clamped.Left, -clamped.Top)
+                    Dim region = New SKRect(clamped.Left, clamped.Top, clamped.Right, clamped.Bottom)
+                    canvas.ClipRect(region)
+                    canvas.DrawBitmap(_sceneSk, region, region)
+                    Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
+                    OverlaySceneRenderer.DrawCachedAnnotations(canvas, adj, _sceneSk.Width, _sceneSk.Height, _annotationBitmapCache)
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.Compositor", ex)
+                composed?.Dispose()
+                composed = Nothing
+            End Try
+            Try
+                Using composed
+                    Using fb = _sceneDisplay.Lock()
+                        Dim source = If(composed, _sceneSk)
+                        Dim srcLeft = If(composed Is Nothing, clamped.Left, 0)
+                        Dim srcTop = If(composed Is Nothing, clamped.Top, 0)
+                        Dim srcStride = source.RowBytes
+                        Dim dstStride = fb.RowBytes
+                        Dim srcBase = source.GetPixels()
+                        Dim bytes = clamped.Width * 4
+                        Dim buffer(bytes - 1) As Byte
+                        For y = clamped.Top To clamped.Bottom - 1
+                            Runtime.InteropServices.Marshal.Copy(IntPtr.Add(srcBase, (y - clamped.Top + srcTop) * srcStride + srcLeft * 4), buffer, 0, bytes)
+                            Runtime.InteropServices.Marshal.Copy(buffer, 0, IntPtr.Add(fb.Address, y * dstStride + clamped.Left * 4), bytes)
+                        Next
+                    End Using
                 End Using
             Catch ex As ObjectDisposedException
                 ' ABSICHERUNG: Anzeige wurde unter uns disposed - neu aufbauen und
@@ -16840,9 +16838,11 @@ Namespace ViewModels
 
             Dim sw = Diagnostics.Stopwatch.StartNew()
             Dim clamped As SKRectI
+            Dim cacheState = ImageProcessor.AnnotationPatchCacheState.Unknown
+            Dim drawnObjects = 0
             Dim patch As SKBitmap
             Try
-                patch = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, adj, rect, clamped)
+                patch = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, adj, rect, clamped, cacheState, drawnObjects)
             Catch ex As Exception
                 DiagnosticLogService.LogException("EditorSceneRegion", ex)
                 Return False
@@ -16866,15 +16866,12 @@ Namespace ViewModels
             InvalidateZoomDetail()
             EnsureSceneDisplay()
             BlitSceneRegionToDisplay(clamped)
-            ' Wie im asynchronen Zwilling: hat die Szene das Objekt an seiner Endstelle, darf der
-            ' Nachlauf-Ghost weg. Fehlte das hier, blieb er über der bereits gerenderten Szene stehen -
-            ' ein Doppelbild, das erst beim nächsten Render verschwand.
-            ClearPlacementGhostLinger()
             _annotationDirtyRect = SKRectI.Empty
             _previewPending = False
             StatusText = LocalizationService.T("Vorschau bereit")
+            ' drawn= ist der Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1).
             DiagnosticLogService.LogAlways("Editor.SceneRegion",
-                                           $"rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} ms={sw.ElapsedMilliseconds}")
+                                           $"rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} drawn={drawnObjects} ms={sw.ElapsedMilliseconds}")
             Return True
         End Function
 
@@ -16929,24 +16926,21 @@ Namespace ViewModels
                     End If
                     Dim versionAtStart = _sceneContentVersion
                     Dim modelAtStart = _annotationModelVersion
-                    ' Merken, ob der Snapshot das aktiv gezogene Objekt AUSBLENDET: gilt die Ausblendung
-                    ' beim Anwenden nicht mehr (Loslassen/Commit), wuerde der Patch das Objekt loeschen.
-                    ' Nur bei EINZELauswahl blendet der Snapshot das gezogene Objekt aus (siehe
-                    ' GetSceneAdjustments) - nur dann darf der Patch die Ghost-Uebergabe melden.
-                    Dim excludedPlacementIndex = If(_annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection,
-                                                    _selectedAnnotationIndex, -1)
                     Dim sw = Diagnostics.Stopwatch.StartNew()
                     Dim clamped As SKRectI = SKRectI.Empty
                     Dim cacheState = ImageProcessor.AnnotationPatchCacheState.Unknown
+                    Dim drawnObjects = 0
                     Dim patch As SKBitmap = Nothing
                     Try
                         patch = Await Task.Run(Function()
                                                    Dim localClamped As SKRectI
                                                    Dim localCacheState = ImageProcessor.AnnotationPatchCacheState.Unknown
+                                                   Dim localDrawn = 0
                                                    Dim p = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, adj, rect,
-                                                                                                                  localClamped, localCacheState)
+                                                                                                                  localClamped, localCacheState, localDrawn)
                                                    clamped = localClamped
                                                    cacheState = localCacheState
+                                                   drawnObjects = localDrawn
                                                    Return p
                                                End Function)
                     Catch ex As Exception
@@ -16980,10 +16974,7 @@ Namespace ViewModels
                         Return
                     End If
 
-                    Dim placementExclusionStale = excludedPlacementIndex >= 0 AndAlso
-                                                  (Not _annotationPlacementEditActive OrElse _selectedAnnotationIndex <> excludedPlacementIndex)
-                    If placementExclusionStale OrElse
-                       Not Object.ReferenceEquals(_sceneSk, sceneAtStart) OrElse _sceneContentVersion <> versionAtStart Then
+                    If Not Object.ReferenceEquals(_sceneSk, sceneAtStart) OrElse _sceneContentVersion <> versionAtStart Then
                         ' Szene wurde waehrenddessen ersetzt (Vollrender) ODER ihr INHALT hat sich
                         ' geaendert (z.B. Objekt synchron angelegt, waehrend ein langer Strich-Render
                         ' lief): das Ergebnis basiert auf einem alten Snapshot und wuerde die Region
@@ -17005,11 +16996,6 @@ Namespace ViewModels
                     InvalidateZoomDetail()
                     EnsureSceneDisplay()
                     BlitSceneRegionToDisplay(clamped)
-                    ' Der Snapshot dieses Patches blendet das gezogene Objekt aus (und die Ausblendung
-                    ' gilt noch, siehe placementExclusionStale): die Szene ist ihre Kopie los, ab jetzt
-                    ' darf der Ghost sichtbar werden.
-                    If excludedPlacementIndex >= 0 Then MarkPlacementSceneCopyRemoved()
-                    ClearPlacementGhostLinger()
                     ' Das Modell hat sich waehrend des Renders geaendert: dieser Patch zeigt einen
                     ' ueberholten Stand. Region nachlegen, damit nicht der alte Stand stehen bleibt.
                     If _annotationModelVersion <> modelAtStart Then
@@ -17017,8 +17003,9 @@ Namespace ViewModels
                     End If
                     _previewPending = False
                     StatusText = LocalizationService.T("Vorschau bereit")
+                    ' drawn= ist der Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1).
                     DiagnosticLogService.LogAlways("Editor.SceneRegion",
-                                                   $"async=1 rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} ms={sw.ElapsedMilliseconds}")
+                                                   $"async=1 rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} drawn={drawnObjects} ms={sw.ElapsedMilliseconds}")
                 End While
             Finally
                 _sceneRegionWorkerBusy = False
@@ -17223,7 +17210,12 @@ Namespace ViewModels
             _zoomDetailRenderSeq += 1
             Dim seq = _zoomDetailRenderSeq
             Dim versionAtStart = _sceneContentVersion
-            Dim adj = GetSceneAdjustments()
+            ' NICHT GetSceneAdjustments: das blendet mit eingeschalteter Kompositor-Weiche die
+            ' Kompositor-Objekte aus (die legt die Blit-Stufe ueber die SZENE, nicht ueber das
+            ' Detail). Das Detail rendert voll - gedrehte Objekte sind hier sogar wieder
+            ' vektor-scharf. Die beiden Sonderfaelle von GetSceneAdjustments (Zug-Ausblendungen)
+            ' treffen es nicht: waehrend eines Zuges rendert das Detail gar nicht (Wache oben).
+            Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
             ' Quelle nur wiederverwenden, wenn sie zu Pfad UND Arbeitsbild-Version passt (die
             ' Ziel-Aufloesung ist je Bild konstant; die Version wandert bei jedem Commit weiter).
             Dim workingVersionAtStart = _workingImage.Version
@@ -17513,9 +17505,15 @@ Namespace ViewModels
                Not IsObjectAdjustTool(_currentTool) Then
                 _previewTimer.Stop()
                 _previewPending = False
-                ' Ghost-Bitmap nur aktualisieren, wenn es sichtbar ist (Placement-Edit) - der Render
-                ' inkl. Schatten/Gluehen ist teuer und waere pro Regler-Tick reine Verschwendung.
-                If _annotationPlacementEditActive Then UpdateSelectedAnnotationOverlayPreview()
+                ' KOMPOSITOR (Stufe 4): die Aenderung liegt komplett ueber dem gebackenen Block -
+                ' kein Szenen-Render, nur die Region neu blitten (der Blit komponiert aus dem
+                ' Cache; eine Aussehens-Aenderung rendert dabei genau die eine Objekt-Bitmap neu).
+                If CompositorCoversSelection() Then
+                    Dim compositorRect = CandidateAnnotationDirtyRect()
+                    _annotationDirtyRect = SKRectI.Empty
+                    CompositorBlitOrSchedule(compositorRect)
+                    Return
+                End If
                 ' STUFE 2: Eigenschafts-Aenderung des selektierten Objekts ASYNCHRON in die Szene
                 ' rendern - Effekt-Renders (Schatten/Gluehen grosser Objekte) kosten 200-800 ms und
                 ' wuerden synchron den UI-Thread wuergen (Regler "quasi nicht bedienbar"). Der Worker
@@ -17558,20 +17556,17 @@ Namespace ViewModels
 
         Public Sub CommitSelectedAnnotationPlacementEdit()
             If Not HasSelectedAnnotation Then Return
-            ' Während des Ziehens beendet SyncSelectedAnnotation absichtlich vor
-            ' RefreshSelectedAnnotationPreviewImmediatelyIfNeeded: der Ghost übernimmt die
-            ' Live-Darstellung und ein Szenen-Patch folgt erst hier beim Loslassen. Damit wurde
-            ' aber auch die sonst in SchedulePreviewUpdate sitzende Änderungsmarkierung umgangen:
-            ' Position/Größe/Drehung waren geändert, HasUnsavedChanges blieb False und beim
-            ' Schließen erschien keine Speicherabfrage. Begin/Commit wird von der View erst nach
-            ' einer echten Zeigerbewegung (> 3 px) aufgerufen, ein reiner Auswahlklick landet nicht hier.
+            ' Der Zug selbst umgeht die sonst in SchedulePreviewUpdate sitzende Änderungsmarkierung
+            ' (Blits bzw. Region-Renders statt Vollrender): Position/Größe/Drehung waren geändert,
+            ' HasUnsavedChanges blieb False und beim Schließen erschien keine Speicherabfrage.
+            ' Begin/Commit wird von der View erst nach einer echten Zeigerbewegung (> 3 px)
+            ' aufgerufen, ein reiner Auswahlklick landet nicht hier.
             If Not _suppressPreviewDirty Then
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             End If
             _previewTimer.Stop()
             _previewPending = False
-            UpdateSelectedAnnotationOverlayPreview()
             ' Hingen Korrekturen im Objektstapel, lief der ganze Zug ohne sie (Live-Darstellung).
             ' Jetzt nachziehen - aber NUR, wenn die bewegte Region eine solche Korrektur überhaupt
             ' berührt. Vorher genügte ihre bloße Existenz, und jedes Loslassen kostete einen
@@ -17582,13 +17577,16 @@ Namespace ViewModels
                 SchedulePreviewUpdate(markDirty:=False)
                 Return
             End If
-            ' STUFE 2: das Objekt an der Endposition in die Szene backen (End lief vor Commit,
-            ' die Placement-Ausblendung ist also schon aufgehoben). Dirty = alte + neue Bounds
-            ' aus der Zieh-Sitzung (_annotationDirtyRect).
-            '
-            ' ZUERST der schnelle synchrone Weg: er schreibt die Endstelle sofort in die Szene UND
-            ' räumt den Nachlauf-Ghost im selben Zug. Ohne ihn bleibt der Ghost sichtbar, bis der
-            ' Hintergrund-Render landet - das ist der „kurz sichtbare Ghost" beim Loslassen.
+            ' KOMPOSITOR (Stufe 4): das Loslassen ist nur der letzte Blit - in der Szene hat sich
+            ' waehrend des ganzen Zuges nichts geaendert.
+            If CompositorCoversSelection() Then
+                _annotationDirtyRect = SKRectI.Empty
+                CompositorBlitOrSchedule(endRegion)
+                Return
+            End If
+            ' Gebackener Block: das Objekt an der Endposition in die Szene backen. Dirty = alte +
+            ' neue Bounds aus der Zieh-Sitzung (_annotationDirtyRect). ZUERST der schnelle synchrone
+            ' Weg - er schreibt die Endstelle sofort in die Szene.
             If TryFastSyncRegion(endRegion) Then
                 _annotationDirtyRect = SKRectI.Empty
                 Return
@@ -17605,82 +17603,28 @@ Namespace ViewModels
             ' entsteht VOR der ersten Änderung, danach ist das Aufzeichnen bis zum Loslassen still.
             PushUndo()
             _suppressUndoCapture = True
-            _placementGhostLinger = False
-            _placementStartRegionCleared = False
             _groupDragRotationTotal = 0
             _groupDragBoxAtStart = If(HasMultiAnnotationSelection AndAlso MasksOfSelectedCorrections().Count > 0,
                                       CType(GetSelectionBoxDisplayRectPercent(), (X As Double, Y As Double, Width As Double, Height As Double)?),
                                       Nothing)
-            _annotationPlacementStartDirtyRect = SKRectI.Empty
             _previewTimer.Stop()
             _previewPending = False
-            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-            ' STUFE 2: einheitlich fuer ALLE Objektarten - die Szene rendert die Startregion OHNE das
-            ' Objekt (GetSceneAdjustments blendet es waehrend _annotationPlacementEditActive aus); die
-            ' Live-Darstellung waehrend des Ziehens uebernimmt der Ghost (Selektions-Overlay).
+            ' Die Startregion in die Dirty-Vereinigung aufnehmen: der erste Render bzw. Blit des
+            ' Zuges muss die alte Lage mitnehmen, sonst bleibt dort eine Kopie stehen.
             Dim previewSource = GetPreviewSource()
             If previewSource IsNot Nothing Then
                 Dim size = GetCurrentScenePixelSize()
-                _annotationPlacementStartDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(size.Width,
-                                                                                              size.Height,
-                                                                                              _annotations(_selectedAnnotationIndex),
-                                                                                              GetCurrentAdjustments(forPreview:=True))
-                ' _annotationDirtyRect bleibt gesetzt, damit der Commit alte+neue Bounds vereint.
-                _annotationDirtyRect = _annotationPlacementStartDirtyRect
+                _annotationDirtyRect = ImageProcessor.UnionRects(
+                    _annotationDirtyRect,
+                    ImageProcessor.ComputeAnnotationDirtyRect(size.Width, size.Height,
+                                                              _annotations(_selectedAnnotationIndex),
+                                                              GetCurrentAdjustments(forPreview:=True)))
             End If
-            ' KOMPLETT ASYNCHRON: weder Ghost-Render (Effekte: 100-300 ms) noch das Herausloesen aus der
-            ' Szene duerfen den Drag-Start blockieren. Ein SYNCHRONER Loesch-Render an dieser Stelle hat
-            ' den Zug-Start sichtbar verzoegert: die Region wird bei einem
-            ' Objekt mit Mischmodus ueber SceneBlendCompositeRequiredRect auf den Composite-Bereich
-            ' aufgezogen, das ist im Zweifel das halbe Bild. Bis der Loesch-Render landet, zeigt die
-            ' SZENE das Objekt weiter an der alten Stelle - und genau solange bleibt der Ghost unsichtbar
-            ' (ShowSelectedSvgOverlay), sonst stuende es doppelt. Der Auswahlrahmen folgt dem Zeiger
-            ' bereits, die Pixel ziehen einen Wimpernschlag spaeter nach.
-            If HasMultiAnnotationSelection Then
-                ' Mehrfachauswahl: kein Ghost, keine Szene-Kopie herauslösen - die Objekte bleiben in
-                ' der Szene und werden beim Ziehen mitgerendert (siehe GetSceneAdjustments).
-                SetSelectedAnnotationOverlay(Nothing)
-                Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-                Return
-            End If
-            RequestPlacementSceneCopyRemoval()
-            BeginPlacementGhostAsync()
-        End Sub
-
-        ''' <summary>Fordert an, dass die Szene ihre Kopie des gezogenen Objekts verliert: die Startregion
-        ''' wird OHNE das Objekt neu gerendert (GetSceneAdjustments blendet es waehrend des Placement-Edits
-        ''' aus). Immer asynchron - der Worker meldet ueber MarkPlacementSceneCopyRemoved zurueck, sobald
-        ''' die Pixel wirklich getauscht sind; erst dann wird der Ghost sichtbar.</summary>
-        Private Sub RequestPlacementSceneCopyRemoval()
-            If _annotationPlacementStartDirtyRect.IsEmpty Then
-                ' Keine Szene/Quelle: es gibt keine Kopie, die stoeren koennte - Ghost sofort freigeben.
-                MarkPlacementSceneCopyRemoved()
-                Return
-            End If
-
-            ' SCHNELLWEG für den Normalfall: ein Objekt OHNE Mischmodus braucht nur seine eigene
-            ' Region. Das ist ein Patch auf dem gewärmten Basis-Cache (~20 ms) - er macht den Ghost
-            ' SOFORT sichtbar, statt auf den Hintergrund-Worker zu warten. Genau dieses Warten war die
-            ' „erst sehr zeitversetzt sichtbare" Live-Ansicht im Auswahlrahmen
-            '; scheiterte der Patch (belegter Cache), landete die Freigabe sogar erst nach
-            ' einem eingeplanten Nachrender.
-            '
-            ' Für Objekte MIT Mischmodus bleibt es beim asynchronen Weg: dort zieht
-            ' SceneBlendCompositeRequiredRect die Region auf den Composite-Bereich auf (im Zweifel das
-            ' halbe Bild), und ein synchroner Render dort hat den Zug-Start sichtbar hängen lassen.
-            If TryFastSyncRegion(_annotationPlacementStartDirtyRect) Then
-                MarkPlacementSceneCopyRemoved()
-                Return
-            End If
-
-            RequestSceneRegionRender(_annotationPlacementStartDirtyRect)
         End Sub
 
         ''' <summary>
-        ''' Der schnelle SYNCHRONE Region-Render für Zug-Start und Zug-Ende: ein Patch auf dem
-        ''' gewärmten Basis-Cache kostet wenige Millisekunden und macht die Szene SOFORT richtig -
-        ''' ohne ihn wartet man am Anfang auf den Ghost und sieht am Ende kurz beides (Ghost-Nachlauf
-        ''' über der schon gerenderten Szene).
+        ''' Der schnelle SYNCHRONE Region-Render für das Zug-Ende: ein Patch auf dem gewärmten
+        ''' Basis-Cache kostet wenige Millisekunden und macht die Szene SOFORT richtig.
         '''
         ''' Zwei Wächter, aus einem alten Befund heraus: Objekte MIT Mischmodus ziehen über
         ''' SceneBlendCompositeRequiredRect den halben Bildbereich mit hinein - dort war ein
@@ -17696,77 +17640,6 @@ Namespace ViewModels
             If gezogen Is Nothing OrElse OverlaySceneRenderer.IsNonNormalBlend(gezogen) Then Return False
             Return TryRenderSceneRegionSync(rect)
         End Function
-
-        ''' <summary>
-        ''' Zweiter (und dritter, und vierter) Versuch, die Startregion zu räumen - aufgerufen bei
-        ''' JEDER Bewegung des laufenden Zuges.
-        '''
-        ''' Der Ghost bleibt unsichtbar, solange die Szene ihre Kopie noch hat. Scheitert das Räumen am
-        ''' Anfang (belegter Basis-Cache), hing die Live-Ansicht bisher am Hintergrund-Worker - und
-        ''' wenn der seinerseits in den Rückfall lief, stand der ganze Zug über: Rahmen leer, Objekt an
-        ''' der alten Stelle. Ein erneuter Versuch je Bewegung kostet nichts,
-        ''' sobald der Cache wieder frei ist, und heilt genau diesen Fall.
-        ''' </summary>
-        Private Sub RetryPlacementSceneCopyRemovalIfNeeded()
-            If Not _annotationPlacementEditActive OrElse _placementStartRegionCleared Then Return
-            If HasMultiAnnotationSelection Then Return
-            If _annotationPlacementStartDirtyRect.IsEmpty Then
-                MarkPlacementSceneCopyRemoved()
-                Return
-            End If
-            ' Läuft der Worker gerade, ist die Anforderung längst eingereiht - dann nicht dazwischenfunken.
-            If _sceneRegionWorkerBusy Then Return
-            If TryFastSyncRegion(_annotationPlacementStartDirtyRect) Then
-                MarkPlacementSceneCopyRemoved()
-                Return
-            End If
-            RequestSceneRegionRender(_annotationPlacementStartDirtyRect)
-        End Sub
-
-        ''' <summary>Vom Szene-Worker aufgerufen, sobald ein Patch angewendet wurde, dessen Snapshot das
-        ''' gezogene Objekt ausblendet: ab jetzt zeichnet die Szene es nicht mehr, der Ghost uebernimmt.</summary>
-        Private Sub MarkPlacementSceneCopyRemoved()
-            If _placementStartRegionCleared Then Return
-            _placementStartRegionCleared = True
-            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-        End Sub
-
-        ''' <summary>Rendert den Drag-Ghost im Hintergrund und loest ERST DANACH die Szene-Kopie heraus -
-        ''' Reihenfolge wichtig, sonst klafft am Drag-Start kurz ein Loch. Ueberholende Aufrufe
-        ''' (schnelles erneutes Greifen) verwerfen aeltere Ergebnisse per Sequenznummer.</summary>
-        Private Async Sub BeginPlacementGhostAsync()
-            Dim idx = _selectedAnnotationIndex
-            If idx < 0 OrElse idx >= _annotations.Count Then Return
-            Dim annotation = _annotations(idx)
-            If Not UsesRenderedSelectionOverlay(annotation) AndAlso Not TextRendersInOverlay(annotation) Then
-                SetSelectedAnnotationOverlay(Nothing)
-                Return
-            End If
-
-            Dim clone = annotation.Clone()
-            ApplyDisplayFlipParityToOverlayClone(clone)
-            Dim displayRect = GetAnnotationDisplayPixelRect(annotation)
-            Dim pixelWidth = Math.Max(48, CInt(Math.Round(displayRect.Width)))
-            Dim pixelHeight = Math.Max(48, CInt(Math.Round(displayRect.Height)))
-            Dim seq = Threading.Interlocked.Increment(_ghostRenderSeq)
-            Dim render As ImageProcessor.AnnotationOverlayRender = Nothing
-            Try
-                render = Await Task.Run(Function() ImageProcessor.RenderAnnotationOverlay(clone, pixelWidth, pixelHeight))
-            Catch ex As Exception
-                DiagnosticLogService.LogException("EditorGhostRender", ex)
-                Return
-            End Try
-            If seq <> _ghostRenderSeq OrElse Not _annotationPlacementEditActive OrElse _selectedAnnotationIndex <> idx Then
-                render?.Image?.Dispose()
-                Return
-            End If
-
-            ' Nur die Bitmap nachreichen (Mischmodus-Objekte haben ausserhalb des Zuges gar keine).
-            ' Ob der Ghost dadurch SICHTBAR wird, entscheidet allein, ob die Szene ihre Kopie schon
-            ' verloren hat - angefordert wurde das bereits beim Zug-Start.
-            SetSelectedAnnotationOverlay(render)
-            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
-        End Sub
 
         ''' <summary>Holt die während eines Gruppen-Zuges aufgeschobene Masken-Nachführung nach: erst
         ''' die Gesamtdrehung um die Mitte der Endbox, dann Verschiebung und Skalierung aus Start- und
@@ -17812,22 +17685,6 @@ Namespace ViewModels
             ' PointerCaptureLost-Weg, damit ein abgebrochener Zug das Undo nicht dauerhaft stilllegt.
             _suppressUndoCapture = False
             ResetUndoCapture()
-            Dim sceneCopyWasRemoved = _placementStartRegionCleared
-            ' Wurde die Startregion nie aus der Szene geloest (kurzer Zug: der Loesch-Render war beim
-            ' Loslassen noch unterwegs), MUSS der Commit sie mitnehmen - sonst bleibt die alte Kopie in
-            ' der Szene stehen und sieht aus wie ein zweites Objekt.
-            If Not sceneCopyWasRemoved AndAlso Not _annotationPlacementStartDirtyRect.IsEmpty Then
-                _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect, _annotationPlacementStartDirtyRect)
-            End If
-            _placementStartRegionCleared = False
-            _annotationPlacementStartDirtyRect = SKRectI.Empty
-            ' Ghost weiterzeigen, bis die Szene das Objekt an der Endposition gerendert hat
-            ' (ClearPlacementGhostLinger im Region-Worker/Vollrender) - sonst fehlt das Objekt
-            ' für die Renderdauer im Bild. ABER nur, wenn die Szene ihre Kopie ueberhaupt verloren hat:
-            ' sonst zeichnete sie das Objekt noch an der ALTEN Stelle, und der nachlaufende Ghost an der
-            ' neuen waere wieder das Doppelbild.
-            If _selectedAnnotationOverlayImage IsNot Nothing AndAlso sceneCopyWasRemoved Then _placementGhostLinger = True
-            Me.RaisePropertyChanged(NameOf(ShowSelectedSvgOverlay))
         End Sub
 
         ''' Wrapper um NotifyAnnotationOverlayStateChanged, der Aufrufe unterdrückt, solange
@@ -17839,8 +17696,8 @@ Namespace ViewModels
             NotifyAnnotationOverlayStateChanged()
         End Sub
 
-        ''' STUFE 2: Selektions-/Werkzeugwechsel aendern den Szeneninhalt NICHT mehr (alle Objekte
-        ''' sind immer in der Szene; der Ghost existiert nur waehrend eines Placement-Edits).
+        ''' Selektions-/Werkzeugwechsel aendern den Szeneninhalt nicht (der gebackene Block bleibt,
+        ''' die Kompositor-Objekte zeichnet die Blit-Stufe unabhaengig von der Auswahl).
         Private Sub NotifyAnnotationOverlayStateChanged()
             _previewPending = False
             StatusText = LocalizationService.T("Vorschau bereit")
@@ -17863,6 +17720,8 @@ Namespace ViewModels
             _sceneSk?.Dispose()
             _sceneSk = Nothing
             _sceneDisplay = Nothing
+            ' Objekt-Bitmaps gehoeren zum alten Dokument (Eintraege haengen an Objekt-Ids).
+            _annotationBitmapCache.Clear()
 
             ' EIGENER Zähler, nicht _previewRequestId: der wird auch von jedem Render-Start
             ' hochgezählt (RegisterPreviewRenderStart). Als Veraltungs-Marke für den Quellwechsel
@@ -18038,6 +17897,7 @@ Namespace ViewModels
             _sceneSk?.Dispose()
             _sceneSk = Nothing
             _sceneDisplay = Nothing
+            _annotationBitmapCache.Clear()
             Dim oldSource As SKBitmap = Nothing
             SyncLock _previewSync
                 oldSource = _previewSource
@@ -18508,16 +18368,11 @@ Namespace ViewModels
             ' Arbeitsbild-Stand beim Render-START: landet waehrend des asynchronen Renders ein
             ' neuer Commit (Strich/Retusche), ist die frisch gebaute Szene veraltet - der
             ' Commit-Callback plant dann ohnehin einen neuen Render (SchedulePreviewUpdate).
-            ' STUFE 2: Die Szene enthaelt ALLE Overlay-Objekte (gleiche Zeichnung wie beim Export);
-            ' waehrend eines Placement-Edits ist das aktiv bearbeitete Objekt ausgeblendet (Ghost).
+            ' Die Szene enthaelt den gebackenen Block (siehe GetSceneAdjustments); die
+            ' Kompositor-Objekte legt die Blit-Stufe darueber.
             Dim adj = GetSceneAdjustments()
-            ' Blendet DIESE Aufnahme das gezogene Objekt aus? Nur dann darf ihr Ergebnis später die
-            ' Ghost-Übergabe melden. Ein Vollrender, der VOR dem Zug gestartet wurde, trägt das Objekt
-            ' noch an der alten Stelle - meldete er trotzdem die Übergabe, stand das Objekt doppelt da:
-            ' Ghost am Zeiger UND Kopie an der Startstelle.
-            Dim captureWithoutDragged = _annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection
-            ' Und lässt die Aufnahme die eingehängten Korrekturen weg (Live-Darstellung während eines
-            ' Zuges, siehe GetSceneAdjustments)? Dann gilt dasselbe.
+            ' Laesst die Aufnahme die eingehaengten Korrekturen weg (Live-Darstellung waehrend eines
+            ' Zuges, siehe GetSceneAdjustments)? Dann darf sie nach dem Zug nicht mehr landen.
             Dim captureWithoutCorrections = _annotationPlacementEditActive AndAlso HasStackedCorrections()
             Dim cts = New CancellationTokenSource()
             Dim token = cts.Token
@@ -18563,24 +18418,35 @@ Namespace ViewModels
                     Return
                 End If
 
-                ' STALE-AUFNAHME: dieser Render lief mit einem Schnappschuss, der das gezogene Objekt
-                ' (bzw. die eingehängten Korrekturen) AUSBLENDET. Gilt die Ausblendung beim Anwenden
-                ' nicht mehr - der Zug ist vorbei -, fehlt im Ergebnis genau das, was jetzt sichtbar
-                ' sein müsste. Angewendet verschwand das Objekt für ein bis zwei Sekunden, bis der
-                ' nächste Render kam. Also verwerfen und neu rendern -
-                ' dasselbe, was der Region-Worker über placementExclusionStale längst tut.
-                If (captureWithoutDragged OrElse captureWithoutCorrections) AndAlso Not _annotationPlacementEditActive Then
+                ' STALE-AUFNAHME: dieser Render lief mit einem Schnappschuss, der die eingehängten
+                ' Korrekturen AUSBLENDET (Live-Darstellung während eines Zuges). Gilt die Ausblendung
+                ' beim Anwenden nicht mehr - der Zug ist vorbei -, fehlt im Ergebnis genau das, was
+                ' jetzt sichtbar sein müsste. Also verwerfen und neu rendern.
+                If captureWithoutCorrections AndAlso Not _annotationPlacementEditActive Then
                     result.Dispose()
                     DiagnosticLogService.LogAlways("Editor.FullPreviewRender", "verworfen=placementSnapshotStale")
                     SchedulePreviewUpdate(markDirty:=False)
                     Return
                 End If
+                ' GEOMETRIE-WAECHTER AM LANDEPUNKT: dieser Render lief mit einem Schnappschuss von
+                ' vor bis zu einer Sekunde. Hat sich die Rezept-Geometrie inzwischen geaendert
+                ' (Live-Zuschnitt beim Verlassen des Zuschneide-Werkzeugs), wuerde die alte, falsch
+                ' grosse Szene hier die richtige Anzeige VERDRAENGEN - Befund: mitten im Zug
+                ' erschien ploetzlich der weggeschnittene Bereich wieder. Verwerfen und neu planen;
+                ' der Massvergleich laeuft wie beim Region-Waechter ueber das reine Geometrie-Rezept.
+                If result.SceneSk IsNot Nothing Then
+                    Dim expectedSize = ImageProcessor.ComputeGeometryOutputSize(previewSource.Width, previewSource.Height,
+                                                                                BuildAppliedGeometryAdjustments())
+                    If result.SceneSk.Width <> expectedSize.Width OrElse result.SceneSk.Height <> expectedSize.Height Then
+                        DiagnosticLogService.LogAlways("Editor.FullPreviewRender",
+                            $"verworfen=geometryStale scene={result.SceneSk.Width}x{result.SceneSk.Height} erwartet={expectedSize.Width}x{expectedSize.Height}")
+                        result.Dispose()
+                        SchedulePreviewUpdate(markDirty:=False)
+                        Return
+                    End If
+                End If
                 SetSceneBitmap(result.SceneSk)
                 result.SceneSk = Nothing
-                If captureWithoutDragged AndAlso _annotationPlacementEditActive AndAlso Not HasMultiAnnotationSelection Then
-                    MarkPlacementSceneCopyRemoved()
-                End If
-                ClearPlacementGhostLinger()
                 ComparisonImage = result.Comparison
                 _previewPending = False
                 StatusText = LocalizationService.T("Vorschau bereit")
@@ -18591,8 +18457,10 @@ Namespace ViewModels
                     ' laufenden Zugs - nicht wegziehen.
                     If Not _retouchStrokeActive Then ClearRetouchLivePatch()
                 End If
+                ' out= ist die SZENEN-Ausgabegroesse (inkl. Geometrie) - size= ist nur die QUELLE.
+                ' Diese Unterscheidung hat bei der Zuschnitt-Forensik gefehlt.
                 DiagnosticLogService.LogAlways("Editor.FullPreviewRender",
-                                               $"pixels={CLng(previewSource.Width) * CLng(previewSource.Height)} size={previewSource.Width}x{previewSource.Height} retouch={If(adj.RetouchSpots Is Nothing, 0, adj.RetouchSpots.Count)} annotations={If(adj.Annotations Is Nothing, 0, adj.Annotations.Count)} ms={fullRenderSw.ElapsedMilliseconds}")
+                                               $"pixels={CLng(previewSource.Width) * CLng(previewSource.Height)} size={previewSource.Width}x{previewSource.Height} out={_sceneSk?.Width}x{_sceneSk?.Height} retouch={If(adj.RetouchSpots Is Nothing, 0, adj.RetouchSpots.Count)} annotations={If(adj.Annotations Is Nothing, 0, adj.Annotations.Count)} ms={fullRenderSw.ElapsedMilliseconds}")
                 result.Preview = Nothing
                 result.Comparison = Nothing
                 result.Dispose()
@@ -18700,7 +18568,7 @@ Namespace ViewModels
             Try
                 StatusText = LocalizationService.T("Wird gespeichert…")
                 If _retouchStrokeActive Then CommitRetouchStroke()
-                If HasSelectedAnnotation Then SyncSelectedAnnotation(refreshOverlay:=False)
+                If HasSelectedAnnotation Then SyncSelectedAnnotation()
                 CommitObjectAdjustModeToModel()
                 Dim adj = GetCurrentAdjustments()
                 Dim preserveMetadata = If(saveAs AndAlso _mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
@@ -20215,7 +20083,6 @@ Namespace ViewModels
             _selectionYPercent = 0
             _selectionWidthPercent = 0
             _selectionHeightPercent = 0
-            SetSelectedAnnotationOverlay(Nothing)
 
             RefreshFilteredShapeIcons()
             RaiseEditorUiStateChanged()
@@ -21360,7 +21227,7 @@ Namespace ViewModels
                 _annotations.Add(a)
             Next
             ' Selektion aufheben: nach dem Umsortieren zeigt die Szene damit sofort die neue
-            ' Reihenfolge, ohne dass ein Placement-Ghost eine alte Z-Position weiterzeigt.
+            ' Reihenfolge (die Kompositor-Grenze kann sich verschoben haben).
             SelectedAnnotationIndex = -1
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -21393,6 +21260,14 @@ Namespace ViewModels
             Dim a = RowIsAdjustmentKind(dragged)
             Dim b = RowIsAdjustmentKind(targetRow)
             If Not a.HasValue OrElse Not b.HasValue Then Return False
+            ' Gruppen verschachteln sich nicht: eine Gruppen-Kopfzeile darf nicht auf der
+            ' MITGLIEDSZEILE einer fremden Gruppe abgelegt werden - eingefuegt wuerde mitten in
+            ' deren zusammenhaengenden Block, und die Zielgruppe zerfiele. Auf der Kopfzeile
+            ' bleibt das Ablegen erlaubt (davor bzw. dahinter, nie hinein).
+            If dragged.IsGroupHeader AndAlso targetRow.IsGroupMember AndAlso
+               Not String.Equals(targetRow.MemberOfGroup?.Id, dragged.Group?.Id, StringComparison.Ordinal) Then
+                Return False
+            End If
             ' Eine KORREKTUREBENE darf in den Objektstapel gezogen werden - dort wirkt sie auf alles
             ' unter ihr. Umgekehrt bleibt ein Objekt ein Objekt: es in den Korrekturblock zu ziehen
             ' hätte keine Bedeutung.
@@ -21623,8 +21498,8 @@ Namespace ViewModels
                 If Not dragged.IsGroupHeader Then objBlock(k).GroupId = targetGroup
             Next
             DropOrphanedAnnotationGroups()
-            ' Nach dem Umsortieren die Auswahl aufheben: sonst zeigte ein Placement-Ghost eine alte
-            ' Z-Position weiter (gleiche Begründung wie beim einfachen Umsortieren).
+            ' Nach dem Umsortieren die Auswahl aufheben (gleiche Begründung wie beim einfachen
+            ' Umsortieren: die Kompositor-Grenze kann sich verschoben haben).
             SelectedAnnotationIndex = -1
             RebuildLayerRows()
             RaiseResetButtonStateChanged()
@@ -21928,11 +21803,25 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        Public Sub NudgeSelectedAnnotation(dx As Double, dy As Double)
+        ''' <summary>Schiebt die Auswahl um ganze BILDPIXEL (Pfeiltasten; Umschalt = groesserer
+        ''' Schritt). Vorher wanderte je Tastendruck ein PROZENT der Bildbreite - auf einem grossen
+        ''' Foto waren das dutzende Pixel, feines Ausrichten war unmoeglich (Nutzerwunsch
+        ''' 2026-07-31). Eine Mehrfachauswahl zieht als Ganzes ueber die gemeinsame Box mit.</summary>
+        Public Sub NudgeSelectedAnnotationPixels(dxPixels As Double, dyPixels As Double)
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return
+            Dim dxPercent = dxPixels / displaySize.Width * 100.0
+            Dim dyPercent = dyPixels / displaySize.Height * 100.0
+            If HasMultiAnnotationSelection Then
+                Dim box = GetSelectionBoxDisplayRectPercent()
+                If box.Width <= 0 OrElse box.Height <= 0 Then Return
+                SetSelectionBoxRect(box.X + dxPercent, box.Y + dyPercent, box.Width, box.Height)
+                Return
+            End If
             CaptureUndoState("LayerNudge")
-            AnnotationXPercent = ClampAnnotationPositionPercent(_annotationXPercent + dx, _annotationWidthPercent)
-            AnnotationYPercent = ClampAnnotationPositionPercent(_annotationYPercent + dy, _annotationHeightPercent)
+            AnnotationXPercent = ClampAnnotationPositionPercent(_annotationXPercent + dxPercent, _annotationWidthPercent)
+            AnnotationYPercent = ClampAnnotationPositionPercent(_annotationYPercent + dyPercent, _annotationHeightPercent)
         End Sub
 
         Public Function HitTestAnnotation(xPercent As Double, yPercent As Double,
@@ -22495,13 +22384,7 @@ Namespace ViewModels
             End Try
         End Sub
 
-        ''' <param name="refreshOverlay">False, wenn sich nur Position oder Drehung geändert haben.
-        ''' RenderAnnotationOverlay liest weder X/Y noch RotationDegrees (es nullt die Drehung sogar
-        ''' explizit) - das Bitmap bliebe also identisch. Der Render läuft synchron auf dem UI-Thread und
-        ''' zeichnet Schatten und Glow inklusive Blur neu, deshalb lohnt es sich, ihn beim Ziehen (ein
-        ''' Aufruf je Mausbewegung) auszulassen. Die Positionierung übernimmt ohnehin die View über die
-        ''' Margins.</param>
-        Private Sub SyncSelectedAnnotation(Optional refreshOverlay As Boolean = True)
+        Private Sub SyncSelectedAnnotation()
             If _isLoadingAnnotation Then Return
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CaptureUndoState("TextAnnotation")
@@ -22586,16 +22469,16 @@ Namespace ViewModels
             a.GlowStrength = CSng(_annotationGlowStrength)
             a.GlowColor = _annotationGlowColor
             _annotationModelVersion += 1
+            ' Auch waehrend eines Zuges AKKUMULIEREND vereinen: der Region-Worker koalesziert
+            ' Anforderungen, und ein gebogener Zug hat Zwischenlagen, die ein blosses
+            ' "Start plus aktuell" nicht abdeckt (dieselbe Falle wie bei den Kompositor-Blits).
+            Dim frameDirtyRect As SKRectI = SKRectI.Empty
             If previewSource IsNot Nothing Then
                 sceneSize = GetCurrentScenePixelSize()
                 Dim newDirtyRect = ImageProcessor.ComputeAnnotationDirtyRect(sceneSize.Width, sceneSize.Height, a,
                                                                              GetCurrentAdjustments(forPreview:=True))
-                If _annotationPlacementEditActive Then
-                    _annotationDirtyRect = ImageProcessor.UnionRects(_annotationPlacementStartDirtyRect, newDirtyRect)
-                Else
-                    _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect,
-                                                                     ImageProcessor.UnionRects(oldDirtyRect, newDirtyRect))
-                End If
+                frameDirtyRect = ImageProcessor.UnionRects(oldDirtyRect, newDirtyRect)
+                _annotationDirtyRect = ImageProcessor.UnionRects(_annotationDirtyRect, frameDirtyRect)
             End If
             ' MEHRFACHAUSWAHL: die Eigenschaften, die für jedes Objekt dieselbe Bedeutung haben,
             ' wirken auf ALLE markierten - sonst beschriebe das Panel nur den Anker, und Deckkraft
@@ -22611,14 +22494,23 @@ Namespace ViewModels
                 Next
             End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
-            If refreshOverlay Then UpdateSelectedAnnotationOverlayPreview()
             RaiseResetButtonStateChanged()
             If _annotationPlacementEditActive Then
                 _previewTimer.Stop()
-                _previewPending = True
-                ' Solange die Szene ihre Kopie noch hat, bleibt der Ghost unsichtbar - hier nachfassen.
-                RetryPlacementSceneCopyRemovalIfNeeded()
-                StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+                ' KOMPOSITOR: das Objekt steht nicht in der Szene - die Bewegung ist ein blosser
+                ' Neu-Blit. Es reicht die Region DIESES Frames (alte plus neue Lage); die
+                ' Verkettung mit dem Vorgaenger-Blit sitzt in CompositorBlitOrSchedule. Die grosse
+                ' Vereinigung ueber den ganzen Zug wuerde jeden Blit mit dem Abstand zur Startlage
+                ' teurer machen.
+                If CompositorCoversSelection() Then
+                    _annotationDirtyRect = SKRectI.Empty
+                    CompositorBlitOrSchedule(frameDirtyRect)
+                    Return
+                End If
+                ' Gebackener Block (Mischmodus, unter einer eingehaengten Korrektur): das Objekt
+                ' bleibt in der Szene und wird waehrend des Zuges an Ort und Stelle nachgerendert.
+                ' Der Region-Worker koalesziert die Anforderungen von selbst.
+                If Not TryRenderAnnotationPatchSync() Then ScheduleAnnotationCompositePreviewUpdate(40.0)
                 Return
             End If
             ' STUFE 2: alle Objekt-Eigenschafts-Aenderungen laufen einheitlich in die Szene
@@ -22629,71 +22521,6 @@ Namespace ViewModels
         Private Sub SyncSelectedAnnotationIfStroke()
             If _isLoadingAnnotation OrElse Not IsSelectedStrokeAnnotation() Then Return
             SyncSelectedAnnotation()
-        End Sub
-
-        ''' Bild und Objekt-Rechteck gehören zusammen (die View rechnet das Rechteck in die negativen
-        ''' Overlay-Margins um) und müssen deshalb immer gemeinsam gesetzt werden.
-        Private Sub SetSelectedAnnotationOverlay(render As ImageProcessor.AnnotationOverlayRender)
-            _selectedAnnotationOverlayMetrics = render
-            SelectedAnnotationOverlayImage = render?.Image
-        End Sub
-
-        Private Sub UpdateSelectedAnnotationOverlayPreview()
-            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then
-                SetSelectedAnnotationOverlay(Nothing)
-                Return
-            End If
-            ' MEHRFACHAUSWAHL: kein Ghost. Er zeigte das ANKER-Objekt, und die Anzeige streckt ihn per
-            ' Stretch=Fill auf die gemeinsame Box - das letzte markierte Objekt erschien dadurch
-            ' verzerrt über der ganzen Auswahl. Live dargestellt wird bei
-            ' mehreren Objekten ohnehin die Szene selbst.
-            If HasMultiAnnotationSelection Then
-                SetSelectedAnnotationOverlay(Nothing)
-                Return
-            End If
-
-            Dim annotation = _annotations(_selectedAnnotationIndex)
-            If annotation Is Nothing OrElse Not annotation.IsVisible Then
-                SetSelectedAnnotationOverlay(Nothing)
-                Return
-            End If
-
-            If AnnotationRequiresBakedPreview(annotation) Then
-                If Not _annotationPlacementEditActive Then
-                    SetSelectedAnnotationOverlay(Nothing)
-                    Return
-                End If
-            End If
-
-            ' Alles Sichtbare eines selektierten Objekts kommt aus dem Renderer: Formen und Symbole ohnehin,
-            ' Text und Wasserzeichen seit TextRendersInOverlay. Pinsel- und Radiergummi-Ebenen haben kein
-            ' Overlay - ihre Züge stehen bereits im gebackenen Bild.
-            If Not UsesRenderedSelectionOverlay(annotation) AndAlso Not TextRendersInOverlay(annotation) Then
-                SetSelectedAnnotationOverlay(Nothing)
-                Return
-            End If
-
-            Dim previewSource = GetPreviewSource()
-            Dim pixelWidth = 256
-            Dim pixelHeight = 256
-            If previewSource IsNot Nothing Then
-                Dim displayRect = GetAnnotationDisplayPixelRect(annotation)
-                pixelWidth = Math.Max(48, CInt(Math.Round(displayRect.Width)))
-                pixelHeight = Math.Max(48, CInt(Math.Round(displayRect.Height)))
-            End If
-
-            Dim overlayAnnotation = annotation.Clone()
-            ApplyDisplayFlipParityToOverlayClone(overlayAnnotation)
-            SetSelectedAnnotationOverlay(ImageProcessor.RenderAnnotationOverlay(overlayAnnotation, pixelWidth, pixelHeight))
-        End Sub
-
-        Private Sub ApplyDisplayFlipParityToOverlayClone(annotation As ImageAnnotation)
-            If annotation Is Nothing Then Return
-            ' Der Overlay-Renderer zeichnet im bereits sichtbaren Display-Rechteck; Rotation kommt
-            ' aus der View-Transform. Die Bildspiegelung wird beim Bake aber in die Annotation-
-            ' Flipflags eingerechnet, deshalb muss der Ghost dieselbe Parität bekommen.
-            If _appliedFlipH Then annotation.FlipHorizontal = Not annotation.FlipHorizontal
-            If _appliedFlipV Then annotation.FlipVertical = Not annotation.FlipVertical
         End Sub
 
         Private Shared Function ParseAvaloniaColorOrDefault(value As String, fallback As Avalonia.Media.Color) As Avalonia.Media.Color
@@ -22885,6 +22712,10 @@ Namespace ViewModels
         End Sub
 
         Public Sub ClearPendingCrop(Optional captureUndo As Boolean = True)
+            ' Nur im Zuschneide-Werkzeug gibt es einen schwebenden Rahmen zum Verwerfen. Bei
+            ' Live-Zuschnitt (RAW/FPX) sind die Crop-Felder ausserhalb des Werkzeugs das stehende
+            ' Rezept - ein Reglerklick oder eine neue Auswahl darf den Zuschnitt nicht loeschen.
+            If Not ShowCropAdjustments Then Return
             If Not HasCropChanges Then Return
             If captureUndo Then PushUndo()
             SetCropPercentages(0, 0, 0, 0)

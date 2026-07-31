@@ -633,6 +633,14 @@ Namespace Views
         Private Sub OnImageDoubleTapped(sender As Object, e As TappedEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.CanEdit Then Return
+            ' Der Handler haengt am Panel der Buehne (der Zuschneide-Zug faengt dort den Zeiger,
+            ' am Bild kam der Doppelklick nicht mehr an). Ob das BILD gemeint war, entscheidet
+            ' deshalb die Geometrie - ein Doppelklick ins Leere oeffnet weiterhin nichts.
+            Dim image = Me.FindControl(Of Image)("MainImage")
+            If image Is Nothing Then Return
+            Dim position = e.GetPosition(image)
+            If position.X < 0 OrElse position.Y < 0 OrElse
+               position.X > image.Bounds.Width OrElse position.Y > image.Bounds.Height Then Return
             EndPanning()
             vm.EditCommand.Execute(Nothing)
             e.Handled = True

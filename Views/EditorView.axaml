@@ -232,19 +232,6 @@
         <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
                 <StackPanel Spacing="2">
-                    <!-- Linksbuendig mit 4 px Einzug: so steht das 18-px-Symbol im 30-px-Knopf genau
-                         unter den Werkzeug-Symbolen (deren Knopf-Padding ist 10, hier 4+6 Zentrierung). -->
-                    <Button Classes="icon-btn" Width="30" Height="30"
-                            HorizontalAlignment="Left" Margin="4,0,0,2"
-                            Command="{Binding ToggleToolSidebarCommand}"
-                            ToolTip.Tip="Werkzeugleiste ein- oder ausklappen">
-                        <Panel>
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-sidebar-left-collapse.svg"
-                                           Width="18" Height="18" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-sidebar-left-expand.svg"
-                                           Width="18" Height="18" IsVisible="{Binding IsToolSidebarCollapsed}" />
-                        </Panel>
-                    </Button>
                     <!-- Die drei Werkzeuggruppen liegen in einem Raster mit drei Zeilen: welche
                          Gruppe oben steht, sagt die Einstellung (Zeilennummer je Gruppe). Ein
                          gestapeltes Panel könnte das nicht - eine Reihenfolge lässt sich nicht
@@ -817,13 +804,6 @@
                                            StrokeThickness="1.5"
                                            StrokeDashArray="4,4"
                                            IsHitTestVisible="False" />
-                                <Image x:Name="SelectedAnnotationOverlayImage"
-                                       Source="{Binding SelectedAnnotationOverlayImage}"
-                                       HorizontalAlignment="Stretch"
-                                       VerticalAlignment="Stretch"
-                                       Stretch="Fill"
-                                       IsHitTestVisible="False"
-                                       IsVisible="{Binding ShowSelectedSvgOverlay}" />
                                 <!-- Kein AcceptsReturn/Wrap: neue Zeile nur per Strg+Enter (Handler im
                                      Code-Behind), damit die Anzeige exakt den Zeilen des Renderers
                                      entspricht - der bricht nicht automatisch um. -->
@@ -1451,12 +1431,28 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"
                                            Width="20" Height="20"/>
                         </Button>
+                        <!-- Sitzt in der Fusszeile statt in der Leiste selbst: so bleibt der Knopf
+                             auch bei eingeklappter Leiste an derselben Stelle erreichbar. -->
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Margin="-8,0,0,0"
+                                Command="{Binding ToggleToolSidebarCommand}"
+                                ToolTip.Tip="Werkzeugleiste ein- oder ausklappen">
+                            <Panel>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-sidebar-left-collapse.svg"
+                                               Width="18" Height="18" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-sidebar-left-expand.svg"
+                                               Width="18" Height="18" IsVisible="{Binding IsToolSidebarCollapsed}" />
+                            </Panel>
+                        </Button>
                         <!-- Dateiname und Farbetikett stehen jetzt als Fenstertitel oben in der Mitte. -->
                         <!-- KEIN StatusText hier: die Fußzeile ist die linke Spalte eines *,Auto,*-Rasters
                              und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
                              überdeckt („Gespeichert als <langer Dateiname>"). Der Status steht ohnehin
                              oben in der Werkzeugleiste. -->
-                        <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <!-- Bildgröße wie im Betrachter; ein "Bild x von y" wäre hier belanglos,
+                             bearbeitet wird immer genau eines. Der Wert folgt Zuschnitt, Bildgröße
+                             und Leinwand - es ist die Größe, die ein Export ergäbe. -->
+                        <TextBlock Text="{Binding OutputSizeText}" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">

@@ -1177,8 +1177,7 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationYPercent),
                      NameOf(EditorViewModel.AnnotationWidthPercent),
                      NameOf(EditorViewModel.AnnotationHeightPercent),
-                     NameOf(EditorViewModel.SelectedAnnotationImagePath),
-                     NameOf(EditorViewModel.ShowSelectedSvgOverlay)
+                     NameOf(EditorViewModel.SelectedAnnotationImagePath)
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.CropLeft),
                      NameOf(EditorViewModel.CropTop),
@@ -1592,7 +1591,7 @@ Namespace Views
                     ' ausserhalb - und eine herausgezogene Ecke liegt ganz draussen, was ja der Sinn
                     ' der Sache ist. Ohne diese Ausnahme verschluckte der Zweig hier jeden Griff von
                     ' aussen, und die Ecken liessen sich nur von innen und nur zur Haelfte fassen.
-                    Dim startsPerspectiveCornerOutside = ZeigtPerspektive(vm) AndAlso
+                    Dim startsPerspectiveCornerOutside = ShowsPerspective(vm) AndAlso
                                                          HitsWarpCorner(vm, canvas, e.GetPosition(canvas))
                     ' Dasselbe fuer die Rasterpunkte: die des RANDES liegen genau auf der Bildkante,
                     ' ihre aeussere Haelfte also draussen. Ohne die Ausnahme liess sich jeder
@@ -1739,7 +1738,7 @@ Namespace Views
             ' GITTERVERZERRUNG: die Rasterpunkte liegen ueber dem Bild und werden mit derselben
             ' Greiftoleranz gefasst wie die Verlaufs-Anfasser. Ohne Treffer faellt der Klick durch,
             ' damit im Transformationswerkzeug weiterhin geschoben und gezoomt werden kann.
-            If ZeigtPerspektive(vm) Then
+            If ShowsPerspective(vm) Then
                 Dim eckRect = GetDisplayedImageRect(canvas, vm)
                 If eckRect.Width > 0 AndAlso eckRect.Height > 0 Then
                     ' Die Ecken zuerst: sie duerfen ausserhalb des Bildes liegen, also NICHT auf das
@@ -3416,6 +3415,28 @@ Namespace Views
             Return False
         End Function
 
+        ''' <summary>Liegt der Zeiger auf einem Endpunkt einer Verzerrungslinie? Nur zur Frage, ob
+        ''' ein Klick im Textkasten durchgelassen werden muss - gefasst wird er weiter unten.</summary>
+        Private Function HitsLinePoint(vm As EditorViewModel, canvas As Canvas,
+                                           position As Avalonia.Point) As Boolean
+            If vm Is Nothing OrElse canvas Is Nothing Then Return False
+            Dim rect = GetDisplayedImageRect(canvas, vm)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
+            Dim g = vm.LineValues
+            If g Is Nothing OrElse g.Length < 1 Then Return False
+            Dim count = CInt(g(0)) * 4
+            If g.Length < 1 + count * 2 Then Return False
+            For i = 0 To count - 1
+                Dim px = g(1 + i * 2), py = g(2 + i * 2)
+                If Double.IsNaN(px) OrElse Double.IsNaN(py) Then Continue For
+                Dim x = rect.Left + px / 100.0 * rect.Width
+                Dim y = rect.Top + py / 100.0 * rect.Height
+                If Math.Abs(position.X - x) <= CornerHandleTolerance AndAlso
+                   Math.Abs(position.Y - y) <= CornerHandleTolerance Then Return True
+            Next
+            Return False
+        End Function
+
         ''' <summary>Zeigt das Werkzeug gerade die Verzerren-Gruppen? Es MUSS dieselbe Bedingung
         ''' sein wie die des Panels (ShowTransformAdjustments), sonst liegen Regler und Anfasser
         ''' nicht zusammen. Genau das war der Fall: die Anfasser hingen an EditorTool.Transform, der
@@ -3428,7 +3449,7 @@ Namespace Views
         ''' <summary>Liegt gerade das Perspektiv-Viereck ueber dem Bild? Nur wenn das Werkzeug offen
         ''' ist UND im Panel die Perspektive gewaehlt wurde. Beide Overlays gleichzeitig waren ein
         ''' Fehler: die Eck-Anfasser und die Rasterpunkte liegen teils uebereinander.</summary>
-        Private Shared Function ZeigtPerspektive(vm As EditorViewModel) As Boolean
+        Private Shared Function ShowsPerspective(vm As EditorViewModel) As Boolean
             Return IsWarpTool(vm) AndAlso vm.IsWarpPerspective
         End Function
 
@@ -3482,7 +3503,7 @@ Namespace Views
                     Return
                 End If
             End If
-            If vm Is Nothing OrElse Not ZeigtPerspektive(vm) OrElse iw <= 0 OrElse ih <= 0 Then
+            If vm Is Nothing OrElse Not ShowsPerspective(vm) OrElse iw <= 0 OrElse ih <= 0 Then
                 overlay.IsVisible = False
                 overlay.CornerValues = Nothing
                 Return
@@ -4142,7 +4163,6 @@ Namespace Views
             Dim overlay = Me.FindControl(Of Border)("TextOverlay")
             Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
             Dim frame = Me.FindControl(Of Rectangle)("TextOverlayFrame")
-            Dim overlayImage = Me.FindControl(Of Image)("SelectedAnnotationOverlayImage")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay Is Nothing OrElse vm Is Nothing OrElse Not IsLayerPlacementTool(vm.CurrentTool) OrElse Not vm.HasSelectedAnnotation Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
@@ -4177,14 +4197,6 @@ Namespace Views
                 Dim gegen = Me.FindControl(Of Rectangle)("TextOverlayFrameCounter")
                 If gegen IsNot Nothing Then gegen.Stroke = New SolidColorBrush(ContrastPartner(frameColor))
             End If
-            If overlayImage IsNot Nothing Then
-                overlayImage.Margin = ComputeSelectedOverlayImageMargin(vm, width, height)
-                ' KEIN IsVisible hier setzen: die Sichtbarkeit gehoert allein dem Binding
-                ' (ShowSelectedSvgOverlay = Drag-Ghost nur waehrend Placement-Edit). Ein lokales
-                ' False wuerde das Binding uebersteuern und den Ghost bei jeder Mausbewegung
-                ' (UpdateSliderLayout) verstecken.
-            End If
-
             Dim selectedKind = If(vm.SelectedAnnotationKind, "")
             Dim isTextLayer = selectedKind.Equals("Text", StringComparison.OrdinalIgnoreCase) OrElse
                               (selectedKind.Equals("Watermark", StringComparison.OrdinalIgnoreCase) AndAlso vm.ShowTextContentControls)
@@ -4249,44 +4261,6 @@ Namespace Views
             Dim displayHeight = CDbl(vm.DisplayImageHeightPixels)
             If displayWidth <= 0 OrElse displayHeight <= 0 OrElse iw <= 0 OrElse ih <= 0 Then Return fallbackScale
             Return Math.Sqrt((iw / displayWidth) * (ih / displayHeight))
-        End Function
-
-        ''' Das Overlay-Bitmap ist um die Schatten-/Glow-Ränder größer als das Objekt selbst und wird per
-        ''' Stretch="Fill" in die Objekt-Border gezogen. Die negativen Margins schieben genau diese Ränder
-        ''' wieder nach außen, sodass der Objekt-Teil des Bitmaps deckungsgleich auf der Border liegt.
-        ''' Die Ränder werden dabei aus Bitmap-Pixeln in Display-Pixel umgerechnet - sie hier aus den
-        ''' Prozent-Slidern nachzurechnen wäre falsch, weil ImageProcessor sie in der (gedeckelten)
-        ''' Bildpixel-Auflösung des Objekts bemisst, nicht in dessen Bildschirmgröße.
-        Private Shared Function ComputeSelectedOverlayImageMargin(vm As EditorViewModel, width As Double, height As Double) As Thickness
-            ' BEWUSST KEIN ShowSelectedSvgOverlay-Guard mehr: die Margin gehoert IMMER zu den Metrics
-            ' des aktuell gesetzten Ghost-Bitmaps - die Sichtbarkeit regelt allein IsVisible (Binding).
-            ' Der fruehere Guard war eine Timing-Falle: landete der (asynchrone) Ghost, waehrend die
-            ' Property gerade False lieferte, blieb die Margin 0 und die Bitmap-Innenraender
-            ' (4 px Basis + Effekt-Pads) wurden mit in die Box gequetscht -> Objekt schrumpfte beim
-            ' Selektieren/Ziehen (~2 px ohne Effekte, mit Schatten deutlich; Log-Befund GhostMargin
-            ' show=False margin=0 bei bmp 847x587 / obj@54,54).
-            If vm Is Nothing OrElse width <= 0 OrElse height <= 0 Then
-                Return New Thickness(0)
-            End If
-
-            Return ComputeAnnotationOverlayImageMargin(vm.SelectedAnnotationOverlayMetrics, width, height)
-        End Function
-
-        Private Shared Function ComputeAnnotationOverlayImageMargin(metrics As ImageProcessor.AnnotationOverlayRender, width As Double, height As Double) As Thickness
-            If width <= 0 OrElse height <= 0 Then Return New Thickness(0)
-            If metrics Is Nothing OrElse metrics.ObjectWidth <= 0 OrElse metrics.ObjectHeight <= 0 Then
-                Return New Thickness(0)
-            End If
-
-            Dim scaleX = width / metrics.ObjectWidth
-            Dim scaleY = height / metrics.ObjectHeight
-            Dim rightPad = metrics.BitmapWidth - metrics.ObjectX - metrics.ObjectWidth
-            Dim bottomPad = metrics.BitmapHeight - metrics.ObjectY - metrics.ObjectHeight
-
-            Return New Thickness(-metrics.ObjectX * scaleX,
-                                 -metrics.ObjectY * scaleY,
-                                 -rightPad * scaleX,
-                                 -bottomPad * scaleY)
         End Function
 
         ''' <summary>Werkzeuge, in denen der Objektrahmen samt Griffen sichtbar ist. Verschieben ist der
@@ -4357,8 +4331,8 @@ Namespace Views
                 Return
             End If
 
-            ' Dieselbe Falle, zweiter Fall: beim Verzerren eines OBJEKTS liegen die Rasterpunkte
-            ' bzw. die Perspektiv-Ecken ueber dem Objekt - und der TextOverlay-Border liegt
+            ' Dieselbe Falle, zweiter Fall: beim Verzerren eines OBJEKTS liegen die Rasterpunkte,
+            ' die Perspektiv-Ecken bzw. die Linien-Endpunkte ueber dem Objekt - und der TextOverlay-Border liegt
             ' darueber. Ein Druck genau auf einen Anfasser landete deshalb hier statt im
             ' Canvas-Zweig, und bei Text-Objekten liess sich das Gitter gar nicht fassen: seine
             ' Punkte sitzen fast alle INNERHALB des Textkastens.
@@ -4367,7 +4341,8 @@ Namespace Views
             ' e.Handled steigt der Druck dorthin auf und der Gitter-Zweig greift. Geprueft wird
             ' geometrisch, weil e.Source hier immer der oben liegende Border ist.
             If ShowsGrid(vm) AndAlso HitsGridPoint(vm, canvas, pos) Then Return
-            If ZeigtPerspektive(vm) AndAlso HitsWarpCorner(vm, canvas, pos) Then Return
+            If ShowsPerspective(vm) AndAlso HitsWarpCorner(vm, canvas, pos) Then Return
+            If ShowsLines(vm) AndAlso HitsLinePoint(vm, canvas, pos) Then Return
 
             Dim rect = GetTextOverlayRect()
             Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
@@ -4388,10 +4363,9 @@ Namespace Views
             _textDragAspect = If(rect.Height > 0, rect.Width / rect.Height, 1.0)
             _textDragInitialFontSize = vm.AnnotationFontSize
             _isTextDragging = True
-            ' Placement-Edit (Ghost-Übergabe Szene->Overlay) NICHT hier starten, sondern erst
-            ' bei echter Bewegung in OnTextOverlayPointerMoved: der reine Auswahl-Klick
-            ' ("Auswahl + Ziehen in einer Geste") löste sonst bei jedem Maus-Selektieren die
-            ' komplette Übergabe aus - das kurze Flackern.
+            ' Placement-Edit NICHT hier starten, sondern erst bei echter Bewegung in
+            ' OnTextOverlayPointerMoved: der reine Auswahl-Klick ("Auswahl + Ziehen in einer
+            ' Geste") legte sonst bei jedem Maus-Selektieren einen Undo-Schnappschuss an.
             _textDragPlacementStarted = False
             ' Smart Guides: Anrast-Ziele der ANDEREN Objekte einmal beim Zug-Start einsammeln
             ' (stabil und billig; die Objekte bewegen sich während des Zugs nicht). Der
@@ -5380,20 +5354,22 @@ Namespace Views
                             e.Handled = True
                         End If
                     Case Key.T
+                        ' SetToolCommand stellt das Werkzeug samt Platzierungsart scharf (derselbe Weg
+                        ' wie die Knoepfe) - eine nackte CurrentTool-Zuweisung liesse PendingInsertKind leer.
                         If Not isTextInputFocused Then
-                            vm.CurrentTool = EditorTool.Text
+                            vm.SetToolCommand.Execute("Text")
                             e.Handled = True
                         End If
                     Case Key.B
                         If Not isTextInputFocused Then
-                            vm.CurrentTool = EditorTool.Draw
+                            vm.SetToolCommand.Execute("Brush")
                             e.Handled = True
                         End If
                     Case Key.M
                         ' „Werkzeug: Einfügen" (Objekte platzieren) - vorher auf Strg+G, das jetzt dem
                         ' Gruppieren gehört.
                         If Not isTextInputFocused Then
-                            vm.CurrentTool = EditorTool.Insert
+                            vm.SetToolCommand.Execute("Insert")
                             e.Handled = True
                         End If
                     Case Key.I
@@ -5426,24 +5402,25 @@ Namespace Views
                e.KeyModifiers.HasFlag(KeyModifiers.Control) Then Return
 
             Select Case e.Key
+                    ' Pfeiltasten schieben in BILDPIXELN: 1 Pixel fein, mit Umschalt 10.
                     Case Key.Left
                         If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
-                            vm.NudgeSelectedAnnotation(-If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0), 0)
+                            vm.NudgeSelectedAnnotationPixels(-If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 10.0, 1.0), 0)
                             e.Handled = True
                         End If
                     Case Key.Right
                         If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
-                            vm.NudgeSelectedAnnotation(If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0), 0)
+                            vm.NudgeSelectedAnnotationPixels(If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 10.0, 1.0), 0)
                             e.Handled = True
                         End If
                     Case Key.Up
                         If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
-                            vm.NudgeSelectedAnnotation(0, -If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0))
+                            vm.NudgeSelectedAnnotationPixels(0, -If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 10.0, 1.0))
                             e.Handled = True
                         End If
                     Case Key.Down
                         If vm.HasSelectedAnnotation AndAlso Not isInputControlFocused Then
-                            vm.NudgeSelectedAnnotation(0, If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 5.0, 1.0))
+                            vm.NudgeSelectedAnnotationPixels(0, If(e.KeyModifiers.HasFlag(KeyModifiers.Shift), 10.0, 1.0))
                             e.Handled = True
                         End If
                     Case Key.Delete
