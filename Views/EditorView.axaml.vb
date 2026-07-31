@@ -4211,8 +4211,9 @@ Namespace Views
                 ' uniform auf die Zielauflösung (ImageProcessor.ScaleAnnotationForSource). Die Live-Textbox
                 ' muss exakt dieselbe Umrechnung machen - sonst weicht der Text im Editor deutlich von der
                 ' gebackenen Größe ab. Die Größe darf insbesondere NICHT aus der Objekt-Box abgeleitet
-                ' werden: die Box umschließt den Text zwar eng (EditorViewModel.EstimateTextAnnotationSizePercent),
-                ' der Nutzer kann sie aber jederzeit an den Griffen aufziehen - der Schriftgrad bleibt dabei.
+                ' werden: die Box ist der gemessene Textkasten (EstimateTextAnnotationSizePercent); beim
+                ' Ziehen an den Griffen skaliert die View den Schriftgrad (ScaleSelectedTextFontFromDrag)
+                ' und die Box folgt der Schrift, nie umgekehrt.
                 Dim displayScale = ComputeBasePixelToDisplayScale(vm, iw, ih, scale)
                 Dim bakedFontSize = Math.Max(8.0, vm.AnnotationFontSize)
                 Dim displayFontSize = Math.Max(1.0, bakedFontSize * displayScale)

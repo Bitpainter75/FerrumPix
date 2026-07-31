@@ -22419,6 +22419,10 @@ Namespace ViewModels
                 a.BrushPreset = If(normalizedKind = "Eraser", "soft", _brushPreset)
                 a.EraserFillColor = _eraserFillColor
             End If
+            ' Ein Mischmodus-Wechsel verschiebt Objekte ueber die Kompositor-Grenze (Normal =
+            ' Kompositor, alles andere = gebackener Block) - dann muss die SZENE neu, ein blosser
+            ' Blit liesse die alte gebackene Fassung stehen.
+            Dim blendChanged = Not String.Equals(If(a.BlendMode, "Normal"), If(_annotationBlendMode, "Normal"), StringComparison.Ordinal)
             a.BlendMode = _annotationBlendMode
             a.BlendIncludesStroke = _annotationBlendIncludesStroke
             ' GESPERRT: Lage, Größe, Drehung und Spiegelung bleiben, wie sie sind. Alles andere
@@ -22484,13 +22488,28 @@ Namespace ViewModels
             ' wirken auf ALLE markierten - sonst beschriebe das Panel nur den Anker, und Deckkraft
             ' oder Mischmodus einer Gruppe wären wirkungslos. Alles Übrige (Text, Schrift, Füllung,
             ' Kontur, Effekte) ist objekt-eigen und wird bei Mehrfachauswahl gar nicht erst angeboten.
+            ' Jedes tatsaechlich geaenderte Mitglied kommt MIT in das Dirty-Rechteck - sonst deckt
+            ' der folgende Render bzw. Blit nur den Anker ab und die uebrigen behalten sichtbar
+            ' den alten Stand (Befund: Gruppe zurueck auf Normal, nur eine Ebene folgte).
             If HasMultiAnnotationSelection Then
                 For Each other In SelectedAnnotations
                     If Object.ReferenceEquals(other, a) Then Continue For
+                    Dim otherBlendChanged = Not String.Equals(If(other.BlendMode, "Normal"), If(a.BlendMode, "Normal"), StringComparison.Ordinal)
+                    Dim otherChanged = otherBlendChanged OrElse
+                                       other.Opacity <> a.Opacity OrElse
+                                       other.BlendIncludesStroke <> a.BlendIncludesStroke OrElse
+                                       other.IsVisible <> a.IsVisible
                     other.Opacity = a.Opacity
                     other.BlendMode = a.BlendMode
                     other.BlendIncludesStroke = a.BlendIncludesStroke
                     other.IsVisible = a.IsVisible
+                    blendChanged = blendChanged OrElse otherBlendChanged
+                    If otherChanged AndAlso previewSource IsNot Nothing Then
+                        _annotationDirtyRect = ImageProcessor.UnionRects(
+                            _annotationDirtyRect,
+                            ImageProcessor.ComputeAnnotationDirtyRect(sceneSize.Width, sceneSize.Height, other,
+                                                                      GetCurrentAdjustments(forPreview:=True)))
+                    End If
                 Next
             End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationText))
@@ -22510,6 +22529,13 @@ Namespace ViewModels
                 ' Gebackener Block (Mischmodus, unter einer eingehaengten Korrektur): das Objekt
                 ' bleibt in der Szene und wird waehrend des Zuges an Ort und Stelle nachgerendert.
                 ' Der Region-Worker koalesziert die Anforderungen von selbst.
+                If Not TryRenderAnnotationPatchSync() Then ScheduleAnnotationCompositePreviewUpdate(40.0)
+                Return
+            End If
+            ' Mischmodus-Wechsel: Objekte wandern zwischen gebackenem Block und Kompositor, die
+            ' Szene selbst muss neu gerendert werden - der Blit-Kurzweg des Kompositors wuerde die
+            ' alte gebackene Fassung stehen lassen (bzw. die neue nie backen).
+            If blendChanged Then
                 If Not TryRenderAnnotationPatchSync() Then ScheduleAnnotationCompositePreviewUpdate(40.0)
                 Return
             End If
