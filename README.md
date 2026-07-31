@@ -80,7 +80,7 @@ Lens defects are corrected from measured data: distortion, the coloured fringes 
 
 Edits to a RAW go into a small `.fpxmp` sidecar next to it; the RAW itself is never modified, and the sidecar travels with the file when you move, copy or rename it in FerrumPix. A Lightroom `.xmp` sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
-Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…* writes them out in one of the normal formats. HEIC needs the system's `libheif`; TIFF needs nothing extra.
+Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…* writes them out in one of the normal formats. HEIC needs the system's `libheif`, except on macOS, which reads it itself; TIFF needs nothing extra.
 
 ### Model files
 
@@ -142,7 +142,7 @@ On macOS the window carries the usual title bar with the red, yellow and green b
 
 `libmpv` (video) and `libraw` (RAW development) are required rather than optional. The Linux packages declare both as dependencies; the Windows releases bundle them. The Flatpak builds LibRaw in but ships no `libmpv`, so it has no video support, and the macOS builds need `brew install libraw`. Where a library is present on the system, FerrumPix prefers it over a bundled copy, so it keeps getting updates and support for newer cameras.
 
-`libheif` is optional and never bundled, on any platform: it opens HEIC/HEIF/AVIF, and those are usually HEVC-encoded, which carries patent licensing in several countries - a decision for your distribution rather than for this project. Without it, HEIC files simply stay closed and everything else works.
+`libheif` is optional and never bundled, on any platform: it opens HEIC/HEIF/AVIF, and those are usually HEVC-encoded, which carries patent licensing in several countries - a decision for your distribution rather than for this project. Without it, HEIC files simply stay closed and everything else works. macOS is the exception: it reads these formats itself, so nothing has to be installed there.
 
 ## Building from source
 

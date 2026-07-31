@@ -1290,9 +1290,16 @@ Namespace Views
             overlay.IsVisible = True
             Me.Focus()
             Try
-                ' Auto-Variante: erkennt Buendel (Komposit), RAW und PSD - derselbe Weg wie die
-                ' Filmstrip-Vorschau.
-                Dim bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(item.FilePath))
+                Dim bmp = Await Task.Run(Function() As Bitmap
+                                             If RawPreviewService.IsSupportedRaw(item.FilePath) Then
+                                                 Using preview = RawPreviewService.ExtractPreviewWithFallback(item.FilePath)
+                                                     Return If(preview IsNot Nothing, ImageOrientationService.LoadOrientedAvaloniaBitmap(preview), Nothing)
+                                                 End Using
+                                             End If
+                                             ' Die Auto-Variante behandelt FPX, HEIF/AVIF, PSD und die
+                                             ' uebrigen Formate ueber denselben orientierten Ladeweg.
+                                             Return ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(item.FilePath)
+                                         End Function)
                 If overlay.IsVisible AndAlso bmp IsNot Nothing Then img.Source = bmp
             Catch
             End Try
