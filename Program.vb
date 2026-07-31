@@ -21,6 +21,9 @@ Module Program
     End Function
 
     Function BuildAvaloniaApp() As AppBuilder
+        ' Video rendering uses Avalonia's OpenGL control on every desktop platform.
+        ' Keep OpenGL preferred and retain Software as Avalonia's fallback; the
+        ' libmpv Render API itself still needs a real OpenGL context for video.
         Return AppBuilder.Configure(Of App)().
             UsePlatformDetect().
             UseReactiveUI(AddressOf ConfigureReactiveUI).

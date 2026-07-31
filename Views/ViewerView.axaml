@@ -674,11 +674,10 @@
 
         </Grid>
 
-        <!-- A single VideoView sits beside the filmstrip in windowed mode and
-             covers the viewer in fullscreen. ApplyVideoLayout moves it between
-             those states instead of maintaining two OpenGL contexts. The libmpv
-             render context therefore survives the transition and composes inside
-             Avalonia's visual tree.
+        <!-- Keep one Avalonia video control for both modes. ApplyVideoLayout changes
+             only its grid placement; it does not create or reparent a native child
+             window. The libmpv render context is attached through the control's
+             OpenGL lifecycle and is recreated if Avalonia recreates the context.
         -->
         <Grid Name="VideoOverlay"
               Grid.Row="1" Grid.Column="0"
@@ -689,6 +688,8 @@
             <icons:MpvVideoView Name="TheVideoView"
                              IsVisible="{Binding ShowVideoSurface}"
                              Tapped="OnVideoViewTapped"/>
+            <!-- This transparent Avalonia layer stays above the framebuffer so pointer
+                 activity and tap-to-play/pause continue through the normal viewer handlers. -->
             <Border Background="Transparent"
                     PointerMoved="OnGlobalPointerActivity"
                     PointerPressed="OnVideoInputPointerPressed"

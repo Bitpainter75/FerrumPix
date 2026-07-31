@@ -7,6 +7,11 @@ Imports FerrumPix.Services
 
 Namespace Controls
 
+    ''' <summary>
+    ''' Hosts libmpv's OpenGL render API in Avalonia's control tree.
+    ''' No native child window or platform window ID is created; Avalonia supplies
+    ''' the current framebuffer to the render callback on every desktop platform.
+    ''' </summary>
     Public Class MpvVideoView
         Inherits OpenGlControlBase
 
@@ -26,12 +31,16 @@ Namespace Controls
         End Property
 
         Protected Overrides Sub OnOpenGlInit(gl As GlInterface)
+            ' Avalonia has made its OpenGL context current before this callback.
+            ' Attach the player here, rather than from the UI thread.
             _glReady = True
             SwitchPlayer(gl)
             RequestNextFrameRendering()
         End Sub
 
         Protected Overrides Sub OnOpenGlRender(gl As GlInterface, framebuffer As Integer)
+            ' Both the framebuffer and libmpv's OpenGL render context are valid only
+            ' while Avalonia is executing this callback with its context current.
             SwitchPlayer(gl)
             If _attachedPlayer Is Nothing Then Return
 
@@ -43,11 +52,15 @@ Namespace Controls
         End Sub
 
         Protected Overrides Sub OnOpenGlDeinit(gl As GlInterface)
+            ' Release libmpv before Avalonia destroys this context. A render context
+            ' belongs to one host context and must not be reused after deinitialization.
             DetachPlayer()
             _glReady = False
         End Sub
 
         Private Sub SwitchPlayer(gl As GlInterface)
+            ' Navigation or disposal can replace the player while this control remains
+            ' in the visual tree. Remove stale callbacks before attaching the new player.
             If _attachedPlayer IsNot Nothing AndAlso
                (Not Object.ReferenceEquals(_attachedPlayer, _player) OrElse _attachedPlayer.IsDisposeRequested) Then
                 DetachPlayer()

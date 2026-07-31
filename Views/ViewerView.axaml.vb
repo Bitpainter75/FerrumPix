@@ -998,8 +998,9 @@ Namespace Views
                 ResetFullscreenVideoControlsVisibility()
             End If
 
-            ' ShowVideoSurface changes at video end and again when playback restarts,
-            ' so the player must be assigned to the OpenGL control again.
+            ' These properties can change while the same control remains in the visual tree.
+            ' Re-run the assignment so MpvVideoView can attach or detach the current player
+            ' through its OpenGL lifecycle without creating a second video surface.
             If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
@@ -1103,9 +1104,10 @@ Namespace Views
             bar.IsVisible = available AndAlso visibleInMode
         End Sub
 
-        ''' Positions the single video overlay for windowed or fullscreen display.
-        ''' Layout changes move the same control without detaching it, preserving
-        ''' the OpenGL context across fullscreen transitions.
+        ''' Moves the single video overlay between windowed and fullscreen layout.
+        ''' The control remains in the visual tree, so fullscreen changes do not require
+        ''' a second player or a platform-native window; OpenGL lifecycle callbacks handle
+        ''' any context recreation performed by Avalonia.
         Private Sub ApplyVideoLayout()
             Dim vm = GetVm()
             Dim overlay = Me.FindControl(Of Grid)("VideoOverlay")
@@ -1127,8 +1129,8 @@ Namespace Views
         End Sub
 
         ''' Assigns the ViewerViewModel player to the single video overlay, or clears it,
-        ''' when the active media changes. Fullscreen transitions only move the overlay,
-        ''' allowing the OpenGL context to survive fullscreen and video navigation.
+        ''' when the active media changes. Fullscreen transitions only move the overlay;
+        ''' changing media swaps the player while the same OpenGL control is retained.
         Private _pendingVideoAttachHandler As EventHandler
 
         Private Sub UpdateActiveVideoView()
@@ -1150,9 +1152,9 @@ Namespace Views
             AttachVideoPlayer(videoView, vm.VideoMediaPlayer, vm)
         End Sub
 
-        ''' The OpenGL renderer is created after the first layout pass. Assign the
-        ''' player only once the control has a real size so libmpv receives a valid
-        ''' framebuffer from the first frame.
+        ''' Defer assignment until the control has non-zero layout bounds. MpvVideoView
+        ''' attaches libmpv from its OpenGL callbacks, and a zero-sized control cannot
+        ''' provide a useful framebuffer for the first frame.
         Private Sub AttachVideoPlayer(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
             If target.Bounds.Width > 0 AndAlso target.Bounds.Height > 0 Then
                 target.Player = mediaPlayer
@@ -1174,6 +1176,8 @@ Namespace Views
 
         Private Async Sub StartPendingVideoAutoplayAfterHostReady(target As MpvVideoView, mediaPlayer As MpvPlayer, vm As ViewerViewModel)
             Try
+                ' Let the first layout/OpenGL pass settle before autoplay. The identity
+                ' checks below prevent this delayed callback from starting stale media.
                 Await Task.Delay(180)
                 If target Is Nothing OrElse vm Is Nothing Then Return
                 If Not Object.ReferenceEquals(target.Player, mediaPlayer) Then Return

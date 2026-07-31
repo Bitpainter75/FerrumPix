@@ -40,12 +40,10 @@ Namespace Services
             Return IntPtr.Zero
         End Function
 
-        ''' <summary>Erst die Bibliothek des Systems, dann die mitgelieferte.
-        '''
-        ''' Die Reihenfolge ist Absicht: eine vom Paketverwalter gepflegte libmpv bekommt
-        ''' Sicherheitsaktualisierungen und passt zu den Codecs, Treibern und Ausgabepfaden des
-        ''' Systems. Die mitgelieferte Fassung ist der Rückfall für Umgebungen, die keine haben -
-        ''' Windows und die portablen Pakete.</summary>
+        ''' <summary>Try system libmpv before application-local candidates.
+        ''' This lets package-managed security, codec, and driver updates follow the host.
+        ''' If no system library is available, the normal bundled/runtime candidates remain
+        ''' available for Windows and portable packages.</summary>
         Private Shared Function TryLoadPreferSystem(assembly As Assembly, searchPath As DllImportSearchPath?, ByRef handle As IntPtr) As Boolean
             For Each candidate In SystemLibraryCandidates()
                 If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then Return True

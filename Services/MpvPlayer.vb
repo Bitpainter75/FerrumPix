@@ -17,9 +17,8 @@ Namespace Services
 
         Private ReadOnly _syncRoot As New Object()
         Private ReadOnly _enableHardwareAcceleration As Boolean
-        ' Regular libmpv commands run separately from the OpenGL render thread.
-        ' The render API requires this separation, and file or seek commands must
-        ' not block Avalonia's UI thread.
+        ' Serialize libmpv commands on a dedicated thread. Render API calls remain on
+        ' Avalonia's OpenGL callback path, and file/seek commands must not block the UI.
         Private ReadOnly _commandQueue As New BlockingCollection(Of Action)()
         Private ReadOnly _commandThread As Thread
         Private ReadOnly _commandQueueLock As New Object()
@@ -64,8 +63,9 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Attaches libmpv to Avalonia's current OpenGL context.
-        ''' Call only from OpenGlControlBase.OnOpenGl* methods.</summary>
+        ''' <summary>Creates the libmpv render context for Avalonia's current OpenGL context.
+        ''' Call only from MpvVideoView's OpenGlControlBase.OnOpenGl* callbacks; the
+        ''' supplied function pointers and render callbacks are tied to that context.</summary>
         Friend Function AttachOpenGl(getProcAddress As Func(Of String, IntPtr), requestRender As Action) As Boolean
             If getProcAddress Is Nothing OrElse requestRender Is Nothing Then Return False
 
@@ -140,7 +140,9 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Detaches the renderer while Avalonia still holds its OpenGL context current.</summary>
+        ''' <summary>Releases the libmpv render context while Avalonia still holds its
+        ''' OpenGL context current. Native player destruction is deferred when disposal
+        ''' was requested while the render context was still attached.</summary>
         Friend Sub DetachOpenGl()
             Dim context As IntPtr
             Dim shouldDispose As Boolean
@@ -164,8 +166,9 @@ Namespace Services
             If shouldDispose Then QueueDispose()
         End Sub
 
-        ''' <summary>Renders the next frame into Avalonia's current framebuffer.
-        ''' Call only from OpenGlControlBase.OnOpenGlRender.</summary>
+        ''' <summary>Renders the next frame into the framebuffer supplied by Avalonia.
+        ''' Width and height are physical pixels. Call only from
+        ''' OpenGlControlBase.OnOpenGlRender while the host context is current.</summary>
         Friend Function RenderOpenGlFrame(framebuffer As Integer, width As Integer, height As Integer) As Boolean
             Dim context As IntPtr
             SyncLock _syncRoot
@@ -360,6 +363,8 @@ Namespace Services
             ' Treat the option as optional for compatibility with minimal libmpv builds.
             TrySetOptionStringLocked("osc", "no")
             SetOptionStringLocked("keep-open", "no")
+            ' Avalonia owns the drawing surface, so use libmpv's render API instead of
+            ' --wid. No platform-native child window is created by this player.
             SetOptionStringLocked("vo", "libmpv")
             ' Match image "cover" behavior: preserve aspect ratio while filling the
             ' output surface instead of retaining letterbox or pillarbox bars.
