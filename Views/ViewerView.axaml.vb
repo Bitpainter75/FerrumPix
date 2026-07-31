@@ -711,13 +711,21 @@ Namespace Views
                    vm.RotationAngle = 0 AndAlso vm.ScaleX = 1.0
         End Function
 
-        ''' <summary>Läuft unabhängig von Pan/Crop-Dragging bei jeder Mausbewegung über dem Bild, damit
-        ''' die Bildpixel-Koordinate in der Fußleiste immer aktuell ist.</summary>
+        ''' <summary>Läuft unabhängig von Pan/Crop-Dragging bei jeder Mausbewegung über der Bühne, damit
+        ''' die Bildpixel-Koordinate in der Fußleiste immer aktuell ist. Die Zieh-Ereignisse hängen am
+        ''' Panel um das Bild - AUSSERHALB des Bildes gibt es keine Bildkoordinate, dort bleibt die
+        ''' Fußleiste leer statt geklemmte Randwerte zu zeigen.</summary>
         Private Sub UpdateMousePositionText(e As PointerEventArgs)
             Dim vm = GetVm()
             Dim image = Me.FindControl(Of Image)("MainImage")
             If vm Is Nothing OrElse image Is Nothing OrElse vm.CurrentImage Is Nothing Then Return
-            Dim norm = NormalizeImagePoint(e.GetPosition(image), image.Bounds.Size)
+            Dim position = e.GetPosition(image)
+            If position.X < 0 OrElse position.Y < 0 OrElse
+               position.X > image.Bounds.Width OrElse position.Y > image.Bounds.Height Then
+                vm.MousePositionText = ""
+                Return
+            End If
+            Dim norm = NormalizeImagePoint(position, image.Bounds.Size)
             Dim px = CInt(norm.X * vm.CurrentImage.PixelSize.Width)
             Dim py = CInt(norm.Y * vm.CurrentImage.PixelSize.Height)
             vm.MousePositionText = $"{px}, {py}"

@@ -206,7 +206,17 @@
                                   VerticalScrollBarVisibility="Auto"
                                   SizeChanged="OnImageViewportSizeChanged"
                                   IsVisible="{Binding IsSingleImageVisible}">
-                        <Panel>
+                        <!-- Die Zieh-Ereignisse haengen am PANEL, nicht am Bild: der Zuschneide-Rahmen
+                             soll wie im Editor auch AUSSERHALB des Bildes auf der Buehne angesetzt
+                             werden koennen (die Rechnung klemmt die Punkte ohnehin auf das Bild).
+                             Dafuer braucht das Panel einen transparenten Hintergrund - ohne ihn ist
+                             die freie Flaeche nicht treffbar. Doppelklick und Verlassen bleiben am
+                             Bild: ein Doppelklick ins Leere soll nicht den Editor oeffnen. -->
+                        <Panel Background="Transparent"
+                               PointerPressed="OnImagePointerPressed"
+                               PointerMoved="OnImagePointerMoved"
+                               PointerReleased="OnImagePointerReleased"
+                               PointerCaptureLost="OnImagePointerCaptureLost">
                             <Border Name="MainImageBackgroundBorder"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
@@ -222,10 +232,6 @@
                                        Stretch="Uniform"
                                        Margin="-1"
                                        RenderOptions.BitmapInterpolationMode="HighQuality"
-                                       PointerPressed="OnImagePointerPressed"
-                                       PointerMoved="OnImagePointerMoved"
-                                       PointerReleased="OnImagePointerReleased"
-                                       PointerCaptureLost="OnImagePointerCaptureLost"
                                        PointerExited="OnImagePointerExited"
                                        DoubleTapped="OnImageDoubleTapped" />
                             </Border>

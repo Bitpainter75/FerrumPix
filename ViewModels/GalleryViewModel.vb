@@ -5680,23 +5680,22 @@ Namespace ViewModels
             If targetItems.Count = 0 Then Return
 
             Dim samplePath = Await EnsureLocalPathForBatchAsync(targetItems(0))
-            ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die Vorgabe des
-            ' Dialogs (zuletzt genutzter Exportordner).
-            Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
+            Dim folderHint = BatchFolderHint(targetItems)
             ' Ueberschreiben nur anbieten, wenn JEDE Quelle ihr eigenes Format auch schreiben kann
             ' (BMP/GIF koennen es nicht - dort entstehen neue Dateien).
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
             Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
-                                                           singleImage:=targetItems.Count = 1)
+                                                           singleImage:=targetItems.Count = 1,
+                                                           sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If resize Is Nothing Then Return
 
             StatusText = LocalizationService.T("Ändere Bildgröße...")
             ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
             ' Einstellung ist nur noch die Vorbelegung.
             Dim preserveMetadata = resize.PreserveMetadata
-            ' Beim Überschreiben behält die Datei ihr Format - dort bleibt die bisherige feste Qualität;
-            ' bei Kopien zählt die Formatauswahl des Dialogs.
-            Dim jpgQuality = If(resize.Overwrite, 95, resize.JpgQuality)
+            ' Auch beim Ueberschreiben zaehlt der Regler des Dialogs (Vorbelegung 95) - vorher
+            ' wurde hier still mit fester Qualitaet gespeichert.
+            Dim jpgQuality = resize.JpgQuality
             Dim writer = Function(source As String, target As String)
                              ' Prozent NICHT vorab aus der Datei schaetzen: SKCodec kennt die Masse
                              ' von RAW/PSD/.fpx nicht (das ergab stumm die Originalgroesse, und ohne
@@ -5785,15 +5784,54 @@ Namespace ViewModels
         ''' die Auswahl anwenden - entweder in die Originale hinein oder in neue Dateien (mit dem Namen der
         ''' Vorgabe im Dateinamen).</summary>
         ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
+        ''' <summary>Der Ordner fuer den Knopf "Aktueller Ordner" eines Stapeldialogs: der
+        ''' gemeinsame Ordner der Dateien selbst - erst wenn die Dateien verstreut liegen, der
+        ''' offene Galerie-Ordner. Aus Viewer und Editor kommen die Dialoge mit dem EINEN aktuellen
+        ''' Bild, waehrend die Galerie in einer Suchliste oder in Immich stehen kann: der Knopf
+        ''' fehlte dort, obwohl das Bild einen eindeutigen Ordner hat. Immich-Assets und ihre
+        ''' Tempkopien bleiben aussen vor - ein Temp-Ordner ist kein sinnvolles Ziel.</summary>
+        Private Function BatchFolderHint(targetItems As IEnumerable(Of ImageItem)) As String
+            Dim gemeinsam As String = Nothing
+            For Each item In If(targetItems, Enumerable.Empty(Of ImageItem)())
+                If item Is Nothing OrElse String.IsNullOrWhiteSpace(item.FilePath) Then Continue For
+                If item.IsImmichAsset OrElse ImmichService.IsImmichTempPath(item.FilePath) Then
+                    gemeinsam = Nothing
+                    Exit For
+                End If
+                Dim ordner = IO.Path.GetDirectoryName(item.FilePath)
+                If String.IsNullOrWhiteSpace(ordner) Then Continue For
+                If gemeinsam Is Nothing Then
+                    gemeinsam = ordner
+                ElseIf Not PathIdentity.AreSame(gemeinsam, ordner) Then
+                    gemeinsam = Nothing
+                    Exit For
+                End If
+            Next
+            If Not String.IsNullOrWhiteSpace(gemeinsam) Then Return gemeinsam
+            ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die
+            ' Vorgabe des Dialogs (zuletzt genutzter Exportordner).
+            Return If(_isVirtualFolder, "", If(_currentFolder, ""))
+        End Function
+
+        ''' <summary>Sind JPG-Dateien im Stapel? Dann zeigt der Dialog den Qualitaetsregler auch
+        ''' beim Ueberschreiben - die Dateien werden dabei neu encodiert.</summary>
+        Private Shared Function BatchIncludesJpg(targetItems As IEnumerable(Of ImageItem)) As Boolean
+            Return If(targetItems, Enumerable.Empty(Of ImageItem)()).Any(
+                Function(i)
+                    If i Is Nothing Then Return False
+                    Dim ext = IO.Path.GetExtension(If(i.FilePath, "")).ToLowerInvariant()
+                    Return ext = ".jpg" OrElse ext = ".jpeg"
+                End Function)
+        End Function
+
         Private Async Sub ApplyFilterSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
             Dim targetItems = If(vorgabe IsNot Nothing, vorgabe.ToList(), GetSelectedBatchEditableImageItems())
             If targetItems.Count = 0 Then Return
 
-            ' In einer Suchliste oder in Immich gibt es keinen echten Ordner - dann greift die Vorgabe des
-            ' Dialogs (zuletzt genutzter Exportordner).
-            Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
+            Dim folderHint = BatchFolderHint(targetItems)
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
-            Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar)
+            Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar,
+                                                            sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If result Is Nothing Then Return
 
             Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
@@ -5950,7 +5988,9 @@ Namespace ViewModels
             If targetItems.Count = 0 Then Return
 
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
-            Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar)
+            Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar,
+                                                                      currentFolder:=BatchFolderHint(targetItems),
+                                                                      sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If result Is Nothing OrElse result.Preset Is Nothing Then Return
 
             Dim annotation = CreateWatermarkAnnotation(result.Preset)
@@ -6470,7 +6510,7 @@ Namespace ViewModels
             DiagnosticLogService.LogAlways("Gallery.ExportTo", $"selected={GetSelectedImageItems().Count} exportable={targetItems.Count}")
             If targetItems.Count = 0 Then Return
 
-            Dim folderHint = If(_isVirtualFolder, "", If(_currentFolder, ""))
+            Dim folderHint = BatchFolderHint(targetItems)
             Dim samplePath = targetItems.Select(Function(i) i.FilePath).
                 FirstOrDefault(Function(pth) Not String.IsNullOrEmpty(pth) AndAlso File.Exists(pth))
             Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath)
@@ -6630,7 +6670,8 @@ Namespace ViewModels
             DiagnosticLogService.LogAlways("Gallery.BatchConvert", $"selected={GetSelectedImageItems().Count} convertible={targetItems.Count}")
             If targetItems.Count = 0 Then Return
 
-            Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, MainWindowViewModel.DefaultSaveFormat())
+            Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, MainWindowViewModel.DefaultSaveFormat(),
+                                                             currentFolder:=BatchFolderHint(targetItems))
             If result Is Nothing Then Return
 
             StatusText = LocalizationService.T("Konvertiere…")

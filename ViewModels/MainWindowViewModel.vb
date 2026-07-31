@@ -685,6 +685,7 @@ Namespace ViewModels
                 If _dialogSelectedFormat = normalized Then Return
                 Me.RaiseAndSetIfChanged(_dialogSelectedFormat, normalized)
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
                 ' Verfügbarkeit des Immich-Ziels hängt vom Format ab (FPX: nur lokal); ein zuvor gewähltes
                 ' Immich-Ziel auf Lokal zurücksetzen, damit keine ausgeblendete Option aktiv bleibt.
                 Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
@@ -727,10 +728,10 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_dialogSaveAsTargetFolder, AppSettingsService.NormalizeFolderPath(value))
-                ' Die beiden Schnellwahlen zeigen sich nur, solange sie etwas ANDERES anbieten als
-                ' das, was schon im Feld steht - deshalb hier und nicht nur beim Oeffnen melden.
-                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentVisible))
-                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedVisible))
+                ' Aktiv-Zustand und Bedienbarkeit haengen am Feldinhalt - deshalb hier und nicht
+                ' nur beim Oeffnen melden.
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentEnabled))
+                Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
                 Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedActive))
             End Set
@@ -752,18 +753,18 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Sichtbar, sobald es den Ordner gibt - NICHT erst, wenn er etwas anderes
-        ''' anbietet als das Feld. Die erste Fassung versteckte die Schaltfläche genau dann, wenn
-        ''' ihr Ordner schon eingetragen war, und beim Öffnen ist das der Normalfall: man sah die
-        ''' Wahlmöglichkeit dadurch fast nie. Welche gerade gilt, zeigt stattdessen die
-        ''' Hervorhebung.</summary>
-        Public ReadOnly Property IsDialogFolderChoiceCurrentVisible As Boolean
+        ''' <summary>Bedienbar, sobald es den Ordner gibt. Die Knoepfe sind IMMER sichtbar und
+        ''' werden ohne Ordner nur ausgegraut - eine Zeile, in der Knoepfe je nach Aufrufweg
+        ''' auftauchen und verschwinden, ist schwerer zu lesen als eine stabile (Nutzerwunsch).
+        ''' Frueher versteckte die Regel die Schaltflaeche komplett, und aus Viewer und Editor
+        ''' fehlte der Knopf "Aktueller Ordner" dadurch ganz.</summary>
+        Public ReadOnly Property IsDialogFolderChoiceCurrentEnabled As Boolean
             Get
                 Return _dialogFolderChoiceCurrent <> ""
             End Get
         End Property
 
-        Public ReadOnly Property IsDialogFolderChoiceLastSavedVisible As Boolean
+        Public ReadOnly Property IsDialogFolderChoiceLastSavedEnabled As Boolean
             Get
                 Return _dialogFolderChoiceLastSaved <> ""
             End Get
@@ -807,8 +808,8 @@ Namespace ViewModels
                                           ResolveDefaultSaveAsTargetFolder())
             Me.RaisePropertyChanged(NameOf(DialogFolderChoiceCurrent))
             Me.RaisePropertyChanged(NameOf(DialogFolderChoiceLastSaved))
-            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentVisible))
-            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedVisible))
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentEnabled))
+            Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedEnabled))
             Me.RaisePropertyChanged(NameOf(IsSaveAsTargetRowVisible))
         End Sub
 
@@ -867,12 +868,11 @@ Namespace ViewModels
 
         ''' <summary>Die ZIEL-ZEILE mit ihren Knoepfen. Sie haengt ausdruecklich NICHT am gewaehlten
         ''' Ziel: an die Sichtbarkeit des Ordner-Feldes gebunden verschwand sie bei Immich mitsamt
-        ''' dem Immich-Knopf, und es gab keinen Weg zurueck zu einem Ordner.</summary>
+        ''' dem Immich-Knopf, und es gab keinen Weg zurueck zu einem Ordner. Seit die Ordner-Knoepfe
+        ''' immer sichtbar sind (ohne Ordner nur ausgegraut), ist die Zeile schlicht immer da.</summary>
         Public ReadOnly Property IsSaveAsTargetRowVisible As Boolean
             Get
-                Return IsDialogFolderChoiceCurrentVisible OrElse
-                       IsDialogFolderChoiceLastSavedVisible OrElse
-                       IsSaveAsImmichAvailable
+                Return True
             End Get
         End Property
 
@@ -1000,11 +1000,15 @@ Namespace ViewModels
                 _dialogBatchFilterOverwrite = value
                 ' Die Wahl bleibt über Sitzungen erhalten.
                 AppSettingsService.SaveBatchFilterOverwriteOriginals(value)
+                ' Beim Ueberschreiben startet die Qualitaet auf 95 (dem frueheren festen Wert),
+                ' bei Kopien gilt wieder die Einstellung.
+                DialogJpgQuality = If(value, 95, DefaultJpgQuality())
                 Me.RaisePropertyChanged(NameOf(DialogBatchFilterOverwrite))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
                 Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterAppendNameVisible))
             End Set
         End Property
@@ -1299,15 +1303,17 @@ Namespace ViewModels
         ''' Vorgabe für neue Dateien - anders als beim Konvertieren, wo der zuletzt gewählte Exportordner
         ''' gemeint ist. Leer (z.B. in einer Suchliste oder in Immich) fällt es auf diesen zurück.</param>
         Public Async Function ShowBatchFilterAsync(fileCount As Integer, Optional currentFolder As String = "",
-                                                   Optional allowOverwrite As Boolean = True) As Task(Of BatchFilterDialogResult)
+                                                   Optional allowOverwrite As Boolean = True,
+                                                   Optional sourcesIncludeJpg As Boolean = False) As Task(Of BatchFilterDialogResult)
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
             _dialogBatchOverwriteAvailable = allowOverwrite
             _dialogBatchFilterOverwrite = allowOverwrite AndAlso AppSettingsService.Load().BatchFilterOverwriteOriginals
+            _dialogBatchSourcesIncludeJpg = sourcesIncludeJpg
             _dialogBatchFilterAppendName = True
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
-            DialogJpgQuality = DefaultJpgQuality()
+            DialogJpgQuality = If(_dialogBatchFilterOverwrite, 95, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
             InitDialogTargetFolder(currentFolder)
             ' Nach dem Neuaufbau steht der erste Filter in der Auswahl - dessen Setter setzt die Stärke.
@@ -1672,6 +1678,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
                 Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
             End Set
         End Property
 
@@ -1970,6 +1977,33 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die EIGENE Qualitaetszeile fuer das UEBERSCHREIBEN: der Speichern-unter-Block
+        ''' (Format, Ziel, Qualitaet) ist dann komplett ausgeblendet, neu encodiert wird die Datei
+        ''' trotzdem. Vorher wurde still mit einem festen bzw. dem Vorgabewert gespeichert, ohne
+        ''' dass man es sehen oder aendern konnte (Nutzerwunsch 2026-07-31). Sichtbar nur, wenn
+        ''' JPG-Quellen im Stapel sind - bei reinen PNG-Stapeln gibt es nichts einzustellen.</summary>
+        Public ReadOnly Property IsDialogOverwriteJpgQualityVisible As Boolean
+            Get
+                Return DialogOverwriteActive AndAlso _dialogBatchSourcesIncludeJpg
+            End Get
+        End Property
+
+        ''' <summary>Ueberschreibt der GERADE OFFENE Stapeldialog die Originale? Die drei Haken
+        ''' leben in getrennten Feldern, die nur ihr eigener Dialog beim Oeffnen zuruecksetzt -
+        ''' ohne die Weiche ueber die Dialogart zoege ein stehengebliebener Haken eines anderen
+        ''' Dialogs den Qualitaetsregler mit herein.</summary>
+        Private ReadOnly Property DialogOverwriteActive As Boolean
+            Get
+                Return (_dialogKind = AppDialogKind.BatchResize AndAlso _dialogBatchResizeOverwrite) OrElse
+                       (_dialogKind = AppDialogKind.BatchFilter AndAlso _dialogBatchFilterOverwrite) OrElse
+                       (_dialogKind = AppDialogKind.WatermarkPreset AndAlso _dialogBatchWatermarkOverwrite)
+            End Get
+        End Property
+
+        ''' <summary>Sind JPG-Dateien im Stapel des offenen Dialogs? Entscheidet zusammen mit dem
+        ''' Ueberschreiben-Haken ueber den Qualitaetsregler.</summary>
+        Private _dialogBatchSourcesIncludeJpg As Boolean = False
+
         ''' Überschreiben blendet Format, Ziel und Namenszusatz aus - wie beim Stapel-Filter.
         Public Property DialogBatchResizeOverwrite As Boolean
             Get
@@ -1980,11 +2014,15 @@ Namespace ViewModels
                 _dialogBatchResizeOverwrite = value
                 ' Die Wahl bleibt über Sitzungen erhalten.
                 AppSettingsService.SaveBatchResizeOverwriteOriginals(value)
+                ' Beim Ueberschreiben startet die Qualitaet auf 95 (dem frueheren festen Wert),
+                ' bei Kopien gilt wieder die Einstellung.
+                DialogJpgQuality = If(value, 95, DefaultJpgQuality())
                 Me.RaisePropertyChanged(NameOf(DialogBatchResizeOverwrite))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
                 Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
             End Set
         End Property
 
@@ -2303,11 +2341,15 @@ Namespace ViewModels
                 If _dialogBatchWatermarkOverwrite = value Then Return
                 _dialogBatchWatermarkOverwrite = value
                 AppSettingsService.SaveBatchWatermarkOverwriteOriginals(value)
+                ' Beim Ueberschreiben startet die Qualitaet auf 95 (dem frueheren festen Wert),
+                ' bei Kopien gilt wieder die Einstellung.
+                DialogJpgQuality = If(value, 95, DefaultJpgQuality())
                 Me.RaisePropertyChanged(NameOf(DialogBatchWatermarkOverwrite))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
                 Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
             End Set
         End Property
 
@@ -2444,9 +2486,11 @@ Namespace ViewModels
         ''' dort bleiben die zuletzt benutzten Werte richtig.</param>
         Public Async Function ShowBatchResizeAsync(Optional samplePath As String = Nothing, Optional currentFolder As String = "",
                                                    Optional allowOverwrite As Boolean = True,
-                                                   Optional singleImage As Boolean = False) As Task(Of BatchResizeResult)
+                                                   Optional singleImage As Boolean = False,
+                                                   Optional sourcesIncludeJpg As Boolean = False) As Task(Of BatchResizeResult)
             Dim settings = AppSettingsService.Load()
             _dialogBatchOverwriteAvailable = allowOverwrite
+            _dialogBatchSourcesIncludeJpg = sourcesIncludeJpg
             _dialogBatchResizeWidthText = If(settings.LastBatchResizeWidth > 0, settings.LastBatchResizeWidth.ToString(CultureInfo.InvariantCulture), "")
             _dialogBatchResizeHeightText = If(settings.LastBatchResizeHeight > 0, settings.LastBatchResizeHeight.ToString(CultureInfo.InvariantCulture), "")
             _dialogBatchResizeLockAspect = settings.LastBatchResizeLockAspect
@@ -2461,7 +2505,7 @@ Namespace ViewModels
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
-            DialogJpgQuality = DefaultJpgQuality()
+            DialogJpgQuality = If(_dialogBatchResizeOverwrite, 95, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
             InitDialogTargetFolder(currentFolder)
 
@@ -2529,18 +2573,21 @@ Namespace ViewModels
             }
         End Function
 
-        Public Async Function ShowWatermarkPresetDialogAsync(Optional allowOverwrite As Boolean = True) As Task(Of WatermarkPresetDialogResult)
+        Public Async Function ShowWatermarkPresetDialogAsync(Optional allowOverwrite As Boolean = True,
+                                                             Optional currentFolder As String = "",
+                                                             Optional sourcesIncludeJpg As Boolean = False) As Task(Of WatermarkPresetDialogResult)
             Dim settings = AppSettingsService.Load()
             SetDialogFormats(includeFpx:=False)
             _dialogWatermarkPresets.Clear()
             DialogWatermarkPresetNames.Clear()
             _dialogBatchOverwriteAvailable = allowOverwrite
             _dialogBatchWatermarkOverwrite = allowOverwrite AndAlso settings.BatchWatermarkOverwriteOriginals
+            _dialogBatchSourcesIncludeJpg = sourcesIncludeJpg
             ResetDialogSaveAsMetaOptions()
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
-            DialogJpgQuality = DefaultJpgQuality()
+            DialogJpgQuality = If(_dialogBatchWatermarkOverwrite, 95, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
-            InitDialogTargetFolder("")
+            InitDialogTargetFolder(currentFolder)
 
             For Each preset In settings.WatermarkPresets
                 _dialogWatermarkPresets.Add(preset)
@@ -2790,14 +2837,15 @@ Namespace ViewModels
 
         ''' Wiederverwendet denselben Format+Qualität-Block wie ShowSaveAsAsync, aber ohne
         ''' Dateinamen-Feld (BatchConvert lässt die Originalnamen unangetastet, ändert nur die Endung).
-        Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 0) As Task(Of SaveAsDialogResult)
+        Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 0,
+                                                    Optional currentFolder As String = "") As Task(Of SaveAsDialogResult)
             SetDialogFormats(includeFpx:=False)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
-            InitDialogTargetFolder("")
+            InitDialogTargetFolder(currentFolder)
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 

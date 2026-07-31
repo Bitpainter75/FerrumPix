@@ -5064,8 +5064,15 @@ Namespace Views
 
             If vm.HasMultiAnnotationSelection Then
                 ' Mehrfachauswahl: die gezogene Box beschreibt ALLE markierten Objekte.
-                Dim boxWidth = If(keepsSize, textRect.Width / imageRect.Width * 100.0, widthPercent)
-                Dim boxHeight = If(keepsSize, textRect.Height / imageRect.Height * 100.0, heightPercent)
+                ' Beim VERSCHIEBEN die Boxgroesse des ViewModels durchreichen statt sie aus
+                ' Bildschirm-Pixeln zurueckzurechnen (dasselbe Prinzip wie beim Einzelobjekt oben):
+                ' weicht das angezeigte Bild gerade vom Rezept ab - etwa solange nach einem
+                ' Geometriewechsel der neue Vollrender noch aussteht -, machte die Rueckrechnung
+                ' aus der reinen Verschiebung eine Skalierung, und die Objekte wurden bei jedem
+                ' Zug dauerhaft kleiner geschrieben.
+                Dim vmBox = vm.GetSelectionBoxDisplayRectPercent()
+                Dim boxWidth = If(keepsSize, vmBox.Width, widthPercent)
+                Dim boxHeight = If(keepsSize, vmBox.Height, heightPercent)
                 vm.SetSelectionBoxRect(
                     (textRect.Left - imageRect.Left) / imageRect.Width * 100.0,
                     (textRect.Top - imageRect.Top) / imageRect.Height * 100.0,

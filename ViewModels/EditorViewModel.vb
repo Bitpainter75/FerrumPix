@@ -16591,6 +16591,19 @@ Namespace ViewModels
 
         Private Sub OnPreviewTimerTick()
             If _annotationCompositePreviewPending Then
+                ' GEOMETRIEWECHSEL hat Vorrang: passt die Szene nicht mehr zum Rezept, kann weder
+                ' Patch noch Overlay die Anzeige richten - der Objekt-Kurzweg wuerde den hier
+                ' faelligen Vollrender nur verschlucken (genau so blieb die Buehne nach dem
+                ' Verlassen des Zuschneide-Werkzeugs beim ganzen Bild stehen).
+                Dim tickSource = GetPreviewSource()
+                If _sceneSk IsNot Nothing AndAlso tickSource IsNot Nothing AndAlso
+                   Not SceneMatchesCurrentGeometry(tickSource, GetSceneAdjustments()) Then
+                    _annotationCompositePreviewPending = False
+                    _annotationCompositePreviewRetries = 0
+                    _previewPending = False
+                    UpdatePreview()
+                    Return
+                End If
                 Dim hasDirtyPatch = Not _annotationDirtyRect.IsEmpty
                 If TryRenderAnnotationPatchSync() OrElse ((Not hasDirtyPatch) AndAlso TryRenderAnnotationOverlaySync()) Then
                     _annotationCompositePreviewPending = False
@@ -16790,9 +16803,33 @@ Namespace ViewModels
         ''' Mischmodus-Abhaengigkeitsbereich, wird dieser automatisch mitgerendert (das Blend-Ergebnis
         ''' haengt vom Untergrund ab). False bei kaltem/gesperrtem Base-Cache oder fehlender Szene -
         ''' der Aufrufer plant dann den asynchronen Vollrender.</summary>
+        ''' <summary>Passt die Szene noch zur AKTUELLEN Rezept-Geometrie? Ein Region-Patch kann die
+        ''' Szenengroesse nie aendern - nach einem Geometriewechsel (etwa dem Live-Zuschnitt beim
+        ''' Verlassen des Zuschneide-Werkzeugs) MUSS der Vollrender laufen. Ohne diesen Waechter
+        ''' flickten die Patch-Wege in die alte, falsch grosse Szene weiter: die Buehne zeigte das
+        ''' ganze Bild, waehrend Auswahlbox und Treffertest bereits im Ausschnitt rechneten - die Box
+        ''' stand neben den Objekten und ein Zug legte sie an der falschen Stelle ab (Befund .fpx mit
+        ''' gespeichertem Zuschnitt). Der zwischendurch geplante Vollrender ging verloren, weil die
+        ''' Patch-Kurzwege den Zeitgeber anhalten und _previewPending loeschen.</summary>
+        Private Function SceneMatchesCurrentGeometry(previewSource As SKBitmap, adj As ImageAdjustments) As Boolean
+            If _sceneSk Is Nothing OrElse previewSource Is Nothing OrElse adj Is Nothing Then Return False
+            Dim expected = ImageProcessor.ComputeGeometryOutputSize(previewSource.Width, previewSource.Height, adj)
+            Return _sceneSk.Width = expected.Width AndAlso _sceneSk.Height = expected.Height
+        End Function
+
         Private Function TryRenderSceneRegionSync(dirtyRect As SKRectI) As Boolean
             Dim previewSource = GetPreviewSource()
             If previewSource Is Nothing OrElse _sceneSk Is Nothing OrElse dirtyRect.IsEmpty Then Return False
+
+            Dim adj = GetSceneAdjustments()
+            If Not SceneMatchesCurrentGeometry(previewSource, adj) Then
+                ' True zurueckgeben: der geplante Vollrender zeichnet ohnehin die ganze Szene, ein
+                ' zusaetzlicher Region-Versuch der Aufrufer wuerde nur denselben Waechter treffen.
+                DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                               $"fallback=true reason=sceneSizeMismatch scene={_sceneSk.Width}x{_sceneSk.Height}")
+                SchedulePreviewUpdate(markDirty:=False)
+                Return True
+            End If
 
             Dim rect = dirtyRect
             Dim blendDep = SceneBlendCompositeRequiredRect()
@@ -16805,7 +16842,7 @@ Namespace ViewModels
             Dim clamped As SKRectI
             Dim patch As SKBitmap
             Try
-                patch = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, GetSceneAdjustments(), rect, clamped)
+                patch = ImageProcessor.TryRenderAnnotationsPatchSkOnCachedBase(previewSource, adj, rect, clamped)
             Catch ex As Exception
                 DiagnosticLogService.LogException("EditorSceneRegion", ex)
                 Return False
@@ -16882,6 +16919,14 @@ Namespace ViewModels
                     End If
 
                     Dim adj = GetSceneAdjustments()
+                    ' Geometrie-Waechter wie im synchronen Zwilling: eine falsch grosse Szene kann
+                    ' kein Patch richten, hier muss der Vollrender ran.
+                    If Not SceneMatchesCurrentGeometry(previewSource, adj) Then
+                        DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                                       $"fallback=true reason=sceneSizeMismatch async=1 scene={sceneAtStart.Width}x{sceneAtStart.Height}")
+                        SchedulePreviewUpdate(markDirty:=False)
+                        Return
+                    End If
                     Dim versionAtStart = _sceneContentVersion
                     Dim modelAtStart = _annotationModelVersion
                     ' Merken, ob der Snapshot das aktiv gezogene Objekt AUSBLENDET: gilt die Ausblendung
