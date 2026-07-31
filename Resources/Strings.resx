@@ -5688,4 +5688,10 @@
   <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
     <value>Capture data, XMP and colour profile will be removed from {0} file(s). The files are rewritten in the process; this cannot be undone.</value>
   </data>
+  <data name="Abstand_c9336132" xml:space="preserve">
+    <value>Spacing</value>
+  </data>
+  <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
+    <value>Turn symbols with the path</value>
+  </data>
 </root>

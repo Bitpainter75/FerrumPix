@@ -2753,7 +2753,13 @@ Namespace Views
         Private Sub UpdateTextOverlayVisibility()
             Dim overlay = Me.FindControl(Of Border)("TextOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If overlay IsNot Nothing Then overlay.IsVisible = vm IsNot Nothing AndAlso IsLayerPlacementTool(vm.CurrentTool) AndAlso vm.HasSelectedAnnotation
+            ' Der Rahmen bekommt KEINEN Auswahlrahmen: sein Rechteck ist das ganze Bild, der Kasten
+            ' laege also genau auf der Bildkante und saehe aus wie ein zweiter Rahmen. Anfassen kann
+            ' man ihn ohnehin nicht (HitTestAnnotation ueberspringt ihn).
+            If overlay IsNot Nothing Then overlay.IsVisible = vm IsNot Nothing AndAlso
+                                                              IsLayerPlacementTool(vm.CurrentTool) AndAlso
+                                                              vm.HasSelectedAnnotation AndAlso
+                                                              Not vm.IsFrameAnnotationSelected
             UpdateSliderLayout()
         End Sub
 
@@ -4165,7 +4171,12 @@ Namespace Views
             Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
             Dim frame = Me.FindControl(Of Rectangle)("TextOverlayFrame")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If overlay Is Nothing OrElse vm Is Nothing OrElse Not IsLayerPlacementTool(vm.CurrentTool) OrElse Not vm.HasSelectedAnnotation Then
+            ' Der Rahmen MUSS hier mit abgefangen werden, nicht nur in UpdateTextOverlayVisibility:
+            ' diese Routine setzt IsVisible am Ende unbedingt auf True und haette die Abschaltung
+            ' dort sonst gleich wieder aufgehoben. Sein Rechteck ist das ganze Bild, der Auswahl-
+            ' rahmen laege also genau auf der Bildkante und saehe aus wie ein zweiter Rahmen.
+            If overlay Is Nothing OrElse vm Is Nothing OrElse Not IsLayerPlacementTool(vm.CurrentTool) OrElse
+               Not vm.HasSelectedAnnotation OrElse vm.IsFrameAnnotationSelected Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
                 Return
             End If
@@ -5018,9 +5029,21 @@ Namespace Views
         ''' vorigen zeigte mitten in die Liste - die ersten Regler waren dann nicht zu sehen.
         ''' Verzoegert, weil die Gruppen des neuen Werkzeugs erst nach diesem Durchlauf
         ''' eingeblendet werden und der Inhalt bis dahin die alte Hoehe hat.</summary>
+        ''' <summary>Beim Werkzeugwechsel gehoert das Anpassungspanel wieder an den Anfang.
+        '''
+        ''' Der aeussere Scrollbereich allein genuegt dafuer NICHT: Zeichnen und Einfuegen bringen
+        ''' einen eigenen mit (die Formenliste ist ueber 20 000 Punkte hoch), und weil die Panels
+        ''' beim Wechsel nur aus- und wieder eingeblendet werden, behalten die ihre Position ueber
+        ''' den Wechsel hinweg. Gemessen: aussen 0, innen 21 075 - man kam zurueck und stand mitten
+        ''' in der Formenliste, waehrend die Bildlaufleiste ganz oben zu stehen schien.</summary>
         Private Sub ScrollAdjustmentsToTop()
             Dispatcher.UIThread.Post(Sub()
-                                         Me.FindControl(Of ScrollViewer)("AdjustmentsScrollViewer")?.ScrollToHome()
+                                         Dim outer = Me.FindControl(Of ScrollViewer)("AdjustmentsScrollViewer")
+                                         If outer Is Nothing Then Return
+                                         outer.ScrollToHome()
+                                         For Each inner In outer.GetVisualDescendants().OfType(Of ScrollViewer)()
+                                             inner.ScrollToHome()
+                                         Next
                                      End Sub, DispatcherPriority.Background)
         End Sub
 

@@ -427,7 +427,8 @@
                 </Grid>
             </Border>
         </Grid>
-        <StackPanel Spacing="6">
+
+        <StackPanel Spacing="6" IsVisible="{Binding ShowAnnotationGeometryControls}">
             <Grid ColumnDefinitions="92,*,44">
                 <TextBlock Text="{Binding AnnotationXLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

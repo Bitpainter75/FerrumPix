@@ -260,6 +260,12 @@ Namespace Services
         Private _strokeColor As String = "#FF000000"
         Private _eraserFillColor As String = ""
         Private _strokeWidth As Single = 0
+        Private _frameSizePercent As Single = 0
+        Private _frameCornerRadiusPercent As Single = 0
+        Private _frameEffect As String = "Einfach"
+        Private _frameSymbol As String = ""
+        Private _frameSymbolSpacingPercent As Single = 50
+        Private _frameSymbolRotate As Boolean = False
         Private _fontSizePixels As Single = 48
         Private _fontFamily As String = "Arial"
         Private _opacity As Single = 100
@@ -533,6 +539,7 @@ Namespace Services
                     Case "cloud" : Return base & "outline/cloud.svg"
                     Case "line" : Return base & "outline/line-shape.svg"
                     Case "arrow" : Return base & "outline/arrow-right.svg"
+                    Case "frame" : Return base & "outline/frame.svg"
                     Case "brush" : Return base & "outline/brush.svg"
                     Case "eraser" : Return "avares://FerrumPix/Assets/Icons/outline/eraser.svg"
                     Case Else : Return base & "outline/rectangle.svg"
@@ -540,7 +547,7 @@ Namespace Services
             End Get
         End Property
 
-        Private Shared Function GermanKindLabel(kind As String) As String
+        Friend Shared Function GermanKindLabel(kind As String) As String
             Select Case If(kind, "").Trim().ToLowerInvariant()
                 Case "text" : Return "Text"
                 Case "watermark" : Return "Wasserzeichen"
@@ -565,6 +572,7 @@ Namespace Services
                 Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return "Sprechblase"
                 Case "heart" : Return "Herz"
                 Case "cloud" : Return "Wolke"
+                Case "frame" : Return "Rahmen"
                 Case "line" : Return "Linie"
                 Case "arrow" : Return "Pfeil"
                 Case "brush" : Return "Pinsel"
@@ -645,6 +653,76 @@ Namespace Services
             End Get
             Set(value As Single)
                 SetField(_strokeWidth, value)
+            End Set
+        End Property
+
+        ''' <summary>Staerke des Rahmens in Prozent der kuerzeren Bildkante (0 bis 25). Nur fuer
+        ''' Objekte der Art "Frame". Der Rahmen ist ein Objekt wie Text und Form und kein Schritt
+        ''' der Pixelkette mehr: nur so steht er in der Ebenenliste, laesst sich abschalten und
+        ''' verschwindet nicht mit den ausgeblendeten Globalkorrekturen.</summary>
+        Public Property FrameSizePercent As Single
+            Get
+                Return _frameSizePercent
+            End Get
+            Set(value As Single)
+                SetField(_frameSizePercent, value)
+            End Set
+        End Property
+
+        ''' <summary>Eckenrundung des Rahmens in Prozent (0 bis 100).</summary>
+        Public Property FrameCornerRadiusPercent As Single
+            Get
+                Return _frameCornerRadiusPercent
+            End Get
+            Set(value As Single)
+                SetField(_frameCornerRadiusPercent, value)
+            End Set
+        End Property
+
+        ''' <summary>Art des Rahmens: "Einfach", "Doppelt", "Gestrichelt", "Punktiert", "Gezackt"
+        ''' oder "Wellig".</summary>
+        Public Property FrameEffect As String
+            Get
+                Return _frameEffect
+            End Get
+            Set(value As String)
+                SetField(_frameEffect, If(value, "Einfach"))
+            End Set
+        End Property
+
+        ''' <summary>Statt einer Linie ein SYMBOL entlang des Rahmens stempeln. Leer heisst: Linie
+        ''' wie bisher. Der Wert ist eine der Formen, die es als Objekt auch gibt ("Star", "Heart",
+        ''' …) - gezeichnet wird sie mit derselben Routine, es gibt also kein zweites Aussehen.
+        '''
+        ''' Die Rahmenart bleibt dabei der PFAD: "Einfach" reiht die Symbole gerade auf, "Wellig"
+        ''' auf einer Welle, "Doppelt" in zwei Reihen.</summary>
+        Public Property FrameSymbol As String
+            Get
+                Return _frameSymbol
+            End Get
+            Set(value As String)
+                SetField(_frameSymbol, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Abstand der Symbole in Prozent ihrer Groesse. 0 heisst: sie beruehren sich.</summary>
+        Public Property FrameSymbolSpacingPercent As Single
+            Get
+                Return _frameSymbolSpacingPercent
+            End Get
+            Set(value As Single)
+                SetField(_frameSymbolSpacingPercent, value)
+            End Set
+        End Property
+
+        ''' <summary>Dreht jedes Symbol in die Laufrichtung des Rahmens. Aus heisst: alle stehen
+        ''' aufrecht - bei Herzen und Sternen meist das Gewollte.</summary>
+        Public Property FrameSymbolRotate As Boolean
+            Get
+                Return _frameSymbolRotate
+            End Get
+            Set(value As Boolean)
+                SetField(_frameSymbolRotate, value)
             End Set
         End Property
 
@@ -1059,6 +1137,12 @@ Namespace Services
                 .Id = Id,
                 .GroupId = GroupId,
                 .WatermarkPresetName = WatermarkPresetName,
+                .FrameSizePercent = FrameSizePercent,
+                .FrameCornerRadiusPercent = FrameCornerRadiusPercent,
+                .FrameEffect = FrameEffect,
+                .FrameSymbol = FrameSymbol,
+                .FrameSymbolSpacingPercent = FrameSymbolSpacingPercent,
+                .FrameSymbolRotate = FrameSymbolRotate,
                 .Warp = Warp?.Clone(),
                 .OwnWarp = OwnWarp?.Clone(),
                 .ImagePath = ImagePath,
@@ -1457,10 +1541,6 @@ Namespace Services
         ''' <summary>Körnungsfrequenz/Unregelmäßigkeit, 0-100. 0 = gleichmäßiges Korn; höher = eine
         ''' feine zweite Lage wird eingemischt, das Korn wirkt unruhiger.</summary>
         Public Property GrainFrequency As Single = 0
-        Public Property BorderSize As Single = 0
-        Public Property BorderColor As String = "#FFFFFFFF"
-        Public Property BorderCornerRadius As Single = 0
-        Public Property BorderEffect As String = "Einfach"
         Public Property Clarity As Single = 0
 
         ''' <summary>Gescanntes Filmnegativ in ein Positiv umkehren.</summary>
@@ -1713,7 +1793,6 @@ Namespace Services
             "CropLeftPercent", "CropTopPercent", "CropRightPercent", "CropBottomPercent",
             "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeFitInsideBox", "ResizeScalePercent", "NoResizeUpscale", "ResizeInterpolation",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
-            "BorderSize", "BorderColor", "BorderCornerRadius", "BorderEffect",
             "RetouchSpots", "Annotations", "AnnotationGroups", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
             "SelectionScopeEnabled", "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
@@ -1883,10 +1962,6 @@ Namespace Services
                 .VignetteCenterX = VignetteCenterX,
                 .VignetteCenterY = VignetteCenterY,
                 .Grain = Grain,
-                .BorderSize = BorderSize,
-                .BorderColor = BorderColor,
-                .BorderCornerRadius = BorderCornerRadius,
-                .BorderEffect = BorderEffect,
                 .Clarity = Clarity,
                 .NegativeEnabled = NegativeEnabled,
                 .NegativeMonochrome = NegativeMonochrome,
@@ -2020,6 +2095,14 @@ Namespace Services
             Dim normalizedKind = If(kind, "").Trim().ToLowerInvariant()
             Dim x As Single
             Dim y As Single
+
+            ' Der Rahmen umfasst IMMER das ganze Bild. Er traegt zwar Position und Groesse wie jedes
+            ' Objekt, benutzt sie aber nicht: ein Rahmen, den man verschieben kann, ist keiner mehr,
+            ' und nach einem Zuschnitt oder einer neuen Leinwandgroesse soll er ohne Zutun wieder an
+            ' der Kante sitzen.
+            If normalizedKind = "frame" Then
+                Return New SKRect(0, 0, Math.Max(1, sourceWidth), Math.Max(1, sourceHeight))
+            End If
 
             If normalizedKind = "watermark" Then
                 Dim offsetX = annotation.XPixels
@@ -3633,9 +3716,8 @@ Namespace Services
                 processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, -adj.AddNoise / 100.0F))
             End If
 
-            If adj.BorderSize > 0 Then
-                processed = ReplaceBitmap(processed, ApplyBorder(processed, adj.BorderSize / 100.0F, adj.BorderColor, adj.BorderCornerRadius / 100.0F, adj.BorderEffect))
-            End If
+            ' Der Rahmen war bis hierher die letzte Stufe der Pixelkette. Er ist jetzt ein OBJEKT
+            ' und wird mit den anderen Objekten gezeichnet - deshalb steht hier nichts mehr.
 
             Return processed
         End Function
@@ -5354,8 +5436,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CalibrationBlueHue, adj.CalibrationBlueSaturation, adj.CalibrationShadowTint,
                                 adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle,
-                adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.BorderSize, adj.BorderColor,
-                adj.BorderCornerRadius, adj.BorderEffect, adj.Clarity,
+                adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
                 adj.RedHue, adj.RedSaturation, adj.RedLuminance, adj.OrangeHue, adj.OrangeSaturation, adj.OrangeLuminance,
@@ -8238,8 +8319,21 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
                 Case "Gitter"
                     ' Zwischen den vier umgebenden Stuetzpunkten interpolieren.
-                    Dim u = Math.Max(0.0, Math.Min(1.0, bx / imageWidth)) * v.Columns
-                    Dim w = Math.Max(0.0, Math.Min(1.0, by / imageHeight)) * v.Rows
+                    '
+                    ' NICHT auf 0..1 klemmen. Der Bezugsrahmen ist bei der objekteigenen Verzerrung
+                    ' das OBJEKTRECHTECK, und ein Objekt zeichnet regelmaessig darueber hinaus - ein
+                    ' Text auf Pfad legt seine Grundlinie auf einen Kreis, die Zeichen stehen
+                    ' senkrecht darauf. Eine Klemmung faltet alles ausserhalb auf die Rechteckkante,
+                    ' und genau das war zu sehen: gemessen an einem Kreispfad-Text blieben von der
+                    ' Tinte 25 Prozent uebrig, der Rest lag ausserhalb und wurde auf den Rand
+                    ' gestaucht - bei einer Verzerrung, die gar nichts verschiebt.
+                    '
+                    ' Ausserhalb wird stattdessen ueber die Randzelle FORTGESETZT: der Zellenindex
+                    ' bleibt begrenzt (die Zeilen darunter), der Anteil darin darf negativ oder
+                    ' groesser eins werden. Fuer ein Gitter auf seinem Raster ist das exakt die
+                    ' Identitaet, ein unverzerrtes Objekt kommt also unveraendert durch.
+                    Dim u = bx / imageWidth * v.Columns
+                    Dim w = by / imageHeight * v.Rows
                     Dim s0 = Math.Max(0, Math.Min(v.Columns - 1, CInt(Math.Floor(u))))
                     Dim z0 = Math.Max(0, Math.Min(v.Rows - 1, CInt(Math.Floor(w))))
                     Dim tu = u - s0, tw = w - z0
@@ -8442,6 +8536,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ' DrawAnnotationEffects wiederverwendet, damit beide Pfade exakt dieselbe Silhouette ergeben.
         Private Shared Sub DrawAnnotationShape(canvas As SKCanvas, kind As String, annotation As ImageAnnotation, rect As SKRect, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, alphaFactor As Single)
             Select Case kind
+                Case "frame"
+                    ' Der Rahmen sitzt am Rechteck des Objekts, und das ist beim Rahmen immer das
+                    ' ganze Bild (siehe ComputeAnnotationRect) - er bleibt damit an der Bildkante,
+                    ' auch wenn spaeter zugeschnitten oder die Leinwand geaendert wird.
+                    Dim frameFill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    DrawFrameOnCanvas(canvas, rect, annotation.FrameSizePercent / 100.0F, fill,
+                                      annotation.FrameCornerRadiusPercent / 100.0F, annotation.FrameEffect,
+                                      annotation.FillKind, frameFill2,
+                                      annotation.GradientAngleDegrees, annotation.GradientInverted,
+                                      annotation.FrameSymbol, annotation.FrameSymbolSpacingPercent,
+                                      annotation.FrameSymbolRotate, stroke, annotation.StrokeWidth)
                 Case "rectangle", "rect", "selectionfill"
                     Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     DrawShape(canvas, rect, fill, stroke, strokeWidth, False, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
@@ -13610,15 +13715,74 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        Private Shared Function ApplyBorder(source As SKBitmap, sizePercent As Single, colorValue As String, cornerRadiusPercent As Single, effect As String) As SKBitmap
-            Dim thickness = CInt(Math.Round(Math.Min(source.Width, source.Height) * Clamp(sizePercent, 0, 0.25F)))
-            If thickness <= 0 Then Return source
+        ''' <summary>Zeichnet den Rahmen in ein Rechteck. Frueher war das eine Stufe der Pixelkette
+        ''' (ApplyBorder); seit der Rahmen ein Objekt ist, zeichnet ihn derselbe Weg wie Text und
+        ''' Form. Die Groessen beziehen sich auf die kuerzere Kante des uebergebenen Rechtecks, damit
+        ''' ein Rahmen bei jedem Seitenverhaeltnis gleich breit wirkt.</summary>
+        Friend Shared Sub DrawFrameOnCanvas(canvas As SKCanvas, bounds As SKRect, sizePercent As Single,
+                                            color As SKColor, cornerRadiusPercent As Single, effect As String,
+                                            Optional fillKind As String = "Solid",
+                                            Optional color2 As SKColor = Nothing,
+                                            Optional gradientAngleDegrees As Single = 0,
+                                            Optional gradientInverted As Boolean = False,
+                                            Optional symbol As String = "",
+                                            Optional symbolSpacingPercent As Single = 50,
+                                            Optional symbolRotate As Boolean = False,
+                                            Optional symbolStrokeColor As SKColor = Nothing,
+                                            Optional symbolStrokeWidth As Single = 0)
+            If canvas Is Nothing Then Return
+            Dim boundsWidth = bounds.Width
+            Dim boundsHeight = bounds.Height
+            If boundsWidth <= 0 OrElse boundsHeight <= 0 Then Return
+            Dim thickness = CInt(Math.Round(Math.Min(boundsWidth, boundsHeight) * Clamp(sizePercent, 0, 0.25F)))
+            If thickness <= 0 Then Return
 
-            Dim result = CloneBitmap(source)
-            Using canvas = New SKCanvas(result)
-                Dim color = ParseColor(colorValue, SKColors.White)
+            ' VOR dem Try: was im Finally freigegeben wird, muss dort auch sichtbar sein - eine
+            ' Deklaration im Try-Block ist es in VB nicht.
+            Dim gradientShader As SKShader = Nothing
+
+            canvas.Save()
+            canvas.Translate(bounds.Left, bounds.Top)
+            Try
                 Dim normalized = If(effect, "Einfach").Trim().ToLowerInvariant()
-                Dim radius = Math.Min(source.Width, source.Height) * Clamp(cornerRadiusPercent, 0, 1) * 0.25F
+                Dim radius = Math.Min(boundsWidth, boundsHeight) * Clamp(cornerRadiusPercent, 0, 1) * 0.25F
+
+                ' Verlauf wie bei den Formen, nur auf der KONTUR statt in der Flaeche: derselbe
+                ' Schattierer, damit Winkel, Umkehrung und Radialform sich ueberall gleich verhalten.
+                ' Er wird EINMAL gebaut und an jeden Pinsel gehaengt - der doppelte Rahmen zeichnet
+                ' zwei Linien und soll denselben Verlauf tragen, nicht zwei eigene.
+                Dim normalizedFillKind = If(fillKind, "Solid").Trim().ToLowerInvariant()
+                If normalizedFillKind = "radialgradient" Then
+                    ' Der radiale Verlauf einer FLAECHE spannt von der Mitte bis zur Ecke. Ein Rahmen
+                    ' liegt aber nur im aeussersten Ring davon: bei 800x600 laege die Mitte einer
+                    ' Kante bei 0,6 des Radius und die Ecke bei 1,0 - der Rahmen zeigte also nur die
+                    ' letzten 40 Prozent der Farbrampe und sah fast einfarbig aus. Deshalb bekommen
+                    ' die beiden Farben hier VERSCHOBENE Stuetzstellen: die Rampe faengt dort an, wo
+                    ' der Rahmen anfaengt (Kantenmitte), und endet in der Ecke.
+                    Dim mitte = New SKPoint(boundsWidth / 2.0F, boundsHeight / 2.0F)
+                    Dim aussen = CSng(Math.Sqrt(CDbl(boundsWidth) * boundsWidth + CDbl(boundsHeight) * boundsHeight) / 2.0)
+                    Dim innen = Math.Min(boundsWidth, boundsHeight) / 2.0F
+                    Dim start = If(gradientInverted, color2, color)
+                    Dim ende = If(gradientInverted, color, color2)
+                    Dim beginn = If(aussen > 0, Clamp(innen / aussen, 0, 0.95F), 0.0F)
+                    gradientShader = SKShader.CreateRadialGradient(mitte, Math.Max(1.0F, aussen),
+                                                                   New SKColor() {start, ende},
+                                                                   New Single() {beginn, 1.0F},
+                                                                   SKShaderTileMode.Clamp)
+                ElseIf normalizedFillKind = "lineargradient" Then
+                    gradientShader = CreateFillGradientShader(New SKRect(0, 0, boundsWidth, boundsHeight),
+                                                              normalizedFillKind, color, color2,
+                                                              gradientAngleDegrees, gradientInverted)
+                End If
+
+                ' MIT SYMBOL wird der Rahmen nicht gestrichen, sondern bestempelt: die Rahmenart
+                ' liefert nur noch den PFAD, auf dem die Symbole sitzen.
+                If Not String.IsNullOrWhiteSpace(symbol) Then
+                    StampFrameSymbols(canvas, boundsWidth, boundsHeight, thickness, radius, normalized,
+                                      symbol, symbolSpacingPercent, symbolRotate, color, gradientShader,
+                                      symbolStrokeColor, symbolStrokeWidth)
+                    Return
+                End If
 
                 If normalized = "doppelt" Then
                     ''' Zwei dünne konzentrische Linien mit Lücke dazwischen (klassischer Passepartout-Look)
@@ -13626,9 +13790,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Dim thinWidth = Math.Max(1.0F, thickness * 0.35F)
                     Dim gap = thickness * 0.6F
                     Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thinWidth, .IsAntialias = True}
+                        If gradientShader IsNot Nothing Then paint.Shader = gradientShader
                         Dim outerInset = thinWidth / 2.0F
-                        Dim outerRect = New SKRect(outerInset, outerInset, source.Width - outerInset, source.Height - outerInset)
-                        Dim innerRect = New SKRect(outerInset + gap, outerInset + gap, source.Width - outerInset - gap, source.Height - outerInset - gap)
+                        Dim outerRect = New SKRect(outerInset, outerInset, boundsWidth - outerInset, boundsHeight - outerInset)
+                        Dim innerRect = New SKRect(outerInset + gap, outerInset + gap, boundsWidth - outerInset - gap, boundsHeight - outerInset - gap)
                         If radius > 0 Then
                             canvas.DrawRoundRect(outerRect, radius, radius, paint)
                             canvas.DrawRoundRect(innerRect, Math.Max(0.0F, radius - gap), Math.Max(0.0F, radius - gap), paint)
@@ -13637,10 +13802,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             canvas.DrawRect(innerRect, paint)
                         End If
                     End Using
-                    Return result
+                    Return
                 End If
 
                 Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thickness, .IsAntialias = True}
+                    If gradientShader IsNot Nothing Then paint.Shader = gradientShader
                     Select Case normalized
                         Case "gestrichelt"
                             paint.PathEffect = SKPathEffect.CreateDash(New Single() {thickness * 1.4F, thickness * 0.9F}, 0)
@@ -13650,7 +13816,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             paint.PathEffect = SKPathEffect.CreateDash(New Single() {0.01F, thickness * 1.3F}, 0)
                     End Select
                     Dim inset = thickness / 2.0F
-                    Dim rect = New SKRect(inset, inset, source.Width - inset, source.Height - inset)
+                    Dim rect = New SKRect(inset, inset, boundsWidth - inset, boundsHeight - inset)
                     Select Case normalized
                         Case "gezackt"
                             Using path = BuildZigZagBorderPath(rect, Math.Max(4, thickness))
@@ -13668,8 +13834,144 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             End If
                     End Select
                 End Using
+            Finally
+                gradientShader?.Dispose()
+                canvas.Restore()
+            End Try
+        End Sub
+
+        ''' <summary>Baut den Pfad, auf dem der Rahmen liegt - dieselbe Form, die sonst gestrichen
+        ''' wird. "Doppelt" liefert zwei ineinanderliegende Ringe, daraus werden die zwei Reihen.</summary>
+        Private Shared Function BuildFramePath(width As Single, height As Single, thickness As Single,
+                                               radius As Single, normalizedEffect As String) As SKPath
+            Dim path = New SKPath()
+            Dim inset = thickness / 2.0F
+            Dim rect = New SKRect(inset, inset, width - inset, height - inset)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return path
+
+            Select Case normalizedEffect
+                Case "gezackt"
+                    Using zack = BuildZigZagBorderPath(rect, Math.Max(4.0F, thickness))
+                        path.AddPath(zack)
+                    End Using
+                Case "wellig"
+                    Using welle = BuildWavyBorderPath(rect, Math.Max(6.0F, thickness * 1.5F))
+                        path.AddPath(welle)
+                    End Using
+                Case "doppelt"
+                    ' Zwei Ringe wie beim gezeichneten Doppelrahmen - daraus werden zwei Reihen Symbole.
+                    Dim gap = thickness * 0.6F
+                    Dim innerRect = New SKRect(rect.Left + gap, rect.Top + gap, rect.Right - gap, rect.Bottom - gap)
+                    If radius > 0 Then
+                        path.AddRoundRect(rect, radius, radius)
+                        If innerRect.Width > 0 AndAlso innerRect.Height > 0 Then
+                            path.AddRoundRect(innerRect, Math.Max(0.0F, radius - gap), Math.Max(0.0F, radius - gap))
+                        End If
+                    Else
+                        path.AddRect(rect)
+                        If innerRect.Width > 0 AndAlso innerRect.Height > 0 Then path.AddRect(innerRect)
+                    End If
+                Case Else
+                    ' Einfach, gestrichelt, punktiert: derselbe Ring. Ein Strichmuster ergibt beim
+                    ' Stempeln keinen Sinn - dafuer gibt es den eigenen Abstand.
+                    If radius > 0 Then path.AddRoundRect(rect, radius, radius) Else path.AddRect(rect)
+            End Select
+            Return path
+        End Function
+
+        ''' <summary>Stempelt ein Symbol in gleichen Abstaenden entlang des Rahmenpfades.
+        '''
+        ''' Gezeichnet wird mit derselben Routine wie die Form-Objekte - ein Stern im Rahmen sieht
+        ''' also aus wie ein Stern auf der Buehne. Traegt der Rahmen einen Verlauf, entstehen die
+        ''' Symbole zuerst deckend auf einer eigenen Ebene und werden danach mit dem Schattierer
+        ''' eingefaerbt (SrcIn); sonst truege jeder Stempel denselben Verlauf in sich statt einen
+        ''' gemeinsamen ueber den ganzen Rahmen.</summary>
+        Private Shared Sub StampFrameSymbols(canvas As SKCanvas, width As Single, height As Single,
+                                             thickness As Single, radius As Single, normalizedEffect As String,
+                                             symbol As String, spacingPercent As Single, rotate As Boolean,
+                                             color As SKColor, gradientShader As SKShader,
+                                             strokeColor As SKColor, strokeWidth As Single)
+            Using path = BuildFramePath(width, height, thickness, radius, normalizedEffect)
+                If path.IsEmpty Then Return
+
+                Dim size = Math.Max(2.0F, thickness)
+                Dim schrittweite = size * (1.0F + Math.Max(0.0F, Math.Min(400.0F, spacingPercent)) / 100.0F)
+                If schrittweite <= 0.5F Then schrittweite = 1.0F
+
+                Dim kind = NormalizeFrameSymbolKind(symbol)
+                Dim malfarbe = If(gradientShader Is Nothing, color, New SKColor(255, 255, 255, color.Alpha))
+                Dim vorlage = New ImageAnnotation With {.Kind = kind, .FillColor = "#FFFFFFFF", .StrokeWidth = 0}
+
+                ' Einmal ueber den Pfad laufen und an jeder Stelle stempeln. Steht als eigener
+                ' Durchgang da, weil er bei einem Verlauf ZWEIMAL gebraucht wird: die Fuellung
+                ' entsteht auf einer eigenen Ebene und wird eingefaerbt, die Kontur kommt danach
+                ' obendrauf und behaelt ihre eigene Farbe.
+                Dim stempeln =
+                    Sub(fuellung As SKColor, kontur As SKColor, konturbreite As Single)
+                        Using measure = New SKPathMeasure(path, False)
+                            Do
+                                Dim laenge = measure.Length
+                                If laenge > 0 Then
+                                    ' Gleichmaessig verteilen: die Schrittweite wird auf die Laenge
+                                    ' JEDER Kontur eingepasst, sonst klafft an deren Ende eine Luecke.
+                                    Dim anzahl = Math.Max(1, CInt(Math.Round(laenge / schrittweite)))
+                                    Dim schritt = laenge / anzahl
+                                    For i = 0 To anzahl - 1
+                                        Dim pos As SKPoint = Nothing, tangente As SKPoint = Nothing
+                                        If Not measure.GetPositionAndTangent(i * schritt, pos, tangente) Then Continue For
+                                        canvas.Save()
+                                        canvas.Translate(pos.X, pos.Y)
+                                        If rotate Then
+                                            canvas.RotateDegrees(CSng(Math.Atan2(tangente.Y, tangente.X) * 180.0 / Math.PI))
+                                        End If
+                                        Dim halb = size / 2.0F
+                                        Dim ziel = New SKRect(-halb, -halb, halb, halb)
+                                        DrawAnnotationShape(canvas, kind, vorlage, ziel, ziel.Left, ziel.Top,
+                                                            ziel.Width, size, fuellung, kontur, konturbreite, 1.0F)
+                                        canvas.Restore()
+                                    Next
+                                End If
+                            Loop While measure.NextContour()
+                        End Using
+                    End Sub
+
+                Dim hatKontur = strokeWidth > 0 AndAlso strokeColor.Alpha > 0
+
+                If gradientShader Is Nothing Then
+                    stempeln(color, If(hatKontur, strokeColor, SKColors.Transparent),
+                             If(hatKontur, strokeWidth, 0.0F))
+                Else
+                    canvas.SaveLayer()
+                    Try
+                        stempeln(malfarbe, SKColors.Transparent, 0.0F)
+                        Using paint = New SKPaint With {.Shader = gradientShader, .BlendMode = SKBlendMode.SrcIn}
+                            canvas.DrawRect(New SKRect(0, 0, width, height), paint)
+                        End Using
+                    Finally
+                        canvas.Restore()
+                    End Try
+                    ' Die Kontur NACH dem Einfaerben und ausserhalb der Ebene - sonst faerbte der
+                    ' Verlauf sie mit ein, und eine eigene Konturfarbe waere folgenlos.
+                    If hatKontur Then stempeln(SKColors.Transparent, strokeColor, strokeWidth)
+                End If
             End Using
-            Return result
+        End Sub
+
+        ''' <summary>Die Formen, die als Rahmensymbol zur Wahl stehen. Alle gibt es auch als Objekt;
+        ''' die Liste steht hier, damit Auswahlliste und Renderer dieselbe Quelle haben.</summary>
+        Public Shared ReadOnly Property FrameSymbolKinds As String()
+            Get
+                Return New String() {"Star", "DoubleStar", "Heart", "Diamond", "Droplet", "Cloud",
+                                     "Ellipse", "Square", "Triangle", "Polygon"}
+            End Get
+        End Property
+
+        Private Shared Function NormalizeFrameSymbolKind(symbol As String) As String
+            Dim wert = If(symbol, "").Trim().ToLowerInvariant()
+            For Each kind In FrameSymbolKinds
+                If String.Equals(kind, wert, StringComparison.OrdinalIgnoreCase) Then Return kind.ToLowerInvariant()
+            Next
+            Return "star"
         End Function
 
         Private Shared Function BuildZigZagBorderPath(rect As SKRect, stepSize As Single) As SKPath

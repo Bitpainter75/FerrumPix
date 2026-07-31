@@ -5686,4 +5686,10 @@
   <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
     <value>Serão removidos dados de captura, XMP e perfil de cor de {0} ficheiro(s). Os ficheiros são reescritos; não é possível desfazer.</value>
   </data>
+  <data name="Abstand_c9336132" xml:space="preserve">
+    <value>Espaçamento</value>
+  </data>
+  <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
+    <value>Girar os símbolos com o traçado</value>
+  </data>
 </root>

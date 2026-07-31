@@ -5687,4 +5687,10 @@
   <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
     <value>Les données de prise de vue, XMP et le profil colorimétrique seront supprimés de {0} fichier(s). Les fichiers sont réécrits ; cette action est irréversible.</value>
   </data>
+  <data name="Abstand_c9336132" xml:space="preserve">
+    <value>Espacement</value>
+  </data>
+  <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
+    <value>Faire pivoter les symboles avec le tracé</value>
+  </data>
 </root>

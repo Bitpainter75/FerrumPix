@@ -130,10 +130,6 @@ Namespace ViewModels
         Private _grain As Double = 0
         Private _grainSize As Double = 0
         Private _grainFrequency As Double = 0
-        Private _borderSize As Double = 0
-        Private _borderColor As String = "#FFFFFFFF"
-        Private _borderCornerRadius As Double = 0
-        Private _borderEffect As String = "Einfach"
         Private _clarity As Double = 0
         Private _negativeEnabled As Boolean = False
         Private _negativeMonochrome As Boolean = False
@@ -1443,7 +1439,7 @@ Namespace ViewModels
         ''' deshalb blendet das Panel die Zeile dann aus.</summary>
         Public ReadOnly Property ShowStrokeColorControls As Boolean
             Get
-                Return Not HasMultiAnnotationSelection
+                Return Not HasMultiAnnotationSelection AndAlso Not IsFrameAnnotationSelected
             End Get
         End Property
 
@@ -2245,6 +2241,12 @@ Namespace ViewModels
                     ' um es zu drehen oder zu spiegeln. Ein Sprung nach „Text"/„Einfügen" würde einen Klick auf
                     ' das Objekt aussehen lassen, als hätte er gar nicht selektiert.
                     If IsObjectScopeTool(_currentTool) Then targetTool = _currentTool
+                    ' Der Rahmen ist davon die Ausnahme: seine Regler stehen NUR in der Rahmengruppe
+                    ' unter Effekte. Bliebe man in Anpassen oder Farbe stehen, waere die Ebene zwar
+                    ' markiert, aber nirgends etwas davon zu sehen.
+                    If String.Equals(_annotations(clamped).Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then
+                        targetTool = EditorTool.Effects
+                    End If
                     If targetTool <> _currentTool Then
                         _overlayNotifySuppressDepth += 1
                         Try
@@ -2300,6 +2302,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
                 Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
+                Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
+                Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
+                Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(FillColorLabel))
                 Me.RaisePropertyChanged(NameOf(StrokeColorLabel))
                 Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
@@ -2425,6 +2430,14 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
             Me.RaisePropertyChanged(NameOf(ShowStrokeColorControls))
             Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
+            Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
+            Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
+            Me.RaisePropertyChanged(NameOf(BorderSize))
+            Me.RaisePropertyChanged(NameOf(BorderCornerRadius))
+            Me.RaisePropertyChanged(NameOf(BorderEffect))
+            Me.RaisePropertyChanged(NameOf(BorderColor))
+            Me.RaisePropertyChanged(NameOf(BorderColorValue))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
             Me.RaisePropertyChanged(NameOf(ShowTextPathRow))
             Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
@@ -2973,6 +2986,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
                 Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
                 Me.RaisePropertyChanged(NameOf(ShowStrokeWidthControls))
+                Me.RaisePropertyChanged(NameOf(IsFrameAnnotationSelected))
+                Me.RaisePropertyChanged(NameOf(ShowAnnotationGeometryControls))
+                Me.RaisePropertyChanged(NameOf(ShowAnnotationProperties))
                 Me.RaisePropertyChanged(NameOf(FillColorLabel))
                 Me.RaisePropertyChanged(NameOf(StrokeColorLabel))
                 Me.RaisePropertyChanged(NameOf(AnnotationPositionMinimum))
@@ -2993,7 +3009,21 @@ Namespace ViewModels
         ''' Eigenschaften-Panel ist sichtbar, sobald ein Objekttyp scharf gestellt ODER ein
         ''' vorhandenes Objekt selektiert ist - unabhängig davon, aus welcher Werkzeuggruppe
         ''' (Text, Malen, Formen &amp; Symbole) der Typ ausgewählt wurde.
+        ''' <summary>Die Gruppe mit den Objekt-Eigenschaften. Beim Rahmen bleibt sie weg: seine
+        ''' Eigenschaften stehen vollstaendig in der Rahmengruppe, und zwei Gruppen mit denselben
+        ''' Reglern nebeneinander waren genau die Dopplung, die weg sollte.
+        '''
+        ''' Die Regel gehoert HIERHIN und nicht in das Panel selbst: die Gruppe ist eine Border mit
+        ''' eigenem Hintergrund, in der das Panel nur steckt. Nur den Inhalt auszublenden liess einen
+        ''' leeren Kasten zwischen Rahmen und Schatten stehen.</summary>
         Public ReadOnly Property ShowAnnotationProperties As Boolean
+            Get
+                If IsFrameAnnotationSelected Then Return False
+                Return HasAnnotationPropertyTarget
+            End Get
+        End Property
+
+        Private ReadOnly Property HasAnnotationPropertyTarget As Boolean
             Get
                 Return (HasSelectedAnnotation AndAlso Not IsSelectedStrokeAnnotation()) OrElse HasPendingInsertKind
             End Get
@@ -3121,7 +3151,25 @@ Namespace ViewModels
             Get
                 ' Bei einer MEHRFACHauswahl beschriebe dieser Bereich nur den Anker - er bleibt weg.
                 If HasMultiAnnotationSelection Then Return False
-                Return EffectiveAnnotationKind <> "QR"
+                Return EffectiveAnnotationKind <> "QR" AndAlso Not IsFrameAnnotationSelected
+            End Get
+        End Property
+
+        ''' <summary>Ist gerade das Rahmen-Objekt markiert? Der Rahmen ist ein Objekt wie jedes
+        ''' andere, aber die Haelfte der Objekt-Eigenschaften ergibt fuer ihn keinen Sinn: er hat
+        ''' keine Kontur (er IST eine), und Position und Groesse gehoeren ihm nicht - er umfasst
+        ''' immer das ganze Bild. Statt dessen zeigt das Panel seine eigene Gruppe.</summary>
+        Public ReadOnly Property IsFrameAnnotationSelected As Boolean
+            Get
+                Return String.Equals(EffectiveAnnotationKind, "Frame", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Position und Groesse. Beim Rahmen weg: die Werte stehen zwar am Objekt, werden
+        ''' aber nicht benutzt - Regler, die nichts tun, sind schlimmer als keine.</summary>
+        Public ReadOnly Property ShowAnnotationGeometryControls As Boolean
+            Get
+                Return Not IsFrameAnnotationSelected
             End Get
         End Property
 
@@ -6706,21 +6754,79 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Das Rahmen-Objekt des Dokuments, falls eines existiert.
+        '''
+        ''' Der Rahmen ist keine Stufe der Pixelkette mehr, sondern ein Objekt wie Text und Form: er
+        ''' steht in der Ebenenliste, laesst sich dort abschalten, loeschen und in der Deckkraft
+        ''' aendern, und die ausgeblendeten Globalkorrekturen nehmen ihn nicht mehr mit. Die Regler
+        ''' unten sind Durchreichen auf dieses Objekt - das Panel bearbeitet immer dasselbe.</summary>
+        Private Function FindFrameAnnotation() As ImageAnnotation
+            For Each annotation In _annotations
+                If String.Equals(annotation.Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then Return annotation
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Legt das Rahmen-Objekt an, sobald zum ersten Mal an einem seiner Regler gedreht
+        ''' wird. Es kommt ganz nach oben: ein Rahmen gehoert ueber alles andere.</summary>
+        Private Function EnsureFrameAnnotation() As ImageAnnotation
+            Dim vorhanden = FindFrameAnnotation()
+            If vorhanden IsNot Nothing Then Return vorhanden
+
+            PushUndo()
+            Dim frame = New ImageAnnotation With {
+                .Kind = "Frame",
+                .XPixels = 0,
+                .YPixels = 0,
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(100))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(100))),
+                .FillColor = "#FFFFFFFF",
+                .Opacity = 100,
+                .IsVisible = True,
+                .FrameEffect = "Einfach"
+            }
+            _annotations.Add(frame)
+            RaiseResetButtonStateChanged()
+            Return frame
+        End Function
+
+        ''' <summary>Aendert einen Wert am Rahmen-Objekt und zieht Undo, Zuruecksetzer und Vorschau
+        ''' nach. Ohne Rahmen und ohne Aenderung entsteht dabei KEINES - sonst legte schon das
+        ''' Oeffnen des Panels ein leeres Objekt in die Liste.</summary>
+        Private Sub SetFrameValue(propertyName As String, unveraendert As Func(Of ImageAnnotation, Boolean),
+                                  schreiben As Action(Of ImageAnnotation))
+            Dim vorhanden = FindFrameAnnotation()
+            If vorhanden IsNot Nothing AndAlso unveraendert(vorhanden) Then Return
+
+            Dim frame = If(vorhanden, EnsureFrameAnnotation())
+            If vorhanden IsNot Nothing Then CaptureUndoState(propertyName)
+            schreiben(frame)
+            Me.RaisePropertyChanged(propertyName)
+            RaiseResetButtonStateChanged()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(frame))
+        End Sub
+
         Public Property BorderSize As Double
             Get
-                Return _borderSize
+                Return CDbl(If(FindFrameAnnotation()?.FrameSizePercent, 0.0F))
             End Get
             Set(value As Double)
-                SetUndoableDouble(_borderSize, Math.Max(0, Math.Min(25, value)), NameOf(BorderSize))
+                Dim ziel = CSng(Math.Max(0, Math.Min(25, value)))
+                SetFrameValue(NameOf(BorderSize),
+                              Function(f) Math.Abs(f.FrameSizePercent - ziel) < 0.0001F,
+                              Sub(f) f.FrameSizePercent = ziel)
             End Set
         End Property
 
         Public Property BorderCornerRadius As Double
             Get
-                Return _borderCornerRadius
+                Return CDbl(If(FindFrameAnnotation()?.FrameCornerRadiusPercent, 0.0F))
             End Get
             Set(value As Double)
-                SetUndoableDouble(_borderCornerRadius, Math.Max(0, Math.Min(100, value)), NameOf(BorderCornerRadius))
+                Dim ziel = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(BorderCornerRadius),
+                              Function(f) Math.Abs(f.FrameCornerRadiusPercent - ziel) < 0.0001F,
+                              Sub(f) f.FrameCornerRadiusPercent = ziel)
             End Set
         End Property
 
@@ -6732,40 +6838,469 @@ Namespace ViewModels
 
         Public Property BorderEffect As String
             Get
-                Return _borderEffect
+                Return If(FindFrameAnnotation()?.FrameEffect, "Einfach")
             End Get
             Set(value As String)
-                Dim normalized = If(String.IsNullOrWhiteSpace(value), "Einfach", value)
-                If String.Equals(_borderEffect, normalized, StringComparison.Ordinal) Then Return
-                CaptureUndoState(NameOf(BorderEffect))
-                Me.RaiseAndSetIfChanged(_borderEffect, normalized)
-                RaiseResetButtonStateChanged()
-                SchedulePreviewUpdate()
+                Dim ziel = If(String.IsNullOrWhiteSpace(value), "Einfach", value)
+                SetFrameValue(NameOf(BorderEffect),
+                              Function(f) String.Equals(f.FrameEffect, ziel, StringComparison.Ordinal),
+                              Sub(f) f.FrameEffect = ziel)
             End Set
         End Property
 
         Public Property BorderColor As String
             Get
-                Return _borderColor
+                Return If(FindFrameAnnotation()?.FillColor, "#FFFFFFFF")
             End Get
             Set(value As String)
-                Dim normalized = NormalizeAvaloniaColor(value, "#FFFFFFFF")
-                If String.Equals(_borderColor, normalized, StringComparison.Ordinal) Then Return
-                CaptureUndoState(NameOf(BorderColor))
-                Me.RaiseAndSetIfChanged(_borderColor, normalized)
+                Dim ziel = NormalizeAvaloniaColor(value, "#FFFFFFFF")
+                SetFrameValue(NameOf(BorderColor),
+                              Function(f) String.Equals(f.FillColor, ziel, StringComparison.Ordinal),
+                              Sub(f) f.FillColor = ziel)
                 Me.RaisePropertyChanged(NameOf(BorderColorValue))
                 Me.RaisePropertyChanged(NameOf(BorderColorBrush))
-                RaiseResetButtonStateChanged()
-                SchedulePreviewUpdate()
             End Set
         End Property
 
         Public Property BorderColorValue As Avalonia.Media.Color
             Get
-                Return ParseAvaloniaColorOrDefault(_borderColor, Avalonia.Media.Colors.White)
+                Return ParseAvaloniaColorOrDefault(BorderColor, Avalonia.Media.Colors.White)
             End Get
             Set(value As Avalonia.Media.Color)
                 BorderColor = value.ToString()
+            End Set
+        End Property
+
+        ''' <summary>Die Objekt-Eigenschaften des Rahmens - Fuellart, Verlauf, Deckkraft, Mischen
+        ''' und Drehung - als eigene Durchreichen.
+        '''
+        ''' Sie MUESSEN eigene sein und duerfen nicht die Annotation*-Puffer benutzen: die
+        ''' beschreiben bei einer Markierung das markierte Objekt und OHNE Markierung das naechste
+        ''' zu platzierende. Die Rahmengruppe steht aber immer da, auch ohne markierte Ebene - mit
+        ''' den Puffern haette ein Dreh am Deckkraft-Regler dort das Vorgabe-Objekt des naechsten
+        ''' Einfuegens verstellt statt den Rahmen.</summary>
+        Public ReadOnly Property FrameFillKindOptions As IReadOnlyList(Of String)
+            Get
+                Return New String() {"Solid", "LinearGradient", "RadialGradient"}
+            End Get
+        End Property
+
+        Public Property FrameFillKind As String
+            Get
+                Return If(FindFrameAnnotation()?.FillKind, "Solid")
+            End Get
+            Set(value As String)
+                Dim ziel = If(String.IsNullOrWhiteSpace(value), "Solid", value)
+                SetFrameValue(NameOf(FrameFillKind),
+                              Function(f) String.Equals(f.FillKind, ziel, StringComparison.Ordinal),
+                              Sub(f) f.FillKind = ziel)
+                Me.RaisePropertyChanged(NameOf(ShowFrameGradientControls))
+                Me.RaisePropertyChanged(NameOf(ShowFrameGradientAngle))
+                Me.RaisePropertyChanged(NameOf(ShowFrameGradientInvert))
+            End Set
+        End Property
+
+        ''' <summary>Zweite Farbe, Winkel und Umkehrung gibt es nur bei einem Verlauf.</summary>
+        Public ReadOnly Property ShowFrameGradientControls As Boolean
+            Get
+                Return Not String.Equals(FrameFillKind, "Solid", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFrameGradientAngle As Boolean
+            Get
+                Return String.Equals(FrameFillKind, "LinearGradient", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFrameGradientInvert As Boolean
+            Get
+                Return String.Equals(FrameFillKind, "RadialGradient", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public Property FrameFillColor2Value As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(If(FindFrameAnnotation()?.FillColor2, "#FF000000"),
+                                                   Avalonia.Media.Colors.Black)
+            End Get
+            Set(value As Avalonia.Media.Color)
+                Dim ziel = NormalizeAvaloniaColor(value.ToString(), "#FF000000")
+                SetFrameValue(NameOf(FrameFillColor2Value),
+                              Function(f) String.Equals(f.FillColor2, ziel, StringComparison.Ordinal),
+                              Sub(f) f.FillColor2 = ziel)
+            End Set
+        End Property
+
+        Public Property FrameGradientAngle As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.GradientAngleDegrees, 0.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(360, value)))
+                SetFrameValue(NameOf(FrameGradientAngle),
+                              Function(f) Math.Abs(f.GradientAngleDegrees - ziel) < 0.0001F,
+                              Sub(f) f.GradientAngleDegrees = ziel)
+            End Set
+        End Property
+
+        Public Property FrameGradientInverted As Boolean
+            Get
+                Return If(FindFrameAnnotation()?.GradientInverted, False)
+            End Get
+            Set(value As Boolean)
+                SetFrameValue(NameOf(FrameGradientInverted),
+                              Function(f) f.GradientInverted = value,
+                              Sub(f) f.GradientInverted = value)
+            End Set
+        End Property
+
+        Public Property FrameOpacity As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.Opacity, 100.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameOpacity),
+                              Function(f) Math.Abs(f.Opacity - ziel) < 0.0001F,
+                              Sub(f) f.Opacity = ziel)
+            End Set
+        End Property
+
+        Public Property FrameRotation As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.RotationDegrees, 0.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(-180, Math.Min(180, value)))
+                SetFrameValue(NameOf(FrameRotation),
+                              Function(f) Math.Abs(f.RotationDegrees - ziel) < 0.0001F,
+                              Sub(f) f.RotationDegrees = ziel)
+            End Set
+        End Property
+
+        ''' <summary>Schatten und Gluehen des Rahmens. Auch sie stehen fest in der Rahmengruppe und
+        ''' brauchen deshalb eigene Durchreichen - aus demselben Grund wie Fuellart und Deckkraft
+        ''' (siehe oben): ohne markierte Ebene beschreiben die Annotation*-Puffer das naechste
+        ''' einzufuegende Objekt.</summary>
+        Public Property FrameShadowEnabled As Boolean
+            Get
+                Return If(FindFrameAnnotation()?.ShadowEnabled, False)
+            End Get
+            Set(value As Boolean)
+                SetFrameValue(NameOf(FrameShadowEnabled),
+                              Function(f) f.ShadowEnabled = value,
+                              Sub(f) f.ShadowEnabled = value)
+            End Set
+        End Property
+
+        Public Property FrameShadowColorValue As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(If(FindFrameAnnotation()?.ShadowColor, "#80000000"),
+                                                   Avalonia.Media.Color.FromArgb(128, 0, 0, 0))
+            End Get
+            Set(value As Avalonia.Media.Color)
+                Dim ziel = NormalizeAvaloniaColor(value.ToString(), "#80000000")
+                SetFrameValue(NameOf(FrameShadowColorValue),
+                              Function(f) String.Equals(f.ShadowColor, ziel, StringComparison.Ordinal),
+                              Sub(f) f.ShadowColor = ziel)
+            End Set
+        End Property
+
+        Public Property FrameShadowOffsetX As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.ShadowOffsetXPercent, 4.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(-100, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameShadowOffsetX),
+                              Function(f) Math.Abs(f.ShadowOffsetXPercent - ziel) < 0.0001F,
+                              Sub(f) f.ShadowOffsetXPercent = ziel)
+                Me.RaisePropertyChanged(NameOf(FrameShadowLightAngle))
+            End Set
+        End Property
+
+        Public Property FrameShadowOffsetY As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.ShadowOffsetYPercent, 4.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(-100, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameShadowOffsetY),
+                              Function(f) Math.Abs(f.ShadowOffsetYPercent - ziel) < 0.0001F,
+                              Sub(f) f.ShadowOffsetYPercent = ziel)
+                Me.RaisePropertyChanged(NameOf(FrameShadowLightAngle))
+            End Set
+        End Property
+
+        ''' <summary>Der Lichtwinkel ist KEIN eigener Wert, sondern die Leserichtung der beiden
+        ''' Versatzwerte - so wie beim Objekt-Schatten auch. Gespeichert wird nur der Versatz, sonst
+        ''' koennten Winkel und Versatz auseinanderlaufen.</summary>
+        Public Property FrameShadowLightAngle As Double
+            Get
+                Dim frame = FindFrameAnnotation()
+                If frame Is Nothing Then Return 0
+                Dim winkel = Math.Atan2(frame.ShadowOffsetYPercent, frame.ShadowOffsetXPercent) * 180.0 / Math.PI
+                Return NormalizeDegrees(winkel + 180.0)
+            End Get
+            Set(value As Double)
+                Dim frame = FindFrameAnnotation()
+                Dim abstand = If(frame Is Nothing, 6.0,
+                                 Math.Sqrt(frame.ShadowOffsetXPercent * frame.ShadowOffsetXPercent +
+                                           frame.ShadowOffsetYPercent * frame.ShadowOffsetYPercent))
+                If abstand < 1 Then abstand = 6
+                Dim schattenwinkel = (NormalizeDegrees(value) + 180.0) * Math.PI / 180.0
+                Dim zx = CSng(Math.Max(-100, Math.Min(100, Math.Cos(schattenwinkel) * abstand)))
+                Dim zy = CSng(Math.Max(-100, Math.Min(100, Math.Sin(schattenwinkel) * abstand)))
+                SetFrameValue(NameOf(FrameShadowLightAngle),
+                              Function(f) Math.Abs(f.ShadowOffsetXPercent - zx) < 0.0001F AndAlso
+                                          Math.Abs(f.ShadowOffsetYPercent - zy) < 0.0001F,
+                              Sub(f)
+                                  f.ShadowOffsetXPercent = zx
+                                  f.ShadowOffsetYPercent = zy
+                              End Sub)
+                Me.RaisePropertyChanged(NameOf(FrameShadowOffsetX))
+                Me.RaisePropertyChanged(NameOf(FrameShadowOffsetY))
+            End Set
+        End Property
+
+        Public Property FrameShadowBlur As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.ShadowBlur, 6.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameShadowBlur),
+                              Function(f) Math.Abs(f.ShadowBlur - ziel) < 0.0001F,
+                              Sub(f) f.ShadowBlur = ziel)
+            End Set
+        End Property
+
+        Public Property FrameShadowStrength As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.ShadowStrength, 100.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameShadowStrength),
+                              Function(f) Math.Abs(f.ShadowStrength - ziel) < 0.0001F,
+                              Sub(f) f.ShadowStrength = ziel)
+            End Set
+        End Property
+
+        Public Property FrameShadowSize As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.ShadowSizePercent, 100.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(25, Math.Min(300, value)))
+                SetFrameValue(NameOf(FrameShadowSize),
+                              Function(f) Math.Abs(f.ShadowSizePercent - ziel) < 0.0001F,
+                              Sub(f) f.ShadowSizePercent = ziel)
+            End Set
+        End Property
+
+        Public Property FrameShadowRounded As Boolean
+            Get
+                Return If(FindFrameAnnotation()?.ShadowRounded, False)
+            End Get
+            Set(value As Boolean)
+                SetFrameValue(NameOf(FrameShadowRounded),
+                              Function(f) f.ShadowRounded = value,
+                              Sub(f) f.ShadowRounded = value)
+            End Set
+        End Property
+
+        Public Property FrameShadowCornerRadius As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.ShadowCornerRadiusPercent, 0.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameShadowCornerRadius),
+                              Function(f) Math.Abs(f.ShadowCornerRadiusPercent - ziel) < 0.0001F,
+                              Sub(f) f.ShadowCornerRadiusPercent = ziel)
+            End Set
+        End Property
+
+        Public Property FrameGlowEnabled As Boolean
+            Get
+                Return If(FindFrameAnnotation()?.GlowEnabled, False)
+            End Get
+            Set(value As Boolean)
+                SetFrameValue(NameOf(FrameGlowEnabled),
+                              Function(f) f.GlowEnabled = value,
+                              Sub(f) f.GlowEnabled = value)
+            End Set
+        End Property
+
+        Public Property FrameGlowColorValue As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(If(FindFrameAnnotation()?.GlowColor, "#FFFFFF00"),
+                                                   Avalonia.Media.Colors.Yellow)
+            End Get
+            Set(value As Avalonia.Media.Color)
+                Dim ziel = NormalizeAvaloniaColor(value.ToString(), "#FFFFFF00")
+                SetFrameValue(NameOf(FrameGlowColorValue),
+                              Function(f) String.Equals(f.GlowColor, ziel, StringComparison.Ordinal),
+                              Sub(f) f.GlowColor = ziel)
+            End Set
+        End Property
+
+        Public Property FrameGlowBlur As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.GlowBlur, 10.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameGlowBlur),
+                              Function(f) Math.Abs(f.GlowBlur - ziel) < 0.0001F,
+                              Sub(f) f.GlowBlur = ziel)
+            End Set
+        End Property
+
+        Public Property FrameGlowStrength As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.GlowStrength, 100.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameGlowStrength),
+                              Function(f) Math.Abs(f.GlowStrength - ziel) < 0.0001F,
+                              Sub(f) f.GlowStrength = ziel)
+            End Set
+        End Property
+
+        ''' <summary>Rahmen aus SYMBOLEN: statt einer Linie wird eine Form entlang des Rahmens
+        ''' gestempelt. Die Rahmenart bleibt dabei der Pfad - gerade, wellig, gezackt oder in zwei
+        ''' Reihen -, und die Groesse des Rahmens ist die Groesse der Symbole.
+        '''
+        ''' Gespeichert wird der englische Formname, angezeigt die uebersetzte Beschriftung; das ist
+        ''' dasselbe Verfahren wie bei der Rahmenart, nur andersherum beschriftet.</summary>
+        Public ReadOnly Property FrameSymbolOptions As IReadOnlyList(Of String)
+            Get
+                Dim liste As New List(Of String) From {"Kein"}
+                For Each kind In ImageProcessor.FrameSymbolKinds
+                    liste.Add(ImageAnnotation.GermanKindLabel(kind))
+                Next
+                Return liste
+            End Get
+        End Property
+
+        Public Property FrameSymbolLabel As String
+            Get
+                Dim aktuell = If(FindFrameAnnotation()?.FrameSymbol, "")
+                If String.IsNullOrWhiteSpace(aktuell) Then Return "Kein"
+                Return ImageAnnotation.GermanKindLabel(aktuell)
+            End Get
+            Set(value As String)
+                Dim ziel = ""
+                For Each kind In ImageProcessor.FrameSymbolKinds
+                    If String.Equals(ImageAnnotation.GermanKindLabel(kind), value, StringComparison.Ordinal) Then
+                        ziel = kind
+                        Exit For
+                    End If
+                Next
+                SetFrameValue(NameOf(FrameSymbolLabel),
+                              Function(f) String.Equals(f.FrameSymbol, ziel, StringComparison.Ordinal),
+                              Sub(f) f.FrameSymbol = ziel)
+                Me.RaisePropertyChanged(NameOf(ShowFrameSymbolControls))
+            End Set
+        End Property
+
+        ''' <summary>Abstand und Mitdrehen ergeben nur mit einem Symbol einen Sinn.</summary>
+        Public ReadOnly Property ShowFrameSymbolControls As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(FindFrameAnnotation()?.FrameSymbol)
+            End Get
+        End Property
+
+        Public Property FrameSymbolSpacing As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.FrameSymbolSpacingPercent, 50.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(400, value)))
+                SetFrameValue(NameOf(FrameSymbolSpacing),
+                              Function(f) Math.Abs(f.FrameSymbolSpacingPercent - ziel) < 0.0001F,
+                              Sub(f) f.FrameSymbolSpacingPercent = ziel)
+            End Set
+        End Property
+
+        ''' <summary>Kontur der Rahmensymbole. Die Fuellfarbe ist die Rahmenfarbe oben; hier kommt
+        ''' die Linie dazu, die das Symbol nachzeichnet. Sie behaelt ihre eigene Farbe auch dann,
+        ''' wenn die Fuellung einen Verlauf traegt.</summary>
+        Public Property FrameSymbolStrokeColorValue As Avalonia.Media.Color
+            Get
+                Return ParseAvaloniaColorOrDefault(If(FindFrameAnnotation()?.StrokeColor, "#FF000000"),
+                                                   Avalonia.Media.Colors.Black)
+            End Get
+            Set(value As Avalonia.Media.Color)
+                Dim ziel = NormalizeAvaloniaColor(value.ToString(), "#FF000000")
+                SetFrameValue(NameOf(FrameSymbolStrokeColorValue),
+                              Function(f) String.Equals(f.StrokeColor, ziel, StringComparison.Ordinal),
+                              Sub(f) f.StrokeColor = ziel)
+            End Set
+        End Property
+
+        Public Property FrameSymbolStrokeWidth As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.StrokeWidth, 0.0F))
+            End Get
+            Set(value As Double)
+                Dim ziel = CSng(Math.Max(0, Math.Min(20, value)))
+                SetFrameValue(NameOf(FrameSymbolStrokeWidth),
+                              Function(f) Math.Abs(f.StrokeWidth - ziel) < 0.0001F,
+                              Sub(f) f.StrokeWidth = ziel)
+            End Set
+        End Property
+
+        ''' <summary>Geht die Kontur der Symbole durch die Mischmethode mit, oder liegt sie
+        ''' unveraendert darueber? Denselben Schalter gibt es an den uebrigen Objekten; der Renderer
+        ''' wertet ihn fuer den Rahmen bereits aus (SplitsStrokeFromBlend), es fehlte nur die
+        ''' Bedienung.</summary>
+        Public Property FrameBlendIncludesStroke As Boolean
+            Get
+                Return If(FindFrameAnnotation()?.BlendIncludesStroke, True)
+            End Get
+            Set(value As Boolean)
+                SetFrameValue(NameOf(FrameBlendIncludesStroke),
+                              Function(f) f.BlendIncludesStroke = value,
+                              Sub(f) f.BlendIncludesStroke = value)
+            End Set
+        End Property
+
+        ''' <summary>Ohne Mischmethode ist der Schalter darueber wirkungslos - dann steht er grau.</summary>
+        Public ReadOnly Property FrameUsesBlendMode As Boolean
+            Get
+                Dim modus = If(FindFrameAnnotation()?.BlendMode, "Normal")
+                Return Not String.Equals(modus, "Normal", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public Property FrameSymbolRotate As Boolean
+            Get
+                Return If(FindFrameAnnotation()?.FrameSymbolRotate, False)
+            End Get
+            Set(value As Boolean)
+                SetFrameValue(NameOf(FrameSymbolRotate),
+                              Function(f) f.FrameSymbolRotate = value,
+                              Sub(f) f.FrameSymbolRotate = value)
+            End Set
+        End Property
+
+        Public Property SelectedFrameBlendModeOption As AnnotationBlendModeOption
+            Get
+                Dim aktuell = If(FindFrameAnnotation()?.BlendMode, "Normal")
+                Return _annotationBlendModeOptions.FirstOrDefault(Function(o) String.Equals(o.Key, aktuell, StringComparison.Ordinal))
+            End Get
+            Set(value As AnnotationBlendModeOption)
+                If value Is Nothing Then Return
+                Dim ziel = value.Key
+                SetFrameValue(NameOf(SelectedFrameBlendModeOption),
+                              Function(f) String.Equals(f.BlendMode, ziel, StringComparison.Ordinal),
+                              Sub(f) f.BlendMode = ziel)
+                Me.RaisePropertyChanged(NameOf(FrameUsesBlendMode))
             End Set
         End Property
 
@@ -14960,6 +15495,7 @@ Namespace ViewModels
         Public ReadOnly Property SetMaskModeCommand As ICommand
         Public ReadOnly Property SetSelectionCombineModeCommand As ICommand
         Public ReadOnly Property SetAnnotationTextPathKindCommand As ICommand
+        Public ReadOnly Property SetFrameFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationFillKindCommand As ICommand
         Public ReadOnly Property SetAnnotationAnchorCommand As ICommand
         Public ReadOnly Property ResetTransformCommand As ICommand
@@ -15331,6 +15867,7 @@ Namespace ViewModels
             SetSelectionCombineModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionCombineMode(mode))
             SetAnnotationAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) AnnotationAnchor = anchor)
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
+            SetFrameFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) FrameFillKind = kind)
             SetAnnotationTextPathKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationTextPathKind(kind))
             ResetTransformCommand = ReactiveCommand.Create(Sub()
                                                                PushUndo()
@@ -19027,10 +19564,6 @@ Namespace ViewModels
                 .Grain = CSng(_grain),
                 .GrainSize = CSng(_grainSize),
                 .GrainFrequency = CSng(_grainFrequency),
-                .BorderSize = CSng(_borderSize),
-                .BorderColor = _borderColor,
-                .BorderCornerRadius = CSng(_borderCornerRadius),
-                .BorderEffect = _borderEffect,
                 .Clarity = CSng(_clarity),
                 .NegativeEnabled = _negativeEnabled AndAlso Not (forPreview AndAlso _suppressNegativeForPick),
                 .NegativeMonochrome = _negativeMonochrome,
@@ -19313,7 +19846,7 @@ Namespace ViewModels
                     Return "Details"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
                      NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
-                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(BorderSize), NameOf(BorderColor)
+                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency)
                     Return "Effekte"
                 Case NameOf(FilterPreset)
                     Return "Filter"
@@ -19459,10 +19992,6 @@ Namespace ViewModels
             _grain = adj.Grain
             _grainSize = adj.GrainSize
             _grainFrequency = adj.GrainFrequency
-            _borderSize = adj.BorderSize
-            _borderColor = If(String.IsNullOrWhiteSpace(adj.BorderColor), "#FFFFFFFF", adj.BorderColor)
-            _borderCornerRadius = adj.BorderCornerRadius
-            _borderEffect = If(String.IsNullOrWhiteSpace(adj.BorderEffect), "Einfach", adj.BorderEffect)
             _clarity = adj.Clarity
             _negativeEnabled = adj.NegativeEnabled
             _negativeMonochrome = adj.NegativeMonochrome
@@ -19854,8 +20383,6 @@ Namespace ViewModels
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
-            _borderSize = 0
-            _borderColor = "#FFFFFFFF"
             _clarity = 0
             ' VOLLSTAENDIGKEIT: diese Felder fehlten hier und ueberlebten damit
             ' den Bildwechsel - Bild B erbte Dunst/Staub/Kalibrierung/Vignettenform/Weissabgleich
@@ -19900,8 +20427,6 @@ Namespace ViewModels
             _vignetteFeather = 70
             _vignetteCenterX = 50
             _vignetteCenterY = 50
-            _borderCornerRadius = 0
-            _borderEffect = "Einfach"
             _selectionFeather = 0
             ' Persistente Masken/Einstellungsebenen gehoeren zum ALTEN Bild - ohne Clear standen
             ' die Ebenen von A im Panel von B und gingen dort in GetCurrentAdjustments (und damit
@@ -20826,6 +21351,7 @@ Namespace ViewModels
                     Return EditorTool.Geometry
                 Case "Symbol", "Svg"
                     Return EditorTool.Insert
+                Case "Frame" : Return EditorTool.Effects
                 Case "Brush", "Eraser" : Return EditorTool.Draw
                 Case "SelectionFill", "SelectionImage" : Return EditorTool.Move
                 Case Else : Return EditorTool.Insert
@@ -21869,6 +22395,11 @@ Namespace ViewModels
                 ' Pinsel-Werkzeug springen - auch wenn der Klick eigentlich einen Beschnitt aufziehen oder
                 ' eine Form setzen sollte. Auswählbar bleiben sie über die Ebenenliste.
                 If IsStrokeAnnotationKind(a.Kind) Then Continue For
+                ' Der Rahmen aus demselben Grund: sein Rechteck ist IMMER das ganze Bild, und er
+                ' liegt obenauf - jeder Klick irgendwohin wuerde ihn greifen und nichts anderes
+                ' waere mehr anzufassen. Auswaehlbar bleibt er ueber die Ebenenliste, verschieben
+                ' laesst er sich ohnehin nicht.
+                If String.Equals(a.Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then Continue For
                 ' Ausgeblendete Ebenen sind auf der Leinwand nicht zu sehen; ein Klick auf ihre alte
                 ' Stelle darf sie nicht selektieren (und damit ins zugehörige Werkzeug springen).
                 If Not a.IsVisible Then Continue For
@@ -23650,10 +24181,6 @@ Namespace ViewModels
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
-            _borderSize = 0
-            _borderCornerRadius = 0
-            _borderEffect = "Einfach"
-            _borderColor = "#FFFFFFFF"
             RaiseEffectsPropertiesChanged()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -23800,16 +24327,19 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Setzt nur die Rahmen-Regler zurück. Die Rahmen-Gruppe hing vorher am
-        ''' Effekte-Zurücksetzer und nahm Vignette und Korn mit, die in einer anderen Gruppe stehen.</summary>
+        ''' <summary>Setzt den Rahmen zurück, und das heisst seit dem Umbau: das Rahmen-Objekt kommt
+        ''' weg. Ein Objekt mit Staerke null bliebe sonst unsichtbar in der Ebenenliste stehen.
+        ''' Die Rahmen-Gruppe hing vorher am Effekte-Zurücksetzer und nahm Vignette und Korn mit,
+        ''' die in einer anderen Gruppe stehen.</summary>
         Private Sub ResetFrameInternal()
-            _borderSize = 0
-            _borderCornerRadius = 0
-            _borderEffect = "Einfach"
-            _borderColor = "#FFFFFFFF"
+            Dim frame = FindFrameAnnotation()
+            If frame Is Nothing Then Return
+            PushUndo()
+            Dim schmutz = ComputeSceneDirtyRectFor(frame)
+            _annotations.Remove(frame)
             RaiseEffectsPropertiesChanged()
             RaiseResetButtonStateChanged()
-            SchedulePreviewUpdate()
+            RefreshOverlayAfterAnnotationChange(schmutz)
         End Sub
 
         ''' Setzt neben den eigentlichen Filter-Werten (FilterPreset/FilterStrength) auch alle Werte
@@ -24228,7 +24758,7 @@ Namespace ViewModels
             If adj.HasHslChanges() Then Return "Farbmischer"
             If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 OrElse adj.ColorNoiseReduction <> 0 OrElse
                adj.ColorNoiseAdd <> 0 OrElse adj.Grain <> 0 Then Return "Details"
-            If adj.Vignette <> 0 OrElse adj.BorderSize <> 0 Then Return "Vignette/Rahmen"
+            If adj.Vignette <> 0 Then Return "Vignette"
             If Not String.Equals(adj.FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) Then Return "Filter"
             Return "Anpassung"
         End Function

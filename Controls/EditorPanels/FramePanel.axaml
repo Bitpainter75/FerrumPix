@@ -53,6 +53,7 @@
                           SelectedItem="{Binding BorderEffect}"
                           FontSize="{DynamicResource FP.Font.Small}"
                           Margin="6,0,0,0"
+                          HorizontalAlignment="Stretch"
                           DropDownOpened="OnMatchWidthDropDownOpened">
                         <ComboBox.ItemTemplate>
                             <!-- Angezeigt wird uebersetzt, gespeichert bleibt der deutsche WERT: er
@@ -72,6 +73,267 @@
                         SelectedColor="{Binding BorderColorValue, Mode=TwoWay}" />
                 </StackPanel>
             </Grid>
+
+            <!-- Rahmen aus Symbolen: die Rahmenart oben bleibt der PFAD, auf dem sie sitzen -
+                 gerade, wellig, gezackt oder in zwei Reihen. Die Groesse oben ist ihre Groesse. -->
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                <TextBlock Text="Symbol" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding FrameSymbolOptions}"
+                          SelectedItem="{Binding FrameSymbolLabel}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          Margin="6,0,0,0"
+                          HorizontalAlignment="Stretch"
+                          DropDownOpened="OnMatchWidthDropDownOpened">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}"
+                                       VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+            <StackPanel Spacing="2" IsVisible="{Binding ShowFrameSymbolControls}">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Abstand" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="400" DefaultValue="50"
+                                       Value="{Binding FrameSymbolSpacing}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FrameSymbolSpacing, Mode=TwoWay}"
+                                             Minimum="0" Maximum="400" Increment="5" FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                    <TextBlock Text="Kontur" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
+                        <icons:ColorPickerButton
+                            SelectedColor="{Binding FrameSymbolStrokeColorValue, Mode=TwoWay}" />
+                    </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="20" DefaultValue="0"
+                                       Value="{Binding FrameSymbolStrokeWidth}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FrameSymbolStrokeWidth, Mode=TwoWay}"
+                                             Minimum="0" Maximum="20" Increment="1" FormatString="F0" />
+                </Grid>
+                <!-- Aus: nur die Fuellung geht durch die Mischmethode, die Kontur bleibt normal
+                     darueber. Ohne Mischmethode wirkungslos - dann ausgegraut, wie beim Objekt. -->
+                <CheckBox Content="Kontur mitmischen"
+                          IsChecked="{Binding FrameBlendIncludesStroke, Mode=TwoWay}"
+                          IsEnabled="{Binding FrameUsesBlendMode}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Aus: nur die Füllung wird gemischt, die Kontur bleibt unverändert darüber" />
+                <CheckBox Content="Symbole mitdrehen" IsChecked="{Binding FrameSymbolRotate}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Jedes Symbol dreht sich in die Laufrichtung des Rahmens. Aus: alle stehen aufrecht." />
+            </StackPanel>
+
+            <!-- Auch die Objekt-Eigenschaften des Rahmens stehen hier, und zwar IMMER - nicht erst,
+                 wenn seine Ebene markiert ist. Sie haengen deshalb an eigenen Frame*-Durchreichen
+                 und nicht an den Annotation*-Puffern: die beschreiben ohne Markierung das naechste
+                 zu platzierende Objekt, ein Dreh am Regler haette dort also das Falsche verstellt.
+                 Alles zum Rahmen steht damit in EINER Gruppe; das Eigenschaften-Panel bleibt bei
+                 markiertem Rahmen ganz weg. -->
+            <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                    <TextBlock Text="Füllart" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <WrapPanel Grid.Column="1" Orientation="Horizontal" Margin="6,0,0,0">
+                        <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                                Command="{Binding SetFrameFillKindCommand}"
+                                CommandParameter="Solid"
+                                Classes.active="{Binding FrameFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
+                            <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                                Command="{Binding SetFrameFillKindCommand}"
+                                CommandParameter="LinearGradient"
+                                Classes.active="{Binding FrameFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
+                            <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                                Command="{Binding SetFrameFillKindCommand}"
+                                CommandParameter="RadialGradient"
+                                Classes.active="{Binding FrameFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
+                            <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                    </WrapPanel>
+                </Grid>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
+                      IsVisible="{Binding ShowFrameGradientControls}">
+                    <TextBlock Text="Verlauf bis" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6">
+                        <icons:ColorPickerButton
+                            SelectedColor="{Binding FrameFillColor2Value, Mode=TwoWay}" />
+                    </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowFrameGradientAngle}">
+                    <TextBlock Text="Winkel" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360"
+                                       DefaultValue="0"
+                                       Value="{Binding FrameGradientAngle}"
+                                       Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FrameGradientAngle, Mode=TwoWay}"
+                                             Minimum="0" Maximum="360" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <CheckBox Content="Verlauf invertieren"
+                          IsChecked="{Binding FrameGradientInverted}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          IsVisible="{Binding ShowFrameGradientInvert}" />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Deckkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="100"
+                                       Value="{Binding FrameOpacity}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FrameOpacity, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                    <TextBlock Text="Mischen" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <ComboBox Grid.Column="1"
+                              Margin="6,0,0,0"
+                              ItemsSource="{Binding AnnotationBlendModeOptions}"
+                              SelectedItem="{Binding SelectedFrameBlendModeOption, Mode=TwoWay}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              HorizontalAlignment="Stretch" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Drehung" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
+                                       DefaultValue="0"
+                                       Value="{Binding FrameRotation}" WheelIncrement="0.1"
+                                       DragIncrement="0.1" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding FrameRotation, Mode=TwoWay}"
+                                             Minimum="-180" Maximum="180" Increment="0.1"
+                                             FormatString="F1" />
+                </Grid>
+
+                <!-- Schatten und Gluehen gehoeren mit in die Gruppe: der Rahmen zeichnet beides wie
+                     jedes andere Objekt. Sie stehen hier als Zeilen und nicht als eigene Aufklapper,
+                     damit die Gruppe eine bleibt. -->
+                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,6,0,2" />
+                <CheckBox Content="Schatten" IsChecked="{Binding FrameShadowEnabled}"
+                          FontSize="{DynamicResource FP.Font.Small}" />
+                <StackPanel Spacing="2" IsVisible="{Binding FrameShadowEnabled}">
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                        <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:ColorPickerButton Grid.Column="1"
+                                                 SelectedColor="{Binding FrameShadowColorValue, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Lichtwinkel" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="45"
+                                           Value="{Binding FrameShadowLightAngle}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameShadowLightAngle, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="360" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Versatz X" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="4"
+                                           Value="{Binding FrameShadowOffsetX}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameShadowOffsetX, Mode=TwoWay}"
+                                                 Minimum="-100" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Versatz Y" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="4"
+                                           Value="{Binding FrameShadowOffsetY}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameShadowOffsetY, Mode=TwoWay}"
+                                                 Minimum="-100" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Weichzeichnen" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="6"
+                                           Value="{Binding FrameShadowBlur}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameShadowBlur, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="100"
+                                           Value="{Binding FrameShadowStrength}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameShadowStrength, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="25" Maximum="300" DefaultValue="100"
+                                           Value="{Binding FrameShadowSize}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameShadowSize, Mode=TwoWay}"
+                                                 Minimum="25" Maximum="300" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <CheckBox Content="Abgerundet" IsChecked="{Binding FrameShadowRounded}"
+                              FontSize="{DynamicResource FP.Font.Small}" />
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                          IsVisible="{Binding FrameShadowRounded}">
+                        <TextBlock Text="Rundung" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                                           Value="{Binding FrameShadowCornerRadius}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameShadowCornerRadius, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                </StackPanel>
+
+                <CheckBox Content="Glühen" IsChecked="{Binding FrameGlowEnabled}"
+                          FontSize="{DynamicResource FP.Font.Small}" Margin="0,4,0,0" />
+                <StackPanel Spacing="2" IsVisible="{Binding FrameGlowEnabled}">
+                    <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
+                        <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:ColorPickerButton Grid.Column="1"
+                                                 SelectedColor="{Binding FrameGlowColorValue, Mode=TwoWay}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="10"
+                                           Value="{Binding FrameGlowBlur}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameGlowBlur, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="100"
+                                           Value="{Binding FrameGlowStrength}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding FrameGlowStrength, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
         </StackPanel>
     </Expander>
 </UserControl>

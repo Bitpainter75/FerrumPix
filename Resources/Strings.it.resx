@@ -5687,4 +5687,10 @@
   <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
     <value>Da {0} file verranno rimossi dati di scatto, XMP e profilo colore. I file vengono riscritti; l'operazione non è annullabile.</value>
   </data>
+  <data name="Abstand_c9336132" xml:space="preserve">
+    <value>Distanza</value>
+  </data>
+  <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
+    <value>Ruota i simboli con il tracciato</value>
+  </data>
 </root>

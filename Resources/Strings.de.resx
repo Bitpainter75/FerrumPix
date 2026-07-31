@@ -5687,4 +5687,10 @@
   <data name="Aus_0_Datei_en_werden_Aufnahmedaten_XMP_und_Farb_c4877d60" xml:space="preserve">
     <value>Aus {0} Datei(en) werden Aufnahmedaten, XMP und Farbprofil entfernt. Die Dateien werden dabei neu geschrieben, das lässt sich nicht rückgängig machen.</value>
   </data>
+  <data name="Abstand_c9336132" xml:space="preserve">
+    <value>Abstand</value>
+  </data>
+  <data name="Symbole_mitdrehen_25ce3e0e" xml:space="preserve">
+    <value>Symbole mitdrehen</value>
+  </data>
 </root>
