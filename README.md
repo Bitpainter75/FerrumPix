@@ -122,6 +122,8 @@ One option needs a word of warning: *Update existing assets* replaces the file o
 
 Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the Immich connection.
 
+The gallery has a few of its own: whether a double-click opens a photo in the viewer or in the editor, whether the info panel starts open, and whether file work follows a folder that is only a link to somewhere else, such as a second hard disk. Looking at and editing those photos is never restricted.
+
 The editor can be set up to match how you work: which tool it opens with, the order of the groups in the tool bar, a default target format for saving and exporting, and how a photo is fitted into the editing area. Twenty-four adjustment groups can be hidden if you never use them - that only changes the display, your values are kept.
 
 Two switches concern RAW development: adapting the base brightness to the camera model using reference values for over 200 models (off by default), and whether the lens correction is on for new photos (on by default - it does nothing unless there is data for your lens).
@@ -135,6 +137,8 @@ The last two sections are reference: a full list of keyboard and mouse shortcuts
 - Experimental and untested, feedback welcome: ARM64 and macOS
 
 The packages are self-contained and include the .NET runtime.
+
+On macOS the window carries the usual title bar with the red, yellow and green buttons, and the shortcuts take Command where a Mac user reaches for it, while the combinations the system has claimed for itself are left alone. The builds are unsigned, so macOS may refuse to open the app at first.
 
 `libmpv` (video) and `libraw` (RAW development) are required rather than optional. The Linux packages declare both as dependencies; the Windows releases bundle them. The Flatpak builds LibRaw in but ships no `libmpv`, so it has no video support, and the macOS builds need `brew install libraw`. Where a library is present on the system, FerrumPix prefers it over a bundled copy, so it keeps getting updates and support for newer cameras.
 

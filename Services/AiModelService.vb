@@ -357,11 +357,11 @@ Namespace Services
         ''' Besitz bleibt HIER - der Aufrufer darf sie nicht schliessen.</summary>
         Public Shared Function Session(fileName As String) As InferenceSession
             If Not RuntimeAvailable Then Return Nothing
-            Dim pfad = ModelPath(fileName)
-            If String.IsNullOrEmpty(pfad) Then Return Nothing
+            Dim filePath = ModelPath(fileName)
+            If String.IsNullOrEmpty(filePath) Then Return Nothing
             SyncLock _sperre
                 Dim vorhanden As InferenceSession = Nothing
-                If _sessions.TryGetValue(pfad, vorhanden) Then Return vorhanden
+                If _sessions.TryGetValue(filePath, vorhanden) Then Return vorhanden
                 Try
                     Dim optionen = New SessionOptions()
                     ' Ein Modell laeuft waehrend der Bearbeitung neben der Vorschau. Alle Kerne zu
@@ -372,11 +372,11 @@ Namespace Services
                     ' ungenutzte Groesse im Modell einzeln auf die Fehlerausgabe - hunderte Zeilen,
                     ' die niemanden etwas angehen und echte Meldungen zudecken.
                     optionen.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
-                    Dim neu = New InferenceSession(pfad, optionen)
-                    _sessions(pfad) = neu
+                    Dim neu = New InferenceSession(filePath, optionen)
+                    _sessions(filePath) = neu
                     Return neu
                 Catch ex As Exception
-                    DiagnosticLogService.LogAlways("KiModell", $"laedt nicht: {Path.GetFileName(pfad)} - {ex.Message}")
+                    DiagnosticLogService.LogAlways("KiModell", $"laedt nicht: {Path.GetFileName(filePath)} - {ex.Message}")
                     Return Nothing
                 End Try
             End SyncLock

@@ -94,17 +94,17 @@ Namespace Services
                 If v < min Then min = v
                 If v > max Then max = v
             Next
-            Dim spanne = max - min
+            Dim span = max - min
             ' Ein voellig flaches Ergebnis ist keine Tiefenkarte, sondern ein Fehlschlag.
-            If spanne <= 0.0001F Then Return Nothing
+            If span <= 0.0001F Then Return Nothing
 
             Using small = New SKBitmap(New SKImageInfo(ModelEdge, ModelEdge, SKColorType.Alpha8, SKAlphaType.Premul))
-                Dim puffer(ModelEdge * ModelEdge - 1) As Byte
-                For i = 0 To puffer.Length - 1
-                    Dim v = (values(offset + i) - min) / spanne
-                    puffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
+                Dim buffer(ModelEdge * ModelEdge - 1) As Byte
+                For i = 0 To buffer.Length - 1
+                    Dim v = (values(offset + i) - min) / span
+                    buffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
                 Next
-                Runtime.InteropServices.Marshal.Copy(puffer, 0, small.GetPixels(), puffer.Length)
+                Runtime.InteropServices.Marshal.Copy(buffer, 0, small.GetPixels(), buffer.Length)
 
                 Dim large = New SKBitmap(New SKImageInfo(targetWidth, targetHeight, SKColorType.Alpha8, SKAlphaType.Premul))
                 If Not small.ScalePixels(large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then
@@ -124,28 +124,28 @@ Namespace Services
         Public Shared Function MaskFromDepth(depth As SKBitmap, fromPct As Double, toPct As Double,
                                              featherPct As Double) As SKBitmap
             If depth Is Nothing OrElse depth.Width <= 0 OrElse depth.Height <= 0 Then Return Nothing
-            Dim von = Math.Max(0.0, Math.Min(100.0, Math.Min(fromPct, toPct)))
+            Dim from = Math.Max(0.0, Math.Min(100.0, Math.Min(fromPct, toPct)))
             Dim bis = Math.Max(0.0, Math.Min(100.0, Math.Max(fromPct, toPct)))
             Dim soft = Math.Max(0.0, Math.Min(50.0, featherPct))
 
             Dim w = depth.Width, h = depth.Height
             Dim output = New SKBitmap(New SKImageInfo(w, h, SKColorType.Alpha8, SKAlphaType.Premul))
-            Dim puffer(w * h - 1) As Byte
+            Dim buffer(w * h - 1) As Byte
             For y = 0 To h - 1
                 For x = 0 To w - 1
                     Dim t = depth.GetPixel(x, y).Alpha / 255.0 * 100.0
                     Dim d As Double
-                    If t < von Then
-                        d = If(soft <= 0, 0.0, 1.0 - Math.Min(1.0, (von - t) / soft))
+                    If t < from Then
+                        d = If(soft <= 0, 0.0, 1.0 - Math.Min(1.0, (from - t) / soft))
                     ElseIf t > bis Then
                         d = If(soft <= 0, 0.0, 1.0 - Math.Min(1.0, (t - bis) / soft))
                     Else
                         d = 1.0
                     End If
-                    puffer(y * w + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(d * 255.0)))))
+                    buffer(y * w + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(d * 255.0)))))
                 Next
             Next
-            Runtime.InteropServices.Marshal.Copy(puffer, 0, output.GetPixels(), puffer.Length)
+            Runtime.InteropServices.Marshal.Copy(buffer, 0, output.GetPixels(), buffer.Length)
             Return output
         End Function
 
@@ -392,7 +392,7 @@ Namespace Services
             ' Ein BAND statt einer Ebene. Eine echte Schaerfentiefe reicht nicht symmetrisch um
             ' einen Punkt: nach hinten ist sie deutlich groesser als nach vorn. Mit zwei Grenzen
             ' laesst sich das einstellen, mit Mitte plus Breite nicht.
-            Dim von = Math.Max(0.0, Math.Min(100.0, Math.Min(fromPct, toPct)))
+            Dim from = Math.Max(0.0, Math.Min(100.0, Math.Min(fromPct, toPct)))
             Dim bis = Math.Max(0.0, Math.Min(100.0, Math.Max(fromPct, toPct)))
             Dim uebergang = Math.Max(1.0, Math.Min(100.0, transitionPct))
             ' Der groesste Radius bezieht sich auf die KURZE Kante: derselbe Prozentwert soll bei
@@ -424,7 +424,7 @@ Namespace Services
                         Dim share = stufe / CDbl(Steps)
                         ' Die Maske dieser Stufe: wie weit ist dieser Punkt von der Fokusebene weg,
                         ' gemessen in Anteilen des Uebergangs, geklemmt auf diese Stufe.
-                        Using mask = StepMask(map, von, bis, uebergang, share, 1.0 / Steps)
+                        Using mask = StepMask(map, from, bis, uebergang, share, 1.0 / Steps)
                             If mask Is Nothing Then Continue For
                             Using blurred = BlurWithDisc(source, maxRadius * share,
                                                                   cornerCount, highlightsPct)
@@ -453,7 +453,7 @@ Namespace Services
                                             share As Double, width As Double) As SKBitmap
             Dim w = depth.Width, h = depth.Height
             Dim output = New SKBitmap(New SKImageInfo(w, h, SKColorType.Alpha8, SKAlphaType.Premul))
-            Dim puffer(w * h - 1) As Byte
+            Dim buffer(w * h - 1) As Byte
             Dim empty = True
             For y = 0 To h - 1
                 For x = 0 To w - 1
@@ -470,14 +470,14 @@ Namespace Services
                     ' Dreieck um diese Stufe herum: voll bei "anteil", null eine Stufenbreite daneben.
                     Dim g = 1.0 - Math.Min(1.0, Math.Abs(d - share) / width)
                     If g > 0.0 Then empty = False
-                    puffer(y * w + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(g * 255.0)))))
+                    buffer(y * w + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(g * 255.0)))))
                 Next
             Next
             If empty Then
                 output.Dispose()
                 Return Nothing
             End If
-            Runtime.InteropServices.Marshal.Copy(puffer, 0, output.GetPixels(), puffer.Length)
+            Runtime.InteropServices.Marshal.Copy(buffer, 0, output.GetPixels(), buffer.Length)
             Return output
         End Function
 

@@ -2227,13 +2227,13 @@ Namespace ViewModels
             Set(value As String)
                 Dim normalized = NormalizeWatermarkSizeText(value)
                 Me.RaiseAndSetIfChanged(_dialogWatermarkWidthText, normalized)
-                Dim breite = ParseWatermarkSize(normalized, 0)
-                If breite <= 0 Then Return
-                _dialogWatermarkWidthPixels = breite
+                Dim widthValue = ParseWatermarkSize(normalized, 0)
+                If widthValue <= 0 Then Return
+                _dialogWatermarkWidthPixels = widthValue
                 ' Gesperrtes Verhaeltnis: die Hoehe folgt der Breite. Der umgekehrte Weg ist
                 ' gesperrt (Feld deaktiviert), sonst zoegen sich beide gegenseitig.
                 If _dialogWatermarkLockAspect AndAlso _dialogWatermarkAspect > 0.0001 Then
-                    _dialogWatermarkHeightPixels = Math.Max(1, Math.Min(100000, CInt(Math.Round(breite / _dialogWatermarkAspect))))
+                    _dialogWatermarkHeightPixels = Math.Max(1, Math.Min(100000, CInt(Math.Round(widthValue / _dialogWatermarkAspect))))
                     Me.RaisePropertyChanged(NameOf(DialogWatermarkHeightText))
                 End If
             End Set

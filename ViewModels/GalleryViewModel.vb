@@ -30,6 +30,10 @@ Namespace ViewModels
         Private _selectedItem As ImageItem
         ' Die aktive Stichwortauswahl. Sie ueberlebt keinen Wechsel im Baum - siehe ClearTagFilter.
         Private _activeTagFilters As New List(Of String)()
+        ''' <summary>Wohin "Auswahl aufheben" zurueckkehrt. Bei einem echten Ordner der Pfad,
+        ''' bei einer virtuellen Ansicht (Immich-Album, Person, Ort, Suchliste) der Knoten - sonst
+        ''' bliebe die Trefferliste stehen, obwohl nichts mehr ausgewaehlt ist.</summary>
+        Private _nodeBeforeTagFilter As VirtualNavigationNode
         Private _folderBeforeTagFilter As String = ""
         Private _thumbnailSize As Double = 260
         Private _statusText As String = LocalizationService.T("Willkommen bei FerrumPix")
@@ -1387,6 +1391,12 @@ Namespace ViewModels
             ToggleTagFilterCommand = ReactiveCommand.Create(Of String)(Sub(tag) ToggleTagFilter(tag))
             ClearTagFilterCommand = ReactiveCommand.Create(Sub() ClearTagFilter())
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
+            ' Das Panel kennt nur ImageItem und koennte lokale Bilder nicht von Immich-Assets
+            ' trennen. Die Wege stellt deshalb die Galerie - dieselbe Teilung wie im Sternemenue.
+            InfoPanel.PersistRating = Sub(items, value) ApplyRatingTo(items, value)
+            InfoPanel.PersistFavorite = Sub(items, value) ApplyFavoriteTo(items, value)
+            InfoPanel.PersistColorLabel = Sub(items, value) ApplyColorLabelTo(items, value)
+            InfoPanel.PersistTag = Sub(items, tag, add) ApplyTagTo(items, tag, add)
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
@@ -1532,6 +1542,62 @@ Namespace ViewModels
             Else
                 LibraryService.Instance.SetRating(item.FilePath, rating, syncToXmp:=True)
             End If
+        End Sub
+
+        ''' <summary>Die Schreibwege des Infopanels. Lokale Bilder gebuendelt in den Katalog,
+        ''' Immich-Elemente einzeln an den Server - mit Ruecknahme, falls der ablehnt. Ohne diese
+        ''' Teilung landete eine Bewertung unter dem Pseudo-Pfad "immich://..." im Katalog, der
+        ''' Server saehe sie nie, und der naechste Abgleich raeumte sie wieder weg.</summary>
+        Friend Sub ApplyRatingTo(items As IList(Of ImageItem), rating As Integer)
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            ' Alte Werte VOR dem Setzen sichern - nur damit kann ein abgelehnter Immich-Schreibvorgang
+            ' die Kachel wieder auf ihren echten Stand zurueckdrehen.
+            Dim beforePerItem = items.ToDictionary(Function(i) i, Function(i) i.Rating)
+            For Each item In items
+                item.Rating = rating
+            Next
+            Dim localPaths = items.Where(Function(i) Not i.IsImmichAsset).Select(Function(i) i.FilePath).ToList()
+            If localPaths.Count > 0 Then LibraryService.Instance.SetRatingForMany(localPaths, rating, syncToXmp:=True)
+            For Each item In items.Where(Function(i) i.IsImmichAsset)
+                PersistRating(item, rating, beforePerItem(item))
+            Next
+            Me.RaisePropertyChanged(NameOf(SelectedRating))
+            If _sortMode = "Rating" Then FilterAndSort()
+        End Sub
+
+        Friend Sub ApplyFavoriteTo(items As IList(Of ImageItem), value As Boolean)
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            For Each item In items
+                Dim before = item.IsFavorite
+                item.IsFavorite = value
+                PersistFavorite(item, value, before)
+            Next
+            Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+            If _sortMode = "Favorite" Then FilterAndSort()
+        End Sub
+
+        ''' <summary>Das Farbetikett ist bewusst rein lokal und wandert nicht zum Server; der
+        ''' Pseudo-Pfad ist dafuer ein stabiler Schluessel in der Bibliothek.</summary>
+        Friend Sub ApplyColorLabelTo(items As IList(Of ImageItem), colorLabel As String)
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            LibraryService.Instance.SetColorLabelForMany(items.Select(Function(i) i.FilePath), If(colorLabel, ""), syncToXmp:=True)
+            If _filterColorLabels.Count > 0 Then FilterAndSort()
+        End Sub
+
+        Friend Sub ApplyTagTo(items As IList(Of ImageItem), tag As String, add As Boolean)
+            If items Is Nothing OrElse items.Count = 0 OrElse String.IsNullOrEmpty(tag) Then Return
+            For Each item In items
+                If item.IsImmichAsset Then
+                    If add Then
+                        Dim ignored = ImmichService.AddTagToAssetAsync(item.ImmichAssetId, tag)
+                    Else
+                        Dim ignored = ImmichService.RemoveTagFromAssetAsync(item.ImmichAssetId, tag)
+                    End If
+                Else
+                    LibraryService.Instance.SetTags(item.FilePath, If(item.Tags, New List(Of String)()), syncToXmp:=True)
+                End If
+            Next
+            RefreshTagFilterOptions()
         End Sub
 
         ''' <summary>Persistiert den Favoriten-Status ans passende Backend (Immich-Server bzw. Katalog).</summary>
@@ -2640,8 +2706,14 @@ Namespace ViewModels
 
             ' Den Ordner merken, aus dem heraus die Auswahl begonnen hat - "Auswahl aufheben"
             ' kehrt dorthin zurueck, statt die Trefferliste stehen zu lassen.
-            If wanted.Count > 0 AndAlso _activeTagFilters.Count = 0 AndAlso Not _isVirtualFolder Then
-                _folderBeforeTagFilter = If(_currentFolder, "")
+            If wanted.Count > 0 AndAlso _activeTagFilters.Count = 0 Then
+                If _isVirtualFolder Then
+                    _nodeBeforeTagFilter = If(SelectedImmichNode, SelectedSearchNode)
+                    _folderBeforeTagFilter = ""
+                Else
+                    _folderBeforeTagFilter = If(_currentFolder, "")
+                    _nodeBeforeTagFilter = Nothing
+                End If
             End If
 
             _activeTagFilters = wanted
@@ -2670,9 +2742,13 @@ Namespace ViewModels
             RefreshTagFilterState()
 
             Dim back = _folderBeforeTagFilter
+            Dim backNode = _nodeBeforeTagFilter
             _folderBeforeTagFilter = ""
-            If returnToFolder AndAlso _isVirtualFolder AndAlso
-               Not String.IsNullOrEmpty(back) AndAlso Directory.Exists(back) Then
+            _nodeBeforeTagFilter = Nothing
+            If Not returnToFolder OrElse Not _isVirtualFolder Then Return
+            If backNode IsNot Nothing Then
+                Dim ignored = OpenVirtualNavigationNode(backNode)
+            ElseIf Not String.IsNullOrEmpty(back) AndAlso Directory.Exists(back) Then
                 NavigateToFolder(back)
             End If
         End Sub
@@ -2682,9 +2758,9 @@ Namespace ViewModels
             Dim wanted = If(tag, "").Trim()
             If String.IsNullOrEmpty(wanted) Then Return
             Dim next_ = _activeTagFilters.ToList()
-            Dim vorhanden = next_.FirstOrDefault(Function(t) String.Equals(t, wanted, StringComparison.OrdinalIgnoreCase))
-            If vorhanden IsNot Nothing Then
-                next_.Remove(vorhanden)
+            Dim existing = next_.FirstOrDefault(Function(t) String.Equals(t, wanted, StringComparison.OrdinalIgnoreCase))
+            If existing IsNot Nothing Then
+                next_.Remove(existing)
             Else
                 next_.Add(wanted)
             End If

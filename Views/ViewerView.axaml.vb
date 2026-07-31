@@ -503,13 +503,13 @@ Namespace Views
         ''' andere folgt ueber die Ausschnitt-Spiegelung.
         ''' Der Offset wird ZWEIMAL gesetzt: einmal sofort und einmal nach dem Layout-Durchlauf - vor
         ''' dem Neu-Vermessen der Bilder kennt der ScrollViewer seinen neuen Umfang noch nicht.</summary>
-        Private Sub ZoomCompareAtPoint(source As ScrollViewer, punkt As Point, factor As Double)
+        Private Sub ZoomCompareAtPoint(source As ScrollViewer, pt As Point, factor As Double)
             Dim vm = GetVm()
             If vm Is Nothing OrElse source Is Nothing OrElse factor <= 0 Then Return
 
             Dim alterZoom = Math.Max(0.05, vm.ZoomLevel)
-            Dim imageX = (source.Offset.X + punkt.X) / alterZoom
-            Dim imageY = (source.Offset.Y + punkt.Y) / alterZoom
+            Dim imageX = (source.Offset.X + pt.X) / alterZoom
+            Dim imageY = (source.Offset.Y + pt.Y) / alterZoom
 
             vm.ActiveZoomPreset = ZoomPresetMode.Manual
             vm.ZoomLevel = alterZoom * factor
@@ -518,14 +518,14 @@ Namespace Views
             Dim setzeOffset =
                 Sub()
                     Dim neuerZoom = Math.Max(0.05, vm.ZoomLevel)
-                    Dim target = New Vector(imageX * neuerZoom - punkt.X, imageY * neuerZoom - punkt.Y)
+                    Dim target = New Vector(imageX * neuerZoom - pt.X, imageY * neuerZoom - pt.Y)
                     source.Offset = New Vector(
                         Math.Min(Math.Max(target.X, 0), Math.Max(0, source.Extent.Width - source.Viewport.Width)),
                         Math.Min(Math.Max(target.Y, 0), Math.Max(0, source.Extent.Height - source.Viewport.Height)))
                     ' Beim Ziehen mit gedrueckter Taste ist die gemerkte Basis nach dem Zoomen
                     ' veraltet - ohne Neu-Verankern springt die Ansicht beim Weiterziehen zurueck.
                     If _compareZiehtScroll IsNot Nothing Then
-                        _compareZiehtVon = punkt
+                        _compareZiehtVon = pt
                         _compareZiehtOffset = source.Offset
                     End If
                 End Sub
@@ -908,18 +908,18 @@ Namespace Views
             If vm Is Nothing OrElse Not vm.IsCompareMode Then Return
             Dim zoom = Math.Max(0.05, vm.ZoomLevel)
 
-            Dim setze = Sub(bildName As String, source As Avalonia.Media.Imaging.Bitmap)
-                            Dim bild = Me.FindControl(Of Image)(bildName)
-                            If bild Is Nothing Then Return
+            Dim setze = Sub(imageName As String, source As Avalonia.Media.Imaging.Bitmap)
+                            Dim imageControl = Me.FindControl(Of Image)(imageName)
+                            If imageControl Is Nothing Then Return
                             If source Is Nothing Then
-                                bild.Width = Double.NaN
-                                bild.Height = Double.NaN
+                                imageControl.Width = Double.NaN
+                                imageControl.Height = Double.NaN
                                 Return
                             End If
-                            bild.Width = Math.Round(source.Size.Width * zoom, MidpointRounding.AwayFromZero)
-                            bild.Height = Math.Round(source.Size.Height * zoom, MidpointRounding.AwayFromZero)
-                            bild.MaxWidth = Double.PositiveInfinity
-                            bild.MaxHeight = Double.PositiveInfinity
+                            imageControl.Width = Math.Round(source.Size.Width * zoom, MidpointRounding.AwayFromZero)
+                            imageControl.Height = Math.Round(source.Size.Height * zoom, MidpointRounding.AwayFromZero)
+                            imageControl.MaxWidth = Double.PositiveInfinity
+                            imageControl.MaxHeight = Double.PositiveInfinity
                         End Sub
             setze("CompareLeftImage", vm.CompareLeftImage)
             setze("CompareRightImage", vm.CompareRightImage)

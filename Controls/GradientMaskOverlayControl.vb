@@ -72,9 +72,9 @@ Namespace Controls
                 ' Aussenkante der Ellipse und die innere Grenze des Übergangs.
                 Dim r2 = Math.Max(0.05, ratio) * laenge
                 Dim inner = Math.Max(0.0, 1.0 - uebergang)
-                ZeichneEllipse(context, schatten, a, laenge, r2, ex, ey)
-                ZeichneEllipse(context, line, a, laenge, r2, ex, ey)
-                If inner > 0.02 Then ZeichneEllipse(context, gentle, a, laenge * inner, r2 * inner, ex, ey)
+                DrawEllipseOutline(context, schatten, a, laenge, r2, ex, ey)
+                DrawEllipseOutline(context, line, a, laenge, r2, ex, ey)
+                If inner > 0.02 Then DrawEllipseOutline(context, gentle, a, laenge * inner, r2 * inner, ex, ey)
             Else
                 context.DrawLine(schatten, a, b)
                 context.DrawLine(line, a, b)
@@ -102,7 +102,7 @@ Namespace Controls
             End If
         End Sub
 
-        Private Shared Sub ZeichneEllipse(context As DrawingContext, stift As Pen, center As Point,
+        Private Shared Sub DrawEllipseOutline(context As DrawingContext, pen As Pen, center As Point,
                                           r1 As Double, r2 As Double, ex As Double, ey As Double)
             ' Avalonia kennt keine gedrehte Ellipse als Grundform - der Umriss wird deshalb aus
             ' Stützpunkten gezogen. 72 Schritte sind auch bei Vollbild-Ellipsen glatt.
@@ -116,17 +116,17 @@ Namespace Controls
                 Next
                 ctx.EndFigure(True)
             End Using
-            context.DrawGeometry(Nothing, stift, geo)
+            context.DrawGeometry(Nothing, pen, geo)
         End Sub
 
         ''' <summary>Der Endpunkt ist gefüllt, der Startpunkt hohl - so sieht man auch bei
         ''' gedrehtem Verlauf sofort, welches Ende die volle Wirkung trägt.</summary>
         Private Sub DrawHandle(context As DrawingContext, p As Point, filled As Boolean)
             Dim border = New Pen(New SolidColorBrush(Color.FromArgb(180, 0, 0, 0)), 2.5)
-            Dim stift = New Pen(StrokeBrush, 1.6)
+            Dim pen = New Pen(StrokeBrush, 1.6)
             context.DrawEllipse(Nothing, border, p, HandleRadius, HandleRadius)
             context.DrawEllipse(If(filled, StrokeBrush, New SolidColorBrush(Color.FromArgb(70, 255, 255, 255))),
-                                stift, p, HandleRadius, HandleRadius)
+                                pen, p, HandleRadius, HandleRadius)
         End Sub
 
     End Class

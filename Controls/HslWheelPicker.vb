@@ -92,12 +92,12 @@ Namespace Controls
                 If IsEdited(BandOrder(i)) Then
                     Dim centerRadius = (segmentStartDeg + 22.5) * Math.PI / 180.0
                     Dim ringRadius = (innerRadius + outerRadius) / 2.0
-                    Dim punkt = New Point(center.X + ringRadius * Math.Cos(centerRadius),
+                    Dim pt = New Point(center.X + ringRadius * Math.Cos(centerRadius),
                                           center.Y + ringRadius * Math.Sin(centerRadius))
                     Dim r = Math.Max(2.0, outerRadius * 0.055)
                     context.DrawEllipse(New SolidColorBrush(Colors.White),
                                         New Pen(New SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), 1),
-                                        punkt, r, r)
+                                        pt, r, r)
                 End If
             Next
         End Sub

@@ -150,10 +150,10 @@ Namespace Services
             Dim bestColumns = Math.Min(count, rasterColumns)
             Dim bestArea = -1.0
             For spalten = 1 To Math.Min(count, rasterColumns)
-                Dim zeilen = CInt(Math.Ceiling(count / CDbl(spalten)))
-                If zeilen > rasterColumns Then Continue For
+                Dim rowCount = CInt(Math.Ceiling(count / CDbl(spalten)))
+                If rowCount > rasterColumns Then Continue For
                 Dim width = (contentRect.Width - gap * (spalten - 1)) / spalten
-                Dim height = (contentRect.Height - gap * (zeilen - 1)) / zeilen
+                Dim height = (contentRect.Height - gap * (rowCount - 1)) / rowCount
                 If width <= 0 OrElse height <= 0 Then Continue For
 
                 Dim area = 0.0

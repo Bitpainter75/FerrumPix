@@ -89,10 +89,10 @@ Namespace Services
         End Property
 
         Public Shared Function NormalizeLanguageMode(value As String) As String
-            Dim wert = If(value, "").Trim()
+            Dim normalized = If(value, "").Trim()
             For Each sprache In Languages
                 If sprache.Key <> "System" AndAlso
-                   String.Equals(sprache.Key, wert, StringComparison.Ordinal) Then
+                   String.Equals(sprache.Key, normalized, StringComparison.Ordinal) Then
                     Return sprache.Key
                 End If
             Next

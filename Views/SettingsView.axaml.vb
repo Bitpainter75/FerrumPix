@@ -19,8 +19,8 @@ Namespace Views
         ''' Inhalt in der Ausgangssprache stehen, waehrend die uebrige Oberflaeche umgeschaltet
         ''' hat.</summary>
         Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
-            Dim inhalt = TryCast(TryCast(sender, Flyout)?.Content, Avalonia.LogicalTree.ILogical)
-            If inhalt IsNot Nothing Then LocalizationService.ApplyTo(inhalt)
+            Dim content = TryCast(TryCast(sender, Flyout)?.Content, Avalonia.LogicalTree.ILogical)
+            If content IsNot Nothing Then LocalizationService.ApplyTo(content)
         End Sub
 
         Public Sub New()

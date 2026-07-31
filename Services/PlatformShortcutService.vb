@@ -221,11 +221,11 @@ Namespace Services
                 AddShortcut(map, "Strg+" & key, "⌘" & key)
             Next
 
-            Dim liste = map.ToList()
-            liste.Sort(Function(a, b) b.Key.Length.CompareTo(a.Key.Length))
-            _replacements = liste
+            Dim items = map.ToList()
+            items.Sort(Function(a, b) b.Key.Length.CompareTo(a.Key.Length))
+            _replacements = items
             _replacementCulture = culture
-            Return liste
+            Return items
         End Function
 
         ''' <summary>

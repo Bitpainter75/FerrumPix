@@ -143,11 +143,13 @@ Namespace ViewModels
             ' Der Zustand wird aus den betroffenen Bildern abgelesen und nur angezeigt, wenn ALLE
             ' denselben haben - bei gemischter Auswahl waere jede Anzeige gelogen.
             If imageBatch Then
-                Dim ratingRow = Controls.MenuWidgets.RatingRow(CommonRating(items),
-                                                              CommonFavorite(items),
+                ' Nur die BILDER ablesen, nicht die ganze Markierung: ein mitmarkierter Ordner
+                ' traegt weder Sterne noch Etikett und drueckte die Zeile sonst auf leer.
+                Dim ratingRow = Controls.MenuWidgets.RatingRow(CommonRating(images),
+                                                              CommonFavorite(images),
                                                               commands.Rating, commands.Favorite)
                 If ratingRow IsNot Nothing Then list.Add(ratingRow)
-                Dim labelRow = Controls.MenuWidgets.ColorLabelRow(CommonColorLabel(items), commands.ColorLabel)
+                Dim labelRow = Controls.MenuWidgets.ColorLabelRow(CommonColorLabel(images), commands.ColorLabel)
                 If labelRow IsNot Nothing Then list.Add(labelRow)
                 Divider(list)
             End If

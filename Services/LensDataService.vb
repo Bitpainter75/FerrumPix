@@ -59,7 +59,7 @@ Namespace Services
         End Class
 
         Public NotInheritable Class LensEntry
-            Public Property Hersteller As String = ""
+            Public Property Maker As String = ""
             Public Property Modell As String = ""
             Public Property Namen As New List(Of String)()
             Public Property Anschluesse As New List(Of String)()
@@ -71,7 +71,7 @@ Namespace Services
         End Class
 
         Public NotInheritable Class CameraEntry
-            Public Property Hersteller As String = ""
+            Public Property Maker As String = ""
             Public Property Modell As String = ""
             Public Property CropFactor As Double = 1.0
             Public Property Anschluesse As New List(Of String)()
@@ -260,7 +260,7 @@ Namespace Services
 
             For Each k In doc.Root.Elements("camera")
                 Dim entry = New CameraEntry With {
-                    .Hersteller = TextVon(k, "maker"),
+                    .Maker = TextVon(k, "maker"),
                     .Modell = TextVon(k, "model"),
                     .CropFactor = ZahlVon(TextVon(k, "cropfactor"), 1.0)
                 }
@@ -273,7 +273,7 @@ Namespace Services
 
             For Each l In doc.Root.Elements("lens")
                 Dim entry = New LensEntry With {
-                    .Hersteller = TextVon(l, "maker"),
+                    .Maker = TextVon(l, "maker"),
                     .Modell = TextVon(l, "model"),
                     .CropFactor = ZahlVon(TextVon(l, "cropfactor"), 1.0),
                     .Seitenverhaeltnis = ZahlVon(TextVon(l, "aspect-ratio"), 1.5)
@@ -746,9 +746,9 @@ Namespace Services
             For Each c In _kameras
                 Dim g = Similarity(modell, c.Modell)
                 If Not String.IsNullOrWhiteSpace(maker) AndAlso
-                   Not String.IsNullOrWhiteSpace(c.Hersteller) Then
+                   Not String.IsNullOrWhiteSpace(c.Maker) Then
                     ' Der Hersteller ist ein starker Filter: "5D" gibt es bei mehreren Marken.
-                    If Similarity(maker, c.Hersteller) < 0.5 Then Continue For
+                    If Similarity(maker, c.Maker) < 0.5 Then Continue For
                 End If
                 If g > besteGuete Then
                     besteGuete = g

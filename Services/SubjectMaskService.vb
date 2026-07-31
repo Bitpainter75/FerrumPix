@@ -249,7 +249,7 @@ Namespace Services
             If targetB <= 0 OrElse zielH <= 0 Then Return Nothing
 
             Dim large = New SKBitmap(New SKImageInfo(targetB, zielH, SKColorType.Alpha8, SKAlphaType.Premul))
-            Dim puffer(targetB * zielH - 1) As Byte
+            Dim buffer(targetB * zielH - 1) As Byte
             ' Umrechnung Bildpunkt -> Rasterfeld. Das halbe Feld Versatz sorgt dafuer, dass die
             ' Rohwerte in der MITTE ihres Feldes sitzen und nicht an dessen Ecke.
             Dim sx = gb / CDbl(targetB), sy = gh / CDbl(zielH)
@@ -275,10 +275,10 @@ Namespace Services
                     Dim v = (roh + Verschiebung) * Steepness
                     Dim sValue = 1.0F / (1.0F + CSng(Math.Exp(-v)))
                     If sValue < Mindestdeckung Then sValue = 0.0F
-                    puffer(targetRow + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(sValue * 255.0F)))))
+                    buffer(targetRow + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(sValue * 255.0F)))))
                 Next
             Next
-            Runtime.InteropServices.Marshal.Copy(puffer, 0, large.GetPixels(), puffer.Length)
+            Runtime.InteropServices.Marshal.Copy(buffer, 0, large.GetPixels(), buffer.Length)
             Return large
         End Function
 

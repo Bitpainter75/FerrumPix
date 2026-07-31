@@ -205,11 +205,11 @@ Namespace Services
     ''' verschiebt, soll dorthin passen, wo es dann liegt.</summary>
     Public Class ObjectWarp
         ''' <summary>"Perspektive", "Gitter" oder "Linien". Leer heisst: keine.</summary>
-        Public Property Art As String = ""
+        Public Property Kind As String = ""
 
         ''' <summary>Perspektive: die vier Ecken des Bildes nach der Verzerrung, in Bildprozent,
         ''' als x0,y0,x1,y1,x2,y2,x3,y3 (links oben, rechts oben, rechts unten, links unten).</summary>
-        Public Property Ecken As Double() = New Double() {}
+        Public Property Corners As Double() = New Double() {}
 
         ''' <summary>Gitter: Spalten und Zeilen, dann je Knoten x,y in Bildprozent.</summary>
         Public Property Columns As Integer = 0
@@ -221,10 +221,10 @@ Namespace Services
         Public Property LineSource As Double() = New Double() {}
         Public Property LineTarget As Double() = New Double() {}
 
-        Public ReadOnly Property IstLeer As Boolean
+        Public ReadOnly Property IsEmpty As Boolean
             Get
-                Select Case Art
-                    Case "Perspektive" : Return Ecken Is Nothing OrElse Ecken.Length <> 8
+                Select Case Kind
+                    Case "Perspektive" : Return Corners Is Nothing OrElse Corners.Length <> 8
                     Case "Gitter" : Return Nodes Is Nothing OrElse Columns < 1 OrElse Rows < 1 OrElse
                                            Nodes.Length <> (Columns + 1) * (Rows + 1) * 2
                     Case "Linien" : Return LineSource Is Nothing OrElse LineTarget Is Nothing OrElse
@@ -236,8 +236,8 @@ Namespace Services
 
         Public Function Clone() As ObjectWarp
             Return New ObjectWarp With {
-                .Art = Art,
-                .Ecken = If(Ecken Is Nothing, New Double() {}, CType(Ecken.Clone(), Double())),
+                .Kind = Kind,
+                .Corners = If(Corners Is Nothing, New Double() {}, CType(Corners.Clone(), Double())),
                 .Columns = Columns, .Rows = Rows,
                 .Nodes = If(Nodes Is Nothing, New Double() {}, CType(Nodes.Clone(), Double())),
                 .LineSource = If(LineSource Is Nothing, New Double() {}, CType(LineSource.Clone(), Double())),
@@ -3636,7 +3636,7 @@ Namespace Services
             Dim steps = Math.Max(3, Math.Min(7, CInt(Math.Round(3.0 + grob * 4.0))))
             Dim n = w * h
 
-            Dim quelle = CloneBitmap(source)
+            Dim work = CloneBitmap(source)
             Dim target = New SKBitmap(w, h, source.ColorType, source.AlphaType)
             Try
                 ' In Helligkeit und zwei Farbdifferenzen zerlegen. Nicht wegen der Norm, sondern weil
@@ -3645,7 +3645,7 @@ Namespace Services
                 Dim alpha(n - 1) As Byte
                 For j = 0 To h - 1
                     For i = 0 To w - 1
-                        Dim p = quelle.GetPixel(i, j)
+                        Dim p = work.GetPixel(i, j)
                         Dim k = j * w + i
                         y(k) = 0.299F * p.Red + 0.587F * p.Green + 0.114F * p.Blue
                         cb(k) = p.Blue - y(k)
@@ -3693,7 +3693,7 @@ Namespace Services
                 target.Dispose()
                 Return CloneBitmap(source)
             Finally
-                quelle.Dispose()
+                work.Dispose()
             End Try
         End Function
 
@@ -3709,7 +3709,7 @@ Namespace Services
             Dim n = w * h
             Dim basis(n - 1) As Single
             Array.Copy(kanal, basis, n)
-            Dim ergebnis(n - 1) As Single
+            Dim result(n - 1) As Single
             Dim geglaettet(n - 1) As Single
             Dim s = schwelle
 
@@ -3720,7 +3720,7 @@ Namespace Services
                 ' Was die Glaettung wegnimmt, ist der Anteil DIESER Stufe.
                 For i = 0 To n - 1
                     Dim detail = basis(i) - geglaettet(i)
-                    ergebnis(i) += Shrink(detail, s)
+                    result(i) += Shrink(detail, s)
                 Next
                 Array.Copy(geglaettet, basis, n)
                 s *= growth
@@ -3728,7 +3728,7 @@ Namespace Services
 
             ' Der Rest ist der grobe Bildaufbau - der bleibt unangetastet.
             For i = 0 To n - 1
-                kanal(i) = ergebnis(i) + basis(i)
+                kanal(i) = result(i) + basis(i)
             Next
         End Sub
 
@@ -3769,9 +3769,9 @@ Namespace Services
                 Next
                 For i = 0 To w - 1
                     zwischen(row + i) = sum / width
-                    Dim raus = Math.Max(0, Math.Min(w - 1, i - radius))
+                    Dim output = Math.Max(0, Math.Min(w - 1, i - radius))
                     Dim rein = Math.Max(0, Math.Min(w - 1, i + radius + 1))
-                    sum += feld(row + rein) - feld(row + raus)
+                    sum += feld(row + rein) - feld(row + output)
                 Next
             Next
 
@@ -3782,9 +3782,9 @@ Namespace Services
                 Next
                 For j = 0 To h - 1
                     feld(j * w + i) = sum / width
-                    Dim raus = Math.Max(0, Math.Min(h - 1, j - radius))
+                    Dim output = Math.Max(0, Math.Min(h - 1, j - radius))
                     Dim rein = Math.Max(0, Math.Min(h - 1, j + radius + 1))
-                    sum += zwischen(rein * w + i) - zwischen(raus * w + i)
+                    sum += zwischen(rein * w + i) - zwischen(output * w + i)
                 Next
             Next
         End Sub
@@ -3998,7 +3998,7 @@ Namespace Services
                                                     pipelineInputWidth As Integer, pipelineInputHeight As Integer,
                                                     zielBreite As Integer, zielHoehe As Integer,
                                                     onlyStackedAboveId As String) As SKBitmap
-            Dim ergebnis As SKBitmap = Nothing
+            Dim result As SKBitmap = Nothing
             For Each g In geschwister
                 If g Is Nothing OrElse ReferenceEquals(g, ersteEbene) Then Continue For
                 If Not adj.IsMaskedLayerRenderVisible(g) Then Continue For
@@ -4018,11 +4018,11 @@ Namespace Services
                                                        zielBreite, zielHoehe, g.Opacity, If(modFill, g, Nothing))
                     If m Is Nothing Then Continue For
                     If m.Width <> ersteMaske.Width OrElse m.Height <> ersteMaske.Height Then Continue For
-                    If ergebnis Is Nothing Then ergebnis = CloneBitmap(ersteMaske)
-                    MaskMaximum(ergebnis, m)
+                    If result Is Nothing Then result = CloneBitmap(ersteMaske)
+                    MaskMaximum(result, m)
                 End Using
             Next
-            Return ergebnis
+            Return result
         End Function
 
         ''' <summary>Je Pixel das Maximum aus zwei gleich grossen Alpha8-Masken, in die erste.</summary>
@@ -7733,12 +7733,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' Voellig durchsichtig heisst: keine Farbe gewuenscht.
             If color.Alpha = 0 Then Return source
 
-            Dim ergebnis = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(ergebnis)
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(result)
                 canvas.Clear(color)
                 canvas.DrawBitmap(source, 0, 0)
             End Using
-            Return ergebnis
+            Return result
         End Function
 
         Private Shared Function ApplyCanvasResize(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
@@ -8113,10 +8113,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Die Ebene WAECHST dabei: eine Verzerrung schiebt Bildpunkte nach aussen, und was ueber den
         ''' bisherigen Rand hinausgeht, waere sonst abgeschnitten. <paramref name="offsetX"/> und
         ''' <paramref name="offsetY"/> werden entsprechend nachgefuehrt.</summary>
-        Friend Shared Function WarpObjectLayer(ebene As SKBitmap, v As ObjectWarp,
+        Friend Shared Function WarpObjectLayer(layer As SKBitmap, v As ObjectWarp,
                                                    imageWidth As Integer, imageHeight As Integer,
                                                    ByRef offsetX As Integer, ByRef offsetY As Integer) As SKBitmap
-            If ebene Is Nothing OrElse v Is Nothing OrElse v.IstLeer Then Return Nothing
+            If layer Is Nothing OrElse v Is Nothing OrElse v.IsEmpty Then Return Nothing
             If imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
 
             Const Steps As Integer = 24
@@ -8125,7 +8125,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' Wie weit sich ein Punkt der Ebene verschiebt, in BILDkoordinaten. Erst einmal fuer die
             ' Ecken und den Rand, um zu wissen, wie weit die Ebene wachsen muss.
             Dim targetX(node - 1) As Single, targetY(node - 1) As Single
-            Dim quellX(node - 1) As Single, quellY(node - 1) As Single
+            Dim sourceX(node - 1) As Single, quellY(node - 1) As Single
             Dim minX = Double.MaxValue, minY = Double.MaxValue
             Dim maxX = Double.MinValue, maxY = Double.MinValue
 
@@ -8133,13 +8133,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 For colIdx = 0 To Steps
                     Dim i = rowIdx * (Steps + 1) + colIdx
                     ' Der Knoten in Ebenenkoordinaten, dann in Bildkoordinaten.
-                    Dim ex = colIdx / CDbl(Steps) * ebene.Width
-                    Dim ey = rowIdx / CDbl(Steps) * ebene.Height
+                    Dim ex = colIdx / CDbl(Steps) * layer.Width
+                    Dim ey = rowIdx / CDbl(Steps) * layer.Height
                     Dim bx = offsetX + ex, by = offsetY + ey
                     Dim z = MovePoint(v, bx, by, imageWidth, imageHeight)
                     targetX(i) = CSng(z.X)
                     targetY(i) = CSng(z.Y)
-                    quellX(i) = CSng(ex)
+                    sourceX(i) = CSng(ex)
                     quellY(i) = CSng(ey)
                     If z.X < minX Then minX = z.X
                     If z.X > maxX Then maxX = z.X
@@ -8157,31 +8157,31 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' Eine Verzerrung, die eine Ebene um das Zwanzigfache aufblaeht, ist keine Verzerrung
             ' mehr, sondern ein Rechenfehler - dann lieber unveraendert lassen.
             If neuB <= 0 OrElse neuH <= 0 Then Return Nothing
-            If neuB > ebene.Width * 20 + 64 OrElse neuH > ebene.Height * 20 + 64 Then Return Nothing
+            If neuB > layer.Width * 20 + 64 OrElse neuH > layer.Height * 20 + 64 Then Return Nothing
 
             For i = 0 To node - 1
                 targetX(i) = CSng(targetX(i) - neuX)
                 targetY(i) = CSng(targetY(i) - neuY)
             Next
 
-            Dim ergebnis = ImageGeometryMapper.WarpOverGridTo(ebene, neuB, neuH, Steps, Steps,
-                                                                     targetX, targetY, quellX, quellY)
-            If ergebnis Is Nothing Then Return Nothing
+            Dim result = ImageGeometryMapper.WarpOverGridTo(layer, neuB, neuH, Steps, Steps,
+                                                                     targetX, targetY, sourceX, quellY)
+            If result Is Nothing Then Return Nothing
             offsetX = neuX
             offsetY = neuY
-            Return ergebnis
+            Return result
         End Function
 
         ''' <summary>Wohin ein Bildpunkt durch die Verzerrung wandert. Alle drei Arten an einer
         ''' Stelle, damit die Zuordnung Punkt zu Ziel nur einmal existiert.</summary>
         Private Shared Function MovePoint(v As ObjectWarp, bx As Double, by As Double,
                                                 imageWidth As Integer, imageHeight As Integer) As SKPoint
-            Select Case v.Art
+            Select Case v.Kind
                 Case "Perspektive"
                     ' Bilineare Abbildung des Einheitsquadrats auf das verzerrte Viereck. Genau genug
                     ' fuer ein Objekt und ohne die Sonderfaelle einer projektiven Matrix.
                     Dim u = bx / imageWidth, w = by / imageHeight
-                    Dim e = v.Ecken
+                    Dim e = v.Corners
                     Dim top = (e(0) + (e(2) - e(0)) * u, e(1) + (e(3) - e(1)) * u)
                     Dim bottom = (e(6) + (e(4) - e(6)) * u, e(7) + (e(5) - e(7)) * u)
                     Dim px = top.Item1 + (bottom.Item1 - top.Item1) * w
@@ -8200,10 +8200,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                 Return (v.Nodes(i), v.Nodes(i + 1))
                             End Function
                     Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
-                    Dim oben = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
-                    Dim unten = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
-                    Dim px = oben.Item1 + (unten.Item1 - oben.Item1) * tw
-                    Dim py = oben.Item2 + (unten.Item2 - oben.Item2) * tw
+                    Dim topPt = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
+                    Dim bottomPt = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
+                    Dim px = topPt.Item1 + (bottomPt.Item1 - topPt.Item1) * tw
+                    Dim py = topPt.Item2 + (bottomPt.Item2 - topPt.Item2) * tw
                     Return New SKPoint(CSng(px / 100.0 * imageWidth), CSng(py / 100.0 * imageHeight))
 
                 Case "Linien"
@@ -8230,8 +8230,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' aber nie an.</summary>
         Private Shared Function HasWarp(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
-            If annotation.OwnWarp IsNot Nothing AndAlso Not annotation.OwnWarp.IstLeer Then Return True
-            Return annotation.Warp IsNot Nothing AndAlso Not annotation.Warp.IstLeer
+            If annotation.OwnWarp IsNot Nothing AndAlso Not annotation.OwnWarp.IsEmpty Then Return True
+            Return annotation.Warp IsNot Nothing AndAlso Not annotation.Warp.IsEmpty
         End Function
 
         Private Shared Sub DrawAnnotationViaLayer(canvas As SKCanvas, annotation As ImageAnnotation,
@@ -8259,7 +8259,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' seine Form, die des Bildes, wo es im Bild liegt - in dieser Reihenfolge gelesen
                 ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
                 If annotation IsNot Nothing AndAlso annotation.OwnWarp IsNot Nothing AndAlso
-                   Not annotation.OwnWarp.IstLeer Then
+                   Not annotation.OwnWarp.IsEmpty Then
                     ' Der Bezug ist das OBJEKTRECHTECK, nicht die Ebene: die eigene Verzerrung steht in
                     ' Prozent DES OBJEKTS, die Ebene ist aber so gross wie die gerenderte Flaeche. Mit
                     ' der Ebene als Bezug las eine kleine Verzerrung sich als eine ueber das ganze
@@ -8279,7 +8279,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End If
 
                 If annotation IsNot Nothing AndAlso annotation.Warp IsNot Nothing AndAlso
-                   Not annotation.Warp.IstLeer Then
+                   Not annotation.Warp.IsEmpty Then
                     eigene = WarpObjectLayer(drawn, annotation.Warp, sourceWidth, sourceHeight, vx, vy)
                     If eigene IsNot Nothing Then drawn = eigene
                 End If
@@ -10645,15 +10645,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' Unbenutzt heisst unbenutzt: kein Umkopieren, keine Neuabtastung.
             If m.IsIdentity Then Return source
 
-            Dim ergebnis = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using canvas = New SKCanvas(ergebnis)
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
                 canvas.SetMatrix(m)
                 Using paint = New SKPaint With {.IsAntialias = True}
                     DrawBitmapSampled(canvas, source, 0, 0, SamplingHigh, paint)
                 End Using
             End Using
-            Return ergebnis
+            Return result
         End Function
 
         Private Shared Function ApplyStraighten(source As SKBitmap, adj As ImageAdjustments) As SKBitmap

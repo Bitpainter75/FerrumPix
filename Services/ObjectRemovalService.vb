@@ -283,12 +283,12 @@ Namespace Services
                 Using hard = New SKBitmap(New SKImageInfo(mask.Width, mask.Height,
                                                           SKColorType.Alpha8, SKAlphaType.Premul))
                     Dim n = mask.Width * mask.Height
-                    Dim puffer(n - 1) As Byte
-                    Runtime.InteropServices.Marshal.Copy(mask.GetPixels(), puffer, 0, n)
+                    Dim buffer(n - 1) As Byte
+                    Runtime.InteropServices.Marshal.Copy(mask.GetPixels(), buffer, 0, n)
                     For i = 0 To n - 1
-                        puffer(i) = If(puffer(i) >= threshold, CByte(255), CByte(0))
+                        buffer(i) = If(buffer(i) >= threshold, CByte(255), CByte(0))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(puffer, 0, hard.GetPixels(), n)
+                    Runtime.InteropServices.Marshal.Copy(buffer, 0, hard.GetPixels(), n)
 
                     Using canvas = New SKCanvas(target)
                         canvas.Clear(SKColors.Transparent)
@@ -300,11 +300,11 @@ Namespace Services
 
                     ' Niedrig schwellen: aus dem weichen Rand der Unschaerfe wird wieder eine volle
                     ' Deckung, und die Maske ist um rund einen Radius groesser als vorher.
-                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), puffer, 0, n)
+                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), buffer, 0, n)
                     For i = 0 To n - 1
-                        puffer(i) = If(puffer(i) >= 40, CByte(255), CByte(0))
+                        buffer(i) = If(buffer(i) >= 40, CByte(255), CByte(0))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(puffer, 0, target.GetPixels(), n)
+                    Runtime.InteropServices.Marshal.Copy(buffer, 0, target.GetPixels(), n)
                 End Using
                 Return target
             Catch

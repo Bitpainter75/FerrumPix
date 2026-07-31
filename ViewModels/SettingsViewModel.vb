@@ -2497,8 +2497,8 @@ Namespace ViewModels
             ''' <summary>Was zusammen geholt werden muesste, in MiB.</summary>
             Public ReadOnly Property SizeText As String
                 Get
-                    Dim summe = Files.Sum(Function(d) d.Bytes)
-                    Return (summe / 1048576.0).ToString("F0", Globalization.CultureInfo.CurrentCulture) & " MiB"
+                    Dim bytesTotal = Files.Sum(Function(d) d.Bytes)
+                    Return (bytesTotal / 1048576.0).ToString("F0", Globalization.CultureInfo.CurrentCulture) & " MiB"
                 End Get
             End Property
 
@@ -2561,7 +2561,7 @@ Namespace ViewModels
                 End Set
             End Property
 
-            Public Property Meldung As String
+            Public Property Message As String
                 Get
                     Return _meldung
                 End Get
@@ -2626,7 +2626,7 @@ Namespace ViewModels
         ''' auf dem die Anwendung etwas aus dem Netz holt.</summary>
         Public Async Function FetchModelGroupAsync(group As ModelGroup) As Task
             If group Is Nothing OrElse group.Laeuft Then Return
-            group.Meldung = ""
+            group.Message = ""
             group.Laeuft = True
             group.Progress = 0
             Try
@@ -2641,18 +2641,18 @@ Namespace ViewModels
                                 group.Progress = Math.Min(1.0, (bisher + share * thisFile.Bytes) / total)
                             End If
                         End Sub)
-                    Dim ergebnis = Await ModelDownloadService.FetchAsync(thisFile, notifier)
-                    Select Case ergebnis
+                    Dim result = Await ModelDownloadService.FetchAsync(thisFile, notifier)
+                    Select Case result
                         Case ModelDownloadService.Result.Done, ModelDownloadService.Result.AlreadyPresent
                             fertig += thisFile.Bytes
                         Case ModelDownloadService.Result.ChecksumMismatch
-                            group.Meldung = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
+                            group.Message = LocalizationService.T("Die geladene Datei stimmt nicht mit der erwarteten überein und wurde verworfen")
                             Return
                         Case ModelDownloadService.Result.Cancelled
-                            group.Meldung = LocalizationService.T("Abgebrochen")
+                            group.Message = LocalizationService.T("Abgebrochen")
                             Return
                         Case Else
-                            group.Meldung = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
+                            group.Message = LocalizationService.T("Das Herunterladen ist fehlgeschlagen")
                             Return
                     End Select
                 Next

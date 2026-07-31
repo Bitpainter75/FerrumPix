@@ -999,10 +999,10 @@ Namespace Services
             Dim recipe = If(recipeJson, "").Trim()
             If String.IsNullOrWhiteSpace(sauber) OrElse String.IsNullOrWhiteSpace(recipe) Then Return
             Update(Sub(s)
-                       Dim liste = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)())
-                       liste.RemoveAll(Function(p) p IsNot Nothing AndAlso String.Equals(p.Name, sauber, StringComparison.OrdinalIgnoreCase))
-                       liste.Add(New AdjustmentPresetSettings With {.Name = sauber, .RecipeJson = recipe})
-                       s.AdjustmentPresets = NormalizeAdjustmentPresets(liste)
+                       Dim items = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)())
+                       items.RemoveAll(Function(p) p IsNot Nothing AndAlso String.Equals(p.Name, sauber, StringComparison.OrdinalIgnoreCase))
+                       items.Add(New AdjustmentPresetSettings With {.Name = sauber, .RecipeJson = recipe})
+                       s.AdjustmentPresets = NormalizeAdjustmentPresets(items)
                        s.LastAdjustmentPresetName = sauber
                    End Sub)
         End Sub
@@ -1011,9 +1011,9 @@ Namespace Services
             Dim sauber = If(name, "").Trim()
             If String.IsNullOrWhiteSpace(sauber) Then Return
             Update(Sub(s)
-                       Dim liste = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)())
-                       liste.RemoveAll(Function(p) p IsNot Nothing AndAlso String.Equals(p.Name, sauber, StringComparison.OrdinalIgnoreCase))
-                       s.AdjustmentPresets = NormalizeAdjustmentPresets(liste)
+                       Dim items = If(s.AdjustmentPresets, New List(Of AdjustmentPresetSettings)())
+                       items.RemoveAll(Function(p) p IsNot Nothing AndAlso String.Equals(p.Name, sauber, StringComparison.OrdinalIgnoreCase))
+                       s.AdjustmentPresets = NormalizeAdjustmentPresets(items)
                        If String.Equals(s.LastAdjustmentPresetName, sauber, StringComparison.OrdinalIgnoreCase) Then
                            s.LastAdjustmentPresetName = If(s.AdjustmentPresets.FirstOrDefault()?.Name, "")
                        End If

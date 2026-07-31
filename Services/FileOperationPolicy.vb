@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections
 Imports System.IO
 Imports System.Linq
 
@@ -12,18 +13,6 @@ Namespace Services
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
 
         ''' <summary>
-        ''' Liegt der Pfad im Benutzerordner? Geprueft wird ZWEIMAL: einmal so, wie er geschrieben
-        ''' steht, und einmal mit aufgeloesten Verweisen.
-        '''
-        ''' Der zweite Durchgang ist der eigentliche Schutz. `Path.GetFullPath` loest ".." auf,
-        ''' aber KEINE Symlinks und Junctions. Ein Verweis im Bilderordner, der nach draussen zeigt,
-        ''' bestand die rein buchstaebliche Pruefung - und Kopieren, Verschieben oder Loeschen
-        ''' griffen dann ausserhalb des Benutzerordners zu.
-        '''
-        ''' Aufgeloest wird erst NACH der buchstaeblichen Pruefung: was schon dem Namen nach
-        ''' draussen liegt, ist ohnehin abgelehnt, und der Weg ueber das Dateisystem kostet Zeit.
-        ''' </summary>
-        ''' <summary>
         ''' Darf Dateiarbeit einem Verweis folgen, der aus dem Benutzerordner hinausfuehrt?
         '''
         ''' Standard AUS. Ein Verweis kann irgendwohin zeigen, und dann greifen Loeschen oder
@@ -35,11 +24,35 @@ Namespace Services
         ''' </summary>
         Public Shared Property FollowLinkedFolders As Boolean = False
 
+        ''' <summary>
+        ''' Liegt der Pfad im Benutzerordner? Geprueft wird ZWEIMAL: einmal so, wie er geschrieben
+        ''' steht, und einmal mit aufgeloesten Verweisen.
+        '''
+        ''' Der zweite Durchgang ist der eigentliche Schutz. `Path.GetFullPath` loest ".." auf,
+        ''' aber KEINE Symlinks und Junctions. Ein Verweis im Bilderordner, der nach draussen zeigt,
+        ''' bestand die rein buchstaebliche Pruefung - und Kopieren, Verschieben oder Loeschen
+        ''' griffen dann ausserhalb des Benutzerordners zu.
+        '''
+        ''' Aufgeloest wird erst NACH der buchstaeblichen Pruefung: was schon dem Namen nach
+        ''' draussen liegt, ist ohnehin abgelehnt, und der Weg ueber das Dateisystem kostet Zeit.
+        ''' </summary>
         Public Shared Function IsInPersonalFolder(path As String) As Boolean
             If Not IsAncestorOrSelf(PersonalFolder, path) Then Return False
             If FollowLinkedFolders Then Return True
             Return IsAncestorOrSelf(ResolveLinks(PersonalFolder), ResolveLinks(path))
         End Function
+
+        ''' <summary>Kurzlebiger Zwischenspeicher fuer <see cref="ResolveLinks"/>.
+        '''
+        ''' Der Aufloeser geht je Pfadabschnitt einmal aufs Dateisystem, und die
+        ''' CanFileOperation-Eigenschaften rufen ihn bei JEDEM Kontextmenue fuer JEDES markierte
+        ''' Element. Lokal faellt das nicht auf, auf einem Netzlaufwerk haengt das Menue dadurch.
+        '''
+        ''' Bewusst nur kurz gueltig: das Ergebnis entscheidet mit, ob eine Datei angefasst werden
+        ''' darf. Ein Verweis, der sich aendert, muss sich schnell durchsetzen - zwei Sekunden decken
+        ''' den Ausbruch eines Menueaufbaus ab und nicht mehr.</summary>
+        Private Const LinkCacheMs As Long = 2000
+        Private Shared ReadOnly _linkCache As New Concurrent.ConcurrentDictionary(Of String, (Stamp As Long, Value As String))(StringComparer.Ordinal)
 
         ''' <summary>
         ''' Loest Verweise auf, auch solche MITTEN im Pfad: jeder Abschnitt wird einzeln geprueft,
@@ -59,6 +72,20 @@ Namespace Services
                 Return path
             End Try
 
+            Dim now = Environment.TickCount64
+            Dim cached As (Stamp As Long, Value As String) = Nothing
+            If _linkCache.TryGetValue(full, cached) AndAlso now - cached.Stamp < LinkCacheMs Then
+                Return cached.Value
+            End If
+            ' Nicht unbegrenzt wachsen lassen: der Zwischenspeicher lebt ohnehin nur Sekunden.
+            If _linkCache.Count > 4096 Then _linkCache.Clear()
+
+            Dim resolved = ResolveLinksUncached(full)
+            _linkCache(full) = (now, resolved)
+            Return resolved
+        End Function
+
+        Private Shared Function ResolveLinksUncached(full As String) As String
             Dim parent = IO.Path.GetDirectoryName(full)
             If String.IsNullOrEmpty(parent) Then Return full   ' Wurzel erreicht
 

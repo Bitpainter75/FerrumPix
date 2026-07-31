@@ -573,11 +573,11 @@ Namespace Views
                 ' geklickt hatte.
                 vm.SelectedAnnotationIndex = -1
                 If vm.HasActiveSelection Then
-                    Dim bildRect = GetDisplayedImageRect(canvas, vm)
+                    Dim displayedRect = GetDisplayedImageRect(canvas, vm)
                     Dim outside = True
-                    If bildRect.Width > 0 AndAlso bildRect.Height > 0 Then
-                        Dim xP = (_objectMarqueeStart.X - bildRect.Left) / bildRect.Width * 100.0
-                        Dim yP = (_objectMarqueeStart.Y - bildRect.Top) / bildRect.Height * 100.0
+                    If displayedRect.Width > 0 AndAlso displayedRect.Height > 0 Then
+                        Dim xP = (_objectMarqueeStart.X - displayedRect.Left) / displayedRect.Width * 100.0
+                        Dim yP = (_objectMarqueeStart.Y - displayedRect.Top) / displayedRect.Height * 100.0
                         outside = xP < 0 OrElse yP < 0 OrElse xP > 100 OrElse yP > 100 OrElse
                                    Not vm.IsPointInsideSelectionPercent(xP, yP)
                     End If
@@ -3041,13 +3041,13 @@ Namespace Views
             If source.HasValue Then
                 value = If(_guideDragIsVertical, CDbl(source.Value.X), CDbl(source.Value.Y))
             Else
-                Dim rand = If(anzeigeProzent < 50.0, 1.0, 99.0)
+                Dim border = If(anzeigeProzent < 50.0, 1.0, 99.0)
                 Dim anker = If(aufSchirmSenkrecht,
-                               vm.DisplayToSourcePercent(rand, 50.0),
-                               vm.DisplayToSourcePercent(50.0, rand))
+                               vm.DisplayToSourcePercent(border, 50.0),
+                               vm.DisplayToSourcePercent(50.0, border))
                 If Not anker.HasValue Then Return
                 Dim anchorValue = If(_guideDragIsVertical, CDbl(anker.Value.X), CDbl(anker.Value.Y))
-                value = anchorValue + (anzeigeProzent - rand)
+                value = anchorValue + (anzeigeProzent - border)
             End If
 
             Dim guides = If(_guideDragIsVertical, _guidesX, _guidesY)
@@ -3444,13 +3444,13 @@ Namespace Views
         ''' Bildbereich. Sie liegt unter den Overlays, damit die Rasterpunkte darauf sichtbar
         ''' bleiben.</summary>
         Private Sub PositionPreview(ix As Double, iy As Double, iw As Double, ih As Double)
-            Dim bild = Me.FindControl(Of Image)("ToolPreviewImage")
-            If bild Is Nothing Then Return
+            Dim previewImage = Me.FindControl(Of Image)("ToolPreviewImage")
+            If previewImage Is Nothing Then Return
             If iw <= 0 OrElse ih <= 0 Then Return
-            Avalonia.Controls.Canvas.SetLeft(bild, ix)
-            Avalonia.Controls.Canvas.SetTop(bild, iy)
-            bild.Width = iw
-            bild.Height = ih
+            Avalonia.Controls.Canvas.SetLeft(previewImage, ix)
+            Avalonia.Controls.Canvas.SetTop(previewImage, iy)
+            previewImage.Width = iw
+            previewImage.Height = ih
         End Sub
 
         ''' <summary>Legt das Verzerrungsviereck ueber das Bild. Die Ecken kommen in Anzeige-Prozent
@@ -3493,17 +3493,17 @@ Namespace Views
                 Return
             End If
             ' Rand ringsum, damit eine nach aussen gezogene Ecke nicht abgeschnitten wird.
-            Const rand As Double = 400.0
+            Const border As Double = 400.0
             Dim values(7) As Double
             For i = 0 To 3
-                values(i * 2) = e(i * 2) / 100.0 * iw + rand
-                values(i * 2 + 1) = e(i * 2 + 1) / 100.0 * ih + rand
+                values(i * 2) = e(i * 2) / 100.0 * iw + border
+                values(i * 2 + 1) = e(i * 2 + 1) / 100.0 * ih + border
             Next
             overlay.CornerValues = values
-            Avalonia.Controls.Canvas.SetLeft(overlay, ix - rand)
-            Avalonia.Controls.Canvas.SetTop(overlay, iy - rand)
-            overlay.Width = iw + rand * 2
-            overlay.Height = ih + rand * 2
+            Avalonia.Controls.Canvas.SetLeft(overlay, ix - border)
+            Avalonia.Controls.Canvas.SetTop(overlay, iy - border)
+            overlay.Width = iw + border * 2
+            overlay.Height = ih + border * 2
             overlay.IsVisible = True
             overlay.InvalidateVisual()
         End Sub

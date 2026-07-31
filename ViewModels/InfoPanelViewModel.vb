@@ -148,7 +148,13 @@ Namespace ViewModels
             RaiseStateChanged()
 
             LoadSummaryBaseData()
-            BuildSummary()
+            ' Der teure Teil - Stichwoerter und Uebersicht - nur bei offener Leiste. Zugeklappt
+            ' sieht das niemand, und ShowItems laeuft bei JEDEM Auswahlwechsel der Galerie.
+            ' Beim Aufklappen holt Refresh es nach.
+            If _isVisible Then
+                LoadSummaryTags()
+                BuildSummary()
+            End If
         End Sub
 
         ''' <summary>Alles zurueck auf Anfang und die laufende Hintergrundarbeit ungueltig machen.
@@ -198,6 +204,8 @@ Namespace ViewModels
         ''' <summary>Ein paar Zahlen zur Auswahl, im selben Namen/Wert-Format wie die EXIF-Zeilen.</summary>
         Public ReadOnly Property SummaryFacts As New ObservableCollection(Of ExifTag)()
 
+        ''' <summary>Bewertung, Herz und Etikett der Auswahl. Kostet nichts - die Werte stehen an den
+        ''' Elementen selbst, es wird keine Datenbank gefragt.</summary>
         Private Sub LoadSummaryBaseData()
             Dim ratings = _items.Select(Function(i) i.Rating).Distinct().ToList()
             Dim favorites = _items.Select(Function(i) i.IsFavorite).Distinct().ToList()
@@ -205,21 +213,44 @@ Namespace ViewModels
             ApplyRatingState(If(ratings.Count = 1, ratings(0), 0),
                                 favorites.Count = 1 AndAlso favorites(0),
                                 If(labels.Count = 1, labels(0), ""))
+        End Sub
+
+        ''' <summary>Die gemeinsamen Stichwoerter der Auswahl - der TEURE Teil der Uebersicht.
+        '''
+        ''' Gefragt wird in EINER Abfrage ueber alle Pfade, nicht je Bild einzeln. Vorher oeffnete
+        ''' jedes markierte Bild seine eigene Verbindung; bei Strg+A auf einem grossen Ordner stand
+        ''' die Oberflaeche. Aus demselben Grund laeuft das hier nur bei OFFENER Leiste - genau die
+        ''' Zusage, die fuer den Hintergrundteil schon galt.</summary>
+        Private Sub LoadSummaryTags()
+            Tags.Clear()
+            If _items.Count = 0 Then Return
+
+            Dim byPath As Dictionary(Of String, LibraryImageMeta) = Nothing
+            Try
+                byPath = LibraryService.Instance.GetMetaForPaths(
+                    _items.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath)).
+                           Select(Function(i) i.FilePath))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("InfoPanel.LoadSummaryTags", ex)
+            End Try
 
             ' Nur die Stichwoerter, die JEDES Bild traegt. Eines, das nur auf der Haelfte steht,
             ' waere hier eine Behauptung ueber die ganze Auswahl.
             Dim common As List(Of String) = Nothing
             For Each entry In _items
-                Dim own = TagsOf(entry)
+                Dim own As List(Of String) = Nothing
+                Dim meta As LibraryImageMeta = Nothing
+                If byPath IsNot Nothing AndAlso Not String.IsNullOrEmpty(entry?.FilePath) AndAlso
+                   byPath.TryGetValue(entry.FilePath, meta) Then own = meta.Tags
+                If own Is Nothing OrElse own.Count = 0 Then own = If(entry?.Tags?.ToList(), New List(Of String)())
                 If common Is Nothing Then
-                    common = own
+                    common = own.ToList()
                 Else
                     common = common.Where(Function(t) own.Contains(t, StringComparer.OrdinalIgnoreCase)).ToList()
                 End If
                 If common.Count = 0 Then Exit For
             Next
 
-            Tags.Clear()
             For Each tag In If(common, New List(Of String)())
                 Tags.Add(tag)
             Next
@@ -259,7 +290,7 @@ Namespace ViewModels
             ' Die Kamera steht im Katalog, nicht auf der Kachel - ein Lookup fuer alle Pfade.
             Dim cameras As New List(Of String)()
             Try
-                Dim metaByPath = LibraryService.Instance.GetMetaForPaths(Paths())
+                Dim metaByPath = LibraryService.Instance.GetMetaForPaths(Targets().Select(Function(i) i.FilePath).ToList())
                 cameras = metaByPath.Values.Select(Function(m) If(m?.Camera, "")).
                                             Where(Function(c) Not String.IsNullOrEmpty(c)).
                                             Distinct(StringComparer.OrdinalIgnoreCase).ToList()
@@ -273,7 +304,7 @@ Namespace ViewModels
                                              cameras.Count.ToString(CultureInfo.InvariantCulture)))
             End If
 
-            Dim folders = Paths().Select(Function(p) IO.Path.GetDirectoryName(p)).
+            Dim folders = Targets().Select(Function(i) i.FilePath).ToList().Select(Function(p) IO.Path.GetDirectoryName(p)).
                                   Distinct(StringComparer.OrdinalIgnoreCase).ToList()
             If folders.Count > 1 Then
                 SummaryFacts.Add(New ExifTag(LocalizationService.T("Ordner"),
@@ -295,6 +326,11 @@ Namespace ViewModels
         ''' <summary>Nach dem Einblenden nachladen: solange das Panel aus war, ist kein Histogramm
         ''' berechnet worden.</summary>
         Public Sub Refresh()
+            If _isSummary Then
+                LoadSummaryTags()
+                BuildSummary()
+                Return
+            End If
             If String.IsNullOrEmpty(_path) Then Return
             LoadInBackground(Interlocked.Increment(_loadToken), _path, _item)
         End Sub
@@ -459,21 +495,29 @@ Namespace ViewModels
             End Get
             Set(value As Integer)
                 Me.RaiseAndSetIfChanged(_rating, value)
-                For Each entry In _items
-                    entry.Rating = value
-                Next
-                ' NICHT "paths" als Name: VB unterscheidet keine Gross-/Kleinschreibung und
-                ' loest ihn auf die Funktion Paths auf.
-                Dim filePaths = Paths()
-                If filePaths.Count > 0 Then LibraryService.Instance.SetRatingForMany(filePaths, value, syncToXmp:=True)
+                ' Den Wert am Element setzt der BESITZER, nicht das Panel: nur so kennt er den
+                ' alten Stand und kann ihn zuruecknehmen, wenn der Immich-Server ablehnt.
+                Dim affected = Targets()
+                If affected.Count > 0 AndAlso PersistRating IsNot Nothing Then PersistRating.Invoke(affected, value)
             End Set
         End Property
 
-        ''' <summary>Die Pfade der betroffenen Bilder - eines oder alle markierten.</summary>
-        Private Function Paths() As List(Of String)
-            Return _items.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath)).
-                          Select(Function(i) i.FilePath).ToList()
+        ''' <summary>Die betroffenen Bilder - eines oder alle markierten.</summary>
+        Private Function Targets() As List(Of ImageItem)
+            Return _items.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath)).ToList()
         End Function
+
+        ''' <summary>Wie eine Aenderung dauerhaft wird. Der BESITZER stellt diese Wege, denn nur er
+        ''' weiss, ob ein Bild lokal liegt oder auf einem Immich-Server; das Panel kennt nur
+        ''' <see cref="ImageItem"/>. Die Galerie teilt darin auf wie in ihrem eigenen Sternemenue:
+        ''' lokale Pfade gebuendelt in den Katalog, Immich-Elemente einzeln an den Server, mit
+        ''' Ruecknahme, falls der ablehnt.</summary>
+        Public Property PersistRating As Action(Of IList(Of ImageItem), Integer)
+        Public Property PersistFavorite As Action(Of IList(Of ImageItem), Boolean)
+        Public Property PersistColorLabel As Action(Of IList(Of ImageItem), String)
+
+        ''' <summary>Ein einzelnes Stichwort setzen (True) oder entfernen (False).</summary>
+        Public Property PersistTag As Action(Of IList(Of ImageItem), String, Boolean)
 
         Public Property IsFavorite As Boolean
             Get
@@ -481,12 +525,8 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isFavorite, value)
-                For Each entry In _items
-                    entry.IsFavorite = value
-                Next
-                For Each path In Paths()
-                    LibraryService.Instance.SetFavorite(path, value)
-                Next
+                Dim affected = Targets()
+                If affected.Count > 0 AndAlso PersistFavorite IsNot Nothing Then PersistFavorite.Invoke(affected, value)
             End Set
         End Property
 
@@ -499,12 +539,8 @@ Namespace ViewModels
                 For Each entry In _items
                     entry.ColorLabel = _colorLabel
                 Next
-                ' NICHT "paths" als Name: VB unterscheidet keine Gross-/Kleinschreibung und
-                ' loest ihn auf die Funktion Paths auf.
-                Dim filePaths = Paths()
-                If filePaths.Count > 0 Then
-                    LibraryService.Instance.SetColorLabelForMany(filePaths, _colorLabel, syncToXmp:=True)
-                End If
+                Dim affected = Targets()
+                If affected.Count > 0 AndAlso PersistColorLabel IsNot Nothing Then PersistColorLabel.Invoke(affected, _colorLabel)
                 RaiseColorLabelChanged()
             End Set
         End Property
@@ -616,6 +652,9 @@ Namespace ViewModels
         ''' jedes Bildes. Stattdessen wird das eine Wort gezielt hinzugefuegt oder entfernt.</summary>
         Private Sub WriteTag(tag As String, add As Boolean)
             If String.IsNullOrEmpty(tag) Then Return
+            ' Nur die Bilder sammeln, bei denen sich wirklich etwas aendert - wer das Wort schon
+            ' traegt (oder nicht traegt), braucht keinen Schreibvorgang und keinen Serveraufruf.
+            Dim changed As New List(Of ImageItem)()
             For Each entry In _items
                 If entry Is Nothing OrElse String.IsNullOrEmpty(entry.FilePath) Then Continue For
                 Dim own = TagsOf(entry)
@@ -627,8 +666,9 @@ Namespace ViewModels
                     own.RemoveAll(Function(t) String.Equals(t, tag, StringComparison.OrdinalIgnoreCase))
                 End If
                 entry.Tags = own
-                LibraryService.Instance.SetTags(entry.FilePath, own, syncToXmp:=True)
+                changed.Add(entry)
             Next
+            If changed.Count > 0 AndAlso PersistTag IsNot Nothing Then PersistTag.Invoke(changed, tag, add)
         End Sub
 
         Private Sub RefreshTagSuggestions()

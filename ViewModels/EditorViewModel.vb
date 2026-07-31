@@ -1151,9 +1151,9 @@ Namespace ViewModels
                         ' Nur eine echte AUSWAHL-Ebene fuehrt ins Auswahl-Werkzeug.
                         Dim istVerlauf = _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId AndAlso m.IsGradient)
                         Dim istMaskenEbene = istVerlauf OrElse picked.IsMaskLayer
-                        Dim zielWerkzeug = If(istMaskenEbene, EditorTool.Mask, EditorTool.Selection)
-                        If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> zielWerkzeug Then
-                            CurrentTool = zielWerkzeug
+                        Dim layerTool = If(istMaskenEbene, EditorTool.Mask, EditorTool.Selection)
+                        If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> layerTool Then
+                            CurrentTool = layerTool
                         End If
                         ' Eine gemalte Maskenebene wird mit dem PINSEL bearbeitet - der Verlaufsmodus
                         ' zoege beim ersten Zug einen neuen Verlauf auf, statt sie nachzubessern.
@@ -2855,10 +2855,10 @@ Namespace ViewModels
                 ' Steht die Auswahl schon AUF oder IN einer Gruppe, gibt es nichts mehr zu gruppieren -
                 ' der Knopf wird dann ausgeblendet.
                 If _selectedLayerRow IsNot Nothing AndAlso _selectedLayerRow.IsGroupHeader Then Return False
-                Dim gruppen = SelectedAnnotations.Select(Function(a) If(a?.GroupId, "")).
+                Dim groupKeys = SelectedAnnotations.Select(Function(a) If(a?.GroupId, "")).
                               Concat(SelectedAdjustmentLayers.Select(Function(l) If(l?.GroupId, ""))).ToList()
-                If gruppen.Count > 0 AndAlso gruppen.All(Function(g) Not String.IsNullOrEmpty(g)) AndAlso
-                   gruppen.Distinct(StringComparer.Ordinal).Count() = 1 Then Return False
+                If groupKeys.Count > 0 AndAlso groupKeys.All(Function(g) Not String.IsNullOrEmpty(g)) AndAlso
+                   groupKeys.Distinct(StringComparer.Ordinal).Count() = 1 Then Return False
                 ' Reine Korrektur-Gruppen bleiben möglich, gemischte auch - nur EINE einzelne Ebene nicht.
                 Return True
             End Get
@@ -4596,9 +4596,9 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Dim v = Math.Max(-100, Math.Min(100, value))
-                Dim entfernen = If(v < 0, -v, 0.0)
+                Dim removeShare = If(v < 0, -v, 0.0)
                 Dim hinzu = If(v > 0, v, 0.0)
-                Dim geaendert = SetUndoableDouble(_colorNoiseReduction, entfernen, NameOf(ColorNoiseReduction))
+                Dim geaendert = SetUndoableDouble(_colorNoiseReduction, removeShare, NameOf(ColorNoiseReduction))
                 geaendert = SetUndoableDouble(_colorNoiseAdd, hinzu, NameOf(ColorNoiseAdd)) OrElse geaendert
                 If geaendert Then Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             End Set
@@ -4807,10 +4807,10 @@ Namespace ViewModels
 
         Public ReadOnly Property LensCandidates As List(Of String)
             Get
-                Dim schluessel = _objektivKamera.Maker & "|" & _objektivKamera.Modell
-                If _lensCandidates Is Nothing OrElse Not String.Equals(_lensCandidatesFuer, schluessel, StringComparison.Ordinal) Then
+                Dim lensCacheKey = _objektivKamera.Maker & "|" & _objektivKamera.Modell
+                If _lensCandidates Is Nothing OrElse Not String.Equals(_lensCandidatesFuer, lensCacheKey, StringComparison.Ordinal) Then
                     _lensCandidates = LensDataService.MatchingLenses(_objektivKamera.Maker, _objektivKamera.Modell)
-                    _lensCandidatesFuer = schluessel
+                    _lensCandidatesFuer = lensCacheKey
                 End If
                 Return _lensCandidates
             End Get
@@ -4993,9 +4993,9 @@ Namespace ViewModels
             _objektivKorrektur = Nothing
             Try
                 If Not String.IsNullOrEmpty(_currentImagePath) AndAlso File.Exists(_currentImagePath) Then
-                    Dim daten = ExifService.ReadExif(_currentImagePath)
-                    _objektivExifName = If(daten?.Lens, "")
-                    _objektivKamera = ("", If(daten?.Camera, ""))
+                    Dim data = ExifService.ReadExif(_currentImagePath)
+                    _objektivExifName = If(data?.Lens, "")
+                    _objektivKamera = ("", If(data?.Camera, ""))
                     _objektivKorrektur = LensDataService.FindCorrectionForFile(_currentImagePath, _lensModel)
                 End If
             Catch
@@ -5286,19 +5286,19 @@ Namespace ViewModels
                                                               _perspectiveHorizontal, _perspectiveVertical,
                                                               _perspectiveAspect, _perspectiveScale,
                                                               CType(_perspectiveCorners.Clone(), Double()))
-                Dim werte(7) As Double
+                Dim arr(7) As Double
                 For i = 0 To 3
                     ' Die Ecke ist der Zielpunkt der Verzerrung. Um ihn in die Anzeige zu bringen,
                     ' wird der zugehoerige QUELLpunkt (die unverzerrte Bildecke) durch die volle
                     ' Kette geschickt - die traegt die Verzerrung seit dieser Aenderung selbst.
-                    Dim quelleX = If(i = 1 OrElse i = 2, previousStep.Width, 0.0)
-                    Dim quelleY = If(i = 2 OrElse i = 3, previousStep.Height, 0.0)
-                    Dim ziel = If(m.IsIdentity, New SKPoint(CSng(quelleX), CSng(quelleY)),
-                                                m.MapPoint(New SKPoint(CSng(quelleX), CSng(quelleY))))
-                    werte(i * 2) = ziel.X / previousStep.Width * 100.0
-                    werte(i * 2 + 1) = ziel.Y / previousStep.Height * 100.0
+                    Dim fromX = If(i = 1 OrElse i = 2, previousStep.Width, 0.0)
+                    Dim fromY = If(i = 2 OrElse i = 3, previousStep.Height, 0.0)
+                    Dim mapped = If(m.IsIdentity, New SKPoint(CSng(fromX), CSng(fromY)),
+                                                m.MapPoint(New SKPoint(CSng(fromX), CSng(fromY))))
+                    arr(i * 2) = mapped.X / previousStep.Width * 100.0
+                    arr(i * 2 + 1) = mapped.Y / previousStep.Height * 100.0
                 Next
-                Return werte
+                Return arr
             End Get
         End Property
 
@@ -5439,20 +5439,20 @@ Namespace ViewModels
         Public ReadOnly Property WarpGridValues As Double()
             Get
                 PrepareGrid()
-                Dim werte(1 + _warpX.Length * 2) As Double
-                werte(0) = _warpColumns
-                werte(1) = _warpRows
+                Dim arr(1 + _warpX.Length * 2) As Double
+                arr(0) = _warpColumns
+                arr(1) = _warpRows
                 For i = 0 To _warpX.Length - 1
                     Dim anzeige = WarpSpaceToDisplay(_warpX(i), _warpY(i))
                     If anzeige.HasValue Then
-                        werte(2 + i * 2) = anzeige.Value.X
-                        werte(3 + i * 2) = anzeige.Value.Y
+                        arr(2 + i * 2) = anzeige.Value.X
+                        arr(3 + i * 2) = anzeige.Value.Y
                     Else
-                        werte(2 + i * 2) = Double.NaN
-                        werte(3 + i * 2) = Double.NaN
+                        arr(2 + i * 2) = Double.NaN
+                        arr(3 + i * 2) = Double.NaN
                     End If
                 Next
-                Return werte
+                Return arr
             End Get
         End Property
 
@@ -5625,8 +5625,8 @@ Namespace ViewModels
                 Return
             End If
             Using warped
-                Using daten = SKImage.FromBitmap(warped).Encode(SKEncodedImageFormat.Png, 90)
-                    Using strom = New IO.MemoryStream(daten.ToArray())
+                Using data = SKImage.FromBitmap(warped).Encode(SKEncodedImageFormat.Png, 90)
+                    Using strom = New IO.MemoryStream(data.ToArray())
                         ToolPreviewImage = New Bitmap(strom)
                         _vorschauQuelle = "Gitter"
                     End Using
@@ -5695,8 +5695,8 @@ Namespace ViewModels
         ''' und werden nicht gezeichnet - genau wie beim Raster.</summary>
         Public ReadOnly Property LineValues As Double()
             Get
-                Dim werte(_linien.Count * 8) As Double
-                werte(0) = _linien.Count
+                Dim arr(_linien.Count * 8) As Double
+                arr(0) = _linien.Count
                 For i = 0 To _linien.Count - 1
                     Dim l = _linien(i)
                     Dim paare = {(l.SourceAx, l.SourceAy), (l.SourceBx, l.SourceBy),
@@ -5704,15 +5704,15 @@ Namespace ViewModels
                     For j = 0 To 3
                         Dim anzeige = WarpSpaceToDisplay(paare(j).Item1, paare(j).Item2)
                         If anzeige.HasValue Then
-                            werte(1 + i * 8 + j * 2) = anzeige.Value.X
-                            werte(2 + i * 8 + j * 2) = anzeige.Value.Y
+                            arr(1 + i * 8 + j * 2) = anzeige.Value.X
+                            arr(2 + i * 8 + j * 2) = anzeige.Value.Y
                         Else
-                            werte(1 + i * 8 + j * 2) = Double.NaN
-                            werte(2 + i * 8 + j * 2) = Double.NaN
+                            arr(1 + i * 8 + j * 2) = Double.NaN
+                            arr(2 + i * 8 + j * 2) = Double.NaN
                         End If
                     Next
                 Next
-                Return werte
+                Return arr
             End Get
         End Property
 
@@ -5957,7 +5957,7 @@ Namespace ViewModels
                         Dim py = rowIdx / CDbl(Steps) * 100.0
                         ' ERST die bestehende Verzerrung, DANN die neue - in der Reihenfolge, in der
                         ' sie eingestellt wurden.
-                        If alt IsNot Nothing AndAlso Not alt.IstLeer Then
+                        If alt IsNot Nothing AndAlso Not alt.IsEmpty Then
                             Dim v = ExistingWarp(alt, px, py)
                             px = v.X : py = v.Y
                         End If
@@ -5967,14 +5967,14 @@ Namespace ViewModels
                     Next
                 Next
                 a.Warp = New ObjectWarp With {
-                    .Art = "Gitter", .Columns = Steps, .Rows = Steps, .Nodes = node}
+                    .Kind = "Gitter", .Columns = Steps, .Rows = Steps, .Nodes = node}
             Next
         End Sub
 
         ''' <summary>Wohin ein Punkt durch eine BEREITS eingetragene Objektverzerrung wandert. Alles
         ''' in Bildprozent.</summary>
         Private Shared Function ExistingWarp(v As ObjectWarp, px As Double, py As Double) As (X As Double, Y As Double)
-            If v Is Nothing OrElse v.IstLeer OrElse v.Art <> "Gitter" Then Return (px, py)
+            If v Is Nothing OrElse v.IsEmpty OrElse v.Kind <> "Gitter" Then Return (px, py)
             Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * v.Columns
             Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * v.Rows
             Dim s0 = Math.Max(0, Math.Min(v.Columns - 1, CInt(Math.Floor(u))))
@@ -6057,11 +6057,11 @@ Namespace ViewModels
                             Dim qp As Double() = Nothing, zp As Double() = Nothing
                             If Not LinesAsPixels(full.Width, full.Height, qp, zp) Then Return
                             Dim steps = ImageGeometryMapper.LineGridSteps
-                            Dim quellX As Single() = Nothing, quellY As Single() = Nothing
+                            Dim sourceX As Single() = Nothing, quellY As Single() = Nothing
                             ImageGeometryMapper.LineField(full.Width, full.Height, steps, steps,
-                                                           qp, zp, quellX, quellY)
-                            If quellX Is Nothing Then Return
-                            Dim targetX(quellX.Length - 1) As Single
+                                                           qp, zp, sourceX, quellY)
+                            If sourceX Is Nothing Then Return
+                            Dim targetX(sourceX.Length - 1) As Single
                             Dim targetY(quellY.Length - 1) As Single
                             For rowIdx = 0 To steps
                                 For colIdx = 0 To steps
@@ -6072,7 +6072,7 @@ Namespace ViewModels
                             Next
                             Using kopie = full.Copy()
                                 Using warped = ImageGeometryMapper.WarpOverGrid(
-                                        kopie, steps, steps, targetX, targetY, quellX, quellY)
+                                        kopie, steps, steps, targetX, targetY, sourceX, quellY)
                                     If warped Is Nothing OrElse Object.ReferenceEquals(warped, kopie) Then Return
                                     Using canvas = New SKCanvas(full)
                                         canvas.Clear(SKColors.Transparent)
@@ -6162,10 +6162,10 @@ Namespace ViewModels
             End If
 
             Dim steps = ImageGeometryMapper.LineGridSteps
-            Dim quellX As Single() = Nothing, quellY As Single() = Nothing
-            ImageGeometryMapper.LineField(bw, bh, steps, steps, qp.ToArray(), zp.ToArray(), quellX, quellY)
-            If quellX Is Nothing Then Return
-            Dim targetX(quellX.Length - 1) As Single
+            Dim sourceX As Single() = Nothing, quellY As Single() = Nothing
+            ImageGeometryMapper.LineField(bw, bh, steps, steps, qp.ToArray(), zp.ToArray(), sourceX, quellY)
+            If sourceX Is Nothing Then Return
+            Dim targetX(sourceX.Length - 1) As Single
             Dim targetY(quellY.Length - 1) As Single
             For rowIdx = 0 To steps
                 For colIdx = 0 To steps
@@ -6175,14 +6175,14 @@ Namespace ViewModels
                 Next
             Next
             Dim warped = ImageGeometryMapper.WarpOverGrid(
-                _linienVorschauBasis, steps, steps, targetX, targetY, quellX, quellY)
+                _linienVorschauBasis, steps, steps, targetX, targetY, sourceX, quellY)
             If warped Is Nothing OrElse Object.ReferenceEquals(warped, _linienVorschauBasis) Then
                 DisposeLinePreview()
                 Return
             End If
             Using warped
-                Using daten = SKImage.FromBitmap(warped).Encode(SKEncodedImageFormat.Png, 90)
-                    Using strom = New IO.MemoryStream(daten.ToArray())
+                Using data = SKImage.FromBitmap(warped).Encode(SKEncodedImageFormat.Png, 90)
+                    Using strom = New IO.MemoryStream(data.ToArray())
                         ToolPreviewImage = New Bitmap(strom)
                         _vorschauQuelle = "Linien"
                     End Using
@@ -6271,9 +6271,9 @@ Namespace ViewModels
             Dim a = CurrentObject()
             If a Is Nothing Then Return Nothing
             Dim v = a.OwnWarp
-            If v IsNot Nothing AndAlso v.Art = "Perspektive" AndAlso v.Ecken IsNot Nothing AndAlso
-               v.Ecken.Length = 8 Then
-                Return CType(v.Ecken.Clone(), Double())
+            If v IsNot Nothing AndAlso v.Kind = "Perspektive" AndAlso v.Corners IsNot Nothing AndAlso
+               v.Corners.Length = 8 Then
+                Return CType(v.Corners.Clone(), Double())
             End If
             Return New Double() {0, 0, 100, 0, 100, 100, 0, 100}
         End Function
@@ -6291,12 +6291,12 @@ Namespace ViewModels
                 Dim x = r.X, y = r.Y
                 Dim b = r.Width, h = r.Height
                 If b <= 0 OrElse h <= 0 Then Return Nothing
-                Dim werte(7) As Double
+                Dim arr(7) As Double
                 For i = 0 To 3
-                    werte(i * 2) = x + roh(i * 2) / 100.0 * b
-                    werte(i * 2 + 1) = y + roh(i * 2 + 1) / 100.0 * h
+                    arr(i * 2) = x + roh(i * 2) / 100.0 * b
+                    arr(i * 2 + 1) = y + roh(i * 2 + 1) / 100.0 * h
                 Next
-                Return werte
+                Return arr
             End Get
         End Property
 
@@ -6304,7 +6304,7 @@ Namespace ViewModels
             Get
                 Dim a = CurrentObject()
                 Return a IsNot Nothing AndAlso a.OwnWarp IsNot Nothing AndAlso
-                       Not a.OwnWarp.IstLeer
+                       Not a.OwnWarp.IsEmpty
             End Get
         End Property
 
@@ -6342,7 +6342,7 @@ Namespace ViewModels
             ' zu ziehen ist genau der Sinn der Sache - die Ebene waechst beim Zeichnen mit.
             roh(_objectCornerDrag * 2) = (xPercent - r.X) / b * 100.0
             roh(_objectCornerDrag * 2 + 1) = (yPercent - r.Y) / h * 100.0
-            a.OwnWarp = New ObjectWarp With {.Art = "Perspektive", .Ecken = roh}
+            a.OwnWarp = New ObjectWarp With {.Kind = "Perspektive", .Corners = roh}
             RaiseObjectWarpChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -6403,7 +6403,7 @@ Namespace ViewModels
                 a.OwnWarp = Nothing
             Else
                 a.OwnWarp = New ObjectWarp With {
-                    .Art = "Gitter", .Columns = _warpColumns, .Rows = _warpRows, .Nodes = node}
+                    .Kind = "Gitter", .Columns = _warpColumns, .Rows = _warpRows, .Nodes = node}
             End If
             RaiseObjectWarpChanged()
         End Sub
@@ -6427,7 +6427,7 @@ Namespace ViewModels
                 z(i * 4 + 2) = l.TargetBx : z(i * 4 + 3) = l.TargetBy
             Next
             a.OwnWarp = New ObjectWarp With {
-                .Art = "Linien", .LineSource = q, .LineTarget = z}
+                .Kind = "Linien", .LineSource = q, .LineTarget = z}
             RaiseObjectWarpChanged()
         End Sub
 
@@ -6488,14 +6488,14 @@ Namespace ViewModels
             ResetGrid()
             Dim a = CurrentObject()
             Dim v = a?.OwnWarp
-            If v Is Nothing OrElse v.IstLeer Then Return
+            If v Is Nothing OrElse v.IsEmpty Then Return
 
-            If v.Art = "Gitter" AndAlso v.Columns = _warpColumns AndAlso v.Rows = _warpRows Then
+            If v.Kind = "Gitter" AndAlso v.Columns = _warpColumns AndAlso v.Rows = _warpRows Then
                 For i = 0 To _warpX.Length - 1
                     _warpX(i) = v.Nodes(i * 2)
                     _warpY(i) = v.Nodes(i * 2 + 1)
                 Next
-            ElseIf v.Art = "Linien" Then
+            ElseIf v.Kind = "Linien" Then
                 For i = 0 To v.LineSource.Length \ 4 - 1
                     _linien.Add(New WarpLine With {
                         .SourceAx = v.LineSource(i * 4), .SourceAy = v.LineSource(i * 4 + 1),
@@ -7227,7 +7227,7 @@ Namespace ViewModels
         ''' etwas eingestellt ist - bei einem importierten Preset ist das der Normalfall.</summary>
         Public ReadOnly Property AdjustedHslBands As String
             Get
-                Dim werte = {
+                Dim arr = {
                     ("Red", RedHue, RedSaturation, RedLuminance),
                     ("Orange", OrangeHue, OrangeSaturation, OrangeLuminance),
                     ("Yellow", YellowHue, YellowSaturation, YellowLuminance),
@@ -7237,7 +7237,7 @@ Namespace ViewModels
                     ("Purple", PurpleHue, PurpleSaturation, PurpleLuminance),
                     ("Magenta", MagentaHue, MagentaSaturation, MagentaLuminance)}
                 Dim treffer As New List(Of String)
-                For Each w In werte
+                For Each w In arr
                     If IsBandEdited(w.Item2, w.Item3, w.Item4) Then treffer.Add(w.Item1)
                 Next
                 Return String.Join(",", treffer)
@@ -9924,15 +9924,15 @@ Namespace ViewModels
                 .Inverted = _gradientInverted
             }
             _imageMasks.Add(mask)
-            Dim ebene As New MaskedAdjustmentLayer With {
+            Dim layer As New MaskedAdjustmentLayer With {
                 .Name = mask.Name,
                 .MaskId = mask.Id,
                 .Adjustments = New ImageAdjustments(),
                 .IsMaskLayer = True
             }
-            PlaceNewCorrectionLayerInBaseImage(ebene)
-            _maskedAdjustmentLayers.Add(ebene)
-            _selectedMaskedAdjustmentLayerId = ebene.Id
+            PlaceNewCorrectionLayerInBaseImage(layer)
+            _maskedAdjustmentLayers.Add(layer)
+            _selectedMaskedAdjustmentLayerId = layer.Id
             _gradientDragMaskId = mask.Id
             _gradientDragActive = True
             _gradientHandle = -1
@@ -10210,8 +10210,8 @@ Namespace ViewModels
             If hinzu Is Nothing AndAlso weg Is Nothing Then Return
 
             Dim stride = overlay.RowBytes
-            Dim puffer = New Byte(stride * overlay.Height - 1) {}
-            Runtime.InteropServices.Marshal.Copy(overlay.GetPixels(), puffer, 0, puffer.Length)
+            Dim buffer = New Byte(stride * overlay.Height - 1) {}
+            Runtime.InteropServices.Marshal.Copy(overlay.GetPixels(), buffer, 0, buffer.Length)
             ' Das Overlay ist premultipliziertes BGRA in reinem Rot - Deckung steht im Alphakanal,
             ' und Rot muss mitgezogen werden, sonst leuchtet ein aufgehellter Bereich falsch.
             For y = 0 To overlay.Height - 1
@@ -10219,7 +10219,7 @@ Namespace ViewModels
                 Dim qy = y - offsetY
                 For x = 0 To overlay.Width - 1
                     Dim qx = x - offsetX
-                    Dim a = CInt(puffer(row + x * 4 + 3))
+                    Dim a = CInt(buffer(row + x * 4 + 3))
                     If qx >= 0 AndAlso qy >= 0 AndAlso qx < overlay.Width AndAlso qy < overlay.Height Then
                         Dim i = qy * overlay.Width + qx
                         If hinzu IsNot Nothing Then a += CInt(hinzu(i)) * 128 \ 255
@@ -10227,13 +10227,13 @@ Namespace ViewModels
                     End If
                     a = Math.Max(0, Math.Min(128, a))
                     Dim o = row + x * 4
-                    puffer(o) = 0
-                    puffer(o + 1) = 0
-                    puffer(o + 2) = CByte(a)   ' premultipliziertes Rot = Alpha
-                    puffer(o + 3) = CByte(a)
+                    buffer(o) = 0
+                    buffer(o + 1) = 0
+                    buffer(o + 2) = CByte(a)   ' premultipliziertes Rot = Alpha
+                    buffer(o + 3) = CByte(a)
                 Next
             Next
-            Runtime.InteropServices.Marshal.Copy(puffer, 0, overlay.GetPixels(), puffer.Length)
+            Runtime.InteropServices.Marshal.Copy(buffer, 0, overlay.GetPixels(), buffer.Length)
         End Sub
 
         ''' <summary>Ein Korrekturraster (Quellraum) auf die Overlay-Größe bringen. Nothing, wenn es
@@ -10252,7 +10252,7 @@ Namespace ViewModels
             Dim rectPx As SKRectI
             Using imDisplay = ImageProcessor.BuildSelectionMaskFromLayerMask(helperMask, adj, rectPx)
                 If imDisplay Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return Nothing
-                Dim ergebnis = New Byte(overlayWidth * overlayHeight - 1) {}
+                Dim result = New Byte(overlayWidth * overlayHeight - 1) {}
                 Dim sx = displayWidth / CDbl(overlayWidth)
                 Dim sy = displayHeight / CDbl(overlayHeight)
                 Dim stride = imDisplay.RowBytes
@@ -10265,10 +10265,10 @@ Namespace ViewModels
                     For x = 0 To overlayWidth - 1
                         Dim dx = CInt(Math.Floor((x + 0.5) * sx)) - rectPx.Left
                         If dx < 0 OrElse dx >= imDisplay.Width Then Continue For
-                        ergebnis(zRow + x) = source(qRow + dx)
+                        result(zRow + x) = source(qRow + dx)
                     Next
                 Next
-                Return ergebnis
+                Return result
             End Using
         End Function
 
@@ -11005,13 +11005,13 @@ Namespace ViewModels
             ' Die Darstellung haengt an der Art, und SetActiveSelectionIsMask baut sie nur bei einem
             ' Wechsel neu - der liegt hier vor, also passt das.
             If Not String.IsNullOrEmpty(_selectionPromotedLayerId) Then
-                Dim ebene = _maskedAdjustmentLayers.FirstOrDefault(
+                Dim layer = _maskedAdjustmentLayers.FirstOrDefault(
                     Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
-                If ebene IsNot Nothing Then
-                    ebene.IsMaskLayer = zuMaske
-                    ebene.Name = If(zuMaske, LocalizationService.T("Masken-Korrektur"),
+                If layer IsNot Nothing Then
+                    layer.IsMaskLayer = zuMaske
+                    layer.Name = If(zuMaske, LocalizationService.T("Masken-Korrektur"),
                                              LocalizationService.T("Auswahl-Korrektur")) &
-                                 ebene.Name.Substring(Math.Max(0, ebene.Name.LastIndexOf(" "c)))
+                                 layer.Name.Substring(Math.Max(0, layer.Name.LastIndexOf(" "c)))
                     RebuildLayerRows()
                     SchedulePreviewUpdate()
                 End If
@@ -11282,16 +11282,16 @@ Namespace ViewModels
                 Dim basis = _bokehVorschauBasis
                 Dim map = _depthMap
                 If basis Is Nothing OrElse map Is Nothing Then Return
-                Dim von = _bokehVon, bis = _bokehBis
+                Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
                 Dim corners = _bokehBlende, lichter = _bokehLichter
 
                 SetPreviewBusy(True)
-                Dim daten As Byte()
+                Dim data As Byte()
                 Try
-                    daten = Await Task.Run(
+                    data = Await Task.Run(
                     Function() As Byte()
-                        Using unscharf = DepthMapService.DepthBlur(basis, map, von, bis,
+                        Using unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
                                                                             strength, uebergang, corners, lichter)
                             If unscharf Is Nothing Then Return Nothing
                             Using image = SKImage.FromBitmap(unscharf)
@@ -11305,8 +11305,8 @@ Namespace ViewModels
                     SetPreviewBusy(False)
                 End Try
 
-                If daten Is Nothing OrElse pass <> _bokehVorschauLauf Then Return
-                Using strom = New IO.MemoryStream(daten)
+                If data Is Nothing OrElse pass <> _bokehVorschauLauf Then Return
+                Using strom = New IO.MemoryStream(data)
                     ToolPreviewImage = New Bitmap(strom)
                     _vorschauQuelle = "Bokeh"
                 End Using
@@ -11447,7 +11447,7 @@ Namespace ViewModels
                     Return
                 End If
 
-                Dim von = _bokehVon, bis = _bokehBis
+                Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
                 Dim corners = _bokehBlende, lichter = _bokehLichter
                 PushUndo()
@@ -11459,7 +11459,7 @@ Namespace ViewModels
                     Function()
                         Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                             Sub(full)
-                                Using unscharf = DepthMapService.DepthBlur(full, map, von, bis,
+                                Using unscharf = DepthMapService.DepthBlur(full, map, from, bis,
                                                                                     strength, uebergang, corners, lichter)
                                     If unscharf Is Nothing Then Return
                                     Using canvas = New SKCanvas(full)
@@ -11581,12 +11581,12 @@ Namespace ViewModels
                     ' Umgekehrte Auswahl heisst hier: alles ausser dem Markierten soll weg. Selten
                     ' gewollt, aber wenn es dasteht, muss es auch gelten.
                     Dim n = width * height
-                    Dim puffer(n - 1) As Byte
-                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), puffer, 0, n)
+                    Dim buffer(n - 1) As Byte
+                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), buffer, 0, n)
                     For i = 0 To n - 1
-                        puffer(i) = CByte(255 - puffer(i))
+                        buffer(i) = CByte(255 - buffer(i))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(puffer, 0, target.GetPixels(), n)
+                    Runtime.InteropServices.Marshal.Copy(buffer, 0, target.GetPixels(), n)
                 End If
                 Return target
             Catch
@@ -11806,8 +11806,8 @@ Namespace ViewModels
                 End If
 
                 Dim map = _depthMap
-                Dim von = _depthFrom, bis = _depthTo, weich = _depthFeather
-                Dim mask = Await Task.Run(Function() DepthMapService.MaskFromDepth(map, von, bis, weich))
+                Dim from = _depthFrom, bis = _depthTo, weich = _depthFeather
+                Dim mask = Await Task.Run(Function() DepthMapService.MaskFromDepth(map, from, bis, weich))
                 If mask Is Nothing Then Return
                 Using mask
                     Dim rect = MaskRect(mask)
@@ -12026,17 +12026,17 @@ Namespace ViewModels
         ''' <summary>Der Ausschnitt eines Alpha8-Rasters, in der Groesse des Rechtecks.</summary>
         Private Shared Function ExtractMaskRegion(mask As SKBitmap, rect As SKRectI) As SKBitmap
             If mask Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
-            Dim raus = New SKBitmap(New SKImageInfo(rect.Width, rect.Height,
+            Dim output = New SKBitmap(New SKImageInfo(rect.Width, rect.Height,
                                                     SKColorType.Alpha8, SKAlphaType.Premul))
-            Dim puffer(rect.Width * rect.Height - 1) As Byte
+            Dim buffer(rect.Width * rect.Height - 1) As Byte
             For y = 0 To rect.Height - 1
                 Dim qy = rect.Top + y
                 For x = 0 To rect.Width - 1
-                    puffer(y * rect.Width + x) = mask.GetPixel(rect.Left + x, qy).Alpha
+                    buffer(y * rect.Width + x) = mask.GetPixel(rect.Left + x, qy).Alpha
                 Next
             Next
-            Runtime.InteropServices.Marshal.Copy(puffer, 0, raus.GetPixels(), puffer.Length)
-            Return raus
+            Runtime.InteropServices.Marshal.Copy(buffer, 0, output.GetPixels(), buffer.Length)
+            Return output
         End Function
 
         ''' <summary>Das umschliessende Rechteck aller Stellen, an denen die Maske ueberhaupt etwas
@@ -12857,12 +12857,12 @@ Namespace ViewModels
             ' bliebe hier die gezogene Größe stehen, sobald der Schriftgrad auf denselben ganzen Pixel
             ' gerundet wird - und der Rahmen stünde wieder neben dem Text.
             If isTextual Then
-                Dim vorherBreite = _annotationWidthPercent
-                Dim vorherHoehe = _annotationHeightPercent
+                Dim oldWidthPercent = _annotationWidthPercent
+                Dim oldHeightPercent = _annotationHeightPercent
                 Dim fitted = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
                 _annotationWidthPercent = fitted.WidthPercent
                 _annotationHeightPercent = fitted.HeightPercent
-                FitBoxToCircleTextPath(vorherBreite, vorherHoehe)
+                FitBoxToCircleTextPath(oldWidthPercent, oldHeightPercent)
             End If
             If ShowWatermarkAnchorControls Then
                 Dim offset = ComputeAnnotationOffsetPercent(EffectiveAnnotationKind, xPercent, yPercent, _annotationWidthPercent, _annotationHeightPercent, _annotationAnchor)
@@ -12950,8 +12950,8 @@ Namespace ViewModels
         ''' Ebene mit.</summary>
         Private Function MasksOfSelectedCorrections() As List(Of ImageMask)
             Dim layers = SelectedAdjustmentLayers
-            Dim ergebnis As New List(Of ImageMask)()
-            If layers.Count = 0 Then Return ergebnis
+            Dim result As New List(Of ImageMask)()
+            If layers.Count = 0 Then Return result
             Dim erledigt As New HashSet(Of String)(StringComparer.Ordinal)
             For Each layer In layers
                 If layer Is Nothing OrElse String.IsNullOrWhiteSpace(layer.MaskId) Then Continue For
@@ -12963,9 +12963,9 @@ Namespace ViewModels
                                                                 Not layers.Contains(l))
                 If fremdGenutzt Then Continue For
                 Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
-                If mask IsNot Nothing Then ergebnis.Add(mask)
+                If mask IsNot Nothing Then result.Add(mask)
             Next
-            Return ergebnis
+            Return result
         End Function
 
         ''' <summary>Liegt diese Korrekturebene in einer gesperrten Gruppe?</summary>
@@ -13074,17 +13074,17 @@ Namespace ViewModels
         ''' <summary>Sperrt bzw. entsperrt alles, was gerade markiert ist (Objekte, Korrekturebenen und
         ''' die Gruppe, wenn deren Kopfzeile markiert ist).</summary>
         Public Sub ToggleSelectionLocked()
-            Dim objekte = SelectedAnnotations
+            Dim objects = SelectedAnnotations
             Dim ebenen = SelectedAdjustmentLayers
             Dim group = If(SelectedLayerRow IsNot Nothing AndAlso SelectedLayerRow.IsGroupHeader, SelectedLayerRow.Group, Nothing)
-            If objekte.Count = 0 AndAlso ebenen.Count = 0 AndAlso group Is Nothing Then Return
+            If objects.Count = 0 AndAlso ebenen.Count = 0 AndAlso group Is Nothing Then Return
 
             ' EIN gemeinsamer Zielzustand: ist irgendetwas offen, wird alles gesperrt - sonst alles frei.
-            Dim etwasOffen = objekte.Any(Function(a) a IsNot Nothing AndAlso Not a.IsLocked) OrElse
+            Dim etwasOffen = objects.Any(Function(a) a IsNot Nothing AndAlso Not a.IsLocked) OrElse
                              ebenen.Any(Function(l) l IsNot Nothing AndAlso Not l.IsLocked) OrElse
                              (group IsNot Nothing AndAlso Not group.IsLocked)
             CaptureUndoState("LayerLocked")
-            For Each a In objekte
+            For Each a In objects
                 If a IsNot Nothing Then a.IsLocked = etwasOffen
             Next
             For Each l In ebenen
@@ -21384,8 +21384,8 @@ Namespace ViewModels
             ' Korrekturebene IN den Objektstapel (oder wieder heraus): sie merkt sich, über welchem
             ' Objekt sie liegt, und wirkt dann auf alles darunter. Leer = zurück ins Basisbild.
             If dragged.AdjustmentLayer IsNot Nothing AndAlso (targetRow.Annotation IsNot Nothing OrElse targetRow.IsGroupHeader) Then
-                Dim ziel As ImageAnnotation = targetRow.Annotation
-                If ziel Is Nothing AndAlso targetRow.IsGroupHeader Then
+                Dim targetAnnotation As ImageAnnotation = targetRow.Annotation
+                If targetAnnotation Is Nothing AndAlso targetRow.IsGroupHeader Then
                     ' KOPFZEILE: untere Hälfte = HINEIN, als erste Zeile der Gruppe (über dem obersten
                     ' Mitglied und mit dessen Gruppe). Obere Hälfte = darüber, also ausserhalb.
                     Dim headerMembers = AnnotationsInGroup(targetRow.Group.Id)
@@ -21400,7 +21400,7 @@ Namespace ViewModels
                     SchedulePreviewUpdate()
                     Return
                 End If
-                If ziel Is Nothing Then Return
+                If targetAnnotation Is Nothing Then Return
                 ' Eine Korrektur DARF in einer Gruppe liegen - sie ist oft genau für eines der Objekte
                 ' darin gemacht. Sie erbt dann die Gruppenzugehörigkeit: das Auge der Gruppe blendet
                 ' sie mit aus, und im Panel steht sie eingerückt im Block. Beim Herausziehen fällt die
@@ -21408,14 +21408,14 @@ Namespace ViewModels
                 PushUndo()
                 ' „unterhalb abgelegt" heisst: unter diesem Objekt - dann gehört sie über das nächst
                 ' tiefere Objekt bzw. ins Basisbild, wenn es keines mehr gibt.
-                Dim targetIndex = _annotations.IndexOf(ziel)
+                Dim targetIndex = _annotations.IndexOf(targetAnnotation)
                 If below Then
-                    Dim darunter = If(targetIndex > 0, _annotations(targetIndex - 1), Nothing)
-                    dragged.AdjustmentLayer.StackAboveAnnotationId = If(darunter Is Nothing, "", darunter.Id)
-                    dragged.AdjustmentLayer.GroupId = If(darunter Is Nothing, "", If(darunter.GroupId, ""))
+                    Dim beneath = If(targetIndex > 0, _annotations(targetIndex - 1), Nothing)
+                    dragged.AdjustmentLayer.StackAboveAnnotationId = If(beneath Is Nothing, "", beneath.Id)
+                    dragged.AdjustmentLayer.GroupId = If(beneath Is Nothing, "", If(beneath.GroupId, ""))
                 Else
-                    dragged.AdjustmentLayer.StackAboveAnnotationId = ziel.Id
-                    dragged.AdjustmentLayer.GroupId = If(ziel.GroupId, "")
+                    dragged.AdjustmentLayer.StackAboveAnnotationId = targetAnnotation.Id
+                    dragged.AdjustmentLayer.GroupId = If(targetAnnotation.GroupId, "")
                 End If
                 CommitSelectionAdjustModeToModel()
                 RebuildLayerRows()
@@ -21501,21 +21501,21 @@ Namespace ViewModels
             Dim targetIndex As Integer
 
             If istKorrektur.Value Then
-                Dim liste = _maskedAdjustmentLayers
+                Dim items = _maskedAdjustmentLayers
                 If targetRow.IsGroupHeader Then
-                    Dim members = liste.Where(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, targetRow.Group.Id, StringComparison.Ordinal)).ToList()
+                    Dim members = items.Where(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, targetRow.Group.Id, StringComparison.Ordinal)).ToList()
                     If members.Count = 0 Then Return
-                    targetIndex = liste.IndexOf(members(members.Count - 1)) + 1
+                    targetIndex = items.IndexOf(members(members.Count - 1)) + 1
                     targetGroup = If(below, targetRow.Group.Id, "")
                 Else
                     If targetRow.AdjustmentLayer Is Nothing Then Return
-                    targetIndex = liste.IndexOf(targetRow.AdjustmentLayer) + If(below, 0, 1)
+                    targetIndex = items.IndexOf(targetRow.AdjustmentLayer) + If(below, 0, 1)
                     targetGroup = If(targetRow.AdjustmentLayer.GroupId, "")
                 End If
 
                 Dim block As List(Of MaskedAdjustmentLayer)
                 If dragged.IsGroupHeader Then
-                    block = liste.Where(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, dragged.Group.Id, StringComparison.Ordinal)).ToList()
+                    block = items.Where(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, dragged.Group.Id, StringComparison.Ordinal)).ToList()
                     If String.Equals(targetGroup, dragged.Group.Id, StringComparison.Ordinal) Then Return  ' in sich selbst
                 Else
                     If dragged.AdjustmentLayer Is Nothing Then Return
@@ -21524,13 +21524,13 @@ Namespace ViewModels
                 If block.Count = 0 Then Return
 
                 PushUndo()
-                Dim removedBefore = block.Where(Function(l) liste.IndexOf(l) < targetIndex).Count()
+                Dim removedBefore = block.Where(Function(l) items.IndexOf(l) < targetIndex).Count()
                 For Each l In block
-                    liste.Remove(l)
+                    items.Remove(l)
                 Next
-                targetIndex = Math.Max(0, Math.Min(liste.Count, targetIndex - removedBefore))
+                targetIndex = Math.Max(0, Math.Min(items.Count, targetIndex - removedBefore))
                 For k = 0 To block.Count - 1
-                    liste.Insert(targetIndex + k, block(k))
+                    items.Insert(targetIndex + k, block(k))
                     If Not dragged.IsGroupHeader Then block(k).GroupId = targetGroup
                 Next
                 DropOrphanedAnnotationGroups()

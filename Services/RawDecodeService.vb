@@ -162,9 +162,9 @@ Namespace Services
                 ' bibliothek. Sie liegt neben der Anwendung bzw. unter runtimes/<rid>/native -
                 ' ein nackter Name findet sie dort NICHT, es braucht den vollen Pfad.
                 If handle = IntPtr.Zero Then
-                    For Each pfad In BundledCandidates(candidates)
-                        If NativeLibrary.TryLoad(pfad, handle) Then
-                            geladen = Path.GetFileName(pfad)
+                    For Each filePath In BundledCandidates(candidates)
+                        If NativeLibrary.TryLoad(filePath, handle) Then
+                            geladen = Path.GetFileName(filePath)
                             Exit For
                         End If
                         handle = IntPtr.Zero

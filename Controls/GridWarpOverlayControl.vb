@@ -57,7 +57,7 @@ Namespace Controls
             Dim count = (columns + 1) * (rows + 1)
             If g.Length < 2 + count * 2 Then Return
 
-            Dim punkt = Function(colIdx As Integer, rowIdx As Integer) As Point
+            Dim pt = Function(colIdx As Integer, rowIdx As Integer) As Point
                             Dim i = 2 + (rowIdx * (columns + 1) + colIdx) * 2
                             Return New Point(g(i), g(i + 1))
                         End Function
@@ -77,13 +77,13 @@ Namespace Controls
             For Each stift In New Pen() {schatten, line}
                 For rowIdx = 0 To rows
                     For colIdx = 0 To columns - 1
-                        Dim a = punkt(colIdx, rowIdx), b = punkt(colIdx + 1, rowIdx)
+                        Dim a = pt(colIdx, rowIdx), b = pt(colIdx + 1, rowIdx)
                         If gilt(a) AndAlso gilt(b) Then context.DrawLine(stift, a, b)
                     Next
                 Next
                 For colIdx = 0 To columns
                     For rowIdx = 0 To rows - 1
-                        Dim a = punkt(colIdx, rowIdx), b = punkt(colIdx, rowIdx + 1)
+                        Dim a = pt(colIdx, rowIdx), b = pt(colIdx, rowIdx + 1)
                         If gilt(a) AndAlso gilt(b) Then context.DrawLine(stift, a, b)
                     Next
                 Next
@@ -93,7 +93,7 @@ Namespace Controls
             Dim border = New Pen(New SolidColorBrush(Color.FromArgb(200, 0, 0, 0)), 1.0)
             For rowIdx = 0 To rows
                 For colIdx = 0 To columns
-                    Dim p = punkt(colIdx, rowIdx)
+                    Dim p = pt(colIdx, rowIdx)
                     If gilt(p) Then context.DrawEllipse(fuellung, border, p, HandleRadius, HandleRadius)
                 Next
             Next
