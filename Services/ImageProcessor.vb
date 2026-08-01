@@ -3594,15 +3594,18 @@ Namespace Services
         ''' Gleitkomma-Kette um. Waehrend der Umstellung laufen beide nebeneinander, damit
         ''' der Aequivalenztest der Diagnose sie vergleichen kann.</summary>
         Private Shared Function ProcessBitmapBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            Dim processed As SKBitmap = CloneBitmap(source)
+            ' Copy-on-write: die Kette startet auf der FREMDEN Quelle und kopiert erst, wenn eine Stufe
+            ' wirklich ein neues Bild liefert. Siehe ReplaceBitmapOwned.
+            Dim processed As SKBitmap = source
+            Dim owned = False
 
-            processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
+            processed = ReplaceBitmapOwned(processed, ApplyCrop(processed, adj), owned)
+            processed = ReplaceBitmapOwned(processed, ApplyGeometryTransforms(processed, adj), owned)
+            processed = ReplaceBitmapOwned(processed, ApplyStraighten(processed, adj), owned)
+            processed = ReplaceBitmapOwned(processed, ApplyPerspective(processed, adj), owned)
+            processed = ReplaceBitmapOwned(processed, ApplyResize(processed, adj), owned)
+            processed = ReplaceBitmapOwned(processed, ApplyCanvasResize(processed, adj), owned)
+            processed = ReplaceBitmapOwned(processed, ApplyDocumentBackground(processed, adj), owned)
 
             ' Eine Auswahl wird im bereits gerenderten Display-Raum angelegt. Deshalb muss auch der
             ' unveraenderte Vergleichsstand fuer selektive Farb-/Detailanpassungen NACH der Geometrie
@@ -3612,7 +3615,7 @@ Namespace Services
                 Dim selectionBaseline As SKBitmap = Nothing
                 If SelectionScopeIsEnabled(adj) Then selectionBaseline = CloneBitmap(processed)
 
-                processed = ReplaceBitmap(processed, ApplyPixelAdjustmentStages(processed, adj))
+                processed = ApplyPixelAdjustmentStagesCore(processed, adj, owned)
 
                 ' Auswahl-Skopus: Anpassungen nur INNERHALB der aktiven Auswahl wirken lassen. Maske,
                 ' Vergleichsstand und angepasstes Bild liegen hier gemeinsam im gerenderten Display-Raum.
@@ -3620,25 +3623,35 @@ Namespace Services
                     Dim scopeMask = BuildSelectionScopeMask(adj, processed.Width, processed.Height)
                     If scopeMask IsNot Nothing Then
                         Using scopeMask
-                            processed = ReplaceBitmap(processed, CompositeSelectionScoped(selectionBaseline, processed, scopeMask))
+                            processed = ReplaceBitmapOwned(processed, CompositeSelectionScoped(selectionBaseline, processed, scopeMask), owned)
                         End Using
                     Else
                         ' Eine aktive, aber unlesbare/leer gewordene Maske darf niemals still auf eine
                         ' globale Anpassung zurueckfallen. Im Fehlerfall bleibt das Bild unveraendert.
-                        processed = ReplaceBitmap(processed, CloneBitmap(selectionBaseline))
+                        processed = ReplaceBitmapOwned(processed, CloneBitmap(selectionBaseline), owned)
                     End If
                     selectionBaseline.Dispose()
                 End If
             End If
 
-            processed = ReplaceBitmap(processed, ApplyMaskedAdjustmentLayers(processed, adj, source.Width, source.Height))
-            Return processed
+            processed = ApplyMaskedAdjustmentLayersCore(processed, adj, source.Width, source.Height, Nothing, owned)
+            Return TakeOwnership(processed, owned)
         End Function
 
         ''' <summary>Die wiederverwendbare Pixelkette ohne Geometrie, Objekte und Auswahl-Compositing.
         ''' Sie dient sowohl der globalen Bearbeitung als auch jeder lokalen Einstellungsebene.</summary>
         Private Shared Function ApplyPixelAdjustmentStages(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            Dim processed = CloneBitmap(source)
+            Dim owned = False
+            Return TakeOwnership(ApplyPixelAdjustmentStagesCore(source, adj, owned), owned)
+        End Function
+
+        ''' <summary>Der Kern der Pixelkette. <paramref name="owned"/> wandert durch: beim Eintritt
+        ''' sagt es, ob <paramref name="source"/> uns gehört, beim Austritt, ob das Ergebnis uns
+        ''' gehört. Nur so kann die Kette ohne Eingangskopie beginnen - siehe
+        ''' <see cref="ReplaceBitmapOwned"/>.</summary>
+        Private Shared Function ApplyPixelAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
+                                                               ByRef owned As Boolean) As SKBitmap
+            Dim processed = source
 
             ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
             ' (ImageProcessorPointOps.vb): Filmnegativ, Farbmatrix, Tonwertkurve, Lichter/Tiefen/
@@ -3649,71 +3662,71 @@ Namespace Services
             ' Die Umkehr steckt dabei ganz vorn in der Kette: Belichtung, Weißabgleich, Kurven und
             ' Filter sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie
             ' seitenverkehrt (Aufhellen würde abdunkeln).
-            processed = ReplaceBitmap(processed, ApplyPointOpChain(processed, adj))
+            processed = ReplaceBitmapOwned(processed, ApplyPointOpChain(processed, adj), owned)
 
             ' "weich" steht im selben Select Case wie die 15 Farbpresets, ist aber als einziges KEINE
             ' Punktoperation, sondern eine echte räumliche Unschärfe. BuildFilterPresetMatrix liefert
             ' dafür bewusst Nothing; die Stufe läuft hier getrennt.
             If String.Equals(If(adj.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
-                processed = ReplaceBitmap(processed, ApplySoftFocusBlur(processed, Clamp(adj.FilterStrength / 100.0F, 0, 1)))
+                processed = ReplaceBitmapOwned(processed, ApplySoftFocusBlur(processed, Clamp(adj.FilterStrength / 100.0F, 0, 1)), owned)
             End If
 
             If adj.Clarity <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyClarity(processed, adj.Clarity / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyClarity(processed, adj.Clarity / 100.0F), owned)
             End If
             If adj.[Structure] <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyStructure(processed, adj.[Structure] / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyStructure(processed, adj.[Structure] / 100.0F), owned)
             End If
             If adj.Haze <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyHaze(processed, adj.Haze / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyHaze(processed, adj.Haze / 100.0F), owned)
             End If
 
             If adj.NoiseReduction > 0 Then
                 If adj.NoiseReductionMethod = NoiseReductionMethod.Median Then
-                    processed = ReplaceBitmap(processed, ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F))
+                    processed = ReplaceBitmapOwned(processed, ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F), owned)
                 Else
-                    processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
+                    processed = ReplaceBitmapOwned(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F), owned)
                 End If
             End If
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
             ' (crs:ColorNoiseReduction) - siehe ImageAdjustments.ColorNoiseAdd.
             If adj.ColorNoiseReduction > 0 Then
-                processed = ReplaceBitmap(processed, ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F), owned)
             End If
             ' NACH der einstufigen Glaettung: die nimmt das feine Farbkorn, diese Stufe die groben
             ' Flecken. Umgekehrt muesste die grobe Stufe erst durch das feine Korn hindurch.
             If adj.FarbrauschGrob > 0 Then
-                processed = ReplaceBitmap(processed, ApplyMultiScaleDenoise(
-                    processed, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyMultiScaleDenoise(
+                    processed, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F), owned)
             End If
             If adj.ColorNoiseAdd > 0 Then
-                processed = ReplaceBitmap(processed, ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F), owned)
             End If
             If adj.DustScratches <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyDustScratches(processed, adj.DustScratches / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyDustScratches(processed, adj.DustScratches / 100.0F), owned)
             End If
             If adj.Glow <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyImageGlow(processed, adj.Glow / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyImageGlow(processed, adj.Glow / 100.0F), owned)
             End If
 
             If adj.Sharpness > 0 Then
-                processed = ReplaceBitmap(processed, ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F), owned)
             End If
 
             If adj.Vignette <> 0 Then
-                processed = ReplaceBitmap(processed, ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
+                processed = ReplaceBitmapOwned(processed, ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle), owned)
             End If
 
             If adj.Grain > 0 Then
-                processed = ReplaceBitmap(processed, ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F), owned)
             End If
             If adj.AddNoise > 0 Then
-                processed = ReplaceBitmap(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F), owned)
             ElseIf adj.AddNoise < 0 Then
                 ' Negative Haelfte = Rauschen REDUZIEREN (gleichmaessiges Weichzeichnen wie der
                 ' Gaussian-Modus der Rauschreduzierung) - ein Regler, beide Richtungen.
-                processed = ReplaceBitmap(processed, ApplyNoiseReduction(processed, -adj.AddNoise / 100.0F))
+                processed = ReplaceBitmapOwned(processed, ApplyNoiseReduction(processed, -adj.AddNoise / 100.0F), owned)
             End If
 
             ' Der Rahmen war bis hierher die letzte Stufe der Pixelkette. Er ist jetzt ein OBJEKT
@@ -3747,34 +3760,64 @@ Namespace Services
         ''' Helligkeitsrauschen gibt es die beiden bestehenden Regler.</summary>
         ''' <param name="strength">0 bis 1.</param>
         ''' <param name="coarse">0 bis 1: wie grosse Flecken noch erfasst werden.</param>
-        Public Shared Function ApplyMultiScaleDenoise(source As SKBitmap, staerke As Single,
-                                                          grob As Single) As SKBitmap
-            If source Is Nothing OrElse staerke <= 0.001F Then Return CloneBitmap(source)
+        Public Shared Function ApplyMultiScaleDenoise(source As SKBitmap, strength As Single,
+                                                          coarse As Single) As SKBitmap
+            If source Is Nothing OrElse strength <= 0.001F Then Return CloneBitmap(source)
             Dim w = source.Width, h = source.Height
             If w < 8 OrElse h < 8 Then Return CloneBitmap(source)
 
             ' Wie viele Stufen. Jede verdoppelt die erfasste Fleckengroesse; sechs Stufen reichen bis
             ' etwa 64 Bildpunkte, und groeber als das ist kein Rauschen mehr, sondern Motiv.
-            Dim steps = Math.Max(3, Math.Min(7, CInt(Math.Round(3.0 + grob * 4.0))))
+            Dim steps = Math.Max(3, Math.Min(7, CInt(Math.Round(3.0 + coarse * 4.0))))
             Dim n = w * h
 
-            Dim work = CloneBitmap(source)
+            ' Gelesen wird DIREKT aus der Quelle. Der frühere Arbeitsklon war eine reine Vollkopie,
+            ' aus der nur gelesen wurde - bei 45 MP allein rund 145 ms.
+            Dim srcBuffer As Byte() = Nothing
+            Dim srcStride, ri, gi, bi, ai As Integer
+            Dim hasBuffer = TryBorrowRgbaLikeBuffer(source, srcBuffer, srcStride, ri, gi, bi, ai)
+            Dim work As SKBitmap = If(hasBuffer, Nothing, CloneBitmap(source))
             Dim target = New SKBitmap(w, h, source.ColorType, source.AlphaType)
             Try
                 ' In Helligkeit und zwei Farbdifferenzen zerlegen. Nicht wegen der Norm, sondern weil
                 ' sich nur so unterschiedlich hart schrumpfen laesst.
                 Dim y(n - 1) As Single, cb(n - 1) As Single, cr(n - 1) As Single
                 Dim alpha(n - 1) As Byte
-                For j = 0 To h - 1
-                    For i = 0 To w - 1
-                        Dim p = work.GetPixel(i, j)
-                        Dim k = j * w + i
-                        y(k) = 0.299F * p.Red + 0.587F * p.Green + 0.114F * p.Blue
-                        cb(k) = p.Blue - y(k)
-                        cr(k) = p.Red - y(k)
-                        alpha(k) = p.Alpha
+                If hasBuffer Then
+                    ' Über den Byte-Puffer statt über GetPixel: derselbe Zeilenblock kostete mit
+                    ' GetPixel/SetPixel gemessen rund 4 s je Vorschaubild, über den Puffer und
+                    ' zeilenparallel rund 7 ms. Entpremultipliziert wird mit derselben Tabelle, die
+                    ' GetPixel benutzt, damit das Bild an weichen Kanten bitgleich bleibt.
+                    ForEachRow(w, h,
+                        Sub(row)
+                            Dim ro = row * srcStride
+                            Dim rk = row * w
+                            For i = 0 To w - 1
+                                Dim o = ro + i * 4
+                                Dim k = rk + i
+                                Dim a = srcBuffer(o + ai)
+                                Dim pr = UnpremultiplyByte(srcBuffer(o + ri), a)
+                                Dim pg = UnpremultiplyByte(srcBuffer(o + gi), a)
+                                Dim pb = UnpremultiplyByte(srcBuffer(o + bi), a)
+                                y(k) = 0.299F * pr + 0.587F * pg + 0.114F * pb
+                                cb(k) = pb - y(k)
+                                cr(k) = pr - y(k)
+                                alpha(k) = a
+                            Next
+                        End Sub)
+                Else
+                    ' Rückfall für exotische Farbtypen, die der Puffer nicht abdeckt.
+                    For j = 0 To h - 1
+                        For i = 0 To w - 1
+                            Dim p = work.GetPixel(i, j)
+                            Dim k = j * w + i
+                            y(k) = 0.299F * p.Red + 0.587F * p.Green + 0.114F * p.Blue
+                            cb(k) = p.Blue - y(k)
+                            cr(k) = p.Red - y(k)
+                            alpha(k) = p.Alpha
+                        Next
                     Next
-                Next
+                End If
 
                 ' Die Schwellen. Die Farbkanaele bekommen ein Vielfaches - dort darf es haerter zur
                 ' Sache gehen, ohne dass man es sieht.
@@ -3797,25 +3840,48 @@ Namespace Services
                 ' die Wirkung sitzt, und ueber der Saettigung bleibt Luft fuer starkes Rauschen.
                 ' Die Kennlinie steht als Info-Zeile im Pruefstand - sie zeigt sofort, wenn eine
                 ' Aenderung den Bereich wieder zusammenschiebt.
-                Dim thresholdC = 1.0F + 19.0F * CSng(Math.Pow(staerke, 1.5))
+                Dim thresholdC = 1.0F + 19.0F * CSng(Math.Pow(strength, 1.5))
                 ShrinkSteps(cb, w, h, steps, thresholdC, 1.0F)
                 ShrinkSteps(cr, w, h, steps, thresholdC, 1.0F)
 
-                For j = 0 To h - 1
-                    For i = 0 To w - 1
-                        Dim k = j * w + i
-                        Dim r = y(k) + cr(k)
-                        Dim b = y(k) + cb(k)
-                        Dim g = (y(k) - 0.299F * r - 0.114F * b) / 0.587F
-                        target.SetPixel(i, j, New SKColor(KlemmeByte(r), KlemmeByte(g), KlemmeByte(b), alpha(k)))
+                If hasBuffer Then
+                    Dim dstBuffer = New Byte(srcBuffer.Length - 1) {}
+                    ForEachRow(w, h,
+                        Sub(row)
+                            Dim ro = row * srcStride
+                            Dim rk = row * w
+                            For i = 0 To w - 1
+                                Dim o = ro + i * 4
+                                Dim k = rk + i
+                                Dim r = y(k) + cr(k)
+                                Dim b = y(k) + cb(k)
+                                Dim g = (y(k) - 0.299F * r - 0.114F * b) / 0.587F
+                                Dim a = alpha(k)
+                                ' Premultiplizieren wie SetPixel, sonst stimmen weiche Kanten nicht.
+                                dstBuffer(o + ri) = PremultiplyByte(KlemmeByte(r), a)
+                                dstBuffer(o + gi) = PremultiplyByte(KlemmeByte(g), a)
+                                dstBuffer(o + bi) = PremultiplyByte(KlemmeByte(b), a)
+                                dstBuffer(o + ai) = a
+                            Next
+                        End Sub)
+                    Marshal.Copy(dstBuffer, 0, target.GetPixels(), dstBuffer.Length)
+                Else
+                    For j = 0 To h - 1
+                        For i = 0 To w - 1
+                            Dim k = j * w + i
+                            Dim r = y(k) + cr(k)
+                            Dim b = y(k) + cb(k)
+                            Dim g = (y(k) - 0.299F * r - 0.114F * b) / 0.587F
+                            target.SetPixel(i, j, New SKColor(KlemmeByte(r), KlemmeByte(g), KlemmeByte(b), alpha(k)))
+                        Next
                     Next
-                Next
+                End If
                 Return target
             Catch
                 target.Dispose()
                 Return CloneBitmap(source)
             Finally
-                work.Dispose()
+                If work IsNot Nothing Then work.Dispose()
             End Try
         End Function
 
@@ -3826,32 +3892,44 @@ Namespace Services
         ''' heisst mehr Flaeche und damit weniger Zufall - dort steht ein Ausschlag eher fuer etwas
         ''' Echtes und die Schwelle darf mitwachsen, sonst frisst man auf den groben Stufen den
         ''' Farbverlauf des Motivs mit.</summary>
-        Private Shared Sub ShrinkSteps(kanal As Single(), w As Integer, h As Integer,
-                                           steps As Integer, schwelle As Single, growth As Single)
+        Private Shared Sub ShrinkSteps(channel As Single(), w As Integer, h As Integer,
+                                           steps As Integer, threshold As Single, growth As Single)
             Dim n = w * h
-            Dim basis(n - 1) As Single
-            Array.Copy(kanal, basis, n)
+            Dim baseline(n - 1) As Single
+            Array.Copy(channel, baseline, n)
             Dim result(n - 1) As Single
-            Dim geglaettet(n - 1) As Single
-            Dim s = schwelle
+            Dim smoothed(n - 1) As Single
+            Dim s = threshold
 
-            For stufe = 1 To steps
-                Dim radius = CInt(Math.Pow(2, stufe - 1))
-                Array.Copy(basis, geglaettet, n)
-                KastenUnschaerfe(geglaettet, w, h, radius)
+            ' "Step" ist in VB ein Schlüsselwort (For ... Step) und taugt nicht als Name.
+            For level = 1 To steps
+                Dim radius = CInt(Math.Pow(2, level - 1))
+                Array.Copy(baseline, smoothed, n)
+                BoxBlur(smoothed, w, h, radius)
                 ' Was die Glaettung wegnimmt, ist der Anteil DIESER Stufe.
-                For i = 0 To n - 1
-                    Dim detail = basis(i) - geglaettet(i)
-                    result(i) += Shrink(detail, s)
-                Next
-                Array.Copy(geglaettet, basis, n)
+                ' Elementweise und damit zeilenunabhängig - siehe Hinweis in BoxBlur.
+                Dim sStep = s
+                ForEachRow(w, h,
+                    Sub(j)
+                        Dim row = j * w
+                        For i = 0 To w - 1
+                            Dim k = row + i
+                            result(k) += Shrink(baseline(k) - smoothed(k), sStep)
+                        Next
+                    End Sub)
+                Array.Copy(smoothed, baseline, n)
                 s *= growth
             Next
 
             ' Der Rest ist der grobe Bildaufbau - der bleibt unangetastet.
-            For i = 0 To n - 1
-                kanal(i) = result(i) + basis(i)
-            Next
+            ForEachRow(w, h,
+                Sub(j)
+                    Dim row = j * w
+                    For i = 0 To w - 1
+                        Dim k = row + i
+                        channel(k) = result(k) + baseline(k)
+                    Next
+                End Sub)
         End Sub
 
         ''' <summary>Die Schrumpfkennlinie. Unterhalb der Schwelle null, darueber wird nur ein mit
@@ -3878,37 +3956,44 @@ Namespace Services
         ''' <summary>Kastenunschaerfe, zweimal getrennt - waagerecht, dann senkrecht. Ueber laufende
         ''' Summen, damit die Kosten NICHT mit dem Radius wachsen: auf den groben Stufen ist der
         ''' Radius 32, und eine gewoehnliche Faltung waere dort unbezahlbar.</summary>
-        Private Shared Sub KastenUnschaerfe(feld As Single(), w As Integer, h As Integer, radius As Integer)
+        Private Shared Sub BoxBlur(field As Single(), w As Integer, h As Integer, radius As Integer)
             If radius < 1 Then Return
-            Dim zwischen(w * h - 1) As Single
-            Dim width = radius * 2 + 1
+            Dim intermediate(w * h - 1) As Single
+            Dim window = radius * 2 + 1
 
-            For j = 0 To h - 1
-                Dim row = j * w
-                Dim sum As Single = 0
-                For i = -radius To radius
-                    sum += feld(row + Math.Max(0, Math.Min(w - 1, i)))
-                Next
-                For i = 0 To w - 1
-                    zwischen(row + i) = sum / width
-                    Dim output = Math.Max(0, Math.Min(w - 1, i - radius))
-                    Dim rein = Math.Max(0, Math.Min(w - 1, i + radius + 1))
-                    sum += feld(row + rein) - feld(row + output)
-                Next
-            Next
+            ' Beide Durchgänge laufen zeilen- bzw. spaltenWEISE und jeder schreibt nur in seine eigene
+            ' Zeile bzw. Spalte - die laufende Summe ist je Durchlauf lokal. Damit ist das Ergebnis
+            ' unabhängig von der Thread-Aufteilung bitgleich zum seriellen Lauf.
+            ForEachRow(w, h,
+                Sub(j)
+                    Dim row = j * w
+                    Dim sum As Single = 0
+                    For i = -radius To radius
+                        sum += field(row + Math.Max(0, Math.Min(w - 1, i)))
+                    Next
+                    For i = 0 To w - 1
+                        intermediate(row + i) = sum / window
+                        Dim leaving = Math.Max(0, Math.Min(w - 1, i - radius))
+                        Dim entering = Math.Max(0, Math.Min(w - 1, i + radius + 1))
+                        sum += field(row + entering) - field(row + leaving)
+                    Next
+                End Sub)
 
-            For i = 0 To w - 1
-                Dim sum As Single = 0
-                For j = -radius To radius
-                    sum += zwischen(Math.Max(0, Math.Min(h - 1, j)) * w + i)
-                Next
-                For j = 0 To h - 1
-                    feld(j * w + i) = sum / width
-                    Dim output = Math.Max(0, Math.Min(h - 1, j - radius))
-                    Dim rein = Math.Max(0, Math.Min(h - 1, j + radius + 1))
-                    sum += zwischen(rein * w + i) - zwischen(output * w + i)
-                Next
-            Next
+            ' Der senkrechte Durchgang läuft über SPALTEN. ForEachRow iteriert über den zweiten
+            ' Parameter, deshalb stehen h und w hier vertauscht - die Lastschwelle bleibt dieselbe.
+            ForEachRow(h, w,
+                Sub(i)
+                    Dim sum As Single = 0
+                    For j = -radius To radius
+                        sum += intermediate(Math.Max(0, Math.Min(h - 1, j)) * w + i)
+                    Next
+                    For j = 0 To h - 1
+                        field(j * w + i) = sum / window
+                        Dim leaving = Math.Max(0, Math.Min(h - 1, j - radius))
+                        Dim entering = Math.Max(0, Math.Min(h - 1, j + radius + 1))
+                        sum += intermediate(entering * w + i) - intermediate(leaving * w + i)
+                    Next
+                End Sub)
         End Sub
 
         Private Shared Function KlemmeByte(v As Single) As Byte
@@ -3925,7 +4010,20 @@ Namespace Services
                                                              pipelineInputWidth As Integer,
                                                              pipelineInputHeight As Integer,
                                                              Optional onlyStackedAboveId As String = Nothing) As SKBitmap
-            Dim processed = CloneBitmap(source)
+            Dim owned = False
+            Return TakeOwnership(ApplyMaskedAdjustmentLayersCore(source, adj, pipelineInputWidth,
+                                                                 pipelineInputHeight, onlyStackedAboveId, owned), owned)
+        End Function
+
+        ''' <summary>Der Kern der Korrekturebenen. <paramref name="owned"/> wandert wie in
+        ''' <see cref="ApplyPixelAdjustmentStagesCore"/> durch: ohne sichtbare Korrektur - der Regelfall -
+        ''' fällt hier gar keine Kopie mehr an.</summary>
+        Private Shared Function ApplyMaskedAdjustmentLayersCore(source As SKBitmap, adj As ImageAdjustments,
+                                                                pipelineInputWidth As Integer,
+                                                                pipelineInputHeight As Integer,
+                                                                onlyStackedAboveId As String,
+                                                                ByRef owned As Boolean) As SKBitmap
+            Dim processed = source
             If adj Is Nothing OrElse adj.MaskedAdjustmentLayers Is Nothing OrElse adj.Masks Is Nothing Then Return processed
 
             Dim masksById = adj.Masks.Where(Function(m) m IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(m.Id)).
@@ -4000,7 +4098,7 @@ Namespace Services
                                 If eigene IsNot Nothing Then effectMask = eigene
                             End If
                             Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
-                                processed = ReplaceBitmap(processed, CompositeSelectionScoped(processed, adjusted, effectMask))
+                                processed = ReplaceBitmapOwned(processed, CompositeSelectionScoped(processed, adjusted, effectMask), owned)
                             End Using
                         Finally
                             eigene?.Dispose()
@@ -4009,7 +4107,7 @@ Namespace Services
                     ' Sichtbare Füllung nur, wenn die Füllung NICHT bereits eine Anpassung abstuft.
                     If hasFill AndAlso Not layer.IsMaskLayer AndAlso Not hasAdj Then
                         Dim filled = CompositeVisibleFill(processed, mask, layer)
-                        If filled IsNot Nothing Then processed = ReplaceBitmap(processed, filled)
+                        If filled IsNot Nothing Then processed = ReplaceBitmapOwned(processed, filled, owned)
                     End If
                 End Using
             Next
@@ -5553,6 +5651,32 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return newBitmap
         End Function
 
+        ''' <summary>Wie <see cref="ReplaceBitmap"/>, aber für Ketten, die MIT DER FREMDEN QUELLE
+        ''' beginnen dürfen: <paramref name="owned"/> sagt, ob das aktuelle Bild uns gehört und beim
+        ''' Ersetzen entsorgt werden darf.
+        '''
+        ''' WARUM: Die Pixelkette begann an drei Stellen mit einem unbedingten Klon, damit jede Stufe
+        ''' ihren Vorgänger entsorgen darf. Eine neutrale Stufe gibt ihre Quelle aber unverändert
+        ''' zurück - bei einem Bild ohne gesetzte Regler wurde also dreimal das ganze Bild kopiert,
+        ''' ohne dass sich ein Pixel ändert. Gemessen an 45 MP waren das 445 ms Grundlast, also genau
+        ''' drei Vollkopien zu je rund 145 ms. Jetzt wird erst kopiert, wenn eine Stufe wirklich
+        ''' etwas liefert; bleibt am Ende die Quelle stehen, klont der Aufrufer EINMAL.</summary>
+        Private Shared Function ReplaceBitmapOwned(oldBitmap As SKBitmap, newBitmap As SKBitmap,
+                                                   ByRef owned As Boolean) As SKBitmap
+            If newBitmap Is Nothing OrElse Object.ReferenceEquals(oldBitmap, newBitmap) Then Return oldBitmap
+            If owned Then oldBitmap.Dispose()
+            owned = True
+            Return newBitmap
+        End Function
+
+        ''' <summary>Schlusspunkt einer <see cref="ReplaceBitmapOwned"/>-Kette: sorgt dafür, dass der
+        ''' Aufrufer IMMER ein eigenes Bitmap bekommt. Hat keine Stufe etwas geändert, steht hier noch
+        ''' die fremde Quelle und wird einmal kopiert.</summary>
+        Private Shared Function TakeOwnership(bitmap As SKBitmap, owned As Boolean) As SKBitmap
+            If owned OrElse bitmap Is Nothing Then Return bitmap
+            Return CloneBitmap(bitmap)
+        End Function
+
         ''' Kopiert den rohen Pixelspeicher eines Bgra8888-Bitmaps in ein verwaltetes Byte-Array, damit
         ''' Pixel-Loops per Array-Index statt über SkiaSharps P/Invoke-lastiges GetPixel/SetPixel
         ''' laufen können (bei mehreren Millionen Pixeln ein erheblicher Geschwindigkeitsunterschied).
@@ -5574,6 +5698,62 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Sub CommitBgraBuffer(bmp As SKBitmap, buffer As Byte())
             Marshal.Copy(buffer, 0, bmp.GetPixels(), buffer.Length)
         End Sub
+
+        ''' <summary>Die Entpremultiplikation, die <c>SKBitmap.GetPixel</c> auf einem Premul-Bitmap
+        ''' vornimmt - als Tabelle über alle 256 mal 256 Kombinationen aus Kanalwert und Alpha.
+        '''
+        ''' WARUM EINE TABELLE UND KEINE FORMEL: Wer eine Pixelschleife von GetPixel/SetPixel auf einen
+        ''' Byte-Puffer umstellt, muss diese Umrechnung selbst machen - und sie muss BITGLEICH sein,
+        ''' sonst ändert der Umbau das Bild an teiltransparenten Stellen. Gemessen über alle 65536
+        ''' Kombinationen trifft keine der naheliegenden Formeln: das übliche <c>v * 255 \ a</c> weicht
+        ''' in 15760 Fällen um eine Stufe ab, eine Nachbildung der Reziprok-Tabelle in fast allen. Die
+        ''' Tabelle wird deshalb aus Skia SELBST erhoben statt nachgerechnet. Das bleibt auch dann
+        ''' richtig, wenn ein SkiaSharp-Wechsel die Rundung ändert.
+        '''
+        ''' Kosten: einmalig rund 20 ms beim ERSTEN Bedarf (Lazy), danach ein Tabellenzugriff je Pixel.
+        ''' Die Gegenrechnung: GetPixel/SetPixel kosteten in der mehrskaligen Entrauschung allein für
+        ''' Ein- und Ausgang rund 4 s je Vorschaubild.</summary>
+        Private Shared ReadOnly _unpremultiplyTable As New Lazy(Of Byte())(
+            AddressOf BuildUnpremultiplyTable, Threading.LazyThreadSafetyMode.ExecutionAndPublication)
+
+        Private Shared Function BuildUnpremultiplyTable() As Byte()
+            Dim table = New Byte(256 * 256 - 1) {}
+            ' Zeile = Alpha, Spalte = premultiplizierter Kanalwert. Auch die Fälle mit Wert über Alpha
+            ' werden erhoben: sie kommen in sauber premultiplizierten Bildern nicht vor, können aber
+            ' aus Rundung entstehen, und was Skia dort liefert, ist die maßgebliche Antwort.
+            Using probe = New SKBitmap(256, 256, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Dim stride = probe.RowBytes
+                Dim raw = New Byte(stride * 256 - 1) {}
+                For a = 0 To 255
+                    For v = 0 To 255
+                        Dim o = a * stride + v * 4
+                        raw(o) = CByte(v) : raw(o + 1) = CByte(v) : raw(o + 2) = CByte(v) : raw(o + 3) = CByte(a)
+                    Next
+                Next
+                Marshal.Copy(raw, 0, probe.GetPixels(), raw.Length)
+                For a = 0 To 255
+                    For v = 0 To 255
+                        table(a * 256 + v) = probe.GetPixel(v, a).Red
+                    Next
+                Next
+            End Using
+            Return table
+        End Function
+
+        ''' <summary>Premultiplizierten Kanalwert zu dem Wert machen, den <c>GetPixel</c> melden würde.</summary>
+        Private Shared Function UnpremultiplyByte(value As Byte, alpha As Byte) As Byte
+            Return _unpremultiplyTable.Value(CInt(alpha) * 256 + CInt(value))
+        End Function
+
+        ''' <summary>Die Premultiplikation, die <c>SKBitmap.SetPixel</c> vornimmt: Skias
+        ''' <c>SkMulDiv255Round</c>. Über alle 65536 Kombinationen gegen SetPixel geprüft, keine
+        ''' Abweichung - hier ist die Formel exakt und eine Tabelle unnötig. Ein einfaches
+        ''' <c>v * a \ 255</c> wäre es NICHT (31770 Abweichungen um je eine Stufe).
+        ''' Überlaufsicher: der Zwischenwert bleibt unter 65536.</summary>
+        Private Shared Function PremultiplyByte(value As Byte, alpha As Byte) As Byte
+            Dim product = CInt(value) * CInt(alpha) + 128
+            Return CByte((product + (product >> 8)) >> 8)
+        End Function
 
         ' Ab dieser Pixelzahl lohnt der Thread-Overhead von Parallel.For. Darunter (Miniaturen,
         ' entartete Größen) bleibt es seriell.
@@ -11810,32 +11990,83 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Masken-Alpha multipliziert (außerhalb der Maske also transparent). Gleiche Größe vorausgesetzt.
         ''' Ergebnis ist Unpremul - passend für die PNG-Ausgabe.</summary>
         Public Shared Function ApplyMaskCutout(source As SKBitmap, mask As SKBitmap) As SKBitmap
-            Dim w = source.Width, h = source.Height
-            Dim result = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-            Dim mstride As Integer
-            Dim mbuf = ReadMaskBytes(mask, mstride)
-            For y = 0 To h - 1
-                For x = 0 To w - 1
-                    Dim c = source.GetPixel(x, y)
-                    Dim m = If(x < mask.Width AndAlso y < mask.Height, CInt(mbuf(y * mstride + x)), 0)
-                    result.SetPixel(x, y, New SKColor(c.Red, c.Green, c.Blue, CByte(CInt(c.Alpha) * m \ 255)))
-                Next
-            Next
-            Return result
+            Return ApplyMaskCutoutCore(source, mask, inverted:=False)
         End Function
 
         ''' <summary>Umkehrung von <see cref="ApplyMaskCutout"/> für "Löschen/Freistellen": innerhalb der
         ''' Maske wird das Bild transparent, außerhalb bleibt es erhalten.</summary>
         Public Shared Function ApplyMaskErase(source As SKBitmap, mask As SKBitmap) As SKBitmap
+            Return ApplyMaskCutoutCore(source, mask, inverted:=True)
+        End Function
+
+        ''' <summary>Der gemeinsame Kern beider Maskenschnitte. <paramref name="inverted"/> dreht nur um,
+        ''' welche Seite der Maske durchlässt.
+        '''
+        ''' Das RGB bleibt unangetastet, nur das Alpha wird mit dem Masken-Alpha multipliziert. Das Ziel
+        ''' ist UNPREMUL (so will es die PNG-Ausgabe) - dorthin schreibt SetPixel die Farbe unverändert,
+        ''' es wird hier also NICHT premultipliziert. Die Quelle ist dagegen meist premultipliziert und
+        ''' muss beim Lesen zurückgerechnet werden, genau wie GetPixel es täte.</summary>
+        Private Shared Function ApplyMaskCutoutCore(source As SKBitmap, mask As SKBitmap,
+                                                    inverted As Boolean) As SKBitmap
             Dim w = source.Width, h = source.Height
             Dim result = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Unpremul)
             Dim mstride As Integer
             Dim mbuf = ReadMaskBytes(mask, mstride)
+            Dim maskW = mask.Width, maskH = mask.Height
+
+            Dim srcBuf As Byte() = Nothing
+            Dim sStride, ri, gi, bi, ai As Integer
+            If TryBorrowRgbaLikeBuffer(source, srcBuf, sStride, ri, gi, bi, ai) Then
+                Dim premultiplied = (source.AlphaType = SKAlphaType.Premul)
+                Dim dStride = result.RowBytes
+                Dim dstBuf = New Byte(dStride * h - 1) {}
+                ForEachRow(w, h,
+                    Sub(y)
+                        Dim so = y * sStride
+                        Dim dof = y * dStride
+                        Dim mo = y * mstride
+                        For x = 0 To w - 1
+                            Dim o = so + x * 4
+                            Dim a = srcBuf(o + ai)
+                            Dim cr = srcBuf(o + ri), cg = srcBuf(o + gi), cb = srcBuf(o + bi)
+                            If premultiplied Then
+                                cr = UnpremultiplyByte(cr, a)
+                                cg = UnpremultiplyByte(cg, a)
+                                cb = UnpremultiplyByte(cb, a)
+                            End If
+                            Dim m = If(x < maskW AndAlso y < maskH, CInt(mbuf(mo + x)), 0)
+                            If inverted Then m = 255 - m
+                            Dim outAlpha = CByte(CInt(a) * m \ 255)
+                            Dim d = dof + x * 4
+                            ' Ziel ist Bgra8888, deshalb hier fest B, G, R, A.
+                            If outAlpha = 0 Then
+                                ' SetPixel NULLT bei Alpha 0 auch die Farbkanaele - gemessen an allen
+                                ' 65536 Kombinationen. Ohne diesen Zweig bliebe hinter vollstaendig
+                                ' ausmaskierten Stellen die alte Farbe stehen; sichtbar wird das erst,
+                                ' wenn jemand das PNG spaeter weiterverarbeitet.
+                                dstBuf(d) = 0
+                                dstBuf(d + 1) = 0
+                                dstBuf(d + 2) = 0
+                                dstBuf(d + 3) = 0
+                            Else
+                                dstBuf(d) = cb
+                                dstBuf(d + 1) = cg
+                                dstBuf(d + 2) = cr
+                                dstBuf(d + 3) = outAlpha
+                            End If
+                        Next
+                    End Sub)
+                Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+                Return result
+            End If
+
+            ' Rückfall für Farbtypen, die der Puffer nicht abdeckt.
             For y = 0 To h - 1
                 For x = 0 To w - 1
                     Dim c = source.GetPixel(x, y)
-                    Dim m = If(x < mask.Width AndAlso y < mask.Height, CInt(mbuf(y * mstride + x)), 0)
-                    result.SetPixel(x, y, New SKColor(c.Red, c.Green, c.Blue, CByte(CInt(c.Alpha) * (255 - m) \ 255)))
+                    Dim m = If(x < maskW AndAlso y < maskH, CInt(mbuf(y * mstride + x)), 0)
+                    If inverted Then m = 255 - m
+                    result.SetPixel(x, y, New SKColor(c.Red, c.Green, c.Blue, CByte(CInt(c.Alpha) * m \ 255)))
                 Next
             Next
             Return result
