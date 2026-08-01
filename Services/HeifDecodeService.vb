@@ -10,6 +10,13 @@ Namespace Services
     ''' SkiaSharp kann beides nicht. Damit lassen sich iPhone-Fotos direkt ansehen und bearbeiten,
     ''' statt sie vorher umwandeln zu müssen; geschrieben wird HEIC bewusst NICHT (siehe unten).
     '''
+    ''' Auf macOS bringt das Betriebssystem den Dekoder selbst mit, dort ist HEIC das Standardformat
+    ''' der Kamera und ein extra installiertes libheif die Ausnahme. Diesen Weg kapselt
+    ''' MacImageIoService; findet er sich, läuft ALLES darüber. Die Klasse hier fragt dafür nur
+    ''' MacImageIoService.IsAvailable und kennt weder das Betriebssystem noch dessen Schnittstellen.
+    ''' Meldet der Dienst False - auf Linux und Windows immer -, bleibt es beim libheif-Weg unten,
+    ''' und für diese beiden Systeme ändert sich damit nichts.
+    '''
     ''' Geladen wird dynamisch über NativeLibrary.Load + Delegates, genau wie bei LibRaw: der
     ''' DllImport-Resolver der Assembly ist bereits belegt (nur EINER erlaubt), und so bleibt die
     ''' Verfügbarkeit sauber prüfbar. Fehlt libheif, meldet IsAvailable False und ALLES läuft wie
@@ -20,7 +27,8 @@ Namespace Services
     ''' Die Entscheidung, einen HEVC-Dekoder auszuliefern, trifft damit die Distribution
     ''' (Arch/Debian/Fedora liefern libheif+libde265 in ihren Paketquellen), nicht FerrumPix.
     ''' Lizenzseitig ist alles unkritisch: libheif und libde265 stehen unter der LGPL-3 und werden
-    ''' unverändert dynamisch geladen - dieselbe Konstruktion wie bei LibRaw und libmpv.
+    ''' unverändert dynamisch geladen - dieselbe Konstruktion wie bei LibRaw und libmpv. Auch der
+    ''' macOS-Weg ändert daran nichts: ImageIO gehört zum Betriebssystem und wird nicht mitgeliefert.
     '''
     ''' NUR LESEN: einen Encoder gibt es hier nicht. Bearbeitete HEIC-Dateien werden wie PSD als
     ''' neue Datei in einem schreibbaren Format gespeichert (ImageProcessor.CanEncodeToTargetExtension
@@ -61,7 +69,9 @@ Namespace Services
         ''' libheif ist nicht garantiert reentrant über einen Kontext hinweg; jeder Aufruf legt
         ''' zwar seinen eigenen Kontext an, die Thumbnail-Erzeugung ruft aber aus mehreren Threads
         ''' herein. Wie bei der nicht-reentranten LibRaw wird deshalb serialisiert - lieber
-        ''' langsamere Thumbnails als sporadische Abstürze.
+        ''' langsamere Thumbnails als sporadische Abstürze. Der Weg über das Betriebssystem
+        ''' liegt bewusst unter demselben Schloss: ImageIO wäre zwar threadsicher, aber in der
+        ''' ganzen Anwendung soll immer nur EIN Decode gleichzeitig laufen.
         Private Shared ReadOnly _nativeLock As New Object()
 
         Private Shared _initialized As Boolean
@@ -81,17 +91,22 @@ Namespace Services
         Private Shared _handleRelease As ReleaseFn
         Private Shared _imageRelease As ReleaseFn
 
-        ''' <summary>True, wenn libheif geladen werden konnte (Ergebnis wird gecacht).</summary>
+        ''' <summary>True, wenn irgendein Dekoder bereitsteht: der des Betriebssystems oder libheif
+        ''' (Ergebnis wird gecacht). Die Reihenfolge ist Absicht - liegt auf einem Mac zusätzlich
+        ''' ein libheif aus Homebrew, bleibt trotzdem der Weg des Systems der erste, und fehlen
+        ''' dort die Frameworks, greift libheif als Rückfall.</summary>
         Public Shared ReadOnly Property IsAvailable As Boolean
             Get
+                If MacImageIoService.IsAvailable Then Return True
                 EnsureLoaded()
                 Return _library <> IntPtr.Zero
             End Get
         End Property
 
-        ''' <summary>Welche libheif-Variante geladen wurde - für die Diagnose und Feldberichte.</summary>
+        ''' <summary>Welcher Dekoder geladen wurde - für die Diagnose und Feldberichte.</summary>
         Public Shared ReadOnly Property LoadedLibraryName As String
             Get
+                If MacImageIoService.IsAvailable Then Return MacImageIoService.DecoderName
                 EnsureLoaded()
                 Return If(_loadedLibrary, "")
             End Get
@@ -166,14 +181,44 @@ Namespace Services
         End Function
 
         ''' <summary>Dekodiert die Hauptaufnahme der Datei als Bgra8888 (Besitz beim Aufrufer) oder
-        ''' Nothing. Drehung/Spiegelung aus dem Container wendet libheif selbst an (die
-        ''' Standard-Dekodieroptionen lassen Transformationen nicht aus) - es braucht also KEINE
-        ''' zusätzliche Orientierungskorrektur, anders als beim eingebetteten RAW-Vorschaubild.</summary>
+        ''' Nothing. Drehung/Spiegelung aus dem Container wenden beide Wege selbst an (libheif über
+        ''' seine Standard-Dekodieroptionen, ImageIO über kCGImageSourceCreateThumbnailWithTransform)
+        ''' - es braucht also KEINE zusätzliche Orientierungskorrektur, anders als beim eingebetteten
+        ''' RAW-Vorschaubild.</summary>
         Public Shared Function TryDecode(path As String) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If MacImageIoService.IsAvailable Then
+                SyncLock _nativeLock
+                    Using preview = MacImageIoService.TryExtractPng(path)
+                        Return If(preview IsNot Nothing, DecodeToBgra(preview), Nothing)
+                    End Using
+                End SyncLock
+            End If
             SyncLock _nativeLock
                 Return DecodeCore(path)
             End SyncLock
+        End Function
+
+        ''' <summary>Einen PNG-Strom in genau das Format bringen, das der libheif-Weg liefert.
+        ''' Ohne die feste SKImageInfo entschiede Skia selbst, und die Zusage "Bgra8888" oben
+        ''' gälte je nach Plattform - ein Fehler, den man erst an vertauschten Farben sähe.</summary>
+        Private Shared Function DecodeToBgra(stream As Stream) As SKBitmap
+            Using data = SKData.Create(stream)
+                If data Is Nothing Then Return Nothing
+                Using codec = SKCodec.Create(data)
+                    If codec Is Nothing Then Return Nothing
+                    Dim info = New SKImageInfo(codec.Info.Width, codec.Info.Height,
+                                               SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                    If info.Width <= 0 OrElse info.Height <= 0 Then Return Nothing
+                    Dim bitmap = New SKBitmap(info)
+                    Dim result = codec.GetPixels(info, bitmap.GetPixels())
+                    If result <> SKCodecResult.Success AndAlso result <> SKCodecResult.IncompleteInput Then
+                        bitmap.Dispose()
+                        Return Nothing
+                    End If
+                    Return bitmap
+                End Using
+            End Using
         End Function
 
         Private Shared Function DecodeCore(path As String) As SKBitmap
@@ -242,6 +287,14 @@ Namespace Services
         ''' <summary>Die Datei als PNG-Strom - das ist die Form, die OpenSourceStream und die
         ''' Thumbnail-Erzeugung erwarten (gleiches Muster wie PSD/ICO).</summary>
         Public Shared Function ExtractPreview(path As String) As MemoryStream
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            ' Der Weg des Systems liefert den PNG-Strom direkt, ohne den Umweg über ein SKBitmap.
+            If MacImageIoService.IsAvailable Then
+                SyncLock _nativeLock
+                    Return MacImageIoService.TryExtractPng(path)
+                End SyncLock
+            End If
+
             Using bmp = TryDecode(path)
                 If bmp Is Nothing Then Return Nothing
                 Using image = SKImage.FromBitmap(bmp)
@@ -260,6 +313,12 @@ Namespace Services
         ''' <summary>Maße ohne vollständiges Dekodieren - die Kopfdaten reichen dafür.</summary>
         Public Shared Function TryGetSize(path As String) As (Width As Integer, Height As Integer)
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return (0, 0)
+            If MacImageIoService.IsAvailable Then
+                SyncLock _nativeLock
+                    Return MacImageIoService.TryGetSize(path)
+                End SyncLock
+            End If
+
             SyncLock _nativeLock
                 Dim ctx As IntPtr = IntPtr.Zero
                 Dim handle As IntPtr = IntPtr.Zero

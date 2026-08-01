@@ -1998,6 +1998,15 @@ Namespace ViewModels
                               Nothing)
                 End Using
             End If
+            If HeifDecodeService.IsSupportedHeif(path) Then
+                ' HEIF fehlte hier bisher ganz: der Viewer fiel unten auf Skia zurueck, das HEIC
+                ' und AVIF nicht dekodiert. IsRenderableImagePath fuehrt die Formate laengst, und
+                ' Miniaturen wie Renderpipeline konnten sie auch - nur das grosse Bild blieb leer.
+                ' Der Dekoder liefert bereits gedreht, deshalb keine Orientierungskorrektur.
+                Using preview = HeifDecodeService.ExtractPreview(path)
+                    Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
+                End Using
+            End If
             If FpxService.IsFpx(path) Then
                 Using preview = FpxService.ExtractComposite(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)

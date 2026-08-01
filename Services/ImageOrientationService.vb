@@ -335,8 +335,8 @@ Namespace Services
 
         ''' Wie LoadOrientedAvaloniaBitmap(filePath), erkennt aber Formate, die SkiaSharp nicht
         ''' selbst dekodiert, und reicht stattdessen deren aufbereiteten Strom herein: RAW über
-        ''' RawPreviewService.ExtractPreviewWithFallback, PSD/PSB über PsdPreviewService.
-        ''' Liefert Nothing, wenn daraus nichts zu holen war.
+        ''' RawPreviewService.ExtractPreviewWithFallback, PSD/PSB über PsdPreviewService,
+        ''' HEIC/HEIF/AVIF über HeifDecodeService. Liefert Nothing, wenn daraus nichts zu holen war.
         '''
         ''' Zur Einordnung der drei RAW-Wege - sie sind bewusst verschieden:
         '''   * ANZEIGE (hier): schnelle eingebettete Vorschau; findet der Scanner nichts, stößt
@@ -375,6 +375,17 @@ Namespace Services
                     If stream Is Nothing Then Return Nothing
                     Dim psdRotation = If(applySidecarRotation, RawSidecarService.ReadRotationDegrees(filePath), 0)
                     Return LoadOrientedAvaloniaBitmap(stream, psdRotation)
+                End Using
+            End If
+            If HeifDecodeService.IsSupportedHeif(filePath) Then
+                ' Ohne diesen Zweig landete HEIC/AVIF beim Skia-Rueckfall unten, der das Format
+                ' nicht kann - im Filmstreifen und im Editor blieb die Flaeche deshalb leer,
+                ' obwohl Miniaturen und Renderpipeline HEIF laengst lesen konnten.
+                ' Kein LoadOrientedAvaloniaBitmap: der Dekoder legt die Drehung aus dem Container
+                ' schon auf. Und kein applySidecarRotation, weil HEIF kein Sidecar-Format ist
+                ' (RawSidecarService.IsSidecarFormat kennt nur RAW und PSD).
+                Using stream = HeifDecodeService.ExtractPreview(filePath)
+                    Return If(stream IsNot Nothing, New Bitmap(stream), Nothing)
                 End Using
             End If
             Return LoadOrientedAvaloniaBitmap(filePath)
