@@ -1344,16 +1344,24 @@ Namespace Views
             overlay.IsVisible = True
             Me.Focus()
             Try
-                Dim bmp = Await Task.Run(Function() As Bitmap
-                                             If RawPreviewService.IsSupportedRaw(item.FilePath) Then
-                                                 Using preview = RawPreviewService.ExtractPreviewWithFallback(item.FilePath)
-                                                     Return If(preview IsNot Nothing, ImageOrientationService.LoadOrientedAvaloniaBitmap(preview), Nothing)
-                                                 End Using
-                                             End If
-                                             ' Die Auto-Variante behandelt FPX, HEIF/AVIF, PSD und die
-                                             ' uebrigen Formate ueber denselben orientierten Ladeweg.
-                                             Return ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(item.FilePath)
-                                         End Function)
+                ' Auto-Variante: erkennt Buendel (Komposit), RAW, PSD und ueber den HEIF-Zweig in
+                ' LoadOrientedAvaloniaBitmapAuto auch HEIC/HEIF/AVIF - derselbe Weg wie die
+                ' Filmstrip-Vorschau.
+                '
+                ' RAW BEKOMMT HIER KEINEN EIGENEN ZWEIG. Er stand einmal hier und nahm der
+                ' Schnellvorschau zwei Dinge, die die Auto-Variante mitbringt:
+                '
+                ' 1. die Drehung aus dem Sidecar (RawSidecarService.ReadRotationDegrees) - eine im
+                '    Betrachter gedrehte RAW steckt ihre Drehung nicht in die Pixel, sondern neben
+                '    die Datei. Ohne das stand sie hier wieder ungedreht.
+                ' 2. rawContainerPath, ueber das RawPreviewOrigin die Orientierung des CONTAINERS
+                '    heranzieht, wenn die eingebettete Vorschau kein eigenes Tag traegt. Ohne das
+                '    steht die Vorschau quer zur Entwicklung.
+                '
+                ' Beides sind genau die Fehlerbilder, vor denen die Kommentare an jenen Stellen
+                ' warnen. Die Auto-Variante kann RAW bereits vollstaendig - ein zweiter Weg daneben
+                ' kann hier nur schlechter sein.
+                Dim bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(item.FilePath))
                 If overlay.IsVisible AndAlso bmp IsNot Nothing Then img.Source = bmp
             Catch
             End Try

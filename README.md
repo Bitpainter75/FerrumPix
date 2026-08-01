@@ -39,7 +39,7 @@ With people switched on, a second button next to it does the same for the people
 
 Person and place are also shown in the info panel of the viewer and the editor, so a picture on screen says who is on it and where it was taken.
 
-The settings have a people section for the bigger clean-up: a wall of faces, one per group, and opening a group shows every face in it - the place to sort out a library that grew over years.
+For the bigger clean-up there is a people area of its own, reached by a button in the gallery above the settings one: a wall of faces, one per group, and opening a group shows every face in it - the place to sort out a library that grew over years. Point at a face and an eye appears that shows the whole photo it came from, because a small crop tells you who is in the picture but never which picture it was.
 
 Batch work runs from the context menu or the footer menu: rename, convert, resize, watermark, filters, metadata removal - and *Export to*, which puts all of it into one dialog with a name pattern, a look, a size, a watermark and a target format, locally or straight to Immich. `.fpx` projects are one of the targets, so a batch can come out as files you can keep editing.
 
@@ -91,13 +91,11 @@ Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…*
 
 ### Model files
 
-Face recognition comes with a choice of two models: a small one that is enough for portraits, and a much stronger one for photos of everyday life. Whichever is installed is used; with both, the stronger one wins.
-
 Five features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
 
 Finding people and naming places have to be switched on there as well, on top of fetching the file. A face is a different matter from a keyword, and where a photo was taken is one too - so neither happens unless you say so. Place names come from a table on your own machine; nothing is looked up anywhere, and there is no map view.
 
-Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
+Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0), the [ONNX Model Zoo](https://github.com/onnx/models) (Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
 
 ## Immich
 
