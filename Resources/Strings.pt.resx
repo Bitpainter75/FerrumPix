@@ -5995,4 +5995,7 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Converter a seleção numa máscara</value>
   </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
+    <value>O cesto não é uma pessoa e por isso não aceita nome nenhum. Para atribuir um rosto isolado que esteja lá, escreva o nome na barra de informações junto da foto.</value>
+  </data>
 </root>

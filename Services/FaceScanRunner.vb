@@ -145,7 +145,7 @@ Namespace Services
         ''' Geschmacks - wer auf einem Stadtfest die Umstehenden nicht in seiner Personenliste haben
         ''' will, stellt das ein, und die Erkennung bleibt davon unberuehrt.
         '''
-        ''' Ab Werk 4 (gemessen, siehe AppSettingsService). Auf 0 gestellt bleibt alles, was die
+        ''' Ab Werk 3 (gemessen, siehe AppSettingsService). Auf 0 gestellt bleibt alles, was die
         ''' Erkennung findet.</summary>
         Private Shared Function FilterBySize(faces As List(Of DetectedFace), source As SKBitmap) As List(Of DetectedFace)
             If faces Is Nothing OrElse faces.Count = 0 Then Return faces

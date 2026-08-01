@@ -308,6 +308,9 @@ Namespace ViewModels
         Public Sub RefreshPeople()
             SelectedPerson = Nothing
             SelectedPersonFaces.Clear()
+            ' Die Wand VOR dem Ausmisten leeren: gleich unten werden Bilder freigegeben, und keines
+            ' davon darf zu diesem Zeitpunkt noch an einer angezeigten Kachel haengen.
+            People.Clear()
             ' Was schon geholt wurde, VOR dem Wegwerfen der Eintraege einsammeln.
             For Each alt In _allPeople
                 If alt.Cover Is Nothing OrElse String.IsNullOrEmpty(alt.CoverPath) Then Continue For
@@ -354,7 +357,17 @@ Namespace ViewModels
                     lebend.Add(CoverKey(entry.Id, entry.CoverPath, entry.BoxX, entry.BoxY))
                 End If
             Next
+            ' FREIGEBEN, nicht bloss vergessen: ein Avalonia-Bitmap haelt unverwalteten Speicher, und
+            ' der haengt sonst bis zum Finalisierer. Je Kachel sind das nur rund 31 KB - aber
+            ' ausgemistet wird bei jedem Verschmelzen, Herausloesen und Umbenennen, und das summiert
+            ' sich ueber eine Aufraeumsitzung.
+            '
+            ' NUR HIER und nicht beim Wechsel des Aushaengeschilds: dort steht dasselbe Bild
+            ' moeglicherweise noch unter seinem alten Schluessel im Speicher. Es faellt beim naechsten
+            ' Aufbau von selbst hier durch, weil sein Schluessel dann nicht mehr lebt.
             For Each tot In _coverCache.Keys.Where(Function(k) Not lebend.Contains(k)).ToList()
+                Dim bild As Avalonia.Media.Imaging.Bitmap = Nothing
+                If _coverCache.TryGetValue(tot, bild) Then bild?.Dispose()
                 _coverCache.Remove(tot)
             Next
 
@@ -458,12 +471,17 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Benennt die geoeffnete Gruppe. Ueber dieselbe Bibliotheksregel wie im Infopanel:
-        ''' ein vorhandener Name verschmilzt beide Gruppen.</summary>
+        ''' ein vorhandener Name verschmilzt beide Gruppen.
+        '''
+        ''' UEBER ApplyPersonName wie die drei Infoleisten, nicht ueber NamePerson daneben. Der
+        ''' direkte Weg ging an der Sperre gegen die Sammelgruppe vorbei; ohne Gesicht in der Hand
+        ''' bleibt ein Name am Korb hier folgenlos, und genau so soll es sein.</summary>
         Public Sub RenameSelectedPerson(newName As String)
             If _selectedPerson Is Nothing Then Return
+            If _selectedPerson.IsUnknownBin Then Return
             Dim id = _selectedPerson.Id
             Try
-                LibraryService.Instance.NamePerson(id, newName)
+                LibraryService.Instance.ApplyPersonName(id, newName, Nothing)
             Catch ex As Exception
                 DiagnosticLogService.LogException("People.RenamePerson", ex)
                 Return

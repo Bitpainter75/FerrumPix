@@ -26,7 +26,9 @@ Namespace Services
         ''' gerade.</summary>
         Public Property Landmarks As Single() = New Single(9) {}
 
-        ''' <summary>128 Zahlen aus dem Vergleichsmodell, oder Nothing, wenn nur gesucht wurde.</summary>
+        ''' <summary>Die Merkmalsreihe aus dem Vergleichsmodell, oder Nothing, wenn nur gesucht wurde.
+        ''' ArcFace liefert 512 Zahlen; die Laenge steht bewusst nirgends fest verdrahtet, weil
+        ''' <see cref="Similarity"/> Reihen ungleicher Laenge ohnehin nie treffen laesst.</summary>
         Public Property Embedding As Single()
     End Class
 
@@ -37,10 +39,10 @@ Namespace Services
     ''' Das SUCHmodell geht einmal ueber das Bild und liefert Rechtecke. Es sagt, DASS da jemand ist,
     ''' und nichts weiter - es kennt keine Personen.
     '''
-    ''' Das VERGLEICHSmodell bekommt ein einzelnes ausgeschnittenes Gesicht und macht daraus 128
-    ''' Zahlen. Zwei Aufnahmen derselben Person ergeben aehnliche Reihen, zwei verschiedene Personen
-    ''' unaehnliche. Auch dieses Modell weiss nicht, WER jemand ist - Namen vergibt allein der
-    ''' Benutzer.
+    ''' Das VERGLEICHSmodell bekommt ein einzelnes ausgeschnittenes Gesicht und macht daraus eine
+    ''' Zahlenreihe (bei ArcFace 512 Werte). Zwei Aufnahmen derselben Person ergeben aehnliche
+    ''' Reihen, zwei verschiedene Personen unaehnliche. Auch dieses Modell weiss nicht, WER jemand
+    ''' ist - Namen vergibt allein der Benutzer.
     '''
     ''' Gemessen auf 24 Kernen: Suchen 47 bis 69 ms je Foto, Vergleichen rund 35 ms je Gesicht. Auf
     ''' einem Bild mit fuenf Personen also gut eine Viertelsekunde. Das Suchmodell rechnet auf einem
@@ -201,10 +203,10 @@ Namespace Services
             Using fitted = New SKBitmap(DetectorEdge, DetectorEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 Using canvas = New SKCanvas(fitted)
                     canvas.Clear(SKColors.Black)
-                    canvas.DrawBitmap(source,
-                                      New SKRect(0, 0, source.Width, source.Height),
-                                      New SKRect(0, 0, fittedWidth, fittedHeight),
-                                      New SKPaint With {.FilterQuality = SKFilterQuality.High})
+                    ImageProcessor.DrawBitmapSampled(canvas, source,
+                                                     New SKRect(0, 0, source.Width, source.Height),
+                                                     New SKRect(0, 0, fittedWidth, fittedHeight),
+                                                     ImageProcessor.SamplingHigh, Nothing)
                 End Using
 
                 ' Ueber den Byte-Puffer statt ueber GetPixel: bei 410000 Punkten ist das der
@@ -347,10 +349,16 @@ Namespace Services
         ''' </code>
         '''
         ''' Unter 80 Punkten sind die Merkmale also nicht schwach, sondern Rauschen - und Rauschen
-        ''' trifft gelegentlich zufaellig. Solche Gesichter bleiben ein gueltiger FUND (sie stehen im
-        ''' Panel und im Bild), sie lassen sich nur keiner Person zuordnen. Auf dem gemessenen
-        ''' Bestand betrifft das 22,7 Prozent der Gesichter, aber nur 14 von 304 Bildern verlieren
-        ''' dadurch jede zuordenbare Person.</summary>
+        ''' trifft gelegentlich zufaellig. Solche Gesichter werden trotzdem EINGETRAGEN, denn gefunden
+        ''' wurden sie; sie bekommen nur keine Person. Auf dem gemessenen Bestand betrifft das 22,7
+        ''' Prozent der Gesichter, aber nur 14 von 304 Bildern verlieren dadurch jede zuordenbare
+        ''' Person.
+        '''
+        ''' SICHTBAR SIND SIE NICHT. Die Infoleiste zeigt Gesichter ueber ihre Person
+        ''' (<see cref="LibraryService.GetFacesForImage"/> laesst Zeilen ohne Zuordnung weg), und ohne
+        ''' Merkmale gibt es keine. Das ist so gewollt: eine Zeile mit Ausschnitt, an der sich kein
+        ''' Name eintragen laesst, waere ein Bedienelement ohne Bedienung. Hier stand einmal das
+        ''' Gegenteil - die Zusage war nie eingeloest.</summary>
         Public Const MinimumFaceSize As Single = 80.0F
 
         ''' <summary>Das Gesicht ein zweites Mal suchen, diesmal in einem engen Ausschnitt.
@@ -397,10 +405,10 @@ Namespace Services
                 Using window = New SKBitmap(windowSize, windowSize, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(window)
                         canvas.Clear(SKColors.Black)
-                        canvas.DrawBitmap(source,
-                                          New SKRect(left, top, left + windowSize, top + windowSize),
-                                          New SKRect(0, 0, windowSize, windowSize),
-                                          New SKPaint With {.FilterQuality = SKFilterQuality.High})
+                        ImageProcessor.DrawBitmapSampled(canvas, source,
+                                                         New SKRect(left, top, left + windowSize, top + windowSize),
+                                                         New SKRect(0, 0, windowSize, windowSize),
+                                                         ImageProcessor.SamplingHigh, Nothing)
                     End Using
 
                     ' Etwas nachsichtiger als im Vollbild: hier ist bekannt, dass ein Gesicht drin
@@ -457,7 +465,8 @@ Namespace Services
             38.2946F, 51.6963F, 73.5318F, 51.5014F, 56.0252F, 71.7366F,
             41.5493F, 92.3655F, 70.7299F, 92.2041F}
 
-        ''' <summary>Schneidet das Gesicht aus und macht daraus 128 Zahlen.
+        ''' <summary>Schneidet das Gesicht aus und macht daraus eine Merkmalsreihe (bei ArcFace 512
+        ''' Zahlen).
         '''
         ''' AUSGERICHTET, nicht bloss ausgeschnitten. Das Modell vergleicht Gesichter in einer festen
         ''' Lage: Augen waagerecht, immer an derselben Stelle, immer im selben Massstab. Die fuenf
@@ -478,8 +487,8 @@ Namespace Services
                 Using canvas = New SKCanvas(crop)
                     canvas.Clear(SKColors.Black)
                     canvas.SetMatrix(transform)
-                    canvas.DrawBitmap(source, 0, 0,
-                                      New SKPaint With {.FilterQuality = SKFilterQuality.High})
+                    ImageProcessor.DrawBitmapSampled(canvas, source, 0, 0,
+                                                     ImageProcessor.SamplingHigh, Nothing)
                 End Using
 
                 Dim stride = crop.RowBytes

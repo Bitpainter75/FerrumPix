@@ -176,8 +176,14 @@
                                      Namen ein zweites Mal zu tippen ist die Stelle, an der aus
                                      einer Person zwei werden - „Anna" und „anna" sind für die
                                      Bibliothek zwei Menschen. Aus der Liste gewählt trifft er
-                                     zeichengenau, und genau daran hängt das Verschmelzen. -->
+                                     zeichengenau, und genau daran hängt das Verschmelzen.
+
+                                     NICHT AM ABLAGEKORB: der ist keine Person, und ihn zu
+                                     benennen hieße, alle darin zu einer zu erklären. Das Feld
+                                     fehlt dort deshalb ganz, statt eine Eingabe anzunehmen, die
+                                     folgenlos bleibt. -->
                                 <AutoCompleteBox Name="PersonNameBox"
+                                                 IsVisible="{Binding !SelectedPerson.IsUnknownBin}"
                                                  Text="{Binding SelectedPersonName, Mode=OneWay}"
                                                  ItemsSource="{Binding PersonNameSuggestions}"
                                                  FilterMode="Contains"
@@ -186,6 +192,10 @@
                                                  Classes="no-translate"
                                                  LostFocus="OnPersonNameCommitted"
                                                  KeyDown="OnPersonNameKeyDown"/>
+                                <TextBlock Text="Der Ablagekorb ist keine Person und nimmt deshalb keinen Namen an. Einen einzelnen Kopf daraus ordnet man in der Infoleiste am Bild zu."
+                                           IsVisible="{Binding SelectedPerson.IsUnknownBin}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding SelectedPerson.CountText}" Classes="no-translate"
                                            Foreground="{DynamicResource FP.Text.Muted}"
                                            FontSize="{DynamicResource FP.Font.Small}"/>

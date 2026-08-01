@@ -641,33 +641,6 @@ Namespace Services
         ' trotzdem: der Gewinn dieser Stufe liegt im Wegfall der BYTE-Zwischenstufe, Single spart
         ' hier nichts Messbares, und die Zahlen der frueheren Messungen bleiben vergleichbar.
 
-        ''' <summary>Kennlinie der HSL-Band-Regler für Sättigung und Luminanz. <paramref name="amount"/>
-        ''' ist der Reglerwert geteilt durch 100 und mit der Chroma gewichtet, liegt also in [-1, 1];
-        ''' <paramref name="value"/> ist S bzw. L in [0, 1]. Ergebnis bleibt ohne Klemmung in [0, 1].
-        '''
-        ''' NACH OBEN: <c>v · (1 + a·(1−v))</c> - multiplikativ am unteren Ende, auslaufend zum
-        ''' Endwert. Die Kennlinie hat hier zwei Fehler hinter sich, je einer pro Ende:
-        ''' 1. URSPRUENGLICH stand hier <c>v · (1+a)</c> mit Kappung auf 1 - das brannte Farben AUS
-        '''    (Luminanz +50: jedes Pixel ab L 0,67 wurde exakt Weiss, eine plattgedrueckte Flaeche
-        '''    ohne Binnenzeichnung; bei der Saettigung kippte mit der Kappung auch der Farbton).
-        ''' 2. Der ERSTE Fix interpolierte linear zum Endwert (<c>v + (1−v)·a</c>) - der hob dafuer
-        '''    SCHWARZ an: f(0) = a, ein dunkles sattes Pixel (L 0,05) sprang bei +28 auf 0,32.
-        '''    Gemessen am Konzertfoto-Vergleich: die Magenta/Purpur-Buehnenlichter hoben
-        '''    den ganzen dunklen Hintergrund an, waehrend der Schwarzboden der Referenz exakt am
-        '''    Kurven-Fusspunkt blieb - Adobes Regler nageln Schwarz fest.
-        ''' Die Parabel erfuellt beide Enden: f(0) = 0 (Schwarz bleibt Schwarz, unten wirkt sie wie
-        ''' die Multiplikation), f(1) = 1 mit Steigung 1−a (laeuft weich aus statt zu klemmen),
-        ''' monoton fuer |a| <= 1 (f' = 1 + a − 2av >= 1 − a >= 0). Kein gekappter Bereich, Verlaeufe
-        ''' bleiben ueberall unterscheidbar.
-        '''
-        ''' NACH UNTEN bleibt die Multiplikation gegen 0 (<c>v · (1+a)</c>). Sie kann nicht klemmen
-        ''' (amount >= -1) und war immer richtig. Beide Zweige treffen sich bei a = 0 im Wert; die
-        ''' Reglersteigung springt dort minimal (1·(1−v)-Faktor nur auf der Plusseite) - das liegt in
-        ''' der REGLER-Achse, das Bild bleibt fuer jede Reglerstellung stetig.
-        '''
-        ''' EICHUNG GEGEN ADOBE: ±100 bedeutet damit wie bei Adobe "volle Wirkung", der Import
-        ''' uebernimmt SaturationAdjustment*/LuminanceAdjustment*/GrayMixer* weiterhin 1:1 (nur der
-        ''' Farbton braucht HueImportScale).</summary>
         ''' <summary>Kennlinie der HSL-Band-SAETTIGUNG. Eigene Kurve, nicht die von der Luminanz -
         ''' die beiden Groessen vertragen Verschiedenes: L = 1 ist Weiss (und darf nicht ausbrennen),
         ''' S = 1 ist nur volle Farbe.
@@ -700,6 +673,37 @@ Namespace Services
             Return 1.0 - (1.0 - value) * Math.Exp(-amount * value / (1.0 - value))
         End Function
 
+        ''' <summary>Kennlinie der HSL-Band-LUMINANZ. <paramref name="amount"/>
+        ''' ist der Reglerwert geteilt durch 100 und mit der Chroma gewichtet, liegt also in [-1, 1];
+        ''' <paramref name="value"/> ist L in [0, 1]. Ergebnis bleibt ohne Klemmung in [0, 1].
+        '''
+        ''' Die SAETTIGUNG hatte einmal dieselbe Kurve und hat inzwischen eine eigene, siehe
+        ''' <see cref="ApplyHslSaturationGain"/>: bei L ist das obere Ende Weiss und darf nicht
+        ''' ausbrennen, bei S ist es nur volle Farbe.
+        '''
+        ''' NACH OBEN: <c>v · (1 + a·(1−v))</c> - multiplikativ am unteren Ende, auslaufend zum
+        ''' Endwert. Die Kennlinie hat hier zwei Fehler hinter sich, je einer pro Ende:
+        ''' 1. URSPRUENGLICH stand hier <c>v · (1+a)</c> mit Kappung auf 1 - das brannte Farben AUS
+        '''    (Luminanz +50: jedes Pixel ab L 0,67 wurde exakt Weiss, eine plattgedrueckte Flaeche
+        '''    ohne Binnenzeichnung; bei der Saettigung kippte mit der Kappung auch der Farbton).
+        ''' 2. Der ERSTE Fix interpolierte linear zum Endwert (<c>v + (1−v)·a</c>) - der hob dafuer
+        '''    SCHWARZ an: f(0) = a, ein dunkles sattes Pixel (L 0,05) sprang bei +28 auf 0,32.
+        '''    Gemessen am Konzertfoto-Vergleich: die Magenta/Purpur-Buehnenlichter hoben
+        '''    den ganzen dunklen Hintergrund an, waehrend der Schwarzboden der Referenz exakt am
+        '''    Kurven-Fusspunkt blieb - Adobes Regler nageln Schwarz fest.
+        ''' Die Parabel erfuellt beide Enden: f(0) = 0 (Schwarz bleibt Schwarz, unten wirkt sie wie
+        ''' die Multiplikation), f(1) = 1 mit Steigung 1−a (laeuft weich aus statt zu klemmen),
+        ''' monoton fuer |a| <= 1 (f' = 1 + a − 2av >= 1 − a >= 0). Kein gekappter Bereich, Verlaeufe
+        ''' bleiben ueberall unterscheidbar.
+        '''
+        ''' NACH UNTEN bleibt die Multiplikation gegen 0 (<c>v · (1+a)</c>). Sie kann nicht klemmen
+        ''' (amount >= -1) und war immer richtig. Beide Zweige treffen sich bei a = 0 im Wert; die
+        ''' Reglersteigung springt dort minimal (1·(1−v)-Faktor nur auf der Plusseite) - das liegt in
+        ''' der REGLER-Achse, das Bild bleibt fuer jede Reglerstellung stetig.
+        '''
+        ''' EICHUNG GEGEN ADOBE: ±100 bedeutet damit wie bei Adobe "volle Wirkung", der Import
+        ''' uebernimmt LuminanceAdjustment*/GrayMixer* weiterhin 1:1 (nur der Farbton braucht
+        ''' HueImportScale).</summary>
         Private Shared Function ApplyHslBandGain(value As Double, amount As Double) As Double
             ' Die Parabel ist nur fuer |amount| <= 1 randtreu (f(1)=1). Der Preset-Import klemmt
             ' auf +-100, eine handbearbeitete .fpx/.fpxmp kann aber mehr enthalten - dann liefe

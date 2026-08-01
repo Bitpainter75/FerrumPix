@@ -5996,4 +5996,7 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Convertire la selezione in una maschera</value>
   </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
+    <value>Il cestino non è una persona e per questo non accetta alcun nome. Per assegnare un singolo volto che si trova lì, scrivi il nome nella barra informazioni accanto alla foto.</value>
+  </data>
 </root>

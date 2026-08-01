@@ -78,6 +78,25 @@ Namespace Services
         Public Sub SaveFaces(filePath As String, sourceModifiedAt As String,
                              faces As IReadOnlyList(Of DetectedFace))
             If String.IsNullOrWhiteSpace(filePath) Then Return
+
+            ' Die Mitten werden waehrend der Transaktion FORTGESCHRIEBEN, damit jedes weitere
+            ' Gesicht dieses Bildes gegen den aktuellen Stand vergleicht. Kommt die Transaktion nicht
+            ' durch, ist die Datenbank unveraendert und der Speicher waere die einzige Stelle, an der
+            ' die Aenderung noch stuende - deshalb fliegt er dann weg und wird neu gelesen.
+            Dim committed = False
+            Try
+                SaveFacesCore(filePath, sourceModifiedAt, faces, committed)
+            Finally
+                If Not committed Then InvalidateCentroids()
+            End Try
+        End Sub
+
+        ''' <summary>Der Rumpf von <see cref="SaveFaces"/>. Eigene Methode, damit das Absichern der
+        ''' Gruppenmitten oben in zwei Zeilen steht, statt die ganze Transaktion eine Ebene tiefer zu
+        ''' schieben.</summary>
+        ''' <param name="committed">Wird auf True gesetzt, sobald die Transaktion durch ist.</param>
+        Private Sub SaveFacesCore(filePath As String, sourceModifiedAt As String,
+                                  faces As IReadOnlyList(Of DetectedFace), ByRef committed As Boolean)
             Dim stamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
 
             Using conn = New SqliteConnection(_connectionString)
@@ -100,12 +119,35 @@ Namespace Services
                         End Using
                     End Using
 
+                    ' Was gleich geloescht wird, faellt aus den Gruppenmitten heraus - sonst zoege
+                    ' ein erneuter Durchlauf gegen Mitten, in denen die eigenen alten Gesichter
+                    ' noch stecken. Gelesen VOR dem Loeschen, angewandt NACH dem Commit.
+                    Dim removedFromCentroids As New List(Of (PersonId As String, Vector As Single()))()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "SELECT f.PersonId, f.Embedding FROM Face f " &
+                                          "JOIN Person p ON p.Id = f.PersonId " &
+                                          "WHERE f.FilePath=$p AND f.IsManual=0 " &
+                                          "AND f.Embedding IS NOT NULL AND p.IsUnknownBin=0"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                removedFromCentroids.Add((reader.GetString(0),
+                                                          FromBlob(CType(reader.GetValue(1), Byte()))))
+                            End While
+                        End Using
+                    End Using
+
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
                         cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p AND IsManual=0"
                         cmd.Parameters.AddWithValue("$p", filePath)
                         cmd.ExecuteNonQuery()
                     End Using
+                    ' Der Speicher muss die Loeschung schon KENNEN, bevor das erste neue Gesicht
+                    ' zugeordnet wird - sonst verglichen die neuen Gesichter gegen die alten
+                    ' Mitten desselben Bildes.
+                    RemoveFromCentroids(removedFromCentroids)
 
                     Dim written = 0
                     ' EINE PERSON STEHT EINMAL AUF EINEM BILD. Wer hier schon zugeordnet wurde,
@@ -167,6 +209,9 @@ Namespace Services
                                 cmd.Parameters.AddWithValue("$t", stamp)
                                 cmd.ExecuteNonQuery()
                             End Using
+                            ' Erst NACH dem Eintrag in die Mitten: das naechste Gesicht dieses
+                            ' Bildes soll bereits dagegen vergleichen koennen.
+                            If personId IsNot Nothing Then AddToCentroids(personId, face.Embedding)
                             written += 1
                         Next
                     End If
@@ -187,6 +232,7 @@ Namespace Services
                     End Using
 
                     tx.Commit()
+                    committed = True
                 End Using
             End Using
         End Sub
@@ -323,11 +369,65 @@ Namespace Services
             Return newId
         End Function
 
-        ''' <summary>Je Person der Mittelwert ihrer Merkmalsreihen. Wird bei JEDEM neuen Gesicht
-        ''' gebraucht; bei sehr grossen Bestaenden ist das der Punkt, an dem sich ein Zwischenspeicher
-        ''' lohnt - solange die Personenzahl im Hunderterbereich liegt, kostet es nichts.</summary>
+        ' ── Die Gruppenmitten ────────────────────────────────────────────────────
+        '
+        ' GEHALTEN WIRD DIE SUMME, NICHT DER MITTELWERT. Aus Summe und Anzahl laesst sich die Mitte
+        ' jederzeit ausrechnen, und beide lassen sich fortschreiben: ein Gesicht kommt dazu, eines
+        ' faellt weg. Aus einem Mittelwert allein ginge das nicht zurueck.
+        '
+        ' WARUM UEBERHAUPT: die Mitten wurden bei JEDEM einzelnen Gesicht neu ueber den GANZEN
+        ' Bestand gelesen. Der Aufwand wuchs damit im Quadrat der Gesichterzahl. Gemessen am Bestand
+        ' sind 571 Reihen zu 2048 Byte rund 1,17 MB je Durchgang - bei 664 Gesichtern faellt das
+        ' nicht auf. Bei den 25000 Bildern, von denen die Planung ausgeht, sind es gut 37000
+        ' Gesichter: 76 MB je Durchgang, 37000 mal gelesen, zusammen ueber zwei Terabyte allein fuer
+        ' die Mitten. Das ist mehr, als die Erkennung selbst kostet.
+        '
+        ' Der alte Kommentar nannte die PERSONENzahl als Maßstab. Das war die falsche Groesse: die
+        ' Personenzahl bestimmt nur, wie viele Mitten herauskommen - gelesen wurde ueber alle
+        ' GESICHTER.
+
+        Private _centroidSums As Dictionary(Of String, Double())
+        Private _centroidCounts As Dictionary(Of String, Integer)
+
+        ''' <summary>Die gemerkten Mitten wegwerfen. Ruft JEDE Aenderung, die Gesichter zwischen
+        ''' Personen bewegt oder Personen entfernt - dort ist das Fortschreiben nicht die Muehe wert,
+        ''' weil es Handgriffe einzeln und selten sind, waehrend der Durchlauf zehntausende Gesichter
+        ''' hintereinander eintraegt.</summary>
+        Private Sub InvalidateCentroids()
+            SyncLock _centroidLock
+                _centroidSums = Nothing
+                _centroidCounts = Nothing
+            End SyncLock
+        End Sub
+
+        Private ReadOnly _centroidLock As New Object()
+
+        ''' <summary>Je Person der Mittelwert ihrer Merkmalsreihen.
+        '''
+        ''' Gelesen wird die Datenbank nur beim ERSTEN Mal und nach jeder Aenderung, die die Mitten
+        ''' verschiebt. Danach steht die Summe im Speicher und wird fortgeschrieben.</summary>
         Private Function LoadPersonCentroidsLocked(conn As SqliteConnection,
                                                    tx As SqliteTransaction) As Dictionary(Of String, Single())
+            SyncLock _centroidLock
+                EnsureCentroidsLocked(conn, tx)
+
+                Dim result As New Dictionary(Of String, Single())(StringComparer.Ordinal)
+                For Each kv In _centroidSums
+                    Dim n = Math.Max(1, _centroidCounts(kv.Key))
+                    Dim mean(kv.Value.Length - 1) As Single
+                    For i = 0 To kv.Value.Length - 1
+                        mean(i) = CSng(kv.Value(i) / n)
+                    Next
+                    result(kv.Key) = mean
+                Next
+                Return result
+            End SyncLock
+        End Function
+
+        ''' <summary>Baut Summe und Anzahl je Person aus der Datenbank auf, falls sie fehlen.</summary>
+        Private Sub EnsureCentroidsLocked(conn As SqliteConnection, tx As SqliteTransaction)
+            If _centroidSums IsNot Nothing Then Return
+
             Dim sums As New Dictionary(Of String, Double())(StringComparer.Ordinal)
             Dim counts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
 
@@ -343,33 +443,84 @@ Namespace Services
                     While reader.Read()
                         Dim id = reader.GetString(0)
                         Dim vec = FromBlob(CType(reader.GetValue(1), Byte()))
-                        If vec Is Nothing OrElse vec.Length = 0 Then Continue While
-                        Dim acc As Double() = Nothing
-                        If Not sums.TryGetValue(id, acc) Then
-                            acc = New Double(vec.Length - 1) {}
-                            sums(id) = acc
-                            counts(id) = 0
-                        End If
-                        If acc.Length <> vec.Length Then Continue While
-                        For i = 0 To vec.Length - 1
-                            acc(i) += vec(i)
-                        Next
-                        counts(id) += 1
+                        AddToCentroidLocked(sums, counts, id, vec)
                     End While
                 End Using
             End Using
 
-            Dim result As New Dictionary(Of String, Single())(StringComparer.Ordinal)
-            For Each kv In sums
-                Dim n = Math.Max(1, counts(kv.Key))
-                Dim mean(kv.Value.Length - 1) As Single
-                For i = 0 To kv.Value.Length - 1
-                    mean(i) = CSng(kv.Value(i) / n)
-                Next
-                result(kv.Key) = mean
+            _centroidSums = sums
+            _centroidCounts = counts
+        End Sub
+
+        ''' <summary>Eine Merkmalsreihe zur Summe einer Person schlagen.
+        '''
+        ''' Die ERSTE Reihe legt die Laenge fest, jede abweichende faellt weg - nach einem
+        ''' Modellwechsel liegen alte 128er-Reihen neben neuen 512ern, und die beschreiben etwas
+        ''' voellig anderes. Dieselbe Sperre wie in <see cref="FaceDetectionService.Similarity"/>.</summary>
+        Private Shared Sub AddToCentroidLocked(sums As Dictionary(Of String, Double()),
+                                               counts As Dictionary(Of String, Integer),
+                                               personId As String, vec As Single())
+            If String.IsNullOrEmpty(personId) OrElse vec Is Nothing OrElse vec.Length = 0 Then Return
+            Dim acc As Double() = Nothing
+            If Not sums.TryGetValue(personId, acc) Then
+                acc = New Double(vec.Length - 1) {}
+                sums(personId) = acc
+                counts(personId) = 0
+            End If
+            If acc.Length <> vec.Length Then Return
+            For i = 0 To vec.Length - 1
+                acc(i) += vec(i)
             Next
-            Return result
-        End Function
+            counts(personId) += 1
+        End Sub
+
+        ''' <summary>Eine Merkmalsreihe wieder abziehen. Faellt die Anzahl auf null, verschwindet die
+        ''' Person aus den Mitten - eine Gruppe ohne Gesicht zieht nichts an.</summary>
+        Private Shared Sub RemoveFromCentroidLocked(sums As Dictionary(Of String, Double()),
+                                                    counts As Dictionary(Of String, Integer),
+                                                    personId As String, vec As Single())
+            If String.IsNullOrEmpty(personId) OrElse vec Is Nothing OrElse vec.Length = 0 Then Return
+            Dim acc As Double() = Nothing
+            If Not sums.TryGetValue(personId, acc) Then Return
+            If acc.Length <> vec.Length Then Return
+            For i = 0 To vec.Length - 1
+                acc(i) -= vec(i)
+            Next
+            counts(personId) -= 1
+            If counts(personId) <= 0 Then
+                sums.Remove(personId)
+                counts.Remove(personId)
+            End If
+        End Sub
+
+        ''' <summary>Gesichter aus den gemerkten Mitten nehmen, weil sie gerade geloescht wurden.
+        '''
+        ''' SOFORT und nicht erst nach dem Commit: die neuen Gesichter DESSELBEN Bildes werden noch
+        ''' in derselben Transaktion zugeordnet und muessen gegen Mitten vergleichen, in denen die
+        ''' eigenen alten Funde nicht mehr stecken. Genau so verhielt sich die alte Fassung, die bei
+        ''' jedem Gesicht frisch aus der Datenbank las. Bricht die Transaktion ab, wirft
+        ''' <see cref="SaveFaces"/> den Speicher weg.
+        '''
+        ''' Sind die Mitten gar nicht aufgebaut, ist nichts zu tun - der naechste Zugriff liest sie
+        ''' ohnehin frisch.</summary>
+        Private Sub RemoveFromCentroids(removed As List(Of (PersonId As String, Vector As Single())))
+            SyncLock _centroidLock
+                If _centroidSums Is Nothing Then Return
+                For Each row In removed
+                    RemoveFromCentroidLocked(_centroidSums, _centroidCounts, row.PersonId, row.Vector)
+                Next
+            End SyncLock
+        End Sub
+
+        ''' <summary>Ein frisch eingetragenes Gesicht in die Mitten aufnehmen. Damit steht es schon
+        ''' fuer das NAECHSTE Gesicht desselben Durchlaufs zur Verfuegung - auch das machte die alte
+        ''' Fassung so, weil sie nach jedem Eintrag neu las.</summary>
+        Private Sub AddToCentroids(personId As String, vec As Single())
+            SyncLock _centroidLock
+                If _centroidSums Is Nothing Then Return
+                AddToCentroidLocked(_centroidSums, _centroidCounts, personId, vec)
+            End SyncLock
+        End Sub
 
         ' ── Lesen ────────────────────────────────────────────────────────────────
 
@@ -524,6 +675,8 @@ Namespace Services
                         cmd.ExecuteNonQuery()
                     End Using
                     tx.Commit()
+                    ' Gesichter haben die Gruppe gewechselt: die gemerkten Mitten stimmen nicht mehr.
+                    InvalidateCentroids()
                 End Using
             End Using
         End Sub
@@ -707,6 +860,8 @@ Namespace Services
                     End If
 
                     tx.Commit()
+                    ' Gesichter haben die Gruppe gewechselt: die gemerkten Mitten stimmen nicht mehr.
+                    InvalidateCentroids()
                     Return newId
                 End Using
             End Using
@@ -744,7 +899,15 @@ Namespace Services
 
         ''' <summary>Gibt einer Gruppe einen Namen. Traegt schon jemand anderes denselben Namen,
         ''' werden beide Gruppen VERSCHMOLZEN - zwei Gruppen mit demselben Namen waeren fuer den
-        ''' Benutzer eine Person, und er hat mit der Benennung genau das gesagt.</summary>
+        ''' Benutzer eine Person, und er hat mit der Benennung genau das gesagt.
+        '''
+        ''' DIE SAMMELGRUPPE BLEIBT AUSSEN VOR, und die Sperre sitzt HIER und nicht nur in
+        ''' <see cref="ApplyPersonName"/>. Sie stand dort einmal allein, und die Personenverwaltung
+        ''' ging an ihr vorbei: ein vorhandener Name am geoeffneten Korb liess den Verschmelzungszweig
+        ''' greifen, schob SAEMTLICHE herausgeloesten Gesichter zu dieser Person und loeschte die
+        ''' Korbzeile - jede Berichtigung des Benutzers auf einen Schlag zurueckgenommen. Ein neuer
+        ''' Name machte den Korb such- und filterbar, weil GetPersonNamesByPath nur nach einem
+        ''' nichtleeren Namen fragt. Eine Regel, die nur ein Aufrufer einhaelt, ist keine.</summary>
         ''' <param name="faceId">Das Gesicht, an dem der Name eingetragen wurde, sofern bekannt.
         ''' Es gilt danach als von Hand gesetzt und ueberlebt jeden weiteren Durchlauf.
         '''
@@ -758,6 +921,17 @@ Namespace Services
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using tx = conn.BeginTransaction()
+                    ' In DERSELBEN Transaktion gefragt wie alles Weitere - eine Abfrage davor waere
+                    ' eine Aussage ueber einen Zustand, der beim Schreiben schon ein anderer sein
+                    ' kann.
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "SELECT IsUnknownBin FROM Person WHERE Id=$id"
+                        cmd.Parameters.AddWithValue("$id", personId)
+                        Dim bin = cmd.ExecuteScalar()
+                        If bin IsNot Nothing AndAlso Not TypeOf bin Is DBNull AndAlso CInt(bin) <> 0 Then Return
+                    End Using
+
                     Dim mergeInto As String = Nothing
                     If clean.Length > 0 Then
                         Using cmd = conn.CreateCommand()
@@ -800,6 +974,8 @@ Namespace Services
                         End Using
                     End If
                     tx.Commit()
+                    ' Gesichter haben die Gruppe gewechselt: die gemerkten Mitten stimmen nicht mehr.
+                    InvalidateCentroids()
                 End Using
             End Using
         End Sub
@@ -934,6 +1110,8 @@ Namespace Services
                         End Using
                     End If
                     tx.Commit()
+                    ' Gesichter haben die Gruppe gewechselt: die gemerkten Mitten stimmen nicht mehr.
+                    InvalidateCentroids()
                 End Using
             End Using
         End Sub
@@ -948,6 +1126,8 @@ Namespace Services
                     cmd.ExecuteNonQuery()
                 End Using
             End Using
+            ' Es gibt keine Mitten mehr, weil es keine Gesichter mehr gibt.
+            InvalidateCentroids()
         End Sub
 
         ' ── Merkmalsreihe als BLOB ───────────────────────────────────────────────

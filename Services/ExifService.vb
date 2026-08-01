@@ -950,15 +950,18 @@ Namespace Services
             Return Nothing
         End Function
 
-        ''' <summary>Ortsname und Land bestimmen. ZWEI QUELLEN, und die Reihenfolge ist der Punkt.
+        ''' <summary>Ortsname und Land aus den Koordinaten bestimmen.
         '''
-        ''' ZUERST die Datei selbst: hat jemand in IPTC oder XMP einen Ort eingetragen, gilt der. Er
-        ''' ist genauer als alles, was sich aus Koordinaten ableiten laesst - dort steht der Ort, den
-        ''' ein Mensch gemeint hat, und nicht "naechster Ort ab 1000 Einwohnern".
+        ''' Gefuellt wird ueber die Ortstabelle, und nur wenn Koordinaten vorliegen. Das deckt den
+        ''' Normalfall ab: eine Kamera schreibt Koordinaten, aber keine Namen. Liegt kein Ort nah
+        ''' genug, bleibt das Feld leer (PlaceLookupService.MaxDistanceKm) - ein falscher Ortsname
+        ''' waere schlechter als keiner.
         '''
-        ''' ERST DANN die Ortstabelle, und nur wenn Koordinaten vorliegen. Sie deckt den Normalfall
-        ''' ab, dass gar nichts eingetragen ist: eine Kamera schreibt Koordinaten, aber keine Namen.
-        ''' Liegt kein Ort nah genug, bleibt das Feld leer (PlaceLookupService.MaxDistanceKm).
+        ''' Ein schon gesetztes Feld bleibt unangetastet. Das ist aber NOCH KEIN Vorrang der Datei:
+        ''' IPTC "City" und XMP "photoshop:City" landen gar nicht in <c>ExifData</c>, sondern erst in
+        ''' den Katalog-Zusammenfassungen, die an anderer Stelle entstehen. Solange das nicht
+        ''' zusammengefuehrt ist, fuellt hier allein die Ortstabelle - siehe den Hinweis im Rumpf und
+        ''' die offenen Punkte.
         '''
         ''' Ohne Ortstabelle passiert schlicht nichts weiter - sie ist Beigabe, kein Bestandteil.</summary>
         Private Shared Sub FillPlaceNames(result As ExifSearchFields, data As ExifData)

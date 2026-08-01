@@ -2191,6 +2191,11 @@ Namespace Services
         ''' Friend: auch PrintService skaliert Bilder auf die Druckseite und braucht dieselbe Abtastung.
         Friend Shared ReadOnly SamplingHigh As New SKSamplingOptions(SKCubicResampler.Mitchell)
 
+        ''' Die mittlere Stufe derselben Abbildung. Friend, weil die Gesichtsausschnitte der
+        ''' Infoleiste und der Personenverwaltung sie brauchen: ein Feld von 88 Punkten rechtfertigt
+        ''' die kubische Abtastung nicht, und ohne ausdrueckliche Angabe faellt es auf Nearest.
+        Friend Shared ReadOnly SamplingMedium As New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)
+
         ''' Zeichnet eine Bitmap mit ausdrücklicher Abtastung. SKCanvas.DrawBitmap kennt keine
         ''' SKSamplingOptions-Überladung, DrawImage schon - ohne sie fiele die Skalierung auf
         ''' Nearest zurück, weil SKSamplingOptions.Default nicht filtert.
@@ -2201,7 +2206,9 @@ Namespace Services
             End Using
         End Sub
 
-        Private Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, x As Single, y As Single,
+        ''' Friend wie die Rechteck-Fassung darueber: das Vergleichsmodell zeichnet sein Gesicht
+        ''' ueber eine gesetzte Matrix und braucht deshalb genau diese Ueberladung.
+        Friend Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, x As Single, y As Single,
                                              sampling As SKSamplingOptions, paint As SKPaint)
             Using image = SKImage.FromBitmap(bitmap)
                 canvas.DrawImage(image, x, y, sampling, paint)
@@ -3776,8 +3783,30 @@ Namespace Services
             Dim srcBuffer As Byte() = Nothing
             Dim srcStride, ri, gi, bi, ai As Integer
             Dim hasBuffer = TryBorrowRgbaLikeBuffer(source, srcBuffer, srcStride, ri, gi, bi, ai)
-            Dim work As SKBitmap = If(hasBuffer, Nothing, CloneBitmap(source))
             Dim target = New SKBitmap(w, h, source.ColorType, source.AlphaType)
+
+            ' ZWEI ANNAHMEN, die der Pufferweg still voraussetzte - jetzt geprueft, statt geglaubt.
+            '
+            ' 1. GLEICHE ZEILENLAENGE. Geschrieben wird in einen Puffer in der Groesse der QUELLE,
+            '    indiziert mit deren Stride, und am Stueck in das FRISCH angelegte Ziel kopiert. Wäre
+            '    die Quelle gepolstert, liefe die Kopie ueber das Ziel hinaus. Fuer alles, was Skia
+            '    hier selbst anlegt, sind beide gleich - aber die Invariante steht nirgends.
+            '
+            ' 2. PREMULTIPLIZIERT. Ent- und Rueckrechnung bilden nach, was GetPixel/SetPixel auf
+            '    einem Premul-Bitmap tun. Auf einem UNPREMUL-Bitmap tun die beiden gar nichts, und
+            '    der Pufferweg lieferte an teiltransparenten Stellen ein anderes Bild als der
+            '    Rueckfallzweig darunter. Bei Opaque ist Alpha 255 und beide Rechnungen sind die
+            '    Identitaet, das ist also unbedenklich.
+            '
+            ' Trifft eine der beiden nicht zu, geht es ueber GetPixel/SetPixel weiter - langsam, aber
+            ' richtig. Das ist derselbe Rueckfall, den exotische Farbtypen ohnehin nehmen.
+            If hasBuffer AndAlso (srcStride <> target.RowBytes OrElse
+                                  source.AlphaType = SKAlphaType.Unpremul) Then
+                hasBuffer = False
+                srcBuffer = Nothing
+            End If
+
+            Dim work As SKBitmap = If(hasBuffer, Nothing, CloneBitmap(source))
             Try
                 ' In Helligkeit und zwei Farbdifferenzen zerlegen. Nicht wegen der Norm, sondern weil
                 ' sich nur so unterschiedlich hart schrumpfen laesst.

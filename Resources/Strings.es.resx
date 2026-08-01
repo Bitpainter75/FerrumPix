@@ -5996,4 +5996,7 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Convertir la selección en una máscara</value>
   </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
+    <value>La cesta de descartes no es una persona y por eso no admite ningún nombre. Para asignar una cara suelta de ahí, escribe el nombre en la barra de información junto a la foto.</value>
+  </data>
 </root>

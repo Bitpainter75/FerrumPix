@@ -258,10 +258,10 @@ Namespace Services
                 Using target = New SkiaSharp.SKBitmap(CropEdge, CropEdge, SkiaSharp.SKColorType.Bgra8888, SkiaSharp.SKAlphaType.Premul)
                     Using canvas = New SkiaSharp.SKCanvas(target)
                         canvas.Clear(SkiaSharp.SKColors.Black)
-                        canvas.DrawBitmap(source,
-                                          New SkiaSharp.SKRect(cropX, cropY, cropX + cropWidth, cropY + cropHeight),
-                                          New SkiaSharp.SKRect(0, 0, CropEdge, CropEdge),
-                                          New SkiaSharp.SKPaint With {.FilterQuality = SkiaSharp.SKFilterQuality.Medium})
+                        ImageProcessor.DrawBitmapSampled(canvas, source,
+                                                         New SkiaSharp.SKRect(cropX, cropY, cropX + cropWidth, cropY + cropHeight),
+                                                         New SkiaSharp.SKRect(0, 0, CropEdge, CropEdge),
+                                                         ImageProcessor.SamplingMedium, Nothing)
                     End Using
                     Using image = SkiaSharp.SKImage.FromBitmap(target)
                         Using data = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 90)

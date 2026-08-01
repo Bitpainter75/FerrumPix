@@ -5997,4 +5997,7 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Turn the selection into a mask</value>
   </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
+    <value>The unknown bin is not a person and so it takes no name. To assign a single face out of it, type the name in the info sidebar next to the photo.</value>
+  </data>
 </root>

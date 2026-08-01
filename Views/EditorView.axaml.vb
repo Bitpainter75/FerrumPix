@@ -50,8 +50,6 @@ Namespace Views
         Private _isPanMode As Boolean = False
         Private _spacePanActive As Boolean = False
         Private _isPanDragging As Boolean = False
-        ''' Nach einem echten Zug mit der rechten Taste ist kein Kontextmenue gemeint.
-        Private _rightButtonDragged As Boolean = False
         Private _panStartX As Double = 0
         Private _panStartY As Double = 0
         Private _panStartOffsetX As Double = 0
@@ -247,25 +245,31 @@ Namespace Views
 
 
 
-        ''' <summary>Rechtsklick irgendwo im Editor. EIN Handler fuer alle drei Aufruforte:
-        ''' Buehne, Filmstreifen und Fusszeile. Die betroffenen Elemente kommen aus
-        ''' <see cref="ContextTarget"/>, der einen Stelle, die das fuer die ganze Anwendung
-        ''' beantwortet.</summary>
+        ''' <summary>Rechtsklick im Editor - AUSSER auf der Buehne.
+        '''
+        ''' AUF DEM BILD KEIN MENUE: dort gehoert die rechte Taste dem Schwenken und, mit dem Rad,
+        ''' dem Zoomen. Beides auf derselben Taste hiess dauernd abzuwaegen, ob ein Druck nun ein Zug
+        ''' war oder nicht - ein Menue, das nach einem kurzen Schwenk aufspringt, steht im Weg; eines,
+        ''' das nach einem langsamen Klick ausbleibt, wirkt kaputt. Was auf der Buehne angeboten
+        ''' wurde, steht im Menue der Fusszeile (<see cref="OnFooterMenuButtonClick"/>).
+        '''
+        ''' IM FILMSTREIFEN BLEIBT ER: dort wird nicht geschwenkt, der Rechtsklick meint eine Kachel,
+        ''' und das ist der uebliche Weg. Die betroffenen Elemente kommen wie ueberall aus
+        ''' <see cref="ContextTarget"/>.</summary>
         Private Sub OnContextRequested(sender As Object, e As Avalonia.Input.ContextRequestedEventArgs)
-            ' Die rechte Taste schwenkt hier das Bild. Wurde wirklich gezogen, ist kein Menue
-            ' gemeint - ein Klick auf der Stelle dagegen schon.
-            If _rightButtonDragged Then
-                _rightButtonDragged = False
-                e.Handled = True
-                Return
-            End If
-
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim menu = Me.FindControl(Of ContextMenu)("EditorKontextMenu")
             If vm Is Nothing OrElse menu Is Nothing Then Return
 
             Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
             Dim hit = ContextTarget.UnderPointer(e, filmstrip)
+
+            ' Auf der Buehne ist Schluss - und zwar BEVOR irgendetwas gesetzt wird.
+            Dim stage = Me.FindControl(Of Canvas)("PreviewCanvas")
+            If hit Is Nothing AndAlso PointerIsWithin(e, stage) Then
+                e.Handled = True
+                Return
+            End If
 
             ' Ein Rechtsklick im Filmstreifen meint DIESES Bild. Die Kommandos des Editors
             ' arbeiten aber alle auf dem geladenen Bild - es reicht also nicht, das getroffene
@@ -274,11 +278,7 @@ Namespace Views
                 vm.NavigateToFilmstripItem(hit)
             End If
 
-            Dim stage = Me.FindControl(Of Canvas)("PreviewCanvas")
-            Dim onStage = hit Is Nothing AndAlso PointerIsWithin(e, stage)
-
-            vm.ContextSite = If(hit IsNot Nothing, MenuSite.EditorFilmstrip,
-                                If(onStage, MenuSite.EditorStage, MenuSite.EditorFooter))
+            vm.ContextSite = If(hit IsNot Nothing, MenuSite.EditorFilmstrip, MenuSite.EditorFooter)
             vm.ContextItems = ContextTarget.Affected(hit, Nothing, StageItem(vm))
 
             ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
@@ -1566,7 +1566,6 @@ Namespace Views
                 _panStartOffsetX = _panX
                 _panStartOffsetY = _panY
                 _isPanDragging = True
-                _rightButtonDragged = False
                 e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
@@ -2247,11 +2246,9 @@ Namespace Views
                     Return
                 End If
                 Dim pos = e.GetPosition(canvas)
-                ' Wurde wirklich GEZOGEN, ist kein Kontextmenue gemeint. Ein paar Bildpunkte
-                ' Wackeln beim Klicken duerfen dagegen nicht schon als Zug gelten.
-                If Math.Abs(pos.X - _panStartX) > 3 OrElse Math.Abs(pos.Y - _panStartY) > 3 Then
-                    _rightButtonDragged = True
-                End If
+                ' Hier stand einmal die Unterscheidung "Zug oder Klick" - sie hielt das Kontextmenue
+                ' nach einem Schwenk zurueck. Im Editor gibt es keines mehr (OnContextRequested),
+                ' also entfaellt sie: die rechte Taste tut hier nur noch eines.
                 _panX = _panStartOffsetX + (pos.X - _panStartX)
                 _panY = _panStartOffsetY + (pos.Y - _panStartY)
                 UpdateSliderLayout()

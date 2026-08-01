@@ -5996,4 +5996,7 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Auswahl in eine Maske umwandeln</value>
   </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
+    <value>Der Ablagekorb ist keine Person und nimmt deshalb keinen Namen an. Einen einzelnen Kopf daraus ordnet man in der Infoleiste am Bild zu.</value>
+  </data>
 </root>

@@ -5996,4 +5996,7 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Convertir la sélection en masque</value>
   </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
+    <value>La corbeille n'est pas une personne et n'accepte donc aucun nom. Pour attribuer un visage isolé qui s'y trouve, saisissez le nom dans la barre d'informations à côté de la photo.</value>
+  </data>
 </root>
