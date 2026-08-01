@@ -20,6 +20,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Develop RAW files from the sensor data, with lens correction from measured data for some 1300 lenses.
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
 - Open JPEG, PNG, WEBP, BMP, GIF and RAW, plus HEIC/HEIF/AVIF, TIFF and Photoshop files read-only.
+- Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
 - Connect to your own Immich server for browsing, upload, download, editing and metadata sync.
 
 Your originals are never changed behind your back: edits to RAW and Photoshop files live in a small sidecar next to the file, and everything else is only written when you save.
@@ -33,6 +34,10 @@ Folder tree, grid and list view, fast thumbnails, file operations, ratings, favo
 Ratings, colour labels and keywords are read from XMP sidecars written by Lightroom, darktable or digiKam, so a collection you tagged elsewhere arrives with its work intact. Only empty fields are filled and keywords are merged.
 
 An info panel shows the selected picture with its shot data, histogram, rating, label and keywords, and with several selected it shows what they have in common - a rating or a keyword set there applies to all of them. A keyword click lists every picture carrying it, and a button next to the filter holds all keywords in use with their counts, several selectable at once.
+
+With people switched on, a second button next to it does the same for the people in your photos, and starts the search for a folder from inside that menu. Photos of the same person end up in one group; you give the group its name in the info panel, where every face on the picture is listed with its own crop. Where the recognition put a face with the wrong person, one button next to it takes that face back out, and only that photo changes. Detecting again goes over every photo, so an improved recognition reaches older ones too - but anything you set by hand stays untouched. With places switched on, a third button lists every place a photo was taken. The three buttons narrow each other down: a person, at a place, with a keyword is one question with three parts. A middle click on any filter or sort button puts it back to its default.
+
+Person and place are also shown in the info panel of the viewer and the editor, so a picture on screen says who is on it and where it was taken.
 
 Batch work runs from the context menu or the footer menu: rename, convert, resize, watermark, filters, metadata removal - and *Export to*, which puts all of it into one dialog with a name pattern, a look, a size, a watermark and a target format, locally or straight to Immich. `.fpx` projects are one of the targets, so a batch can come out as files you can keep editing.
 
@@ -84,9 +89,11 @@ Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…*
 
 ### Model files
 
-Three features use a model file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), and removing an object. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
+Five features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
 
-Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT) and [LaMa](https://github.com/advimman/lama) (Apache-2.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
+Finding people and naming places have to be switched on there as well, on top of fetching the file. A face is a different matter from a keyword, and where a photo was taken is one too - so neither happens unless you say so. Place names come from a table on your own machine; nothing is looked up anywhere, and there is no map view.
+
+Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
 
 ## Immich
 

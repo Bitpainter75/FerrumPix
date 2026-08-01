@@ -26,6 +26,7 @@ Namespace ViewModels
     ''' </summary>
     Public Class InfoPanelViewModel
         Inherits ViewModelBase
+        Implements IInfoSidebarPanel
 
         Private _item As ImageItem
         Private _path As String = ""
@@ -93,6 +94,14 @@ Namespace ViewModels
             ' rechnete die Anzeige noch mit dem leeren Pfad und blieb ausgeblendet - nach einer
             ' Mehrfachauswahl war der ganze Bereich weg.
             RaiseStateChanged()
+
+            ' Personen gehoeren HIERHER, in den Einzelbild-Pfad. Sie zuerst in ShowItems einzuhaengen
+            ' war falsch: bei genau EINEM Bild leitet ShowItems sofort auf ShowItem um und der
+            ' Sammelpfad laeuft nie - der Abschnitt blieb leer, obwohl die Bibliothek die Personen
+            ' kannte. Und genau ein Bild ist der einzige Fall, in dem er ueberhaupt etwas zeigt.
+            LoadPeople()
+            LoadPlace()
+
             If String.IsNullOrEmpty(_path) Then Return
 
             ' Sofort ein Stand des RICHTIGEN Bildes, damit nie die Angaben des vorherigen stehen
@@ -169,9 +178,15 @@ Namespace ViewModels
             _items = New List(Of ImageItem)()
             _item = Nothing
             _path = ""
-            _selectedTab = InfoSidebarTab.General
+            ' DER REITER BLEIBT STEHEN. Wer sich die EXIF-Daten ansieht und weiterblaettert, will
+            ' die EXIF-Daten des naechsten Bildes sehen - und nicht bei jedem Klick wieder auf
+            ' "Allgemein" landen. Zurueck faellt die Auswahl nur, wenn es den Reiter fuer das neue
+            ' Bild gar nicht gibt (siehe RaisePeopleTabState).
             HistogramImage = Nothing
             ExifInfo = New ExifData()
+            ' Auch der Ort - sonst steht bei einer Mehrfachauswahl der des zuletzt einzeln
+            ' markierten Bildes weiter da, und der gilt dann fuer keines der markierten.
+            _placeText = ""
             Tags.Clear()
             SummaryFacts.Clear()
             ApplyRatingState(0, False, "")
@@ -182,7 +197,8 @@ Namespace ViewModels
         Private Sub RaiseStateChanged()
             For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasHistogram), NameOf(HasInfoContent),
                                       NameOf(Name), NameOf(IsInfoTabGeneral), NameOf(IsInfoTabExif),
-                                      NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc)}
+                                      NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc),
+                                      NameOf(IsInfoTabPeople), NameOf(PlaceText), NameOf(HasPlace)}
                 Me.RaisePropertyChanged(propertyName)
             Next
         End Sub
@@ -230,6 +246,124 @@ Namespace ViewModels
         ''' jedes markierte Bild seine eigene Verbindung; bei Strg+A auf einem grossen Ordner stand
         ''' die Oberflaeche. Aus demselben Grund laeuft das hier nur bei OFFENER Leiste - genau die
         ''' Zusage, die fuer den Hintergrundteil schon galt.</summary>
+        ''' <summary>Die Personen auf dem markierten Bild. Nur bei GENAU EINEM Bild - bei mehreren
+        ''' waere jede Angabe eine Behauptung ueber alle, und anders als bei Stichwoertern ist die
+        ''' Schnittmenge hier fast immer leer (selten stehen dieselben Menschen auf allen Bildern
+        ''' einer Auswahl).
+        '''
+        ''' Auch UNBENANNTE Gruppen kommen mit: sie sind der Normalfall direkt nach einem Durchlauf,
+        ''' und genau hier soll man ihnen einen Namen geben koennen.</summary>
+        Public ReadOnly Property People As New ObservableCollection(Of PersonFaceEntry)() Implements IInfoSidebarPanel.People
+
+        ''' <summary>Zeigt das Panel den Personen-Abschnitt? Nur mit eingeschalteter Erkennung, bei
+        ''' genau einem Bild und wenn ueberhaupt jemand darauf erkannt wurde. Ein leerer Abschnitt
+        ''' unter jedem Landschaftsfoto waere nur Platzverbrauch.</summary>
+        Public ReadOnly Property HasPeople As Boolean Implements IInfoSidebarPanel.HasPeople
+            Get
+                Return People.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Die Gesichter des Bildes, JE MIT AUSSCHNITT.
+        '''
+        ''' Der Ausschnitt ist der ganze Punkt: fuenf leere Namensfelder untereinander sagen
+        ''' niemandem, welches zu welchem Gesicht gehoert. Mit dem Gesicht daneben ist es
+        ''' offensichtlich - so machen es alle, die das anbieten.
+        '''
+        ''' Gebaut wird im FacePanelService, damit Betrachter und Editor dieselben Zeilen bekommen
+        ''' und nicht jeder seinen eigenen Zuschnitt nachbaut.</summary>
+        Private Sub LoadPeople()
+            People.Clear()
+            If _items.Count <> 1 Then
+                RaisePeopleTabState()
+                Return
+            End If
+            Dim path = _items(0)?.FilePath
+            Dim entries = FacePanelService.BuildEntries(path)
+            For Each entry In entries
+                People.Add(entry)
+            Next
+            RaisePeopleTabState()
+
+            ' Die Ausschnitte kommen nach. Der Vergleich gegen die Marke haelt den Nachschub am
+            ' richtigen Bild fest - beim schnellen Blaettern faellt er sonst ins naechste.
+            Dim token = _loadToken
+            FacePanelService.LoadThumbnails(entries, path, Function() token = _loadToken)
+        End Sub
+
+        ''' <summary>Meldet den Personen-Abschnitt UND seinen Reiter.
+        '''
+        ''' Steht der Reiter gerade offen und das naechste Bild zeigt niemanden, waere er weg und
+        ''' sein Inhalt auch - die Leiste bliebe leer zurueck. Deshalb faellt die Auswahl dann auf
+        ''' "Allgemein".</summary>
+        Private Sub RaisePeopleTabState()
+            ' Nur bei genau EINEM Bild entscheiden. Im Sammelmodus ist die Reiterleiste ohnehin weg,
+            ' und der gemerkte Reiter soll die Rueckkehr zu einem Einzelbild ueberleben.
+            If Not _isSummary AndAlso _items.Count = 1 AndAlso People.Count = 0 AndAlso
+               _selectedTab = InfoSidebarTab.People Then
+                SelectedInfoTab = InfoSidebarTab.General
+            End If
+            Me.RaisePropertyChanged(NameOf(HasPeople))
+            Me.RaisePropertyChanged(NameOf(IsInfoTabPeople))
+        End Sub
+
+        ''' <summary>Gibt einer Gruppe ihren Namen. Traegt schon jemand denselben, verschmelzen beide
+        ''' - das entscheidet die Bibliothek, nicht das Panel (LibraryService.NamePerson).
+        '''
+        ''' Der Name gilt fuer die GANZE Gruppe, also fuer jedes Bild darin. Das ist gewollt: genau
+        ''' dafuer wird gruppiert. Wer nur DIESES Gesicht meint, weil es falsch zugeordnet ist,
+        ''' nimmt <see cref="DetachFace"/>.</summary>
+        Public Sub RenamePerson(personId As String, newName As String, faceId As String) Implements IInfoSidebarPanel.RenamePerson
+            If String.IsNullOrWhiteSpace(personId) Then Return
+            Try
+                LibraryService.Instance.ApplyPersonName(personId, newName, faceId)
+                LoadPeople()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("InfoPanel.RenamePerson", ex)
+            End Try
+        End Sub
+
+        Private _placeText As String = ""
+
+        ''' <summary>Der Aufnahmeort, etwa "Norden, Deutschland".
+        '''
+        ''' Er kommt aus dem Katalog und nicht aus der Datei: die Koordinaten stehen zwar im Bild,
+        ''' der NAME dazu aber nirgends - den schlaegt die Ortstabelle nach, und das Ergebnis liegt
+        ''' im Katalog.</summary>
+        Public ReadOnly Property PlaceText As String Implements IInfoSidebarPanel.PlaceText
+            Get
+                Return _placeText
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPlace As Boolean Implements IInfoSidebarPanel.HasPlace
+            Get
+                Return Not String.IsNullOrEmpty(_placeText)
+            End Get
+        End Property
+
+        Private Sub LoadPlace()
+            _placeText = PlacePanelService.TextFor(If(_items.Count = 1, _items(0)?.FilePath, ""))
+            Me.RaisePropertyChanged(NameOf(PlaceText))
+            Me.RaisePropertyChanged(NameOf(HasPlace))
+        End Sub
+
+        ''' <summary>Hebt die Zuordnung EINES Gesichts auf: es bekommt eine eigene, namenlose Gruppe.
+        '''
+        ''' Fuer den Fall, dass die Erkennung jemanden verwechselt hat. Andere Bilder derselben
+        ''' Person bleiben unberuehrt - geaendert wird nur dieses eine Gesicht. Danach steht das Feld
+        ''' wieder leer, und der richtige Name traegt es in die richtige Gruppe (heisst schon jemand
+        ''' so, verschmilzt die Bibliothek beides).</summary>
+        Public Sub DetachFace(faceId As String) Implements IInfoSidebarPanel.DetachFace
+            If String.IsNullOrWhiteSpace(faceId) Then Return
+            Try
+                LibraryService.Instance.DetachFace(faceId)
+                LoadPeople()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("InfoPanel.DetachFace", ex)
+            End Try
+        End Sub
+
         Private Sub LoadSummaryTags()
             Tags.Clear()
             If _items.Count = 0 Then Return
@@ -696,8 +830,8 @@ Namespace ViewModels
             End Get
             Set(value As InfoSidebarTab)
                 Me.RaiseAndSetIfChanged(_selectedTab, value)
-                For Each propertyName In {NameOf(IsInfoTabGeneral), NameOf(IsInfoTabExif), NameOf(IsInfoTabIptc),
-                                       NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc)}
+                For Each propertyName In {NameOf(IsInfoTabGeneral), NameOf(IsInfoTabPeople), NameOf(IsInfoTabExif),
+                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc)}
                     Me.RaisePropertyChanged(propertyName)
                 Next
             End Set
@@ -705,6 +839,8 @@ Namespace ViewModels
 
         Private Sub SetInfoTab(tabName As String)
             Select Case If(tabName, "").Trim().ToLowerInvariant()
+                Case "people"
+                    SelectedInfoTab = InfoSidebarTab.People
                 Case "exif"
                     SelectedInfoTab = InfoSidebarTab.Exif
                 Case "iptc"
@@ -721,6 +857,15 @@ Namespace ViewModels
         Public ReadOnly Property IsInfoTabGeneral As Boolean
             Get
                 Return _selectedTab = InfoSidebarTab.General
+            End Get
+        End Property
+
+        ''' <summary>Der Personen-Reiter gilt nur, solange auf dem Bild ueberhaupt jemand erkannt
+        ''' wurde - sonst gibt es den Reiter nicht, und ein Inhalt ohne Reiter waere nicht mehr zu
+        ''' verlassen.</summary>
+        Public ReadOnly Property IsInfoTabPeople As Boolean
+            Get
+                Return _selectedTab = InfoSidebarTab.People AndAlso HasPeople
             End Get
         End Property
 

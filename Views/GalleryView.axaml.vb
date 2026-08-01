@@ -71,6 +71,60 @@ Namespace Views
             GetVm()?.RefreshTagFilterOptions()
         End Sub
 
+        ''' <summary>Die Personenliste entsteht beim Oeffnen neu - nach einem Durchlauf sind neue
+        ''' Gruppen dabei, nach einer Benennung neue Namen.</summary>
+        Private Sub OnPersonFilterButtonClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.RefreshPersonFilterOptions()
+        End Sub
+
+        ''' <summary>Eine Person dazunehmen oder abwaehlen. Ueber den Datenkontext der Schaltflaeche,
+        ''' nicht ueber eine Bindung: der Inhalt eines Aufklappfensters haengt nicht im Baum der
+        ''' Ansicht (gleicher Grund wie bei den Stichwoertern).</summary>
+        Private Sub OnPersonFilterItemClick(sender As Object, e As RoutedEventArgs)
+            Dim entry = TryCast(TryCast(sender, Button)?.DataContext, PersonFilterOption)
+            If entry Is Nothing Then Return
+            GetVm()?.TogglePersonFilter(entry.Id)
+        End Sub
+
+        ''' <summary>Die Ortsliste entsteht beim Oeffnen neu - nach einem Einlesen sind neue Orte
+        ''' dabei, und das Nachziehen aelterer Eintraege laeuft im Hintergrund.</summary>
+        Private Sub OnPlaceFilterButtonClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.RefreshPlaceFilterOptions()
+        End Sub
+
+        ''' <summary>Einen Ort dazunehmen oder abwaehlen. Ueber den Datenkontext der Schaltflaeche,
+        ''' gleicher Grund wie bei Personen und Stichwoertern.</summary>
+        Private Sub OnPlaceFilterItemClick(sender As Object, e As RoutedEventArgs)
+            Dim entry = TryCast(TryCast(sender, Button)?.DataContext, PlaceFilterOption)
+            If entry Is Nothing Then Return
+            GetVm()?.TogglePlaceFilter(entry.City)
+        End Sub
+
+        ''' <summary>Mausradklick auf einen Filter- oder Sortierknopf setzt ihn auf den Standard
+        ''' zurueck, ohne das Menue zu oeffnen.
+        '''
+        ''' Am Druck und nicht am Klick: ein Klick entsteht nur mit der LINKEN Taste, und genau die
+        ''' oeffnet das Aufklappfenster. Aus demselben Grund kommt sich hier nichts in die Quere -
+        ''' die mittlere Taste laesst der Knopf von sich aus liegen.
+        '''
+        ''' Welcher Knopf gemeint ist, sagt sein Tag. Ein eigener Handler je Knopf waere viermal
+        ''' derselbe Rumpf mit einer anderen Zeile in der Mitte.</summary>
+        Private Sub OnFilterButtonPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            Dim button = TryCast(sender, Button)
+            If button Is Nothing Then Return
+            If Not e.GetCurrentPoint(button).Properties.IsMiddleButtonPressed Then Return
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Select Case TryCast(button.Tag, String)
+                Case "Person" : vm.ClearPersonFilter()
+                Case "Place" : vm.ClearPlaceFilter()
+                Case "Tag" : vm.ClearTagFilter()
+                Case "Filter" : vm.ClearFilters()
+                Case "Sort" : vm.ResetSort()
+            End Select
+            e.Handled = True
+        End Sub
+
         ''' <summary>Ein Stichwort dazunehmen oder abwaehlen. Ueber den Datenkontext der
         ''' Schaltflaeche, nicht ueber eine Bindung: der Inhalt eines Aufklappfensters haengt nicht
         ''' im Baum der Ansicht, und eine Bindung ueber den Vorfahren findet dort nichts.</summary>

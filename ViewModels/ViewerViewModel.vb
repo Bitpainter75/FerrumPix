@@ -16,6 +16,7 @@ Namespace ViewModels
 
     Public Class ViewerViewModel
         Inherits ViewModelBase
+        Implements IInfoSidebarPanel
 
         ''' Weniger Schalter als im Editor - „Diashow starten" und „Anpassen" oben,
         ''' „Einpassen" in der Fußzeile.
@@ -96,6 +97,80 @@ Namespace ViewModels
 
         Public Property FilmstripItems As BulkObservableCollection(Of ImageItem)
         Public Property Tags As ObservableCollection(Of String)
+
+        ''' <summary>Die Leiste ist EIN Steuerelement fuer Galerie, Betrachter und Editor. Fehlt die
+        ''' Eigenschaft in einem der drei, ist die Bindung dort tot (siehe INFOPANEL_GALERIE.md).
+        ''' Gezeigt und berichtigt wird deshalb in allen dreien dasselbe - wer ein Bild gross vor sich
+        ''' hat, sieht am ehesten, dass jemand falsch zugeordnet ist.</summary>
+        Public ReadOnly Property People As New ObservableCollection(Of PersonFaceEntry)() Implements IInfoSidebarPanel.People
+
+        Public ReadOnly Property HasPeople As Boolean Implements IInfoSidebarPanel.HasPeople
+            Get
+                Return People.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Die Gesichter des gerade gezeigten Bildes. Die Ausschnitte holt der Dienst im
+        ''' Hintergrund nach; im Vordergrund laeuft nur die Datenbankabfrage - beim Blaettern durch
+        ''' den Filmstreifen darf hier nichts stehenbleiben.</summary>
+        Private Sub LoadPeople(imagePath As String)
+            People.Clear()
+            Dim entries = FacePanelService.BuildEntries(imagePath)
+            For Each entry In entries
+                People.Add(entry)
+            Next
+            ' Faellt der Reiter weg, waere sein Inhalt auch weg - dann zurueck auf "Allgemein".
+            If People.Count = 0 AndAlso _selectedInfoTab = InfoSidebarTab.People Then
+                SelectedInfoTab = InfoSidebarTab.General
+            End If
+            Me.RaisePropertyChanged(NameOf(HasPeople))
+            Me.RaisePropertyChanged(NameOf(IsInfoTabPeople))
+
+            Dim token = _infoPanelLoadToken
+            FacePanelService.LoadThumbnails(entries, imagePath, Function() token = _infoPanelLoadToken)
+        End Sub
+
+        Public Sub RenamePerson(personId As String, newName As String, faceId As String) Implements IInfoSidebarPanel.RenamePerson
+            If String.IsNullOrWhiteSpace(personId) Then Return
+            Try
+                LibraryService.Instance.ApplyPersonName(personId, newName, faceId)
+                LoadPeople(_currentImagePath)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.RenamePerson", ex)
+            End Try
+        End Sub
+
+        Public Sub DetachFace(faceId As String) Implements IInfoSidebarPanel.DetachFace
+            If String.IsNullOrWhiteSpace(faceId) Then Return
+            Try
+                LibraryService.Instance.DetachFace(faceId)
+                LoadPeople(_currentImagePath)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.DetachFace", ex)
+            End Try
+        End Sub
+
+        Private _placeText As String = ""
+
+        ''' <summary>Der Aufnahmeort, etwa "Norden, Deutschland". Kommt aus dem Katalog: die
+        ''' Koordinaten stehen im Bild, der Name dazu nirgends.</summary>
+        Public ReadOnly Property PlaceText As String Implements IInfoSidebarPanel.PlaceText
+            Get
+                Return _placeText
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPlace As Boolean Implements IInfoSidebarPanel.HasPlace
+            Get
+                Return Not String.IsNullOrEmpty(_placeText)
+            End Get
+        End Property
+
+        Private Sub LoadPlace(imagePath As String)
+            _placeText = PlacePanelService.TextFor(imagePath)
+            Me.RaisePropertyChanged(NameOf(PlaceText))
+            Me.RaisePropertyChanged(NameOf(HasPlace))
+        End Sub
         Public Property TagSuggestions As ObservableCollection(Of String)
 
         Public ReadOnly Property IsInfoSidebarVisible As Boolean
@@ -461,6 +536,12 @@ Namespace ViewModels
         Public ReadOnly Property IsInfoTabGeneral As Boolean
             Get
                 Return _selectedInfoTab = InfoSidebarTab.General
+            End Get
+        End Property
+
+        Public ReadOnly Property IsInfoTabPeople As Boolean
+            Get
+                Return _selectedInfoTab = InfoSidebarTab.People
             End Get
         End Property
 
@@ -2180,6 +2261,8 @@ Namespace ViewModels
 
         Private Sub SetInfoTab(tabName As String)
             Select Case If(tabName, "").Trim().ToLowerInvariant()
+                Case "people"
+                    SelectedInfoTab = InfoSidebarTab.People
                 Case "exif"
                     SelectedInfoTab = InfoSidebarTab.Exif
                 Case "iptc"
@@ -2195,6 +2278,7 @@ Namespace ViewModels
 
         Private Sub RaiseInfoTabStateChanged()
             Me.RaisePropertyChanged(NameOf(IsInfoTabGeneral))
+            Me.RaisePropertyChanged(NameOf(IsInfoTabPeople))
             Me.RaisePropertyChanged(NameOf(IsInfoTabExif))
             Me.RaisePropertyChanged(NameOf(IsInfoTabIptc))
             Me.RaisePropertyChanged(NameOf(IsInfoTabXmp))
@@ -2244,6 +2328,8 @@ Namespace ViewModels
                 Next
             End If
             RefreshTagSuggestions()
+            LoadPeople(imagePath)
+            LoadPlace(imagePath)
 
             If Not loadHistogram Then
                 _histogramLoadedForPath = ""

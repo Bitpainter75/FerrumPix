@@ -29,6 +29,9 @@ Namespace Services
         Public Property GpsLongitude As Double?
         Public Property ImageWidth As Integer?
         Public Property ImageHeight As Integer?
+        ''' Ortsangabe aus IPTC bzw. XMP, falls die Datei eine traegt.
+        Public Property City As String = ""
+        Public Property Country As String = ""
     End Class
 
     Public Class ExifTag
@@ -441,6 +444,8 @@ Namespace Services
             Dim dimensions = If(Not String.IsNullOrWhiteSpace(imagePath), ReadImageDimensions(imagePath), (Width:=CType(Nothing, Integer?), Height:=CType(Nothing, Integer?)))
             result.ImageWidth = If(dimensions.Width, ParseLeadingInt(data.ImageWidth))
             result.ImageHeight = If(dimensions.Height, ParseLeadingInt(data.ImageHeight))
+
+            FillPlaceNames(result, data)
 
             Return result
         End Function
@@ -938,6 +943,50 @@ Namespace Services
             Dim prop = item.GetType().GetProperty(memberName, BindingFlags.Public Or BindingFlags.Instance)
             If prop IsNot Nothing Then Return prop.GetValue(item)
             Return Nothing
+        End Function
+
+        ''' <summary>Ortsname und Land bestimmen. ZWEI QUELLEN, und die Reihenfolge ist der Punkt.
+        '''
+        ''' ZUERST die Datei selbst: hat jemand in IPTC oder XMP einen Ort eingetragen, gilt der. Er
+        ''' ist genauer als alles, was sich aus Koordinaten ableiten laesst - dort steht der Ort, den
+        ''' ein Mensch gemeint hat, und nicht "naechster Ort ab 1000 Einwohnern".
+        '''
+        ''' ERST DANN die Ortstabelle, und nur wenn Koordinaten vorliegen. Sie deckt den Normalfall
+        ''' ab, dass gar nichts eingetragen ist: eine Kamera schreibt Koordinaten, aber keine Namen.
+        ''' Liegt kein Ort nah genug, bleibt das Feld leer (PlaceLookupService.MaxDistanceKm).
+        '''
+        ''' Ohne Ortstabelle passiert schlicht nichts weiter - sie ist Beigabe, kein Bestandteil.</summary>
+        Private Shared Sub FillPlaceNames(result As ExifSearchFields, data As ExifData)
+            Try
+                ' OFFEN: Ortsangaben, die schon IN der Datei stehen (IPTC "City", XMP
+                ' "photoshop:City"), muessen Vorrang bekommen - sie sind genauer als der
+                ' naechstgelegene Ort und jemand hat sie bewusst gesetzt. Sie liegen nur nicht in
+                ' ExifData, sondern erst in den Katalog-Zusammenfassungen, die an anderer Stelle
+                ' entstehen. Bis das zusammengefuehrt ist, fuellt hier allein die Ortstabelle.
+                If result.City.Length > 0 Then Return
+                If Not result.GpsLatitude.HasValue OrElse Not result.GpsLongitude.HasValue Then Return
+                If Not PlaceLookupService.Enabled Then Return
+
+                Dim hit = PlaceLookupService.Nearest(result.GpsLatitude.Value, result.GpsLongitude.Value)
+                If hit Is Nothing Then Return
+                result.City = hit.Name
+                If result.Country.Length = 0 Then result.Country = hit.Country
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.Ortsnamen", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Holt einen Wert aus einer der vorformatierten Zusammenfassungen.</summary>
+        Private Shared Function FindSummaryValue(summary As String, key As String) As String
+            If String.IsNullOrEmpty(summary) Then Return ""
+            For Each line In summary.Split(ControlChars.Lf)
+                Dim sep = line.IndexOf(": ", StringComparison.Ordinal)
+                If sep <= 0 Then Continue For
+                If line.Substring(0, sep).Trim().Equals(key, StringComparison.OrdinalIgnoreCase) Then
+                    Return line.Substring(sep + 2).Trim()
+                End If
+            Next
+            Return ""
         End Function
     End Class
 

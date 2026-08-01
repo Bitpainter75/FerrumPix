@@ -15,8 +15,48 @@ Namespace Services
         Public Property [Operator] As String = ">"
         Public Property Value As String = ""
 
-        Public Shared ReadOnly ValidFields As String() = {"Width", "Height", "Camera", "Iso", "Aperture", "FocalLength", "DateTaken"}
+        ''' <summary>"Person" und "Place" stehen bewusst in derselben Liste wie Kamera und ISO, statt
+        ''' einen eigenen Filterzustand daneben zu bekommen. Nur so lassen sie sich mit allem anderen
+        ''' VERUNDEN - "diese Person, an diesem Ort, mit diesem Stichwort, fuenf Sterne" ist genau
+        ''' eine Suchliste mit vier Bedingungen und kein Sonderweg.
+        '''
+        ''' UNTERSCHIED ZU DEN UEBRIGEN: Ort steht als Text in ImageMeta und wird wie Kamera
+        ''' verglichen. Person NICHT - die Zuordnung liegt in eigenen Tabellen, weil ein Bild mehrere
+        ''' Personen traegt. Der Vergleich laeuft deshalb ueber eine vorab geholte Zuordnung
+        ''' (siehe GalleryViewModel.MatchesCondition), nicht ueber ein Feld in der Zeile.</summary>
+        Public Shared ReadOnly ValidFields As String() = {"Width", "Height", "Camera", "Iso", "Aperture", "FocalLength", "DateTaken", "Person", "Place"}
         Public Shared ReadOnly ValidOperators As String() = {">", "<", ">=", "<=", "=", "Contains"}
+
+        ''' <summary>Der Anzeigetext zu einem Feldnamen.
+        '''
+        ''' Der NAME bleibt, wie er ist: er steht in jeder gespeicherten Suche auf der Platte und in
+        ''' jedem Select Case. Uebersetzt wird allein, was im Auswahlfeld steht - sonst passte der
+        ''' Vergleich nach dem ersten Sprachwechsel nicht mehr. Unbekanntes kommt unveraendert
+        ''' zurueck, damit eine aeltere Suche mit einem Feld, das es nicht mehr gibt, wenigstens
+        ''' lesbar bleibt.</summary>
+        Public Shared Function FieldLabel(field As String) As String
+            Select Case If(field, "").Trim()
+                Case "Width" : Return LocalizationService.T("Bildbreite")
+                Case "Height" : Return LocalizationService.T("Bildhöhe")
+                Case "Camera" : Return LocalizationService.T("Kamera")
+                Case "Iso" : Return "ISO"
+                Case "Aperture" : Return LocalizationService.T("Blende")
+                Case "FocalLength" : Return LocalizationService.T("Brennweite")
+                Case "DateTaken" : Return LocalizationService.T("Aufnahmedatum")
+                Case "Person" : Return LocalizationService.T("Person")
+                Case "Place" : Return LocalizationService.T("Ort")
+                Case Else : Return If(field, "")
+            End Select
+        End Function
+
+        ''' <summary>Der Anzeigetext zu einem Vergleich. Nur "Contains" ist ein Wort und gehoert
+        ''' uebersetzt; die Zeichen sprechen fuer sich.</summary>
+        Public Shared Function OperatorLabel(op As String) As String
+            If String.Equals(If(op, "").Trim(), "Contains", StringComparison.Ordinal) Then
+                Return LocalizationService.T("enthält")
+            End If
+            Return If(op, "")
+        End Function
     End Class
 
     Public Class SearchListEntry

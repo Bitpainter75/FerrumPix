@@ -144,13 +144,32 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Grid ColumnDefinitions="120,90,*,Auto" ColumnSpacing="6" Margin="0,0,0,6">
+                                <!-- Der WERT bleibt der Feldname ("Person", "Place") - er steht so in
+                                     jeder gespeicherten Suche. Übersetzt wird nur die Anzeige, sonst
+                                     passte der Vergleich nach einem Sprachwechsel nicht mehr. Der
+                                     Baumdurchlauf der Lokalisierung fasst diese Texte nicht an
+                                     ("no-translate"): er würde die Bindung überschreiben. -->
                                 <ComboBox ItemsSource="{Binding DataContext.DialogSearchConditionFieldOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           SelectedItem="{Binding Field, Mode=TwoWay}"
-                                          MinHeight="32"/>
+                                          MinHeight="32">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource SearchFieldLabelConverter}}"
+                                                       Classes="no-translate" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <ComboBox Grid.Column="1"
                                           ItemsSource="{Binding DataContext.DialogSearchConditionOperatorOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           SelectedItem="{Binding Operator, Mode=TwoWay}"
-                                          MinHeight="32"/>
+                                          MinHeight="32">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource SearchOperatorLabelConverter}}"
+                                                       Classes="no-translate" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                                 <TextBox Grid.Column="2"
                                          Text="{Binding Value, Mode=TwoWay}"
                                          PlaceholderText="Wert"

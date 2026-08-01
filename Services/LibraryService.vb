@@ -25,6 +25,12 @@ Namespace Services
         Public Property ShutterSpeed As String = ""
         Public Property GpsLatitude As Double?
         Public Property GpsLongitude As Double?
+        ''' <summary>Ortsname und Land. Sie stammen ENTWEDER aus den Metadaten der Datei
+        ''' (IPTC/XMP, dort hat jemand sie bewusst gesetzt) ODER aus der Ortstabelle. Das erste
+        ''' hat Vorrang: wer seine Fotos von Hand mit Orten versehen hat, will die sehen und
+        ''' nicht den naechstgelegenen Ort ab 1000 Einwohnern.</summary>
+        Public Property City As String = ""
+        Public Property Country As String = ""
         Public Property ImageWidth As Integer?
         Public Property ImageHeight As Integer?
         Public Property FileCreatedAt As String = ""
@@ -54,7 +60,10 @@ Namespace Services
         Public Property ScannedSidecarModifiedAt As String = ""
     End Class
 
-    Public Class LibraryService
+    ''' Der Personen-Teil liegt in LibraryServicePeople.vb - eigene Datei, weil er eine
+    ''' zusammenhaengende eigene Feldgruppe hat (Face, Person, ScannedImage) und mit dem Rest der
+    ''' Bibliothek nur die Verbindungszeichenfolge teilt.
+    Partial Public Class LibraryService
 
         Private Shared _instance As LibraryService
         Private ReadOnly _connectionString As String
@@ -95,6 +104,63 @@ Namespace Services
                     cmd.ExecuteNonQuery()
                 End Using
                 EnsureExifColumns(conn)
+                EnsurePeopleTables(conn)
+                EnsureFaceColumns(conn)
+            End Using
+        End Sub
+
+        ''' <summary>Die beiden Tabellen fuer Personen. Eigene Tabellen statt Spalten in ImageMeta:
+        ''' ein Bild kann mehrere Gesichter tragen, und eine Person steht in vielen Bildern - das
+        ''' passt in keine Spalte.
+        '''
+        ''' Face haelt den Merkmalsvektor als BLOB (128 Single, 512 Byte). Als Text waere er dreimal
+        ''' so gross und muesste bei jedem Vergleich geparst werden; verglichen wird bei jedem neuen
+        ''' Gesicht gegen den ganzen Bestand.
+        '''
+        ''' ScannedAt und SourceModifiedAt tragen den Wiederholungslauf: ein zweiter Durchgang ueber
+        ''' denselben Ordner soll nur anfassen, was neu oder geaendert ist. Deshalb wird auch ein
+        ''' Bild OHNE Gesichter vermerkt (Zeile in ScannedImage) - sonst wuerde es bei jedem Lauf
+        ''' erneut durchsucht, und gerade Landschaftsordner bestehen fast nur daraus.
+        '''
+        ''' PersonId ist NULL, solange ein Gesicht keiner Gruppe zugeordnet ist. Eine Person ohne
+        ''' Namen ist ausdruecklich erlaubt: die Gruppierung entsteht automatisch, der Name kommt
+        ''' vom Benutzer und oft erst viel spaeter.
+        '''
+        ''' IsManual heisst: der Benutzer hat dieses Gesicht angefasst - einen Namen eingetragen oder
+        ''' eine Fehlzuordnung geloest. Ein erneuter Durchlauf laesst es dann stehen, statt es zu
+        ''' loeschen und neu zu erkennen. Fest ist genau das ANGEFASSTE Gesicht und nicht die ganze
+        ''' Gruppe: sonst waere nach dem Benennen einer Person mit hundert Bildern keine einzige
+        ''' Fehlzuordnung darin je wieder zu berichtigen.</summary>
+        Private Shared Sub EnsurePeopleTables(conn As SqliteConnection)
+            Using cmd = conn.CreateCommand()
+                cmd.CommandText =
+                    "CREATE TABLE IF NOT EXISTS Person (" &
+                    "  Id        TEXT PRIMARY KEY," &
+                    "  Name      TEXT NOT NULL DEFAULT ''," &
+                    "  CreatedAt TEXT NOT NULL DEFAULT ''" &
+                    ");" &
+                    "CREATE TABLE IF NOT EXISTS Face (" &
+                    "  Id          TEXT PRIMARY KEY," &
+                    "  FilePath    TEXT NOT NULL," &
+                    "  PersonId    TEXT," &
+                    "  X           REAL NOT NULL," &
+                    "  Y           REAL NOT NULL," &
+                    "  Width       REAL NOT NULL," &
+                    "  Height      REAL NOT NULL," &
+                    "  Score       REAL NOT NULL DEFAULT 0," &
+                    "  Embedding   BLOB," &
+                    "  ScannedAt   TEXT NOT NULL DEFAULT ''," &
+                    "  IsManual    INTEGER NOT NULL DEFAULT 0" &
+                    ");" &
+                    "CREATE TABLE IF NOT EXISTS ScannedImage (" &
+                    "  FilePath         TEXT PRIMARY KEY," &
+                    "  SourceModifiedAt TEXT NOT NULL DEFAULT ''," &
+                    "  FaceCount        INTEGER NOT NULL DEFAULT 0," &
+                    "  ScannedAt        TEXT NOT NULL DEFAULT ''" &
+                    ");" &
+                    "CREATE INDEX IF NOT EXISTS IX_Face_FilePath ON Face(FilePath);" &
+                    "CREATE INDEX IF NOT EXISTS IX_Face_PersonId ON Face(PersonId);"
+                cmd.ExecuteNonQuery()
             End Using
         End Sub
 
@@ -126,8 +192,38 @@ Namespace Services
             ("IccSummary", "TEXT"),
             ("SummaryFormat", "TEXT"),
             ("ColorLabel", "TEXT"),
-            ("ScannedSidecarModifiedAt", "TEXT")
+            ("ScannedSidecarModifiedAt", "TEXT"),
+            ("City", "TEXT"),
+            ("Country", "TEXT")
         }
+
+        ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
+        ''' Bibliotheken tragen sie nicht - ohne dieses Nachziehen faende jede Abfrage darauf
+        ''' nichts.</summary>
+        Private Shared ReadOnly FaceColumns As (Name As String, Sql As String)() = {
+            ("IsManual", "INTEGER NOT NULL DEFAULT 0")
+        }
+
+        Private Shared Sub EnsureFaceColumns(conn As SqliteConnection)
+            Dim existing As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Using cmd = conn.CreateCommand()
+                cmd.CommandText = "PRAGMA table_info(Face)"
+                Using reader = cmd.ExecuteReader()
+                    Dim nameOrdinal = reader.GetOrdinal("name")
+                    While reader.Read()
+                        existing.Add(reader.GetString(nameOrdinal))
+                    End While
+                End Using
+            End Using
+
+            For Each column In FaceColumns
+                If existing.Contains(column.Name) Then Continue For
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = $"ALTER TABLE Face ADD COLUMN {column.Name} {column.Sql}"
+                    cmd.ExecuteNonQuery()
+                End Using
+            Next
+        End Sub
 
         Private Shared Sub EnsureExifColumns(conn As SqliteConnection)
             Dim existing As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -619,8 +715,8 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
@@ -632,7 +728,7 @@ Namespace Services
                         "ScannedSidecarModifiedAt=excluded.ScannedSidecarModifiedAt, " &
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
-                        "HasIccProfile=excluded.HasIccProfile"
+                        "HasIccProfile=excluded.HasIccProfile, City=excluded.City, Country=excluded.Country"
                     cmd.Parameters.AddWithValue("$p", filePath)
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
@@ -644,6 +740,8 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$shutterSpeed", If(exif.ShutterSpeed, ""))
                     cmd.Parameters.AddWithValue("$gpsLat", NullableToDbValue(exif.GpsLatitude))
                     cmd.Parameters.AddWithValue("$gpsLon", NullableToDbValue(exif.GpsLongitude))
+                    cmd.Parameters.AddWithValue("$city", If(exif.City, ""))
+                    cmd.Parameters.AddWithValue("$country", If(exif.Country, ""))
                     cmd.Parameters.AddWithValue("$width", NullableToDbValue(exif.ImageWidth))
                     cmd.Parameters.AddWithValue("$height", NullableToDbValue(exif.ImageHeight))
                     cmd.Parameters.AddWithValue("$fileCreatedAt", fileCreatedAt)
@@ -666,7 +764,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -698,7 +796,9 @@ Namespace Services
                 .IccSummary = If(reader.IsDBNull(25), "", reader.GetString(25)),
                 .SummaryFormat = If(reader.IsDBNull(26), "", reader.GetString(26)),
                 .ColorLabel = If(reader.IsDBNull(27), "", reader.GetString(27)),
-                .ScannedSidecarModifiedAt = If(reader.IsDBNull(28), "", reader.GetString(28))
+                .ScannedSidecarModifiedAt = If(reader.IsDBNull(28), "", reader.GetString(28)),
+                .City = If(reader.IsDBNull(29), "", reader.GetString(29)),
+                .Country = If(reader.IsDBNull(30), "", reader.GetString(30))
             }
         End Function
 

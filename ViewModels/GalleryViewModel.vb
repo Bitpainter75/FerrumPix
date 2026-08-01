@@ -40,8 +40,8 @@ Namespace ViewModels
         Private _hoveredMetadataTitle As String = ""
         Private _hoveredMetadataText As String = ""
         Private _searchText As String = ""
-        Private _sortMode As String = "Name"
-        Private _sortAscending As Boolean = True
+        Private _sortMode As String = AppSettingsService.DefaultGallerySortMode
+        Private _sortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
         Private _showFolders As Boolean = True
         Private _showParentFolder As Boolean = True
         Private _ratingBadgesAlwaysVisible As Boolean = False
@@ -766,6 +766,41 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Favorit, Bewertung, Etikett und Dateityp zurueck auf "alles zeigen".
+        '''
+        ''' Eine eigene Methode und nicht nur der Rumpf des Befehls: sie haengt am Eintrag im Menue
+        ''' UND am Mausradklick auf den Knopf, und zwei Wege sollen nicht zwei Fassungen bedeuten.</summary>
+        Public Sub ClearFilters()
+            _filterFavorite = "All"
+            _filterRatings.Clear()
+            _filterFileType = "All"
+            _filterColorLabels.Clear()
+            For Each name In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly),
+                              NameOf(IsFilterRatingAll), NameOf(IsFilterRatingUnrated),
+                              NameOf(IsFilterRating1Plus), NameOf(IsFilterRating2Plus),
+                              NameOf(IsFilterRating3Plus), NameOf(IsFilterRating4Plus),
+                              NameOf(IsFilterRating5),
+                              NameOf(IsFilterTypeAll), NameOf(IsFilterTypeRaw), NameOf(IsFilterTypeNonRaw),
+                              NameOf(IsFilterLabelAll), NameOf(IsFilterLabelOrange), NameOf(IsFilterLabelRed),
+                              NameOf(IsFilterLabelPink), NameOf(IsFilterLabelPurple), NameOf(IsFilterLabelBlue),
+                              NameOf(IsFilterLabelCyan), NameOf(IsFilterLabelTeal), NameOf(IsFilterLabelGreen),
+                              NameOf(IsFilterLabelYellow),
+                              NameOf(HasActiveFilter), NameOf(FilterLabel)}
+                Me.RaisePropertyChanged(name)
+            Next
+            FilterAndSort()
+            SaveGalleryFilters()
+        End Sub
+
+        ''' <summary>Sortierung zurueck auf den Standard: Name, aufsteigend.
+        '''
+        ''' Steht der Standard schon, passiert nichts - beide Eigenschaften vergleichen vor dem
+        ''' Setzen, es faellt also weder ein Neusortieren noch ein Schreiben der Einstellung an.</summary>
+        Public Sub ResetSort()
+            SortMode = AppSettingsService.DefaultGallerySortMode
+            SortAscending = AppSettingsService.DefaultGallerySortAscending
+        End Sub
+
         Public Property IsCollageDialogOpen As Boolean
             Get
                 Return _isCollageDialogOpen
@@ -1129,6 +1164,9 @@ Namespace ViewModels
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
         Public ReadOnly Property ToggleTagFilterCommand As ICommand
         Public ReadOnly Property ClearTagFilterCommand As ICommand
+        Public ReadOnly Property ClearPersonFilterCommand As ICommand
+        Public ReadOnly Property ClearPlaceFilterCommand As ICommand
+        Public ReadOnly Property ScanFacesCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
@@ -1390,6 +1428,9 @@ Namespace ViewModels
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub() ToggleInfoSidebar())
             ToggleTagFilterCommand = ReactiveCommand.Create(Of String)(Sub(tag) ToggleTagFilter(tag))
             ClearTagFilterCommand = ReactiveCommand.Create(Sub() ClearTagFilter())
+            ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
+            ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
+            ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesAsync())
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
             ' Das Panel kennt nur ImageItem und koennte lokale Bilder nicht von Immich-Assets
             ' trennen. Die Wege stellt deshalb die Galerie - dieselbe Teilung wie im Sternemenue.
@@ -1418,31 +1459,12 @@ Namespace ViewModels
             End Sub)
             SetFilterTypeCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterFileType = v)
             SetFilterColorLabelCommand = ReactiveCommand.Create(Of String)(Sub(v) ToggleFilterColorLabel(v))
-            ClearFiltersCommand = ReactiveCommand.Create(Sub()
-                _filterFavorite = "All"
-                _filterRatings.Clear()
-                _filterFileType = "All"
-                _filterColorLabels.Clear()
-                For Each n In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly),
-                                NameOf(IsFilterRatingAll), NameOf(IsFilterRatingUnrated),
-                                NameOf(IsFilterRating1Plus), NameOf(IsFilterRating2Plus),
-                                NameOf(IsFilterRating3Plus), NameOf(IsFilterRating4Plus),
-                                NameOf(IsFilterRating5),
-                                NameOf(IsFilterTypeAll), NameOf(IsFilterTypeRaw), NameOf(IsFilterTypeNonRaw),
-                                NameOf(IsFilterLabelAll), NameOf(IsFilterLabelOrange), NameOf(IsFilterLabelRed),
-                                NameOf(IsFilterLabelPink), NameOf(IsFilterLabelPurple), NameOf(IsFilterLabelBlue),
-                                NameOf(IsFilterLabelCyan), NameOf(IsFilterLabelTeal), NameOf(IsFilterLabelGreen),
-                                NameOf(IsFilterLabelYellow),
-                                NameOf(HasActiveFilter), NameOf(FilterLabel)}
-                    Me.RaisePropertyChanged(n)
-                Next
-                FilterAndSort()
-                SaveGalleryFilters()
-            End Sub)
+            ClearFiltersCommand = ReactiveCommand.Create(Sub() ClearFilters())
 
             InitializeFolderTree()
             InitializeVirtualNavigation()
             InitializeImmich()
+            FillMissingPlacesInBackground()
         End Sub
 
         Public Sub ReplaceSelection(selected As IEnumerable(Of ImageItem))
@@ -2521,9 +2543,9 @@ Namespace ViewModels
 
         Public Function NavigateToFolderAsync(folderPath As String) As Task
             CancelActiveSearch()
-            ' Ein Wechsel im Baum beendet die Stichwortauswahl - der Knopf verliert die
-            ' Akzentfarbe, sonst behauptete er einen Filter, der gar nicht mehr gilt.
-            ClearTagFilter(returnToFolder:=False)
+            ' Ein Wechsel im Baum beendet JEDE Knopfauswahl - die Knoepfe verlieren die
+            ' Akzentfarbe, sonst behaupteten sie einen Filter, der gar nicht mehr gilt.
+            ClearButtonFiltersSilently()
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) AndAlso _currentFolder <> folderPath Then
                 _historyBack.Push(_currentFolder)
                 _historyForward.Clear()
@@ -2718,11 +2740,41 @@ Namespace ViewModels
 
             _activeTagFilters = wanted
             RefreshTagFilterState()
-            If wanted.Count = 0 Then Return
+            ApplyButtonFilters()
+        End Sub
 
-            Dim node As New VirtualNavigationNode(String.Join(", ", wanted), "SavedSearch") With {
+        ''' <summary>Baut aus ALLEN Knopfauswahlen EINEN Suchknoten.
+        '''
+        ''' UND, nicht ODER: "diese Person, an diesem Ort, mit diesem Stichwort" ist eine einzige
+        ''' Frage mit drei Teilen. Vorher baute jeder Knopf seinen eigenen Knoten und ersetzte damit
+        ''' den vorherigen - die Auswahlen loeschten sich gegenseitig aus, statt sich zu schneiden.
+        '''
+        ''' Innerhalb einer Sorte gilt, was zu ihr passt: Stichwoerter ODER (mindestens eines),
+        ''' Personen UND (gemeinsam auf einem Bild), Orte ODER (ein Bild hat genau einen Ort).
+        ''' Deshalb drei eigene Listen am Knoten und keine gemeinsame Bedingungsliste - die traegt
+        ''' nur EINE Verknuepfung fuer alles.
+        '''
+        ''' Ist nichts mehr ausgewaehlt, kehrt die Ansicht dorthin zurueck, wo die Auswahl begonnen
+        ''' hat.</summary>
+        Private Sub ApplyButtonFilters()
+            Dim tags = _activeTagFilters.ToList()
+            Dim places = _activePlaceFilters.ToList()
+            Dim people = PersonFilterOptions.
+                         Where(Function(o) _activePersonFilters.Contains(o.Id) AndAlso o.IsNamed).
+                         Select(Function(o) o.Name).
+                         Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+
+            If tags.Count = 0 AndAlso places.Count = 0 AndAlso people.Count = 0 Then
+                ReturnToFilterOrigin()
+                Return
+            End If
+
+            Dim title = String.Join(", ", people.Concat(places).Concat(tags))
+            Dim node As New VirtualNavigationNode(title, "SavedSearch") With {
                 .Source = "Local",
-                .TagQueries = wanted,
+                .TagQueries = tags,
+                .PersonQueries = people,
+                .PlaceQueries = places,
                 .RootFolder = "",
                 .IncludeSubfolders = True,
                 .IsRemovable = False
@@ -2740,12 +2792,40 @@ Namespace ViewModels
             If _activeTagFilters.Count = 0 Then Return
             _activeTagFilters = New List(Of String)()
             RefreshTagFilterState()
+            ' Die uebrigen Knopfauswahlen bleiben und werden neu angewandt - erst wenn gar nichts
+            ' mehr ausgewaehlt ist, kehrt die Ansicht zurueck.
+            If returnToFolder Then ApplyButtonFilters() Else ReturnToFilterOrigin(navigate:=False)
+        End Sub
 
+        ''' <summary>Alle drei Knopfauswahlen zuruecknehmen, ohne irgendwohin zu navigieren.
+        '''
+        ''' Fuer den Ordnerwechsel: danach gilt keiner der Filter mehr, und ein Knopf, der noch die
+        ''' Akzentfarbe traegt, behauptet etwas Falsches.</summary>
+        Private Sub ClearButtonFiltersSilently()
+            _activeTagFilters = New List(Of String)()
+            _activePersonFilters = New List(Of String)()
+            _activePlaceFilters = New List(Of String)()
+            RefreshTagFilterState()
+            RefreshPersonFilterState()
+            RefreshPlaceFilterState()
+            ReturnToFilterOrigin(navigate:=False)
+        End Sub
+
+        ''' <summary>Zurueck dorthin, wo die Auswahl begonnen hat - in den Ordner oder auf den Knoten.
+        '''
+        ''' EIGENE METHODE, weil sie drei Filtern gehoert. Personen und Orte riefen dafuer
+        ''' ClearTagFilter, und das kehrt gleich in der ersten Zeile um, wenn kein Stichwort
+        ''' ausgewaehlt ist: das Aufheben nahm die Akzentfarbe vom Knopf und liess die Trefferliste
+        ''' stehen.</summary>
+        ''' <param name="navigate">Aus, wenn der Aufruf SELBST aus einer Navigation kommt - sonst
+        ''' riefe das Zurueckkehren die Navigation erneut auf. Der gemerkte Ausgangspunkt wird
+        ''' trotzdem verworfen, er ist dann ueberholt.</param>
+        Private Sub ReturnToFilterOrigin(Optional navigate As Boolean = True)
             Dim back = _folderBeforeTagFilter
             Dim backNode = _nodeBeforeTagFilter
             _folderBeforeTagFilter = ""
             _nodeBeforeTagFilter = Nothing
-            If Not returnToFolder OrElse Not _isVirtualFolder Then Return
+            If Not navigate OrElse Not _isVirtualFolder Then Return
             If backNode IsNot Nothing Then
                 Dim ignored = OpenVirtualNavigationNode(backNode)
             ElseIf Not String.IsNullOrEmpty(back) AndAlso Directory.Exists(back) Then
@@ -2795,6 +2875,351 @@ Namespace ViewModels
         End Property
 
         Public ReadOnly Property TagFilterOptions As New ObservableCollection(Of TagFilterOption)()
+
+        ' ── Personen ─────────────────────────────────────────────────────────────
+
+        Private _activePersonFilters As New List(Of String)()
+
+        Public ReadOnly Property PersonFilterOptions As New ObservableCollection(Of PersonFilterOption)()
+
+        ''' <summary>Steht der Knopf ueberhaupt zur Verfuegung? Nur mit eingeschalteter Erkennung UND
+        ''' vorhandenen Modellen. Fehlt eines, ist der Knopf ganz WEG und nicht ausgegraut - so haelt
+        ''' es die Anwendung bei allen Modellfunktionen, und ein toter Knopf ist schlimmer als
+        ''' keiner.</summary>
+        Public ReadOnly Property HasPersonFeature As Boolean
+            Get
+                Return FaceDetectionService.Enabled
+            End Get
+        End Property
+
+        ''' <summary>Traegt der Knopf die Akzentfarbe? Genau dann, wenn eine Personenauswahl aktiv
+        ''' ist - gleiche Regel wie bei den Stichwoertern.</summary>
+        Public ReadOnly Property HasPersonFilter As Boolean
+            Get
+                Return _activePersonFilters.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Baut die Liste beim Oeffnen neu auf, damit frisch benannte Personen dabei sind.
+        '''
+        ''' NUR BENANNTE GRUPPEN. Eine namenlose Gruppe sagt in einer Filterliste nichts - "Ohne
+        ''' Namen (17)" dreimal untereinander ist keine Auswahl, sondern Rauschen, und bei einem
+        ''' gewachsenen Bestand stehen dort schnell dutzende davon. Gesehen und benannt werden sie am
+        ''' Bild im Infopanel, wo der Ausschnitt danebensteht.</summary>
+        ''' <summary>Suchfeld im Personen-Menue. Bei einem gewachsenen Bestand hat man schnell
+        ''' dreistellig viele Gruppen; ohne Suche waere die Liste dann nur noch scrollbar, nicht
+        ''' benutzbar. Die Auswahl bleibt beim Tippen bestehen - gefiltert wird die ANZEIGE, nicht
+        ''' der Filter.</summary>
+        Private _personFilterSearch As String = ""
+
+        Public Property PersonFilterSearch As String
+            Get
+                Return _personFilterSearch
+            End Get
+            Set(value As String)
+                If String.Equals(_personFilterSearch, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_personFilterSearch, value)
+                RefreshPersonFilterOptions()
+            End Set
+        End Property
+
+        Public Sub RefreshPersonFilterOptions()
+            PersonFilterOptions.Clear()
+            Try
+                Dim search = If(_personFilterSearch, "").Trim()
+                For Each entry In LibraryService.Instance.GetPeople()
+                    If entry.ImageCount <= 0 Then Continue For
+                    If Not entry.IsNamed Then Continue For
+                    ' Eine ausgewaehlte Person bleibt IMMER sichtbar, auch wenn sie nicht zur Suche
+                    ' passt - sonst verschwindet sie beim Tippen und man kann sie nicht abwaehlen.
+                    Dim matches = search.Length = 0 OrElse
+                                  entry.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                  IsPersonFilterSelected(entry.Id)
+                    If Not matches Then Continue For
+                    PersonFilterOptions.Add(New PersonFilterOption(entry.Id, entry.Name, entry.ImageCount,
+                                                                   IsPersonFilterSelected(entry.Id)))
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RefreshPersonFilterOptions", ex)
+            End Try
+            Me.RaisePropertyChanged(NameOf(HasPersonFeature))
+        End Sub
+
+        Public Function IsPersonFilterSelected(personId As String) As Boolean
+            Return _activePersonFilters.Any(Function(p) String.Equals(p, If(personId, ""), StringComparison.Ordinal))
+        End Function
+
+        ''' <summary>Setzt die Personenauswahl und zeigt die Treffer.
+        '''
+        ''' Gebaut wie <see cref="SetTagFilter"/>, und das ist Absicht: der Filter legt KEINEN
+        ''' eigenen Zustand an, sondern erzeugt einen Suchknoten mit Kriterien. Nur so lassen sich
+        ''' die Filter spaeter verunden - vier Filter mit je eigenem Zustand wuerden sich gegenseitig
+        ''' ersetzen statt zu schneiden, und "diese Person, dieses Stichwort, fuenf Sterne" waere
+        ''' nicht darstellbar.
+        '''
+        ''' Die Pfade kommen aus der Bibliothek und sind bereits verundet: mehrere Personen heisst
+        ''' "wer gemeinsam auf einem Bild steht", nicht "wer auf irgendeinem"
+        ''' (LibraryService.GetPathsForPeople).</summary>
+        Public Sub SetPersonFilter(personIds As IEnumerable(Of String))
+            Dim wanted = If(personIds, Enumerable.Empty(Of String)()).
+                         Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                         Select(Function(p) p.Trim()).
+                         Distinct(StringComparer.Ordinal).ToList()
+
+            ' Den Ausgangspunkt merken, damit "Auswahl aufheben" dorthin zurueckkehrt - dieselbe
+            ' Ueberlegung wie bei den Stichwoertern.
+            If wanted.Count > 0 AndAlso _activePersonFilters.Count = 0 Then
+                If _isVirtualFolder Then
+                    _nodeBeforeTagFilter = If(SelectedImmichNode, SelectedSearchNode)
+                    _folderBeforeTagFilter = ""
+                Else
+                    _folderBeforeTagFilter = If(_currentFolder, "")
+                    _nodeBeforeTagFilter = Nothing
+                End If
+            End If
+
+            _activePersonFilters = wanted
+            RefreshPersonFilterState()
+            ' Der Knoten traegt die Auswahl als NAMENSLISTE, keine fertige Trefferliste. Mit Results
+            ' allein passierte beim Klick nichts - der Durchlauf wertet sie nur bei einer
+            ' gespeicherten Suche mit Id aus. Und er entsteht gemeinsam mit Ort und Stichwort, damit
+            ' sich die Knoepfe verunden statt sich zu ersetzen.
+            ApplyButtonFilters()
+        End Sub
+
+        ''' <summary>Eine Person dazunehmen oder abwaehlen. Verglichen wird ueber die ID, nicht ueber
+        ''' den Namen: eine Umbenennung darf einen laufenden Filter nicht ins Leere laufen lassen.</summary>
+        Public Sub TogglePersonFilter(personId As String)
+            Dim wanted = If(personId, "").Trim()
+            If wanted.Length = 0 Then Return
+            Dim next_ = _activePersonFilters.ToList()
+            If next_.Contains(wanted) Then
+                next_.Remove(wanted)
+            Else
+                next_.Add(wanted)
+            End If
+            SetPersonFilter(next_)
+        End Sub
+
+        Public Sub ClearPersonFilter()
+            If _activePersonFilters.Count = 0 Then Return
+            SetPersonFilter(New List(Of String)())
+        End Sub
+
+        ' ── Orte ─────────────────────────────────────────────────────────────────
+
+        Private _activePlaceFilters As New List(Of String)()
+
+        Public ReadOnly Property PlaceFilterOptions As New ObservableCollection(Of PlaceFilterOption)()
+
+        ''' <summary>Steht der Knopf zur Verfuegung? Nur mit vorhandener UND eingeschalteter
+        ''' Ortstabelle - dieselbe Regel wie beim Personenknopf, und aus demselben Grund ist er sonst
+        ''' ganz weg statt ausgegraut.</summary>
+        Public ReadOnly Property HasPlaceFeature As Boolean
+            Get
+                Return PlaceLookupService.Enabled
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPlaceFilter As Boolean
+            Get
+                Return _activePlaceFilters.Count > 0
+            End Get
+        End Property
+
+        Private _placeFilterSearch As String = ""
+
+        ''' <summary>Suchfeld im Ortsmenue. Ein gewachsener Bestand hat schnell hunderte Orte.</summary>
+        Public Property PlaceFilterSearch As String
+            Get
+                Return _placeFilterSearch
+            End Get
+            Set(value As String)
+                If String.Equals(_placeFilterSearch, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_placeFilterSearch, value)
+                RefreshPlaceFilterOptions()
+            End Set
+        End Property
+
+        ''' <summary>Baut die Ortsliste beim Oeffnen neu auf.
+        '''
+        ''' Sie kommt aus dem Katalog, nicht aus den Dateien: der Ortsname entsteht beim Einlesen aus
+        ''' den Koordinaten. Was vor der Ortstabelle eingelesen wurde, traegt ihn noch nicht -
+        ''' deshalb zieht <see cref="FillMissingPlacesInBackground"/> ihn einmalig nach, sonst
+        ''' bliebe diese Liste auf einem gewachsenen Bestand dauerhaft leer.</summary>
+        Public Sub RefreshPlaceFilterOptions()
+            PlaceFilterOptions.Clear()
+            Try
+                Dim search = If(_placeFilterSearch, "").Trim()
+                For Each entry In LibraryService.Instance.GetPlaceCounts()
+                    ' Ein ausgewaehlter Ort bleibt sichtbar, auch wenn er nicht zur Suche passt -
+                    ' sonst verschwindet er beim Tippen und laesst sich nicht mehr abwaehlen.
+                    Dim matches = search.Length = 0 OrElse
+                                  entry.City.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                  entry.Country.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                  IsPlaceFilterSelected(entry.City)
+                    If Not matches Then Continue For
+                    PlaceFilterOptions.Add(New PlaceFilterOption(entry.City, entry.Country, entry.Count,
+                                                                 IsPlaceFilterSelected(entry.City)))
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RefreshPlaceFilterOptions", ex)
+            End Try
+            Me.RaisePropertyChanged(NameOf(HasPlaceFeature))
+        End Sub
+
+        Public Function IsPlaceFilterSelected(city As String) As Boolean
+            Return _activePlaceFilters.Any(Function(p) String.Equals(p, If(city, ""), StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        ''' <summary>Setzt die Ortsauswahl und zeigt die Treffer.
+        '''
+        ''' Gebaut wie der Personenfilter - ein Suchknoten mit Bedingungen, kein eigener Zustand.
+        '''
+        ''' ODER statt UND, und das ist der Unterschied zu Personen und Stichwoertern: ein Bild hat
+        ''' GENAU EINEN Aufnahmeort. Zwei Orte mit UND ergaeben immer eine leere Liste; gemeint ist
+        ''' "von hier oder von dort".</summary>
+        Public Sub SetPlaceFilter(cities As IEnumerable(Of String))
+            Dim wanted = If(cities, Enumerable.Empty(Of String)()).
+                         Where(Function(c) Not String.IsNullOrWhiteSpace(c)).
+                         Select(Function(c) c.Trim()).
+                         Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+
+            If wanted.Count > 0 AndAlso _activePlaceFilters.Count = 0 Then
+                If _isVirtualFolder Then
+                    _nodeBeforeTagFilter = If(SelectedImmichNode, SelectedSearchNode)
+                    _folderBeforeTagFilter = ""
+                Else
+                    _folderBeforeTagFilter = If(_currentFolder, "")
+                    _nodeBeforeTagFilter = Nothing
+                End If
+            End If
+
+            _activePlaceFilters = wanted
+            RefreshPlaceFilterState()
+            ApplyButtonFilters()
+        End Sub
+
+        Public Sub TogglePlaceFilter(city As String)
+            Dim wanted = If(city, "").Trim()
+            If wanted.Length = 0 Then Return
+            Dim next_ = _activePlaceFilters.ToList()
+            Dim existing = next_.FirstOrDefault(Function(c) String.Equals(c, wanted, StringComparison.OrdinalIgnoreCase))
+            If existing IsNot Nothing Then
+                next_.Remove(existing)
+            Else
+                next_.Add(wanted)
+            End If
+            SetPlaceFilter(next_)
+        End Sub
+
+        Public Sub ClearPlaceFilter()
+            If _activePlaceFilters.Count = 0 Then Return
+            SetPlaceFilter(New List(Of String)())
+        End Sub
+
+        Private Sub RefreshPlaceFilterState()
+            Me.RaisePropertyChanged(NameOf(HasPlaceFilter))
+            For Each entry In PlaceFilterOptions
+                entry.IsSelected = IsPlaceFilterSelected(entry.City)
+            Next
+        End Sub
+
+        ''' <summary>Zieht Ortsnamen fuer aeltere Bibliothekseintraege nach, einmal je Sitzung.
+        '''
+        ''' Die Spalten Ort und Land kamen spaeter dazu und werden nur beim Einlesen gefuellt. Auf
+        ''' einem gewachsenen Bestand ist deshalb JEDER Eintrag ohne Ortsnamen - gemessen 13333
+        ''' Eintraege, davon 4471 mit Koordinaten und kein einziger mit Namen. Ohne diesen Lauf
+        ''' bliebe der Ortsfilter leer, und genau so sah es aus.
+        '''
+        ''' Im Hintergrund und ohne Meldung: es ist Nacharbeit an vorhandenen Daten, kein Auftrag des
+        ''' Benutzers. Steht nichts mehr aus, kostet der Lauf eine Abfrage.</summary>
+        Private Sub FillMissingPlacesInBackground()
+            If Not PlaceLookupService.Enabled Then Return
+            Task.Run(Sub()
+                         Try
+                             Dim filled = LibraryService.Instance.FillMissingPlaces()
+                             If filled <= 0 Then Return
+                             Dispatcher.UIThread.Post(Sub() RefreshPlaceFilterOptions())
+                         Catch ex As Exception
+                             DiagnosticLogService.LogException("Gallery.FillMissingPlaces", ex)
+                         End Try
+                     End Sub)
+        End Sub
+
+        ''' <summary>Sucht Gesichter in dem, was gerade zu sehen ist.
+        '''
+        ''' AUSWAHL SCHLAEGT ANSICHT: sind Bilder markiert, gilt die Auswahl, sonst die ganze
+        ''' Ansicht - dieselbe Regel wie bei den uebrigen Stapelaktionen. Nicht rekursiv: "diese
+        ''' Ansicht" ist, was man sieht, und Unterordner stillschweigend mitzunehmen waere eine
+        ''' Ueberraschung.
+        '''
+        ''' JEDES Bild wird durchsucht, auch ein schon gescanntes. Die Buchfuehrung merkt sich nur,
+        ''' DASS ein Bild dran war, nicht WOMIT - ein Bestand bliebe sonst fuer immer auf dem Stand
+        ''' der Fassung, mit der er einmal durchlief, und eine verbesserte Erkennung kaeme dort nie
+        ''' an. Von Hand gesetzte Zuordnungen bleiben stehen: was der Benutzer eingetragen oder
+        ''' geloest hat, ist seine Entscheidung und nicht die des Modells.</summary>
+        Public Async Function ScanFacesAsync() As Task
+            If Not FaceDetectionService.Enabled Then Return
+            If _faceScanRunning Then Return
+
+            Dim source = If(SelectedItems IsNot Nothing AndAlso SelectedItems.Count > 0,
+                            SelectedItems.Cast(Of ImageItem)().ToList(),
+                            Items.ToList())
+            Dim paths = source.Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
+                               Select(Function(i) i.FilePath).
+                               Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                               Distinct(StringComparer.Ordinal).ToList()
+            If paths.Count = 0 Then Return
+
+            _faceScanRunning = True
+            FaceScanProgressText = LocalizationService.T("Gesichter werden gesucht") & $" 0/{paths.Count}"
+            Me.RaisePropertyChanged(NameOf(IsScanningFaces))
+            Try
+                ' Der Fortschritt steht im Balken, NICHT in der Statuszeile: ein Lauf ueber einen
+                ' grossen Ordner dauert Minuten, und eine Zeile am unteren Rand ist dafuer zu leise -
+                ' man haelt das Programm sonst fuer haengengeblieben.
+                Dim reporter = New Progress(Of (Done As Integer, Total As Integer, File As String))(
+                    Sub(p) FaceScanProgressText = LocalizationService.T("Gesichter werden gesucht") &
+                                                  $" {p.Done}/{p.Total}")
+                Dim result = Await FaceScanRunner.RunAsync(paths, reporter, Nothing, force:=True).ConfigureAwait(True)
+                StatusText = $"{result.FacesFound} " & LocalizationService.T("Gesichter gefunden")
+                RefreshPersonFilterOptions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ScanFaces", ex)
+            Finally
+                _faceScanRunning = False
+                Me.RaisePropertyChanged(NameOf(IsScanningFaces))
+            End Try
+        End Function
+
+        Private _faceScanRunning As Boolean
+
+        ''' <summary>Laeuft gerade ein Durchlauf? Zeigt den Balken ueber der Galerie.</summary>
+        Public ReadOnly Property IsScanningFaces As Boolean
+            Get
+                Return _faceScanRunning
+            End Get
+        End Property
+
+        Private _faceScanProgressText As String = ""
+
+        Public Property FaceScanProgressText As String
+            Get
+                Return _faceScanProgressText
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_faceScanProgressText, value)
+            End Set
+        End Property
+
+        Private Sub RefreshPersonFilterState()
+            Me.RaisePropertyChanged(NameOf(HasPersonFilter))
+            ' "Option" ist in VB ein Schluesselwort (Option Strict) und taugt nicht als Name.
+            For Each entry In PersonFilterOptions
+                entry.IsSelected = IsPersonFilterSelected(entry.Id)
+            Next
+        End Sub
 
         Private Sub RefreshTagFilterState()
             Me.RaisePropertyChanged(NameOf(HasTagFilter))
@@ -2991,7 +3416,7 @@ Namespace ViewModels
                                        End If
                                    Else
                                        Dim pending As New List(Of LibraryImageMeta)()
-                                       For Each meta In EnumerateCatalogSearchMetasLazy("", node.IncludeSubfolders, token)
+                                       For Each meta In EnumerateCatalogSearchMetasLazy("", node.IncludeSubfolders, token, node)
                                            token.ThrowIfCancellationRequested()
                                            scannedCount += 1
                                            pending.Add(meta)
@@ -3031,9 +3456,19 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Iterator Function EnumerateCatalogSearchMetasLazy(rootFolder As String, includeSubfolders As Boolean, token As CancellationToken) As IEnumerable(Of LibraryImageMeta)
+        Private Iterator Function EnumerateCatalogSearchMetasLazy(rootFolder As String, includeSubfolders As Boolean,
+                                                                 token As CancellationToken,
+                                                                 Optional node As VirtualNavigationNode = Nothing) As IEnumerable(Of LibraryImageMeta)
             Dim root = If(rootFolder, "").Trim()
-            For Each meta In LibraryService.Instance.GetAllImages()
+            ' Vor dem Durchlauf leeren: eine gerade vergebene Benennung soll sofort greifen.
+            ResetPersonNameCache()
+
+            ' Laesst sich die Menge vorab eingrenzen, dann nur diese Eintraege - sonst alle.
+            Dim narrowed = NarrowSearchMetas(node)
+            Dim source As IEnumerable(Of LibraryImageMeta) =
+                If(narrowed, DirectCast(LibraryService.Instance.GetAllImages(), IEnumerable(Of LibraryImageMeta)))
+
+            For Each meta In source
                 token.ThrowIfCancellationRequested()
                 If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
                 If Not File.Exists(meta.FilePath) Then Continue For
@@ -3041,6 +3476,75 @@ Namespace ViewModels
                 If Not IsPathInSearchRoot(meta.FilePath, root, includeSubfolders) Then Continue For
                 Yield meta
             Next
+        End Function
+
+        ''' <summary>Die Eintraege, die ueberhaupt in Frage kommen - oder Nothing, wenn sich das
+        ''' nicht sagen laesst.
+        '''
+        ''' WARUM: ohne Startordner geht der Durchlauf ueber JEDEN Katalogeintrag und fragt fuer
+        ''' jeden die Datei ab. Bei 13000 Eintraegen und einem Ort mit dreissig Bildern stand die
+        ''' Galerie lange leer, weil die Treffer irgendwo weit hinten lagen. Person und Ort liegen
+        ''' aber in der Datenbank und lassen sich dort in EINER Abfrage einschraenken.
+        '''
+        ''' NUR EINE VORAUSWAHL: die Bedingungen werden danach ganz normal ausgewertet, ebenso Text,
+        ''' Favorit und Sterne. Eingegrenzt wird deshalb nur, wo die Abfrage GENAU dasselbe meint wie
+        ''' die Bedingung - Gleichheit, und bei mehreren Bedingungen dieselbe Verknuepfung, die auch
+        ''' die Abfrage kennt: Orte ODER, Personen UND. Alles andere gibt Nothing zurueck und laeuft
+        ''' wie bisher.</summary>
+        Private Shared Function NarrowSearchMetas(node As VirtualNavigationNode) As List(Of LibraryImageMeta)
+            If node Is Nothing Then Return Nothing
+            Try
+                ' Die Knopfauswahl zuerst: sie ist der haeufige Fall und laesst sich sauber
+                ' schneiden - Personen ueber ihre Namen, Orte ueber Ort und Land.
+                Dim hasPeople = node.PersonQueries IsNot Nothing AndAlso node.PersonQueries.Count > 0
+                Dim hasPlaces = node.PlaceQueries IsNot Nothing AndAlso node.PlaceQueries.Count > 0
+                If hasPeople OrElse hasPlaces Then
+                    Dim narrowedPaths As HashSet(Of String) = Nothing
+                    If hasPeople Then
+                        narrowedPaths = New HashSet(Of String)(
+                            LibraryService.Instance.GetPathsForPersonNames(node.PersonQueries.ToList()),
+                            StringComparer.Ordinal)
+                    End If
+                    If hasPlaces Then
+                        Dim placePaths = LibraryService.Instance.GetPathsForPlaces(node.PlaceQueries.ToList())
+                        If narrowedPaths Is Nothing Then
+                            narrowedPaths = New HashSet(Of String)(placePaths, StringComparer.Ordinal)
+                        Else
+                            narrowedPaths.IntersectWith(placePaths)
+                        End If
+                    End If
+                    If narrowedPaths.Count = 0 Then Return New List(Of LibraryImageMeta)()
+                    Return LibraryService.Instance.GetMetaForPaths(narrowedPaths).Values.ToList()
+                End If
+
+                If node.Conditions Is Nothing OrElse node.Conditions.Count = 0 Then Return Nothing
+                Dim conditions = node.Conditions.Where(Function(c) c IsNot Nothing).ToList()
+                If conditions.Count = 0 Then Return Nothing
+                If Not conditions.All(Function(c) String.Equals(c.Operator, "=", StringComparison.Ordinal)) Then Return Nothing
+                If conditions.Any(Function(c) String.IsNullOrWhiteSpace(c.Value)) Then Return Nothing
+                Dim isOr = String.Equals(node.ConditionCombinator, "OR", StringComparison.OrdinalIgnoreCase)
+
+                Dim paths As List(Of String) = Nothing
+                If conditions.All(Function(c) String.Equals(c.Field, "Place", StringComparison.Ordinal)) Then
+                    ' Mehrere Orte gehen nur mit ODER: ein Bild hat genau einen Aufnahmeort.
+                    If conditions.Count > 1 AndAlso Not isOr Then Return Nothing
+                    paths = LibraryService.Instance.GetPathsForPlaces(conditions.Select(Function(c) c.Value.Trim()).ToList())
+                ElseIf conditions.All(Function(c) String.Equals(c.Field, "Person", StringComparison.Ordinal)) Then
+                    ' Mehrere Personen heisst "gemeinsam auf einem Bild", also UND.
+                    If conditions.Count > 1 AndAlso isOr Then Return Nothing
+                    paths = LibraryService.Instance.GetPathsForPersonNames(conditions.Select(Function(c) c.Value.Trim()).ToList())
+                Else
+                    Return Nothing
+                End If
+
+                If paths Is Nothing Then Return Nothing
+                If paths.Count = 0 Then Return New List(Of LibraryImageMeta)()
+                Dim byPath = LibraryService.Instance.GetMetaForPaths(paths)
+                Return byPath.Values.ToList()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.NarrowSearchMetas", ex)
+                Return Nothing
+            End Try
         End Function
 
         Private Shared Function IsPathInSearchRoot(filePath As String, rootFolder As String, includeSubfolders As Boolean) As Boolean
@@ -3077,6 +3581,8 @@ Namespace ViewModels
                 If meta Is Nothing Then Continue For
                 If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Continue For
                 If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
+                If Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Continue For
+                If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Continue For
                 If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
                 If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
                 If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
@@ -3128,6 +3634,8 @@ Namespace ViewModels
 
                 If Not MatchesSavedSearchText(file, meta.Tags, textQuery) Then Continue For
                 If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
+                If Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Continue For
+                If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Continue For
                 If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
                 If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
                 If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
@@ -3339,10 +3847,46 @@ Namespace ViewModels
                     Return CompareTextCondition(meta.Camera, condition.Operator, condition.Value)
                 Case "DateTaken"
                     Return CompareTextCondition(meta.DateTaken, condition.Operator, condition.Value)
+                Case "Place"
+                    ' Ort und Land gelten beide: wer "Borkum" sucht, meint den Ort, wer "Germany"
+                    ' sucht, das Land - eine getrennte Bedingung je Ebene waere nur Ballast.
+                    Return CompareTextCondition(meta.City, condition.Operator, condition.Value) OrElse
+                           CompareTextCondition(meta.Country, condition.Operator, condition.Value)
+                Case "Person"
+                    Return MatchesPersonCondition(meta.FilePath, condition)
                 Case Else
                     Return True
             End Select
         End Function
+
+        ''' <summary>Personen liegen NICHT in der Bildzeile, sondern in eigenen Tabellen - ein Bild
+        ''' traegt mehrere. Verglichen wird deshalb gegen die Namen, die zu diesem Pfad gehoeren.
+        '''
+        ''' Die Zuordnung wird je Durchlauf EINMAL geholt und gemerkt: ohne das faellt je Bild eine
+        ''' eigene Datenbankabfrage an, und bei einem Bestand mit zehntausenden Fotos steht die
+        ''' Oberflaeche. Der Zwischenspeicher gilt fuer einen Durchlauf, nicht laenger - danach kann
+        ''' eine Benennung ihn ueberholt haben.</summary>
+        Private Shared _personNamesByPath As Dictionary(Of String, List(Of String))
+
+        Private Shared Function MatchesPersonCondition(filePath As String, condition As SearchCondition) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Try
+                If _personNamesByPath Is Nothing Then
+                    _personNamesByPath = LibraryService.Instance.GetPersonNamesByPath()
+                End If
+                Dim names As List(Of String) = Nothing
+                If Not _personNamesByPath.TryGetValue(filePath, names) OrElse names Is Nothing Then Return False
+                Return names.Any(Function(n) CompareTextCondition(n, condition.Operator, condition.Value))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.MatchesPersonCondition", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Vor jedem Durchlauf leeren, damit frisch benannte Personen sofort greifen.</summary>
+        Private Shared Sub ResetPersonNameCache()
+            _personNamesByPath = Nothing
+        End Sub
 
         Private Shared Function CompareNumericCondition(actual As Double?, op As String, valueText As String) As Boolean
             If Not actual.HasValue Then Return False
@@ -3485,6 +4029,39 @@ Namespace ViewModels
                            Select(Function(t) t.Trim()).ToList()
             Return tagQueries.Any(Function(wanted) own.Any(
                 Function(t) String.Equals(t, wanted.Trim(), StringComparison.OrdinalIgnoreCase)))
+        End Function
+
+        ''' <summary>Stehen ALLE diese Personen auf dem Bild? Mehrere wirken als UND - wer zwei Namen
+        ''' anklickt, sucht die beiden gemeinsam.
+        '''
+        ''' Die Zuordnung kommt aus demselben Zwischenspeicher wie die Suchbedingung: sie liegt nicht
+        ''' in der Bildzeile, weil ein Bild mehrere Personen traegt, und eine eigene Abfrage je Bild
+        ''' liess bei grossen Bestaenden die Oberflaeche stehen.</summary>
+        Private Shared Function MatchesPersonQuery(filePath As String, wanted As IList(Of String)) As Boolean
+            If wanted Is Nothing OrElse wanted.Count = 0 Then Return True
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Try
+                If _personNamesByPath Is Nothing Then
+                    _personNamesByPath = LibraryService.Instance.GetPersonNamesByPath()
+                End If
+                Dim names As List(Of String) = Nothing
+                If Not _personNamesByPath.TryGetValue(filePath, names) OrElse names Is Nothing Then Return False
+                Return wanted.All(Function(w) names.Any(
+                    Function(n) String.Equals(n, w, StringComparison.OrdinalIgnoreCase)))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.MatchesPersonQuery", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Kommt das Bild von einem dieser Orte? Mehrere wirken als ODER, denn ein Bild hat
+        ''' genau einen Aufnahmeort. Verglichen wird gegen Ort UND Land - wer "Germany" waehlt, meint
+        ''' das Land.</summary>
+        Private Shared Function MatchesPlaceQuery(meta As LibraryImageMeta, wanted As IList(Of String)) As Boolean
+            If wanted Is Nothing OrElse wanted.Count = 0 Then Return True
+            If meta Is Nothing Then Return False
+            Return wanted.Any(Function(w) String.Equals(meta.City, w, StringComparison.OrdinalIgnoreCase) OrElse
+                                          String.Equals(meta.Country, w, StringComparison.OrdinalIgnoreCase))
         End Function
 
         Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String), textQuery As String) As Boolean

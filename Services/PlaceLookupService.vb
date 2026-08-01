@@ -1,0 +1,162 @@
+Imports System
+Imports System.Collections.Generic
+Imports System.Globalization
+Imports Microsoft.Data.Sqlite
+
+Namespace Services
+
+    ''' <summary>Ein Ort mit Land und der Entfernung zum gesuchten Punkt.</summary>
+    Public Class PlaceHit
+        Public Property Name As String = ""
+        Public Property Country As String = ""
+        Public Property DistanceKm As Double
+    End Class
+
+    ''' <summary>Ortsnamen zu Koordinaten, ausschliesslich vom eigenen Geraet.
+    '''
+    ''' WARUM NICHT UEBER EINEN DIENST IM NETZ: Der naheliegende Weg waere eine Abfrage bei einem
+    ''' Geokodierer. Er scheidet aus zwei Gruenden aus. Erstens verbieten die Nutzungsbedingungen des
+    ''' offenen Dienstes systematische Abfragen ausdruecklich - genau das waere ein Durchlauf ueber
+    ''' einen Fotobestand - und lassen hoechstens eine Anfrage je Sekunde zu; fuer 25000 Bilder waeren
+    ''' das sieben Stunden. Zweitens, und wichtiger: jede Abfrage traegt einen Aufnahmeort nach
+    ''' draussen. Bei einer Anwendung, die sonst nichts sendet, waere das ein stiller Bruch mit dem,
+    ''' was sie zusagt.
+    '''
+    ''' Stattdessen eine Tabelle von 170540 Orten neben der Anwendung (12,6 MB, ueber denselben Knopf
+    ''' wie die Modelle). Fuer die Frage "wie heisst es hier" reicht das: gebraucht wird ein Ortsname,
+    ''' keine Adresse.
+    '''
+    ''' Die Suche geht ueber ein KAESTCHEN um den Punkt und rechnet den echten Abstand nur darin.
+    ''' Ohne das waere jede Abfrage ein Durchlauf durch alle 170540 Zeilen. Das Kaestchen waechst in
+    ''' Stufen, bis etwas darin liegt - in bewohnten Gegenden reicht die erste, auf dem Meer greift
+    ''' keine.</summary>
+    Public NotInheritable Class PlaceLookupService
+
+        Private Sub New()
+        End Sub
+
+        Public Const PlaceFileKey As String = "orte"
+
+        ''' <summary>Weiter entfernte Orte gelten NICHT mehr als Aufnahmeort.
+        '''
+        ''' Ohne diese Grenze bekaeme jedes Foto einen Namen, auch eines mitten auf dem Atlantik -
+        ''' gemessen war der naechste Ort dort 1343 km entfernt. Ein falscher Ortsname ist schlechter
+        ''' als gar keiner: er landet im Filter, in der Suche und spaeter womoeglich in den
+        ''' Metadaten. 50 km decken auch abgelegene Aufnahmestellen ab, ohne ins Beliebige zu
+        ''' geraten.</summary>
+        Public Const MaxDistanceKm As Double = 50.0
+
+        ''' <summary>Steht die Funktion zur Verfuegung? Nur mit der Ortstabelle.</summary>
+        Public Shared ReadOnly Property Available As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(AiModelService.BestFile(PlaceFileKey))
+            End Get
+        End Property
+
+        ''' <summary>Darf sie auch benutzt werden? Zusaetzlich zur vorhandenen Tabelle muss der
+        ''' Benutzer sie eingeschaltet haben - dieselbe Regel wie bei der Personenerkennung. Ohne
+        ''' diese Abfrage waere der Schalter in den Einstellungen ohne Wirkung, und die Tabelle
+        ''' fuellte Ortsnamen, sobald sie irgendwann einmal geladen wurde.</summary>
+        Public Shared ReadOnly Property Enabled As Boolean
+            Get
+                Return Available AndAlso AppSettingsService.Load().PhotoMapEnabled
+            End Get
+        End Property
+
+        Private Shared _connectionString As String = Nothing
+        Private Shared ReadOnly _lock As New Object()
+
+        Private Shared Function ConnectionString() As String
+            SyncLock _lock
+                If _connectionString IsNot Nothing Then Return _connectionString
+                Dim file = AiModelService.BestFile(PlaceFileKey)
+                If String.IsNullOrEmpty(file) Then Return Nothing
+                Dim path = AiModelService.ModelPath(file)
+                If String.IsNullOrEmpty(path) Then Return Nothing
+                ' Nur lesen: die Tabelle ist Beigabe, keine Ablage. Ein versehentliches Schreiben
+                ' wuerde ihre Pruefsumme ungueltig machen.
+                _connectionString = $"Data Source={path};Mode=ReadOnly"
+                Return _connectionString
+            End SyncLock
+        End Function
+
+        ''' <summary>Der naechstgelegene Ort, oder Nothing, wenn keiner nah genug liegt.</summary>
+        Public Shared Function Nearest(latitude As Double, longitude As Double) As PlaceHit
+            If Double.IsNaN(latitude) OrElse Double.IsNaN(longitude) Then Return Nothing
+            If latitude < -90 OrElse latitude > 90 OrElse longitude < -180 OrElse longitude > 180 Then Return Nothing
+            Dim cs = ConnectionString()
+            If cs Is Nothing Then Return Nothing
+
+            Try
+                Using conn = New SqliteConnection(cs)
+                    conn.Open()
+                    ' In Stufen weiten. Die erste deckt bewohnte Gegenden ab; die letzte reicht
+                    ' knapp ueber die Hoechstentfernung hinaus, damit ein Ort am Rand nicht durch
+                    ' das Kaestchen faellt.
+                    For Each boxDegrees In New Double() {0.15, 0.5, 1.0}
+                        Dim hit = NearestInBox(conn, latitude, longitude, boxDegrees)
+                        If hit IsNot Nothing Then
+                            If hit.DistanceKm > MaxDistanceKm Then Return Nothing
+                            Return hit
+                        End If
+                    Next
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Orte.Nachschlagen", ex)
+            End Try
+            Return Nothing
+        End Function
+
+        Private Shared Function NearestInBox(conn As SqliteConnection, lat As Double, lon As Double,
+                                             boxDegrees As Double) As PlaceHit
+            ' Ein Grad Laenge ist am Aequator so lang wie ein Grad Breite und schrumpft zu den Polen
+            ' hin auf null. Ohne diese Korrektur waere das Kaestchen in Nordeuropa viel zu schmal.
+            Dim cosLat = Math.Max(0.05, Math.Cos(lat * Math.PI / 180.0))
+            Dim lonSpan = boxDegrees / cosLat
+
+            Using cmd = conn.CreateCommand()
+                cmd.CommandText =
+                    "SELECT Name, Country, Lat, Lon FROM Place " &
+                    "WHERE Lat BETWEEN $latMin AND $latMax AND Lon BETWEEN $lonMin AND $lonMax"
+                cmd.Parameters.AddWithValue("$latMin", lat - boxDegrees)
+                cmd.Parameters.AddWithValue("$latMax", lat + boxDegrees)
+                cmd.Parameters.AddWithValue("$lonMin", lon - lonSpan)
+                cmd.Parameters.AddWithValue("$lonMax", lon + lonSpan)
+
+                Dim best As PlaceHit = Nothing
+                Dim bestKm As Double = Double.MaxValue
+                Using reader = cmd.ExecuteReader()
+                    While reader.Read()
+                        Dim pLat = reader.GetDouble(2)
+                        Dim pLon = reader.GetDouble(3)
+                        Dim km = DistanceKm(lat, lon, pLat, pLon)
+                        If km < bestKm Then
+                            bestKm = km
+                            best = New PlaceHit With {
+                                .Name = reader.GetString(0),
+                                .Country = reader.GetString(1),
+                                .DistanceKm = km}
+                        End If
+                    End While
+                End Using
+                Return best
+            End Using
+        End Function
+
+        ''' <summary>Abstand zweier Punkte auf der Kugel. Die einfache ebene Naeherung reicht hier
+        ''' nicht: sie liegt in Nordeuropa deutlich daneben, und der Abstand entscheidet ueber die
+        ''' Hoechstentfernung.</summary>
+        Private Shared Function DistanceKm(lat1 As Double, lon1 As Double,
+                                           lat2 As Double, lon2 As Double) As Double
+            Const EarthRadiusKm As Double = 6371.0
+            Dim dLat = (lat2 - lat1) * Math.PI / 180.0
+            Dim dLon = (lon2 - lon1) * Math.PI / 180.0
+            Dim a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2)
+            Return EarthRadiusKm * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a))
+        End Function
+
+    End Class
+
+End Namespace

@@ -5694,4 +5694,130 @@
   <data name="Jedes_Symbol_dreht_sich_in_die_Laufrichtung_des__92c61e19" xml:space="preserve">
     <value>每个符号随边框走向旋转。关闭时全部保持直立。</value>
   </data>
+  <data name="Vier_Werkzeuge_brauchen_eine_Modelldatei_die_sic_88ebbe74" xml:space="preserve">
+    <value>四个工具需要可从 GitHub 下载的模型文件。</value>
+  </data>
+  <data name="Personen_erkennen_be0c64ef" xml:space="preserve">
+    <value>识别人物</value>
+  </data>
+  <data name="Sucht_Gesichter_in_Ihren_Fotos_und_fasst_dieselb_36651baa" xml:space="preserve">
+    <value>在您的照片中查找人脸，并将同一个人归为一组，方便您搜索。在您的设备上运行；特征数据保留在您的图库中，不会发送到任何地方。名字由您自己命名。</value>
+  </data>
+  <data name="Aufnahmeorte_auf_einer_Karte_2762855b" xml:space="preserve">
+    <value>在地图上显示拍摄地点</value>
+  </data>
+  <data name="Zeigt_Fotos_mit_Ortsangabe_auf_einer_Karte_Ander_0b8f8d2d" xml:space="preserve">
+    <value>在地图上显示带有位置信息的照片。与 FerrumPix 中的其他功能不同，这需要对外连接：地图图像来自第三方服务，该服务会因此得知您正在查看哪个区域。</value>
+  </data>
+  <data name="YuNet_365d3d5b" xml:space="preserve">
+    <value>YuNet</value>
+  </data>
+  <data name="Gesichter_finden_Modelldatei_4e16ccfe" xml:space="preserve">
+    <value>查找人脸（模型文件）</value>
+  </data>
+  <data name="SFace_8767ac17" xml:space="preserve">
+    <value>SFace</value>
+  </data>
+  <data name="Gesichter_vergleichen_Modelldatei_c264f3b0" xml:space="preserve">
+    <value>比较人脸（模型文件）</value>
+  </data>
+  <data name="Gesichter_finden_und_dieselbe_Person_zusammenfas_cf89104f" xml:space="preserve">
+    <value>查找人脸并将同一人归为一组</value>
+  </data>
+  <data name="Ortsnamen_zu_den_Koordinaten_im_Bild_ohne_Abfrag_844f8c14" xml:space="preserve">
+    <value>根据照片中的坐标获取地名，无需联网查询</value>
+  </data>
+  <data name="Ohne_Namen_123a8e9b" xml:space="preserve">
+    <value>未命名</value>
+  </data>
+  <data name="Noch_keine_Personen_erkannt_d9c98ed5" xml:space="preserve">
+    <value>尚未识别到人物</value>
+  </data>
+  <data name="Gesichter_erkennen_c67e0f96" xml:space="preserve">
+    <value>识别人脸</value>
+  </data>
+  <data name="Durchsucht_die_markierten_Bilder_sonst_die_ganze_c1680a0b" xml:space="preserve">
+    <value>搜索已选照片，未选时搜索整个视图</value>
+  </data>
+  <data name="Gesichter_werden_gesucht_affb823b" xml:space="preserve">
+    <value>正在查找人脸</value>
+  </data>
+  <data name="Gesichter_gefunden_18cc9ec6" xml:space="preserve">
+    <value>个人脸</value>
+  </data>
+  <data name="PERSONEN_c9cfcdaa" xml:space="preserve">
+    <value>人物</value>
+  </data>
+  <data name="Name_eingeben_ec833156" xml:space="preserve">
+    <value>输入姓名</value>
+  </data>
+  <data name="Person_suchen_8bff7891" xml:space="preserve">
+    <value>搜索人物</value>
+  </data>
+  <data name="Personen_Mausradklick_hebt_die_Auswahl_auf_06b10702" xml:space="preserve">
+    <value>人物（按下鼠标中键取消选择）</value>
+  </data>
+  <data name="Stichw_rter_Mausradklick_hebt_die_Auswahl_auf_23ebbdff" xml:space="preserve">
+    <value>关键词（按下鼠标中键取消选择）</value>
+  </data>
+  <data name="Orte_Mausradklick_hebt_die_Auswahl_auf_788210a1" xml:space="preserve">
+    <value>地点（按下鼠标中键取消选择）</value>
+  </data>
+  <data name="Filter_Mausradklick_setzt_zur_ck_c9c33585" xml:space="preserve">
+    <value>筛选（按下鼠标中键重置）</value>
+  </data>
+  <data name="Sortieren_Mausradklick_setzt_zur_ck_b7b3423d" xml:space="preserve">
+    <value>排序（按下鼠标中键重置）</value>
+  </data>
+  <data name="Noch_keine_Personen_benannt_c4870013" xml:space="preserve">
+    <value>尚未命名任何人物</value>
+  </data>
+  <data name="Namen_werden_im_Infopanel_am_Bild_vergeben_6995b814" xml:space="preserve">
+    <value>在照片的信息面板中为人物命名</value>
+  </data>
+  <data name="ORTE_616e8a82" xml:space="preserve">
+    <value>地点</value>
+  </data>
+  <data name="Ort_suchen_06144b10" xml:space="preserve">
+    <value>搜索地点</value>
+  </data>
+  <data name="Noch_keine_Orte_bekannt_03c72673" xml:space="preserve">
+    <value>尚无已知地点</value>
+  </data>
+  <data name="Ortsnamen_entstehen_aus_den_Koordinaten_im_Bild_d6f239b3" xml:space="preserve">
+    <value>地点名称来自照片中的坐标</value>
+  </data>
+  <data name="Ort_d95f9e67" xml:space="preserve">
+    <value>地点</value>
+  </data>
+  <data name="Falsch_erkannt_dieses_Gesicht_aus_der_Person_her_da69b300" xml:space="preserve">
+    <value>识别有误：将此面孔从该人物中分离。其他照片保持不变。</value>
+  </data>
+  <data name="Person_8c41ae88" xml:space="preserve">
+    <value>人物</value>
+  </data>
+  <data name="enth_lt_7c93d365" xml:space="preserve">
+    <value>包含</value>
+  </data>
+  <data name="Erkannte_Personen_nach_Immich_schreiben_f53b5807" xml:space="preserve">
+    <value>将识别到的人物写入 Immich</value>
+  </data>
+  <data name="Schreibt_die_Namen_der_auf_einem_Immich_Bild_erk_048fa06b" xml:space="preserve">
+    <value>将 Immich 照片中识别到的人物姓名作为 Immich 标签写入服务器。仅限已命名的分组，且仅在人物识别运行之后。关闭时：识别结果留在本机。</value>
+  </data>
+  <data name="Name_eintragen_benennt_die_ganze_Gruppe_44bfe467" xml:space="preserve">
+    <value>输入姓名会为整个分组命名。</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_verschiebt_nur_dieses_ed791b2c" xml:space="preserve">
+    <value>已存在的姓名只会把这一张面孔移过去。</value>
+  </data>
+  <data name="Nicht_diese_Person_486fc4cd" xml:space="preserve">
+    <value>不是此人</value>
+  </data>
+  <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
+    <value>为拍摄地点命名</value>
+  </data>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
+    <value>把照片中的坐标变成地点和国家：它们会出现在信息栏、图库上方的地点筛选和搜索中。名称来自本机的地点表，不查询也不发送任何内容。FerrumPix 不显示地图。</value>
+  </data>
 </root>

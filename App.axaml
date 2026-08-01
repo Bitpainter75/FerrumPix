@@ -19,6 +19,8 @@
         <conv:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter"/>
         <conv:ExifDateConverter x:Key="ExifDateConverter"/>
         <conv:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
+        <conv:SearchFieldLabelConverter x:Key="SearchFieldLabelConverter"/>
+        <conv:SearchOperatorLabelConverter x:Key="SearchOperatorLabelConverter"/>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme>

@@ -32,10 +32,16 @@
                      beschreiben genau eine Datei, und eine von zwölf zu zeigen wäre falsch. -->
                 <!-- Spacing knapper als sonst: fünf Reiter müssen in die 320px breite Seitenleiste passen,
                      auch bei längeren Übersetzungen von "Allgemein". -->
-                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,14,0,0"
+                <StackPanel Orientation="Horizontal" Spacing="9" Margin="0,14,0,0"
                             IsVisible="{Binding IsSingleImage}">
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="General" Classes.active="{Binding IsInfoTabGeneral}">
                         <TextBlock Text="Allgemein"/>
+                    </Button>
+                    <!-- Nur da, wenn auf dem Bild jemand erkannt wurde. Ein Reiter, hinter dem nie
+                         etwas steht, wäre bei jedem Landschaftsfoto ein leeres Versprechen. -->
+                    <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="People"
+                            Classes.active="{Binding IsInfoTabPeople}" IsVisible="{Binding HasPeople}">
+                        <TextBlock Text="Personen"/>
                     </Button>
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="Exif" Classes.active="{Binding IsInfoTabExif}">
                         <TextBlock Text="EXIF"/>
@@ -260,6 +266,23 @@
                             </StackPanel>
                         </StackPanel>
 
+                        <!-- Ort. Steht bei den Personen, weil beides aus derselben Quelle kommt:
+                             was das Bild über sich selbst verrät, ohne dass jemand es eingetippt hat.
+                             Der Name stammt aus der örtlichen Ortstabelle - die Koordinaten stehen im
+                             Bild, der Name nirgends. Ohne Ortsangabe fällt der ganze Block weg. -->
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
+                                IsVisible="{Binding HasPlace}"/>
+
+                        <StackPanel Spacing="10" IsVisible="{Binding HasPlace}">
+                            <TextBlock Text="Ort" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                                               Width="16" Height="16" VerticalAlignment="Center" Opacity="0.75"/>
+                                <TextBlock Text="{Binding PlaceText}" Classes="no-translate"
+                                           TextWrapping="Wrap" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
 
                         <StackPanel Spacing="10">
@@ -337,6 +360,63 @@
                             </Grid>
                         </StackPanel>
 
+                    </StackPanel>
+
+                    <!-- PERSONEN als eigener Reiter. Sie sind das einzige in dieser Leiste, was
+                         der Benutzer BEARBEITET - alles andere ist Anzeige. Als Abschnitt unter den
+                         Aufnahmedaten schob eine Gruppenaufnahme mit zwanzig Gesichtern alles andere
+                         aus der Leiste; hier hat die Liste die ganze Höhe für sich. Der Reiter
+                         erscheint nur, wenn jemand erkannt wurde. -->
+                    <StackPanel Spacing="12" IsVisible="{Binding IsInfoTabPeople}" Margin="0,0,12,0">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Name eintragen benennt die ganze Gruppe."
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Ein Name, den es schon gibt, verschiebt nur dieses eine Gesicht dorthin."
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding People}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <!-- Das GESICHT gehört neben das Feld. Fünf leere Felder
+                                         untereinander sagen niemandem, welches zu wem gehört - mit
+                                         dem Ausschnitt daneben ist es offensichtlich. Der Knopf
+                                         rechts meint NUR dieses Gesicht: er löst es aus der Gruppe,
+                                         wenn die Erkennung jemanden verwechselt hat. -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+                                        <Border Width="44" Height="44" CornerRadius="4"
+                                                ClipToBounds="True"
+                                                Background="{DynamicResource FP.Bg.Elevated}"
+                                                VerticalAlignment="Center">
+                                            <Image Source="{Binding Thumbnail}"
+                                                   Stretch="UniformToFill"/>
+                                        </Border>
+                                        <TextBox Grid.Column="1"
+                                                 Text="{Binding Name, Mode=OneWay}"
+                                                 PlaceholderText="Name eingeben"
+                                                 Classes="no-translate"
+                                                 VerticalAlignment="Center"
+                                                 LostFocus="OnPersonNameCommitted"
+                                                 KeyDown="OnPersonNameKeyDown"
+                                                 Tag="{Binding Id}"/>
+                                        <Button Grid.Column="2"
+                                                Classes="ghost"
+                                                Width="28" Height="28" Padding="0"
+                                                VerticalAlignment="Center"
+                                                Click="OnDetachFaceClick"
+                                                Tag="{Binding FaceId}"
+                                                ToolTip.Tip="Nicht diese Person">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/user-x.svg"
+                                                           Width="16" Height="16"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Opacity="0.75"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
 
                     <StackPanel Spacing="10" IsVisible="{Binding IsInfoTabExif}" Margin="0,0,12,0">

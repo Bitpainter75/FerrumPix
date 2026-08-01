@@ -74,6 +74,8 @@ Namespace ViewModels
         Private _cleanupResultMessage As String = ""
         Private _thumbnailCacheResultMessage As String = ""
         Private _videoHardwareAcceleration As Boolean = False
+        Private _faceRecognitionEnabled As Boolean = False
+        Private _photoMapEnabled As Boolean = False
         Private _transparencyBackgroundMode As String = "Checkerboard"
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
         Private _enableDiagnosticLogging As Boolean = False
@@ -87,6 +89,7 @@ Namespace ViewModels
         Private _immichUpdateExistingAssets As Boolean = False
         Private _immichAllowDelete As Boolean = False
         Private _immichDeletePermanently As Boolean = False
+        Private _immichWritePeopleTags As Boolean = False
         Private _immichConnectionMessage As String = ""
         Private _immichCacheMessage As String = ""
         Private _immichIsTesting As Boolean = False
@@ -98,6 +101,7 @@ Namespace ViewModels
         Private _savedImmichUpdateExistingAssets As Boolean = False
         Private _savedImmichAllowDelete As Boolean = False
         Private _savedImmichDeletePermanently As Boolean = False
+        Private _savedImmichWritePeopleTags As Boolean = False
 
         Private _savedThemeMode As String = "Dark"
         Private _savedAccentColor As String = "#F08A1A"
@@ -148,6 +152,8 @@ Namespace ViewModels
         Private _savedApplicationScale As Double = 1.0
         Private _savedApplicationScaleScreen As String = "HDMI-A-1"
         Private _savedVideoHardwareAcceleration As Boolean = False
+        Private _savedFaceRecognitionEnabled As Boolean = False
+        Private _savedPhotoMapEnabled As Boolean = False
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
         Private _savedTransparencyBackgroundColor As String = "#FFFFFFFF"
 
@@ -1413,6 +1419,35 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS - die
+        ''' Erkennung liest den ganzen Bestand durch und legt biometrische Merkmale in der Bibliothek
+        ''' ab, und das ist etwas anderes als ein Stichwort. Ohne die beiden Modelldateien bleibt der
+        ''' Schalter wirkungslos; ob sie da sind, entscheidet AiModelService.
+        Public Property FaceRecognitionEnabled As Boolean
+            Get
+                Return _faceRecognitionEnabled
+            End Get
+            Set(value As Boolean)
+                If _faceRecognitionEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_faceRecognitionEnabled, value)
+                SaveFeatureSettings()
+            End Set
+        End Property
+
+        ''' Aufnahmeorte auf einer Karte zeigen. AB WERK AUS - die Koordinaten liegen zwar laengst in
+        ''' der Bibliothek, aber ein Kartenbild kommt von einem fremden Dienst, und jede Anfrage
+        ''' verraet ihm, WO fotografiert wurde.
+        Public Property PhotoMapEnabled As Boolean
+            Get
+                Return _photoMapEnabled
+            End Get
+            Set(value As Boolean)
+                If _photoMapEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_photoMapEnabled, value)
+                SaveFeatureSettings()
+            End Set
+        End Property
+
         ''' Bestimmt, wie der Bereich hinter transparenten Bildbereichen in Viewer und Editor
         ''' dargestellt wird: "Checkerboard" (Standard) zeigt das übliche Schachbrettmuster,
         ''' "None" zeigt gar keinen Hintergrund (echt durchsichtig, kein Muster), "Solid" eine per
@@ -1607,6 +1642,24 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Erkannte Personen als Stichworte zurueck auf den Server schreiben.
+        '''
+        ''' AB WERK AUS. Der Server gehoert dem Benutzer, und wer dort etwas hinschreibt, aendert
+        ''' Daten ausserhalb dieses Programms. Wer wen auf einem Foto erkannt hat, ist ausserdem eine
+        ''' Angabe fuer sich - sie soll nicht als Nebenwirkung eines Suchlaufs den Rechner verlassen.
+        ''' Geschrieben werden nur BENANNTE Gruppen; eine namenlose waere als Stichwort wertlos und
+        ''' liesse sich auf dem Server nur von Hand wieder loswerden.</summary>
+        Public Property ImmichWritePeopleTags As Boolean
+            Get
+                Return _immichWritePeopleTags
+            End Get
+            Set(value As Boolean)
+                If _immichWritePeopleTags = value Then Return
+                Me.RaiseAndSetIfChanged(_immichWritePeopleTags, value)
+                PersistImmichSettings()
+            End Set
+        End Property
+
         Public Property ImmichConnectionMessage As String
             Get
                 Return _immichConnectionMessage
@@ -1750,6 +1803,8 @@ Namespace ViewModels
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
+            _faceRecognitionEnabled = _appSettings.FaceRecognitionEnabled
+            _photoMapEnabled = _appSettings.PhotoMapEnabled
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
             _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
@@ -1761,6 +1816,7 @@ Namespace ViewModels
             _immichUpdateExistingAssets = _appSettings.ImmichUpdateExistingAssets
             _immichAllowDelete = _appSettings.ImmichAllowDelete
             _immichDeletePermanently = _appSettings.ImmichDeletePermanently
+            _immichWritePeopleTags = _appSettings.ImmichWritePeopleTags
             FolderNode.ShowHiddenFolders = _showHiddenFolders
             FileOperationPolicy.FollowLinkedFolders = _followLinkedFolders
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
@@ -1847,6 +1903,7 @@ Namespace ViewModels
                                           s.ImmichUpdateExistingAssets = _immichUpdateExistingAssets
                                           s.ImmichAllowDelete = _immichAllowDelete
                                           s.ImmichDeletePermanently = _immichDeletePermanently
+                                          s.ImmichWritePeopleTags = _immichWritePeopleTags
                                       End Sub)
         End Sub
 
@@ -1918,6 +1975,7 @@ Namespace ViewModels
             _savedImmichUpdateExistingAssets = _immichUpdateExistingAssets
             _savedImmichAllowDelete = _immichAllowDelete
             _savedImmichDeletePermanently = _immichDeletePermanently
+            _savedImmichWritePeopleTags = _immichWritePeopleTags
             _savedShowHiddenFolders = _showHiddenFolders
             _savedFollowLinkedFolders = _followLinkedFolders
             _savedDeleteSkipTrash = _deleteSkipTrash
@@ -1946,6 +2004,8 @@ Namespace ViewModels
             _savedStartupNoImageMode = _startupNoImageMode
             _savedLanguageMode = _languageMode
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
+            _savedFaceRecognitionEnabled = _faceRecognitionEnabled
+            _savedPhotoMapEnabled = _photoMapEnabled
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
             _savedTransparencyBackgroundColor = _transparencyBackgroundColor
             _savedFontSizeOffset = _fontSizeOffset
@@ -1978,6 +2038,7 @@ Namespace ViewModels
             ImmichUpdateExistingAssets = _savedImmichUpdateExistingAssets
             ImmichAllowDelete = _savedImmichAllowDelete
             ImmichDeletePermanently = _savedImmichDeletePermanently
+            ImmichWritePeopleTags = _savedImmichWritePeopleTags
             ImmichEnabled = _savedImmichEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
             FollowLinkedFolders = _savedFollowLinkedFolders
@@ -2007,6 +2068,8 @@ Namespace ViewModels
             StartupNoImageMode = _savedStartupNoImageMode
             LanguageMode = _savedLanguageMode
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
+            FaceRecognitionEnabled = _savedFaceRecognitionEnabled
+            PhotoMapEnabled = _savedPhotoMapEnabled
             TransparencyBackgroundMode = _savedTransparencyBackgroundMode
             TransparencyBackgroundColor = _savedTransparencyBackgroundColor
             FontSizeOffset = _savedFontSizeOffset
@@ -2060,6 +2123,7 @@ Namespace ViewModels
             ImmichUpdateExistingAssets = False
             ImmichAllowDelete = False
             ImmichDeletePermanently = False
+            ImmichWritePeopleTags = False
             ShowHiddenFolders = False
             FollowLinkedFolders = False
             DeleteSkipTrash = False
@@ -2084,6 +2148,8 @@ Namespace ViewModels
             GalleryInfoSidebarExpanded = False
             LanguageMode = "System"
             VideoHardwareAcceleration = False
+            FaceRecognitionEnabled = False
+            PhotoMapEnabled = False
             TransparencyBackgroundMode = "Checkerboard"
             TransparencyBackgroundColor = "#FFFFFFFF"
             FontSizeOffset = 0
@@ -2109,6 +2175,30 @@ Namespace ViewModels
             Dim settings = AppSettingsService.Load()
             settings.VideoHardwareAcceleration = _videoHardwareAcceleration
             AppSettingsService.Save(settings)
+        End Sub
+
+        ''' Die beiden Funktionen, die der Benutzer erst freischalten muss. Sofort geschrieben wie die
+        ''' Wiedergabe-Einstellung: wer einen solchen Schalter umlegt, erwartet, dass er umgelegt ist -
+        ''' und nicht, dass er es beim Abbrechen des Dialogs wieder verliert.
+        Private Sub SaveFeatureSettings()
+            Dim settings = AppSettingsService.Load()
+            Dim faceWasOn = settings.FaceRecognitionEnabled
+            settings.FaceRecognitionEnabled = _faceRecognitionEnabled
+            settings.PhotoMapEnabled = _photoMapEnabled
+            AppSettingsService.Save(settings)
+
+            ' AUSSCHALTEN WIRFT DIE MERKMALE WEG. Biometrische Merkmale entstehen nur auf
+            ' ausdrueckliche Ansage, und sie sollen auch nur solange liegenbleiben - wer die
+            ' Funktion abschaltet, will sie los sein und nicht schlafend in der Bibliothek wissen.
+            ' Das ist zugleich der Weg, die Gruppierung von Grund auf neu aufzubauen: aus, ein,
+            ' neu suchen.
+            If faceWasOn AndAlso Not _faceRecognitionEnabled Then
+                Try
+                    LibraryService.Instance.ClearAllFaces()
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Settings.ClearAllFaces", ex)
+                End Try
+            End If
         End Sub
 
         ''' Schaltet die AUSFÜHRLICHE Ablaufspur in DiagnosticLogService ein/aus (schreibt nach
@@ -2601,11 +2691,20 @@ Namespace ViewModels
             For Each name In AiModelService.KnownEntries.Select(Function(e) e.Group).Distinct()
                 Dim files = AiModelService.KnownEntries.Where(Function(e) e.Group = name).ToList()
                 Dim description As String
+                ' JEDE Gruppe braucht hier einen eigenen Zweig. Ein "Case Else", das alles Unbekannte
+                ' zur Objektauswahl erklaert, hat genau das getan, als die Gruppen "Personen" und
+                ' "Orte" dazukamen: sie standen im Dialog unter fremdem Namen mit fremder
+                ' Beschreibung. Deshalb faellt der Rest jetzt auf den ROHNAMEN zurueck - lieber
+                ' unuebersetzt und richtig als uebersetzt und falsch.
                 Select Case name
                     Case "Tiefe"
                         description = LocalizationService.T("Maske nach Entfernung und Tiefen-Unschärfe")
                     Case "Objekt entfernen"
                         description = LocalizationService.T("Markiertes verschwinden lassen, der Hintergrund wird fortgesetzt")
+                    Case "Personen"
+                        description = LocalizationService.T("Gesichter finden und dieselbe Person zusammenfassen")
+                    Case "Orte"
+                        description = LocalizationService.T("Ortsnamen zu den Koordinaten im Bild, ohne Abfrage im Netz")
                     Case Else
                         description = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
                 End Select
@@ -2613,7 +2712,10 @@ Namespace ViewModels
                 Select Case name
                     Case "Tiefe" : anzeigeName = LocalizationService.T("Tiefe")
                     Case "Objekt entfernen" : anzeigeName = LocalizationService.T("Objekt entfernen")
-                    Case Else : anzeigeName = LocalizationService.T("Objektauswahl")
+                    Case "Personen" : anzeigeName = LocalizationService.T("Personen")
+                    Case "Orte" : anzeigeName = LocalizationService.T("Orte")
+                    Case "Objektauswahl" : anzeigeName = LocalizationService.T("Objektauswahl")
+                    Case Else : anzeigeName = name
                 End Select
                 ModelGroups.Add(New ModelGroup With {
                     .Name = anzeigeName,

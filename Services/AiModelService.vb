@@ -183,7 +183,24 @@ Namespace Services
         End Class
 
         ''' <summary>Alle Modelle, die die Anwendung kennt. Wer eines hinzufuegt, traegt es hier ein;
-        ''' sonst wird es beim Start nicht gesucht und die Funktion bliebe unsichtbar.</summary>
+        ''' sonst wird es beim Start nicht gesucht und die Funktion bliebe unsichtbar.
+        '''
+        ''' Die Gruppe "Personen" braucht BEIDE Dateien: die eine findet die Gesichter, die andere
+        ''' macht aus einem Gesicht eine vergleichbare Zahlenreihe. Mit nur der ersten wuesste man,
+        ''' DASS jemand im Bild ist, aber nie, ob es dieselbe Person ist wie nebenan - deshalb ist
+        ''' die Gruppe erst vollstaendig etwas wert (siehe <c>Group</c>: ein halbes Modell ist keins).
+        '''
+        ''' Die Gruppe "Orte" ist KEIN gelerntes Modell, sondern eine Nachschlagetabelle: 170540 Orte
+        ''' mit Koordinaten. Sie laeuft trotzdem hier mit, weil sie dieselben Fragen stellt - hole
+        ''' sie auf Knopfdruck, pruefe die Pruefsumme, blende die Funktion aus, wenn sie fehlt. Ein
+        ''' zweiter Mechanismus daneben haette nichts gekonnt, was dieser nicht kann.
+        '''
+        ''' WARUM NICHT EINGEBETTET: 12,6 MB in jeder Auslieferung, auch fuer alle, die keine
+        ''' Ortsnamen brauchen - und eine Ortstabelle veraltet, waehrend das Programm gleich bleibt.
+        ''' Als eigene Datei laesst sie sich austauschen, ohne eine neue Programmversion zu bauen.
+        '''
+        ''' KEIN Kommentar INNERHALB der Liste: VB bricht dort die implizite Zeilenfortsetzung nach
+        ''' dem Komma ab, und der Initialisierer laesst sich nicht mehr uebersetzen.</summary>
         Public Shared ReadOnly Property KnownEntries As IReadOnlyList(Of ModelEntry) =
             New List(Of ModelEntry) From {
                 New ModelEntry With {.Key = "mobilesam-encoder",
@@ -201,7 +218,19 @@ Namespace Services
                 New ModelEntry With {.Key = "lama",
                                         .FileName = "lama-v1.onnx", .Group = "Objekt entfernen",
                                         .Zweck = "Lücken füllen", .Bytes = 110513159,
-                                        .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"}}
+                                        .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"},
+                New ModelEntry With {.Key = "yunet",
+                                        .FileName = "yunet-v1.onnx", .Group = "Personen",
+                                        .Zweck = "Gesichter finden", .Bytes = 232589,
+                                        .Sha256 = "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"},
+                New ModelEntry With {.Key = "sface",
+                                        .FileName = "sface-v1.onnx", .Group = "Personen",
+                                        .Zweck = "Gesichter vergleichen", .Bytes = 38696353,
+                                        .Sha256 = "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79"},
+                New ModelEntry With {.Key = "orte",
+                                        .FileName = "orte-v1.sqlite", .Group = "Orte",
+                                        .Zweck = "Ortsnamen zu Koordinaten", .Bytes = 13201408,
+                                        .Sha256 = "95ca2b04fb0703f8cd93e038ca0b3da469bbabf8aa7c9069acfc7105bf75c42a"}}
 
         ''' <summary>Woher die Dateien kommen: DIREKT von der Ablage, ohne Umweg.
         '''

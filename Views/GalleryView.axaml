@@ -132,7 +132,7 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
                     <Border Grid.Column="0"
                             Background="{DynamicResource FP.Bg.Input}"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
@@ -174,13 +174,187 @@
                         </Grid>
                     </Border>
 
-                    <!-- Stichwörter. Steht links vom Filter, weil es dieselbe Sorte Einschränkung
-                         ist, nur über den ganzen Bestand statt über den offenen Ordner. Die Liste
-                         entsteht beim Öffnen neu, damit frisch vergebene Stichwörter dabei sind. -->
+                    <!-- Personen. Dieselbe Sorte Einschränkung wie die Stichwörter, deshalb daneben
+                         und genauso gebaut. Der Knopf ist GANZ WEG, solange die Erkennung nicht
+                         eingeschaltet ist oder die Modelle fehlen - nicht ausgegraut, so hält es die
+                         Anwendung bei allen Modellfunktionen. Die Erkennung wird unten IM Menü
+                         ausgelöst: ohne das wäre der Knopf beim ersten Öffnen leer und tot. -->
                     <Button Grid.Column="1" Padding="10,7" Margin="0,0,8,0"
+                            Classes="filter-btn"
+                            Classes.active="{Binding HasPersonFilter}"
+                            IsVisible="{Binding HasPersonFeature}"
+                            Click="OnPersonFilterButtonClick"
+                            Tag="Person"
+                            PointerPressed="OnFilterButtonPointerPressed"
+                            ToolTip.Tip="Personen">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight"
+                                    VerticalOffset="2"
+                                    Opened="OnLocalizedFlyoutOpened">
+                                <StackPanel Spacing="1" MinWidth="248" MaxHeight="520">
+                                    <TextBlock Text="PERSONEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               Margin="10,8,10,4"/>
+
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding ClearPersonFilterCommand}">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Auswahl aufheben" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding !HasPersonFilter}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+
+                                    <Separator Margin="4,6"/>
+
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding ScanFacesCommand}"
+                                            ToolTip.Tip="Durchsucht die markierten Bilder, sonst die ganze Ansicht">
+                                        <TextBlock Text="Gesichter erkennen" VerticalAlignment="Center"/>
+                                    </Button>
+
+                                    <Separator Margin="4,6"/>
+
+                                    <!-- Suchfeld: bei einem gewachsenen Bestand hat man schnell
+                                         dreistellig viele Gruppen. Eine ausgewählte Person bleibt
+                                         beim Tippen sichtbar, sonst ließe sie sich nicht abwählen. -->
+                                    <TextBox Text="{Binding PersonFilterSearch}"
+                                             PlaceholderText="Person suchen"
+                                             Margin="10,0,10,6"/>
+
+                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding PersonFilterOptions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type models:PersonFilterOption}">
+                                                    <!-- Click statt Command, gleicher Grund wie bei den
+                                                         Stichwörtern: der Inhalt eines Aufklappfensters hängt
+                                                         nicht im Baum der Ansicht. -->
+                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                            Click="OnPersonFilterItemClick">
+                                                        <Grid ColumnDefinitions="*,20">
+                                                            <TextBlock Text="{Binding Label}" Classes="no-translate"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <!-- Namenlose Gruppen stehen nicht in dieser Liste, deshalb ist sie
+                                         nach einer frischen Erkennung noch leer. Der zweite Satz sagt,
+                                         wo es weitergeht. -->
+                                    <TextBlock Text="Noch keine Personen benannt"
+                                               IsVisible="{Binding !PersonFilterOptions.Count}"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               Margin="10,8,10,2"/>
+                                    <TextBlock Text="Namen werden im Infopanel am Bild vergeben"
+                                               IsVisible="{Binding !PersonFilterOptions.Count}"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               TextWrapping="Wrap"
+                                               Margin="10,0,10,8"/>
+
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/users.svg"
+                                       Classes="filter-glyph" Width="18" Height="18"/>
+                    </Button>
+
+                    <!-- Orte. Neben den Personen, weil beides aus dem Bild selbst kommt und nicht
+                         von Hand vergeben wurde. Der Knopf ist ganz WEG, solange die Ortstabelle
+                         fehlt oder nicht eingeschaltet ist - wie bei allen Modellfunktionen.
+                         Mehrere Orte wirken als ODER: ein Bild hat genau einen Aufnahmeort, ein UND
+                         ergäbe immer eine leere Liste. -->
+                    <Button Grid.Column="2" Padding="10,7" Margin="0,0,8,0"
+                            Classes="filter-btn"
+                            Classes.active="{Binding HasPlaceFilter}"
+                            IsVisible="{Binding HasPlaceFeature}"
+                            Click="OnPlaceFilterButtonClick"
+                            Tag="Place"
+                            PointerPressed="OnFilterButtonPointerPressed"
+                            ToolTip.Tip="Orte">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight"
+                                    VerticalOffset="2"
+                                    Opened="OnLocalizedFlyoutOpened">
+                                <StackPanel Spacing="1" MinWidth="248" MaxHeight="520">
+                                    <TextBlock Text="ORTE" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               Margin="10,8,10,4"/>
+
+                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                            Command="{Binding ClearPlaceFilterCommand}">
+                                        <Grid ColumnDefinitions="*,20">
+                                            <TextBlock Text="Auswahl aufheben" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding !HasPlaceFilter}"
+                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Button>
+
+                                    <Separator Margin="4,6"/>
+
+                                    <TextBox Text="{Binding PlaceFilterSearch}"
+                                             PlaceholderText="Ort suchen"
+                                             Margin="10,0,10,6"/>
+
+                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding PlaceFilterOptions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type models:PlaceFilterOption}">
+                                                    <!-- Click statt Command, gleicher Grund wie bei den
+                                                         Stichwörtern und Personen: der Inhalt eines
+                                                         Aufklappfensters hängt nicht im Baum der Ansicht. -->
+                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                            Click="OnPlaceFilterItemClick">
+                                                        <Grid ColumnDefinitions="*,20">
+                                                            <TextBlock Text="{Binding Label}" Classes="no-translate"
+                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <TextBlock Text="Noch keine Orte bekannt"
+                                               IsVisible="{Binding !PlaceFilterOptions.Count}"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               Margin="10,8,10,2"/>
+                                    <TextBlock Text="Ortsnamen entstehen aus den Koordinaten im Bild"
+                                               IsVisible="{Binding !PlaceFilterOptions.Count}"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               TextWrapping="Wrap"
+                                               Margin="10,0,10,8"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                                       Classes="filter-glyph" Width="18" Height="18"/>
+                    </Button>
+
+                    <!-- Stichwörter. Dieselbe Sorte Einschränkung wie Personen, nur über den
+                         ganzen Bestand statt über den offenen Ordner. Die Liste entsteht beim
+                         Öffnen neu, damit frisch vergebene Stichwörter dabei sind. -->
+                    <Button Grid.Column="3" Padding="10,7" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasTagFilter}"
                             Click="OnTagFilterButtonClick"
+                            Tag="Tag"
+                            PointerPressed="OnFilterButtonPointerPressed"
                             ToolTip.Tip="Stichwörter">
                         <Button.Flyout>
                             <Flyout Placement="BottomEdgeAlignedRight"
@@ -237,9 +411,11 @@
                                        Classes="filter-glyph" Width="18" Height="18"/>
                     </Button>
 
-                    <Button Grid.Column="2" Padding="10,7" Margin="0,0,8,0"
+                    <Button Grid.Column="4" Padding="10,7" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasActiveFilter}"
+                            Tag="Filter"
+                            PointerPressed="OnFilterButtonPointerPressed"
                             ToolTip.Tip="Filter">
                         <Button.Flyout>
                             <Flyout Placement="BottomEdgeAlignedRight"
@@ -521,9 +697,11 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="3"
+                    <Button Grid.Column="5"
                             MinWidth="156" MaxWidth="260"
                             Padding="10,7" Margin="0,0,8,0"
+                            Tag="Sort"
+                            PointerPressed="OnFilterButtonPointerPressed"
                             ToolTip.Tip="Sortieren">
                         <Button.Flyout>
                             <Flyout Placement="BottomEdgeAlignedLeft"
@@ -706,7 +884,7 @@
                         </StackPanel>
                     </Button>
 
-                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
                         <Button Classes="icon-btn" Width="36" Height="36"
                                 Classes.active="{Binding IsListView}"
                                 Command="{Binding SetViewModeCommand}" CommandParameter="List"
@@ -1916,7 +2094,19 @@
                 </StackPanel>
                 
                 <StackPanel Grid.Column="2" Spacing="12" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock 
+                    <!-- Der Durchlauf dauert bei einem grossen Ordner Minuten. Ein Balken mit Zahl
+                         sagt, dass etwas passiert und wie weit es ist - die Statuszeile allein wäre
+                         dafür zu leise, man hielte das Programm für hängengeblieben. -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                                IsVisible="{Binding IsScanningFaces}">
+                        <ProgressBar IsIndeterminate="True" Width="90" Height="4"
+                                     VerticalAlignment="Center"/>
+                        <TextBlock Classes="no-translate"
+                                   Text="{Binding FaceScanProgressText}"
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock
                            Text="{Binding StatusText}"
                            Foreground="{DynamicResource FP.Text.Muted}"
                            VerticalAlignment="Center"/>

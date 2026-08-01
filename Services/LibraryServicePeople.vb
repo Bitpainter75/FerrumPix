@@ -1,0 +1,806 @@
+Imports System
+Imports System.Collections.Generic
+Imports System.Globalization
+Imports System.Linq
+Imports Microsoft.Data.Sqlite
+
+Namespace Services
+
+    ''' <summary>Eine Person mit der Anzahl Bilder, in denen sie vorkommt.</summary>
+    Public Class PersonEntry
+        Public Property Id As String = ""
+        Public Property Name As String = ""
+        Public Property ImageCount As Integer
+        ''' <summary>Eine Person ohne Namen ist der Normalfall direkt nach der Erkennung: die
+        ''' Gruppe steht, der Name kommt vom Benutzer und oft erst viel spaeter.</summary>
+        Public ReadOnly Property IsNamed As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(Name)
+            End Get
+        End Property
+    End Class
+
+    Partial Public Class LibraryService
+
+        ''' <summary>Ab wann zwei Gesichter als dieselbe Person gelten. Liegt im Erkennungsdienst,
+        ''' damit Schwelle und Messung an einer Stelle stehen.</summary>
+        Private Shared ReadOnly SameThreshold As Double = FaceDetectionService.SamePersonThreshold
+
+        ' VERWORFEN: ein Mindestabstand zur zweitbesten Gruppe. Der Gedanke war, einen Muenzwurf
+        ' zwischen zwei fast gleich guten Gruppen zu vermeiden. Gemessen hat er das Gegenteil
+        ' bewirkt: zwei Gruppen mit fast gleicher Mitte - und genau die entstehen, wenn dieselbe
+        ' Person einmal geteilt wurde - machen JEDE weitere Aufnahme zum Grenzfall, und es entsteht
+        ' eine dritte, vierte, fuenfte Gruppe. Fuer den Nutzen gibt es keine Messung, fuer den
+        ' Schaden eine.
+
+        ' ── Was muss ueberhaupt gescannt werden ──────────────────────────────────
+
+        ''' <summary>Braucht dieses Bild einen Durchlauf? Nur, wenn es noch nie gescannt wurde oder
+        ''' sich seither geaendert hat.
+        '''
+        ''' Auch ein Bild OHNE Gesichter wird als gescannt vermerkt. Ohne das wuerde jeder weitere
+        ''' Lauf ueber einen Landschaftsordner alles erneut durchsuchen - und das sind gerade die
+        ''' Ordner, in denen nie etwas gefunden wird.</summary>
+        Public Function NeedsFaceScan(filePath As String, sourceModifiedAt As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT SourceModifiedAt FROM ScannedImage WHERE FilePath=$p"
+                    cmd.Parameters.AddWithValue("$p", filePath)
+                    Dim r = cmd.ExecuteScalar()
+                    If r Is Nothing OrElse TypeOf r Is DBNull Then Return True
+                    Return Not String.Equals(CStr(r), If(sourceModifiedAt, ""), StringComparison.Ordinal)
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Traegt das Ergebnis eines Durchlaufs ein: alte Gesichter dieses Bildes weg, neue
+        ''' hin, und jedes neue Gesicht einer Person zuordnen.
+        '''
+        ''' Die alten Gesichter werden GELOESCHT und nicht ergaenzt - ein zweiter Lauf ueber ein
+        ''' geaendertes Bild soll nicht dieselbe Person doppelt eintragen. Personen bleiben dabei
+        ''' bestehen, auch wenn sie dadurch vorruebergehend ohne Gesicht dastehen; ihr Name ist
+        ''' Handarbeit des Benutzers und darf nicht an einem Neu-Scan haengen.</summary>
+        Public Sub SaveFaces(filePath As String, sourceModifiedAt As String,
+                             faces As IReadOnlyList(Of DetectedFace))
+            If String.IsNullOrWhiteSpace(filePath) Then Return
+            Dim stamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    ' HANDARBEIT BLEIBT STEHEN. Wer einen Namen eingetragen oder eine
+                    ' Fehlzuordnung geloest hat, hat damit entschieden - ein erneuter Durchlauf
+                    ' darf das nicht ueberschreiben. Diese Gesichter werden weder geloescht noch
+                    ' neu angelegt; ein neuer Fund, der auf demselben Fleck liegt, faellt weg.
+                    Dim manual As New List(Of (X As Double, Y As Double, W As Double, H As Double))()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "SELECT X, Y, Width, Height FROM Face WHERE FilePath=$p AND IsManual=1"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                manual.Add((reader.GetDouble(0), reader.GetDouble(1),
+                                            reader.GetDouble(2), reader.GetDouble(3)))
+                            End While
+                        End Using
+                    End Using
+
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p AND IsManual=0"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.ExecuteNonQuery()
+                    End Using
+
+                    Dim written = 0
+                    ' EINE PERSON STEHT EINMAL AUF EINEM BILD. Wer hier schon zugeordnet wurde,
+                    ' kommt fuer die uebrigen Gesichter DESSELBEN Bildes nicht mehr in Frage.
+                    '
+                    ' Der Grund ist gemessen: auf einem Gruppenfoto lieferte die Verfeinerung fuer
+                    ' zwei benachbarte Gesichter zweimal dasselbe, beide bekamen dieselbe
+                    ' Merkmalsreihe und landeten in einer Gruppe - 158 von 240 Bildern trugen
+                    ' dieselbe Person mehrfach. Die Ursache ist behoben, aber die Regel bleibt: sie
+                    ' kostet nichts und faengt jede weitere Verwechslung dieser Art ab. Der Preis
+                    ' waere ein Bild, auf dem jemand zweimal zu sehen ist (Spiegel, Foto im Foto) -
+                    ' dort entsteht eine zweite Gruppe, und die verschmilzt beim Benennen.
+                    Dim usedOnThisImage As New HashSet(Of String)(StringComparer.Ordinal)
+                    ' Die von Hand gesetzten Gesichter sind schon vergeben - ihre Personen kommen
+                    ' fuer die uebrigen Gesichter dieses Bildes nicht mehr in Frage.
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "SELECT PersonId FROM Face WHERE FilePath=$p AND IsManual=1 AND PersonId IS NOT NULL"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                usedOnThisImage.Add(reader.GetString(0))
+                            End While
+                        End Using
+                    End Using
+
+                    If faces IsNot Nothing Then
+                        For Each face In faces
+                            ' Liegt hier schon ein von Hand gesetztes Gesicht, gilt dieses.
+                            If OverlapsManual(manual, face) Then Continue For
+                            Dim personId As String = Nothing
+                            ' Ohne Merkmale keine Person: das Gesicht ist zu klein aufgeloest
+                            ' (siehe FaceDetectionService.MinimumRasterSize). Es wird trotzdem
+                            ' eingetragen - gefunden wurde es ja.
+                            If face.Embedding IsNot Nothing AndAlso face.Embedding.Length > 0 Then
+                                personId = MatchOrCreatePersonLocked(conn, tx, face.Embedding, stamp, usedOnThisImage)
+                                If personId IsNot Nothing Then usedOnThisImage.Add(personId)
+                            End If
+
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText =
+                                    "INSERT INTO Face(Id,FilePath,PersonId,X,Y,Width,Height,Score,Embedding,ScannedAt) " &
+                                    "VALUES($id,$p,$person,$x,$y,$w,$h,$s,$e,$t)"
+                                cmd.Parameters.AddWithValue("$id", Guid.NewGuid().ToString("N"))
+                                cmd.Parameters.AddWithValue("$p", filePath)
+                                cmd.Parameters.AddWithValue("$person", If(personId, CObj(DBNull.Value)))
+                                cmd.Parameters.AddWithValue("$x", CDbl(face.X))
+                                cmd.Parameters.AddWithValue("$y", CDbl(face.Y))
+                                cmd.Parameters.AddWithValue("$w", CDbl(face.Width))
+                                cmd.Parameters.AddWithValue("$h", CDbl(face.Height))
+                                cmd.Parameters.AddWithValue("$s", CDbl(face.Score))
+                                cmd.Parameters.AddWithValue("$e", If(face.Embedding Is Nothing,
+                                                                     CObj(DBNull.Value), ToBlob(face.Embedding)))
+                                cmd.Parameters.AddWithValue("$t", stamp)
+                                cmd.ExecuteNonQuery()
+                            End Using
+                            written += 1
+                        Next
+                    End If
+                    written += manual.Count
+
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText =
+                            "INSERT INTO ScannedImage(FilePath,SourceModifiedAt,FaceCount,ScannedAt) " &
+                            "VALUES($p,$m,$c,$t) " &
+                            "ON CONFLICT(FilePath) DO UPDATE SET SourceModifiedAt=excluded.SourceModifiedAt, " &
+                            "FaceCount=excluded.FaceCount, ScannedAt=excluded.ScannedAt"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$m", If(sourceModifiedAt, ""))
+                        cmd.Parameters.AddWithValue("$c", written)
+                        cmd.Parameters.AddWithValue("$t", stamp)
+                        cmd.ExecuteNonQuery()
+                    End Using
+
+                    tx.Commit()
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Liegt an dieser Stelle schon ein von Hand gesetztes Gesicht?
+        '''
+        ''' Verglichen wird die Ueberdeckung, nicht die Gleichheit: der Erkenner findet dasselbe
+        ''' Gesicht beim naechsten Lauf ein paar Bildpunkte versetzt, und ein exakter Vergleich
+        ''' liesse dann zwei Eintraege fuer dasselbe Gesicht entstehen.</summary>
+        Private Shared Function OverlapsManual(manual As List(Of (X As Double, Y As Double, W As Double, H As Double)),
+                                               face As DetectedFace) As Boolean
+            If manual Is Nothing OrElse manual.Count = 0 Then Return False
+            For Each m In manual
+                Dim x1 = Math.Max(m.X, CDbl(face.X))
+                Dim y1 = Math.Max(m.Y, CDbl(face.Y))
+                Dim x2 = Math.Min(m.X + m.W, CDbl(face.X) + face.Width)
+                Dim y2 = Math.Min(m.Y + m.H, CDbl(face.Y) + face.Height)
+                Dim intersection = Math.Max(0.0, x2 - x1) * Math.Max(0.0, y2 - y1)
+                Dim union = m.W * m.H + CDbl(face.Width) * face.Height - intersection
+                If union > 0 AndAlso intersection / union >= 0.4 Then Return True
+            Next
+            Return False
+        End Function
+
+        ' ── Zuordnung ────────────────────────────────────────────────────────────
+
+        ''' <summary>Sucht die Person, zu der dieses Gesicht am besten passt, und legt sonst eine neue
+        ''' an.
+        '''
+        ''' VERGLICHEN WIRD GEGEN DEN MITTELWERT aller Gesichter einer Person, nicht gegen ein
+        ''' einzelnes. Der Grund ist gemessen: die hoechste Aehnlichkeit zwischen zwei FREMDEN lag
+        ''' bei 0,35, die Schwelle liegt bei 0,363 - ein Hundertstel Abstand. Gegen ein einzelnes
+        ''' unguenstiges Vorkommen (Gegenlicht, Halbprofil) waere eine Fehlzuordnung damit eine Frage
+        ''' der Tagesform. Der Mittelwert ueber mehrere Aufnahmen mittelt genau diese Ausreisser weg.
+        '''
+        ''' Der Vergleich laeuft GLOBAL ueber den ganzen Bestand, nicht ueber den gerade laufenden
+        ''' Ordner. Sonst waere dieselbe Person je Ordner eine andere - und weil die Erkennung
+        ''' bewusst ordnerweise ausgeloest wird, waere das der Regelfall statt der Ausnahme.</summary>
+        ''' <param name="excluded">Personen, die auf DIESEM Bild schon vergeben sind.</param>
+        Private Function MatchOrCreatePersonLocked(conn As SqliteConnection, tx As SqliteTransaction,
+                                                   embedding As Single(), stamp As String,
+                                                   excluded As HashSet(Of String)) As String
+            Dim bestId As String = Nothing
+            Dim bestScore As Double = 0
+
+            For Each kv In LoadPersonCentroidsLocked(conn, tx)
+                If excluded IsNot Nothing AndAlso excluded.Contains(kv.Key) Then Continue For
+                Dim score = FaceDetectionService.Similarity(embedding, kv.Value)
+                If score > bestScore Then
+                    bestScore = score
+                    bestId = kv.Key
+                End If
+            Next
+
+            If bestId IsNot Nothing AndAlso bestScore >= SameThreshold Then Return bestId
+
+            Dim newId = Guid.NewGuid().ToString("N")
+            Using cmd = conn.CreateCommand()
+                cmd.Transaction = tx
+                cmd.CommandText = "INSERT INTO Person(Id,Name,CreatedAt) VALUES($id,'',$t)"
+                cmd.Parameters.AddWithValue("$id", newId)
+                cmd.Parameters.AddWithValue("$t", stamp)
+                cmd.ExecuteNonQuery()
+            End Using
+            Return newId
+        End Function
+
+        ''' <summary>Je Person der Mittelwert ihrer Merkmalsreihen. Wird bei JEDEM neuen Gesicht
+        ''' gebraucht; bei sehr grossen Bestaenden ist das der Punkt, an dem sich ein Zwischenspeicher
+        ''' lohnt - solange die Personenzahl im Hunderterbereich liegt, kostet es nichts.</summary>
+        Private Function LoadPersonCentroidsLocked(conn As SqliteConnection,
+                                                   tx As SqliteTransaction) As Dictionary(Of String, Single())
+            Dim sums As New Dictionary(Of String, Double())(StringComparer.Ordinal)
+            Dim counts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+
+            Using cmd = conn.CreateCommand()
+                cmd.Transaction = tx
+                cmd.CommandText = "SELECT PersonId, Embedding FROM Face WHERE PersonId IS NOT NULL AND Embedding IS NOT NULL"
+                Using reader = cmd.ExecuteReader()
+                    While reader.Read()
+                        Dim id = reader.GetString(0)
+                        Dim vec = FromBlob(CType(reader.GetValue(1), Byte()))
+                        If vec Is Nothing OrElse vec.Length = 0 Then Continue While
+                        Dim acc As Double() = Nothing
+                        If Not sums.TryGetValue(id, acc) Then
+                            acc = New Double(vec.Length - 1) {}
+                            sums(id) = acc
+                            counts(id) = 0
+                        End If
+                        If acc.Length <> vec.Length Then Continue While
+                        For i = 0 To vec.Length - 1
+                            acc(i) += vec(i)
+                        Next
+                        counts(id) += 1
+                    End While
+                End Using
+            End Using
+
+            Dim result As New Dictionary(Of String, Single())(StringComparer.Ordinal)
+            For Each kv In sums
+                Dim n = Math.Max(1, counts(kv.Key))
+                Dim mean(kv.Value.Length - 1) As Single
+                For i = 0 To kv.Value.Length - 1
+                    mean(i) = CSng(kv.Value(i) / n)
+                Next
+                result(kv.Key) = mean
+            Next
+            Return result
+        End Function
+
+        ' ── Lesen ────────────────────────────────────────────────────────────────
+
+        ''' <summary>Alle Personen mit der Zahl der Bilder, in denen sie vorkommen. Gezaehlt werden
+        ''' BILDER, nicht Gesichter - steht jemand zweimal auf demselben Foto, ist das ein Bild.</summary>
+        Public Function GetPeople() As List(Of PersonEntry)
+            Dim result As New List(Of PersonEntry)()
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "SELECT p.Id, p.Name, COUNT(DISTINCT f.FilePath) " &
+                        "FROM Person p LEFT JOIN Face f ON f.PersonId = p.Id " &
+                        "GROUP BY p.Id, p.Name ORDER BY p.Name = '' , p.Name COLLATE NOCASE"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result.Add(New PersonEntry With {
+                                .Id = reader.GetString(0),
+                                .Name = reader.GetString(1),
+                                .ImageCount = reader.GetInt32(2)})
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Das GROESSTE Gesicht einer Person - ihr Aushaengeschild in der Liste.
+        '''
+        ''' Das groesste und nicht das erste: es ist am ehesten scharf, und man erkennt darauf, wen
+        ''' man vor sich hat. Genau darum geht es in einer Liste von hundert Gruppen.</summary>
+        Public Function GetPersonCover(personId As String) As (FilePath As String, X As Double, Y As Double,
+                                                              Width As Double, Height As Double)
+            If String.IsNullOrWhiteSpace(personId) Then Return ("", 0, 0, 0, 0)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "SELECT FilePath, X, Y, Width, Height FROM Face WHERE PersonId=$p " &
+                        "ORDER BY MAX(Width, Height) DESC LIMIT 1"
+                    cmd.Parameters.AddWithValue("$p", personId)
+                    Using reader = cmd.ExecuteReader()
+                        If Not reader.Read() Then Return ("", 0, 0, 0, 0)
+                        Return (reader.GetString(0), reader.GetDouble(1), reader.GetDouble(2),
+                                reader.GetDouble(3), reader.GetDouble(4))
+                    End Using
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Alle Gesichter EINER Person, das groesste zuerst. Fuer die Personenverwaltung:
+        ''' dort raeumt man eine Gruppe auf, und dazu muss man sehen, wer alles darin steckt.</summary>
+        Public Function GetFacesForPerson(personId As String, Optional limit As Integer = 400) As List(Of (FaceId As String,
+                                                                                                          FilePath As String,
+                                                                                                          X As Double, Y As Double,
+                                                                                                          Width As Double, Height As Double,
+                                                                                                          IsManual As Boolean))
+            Dim result As New List(Of (FaceId As String, FilePath As String, X As Double, Y As Double, Width As Double, Height As Double, IsManual As Boolean))()
+            If String.IsNullOrWhiteSpace(personId) Then Return result
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "SELECT Id, FilePath, X, Y, Width, Height, IsManual FROM Face WHERE PersonId=$p " &
+                        "ORDER BY MAX(Width, Height) DESC LIMIT $n"
+                    cmd.Parameters.AddWithValue("$p", personId)
+                    cmd.Parameters.AddWithValue("$n", Math.Max(1, limit))
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result.Add((reader.GetString(0), reader.GetString(1),
+                                        reader.GetDouble(2), reader.GetDouble(3),
+                                        reader.GetDouble(4), reader.GetDouble(5),
+                                        reader.GetInt32(6) <> 0))
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Wirft eine Gruppe weg. Die GESICHTER bleiben - sie wurden ja gefunden -, sie
+        ''' gehoeren danach nur zu niemandem mehr und tauchen in keiner Personenliste auf.
+        '''
+        ''' Fuer Gruppen, die gar keine Person sind: ein Muster in einer Hecke, ein Gesicht auf einem
+        ''' Plakat im Hintergrund. Ein erneuter Durchlauf legt sie neu an, wenn er sie wieder
+        ''' findet - deshalb ist das kein Ausschluss auf Dauer, sondern Aufraeumen.</summary>
+        Public Sub DeletePerson(personId As String)
+            If String.IsNullOrWhiteSpace(personId) Then Return
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "UPDATE Face SET PersonId=NULL, IsManual=0 WHERE PersonId=$p"
+                        cmd.Parameters.AddWithValue("$p", personId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM Person WHERE Id=$p"
+                        cmd.Parameters.AddWithValue("$p", personId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    tx.Commit()
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Die Personen auf einem Bild. Fuer den Abschnitt im Infopanel.</summary>
+        Public Function GetPeopleForImage(filePath As String) As List(Of PersonEntry)
+            Dim result As New List(Of PersonEntry)()
+            If String.IsNullOrWhiteSpace(filePath) Then Return result
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "SELECT DISTINCT p.Id, p.Name FROM Face f " &
+                        "JOIN Person p ON p.Id = f.PersonId WHERE f.FilePath=$p " &
+                        "ORDER BY p.Name = '', p.Name COLLATE NOCASE"
+                    cmd.Parameters.AddWithValue("$p", filePath)
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result.Add(New PersonEntry With {.Id = reader.GetString(0), .Name = reader.GetString(1)})
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Alle Bildpfade, auf denen diese Personen zu sehen sind. Mehrere Personen wirken
+        ''' als UND: gesucht wird, wer gemeinsam auf einem Bild steht - so ist die Frage gemeint,
+        ''' wenn jemand zwei Namen anklickt.</summary>
+        Public Function GetPathsForPeople(personIds As IReadOnlyList(Of String)) As List(Of String)
+            Dim result As New List(Of String)()
+            If personIds Is Nothing OrElse personIds.Count = 0 Then Return result
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    Dim names = personIds.Select(Function(unused, i) "$p" & i).ToList()
+                    cmd.CommandText =
+                        $"SELECT FilePath FROM Face WHERE PersonId IN ({String.Join(",", names)}) " &
+                        "GROUP BY FilePath HAVING COUNT(DISTINCT PersonId) = $n"
+                    For i = 0 To personIds.Count - 1
+                        cmd.Parameters.AddWithValue("$p" & i, personIds(i))
+                    Next
+                    cmd.Parameters.AddWithValue("$n", personIds.Count)
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result.Add(reader.GetString(0))
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Alle Bildpfade, auf denen diese Personen NAMENTLICH zu sehen sind. Mehrere Namen
+        ''' wirken als UND, genau wie bei <see cref="GetPathsForPeople"/>.
+        '''
+        ''' Fuer die Vorauswahl des Suchdurchlaufs, der sonst ueber jeden Katalogeintrag geht. Ueber
+        ''' den NAMEN und nicht ueber die Id, weil die Suchbedingung so gebaut ist - sie muss auch in
+        ''' einer gespeicherten Suche lesbar bleiben.</summary>
+        Public Function GetPathsForPersonNames(names As IReadOnlyList(Of String)) As List(Of String)
+            Dim result As New List(Of String)()
+            If names Is Nothing OrElse names.Count = 0 Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim parameters As New List(Of String)()
+                        For i = 0 To names.Count - 1
+                            parameters.Add("$n" & i)
+                            cmd.Parameters.AddWithValue("$n" & i, names(i))
+                        Next
+                        cmd.CommandText =
+                            "SELECT f.FilePath FROM Face f JOIN Person p ON p.Id = f.PersonId " &
+                            $"WHERE p.Name COLLATE NOCASE IN ({String.Join(",", parameters)}) " &
+                            "GROUP BY f.FilePath HAVING COUNT(DISTINCT p.Name) = $n"
+                        cmd.Parameters.AddWithValue("$n", names.Count)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                result.Add(reader.GetString(0))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.GetPathsForPersonNames", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Die Gesichter EINES Bildes samt Lage und zugeordneter Person.
+        '''
+        ''' Gebraucht fuer die Zuordnung im Infopanel: fuenf leere Namensfelder untereinander sagen
+        ''' niemandem, welches zu welchem Gesicht gehoert. Mit der Box laesst sich der Ausschnitt
+        ''' danebenstellen, und dann ist es offensichtlich.
+        '''
+        ''' Die FaceId kommt mit, weil sich eine Fehlzuordnung nur an EINEM Gesicht loesen laesst
+        ''' (siehe <see cref="DetachFace"/>) - ueber die PersonId waere immer die ganze Gruppe
+        ''' gemeint, also auch jedes andere Bild.</summary>
+        Public Function GetFacesForImage(filePath As String) As List(Of (FaceId As String, PersonId As String, Name As String,
+                                                                        X As Double, Y As Double,
+                                                                        Width As Double, Height As Double))
+            Dim result As New List(Of (FaceId As String, PersonId As String, Name As String, X As Double, Y As Double, Width As Double, Height As Double))()
+            If String.IsNullOrWhiteSpace(filePath) Then Return result
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    ' Nach Lage sortiert, links vor rechts: die Reihenfolge im Panel entspricht damit
+                    ' der im Bild, und das Zuordnen faellt noch leichter.
+                    cmd.CommandText =
+                        "SELECT f.Id, f.PersonId, COALESCE(p.Name,''), f.X, f.Y, f.Width, f.Height " &
+                        "FROM Face f LEFT JOIN Person p ON p.Id = f.PersonId " &
+                        "WHERE f.FilePath=$p ORDER BY f.X"
+                    cmd.Parameters.AddWithValue("$p", filePath)
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.IsDBNull(1) Then Continue While
+                            result.Add((reader.GetString(0), reader.GetString(1), reader.GetString(2),
+                                        reader.GetDouble(3), reader.GetDouble(4),
+                                        reader.GetDouble(5), reader.GetDouble(6)))
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Loest EIN Gesicht aus seiner Person heraus - der Weg fuer eine Fehlzuordnung.
+        '''
+        ''' Das Gesicht bekommt eine EIGENE, namenlose Gruppe statt gar keiner. Der Grund ist die
+        ''' Bedienung: mit leerer Zuordnung waere das Gesicht danach an nichts mehr zu fassen, mit
+        ''' eigener Gruppe traegt man einfach den richtigen Namen ein - und heisst schon jemand so,
+        ''' verschmilzt <see cref="NamePerson"/> beides. "Aufheben" und "neu setzen" sind damit
+        ''' derselbe Handgriff wie ueberall sonst.
+        '''
+        ''' Geaendert wird GENAU EINE Zeile in Face. Jede andere Aufnahme derselben Person bleibt,
+        ''' wo sie ist - das ist der ganze Sinn der Sache.
+        '''
+        ''' Bleibt die alte Gruppe leer zurueck, wird sie nur dann geloescht, wenn sie NAMENLOS war.
+        ''' Ein vergebener Name ist Handarbeit des Benutzers und verschwindet nicht, weil gerade das
+        ''' letzte Gesicht woanders hin gehoerte.</summary>
+        ''' <returns>Die Id der neuen Gruppe, oder Nothing, wenn es das Gesicht nicht gibt.</returns>
+        Public Function DetachFace(faceId As String) As String
+            If String.IsNullOrWhiteSpace(faceId) Then Return Nothing
+            Dim stamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Dim oldPersonId As String = Nothing
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "SELECT PersonId FROM Face WHERE Id=$id"
+                        cmd.Parameters.AddWithValue("$id", faceId)
+                        Dim r = cmd.ExecuteScalar()
+                        If r Is Nothing Then Return Nothing
+                        If Not TypeOf r Is DBNull Then oldPersonId = CStr(r)
+                    End Using
+
+                    Dim newId = Guid.NewGuid().ToString("N")
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "INSERT INTO Person(Id,Name,CreatedAt) VALUES($id,'',$t)"
+                        cmd.Parameters.AddWithValue("$id", newId)
+                        cmd.Parameters.AddWithValue("$t", stamp)
+                        cmd.ExecuteNonQuery()
+                    End Using
+
+                    ' Von Hand geloest heisst von Hand entschieden: ein erneuter Durchlauf faellt
+                    ' sonst in dieselbe Fehlzuordnung zurueck, und die Berichtigung waere weg.
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "UPDATE Face SET PersonId=$new, IsManual=1 WHERE Id=$id"
+                        cmd.Parameters.AddWithValue("$new", newId)
+                        cmd.Parameters.AddWithValue("$id", faceId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+
+                    If oldPersonId IsNot Nothing Then
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText =
+                                "DELETE FROM Person WHERE Id=$old AND Name='' " &
+                                "AND NOT EXISTS(SELECT 1 FROM Face WHERE PersonId=$old)"
+                            cmd.Parameters.AddWithValue("$old", oldPersonId)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                    End If
+
+                    tx.Commit()
+                    Return newId
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Zu jedem Bildpfad die Namen der Personen darauf, in EINER Abfrage.
+        '''
+        ''' Fuer den Suchdurchlauf: dort wird je Bild gefragt, ob eine Person darauf steht, und eine
+        ''' eigene Abfrage je Bild liesse bei zehntausenden Fotos die Oberflaeche stehen. Unbenannte
+        ''' Gruppen bleiben draussen - nach ihnen laesst sich nicht suchen, sie haben ja keinen
+        ''' Namen.</summary>
+        Public Function GetPersonNamesByPath() As Dictionary(Of String, List(Of String))
+            Dim result As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "SELECT DISTINCT f.FilePath, p.Name FROM Face f " &
+                        "JOIN Person p ON p.Id = f.PersonId WHERE p.Name <> ''"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim path = reader.GetString(0)
+                            Dim names As List(Of String) = Nothing
+                            If Not result.TryGetValue(path, names) Then
+                                names = New List(Of String)()
+                                result(path) = names
+                            End If
+                            names.Add(reader.GetString(1))
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Gibt einer Gruppe einen Namen. Traegt schon jemand anderes denselben Namen,
+        ''' werden beide Gruppen VERSCHMOLZEN - zwei Gruppen mit demselben Namen waeren fuer den
+        ''' Benutzer eine Person, und er hat mit der Benennung genau das gesagt.</summary>
+        ''' <param name="faceId">Das Gesicht, an dem der Name eingetragen wurde, sofern bekannt.
+        ''' Es gilt danach als von Hand gesetzt und ueberlebt jeden weiteren Durchlauf.
+        '''
+        ''' NUR DIESES EINE, nicht die ganze Gruppe: sonst waere nach dem Benennen einer Person mit
+        ''' hundert Bildern jedes davon festgeschrieben, und eine falsche Zuordnung darin liesse
+        ''' sich durch keinen Neulauf mehr berichtigen. Fest ist, was der Benutzer angefasst
+        ''' hat.</param>
+        Public Sub NamePerson(personId As String, name As String, Optional faceId As String = Nothing)
+            If String.IsNullOrWhiteSpace(personId) Then Return
+            Dim clean = If(name, "").Trim()
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Dim mergeInto As String = Nothing
+                    If clean.Length > 0 Then
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "SELECT Id FROM Person WHERE Name=$n COLLATE NOCASE AND Id<>$id LIMIT 1"
+                            cmd.Parameters.AddWithValue("$n", clean)
+                            cmd.Parameters.AddWithValue("$id", personId)
+                            Dim r = cmd.ExecuteScalar()
+                            If r IsNot Nothing AndAlso Not TypeOf r Is DBNull Then mergeInto = CStr(r)
+                        End Using
+                    End If
+
+                    If mergeInto IsNot Nothing Then
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "UPDATE Face SET PersonId=$into WHERE PersonId=$from; " &
+                                              "DELETE FROM Person WHERE Id=$from"
+                            cmd.Parameters.AddWithValue("$into", mergeInto)
+                            cmd.Parameters.AddWithValue("$from", personId)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                    Else
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "UPDATE Person SET Name=$n WHERE Id=$id"
+                            cmd.Parameters.AddWithValue("$n", clean)
+                            cmd.Parameters.AddWithValue("$id", personId)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                    End If
+
+                    ' Das angefasste Gesicht ist ab jetzt Handarbeit und bleibt bei jedem weiteren
+                    ' Durchlauf, wo es ist.
+                    If Not String.IsNullOrWhiteSpace(faceId) Then
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "UPDATE Face SET IsManual=1 WHERE Id=$f"
+                            cmd.Parameters.AddWithValue("$f", faceId)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                    End If
+                    tx.Commit()
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Was ein eingetragener Name bewirkt hat.</summary>
+        Public Enum PersonNameOutcome
+            Unchanged
+            GroupNamed
+            FaceMoved
+        End Enum
+
+        ''' <summary>Der Name, den jemand an EINEM Gesicht eintraegt - und was er bedeutet.
+        '''
+        ''' Drei Faelle, und der Unterschied ist der ganze Punkt:
+        '''
+        ''' 1. DIE GRUPPE HAT NOCH KEINEN NAMEN. Dann benennt der Eintrag die Gruppe, und heisst
+        '''    schon jemand so, verschmelzen beide. Das ist der Normalfall nach einem Durchlauf: die
+        '''    Gruppierung steht, der Mensch sagt, wer das ist.
+        '''
+        ''' 2. DIE GRUPPE HAT EINEN NAMEN, und der neue kommt sonst nirgends vor. Dann ist es eine
+        '''    Umbenennung der Gruppe - typischerweise ein Tippfehler, der geradegezogen wird.
+        '''
+        ''' 3. DIE GRUPPE HAT EINEN NAMEN, und der neue gehoert einer ANDEREN Person. Dann ist es
+        '''    eine Berichtigung DIESES Gesichts: es ist nicht Steffen, sondern Christina. Verschoben
+        '''    wird genau diese eine Zeile, und sie gilt danach als Handarbeit. Die uebrigen Bilder
+        '''    der Gruppe bleiben, wo sie sind - waere es anders, zoege ein einziger falsch
+        '''    einsortierter Kopf die ganze Gruppe mit sich, und das ist genau der Schaden, den man
+        '''    gerade beheben wollte.</summary>
+        ''' <returns>Was geschehen ist - fuer eine Rueckmeldung an den Benutzer.</returns>
+        Public Function ApplyPersonName(personId As String, name As String, faceId As String) As PersonNameOutcome
+            If String.IsNullOrWhiteSpace(personId) Then Return PersonNameOutcome.Unchanged
+            Dim clean = If(name, "").Trim()
+
+            Dim currentName = ""
+            Dim targetId As String = Nothing
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT Name FROM Person WHERE Id=$id"
+                    cmd.Parameters.AddWithValue("$id", personId)
+                    Dim r = cmd.ExecuteScalar()
+                    If r Is Nothing OrElse TypeOf r Is DBNull Then Return PersonNameOutcome.Unchanged
+                    currentName = CStr(r)
+                End Using
+
+                If clean.Length > 0 Then
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Id FROM Person WHERE Name=$n COLLATE NOCASE AND Id<>$id LIMIT 1"
+                        cmd.Parameters.AddWithValue("$n", clean)
+                        cmd.Parameters.AddWithValue("$id", personId)
+                        Dim r = cmd.ExecuteScalar()
+                        If r IsNot Nothing AndAlso Not TypeOf r Is DBNull Then targetId = CStr(r)
+                    End Using
+                End If
+            End Using
+
+            If String.Equals(currentName, clean, StringComparison.OrdinalIgnoreCase) Then Return PersonNameOutcome.Unchanged
+
+            ' Fall 3: benannte Gruppe, und der neue Name gehoert schon jemandem.
+            If currentName.Length > 0 AndAlso targetId IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(faceId) Then
+                MoveFaceToPerson(faceId, targetId)
+                Return PersonNameOutcome.FaceMoved
+            End If
+
+            ' Fall 1 und 2.
+            NamePerson(personId, clean, faceId)
+            Return PersonNameOutcome.GroupNamed
+        End Function
+
+        ''' <summary>Haengt EIN Gesicht an eine andere Person und schreibt es als Handarbeit fest.
+        ''' Bleibt die alte Gruppe leer und NAMENLOS zurueck, verschwindet sie - ein vergebener Name
+        ''' dagegen bleibt, er ist Handarbeit des Benutzers.</summary>
+        Public Sub MoveFaceToPerson(faceId As String, personId As String)
+            If String.IsNullOrWhiteSpace(faceId) OrElse String.IsNullOrWhiteSpace(personId) Then Return
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Dim oldPersonId As String = Nothing
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "SELECT PersonId FROM Face WHERE Id=$id"
+                        cmd.Parameters.AddWithValue("$id", faceId)
+                        Dim r = cmd.ExecuteScalar()
+                        If r Is Nothing Then Return
+                        If Not TypeOf r Is DBNull Then oldPersonId = CStr(r)
+                    End Using
+
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "UPDATE Face SET PersonId=$new, IsManual=1 WHERE Id=$id"
+                        cmd.Parameters.AddWithValue("$new", personId)
+                        cmd.Parameters.AddWithValue("$id", faceId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+
+                    If oldPersonId IsNot Nothing AndAlso Not String.Equals(oldPersonId, personId, StringComparison.Ordinal) Then
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText =
+                                "DELETE FROM Person WHERE Id=$old AND Name='' " &
+                                "AND NOT EXISTS(SELECT 1 FROM Face WHERE PersonId=$old)"
+                            cmd.Parameters.AddWithValue("$old", oldPersonId)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                    End If
+                    tx.Commit()
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Alles zu Personen wegwerfen. Fuer den Fall, dass jemand die Funktion wieder
+        ''' abschaltet - biometrische Merkmale sollen dann nicht liegenbleiben.</summary>
+        Public Sub ClearAllFaces()
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "DELETE FROM Face; DELETE FROM Person; DELETE FROM ScannedImage;"
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        End Sub
+
+        ' ── Merkmalsreihe als BLOB ───────────────────────────────────────────────
+
+        Private Shared Function ToBlob(values As Single()) As Byte()
+            Dim bytes(values.Length * 4 - 1) As Byte
+            Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length)
+            Return bytes
+        End Function
+
+        Private Shared Function FromBlob(bytes As Byte()) As Single()
+            If bytes Is Nothing OrElse bytes.Length < 4 Then Return Nothing
+            Dim values(bytes.Length \ 4 - 1) As Single
+            Buffer.BlockCopy(bytes, 0, values, 0, values.Length * 4)
+            Return values
+        End Function
+
+    End Class
+
+End Namespace

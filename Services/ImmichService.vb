@@ -1274,6 +1274,53 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Die Vorschau eines Assets als Rohdaten - fuer die Gesichtserkennung.
+        '''
+        ''' Bewusst die VORSCHAU und nicht das Original: die Erkennung rechnet ohnehin auf 640
+        ''' Punkten, das Original zu holen brachte nichts ausser Wartezeit und Datenverkehr. Nur der
+        ''' Ausschnitt fuer den Merkmalsvergleich wird daraus geschnitten, und dafuer reicht die
+        ''' Vorschau bei Gesichtern normaler Groesse.
+        '''
+        ''' Der Weg nutzt denselben Zwischenspeicher wie die Anzeige - ein Durchlauf ueber einen
+        ''' bereits angesehenen Ordner holt also gar nichts mehr vom Server.</summary>
+        Public Shared Async Function GetPreviewBytesAsync(assetId As String,
+                                                          Optional cancellationToken As CancellationToken = Nothing) As Task(Of Byte())
+            Return Await GetThumbnailBytesAsync(assetId, PreviewSize, cancellationToken).ConfigureAwait(False)
+        End Function
+
+        ''' <summary>Schreibt die Personen eines Assets als Stichworte zurueck nach Immich.
+        '''
+        ''' WOFUER: Immich kennt Personen, gibt sie aber nicht in die Metadaten - beim Export ist die
+        ''' Zuordnung weg. Als Stichwort wandert sie mit. Und wer die serverseitige Erkennung gar
+        ''' nicht laufen lassen kann oder will, bekommt hier die lokal erkannten Personen hinueber.
+        '''
+        ''' HIERARCHISCH unter einem gemeinsamen Zweig: so bleiben Personen von den uebrigen
+        ''' Stichworten getrennt und lassen sich als Gruppe wieder entfernen, falls das Ergebnis
+        ''' nicht gefaellt. Immich bildet aus dem Schraegstrich eine Hierarchie.
+        '''
+        ''' ACHTUNG: Steht in den Einstellungen ImmichStoreTagsInDescription, landen die Namen als
+        ''' Textblock in der Beschreibung statt im Tagbaum - dann gibt es keine Hierarchie, nur
+        ''' Zeilen. Das entscheidet AddTagToAssetAsync, nicht diese Funktion.</summary>
+        Public Const PersonTagPrefix As String = "Personen/"
+
+        Public Shared Async Function WritePeopleAsTagsAsync(assetId As String,
+                                                            names As IEnumerable(Of String),
+                                                            Optional cancellationToken As CancellationToken = Nothing) As Task(Of Integer)
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) OrElse names Is Nothing Then Return 0
+            Dim written = 0
+            For Each name In names.Where(Function(n) Not String.IsNullOrWhiteSpace(n)).
+                                   Select(Function(n) n.Trim()).
+                                   Distinct(StringComparer.OrdinalIgnoreCase)
+                If cancellationToken.IsCancellationRequested Then Exit For
+                ' Ein Schraegstrich IM Namen wuerde eine Ebene erfinden, die niemand gemeint hat.
+                Dim safe = name.Replace("/"c, "-"c)
+                If Await AddTagToAssetAsync(assetId, PersonTagPrefix & safe, cancellationToken).ConfigureAwait(False) Then
+                    written += 1
+                End If
+            Next
+            Return written
+        End Function
+
         Private Shared Async Function GetThumbnailBytesAsync(assetId As String, size As String, cancellationToken As CancellationToken) As Task(Of Byte())
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) Then Return Nothing
             Dim sizeKey = If(String.Equals(size, PreviewSize, StringComparison.OrdinalIgnoreCase), PreviewSize, ThumbnailSize)

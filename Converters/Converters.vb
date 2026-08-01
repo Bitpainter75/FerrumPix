@@ -44,6 +44,37 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Zeigt den uebersetzten Anzeigetext zu einem SUCHFELD-Namen.
+    '''
+    ''' Die Auswahlliste im Suchdialog fuehrt die Feldnamen als Wert - "Width", "Person", "Place".
+    ''' Sie stehen so in jeder gespeicherten Suche und in jedem Select Case und duerfen sich nicht
+    ''' aendern, standen aber bis hierher auch genau so in der Oberflaeche: englisch, mitten in einem
+    ''' deutschen Dialog. Uebersetzt wird deshalb nur die ANZEIGE.</summary>
+    Public Class SearchFieldLabelConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Return Services.SearchCondition.FieldLabel(TryCast(value, String))
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Return BindingOperations.DoNothing
+        End Function
+    End Class
+
+    ''' <summary>Dasselbe fuer den Vergleich: aus "Contains" wird "enthaelt", die Zeichen bleiben.</summary>
+    Public Class SearchOperatorLabelConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Return Services.SearchCondition.OperatorLabel(TryCast(value, String))
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Return BindingOperations.DoNothing
+        End Function
+    End Class
+
     Public Class AppModeToVisibilityConverter
         Implements IValueConverter
 

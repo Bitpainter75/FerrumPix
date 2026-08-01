@@ -1252,6 +1252,16 @@
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichStoreTagsInDescription}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                         </Grid>
 
+                        <!-- Ab Werk AUS: hier verlässt eine Angabe den Rechner, die sonst nirgends
+                             hingeht - wer auf welchem Foto zu sehen ist. -->
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Erkannte Personen nach Immich schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schreibt die Namen der auf einem Immich-Bild erkannten Personen als Immich-Stichwörter auf den Server. Nur benannte Gruppen, und nur nach einem Durchlauf der Personenerkennung. Aus: die Erkennung bleibt auf diesem Gerät." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichWritePeopleTags}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
 
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
@@ -1300,7 +1310,7 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Modelle" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Drei Werkzeuge brauchen eine Modelldatei, die sich von GitHub nachladen lässt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Vier Werkzeuge brauchen eine Modelldatei, die sich von GitHub nachladen lässt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <StackPanel Spacing="10">
                             <ItemsControl ItemsSource="{Binding ModelGroups}">
@@ -1330,7 +1340,36 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock Classes="no-translate" Text="{Binding ModelFolder}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
-                        </StackPanel>                    </StackPanel>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Personen erkennen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Sucht Gesichter in Ihren Fotos und fasst dieselbe Person zusammen, damit Sie nach ihr suchen können. Läuft auf Ihrem Gerät; die Merkmale bleiben in Ihrer Bibliothek und werden nirgendwohin gesendet. Namen vergeben Sie selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FaceRecognitionEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <!-- Ein Kartenbild gibt es (noch) nicht, und der Text hat eines
+                                     versprochen. Was die Ortstabelle wirklich leistet, sind NAMEN
+                                     aus Koordinaten - und die entstehen ohne jede Verbindung nach
+                                     außen. -->
+                                <TextBlock Text="Aufnahmeorte benennen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Macht aus den Koordinaten im Foto einen Ort und ein Land: sie erscheinen in der Info-Leiste, im Ortsfilter über der Galerie und in der Suche. Die Zuordnung kommt aus einer Ortstabelle auf diesem Gerät - es wird nichts abgefragt und nichts gesendet. Eine Karte zeigt FerrumPix nicht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding PhotoMapEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
                 </Border>
 
                 <Border x:Name="PerformanceSection" Classes="section">
@@ -2124,6 +2163,30 @@
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/advimman/lama/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="YuNet" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Gesichter finden (Modelldatei)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo/blob/main/models/face_detection_yunet/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="SFace" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Gesichter vergleichen (Modelldatei)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo/blob/main/models/face_recognition_sface/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>

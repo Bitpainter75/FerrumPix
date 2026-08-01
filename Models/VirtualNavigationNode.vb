@@ -24,6 +24,22 @@ Namespace Models
         ''' "urlaub.jpg" ohne das Stichwort "urlaub" waere dann dabei. Nicht gespeichert -
         ''' Stichwortsuchen entstehen im Vorbeigehen.</summary>
         Public Property TagQueries As New List(Of String)()
+
+        ''' <summary>Genau diese Personen, ueber ihren Namen. Mehrere wirken als UND: gezeigt wird,
+        ''' wer GEMEINSAM auf einem Bild steht - so ist die Frage gemeint, wenn jemand zwei Namen
+        ''' anklickt.
+        '''
+        ''' Eigene Liste neben den Bedingungen, aus demselben Grund wie bei den Stichwoertern: die
+        ''' drei Filterknoepfe muessen sich MITEINANDER verunden ("diese Person, an diesem Ort, mit
+        ''' diesem Stichwort"), und ein Knoten traegt nur EINE Verknuepfung fuer alle Bedingungen.
+        ''' Personen brauchen darin UND, Orte ODER - in einer gemeinsamen Bedingungsliste waere das
+        ''' nicht auszudruecken. Die Listen dagegen gelten je fuer sich und werden untereinander
+        ''' verundet. Nicht gespeichert - die Knoepfe bauen ihren Knoten im Vorbeigehen.</summary>
+        Public Property PersonQueries As New List(Of String)()
+
+        ''' <summary>Genau diese Orte, verglichen gegen Ort UND Land. Mehrere wirken als ODER: ein
+        ''' Bild hat genau einen Aufnahmeort, ein UND ergaebe immer eine leere Liste.</summary>
+        Public Property PlaceQueries As New List(Of String)()
         Public Property RootFolder As String
         Public Property IncludeSubfolders As Boolean = True
         Public Property FavoriteMode As String = "Any"

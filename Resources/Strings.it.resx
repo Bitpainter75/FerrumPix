@@ -5696,4 +5696,130 @@
   <data name="Jedes_Symbol_dreht_sich_in_die_Laufrichtung_des__92c61e19" xml:space="preserve">
     <value>Ogni simbolo ruota nel senso della cornice. Disattivato: restano tutti dritti.</value>
   </data>
+  <data name="Vier_Werkzeuge_brauchen_eine_Modelldatei_die_sic_88ebbe74" xml:space="preserve">
+    <value>Quattro strumenti richiedono un file di modello scaricabile da GitHub.</value>
+  </data>
+  <data name="Personen_erkennen_be0c64ef" xml:space="preserve">
+    <value>Riconoscere le persone</value>
+  </data>
+  <data name="Sucht_Gesichter_in_Ihren_Fotos_und_fasst_dieselb_36651baa" xml:space="preserve">
+    <value>Cerca i volti nelle sue foto e raggruppa la stessa persona, così può cercarla. Funziona sul suo dispositivo; le caratteristiche restano nella sua libreria e non vengono inviate da nessuna parte. I nomi li assegna lei.</value>
+  </data>
+  <data name="Aufnahmeorte_auf_einer_Karte_2762855b" xml:space="preserve">
+    <value>Luoghi di scatto su una mappa</value>
+  </data>
+  <data name="Zeigt_Fotos_mit_Ortsangabe_auf_einer_Karte_Ander_0b8f8d2d" xml:space="preserve">
+    <value>Mostra su una mappa le foto che riportano un luogo. A differenza di tutto il resto in FerrumPix, questo richiede una connessione verso l'esterno: l'immagine della mappa proviene da un servizio esterno, che così viene a sapere quale zona sta guardando.</value>
+  </data>
+  <data name="YuNet_365d3d5b" xml:space="preserve">
+    <value>YuNet</value>
+  </data>
+  <data name="Gesichter_finden_Modelldatei_4e16ccfe" xml:space="preserve">
+    <value>Individuazione dei volti (file di modello)</value>
+  </data>
+  <data name="SFace_8767ac17" xml:space="preserve">
+    <value>SFace</value>
+  </data>
+  <data name="Gesichter_vergleichen_Modelldatei_c264f3b0" xml:space="preserve">
+    <value>Confronto dei volti (file di modello)</value>
+  </data>
+  <data name="Gesichter_finden_und_dieselbe_Person_zusammenfas_cf89104f" xml:space="preserve">
+    <value>Individua i volti e raggruppa la stessa persona</value>
+  </data>
+  <data name="Ortsnamen_zu_den_Koordinaten_im_Bild_ohne_Abfrag_844f8c14" xml:space="preserve">
+    <value>Nomi di luogo per le coordinate della foto, senza interrogare la rete</value>
+  </data>
+  <data name="Ohne_Namen_123a8e9b" xml:space="preserve">
+    <value>Senza nome</value>
+  </data>
+  <data name="Noch_keine_Personen_erkannt_d9c98ed5" xml:space="preserve">
+    <value>Nessuna persona ancora riconosciuta</value>
+  </data>
+  <data name="Gesichter_erkennen_c67e0f96" xml:space="preserve">
+    <value>Riconoscere i volti</value>
+  </data>
+  <data name="Durchsucht_die_markierten_Bilder_sonst_die_ganze_c1680a0b" xml:space="preserve">
+    <value>Esamina le foto selezionate, altrimenti l'intera vista</value>
+  </data>
+  <data name="Gesichter_werden_gesucht_affb823b" xml:space="preserve">
+    <value>Ricerca dei volti in corso</value>
+  </data>
+  <data name="Gesichter_gefunden_18cc9ec6" xml:space="preserve">
+    <value>volti trovati</value>
+  </data>
+  <data name="PERSONEN_c9cfcdaa" xml:space="preserve">
+    <value>PERSONE</value>
+  </data>
+  <data name="Name_eingeben_ec833156" xml:space="preserve">
+    <value>Inserire un nome</value>
+  </data>
+  <data name="Person_suchen_8bff7891" xml:space="preserve">
+    <value>Cerca una persona</value>
+  </data>
+  <data name="Personen_Mausradklick_hebt_die_Auswahl_auf_06b10702" xml:space="preserve">
+    <value>Persone (clic centrale annulla la selezione)</value>
+  </data>
+  <data name="Stichw_rter_Mausradklick_hebt_die_Auswahl_auf_23ebbdff" xml:space="preserve">
+    <value>Parole chiave (clic centrale annulla la selezione)</value>
+  </data>
+  <data name="Orte_Mausradklick_hebt_die_Auswahl_auf_788210a1" xml:space="preserve">
+    <value>Luoghi (clic centrale annulla la selezione)</value>
+  </data>
+  <data name="Filter_Mausradklick_setzt_zur_ck_c9c33585" xml:space="preserve">
+    <value>Filtro (clic centrale reimposta)</value>
+  </data>
+  <data name="Sortieren_Mausradklick_setzt_zur_ck_b7b3423d" xml:space="preserve">
+    <value>Ordina (clic centrale reimposta)</value>
+  </data>
+  <data name="Noch_keine_Personen_benannt_c4870013" xml:space="preserve">
+    <value>Nessuna persona ancora nominata</value>
+  </data>
+  <data name="Namen_werden_im_Infopanel_am_Bild_vergeben_6995b814" xml:space="preserve">
+    <value>I nomi si assegnano nel pannello informazioni accanto alla foto</value>
+  </data>
+  <data name="ORTE_616e8a82" xml:space="preserve">
+    <value>LUOGHI</value>
+  </data>
+  <data name="Ort_suchen_06144b10" xml:space="preserve">
+    <value>Cerca luogo</value>
+  </data>
+  <data name="Noch_keine_Orte_bekannt_03c72673" xml:space="preserve">
+    <value>Nessun luogo ancora noto</value>
+  </data>
+  <data name="Ortsnamen_entstehen_aus_den_Koordinaten_im_Bild_d6f239b3" xml:space="preserve">
+    <value>I nomi dei luoghi derivano dalle coordinate nella foto</value>
+  </data>
+  <data name="Ort_d95f9e67" xml:space="preserve">
+    <value>Luogo</value>
+  </data>
+  <data name="Falsch_erkannt_dieses_Gesicht_aus_der_Person_her_da69b300" xml:space="preserve">
+    <value>Riconoscimento errato: stacca questo volto dalla persona. Le altre foto restano invariate.</value>
+  </data>
+  <data name="Person_8c41ae88" xml:space="preserve">
+    <value>Persona</value>
+  </data>
+  <data name="enth_lt_7c93d365" xml:space="preserve">
+    <value>contiene</value>
+  </data>
+  <data name="Erkannte_Personen_nach_Immich_schreiben_f53b5807" xml:space="preserve">
+    <value>Scrivere in Immich le persone riconosciute</value>
+  </data>
+  <data name="Schreibt_die_Namen_der_auf_einem_Immich_Bild_erk_048fa06b" xml:space="preserve">
+    <value>Scrive sul server, come parole chiave di Immich, i nomi delle persone riconosciute su una foto di Immich. Solo gruppi con nome e solo dopo una passata del riconoscimento. Disattivato: quanto riconosciuto resta su questo dispositivo.</value>
+  </data>
+  <data name="Name_eintragen_benennt_die_ganze_Gruppe_44bfe467" xml:space="preserve">
+    <value>Inserire un nome assegna il nome all'intero gruppo.</value>
+  </data>
+  <data name="Ein_Name_den_es_schon_gibt_verschiebt_nur_dieses_ed791b2c" xml:space="preserve">
+    <value>Un nome che esiste già sposta lì solo questo volto.</value>
+  </data>
+  <data name="Nicht_diese_Person_486fc4cd" xml:space="preserve">
+    <value>Non questa persona</value>
+  </data>
+  <data name="Aufnahmeorte_benennen_9f084a61" xml:space="preserve">
+    <value>Assegnare un nome ai luoghi di scatto</value>
+  </data>
+  <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
+    <value>Trasforma le coordinate della foto in un luogo e un paese: compaiono nel pannello informazioni, nel filtro dei luoghi sopra la galleria e nella ricerca. I nomi provengono da una tabella dei luoghi su questo dispositivo: non viene interrogato né inviato nulla. FerrumPix non mostra alcuna mappa.</value>
+  </data>
 </root>

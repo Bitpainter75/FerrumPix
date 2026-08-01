@@ -102,8 +102,8 @@ Namespace Services
     Public Class AppSettings
         Public Property GalleryThumbnailSize As Double = 260
         Public Property GalleryViewMode As String = "Grid"
-        Public Property GallerySortMode As String = "Name"
-        Public Property GallerySortAscending As Boolean = True
+        Public Property GallerySortMode As String = AppSettingsService.DefaultGallerySortMode
+        Public Property GallerySortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
         Public Property GalleryShowFolders As Boolean = True
         Public Property GalleryShowParentFolder As Boolean = True
         ' Galerie-Kachel-Badges: True = immer sichtbar, False = erst beim Mouseover. Standard spiegelt
@@ -251,6 +251,24 @@ Namespace Services
         Public Property MainWindowMaximized As Boolean = False
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
         Public Property VideoHardwareAcceleration As Boolean = False
+
+        ''' <summary>Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS.
+        '''
+        ''' Kein Standardverhalten, sondern eine Entscheidung des Benutzers: die Erkennung liest den
+        ''' ganzen Bestand durch und legt biometrische Merkmale in der Bibliothek ab. Das ist etwas
+        ''' anderes als ein Stichwort, auch wenn es lokal bleibt - wer es nicht ausdrücklich
+        ''' einschaltet, bekommt es nicht. Ohne die beiden Modelldateien bleibt der Schalter
+        ''' wirkungslos; das entscheidet <c>AiModelService</c>.</summary>
+        Public Property FaceRecognitionEnabled As Boolean = False
+
+        ''' <summary>Aufnahmeorte auf einer Karte zeigen. AB WERK AUS.
+        '''
+        ''' Ebenfalls eine bewusste Entscheidung: die Koordinaten liegen zwar längst in der
+        ''' Bibliothek, aber ein Kartenbild kommt von einem fremden Dienst, und jede Anfrage verrät
+        ''' ihm, WO fotografiert wurde. Bei einer Anwendung, die sonst nichts nach draußen gibt,
+        ''' darf das niemand ungefragt bekommen.</summary>
+        Public Property PhotoMapEnabled As Boolean = False
+
         Public Property TransparencyBackgroundMode As String = "Checkerboard"
         Public Property TransparencyBackgroundColor As String = "#FFFFFFFF"
         Public Property LastBatchRenamePattern As String = "{name}_###"
@@ -317,6 +335,14 @@ Namespace Services
         ''' "Immich" (nur Immich-Ansichten), "Folders" (nur Ordner-/Suchansichten), "Off".
         Public Property GalleryTimelineMode As String = "All"
         Public Property ImmichDeletePermanently As Boolean = False
+
+        ''' <summary>Erkannte Personen als Stichworte zurueck auf den Immich-Server schreiben.
+        '''
+        ''' AB WERK AUS, und das ist keine Vorsicht ohne Grund: der Server gehoert dem Benutzer, und
+        ''' wer dort etwas hinschreibt, aendert Daten ausserhalb dieses Programms. Wer wen auf einem
+        ''' Foto erkannt hat, ist ausserdem eine Angabe fuer sich - sie soll nicht als Nebenwirkung
+        ''' eines Suchlaufs den Rechner verlassen. Geschrieben werden nur BENANNTE Gruppen.</summary>
+        Public Property ImmichWritePeopleTags As Boolean = False
 
         ' Zuletzt im Druckdialog gewählte Optionen. Sie gelten auch für das Zielformat PDF in
         ' „Speichern unter"/„Konvertieren nach", damit Drucken und PDF-Export dasselbe Seitenlayout
@@ -838,6 +864,13 @@ Namespace Services
             End Select
         End Function
 
+        ''' <summary>Der Standard der Galerie-Sortierung, an EINER Stelle. Er ist der Anfangswert der
+        ''' Einstellung und zugleich das Ziel des Zuruecksetzens ueber den Mausradklick - stuenden
+        ''' beide getrennt da, liefen sie beim naechsten Umstellen auseinander.</summary>
+        Public Const DefaultGallerySortMode As String = "Name"
+
+        Public Const DefaultGallerySortAscending As Boolean = True
+
         Public Shared Function NormalizeGallerySortMode(value As String) As String
             Select Case If(value, "").Trim()
                 Case "Size", "Type", "Rating", "Favorite",
@@ -847,7 +880,7 @@ Namespace Services
                 Case "Date" ' Alte Sortiereinstellung aus Versionen vor 0.4.0 - Bestandsnutzer nicht stillschweigend auf "Name" zurückfallen lassen.
                     Return "FileModifiedAt"
                 Case Else
-                    Return "Name"
+                    Return DefaultGallerySortMode
             End Select
         End Function
 
