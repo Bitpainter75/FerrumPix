@@ -23,19 +23,23 @@ Namespace Views
         ''' Eingabetaste kommt. Kein Knopf daneben: ein Name ist ein Wort, und ein Bestaetigen-Knopf
         ''' je Person waere mehr Oberflaeche als Inhalt.
         '''
-        ''' Die Id steht im Tag der Textbox, nicht im Text - benannt wird ueber die Id, damit eine
+        ''' Die Id steht im Tag des Feldes, nicht im Text - benannt wird ueber die Id, damit eine
         ''' Umbenennung die Zuordnung nicht verliert.</summary>
         Private Sub OnPersonNameCommitted(sender As Object, e As RoutedEventArgs)
-            CommitPersonName(TryCast(sender, TextBox))
+            CommitPersonName(TryCast(sender, AutoCompleteBox))
         End Sub
 
+        ''' <summary>Steht die Vorschlagsliste offen, hat der Rahmen die Eingabetaste schon fuer die
+        ''' Auswahl verbraucht und dieses Ereignis kommt gar nicht erst an - der erste Druck waehlt
+        ''' den Vorschlag, der zweite uebernimmt ihn. Genau so soll es sein: ein versehentlich
+        ''' uebernommener Vorschlag schiebt ein Gesicht zu einer fremden Person.</summary>
         Private Sub OnPersonNameKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key <> Key.Enter Then Return
-            CommitPersonName(TryCast(sender, TextBox))
+            CommitPersonName(TryCast(sender, AutoCompleteBox))
             e.Handled = True
         End Sub
 
-        Private Sub CommitPersonName(box As TextBox)
+        Private Sub CommitPersonName(box As AutoCompleteBox)
             If box Is Nothing Then Return
             ' Der Datenkontext der Zeile statt des Tags: gebraucht werden BEIDE Ids. Die Person sagt,
             ' welche Gruppe den Namen bekommt, das Gesicht, was der Benutzer angefasst hat - und

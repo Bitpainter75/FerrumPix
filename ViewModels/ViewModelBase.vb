@@ -56,6 +56,9 @@ Namespace ViewModels
         Viewer = 1
         Editor = 2
         Settings = 3
+        ''' <summary>Die Personenverwaltung. Ein eigener Bereich neben den Einstellungen - dort
+        ''' legt man fest, wie das Programm arbeitet, hier arbeitet man am Bestand.</summary>
+        People = 4
     End Enum
 
 End Namespace

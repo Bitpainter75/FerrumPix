@@ -633,13 +633,13 @@ Namespace Services
         ' 0.00001 und der Reihenfolge der maxV-Vergleiche, weil beides bei Grautoenen und exakt
         ' gleichen Kanaelen ueber das Ergebnis entscheidet.
         '
-        ' GERECHNET WIRD IN DOUBLE, nicht in Single - und das ist keine Bequemlichkeit:
-        ' GetHslBandAdjustments waehlt das Farbband ueber HARTE Grenzen (15/45/75/165/195/255/285).
-        ' Liegt ein Farbton exakt auf einer Grenze, entscheidet das letzte Bit darueber, welches Band
-        ' greift - und Nachbarbaender koennen voellig verschiedene Regler tragen. Gemessen am
-        ' Testbild: Pixel (128,127,124) ergibt Farbton exakt 45,0; in Single kippt (g-b)/d auf
-        ' 44,999998, das Pixel faellt von Gelb nach Orange und weicht um 27 Tonwerte ab.
-        ' Der Gewinn dieser Stufe liegt ohnehin im Wegfall der BYTE-Zwischenstufe, nicht in Single.
+        ' GERECHNET WIRD IN DOUBLE, nicht in Single. Der urspruengliche Grund ist inzwischen weg:
+        ' GetHslBandAdjustments waehlte das Band einmal ueber HARTE Grenzen, und dort entschied auf
+        ' der Grenze das letzte Bit, welcher Regler greift - gemessen sprang Pixel (128,127,124) bei
+        ' Farbton exakt 45,0 in Single nach 44,999998 und damit um 27 Tonwerte. Heute wird zwischen
+        ' den Baendern uebergeblendet, eine Grenze in diesem Sinn gibt es nicht mehr. Double bleibt
+        ' trotzdem: der Gewinn dieser Stufe liegt im Wegfall der BYTE-Zwischenstufe, Single spart
+        ' hier nichts Messbares, und die Zahlen der frueheren Messungen bleiben vergleichbar.
 
         ''' <summary>Kennlinie der HSL-Band-Regler für Sättigung und Luminanz. <paramref name="amount"/>
         ''' ist der Reglerwert geteilt durch 100 und mit der Chroma gewichtet, liegt also in [-1, 1];
@@ -668,6 +668,38 @@ Namespace Services
         ''' EICHUNG GEGEN ADOBE: ±100 bedeutet damit wie bei Adobe "volle Wirkung", der Import
         ''' uebernimmt SaturationAdjustment*/LuminanceAdjustment*/GrayMixer* weiterhin 1:1 (nur der
         ''' Farbton braucht HueImportScale).</summary>
+        ''' <summary>Kennlinie der HSL-Band-SAETTIGUNG. Eigene Kurve, nicht die von der Luminanz -
+        ''' die beiden Groessen vertragen Verschiedenes: L = 1 ist Weiss (und darf nicht ausbrennen),
+        ''' S = 1 ist nur volle Farbe.
+        '''
+        ''' <c>1 − f = (1−v) · e^(−a·v/(1−v))</c>. Die Enden sind dieselben wie bei der Parabel -
+        ''' f(0) = 0 (Schwarz bleibt fest), f(1) = 1 (keine Klemmung), monoton, bei a = 0 exakt die
+        ''' Kennlinie der Ruhe (bitgleich, ohne Sonderfall). Die STEIGUNG AM NULLPUNKT ist 1 + a und
+        ''' damit dieselbe wie beim globalen Saettigungsregler: schwache Farben werden gleich stark
+        ''' angehoben, erst nach oben biegt die Kurve weg, weil x2 auf einer bereits satten Farbe
+        ''' nicht mehr in den Wertebereich passt.
+        '''
+        ''' WARUM NICHT MEHR DIE PARABEL: sie bog viel zu frueh ab. Gemessen an echten Farbwerten
+        ''' brachte +100 auf dem Hauptband nur zwischen 16 und 58 Prozent mehr Chroma, waehrend der
+        ''' globale Regler bei +100 genau verdoppelt - dieselbe Zahl am Regler bedeutete je nach
+        ''' Regler etwas voellig anderes. Die Minusseite war davon nie betroffen: −100 entsaettigt
+        ''' seit jeher vollstaendig. Der Regler war also einseitig, und genau so fuehlte er sich an.
+        ''' Mit dieser Kurve (und dem Bandkern in GetHslBandAdjustments) kommen dieselben Farben auf
+        ''' 28 bis 75 Prozent, ohne dass irgendwo geklemmt wird.
+        '''
+        ''' FOLGE FUER PRESETS: importierte Adobe-Werte wirken auf der Plusseite staerker als vorher.
+        ''' Ein Gegenbeleg aus Lightroom liegt nicht vor (siehe LIGHTROOM_ANGLEICH.md, es fehlen
+        ''' preset-freie Referenzexporte); die Eichung stuetzt sich auf den Vergleich mit dem
+        ''' eigenen globalen Regler, nicht auf eine Messung gegen Adobe.</summary>
+        Private Shared Function ApplyHslSaturationGain(value As Double, amount As Double) As Double
+            If amount > 1.0 Then amount = 1.0 Else If amount < -1.0 Then amount = -1.0
+            If amount = 0.0 Then Return value
+            If amount < 0.0 Then Return value * (1.0 + amount)
+            If value <= 0.0 Then Return 0.0
+            If value >= 1.0 Then Return 1.0
+            Return 1.0 - (1.0 - value) * Math.Exp(-amount * value / (1.0 - value))
+        End Function
+
         Private Shared Function ApplyHslBandGain(value As Double, amount As Double) As Double
             ' Die Parabel ist nur fuer |amount| <= 1 randtreu (f(1)=1). Der Preset-Import klemmt
             ' auf +-100, eine handbearbeitete .fpx/.fpxmp kann aber mehr enthalten - dann liefe
@@ -995,7 +1027,7 @@ Namespace Services
                                 Dim chromaW = Math.Min(1.0, sat / 0.1)
                                 chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW)
                                 h = (h + hueShift * gateCs + 360.0) Mod 360.0
-                                sat = ApplyHslBandGain(sat, satShift * gateCs / 100.0)
+                                sat = ApplyHslSaturationGain(sat, satShift * gateCs / 100.0)
                                 lum = ApplyHslBandGain(lum, lumShift * chromaW / 100.0)
                             End If
 

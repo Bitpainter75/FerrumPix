@@ -2,6 +2,7 @@ Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
+Imports System.Linq
 Imports System.Threading
 Imports System.Threading.Tasks
 Imports SkiaSharp
@@ -105,7 +106,7 @@ Namespace Services
                                     Continue For
                                 End If
 
-                                Dim faces = FaceDetectionService.Detect(bitmap)
+                                Dim faces = FilterBySize(FaceDetectionService.Detect(bitmap), bitmap)
                                 library.SaveFaces(filePath, stamp, faces)
                                 result.Scanned += 1
                                 result.FacesFound += faces.Count
@@ -131,6 +132,30 @@ Namespace Services
                 $"{result.FacesFound} Gesichter, {result.Failed} fehlgeschlagen" &
                 If(result.Cancelled, ", abgebrochen", ""))
             Return result
+        End Function
+
+        ''' <summary>Wirft zu kleine Gesichter weg, bevor sie ueberhaupt in die Bibliothek kommen.
+        '''
+        ''' Gemessen wird an der KUERZEREN Bildkante, nicht in Bildpunkten: 80 Punkte sind auf einem
+        ''' 24-Megapixel-Foto ein Kopf in der dritten Reihe und auf einem Handyschnappschuss ein
+        ''' Portraet. Die Prozentzahl meint auf jedem Bild dasselbe.
+        '''
+        ''' WARUM HIER und nicht in der Erkennung: <see cref="FaceDetectionService.Detect"/> soll
+        ''' sagen, was im Bild IST. Was davon in die Bibliothek gehoert, ist eine Frage des
+        ''' Geschmacks - wer auf einem Stadtfest die Umstehenden nicht in seiner Personenliste haben
+        ''' will, stellt das ein, und die Erkennung bleibt davon unberuehrt.
+        '''
+        ''' Ab Werk 4 (gemessen, siehe AppSettingsService). Auf 0 gestellt bleibt alles, was die
+        ''' Erkennung findet.</summary>
+        Private Shared Function FilterBySize(faces As List(Of DetectedFace), source As SKBitmap) As List(Of DetectedFace)
+            If faces Is Nothing OrElse faces.Count = 0 Then Return faces
+            Dim prozent = AppSettingsService.Load().FaceMinimumSizePercent
+            If prozent <= 0 OrElse source Is Nothing Then Return faces
+
+            Dim kante = Math.Min(source.Width, source.Height)
+            Dim grenze = kante * prozent / 100.0
+            If grenze <= 0 Then Return faces
+            Return faces.Where(Function(f) Math.Max(f.Width, f.Height) >= grenze).ToList()
         End Function
 
         ''' <summary>Holt die Vorschau eines Immich-Assets und dekodiert sie. Nothing, wenn der

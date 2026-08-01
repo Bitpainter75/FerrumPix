@@ -220,9 +220,26 @@
                                     <!-- Suchfeld: bei einem gewachsenen Bestand hat man schnell
                                          dreistellig viele Gruppen. Eine ausgewählte Person bleibt
                                          beim Tippen sichtbar, sonst ließe sie sich nicht abwählen. -->
-                                    <TextBox Text="{Binding PersonFilterSearch}"
-                                             PlaceholderText="Person suchen"
-                                             Margin="10,0,10,6"/>
+                                    <Border Background="{DynamicResource FP.Bg.Input}"
+                                             BorderBrush="{DynamicResource FP.Border.Normal}"
+                                             BorderThickness="1"
+                                             CornerRadius="8"
+                                             Padding="10,6"
+                                             Margin="10,0,10,6">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                                           Width="14" Height="14" VerticalAlignment="Center" Opacity="0.65"/>
+                                            <TextBox Grid.Column="1"
+                                                     Classes="search-input"
+                                                     Background="Transparent"
+                                                     BorderThickness="0"
+                                                     Padding="0"
+                                                     Text="{Binding PersonFilterSearch}"
+                                                     PlaceholderText="Person suchen"
+                                                     Margin="8,0,0,0"
+                                                     VerticalContentAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
 
                                     <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding PersonFilterOptions}">
@@ -302,9 +319,26 @@
 
                                     <Separator Margin="4,6"/>
 
-                                    <TextBox Text="{Binding PlaceFilterSearch}"
-                                             PlaceholderText="Ort suchen"
-                                             Margin="10,0,10,6"/>
+                                    <Border Background="{DynamicResource FP.Bg.Input}"
+                                             BorderBrush="{DynamicResource FP.Border.Normal}"
+                                             BorderThickness="1"
+                                             CornerRadius="8"
+                                             Padding="10,6"
+                                             Margin="10,0,10,6">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                                           Width="14" Height="14" VerticalAlignment="Center" Opacity="0.65"/>
+                                            <TextBox Grid.Column="1"
+                                                     Classes="search-input"
+                                                     Background="Transparent"
+                                                     BorderThickness="0"
+                                                     Padding="0"
+                                                     Text="{Binding PlaceFilterSearch}"
+                                                     PlaceholderText="Ort suchen"
+                                                     Margin="8,0,0,0"
+                                                     VerticalContentAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
 
                                     <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding PlaceFilterOptions}">
@@ -376,6 +410,31 @@
                                     </Button>
 
                                     <Separator Margin="4,6"/>
+
+                                    <!-- Suchfeld wie bei Personen und Orten: ein gewachsener Bestand
+                                         hat schnell dreistellig viele Stichwörter. Ein ausgewähltes
+                                         bleibt beim Tippen sichtbar, sonst ließe es sich nicht mehr
+                                         abwählen. -->
+                                    <Border Background="{DynamicResource FP.Bg.Input}"
+                                             BorderBrush="{DynamicResource FP.Border.Normal}"
+                                             BorderThickness="1"
+                                             CornerRadius="8"
+                                             Padding="10,6"
+                                             Margin="10,0,10,6">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                                           Width="14" Height="14" VerticalAlignment="Center" Opacity="0.65"/>
+                                            <TextBox Grid.Column="1"
+                                                     Classes="search-input"
+                                                     Background="Transparent"
+                                                     BorderThickness="0"
+                                                     Padding="0"
+                                                     Text="{Binding TagFilterSearch}"
+                                                     PlaceholderText="Stichwort suchen"
+                                                     Margin="8,0,0,0"
+                                                     VerticalContentAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
 
                                     <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
                                         <ItemsControl ItemsSource="{Binding TagFilterOptions}">
@@ -1285,6 +1344,23 @@
                 </Grid>
 
                 <StackPanel Grid.Row="2" Margin="24,18,24,21" Spacing="9">
+                    <!-- Personen verwalten steht ÜBER den Einstellungen, weil es keine Einstellung
+                         ist: hier arbeitet man am Bestand, so wie beim Ordnen und Bewerten. Der
+                         Knopf erscheint nur mit eingeschalteter Erkennung - ohne sie führte er in
+                         einen leeren Bereich. -->
+                    <Button Classes="ghost"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,7"
+                            IsVisible="{Binding HasPersonFeature}"
+                            Click="OnManagePeopleClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/users.svg"
+                                           Width="20" Height="20"/>
+                            <TextBlock Text="Personen verwalten"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <Button Classes="ghost"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"

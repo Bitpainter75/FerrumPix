@@ -104,6 +104,10 @@ Namespace ViewModels
         ''' hat, sieht am ehesten, dass jemand falsch zugeordnet ist.</summary>
         Public ReadOnly Property People As New ObservableCollection(Of PersonFaceEntry)() Implements IInfoSidebarPanel.People
 
+        ''' <summary>Die schon vergebenen Namen fuer die Vorschlagsliste am Namensfeld. Denselben
+        ''' Namen ein zweites Mal zu tippen macht aus einer Person zwei.</summary>
+        Public ReadOnly Property PersonNameSuggestions As New ObservableCollection(Of String)() Implements IInfoSidebarPanel.PersonNameSuggestions
+
         Public ReadOnly Property HasPeople As Boolean Implements IInfoSidebarPanel.HasPeople
             Get
                 Return People.Count > 0
@@ -116,6 +120,7 @@ Namespace ViewModels
         Private Sub LoadPeople(imagePath As String)
             People.Clear()
             Dim entries = FacePanelService.BuildEntries(imagePath)
+            FacePanelService.FillNameSuggestions(PersonNameSuggestions)
             For Each entry In entries
                 People.Add(entry)
             Next

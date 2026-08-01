@@ -5000,12 +5000,6 @@
   <data name="Erst_w_hlen_dann_liegt_das_jeweilige_Werkzeug_be_de86f4af" xml:space="preserve">
     <value>Elija primero y esa herramienta aparecerá sobre la imagen. Al pulsar de nuevo se oculta.</value>
   </data>
-  <data name="In_eine_Maske_umwandeln_3828b7ef" xml:space="preserve">
-    <value>Convertir en máscara</value>
-  </data>
-  <data name="In_eine_Auswahl_umwandeln_d60b98b1" xml:space="preserve">
-    <value>Convertir en selección</value>
-  </data>
   <data name="In_eine_Maske_umgewandelt_7f858fd9" xml:space="preserve">
     <value>Convertido en máscara</value>
   </data>
@@ -5717,9 +5711,6 @@
   <data name="Gesichter_finden_Modelldatei_4e16ccfe" xml:space="preserve">
     <value>Encontrar rostros (archivo de modelo)</value>
   </data>
-  <data name="SFace_8767ac17" xml:space="preserve">
-    <value>SFace</value>
-  </data>
   <data name="Gesichter_vergleichen_Modelldatei_c264f3b0" xml:space="preserve">
     <value>Comparar rostros (archivo de modelo)</value>
   </data>
@@ -5821,5 +5812,188 @@
   </data>
   <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
     <value>Convierte las coordenadas de la foto en un lugar y un país: aparecen en el panel de información, en el filtro de lugares sobre la galería y en la búsqueda. Los nombres provienen de una tabla de lugares en este equipo: no se consulta ni se envía nada. FerrumPix no muestra ningún mapa.</value>
+  </data>
+  <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
+    <value>ArcFace ResNet100</value>
+  </data>
+  <data name="Gesichter_genauer_vergleichen_Modelldatei_c9cae249" xml:space="preserve">
+    <value>Comparar caras con más precisión (archivo de modelo)</value>
+  </data>
+  <data name="Personen_genau_27cd5f76" xml:space="preserve">
+    <value>Personas, preciso</value>
+  </data>
+  <data name="Gruppen_1d071099" xml:space="preserve">
+    <value>grupos</value>
+  </data>
+  <data name="davon_benannt_95459c71" xml:space="preserve">
+    <value>con nombre</value>
+  </data>
+  <data name="Ein_Klick_ffnet_eine_Gruppe_Dort_steht_jedes_Ges_92563102" xml:space="preserve">
+    <value>Un clic abre un grupo. Allí aparece cada cara por separado, y lo que no pertenece se puede separar sin tocar las demás fotos.</value>
+  </data>
+  <data name="Geh_rt_jemand_nicht_dazu_l_st_der_Knopf_an_der_K_a96e1bde" xml:space="preserve">
+    <value>Si alguien no pertenece aquí, el botón de la miniatura separa exactamente esa cara. Las demás fotos no cambian.</value>
+  </data>
+  <data name="Gruppe_verwerfen_55df8ba2" xml:space="preserve">
+    <value>Descartar grupo</value>
+  </data>
+  <data name="Die_Gruppe_verwerfen_Die_Gesichter_bleiben_erhal_5aa30b20" xml:space="preserve">
+    <value>Descarta el grupo. Las caras se conservan, después no pertenecen a nadie.</value>
+  </data>
+  <data name="Zur_ck_zur_bersicht_d244adba" xml:space="preserve">
+    <value>Volver a la vista general</value>
+  </data>
+  <data name="Seite_633082b8" xml:space="preserve">
+    <value>Página</value>
+  </data>
+  <data name="bis_1094cd06" xml:space="preserve">
+    <value>a</value>
+  </data>
+  <data name="Weiter_aeff967b" xml:space="preserve">
+    <value>Siguiente</value>
+  </data>
+  <data name="Stichwort_suchen_7da58667" xml:space="preserve">
+    <value>Buscar palabra clave</value>
+  </data>
+  <data name="Unbekannt_d0b00a9f" xml:space="preserve">
+    <value>Desconocido</value>
+  </data>
+  <data name="Kleinste_erkannte_Person_f3f9cb97" xml:space="preserve">
+    <value>Persona más pequeña a detectar</value>
+  </data>
+  <data name="alle_ac78aefc" xml:space="preserve">
+    <value>todas</value>
+  </data>
+  <data name="Gesichter_unterhalb_dieser_Gr_e_kommen_gar_nicht_a50f4e8d" xml:space="preserve">
+    <value>Las caras por debajo de este tamaño no llegan siquiera a la biblioteca; se mide sobre el lado más corto de la foto, para que el mismo valor signifique lo mismo en cada imagen. En una fiesta popular queda fuera la tercera fila del fondo. Con «todas» se conserva lo que encuentre el reconocimiento.</value>
+  </data>
+  <data name="Ordner_aufr_umen_3cebb414" xml:space="preserve">
+    <value>Limpiar carpetas</value>
+  </data>
+  <data name="Katalogdaten_34af479a" xml:space="preserve">
+    <value>Datos del catálogo</value>
+  </data>
+  <data name="Beides_affdd6a7" xml:space="preserve">
+    <value>Ambos</value>
+  </data>
+  <data name="Entfernt_Aufnahmedaten_Bewertung_Etikett_Stichw__3d91344c" xml:space="preserve">
+    <value>Elimina del catálogo los datos de captura, la valoración, la etiqueta, las palabras clave y las caras encontradas de esta carpeta. Los archivos de imagen no se tocan.</value>
+  </data>
+  <data name="L_scht_nur_die_zwischengespeicherten_Vorschaubil_bb3df544" xml:space="preserve">
+    <value>Solo borra las miniaturas en caché. Se vuelven a crear solas la próxima vez que las mires.</value>
+  </data>
+  <data name="Beides_entfernen_Danach_wei_FerrumPix_nichts_meh_fecd4123" xml:space="preserve">
+    <value>Eliminar ambos. Después FerrumPix ya no sabe nada de esta carpeta y desaparece de la lista.</value>
+  </data>
+  <data name="FerrumPix_hat_zu_keinem_Ordner_Daten_abgelegt_5bad9905" xml:space="preserve">
+    <value>FerrumPix no ha guardado datos de ninguna carpeta.</value>
+  </data>
+  <data name="Keine_Ordner_mit_abgelegten_Daten_c26ec9c3" xml:space="preserve">
+    <value>Ninguna carpeta con datos guardados</value>
+  </data>
+  <data name="0_Ordner_1_Vorschaubilder_2_3_Katalogeintr_ge_7ed15827" xml:space="preserve">
+    <value>{0} carpetas · {1} miniaturas · {2} · {3} entradas de catálogo</value>
+  </data>
+  <data name="0_Vorschaubilder_1_2_Katalogeintr_ge_3_cc0d4bd5" xml:space="preserve">
+    <value>{0} miniaturas · {1} · {2} entradas de catálogo · {3}</value>
+  </data>
+  <data name="0_Vorschaubilder_c861a246" xml:space="preserve">
+    <value>{0} miniaturas</value>
+  </data>
+  <data name="0_Katalogeintr_ge_744cc761" xml:space="preserve">
+    <value>{0} entradas de catálogo</value>
+  </data>
+  <data name="entfernt_802e67af" xml:space="preserve">
+    <value>eliminados.</value>
+  </data>
+  <data name="Nichts_zu_entfernen_b262eaa2" xml:space="preserve">
+    <value>Nada que eliminar.</value>
+  </data>
+  <data name="Gesichter_finden_zu_Personen_zusammenfassen_und__3404f335" xml:space="preserve">
+    <value>Encontrar caras, agruparlas en personas y ponerles nombre: todo en este equipo.</value>
+  </data>
+  <data name="Alle_Katalogdaten_2bbf2c36" xml:space="preserve">
+    <value>Todos los datos del catálogo</value>
+  </data>
+  <data name="Alle_Vorschaubilder_98cff590" xml:space="preserve">
+    <value>Todas las miniaturas</value>
+  </data>
+  <data name="Alles_6343afb8" xml:space="preserve">
+    <value>Todo</value>
+  </data>
+  <data name="Entfernt_Aufnahmedaten_Bewertung_Etikett_Stichw__bc7fd3e1" xml:space="preserve">
+    <value>Elimina del catálogo los datos de captura, la valoración, la etiqueta, las palabras clave y las personas encontradas de todas las carpetas. Los archivos de imagen quedan intactos.</value>
+  </data>
+  <data name="L_scht_die_zwischengespeicherten_Vorschaubilder__6cd66918" xml:space="preserve">
+    <value>Borra las miniaturas en caché de todas las carpetas. Vuelven a crearse solas la próxima vez que mires.</value>
+  </data>
+  <data name="Beides_f_r_alle_Ordner_entfernen_Danach_ist_die__34d7ef9b" xml:space="preserve">
+    <value>Eliminar ambos en todas las carpetas. Después la lista queda vacía y FerrumPix empieza de nuevo la próxima vez que mires.</value>
+  </data>
+  <data name="Alles_entfernen_979ecb59" xml:space="preserve">
+    <value>Eliminar todo</value>
+  </data>
+  <data name="Alle_Katalogdaten_entfernen_87fc1e96" xml:space="preserve">
+    <value>Eliminar todos los datos del catálogo</value>
+  </data>
+  <data name="Alle_Vorschaubilder_l_schen_c91ad8e6" xml:space="preserve">
+    <value>Borrar todas las miniaturas</value>
+  </data>
+  <data name="Katalogdaten_und_Vorschaubilder_aller_Ordner_ent_789853cf" xml:space="preserve">
+    <value>¿Eliminar los datos del catálogo y las miniaturas de todas las carpetas?</value>
+  </data>
+  <data name="Katalogdaten_aller_Ordner_entfernen_5ee702d1" xml:space="preserve">
+    <value>¿Eliminar los datos del catálogo de todas las carpetas?</value>
+  </data>
+  <data name="Vorschaubilder_aller_Ordner_l_schen_9d2aa1be" xml:space="preserve">
+    <value>¿Borrar las miniaturas de todas las carpetas?</value>
+  </data>
+  <data name="Betroffen_sind_0_Katalogeintr_ge_mit_Bewertung_E_bc66b8ff" xml:space="preserve">
+    <value>Afecta a {0} entradas del catálogo con valoración, etiqueta, palabras clave y personas encontradas. Los archivos de imagen no cambian. Lo que esté en un archivo adjunto vuelve en la próxima lectura, lo demás se pierde.</value>
+  </data>
+  <data name="Die_Vorschaubilder_entstehen_beim_n_chsten_Anseh_ee341874" xml:space="preserve">
+    <value>Las miniaturas vuelven a crearse solas la próxima vez que mires. Los datos del catálogo quedan intactos.</value>
+  </data>
+  <data name="Personen_verwalten_c0ddbc79" xml:space="preserve">
+    <value>Gestionar personas</value>
+  </data>
+  <data name="Zu_den_Einstellungen_a12516ab" xml:space="preserve">
+    <value>Ir a los ajustes</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_ausgeschaltet_388c65b7" xml:space="preserve">
+    <value>El reconocimiento de personas está desactivado.</value>
+  </data>
+  <data name="In_den_Einstellungen_unter_Personen_einschalten__bdca7432" xml:space="preserve">
+    <value>Actívalo en los ajustes, en Personas, y luego haz buscar en una carpeta. Todo se calcula en este dispositivo.</value>
+  </data>
+  <data name="Erkennung_ein_oder_ausschalten_und_die_kleinste__b4df9a8c" xml:space="preserve">
+    <value>Activar o desactivar el reconocimiento y definir la persona más pequeña que se detecta</value>
+  </data>
+  <data name="Die_gefundenen_Gruppen_als_Wand_aus_Gesichtern_b_4dee80d3" xml:space="preserve">
+    <value>Los grupos encontrados como un muro de caras: ponerles nombre, fusionarlos y sacar lo mal asignado. Está en la galería, encima del botón de ajustes.</value>
+  </data>
+  <data name="die_Personen_zu_ffnen_f2c9ddd4" xml:space="preserve">
+    <value>abrir las personas</value>
+  </data>
+  <data name="die_Personen_ffnest_df2d6fc8" xml:space="preserve">
+    <value>abres las personas</value>
+  </data>
+  <data name="Fertig_708ad54e" xml:space="preserve">
+    <value>Listo</value>
+  </data>
+  <data name="Jede_nderung_steht_sofort_in_der_Bibliothek_95495c07" xml:space="preserve">
+    <value>Cada cambio queda de inmediato en la biblioteca.</value>
+  </data>
+  <data name="Das_ganze_Bild_ansehen_c32d1120" xml:space="preserve">
+    <value>Ver la imagen completa</value>
+  </data>
+  <data name="Klicken_zum_Schlie_en_7a952e8b" xml:space="preserve">
+    <value>Haz clic para cerrar</value>
+  </data>
+  <data name="Maske_in_eine_Auswahl_umwandeln_3e24b058" xml:space="preserve">
+    <value>Convertir la máscara en una selección</value>
+  </data>
+  <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
+    <value>Convertir la selección en una máscara</value>
   </data>
 </root>

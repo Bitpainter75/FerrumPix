@@ -703,6 +703,15 @@
         <Setter Property="Padding" Value="0"/>
         <Setter Property="MinHeight" Value="0"/>
     </Style>
+    <!-- Der RUHEZUSTAND muss ebenfalls durchsichtig sein, und das ist keine Doppelung: der
+         Hintergrund einer TextBox haengt bei Avalonia am PART_BorderElement der Vorlage, nicht an
+         ihrer Background-Eigenschaft. Ein Background="Transparent" an der TextBox selbst - ob als
+         Klasse oder direkt am Element - laeuft deshalb ins Leere. Ohne diese Regel malte das Feld in
+         den Suchkaesten der Filtermenues einen helleren Kasten in seinen eigenen Rahmen. -->
+    <Style Selector="TextBox.search-input /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
     <Style Selector="TextBox.search-input:pointerover /template/ Border#PART_BorderElement">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

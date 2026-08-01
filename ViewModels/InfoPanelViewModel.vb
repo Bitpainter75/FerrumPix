@@ -255,6 +255,10 @@ Namespace ViewModels
         ''' und genau hier soll man ihnen einen Namen geben koennen.</summary>
         Public ReadOnly Property People As New ObservableCollection(Of PersonFaceEntry)() Implements IInfoSidebarPanel.People
 
+        ''' <summary>Die schon vergebenen Namen fuer die Vorschlagsliste am Namensfeld. Denselben
+        ''' Namen ein zweites Mal zu tippen macht aus einer Person zwei.</summary>
+        Public ReadOnly Property PersonNameSuggestions As New ObservableCollection(Of String)() Implements IInfoSidebarPanel.PersonNameSuggestions
+
         ''' <summary>Zeigt das Panel den Personen-Abschnitt? Nur mit eingeschalteter Erkennung, bei
         ''' genau einem Bild und wenn ueberhaupt jemand darauf erkannt wurde. Ein leerer Abschnitt
         ''' unter jedem Landschaftsfoto waere nur Platzverbrauch.</summary>
@@ -280,6 +284,7 @@ Namespace ViewModels
             End If
             Dim path = _items(0)?.FilePath
             Dim entries = FacePanelService.BuildEntries(path)
+            FacePanelService.FillNameSuggestions(PersonNameSuggestions)
             For Each entry In entries
                 People.Add(entry)
             Next

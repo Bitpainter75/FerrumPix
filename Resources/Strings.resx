@@ -5001,12 +5001,6 @@
   <data name="Erst_w_hlen_dann_liegt_das_jeweilige_Werkzeug_be_de86f4af" xml:space="preserve">
     <value>Choose first, then that tool appears over the picture. Clicking it again hides it.</value>
   </data>
-  <data name="In_eine_Maske_umwandeln_3828b7ef" xml:space="preserve">
-    <value>Convert to a mask</value>
-  </data>
-  <data name="In_eine_Auswahl_umwandeln_d60b98b1" xml:space="preserve">
-    <value>Convert to a selection</value>
-  </data>
   <data name="In_eine_Maske_umgewandelt_7f858fd9" xml:space="preserve">
     <value>Converted to a mask</value>
   </data>
@@ -5718,9 +5712,6 @@
   <data name="Gesichter_finden_Modelldatei_4e16ccfe" xml:space="preserve">
     <value>Finding faces (model file)</value>
   </data>
-  <data name="SFace_8767ac17" xml:space="preserve">
-    <value>SFace</value>
-  </data>
   <data name="Gesichter_vergleichen_Modelldatei_c264f3b0" xml:space="preserve">
     <value>Comparing faces (model file)</value>
   </data>
@@ -5822,5 +5813,188 @@
   </data>
   <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
     <value>Turns the coordinates in a photo into a place and a country: they show in the info sidebar, in the place filter above the gallery and in searches. The names come from a place table on this machine - nothing is looked up and nothing is sent. FerrumPix does not show a map.</value>
+  </data>
+  <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
+    <value>ArcFace ResNet100</value>
+  </data>
+  <data name="Gesichter_genauer_vergleichen_Modelldatei_c9cae249" xml:space="preserve">
+    <value>Compare faces more accurately (model file)</value>
+  </data>
+  <data name="Personen_genau_27cd5f76" xml:space="preserve">
+    <value>People, accurate</value>
+  </data>
+  <data name="Gruppen_1d071099" xml:space="preserve">
+    <value>groups</value>
+  </data>
+  <data name="davon_benannt_95459c71" xml:space="preserve">
+    <value>of them named</value>
+  </data>
+  <data name="Ein_Klick_ffnet_eine_Gruppe_Dort_steht_jedes_Ges_92563102" xml:space="preserve">
+    <value>One click opens a group. Every face is listed there on its own, and whatever does not belong can be taken out without touching the other photos.</value>
+  </data>
+  <data name="Geh_rt_jemand_nicht_dazu_l_st_der_Knopf_an_der_K_a96e1bde" xml:space="preserve">
+    <value>If somebody does not belong here, the button on the tile takes exactly that face out. Other photos stay as they are.</value>
+  </data>
+  <data name="Gruppe_verwerfen_55df8ba2" xml:space="preserve">
+    <value>Discard group</value>
+  </data>
+  <data name="Die_Gruppe_verwerfen_Die_Gesichter_bleiben_erhal_5aa30b20" xml:space="preserve">
+    <value>Discard the group. The faces are kept, they just belong to nobody afterwards.</value>
+  </data>
+  <data name="Zur_ck_zur_bersicht_d244adba" xml:space="preserve">
+    <value>Back to the overview</value>
+  </data>
+  <data name="Seite_633082b8" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="bis_1094cd06" xml:space="preserve">
+    <value>to</value>
+  </data>
+  <data name="Weiter_aeff967b" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Stichwort_suchen_7da58667" xml:space="preserve">
+    <value>Search keyword</value>
+  </data>
+  <data name="Unbekannt_d0b00a9f" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Kleinste_erkannte_Person_f3f9cb97" xml:space="preserve">
+    <value>Smallest person to detect</value>
+  </data>
+  <data name="alle_ac78aefc" xml:space="preserve">
+    <value>all</value>
+  </data>
+  <data name="Gesichter_unterhalb_dieser_Gr_e_kommen_gar_nicht_a50f4e8d" xml:space="preserve">
+    <value>Faces below this size never reach the library at all - measured against the shorter edge of the photo, so the same setting means the same thing on every picture. At a street festival the third row in the background stays out. At “all”, whatever is found is kept.</value>
+  </data>
+  <data name="Ordner_aufr_umen_3cebb414" xml:space="preserve">
+    <value>Tidy up folders</value>
+  </data>
+  <data name="Katalogdaten_34af479a" xml:space="preserve">
+    <value>Catalogue data</value>
+  </data>
+  <data name="Beides_affdd6a7" xml:space="preserve">
+    <value>Both</value>
+  </data>
+  <data name="Entfernt_Aufnahmedaten_Bewertung_Etikett_Stichw__3d91344c" xml:space="preserve">
+    <value>Removes shot data, rating, label, keywords and found faces of this folder from the catalogue. The image files are left untouched.</value>
+  </data>
+  <data name="L_scht_nur_die_zwischengespeicherten_Vorschaubil_bb3df544" xml:space="preserve">
+    <value>Deletes only the cached thumbnails. They are created again by themselves the next time you look.</value>
+  </data>
+  <data name="Beides_entfernen_Danach_wei_FerrumPix_nichts_meh_fecd4123" xml:space="preserve">
+    <value>Remove both. After that FerrumPix knows nothing about this folder any more, and it disappears from the list.</value>
+  </data>
+  <data name="FerrumPix_hat_zu_keinem_Ordner_Daten_abgelegt_5bad9905" xml:space="preserve">
+    <value>FerrumPix has not stored data for any folder.</value>
+  </data>
+  <data name="Keine_Ordner_mit_abgelegten_Daten_c26ec9c3" xml:space="preserve">
+    <value>No folders with stored data</value>
+  </data>
+  <data name="0_Ordner_1_Vorschaubilder_2_3_Katalogeintr_ge_7ed15827" xml:space="preserve">
+    <value>{0} folders · {1} thumbnails · {2} · {3} catalogue entries</value>
+  </data>
+  <data name="0_Vorschaubilder_1_2_Katalogeintr_ge_3_cc0d4bd5" xml:space="preserve">
+    <value>{0} thumbnails · {1} · {2} catalogue entries · {3}</value>
+  </data>
+  <data name="0_Vorschaubilder_c861a246" xml:space="preserve">
+    <value>{0} thumbnails</value>
+  </data>
+  <data name="0_Katalogeintr_ge_744cc761" xml:space="preserve">
+    <value>{0} catalogue entries</value>
+  </data>
+  <data name="entfernt_802e67af" xml:space="preserve">
+    <value>removed.</value>
+  </data>
+  <data name="Nichts_zu_entfernen_b262eaa2" xml:space="preserve">
+    <value>Nothing to remove.</value>
+  </data>
+  <data name="Gesichter_finden_zu_Personen_zusammenfassen_und__3404f335" xml:space="preserve">
+    <value>Find faces, group them into people and name them - all on this machine.</value>
+  </data>
+  <data name="Alle_Katalogdaten_2bbf2c36" xml:space="preserve">
+    <value>All catalogue data</value>
+  </data>
+  <data name="Alle_Vorschaubilder_98cff590" xml:space="preserve">
+    <value>All thumbnails</value>
+  </data>
+  <data name="Alles_6343afb8" xml:space="preserve">
+    <value>Everything</value>
+  </data>
+  <data name="Entfernt_Aufnahmedaten_Bewertung_Etikett_Stichw__bc7fd3e1" xml:space="preserve">
+    <value>Removes capture data, rating, label, keywords and found people of every folder from the catalogue. The image files are left untouched.</value>
+  </data>
+  <data name="L_scht_die_zwischengespeicherten_Vorschaubilder__6cd66918" xml:space="preserve">
+    <value>Deletes the cached thumbnails of every folder. They come back on their own the next time you look.</value>
+  </data>
+  <data name="Beides_f_r_alle_Ordner_entfernen_Danach_ist_die__34d7ef9b" xml:space="preserve">
+    <value>Remove both for every folder. The list is empty afterwards and FerrumPix starts over the next time you look.</value>
+  </data>
+  <data name="Alles_entfernen_979ecb59" xml:space="preserve">
+    <value>Remove everything</value>
+  </data>
+  <data name="Alle_Katalogdaten_entfernen_87fc1e96" xml:space="preserve">
+    <value>Remove all catalogue data</value>
+  </data>
+  <data name="Alle_Vorschaubilder_l_schen_c91ad8e6" xml:space="preserve">
+    <value>Delete all thumbnails</value>
+  </data>
+  <data name="Katalogdaten_und_Vorschaubilder_aller_Ordner_ent_789853cf" xml:space="preserve">
+    <value>Remove catalogue data and thumbnails of every folder?</value>
+  </data>
+  <data name="Katalogdaten_aller_Ordner_entfernen_5ee702d1" xml:space="preserve">
+    <value>Remove the catalogue data of every folder?</value>
+  </data>
+  <data name="Vorschaubilder_aller_Ordner_l_schen_9d2aa1be" xml:space="preserve">
+    <value>Delete the thumbnails of every folder?</value>
+  </data>
+  <data name="Betroffen_sind_0_Katalogeintr_ge_mit_Bewertung_E_bc66b8ff" xml:space="preserve">
+    <value>This affects {0} catalogue entries with rating, label, keywords and found people. The image files themselves stay unchanged. Whatever sits in a sidecar file comes back on the next read, everything else is gone.</value>
+  </data>
+  <data name="Die_Vorschaubilder_entstehen_beim_n_chsten_Anseh_ee341874" xml:space="preserve">
+    <value>The thumbnails come back on their own the next time you look. Catalogue data is left untouched.</value>
+  </data>
+  <data name="Personen_verwalten_c0ddbc79" xml:space="preserve">
+    <value>Manage people</value>
+  </data>
+  <data name="Zu_den_Einstellungen_a12516ab" xml:space="preserve">
+    <value>Go to settings</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_ausgeschaltet_388c65b7" xml:space="preserve">
+    <value>People recognition is switched off.</value>
+  </data>
+  <data name="In_den_Einstellungen_unter_Personen_einschalten__bdca7432" xml:space="preserve">
+    <value>Switch it on in the settings under People, then have a folder searched. Everything is computed on this device.</value>
+  </data>
+  <data name="Erkennung_ein_oder_ausschalten_und_die_kleinste__b4df9a8c" xml:space="preserve">
+    <value>Switch the recognition on or off and set the smallest person to detect</value>
+  </data>
+  <data name="Die_gefundenen_Gruppen_als_Wand_aus_Gesichtern_b_4dee80d3" xml:space="preserve">
+    <value>The groups that were found, as a wall of faces: name them, merge them and take out what was put in the wrong place. Found in the gallery, above the settings button.</value>
+  </data>
+  <data name="die_Personen_zu_ffnen_f2c9ddd4" xml:space="preserve">
+    <value>to open the people</value>
+  </data>
+  <data name="die_Personen_ffnest_df2d6fc8" xml:space="preserve">
+    <value>open the people</value>
+  </data>
+  <data name="Fertig_708ad54e" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="Jede_nderung_steht_sofort_in_der_Bibliothek_95495c07" xml:space="preserve">
+    <value>Every change goes straight into the library.</value>
+  </data>
+  <data name="Das_ganze_Bild_ansehen_c32d1120" xml:space="preserve">
+    <value>Look at the whole picture</value>
+  </data>
+  <data name="Klicken_zum_Schlie_en_7a952e8b" xml:space="preserve">
+    <value>Click to close</value>
+  </data>
+  <data name="Maske_in_eine_Auswahl_umwandeln_3e24b058" xml:space="preserve">
+    <value>Turn the mask into a selection</value>
+  </data>
+  <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
+    <value>Turn the selection into a mask</value>
   </data>
 </root>

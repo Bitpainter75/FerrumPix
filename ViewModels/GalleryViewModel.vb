@@ -2850,10 +2850,36 @@ Namespace ViewModels
         ''' <summary>Die Liste fuer das Aufklappmenue: jedes benutzte Stichwort mit der Anzahl
         ''' Bilder. Sie entsteht beim Oeffnen neu, damit frisch vergebene Stichwoerter sofort
         ''' dabei sind.</summary>
+        Private _tagFilterSearch As String = ""
+
+        ''' <summary>Suchfeld im Stichwortmenue - dieselbe Bedienung wie bei Personen und Orten.
+        '''
+        ''' Ein gewachsener Bestand hat schnell dreistellig viele Stichwoerter; ohne Suche waere die
+        ''' Liste nur noch scrollbar, nicht benutzbar. Gefiltert wird die ANZEIGE, nicht der Filter:
+        ''' die Auswahl bleibt beim Tippen bestehen.</summary>
+        Public Property TagFilterSearch As String
+            Get
+                Return _tagFilterSearch
+            End Get
+            Set(value As String)
+                If String.Equals(_tagFilterSearch, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_tagFilterSearch, value)
+                RefreshTagFilterOptions()
+            End Set
+        End Property
+
         Public Sub RefreshTagFilterOptions()
             TagFilterOptions.Clear()
             Try
+                Dim search = If(_tagFilterSearch, "").Trim()
                 For Each entry In LibraryService.Instance.GetTagCounts()
+                    ' Ein ausgewaehltes Stichwort bleibt IMMER sichtbar, auch wenn es nicht zur
+                    ' Suche passt - sonst verschwindet es beim Tippen und laesst sich nicht mehr
+                    ' abwaehlen.
+                    Dim matches = search.Length = 0 OrElse
+                                  entry.Tag.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                  IsTagFilterSelected(entry.Tag)
+                    If Not matches Then Continue For
                     TagFilterOptions.Add(New TagFilterOption(entry.Tag, entry.Count,
                                                              IsTagFilterSelected(entry.Tag)))
                 Next
@@ -3054,13 +3080,18 @@ Namespace ViewModels
                 For Each entry In LibraryService.Instance.GetPlaceCounts()
                     ' Ein ausgewaehlter Ort bleibt sichtbar, auch wenn er nicht zur Suche passt -
                     ' sonst verschwindet er beim Tippen und laesst sich nicht mehr abwaehlen.
+                    ' Gesucht wird auch im UEBERSETZTEN Landesnamen: wer "Deutschland" tippt, meint
+                    ' das, was er in der Liste liest - in der Tabelle steht "Germany".
+                    Dim land = PlaceLookupService.LocalizedCountry(entry.CountryCode, entry.Country)
                     Dim matches = search.Length = 0 OrElse
                                   entry.City.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
                                   entry.Country.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                  land.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
                                   IsPlaceFilterSelected(entry.City)
                     If Not matches Then Continue For
                     PlaceFilterOptions.Add(New PlaceFilterOption(entry.City, entry.Country, entry.Count,
-                                                                 IsPlaceFilterSelected(entry.City)))
+                                                                 IsPlaceFilterSelected(entry.City),
+                                                                 entry.CountryCode))
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshPlaceFilterOptions", ex)

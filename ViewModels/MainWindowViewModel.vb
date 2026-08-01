@@ -82,6 +82,10 @@ Namespace ViewModels
         Public Property Editor As EditorViewModel Implements IViewerHost.Editor
         Public Property Settings As SettingsViewModel Implements IViewerHost.Settings, IEditorHost.Settings
 
+        ''' <summary>Die Personenverwaltung. Eigener Bereich, kein Abschnitt der Einstellungen:
+        ''' dort legt man fest, WIE das Programm arbeitet, hier arbeitet man am Bestand.</summary>
+        Public Property People As PeopleViewModel
+
         ''' <summary>Meldet die Fensterbreite an alle Leisten. Wird von MainWindow bei jeder
         ''' Größenänderung gerufen; meldet nur, wenn sich an mindestens einer Schwelle etwas
         ''' ändert - sonst liefe bei jedem Pixel Ziehen eine Runde Bindungsaktualisierungen.</summary>
@@ -225,6 +229,7 @@ Namespace ViewModels
                     Case AppMode.Editor : Return " Editor"
                     Case AppMode.Viewer : Return " Viewer"
                     Case AppMode.Settings : Return " – " & LocalizationService.T("Einstellungen")
+                    Case AppMode.People : Return " – " & LocalizationService.T("Personen verwalten")
                     Case Else : Return ""
                 End Select
             End Get
@@ -249,6 +254,7 @@ Namespace ViewModels
                     Case AppMode.Viewer : Return Viewer
                     Case AppMode.Editor : Return Editor
                     Case AppMode.Settings : Return Settings
+                    Case AppMode.People : Return People
                     Case Else : Return Gallery
                 End Select
             End Get
@@ -264,6 +270,7 @@ Namespace ViewModels
 
         Public Sub New(Optional initialImagePath As String = Nothing)
             Settings = New SettingsViewModel(Me)
+            People = New PeopleViewModel(Me)
             Gallery = New GalleryViewModel(Me)
             Viewer = New ViewerViewModel(Me)
             Editor = New EditorViewModel(Me)
@@ -413,7 +420,38 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Oeffnet die Personenverwaltung. Eigener Bereich neben den Einstellungen, mit
+        ''' demselben Rueckweg: geschlossen wird dorthin, wo man herkam.
+        '''
+        ''' Die Wand wird beim Oeffnen aufgebaut - die Abfrage kostet nichts, die Gesichter kommen
+        ''' im Hintergrund nach. Ein Bereich, der erst nach einem Knopfdruck etwas zeigt, sieht beim
+        ''' ersten Blick aus, als gaebe es nichts.</summary>
+        Public Async Sub OpenPeople()
+            Try
+                If CurrentMode = AppMode.Editor Then
+                    If Not Await ConfirmEditorLeaveAsync("die Personen zu öffnen") Then Return
+                End If
+                If CurrentMode = AppMode.Viewer Then
+                    If Not Await ConfirmViewerLeaveAsync("die Personen öffnest") Then Return
+                End If
+                If CurrentMode <> AppMode.People AndAlso CurrentMode <> AppMode.Settings Then
+                    _previousModeBeforeSettings = CurrentMode
+                End If
+                People?.RefreshPeople()
+                CurrentMode = AppMode.People
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.OpenPeople", ex)
+            End Try
+        End Sub
+
         Public Sub CloseSettings()
+            CurrentMode = _previousModeBeforeSettings
+        End Sub
+
+        ''' <summary>Zurueck aus Einstellungen oder Personenverwaltung an die Stelle, von der aus
+        ''' geoeffnet wurde. Beide teilen sich denselben Merker: man ist immer nur in einem von
+        ''' beiden, und von einem zum anderen zu wechseln soll den Rueckweg nicht verlieren.</summary>
+        Public Sub CloseSecondaryMode()
             CurrentMode = _previousModeBeforeSettings
         End Sub
 

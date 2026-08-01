@@ -2122,6 +2122,12 @@ Namespace Views
             Return (New List(Of String)(), False)
         End Function
 
+        Public Sub OnManagePeopleClick(sender As Object, e As RoutedEventArgs)
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            mainVm?.OpenPeople()
+            e.Handled = True
+        End Sub
+
         Public Sub OnSettingsClick(sender As Object, e As RoutedEventArgs)
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             mainVm?.OpenSettings()

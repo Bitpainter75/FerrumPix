@@ -11,6 +11,11 @@ Namespace Services
         Public Property Id As String = ""
         Public Property Name As String = ""
         Public Property ImageCount As Integer
+
+        ''' <summary>Die Sammelgruppe fuer herausgeloeste Gesichter. Sie ist KEINE Person, und das
+        ''' hat Folgen: sie zieht nichts an (siehe LoadPersonCentroidsLocked) und nimmt keinen Namen
+        ''' an (siehe ApplyPersonName).</summary>
+        Public Property IsUnknownBin As Boolean
         ''' <summary>Eine Person ohne Namen ist der Normalfall direkt nach der Erkennung: die
         ''' Gruppe steht, der Name kommt vom Benutzer und oft erst viel spaeter.</summary>
         Public ReadOnly Property IsNamed As Boolean
@@ -23,8 +28,16 @@ Namespace Services
     Partial Public Class LibraryService
 
         ''' <summary>Ab wann zwei Gesichter als dieselbe Person gelten. Liegt im Erkennungsdienst,
-        ''' damit Schwelle und Messung an einer Stelle stehen.</summary>
-        Private Shared ReadOnly SameThreshold As Double = FaceDetectionService.SamePersonThreshold
+        ''' damit Schwelle und Messung an einer Stelle stehen.
+        '''
+        ''' BEI JEDEM ZUGRIFF gelesen und nicht einmal gemerkt: sie haengt am Vergleichsmodell, und
+        ''' das kann zur Laufzeit dazukommen - wer die grosse Datei erst waehrend der Sitzung holt,
+        ''' rechnete sonst mit der Schwelle des kleinen weiter.</summary>
+        Private Shared ReadOnly Property SameThreshold As Double
+            Get
+                Return FaceDetectionService.SamePersonThreshold
+            End Get
+        End Property
 
         ' VERWORFEN: ein Mindestabstand zur zweitbesten Gruppe. Der Gedanke war, einen Muenzwurf
         ' zwischen zwei fast gleich guten Gruppen zu vermeiden. Gemessen hat er das Gegenteil
@@ -110,7 +123,11 @@ Namespace Services
                     ' fuer die uebrigen Gesichter dieses Bildes nicht mehr in Frage.
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
-                        cmd.CommandText = "SELECT PersonId FROM Face WHERE FilePath=$p AND IsManual=1 AND PersonId IS NOT NULL"
+                        ' OHNE die Sammelgruppe: auf einem Bild koennen mehrere herausgeloeste
+                        ' Gesichter liegen, und sie alle gehoeren in denselben Ablagekorb.
+                        cmd.CommandText = "SELECT f.PersonId FROM Face f " &
+                                          "JOIN Person p ON p.Id = f.PersonId " &
+                                          "WHERE f.FilePath=$p AND f.IsManual=1 AND p.IsUnknownBin=0"
                         cmd.Parameters.AddWithValue("$p", filePath)
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
@@ -182,6 +199,9 @@ Namespace Services
         Private Shared Function OverlapsManual(manual As List(Of (X As Double, Y As Double, W As Double, H As Double)),
                                                face As DetectedFace) As Boolean
             If manual Is Nothing OrElse manual.Count = 0 Then Return False
+            Dim faceCenterX = CDbl(face.X) + face.Width / 2
+            Dim faceCenterY = CDbl(face.Y) + face.Height / 2
+
             For Each m In manual
                 Dim x1 = Math.Max(m.X, CDbl(face.X))
                 Dim y1 = Math.Max(m.Y, CDbl(face.Y))
@@ -190,8 +210,74 @@ Namespace Services
                 Dim intersection = Math.Max(0.0, x2 - x1) * Math.Max(0.0, y2 - y1)
                 Dim union = m.W * m.H + CDbl(face.Width) * face.Height - intersection
                 If union > 0 AndAlso intersection / union >= 0.4 Then Return True
+
+                ' ZWEITES KRITERIUM: liegt eine Mitte im anderen Kasten, ist es derselbe Kopf.
+                ' Die Ueberdeckung allein reicht nicht - ein erneuter Lauf setzt den Kasten
+                ' gelegentlich etwas versetzt oder deutlich groesser, und dann faellt derselbe Kopf
+                ' unter die Grenze. Er bekaeme eine neue Zeile, wuerde normal gruppiert, und ein
+                ' Gesicht, das der Benutzer als "Unbekannt" abgelegt hat, staende wieder als Person
+                ' in der Wand. Genau das darf nicht passieren.
+                If faceCenterX >= m.X AndAlso faceCenterX <= m.X + m.W AndAlso
+                   faceCenterY >= m.Y AndAlso faceCenterY <= m.Y + m.H Then Return True
+                Dim mCenterX = m.X + m.W / 2
+                Dim mCenterY = m.Y + m.H / 2
+                If mCenterX >= face.X AndAlso mCenterX <= face.X + face.Width AndAlso
+                   mCenterY >= face.Y AndAlso mCenterY <= face.Y + face.Height Then Return True
             Next
             Return False
+        End Function
+
+        ' ── Die Sammelgruppe ─────────────────────────────────────────────────────
+
+        ''' <summary>Die eine Gruppe, in die herausgeloeste Gesichter wandern - angelegt, sobald sie
+        ''' zum ersten Mal gebraucht wird.
+        '''
+        ''' WARUM ueberhaupt eine Sammelgruppe: ohne sie bekaeme jedes herausgeloeste Gesicht eine
+        ''' eigene Gruppe, und nach zwanzig Korrekturen staende die Wand voller Einzelkacheln. Mit
+        ''' ihr gibt es EINEN Ort fuer alles, was nicht dazugehoert.
+        '''
+        ''' UND WARUM SIE KEINE PERSON IST: eine Gruppe aus lauter verschiedenen Menschen haette eine
+        ''' Mitte, die nichts bedeutet - und zugeordnet wird gegen die Mitte. Sie waere ein Magnet
+        ''' fuer jedes unsichere Gesicht und wuerde beim naechsten Durchlauf alles einsammeln.
+        ''' Deshalb steht sie in KEINEM Vergleich (<see cref="LoadPersonCentroidsLocked"/>) und nimmt
+        ''' keinen Namen an (<see cref="ApplyPersonName"/>). Sie ist ein Ablagekorb, keine Person.</summary>
+        Public Function GetOrCreateUnknownBin() As String
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Return GetOrCreateUnknownBinLocked(conn, Nothing)
+            End Using
+        End Function
+
+        Private Shared Function GetOrCreateUnknownBinLocked(conn As SqliteConnection, tx As SqliteTransaction) As String
+            Using cmd = conn.CreateCommand()
+                cmd.Transaction = tx
+                cmd.CommandText = "SELECT Id FROM Person WHERE IsUnknownBin=1 LIMIT 1"
+                Dim r = cmd.ExecuteScalar()
+                If r IsNot Nothing AndAlso Not TypeOf r Is DBNull Then Return CStr(r)
+            End Using
+
+            Dim newId = Guid.NewGuid().ToString("N")
+            Using cmd = conn.CreateCommand()
+                cmd.Transaction = tx
+                cmd.CommandText = "INSERT INTO Person(Id,Name,CreatedAt,IsUnknownBin) VALUES($id,'',$t,1)"
+                cmd.Parameters.AddWithValue("$id", newId)
+                cmd.Parameters.AddWithValue("$t", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture))
+                cmd.ExecuteNonQuery()
+            End Using
+            Return newId
+        End Function
+
+        Public Function IsUnknownBin(personId As String) As Boolean
+            If String.IsNullOrWhiteSpace(personId) Then Return False
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT IsUnknownBin FROM Person WHERE Id=$id"
+                    cmd.Parameters.AddWithValue("$id", personId)
+                    Dim r = cmd.ExecuteScalar()
+                    Return r IsNot Nothing AndAlso Not TypeOf r Is DBNull AndAlso CInt(r) <> 0
+                End Using
+            End Using
         End Function
 
         ' ── Zuordnung ────────────────────────────────────────────────────────────
@@ -247,7 +333,12 @@ Namespace Services
 
             Using cmd = conn.CreateCommand()
                 cmd.Transaction = tx
-                cmd.CommandText = "SELECT PersonId, Embedding FROM Face WHERE PersonId IS NOT NULL AND Embedding IS NOT NULL"
+                ' Die Sammelgruppe bleibt AUSSEN VOR. Ihre Mitte waere der Durchschnitt lauter
+                ' verschiedener Menschen - ein Magnet, der beim naechsten Durchlauf alles
+                ' Unsichere einsammelt.
+                cmd.CommandText = "SELECT f.PersonId, f.Embedding FROM Face f " &
+                                  "JOIN Person p ON p.Id = f.PersonId " &
+                                  "WHERE f.Embedding IS NOT NULL AND p.IsUnknownBin=0"
                 Using reader = cmd.ExecuteReader()
                     While reader.Read()
                         Dim id = reader.GetString(0)
@@ -282,6 +373,36 @@ Namespace Services
 
         ' ── Lesen ────────────────────────────────────────────────────────────────
 
+        ''' <summary>Die vergebenen Namen, alphabetisch. Fuer die Vorschlagsliste beim Eintippen.
+        '''
+        ''' WARUM ES DIE BRAUCHT: einen Namen von Hand ein zweites Mal zu tippen ist die haeufigste
+        ''' Stelle, an der aus einer Person zwei werden - "Anna" und "anna" sind fuer die Bibliothek
+        ''' zwei Menschen. Wer den vorhandenen Namen aus der Liste nimmt, trifft ihn zeichengenau,
+        ''' und genau daran haengt, ob zwei Gruppen verschmelzen oder nebeneinander stehenbleiben.
+        '''
+        ''' Ohne Sammelkorb: der traegt keinen Namen und ist keine Person.</summary>
+        Public Function GetPersonNames() As List(Of String)
+            Dim result As New List(Of String)()
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText =
+                            "SELECT DISTINCT Name FROM Person " &
+                            "WHERE Name <> '' AND IsUnknownBin=0 ORDER BY Name COLLATE NOCASE"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                result.Add(reader.GetString(0))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.GetPersonNames", ex)
+            End Try
+            Return result
+        End Function
+
         ''' <summary>Alle Personen mit der Zahl der Bilder, in denen sie vorkommen. Gezaehlt werden
         ''' BILDER, nicht Gesichter - steht jemand zweimal auf demselben Foto, ist das ein Bild.</summary>
         Public Function GetPeople() As List(Of PersonEntry)
@@ -289,16 +410,20 @@ Namespace Services
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
+                    ' Die Sammelgruppe ganz nach hinten: sie ist keine Person, und oben stehen
+                    ' die, mit denen man arbeitet.
                     cmd.CommandText =
-                        "SELECT p.Id, p.Name, COUNT(DISTINCT f.FilePath) " &
+                        "SELECT p.Id, p.Name, COUNT(DISTINCT f.FilePath), p.IsUnknownBin " &
                         "FROM Person p LEFT JOIN Face f ON f.PersonId = p.Id " &
-                        "GROUP BY p.Id, p.Name ORDER BY p.Name = '' , p.Name COLLATE NOCASE"
+                        "GROUP BY p.Id, p.Name, p.IsUnknownBin " &
+                        "ORDER BY p.IsUnknownBin, p.Name = '' , p.Name COLLATE NOCASE"
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
                             result.Add(New PersonEntry With {
                                 .Id = reader.GetString(0),
                                 .Name = reader.GetString(1),
-                                .ImageCount = reader.GetInt32(2)})
+                                .ImageCount = reader.GetInt32(2),
+                                .IsUnknownBin = reader.GetInt32(3) <> 0})
                         End While
                     End Using
                 End Using
@@ -325,6 +450,22 @@ Namespace Services
                         Return (reader.GetString(0), reader.GetDouble(1), reader.GetDouble(2),
                                 reader.GetDouble(3), reader.GetDouble(4))
                     End Using
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Wie viele BILDER eine Person hat - gezaehlt werden Bilder, nicht Gesichter.
+        ''' Fuer die Kachel nach einer Aenderung: eine Zahl, die nicht mehr stimmt, ist schlimmer als
+        ''' keine.</summary>
+        Public Function GetPersonImageCount(personId As String) As Integer
+            If String.IsNullOrWhiteSpace(personId) Then Return 0
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT COUNT(DISTINCT FilePath) FROM Face WHERE PersonId=$p"
+                    cmd.Parameters.AddWithValue("$p", personId)
+                    Dim r = cmd.ExecuteScalar()
+                    Return If(r Is Nothing OrElse TypeOf r Is DBNull, 0, CInt(r))
                 End Using
             End Using
         End Function
@@ -540,14 +681,9 @@ Namespace Services
                         If Not TypeOf r Is DBNull Then oldPersonId = CStr(r)
                     End Using
 
-                    Dim newId = Guid.NewGuid().ToString("N")
-                    Using cmd = conn.CreateCommand()
-                        cmd.Transaction = tx
-                        cmd.CommandText = "INSERT INTO Person(Id,Name,CreatedAt) VALUES($id,'',$t)"
-                        cmd.Parameters.AddWithValue("$id", newId)
-                        cmd.Parameters.AddWithValue("$t", stamp)
-                        cmd.ExecuteNonQuery()
-                    End Using
+                    ' In die SAMMELGRUPPE, nicht in eine eigene neue: sonst staende die
+                    ' Personenwand nach zwanzig Korrekturen voller Einzelkacheln.
+                    Dim newId = GetOrCreateUnknownBinLocked(conn, tx)
 
                     ' Von Hand geloest heisst von Hand entschieden: ein erneuter Durchlauf faellt
                     ' sonst in dieselbe Fehlzuordnung zurueck, und die Berichtigung waere weg.
@@ -728,9 +864,37 @@ Namespace Services
                 Return PersonNameOutcome.FaceMoved
             End If
 
+            ' DIE SAMMELGRUPPE NIMMT KEINEN NAMEN AN. Sie ist ein Ablagekorb aus lauter
+            ' verschiedenen Menschen; sie zu benennen hiesse, sie alle zu einer Person zu erklaeren.
+            ' Ein Name an einem Gesicht IN ihr meint deshalb immer nur dieses eine: es verlaesst den
+            ' Korb und geht zu der genannten Person, oder zu einer neuen mit diesem Namen.
+            If IsUnknownBin(personId) Then
+                If String.IsNullOrWhiteSpace(faceId) OrElse clean.Length = 0 Then Return PersonNameOutcome.Unchanged
+                Dim ziel = If(targetId, CreateNamedPerson(clean))
+                MoveFaceToPerson(faceId, ziel)
+                Return PersonNameOutcome.FaceMoved
+            End If
+
             ' Fall 1 und 2.
             NamePerson(personId, clean, faceId)
             Return PersonNameOutcome.GroupNamed
+        End Function
+
+        ''' <summary>Legt eine Person mit diesem Namen an. Fuer ein Gesicht, das aus dem Ablagekorb
+        ''' zu jemandem geht, den es noch nicht gibt.</summary>
+        Private Function CreateNamedPerson(name As String) As String
+            Dim newId = Guid.NewGuid().ToString("N")
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "INSERT INTO Person(Id,Name,CreatedAt) VALUES($id,$n,$t)"
+                    cmd.Parameters.AddWithValue("$id", newId)
+                    cmd.Parameters.AddWithValue("$n", If(name, "").Trim())
+                    cmd.Parameters.AddWithValue("$t", DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture))
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+            Return newId
         End Function
 
         ''' <summary>Haengt EIN Gesicht an eine andere Person und schreibt es als Handarbeit fest.

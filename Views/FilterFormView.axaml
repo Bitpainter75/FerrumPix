@@ -69,13 +69,17 @@
                   ColumnDefinitions="*,Auto"
                   ColumnSpacing="12"
                   IsVisible="{Binding IsDialogFilterStrengthVisible}">
+                <!-- Keine feste Breite, sondern ueber die Spalte gedehnt - genau wie der Regler
+                     fuer die JPG-Qualitaet eine Zeile darueber. Mit 220 Punkten sass er in der
+                     breiten Spalte kuerzer als sein Nachbar, und zwei Regler untereinander, die
+                     verschieden weit reichen, sehen nach Versehen aus. -->
                 <icons:RoundSlider Minimum="0"
                                    Maximum="100"
                                    Value="{Binding DialogFilterStrength, Mode=TwoWay}"
                                    VerticalAlignment="Center"
+                                   HorizontalAlignment="Stretch"
                                    Height="28"
-                                   MinHeight="0"
-                                   Width="220"/>
+                                   MinHeight="0"/>
                 <TextBlock Grid.Column="1"
                            Text="{Binding DialogFilterStrength, StringFormat={}{0}%}"
                            MinWidth="42"

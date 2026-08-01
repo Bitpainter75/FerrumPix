@@ -39,6 +39,8 @@ With people switched on, a second button next to it does the same for the people
 
 Person and place are also shown in the info panel of the viewer and the editor, so a picture on screen says who is on it and where it was taken.
 
+The settings have a people section for the bigger clean-up: a wall of faces, one per group, and opening a group shows every face in it - the place to sort out a library that grew over years.
+
 Batch work runs from the context menu or the footer menu: rename, convert, resize, watermark, filters, metadata removal - and *Export to*, which puts all of it into one dialog with a name pattern, a look, a size, a watermark and a target format, locally or straight to Immich. `.fpx` projects are one of the targets, so a batch can come out as files you can keep editing.
 
 Photos can also be printed, laid out as contact sheets, or combined into a collage - each of them showing your edits, not the untouched file on disk.
@@ -88,6 +90,8 @@ Edits to a RAW go into a small `.fpxmp` sidecar next to it; the RAW itself is ne
 Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…* writes them out in one of the normal formats. HEIC needs the system's `libheif`; TIFF needs nothing extra.
 
 ### Model files
+
+Face recognition comes with a choice of two models: a small one that is enough for portraits, and a much stronger one for photos of everyday life. Whichever is installed is used; with both, the stronger one wins.
 
 Five features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
 

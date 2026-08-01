@@ -55,6 +55,12 @@ Namespace Models
         Public ReadOnly Property BoxWidth As Double
         Public ReadOnly Property BoxHeight As Double
 
+        ''' <summary>Die Datei, auf der dieses Gesicht steht. Fuer die Vorschau hinter dem
+        ''' Auge-Zeichen: eine Kachel von 84 Punkten zeigt ein Gesicht, aber nicht, ob der Ausschnitt
+        ''' ueberhaupt zu dem Bild passt, das man im Kopf hat. Leer, wo die Zeile aus dem Infopanel
+        ''' kommt - dort steht das Bild ohnehin daneben.</summary>
+        Public Property FilePath As String = ""
+
         Public Sub SetBox(x As Double, y As Double, width As Double, height As Double)
             _BoxX = x
             _BoxY = y

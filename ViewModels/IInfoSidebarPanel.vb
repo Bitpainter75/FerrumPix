@@ -18,6 +18,11 @@ Namespace ViewModels
         ''' waere nur Platzverbrauch.</summary>
         ReadOnly Property HasPeople As Boolean
 
+        ''' <summary>Die schon vergebenen Namen, fuer die Vorschlagsliste am Namensfeld. Einen
+        ''' vorhandenen Namen ein zweites Mal zu tippen ist die Stelle, an der aus einer Person zwei
+        ''' werden - fuer die Bibliothek sind "Anna" und "anna" zwei Menschen.</summary>
+        ReadOnly Property PersonNameSuggestions As ObservableCollection(Of String)
+
         ''' <summary>Benennt die GANZE Gruppe, also jedes Bild darin. Das angefasste Gesicht
         ''' gilt danach als von Hand gesetzt und ueberlebt jeden weiteren Durchlauf.</summary>
         Sub RenamePerson(personId As String, newName As String, faceId As String)

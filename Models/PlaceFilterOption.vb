@@ -15,21 +15,29 @@ Namespace Models
 
         Private _isSelected As Boolean
 
-        Public Sub New(city As String, country As String, count As Integer, isSelected As Boolean)
+        Public Sub New(city As String, country As String, count As Integer, isSelected As Boolean,
+                       Optional countryCode As String = "")
             Me.City = If(city, "")
             Me.Country = If(country, "")
+            Me.CountryCode = If(countryCode, "")
             Me.Count = count
             _isSelected = isSelected
         End Sub
 
         Public ReadOnly Property City As String
         Public ReadOnly Property Country As String
+
+        ''' <summary>Das Laenderkuerzel. Der ANGEZEIGTE Landesname kommt daraus in der Sprache der
+        ''' Oberflaeche; gefiltert wird weiter ueber den gespeicherten Ortsnamen, der sich nicht mit
+        ''' der Sprache aendert.</summary>
+        Public ReadOnly Property CountryCode As String
         Public ReadOnly Property Count As Integer
 
         ''' <summary>"Norden, Deutschland (42)". Fehlt das Land, faellt es samt Komma weg.</summary>
         Public ReadOnly Property Label As String
             Get
-                Dim place = If(Country.Length > 0, $"{City}, {Country}", City)
+                Dim land = Services.PlaceLookupService.LocalizedCountry(CountryCode, Country)
+                Dim place = If(land.Length > 0, $"{City}, {land}", City)
                 Return $"{place} ({Count})"
             End Get
         End Property

@@ -58,7 +58,17 @@ Namespace Services
         End Sub
 
         Public Const DetectorKey As String = "yunet"      ' Schluessel, nicht Dateiname
-        Public Const RecognizerKey As String = "sface"
+        ''' <summary>Das Vergleichsmodell: ArcFace ResNet100 aus dem ONNX Model Zoo (261 MB,
+        ''' Apache-2.0 und damit mit der GPL vertraeglich).
+        '''
+        ''' ES GAB EINMAL ZWEI. Das kleine sface (38 MB) war die Grundausstattung und zugleich der
+        ''' Engpass: gemessen an 60 echten Fotos erkannte es bei 1 Prozent Fehlzuordnung 39,0 Prozent
+        ''' der echten Paare, ArcFace 42,5 Prozent - und auf den Testfotos fiel die hoechste
+        ''' Fremd-Aehnlichkeit von 0,35 auf 0,21. Zwei Modelle nebeneinander hiessen zwei Schwellen,
+        ''' zwei Merkmalslaengen und bei jeder Frage die Rueckfrage, welches gerade gilt. Fuer den
+        ''' Gegenwert lohnt das nicht. Wer die Datei nicht holt, hat die Funktion nicht - wie bei
+        ''' jedem anderen Modell auch.</summary>
+        Public Const RecognizerKey As String = "arcface"
 
         ''' <summary>Kantenlaenge des Suchmodells. Fest verdrahtet im Modell, nicht verhandelbar.</summary>
         Public Const DetectorEdge As Integer = 640
@@ -68,30 +78,28 @@ Namespace Services
 
         ''' <summary>Ab welcher Aehnlichkeit zwei Gesichter als dieselbe Person gelten.
         '''
-        ''' 0,363 ist der Wert der Modellsammlung, und er stimmt fuer das, wofuer er gemacht ist:
-        ''' zugeschnittene, gut aufgeloeste Portraits gegeneinander zu pruefen. Fuer einen
-        ''' gewachsenen Fotobestand ist er ZU NIEDRIG, und das ist gemessen.
-        '''
-        ''' Als Messgroesse dienen Gesichtspaare AUF DEMSELBEN BILD - die sind praktisch immer
-        ''' verschiedene Menschen. An einem echten Bestand mit 1484 Gesichtern (nur Gesichter ab 120
-        ''' Punkten, also der gute Teil):
+        ''' GEMESSEN, nicht uebernommen. Als Fremdsatz dienen Gesichtspaare AUF DEMSELBEN BILD - die
+        ''' sind praktisch immer verschiedene Menschen; als echte Paare acht benannte Personen ueber
+        ''' verschiedene Bilder. An 60 echten Fotos mit 210 Gesichtern, verglichen bei GLEICHER
+        ''' Fehlerrate:
         '''
         ''' <code>
-        ''' Schwelle   echte Paare erkannt   sicher Fremde faelschlich
-        '''   0,363          37,7 %                    7,8 %
-        '''   0,42           25,5 %                    3,2 %
-        '''   0,45           20,4 %                    2,2 %
-        '''   0,50           14,4 %                    0,9 %
+        ''' bei 1 % Fehlzuordnung   Schwelle   echte Paare erkannt
+        '''   ArcFace                 0,373           42,5 %
+        '''   ArcFace mit BGR         0,450           32,4 %
+        '''   sface (abgeloest)       0,479           39,0 %
         ''' </code>
         '''
-        ''' 0,45 nimmt also drei Viertel der Fehlzuordnungen weg. Die Haelfte der echten Paare faellt
-        ''' dabei ebenfalls unter die Schwelle - das ist der BILLIGERE Fehler, und zwar deutlich:
-        ''' eine geteilte Person fuehrt zu zwei Gruppen, und die verschmelzen beim Benennen von
-        ''' selbst. Eine falsche Zusammenlegung dagegen ist Handarbeit an jedem einzelnen Gesicht,
-        ''' und bis sie auffaellt, hat die verunreinigte Gruppenmitte schon die naechsten Fremden
-        ''' angezogen. Dazu kommt: zugeordnet wird gegen den MITTELWERT einer Gruppe, und der ist
-        ''' stabiler als ein einzelnes Gesicht - die Tabelle oben ist der pessimistische Fall.</summary>
-        Public Const SamePersonThreshold As Double = 0.45
+        ''' Die zweite Zeile ist die Gegenprobe zur Kanalreihenfolge: mit vertauschten Kanaelen laeuft
+        ''' das Modell anstandslos weiter und liefert brauchbar aussehende Zahlen - es trennt nur
+        ''' schlechter. Ein Fehler, den man nur durch Messen findet.
+        '''
+        ''' Mehr als die Haelfte der echten Paare faellt bei 0,38 unter die Schwelle. Das ist der
+        ''' BILLIGERE Fehler: eine geteilte Person fuehrt zu zwei Gruppen, und die verschmelzen beim
+        ''' Benennen von selbst. Eine falsche Zusammenlegung dagegen ist Handarbeit an jedem
+        ''' einzelnen Gesicht. Dazu kommt: zugeordnet wird gegen den MITTELWERT einer Gruppe, und der
+        ''' ist stabiler als ein einzelnes Gesicht - die Tabelle ist der pessimistische Fall.</summary>
+        Public Const SamePersonThreshold As Double = 0.38
 
         ''' <summary>Ab welcher Sicherheit ein Fund als Gesicht gilt. Darunter haeuften sich im
         ''' Versuch Baumkronen und Muster.</summary>
@@ -479,15 +487,21 @@ Namespace Services
                 Marshal.Copy(crop.GetPixels(), raw, 0, raw.Length)
 
                 Dim plane = RecognizerEdge * RecognizerEdge
+                ' ArcFace stammt aus der MXNet-Welt und will RGB. Bgra8888 liegt im Speicher als
+                ' B, G, R, A - die aeussere Ebene wird also vertauscht, die mittlere ist Gruen.
+                ' Vertauscht laeuft das Modell anstandslos weiter und liefert brauchbar aussehende
+                ' Zahlen; es trennt nur schlechter (siehe die Messung an SamePersonThreshold).
+                Const firstOffset As Integer = 2
+                Const lastOffset As Integer = 0
                 For y = 0 To RecognizerEdge - 1
                     Dim rowOffset = y * stride
                     Dim rowIndex = y * RecognizerEdge
                     For x = 0 To RecognizerEdge - 1
                         Dim o = rowOffset + x * 4
                         Dim k = rowIndex + x
-                        input(k) = raw(o)
+                        input(k) = raw(o + firstOffset)
                         input(plane + k) = raw(o + 1)
-                        input(2 * plane + k) = raw(o + 2)
+                        input(2 * plane + k) = raw(o + lastOffset)
                     Next
                 Next
             End Using

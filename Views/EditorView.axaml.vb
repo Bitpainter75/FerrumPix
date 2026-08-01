@@ -500,16 +500,39 @@ Namespace Views
         ''' Popup), wird der Zug wie ein Loslassen abgewickelt - sonst bliebe das Rechteck sichtbar
         ''' stehen und der nächste Klick liefe in einen halb offenen Zug (dieselbe Lehre wie bei den
         ''' Einrast-Hilfslinien).</summary>
+        ''' <summary>Die Zeigererfassung ist weg - dann ist die Geste vorbei, ob es ein Loslassen
+        ''' gab oder nicht.
+        '''
+        ''' WARUM DAS ZAEHLT: ein Schwenken faengt mit der rechten Maustaste an und endete bisher
+        ''' NUR im Loslassen auf dieser Leinwand. Kommt dazwischen etwas, das die Erfassung nimmt -
+        ''' ein Kontextmenue, ein Dialog, ein Fensterwechsel -, blieb <c>_isPanDragging</c> stehen.
+        ''' Danach schwenkte JEDE Mausbewegung das Bild, ohne dass eine Taste gedrueckt war: der
+        ''' Ausschnitt lief unter dem Zeiger weg, und der Pinselkreis schien an seiner Stelle zu
+        ''' kleben. Gemeldet aus dem Reparaturpinsel bei 100 Prozent, wo davon am meisten zu sehen
+        ''' ist.
+        '''
+        ''' Aufgeraeumt wird nur, was OHNE Uebernahme endet - Schwenken, Vergleichsregler,
+        ''' Objektrechteck. Striche und Auswahlgesten tragen ein Ergebnis und bleiben beim
+        ''' Loslassen, das ihre Uebernahme kennt.</summary>
         Private Sub OnPreviewCanvasCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
             If _objectMarqueeActive Then EndObjectMarquee()
+            _isPanDragging = False
+            _isDraggingSlider = False
         End Sub
 
         ''' <summary>In welchen Werkzeugen zieht ein Zug auf freier Fläche ein OBJEKT-Auswahlrechteck?
-        ''' Bewusst eng: im VERSCHIEBEN-Werkzeug immer (dort sind Objekte das Thema, es wird nichts
-        ''' platziert), in den Objekt-Werkzeugen nur, solange KEIN Objekttyp scharfgestellt ist - sonst
-        ''' setzt der Klick dort ein neues Objekt. In den Anpassungs-Werkzeugen (Anpassen/Farbe/Effekte/
-        ''' Filter) NICHT: dort hebt ein Klick ins Leere weiterhin die Auswahl auf. Und im
-        ''' Auswahl-Werkzeug schon gar nicht - dessen Rechteck ist die Pixelauswahl.</summary>
+        ''' Im VERSCHIEBEN-Werkzeug immer (dort sind Objekte das Thema, es wird nichts platziert), in
+        ''' den Objekt-Werkzeugen nur, solange KEIN Objekttyp scharfgestellt ist - sonst setzt der
+        ''' Klick dort ein neues Objekt. Im Auswahl-Werkzeug NICHT: dessen Rechteck ist die
+        ''' Pixelauswahl.
+        '''
+        ''' AUCH IN DEN ANPASSUNGS-WERKZEUGEN (Anpassen/Farbe/Details/Effekte/Filter). Dort stand
+        ''' einmal das Gegenteil, mit der Begründung, ein Klick ins Leere hebe die Auswahl auf - das
+        ''' tut er weiterhin, denn ohne Zug entscheidet die Zugschwelle beim Loslassen genau so.
+        ''' Gewonnen ist der Fall davor: in genau diesen Werkzeugen arbeitet man an einer Auswahl von
+        ''' Ebenen, und die musste man vorher einzeln anklicken. Der Rahmen darf innerhalb wie
+        ''' AUSSERHALB des Bildes ansetzen - Objekte am Bildrand umschließt man sonst nicht, ohne sie
+        ''' anzufassen.</summary>
         Private Shared Function AllowsObjectMarquee(vm As EditorViewModel) As Boolean
             If vm Is Nothing Then Return False
             ' Im AUSWAHL-Werkzeug bleibt das Rechteck die Pixelauswahl - AUSSER im Untermodus
@@ -521,6 +544,7 @@ Namespace Views
             ' nicht gemalt, sondern gegriffen.
             If vm.CurrentTool = EditorTool.Mask Then Return vm.IsMaskMoveMode
             Dim erlaubt = vm.CurrentTool = EditorTool.Move OrElse
+                          EditorViewModel.IsObjectAdjustTool(vm.CurrentTool) OrElse
                           (String.IsNullOrEmpty(vm.PendingInsertKind) AndAlso
                            (vm.CurrentTool = EditorTool.Text OrElse vm.CurrentTool = EditorTool.Geometry OrElse
                             vm.CurrentTool = EditorTool.Insert))
@@ -865,9 +889,31 @@ Namespace Views
             If Not isInsideCanvas Then Return
             If e.Delta.Y = 0 Then Return
             Dim pointerPoint = e.GetCurrentPoint(canvas)
-            ' Das Mausrad über dem Bild zoomt jetzt IMMER - vorher nur mit gedrückter
-            ' rechter Maustaste oder Strg. Die rechte Maustaste bleibt zusätzlich als Zoom-beim-Schwenken
-            ' unterstützt (siehe Pan-Neuverankerung unten).
+            ' Das Mausrad über dem Bild zoomt IMMER - vorher nur mit gedrückter rechter Maustaste
+            ' oder Strg. Die rechte Maustaste bleibt zusätzlich als Zoom-beim-Schwenken unterstützt
+            ' (siehe Pan-Neuverankerung unten).
+            '
+            ' AUSGENOMMEN PINSEL UND RETUSCHE. Zoomen heisst hier ZOOMEN AUF DEN ZEIGER, und das
+            ' verschiebt den sichtbaren Ausschnitt - genau das darf beim Malen nicht passieren. Wer
+            ' in einen Ausschnitt hineingezoomt hat und dort arbeitet, verliert sonst mitten im
+            ' Strich die Stelle, an der er gerade ist. Verschoben wird bewusst: über den Knopf
+            ' "Verschieben", mit der Leertaste oder mit gedrückter rechter Maustaste.
+            '
+            ' Stattdessen ändert das Rad die WERKZEUGGRÖSSE - dieselbe Wirkung wie die Tasten [ und
+            ' ], und die naheliegendste Bedeutung des Rades, solange ein Werkzeug mit Radius aktiv
+            ' ist. Mit STRG zoomt es weiterhin, für den Fall, dass man beim Malen doch näher ran will.
+            ' NICHT waehrend eines Schwenks: mit gedrueckter rechter Maustaste zoomt das Rad seit
+            ' jeher, und genau diese Kombination ist das Werkzeug fuer "naeher ran an genau diese
+            ' Stelle". Wer schwenkt, will nicht die Pinselgroesse aendern.
+            Dim toolVm = TryCast(DataContext, EditorViewModel)
+            If toolVm IsNot Nothing AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+               Not _isPanDragging AndAlso Not pointerPoint.Properties.IsRightButtonPressed AndAlso
+               (toolVm.CurrentTool = EditorTool.Draw OrElse toolVm.CurrentTool = EditorTool.Retouch) Then
+                AdjustActiveToolSize(toolVm, If(e.Delta.Y > 0, 1, -1))
+                e.Handled = True
+                Return
+            End If
+
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing Then vm.ActiveZoomPreset = ZoomPresetMode.Manual
             Dim anchor = e.GetPosition(canvas)
@@ -2190,6 +2236,16 @@ Namespace Views
             If _isPanDragging Then
                 Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 If canvas Is Nothing Then Return
+                ' OHNE GEDRUECKTE TASTE WIRD NICHT GESCHWENKT - egal, wie die Marke hierher kam.
+                ' Sie blieb frueher stehen, wenn die Zeigererfassung mitten im Zug wegfiel (Menue,
+                ' Dialog, Fensterwechsel); danach schob jede blosse Mausbewegung das Bild weg. Der
+                ' Fall ist an seiner Quelle behoben (OnPreviewCanvasCaptureLost), aber diese Frage
+                ' kostet nichts und macht die ganze Fehlerklasse unmoeglich.
+                Dim tasten = e.GetCurrentPoint(canvas).Properties
+                If Not tasten.IsRightButtonPressed AndAlso Not tasten.IsLeftButtonPressed Then
+                    _isPanDragging = False
+                    Return
+                End If
                 Dim pos = e.GetPosition(canvas)
                 ' Wurde wirklich GEZOGEN, ist kein Kontextmenue gemeint. Ein paar Bildpunkte
                 ' Wackeln beim Klicken duerfen dagegen nicht schon als Zug gelten.

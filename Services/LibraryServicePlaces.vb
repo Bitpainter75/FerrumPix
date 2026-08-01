@@ -8,6 +8,10 @@ Namespace Services
     Public Class PlaceEntry
         Public Property City As String = ""
         Public Property Country As String = ""
+
+        ''' <summary>Das Laenderkuerzel - damit steht der Landesname in der Sprache der Oberflaeche
+        ''' zur Verfuegung, ohne eine eigene Uebersetzungstabelle fuer 246 Laender.</summary>
+        Public Property CountryCode As String = ""
         Public Property Count As Integer
 
         ''' <summary>"Norden, Deutschland (42)". Fehlt eines von beiden, faellt es samt Komma weg -
@@ -20,8 +24,9 @@ Namespace Services
 
         Public ReadOnly Property PlaceText As String
             Get
-                If City.Length > 0 AndAlso Country.Length > 0 Then Return $"{City}, {Country}"
-                Return If(City.Length > 0, City, Country)
+                Dim land = PlaceLookupService.LocalizedCountry(CountryCode, Country)
+                If City.Length > 0 AndAlso land.Length > 0 Then Return $"{City}, {land}"
+                Return If(City.Length > 0, City, land)
             End Get
         End Property
     End Class
@@ -40,8 +45,9 @@ Namespace Services
             ' Ein Immich-Element liegt nicht im Dateisystem und steht in keinem lokalen Katalog.
             If ImmichService.IsImmichPseudoPath(filePath) Then Return ""
             Dim place = LibraryService.Instance.GetPlace(filePath)
-            If place.City.Length > 0 AndAlso place.Country.Length > 0 Then Return $"{place.City}, {place.Country}"
-            Return If(place.City.Length > 0, place.City, place.Country)
+            Dim land = PlaceLookupService.LocalizedCountry(place.CountryCode, place.Country)
+            If place.City.Length > 0 AndAlso land.Length > 0 Then Return $"{place.City}, {land}"
+            Return If(place.City.Length > 0, place.City, land)
         End Function
 
     End Class
@@ -55,40 +61,46 @@ Namespace Services
         ''' dazugekommen, und alles, was vorher eingelesen wurde, traegt sie nicht. Ohne dieses
         ''' Nachziehen bliebe der Ort bei jedem aelteren Bild leer, bis jemand den Ordner erneut
         ''' einliest - und niemand liest 13000 Bilder neu ein, um einen Ortsnamen zu sehen.</summary>
-        Public Function GetPlace(filePath As String) As (City As String, Country As String)
-            If String.IsNullOrWhiteSpace(filePath) Then Return ("", "")
+        Public Function GetPlace(filePath As String) As (City As String, Country As String, CountryCode As String)
+            If String.IsNullOrWhiteSpace(filePath) Then Return ("", "", "")
             Try
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Dim city = ""
                     Dim country = ""
+                    Dim code = ""
                     Dim latitude As Double? = Nothing
                     Dim longitude As Double? = Nothing
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT City, Country, GpsLatitude, GpsLongitude FROM ImageMeta WHERE FilePath=$p"
+                        cmd.CommandText = "SELECT City, Country, GpsLatitude, GpsLongitude, CountryCode FROM ImageMeta WHERE FilePath=$p"
                         cmd.Parameters.AddWithValue("$p", filePath)
                         Using reader = cmd.ExecuteReader()
-                            If Not reader.Read() Then Return ("", "")
+                            If Not reader.Read() Then Return ("", "", "")
                             city = If(reader.IsDBNull(0), "", reader.GetString(0))
                             country = If(reader.IsDBNull(1), "", reader.GetString(1))
                             If Not reader.IsDBNull(2) Then latitude = reader.GetDouble(2)
                             If Not reader.IsDBNull(3) Then longitude = reader.GetDouble(3)
+                            code = If(reader.IsDBNull(4), "", reader.GetString(4))
                         End Using
                     End Using
 
-                    If city.Length > 0 Then Return (city, country)
-                    If Not latitude.HasValue OrElse Not longitude.HasValue Then Return (city, country)
-                    If Not PlaceLookupService.Enabled Then Return (city, country)
+                    ' Steht der Ort schon da, fehlt bei einem alten Eintrag nur das Kuerzel - und
+                    ' damit die Uebersetzung des Landesnamens. Das Nachschlagen kostet eine Abfrage
+                    ' und laesst den gespeicherten Ortsnamen unangetastet.
+                    If city.Length > 0 AndAlso code.Length > 0 Then Return (city, country, code)
+                    If Not latitude.HasValue OrElse Not longitude.HasValue Then Return (city, country, code)
+                    If Not PlaceLookupService.Enabled Then Return (city, country, code)
 
                     Dim hit = PlaceLookupService.Nearest(latitude.Value, longitude.Value)
-                    If hit Is Nothing Then Return (city, country)
+                    If hit Is Nothing Then Return (city, country, code)
+                    Dim ort = If(city.Length > 0, city, hit.Name)
                     If country.Length = 0 Then country = hit.Country
-                    WritePlace(conn, Nothing, filePath, hit.Name, country)
-                    Return (hit.Name, country)
+                    WritePlace(conn, Nothing, filePath, ort, country, hit.CountryCode)
+                    Return (ort, country, hit.CountryCode)
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("Library.GetPlace", ex)
-                Return ("", "")
+                Return ("", "", "")
             End Try
         End Function
 
@@ -100,15 +112,16 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
-                            "SELECT City, COALESCE(Country,''), COUNT(*) FROM ImageMeta " &
+                            "SELECT City, COALESCE(Country,''), COUNT(*), COALESCE(CountryCode,'') FROM ImageMeta " &
                             "WHERE City IS NOT NULL AND City <> '' " &
-                            "GROUP BY City, COALESCE(Country,'') ORDER BY City COLLATE NOCASE"
+                            "GROUP BY City, COALESCE(Country,''), COALESCE(CountryCode,'') ORDER BY City COLLATE NOCASE"
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 result.Add(New PlaceEntry With {
                                     .City = reader.GetString(0),
                                     .Country = reader.GetString(1),
-                                    .Count = reader.GetInt32(2)})
+                                    .Count = reader.GetInt32(2),
+                                    .CountryCode = reader.GetString(3)})
                             End While
                         End Using
                     End Using
@@ -170,29 +183,38 @@ Namespace Services
         Public Function FillMissingPlaces() As Integer
             If Not PlaceLookupService.Enabled Then Return 0
             Try
-                Dim pending As New List(Of (Path As String, Latitude As Double, Longitude As Double, Country As String))()
+                Dim pending As New List(Of (Path As String, Latitude As Double, Longitude As Double,
+                                            Country As String, City As String))()
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
+                        ' Auch Eintraege, die einen Ort haben, aber noch kein Kuerzel: ihnen fehlt
+                        ' nur die Uebersetzung des Landesnamens.
                         cmd.CommandText =
-                            "SELECT FilePath, GpsLatitude, GpsLongitude, COALESCE(Country,'') FROM ImageMeta " &
-                            "WHERE (City IS NULL OR City='') AND GpsLatitude IS NOT NULL AND GpsLongitude IS NOT NULL"
+                            "SELECT FilePath, GpsLatitude, GpsLongitude, COALESCE(Country,''), COALESCE(City,'') FROM ImageMeta " &
+                            "WHERE (City IS NULL OR City='' OR CountryCode IS NULL OR CountryCode='') " &
+                            "AND GpsLatitude IS NOT NULL AND GpsLongitude IS NOT NULL"
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
-                                pending.Add((reader.GetString(0), reader.GetDouble(1), reader.GetDouble(2), reader.GetString(3)))
+                                pending.Add((reader.GetString(0), reader.GetDouble(1), reader.GetDouble(2),
+                                             reader.GetString(3), reader.GetString(4)))
                             End While
                         End Using
                     End Using
                 End Using
                 If pending.Count = 0 Then Return 0
 
-                Dim found As New List(Of (Path As String, City As String, Country As String))()
+                Dim found As New List(Of (Path As String, City As String, Country As String, Code As String))()
                 For Each row In pending
                     Dim hit = PlaceLookupService.Nearest(row.Latitude, row.Longitude)
                     ' Kein Treffer heisst: kein Ort innerhalb der Grenze. Das Feld bleibt leer -
                     ' ein falscher Ortsname waere schlechter als keiner.
                     If hit Is Nothing Then Continue For
-                    found.Add((row.Path, hit.Name, If(row.Country.Length > 0, row.Country, hit.Country)))
+                    ' Ein VORHANDENER Ortsname bleibt stehen - er kann aus der Datei selbst stammen.
+                    found.Add((row.Path,
+                               If(row.City.Length > 0, row.City, hit.Name),
+                               If(row.Country.Length > 0, row.Country, hit.Country),
+                               hit.CountryCode))
                 Next
                 If found.Count = 0 Then Return 0
 
@@ -200,7 +222,7 @@ Namespace Services
                     conn.Open()
                     Using tx = conn.BeginTransaction()
                         For Each row In found
-                            WritePlace(conn, tx, row.Path, row.City, row.Country)
+                            WritePlace(conn, tx, row.Path, row.City, row.Country, row.Code)
                         Next
                         tx.Commit()
                     End Using
@@ -213,12 +235,14 @@ Namespace Services
         End Function
 
         Private Shared Sub WritePlace(conn As SqliteConnection, tx As SqliteTransaction,
-                                      filePath As String, city As String, country As String)
+                                      filePath As String, city As String, country As String,
+                                      countryCode As String)
             Using cmd = conn.CreateCommand()
                 cmd.Transaction = tx
-                cmd.CommandText = "UPDATE ImageMeta SET City=$c, Country=$l WHERE FilePath=$p"
+                cmd.CommandText = "UPDATE ImageMeta SET City=$c, Country=$l, CountryCode=$k WHERE FilePath=$p"
                 cmd.Parameters.AddWithValue("$c", If(city, ""))
                 cmd.Parameters.AddWithValue("$l", If(country, ""))
+                cmd.Parameters.AddWithValue("$k", If(countryCode, ""))
                 cmd.Parameters.AddWithValue("$p", filePath)
                 cmd.ExecuteNonQuery()
             End Using

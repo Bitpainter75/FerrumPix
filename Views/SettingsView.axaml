@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
              xmlns:vm="clr-namespace:FerrumPix.ViewModels"
              x:Class="FerrumPix.Views.SettingsView"
              Classes="settings-view"
@@ -85,6 +86,18 @@
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brain.svg" Width="16" Height="16"/>
                         <TextBlock Text="Modelle"/>
+                    </StackPanel>
+                </Button>
+                <!-- Nur mit eingeschalteter Erkennung: ohne sie gibt es keine Gruppen, und ein
+                     Abschnitt, hinter dem nie etwas steht, ist ein leeres Versprechen. -->
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        IsVisible="{Binding ModelRuntimeAvailable}"
+                        Tag="PeopleSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/users.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Personen"/>
                     </StackPanel>
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
@@ -1344,18 +1357,6 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Personen erkennen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Sucht Gesichter in Ihren Fotos und fasst dieselbe Person zusammen, damit Sie nach ihr suchen können. Läuft auf Ihrem Gerät; die Merkmale bleiben in Ihrer Bibliothek und werden nirgendwohin gesendet. Namen vergeben Sie selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding FaceRecognitionEnabled}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <!-- Ein Kartenbild gibt es (noch) nicht, und der Text hat eines
                                      versprochen. Was die Ortstabelle wirklich leistet, sind NAMEN
                                      aus Koordinaten - und die entstehen ohne jede Verbindung nach
@@ -1369,6 +1370,90 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- PERSONEN. Eine Wand aus Gesichtern, keine Liste aus Namen: eine Person erkennt
+                     man am Gesicht. Wer hundert Gruppen aufräumt, sucht nach Doppelgängern und nach
+                     Kacheln, die gar keine Person zeigen - beides sieht man in Bildern auf einen
+                     Blick und in einer Namensliste überhaupt nicht.
+
+                     ZWEI ZUSTÄNDE, kein dritter: die Wand ODER eine geöffnete Person. Die Bilder
+                     kommen im Hintergrund nach und verkleinert dekodiert (FacePanelService). -->
+                <Border x:Name="PeopleSection" Classes="section" IsVisible="{Binding ModelRuntimeAvailable}">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Personen" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Gesichter finden, zu Personen zusammenfassen und benennen - alles auf diesem Gerät." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Die beiden Schalter stehen HIER und nicht bei den Modellen: dort geht es
+                             um Dateien, hier um die Sache selbst. Sie bleiben sichtbar, auch wenn
+                             die Erkennung aus ist - sonst gäbe es keinen Weg, sie einzuschalten. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Personen erkennen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Sucht Gesichter in Ihren Fotos und fasst dieselbe Person zusammen, damit Sie nach ihr suchen können. Läuft auf Ihrem Gerät; die Merkmale bleiben in Ihrer Bibliothek und werden nirgendwohin gesendet. Namen vergeben Sie selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FaceRecognitionEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Relativ zur Bildkante und nicht in Bildpunkten: 80 Punkte sind auf einem
+                             24-Megapixel-Foto ein Kopf in der dritten Reihe und auf einem
+                             Handyschnappschuss ein Porträt. -->
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding FaceRecognitionEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Kleinste erkannte Person" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gesichter unterhalb dieser Größe kommen gar nicht erst in die Bibliothek - gemessen an der kürzeren Bildkante, damit dieselbe Angabe auf jedem Foto dasselbe bedeutet. Auf einem Stadtfest bleibt so die dritte Reihe im Hintergrund draußen. Bei „alle&quot; bleibt, was die Erkennung findet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <!-- Ab Werk 3 Prozent, gemessen und nicht geraten: an einem
+                                     gewachsenen Bestand liegen die kleinsten so noch behaltenen
+                                     Gesichter klar ueber der Grenze, ab der ohnehin nichts mehr
+                                     vermessen wird. Der Regler schneidet dort also nach Geschmack
+                                     und rettet nicht vor Unbrauchbarem.
+                                     BIS 10 und nicht weiter: bei 8 Prozent faellt schon rund die
+                                     Haelfte aller gefundenen Gesichter weg. Ein Bereich, dessen
+                                     obere Haelfte niemand sinnvoll benutzt, macht den nuetzlichen
+                                     Teil nur schwerer zu treffen. -->
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="10"
+                                                   DefaultValue="3"
+                                                   DragIncrement="1"
+                                                   WheelIncrement="1"
+                                                   Value="{Binding FaceMinimumSizePercent}"/>
+                                <TextBlock Text="{Binding FaceMinimumSizeText}" Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="56"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <!-- HIER STEHEN NUR NOCH DIE SCHALTER. Die Kachelwand ist ein eigener
+                             Bereich geworden, erreichbar über den Knopf in der Galerie: in den
+                             Einstellungen legt man fest, WIE das Programm arbeitet - Gruppen
+                             aufzuräumen ist dagegen Arbeit am Bestand. Der Knopf hier führt
+                             hinüber, damit niemand suchen muss. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Personen verwalten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Die gefundenen Gruppen als Wand aus Gesichtern: benennen, zusammenführen und falsch Zugeordnetes herauslösen. Zu finden in der Galerie über dem Knopf für die Einstellungen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                    IsEnabled="{Binding FaceRecognitionEnabled}"
+                                    Click="OnManagePeopleClick">Öffnen</Button>
+                        </Grid>
+
                     </StackPanel>
                 </Border>
 
@@ -1455,15 +1540,41 @@
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Vorschaubild-Cache nach Ordnern" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Ordner aufräumen" FontSize="{DynamicResource FP.Font.Body}"/>
                                     <TextBlock Text="{Binding ThumbnailCacheSummaryText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding ThumbnailCacheResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                                     <Button Classes="ghost" Padding="12,7" Command="{Binding RefreshThumbnailCacheCommand}">Aktualisieren</Button>
-                                    <Button Classes="ghost" Padding="12,7" Command="{Binding DeleteAllThumbnailCacheCommand}">Alle löschen</Button>
+                                    <!-- Dieselben drei Wege wie in jeder Zeile, nur für alle Ordner.
+                                         "Alle löschen" stand hier, solange der Abschnitt nur der
+                                         Vorschaubild-Cache war; seit die Katalogdaten daneben stehen,
+                                         sagte die Beschriftung nicht mehr, was passiert.
+                                         Alle drei fragen vorher nach - auch der harmlose: eine Reihe,
+                                         in der nur zwei von drei Knöpfen nachfragen, erzieht dazu,
+                                         die Frage wegzuklicken. -->
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding DeleteAllCatalogCommand}"
+                                            ToolTip.Tip="Entfernt Aufnahmedaten, Bewertung, Etikett, Stichwörter und gefundene Personen aller Ordner aus dem Katalog. Die Bilddateien bleiben unangetastet.">Alle Katalogdaten</Button>
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding DeleteAllThumbnailCacheCommand}"
+                                            ToolTip.Tip="Löscht die zwischengespeicherten Vorschaubilder aller Ordner. Sie entstehen beim nächsten Ansehen von selbst wieder.">Alle Vorschaubilder</Button>
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding DeleteAllBothCommand}"
+                                            ToolTip.Tip="Beides für alle Ordner entfernen. Danach ist die Liste leer und FerrumPix fängt beim nächsten Ansehen von vorne an.">Alles</Button>
                                 </StackPanel>
                             </Grid>
+
+                            <!-- Die Rückmeldung steht UNTER der Knopfreihe, nicht daneben. Neben den
+                                 vier Knöpfen nahm sie so viel Breite, dass die Überschrift links
+                                 umbrach, sobald etwas gemeldet wurde - der Abschnitt sprang bei
+                                 jedem Aufräumen in der Höhe. Solange nichts gemeldet ist, ist die
+                                 Zeile nicht da und kostet auch keinen Platz. -->
+                            <TextBlock Text="{Binding ThumbnailCacheResultMessage}"
+                                       IsVisible="{Binding ThumbnailCacheResultMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
 
                             <!-- AUFKLAPPBAR: die Liste kann Dutzende Ordner lang sein und schob
                                  alles darunter aus dem Blick. Zugeklappt steht in der Kopfzeile, wie
@@ -1494,12 +1605,27 @@
                                                                    FontSize="{DynamicResource FP.Font.Small}"
                                                                    TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
-                                                    <Button Grid.Column="1"
-                                                            Classes="ghost"
-                                                            Padding="10,6"
-                                                            VerticalAlignment="Center"
-                                                            Command="{Binding DataContext.DeleteThumbnailCacheFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                            CommandParameter="{Binding}">Löschen</Button>
+                                                    <!-- DREI Wege, weil es zwei verschiedene Dinge
+                                                         sind: Vorschaubilder entstehen von selbst
+                                                         wieder, Katalogdaten tragen Bewertung,
+                                                         Stichwörter und die gefundenen Gesichter.
+                                                         Aus der Liste verschwindet ein Ordner erst,
+                                                         wenn nichts mehr da ist. -->
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                                VerticalAlignment="Center">
+                                                        <Button Classes="ghost" Padding="10,6"
+                                                                Command="{Binding DataContext.DeleteFolderCatalogCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip.Tip="Entfernt Aufnahmedaten, Bewertung, Etikett, Stichwörter und gefundene Gesichter dieses Ordners aus dem Katalog. Die Bilddateien bleiben unangetastet.">Katalogdaten</Button>
+                                                        <Button Classes="ghost" Padding="10,6"
+                                                                Command="{Binding DataContext.DeleteFolderThumbnailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip.Tip="Löscht nur die zwischengespeicherten Vorschaubilder. Sie entstehen beim nächsten Ansehen von selbst wieder.">Vorschaubilder</Button>
+                                                        <Button Classes="ghost" Padding="10,6"
+                                                                Command="{Binding DataContext.DeleteFolderBothCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                ToolTip.Tip="Beides entfernen. Danach weiß FerrumPix nichts mehr über diesen Ordner, und er verschwindet aus der Liste.">Beides</Button>
+                                                    </StackPanel>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -2180,13 +2306,13 @@
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="SFace" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="ArcFace ResNet100" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="Gesichter vergleichen (Modelldatei)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/onnx/models" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
                                     </Button>
-                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo/blob/main/models/face_recognition_sface/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/onnx/models/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>

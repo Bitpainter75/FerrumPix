@@ -9,6 +9,12 @@ Namespace Services
     Public Class PlaceHit
         Public Property Name As String = ""
         Public Property Country As String = ""
+
+        ''' <summary>Das Laenderkuerzel nach ISO 3166 ("DE", "FR"). Es steht in der Ortstabelle und
+        ''' ist der Schluessel zur UEBERSETZUNG: .NET kennt zu jedem Kuerzel den Landesnamen in jeder
+        ''' Sprache, eine eigene Uebersetzungstabelle fuer 246 Laender braucht es damit nicht.</summary>
+        Public Property CountryCode As String = ""
+
         Public Property DistanceKm As Double
     End Class
 
@@ -80,6 +86,28 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Der Landesname in der Sprache der Oberflaeche.
+        '''
+        ''' .NET kennt zu jedem ISO-Kuerzel den Landesnamen in jeder Sprache - eine eigene
+        ''' Uebersetzungstabelle fuer 246 Laender waere Pflegearbeit ohne Gegenwert und in sieben
+        ''' Sprachen ein Fehlerherd. Der englische Name aus der Ortstabelle bleibt der Rueckfall:
+        ''' ohne Kuerzel, bei einem unbekannten Kuerzel und dort, wo das System keinen Namen kennt.
+        '''
+        ''' Gefragt wird die Sprache der ANWENDUNG, nicht die des Systems: wer FerrumPix auf Deutsch
+        ''' stellt, will "Deutschland" lesen, auch wenn das Betriebssystem englisch laeuft.</summary>
+        Public Shared Function LocalizedCountry(countryCode As String, fallback As String) As String
+            Dim code = If(countryCode, "").Trim()
+            If code.Length <> 2 Then Return If(fallback, "")
+            Try
+                Dim region As New Globalization.RegionInfo(code.ToUpperInvariant())
+                Dim name = region.DisplayName
+                Return If(String.IsNullOrWhiteSpace(name), If(fallback, ""), name)
+            Catch
+                ' Ein Kuerzel, das dieses System nicht kennt - dann der Name aus der Tabelle.
+                Return If(fallback, "")
+            End Try
+        End Function
+
         ''' <summary>Der naechstgelegene Ort, oder Nothing, wenn keiner nah genug liegt.</summary>
         Public Shared Function Nearest(latitude As Double, longitude As Double) As PlaceHit
             If Double.IsNaN(latitude) OrElse Double.IsNaN(longitude) Then Return Nothing
@@ -116,7 +144,7 @@ Namespace Services
 
             Using cmd = conn.CreateCommand()
                 cmd.CommandText =
-                    "SELECT Name, Country, Lat, Lon FROM Place " &
+                    "SELECT Name, Country, Lat, Lon, CountryCode FROM Place " &
                     "WHERE Lat BETWEEN $latMin AND $latMax AND Lon BETWEEN $lonMin AND $lonMax"
                 cmd.Parameters.AddWithValue("$latMin", lat - boxDegrees)
                 cmd.Parameters.AddWithValue("$latMax", lat + boxDegrees)
@@ -135,6 +163,7 @@ Namespace Services
                             best = New PlaceHit With {
                                 .Name = reader.GetString(0),
                                 .Country = reader.GetString(1),
+                                .CountryCode = If(reader.IsDBNull(4), "", reader.GetString(4)),
                                 .DistanceKm = km}
                         End If
                     End While

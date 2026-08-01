@@ -32,6 +32,11 @@ Namespace Services
         ''' Ortsangabe aus IPTC bzw. XMP, falls die Datei eine traegt.
         Public Property City As String = ""
         Public Property Country As String = ""
+
+        ''' <summary>Laenderkuerzel nach ISO 3166, sofern der Ort aus der Ortstabelle kam. Es ist der
+        ''' Schluessel zur Uebersetzung des Landesnamens - der Name selbst steht englisch in der
+        ''' Tabelle.</summary>
+        Public Property CountryCode As String = ""
     End Class
 
     Public Class ExifTag
@@ -971,6 +976,7 @@ Namespace Services
                 If hit Is Nothing Then Return
                 result.City = hit.Name
                 If result.Country.Length = 0 Then result.Country = hit.Country
+                result.CountryCode = hit.CountryCode
             Catch ex As Exception
                 DiagnosticLogService.LogException("Exif.Ortsnamen", ex)
             End Try

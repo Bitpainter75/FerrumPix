@@ -5016,12 +5016,6 @@
   <data name="Erst_w_hlen_dann_liegt_das_jeweilige_Werkzeug_be_de86f4af" xml:space="preserve">
     <value>先选择一种，该工具便会显示在图像上。再次单击可将其收起。</value>
   </data>
-  <data name="In_eine_Maske_umwandeln_3828b7ef" xml:space="preserve">
-    <value>转换为蒙版</value>
-  </data>
-  <data name="In_eine_Auswahl_umwandeln_d60b98b1" xml:space="preserve">
-    <value>转换为选区</value>
-  </data>
   <data name="In_eine_Maske_umgewandelt_7f858fd9" xml:space="preserve">
     <value>已转换为蒙版</value>
   </data>
@@ -5715,9 +5709,6 @@
   <data name="Gesichter_finden_Modelldatei_4e16ccfe" xml:space="preserve">
     <value>查找人脸（模型文件）</value>
   </data>
-  <data name="SFace_8767ac17" xml:space="preserve">
-    <value>SFace</value>
-  </data>
   <data name="Gesichter_vergleichen_Modelldatei_c264f3b0" xml:space="preserve">
     <value>比较人脸（模型文件）</value>
   </data>
@@ -5819,5 +5810,188 @@
   </data>
   <data name="Macht_aus_den_Koordinaten_im_Foto_einen_Ort_und__ab9c05cb" xml:space="preserve">
     <value>把照片中的坐标变成地点和国家：它们会出现在信息栏、图库上方的地点筛选和搜索中。名称来自本机的地点表，不查询也不发送任何内容。FerrumPix 不显示地图。</value>
+  </data>
+  <data name="ArcFace_ResNet100_13907a88" xml:space="preserve">
+    <value>ArcFace ResNet100</value>
+  </data>
+  <data name="Gesichter_genauer_vergleichen_Modelldatei_c9cae249" xml:space="preserve">
+    <value>更精确地比较面孔（模型文件）</value>
+  </data>
+  <data name="Personen_genau_27cd5f76" xml:space="preserve">
+    <value>人物（精确）</value>
+  </data>
+  <data name="Gruppen_1d071099" xml:space="preserve">
+    <value>个分组</value>
+  </data>
+  <data name="davon_benannt_95459c71" xml:space="preserve">
+    <value>个已命名</value>
+  </data>
+  <data name="Ein_Klick_ffnet_eine_Gruppe_Dort_steht_jedes_Ges_92563102" xml:space="preserve">
+    <value>点击可打开一个分组。其中每张面孔单独列出，不属于该人的可以单独取出，不影响其他照片。</value>
+  </data>
+  <data name="Geh_rt_jemand_nicht_dazu_l_st_der_Knopf_an_der_K_a96e1bde" xml:space="preserve">
+    <value>若某人不属于此分组，缩略图上的按钮只取出这一张面孔，其他照片保持不变。</value>
+  </data>
+  <data name="Gruppe_verwerfen_55df8ba2" xml:space="preserve">
+    <value>丢弃分组</value>
+  </data>
+  <data name="Die_Gruppe_verwerfen_Die_Gesichter_bleiben_erhal_5aa30b20" xml:space="preserve">
+    <value>丢弃该分组。面孔仍保留，之后不属于任何人。</value>
+  </data>
+  <data name="Zur_ck_zur_bersicht_d244adba" xml:space="preserve">
+    <value>返回总览</value>
+  </data>
+  <data name="Seite_633082b8" xml:space="preserve">
+    <value>第</value>
+  </data>
+  <data name="bis_1094cd06" xml:space="preserve">
+    <value>至</value>
+  </data>
+  <data name="Weiter_aeff967b" xml:space="preserve">
+    <value>下一页</value>
+  </data>
+  <data name="Stichwort_suchen_7da58667" xml:space="preserve">
+    <value>搜索关键词</value>
+  </data>
+  <data name="Unbekannt_d0b00a9f" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Kleinste_erkannte_Person_f3f9cb97" xml:space="preserve">
+    <value>可识别的最小人物</value>
+  </data>
+  <data name="alle_ac78aefc" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="Gesichter_unterhalb_dieser_Gr_e_kommen_gar_nicht_a50f4e8d" xml:space="preserve">
+    <value>小于此尺寸的面孔根本不会进入图库——以照片较短边为基准衡量，因此同一设置在每张照片上含义相同。在街头庆典上，背景中的第三排就会被排除。选择“全部”时，识别到的都会保留。</value>
+  </data>
+  <data name="Ordner_aufr_umen_3cebb414" xml:space="preserve">
+    <value>整理文件夹</value>
+  </data>
+  <data name="Katalogdaten_34af479a" xml:space="preserve">
+    <value>目录数据</value>
+  </data>
+  <data name="Beides_affdd6a7" xml:space="preserve">
+    <value>两者</value>
+  </data>
+  <data name="Entfernt_Aufnahmedaten_Bewertung_Etikett_Stichw__3d91344c" xml:space="preserve">
+    <value>从目录中移除该文件夹的拍摄数据、评分、标签、关键词和已找到的面孔。图像文件保持不变。</value>
+  </data>
+  <data name="L_scht_nur_die_zwischengespeicherten_Vorschaubil_bb3df544" xml:space="preserve">
+    <value>仅删除缓存的缩略图。下次查看时会自行重新生成。</value>
+  </data>
+  <data name="Beides_entfernen_Danach_wei_FerrumPix_nichts_meh_fecd4123" xml:space="preserve">
+    <value>两者都移除。此后 FerrumPix 不再了解该文件夹，它也会从列表中消失。</value>
+  </data>
+  <data name="FerrumPix_hat_zu_keinem_Ordner_Daten_abgelegt_5bad9905" xml:space="preserve">
+    <value>FerrumPix 尚未为任何文件夹存储数据。</value>
+  </data>
+  <data name="Keine_Ordner_mit_abgelegten_Daten_c26ec9c3" xml:space="preserve">
+    <value>没有已存储数据的文件夹</value>
+  </data>
+  <data name="0_Ordner_1_Vorschaubilder_2_3_Katalogeintr_ge_7ed15827" xml:space="preserve">
+    <value>{0} 个文件夹 · {1} 张缩略图 · {2} · {3} 条目录记录</value>
+  </data>
+  <data name="0_Vorschaubilder_1_2_Katalogeintr_ge_3_cc0d4bd5" xml:space="preserve">
+    <value>{0} 张缩略图 · {1} · {2} 条目录记录 · {3}</value>
+  </data>
+  <data name="0_Vorschaubilder_c861a246" xml:space="preserve">
+    <value>{0} 张缩略图</value>
+  </data>
+  <data name="0_Katalogeintr_ge_744cc761" xml:space="preserve">
+    <value>{0} 条目录记录</value>
+  </data>
+  <data name="entfernt_802e67af" xml:space="preserve">
+    <value>已移除。</value>
+  </data>
+  <data name="Nichts_zu_entfernen_b262eaa2" xml:space="preserve">
+    <value>没有可移除的内容。</value>
+  </data>
+  <data name="Gesichter_finden_zu_Personen_zusammenfassen_und__3404f335" xml:space="preserve">
+    <value>查找面孔、归入人物并命名——全部在本机完成。</value>
+  </data>
+  <data name="Alle_Katalogdaten_2bbf2c36" xml:space="preserve">
+    <value>全部目录数据</value>
+  </data>
+  <data name="Alle_Vorschaubilder_98cff590" xml:space="preserve">
+    <value>全部缩略图</value>
+  </data>
+  <data name="Alles_6343afb8" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="Entfernt_Aufnahmedaten_Bewertung_Etikett_Stichw__bc7fd3e1" xml:space="preserve">
+    <value>从目录中移除所有文件夹的拍摄数据、评分、标签、关键词和已识别的人物。图像文件本身保持不变。</value>
+  </data>
+  <data name="L_scht_die_zwischengespeicherten_Vorschaubilder__6cd66918" xml:space="preserve">
+    <value>删除所有文件夹的缓存缩略图。下次查看时会自动重新生成。</value>
+  </data>
+  <data name="Beides_f_r_alle_Ordner_entfernen_Danach_ist_die__34d7ef9b" xml:space="preserve">
+    <value>为所有文件夹移除两者。之后列表为空，下次查看时 FerrumPix 从头开始。</value>
+  </data>
+  <data name="Alles_entfernen_979ecb59" xml:space="preserve">
+    <value>移除全部</value>
+  </data>
+  <data name="Alle_Katalogdaten_entfernen_87fc1e96" xml:space="preserve">
+    <value>移除全部目录数据</value>
+  </data>
+  <data name="Alle_Vorschaubilder_l_schen_c91ad8e6" xml:space="preserve">
+    <value>删除全部缩略图</value>
+  </data>
+  <data name="Katalogdaten_und_Vorschaubilder_aller_Ordner_ent_789853cf" xml:space="preserve">
+    <value>移除所有文件夹的目录数据和缩略图？</value>
+  </data>
+  <data name="Katalogdaten_aller_Ordner_entfernen_5ee702d1" xml:space="preserve">
+    <value>移除所有文件夹的目录数据？</value>
+  </data>
+  <data name="Vorschaubilder_aller_Ordner_l_schen_9d2aa1be" xml:space="preserve">
+    <value>删除所有文件夹的缩略图？</value>
+  </data>
+  <data name="Betroffen_sind_0_Katalogeintr_ge_mit_Bewertung_E_bc66b8ff" xml:space="preserve">
+    <value>涉及 {0} 条目录条目，含评分、标签、关键词和已识别的人物。图像文件本身不变。写在附属文件中的内容会在下次读取时回来，其余的将消失。</value>
+  </data>
+  <data name="Die_Vorschaubilder_entstehen_beim_n_chsten_Anseh_ee341874" xml:space="preserve">
+    <value>缩略图会在下次查看时自动重新生成。目录数据保持不变。</value>
+  </data>
+  <data name="Personen_verwalten_c0ddbc79" xml:space="preserve">
+    <value>管理人物</value>
+  </data>
+  <data name="Zu_den_Einstellungen_a12516ab" xml:space="preserve">
+    <value>前往设置</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_ausgeschaltet_388c65b7" xml:space="preserve">
+    <value>人物识别已关闭。</value>
+  </data>
+  <data name="In_den_Einstellungen_unter_Personen_einschalten__bdca7432" xml:space="preserve">
+    <value>在设置的“人物”中开启，然后搜索一个文件夹。全部在本设备上计算。</value>
+  </data>
+  <data name="Erkennung_ein_oder_ausschalten_und_die_kleinste__b4df9a8c" xml:space="preserve">
+    <value>开启或关闭识别，并设定可识别的最小人物</value>
+  </data>
+  <data name="Die_gefundenen_Gruppen_als_Wand_aus_Gesichtern_b_4dee80d3" xml:space="preserve">
+    <value>已找到的分组以人脸墙呈现：命名、合并，并取出归错的面孔。位于图库中设置按钮的上方。</value>
+  </data>
+  <data name="die_Personen_zu_ffnen_f2c9ddd4" xml:space="preserve">
+    <value>打开人物</value>
+  </data>
+  <data name="die_Personen_ffnest_df2d6fc8" xml:space="preserve">
+    <value>打开人物</value>
+  </data>
+  <data name="Fertig_708ad54e" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="Jede_nderung_steht_sofort_in_der_Bibliothek_95495c07" xml:space="preserve">
+    <value>每一处改动都会立即写入图库。</value>
+  </data>
+  <data name="Das_ganze_Bild_ansehen_c32d1120" xml:space="preserve">
+    <value>查看整张图片</value>
+  </data>
+  <data name="Klicken_zum_Schlie_en_7a952e8b" xml:space="preserve">
+    <value>点击关闭</value>
+  </data>
+  <data name="Maske_in_eine_Auswahl_umwandeln_3e24b058" xml:space="preserve">
+    <value>将蒙版转换为选区</value>
+  </data>
+  <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
+    <value>将选区转换为蒙版</value>
   </data>
 </root>

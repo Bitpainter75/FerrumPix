@@ -26,11 +26,25 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Wie viele Katalogzeilen dieser Ordner hat. Sie sind das ZWEITE, was FerrumPix
+        ''' ueber einen Ordner weiss - Aufnahmedaten, Bewertungen, Stichworte, gefundene Gesichter.
+        ''' Deshalb steht ein Ordner auch dann in der Liste, wenn er gar keine Vorschaubilder mehr
+        ''' hat: zum Aufraeumen gehoert beides.</summary>
+        Public Property CatalogCount As Integer
+
         Public ReadOnly Property DetailText As String
             Get
                 Dim status = If(Exists, LocalizationService.T("vorhanden"), LocalizationService.T("Ordner fehlt"))
-                Return String.Format(LocalizationService.T("{0} Bilder · {1} · {2}"),
-                                     ThumbnailCount.ToString("N0"), FormatBytes(SizeBytes), status)
+                Return String.Format(LocalizationService.T("{0} Vorschaubilder · {1} · {2} Katalogeinträge · {3}"),
+                                     ThumbnailCount.ToString("N0"), FormatBytes(SizeBytes),
+                                     CatalogCount.ToString("N0"), status)
+            End Get
+        End Property
+
+        ''' <summary>Ein Ordner verschwindet erst aus der Liste, wenn BEIDES weg ist.</summary>
+        Public ReadOnly Property HasAnything As Boolean
+            Get
+                Return ThumbnailCount > 0 OrElse CatalogCount > 0
             End Get
         End Property
 

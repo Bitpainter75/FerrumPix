@@ -76,6 +76,7 @@ Namespace ViewModels
         Private _videoHardwareAcceleration As Boolean = False
         Private _faceRecognitionEnabled As Boolean = False
         Private _photoMapEnabled As Boolean = False
+        Private _faceMinimumSizePercent As Double = 0
         Private _transparencyBackgroundMode As String = "Checkerboard"
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
         Private _enableDiagnosticLogging As Boolean = False
@@ -1434,6 +1435,33 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Wie gross ein Gesicht mindestens sein muss, um aufgenommen zu werden - in
+        ''' Prozent der kuerzeren Bildkante.
+        '''
+        ''' Relativ und nicht in Bildpunkten: 80 Punkte sind auf einem 24-Megapixel-Foto ein Kopf in
+        ''' der dritten Reihe und auf einem Handyschnappschuss ein Portraet. Ab Werk 4, gemessen
+        ''' (siehe AppSettingsService). Auf 0 gestellt bleibt alles, was die Erkennung findet.</summary>
+        Public Property FaceMinimumSizePercent As Double
+            Get
+                Return _faceMinimumSizePercent
+            End Get
+            Set(value As Double)
+                Dim clean = Math.Max(0, Math.Min(25, Math.Round(value)))
+                If _faceMinimumSizePercent = clean Then Return
+                Me.RaiseAndSetIfChanged(_faceMinimumSizePercent, clean)
+                Me.RaisePropertyChanged(NameOf(FaceMinimumSizeText))
+                SaveFeatureSettings()
+            End Set
+        End Property
+
+        ''' <summary>Was am Regler steht - und bei 0 der Grund, warum dort keine Zahl steht.</summary>
+        Public ReadOnly Property FaceMinimumSizeText As String
+            Get
+                If _faceMinimumSizePercent <= 0 Then Return LocalizationService.T("alle")
+                Return $"{_faceMinimumSizePercent:0} %"
+            End Get
+        End Property
+
         ''' Aufnahmeorte auf einer Karte zeigen. AB WERK AUS - die Koordinaten liegen zwar laengst in
         ''' der Bibliothek, aber ein Kartenbild kommt von einem fremden Dienst, und jede Anfrage
         ''' verraet ihm, WO fotografiert wurde.
@@ -1714,7 +1742,12 @@ Namespace ViewModels
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
         Public ReadOnly Property RefreshThumbnailCacheCommand As ICommand
         Public ReadOnly Property DeleteThumbnailCacheFolderCommand As ICommand
+        Public ReadOnly Property DeleteFolderCatalogCommand As ICommand
+        Public ReadOnly Property DeleteFolderThumbnailsCommand As ICommand
+        Public ReadOnly Property DeleteFolderBothCommand As ICommand
+        Public ReadOnly Property DeleteAllCatalogCommand As ICommand
         Public ReadOnly Property DeleteAllThumbnailCacheCommand As ICommand
+        Public ReadOnly Property DeleteAllBothCommand As ICommand
         Public Property ThumbnailCacheFolders As ObservableCollection(Of ThumbnailCacheFolderInfo)
 
         ''' <summary>Was zugeklappt in der Kopfzeile steht. Ohne diese Zahl waere die zugeklappte
@@ -1722,7 +1755,7 @@ Namespace ViewModels
         Public ReadOnly Property ThumbnailCacheFolderCountText As String
             Get
                 Dim n = ThumbnailCacheFolders.Count
-                If n = 0 Then Return LocalizationService.T("Keine Ordner im Zwischenspeicher")
+                If n = 0 Then Return LocalizationService.T("Keine Ordner mit abgelegten Daten")
                 If n = 1 Then Return LocalizationService.T("1 Ordner")
                 Return String.Format(LocalizationService.T("{0} Ordner"), n)
             End Get
@@ -1731,14 +1764,15 @@ Namespace ViewModels
         Public ReadOnly Property ThumbnailCacheSummaryText As String
             Get
                 If _isThumbnailCacheRefreshing Then Return LocalizationService.T("Cache wird ermittelt…")
-                If ThumbnailCacheFolders Is Nothing OrElse ThumbnailCacheFolders.Count = 0 Then Return LocalizationService.T("Kein Vorschaubild-Cache vorhanden.")
+                If ThumbnailCacheFolders Is Nothing OrElse ThumbnailCacheFolders.Count = 0 Then Return LocalizationService.T("FerrumPix hat zu keinem Ordner Daten abgelegt.")
                 Dim count = ThumbnailCacheFolders.Sum(Function(i) i.ThumbnailCount)
                 Dim size = ThumbnailCacheFolders.Sum(Function(i) i.SizeBytes)
+                Dim katalog = ThumbnailCacheFolders.Sum(Function(i) i.CatalogCount)
                 ' Als EINE Zeichenkette mit Platzhaltern und nicht zusammengesetzt: die Reihenfolge
                 ' von Zahl und Wort ist nicht in jeder Sprache dieselbe.
-                Return String.Format(LocalizationService.T("{0} Ordner · {1} Bilder · {2}"),
+                Return String.Format(LocalizationService.T("{0} Ordner · {1} Vorschaubilder · {2} · {3} Katalogeinträge"),
                                      ThumbnailCacheFolders.Count.ToString("N0"),
-                                     count.ToString("N0"), FormatBytes(size))
+                                     count.ToString("N0"), FormatBytes(size), katalog.ToString("N0"))
             End Get
         End Property
 
@@ -1805,6 +1839,7 @@ Namespace ViewModels
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _faceRecognitionEnabled = _appSettings.FaceRecognitionEnabled
             _photoMapEnabled = _appSettings.PhotoMapEnabled
+            _faceMinimumSizePercent = _appSettings.FaceMinimumSizePercent
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
             _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
@@ -1859,6 +1894,9 @@ Namespace ViewModels
                                                                     String.Format(LocalizationService.T("{0} verwaiste Einträge entfernt."), removed))
                                                             End Sub)
             RefreshThumbnailCacheCommand = ReactiveCommand.Create(Sub() RefreshThumbnailCacheFolders())
+            DeleteFolderCatalogCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item) CleanFolder(item, catalog:=True, thumbnails:=False))
+            DeleteFolderThumbnailsCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item) CleanFolder(item, catalog:=False, thumbnails:=True))
+            DeleteFolderBothCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item) CleanFolder(item, catalog:=True, thumbnails:=True))
             DeleteThumbnailCacheFolderCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item)
                                                                                                        If item Is Nothing Then Return
                                                                                                        Dim removed = Services.ThumbnailCacheService.DeleteFolderCacheById(item.CacheId)
@@ -1868,14 +1906,9 @@ Namespace ViewModels
                                                                                                        RefreshThumbnailCacheFolders()
                                                                                                        _mainVm?.Gallery?.LoadCurrentFolder()
                                                                                                    End Sub)
-            DeleteAllThumbnailCacheCommand = ReactiveCommand.Create(Sub()
-                                                                        Dim removed = Services.ThumbnailCacheService.DeleteAllCaches()
-                                                                        ThumbnailCacheResultMessage = If(removed = 0,
-                                                                            "Kein Cache vorhanden.",
-                                                                            String.Format(LocalizationService.T("{0} Vorschaubilder gelöscht."), removed))
-                                                                        RefreshThumbnailCacheFolders()
-                                                                        _mainVm?.Gallery?.LoadCurrentFolder()
-                                                                    End Sub)
+            DeleteAllCatalogCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=True, thumbnails:=False))
+            DeleteAllThumbnailCacheCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=False, thumbnails:=True))
+            DeleteAllBothCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=True, thumbnails:=True))
             TestImmichConnectionCommand = ReactiveCommand.CreateFromTask(Function() TestImmichConnectionAsync())
             ClearImmichCacheCommand = ReactiveCommand.CreateFromTask(Function() ClearImmichCacheAsync())
             ApplyTheme(_themeMode, _accentColor)
@@ -2185,6 +2218,7 @@ Namespace ViewModels
             Dim faceWasOn = settings.FaceRecognitionEnabled
             settings.FaceRecognitionEnabled = _faceRecognitionEnabled
             settings.PhotoMapEnabled = _photoMapEnabled
+            settings.FaceMinimumSizePercent = _faceMinimumSizePercent
             AppSettingsService.Save(settings)
 
             ' AUSSCHALTEN WIRFT DIE MERKMALE WEG. Biometrische Merkmale entstehen nur auf
@@ -2308,6 +2342,109 @@ Namespace ViewModels
         ''' Ermittelt die Cache-Kennzahlen im Hintergrund. Beim ersten Mal - und immer, wenn seither
         ''' Vorschaubilder dazugekommen sind - muss ThumbnailCacheService dafür Dateien zählen; das darf
         ''' den Dialog nicht am Öffnen hindern.
+        ''' <summary>Raeumt einen Ordner auf - Katalogdaten, Vorschaubilder oder beides.
+        '''
+        ''' DREI WEGE, weil es zwei verschiedene Dinge sind. Vorschaubilder sind nur Rechenzeit: sie
+        ''' entstehen beim naechsten Ansehen von selbst wieder. Die Katalogdaten dagegen tragen
+        ''' Bewertung, Etikett, Stichworte und die gefundenen Gesichter - was davon nicht in einer
+        ''' Beistelldatei steht, ist danach weg. Beides unter einem Knopf zusammenzufassen hiesse,
+        ''' den teuren Fall im billigen zu verstecken.
+        '''
+        ''' Aus der Liste verschwindet ein Ordner erst, wenn NICHTS mehr da ist.</summary>
+        Private Sub CleanFolder(item As ThumbnailCacheFolderInfo, catalog As Boolean, thumbnails As Boolean)
+            If item Is Nothing Then Return
+            Dim teile As New List(Of String)()
+            Try
+                If thumbnails AndAlso Not String.IsNullOrEmpty(item.CacheId) Then
+                    Dim weg = Services.ThumbnailCacheService.DeleteFolderCacheById(item.CacheId)
+                    teile.Add(String.Format(LocalizationService.T("{0} Vorschaubilder"), weg))
+                End If
+                If catalog AndAlso Not String.IsNullOrEmpty(item.FolderPath) Then
+                    Dim weg = Services.LibraryService.Instance.DeleteFolderCatalogData(item.FolderPath)
+                    teile.Add(String.Format(LocalizationService.T("{0} Katalogeinträge"), weg))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.CleanFolder", ex)
+            End Try
+
+            ThumbnailCacheResultMessage = If(teile.Count = 0,
+                                             LocalizationService.T("Nichts zu entfernen."),
+                                             String.Join(", ", teile) & " " & LocalizationService.T("entfernt."))
+            RefreshThumbnailCacheFolders()
+            ' Die Personenwand liegt jetzt woanders: mit den Katalogdaten gehen auch Gesichter, und
+            ' eine Gruppe, deren Bilder es nicht mehr gibt, darf dort nicht stehenbleiben.
+            _mainVm?.People?.RefreshPeople()
+            _mainVm?.Gallery?.LoadCurrentFolder()
+        End Sub
+
+        ''' <summary>Dasselbe fuer alle Ordner auf einmal - mit Rueckfrage davor.
+        '''
+        ''' Die Rueckfrage steht hier und nicht bei der einzelnen Zeile, weil der Unterschied nicht
+        ''' im Wie liegt, sondern im Umfang: eine Zeile trifft einen Ordner, den man vor sich sieht,
+        ''' dieser Knopf den ganzen Bestand. Beim Verlust von Katalogdaten steht in der Frage, wie
+        ''' viele Zeilen betroffen sind - "alles" ist keine Zahl, mit der man abwaegen kann.
+        '''
+        ''' Der Fall "nur Vorschaubilder" wird ebenfalls gefragt, obwohl er harmlos ist: der Knopf
+        ''' liegt neben den beiden anderen, und eine Reihe, in der nur zwei von drei Knoepfen
+        ''' nachfragen, erzieht dazu, die Frage wegzuklicken.</summary>
+        Private Async Function CleanEverythingAsync(catalog As Boolean, thumbnails As Boolean) As Task
+            Dim titleText As String
+            Dim question As String
+            If catalog AndAlso thumbnails Then
+                titleText = "Alles entfernen"
+                question = "Katalogdaten und Vorschaubilder aller Ordner entfernen?"
+            ElseIf catalog Then
+                titleText = "Alle Katalogdaten entfernen"
+                question = "Katalogdaten aller Ordner entfernen?"
+            Else
+                titleText = "Alle Vorschaubilder löschen"
+                question = "Vorschaubilder aller Ordner löschen?"
+            End If
+
+            Dim detail As String
+            If catalog Then
+                Dim rows = 0
+                Try
+                    rows = Await Task.Run(Function() Services.LibraryService.Instance.GetCatalogFolderCounts().Values.Sum())
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Settings.CleanEverything.Count", ex)
+                End Try
+                detail = String.Format(LocalizationService.T("Betroffen sind {0} Katalogeinträge mit Bewertung, Etikett, Stichwörtern und gefundenen Personen. Die Bilddateien selbst bleiben unverändert. Was in einer Beistelldatei steht, kommt beim nächsten Einlesen zurück, alles andere ist weg."), rows)
+            Else
+                detail = LocalizationService.T("Die Vorschaubilder entstehen beim nächsten Ansehen von selbst wieder. Katalogdaten bleiben unberührt.")
+            End If
+
+            If _mainVm IsNot Nothing Then
+                Dim goAhead = Await _mainVm.ShowConfirmAsync(titleText,
+                                                             LocalizationService.T(question) & vbLf & vbLf & detail,
+                                                             "Entfernen", "Abbrechen")
+                If Not goAhead Then Return
+            End If
+
+            Dim teile As New List(Of String)()
+            Try
+                If thumbnails Then
+                    Dim weg = Await Task.Run(Function() Services.ThumbnailCacheService.DeleteAllCaches())
+                    teile.Add(String.Format(LocalizationService.T("{0} Vorschaubilder"), weg))
+                End If
+                If catalog Then
+                    Dim weg = Await Task.Run(Function() Services.LibraryService.Instance.DeleteAllCatalogData())
+                    teile.Add(String.Format(LocalizationService.T("{0} Katalogeinträge"), weg))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.CleanEverything", ex)
+            End Try
+
+            ThumbnailCacheResultMessage = If(teile.Count = 0,
+                                             LocalizationService.T("Nichts zu entfernen."),
+                                             String.Join(", ", teile) & " " & LocalizationService.T("entfernt."))
+            RefreshThumbnailCacheFolders()
+            ' Die Personenwand liegt jetzt woanders: mit den Katalogdaten gehen auch Gesichter, und
+            ' eine Gruppe, deren Bilder es nicht mehr gibt, darf dort nicht stehenbleiben.
+            _mainVm?.People?.RefreshPeople()
+            _mainVm?.Gallery?.LoadCurrentFolder()
+        End Function
+
         Public Async Sub RefreshThumbnailCacheFolders()
             ' Läuft schon eine Erhebung, wird die neue Anforderung vorgemerkt statt verworfen: sonst
             ' zeigte die Liste nach dem Löschen eines Ordners noch das Ergebnis von davor.
@@ -2323,8 +2460,31 @@ Namespace ViewModels
                 Do
                     _isThumbnailCacheRefreshQueued = False
                     Dim folders = Await Services.ThumbnailCacheService.GetFolderCachesAsync()
-                    ThumbnailCacheFolders.Clear()
+
+                    ' Die Katalogzahlen dazu - und Ordner, die NUR im Katalog stehen. Zum Aufraeumen
+                    ' gehoert beides, und eine Zeile verschwindet erst, wenn nichts mehr da ist.
+                    Dim katalog = Await Task.Run(Function() Services.LibraryService.Instance.GetCatalogFolderCounts())
+                    Dim bekannt As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
                     For Each item In folders
+                        If String.IsNullOrEmpty(item.FolderPath) Then Continue For
+                        bekannt.Add(item.FolderPath)
+                        Dim anzahl = 0
+                        katalog.TryGetValue(item.FolderPath, anzahl)
+                        item.CatalogCount = anzahl
+                    Next
+                    Dim nurKatalog = katalog.Where(Function(kv) Not bekannt.Contains(kv.Key)).
+                                             Select(Function(kv) New Services.ThumbnailCacheFolderInfo With {
+                                                 .CacheId = "",
+                                                 .FolderPath = kv.Key,
+                                                 .ThumbnailCount = 0,
+                                                 .SizeBytes = 0,
+                                                 .CatalogCount = kv.Value,
+                                                 .Exists = IO.Directory.Exists(kv.Key)})
+
+                    ThumbnailCacheFolders.Clear()
+                    For Each item In folders.Concat(nurKatalog).
+                                             Where(Function(f) f.HasAnything).
+                                             OrderBy(Function(f) f.DisplayName, StringComparer.OrdinalIgnoreCase)
                         ThumbnailCacheFolders.Add(item)
                     Next
                 Loop While _isThumbnailCacheRefreshQueued

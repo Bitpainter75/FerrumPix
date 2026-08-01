@@ -4,6 +4,7 @@ Imports Avalonia.Input
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Platform.Storage
+Imports FerrumPix.Models
 Imports FerrumPix.Services
 Imports System.Diagnostics
 Imports System.Linq
@@ -85,15 +86,32 @@ Namespace Views
             Dim button = TryCast(sender, Button)
             Dim targetName = TryCast(button?.Tag, String)
             If String.IsNullOrWhiteSpace(targetName) Then Return
+            ScrollSectionToTop(targetName)
+            e.Handled = True
+        End Sub
 
+        ''' <summary>Rollt einen Abschnitt an den oberen Rand.
+        '''
+        ''' Nicht nur fuer die Navigation links: wer in der Personenwand weit unten eine Kachel
+        ''' anklickt, bekommt danach eine viel KUERZERE Ansicht - die Rollposition bliebe stehen, und
+        ''' auf einmal steht dort der naechste Abschnitt. Deshalb rollt jeder Wechsel innerhalb der
+        ''' Personenverwaltung ebenfalls hierher.</summary>
+        Private Sub ScrollSectionToTop(sectionName As String)
             Dim sv = Me.FindControl(Of ScrollViewer)("SettingsScrollViewer")
-            Dim target = Me.FindControl(Of Control)(targetName)
+            Dim target = Me.FindControl(Of Control)(sectionName)
             If sv Is Nothing OrElse target Is Nothing Then Return
 
             Dim pt = Avalonia.VisualExtensions.TranslatePoint(target, New Avalonia.Point(0, 0), sv)
             If pt.HasValue Then
                 sv.Offset = New Avalonia.Vector(0, Math.Max(0, sv.Offset.Y + pt.Value.Y))
             End If
+        End Sub
+
+        ''' <summary>Fuehrt in die Personenverwaltung. Die liegt nicht mehr hier: in den
+        ''' Einstellungen legt man fest, WIE das Programm arbeitet, dort arbeitet man am Bestand.
+        ''' Der Knopf steht trotzdem hier, damit niemand suchen muss.</summary>
+        Private Sub OnManagePeopleClick(sender As Object, e As RoutedEventArgs)
+            TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)?.OpenPeople()
             e.Handled = True
         End Sub
 

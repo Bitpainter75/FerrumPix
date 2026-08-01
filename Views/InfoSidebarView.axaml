@@ -393,14 +393,23 @@
                                             <Image Source="{Binding Thumbnail}"
                                                    Stretch="UniformToFill"/>
                                         </Border>
-                                        <TextBox Grid.Column="1"
-                                                 Text="{Binding Name, Mode=OneWay}"
-                                                 PlaceholderText="Name eingeben"
-                                                 Classes="no-translate"
-                                                 VerticalAlignment="Center"
-                                                 LostFocus="OnPersonNameCommitted"
-                                                 KeyDown="OnPersonNameKeyDown"
-                                                 Tag="{Binding Id}"/>
+                                        <!-- MIT VORSCHLAGSLISTE, wie beim Stichwort: einen schon
+                                             vergebenen Namen von Hand nachzutippen ist die Stelle,
+                                             an der aus einer Person zwei werden - „Anna" und „anna"
+                                             sind für die Bibliothek zwei Menschen. Aus der Liste
+                                             gewählt trifft er zeichengenau, und genau daran hängt,
+                                             ob dieses Gesicht zur vorhandenen Person wandert. -->
+                                        <AutoCompleteBox Grid.Column="1"
+                                                         Text="{Binding Name, Mode=OneWay}"
+                                                         ItemsSource="{Binding DataContext.PersonNameSuggestions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                         FilterMode="Contains"
+                                                         MinimumPrefixLength="0"
+                                                         PlaceholderText="Name eingeben"
+                                                         Classes="no-translate"
+                                                         VerticalAlignment="Center"
+                                                         LostFocus="OnPersonNameCommitted"
+                                                         KeyDown="OnPersonNameKeyDown"
+                                                         Tag="{Binding Id}"/>
                                         <Button Grid.Column="2"
                                                 Classes="ghost"
                                                 Width="28" Height="28" Padding="0"

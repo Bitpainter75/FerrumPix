@@ -269,6 +269,27 @@ Namespace Services
         ''' darf das niemand ungefragt bekommen.</summary>
         Public Property PhotoMapEnabled As Boolean = False
 
+        ''' <summary>Wie gross ein Gesicht mindestens sein muss, um ueberhaupt aufgenommen zu werden -
+        ''' in Prozent der KUERZEREN Bildkante.
+        '''
+        ''' Relativ und nicht in Bildpunkten: 80 Punkte sind auf einem 24-Megapixel-Foto ein Kopf in
+        ''' der Menge und auf einem Handyschnappschuss ein Portraet. Die Prozentzahl meint dasselbe
+        ''' auf jedem Bild.
+        '''
+        ''' 0 heisst: keine zusaetzliche Grenze - dann gilt allein die absolute Untergrenze der
+        ''' Erkennung (FaceDetectionService.MinimumFaceSize), unter der es ohnehin keine Merkmale
+        ''' gibt. Wer auf einem Stadtfest nicht die dritte Reihe im Hintergrund in seiner
+        ''' Personenliste haben will, dreht hier hoch.
+        '''
+        ''' AB WERK 3, und der Regler geht nur bis 10. Gemessen an einem gewachsenen Bestand: bei 4
+        ''' Prozent hatte das kleinste noch behaltene Gesicht rund 100 bis 130 Punkte und lag damit
+        ''' klar ueber der absoluten Untergrenze - der Wert schneidet nach Geschmack und nicht vor
+        ''' Unbrauchbarem. 3 laesst etwas mehr stehen und liegt auf einem ueblichen Foto (kurze Kante
+        ''' 3000) immer noch bei 90 Punkten. Nach oben ist bei 10 Schluss: dort faellt schon rund die
+        ''' Haelfte aller gefundenen Gesichter weg, weiter zu drehen streicht Leute, die man haben
+        ''' will.</summary>
+        Public Property FaceMinimumSizePercent As Double = 3
+
         Public Property TransparencyBackgroundMode As String = "Checkerboard"
         Public Property TransparencyBackgroundColor As String = "#FFFFFFFF"
         Public Property LastBatchRenamePattern As String = "{name}_###"

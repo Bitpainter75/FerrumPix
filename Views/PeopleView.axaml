@@ -1,0 +1,315 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             x:Class="FerrumPix.Views.PeopleView"
+             x:DataType="vm:PeopleViewModel"
+             Classes="settings-view"
+             Background="{DynamicResource FP.Bg.Root}"
+             Focusable="True"
+             KeyDown="OnKeyDown">
+
+    <UserControl.Styles>
+        <!-- BEIDE Zeichen nur beim Zeigen, und beide deutlich. Über die Deckkraft und nicht über
+             IsVisible: der Platz bleibt belegt, die Kachel springt beim Zeigen also nicht.
+
+             Deutlich heißt hier: eigener dunkler Grund mit heller Kante. Ein Symbol ohne Grund
+             steht auf einem Gesichtsausschnitt mal auf Haut, mal auf Haar, mal auf hellem Himmel -
+             es war je nach Bild kaum zu sehen. Der Grund macht es auf jedem Ausschnitt gleich
+             lesbar, die Akzentfarbe zeigt, welches der beiden gerade unter dem Zeiger liegt. -->
+        <Style Selector="Panel.face-tile Button.tile-badge">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Background" Value="#D9151B21"/>
+            <Setter Property="BorderBrush" Value="#80FFFFFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="14"/>
+        </Style>
+        <Style Selector="Panel.face-tile:pointerover Button.tile-badge">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+        </Style>
+        <Style Selector="Panel.face-tile Button.tile-badge:pointerover">
+            <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+        <Style Selector="Panel.face-tile Button.tile-badge icons|SvgIcon">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- EIGENER BEREICH und kein Abschnitt der Einstellungen mehr: hier arbeitet man am Bestand,
+         wie beim Ordnen und Bewerten. In den Einstellungen legt man fest, WIE das Programm
+         arbeitet - das ist etwas anderes. Die zwei Schalter der Erkennung bleiben deshalb dort,
+         und ein Knopf oben rechts führt hin. -->
+    <Grid RowDefinitions="Auto,*,74">
+
+        <Border Grid.Row="0" Classes="section" Margin="24,20,24,0">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="14">
+                <Button Classes="ghost" Padding="10,7" VerticalAlignment="Center"
+                        Click="OnBackClick"
+                        ToolTip.Tip="Zurück zur Galerie">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
+                                   Width="16" Height="16"/>
+                </Button>
+                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="Personen verwalten" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding PeopleSummaryText}" Classes="no-translate"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="2" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                        Command="{Binding RefreshPeopleCommand}">Aktualisieren</Button>
+                <Button Grid.Column="3" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                        Command="{Binding OpenSettingsCommand}"
+                        ToolTip.Tip="Erkennung ein- oder ausschalten und die kleinste erkannte Person festlegen">Einstellungen</Button>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" Name="PeopleScrollViewer" Padding="24,16,24,24">
+            <StackPanel Spacing="16" x:Name="PeopleContent">
+
+                <!-- Ohne eingeschaltete Erkennung gibt es nichts aufzuräumen. Der Hinweis sagt, wo
+                     der Schalter steht, statt eine leere Wand zu zeigen. -->
+                <Border Classes="section" IsVisible="{Binding !HasPeopleFeature}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Die Personenerkennung ist ausgeschaltet."
+                                   FontSize="{DynamicResource FP.Font.Body}"/>
+                        <TextBlock Text="In den Einstellungen unter „Personen“ einschalten, danach einen Ordner durchsuchen lassen. Alles rechnet auf diesem Gerät."
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <Button Classes="ghost" Padding="12,7" HorizontalAlignment="Left"
+                                Command="{Binding OpenSettingsCommand}">Zu den Einstellungen</Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Übersicht: eine Wand aus Gesichtern. Kacheln und keine Liste - eine Person
+                     erkennt man am Gesicht, nicht an einer Zeile. -->
+                <Border Classes="section" IsVisible="{Binding IsPeopleOverview}"
+                        IsEnabled="{Binding HasPeopleFeature}">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="Ein Klick öffnet eine Gruppe. Dort steht jedes Gesicht einzeln, und was nicht dazugehört, lässt sich herauslösen, ohne die anderen Bilder anzufassen."
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                        <ItemsControl ItemsSource="{Binding People}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type models:PersonListEntry}">
+                                    <Button Classes="ghost" Padding="8" Margin="0,0,10,10"
+                                            Click="OnPersonCardClick">
+                                        <StackPanel Width="104" Spacing="6">
+                                            <!-- Rund, weil es ein Gesicht ist. Der Rahmen bleibt
+                                                 sichtbar, solange das Bild noch nicht da ist -
+                                                 eine Lücke sähe nach einem Fehler aus. -->
+                                            <Border Width="88" Height="88" CornerRadius="44"
+                                                    ClipToBounds="True" HorizontalAlignment="Center"
+                                                    Background="{DynamicResource FP.Bg.Elevated}"
+                                                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                    BorderThickness="1">
+                                                <Image Source="{Binding Cover}" Stretch="UniformToFill"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding DisplayName}" Classes="no-translate"
+                                                       HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                            <TextBlock Text="{Binding CountText}" Classes="no-translate"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="Noch keine Personen erkannt"
+                                   IsVisible="{Binding !People.Count}"
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <!-- Geblättert wird wegen der BILDER: jede Kachel braucht ein Gesicht aus
+                             einer anderen Datei, und dreihundert Dateien für eine Wand, von der
+                             man zwanzig ansieht, wäre Arbeit für nichts. Die Leiste erscheint
+                             nur, wenn es überhaupt mehr als eine Seite gibt. -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" IsVisible="{Binding HasPeoplePaging}">
+                            <Button Classes="ghost" Padding="12,7"
+                                    IsEnabled="{Binding CanPeoplePageBack}"
+                                    Tag="PeopleBack" Click="OnPeoplePageClick">Zurück</Button>
+                            <TextBlock Grid.Column="1" Text="{Binding PeoplePageText}" Classes="no-translate"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                            <Button Grid.Column="2" Classes="ghost" Padding="12,7"
+                                    IsEnabled="{Binding CanPeoplePageForward}"
+                                    Tag="PeopleForward" Click="OnPeoplePageClick">Weiter</Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Eine geöffnete Gruppe -->
+                <Border Classes="section" IsVisible="{Binding IsPersonOpen}">
+                    <StackPanel Spacing="14">
+                        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="14">
+                            <Button Classes="ghost" Padding="10,7" VerticalAlignment="Center"
+                                    Click="OnClosePersonClick"
+                                    ToolTip.Tip="Zurück zur Übersicht">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
+                                               Width="16" Height="16"/>
+                            </Button>
+                            <Border Grid.Column="1" Width="72" Height="72" CornerRadius="36"
+                                    ClipToBounds="True"
+                                    Background="{DynamicResource FP.Bg.Elevated}"
+                                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                                    BorderThickness="1">
+                                <Image Source="{Binding SelectedPerson.Cover}" Stretch="UniformToFill"/>
+                            </Border>
+                            <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
+                                <!-- Der Name gehört dem Benutzer: hier änderbar, und ein Name,
+                                     den es schon gibt, führt die beiden Gruppen zusammen.
+
+                                     MIT VORSCHLAGSLISTE, wie beim Stichwort: einen vorhandenen
+                                     Namen ein zweites Mal zu tippen ist die Stelle, an der aus
+                                     einer Person zwei werden - „Anna" und „anna" sind für die
+                                     Bibliothek zwei Menschen. Aus der Liste gewählt trifft er
+                                     zeichengenau, und genau daran hängt das Verschmelzen. -->
+                                <AutoCompleteBox Name="PersonNameBox"
+                                                 Text="{Binding SelectedPersonName, Mode=OneWay}"
+                                                 ItemsSource="{Binding PersonNameSuggestions}"
+                                                 FilterMode="Contains"
+                                                 MinimumPrefixLength="0"
+                                                 PlaceholderText="Name eingeben"
+                                                 Classes="no-translate"
+                                                 LostFocus="OnPersonNameCommitted"
+                                                 KeyDown="OnPersonNameKeyDown"/>
+                                <TextBlock Text="{Binding SelectedPerson.CountText}" Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Gehört jemand nicht dazu, löst der Knopf an der Kachel genau dieses Gesicht heraus. Andere Bilder bleiben unberührt."
+                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                   FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                        <ItemsControl ItemsSource="{Binding SelectedPersonFaces}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type models:PersonFaceEntry}">
+                                    <Panel Classes="face-tile" Margin="0,0,10,10">
+                                        <Border Width="84" Height="84" CornerRadius="6"
+                                                ClipToBounds="True"
+                                                Background="{DynamicResource FP.Bg.Elevated}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1">
+                                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill"/>
+                                        </Border>
+                                        <!-- BEIDE Zeichen sitzen AUF der Kachel: sie gehören zu
+                                             diesem einen Gesicht, und daneben wäre nicht zu sehen,
+                                             zu welchem. Sichtbar erst beim Zeigen - dauerhaft wären
+                                             es zwei Symbole auf jeder Kachel und damit Unruhe in
+                                             einer Wand, die vom Bild leben soll. -->
+                                        <Button Classes="ghost tile-badge" Width="28" Height="28" Padding="0"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                Margin="0,3,3,0"
+                                                Click="OnDetachPersonFaceClick"
+                                                Tag="{Binding FaceId}"
+                                                ToolTip.Tip="Nicht diese Person">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/user-x.svg"
+                                                           Width="16" Height="16"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <!-- Das Auge erscheint ERST BEIM ZEIGEN. Ein Ausschnitt von
+                                             84 Punkten sagt, wer zu sehen ist, aber nicht, aus
+                                             welchem Bild er stammt - und genau das ist die Frage,
+                                             wenn man eine Gruppe durchgeht. Dauerhaft sichtbar wäre
+                                             es ein zweites Zeichen auf jeder Kachel und damit
+                                             Unruhe in einer Wand, die vom Bild leben soll. -->
+                                        <Button Classes="ghost tile-badge" Width="28" Height="28" Padding="0"
+                                                HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                Margin="3,3,0,0"
+                                                Click="OnPreviewFaceClick"
+                                                ToolTip.Tip="Das ganze Bild ansehen">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                                           Width="16" Height="16"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                    </Panel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Grid ColumnDefinitions="Auto,*,Auto" IsVisible="{Binding HasFacePaging}">
+                            <Button Classes="ghost" Padding="12,7"
+                                    IsEnabled="{Binding CanFacePageBack}"
+                                    Tag="FaceBack" Click="OnPeoplePageClick">Zurück</Button>
+                            <TextBlock Grid.Column="1" Text="{Binding FacePageText}" Classes="no-translate"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                            <Button Grid.Column="2" Classes="ghost" Padding="12,7"
+                                    IsEnabled="{Binding CanFacePageForward}"
+                                    Tag="FaceForward" Click="OnPeoplePageClick">Weiter</Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Fußzeile wie in den Einstellungen: der Weg hinaus steht immer an derselben Stelle,
+             gleich beschriftet und gleich platziert. Ein Bereich, den man nur über einen Pfeil oben
+             links oder über Escape verlässt, ist eine Frage des Wissens.
+
+             KEIN „Abbrechen" daneben: hier wird nichts gesammelt und am Ende übernommen - jeder
+             Handgriff steht sofort in der Bibliothek. Ein Knopf, der ein Zurücknehmen verspricht,
+             das es nicht gibt, wäre schlimmer als keiner. -->
+        <Border Grid.Row="2" Background="{DynamicResource FP.Bg.Dark}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
+                Padding="16,0">
+            <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+                <TextBlock Text="Jede Änderung steht sofort in der Bibliothek."
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           FontSize="{DynamicResource FP.Font.Small}"/>
+                <Button Grid.Column="2" Classes="accent" Padding="18,8"
+                        Click="OnBackClick">Fertig</Button>
+            </Grid>
+        </Border>
+
+        <!-- Die Vorschau liegt ÜBER allem, auch über der Fußzeile, und schließt bei jedem Klick.
+             Sie ist ein Blick und kein Arbeitsplatz: wer das Bild wirklich bearbeiten will, geht
+             in den Betrachter. Deshalb kein Rahmen mit Knöpfen, sondern ein dunkler Grund, das
+             Bild und der Dateiname. -->
+        <Border Grid.Row="0" Grid.RowSpan="3"
+                IsVisible="{Binding IsPreviewOpen}"
+                Background="#E6000000"
+                PointerPressed="OnClosePreviewClick">
+            <Grid RowDefinitions="*,Auto" Margin="40,32">
+                <Image Source="{Binding PreviewImage}"
+                       Stretch="Uniform"
+                       StretchDirection="DownOnly"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="1" Spacing="4" Margin="0,16,0,0" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding PreviewTitle}" Classes="no-translate"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource FP.Text.Primary}"
+                               FontSize="{DynamicResource FP.Font.Body}"/>
+                    <TextBlock Text="Klicken zum Schließen"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Small}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

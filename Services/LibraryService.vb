@@ -31,6 +31,11 @@ Namespace Services
         ''' nicht den naechstgelegenen Ort ab 1000 Einwohnern.</summary>
         Public Property City As String = ""
         Public Property Country As String = ""
+
+        ''' <summary>Laenderkuerzel nach ISO 3166 - der Schluessel zur Uebersetzung des Landesnamens
+        ''' (siehe PlaceLookupService.LocalizedCountry). Leer bei Eintraegen, deren Ort aus der Datei
+        ''' selbst stammt oder die vor dieser Spalte eingelesen wurden.</summary>
+        Public Property CountryCode As String = ""
         Public Property ImageWidth As Integer?
         Public Property ImageHeight As Integer?
         Public Property FileCreatedAt As String = ""
@@ -194,7 +199,8 @@ Namespace Services
             ("ColorLabel", "TEXT"),
             ("ScannedSidecarModifiedAt", "TEXT"),
             ("City", "TEXT"),
-            ("Country", "TEXT")
+            ("Country", "TEXT"),
+            ("CountryCode", "TEXT")
         }
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
@@ -204,10 +210,22 @@ Namespace Services
             ("IsManual", "INTEGER NOT NULL DEFAULT 0")
         }
 
+        ''' <summary>Dasselbe fuer die Personentabelle. IsUnknownBin kennzeichnet die EINE Gruppe,
+        ''' in die herausgeloeste Gesichter wandern.</summary>
+        Private Shared ReadOnly PersonColumns As (Name As String, Sql As String)() = {
+            ("IsUnknownBin", "INTEGER NOT NULL DEFAULT 0")
+        }
+
         Private Shared Sub EnsureFaceColumns(conn As SqliteConnection)
+            AddMissingColumns(conn, "Face", FaceColumns)
+            AddMissingColumns(conn, "Person", PersonColumns)
+        End Sub
+
+        Private Shared Sub AddMissingColumns(conn As SqliteConnection, table As String,
+                                             columns As (Name As String, Sql As String)())
             Dim existing As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             Using cmd = conn.CreateCommand()
-                cmd.CommandText = "PRAGMA table_info(Face)"
+                cmd.CommandText = $"PRAGMA table_info({table})"
                 Using reader = cmd.ExecuteReader()
                     Dim nameOrdinal = reader.GetOrdinal("name")
                     While reader.Read()
@@ -216,10 +234,10 @@ Namespace Services
                 End Using
             End Using
 
-            For Each column In FaceColumns
+            For Each column In columns
                 If existing.Contains(column.Name) Then Continue For
                 Using cmd = conn.CreateCommand()
-                    cmd.CommandText = $"ALTER TABLE Face ADD COLUMN {column.Name} {column.Sql}"
+                    cmd.CommandText = $"ALTER TABLE {table} ADD COLUMN {column.Name} {column.Sql}"
                     cmd.ExecuteNonQuery()
                 End Using
             Next
@@ -715,8 +733,8 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
@@ -728,7 +746,8 @@ Namespace Services
                         "ScannedSidecarModifiedAt=excluded.ScannedSidecarModifiedAt, " &
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
-                        "HasIccProfile=excluded.HasIccProfile, City=excluded.City, Country=excluded.Country"
+                        "HasIccProfile=excluded.HasIccProfile, City=excluded.City, Country=excluded.Country, " &
+                        "CountryCode=excluded.CountryCode"
                     cmd.Parameters.AddWithValue("$p", filePath)
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
@@ -742,6 +761,7 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$gpsLon", NullableToDbValue(exif.GpsLongitude))
                     cmd.Parameters.AddWithValue("$city", If(exif.City, ""))
                     cmd.Parameters.AddWithValue("$country", If(exif.Country, ""))
+                    cmd.Parameters.AddWithValue("$countryCode", If(exif.CountryCode, ""))
                     cmd.Parameters.AddWithValue("$width", NullableToDbValue(exif.ImageWidth))
                     cmd.Parameters.AddWithValue("$height", NullableToDbValue(exif.ImageHeight))
                     cmd.Parameters.AddWithValue("$fileCreatedAt", fileCreatedAt)
@@ -764,7 +784,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -798,7 +818,8 @@ Namespace Services
                 .ColorLabel = If(reader.IsDBNull(27), "", reader.GetString(27)),
                 .ScannedSidecarModifiedAt = If(reader.IsDBNull(28), "", reader.GetString(28)),
                 .City = If(reader.IsDBNull(29), "", reader.GetString(29)),
-                .Country = If(reader.IsDBNull(30), "", reader.GetString(30))
+                .Country = If(reader.IsDBNull(30), "", reader.GetString(30)),
+                .CountryCode = If(reader.IsDBNull(31), "", reader.GetString(31))
             }
         End Function
 
@@ -995,6 +1016,117 @@ Namespace Services
         End Function
 
         ''' <summary>Entfernt Metadaten-Einträge, deren Bilddatei nicht mehr existiert. Gibt die Anzahl gelöschter Einträge zurück.</summary>
+        ''' <summary>Je Ordner die Zahl der Katalogzeilen - fuer die Aufraeumliste in den
+        ''' Einstellungen.
+        '''
+        ''' Gruppiert wird HIER und nicht in SQL: SQLite hat keine Funktion, die aus einem Pfad das
+        ''' Verzeichnis macht, und ein Ausdruck aus instr und substr waere unlesbar und nicht
+        ''' schneller. 13000 Zeilen einmal durchzugehen kostet nichts, und der Aufruf laeuft ohnehin
+        ''' im Hintergrund.</summary>
+        Public Function GetCatalogFolderCounts() As Dictionary(Of String, Integer)
+            Dim result As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT FilePath FROM ImageMeta"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                Dim ordner = Path.GetDirectoryName(reader.GetString(0))
+                                If String.IsNullOrEmpty(ordner) Then Continue While
+                                Dim anzahl = 0
+                                result.TryGetValue(ordner, anzahl)
+                                result(ordner) = anzahl + 1
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.GetCatalogFolderCounts", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Vergisst alles, was der Katalog ueber einen Ordner weiss: Aufnahmedaten,
+        ''' Ortsnamen, gefundene Gesichter und den Vermerk, dass er durchsucht wurde.
+        '''
+        ''' NICHT die Bilder - die Dateien bleiben unangetastet. Und nicht Bewertung, Favorit,
+        ''' Etikett oder Stichworte... doch, auch die: sie stehen in derselben Zeile. Deshalb ist das
+        ''' eine ausdrueckliche Handlung mit eigenem Knopf und keine Nebenwirkung von irgendetwas.
+        ''' Was in einer Beistelldatei liegt, kommt beim naechsten Einlesen zurueck.
+        '''
+        ''' Die GESICHTER muessen mit: sie zeigen ueber den Pfad auf Bilder, die der Katalog nicht
+        ''' mehr kennt. Bleiben sie stehen, zaehlen Personen weiter Bilder mit, die verschwunden
+        ''' sind. Gruppen, die dadurch leer und namenlos zurueckbleiben, verschwinden ebenfalls.</summary>
+        ''' <returns>Wie viele Katalogzeilen entfernt wurden.</returns>
+        Public Function DeleteFolderCatalogData(folderPath As String) As Integer
+            If String.IsNullOrWhiteSpace(folderPath) Then Return 0
+            Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
+                         Path.DirectorySeparatorChar & "%"
+            Dim removed = 0
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM Face WHERE FilePath LIKE $p"
+                        cmd.Parameters.AddWithValue("$p", prefix)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM ScannedImage WHERE FilePath LIKE $p"
+                        cmd.Parameters.AddWithValue("$p", prefix)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM ImageMeta WHERE FilePath LIKE $p"
+                        cmd.Parameters.AddWithValue("$p", prefix)
+                        removed = cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText =
+                            "DELETE FROM Person WHERE Name='' AND IsUnknownBin=0 " &
+                            "AND NOT EXISTS(SELECT 1 FROM Face WHERE Face.PersonId = Person.Id)"
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    tx.Commit()
+                End Using
+            End Using
+            Return removed
+        End Function
+
+        ''' <summary>Denselben Schnitt fuer den GANZEN Katalog. Nicht als Schleife ueber die
+        ''' Ordnerliste gebaut, sondern als ein Satz Loeschungen: die Liste zeigt nur, was gerade
+        ''' bekannt ist, und ein Ordner, dessen Bilder nicht mehr am Platz liegen, faellt aus ihr
+        ''' heraus - seine Zeilen blieben sonst zurueck. "Alles" soll auch alles heissen.
+        '''
+        ''' Personen fallen hier vollstaendig weg, auch benannte: ohne Gesichter zaehlt jede Gruppe
+        ''' null Bilder, und leere Gruppen sollen nirgends auftauchen.</summary>
+        ''' <returns>Wie viele Katalogzeilen entfernt wurden.</returns>
+        Public Function DeleteAllCatalogData() As Integer
+            Dim removed = 0
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using tx = conn.BeginTransaction()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM Face; DELETE FROM Person; DELETE FROM ScannedImage;"
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM ImageMeta"
+                        removed = cmd.ExecuteNonQuery()
+                    End Using
+                    tx.Commit()
+                End Using
+            End Using
+            Return removed
+        End Function
+
         Public Function PurgeOrphanedRecords() As Integer
             Dim orphans As New List(Of String)()
             Using conn = New SqliteConnection(_connectionString)
@@ -1022,6 +1154,21 @@ Namespace Services
                         transaction.Commit()
                     End Using
                 End If
+
+                ' Gruppen ohne ein einziges Gesicht. Sie entstehen im Betrieb: beim Verschmelzen
+                ' zweier Namen, beim Verschieben eines Gesichts, bei einem erneuten Durchlauf ueber
+                ' ein geaendertes Bild. Zurueck bleibt eine Person, die auf nichts mehr zeigt - in
+                ' der Personenwand eine Kachel ohne Bild und mit "0 Bilder".
+                '
+                ' Ein NAME bleibt trotzdem verschont: er ist Handarbeit, und wer gerade alle Bilder
+                ' einer benannten Person geloescht hat, will den Namen vielleicht behalten. Dieser
+                ' Fall wird in der Wand ausgeblendet, nicht geloescht.
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "DELETE FROM Person WHERE Name='' AND IsUnknownBin=0 " &
+                        "AND NOT EXISTS(SELECT 1 FROM Face WHERE Face.PersonId = Person.Id)"
+                    orphans.AddRange(Enumerable.Repeat("", cmd.ExecuteNonQuery()))
+                End Using
             End Using
             Return orphans.Count
         End Function

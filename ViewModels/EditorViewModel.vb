@@ -924,6 +924,10 @@ Namespace ViewModels
         ''' Gezeigt und berichtigt wird deshalb in allen dreien dasselbe.</summary>
         Public ReadOnly Property People As New ObservableCollection(Of PersonFaceEntry)() Implements IInfoSidebarPanel.People
 
+        ''' <summary>Die schon vergebenen Namen fuer die Vorschlagsliste am Namensfeld. Denselben
+        ''' Namen ein zweites Mal zu tippen macht aus einer Person zwei.</summary>
+        Public ReadOnly Property PersonNameSuggestions As New ObservableCollection(Of String)() Implements IInfoSidebarPanel.PersonNameSuggestions
+
         Public ReadOnly Property HasPeople As Boolean Implements IInfoSidebarPanel.HasPeople
             Get
                 Return People.Count > 0
@@ -936,6 +940,7 @@ Namespace ViewModels
         Private Sub LoadPeople(imagePath As String)
             People.Clear()
             Dim entries = FacePanelService.BuildEntries(imagePath)
+            FacePanelService.FillNameSuggestions(PersonNameSuggestions)
             For Each entry In entries
                 People.Add(entry)
             Next
@@ -11532,12 +11537,17 @@ Namespace ViewModels
         ''' welcher Knopf wo sitzt. Der Text sagt, was passiert, nicht was gerade ist.
         '''
         ''' Uebersetzt wird hier, nicht im Baumdurchlauf: der Text kommt aus einer Bindung, und der
-        ''' Durchlauf wuerde sie beim Zuweisen loeschen.</summary>
+        ''' Durchlauf wuerde sie beim Zuweisen loeschen.
+        '''
+        ''' BEIDE SEITEN STEHEN DRIN. "In eine Maske umwandeln" allein las sich im Maskenwerkzeug
+        ''' falsch herum: dort erwartet man eine Maske, und der Knopf schien anzubieten, was schon da
+        ''' ist. Mit der Ausgangsart davor ist in jedem Werkzeug zu sehen, WAS gerade vorliegt und
+        ''' was daraus wird - und die Beschriftung kann in keinem Zustand mehr verkehrt wirken.</summary>
         Public ReadOnly Property ConvertKindText As String
             Get
                 Return If(_activeSelectionIsMask,
-                          LocalizationService.T("In eine Auswahl umwandeln"),
-                          LocalizationService.T("In eine Maske umwandeln"))
+                          LocalizationService.T("Maske in eine Auswahl umwandeln"),
+                          LocalizationService.T("Auswahl in eine Maske umwandeln"))
             End Get
         End Property
 
