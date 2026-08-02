@@ -245,8 +245,22 @@ Namespace Services
                 textBlock.Text = TranslateRemembered(textBlock.Text, merker.Text)
             End If
 
+            ' VORLAGENTEILE BLEIBEN UNANGETASTET. Ein ContentControl mit gesetztem TemplatedParent
+            ' stammt aus der Vorlage eines anderen Steuerelements, und sein Inhalt haengt dort an
+            ' einer Vorlagenbindung. Ein Zuweisen bricht diese Bindung - das Steuerelement zeigt
+            ' danach fuer immer den Wert, den es beim Uebersetzen zufaellig hatte.
+            '
+            ' BEFUND: die Anzeigeflaeche einer ComboBox ist genau so ein Teil (Inhalt an
+            ' SelectionBoxItem). Beim BEARBEITEN einer Suchliste stehen die Bedingungszeilen schon,
+            ' wenn der Dialog uebersetzt wird - danach liess sich der Operator zwar waehlen und kam
+            ' auch im Modell an, die Auswahl zeigte aber weiter den alten Wert. Bei der NEUANLAGE
+            ' entstehen die Zeilen erst NACH dem Durchlauf, deshalb ging es dort.
+            '
+            ' Selbst geschriebene Inhalte (ein Knopf mit Text im XAML) haben keinen TemplatedParent
+            ' und werden weiter uebersetzt.
             Dim content = TryCast(node, ContentControl)
-            If content IsNot Nothing AndAlso TypeOf content.Content Is String Then
+            If content IsNot Nothing AndAlso content.TemplatedParent Is Nothing AndAlso
+               TypeOf content.Content Is String Then
                 content.Content = TranslateRemembered(CStr(content.Content), merker.Inhalt)
             End If
 

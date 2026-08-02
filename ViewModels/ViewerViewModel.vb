@@ -138,8 +138,9 @@ Namespace ViewModels
         Public Sub RenamePerson(personId As String, newName As String, faceId As String) Implements IInfoSidebarPanel.RenamePerson
             If String.IsNullOrWhiteSpace(personId) Then Return
             Try
-                LibraryService.Instance.ApplyPersonName(personId, newName, faceId)
-                LoadPeople(_currentImagePath)
+                ' NUR bei einer echten Aenderung neu aufbauen - siehe InfoPanelViewModel.RenamePerson.
+                If LibraryService.Instance.ApplyPersonName(personId, newName, faceId) <>
+                   LibraryService.PersonNameOutcome.Unchanged Then LoadPeople(_currentImagePath)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Viewer.RenamePerson", ex)
             End Try

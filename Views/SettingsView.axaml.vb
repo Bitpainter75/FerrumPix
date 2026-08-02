@@ -15,6 +15,14 @@ Namespace Views
     Public Class SettingsView
         Inherits UserControl
 
+        ''' <summary>Beim Erscheinen den Fokus holen, sonst ist Escape tot - dieselbe Falle wie in
+        ''' der Personenverwaltung: ein KeyDown an einer Ansicht laeuft nur, wenn der Fokus in ihrem
+        ''' Teilbaum sitzt. Geoeffnet wird von einem Knopf ausserhalb, und dort blieb er auch.
+        ''' Ueber den Dispatcher, weil beim Anhaengen das Layout noch nicht steht.</summary>
+        Private Sub OnAttachedFocus(sender As Object, e As EventArgs)
+            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.Focus())
+        End Sub
+
         ''' <summary>Ein Flyout entsteht erst beim Oeffnen aus seinem Template und ist beim
         ''' einmaligen Durchlauf ueber das Fenster noch nicht da. Ohne diesen Einstieg bleibt sein
         ''' Inhalt in der Ausgangssprache stehen, waehrend die uebrige Oberflaeche umgeschaltet
@@ -26,6 +34,7 @@ Namespace Views
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            AddHandler Me.AttachedToVisualTree, AddressOf OnAttachedFocus
             ' Ausklappliste nie schmaler als der Knopf (siehe FlyoutHelpers).
             MatchFlyoutWidthToButton(Me.FindControl(Of Button)("ScaleScreenDropDownButton"))
             AddHandler Loaded, AddressOf HandleLoaded

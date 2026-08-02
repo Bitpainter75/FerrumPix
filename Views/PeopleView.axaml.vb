@@ -14,6 +14,21 @@ Namespace Views
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            AddHandler Me.AttachedToVisualTree, AddressOf OnAttachedFocus
+        End Sub
+
+        ''' <summary>Beim Erscheinen den Fokus holen, sonst ist Escape tot.
+        '''
+        ''' Ein KeyDown an einer Ansicht laeuft nur, wenn der Fokus in ihrem Teilbaum sitzt. Der
+        ''' Bereich wird aber ueber einen Knopf in der Galerie geoeffnet - der Fokus bleibt dort, und
+        ''' Escape kam hier nie an. Es half nur, vorher irgendwohin zu klicken, und genau so
+        ''' willkuerlich fuehlte es sich an (dieselbe Falle wie nach einem Overlay-Dialog, siehe
+        ''' MainWindow.RestoreFocusAfterDialog).
+        '''
+        ''' Ueber den Dispatcher und nicht sofort: beim Anhaengen steht das Layout noch nicht, und
+        ''' ein Fokus auf ein Element ohne Flaeche verpufft.</summary>
+        Private Sub OnAttachedFocus(sender As Object, e As EventArgs)
+            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.Focus())
         End Sub
 
         ''' <summary>Zurueck an den Anfang. Nach jedem Wechsel - Gruppe auf, Gruppe zu, Seite
@@ -102,8 +117,16 @@ Namespace Views
         '''
         ''' Ein vorhandener Name fuehrt die beiden Gruppen zusammen; das entscheidet die Bibliothek,
         ''' nicht die Ansicht.</summary>
+        ''' <summary>NICHT uebernehmen, solange die Vorschlagsliste offen steht: ein Klick auf einen
+        ''' Vorschlag nimmt dem Feld zuerst den Fokus, und ohne diese Sperre liefe die Uebernahme mit
+        ''' dem Text von VOR dem Klick. Wer "Chr" tippt und "Christina" anklickt, benennt die Gruppe
+        ''' sonst "Chr". Dieselbe Sperre steht in der Infoleiste, dort ausfuehrlich begruendet.</summary>
         Private Sub OnPersonNameCommitted(sender As Object, e As RoutedEventArgs)
-            CommitPersonName(TryCast(sender, AutoCompleteBox))
+            Dim box = TryCast(sender, AutoCompleteBox)
+            If box Is Nothing Then Return
+            ' EINEN DURCHLAUF SPAETER - siehe InfoSidebarView, dort ausfuehrlich begruendet: der
+            ' Klick auf einen Vorschlag traegt seinen Text erst NACH dem Fokusverlust ein.
+            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() CommitPersonName(box))
         End Sub
 
         ''' <summary>Die Eingabetaste uebernimmt. Steht die Vorschlagsliste offen, hat der Rahmen

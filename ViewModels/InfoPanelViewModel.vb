@@ -321,8 +321,14 @@ Namespace ViewModels
         Public Sub RenamePerson(personId As String, newName As String, faceId As String) Implements IInfoSidebarPanel.RenamePerson
             If String.IsNullOrWhiteSpace(personId) Then Return
             Try
-                LibraryService.Instance.ApplyPersonName(personId, newName, faceId)
-                LoadPeople()
+                ' NUR bei einer echten Aenderung neu aufbauen. Der Neuaufbau wirft die Gesichtszeilen
+                ' weg und legt sie neu an - stand dabei eine Vorschlagsliste offen, verschwand sie
+                ' mitsamt ihrem Feld, bevor der Klick ankam.
+                ' NUR bei einer echten Aenderung neu aufbauen. Der Neuaufbau wirft die Gesichtszeilen
+                ' weg und legt sie neu an - stand dabei eine Vorschlagsliste offen, verschwand sie
+                ' mitsamt ihrem Feld, bevor der Klick ankam.
+                If LibraryService.Instance.ApplyPersonName(personId, newName, faceId) <>
+                   LibraryService.PersonNameOutcome.Unchanged Then LoadPeople()
             Catch ex As Exception
                 DiagnosticLogService.LogException("InfoPanel.RenamePerson", ex)
             End Try
