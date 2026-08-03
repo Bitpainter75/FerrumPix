@@ -6107,8 +6107,8 @@
   <data name="Grafikkarte_f_r_gelernte_Modelle_nutzen_100a84ba" xml:space="preserve">
     <value>Grafikkarte für gelernte Modelle nutzen</value>
   </data>
-  <data name="L_sst_Entrauschen_Objektauswahl_und_Tiefenkarte__49e3db07" xml:space="preserve">
-    <value>Lässt Entrauschen, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind.</value>
+  <data name="L_sst_Entrauschen_Hochskalieren_Objektauswahl_un_2438f0d5" xml:space="preserve">
+    <value>Lässt Entrauschen, Hochskalieren, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind.</value>
   </data>
   <data name="Verwendete_Grafikkarte_5f0a8ad8" xml:space="preserve">
     <value>Verwendete Grafikkarte</value>
@@ -6167,16 +6167,91 @@
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Rechnet gelernte Modelle auf der Grafikkarte</value>
   </data>
-  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
-    <value>Entrauschen: dosiert</value>
+  <data name="Vierfach_gr_ndlich_55df273f" xml:space="preserve">
+    <value>Vierfach, gründlich</value>
   </data>
-  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
-    <value>Der Stärke-Regler sagt hier dem Modell, wie stark das Rauschen ist, statt sein Ergebnis hinterher zurückzumischen. Deutlich schneller als der gründliche Weg.</value>
+  <data name="Zweifach_gr_ndlich_b2a2773e" xml:space="preserve">
+    <value>Zweifach, gründlich</value>
   </data>
-  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
-    <value>Der Stärke-Regler geht in das Modell hinein, statt sein Ergebnis zurückzumischen</value>
+  <data name="Vierfach_z_gig_67b9c460" xml:space="preserve">
+    <value>Vierfach, zügig</value>
   </data>
-  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
-    <value>Entrauschen dosiert</value>
+  <data name="Vierfach_f_r_Zeichnungen_55b4a514" xml:space="preserve">
+    <value>Vierfach, für Zeichnungen</value>
+  </data>
+  <data name="Das_genaueste_f_r_Fotos_Auf_einer_Grafikkarte_gu_28d5f237" xml:space="preserve">
+    <value>Das genaueste für Fotos. Auf einer Grafikkarte gut eine Minute je Foto, auf dem Prozessor mehrere.</value>
+  </data>
+  <data name="Dasselbe_f_r_die_doppelte_Gr_e_Deutlich_schnelle_bfb781c3" xml:space="preserve">
+    <value>Dasselbe für die doppelte Größe. Deutlich schneller als vierfach, weil viermal weniger Fläche entsteht.</value>
+  </data>
+  <data name="F_r_Gezeichnetes_statt_Fotografiertes_h_lt_Fl_ch_3ce48c60" xml:space="preserve">
+    <value>Für Gezeichnetes statt Fotografiertes: hält Flächen glatt und Linien scharf. An einem Foto wirkt es wachsartig.</value>
+  </data>
+  <data name="Vergr_ert_jedes_Bild_mit_einem_gelernten_Modell__162874ac" xml:space="preserve">
+    <value>Vergrößert jedes Bild mit einem gelernten Modell, statt seine Bildpunkte nur zu mitteln. Das kostet Sekunden bis Minuten je Bild.</value>
+  </data>
+  <data name="Wird_abgebrochen_682a363b" xml:space="preserve">
+    <value>Wird abgebrochen…</value>
+  </data>
+  <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
+    <value>Entrauschen abgebrochen - das Bild ist unverändert</value>
+  </data>
+  <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
+    <value>Entfernen abgebrochen - das Bild ist unverändert</value>
+  </data>
+  <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
+    <value>Anwenden abgebrochen - das Bild ist unverändert</value>
+  </data>
+  <data name="Abbrechen_Esc_Das_Entrauschen_steigt_an_der_n_ch_3adced7f" xml:space="preserve">
+    <value>Abbrechen (Esc). Das Entrauschen steigt an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.</value>
+  </data>
+  <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
+    <value>Hochskalieren mit Modell</value>
+  </data>
+  <data name="Hochskalieren_4a8ec201" xml:space="preserve">
+    <value>Hochskalieren</value>
+  </data>
+  <data name="Hochskalieren_schnell_3d45a8ca" xml:space="preserve">
+    <value>Hochskalieren schnell</value>
+  </data>
+  <data name="Hochskalieren_Zeichnung_f97a0888" xml:space="preserve">
+    <value>Hochskalieren Zeichnung</value>
+  </data>
+  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_c60382bd" xml:space="preserve">
+    <value>Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte</value>
+  </data>
+  <data name="Derselbe_Zweck_in_einem_Sechzehntel_der_Zeit_die_7790d26f" xml:space="preserve">
+    <value>Derselbe Zweck in einem Sechzehntel der Zeit - die Wahl ohne Grafikkarte</value>
+  </data>
+  <data name="F_r_Gezeichnetes_statt_Fotografiertes_glatte_Fl__ee30cb59" xml:space="preserve">
+    <value>Für Gezeichnetes statt Fotografiertes: glatte Flächen, scharfe Linien</value>
+  </data>
+  <data name="Vierfach_z_gig_Korn_bleibt_df6a66a9" xml:space="preserve">
+    <value>Vierfach, zügig, Korn bleibt</value>
+  </data>
+  <data name="Ein_sehr_kleines_Modell_auf_dem_Prozessor_sechze_8c4649ba" xml:space="preserve">
+    <value>Ein sehr kleines Modell: auf dem Prozessor sechzehnmal schneller als der gründliche Weg, dafür etwas weniger Zeichnung. Es nimmt dabei auch Rauschen mit heraus. Ohne Grafikkarte die richtige Wahl.</value>
+  </data>
+  <data name="Dasselbe_kleine_Modell_in_der_Fassung_die_das_Ko_3dd41e34" xml:space="preserve">
+    <value>Dasselbe kleine Modell in der Fassung, die das Korn STEHEN lässt. Für Aufnahmen, deren Körnung zum Bild gehört und nicht mit weggerechnet werden soll.</value>
+  </data>
+  <data name="Vierfach_f_r_Aufnahmen_aus_dem_Netz_1f6cc571" xml:space="preserve">
+    <value>Vierfach, für Aufnahmen aus dem Netz</value>
+  </data>
+  <data name="Auf_Fotos_trainiert_die_schon_einmal_durch_eine__c3cba7aa" xml:space="preserve">
+    <value>Auf Fotos trainiert, die schon einmal durch eine JPEG-Kompression gegangen sind - es rechnet deren Artefakte und leichte Unschärfe mit heraus. Für Bilder aus dem Netz oder aus alten Sicherungen.</value>
+  </data>
+  <data name="Vierfach_f_r_Zeichnungen_zweite_Wahl_c78c29b1" xml:space="preserve">
+    <value>Vierfach, für Zeichnungen, zweite Wahl</value>
+  </data>
+  <data name="Derselbe_Zweck_aber_auf_Einzelbildern_moderner_A_99c07c07" xml:space="preserve">
+    <value>Derselbe Zweck, aber auf Einzelbildern moderner Animationsfilme trainiert statt auf Zeichnungen allgemein. Welches der beiden besser trifft, hängt an der Vorlage.</value>
+  </data>
+  <data name="Vierfach_zur_ckhaltend_945f57bf" xml:space="preserve">
+    <value>Vierfach, zurückhaltend</value>
+  </data>
+  <data name="Auf_ber_84000_unbesch_digten_Fotos_trainiert_ohn_7a563d0c" xml:space="preserve">
+    <value>Auf über 84000 unbeschädigten Fotos trainiert, ohne künstlich verschlechterte Vorlagen. Es erfindet weniger dazu als die übrigen - für Aufnahmen, die schon gut sind.</value>
   </data>
 </root>

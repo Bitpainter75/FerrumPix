@@ -307,8 +307,18 @@ Namespace Views
         End Function
 
         Private Sub OnFooterMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
+            ' Waehrend eines laufenden Vorgangs bleibt das Menue zu. Die Leisten und die Fusszeile
+            ' sind ueber IsInteractionAllowed gesperrt, dieses Menue haengt aber am Wurzelraster und
+            ' liesse sich per Rechtsklick trotzdem oeffnen - und es traegt dieselben Eintraege wie
+            ' die Fusszeile, also auch solche, die dem gerade neu geschriebenen Bild in die Quere
+            ' kaemen. Geschlossen statt ausgegraut: ein Menue, in dem nichts geht, ist nur im Weg.
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm IsNot Nothing AndAlso Not vm.IsInteractionAllowed Then
+                TryCast(sender, ContextMenu)?.Close()
+                Return
+            End If
             SetClipboardHook()
-            TryCast(DataContext, EditorViewModel)?.RefreshContextActions()
+            vm?.RefreshContextActions()
         End Sub
 
         Private Sub SetZoom(sliderValue As Double)
@@ -5529,7 +5539,12 @@ Namespace Views
                             e.Handled = True
                         End If
                     Case Key.Escape
-                        If vm.IsPickingColorFromImage Then
+                        If vm.CanCancelBusy Then
+                            ' Laeuft gerade ein Modelldurchlauf, meint Esc IHN - und nichts anderes.
+                            ' Vor dieser Zeile verliess Esc waehrend eines minutenlangen Entrauschens
+                            ' den Editor, waehrend im Hintergrund weitergerechnet wurde.
+                            vm.RequestBusyCancel()
+                        ElseIf vm.IsPickingColorFromImage Then
                             vm.CancelColorPick()
                         ElseIf _isSelectionDragging OrElse _isLassoDrawing OrElse _isSelectionMoveDragging Then
                             ' Ein laufendes Aufziehen/Ziehen abbrechen, ohne es zu übernehmen - vorher

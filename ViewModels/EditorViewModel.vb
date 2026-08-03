@@ -560,7 +560,7 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Umgekehrt, fuer die Bedienbarkeit ganzer Panelbereiche.</summary>
-        Public ReadOnly Property BedienbarWaehrendArbeit As Boolean
+        Public ReadOnly Property IsInteractionAllowed As Boolean
             Get
                 Return Not _showsBusy
             End Get
@@ -572,6 +572,59 @@ Namespace ViewModels
                 Return LocalizationService.T("Wird berechnet…")
             End Get
         End Property
+
+        ' ── Abbrechen eines langen Vorgangs ─────────────────────────────────────
+        '
+        ' Nur die MODELLWEGE sind abbrechbar, und nur sie brauchen es: sie laufen Minuten. Ein
+        ' Einbacken von Strichen ist nach Sekundenbruchteilen vorbei, dort waere ein Abbruch-Knopf
+        ' eine Schaltflaeche, die niemand trifft.
+        Private _busyCancellation As Threading.CancellationTokenSource
+
+        ''' <summary>Laesst sich das, was gerade laeuft, abbrechen? Steuert das X in der
+        ''' Warte-Anzeige und die Esc-Taste.</summary>
+        Public ReadOnly Property CanCancelBusy As Boolean
+            Get
+                Return _busyCancellation IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Den laufenden Vorgang abbrechen. Wirkt NICHT sofort: das Entrauschen steigt an
+        ''' der naechsten Kachelgrenze aus, das Entfernen erst nach seinem Modelldurchlauf. Deshalb
+        ''' sagt die Anzeige danach "wird abgebrochen" und nicht einfach nichts mehr - sonst haelt
+        ''' man den Knopf fuer kaputt und drueckt weiter.</summary>
+        Public Sub RequestBusyCancel()
+            If _busyCancellation Is Nothing Then Return
+            Try
+                _busyCancellation.Cancel()
+            Catch ex As ObjectDisposedException
+                ' Der Vorgang war in derselben Sekunde fertig - dann gibt es nichts abzubrechen.
+                Return
+            End Try
+            SetBusyReason(LocalizationService.T("Wird abgebrochen…"))
+        End Sub
+
+        ''' <summary>Beginn eines abbrechbaren Vorgangs. Gibt die Marke, die in die Dienste geht.</summary>
+        Private Function BeginCancellableBusy() As Threading.CancellationToken
+            EndCancellableBusy()
+            _busyCancellation = New Threading.CancellationTokenSource()
+            Me.RaisePropertyChanged(NameOf(CanCancelBusy))
+            Return _busyCancellation.Token
+        End Function
+
+        ''' <summary>Ende - egal ob fertig, abgebrochen oder fehlgeschlagen. Wird der Aufruf
+        ''' vergessen, bleibt das X stehen und zeigt auf einen Vorgang, den es nicht mehr gibt.</summary>
+        Private Sub EndCancellableBusy()
+            If _busyCancellation Is Nothing Then Return
+            _busyCancellation.Dispose()
+            _busyCancellation = Nothing
+            Me.RaisePropertyChanged(NameOf(CanCancelBusy))
+        End Sub
+
+        ''' <summary>Wurde der letzte Vorgang abgebrochen? Fuer die Meldung danach: "fehlgeschlagen"
+        ''' waere bei einem gewollten Abbruch die falsche Auskunft.</summary>
+        Private Function BusyWasCancelled() As Boolean
+            Return _busyCancellation IsNot Nothing AndAlso _busyCancellation.IsCancellationRequested
+        End Function
 
         ''' <summary>Was gerade laeuft, in einem Wort. Wird von den langen Wegen gesetzt, bevor sie
         ''' anfangen - sonst stuende dort nur "Wird berechnet".</summary>
@@ -594,7 +647,7 @@ Namespace ViewModels
                     _showsBusy = False
                     SetBusyReason("")
                     Me.RaisePropertyChanged(NameOf(ShowsBusy))
-                    Me.RaisePropertyChanged(NameOf(BedienbarWaehrendArbeit))
+                    Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
                     Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
                 End If
                 Return
@@ -610,7 +663,7 @@ Namespace ViewModels
             If pass <> _busyRun OrElse Not IsBusy OrElse _showsBusy Then Return
             _showsBusy = True
             Me.RaisePropertyChanged(NameOf(ShowsBusy))
-            Me.RaisePropertyChanged(NameOf(BedienbarWaehrendArbeit))
+            Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
             Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
         End Function
 
@@ -12150,31 +12203,15 @@ Namespace ViewModels
         Private Shared Function DenoiseRecipeName(kind As DenoiseModelService.DenoiseKind) As String
             Select Case kind
                 Case DenoiseModelService.DenoiseKind.Fast : Return "fast"
-                Case DenoiseModelService.DenoiseKind.Metered : Return "metered"
                 Case Else : Return "quality"
             End Select
         End Function
 
-        ''' <summary>Der dosierte Weg, wieder mit eigener Modelldatei.</summary>
-        Public ReadOnly Property CanDenoiseMetered As Boolean
-            Get
-                Return DenoiseModelService.MeteredAvailable
-            End Get
-        End Property
-
-        Public ReadOnly Property DenoiseMeteredHint As String
-            Get
-                If Not DenoiseModelService.MeteredAvailable Then Return MissingModelHint
-                Return LocalizationService.T("Der Stärke-Regler sagt hier dem Modell, wie stark das Rauschen ist, statt sein Ergebnis hinterher zurückzumischen. Deutlich schneller als der gründliche Weg.")
-            End Get
-        End Property
-
-        ''' <summary>Ob ueberhaupt einer der Wege da ist. Der Staerke-Regler gehoert zu allen,
-        ''' also darf er nicht an einem einzelnen haengen.</summary>
+        ''' <summary>Ob ueberhaupt einer der Wege da ist. Der Staerke-Regler gehoert zu beiden, also
+        ''' darf er nicht an einem einzelnen haengen.</summary>
         Public ReadOnly Property CanDenoiseWithAnyModel As Boolean
             Get
-                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable OrElse
-                       DenoiseModelService.MeteredAvailable
+                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable
             End Get
         End Property
 
@@ -12285,8 +12322,6 @@ Namespace ViewModels
                 Optional kind As DenoiseModelService.DenoiseKind = DenoiseModelService.DenoiseKind.Quality)
             If kind = DenoiseModelService.DenoiseKind.Fast Then
                 If Not CanDenoiseFast Then Return
-            ElseIf kind = DenoiseModelService.DenoiseKind.Metered Then
-                If Not CanDenoiseMetered Then Return
             ElseIf Not CanDenoiseWithModel Then
                 Return
             End If
@@ -12301,6 +12336,7 @@ Namespace ViewModels
             ' bleibt waehrend der Rechenzeit bedienbar, und ein Bild, das zur Haelfte mit dem einen
             ' und zur Haelfte mit dem anderen Wert entrauscht ist, waere nicht wiederholbar.
             Dim strength = CSng(_denoiseStrength / 100.0)
+            Dim cancel = BeginCancellableBusy()
             EnqueueWorkingCommit(
                 Function()
                     Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
@@ -12316,7 +12352,7 @@ Namespace ViewModels
                                             schritt, gesamt)))
                                 End Sub
                             Try
-                                Using entrauscht = DenoiseModelService.Denoise(full, kind, strength)
+                                Using entrauscht = DenoiseModelService.Denoise(full, kind, strength, cancel)
                                     If entrauscht Is Nothing Then
                                         reason = "Modell"
                                         Return
@@ -12331,9 +12367,17 @@ Namespace ViewModels
                             Finally
                                 DenoiseModelService.Progress = Nothing
                             End Try
-                        End Sub)
+                        End Sub, recordedInRecipe:=True)
                 End Function,
                 Sub(patch)
+                    ' ABGEBROCHEN ist kein Fehlschlag, und die Meldung muss das auseinanderhalten:
+                    ' "fehlgeschlagen" nach einem Druck auf das X liest sich wie ein Defekt.
+                    Dim cancelled = BusyWasCancelled()
+                    EndCancellableBusy()
+                    If cancelled Then
+                        StatusText = LocalizationService.T("Entrauschen abgebrochen - das Bild ist unverändert")
+                        Return
+                    End If
                     If patch Is Nothing OrElse reason <> "" Then
                         StatusText = LocalizationService.T("Entrauschen fehlgeschlagen")
                         Return
@@ -12472,11 +12516,12 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Gespeicherte Bearbeitung wird angewendet…")
             SetBusyReason(LocalizationService.T("Gespeicherte Bearbeitung wird angewendet"))
             Dim done = False
+            Dim cancel = BeginCancellableBusy()
             EnqueueWorkingCommit(
                 Function()
                     Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                         Sub(full)
-                            Dim produced = ImageProcessor.ApplyPendingBakedOperations(full, recipe)
+                            Dim produced = ImageProcessor.ApplyPendingBakedOperations(full, recipe, cancel)
                             If produced Is Nothing Then Return
                             Using produced
                                 Using canvas = New SKCanvas(full)
@@ -12487,9 +12532,16 @@ Namespace ViewModels
                                 End Using
                             End Using
                             done = True
-                        End Sub)
+                        End Sub, recordedInRecipe:=True)
                 End Function,
                 Sub(patch)
+                    Dim cancelled = BusyWasCancelled()
+                    EndCancellableBusy()
+                    If cancelled Then
+                        ' Der Vermerk bleibt - abgebrochen heisst vertagt, nicht verworfen.
+                        StatusText = LocalizationService.T("Anwenden abgebrochen - das Bild ist unverändert")
+                        Return
+                    End If
                     If patch Is Nothing OrElse Not done Then
                         ' Kein Erfolg heisst hier ausdruecklich NICHT "Vermerk weg": beim naechsten
                         ' Mal (oder auf einem Rechner mit der fehlenden Modelldatei) soll es wieder
@@ -12511,7 +12563,7 @@ Namespace ViewModels
             If Not CanRemoveObject Then Return
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
-            Dim rezept = GetCurrentAdjustments()
+            Dim recipe = GetCurrentAdjustments()
 
             PushUndo()
             ' Der eben abgelegte Schritt zurueck merkt sich nur das REZEPT. Was hier passiert, sind
@@ -12526,6 +12578,7 @@ Namespace ViewModels
             ' und das ist die Meldung, die man am wenigsten gebrauchen kann.
             Dim reason = ""
             Dim removalMask As ImageMask = Nothing
+            Dim cancel = BeginCancellableBusy()
             EnqueueWorkingCommit(
                 Function()
                     ' Die Maske wird HIER gebaut, nicht vorher. CreateSourceMaskFromSelection laeuft
@@ -12533,7 +12586,7 @@ Namespace ViewModels
                     ' Klick sekundenlang gar nichts passierte - auch der Hinweis "wird entfernt"
                     ' konnte nicht erscheinen, weil der Faden blockiert war.
                     Dim m = ImageProcessor.CreateSourceMaskFromSelection(
-                        rezept, LocalizationService.T("Objekt entfernen"))
+                        recipe, LocalizationService.T("Objekt entfernen"))
                     If m Is Nothing Then
                         reason = "Maske"
                         Return Nothing
@@ -12549,7 +12602,7 @@ Namespace ViewModels
                                     reason = "Maske"
                                     Return
                                 End If
-                                Using filled = ObjectRemovalService.Fill(full, mask)
+                                Using filled = ObjectRemovalService.Fill(full, mask, cancel)
                                     If filled Is Nothing Then
                                         reason = "Modell"
                                         Return
@@ -12562,9 +12615,15 @@ Namespace ViewModels
                                     End Using
                                 End Using
                             End Using
-                        End Sub)
+                        End Sub, recordedInRecipe:=True)
                 End Function,
                 Sub(patch)
+                    Dim cancelled = BusyWasCancelled()
+                    EndCancellableBusy()
+                    If cancelled Then
+                        StatusText = LocalizationService.T("Entfernen abgebrochen - das Bild ist unverändert")
+                        Return
+                    End If
                     If patch Is Nothing OrElse reason <> "" Then
                         StatusText = LocalizationService.T("Entfernen fehlgeschlagen") &
                                      If(reason = "", "", " (" & reason & ")")
@@ -15917,9 +15976,10 @@ Namespace ViewModels
         Public ReadOnly Property ApplyBokehCommand As ICommand
         Public ReadOnly Property ResetBokehCommand As ICommand
         Public ReadOnly Property RemoveObjectCommand As ICommand
+        ''' <summary>Das X in der Warte-Anzeige. Dieselbe Wirkung wie Esc.</summary>
+        Public ReadOnly Property CancelBusyCommand As ICommand
         Public ReadOnly Property DenoiseWithModelCommand As ICommand
         Public ReadOnly Property DenoiseFastCommand As ICommand
-        Public ReadOnly Property DenoiseMeteredCommand As ICommand
         Public ReadOnly Property SetBokehApertureCommand As ICommand
         Public ReadOnly Property SetSubjectGrainCommand As ICommand
         Public ReadOnly Property SetWarpModeCommand As ICommand
@@ -16273,11 +16333,10 @@ Namespace ViewModels
             ApplyLinesCommand = ReactiveCommand.Create(Sub() ApplyLineWarp())
             RemoveLastLineCommand = ReactiveCommand.Create(Sub() RemoveLastLine())
             RemoveObjectCommand = ReactiveCommand.Create(Sub() ApplyObjectRemoval())
+            CancelBusyCommand = ReactiveCommand.Create(Sub() RequestBusyCancel())
             DenoiseWithModelCommand = ReactiveCommand.Create(Sub() ApplyModelDenoise())
             DenoiseFastCommand = ReactiveCommand.Create(
                 Sub() ApplyModelDenoise(DenoiseModelService.DenoiseKind.Fast))
-            DenoiseMeteredCommand = ReactiveCommand.Create(
-                Sub() ApplyModelDenoise(DenoiseModelService.DenoiseKind.Metered))
             SetBokehApertureCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
@@ -19856,10 +19915,17 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Ob "Speichern" (in-place) bei der aktuellen RAW-/PSD-Quelle den Rezept-Sidecar
-        ''' schreiben kann: kein offenes .fpx und ausschliesslich Entwicklungseinstellungen.
-        ''' Pinsel, Retusche und gerasterte Ebenen stecken im Arbeitsbild; Objekte waeren im Sidecar
-        ''' nicht als selbstaendiges Projekt mit eingebetteten Assets gesichert. In all diesen Faellen
-        ''' bleibt deshalb nur "Speichern unter" (vorzugsweise .fpx oder ein gebackenes Ausgabeformat).
+        ''' schreiben kann: kein offenes .fpx und nichts im Arbeitsbild, was das Rezept nicht
+        ''' beschreibt.
+        ''' Pinsel, Retusche, gerasterte Ebenen, Verzerren und Bokeh stecken NUR im Arbeitsbild;
+        ''' Objekte waeren im Sidecar nicht als selbstaendiges Projekt mit eingebetteten Assets
+        ''' gesichert. In diesen Faellen bleibt nur "Speichern unter" (vorzugsweise .fpx oder ein
+        ''' gebackenes Ausgabeformat).
+        '''
+        ''' Entrauschen und Objektentfernen gehoeren AUSDRUECKLICH nicht dazu, obwohl auch sie in
+        ''' den Pixeln stehen: sie liegen zugleich als Vermerk im Rezept und werden beim naechsten
+        ''' Oeffnen neu gerechnet. Vorher sperrten sie den Knopf mit, und wer eine RAW entrauscht
+        ''' hatte, stand ohne Grund vor einem toten "Speichern".
         ''' Geschrieben wird AUSSCHLIESSLICH ueber die Speichern-Funktion, nie nebenbei beim
         ''' Verlassen (Dateien entstehen nur durch bewusstes
         ''' Speichern).</summary>
@@ -19867,7 +19933,7 @@ Namespace ViewModels
             Get
                 Return RawSidecarService.IsSidecarFormat(RenderSourcePath) AndAlso
                        String.IsNullOrEmpty(_currentFpxPath) AndAlso
-                       Not _workingImage.HasBakedContent AndAlso
+                       Not _workingImage.HasUnrecordedBakedContent AndAlso
                        _annotations.Count = 0 AndAlso
                        Not _retouchStrokeActive AndAlso
                        _pendingWorkingCommits = 0

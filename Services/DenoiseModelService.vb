@@ -37,11 +37,17 @@ Namespace Services
         ''' stehen - sichtbar glatter. Dafuer rechnet es rund sechsmal schneller, dasselbe Foto also
         ''' in gut einer halben Minute.
         '''
-        ''' Keines ist allgemein besser. Wer die Wartezeit hat, nimmt das erste.</summary>
+        ''' Keines ist allgemein besser. Wer die Wartezeit hat, nimmt das erste.
+        '''
+        ''' ZWEI weitere Wege waren eingebaut und sind wieder heraus, beide nach einem Test am
+        ''' echten Foto: DRUNet (Rauschstaerke als vierter Eingangskanal, schlechter als der
+        ''' schnelle Weg bei dreifacher Rechenzeit) und ein auf das Wiederherstellen von Fotos
+        ''' trainiertes Modell (das teuerste der drei, ohne dass sich das im Bild gezeigt haette).
+        ''' Die Zahlen und die Begruendung stehen in FALLEN_UND_ENTSCHEIDUNGEN.md - nicht erneut
+        ''' vorschlagen.</summary>
         Public Enum DenoiseKind
             Quality = 0
             Fast = 1
-            Metered = 2
         End Enum
 
         ''' <summary>Das Modell fuer Qualitaet. Heisst ModelFile, weil es das voreingestellte ist -
@@ -51,21 +57,9 @@ Namespace Services
         ''' <summary>Und das schnelle.</summary>
         Public Const FastModelFile As String = "nafnet"
 
-        ''' <summary>Das dritte: es bekommt die Rauschstaerke ALS EINGABE statt sie hinterher
-        ''' beigemischt zu bekommen.
-        '''
-        ''' Das ist der eigentliche Unterschied und nicht das Tempo. Die beiden anderen entrauschen
-        ''' so stark, wie sie gelernt haben, und der Regler mischt das Ergebnis danach zurueck.
-        ''' Dieses hier bekommt einen VIERTEN Eingangskanal, in dem die angenommene Rauschstaerke
-        ''' steht - es entscheidet also selbst, was Rauschen ist und was Zeichnung. Gemessen
-        ''' antwortet es darauf sauber: bei zu klein angesetzter Staerke laesst es das Rauschen
-        ''' stehen, statt die Zeichnung zu glaetten.</summary>
-        Public Const MeteredModelFile As String = "drunet"
-
         Private Shared Function KeyFor(kind As DenoiseKind) As String
             Select Case kind
                 Case DenoiseKind.Fast : Return FastModelFile
-                Case DenoiseKind.Metered : Return MeteredModelFile
                 Case Else : Return ModelFile
             End Select
         End Function
@@ -75,7 +69,6 @@ Namespace Services
         Private Shared Function KindName(kind As DenoiseKind) As String
             Select Case kind
                 Case DenoiseKind.Fast : Return "schnell"
-                Case DenoiseKind.Metered : Return "dosiert"
                 Case Else : Return "Qualität"
             End Select
         End Function
@@ -127,13 +120,6 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Und der dosierte Weg, wieder mit eigener Modelldatei.</summary>
-        Public Shared ReadOnly Property MeteredAvailable As Boolean
-            Get
-                Return AiModelService.RuntimeAvailable AndAlso
-                       Not String.IsNullOrEmpty(AiModelService.BestFile(MeteredModelFile))
-            End Get
-        End Property
 
         ''' <summary>Das Bild entrauschen. Zurueck kommt eine KOPIE, oder Nothing bei jedem
         ''' Fehlschlag.
@@ -155,9 +141,14 @@ Namespace Services
         ''' Deshalb ist Staerke 0 auch KEIN Nichtstun: die Farbe wird dann trotzdem entrauscht und
         ''' die Helligkeit unangetastet gelassen. Das ist ein sinnvoller Fall und faellt nicht
         ''' durch.</summary>
+        ''' <param name="cancel">Abbruch durch den Nutzer. Gewartet wird bis zur naechsten
+        ''' KACHELGRENZE - ein laufender Modelldurchlauf laesst sich nicht mittendrin anhalten, und
+        ''' eine Kachel dauert Sekunden, nicht Minuten. Wird abgebrochen, kommt NOTHING zurueck: der
+        ''' Aufrufer soll ein halb entrauschtes Bild gar nicht erst in die Finger bekommen.</param>
         Public Shared Function Denoise(image As SKBitmap,
                                        Optional kind As DenoiseKind = DenoiseKind.Quality,
-                                       Optional strength As Single = 1.0F) As SKBitmap
+                                       Optional strength As Single = 1.0F,
+                                       Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
             If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
             Dim session = AiModelService.SessionFor(KeyFor(kind))
             If session Is Nothing Then Return Nothing
@@ -165,56 +156,56 @@ Namespace Services
 
             Dim amount = Math.Max(0.0F, Math.Min(1.0F, strength))
 
-            ' DERSELBE Regler, zwei Wege - und er darf nur EINEN davon gehen. Bei den beiden alten
-            ' Modellen wird das Ergebnis hinterher zurueckgemischt (mixAmount). Beim dosierten
-            ' Modell wandert die Staerke stattdessen in den vierten Eingangskanal: dort entscheidet
-            ' das Modell selbst, was Rauschen ist. Beides zusammen waere derselbe Regler zweimal.
-            Dim metered = (kind = DenoiseKind.Metered)
-            Dim sigma = If(metered, MeteredSigmaMin + amount * (MeteredSigmaMax - MeteredSigmaMin), 0.0F)
-            Dim mixAmount = If(metered, 1.0F, amount)
-
             Dim result As SKBitmap = Nothing
-            Dim gepolstert As SKBitmap = Nothing
+            Dim padded As SKBitmap = Nothing
             Try
                 ' Ist das Bild in einer Achse kuerzer als eine Kachel, gibt es keinen Ausschnitt, der
                 ' sich nach innen schieben liesse: JEDE Kachel faellt aus, und zurueck kaeme eine
                 ' unveraenderte Kopie samt Erfolgsmeldung. Das trifft nicht nur Briefmarken, sondern
                 ' auch flache Zuschnitte wie 3000 mal 400. Deshalb wird vorher auf Kachelgroesse
-                ' GESPIEGELT gepolstert - gespiegelt und nicht mit einer Farbe gefuellt, weil eine
+                ' GESPIEGELT padded - gespiegelt und nicht mit einer Farbe gefuellt, weil eine
                 ' harte Kunstkante am Bildrand das Modell dort etwas erfinden liesse, was es dann in
                 ' die letzten Bildpunkte hineinrechnet.
-                Dim quelle = image
+                Dim tiledSource = image
                 If image.Width < TileEdge OrElse image.Height < TileEdge Then
-                    gepolstert = New SKBitmap(Math.Max(image.Width, TileEdge),
+                    padded = New SKBitmap(Math.Max(image.Width, TileEdge),
                                               Math.Max(image.Height, TileEdge),
                                               image.ColorType, image.AlphaType)
-                    Using canvas = New SKCanvas(gepolstert)
+                    Using canvas = New SKCanvas(padded)
                         Using shader = SKShader.CreateBitmap(image, SKShaderTileMode.Mirror, SKShaderTileMode.Mirror)
                             Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
-                                canvas.DrawRect(New SKRect(0, 0, gepolstert.Width, gepolstert.Height), paint)
+                                canvas.DrawRect(New SKRect(0, 0, padded.Width, padded.Height), paint)
                             End Using
                         End Using
                     End Using
-                    quelle = gepolstert
+                    tiledSource = padded
                 End If
 
-                result = New SKBitmap(quelle.Width, quelle.Height, quelle.ColorType, quelle.AlphaType)
+                result = New SKBitmap(tiledSource.Width, tiledSource.Height, tiledSource.ColorType, tiledSource.AlphaType)
                 Using canvas = New SKCanvas(result)
                     Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                        canvas.DrawBitmap(quelle, 0, 0, paint)
+                        canvas.DrawBitmap(tiledSource, 0, 0, paint)
                     End Using
                 End Using
 
                 Dim stride = Math.Max(1, TileEdge - 2 * TileOverlap)
-                Dim kacheln = ((quelle.Width + stride - 1) \ stride) * ((quelle.Height + stride - 1) \ stride)
+                Dim tileCount = ((tiledSource.Width + stride - 1) \ stride) * ((tiledSource.Height + stride - 1) \ stride)
                 Dim name = session.InputMetadata.Keys.First()
                 Dim uhr = Diagnostics.Stopwatch.StartNew()
                 Dim done = 0
 
                 Dim y = 0
-                While y < quelle.Height
+                While y < tiledSource.Height
                     Dim x = 0
-                    While x < quelle.Width
+                    While x < tiledSource.Width
+                        ' ABBRUCH an der Kachelgrenze - die einzige Stelle, an der es sauber geht.
+                        ' Zurueck kommt Nothing, nicht das halbe Ergebnis: ein Bild, das oben
+                        ' entrauscht ist und unten nicht, waere das schlechteste aller Enden.
+                        If cancel.IsCancellationRequested Then
+                            DiagnosticLogService.LogAlways("Entrauschen",
+                                $"abgebrochen nach {done} von {tileCount} Kacheln")
+                            Return Nothing
+                        End If
                         ' Der Ausschnitt ist IMMER genau eine Kachel gross und wird am Bildrand nach
                         ' innen geschoben, statt beschnitten zu werden.
                         '
@@ -223,30 +214,29 @@ Namespace Services
                         ' sein. Ein beschnittener Randstreifen von 480 Punkten bricht mitten im
                         ' Modell ab, mit einer Meldung ueber eine Umformung, die die Ursache nicht
                         ' erkennen laesst.
-                        Dim l = Math.Max(0, Math.Min(x - TileOverlap, quelle.Width - TileEdge))
-                        Dim t = Math.Max(0, Math.Min(y - TileOverlap, quelle.Height - TileEdge))
-                        Dim r = Math.Min(quelle.Width, l + TileEdge)
-                        Dim b = Math.Min(quelle.Height, t + TileEdge)
+                        Dim l = Math.Max(0, Math.Min(x - TileOverlap, tiledSource.Width - TileEdge))
+                        Dim t = Math.Max(0, Math.Min(y - TileOverlap, tiledSource.Height - TileEdge))
+                        Dim r = Math.Min(tiledSource.Width, l + TileEdge)
+                        Dim b = Math.Min(tiledSource.Height, t + TileEdge)
                         ' Und der Teil davon, der wirklich uebernommen wird.
                         Dim keepL = x, keepT = y
-                        Dim keepR = Math.Min(quelle.Width, x + stride)
-                        Dim keepB = Math.Min(quelle.Height, y + stride)
+                        Dim keepR = Math.Min(tiledSource.Width, x + stride)
+                        Dim keepB = Math.Min(tiledSource.Height, y + stride)
                         If r - l = TileEdge AndAlso b - t = TileEdge AndAlso
                            keepR > keepL AndAlso keepB > keepT Then
-                            DenoiseTile(session, name, quelle, result,
-                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB),
-                                        mixAmount, sigma)
+                            DenoiseTile(session, name, tiledSource, result,
+                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount)
                             done += 1
-                            Progress?.Invoke(done, kacheln)
+                            Progress?.Invoke(done, tileCount)
                         End If
                         x += stride
                     End While
                     y += stride
                 End While
 
-                ' Vom gepolsterten Ergebnis bleibt nur der Bereich des echten Bildes; die gespiegelten
+                ' Vom paddeden Ergebnis bleibt nur der Bereich des echten Bildes; die gespiegelten
                 ' Raender waren Anlauf fuer das Modell und haben in der Ausgabe nichts zu suchen.
-                If gepolstert IsNot Nothing Then
+                If padded IsNot Nothing Then
                     Dim eng = New SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType)
                     Using canvas = New SKCanvas(eng)
                         Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
@@ -261,8 +251,8 @@ Namespace Services
                 ' Welches Modell gerechnet hat, gehoert in den Bericht: bei zwei Wegen ist die Frage
                 ' "warum sieht das anders aus als beim letzten Mal" sonst nicht zu beantworten.
                 LastReport = $"Bild {image.Width}x{image.Height}, {done} Kacheln, " &
-                             $"{uhr.Elapsed.TotalSeconds:F0} s, Stärke {amount * 100:F0} %" &
-                             If(metered, $" (angesetzt {sigma:F0}/255)", "") & $", {KindName(kind)}"
+                             $"{uhr.Elapsed.TotalSeconds:F0} s, Stärke {amount * 100:F0} %, " &
+                             $"{KindName(kind)}"
                 DiagnosticLogService.LogAlways("Entrauschen", LastReport)
                 Dim fertig = result
                 result = Nothing
@@ -272,43 +262,18 @@ Namespace Services
                 result?.Dispose()
                 Return Nothing
             Finally
-                gepolstert?.Dispose()
+                padded?.Dispose()
             End Try
         End Function
 
-        ''' <summary>Wie stark das dosierte Modell das Rauschen ansetzt, in Stufen von 255.
-        '''
-        ''' Die untere Grenze ist nicht null: eine angesetzte Staerke von null hiesse "hier ist
-        ''' kein Rauschen", und dann gibt das Modell die Eingabe unveraendert zurueck - ein Knopf,
-        ''' der nichts tut. Die obere Grenze ist der Bereich, in dem das Modell trainiert wurde;
-        ''' darueber hinaus glaettet es nur noch.</summary>
-        Private Const MeteredSigmaMin As Single = 3.0F
-        Private Const MeteredSigmaMax As Single = 40.0F
-
-        ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.
-        '''
-        ''' <paramref name="sigma"/> ist die angesetzte Rauschstaerke fuer Modelle mit VIER
-        ''' Eingangskanaelen; bei den anderen bleibt sie ungenutzt. Ist sie gesetzt, dosiert das
-        ''' Modell selbst, und die nachtraegliche Mischung ueber <paramref name="amount"/> entfaellt
-        ''' - beides zusammen waere zweimal derselbe Regler.</summary>
+        ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.</summary>
         Private Shared Sub DenoiseTile(session As InferenceSession, name As String,
                                        source As SKBitmap, target As SKBitmap,
-                                       window As SKRectI, keep As SKRectI, amount As Single,
-                                       Optional sigma As Single = 0.0F)
+                                       window As SKRectI, keep As SKRectI, amount As Single)
             Dim w = window.Width, h = window.Height
             Dim layer = w * h
-            Dim kanaele = If(sigma > 0.0F, 4, 3)
-            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, kanaele, h, w})
+            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, h, w})
             Dim z = tensor.Buffer.Span
-            If kanaele = 4 Then
-                ' Der vierte Kanal ist eine Karte der angenommenen Rauschstaerke. Sie ist ueber die
-                ' ganze Kachel gleich: was in einem Foto wo wie stark rauscht, wissen wir nicht,
-                ' und eine geratene Karte waere schlechter als eine ehrliche Konstante.
-                Dim wert = sigma / 255.0F
-                For i = layer * 3 To layer * 4 - 1
-                    z(i) = wert
-                Next
-            End If
 
             ' Zeilenweise ueber den Speicher, nicht ueber GetPixel - bei einem ganzen Foto ist das
             ' der Unterschied zwischen Sekunden und Minuten allein fuer das Einlesen.
@@ -336,23 +301,23 @@ Namespace Services
                 Dim dims = output.Dimensions.ToArray()
                 Dim rh = dims(dims.Length - 2), rw = dims(dims.Length - 1)
                 Dim rLayer = rw * rh
-                Dim werte = output.Buffer.Span
-                If werte.Length < rLayer * 3 Then Return
+                Dim values = output.Buffer.Span
+                If values.Length < rLayer * 3 Then Return
 
                 Dim dstStride = target.RowBytes
-                Dim ziel = target.GetPixels()
-                Dim zeile(dstStride - 1) As Byte
+                Dim targetPixels = target.GetPixels()
+                Dim targetRow(dstStride - 1) As Byte
                 For yy = keep.Top To keep.Bottom - 1
                     Runtime.InteropServices.Marshal.Copy(
-                        IntPtr.Add(ziel, yy * dstStride), zeile, 0, dstStride)
+                        IntPtr.Add(targetPixels, yy * dstStride), targetRow, 0, dstStride)
                     Dim sy = Math.Min(yy - window.Top, rh - 1)
                     For xx = keep.Left To keep.Right - 1
                         Dim sx = Math.Min(xx - window.Left, rw - 1)
                         Dim i = sy * rw + sx
                         Dim p = xx * 4
-                        Dim newRed = werte(i) * 255.0F
-                        Dim newGreen = werte(rLayer + i) * 255.0F
-                        Dim newBlue = werte(rLayer * 2 + i) * 255.0F
+                        Dim newRed = values(i) * 255.0F
+                        Dim newGreen = values(rLayer + i) * 255.0F
+                        Dim newBlue = values(rLayer * 2 + i) * 255.0F
                         ' Ein einzelner unsinniger Wert darf nicht den Bildpunkt verderben - dann
                         ' bleibt eben das Original stehen.
                         If Single.IsNaN(newRed) OrElse Single.IsNaN(newGreen) OrElse Single.IsNaN(newBlue) Then
@@ -370,14 +335,14 @@ Namespace Services
                         ' Bei Staerke 1 ist die Verschiebung null und es steht Bildpunkt fuer
                         ' Bildpunkt dasselbe da wie vorher, als noch alle drei Kanaele gleich
                         ' gemischt wurden.
-                        Dim oldLuma = 0.2126F * zeile(p + 2) + 0.7152F * zeile(p + 1) + 0.0722F * zeile(p)
+                        Dim oldLuma = 0.2126F * targetRow(p + 2) + 0.7152F * targetRow(p + 1) + 0.0722F * targetRow(p)
                         Dim newLuma = 0.2126F * newRed + 0.7152F * newGreen + 0.0722F * newBlue
                         Dim shift = (oldLuma - newLuma) * (1.0F - amount)
-                        zeile(p) = ToByte(newBlue + shift)
-                        zeile(p + 1) = ToByte(newGreen + shift)
-                        zeile(p + 2) = ToByte(newRed + shift)
+                        targetRow(p) = ToByte(newBlue + shift)
+                        targetRow(p + 1) = ToByte(newGreen + shift)
+                        targetRow(p + 2) = ToByte(newRed + shift)
                     Next
-                    Runtime.InteropServices.Marshal.Copy(zeile, 0, IntPtr.Add(ziel, yy * dstStride), dstStride)
+                    Runtime.InteropServices.Marshal.Copy(targetRow, 0, IntPtr.Add(targetPixels, yy * dstStride), dstStride)
                 Next
             End Using
         End Sub

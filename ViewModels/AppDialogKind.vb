@@ -50,6 +50,11 @@ Namespace ViewModels
         ''' <summary>Bilder, die schon kleiner als das Ziel sind, bleiben unveraendert.</summary>
         Public Property NoUpscale As Boolean
         Public Property ResizeInterpolation As ResizeInterpolationMode = ResizeInterpolationMode.Bilinear
+
+        ''' <summary>Vergroessern mit einem gelernten Modell: der Schluessel, leer heisst nichts tun.
+        ''' Gehoert zum Bildgroessen-Teil des Dialogs und gilt nur, wenn der eingeschaltet ist.</summary>
+        Public Property UpscaleModel As String = ""
+
         ''' <summary>EXIF/XMP der Quelle in die Zieldatei übernehmen.</summary>
         Public Property PreserveMetadata As Boolean = True
         ''' <summary>Dateinamen-Muster für die Ziele (leer = Originalname), Platzhalter wie beim
@@ -150,6 +155,11 @@ Namespace ViewModels
         ''' <summary>Bilder, die schon kleiner als das Ziel sind, bleiben unveraendert.</summary>
         Public Property NoUpscale As Boolean
         Public Property Interpolation As ResizeInterpolationMode
+
+        ''' <summary>Vergroessern mit einem gelernten Modell: der Schluessel, leer heisst nichts tun.
+        ''' Es laeuft VOR der Groessenaenderung - wer viermal vergroessert und eine Zielbreite
+        ''' eintraegt, bekommt genau die, gerechnet vom vergroesserten Bild herunter.</summary>
+        Public Property UpscaleModel As String = ""
 
         ''' <summary>True: Originale werden überschrieben (bisheriges Verhalten; Format, Ziel und
         ''' Namenszusatz entfallen). False: neue Dateien mit Formatauswahl wie beim Filter-Dialog.</summary>

@@ -1291,6 +1291,7 @@ Namespace ViewModels
             ' Zuletzt benutzte Zusammenstellung wiederherstellen - ein Sammel-Export wird meist mit
             ' denselben Bausteinen wiederholt.
             _dialogBatchOverwriteAvailable = True
+            ResetDialogUpscaleModel()
             DialogExportUseFilter = settings.ExportToUseFilter
             DialogExportUseWatermark = settings.ExportToUseWatermark
             DialogExportUseResize = settings.ExportToUseResize
@@ -1359,6 +1360,19 @@ Namespace ViewModels
             ' Ohne Größenänderung gibt es nichts zu skalieren - der Wasserzeichen-Schalter darf dann
             ' auch nichts bedeuten, sonst wirkte eine unsichtbare Einstellung.
             Dim keepWatermarkSize = _dialogExportUseResize AndAlso _dialogWatermarkKeepSize
+            ' Das Hochskalieren gehoert zum Bildgroessen-Teil und gilt nur, wenn der eingeschaltet
+            ' ist - sonst wirkte eine Einstellung, die der Nutzer gerade nicht sieht. Dieselbe
+            ' Regel wie beim Wasserzeichen eine Zeile darueber. Steht HIER und nicht im
+            ' Initialisierer darunter: ein Kommentar innerhalb einer solchen Liste bricht in VB
+            ' die Zeilenfortsetzung nach dem Komma ab.
+            Dim upscaleModel = If(_dialogExportUseResize, If(_dialogUpscaleModelKey, ""), "")
+            ' Und beim Hochskalieren bestimmt das Modell die Groesse allein: die Felder sind dann
+            ' gar nicht zu sehen, also darf auch nichts wirken, was vom letzten Mal darin steht.
+            If upscaleModel.Length > 0 Then
+                width = 0
+                height = 0
+                skalierung = 0
+            End If
 
             Return New ExportToDialogResult With {
                 .AutoEnhance = autoEnhance,
@@ -1378,6 +1392,7 @@ Namespace ViewModels
                 .LockAspect = _dialogBatchResizeLockAspect,
                 .NoUpscale = _dialogBatchResizeNoUpscale,
                 .ResizeInterpolation = _dialogBatchResizeInterpolation,
+                .UpscaleModel = upscaleModel,
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
@@ -2137,6 +2152,97 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die Auswahl fuer das Hochskalieren mit Modell. Der erste Eintrag ist das
+        ''' Abschalten; danach kommt, was an Modelldateien wirklich vorliegt.
+        '''
+        ''' Gespeichert wird der deutsche TEXT und nicht der Modellschluessel - so wie bei der
+        ''' Neuberechnung daneben. Angezeigt wird er uebersetzt, verglichen im Quelltext.</summary>
+        Public ReadOnly Property DialogUpscaleModelOptions As IReadOnlyList(Of String)
+            Get
+                Dim liste As New List(Of String) From {UpscaleOffLabel}
+                liste.AddRange(UpscaleModelService.AvailableModels.Select(Function(m) m.Label))
+                Return liste
+            End Get
+        End Property
+
+        ''' <summary>Der Text fuer "nicht vergroessern". Steht als Konstante hier, weil er an drei
+        ''' Stellen verglichen wird und ein Tippfehler den Schalter still wirkungslos machte.</summary>
+        Private Const UpscaleOffLabel As String = "Nicht vergrößern"
+
+        ''' <summary>Gibt es ueberhaupt ein Modell? Ohne eines bleibt die Zeile weg - eine Auswahl
+        ''' mit nur "aus" waere eine Frage ohne Antwortmoeglichkeit.</summary>
+        Public ReadOnly Property IsDialogUpscaleAvailable As Boolean
+            Get
+                Return UpscaleModelService.Available
+            End Get
+        End Property
+
+        ''' <summary>Sind die gewoehnlichen Groessenfelder zu sehen? Beim Hochskalieren NICHT.
+        '''
+        ''' Der Grund ist nicht Platzersparnis: das Modell bringt seinen eigenen Massstab mit, und
+        ''' daneben eine Zielbreite anzubieten hiesse, zwei Wege zur selben Groesse gleichzeitig zu
+        ''' oeffnen. Wer beides ausfuellt, hat eine Erwartung, die einer der beiden Wege enttaeuschen
+        ''' muss. Weggeblendet UND nicht angewandt - siehe die Ergebnisse der beiden Dialoge, die
+        ''' die Groessenfelder in diesem Fall auf null setzen.</summary>
+        Public ReadOnly Property IsDialogResizeSizeVisible As Boolean
+            Get
+                Return String.IsNullOrEmpty(_dialogUpscaleModelKey)
+            End Get
+        End Property
+
+        Public Property DialogUpscaleModelLabel As String
+            Get
+                ' UNUEBERSETZT zurueckgeben. Die Auswahlliste traegt die deutschen Quelltexte, und
+                ' uebersetzt wird erst in der Anzeige (ItemTemplate). Gaebe der Getter den
+                ' uebersetzten Text zurueck, faende die Liste ihn in einer anderen Sprache nicht
+                ' wieder und stuende leer da - der Wert ist der Vergleichsschluessel, nicht die
+                ' Anzeige.
+                Dim treffer = UpscaleModelService.AvailableModels.FirstOrDefault(
+                    Function(m) String.Equals(m.Key, _dialogUpscaleModelKey, StringComparison.OrdinalIgnoreCase))
+                Return If(treffer Is Nothing, UpscaleOffLabel, treffer.Label)
+            End Get
+            Set(value As String)
+                Dim treffer = UpscaleModelService.AvailableModels.FirstOrDefault(
+                    Function(m) String.Equals(m.Label, value, StringComparison.Ordinal))
+                _dialogUpscaleModelKey = If(treffer Is Nothing, "", treffer.Key)
+                Me.RaisePropertyChanged(NameOf(DialogUpscaleModelLabel))
+                Me.RaisePropertyChanged(NameOf(DialogUpscaleModelHint))
+                ' Mit der Wahl verschwinden die gewoehnlichen Groessenfelder - oder kommen zurueck.
+                Me.RaisePropertyChanged(NameOf(IsDialogResizeSizeVisible))
+            End Set
+        End Property
+
+        ''' <summary>Was das gewaehlte Modell tut und was es kostet.</summary>
+        Public ReadOnly Property DialogUpscaleModelHint As String
+            Get
+                Dim treffer = UpscaleModelService.AvailableModels.FirstOrDefault(
+                    Function(m) String.Equals(m.Key, _dialogUpscaleModelKey, StringComparison.OrdinalIgnoreCase))
+                If treffer Is Nothing Then
+                    Return LocalizationService.T("Vergrößert jedes Bild mit einem gelernten Modell, statt seine Bildpunkte nur zu mitteln. Das kostet Sekunden bis Minuten je Bild.")
+                End If
+                Return LocalizationService.T(treffer.Hint)
+            End Get
+        End Property
+
+        ''' <summary>Der Schluessel des gewaehlten Modells, leer heisst "nicht vergroessern".</summary>
+        Private _dialogUpscaleModelKey As String = ""
+
+        ''' <summary>Die Wahl bei jedem Dialogstart zuruecksetzen - ABSICHTLICH anders als bei den
+        ''' uebrigen Dialogwerten, die sich der Benutzer merken laesst.
+        '''
+        ''' Der Grund ist der Preis: ein Modelldurchlauf kostet Sekunden bis Minuten JE BILD. Eine
+        ''' Wahl, die vom letzten Mal stehen bleibt, liesse einen Stapel von hundert Fotos
+        ''' stundenlang rechnen, ohne dass jemand sie in diesem Durchgang getroffen haette.
+        ''' Wiederholung ist hier nicht die Regel, sondern die Ausnahme.</summary>
+        Private Sub ResetDialogUpscaleModel()
+            _dialogUpscaleModelKey = ""
+            Me.RaisePropertyChanged(NameOf(DialogUpscaleModelLabel))
+            Me.RaisePropertyChanged(NameOf(DialogUpscaleModelHint))
+            Me.RaisePropertyChanged(NameOf(DialogUpscaleModelOptions))
+            Me.RaisePropertyChanged(NameOf(IsDialogUpscaleAvailable))
+            Me.RaisePropertyChanged(NameOf(IsDialogResizeSizeVisible))
+        End Sub
+
         Public Property DialogBatchResizeWidthText As String
             Get
                 Return _dialogBatchResizeWidthText
@@ -2622,6 +2728,7 @@ Namespace ViewModels
             _dialogBatchResizeSourceWidth = 0
             _dialogBatchResizeSourceHeight = 0
             _dialogBatchResizeOverwrite = allowOverwrite AndAlso settings.BatchResizeOverwriteOriginals
+            ResetDialogUpscaleModel()
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
@@ -2667,7 +2774,19 @@ Namespace ViewModels
             ' (ApplyResize entscheidet das pro Bild). Die Ergaenzung aus EINEM Beispielbild
             ' haette einem gemischten Stapel dessen Ausrichtung aufgezwungen.
 
-            If _dialogBatchResizeScalePercent <= 0 AndAlso width <= 0 AndAlso height <= 0 Then Return Nothing
+            ' Beim Hochskalieren bestimmt das Modell die Groesse allein: die Felder sind dann gar
+            ' nicht zu sehen, und was in ihnen vom letzten Mal stehen geblieben ist, darf auch nicht
+            ' wirken. Deshalb hier auf null - weggeblendet UND nicht angewandt.
+            Dim upscaleModel = If(_dialogUpscaleModelKey, "")
+            If upscaleModel.Length > 0 Then
+                width = 0
+                height = 0
+                _dialogBatchResizeScalePercent = 0
+            End If
+
+            ' Ohne Zielgroesse gaebe es sonst nichts zu tun - MIT gewaehltem Modell aber schon.
+            If upscaleModel.Length = 0 AndAlso
+               _dialogBatchResizeScalePercent <= 0 AndAlso width <= 0 AndAlso height <= 0 Then Return Nothing
             AppSettingsService.SaveLastBatchResizeSettings(width, height, _dialogBatchResizeScalePercent, _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation, _dialogBatchResizeNoUpscale,
                                                            _dialogBatchResizeLongEdge)
             If Not _dialogBatchResizeOverwrite Then PersistDialogTargetFolderIfLocal()
@@ -2679,6 +2798,7 @@ Namespace ViewModels
                 .LockAspect = _dialogBatchResizeLockAspect,
                 .NoUpscale = _dialogBatchResizeNoUpscale,
                 .Interpolation = _dialogBatchResizeInterpolation,
+                .UpscaleModel = upscaleModel,
                 .Overwrite = _dialogBatchResizeOverwrite,
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,

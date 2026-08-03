@@ -1717,6 +1717,19 @@ Namespace Services
         ''' ImageMagick). Verhindert vorgetaeuschte Aufloesung in gemischten Stapeln.</summary>
         Public Property NoResizeUpscale As Boolean = False
         Public Property ResizeInterpolation As ResizeInterpolationMode = ResizeInterpolationMode.Bilinear
+
+        ''' <summary>Hochskalieren mit einem gelernten Modell - der Schluessel des Modells, leer heisst
+        ''' nichts tun. Siehe <c>UpscaleModelService</c>.
+        '''
+        ''' Dieses Feld wirkt AUSSCHLIESSLICH im Speicherweg und NICHT in der Vorschaukette. Das ist
+        ''' kein Versehen: ein Durchlauf kostet Sekunden bis Minuten, und in der Vorschau liefe er
+        ''' bei jeder Reglerbewegung erneut. Es steht hier bei den Groessenfeldern, weil es zur
+        ''' Groesse gehoert - angewandt wird es aber wie ein eingebackener Vorgang, VOR der
+        ''' Reglerkette. So kann danach noch gewoehnlich auf ein Zielmass verkleinert werden, und
+        ''' das ist die richtige Reihenfolge: vom Grossen herunter ist ein Mitteln und verliert
+        ''' nichts, umgekehrt wird geraten.</summary>
+        Public Property UpscaleModel As String = ""
+
         Public Property CanvasWidth As Integer = 0
         Public Property CanvasHeight As Integer = 0
         Public Property LockCanvasAspect As Boolean = True
@@ -2480,7 +2493,12 @@ Namespace Services
         '''
         ''' FEHLT EIN MODELL, wird der Vorgang UEBERSPRUNGEN und der Rest trotzdem gemacht. Alles
         ''' abzubrechen hiesse, wegen eines fehlenden Modells auch die Retusche zu verlieren.</summary>
-        Friend Shared Function ApplyPendingBakedOperations(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+        ''' <param name="cancel">Abbruch durch den Nutzer. Hier laufen dieselben Modelle wie beim
+        ''' ersten Mal, also dauert es genauso lange - und ein Abbruch muss genauso gehen. Bricht
+        ''' einer der Vorgaenge ab, wird der GANZE Nachzug verworfen: ein Bild mit dem Entrauschen,
+        ''' aber ohne die Retusche waere ein Zustand, den niemand bestellt hat.</param>
+        Friend Shared Function ApplyPendingBakedOperations(source As SKBitmap, adj As ImageAdjustments,
+                                                           Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
             If source Is Nothing OrElse Not HasPendingBakedOperations(adj) Then Return Nothing
 
             Dim current = source
@@ -2489,12 +2507,20 @@ Namespace Services
                 If adj.BakedOperations IsNot Nothing Then
                     For Each op In adj.BakedOperations
                         If op Is Nothing Then Continue For
+                        If cancel.IsCancellationRequested Then
+                            If owned Then current.Dispose()
+                            Return Nothing
+                        End If
                         If String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase) Then
-                            current = ReplaceBitmapOwned(current, RunBakedDenoise(current, op), owned)
+                            current = ReplaceBitmapOwned(current, RunBakedDenoise(current, op, cancel), owned)
                         ElseIf String.Equals(op.Kind, BakedOperation.KindObjectRemoval, StringComparison.OrdinalIgnoreCase) Then
-                            current = ReplaceBitmapOwned(current, RunBakedObjectRemoval(current, op), owned)
+                            current = ReplaceBitmapOwned(current, RunBakedObjectRemoval(current, op, cancel), owned)
                         End If
                     Next
+                End If
+                If cancel.IsCancellationRequested Then
+                    If owned Then current.Dispose()
+                    Return Nothing
                 End If
 
                 ' Retusche und Striche zeichnen IN das Bild statt ein neues zu liefern. Solange noch
@@ -2541,7 +2567,8 @@ Namespace Services
         End Function
 
         ''' <summary>Ein vermerkter Entrausch-Durchlauf. Nothing, wenn seine Modelldatei fehlt.</summary>
-        Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation) As SKBitmap
+        Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation,
+                                                cancel As Threading.CancellationToken) As SKBitmap
             Dim kind = If(String.Equals(op.DenoiseModel, "fast", StringComparison.OrdinalIgnoreCase),
                           DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.DenoiseKind.Quality)
             If kind = DenoiseModelService.DenoiseKind.Fast Then
@@ -2564,7 +2591,8 @@ Namespace Services
                     End Using
                     input = converted
                 End If
-                Return DenoiseModelService.Denoise(input, kind, CSng(Math.Max(0.0, Math.Min(100.0, op.DenoiseStrength)) / 100.0))
+                Return DenoiseModelService.Denoise(input, kind,
+                                                   CSng(Math.Max(0.0, Math.Min(100.0, op.DenoiseStrength)) / 100.0), cancel)
             Finally
                 converted?.Dispose()
             End Try
@@ -2572,12 +2600,13 @@ Namespace Services
 
         ''' <summary>Ein vermerktes Objektentfernen. Ohne Maske gibt es nichts nachzuziehen - sie IST
         ''' der Auftrag.</summary>
-        Private Shared Function RunBakedObjectRemoval(source As SKBitmap, op As BakedOperation) As SKBitmap
+        Private Shared Function RunBakedObjectRemoval(source As SKBitmap, op As BakedOperation,
+                                                      cancel As Threading.CancellationToken) As SKBitmap
             If op.Mask Is Nothing Then Return Nothing
             If Not ObjectRemovalService.Available Then Return Nothing
             Using mask = MaskAsSourceBitmap(op.Mask, source.Width, source.Height)
                 If mask Is Nothing Then Return Nothing
-                Return ObjectRemovalService.Fill(source, mask)
+                Return ObjectRemovalService.Fill(source, mask, cancel)
             End Using
         End Function
 
@@ -7591,9 +7620,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If work Is Nothing OrElse maskAlpha Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return
 
             Dim iterations = If(Math.Max(width, height) > 72, 4, 3)
+            ' EINMAL angelegt und je Durchlauf wiederverwendet. Vorher entstanden beide Puffer bei
+            ' jeder der drei bis vier Iterationen neu; bei einer grossen Reparaturstelle sind das
+            ' vier Wuerfe Speicher, die der Sammler hinterher wieder einsammeln muss, ohne dass ein
+            ' einziges Pixel anders herauskaeme.
+            '
+            ' Geleert werden muss dabei nur hasNext: nextColors wird ausschliesslich dort gelesen,
+            ' wo hasNext wahr ist. Eine zweite Leerung waere Arbeit fuer nichts.
+            Dim nextColors(width * height - 1) As SKColor
+            Dim hasNext(width * height - 1) As Boolean
             For iteration = 1 To iterations
-                Dim nextColors(width * height - 1) As SKColor
-                Dim hasNext(width * height - 1) As Boolean
+                If iteration > 1 Then Array.Clear(hasNext, 0, hasNext.Length)
 
                 For maskY = 0 To height - 1
                     Dim y = targetTop + maskY
@@ -11460,6 +11497,23 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         decoded = reapplied
                     End If
                 End If
+
+                ' Hochskalieren mit Modell - HIER und nur hier, also im Speicherweg. Es steht VOR der
+                ' Reglerkette: dann kann deren Groessenaenderung danach noch auf ein Zielmass
+                ' verkleinern, und das ist die richtige Reihenfolge. Faellt es aus (Modell fehlt,
+                ' Speicher reicht nicht), wird gespeichert wie ohne - eine Vergroesserung, die nicht
+                ' geht, darf keine Datei kosten.
+                If decoded IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(adj.UpscaleModel) Then
+                    Dim hochskaliert = UpscaleModelService.Upscale(decoded, adj.UpscaleModel)
+                    If hochskaliert IsNot Nothing Then
+                        decoded.Dispose()
+                        decoded = hochskaliert
+                    Else
+                        DiagnosticLogService.LogAlways("Hochskalieren",
+                            $"nicht angewandt auf {IO.Path.GetFileName(sourcePath)} - es wird ohne gespeichert")
+                    End If
+                End If
+
                 Using original = decoded
                     If original Is Nothing Then Return False
 
@@ -13984,18 +14038,41 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Domain wird als 0..1 angenommen). Ergebnis wird pro Dateipfad gecacht, da eine LUT beim
         ''' Ziehen an einem Stärke-Regler sonst bei jedem Preview-Frame neu von der Platte geparst würde.
         ''' Speicher- (SaveImage) und Vorschau-Rendering (ApplyAdjustments) können diese Methode
-        ''' gleichzeitig von verschiedenen Threads aufrufen, daher SyncLock um das gesamte Dictionary.
+        ''' gleichzeitig von verschiedenen Threads aufrufen, daher SyncLock um das Dictionary.
+        '''
+        ''' GESPERRT WIRD NUR DAS NACHSCHLAGEN UND DAS EINTRAGEN, nicht das Parsen. Vorher lag die
+        ''' Datei-Arbeit innerhalb der Sperre: der erste Zugriff auf eine LUT hielt damit JEDEN
+        ''' anderen Renderfaden an, solange die Datei gelesen und zerlegt wurde - bei einer
+        ''' 64er-LUT sind das über 780 000 Zahlen. Draussen geparst kann es passieren, dass zwei
+        ''' Faeden dieselbe Datei gleichzeitig lesen; das kostet einmal doppelte Arbeit und ist
+        ''' ungefaehrlich, weil beide dasselbe Ergebnis haben und der Erste im Cache gewinnt.
         Private Shared Function LoadCubeLut(path As String) As Lut3DData
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
 
             SyncLock _cubeLutCacheLock
                 Dim cached As Lut3DData = Nothing
                 If _cubeLutCache.TryGetValue(path, cached) Then Return cached
-                Return LoadCubeLutUnlocked(path)
+            End SyncLock
+
+            ' Ausserhalb der Sperre: hier liegt die ganze Datei-Arbeit.
+            Dim parsed = ParseCubeLut(path)
+
+            SyncLock _cubeLutCacheLock
+                ' Zweite Frage unter der Sperre: war ein anderer Faden schneller, gewinnt sein
+                ' Eintrag. Sonst stuenden zwei gleichwertige Tabellen im Speicher, und welche ein
+                ' Aufrufer bekommt, haenge am Zufall.
+                Dim winner As Lut3DData = Nothing
+                If _cubeLutCache.TryGetValue(path, winner) Then Return winner
+                _cubeLutCache(path) = parsed
+                Return parsed
             End SyncLock
         End Function
 
-        Private Shared Function LoadCubeLutUnlocked(path As String) As Lut3DData
+        ''' <summary>Die reine Datei-Arbeit, OHNE Cache und ohne Sperre - genau deshalb darf sie
+        ''' ausserhalb des SyncLock laufen. Nothing heisst "nicht brauchbar" (fehlende Groesse,
+        ''' falsche Anzahl Werte, unlesbare Datei); was damit geschieht, entscheidet der
+        ''' Aufrufer.</summary>
+        Private Shared Function ParseCubeLut(path As String) As Lut3DData
             Dim size As Integer = 0
             Dim values As New List(Of Single)()
             Try
@@ -14026,18 +14103,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Try
 
             If size < 2 OrElse values.Count <> size * size * size * 3 Then
-                ' Fehlschlag NEGATIV cachen: ohne Eintrag wurde eine defekte
-                ' .cube-Datei beim Ziehen am LUT-Stärke-Regler mit JEDEM Vorschau-Frame neu
-                ' geparst. TryGetValue liefert für den Nothing-Eintrag True -> Aufrufer sehen
-                ' weiterhin "keine LUT". Gilt (wie der Positiv-Cache) bis zum Programmende -
-                ' eine extern reparierte Datei braucht einen Neustart bzw. Neu-Auswahl.
-                _cubeLutCache(path) = Nothing
+                ' Nothing heisst hier "unbrauchbar", und der Aufrufer legt genau das in den Cache.
+                ' Das NEGATIVE Merken ist wichtig: ohne Eintrag wurde eine defekte .cube-Datei beim
+                ' Ziehen am LUT-Staerke-Regler mit JEDEM Vorschau-Frame neu geparst. Es gilt (wie
+                ' der Positiv-Cache) bis zum Programmende - eine extern reparierte Datei braucht
+                ' einen Neustart bzw. eine Neu-Auswahl.
                 Return Nothing
             End If
 
-            Dim data = New Lut3DData With {.Size = size, .Table = values.ToArray()}
-            _cubeLutCache(path) = data
-            Return data
+            Return New Lut3DData With {.Size = size, .Table = values.ToArray()}
         End Function
 
         Private Shared Function LutChannel(table As Single(), size As Integer, r As Integer, g As Integer, b As Integer, channel As Integer) As Single

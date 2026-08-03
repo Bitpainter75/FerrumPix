@@ -55,7 +55,13 @@
         </Grid.ContextMenu>
 
 
-        <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="60" Padding="24,0">
+        <!-- Die obere Leiste ist waehrend eines laufenden Vorgangs GESPERRT, so wie die
+             Werkzeugleiste, die Regler und die Fusszeile. Sie war es als einzige nicht, und
+             gerade hier stehen die Knoepfe, die am meisten anrichten: Rueckgaengig und
+             Speichern greifen auf ein Bild zu, das in diesem Augenblick Kachel fuer Kachel
+             neu geschrieben wird. -->
+        <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="60" Padding="24,0"
+                IsEnabled="{Binding IsInteractionAllowed}">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
                     <Button Classes="icon-btn" Width="38" Height="38"
@@ -229,7 +235,11 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}">
+        <!-- GESPERRT, solange ein langer Vorgang laeuft - genau wie die Regler rechts. Ein
+             Werkzeugwechsel mitten im Entrauschen fuehrt sonst zu einem Bild, dessen Zustand
+             niemand mehr erklaeren kann. -->
+        <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}"
+                IsEnabled="{Binding IsInteractionAllowed}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
                 <StackPanel Spacing="2">
                     <!-- Die drei Werkzeuggruppen liegen in einem Raster mit drei Zeilen: welche
@@ -964,6 +974,17 @@
                                            Text="{Binding BusyText}"
                                            VerticalAlignment="Center"
                                            FontSize="{DynamicResource FP.Font.Body}" />
+                                <!-- ABBRECHEN. Nur bei den langen Modellwegen da - beim Einbacken
+                                     eines Strichs waere es eine Schaltflaeche, die niemand trifft.
+                                     Dieselbe Wirkung hat Esc. -->
+                                <Button Classes="icon-btn"
+                                        Width="26" Height="26" Padding="0"
+                                        IsVisible="{Binding CanCancelBusy}"
+                                        Command="{Binding CancelBusyCommand}"
+                                        ToolTip.Tip="Abbrechen (Esc). Das Entrauschen steigt an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                                   Width="14" Height="14" />
+                                </Button>
                             </StackPanel>
                         </Border>
                     </Border>
@@ -986,7 +1007,7 @@
                              an und der spaeter eintreffende Vorgang ueberschrieb sie wieder. -->
                         <StackPanel x:Name="AdjustmentsStackPanel"
                                     Margin="10,2,10,10"
-                                    IsEnabled="{Binding BedienbarWaehrendArbeit}"
+                                    IsEnabled="{Binding IsInteractionAllowed}"
                                     HorizontalAlignment="Stretch">
                             <!-- OHNE aeusseren Rahmen: das Panel bringt seit dem Verzerren ZWEI
                                  Gruppen mit und rahmt jede selbst (siehe DetailsPanel). -->
@@ -1385,13 +1406,18 @@
         <!-- Liegt über dem Platzhalter: beim Start ohne Bilddatei erscheinen beide, der Dialog vorn. -->
         <views:NewDocumentDialogOverlayView Grid.Row="0" Grid.RowSpan="3" Grid.ColumnSpan="5" ZIndex="200" />
 
+        <!-- Auch der Fuss mit Filmstreifen und Menue: waehrend eines Modelllaufs zum naechsten Bild
+             zu blaettern hiesse, dass der Commit auf ein Bild trifft, das gar nicht mehr offen ist.
+             Der Commit selbst faengt das ab (er verfaellt), aber der Nutzer stuende dann vor einem
+             Ergebnis, das er nirgends sieht. -->
         <Border Grid.Row="2"
                 Grid.ColumnSpan="5"
                 Classes="window-drag"
                 Background="{DynamicResource FP.Bg.Dark}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="0,1,0,0"
-                Padding="24,8,24,8">
+                Padding="24,8,24,8"
+                IsEnabled="{Binding IsInteractionAllowed}">
             <!-- Dasselbe Menue wie hinter der Schaltflaeche, hier als Rechtsklick auf die
                  Fussleiste. Bewusst NICHT auf der Bildflaeche: dort ist die rechte Taste
                  bereits belegt (im Editor hebt sie die Auswahl auf, im Betrachter zoomt sie). -->

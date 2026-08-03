@@ -8,6 +8,39 @@
     <StackPanel Spacing="10">
         <Border Classes="adjustment-group">
             <StackPanel Spacing="8">
+                <!-- HOCHSKALIEREN MIT MODELL. Steht ganz oben, weil es alles darunter ersetzt:
+                     ist ein Modell gewählt, bestimmt DESSEN Maßstab die Größe, und die
+                     gewöhnlichen Größenfelder verschwinden. Zwei Wege zur selben Größe
+                     nebeneinander wären eine Einladung, sich zu widersprechen.
+
+                     Es ist auch kein weiterer Eintrag in der Neuberechnung darunter: die dortigen
+                     Verfahren sind sofort fertig und mitteln nur, was schon da ist. Das Modell
+                     rechnet Sekunden bis Minuten je Bild und setzt Kanten und Strukturen neu. -->
+                <Grid ColumnSpacing="14" VerticalAlignment="Center"
+                      IsVisible="{Binding IsDialogUpscaleAvailable}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Hochskalieren mit Modell"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding DialogUpscaleModelOptions}"
+                              SelectedItem="{Binding DialogUpscaleModelLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              HorizontalAlignment="Stretch"
+                              ToolTip.Tip="{Binding DialogUpscaleModelHint}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}"
+                                           VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+
+                <StackPanel Spacing="8" IsVisible="{Binding IsDialogResizeSizeVisible}">
                 <!-- „Lange Kante": EIN Feld statt Breite und Höhe. Der Wert begrenzt bei jedem Bild
                      die längere Kante, egal ob quer oder hoch - dafür muss das Seitenverhältnis
                      gehalten sein, deshalb steht der Haken darunter dann fest. -->
@@ -104,10 +137,14 @@
                         </ComboBox.ItemTemplate>
                       </ComboBox>
                 </Grid>
+                </StackPanel>
             </StackPanel>
         </Border>
 
-        <Border Classes="adjustment-group">
+        <!-- Die Vorgaben gehören zu den Größenfeldern und verschwinden mit ihnen: beim
+             Hochskalieren bestimmt das Modell den Maßstab, eine Vorgabe wie „Full-HD" hätte
+             dort nichts zu setzen. -->
+        <Border Classes="adjustment-group" IsVisible="{Binding IsDialogResizeSizeVisible}">
             <StackPanel Spacing="8">
                 <TextBlock Text="Vorgaben" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" />
                 <WrapPanel>

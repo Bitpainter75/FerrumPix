@@ -63,6 +63,7 @@ Namespace Services
         ''' meinte (Bildwechsel dazwischen), erkennt das am veränderten Stempel und verfällt.
         Private _initStamp As Long
         Private _hasBakedContent As Boolean
+        Private _hasUnrecordedBakedContent As Boolean
         Private _hasAlphaHoles As Boolean
         ''' Einfüge-Reihenfolge = Alter; vorne der älteste (Budget-Verdrängungskandidat).
         Private ReadOnly _patches As New List(Of WorkingImagePatch)()
@@ -144,6 +145,9 @@ Namespace Services
                 ' hasBakedContent=True beim Laden einer .fpx, deren retouch.png bereits das fertige
                 ' Arbeitsbild ist (Striche/Retusche eingebacken); hasAlphaHoles aus dem Rezept-Flag.
                 _hasBakedContent = hasBakedContent
+                ' Was aus einer retouch.png kommt, sind PIXEL und kein Rezept - es liesse sich aus
+                ' einer Begleitdatei nicht wiederherstellen.
+                _hasUnrecordedBakedContent = hasBakedContent
                 _hasAlphaHoles = hasAlphaHoles
             End SyncLock
             Return preview
@@ -225,6 +229,22 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>True, sobald etwas eingebacken wurde, das KEIN Rezept beschreiben kann:
+        ''' Retusche, Striche, gerasterte Ebenen, Verzerren, Bokeh.
+        '''
+        ''' Der Unterschied zu <see cref="HasBakedContent"/> entscheidet, ob bei einem RAW oder PSD
+        ''' die Begleitdatei allein reicht. Entrauschen und Objektentfernen stehen als Vermerk im
+        ''' Rezept und werden beim naechsten Oeffnen neu gerechnet - die Pixel daneben sind
+        ''' verzichtbar. Ein Pinselstrich ist es nicht: er steht nirgends ausser im Arbeitsbild,
+        ''' und eine Begleitdatei wuerde ihn stillschweigend verlieren.</summary>
+        Public ReadOnly Property HasUnrecordedBakedContent As Boolean
+            Get
+                SyncLock _lock
+                    Return _hasUnrecordedBakedContent
+                End SyncLock
+            End Get
+        End Property
+
         ''' <summary>True, sobald der Radierer (oder transparentes Rastern) Alpha-Löcher ins
         ''' Arbeitsbild gestanzt hat - steuert Schachbrett und Transparenz beim Speichern.</summary>
         Public ReadOnly Property HasAlphaHoles As Boolean
@@ -296,9 +316,14 @@ Namespace Services
         ''' Heal-Kandidatensuche), zieht die Vorschau-Region nach und erhöht die Version.
         ''' Läuft komplett unter dem Service-Lock - Commits sind dadurch strikt seriell, und
         ''' CloneFull (Export) wartet automatisch auf einen laufenden Commit.
-        ''' Nothing bei leerer Region oder ohne Init.</summary>
+        ''' Nothing bei leerer Region oder ohne Init.
+        ''' <paramref name="recordedInRecipe"/> setzt, wer den Vorgang zugleich als Vermerk ins
+        ''' Rezept schreibt (Entrauschen, Objektentfernen) - siehe
+        ''' <see cref="HasUnrecordedBakedContent"/>. Die Vorgabe ist bewusst falsch: wer es
+        ''' vergisst, sperrt hoechstens einen Knopf, statt eine Bearbeitung zu verlieren.</summary>
         Public Function CommitRegion(rect As SKRectI, draw As Action(Of SKBitmap),
-                                     Optional punchesAlpha As Boolean = False) As WorkingImagePatch
+                                     Optional punchesAlpha As Boolean = False,
+                                     Optional recordedInRecipe As Boolean = False) As WorkingImagePatch
             If draw Is Nothing Then Return Nothing
             SyncLock _lock
                 If _full Is Nothing Then Return Nothing
@@ -328,6 +353,7 @@ Namespace Services
                 UpdatePreviewRegionLocked(clamped)
                 _version += 1
                 _hasBakedContent = True
+                If Not recordedInRecipe Then _hasUnrecordedBakedContent = True
                 If punchesAlpha Then _hasAlphaHoles = True
 
                 Dim patch As New WorkingImagePatch(clamped, before)
@@ -460,6 +486,7 @@ Namespace Services
                 _preview = Nothing
                 _initStamp += 1
                 _hasBakedContent = False
+                _hasUnrecordedBakedContent = False
                 _hasAlphaHoles = False
             End SyncLock
         End Sub

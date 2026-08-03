@@ -6108,8 +6108,8 @@
   <data name="Grafikkarte_f_r_gelernte_Modelle_nutzen_100a84ba" xml:space="preserve">
     <value>Use the graphics card for learned models</value>
   </data>
-  <data name="L_sst_Entrauschen_Objektauswahl_und_Tiefenkarte__49e3db07" xml:space="preserve">
-    <value>Runs denoising, subject selection and depth maps on the graphics card instead of the processor. The result stays the same, only the waiting time gets shorter. The remaining models stay on the processor because they are measurably faster there.</value>
+  <data name="L_sst_Entrauschen_Hochskalieren_Objektauswahl_un_2438f0d5" xml:space="preserve">
+    <value>Runs denoising, enlarging, subject selection and depth maps on the graphics card instead of the processor. The result stays the same, only the waiting time gets shorter. The remaining models stay on the processor because they are measurably faster there.</value>
   </data>
   <data name="Verwendete_Grafikkarte_5f0a8ad8" xml:space="preserve">
     <value>Graphics card in use</value>
@@ -6168,16 +6168,91 @@
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Runs learned models on the graphics card</value>
   </data>
-  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
-    <value>Denoise: metered</value>
+  <data name="Vierfach_gr_ndlich_55df273f" xml:space="preserve">
+    <value>Four times, thorough</value>
   </data>
-  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
-    <value>Here the strength slider tells the model how strong the noise is, instead of mixing its result back afterwards. Much faster than the thorough way.</value>
+  <data name="Zweifach_gr_ndlich_b2a2773e" xml:space="preserve">
+    <value>Twice, thorough</value>
   </data>
-  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
-    <value>The strength slider goes into the model instead of mixing its result back</value>
+  <data name="Vierfach_z_gig_67b9c460" xml:space="preserve">
+    <value>Four times, quick</value>
   </data>
-  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
-    <value>Metered denoising</value>
+  <data name="Vierfach_f_r_Zeichnungen_55b4a514" xml:space="preserve">
+    <value>Four times, for drawings</value>
+  </data>
+  <data name="Das_genaueste_f_r_Fotos_Auf_einer_Grafikkarte_gu_28d5f237" xml:space="preserve">
+    <value>The most accurate one for photos. About a minute per photo on a graphics card, several on the processor.</value>
+  </data>
+  <data name="Dasselbe_f_r_die_doppelte_Gr_e_Deutlich_schnelle_bfb781c3" xml:space="preserve">
+    <value>The same for double the size. Much quicker than four times, because four times less area is created.</value>
+  </data>
+  <data name="F_r_Gezeichnetes_statt_Fotografiertes_h_lt_Fl_ch_3ce48c60" xml:space="preserve">
+    <value>For drawn rather than photographed material: keeps areas smooth and lines sharp. On a photo it looks waxy.</value>
+  </data>
+  <data name="Vergr_ert_jedes_Bild_mit_einem_gelernten_Modell__162874ac" xml:space="preserve">
+    <value>Enlarges every picture with a learned model instead of just averaging its pixels. This costs seconds to minutes per picture.</value>
+  </data>
+  <data name="Wird_abgebrochen_682a363b" xml:space="preserve">
+    <value>Cancelling…</value>
+  </data>
+  <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
+    <value>Denoising cancelled - the picture is unchanged</value>
+  </data>
+  <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
+    <value>Removal cancelled - the picture is unchanged</value>
+  </data>
+  <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
+    <value>Applying cancelled - the picture is unchanged</value>
+  </data>
+  <data name="Abbrechen_Esc_Das_Entrauschen_steigt_an_der_n_ch_3adced7f" xml:space="preserve">
+    <value>Cancel (Esc). Denoising stops at the next tile, removal after its run - the picture stays unchanged either way.</value>
+  </data>
+  <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
+    <value>Upscale with a model</value>
+  </data>
+  <data name="Hochskalieren_4a8ec201" xml:space="preserve">
+    <value>Upscaling</value>
+  </data>
+  <data name="Hochskalieren_schnell_3d45a8ca" xml:space="preserve">
+    <value>Upscaling, quick</value>
+  </data>
+  <data name="Hochskalieren_Zeichnung_f97a0888" xml:space="preserve">
+    <value>Upscaling drawings</value>
+  </data>
+  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_c60382bd" xml:space="preserve">
+    <value>Enlarge a photo two or four times, with edges put back rather than pixels averaged</value>
+  </data>
+  <data name="Derselbe_Zweck_in_einem_Sechzehntel_der_Zeit_die_7790d26f" xml:space="preserve">
+    <value>The same purpose in a sixteenth of the time - the choice without a graphics card</value>
+  </data>
+  <data name="F_r_Gezeichnetes_statt_Fotografiertes_glatte_Fl__ee30cb59" xml:space="preserve">
+    <value>For drawn rather than photographed material: smooth areas, sharp lines</value>
+  </data>
+  <data name="Vierfach_z_gig_Korn_bleibt_df6a66a9" xml:space="preserve">
+    <value>Four times, quick, grain stays</value>
+  </data>
+  <data name="Ein_sehr_kleines_Modell_auf_dem_Prozessor_sechze_8c4649ba" xml:space="preserve">
+    <value>A very small model: sixteen times quicker than the thorough way on the processor, at the cost of a little drawing. It takes noise out along the way. The right choice without a graphics card.</value>
+  </data>
+  <data name="Dasselbe_kleine_Modell_in_der_Fassung_die_das_Ko_3dd41e34" xml:space="preserve">
+    <value>The same small model in the version that LEAVES the grain in. For shots whose grain belongs to the picture and should not be computed away with it.</value>
+  </data>
+  <data name="Vierfach_f_r_Aufnahmen_aus_dem_Netz_1f6cc571" xml:space="preserve">
+    <value>Four times, for pictures from the web</value>
+  </data>
+  <data name="Auf_Fotos_trainiert_die_schon_einmal_durch_eine__c3cba7aa" xml:space="preserve">
+    <value>Trained on photos that have been through JPEG compression once - it computes their artefacts and slight blur away along the way. For pictures from the web or from old backups.</value>
+  </data>
+  <data name="Vierfach_f_r_Zeichnungen_zweite_Wahl_c78c29b1" xml:space="preserve">
+    <value>Four times, for drawings, second option</value>
+  </data>
+  <data name="Derselbe_Zweck_aber_auf_Einzelbildern_moderner_A_99c07c07" xml:space="preserve">
+    <value>The same purpose, but trained on frames from modern animated films rather than on drawings in general. Which of the two fits better depends on the source.</value>
+  </data>
+  <data name="Vierfach_zur_ckhaltend_945f57bf" xml:space="preserve">
+    <value>Four times, restrained</value>
+  </data>
+  <data name="Auf_ber_84000_unbesch_digten_Fotos_trainiert_ohn_7a563d0c" xml:space="preserve">
+    <value>Trained on over 84000 undamaged photos, without artificially degraded sources. It invents less than the others - for shots that are already good.</value>
   </data>
 </root>

@@ -174,9 +174,16 @@ Namespace Services
         ''' <summary>Die Luecke fuellen. <paramref name="mask"/> hat Bildgroesse; alles ueber der
         ''' Schwelle gilt als zu fuellen. Zurueck kommt eine KOPIE des Bildes mit gefuellter Luecke,
         ''' oder Nothing bei jedem Fehlschlag.</summary>
-        Public Shared Function Fill(image As SKBitmap, mask As SKBitmap) As SKBitmap
+        ''' <param name="cancel">Abbruch durch den Nutzer. ANDERS ALS BEIM ENTRAUSCHEN gibt es hier
+        ''' keine Kachelgrenze: das Fuellen ist EIN Modelldurchlauf von mehreren Sekunden, und der
+        ''' laesst sich nicht anhalten. Geprueft wird davor und danach - wer waehrenddessen abbricht,
+        ''' wartet den Durchlauf noch ab, bekommt aber sein Bild unveraendert zurueck. Ehrlicher als
+        ''' ein Knopf, der so tut, als koennte er das Modell stoppen.</param>
+        Public Shared Function Fill(image As SKBitmap, mask As SKBitmap,
+                                    Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
             If image Is Nothing OrElse mask Is Nothing Then Return Nothing
             If image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
+            If cancel.IsCancellationRequested Then Return Nothing
             Dim session = AiModelService.SessionFor(ModelFile)
             If session Is Nothing Then Return Nothing
 
@@ -265,6 +272,13 @@ Namespace Services
                         Dim filled = Compute(session, small, smallMask, aw, ah, pw, ph, threshold)
                         If filled Is Nothing Then Return Nothing
                         Using filled
+                            ' Wer waehrend des Durchlaufs abgebrochen hat, bekommt sein Bild
+                            ' unveraendert zurueck. Das Ergebnis wird verworfen, obwohl es fertig
+                            ' ist - genau das hat der Nutzer verlangt.
+                            If cancel.IsCancellationRequested Then
+                                DiagnosticLogService.LogAlways("ObjektEntfernen", "abgebrochen, Ergebnis verworfen")
+                                Return Nothing
+                            End If
                             Return InsertInto(image, m, filled, window)
                         End Using
                     End Using

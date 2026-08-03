@@ -1364,7 +1364,7 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                     <TextBlock Text="Grafikkarte für gelernte Modelle nutzen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Lässt Entrauschen, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Lässt Entrauschen, Hochskalieren, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                     <Button Classes="ghost" Padding="12,7"

@@ -6328,6 +6328,11 @@ Namespace ViewModels
                              adj.LockResizeAspect = resize.LockAspect
                              adj.NoResizeUpscale = resize.NoUpscale
                              adj.ResizeInterpolation = resize.Interpolation
+                             ' Das Vergroessern laeuft im Speicherweg VOR der Reglerkette, also vor
+                             ' den Groessenfeldern darueber. Beides zusammen ist damit sinnvoll:
+                             ' erst vierfach durch das Modell, dann auf das eingetragene Zielmass
+                             ' herunter.
+                             adj.UpscaleModel = resize.UpscaleModel
                              Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked)
@@ -7241,6 +7246,11 @@ Namespace ViewModels
                 ' "Lange Kante" haette hier gar nicht gewirkt.
                 vorlage.ResizeFitInsideBox = True
             End If
+            ' Das Vergroessern mit Modell steht AUSSERHALB der beiden Zweige darueber: es gilt auch
+            ' ohne Zielmasse. Es laeuft im Speicherweg vor der Reglerkette - wer also vierfach
+            ' vergroessert UND eine Zielbreite eintraegt, bekommt genau die, gerechnet vom
+            ' vergroesserten Bild herunter.
+            vorlage.UpscaleModel = If(result.UpscaleModel, "")
             If Not String.IsNullOrEmpty(result.WatermarkPresetName) Then
                 ' Die Lauf-Kopie aus dem Dialog traegt Anker und Breite dieses Laufs; nur wenn sie
                 ' fehlt (aelteres Ergebnis), wird die gespeicherte Vorlage nachgeschlagen.

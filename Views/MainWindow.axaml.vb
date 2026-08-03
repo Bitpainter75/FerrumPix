@@ -863,6 +863,28 @@ Namespace Views
                 End If
 
                 If e.Key = Key.Escape Then
+                    ' ZUERST das, was gerade LÄUFT - und zwar hier im Fenster-Tunnel, nicht in der
+                    ' Ansicht. Der Tunnel feuert vor jedem Handler der Ansicht; stünde die Abfrage
+                    ' nur im Editor, käme Esc dort nie an, und die Zeile darunter verließe stattdessen
+                    ' den Editor. Genau so war es: die Pipette liess sich nicht abbrechen, und der
+                    ' Abbruch eines Modelllaufs waere ebenso ins Leere gelaufen.
+                    '
+                    ' Die Reihenfolge ist die der Dringlichkeit: ein Modelllauf rechnet Minuten, eine
+                    ' Pipette wartet auf einen Klick, und erst danach heisst Esc "verlassen".
+                    If vm.CurrentMode = AppMode.Editor AndAlso vm.Editor IsNot Nothing Then
+                        If vm.Editor.CanCancelBusy Then
+                            vm.Editor.RequestBusyCancel()
+                            e.Handled = True
+                            Return
+                        End If
+                        ' Gilt fuer JEDE Pipette - die im Farbmischer, die an den Farbraedern und die
+                        ' der Farbfelder: sie alle laufen ueber denselben Zustand im ViewModel.
+                        If vm.Editor.IsPickingColorFromImage Then
+                            vm.Editor.CancelColorPick()
+                            e.Handled = True
+                            Return
+                        End If
+                    End If
                     If vm.CurrentMode = AppMode.Editor Then
                         vm.Editor.BackToViewerCommand.Execute(Nothing)
                         e.Handled = True

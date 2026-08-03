@@ -6107,8 +6107,8 @@
   <data name="Grafikkarte_f_r_gelernte_Modelle_nutzen_100a84ba" xml:space="preserve">
     <value>Usare la scheda grafica per i modelli appresi</value>
   </data>
-  <data name="L_sst_Entrauschen_Objektauswahl_und_Tiefenkarte__49e3db07" xml:space="preserve">
-    <value>Esegue riduzione del rumore, selezione oggetto e mappa di profondità sulla scheda grafica anziché sul processore. Il risultato resta lo stesso, si accorcia solo l'attesa. Gli altri modelli restano sul processore perché lì sono più veloci secondo le misurazioni.</value>
+  <data name="L_sst_Entrauschen_Hochskalieren_Objektauswahl_un_2438f0d5" xml:space="preserve">
+    <value>Esegue riduzione del rumore, ingrandimento, selezione oggetto e mappa di profondità sulla scheda grafica anziché sul processore. Il risultato resta lo stesso, si accorcia solo l'attesa. Gli altri modelli restano sul processore perché lì sono più veloci secondo le misurazioni.</value>
   </data>
   <data name="Verwendete_Grafikkarte_5f0a8ad8" xml:space="preserve">
     <value>Scheda grafica utilizzata</value>
@@ -6167,16 +6167,91 @@
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Esegue i modelli appresi sulla scheda grafica</value>
   </data>
-  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
-    <value>Riduzione rumore: dosata</value>
+  <data name="Vierfach_gr_ndlich_55df273f" xml:space="preserve">
+    <value>Quadruplo, accurato</value>
   </data>
-  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
-    <value>Qui il cursore dell'intensità dice al modello quanto è forte il rumore, invece di rimescolarne il risultato dopo. Molto più veloce della via accurata.</value>
+  <data name="Zweifach_gr_ndlich_b2a2773e" xml:space="preserve">
+    <value>Doppio, accurato</value>
   </data>
-  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
-    <value>Il cursore dell'intensità entra nel modello invece di rimescolarne il risultato</value>
+  <data name="Vierfach_z_gig_67b9c460" xml:space="preserve">
+    <value>Quadruplo, rapido</value>
   </data>
-  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
-    <value>Riduzione rumore dosata</value>
+  <data name="Vierfach_f_r_Zeichnungen_55b4a514" xml:space="preserve">
+    <value>Quadruplo, per disegni</value>
+  </data>
+  <data name="Das_genaueste_f_r_Fotos_Auf_einer_Grafikkarte_gu_28d5f237" xml:space="preserve">
+    <value>Il più preciso per le foto. Circa un minuto per foto su una scheda grafica, diversi sul processore.</value>
+  </data>
+  <data name="Dasselbe_f_r_die_doppelte_Gr_e_Deutlich_schnelle_bfb781c3" xml:space="preserve">
+    <value>Lo stesso per il doppio della dimensione. Molto più veloce del quadruplo, perché si crea quattro volte meno superficie.</value>
+  </data>
+  <data name="F_r_Gezeichnetes_statt_Fotografiertes_h_lt_Fl_ch_3ce48c60" xml:space="preserve">
+    <value>Per il disegnato invece del fotografato: mantiene lisce le superfici e nitide le linee. Su una foto risulta ceroso.</value>
+  </data>
+  <data name="Vergr_ert_jedes_Bild_mit_einem_gelernten_Modell__162874ac" xml:space="preserve">
+    <value>Ingrandisce ogni immagine con un modello appreso invece di limitarsi a mediarne i pixel. Costa da secondi a minuti per immagine.</value>
+  </data>
+  <data name="Wird_abgebrochen_682a363b" xml:space="preserve">
+    <value>Annullamento…</value>
+  </data>
+  <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
+    <value>Riduzione rumore annullata - la foto è invariata</value>
+  </data>
+  <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
+    <value>Rimozione annullata - la foto è invariata</value>
+  </data>
+  <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
+    <value>Applicazione annullata - la foto è invariata</value>
+  </data>
+  <data name="Abbrechen_Esc_Das_Entrauschen_steigt_an_der_n_ch_3adced7f" xml:space="preserve">
+    <value>Annulla (Esc). La riduzione del rumore si ferma al riquadro successivo, la rimozione dopo la sua passata - in entrambi i casi la foto resta invariata.</value>
+  </data>
+  <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
+    <value>Ingrandire con un modello</value>
+  </data>
+  <data name="Hochskalieren_4a8ec201" xml:space="preserve">
+    <value>Ingrandimento</value>
+  </data>
+  <data name="Hochskalieren_schnell_3d45a8ca" xml:space="preserve">
+    <value>Ingrandimento rapido</value>
+  </data>
+  <data name="Hochskalieren_Zeichnung_f97a0888" xml:space="preserve">
+    <value>Ingrandimento di disegni</value>
+  </data>
+  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_c60382bd" xml:space="preserve">
+    <value>Ingrandire una foto al doppio o al quadruplo, con i bordi ricostruiti invece di pixel mediati</value>
+  </data>
+  <data name="Derselbe_Zweck_in_einem_Sechzehntel_der_Zeit_die_7790d26f" xml:space="preserve">
+    <value>Lo stesso scopo in un sedicesimo del tempo: la scelta senza scheda grafica</value>
+  </data>
+  <data name="F_r_Gezeichnetes_statt_Fotografiertes_glatte_Fl__ee30cb59" xml:space="preserve">
+    <value>Per il disegnato invece del fotografato: superfici lisce, linee nitide</value>
+  </data>
+  <data name="Vierfach_z_gig_Korn_bleibt_df6a66a9" xml:space="preserve">
+    <value>Quadruplo, rapido, la grana resta</value>
+  </data>
+  <data name="Ein_sehr_kleines_Modell_auf_dem_Prozessor_sechze_8c4649ba" xml:space="preserve">
+    <value>Un modello molto piccolo: sedici volte più veloce della via accurata sul processore, al prezzo di un po' di dettaglio. Toglie anche il rumore per strada. La scelta giusta senza scheda grafica.</value>
+  </data>
+  <data name="Dasselbe_kleine_Modell_in_der_Fassung_die_das_Ko_3dd41e34" xml:space="preserve">
+    <value>Lo stesso piccolo modello nella versione che LASCIA la grana. Per scatti la cui grana fa parte dell'immagine e non deve sparire con essa.</value>
+  </data>
+  <data name="Vierfach_f_r_Aufnahmen_aus_dem_Netz_1f6cc571" xml:space="preserve">
+    <value>Quadruplo, per immagini dal web</value>
+  </data>
+  <data name="Auf_Fotos_trainiert_die_schon_einmal_durch_eine__c3cba7aa" xml:space="preserve">
+    <value>Addestrato su foto già passate per una compressione JPEG: ne toglie per strada gli artefatti e una leggera sfocatura. Per immagini dal web o da vecchi backup.</value>
+  </data>
+  <data name="Vierfach_f_r_Zeichnungen_zweite_Wahl_c78c29b1" xml:space="preserve">
+    <value>Quadruplo, per disegni, seconda scelta</value>
+  </data>
+  <data name="Derselbe_Zweck_aber_auf_Einzelbildern_moderner_A_99c07c07" xml:space="preserve">
+    <value>Lo stesso scopo, ma addestrato su fotogrammi di film d'animazione moderni invece che su disegni in generale. Quale dei due funzioni meglio dipende dall'originale.</value>
+  </data>
+  <data name="Vierfach_zur_ckhaltend_945f57bf" xml:space="preserve">
+    <value>Quadruplo, sobrio</value>
+  </data>
+  <data name="Auf_ber_84000_unbesch_digten_Fotos_trainiert_ohn_7a563d0c" xml:space="preserve">
+    <value>Addestrato su oltre 84000 foto integre, senza originali degradati artificialmente. Inventa meno degli altri: per scatti già buoni.</value>
   </data>
 </root>
