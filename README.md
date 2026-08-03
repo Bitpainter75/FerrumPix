@@ -67,7 +67,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 **Masks and selections.** Rectangle, ellipse, lasso and magic wand selections; a mask brush with a soft edge; graduated and radial masks you drag onto the picture and can keep adjusting afterwards. Any of them becomes a correction layer whose adjustment applies only inside it.
 
-**With a model file installed** (see below), three more things become available: clicking an object to select it, selecting by distance from the camera, and removing something from the picture so that the background is continued through the gap.
+**With a model file installed** (see below), four more things become available: clicking an object to select it, selecting by distance from the camera, removing something from the picture so that the background is continued through the gap, and denoising a photo with a model - a separate step next to the noise sliders that takes minutes rather than seconds, with a strength slider for how much of the brightness it should touch.
 
 **Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants.
 
@@ -91,11 +91,13 @@ Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…*
 
 ### Model files
 
-Five features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
+Six features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, denoising a photo with a model, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
 
 Finding people and naming places have to be switched on there as well, on top of fetching the file. A face is a different matter from a keyword, and where a photo was taken is one too - so neither happens unless you say so. Place names come from a table on your own machine; nothing is looked up anywhere, and there is no map view.
 
-Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0), the [ONNX Model Zoo](https://github.com/onnx/models) (Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
+The same section has a switch for the graphics card. It is off to begin with; turned on, denoising, click-to-select and the depth map run on the card instead of the processor and finish several times sooner, with the same result. FerrumPix names the card it found, will try it out when you ask, and lets you pick if the machine has more than one. Whatever the card cannot take - or will not do faster - keeps running on the processor, and if the card fails outright nothing is lost but time.
+
+Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), [SCUNet](https://github.com/cszn/SCUNet) (Apache-2.0), [NAFNet](https://github.com/megvii-research/NAFNet) (MIT), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0), the [ONNX Model Zoo](https://github.com/onnx/models) (Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
 
 ## Immich
 

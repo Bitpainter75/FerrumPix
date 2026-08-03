@@ -5999,4 +5999,154 @@
   <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
     <value>La cesta de descartes no es una persona y por eso no admite ningún nombre. Para asignar una cara suelta de ahí, escribe el nombre en la barra de información junto a la foto.</value>
   </data>
+  <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
+    <value>Reducir ruido con modelo</value>
+  </data>
+  <data name="Bild_wird_entrauscht_1b37ba42" xml:space="preserve">
+    <value>Reduciendo ruido…</value>
+  </data>
+  <data name="Bild_wird_entrauscht_d4eafb85" xml:space="preserve">
+    <value>Reduciendo ruido</value>
+  </data>
+  <data name="Bild_wird_entrauscht_0_von_1_6beafe11" xml:space="preserve">
+    <value>Reduciendo ruido ({0} de {1})</value>
+  </data>
+  <data name="Entrauschen_fehlgeschlagen_bae13c94" xml:space="preserve">
+    <value>Error al reducir ruido</value>
+  </data>
+  <data name="Bild_entrauscht_9ef77180" xml:space="preserve">
+    <value>Imagen sin ruido</value>
+  </data>
+  <data name="Rauschen_aus_hohen_ISO_Werten_entfernen_mit_erha_e9e1ee04" xml:space="preserve">
+    <value>Elimina el ruido de ISO altos conservando el detalle fino</value>
+  </data>
+  <data name="Entrauschen_d5be20de" xml:space="preserve">
+    <value>Reducción de ruido</value>
+  </data>
+  <data name="Entrauschen_schnell_4bd2dff3" xml:space="preserve">
+    <value>Reducción de ruido rápida</value>
+  </data>
+  <data name="Dasselbe_in_einem_Sechstel_der_Zeit_daf_r_etwas__42a40036" xml:space="preserve">
+    <value>Lo mismo en una sexta parte del tiempo, a cambio de algo más de suavizado. Para series largas o cuando la espera no encaja.</value>
+  </data>
+  <data name="Derselbe_Zweck_in_einem_Sechstel_der_Zeit_daf_r__a04b804b" xml:space="preserve">
+    <value>El mismo fin en una sexta parte del tiempo, a cambio de algo más de suavizado</value>
+  </data>
+  <data name="Entrauschen_gr_ndlich_1d9879a5" xml:space="preserve">
+    <value>Reducir ruido: a fondo</value>
+  </data>
+  <data name="Entrauschen_z_gig_9a3de0af" xml:space="preserve">
+    <value>Reducir ruido: rápido</value>
+  </data>
+  <data name="Entrauscht_das_ganze_Bild_mit_einem_gelernten_Mo_2c5a4bd1" xml:space="preserve">
+    <value>Pasa toda la foto por un modelo entrenado y conserva más dibujo. Tarda varios minutos y se calcula en los píxeles.</value>
+  </data>
+  <data name="Wie_stark_die_Helligkeit_entrauscht_wird_Niedrig_687c6921" xml:space="preserve">
+    <value>Con qué intensidad se reduce el ruido del brillo. Más bajo conserva más dibujo fino, más alto quita más grano. El color siempre se limpia por completo, y eso no cuesta dibujo. Se aplica a la próxima pulsación de cualquiera de los dos botones.</value>
+  </data>
+  <data name="Objekt_entfernen_0_Stellen_7b3c9d93" xml:space="preserve">
+    <value>Quitar objeto ({0} sitios)</value>
+  </data>
+  <data name="z_gig_e813cf87" xml:space="preserve">
+    <value>rápido</value>
+  </data>
+  <data name="gr_ndlich_302c62c4" xml:space="preserve">
+    <value>a fondo</value>
+  </data>
+  <data name="Gespeichert_0_St_rke_1_58526d95" xml:space="preserve">
+    <value>Guardado: {0}, intensidad {1}</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_anwenden_72c046dc" xml:space="preserve">
+    <value>¿Aplicar la edición guardada?</value>
+  </data>
+  <data name="Zu_diesem_Bild_ist_eine_Bearbeitung_gespeichert__136fdf74" xml:space="preserve">
+    <value>Esta foto tiene guardada una edición que debe calcularse en los píxeles: {0}. Todavía no está en la imagen, porque el archivo en sí no ha cambiado. Aplicarla puede tardar varios minutos.</value>
+  </data>
+  <data name="Sp_ter_a1ec84cf" xml:space="preserve">
+    <value>Más tarde</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_bleibt_liegen_b308a1d5" xml:space="preserve">
+    <value>La edición guardada queda pendiente</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_wird_angewendet_cffeb3ed" xml:space="preserve">
+    <value>Aplicando la edición guardada…</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_wird_angewendet_3710b6ef" xml:space="preserve">
+    <value>Aplicando la edición guardada</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_konnte_nicht_angewendet_92a4e5c8" xml:space="preserve">
+    <value>No se pudo aplicar la edición guardada</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_angewendet_0f22a6e3" xml:space="preserve">
+    <value>Edición guardada aplicada</value>
+  </data>
+  <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
+    <value>Reducción de ruido guardada eliminada: los píxeles se quedan como están</value>
+  </data>
+  <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
+    <value>Se anota en el archivo adjunto al guardar y se ofrece la próxima vez que abras la foto. Restablecer este grupo elimina la anotación.</value>
+  </data>
+  <data name="Grafikkarte_f_r_gelernte_Modelle_nutzen_100a84ba" xml:space="preserve">
+    <value>Usar la tarjeta gráfica para los modelos aprendidos</value>
+  </data>
+  <data name="L_sst_Entrauschen_Objektauswahl_und_Tiefenkarte__49e3db07" xml:space="preserve">
+    <value>Ejecuta la reducción de ruido, la selección de objetos y el mapa de profundidad en la tarjeta gráfica en lugar del procesador. El resultado es el mismo, solo se acorta la espera. Los demás modelos siguen en el procesador porque allí son medidamente más rápidos.</value>
+  </data>
+  <data name="Verwendete_Grafikkarte_5f0a8ad8" xml:space="preserve">
+    <value>Tarjeta gráfica utilizada</value>
+  </data>
+  <data name="L_dt_ein_Modell_versuchsweise_auf_die_Grafikkart_7b387230" xml:space="preserve">
+    <value>Carga un modelo en la tarjeta gráfica a modo de prueba y lo cierra enseguida. Solo así se ve si el controlador la deja usar de verdad.</value>
+  </data>
+  <data name="Pr_fen_5af98a0f" xml:space="preserve">
+    <value>Comprobar</value>
+  </data>
+  <data name="Die_Grafikkarte_wird_gepr_ft_6ba845e7" xml:space="preserve">
+    <value>Se está comprobando la tarjeta gráfica</value>
+  </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_steht_auf_dies_caa45c8d" xml:space="preserve">
+    <value>El entorno de ejecución para los modelos aprendidos no está disponible en este dispositivo.</value>
+  </data>
+  <data name="F_r_diese_Programmfassung_ist_keine_Grafikbeschl_b4f6b204" xml:space="preserve">
+    <value>Esta versión del programa no incluye aceleración gráfica. Los modelos se calculan en el procesador.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_l_sst_sich_nicht_laden__023e3e70" xml:space="preserve">
+    <value>La aceleración gráfica no se puede cargar: {0}</value>
+  </data>
+  <data name="Keine_geeignete_Grafikkarte_gefunden_Die_Modelle_6431d848" xml:space="preserve">
+    <value>No se ha encontrado ninguna tarjeta gráfica adecuada. Los modelos se calculan en el procesador.</value>
+  </data>
+  <data name="Grafikkarte_1953111f" xml:space="preserve">
+    <value>tarjeta gráfica</value>
+  </data>
+  <data name="eigene_Grafikkarte_ba7d12e0" xml:space="preserve">
+    <value>tarjeta gráfica dedicada</value>
+  </data>
+  <data name="eingebaute_Grafikeinheit_ff80201d" xml:space="preserve">
+    <value>unidad gráfica integrada</value>
+  </data>
+  <data name="unbekannter_Hersteller_a8469674" xml:space="preserve">
+    <value>fabricante desconocido</value>
+  </data>
+  <data name="Gefunden_0_1_2_angesprochen_ber_3_f69b4e9d" xml:space="preserve">
+    <value>Encontrada: {0} {1}, {2}, utilizada mediante {3}.</value>
+  </data>
+  <data name="Gepr_ft_ein_Modell_l_uft_darauf_075ea3da" xml:space="preserve">
+    <value>Comprobado: un modelo se ejecuta en ella.</value>
+  </data>
+  <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_92dcc74f" xml:space="preserve">
+    <value>Comprobado: ningún modelo se ejecuta en ella.</value>
+  </data>
+  <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
+    <value>Comprobado: ningún modelo se ejecuta en ella ({0}).</value>
+  </data>
+  <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
+    <value>Todavía sin comprobar.</value>
+  </data>
+  <data name="ONNX_Runtime_WebGPU_0_2_091a6cdf" xml:space="preserve">
+    <value>ONNX Runtime WebGPU 0.2</value>
+  </data>
+  <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
+    <value>Ejecuta los modelos aprendidos en la tarjeta gráfica</value>
+  </data>
 </root>

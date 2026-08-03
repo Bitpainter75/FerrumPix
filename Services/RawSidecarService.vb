@@ -114,7 +114,15 @@ Namespace Services
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
                 Try
-                    Dim json = FpxService.SerializeAdjustments(adjustments)
+                    ' HIER wird entschieden, was der Vermerk ueber gebackene Vorgaenge BEDEUTET.
+                    ' Neben dieser Datei liegt kein einziges Pixel: die Quelle bleibt unangetastet,
+                    ' und beim naechsten Oeffnen wird sie neu entwickelt. Also sind Entrauschen,
+                    ' Objektentfernen, Retusche und Striche dort NICHT drin, sondern noch anzuwenden.
+                    ' Der Editor kann das nicht setzen - er weiss beim Entrauschen noch nicht, ob
+                    ' spaeter eine .fpxmp oder eine .fpx daraus wird.
+                    Dim sidecarAdj = adjustments.Clone()
+                    sidecarAdj.BakedOperationsApplied = False
+                    Dim json = FpxService.SerializeAdjustments(sidecarAdj)
                     Dim keywordsNode = New XElement(Ns + "keywords")
                     For Each keyword In NormalizeKeywords(catalog?.Keywords)
                         keywordsNode.Add(New XElement(Ns + "keyword", keyword))

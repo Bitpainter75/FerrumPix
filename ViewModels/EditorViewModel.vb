@@ -12117,54 +12117,321 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property CanDenoiseWithModel As Boolean
+            Get
+                Return DenoiseModelService.Available
+            End Get
+        End Property
+
+        Public ReadOnly Property DenoiseWithModelHint As String
+            Get
+                If Not DenoiseModelService.Available Then Return MissingModelHint
+                Return LocalizationService.T("Entrauscht das ganze Bild mit einem gelernten Modell und hält dabei mehr Zeichnung. Braucht mehrere Minuten und wird in die Pixel gerechnet.")
+            End Get
+        End Property
+
+        ''' <summary>Der schnelle Weg hat eine EIGENE Modelldatei, und die kann fehlen, waehrend die
+        ''' andere da ist. Ein Knopf, der dann ins Leere fuehrt, waere schlimmer als keiner.</summary>
+        Public ReadOnly Property CanDenoiseFast As Boolean
+            Get
+                Return DenoiseModelService.FastAvailable
+            End Get
+        End Property
+
+        Public ReadOnly Property DenoiseFastHint As String
+            Get
+                If Not DenoiseModelService.FastAvailable Then Return MissingModelHint
+                Return LocalizationService.T("Dasselbe in einem Sechstel der Zeit, dafür etwas glatter. Für lange Serien oder wenn die Wartezeit nicht passt.")
+            End Get
+        End Property
+
+        ''' <summary>Ob ueberhaupt einer der beiden Wege da ist. Der Staerke-Regler gehoert zu
+        ''' beiden, also darf er nicht an einem der beiden haengen.</summary>
+        Public ReadOnly Property CanDenoiseWithAnyModel As Boolean
+            Get
+                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable
+            End Get
+        End Property
+
+        Private _denoiseStrength As Double = 70.0
+
+        ''' <summary>Wie stark die HELLIGKEIT entrauscht wird, 0 bis 100. Die Farbe wird immer voll
+        ''' entrauscht - warum, steht bei DenoiseModelService.Denoise.
+        '''
+        ''' Die Vorgabe steht auf 70 und nicht auf 100, weil volle Staerke an einer naechtlichen
+        ''' Fassade gemessen die schwache Zeichnung halbiert; bei 70 bleibt sichtbar mehr davon
+        ''' stehen, und das Rauschen ist immer noch weitgehend weg. Wer die Zeit hat, dreht am
+        ''' einzelnen Bild nach - ein Schritt zurueck und der andere Wert kostet nur die Wartezeit.
+        '''
+        ''' KEIN Rezeptwert: das Entrauschen ist ein Zug in die Pixel, kein Regler an der Vorschau.
+        ''' Was hier steht, gilt fuer den NAECHSTEN Druck auf den Knopf und aendert an einem bereits
+        ''' entrauschten Bild nichts.</summary>
+        Public Property DenoiseStrength As Double
+            Get
+                Return _denoiseStrength
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                If Math.Abs(_denoiseStrength - v) < 0.0001 Then Return
+                _denoiseStrength = v
+                Me.RaisePropertyChanged(NameOf(DenoiseStrength))
+            End Set
+        End Property
+
+        ''' <summary>Die in die PIXEL gerechneten Vorgaenge dieses Bildes (Entrauschen,
+        ''' Objektentfernen). Warum sie ins Rezept gehoeren, steht bei
+        ''' <see cref="ImageProcessor.BakedOperation"/>.</summary>
+        Private _bakedOperations As New List(Of BakedOperation)()
+
+        ''' <summary>Traegt das ARBEITSBILD dieser Sitzung die Vorgaenge aus
+        ''' <see cref="_bakedOperations"/> samt Retusche und Strichen bereits?
+        '''
+        ''' Beim Oeffnen einer .fpxmp steht hier falsch: daneben lag nur das Rezept, die Pixel sind
+        ''' frisch aus den Sensordaten. Beim Oeffnen einer .fpx steht wahr - das Buendel bringt sein
+        ''' Arbeitsbild mit. Wer etwas einbackt, setzt es wahr.</summary>
+        Private _bakedOperationsApplied As Boolean = False
+
+        ''' <summary>Kam dieses Bild MIT offenen Vorgaengen herein?
+        '''
+        ''' Das entscheidet, was ein neues Einbacken bedeutet. Wer auf einem sauberen Bild
+        ''' entrauscht, hat danach alles in den Pixeln - der Vermerk darf wahr werden. Wer auf einem
+        ''' Bild mit offener Retusche entrauscht, hat NICHT alles in den Pixeln, und ein wahrer
+        ''' Vermerk wuerde die Retusche stillschweigend fuer erledigt erklaeren. Deshalb bleibt er
+        ''' dann falsch, bis die offenen Vorgaenge wirklich angewandt sind.</summary>
+        Private _pendingBakedFromRecipe As Boolean = False
+
+        ''' <summary>Nach einem erfolgreichen Einbacken aufzurufen. Siehe
+        ''' <see cref="_pendingBakedFromRecipe"/> - der Vermerk stimmt nur, wenn vorher nichts
+        ''' offen war.</summary>
+        Private Sub MarkBakedIntoWorkingImage()
+            If Not _pendingBakedFromRecipe Then _bakedOperationsApplied = True
+        End Sub
+
+        ''' <summary>Welche Bilder in dieser Sitzung schon gefragt wurden. Ohne das kaeme beim
+        ''' Blaettern durch eine Serie bei jedem Hin und Her dieselbe Frage.</summary>
+        Private ReadOnly _bakedOperationsAsked As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Ein gespeicherter Entrausch-Durchlauf haengt an diesem Bild - fuer die Anzeige
+        ''' im Rauschen-Bereich, damit der Zuruecksetzer nicht ins Leere zeigt.</summary>
+        Public ReadOnly Property HasStoredDenoise As Boolean
+            Get
+                Return _bakedOperations.Any(Function(o) o IsNot Nothing AndAlso
+                    String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
+            End Get
+        End Property
+
+        ''' <summary>Was da haengt, in Worten: Modell und Staerke. Ohne die Zahlen kann niemand
+        ''' entscheiden, ob er es behalten will.</summary>
+        Public ReadOnly Property StoredDenoiseText As String
+            Get
+                Dim op = _bakedOperations.LastOrDefault(Function(o) o IsNot Nothing AndAlso
+                    String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
+                If op Is Nothing Then Return ""
+                Dim modelName = If(String.Equals(op.DenoiseModel, "fast", StringComparison.OrdinalIgnoreCase),
+                                   LocalizationService.T("zügig"), LocalizationService.T("gründlich"))
+                Return String.Format(LocalizationService.T("Gespeichert: {0}, Stärke {1}"),
+                                     modelName, CInt(Math.Round(op.DenoiseStrength)))
+            End Get
+        End Property
+
+        Private Sub RaiseStoredDenoiseChanged()
+            Me.RaisePropertyChanged(NameOf(HasStoredDenoise))
+            Me.RaisePropertyChanged(NameOf(StoredDenoiseText))
+        End Sub
+
         ''' <summary>Die Maske einer Auswahl als Bild in QUELLgroesse. Die Auswahl liegt im
         ''' Anzeigeraum; ueber CreateSourceMaskFromSelection wird sie zurueckgelegt, und zwar ueber
         ''' denselben Weg wie beim Anlegen einer Maskenebene - eine zweite Umrechnung daneben waere
         ''' eine zweite Gelegenheit, sich um ein paar Bildpunkte zu vertun.</summary>
+        ''' <summary>Liegt bei <see cref="ImageProcessor.MaskAsSourceBitmap"/>: dieselbe Umrechnung
+        ''' braucht das Nachziehen eines vermerkten Objektentfernens, und zwei Fassungen davon waeren
+        ''' zwei Gelegenheiten, sich um den Massstab zu vertun.</summary>
         Private Shared Function MaskAsSourceImage(m As ImageMask, width As Integer, height As Integer) As SKBitmap
-            If m Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return Nothing
-            If String.IsNullOrWhiteSpace(m.PngBase64) Then Return Nothing
-            Dim w = m.Right - m.Left, h = m.Bottom - m.Top
-            If w <= 0 OrElse h <= 0 Then Return Nothing
-            Dim target = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
-            Try
-                ' MASSSTAB. Die Maske liegt im Raum des ANZEIGEbildes (ImageMask.SourceWidthPixels),
-                ' das Arbeitsbild hat die volle Aufloesung der Datei. Bei einem 40-Megapixel-Foto,
-                ' das auf 1600 Punkte heruntergerechnet angezeigt wird, sind das Faktor drei: die
-                ' Maske landete im linken oberen Viertel und traf, was sie treffen sollte, gar nicht.
-                Dim sx = If(m.SourceWidthPixels > 0, width / CDbl(m.SourceWidthPixels), 1.0)
-                Dim sy = If(m.SourceHeightPixels > 0, height / CDbl(m.SourceHeightPixels), 1.0)
-                Using roh = SKBitmap.Decode(Convert.FromBase64String(m.PngBase64))
-                    If roh Is Nothing Then
-                        target.Dispose()
-                        Return Nothing
-                    End If
-                    Using canvas = New SKCanvas(target)
-                        canvas.Clear(SKColors.Transparent)
-                        Using image = SKImage.FromBitmap(roh)
-                            canvas.DrawImage(image, New SKRect(CSng(m.Left * sx), CSng(m.Top * sy),
-                                                              CSng((m.Left + w) * sx), CSng((m.Top + h) * sy)),
-                                             New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), Nothing)
-                        End Using
-                    End Using
-                End Using
-                If m.Inverted Then
-                    ' Umgekehrte Auswahl heisst hier: alles ausser dem Markierten soll weg. Selten
-                    ' gewollt, aber wenn es dasteht, muss es auch gelten.
-                    Dim n = width * height
-                    Dim buffer(n - 1) As Byte
-                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), buffer, 0, n)
-                    For i = 0 To n - 1
-                        buffer(i) = CByte(255 - buffer(i))
-                    Next
-                    Runtime.InteropServices.Marshal.Copy(buffer, 0, target.GetPixels(), n)
-                End If
-                Return target
-            Catch
-                target.Dispose()
-                Return Nothing
-            End Try
+            Return ImageProcessor.MaskAsSourceBitmap(m, width, height)
         End Function
+
+        ''' <summary>Das ganze Bild mit dem Modell entrauschen. <paramref name="kind"/> waehlt
+        ''' zwischen den beiden Modellen - Zeit gegen Zeichnung, die Zahlen stehen beim Dienst.
+        '''
+        ''' Anders als die Regler ist das KEINE Vorschau, sondern ein Zug in die Pixel - wie
+        ''' Retusche oder Objektentfernen. Der Grund ist die Rechenzeit: bei Minuten je Bild kann
+        ''' das nicht bei jeder Reglerbewegung neu laufen.</summary>
+        Public Sub ApplyModelDenoise(
+                Optional kind As DenoiseModelService.DenoiseKind = DenoiseModelService.DenoiseKind.Quality)
+            If kind = DenoiseModelService.DenoiseKind.Fast Then
+                If Not CanDenoiseFast Then Return
+            ElseIf Not CanDenoiseWithModel Then
+                Return
+            End If
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+
+            PushUndo()
+            Dim undoItem = _lastPushedUndoEntry
+            StatusText = LocalizationService.T("Bild wird entrauscht…")
+            SetBusyReason(LocalizationService.T("Bild wird entrauscht"))
+            Dim reason = ""
+            ' Die Staerke wird JETZT festgehalten, nicht erst im Hintergrund gelesen: der Regler
+            ' bleibt waehrend der Rechenzeit bedienbar, und ein Bild, das zur Haelfte mit dem einen
+            ' und zur Haelfte mit dem anderen Wert entrauscht ist, waere nicht wiederholbar.
+            Dim strength = CSng(_denoiseStrength / 100.0)
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
+                        Sub(full)
+                            ' Der Fortschritt muss ueber den UI-Faden: gerechnet wird im Hintergrund,
+                            ' und zwar minutenlang. So lange gar nichts zu melden ist von einem
+                            ' Absturz nicht zu unterscheiden.
+                            DenoiseModelService.Progress =
+                                Sub(schritt, gesamt)
+                                    Dispatcher.UIThread.Post(
+                                        Sub() SetBusyReason(String.Format(
+                                            LocalizationService.T("Bild wird entrauscht ({0} von {1})"),
+                                            schritt, gesamt)))
+                                End Sub
+                            Try
+                                Using entrauscht = DenoiseModelService.Denoise(full, kind, strength)
+                                    If entrauscht Is Nothing Then
+                                        reason = "Modell"
+                                        Return
+                                    End If
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.Clear(SKColors.Transparent)
+                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                            canvas.DrawBitmap(entrauscht, 0, 0, paint)
+                                        End Using
+                                    End Using
+                                End Using
+                            Finally
+                                DenoiseModelService.Progress = Nothing
+                            End Try
+                        End Sub)
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing OrElse reason <> "" Then
+                        StatusText = LocalizationService.T("Entrauschen fehlgeschlagen")
+                        Return
+                    End If
+                    If undoItem IsNot Nothing Then undoItem.Patch = patch
+                    ' Der Vermerk fuers Rezept. Er ist der einzige Grund, warum dieser Durchlauf ein
+                    ' RAW ueberlebt: die Pixel daneben entstehen beim naechsten Oeffnen neu, und ohne
+                    ' diesen Eintrag waere die Wartezeit von eben spurlos weg.
+                    _bakedOperations.Add(New BakedOperation With {
+                        .Kind = BakedOperation.KindDenoise,
+                        .DenoiseModel = If(kind = DenoiseModelService.DenoiseKind.Fast, "fast", "quality"),
+                        .DenoiseStrength = CSng(strength * 100.0)})
+                    MarkBakedIntoWorkingImage()
+                    RaiseStoredDenoiseChanged()
+                    Dim report = DenoiseModelService.LastReport
+                    StatusText = LocalizationService.T("Bild entrauscht") &
+                                 If(String.IsNullOrEmpty(report), "", " - " & report)
+                    _hasChanges = True
+                    AddHistoryEntry(LocalizationService.T("Bild entrauscht") &
+                                    If(String.IsNullOrEmpty(report), "", " - " & report))
+                    SchedulePreviewUpdate()
+                End Sub)
+        End Sub
+
+        ''' <summary>Die Frage NACH dem Anzeigen stellen, nicht mittendrin.
+        '''
+        ''' Sie haengt sich deshalb hinten an die Warteschlange des Oberflaechenfadens: erst ist das
+        ''' Bild da, dann kommt die Frage. Andersherum stuende der Nutzer vor einem Dialog ueber
+        ''' einem leeren Editor und muesste raten, um welches Bild es geht. Der Pfadvergleich in der
+        ''' Frage selbst faengt den Fall, dass in der Zwischenzeit weitergeblaettert wurde.</summary>
+        Private Sub SchedulePendingBakedOperationsQuestion()
+            If _mainVm Is Nothing Then Return
+            If Not _pendingBakedFromRecipe Then Return
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Async Sub()
+                    Try
+                        Await AskAndApplyPendingBakedOperationsAsync()
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Editor.BakedOperations", ex)
+                    End Try
+                End Sub, Avalonia.Threading.DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Beim Oeffnen fragen, ob die vermerkten Vorgaenge nachgezogen werden sollen.
+        '''
+        ''' WARUM GEFRAGT UND NICHT GETAN: es kostet Minuten. Ein Bild, das nach dem Doppelklick
+        ''' erst einmal minutenlang rechnet, ist keine Bildanzeige mehr. Und wer nur kurz nachsehen
+        ''' will, wie das Foto aussah, braucht das Entrauschen dafuer nicht.
+        '''
+        ''' WARUM NUR EINMAL JE BILD UND SITZUNG: beim Blaettern durch eine Serie kaeme die Frage
+        ''' sonst bei jedem Hin und Her erneut.</summary>
+        Private Async Function AskAndApplyPendingBakedOperationsAsync() As Task
+            Dim path = _currentImagePath
+            If String.IsNullOrEmpty(path) Then Return
+            If _bakedOperationsAsked.Contains(path) Then Return
+
+            Dim rezept = GetCurrentAdjustments()
+            If Not ImageProcessor.HasPendingBakedOperations(rezept) Then Return
+            _bakedOperationsAsked.Add(path)
+
+            Dim was = ImageProcessor.DescribePendingBakedOperations(rezept)
+            ' Der Text der Frage steht als EIN Literal da und ist nicht aus Teilen zusammengesetzt:
+            ' der Uebersetzungsschluessel wird ueber den ganzen Text gebildet, und ein
+            ' zusammengesetzter waere fuer die Lokalisierungspruefung unsichtbar - er bliebe in
+            ' jeder Sprache deutsch. Und KEIN Kommentar zwischen den Argumenten darunter: VB bricht
+            ' dort die Zeilenfortsetzung nach dem Komma ab.
+            Dim ok = Await _mainVm.ShowConfirmAsync(
+                LocalizationService.T("Gespeicherte Bearbeitung anwenden?"),
+                String.Format(LocalizationService.T("Zu diesem Bild ist eine Bearbeitung gespeichert, die in die Bildpunkte gerechnet werden muss: {0}. Sie steht noch nicht im Bild, weil die Datei selbst unverändert ist. Das Anwenden kann mehrere Minuten dauern."), was),
+                LocalizationService.T("Anwenden"), LocalizationService.T("Später"))
+            If Not ok Then
+                ' Nein heisst NICHT "wegwerfen": der Vermerk bleibt stehen und wird beim naechsten
+                ' Oeffnen wieder angeboten. Weg ist er nur ueber das Zuruecksetzen.
+                StatusText = LocalizationService.T("Gespeicherte Bearbeitung bleibt liegen")
+                Return
+            End If
+            ApplyPendingBakedOperations()
+        End Function
+
+        ''' <summary>Die vermerkten Vorgaenge auf das Arbeitsbild nachziehen. Gerechnet wird in
+        ''' <see cref="ImageProcessor.ApplyPendingBakedOperations"/> - hier steht nur der Weg ins
+        ''' Arbeitsbild, derselbe wie beim Entrauschen und beim Entfernen.</summary>
+        Public Sub ApplyPendingBakedOperations()
+            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
+            Dim rezept = GetCurrentAdjustments()
+            If Not ImageProcessor.HasPendingBakedOperations(rezept) Then Return
+
+            PushUndo()
+            Dim undoItem = _lastPushedUndoEntry
+            StatusText = LocalizationService.T("Gespeicherte Bearbeitung wird angewendet…")
+            SetBusyReason(LocalizationService.T("Gespeicherte Bearbeitung wird angewendet"))
+            Dim done = False
+            EnqueueWorkingCommit(
+                Function()
+                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
+                        Sub(full)
+                            Dim produced = ImageProcessor.ApplyPendingBakedOperations(full, rezept)
+                            If produced Is Nothing Then Return
+                            Using produced
+                                Using canvas = New SKCanvas(full)
+                                    canvas.Clear(SKColors.Transparent)
+                                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                        canvas.DrawBitmap(produced, 0, 0, paint)
+                                    End Using
+                                End Using
+                            End Using
+                            done = True
+                        End Sub)
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing OrElse Not done Then
+                        ' Kein Erfolg heisst hier ausdruecklich NICHT "Vermerk weg": beim naechsten
+                        ' Mal (oder auf einem Rechner mit der fehlenden Modelldatei) soll es wieder
+                        ' angeboten werden.
+                        StatusText = LocalizationService.T("Gespeicherte Bearbeitung konnte nicht angewendet werden")
+                        Return
+                    End If
+                    If undoItem IsNot Nothing Then undoItem.Patch = patch
+                    _pendingBakedFromRecipe = False
+                    _bakedOperationsApplied = True
+                    StatusText = LocalizationService.T("Gespeicherte Bearbeitung angewendet")
+                    AddHistoryEntry(LocalizationService.T("Gespeicherte Bearbeitung angewendet"))
+                    SchedulePreviewUpdate()
+                End Sub)
+        End Sub
 
         ''' <summary>Das Markierte verschwinden lassen und die Luecke fuellen.</summary>
         Public Sub ApplyObjectRemoval()
@@ -12185,6 +12452,7 @@ Namespace ViewModels
             ' sprung im Commit sieht von aussen aus wie "hat funktioniert, aber nichts geaendert" -
             ' und das ist die Meldung, die man am wenigsten gebrauchen kann.
             Dim reason = ""
+            Dim removalMask As ImageMask = Nothing
             EnqueueWorkingCommit(
                 Function()
                     ' Die Maske wird HIER gebaut, nicht vorher. CreateSourceMaskFromSelection laeuft
@@ -12197,6 +12465,10 @@ Namespace ViewModels
                         reason = "Maske"
                         Return Nothing
                     End If
+                    ' Die Maske IST der Auftrag: ohne sie liesse sich das Entfernen an einem RAW
+                    ' nicht nachziehen. Deshalb wandert sie gleich hier heraus, damit der Abschluss
+                    ' sie ins Rezept legen kann.
+                    removalMask = m
                     Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                         Sub(full)
                             Using mask = MaskAsSourceImage(m, full.Width, full.Height)
@@ -12237,6 +12509,13 @@ Namespace ViewModels
                     ' Mit den Zahlen des Durchlaufs. Sie stehen im VERLAUF und nicht nur im Fuss:
                     ' der Statustext wird von der gleich darauf startenden Vorschau ueberschrieben,
                     ' bevor man ihn gelesen hat.
+                    ' Derselbe Vermerk wie beim Entrauschen, nur mit der Maske als Auftrag.
+                    If removalMask IsNot Nothing Then
+                        _bakedOperations.Add(New BakedOperation With {
+                            .Kind = BakedOperation.KindObjectRemoval,
+                            .Mask = removalMask.Clone()})
+                        MarkBakedIntoWorkingImage()
+                    End If
                     Dim report = ObjectRemovalService.LastReport
                     StatusText = LocalizationService.T("Objekt entfernt") &
                                  If(String.IsNullOrEmpty(report), "", " - " & report)
@@ -12430,7 +12709,7 @@ Namespace ViewModels
         End Property
 
         Private _motivKante As Double = 50.0
-        Private _motivUmfang As Double = 0.0
+        Private _motivUmfang As Double = 25.0
         ' Die MITTLERE Koernung als Vorgabe: die grobste faellt bei einem freistehenden Motiv
         ' gern auf das ganze Bild zusammen, die feinste greift nur einen Teil heraus. Die mittlere
         ' ist das, was man mit "dieses Objekt" meistens meint.
@@ -15565,6 +15844,8 @@ Namespace ViewModels
         Public ReadOnly Property ApplyBokehCommand As ICommand
         Public ReadOnly Property ResetBokehCommand As ICommand
         Public ReadOnly Property RemoveObjectCommand As ICommand
+        Public ReadOnly Property DenoiseWithModelCommand As ICommand
+        Public ReadOnly Property DenoiseFastCommand As ICommand
         Public ReadOnly Property SetBokehApertureCommand As ICommand
         Public ReadOnly Property SetSubjectGrainCommand As ICommand
         Public ReadOnly Property SetWarpModeCommand As ICommand
@@ -15918,6 +16199,9 @@ Namespace ViewModels
             ApplyLinesCommand = ReactiveCommand.Create(Sub() ApplyLineWarp())
             RemoveLastLineCommand = ReactiveCommand.Create(Sub() RemoveLastLine())
             RemoveObjectCommand = ReactiveCommand.Create(Sub() ApplyObjectRemoval())
+            DenoiseWithModelCommand = ReactiveCommand.Create(Sub() ApplyModelDenoise())
+            DenoiseFastCommand = ReactiveCommand.Create(
+                Sub() ApplyModelDenoise(DenoiseModelService.DenoiseKind.Fast))
             SetBokehApertureCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
@@ -16659,6 +16943,7 @@ Namespace ViewModels
                     ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                    SchedulePendingBakedOperationsQuestion()
                 End If
             Finally
                 _suppressPreviewDirty = previousSuppressPreviewDirty
@@ -16817,6 +17102,7 @@ Namespace ViewModels
                     ApplyAdjustments(fpxAdjustments, resetTransientSelectionBinding:=True)
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                    SchedulePendingBakedOperationsQuestion()
                 End If
             Finally
                 _suppressPreviewDirty = previousSuppressPreviewDirty
@@ -19735,6 +20021,8 @@ Namespace ViewModels
                 .LutStrength = CSng(_lutStrength),
                 .Annotations = _annotations.Select(Function(a) a.Clone()).ToList(),
                 .AnnotationGroups = _annotationGroups.Select(Function(g) g.Clone()).ToList(),
+                .BakedOperations = _bakedOperations.Select(Function(o) o.Clone()).ToList(),
+                .BakedOperationsApplied = _bakedOperationsApplied,
                 .Masks = _imageMasks.Select(Function(m) m.Clone()).ToList(),
                 .MaskedAdjustmentLayers = _maskedAdjustmentLayers.Select(Function(l) l.Clone()).ToList(),
                 .GlobalAdjustmentsHidden = _globalAdjustmentsHidden,
@@ -20067,6 +20355,14 @@ Namespace ViewModels
             _noiseReduction = adj.NoiseReduction
             _noiseReductionDetail = adj.NoiseReductionDetail
             _colorNoiseReduction = adj.ColorNoiseReduction
+            ' Die gebackenen Vorgaenge kommen mit dem Rezept herein - samt der Frage, ob sie in den
+            ' Pixeln stecken. Beides gehoert zusammen: die Liste allein sagt nur WAS, nicht OB.
+            _bakedOperations = If(adj.BakedOperations Is Nothing,
+                                  New List(Of BakedOperation)(),
+                                  adj.BakedOperations.Where(Function(o) o IsNot Nothing).Select(Function(o) o.Clone()).ToList())
+            _bakedOperationsApplied = adj.BakedOperationsApplied
+            _pendingBakedFromRecipe = ImageProcessor.HasPendingBakedOperations(adj)
+            RaiseStoredDenoiseChanged()
             _farbrauschGrob = adj.FarbrauschGrob
             _farbrauschGrobSkala = adj.ColorNoiseCoarseScale
             _colorNoiseAdd = adj.ColorNoiseAdd
@@ -20436,6 +20732,12 @@ Namespace ViewModels
                 _workingImageOverrideHasAlpha = False
                 PreparePreviewSource(RenderSourcePath, scheduleInitialRender:=False)
             End If
+            ' Das Arbeitsbild ist danach wieder das nackte Original - also darf auch kein Vermerk
+            ' ueber gebackene Vorgaenge stehen bleiben. Bliebe er, wuerde er beim naechsten Oeffnen
+            ' etwas anbieten, das der Nutzer gerade weggeworfen hat.
+            _bakedOperations.Clear()
+            _bakedOperationsApplied = False
+            RaiseStoredDenoiseChanged()
             _brightness = 0
             _contrast = 0
             _saturation = 0
@@ -24338,6 +24640,17 @@ Namespace ViewModels
             _colorNoiseAdd = 0
             _farbrauschGrob = 0
             _farbrauschGrobSkala = 50
+            ' Auch das gespeicherte Entrauschen mit Modell gehoert hierher: es steht in derselben
+            ' Gruppe, und ohne diesen Weg gaebe es keinen, es wieder loszuwerden.
+            '
+            ' WAS ES TUT UND WAS NICHT: der Vermerk verschwindet, damit beim naechsten Oeffnen nichts
+            ' mehr nachgezogen wird. Die PIXEL der laufenden Sitzung bleiben entrauscht - das
+            ' zurueckzurechnen gibt es nicht, der Rueckweg dorthin ist der Schritt zurueck.
+            If _bakedOperations.RemoveAll(Function(o) o Is Nothing OrElse
+                    String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase)) > 0 Then
+                RaiseStoredDenoiseChanged()
+                StatusText = LocalizationService.T("Gespeichertes Entrauschen entfernt - die Bildpunkte bleiben, wie sie sind")
+            End If
             For Each n In {NameOf(AddNoise), NameOf(ColorNoiseAmount), NameOf(ColorNoiseReduction),
                            NameOf(ColorNoiseAdd), NameOf(FarbrauschGrob), NameOf(ColorNoiseCoarseScale),
                            NameOf(HasColorBlotches)}

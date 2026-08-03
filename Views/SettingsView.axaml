@@ -1346,13 +1346,65 @@
                                                     </Button>
                                                 </Grid>
                                                 <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}"
-                                                             IsVisible="{Binding Laeuft}" Height="4"/>
+                                                             IsVisible="{Binding Running}" Height="4"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <TextBlock Classes="no-translate" Text="{Binding ModelFolder}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Die Grafikkarte steht HIER und nicht bei der Leistung: es geht um die
+                             Modelle und um nichts sonst, und wer die Dateien gerade geholt hat,
+                             steht ohnehin an dieser Stelle. Der Statustext gehoert unter den
+                             Schalter - "Grafikkarte nutzen" ohne die Angabe, WELCHE gefunden wurde
+                             und ob darauf wirklich etwas laeuft, waere ein Schalter ins Ungewisse. -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Grafikkarte für gelernte Modelle nutzen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Lässt Entrauschen, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding CheckGpuAccelerationCommand}"
+                                            IsEnabled="{Binding GpuAccelerationAvailable}"
+                                            ToolTip.Tip="Lädt ein Modell versuchsweise auf die Grafikkarte und schließt es sofort wieder. Nur so zeigt sich, ob der Treiber die Karte wirklich hergibt.">Prüfen</Button>
+                                    <ToggleSwitch IsChecked="{Binding GpuAccelerationEnabled}"
+                                                  IsEnabled="{Binding GpuAccelerationAvailable}"
+                                                  OnContent=""
+                                                  OffContent=""
+                                                  VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding GpuAccelerationStatusText}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+
+                            <!-- Die Auswahl erscheint NUR, wenn wirklich mehr als eine Karte im
+                                 Rechner steckt. Bei einer einzigen waere sie eine Frage ohne
+                                 Antwortmoeglichkeit - welche es ist, steht in der Zeile darueber. -->
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasMultipleGpuDevices}">
+                                <TextBlock Text="Verwendete Grafikkarte"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding GpuDeviceOptions}"
+                                          SelectedItem="{Binding SelectedGpuDevice, Mode=TwoWay}"
+                                          IsEnabled="{Binding GpuAccelerationAvailable}"
+                                          MinWidth="260"
+                                          VerticalAlignment="Center"
+                                          FontSize="{DynamicResource FP.Font.Body}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -2080,6 +2132,21 @@
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="ONNX Runtime 1.28" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="Führt gelernte Modelle aus, Telemetrie abgeschaltet" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <!-- Eigener Eintrag und nicht in der Zeile darueber mitgemeint: es
+                                     ist ein eigenes Paket mit eigener nativer Bibliothek, und wer
+                                     die Grafikbeschleunigung einschaltet, laedt genau diese. -->
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="ONNX Runtime WebGPU 0.2" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Rechnet gelernte Modelle auf der Grafikkarte" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>

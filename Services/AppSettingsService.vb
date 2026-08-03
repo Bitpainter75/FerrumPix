@@ -252,6 +252,24 @@ Namespace Services
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
         Public Property VideoHardwareAcceleration As Boolean = False
 
+        ''' <summary>Die gelernten Modelle auf der Grafikkarte rechnen lassen. AB WERK AUS.
+        '''
+        ''' Nicht, weil das Ergebnis ein anderes wäre - dieselbe Datei rechnet auf der Karte
+        ''' dasselbe wie auf dem Prozessor -, sondern weil es Rechner gibt, auf denen es schadet:
+        ''' eine im Prozessor eingebaute Grafikeinheit teilt sich den Speicher mit allem anderen,
+        ''' und wenn ein großes Modell dort nicht hineinpasst, wird nicht nur das Modell langsam,
+        ''' sondern die ganze Oberfläche. Wer seine Karte kennt, schaltet es ein. Die Einzelheiten
+        ''' stehen bei <c>GpuAccelerationService</c>.</summary>
+        Public Property GpuAccelerationEnabled As Boolean = False
+
+        ''' <summary>WELCHE Grafikkarte, wenn mehrere im Rechner stecken. Leer heißt: die
+        ''' Anwendung sucht sich eine aus und bevorzugt dabei die eigene Karte.
+        '''
+        ''' Der Wert ist der Schlüssel aus <c>GpuAccelerationService.GpuDeviceInfo</c>, also
+        ''' Hersteller, Modell und Steckplatz - nicht die Stelle in der Liste. Zeigt er nach einem
+        ''' Umbau ins Leere, greift wieder die Vorauswahl, statt die Funktion abzuschalten.</summary>
+        Public Property GpuAccelerationDevice As String = ""
+
         ''' <summary>Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS.
         '''
         ''' Kein Standardverhalten, sondern eine Entscheidung des Benutzers: die Erkennung liest den

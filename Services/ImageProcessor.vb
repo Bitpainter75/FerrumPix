@@ -1408,6 +1408,52 @@ Namespace Services
         End Function
     End Class
 
+    ''' <summary>Ein Vorgang, der in die PIXEL gerechnet wurde und sich nicht als Regler ausdruecken
+    ''' laesst: das Entrauschen mit Modell und das Objektentfernen.
+    '''
+    ''' WOZU: bei einer .fpx stecken solche Pixel im Buendel und ueberleben. Bei einem RAW oder PSD
+    ''' liegt daneben nur das Rezept, und die Pixel entstehen bei jedem Oeffnen neu aus den
+    ''' Sensordaten - ohne diesen Vermerk waere der Vorgang beim naechsten Oeffnen spurlos weg, und
+    ''' zwar ohne Hinweis. Der Vermerk sagt, WAS getan wurde, damit der Editor es beim Oeffnen
+    ''' anbieten kann.
+    '''
+    ''' DIE FALLE, DIE DEN ENTWURF ENTSCHEIDET: derselbe Vermerk bedeutet zweierlei. Bei einer .fpx
+    ''' heisst er "steckt in diesen Pixeln", bei einem frisch entwickelten RAW "waere noch
+    ''' anzuwenden". Deshalb steht neben der Liste das Feld
+    ''' <see cref="ImageAdjustments.BakedOperationsApplied"/>, und es wird NICHT vom Editor gesetzt,
+    ''' sondern von dem, der schreibt: wer Pixel mitschreibt, setzt es wahr, wer nur ein Rezept
+    ''' schreibt, setzt es falsch. Sonst behauptet das Rezept frueher oder spaeter etwas, das im
+    ''' Bild nicht steht.</summary>
+    Public Class BakedOperation
+        ''' <summary>"denoise" oder "objectremoval". Ein unbekannter Wert wird beim Nachziehen
+        ''' uebersprungen - eine aeltere Programmfassung soll an einem neuen Vorgang nicht
+        ''' scheitern, sondern ihn liegen lassen.</summary>
+        Public Property Kind As String = ""
+
+        ''' <summary>Nur beim Entrauschen: "quality" oder "fast". Welches Modell gerechnet hat,
+        ''' gehoert dazu - die beiden liefern sichtbar Verschiedenes.</summary>
+        Public Property DenoiseModel As String = ""
+
+        ''' <summary>Nur beim Entrauschen: die Staerke, mit der die HELLIGKEIT entrauscht wurde,
+        ''' 0 bis 100. Ohne sie kaeme beim Nachziehen etwas anderes heraus als beim ersten Mal.</summary>
+        Public Property DenoiseStrength As Single = 100
+
+        ''' <summary>Nur beim Objektentfernen: WAS entfernt wurde. Ohne die Maske ist der Vorgang
+        ''' nicht wiederholbar - sie ist der ganze Auftrag. Es ist derselbe Maskentyp wie im
+        ''' uebrigen Rezept, wird also mitgeschrieben und gelesen wie jede andere Maske.</summary>
+        Public Property Mask As ImageMask = Nothing
+
+        Public Function Clone() As BakedOperation
+            Return New BakedOperation With {
+                .Kind = Kind, .DenoiseModel = DenoiseModel, .DenoiseStrength = DenoiseStrength,
+                .Mask = If(Mask Is Nothing, Nothing, Mask.Clone())
+            }
+        End Function
+
+        Public Const KindDenoise As String = "denoise"
+        Public Const KindObjectRemoval As String = "objectremoval"
+    End Class
+
     Public Class ImageAdjustments
 
         ''' <summary>Die eingebauten Filter, in der Reihenfolge, in der sie im Editor stehen. "Keine" ist
@@ -1706,6 +1752,23 @@ Namespace Services
         ''' Arbeitsbild gestanzt hat - im .fpx-Rezept persistiert, damit Schachbrett und
         ''' Transparenz-Verhalten das Wiederöffnen überleben.</summary>
         Public Property WorkingImageHasTransparency As Boolean = False
+
+        ''' <summary>Vorgänge, die in die PIXEL gerechnet wurden: Entrauschen mit Modell und
+        ''' Objektentfernen (siehe <see cref="BakedOperation"/>). In der REIHENFOLGE ihrer Anwendung -
+        ''' beim Nachziehen wird sie eingehalten, sonst käme etwas anderes heraus.</summary>
+        Public Property BakedOperations As New System.Collections.Generic.List(Of BakedOperation)()
+
+        ''' <summary>Stecken die Vorgänge aus <see cref="BakedOperations"/> bereits in den Pixeln, zu
+        ''' denen dieses Rezept gehört?
+        '''
+        ''' True bei einer .fpx: das Bündel trägt das Arbeitsbild mit allem Eingebackenen.
+        ''' False bei einer .fpxmp: daneben liegt nur das Rezept, die Pixel entstehen beim Öffnen neu
+        ''' aus den Sensordaten, und die Vorgänge sind noch anzuwenden.
+        '''
+        ''' Gesetzt wird das NICHT vom Editor, sondern von dem, der schreibt (RawSidecarService bzw.
+        ''' FpxService). Der Editor kennt beim Setzen der Vorgänge noch gar nicht, wohin gespeichert
+        ''' wird.</summary>
+        Public Property BakedOperationsApplied As Boolean = False
         ''' <summary>Persistenter Render-Skopus der gespeicherten Auswahlmaske. Im Gegensatz zu
         ''' HasActiveSelection ist dies Bildrezept und kein transient markierter UI-Zustand.</summary>
         Public Property SelectionScopeEnabled As Boolean = False
@@ -1786,6 +1849,7 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WorkingImageVersion", "WorkingImageHasTransparency",
+            "BakedOperations", "BakedOperationsApplied",
             "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "FlipHorizontal", "FlipVertical",
             "PerspectiveHorizontal", "PerspectiveVertical", "PerspectiveAspect", "PerspectiveScale",
             "PerspectiveCorner0X", "PerspectiveCorner0Y", "PerspectiveCorner1X", "PerspectiveCorner1Y",
@@ -1926,6 +1990,7 @@ Namespace Services
                 .RecipeCoordinateVersion = RecipeCoordinateVersion,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
+                .BakedOperationsApplied = BakedOperationsApplied,
                 .Brightness = Brightness,
                 .Contrast = Contrast,
                 .Saturation = Saturation,
@@ -2045,6 +2110,7 @@ Namespace Services
                 .LutPath = LutPath,
                 .LutStrength = LutStrength,
                 .RetouchSpots = RetouchSpots.Select(Function(s) s.Clone()).ToList(),
+                .BakedOperations = BakedOperations.Select(Function(o) o.Clone()).ToList(),
                 .Annotations = Annotations.Select(Function(a) a.Clone()).ToList(),
                 .AnnotationGroups = If(AnnotationGroups, New System.Collections.Generic.List(Of AnnotationGroup)()).
                     Where(Function(g) g IsNot Nothing).Select(Function(g) g.Clone()).ToList(),
@@ -2309,6 +2375,223 @@ Namespace Services
             Using decoded
                 Return ProcessBitmap(decoded, rezept)
             End Using
+        End Function
+
+        ''' <summary>Liegt in diesem Rezept ein Vorgang, der in die PIXEL gehoert, aber in den Pixeln
+        ''' daneben NICHT steckt?
+        '''
+        ''' Vier Vorgaenge fallen darunter, und alle vier haben dasselbe Problem: sie lassen sich
+        ''' nicht als Regler ausdruecken, sondern nur rechnen. Bei einer .fpx liegen ihre Pixel im
+        ''' Buendel und ueberleben; neben einem RAW oder PSD liegt nur das Rezept, und die Pixel
+        ''' entstehen bei jedem Oeffnen neu aus den Sensordaten.
+        '''
+        ''' Entrauschen und Objektentfernen stehen dafuer in <see cref="ImageAdjustments.BakedOperations"/>.
+        ''' Retusche und Pinselstriche standen schon immer im Rezept - sie wurden nur nirgends wieder
+        ''' angewandt, womit sie neben einem RAW genauso still verlorengingen. Deshalb zaehlen sie
+        ''' hier mit.</summary>
+        Public Shared Function HasPendingBakedOperations(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse adj.BakedOperationsApplied Then Return False
+            If adj.BakedOperations IsNot Nothing AndAlso adj.BakedOperations.Count > 0 Then Return True
+            If adj.RetouchSpots IsNot Nothing AndAlso adj.RetouchSpots.Count > 0 Then Return True
+            If adj.RasterPaintStrokes IsNot Nothing AndAlso adj.RasterPaintStrokes.Count > 0 Then Return True
+            Return False
+        End Function
+
+        ''' <summary>Was offen ist, in Worten - fuer die Frage vor dem Anwenden. Eine Frage, die nur
+        ''' "es liegt etwas an" sagt, kann niemand beantworten.</summary>
+        Public Shared Function DescribePendingBakedOperations(adj As ImageAdjustments) As String
+            If Not HasPendingBakedOperations(adj) Then Return ""
+            Dim parts As New List(Of String)()
+            Dim denoiseCount = 0, removalCount = 0
+            If adj.BakedOperations IsNot Nothing Then
+                For Each op In adj.BakedOperations
+                    If op Is Nothing Then Continue For
+                    If String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase) Then
+                        denoiseCount += 1
+                    ElseIf String.Equals(op.Kind, BakedOperation.KindObjectRemoval, StringComparison.OrdinalIgnoreCase) Then
+                        removalCount += 1
+                    End If
+                Next
+            End If
+            If denoiseCount > 0 Then parts.Add(LocalizationService.T("Entrauschen"))
+            If removalCount = 1 Then
+                parts.Add(LocalizationService.T("Objekt entfernen"))
+            ElseIf removalCount > 1 Then
+                parts.Add(String.Format(LocalizationService.T("Objekt entfernen ({0} Stellen)"), removalCount))
+            End If
+            If adj.RetouchSpots IsNot Nothing AndAlso adj.RetouchSpots.Count > 0 Then
+                parts.Add(LocalizationService.T("Retusche"))
+            End If
+            If adj.RasterPaintStrokes IsNot Nothing AndAlso adj.RasterPaintStrokes.Count > 0 Then
+                parts.Add(LocalizationService.T("Pinsel"))
+            End If
+            Return String.Join(", ", parts)
+        End Function
+
+        ''' <summary>Die offenen Vorgaenge auf ein frisch entwickeltes Bild nachziehen. Zurueck kommt
+        ''' ein NEUES Bitmap, das der Aufrufer uebernimmt - oder Nothing, wenn nichts zu tun war oder
+        ''' nichts gelungen ist; dann behaelt der Aufrufer sein eigenes.
+        '''
+        ''' DIE EINZIGE STELLE, die das tut. Nicht aus Ordnungsliebe: waeren es zwei, koennte ein
+        ''' Bild durch beide laufen, und ein zweimal entrauschtes oder zweimal gefuelltes Bild sieht
+        ''' man erst, wenn man es nebeneinanderlegt.
+        '''
+        ''' REIHENFOLGE. Zuerst das Entrauschen und das Entfernen in der Reihenfolge, in der sie
+        ''' gemacht wurden, danach Retusche und Striche. Das Entrauschen gehoert nach vorn, weil es
+        ''' das ganze Bild anfasst: eine retuschierte Stelle wuerde sonst mitentrauscht und saehe
+        ''' anders aus als in der Sitzung, in der sie entstanden ist. Ganz deckungsgleich wird es
+        ''' nicht - wer in der Sitzung erst retuschiert und dann entrauscht hat, bekommt hier die
+        ''' andere Reihenfolge. Der Unterschied ist kleiner als der Aufwand, die tatsaechliche
+        ''' Reihenfolge mitzuschreiben.
+        '''
+        ''' FEHLT EIN MODELL, wird der Vorgang UEBERSPRUNGEN und der Rest trotzdem gemacht. Alles
+        ''' abzubrechen hiesse, wegen eines fehlenden Modells auch die Retusche zu verlieren.</summary>
+        Friend Shared Function ApplyPendingBakedOperations(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing OrElse Not HasPendingBakedOperations(adj) Then Return Nothing
+
+            Dim current = source
+            Dim owned = False
+            Try
+                If adj.BakedOperations IsNot Nothing Then
+                    For Each op In adj.BakedOperations
+                        If op Is Nothing Then Continue For
+                        If String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase) Then
+                            current = ReplaceBitmapOwned(current, RunBakedDenoise(current, op), owned)
+                        ElseIf String.Equals(op.Kind, BakedOperation.KindObjectRemoval, StringComparison.OrdinalIgnoreCase) Then
+                            current = ReplaceBitmapOwned(current, RunBakedObjectRemoval(current, op), owned)
+                        End If
+                    Next
+                End If
+
+                ' Retusche und Striche zeichnen IN das Bild statt ein neues zu liefern. Solange noch
+                ' die fremde Quelle dasteht, muss sie deshalb erst kopiert werden - hineinzumalen
+                ' hiesse, dem Aufrufer sein eigenes Bild unter den Haenden zu veraendern.
+                Dim hasSpots = adj.RetouchSpots IsNot Nothing AndAlso adj.RetouchSpots.Count > 0
+                Dim hasStrokes = adj.RasterPaintStrokes IsNot Nothing AndAlso adj.RasterPaintStrokes.Count > 0
+                If hasSpots OrElse hasStrokes Then
+                    If Not owned Then
+                        Dim copy = current.Copy()
+                        If copy IsNot Nothing Then
+                            current = copy
+                            owned = True
+                        End If
+                    End If
+                    If owned Then
+                        Dim baseW = If(adj.SourceWidthPixels > 0, adj.SourceWidthPixels, current.Width)
+                        Dim baseH = If(adj.SourceHeightPixels > 0, adj.SourceHeightPixels, current.Height)
+                        If hasSpots Then
+                            ApplyRetouchSpotsInPlace(current, current, adj.RetouchSpots, baseW, baseH)
+                        End If
+                        If hasStrokes Then
+                            Using canvas = New SKCanvas(current)
+                                Dim drawAdj As New ImageAdjustments With {
+                                    .SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
+                                For Each stroke In adj.RasterPaintStrokes
+                                    If stroke Is Nothing Then Continue For
+                                    DrawAnnotationsOnCanvas(canvas, drawAdj, current.Width, current.Height,
+                                                            0, 0, current.Width, current.Height,
+                                                            New List(Of ImageAnnotation) From {stroke.ToRenderAnnotation()})
+                                Next
+                            End Using
+                        End If
+                    End If
+                End If
+
+                If Not owned Then Return Nothing
+                Return current
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.BakedOperations", ex)
+                If owned Then current.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Ein vermerkter Entrausch-Durchlauf. Nothing, wenn seine Modelldatei fehlt.</summary>
+        Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation) As SKBitmap
+            Dim kind = If(String.Equals(op.DenoiseModel, "fast", StringComparison.OrdinalIgnoreCase),
+                          DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.DenoiseKind.Quality)
+            If kind = DenoiseModelService.DenoiseKind.Fast Then
+                If Not DenoiseModelService.FastAvailable Then Return Nothing
+            ElseIf Not DenoiseModelService.Available Then
+                Return Nothing
+            End If
+            ' Das Modell nimmt nur Bgra8888. Ein anders belegtes Bild wird einmal umgelegt, statt den
+            ' Vorgang wortlos ausfallen zu lassen.
+            Dim converted As SKBitmap = Nothing
+            Try
+                Dim input = source
+                If source.ColorType <> SKColorType.Bgra8888 Then
+                    converted = New SKBitmap(New SKImageInfo(source.Width, source.Height,
+                                                             SKColorType.Bgra8888, source.AlphaType))
+                    Using canvas = New SKCanvas(converted)
+                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                            canvas.DrawBitmap(source, 0, 0, paint)
+                        End Using
+                    End Using
+                    input = converted
+                End If
+                Return DenoiseModelService.Denoise(input, kind, CSng(Math.Max(0.0, Math.Min(100.0, op.DenoiseStrength)) / 100.0))
+            Finally
+                converted?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Ein vermerktes Objektentfernen. Ohne Maske gibt es nichts nachzuziehen - sie IST
+        ''' der Auftrag.</summary>
+        Private Shared Function RunBakedObjectRemoval(source As SKBitmap, op As BakedOperation) As SKBitmap
+            If op.Mask Is Nothing Then Return Nothing
+            If Not ObjectRemovalService.Available Then Return Nothing
+            Using mask = MaskAsSourceBitmap(op.Mask, source.Width, source.Height)
+                If mask Is Nothing Then Return Nothing
+                Return ObjectRemovalService.Fill(source, mask)
+            End Using
+        End Function
+
+        ''' <summary>Eine Rezeptmaske als Alpha8-Bild in der Groesse des Zielbildes.
+        '''
+        ''' MASSSTAB: die Maske liegt im Raum des ANZEIGEbildes (ImageMask.SourceWidthPixels), das
+        ''' Ziel hat die volle Aufloesung der Datei. Bei einem 40-Megapixel-Foto, das auf 1600 Punkte
+        ''' heruntergerechnet angezeigt wird, sind das Faktor drei: ohne die Umrechnung landet die
+        ''' Maske im linken oberen Viertel und trifft nichts von dem, was sie treffen soll.</summary>
+        Friend Shared Function MaskAsSourceBitmap(m As ImageMask, width As Integer, height As Integer) As SKBitmap
+            If m Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return Nothing
+            If String.IsNullOrWhiteSpace(m.PngBase64) Then Return Nothing
+            Dim w = m.Right - m.Left, h = m.Bottom - m.Top
+            If w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim target = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
+            Try
+                Dim sx = If(m.SourceWidthPixels > 0, width / CDbl(m.SourceWidthPixels), 1.0)
+                Dim sy = If(m.SourceHeightPixels > 0, height / CDbl(m.SourceHeightPixels), 1.0)
+                Using roh = SKBitmap.Decode(Convert.FromBase64String(m.PngBase64))
+                    If roh Is Nothing Then
+                        target.Dispose()
+                        Return Nothing
+                    End If
+                    Using canvas = New SKCanvas(target)
+                        canvas.Clear(SKColors.Transparent)
+                        Using image = SKImage.FromBitmap(roh)
+                            canvas.DrawImage(image, New SKRect(CSng(m.Left * sx), CSng(m.Top * sy),
+                                                              CSng((m.Left + w) * sx), CSng((m.Top + h) * sy)),
+                                             New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), Nothing)
+                        End Using
+                    End Using
+                End Using
+                If m.Inverted Then
+                    ' Umgekehrte Auswahl heisst hier: alles ausser dem Markierten. Selten gewollt,
+                    ' aber wenn es dasteht, muss es auch gelten.
+                    Dim n = width * height
+                    Dim buffer(n - 1) As Byte
+                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), buffer, 0, n)
+                    For i = 0 To n - 1
+                        buffer(i) = CByte(255 - buffer(i))
+                    Next
+                    Runtime.InteropServices.Marshal.Copy(buffer, 0, target.GetPixels(), n)
+                End If
+                Return target
+            Catch
+                target.Dispose()
+                Return Nothing
+            End Try
         End Function
 
         ''' <summary>Friend statt Private, damit PrintService dieselbe Dekodier-Route benutzt -

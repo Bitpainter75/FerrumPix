@@ -153,6 +153,11 @@ Namespace ViewModels
         Private _savedApplicationScale As Double = 1.0
         Private _savedApplicationScaleScreen As String = "HDMI-A-1"
         Private _savedVideoHardwareAcceleration As Boolean = False
+        Private _gpuAccelerationEnabled As Boolean = False
+        Private _savedGpuAccelerationEnabled As Boolean = False
+        Private _gpuAccelerationDevice As String = ""
+        Private _savedGpuAccelerationDevice As String = ""
+        Private _gpuAccelerationBusy As Boolean = False
         Private _savedFaceRecognitionEnabled As Boolean = False
         Private _savedPhotoMapEnabled As Boolean = False
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
@@ -1420,6 +1425,174 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' Lässt die gelernten Modelle auf der Grafikkarte rechnen statt auf dem Prozessor. Wirkt
+        ''' auf ALLE Modelle gleichermaßen, weil alle durch dieselbe Stelle geladen werden
+        ''' (AiModelService.Session). Eine bereits geladene Sitzung wird beim nächsten Zugriff neu
+        ''' aufgebaut, die Umstellung braucht also keinen Neustart.
+        Public Property GpuAccelerationEnabled As Boolean
+            Get
+                Return _gpuAccelerationEnabled
+            End Get
+            Set(value As Boolean)
+                If _gpuAccelerationEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_gpuAccelerationEnabled, value)
+                SaveGpuAccelerationSettings()
+                Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
+                ' Beim Einschalten gleich wirklich nachsehen. Gefunden zu werden heißt nicht, dass
+                ' ein Modell darauf anläuft - und wer den Schalter umlegt, will genau das wissen,
+                ' und nicht erst beim nächsten Entrauschen.
+                If value AndAlso GpuAccelerationService.Available AndAlso
+                   GpuAccelerationService.ProbeState = GpuAccelerationService.ProbeResult.Untested Then
+                    Dim ignored = CheckGpuAccelerationAsync()
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Gibt es überhaupt eine Karte, die die Laufzeit ansprechen kann? Ohne sie bleibt
+        ''' der Schalter unbedienbar - ein Schalter, der nichts tut, ist schlechter als keiner.</summary>
+        Public ReadOnly Property GpuAccelerationAvailable As Boolean
+            Get
+                Return GpuAccelerationService.Available
+            End Get
+        End Property
+
+        ''' <summary>Steckt mehr als eine Karte im Rechner? Nur dann erscheint die Auswahl. Bei
+        ''' einer einzigen wäre eine Liste mit einem Eintrag eine Frage ohne Antwortmöglichkeit -
+        ''' welche Karte es ist, steht ohnehin im Statustext darunter.</summary>
+        Public ReadOnly Property HasMultipleGpuDevices As Boolean
+            Get
+                Return GpuAccelerationService.Devices.Count > 1
+            End Get
+        End Property
+
+        ''' <summary>Die Auswahlliste der gefundenen Karten, mit "Automatisch" an erster Stelle.</summary>
+        Public ReadOnly Property GpuDeviceOptions As New ObservableCollection(Of GpuDeviceOption)()
+
+        Public Property SelectedGpuDevice As GpuDeviceOption
+            Get
+                Dim chosen = GpuDeviceOptions.FirstOrDefault(
+                    Function(o) String.Equals(o.Key, _gpuAccelerationDevice, StringComparison.Ordinal))
+                ' Zeigt die gespeicherte Wahl ins Leere - Karte ausgebaut, Rechner gewechselt -,
+                ' steht die Liste auf "Automatisch", und genau das passiert dann auch.
+                Return If(chosen, GpuDeviceOptions.FirstOrDefault())
+            End Get
+            Set(value As GpuDeviceOption)
+                If value Is Nothing Then Return
+                If String.Equals(_gpuAccelerationDevice, value.Key, StringComparison.Ordinal) Then Return
+                _gpuAccelerationDevice = value.Key
+                Me.RaisePropertyChanged(NameOf(SelectedGpuDevice))
+                SaveGpuAccelerationSettings()
+                ' Die Karte hat gewechselt: was über die alte bekannt war, gilt nicht mehr.
+                Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
+                If _gpuAccelerationEnabled AndAlso GpuAccelerationService.Available Then
+                    Dim ignored = CheckGpuAccelerationAsync()
+                End If
+            End Set
+        End Property
+
+        Private Sub BuildGpuDeviceOptions()
+            GpuDeviceOptions.Clear()
+            Dim devices = GpuAccelerationService.Devices
+            If devices.Count = 0 Then Return
+            GpuDeviceOptions.Add(New GpuDeviceOption With {
+                .Key = "", .Name = LocalizationService.T("Automatisch")})
+            For Each device In devices
+                GpuDeviceOptions.Add(New GpuDeviceOption With {.Key = device.Key, .Name = LabelFor(device)})
+            Next
+            Me.RaisePropertyChanged(NameOf(SelectedGpuDevice))
+            Me.RaisePropertyChanged(NameOf(HasMultipleGpuDevices))
+        End Sub
+
+        ''' <summary>Die Beschriftung einer Karte: Hersteller, Modell und die Bauart. Der Modellname
+        ''' steht nur zur Verfügung, wo das System eine Zuordnung der Gerätenummern mitbringt -
+        ''' sonst tritt die Nummer an seine Stelle.</summary>
+        Private Shared Function LabelFor(device As GpuAccelerationService.GpuDeviceInfo) As String
+            Dim vendor = device.VendorName
+            If String.IsNullOrWhiteSpace(vendor) Then vendor = LocalizationService.T("unbekannter Hersteller")
+            Dim model = device.DeviceName
+            If String.IsNullOrWhiteSpace(model) Then model = device.DeviceIdText
+            Dim kind As String
+            If Not device.IsKindKnown Then
+                kind = LocalizationService.T("Grafikkarte")
+            ElseIf device.IsDiscrete Then
+                kind = LocalizationService.T("eigene Grafikkarte")
+            Else
+                kind = LocalizationService.T("eingebaute Grafikeinheit")
+            End If
+            Return $"{vendor} {model} ({kind})".Trim()
+        End Function
+
+        ''' <summary>Was über die Grafikkarte bekannt ist: was gefunden wurde, worüber sie
+        ''' angesprochen wird und ob wirklich ein Modell darauf anläuft.</summary>
+        Public ReadOnly Property GpuAccelerationStatusText As String
+            Get
+                If _gpuAccelerationBusy Then Return LocalizationService.T("Die Grafikkarte wird geprüft")
+                If Not AiModelService.RuntimeAvailable Then
+                    Return LocalizationService.T("Die Laufzeit für gelernte Modelle steht auf diesem Gerät nicht zur Verfügung.")
+                End If
+                If GpuAccelerationService.LibraryMissing Then
+                    Return LocalizationService.T("Für diese Programmfassung ist keine Grafikbeschleunigung dabei. Die Modelle rechnen auf dem Prozessor.")
+                End If
+                If Not String.IsNullOrEmpty(GpuAccelerationService.SetupError) Then
+                    Return String.Format(LocalizationService.T("Die Grafikbeschleunigung lässt sich nicht laden: {0}"),
+                                         GpuAccelerationService.SetupError)
+                End If
+                If Not GpuAccelerationService.Available Then
+                    Return LocalizationService.T("Keine geeignete Grafikkarte gefunden. Die Modelle rechnen auf dem Prozessor.")
+                End If
+
+                Dim kind As String
+                If Not GpuAccelerationService.IsKindKnown Then
+                    kind = LocalizationService.T("Grafikkarte")
+                ElseIf GpuAccelerationService.IsDiscrete Then
+                    kind = LocalizationService.T("eigene Grafikkarte")
+                Else
+                    kind = LocalizationService.T("eingebaute Grafikeinheit")
+                End If
+                Dim vendor = GpuAccelerationService.VendorName
+                If String.IsNullOrWhiteSpace(vendor) Then vendor = LocalizationService.T("unbekannter Hersteller")
+                ' Steht der Modellname zur Verfügung, dann er - sonst die Nummer der Karte. Beides
+                ' an derselben Stelle im Satz, damit es nur EINEN übersetzbaren Text gibt.
+                Dim model = GpuAccelerationService.DeviceName
+                If String.IsNullOrWhiteSpace(model) Then model = GpuAccelerationService.DeviceIdText
+                Dim foundText = String.Format(
+                    LocalizationService.T("Gefunden: {0} {1}, {2}, angesprochen über {3}."),
+                    vendor, model, kind, GpuAccelerationService.BackendName)
+
+                Select Case GpuAccelerationService.ProbeState
+                    Case GpuAccelerationService.ProbeResult.Works
+                        Return foundText & " " & LocalizationService.T("Geprüft: ein Modell läuft darauf.")
+                    Case GpuAccelerationService.ProbeResult.Failed
+                        If String.IsNullOrEmpty(GpuAccelerationService.ProbeError) Then
+                            Return foundText & " " & LocalizationService.T("Geprüft: es läuft kein Modell darauf.")
+                        End If
+                        Return foundText & " " & String.Format(
+                            LocalizationService.T("Geprüft: es läuft kein Modell darauf ({0})."),
+                            GpuAccelerationService.ProbeError)
+                    Case Else
+                        Return foundText & " " & LocalizationService.T("Noch nicht geprüft.")
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Wirklich ein Modell auf der Karte laden und sofort wieder schließen. Das ist
+        ''' der einzige ehrliche Weg zu der Frage, ob die Beschleunigung auf diesem Rechner
+        ''' funktioniert: die Geräteliste meldet eine Karte auch dann, wenn kein brauchbarer Treiber
+        ''' dahintersteht.</summary>
+        Public Async Function CheckGpuAccelerationAsync() As Task
+            If _gpuAccelerationBusy Then Return
+            _gpuAccelerationBusy = True
+            Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
+            Try
+                Await Task.Run(Sub() GpuAccelerationService.Probe())
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.CheckGpuAcceleration", ex)
+            Finally
+                _gpuAccelerationBusy = False
+                Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
+            End Try
+        End Function
+
         ''' Gesichter im eigenen Bestand suchen und zu Personen zusammenfassen. AB WERK AUS - die
         ''' Erkennung liest den ganzen Bestand durch und legt biometrische Merkmale in der Bibliothek
         ''' ab, und das ist etwas anderes als ein Stichwort. Ohne die beiden Modelldateien bleibt der
@@ -1739,6 +1912,7 @@ Namespace ViewModels
         Public ReadOnly Property MoveEditorToolGroupDownCommand As ICommand
         Public ReadOnly Property SetLanguageModeCommand As ICommand
         Public ReadOnly Property SetTransparencyBackgroundModeCommand As ICommand
+        Public ReadOnly Property CheckGpuAccelerationCommand As ICommand
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
         Public ReadOnly Property RefreshThumbnailCacheCommand As ICommand
         Public ReadOnly Property DeleteThumbnailCacheFolderCommand As ICommand
@@ -1837,6 +2011,8 @@ Namespace ViewModels
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
+            _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
+            _gpuAccelerationDevice = If(_appSettings.GpuAccelerationDevice, "")
             _faceRecognitionEnabled = _appSettings.FaceRecognitionEnabled
             _photoMapEnabled = _appSettings.PhotoMapEnabled
             _faceMinimumSizePercent = _appSettings.FaceMinimumSizePercent
@@ -1858,9 +2034,14 @@ Namespace ViewModels
             BuildModelGroups()
             BuildAdjustmentGroupItems()
             BuildLanguageOptions()
+            BuildGpuDeviceOptions()
             FetchModelCommand = ReactiveCommand.Create(Of ModelGroup)(
                 Sub(g)
-                    Dim ignoriert = FetchModelGroupAsync(g)
+                    Dim ignored = FetchModelGroupAsync(g)
+                End Sub)
+            CheckGpuAccelerationCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim ignored = CheckGpuAccelerationAsync()
                 End Sub)
             ResetCommand = ReactiveCommand.Create(Sub() ResetToDefaults())
             ApplyCommand = ReactiveCommand.Create(Sub()
@@ -2037,6 +2218,8 @@ Namespace ViewModels
             _savedStartupNoImageMode = _startupNoImageMode
             _savedLanguageMode = _languageMode
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
+            _savedGpuAccelerationEnabled = _gpuAccelerationEnabled
+            _savedGpuAccelerationDevice = _gpuAccelerationDevice
             _savedFaceRecognitionEnabled = _faceRecognitionEnabled
             _savedPhotoMapEnabled = _photoMapEnabled
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
@@ -2101,6 +2284,9 @@ Namespace ViewModels
             StartupNoImageMode = _savedStartupNoImageMode
             LanguageMode = _savedLanguageMode
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
+            GpuAccelerationEnabled = _savedGpuAccelerationEnabled
+            SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault(
+                Function(o) String.Equals(o.Key, _savedGpuAccelerationDevice, StringComparison.Ordinal))
             FaceRecognitionEnabled = _savedFaceRecognitionEnabled
             PhotoMapEnabled = _savedPhotoMapEnabled
             TransparencyBackgroundMode = _savedTransparencyBackgroundMode
@@ -2181,6 +2367,8 @@ Namespace ViewModels
             GalleryInfoSidebarExpanded = False
             LanguageMode = "System"
             VideoHardwareAcceleration = False
+            GpuAccelerationEnabled = False
+            SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault()
             FaceRecognitionEnabled = False
             PhotoMapEnabled = False
             TransparencyBackgroundMode = "Checkerboard"
@@ -2207,6 +2395,15 @@ Namespace ViewModels
         Private Sub SavePlaybackSettings()
             Dim settings = AppSettingsService.Load()
             settings.VideoHardwareAcceleration = _videoHardwareAcceleration
+            AppSettingsService.Save(settings)
+        End Sub
+
+        ''' Sofort geschrieben und nicht erst beim Übernehmen: der Dienst, der die Modelle lädt,
+        ''' liest die Einstellung direkt und nicht über diese Ansicht.
+        Private Sub SaveGpuAccelerationSettings()
+            Dim settings = AppSettingsService.Load()
+            settings.GpuAccelerationEnabled = _gpuAccelerationEnabled
+            settings.GpuAccelerationDevice = _gpuAccelerationDevice
             AppSettingsService.Save(settings)
         End Sub
 
@@ -2595,9 +2792,12 @@ Namespace ViewModels
             BuildAdjustmentGroupItems()
             BuildModelGroups()
             BuildLanguageOptions()
+            ' Die Kartennamen tragen ihre Bauart als übersetztes Wort in sich - sie stünden nach
+            ' einem Sprachwechsel sonst in der alten Sprache da.
+            BuildGpuDeviceOptions()
             For Each n In {NameOf(ThumbnailCacheSummaryText), NameOf(ThumbnailCacheFolderCountText),
                            NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
-                           NameOf(ModelGroups)}
+                           NameOf(ModelGroups), NameOf(GpuAccelerationStatusText)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -2740,8 +2940,8 @@ Namespace ViewModels
             Public Property Description As String = ""
             Public Property Files As New List(Of AiModelService.ModelEntry)()
 
-            Private _fortschritt As Double = 0
-            Private _laeuft As Boolean = False
+            Private _progress As Double = 0
+            Private _running As Boolean = False
             Private _meldung As String = ""
 
             ''' <summary>Was zusammen geholt werden muesste, in MiB.</summary>
@@ -2759,7 +2959,7 @@ Namespace ViewModels
                 End Get
             End Property
 
-            ''' <summary>Laeuft mindestens eine Datei in einer AELTEREN Fassung? Dann gibt es etwas
+            ''' <summary>Läuft mindestens eine Datei in einer AELTEREN Fassung? Dann gibt es etwas
             ''' zu aktualisieren - und bis dahin arbeitet alles weiter.</summary>
             Public ReadOnly Property IsUpdatable As Boolean
                 Get
@@ -2770,7 +2970,7 @@ Namespace ViewModels
 
             Public ReadOnly Property StatusText As String
                 Get
-                    If _laeuft Then Return LocalizationService.T("Wird geladen…")
+                    If _running Then Return LocalizationService.T("Wird geladen…")
                     If Not String.IsNullOrEmpty(_meldung) Then Return _meldung
                     If IsUpdatable Then Return LocalizationService.T("Eine neuere Fassung liegt bereit")
                     If IsComplete Then Return LocalizationService.T("Vorhanden")
@@ -2788,25 +2988,25 @@ Namespace ViewModels
 
             Public ReadOnly Property ButtonVisible As Boolean
                 Get
-                    Return Not _laeuft AndAlso (Not IsComplete OrElse IsUpdatable)
+                    Return Not _running AndAlso (Not IsComplete OrElse IsUpdatable)
                 End Get
             End Property
 
             Public Property Progress As Double
                 Get
-                    Return _fortschritt
+                    Return _progress
                 End Get
                 Set(value As Double)
-                    Me.RaiseAndSetIfChanged(_fortschritt, value)
+                    Me.RaiseAndSetIfChanged(_progress, value)
                 End Set
             End Property
 
-            Public Property Laeuft As Boolean
+            Public Property Running As Boolean
                 Get
-                    Return _laeuft
+                    Return _running
                 End Get
                 Set(value As Boolean)
-                    Me.RaiseAndSetIfChanged(_laeuft, value)
+                    Me.RaiseAndSetIfChanged(_running, value)
                     RaiseStateChanged()
                 End Set
             End Property
@@ -2865,6 +3065,10 @@ Namespace ViewModels
                         description = LocalizationService.T("Gesichter finden und dieselbe Person zusammenfassen")
                     Case "Orte"
                         description = LocalizationService.T("Ortsnamen zu den Koordinaten im Bild, ohne Abfrage im Netz")
+                    Case "Entrauschen"
+                        description = LocalizationService.T("Rauschen aus hohen ISO-Werten entfernen, mit erhaltener Feinstruktur")
+                    Case "Entrauschen schnell"
+                        description = LocalizationService.T("Derselbe Zweck in einem Sechstel der Zeit, dafür etwas glatter")
                     Case Else
                         description = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
                 End Select
@@ -2874,6 +3078,8 @@ Namespace ViewModels
                     Case "Objekt entfernen" : anzeigeName = LocalizationService.T("Objekt entfernen")
                     Case "Personen" : anzeigeName = LocalizationService.T("Personen")
                     Case "Orte" : anzeigeName = LocalizationService.T("Orte")
+                    Case "Entrauschen" : anzeigeName = LocalizationService.T("Entrauschen")
+                    Case "Entrauschen schnell" : anzeigeName = LocalizationService.T("Entrauschen schnell")
                     Case "Objektauswahl" : anzeigeName = LocalizationService.T("Objektauswahl")
                     Case Else : anzeigeName = name
                 End Select
@@ -2887,9 +3093,9 @@ Namespace ViewModels
         ''' <summary>Holt alle Dateien einer Gruppe. NUR von hier aus - es gibt keinen anderen Weg,
         ''' auf dem die Anwendung etwas aus dem Netz holt.</summary>
         Public Async Function FetchModelGroupAsync(group As ModelGroup) As Task
-            If group Is Nothing OrElse group.Laeuft Then Return
+            If group Is Nothing OrElse group.Running Then Return
             group.Message = ""
-            group.Laeuft = True
+            group.Running = True
             group.Progress = 0
             Try
                 Dim total = group.Files.Sum(Function(d) d.Bytes)
@@ -2920,7 +3126,7 @@ Namespace ViewModels
                 Next
                 group.Progress = 1
             Finally
-                group.Laeuft = False
+                group.Running = False
                 group.RaiseStateChanged()
             End Try
         End Function
@@ -2931,6 +3137,16 @@ Namespace ViewModels
     ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
     ''' <summary>Ein Eintrag in der Sprachauswahl.</summary>
     Public Class LanguageOption
+        Public Property Key As String = ""
+        Public Property Name As String = ""
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
+    ''' <summary>Ein Eintrag in der Auswahl der Grafikkarten. Der leere Schlüssel ist die
+    ''' Vorauswahl: dann sucht die Anwendung selbst eine aus.</summary>
+    Public Class GpuDeviceOption
         Public Property Key As String = ""
         Public Property Name As String = ""
         Public Overrides Function ToString() As String

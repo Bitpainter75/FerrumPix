@@ -76,6 +76,55 @@
                                              Value="{Binding ColorNoiseCoarseScale, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
 
+                <!-- ENTRAUSCHEN MIT MODELL: kein Regler, sondern ein Zug in die Pixel - bei
+                     mehreren Minuten Rechenzeit kann das nicht an einer Vorschau haengen.
+                     Deshalb steht es abgesetzt unter den Reglern und nicht zwischen ihnen. -->
+                <Separator Margin="0,6,0,4" Background="{DynamicResource FP.Border}" Height="1"/>
+                <!-- Die Staerke steht UEBER den Knoepfen, weil sie fuer beide gilt und vor dem
+                     Druck eingestellt wird - danach laeuft die Rechnung minutenlang. Sie wirkt nur
+                     auf die Helligkeit; die Farbe kommt immer voll aus dem Modell. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsEnabled="{Binding CanDenoiseWithAnyModel}">
+                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Wie stark die Helligkeit entrauscht wird. Niedriger lässt mehr feine Zeichnung stehen, höher nimmt mehr Korn. Die Farbe wird immer voll entrauscht, das kostet keine Zeichnung. Gilt für den nächsten Druck auf einen der beiden Knöpfe." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="70"
+                                       Value="{Binding DenoiseStrength}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding CanDenoiseWithModel}"
+                        Command="{Binding DenoiseWithModelCommand}"
+                        ToolTip.Tip="{Binding DenoiseWithModelHint}">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Entrauschen: gründlich" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding CanDenoiseFast}"
+                        Command="{Binding DenoiseFastCommand}"
+                        ToolTip.Tip="{Binding DenoiseFastHint}">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Entrauschen: zügig" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+                <!-- Was an diesem Bild gespeichert ist. Ohne diese Zeile zeigt der Zuruecksetzer der
+                     Gruppe auf etwas Unsichtbares: bei einem RAW steckt das Entrauschen NICHT in der
+                     Datei, sondern nur als Vermerk daneben. -->
+                <TextBlock IsVisible="{Binding HasStoredDenoise}"
+                           Text="{Binding StoredDenoiseText}"
+                           Margin="2,4,2,0" TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}"
+                           Classes="no-translate"
+                           ToolTip.Tip="Wird beim Speichern in der Begleitdatei vermerkt und beim nächsten Öffnen angeboten. Das Zurücksetzen dieser Gruppe entfernt den Vermerk." />
+
             </StackPanel>
         </Expander>
     </Border>

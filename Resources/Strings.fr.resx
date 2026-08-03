@@ -5999,4 +5999,154 @@
   <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
     <value>La corbeille n'est pas une personne et n'accepte donc aucun nom. Pour attribuer un visage isolé qui s'y trouve, saisissez le nom dans la barre d'informations à côté de la photo.</value>
   </data>
+  <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
+    <value>Débruiter avec un modèle</value>
+  </data>
+  <data name="Bild_wird_entrauscht_1b37ba42" xml:space="preserve">
+    <value>Débruitage en cours…</value>
+  </data>
+  <data name="Bild_wird_entrauscht_d4eafb85" xml:space="preserve">
+    <value>Débruitage</value>
+  </data>
+  <data name="Bild_wird_entrauscht_0_von_1_6beafe11" xml:space="preserve">
+    <value>Débruitage ({0} sur {1})</value>
+  </data>
+  <data name="Entrauschen_fehlgeschlagen_bae13c94" xml:space="preserve">
+    <value>Échec du débruitage</value>
+  </data>
+  <data name="Bild_entrauscht_9ef77180" xml:space="preserve">
+    <value>Image débruitée</value>
+  </data>
+  <data name="Rauschen_aus_hohen_ISO_Werten_entfernen_mit_erha_e9e1ee04" xml:space="preserve">
+    <value>Supprime le bruit des ISO élevés en conservant les fins détails</value>
+  </data>
+  <data name="Entrauschen_d5be20de" xml:space="preserve">
+    <value>Débruitage</value>
+  </data>
+  <data name="Entrauschen_schnell_4bd2dff3" xml:space="preserve">
+    <value>Débruitage rapide</value>
+  </data>
+  <data name="Dasselbe_in_einem_Sechstel_der_Zeit_daf_r_etwas__42a40036" xml:space="preserve">
+    <value>La même chose en un sixième du temps, un peu plus lissé en retour. Pour les longues séries ou quand l'attente ne convient pas.</value>
+  </data>
+  <data name="Derselbe_Zweck_in_einem_Sechstel_der_Zeit_daf_r__a04b804b" xml:space="preserve">
+    <value>Le même but en un sixième du temps, un peu plus lissé en retour</value>
+  </data>
+  <data name="Entrauschen_gr_ndlich_1d9879a5" xml:space="preserve">
+    <value>Débruitage : approfondi</value>
+  </data>
+  <data name="Entrauschen_z_gig_9a3de0af" xml:space="preserve">
+    <value>Débruitage : rapide</value>
+  </data>
+  <data name="Entrauscht_das_ganze_Bild_mit_einem_gelernten_Mo_2c5a4bd1" xml:space="preserve">
+    <value>Fait passer toute la photo par un modèle entraîné en gardant plus de dessin. Prend plusieurs minutes et est calculé dans les pixels.</value>
+  </data>
+  <data name="Wie_stark_die_Helligkeit_entrauscht_wird_Niedrig_687c6921" xml:space="preserve">
+    <value>Dans quelle mesure la luminosité est débruitée. Plus bas garde davantage de dessin fin, plus haut retire davantage de grain. La couleur est toujours débruitée entièrement, sans coûter de dessin. S'applique à la prochaine pression sur l'un des deux boutons.</value>
+  </data>
+  <data name="Objekt_entfernen_0_Stellen_7b3c9d93" xml:space="preserve">
+    <value>Supprimer un objet ({0} endroits)</value>
+  </data>
+  <data name="z_gig_e813cf87" xml:space="preserve">
+    <value>rapide</value>
+  </data>
+  <data name="gr_ndlich_302c62c4" xml:space="preserve">
+    <value>approfondi</value>
+  </data>
+  <data name="Gespeichert_0_St_rke_1_58526d95" xml:space="preserve">
+    <value>Enregistré : {0}, intensité {1}</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_anwenden_72c046dc" xml:space="preserve">
+    <value>Appliquer la retouche enregistrée ?</value>
+  </data>
+  <data name="Zu_diesem_Bild_ist_eine_Bearbeitung_gespeichert__136fdf74" xml:space="preserve">
+    <value>Cette photo a une retouche enregistrée qui doit être calculée dans les pixels : {0}. Elle n'est pas encore dans l'image, car le fichier lui-même est inchangé. L'appliquer peut prendre plusieurs minutes.</value>
+  </data>
+  <data name="Sp_ter_a1ec84cf" xml:space="preserve">
+    <value>Plus tard</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_bleibt_liegen_b308a1d5" xml:space="preserve">
+    <value>La retouche enregistrée reste en attente</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_wird_angewendet_cffeb3ed" xml:space="preserve">
+    <value>Application de la retouche enregistrée…</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_wird_angewendet_3710b6ef" xml:space="preserve">
+    <value>Application de la retouche enregistrée</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_konnte_nicht_angewendet_92a4e5c8" xml:space="preserve">
+    <value>La retouche enregistrée n'a pas pu être appliquée</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_angewendet_0f22a6e3" xml:space="preserve">
+    <value>Retouche enregistrée appliquée</value>
+  </data>
+  <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
+    <value>Débruitage enregistré supprimé - les pixels restent tels quels</value>
+  </data>
+  <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
+    <value>Noté dans le fichier annexe lors de l'enregistrement et proposé à la prochaine ouverture. Réinitialiser ce groupe supprime la note.</value>
+  </data>
+  <data name="Grafikkarte_f_r_gelernte_Modelle_nutzen_100a84ba" xml:space="preserve">
+    <value>Utiliser la carte graphique pour les modèles appris</value>
+  </data>
+  <data name="L_sst_Entrauschen_Objektauswahl_und_Tiefenkarte__49e3db07" xml:space="preserve">
+    <value>Exécute le débruitage, la sélection d'objet et la carte de profondeur sur la carte graphique plutôt que sur le processeur. Le résultat reste le même, seule l'attente est plus courte. Les autres modèles restent sur le processeur parce qu'ils y sont plus rapides selon les mesures.</value>
+  </data>
+  <data name="Verwendete_Grafikkarte_5f0a8ad8" xml:space="preserve">
+    <value>Carte graphique utilisée</value>
+  </data>
+  <data name="L_dt_ein_Modell_versuchsweise_auf_die_Grafikkart_7b387230" xml:space="preserve">
+    <value>Charge un modèle sur la carte graphique à titre d'essai et le referme aussitôt. C'est le seul moyen de voir si le pilote la rend vraiment utilisable.</value>
+  </data>
+  <data name="Pr_fen_5af98a0f" xml:space="preserve">
+    <value>Vérifier</value>
+  </data>
+  <data name="Die_Grafikkarte_wird_gepr_ft_6ba845e7" xml:space="preserve">
+    <value>La carte graphique est en cours de vérification</value>
+  </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_steht_auf_dies_caa45c8d" xml:space="preserve">
+    <value>L'environnement d'exécution des modèles appris n'est pas disponible sur cet appareil.</value>
+  </data>
+  <data name="F_r_diese_Programmfassung_ist_keine_Grafikbeschl_b4f6b204" xml:space="preserve">
+    <value>Cette version du programme ne comporte pas d'accélération graphique. Les modèles sont calculés sur le processeur.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_l_sst_sich_nicht_laden__023e3e70" xml:space="preserve">
+    <value>L'accélération graphique ne peut pas être chargée : {0}</value>
+  </data>
+  <data name="Keine_geeignete_Grafikkarte_gefunden_Die_Modelle_6431d848" xml:space="preserve">
+    <value>Aucune carte graphique appropriée n'a été trouvée. Les modèles sont calculés sur le processeur.</value>
+  </data>
+  <data name="Grafikkarte_1953111f" xml:space="preserve">
+    <value>carte graphique</value>
+  </data>
+  <data name="eigene_Grafikkarte_ba7d12e0" xml:space="preserve">
+    <value>carte graphique dédiée</value>
+  </data>
+  <data name="eingebaute_Grafikeinheit_ff80201d" xml:space="preserve">
+    <value>unité graphique intégrée</value>
+  </data>
+  <data name="unbekannter_Hersteller_a8469674" xml:space="preserve">
+    <value>fabricant inconnu</value>
+  </data>
+  <data name="Gefunden_0_1_2_angesprochen_ber_3_f69b4e9d" xml:space="preserve">
+    <value>Trouvée : {0} {1}, {2}, utilisée via {3}.</value>
+  </data>
+  <data name="Gepr_ft_ein_Modell_l_uft_darauf_075ea3da" xml:space="preserve">
+    <value>Vérifié : un modèle s'y exécute.</value>
+  </data>
+  <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_92dcc74f" xml:space="preserve">
+    <value>Vérifié : aucun modèle ne s'y exécute.</value>
+  </data>
+  <data name="Gepr_ft_es_l_uft_kein_Modell_darauf_0_34e7178e" xml:space="preserve">
+    <value>Vérifié : aucun modèle ne s'y exécute ({0}).</value>
+  </data>
+  <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
+    <value>Pas encore vérifié.</value>
+  </data>
+  <data name="ONNX_Runtime_WebGPU_0_2_091a6cdf" xml:space="preserve">
+    <value>ONNX Runtime WebGPU 0.2</value>
+  </data>
+  <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
+    <value>Exécute les modèles appris sur la carte graphique</value>
+  </data>
 </root>

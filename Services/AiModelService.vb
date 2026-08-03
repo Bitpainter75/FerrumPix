@@ -22,20 +22,22 @@ Namespace Services
     ''' haben sollte. Der Nutzer legt die Datei in den Modellordner; ist sie da, erscheint die
     ''' Funktion, sonst nicht.
     '''
-    ''' Zweitens laufen sie auf der CPU. Eine Grafikkarte waere schneller, verlangt aber je nach
-    ''' Hersteller eigene Pakete und eigene Fehlerbilder. Der CPU-Weg laeuft ueberall, und fuer eine
-    ''' Maske reicht er: eine Maske braucht keine volle Aufloesung.</summary>
+    ''' Zweitens laufen sie ab Werk auf der CPU. Der CPU-Weg laeuft ueberall, und fuer eine Maske
+    ''' reicht er: eine Maske braucht keine volle Aufloesung. Wer eine Grafikkarte hat, kann sie in
+    ''' den Einstellungen dazunehmen - was das bringt und was es kostet, steht bei
+    ''' <see cref="GpuAccelerationService"/>. Ob eine Sitzung auf der Karte oder auf dem Prozessor
+    ''' laeuft, entscheidet allein diese Klasse hier; die einzelnen Dienste merken davon nichts.</summary>
     Public NotInheritable Class AiModelService
 
         Private Sub New()
         End Sub
 
-        Private Shared ReadOnly _sperre As New Object()
-        Private Shared ReadOnly _sessions As New Dictionary(Of String, InferenceSession)(StringComparer.OrdinalIgnoreCase)
-        Private Shared _laufzeitGeprueft As Boolean = False
-        Private Shared _laufzeitDa As Boolean = False
-        Private Shared _laufzeitFehler As String = ""
-        Private Shared _telemetrieAus As Boolean = False
+        Private Shared ReadOnly _lock As New Object()
+        Private Shared ReadOnly _sessions As New Dictionary(Of String, LoadedSession)(StringComparer.OrdinalIgnoreCase)
+        Private Shared _runtimeChecked As Boolean = False
+        Private Shared _runtimeReady As Boolean = False
+        Private Shared _runtimeError As String = ""
+        Private Shared _telemetryOff As Boolean = False
 
         ''' <summary>Der Ordner des NUTZERS. Was hier liegt, gewinnt: wer ein Modell selbst
         ''' exportiert oder gegen ein neueres tauscht, soll das ohne Schreibrechte im System
@@ -56,7 +58,7 @@ Namespace Services
         ''' und ob eine Funktion erscheint, entscheidet allein, ob die Datei da ist. Ein Paket, das
         ''' die Modelle mitbringt, legt sie neben die Anwendung; ein Paket ohne sie laesst den Platz
         ''' leer. Beide bauen aus demselben Quelltext, und der Pruefstand laeuft nur einmal.</summary>
-        Public Shared ReadOnly Iterator Property Suchorte As IEnumerable(Of String)
+        Public Shared ReadOnly Iterator Property SearchPaths As IEnumerable(Of String)
             Get
                 Yield ModelFolder
                 ' Neben der Anwendung - so liefert ein Paket sie aus.
@@ -78,7 +80,7 @@ Namespace Services
         Public Shared ReadOnly Property RuntimeAvailable As Boolean
             Get
                 CheckRuntime()
-                Return _laufzeitDa
+                Return _runtimeReady
             End Get
         End Property
 
@@ -86,14 +88,14 @@ Namespace Services
         Public Shared ReadOnly Property RuntimeError As String
             Get
                 CheckRuntime()
-                Return _laufzeitFehler
+                Return _runtimeError
             End Get
         End Property
 
         Private Shared Sub CheckRuntime()
-            SyncLock _sperre
-                If _laufzeitGeprueft Then Return
-                _laufzeitGeprueft = True
+            SyncLock _lock
+                If _runtimeChecked Then Return
+                _runtimeChecked = True
                 Try
                     ' TELEMETRIE AUS, und zwar als ERSTES - bevor irgendetwas anderes die Laufzeit
                     ' benutzt. Die Laufzeit meldet unter Windows ueber den Ereignisdienst des
@@ -102,16 +104,16 @@ Namespace Services
                     ' davon abhaengt, wo gebaut wird. Was ein Nutzer mit seinen Fotos tut, geht
                     ' niemanden ausser ihm etwas an.
                     OrtEnv.Instance().DisableTelemetryEvents()
-                    _telemetrieAus = True
+                    _telemetryOff = True
 
                     ' Eine Sitzungsoption zu bauen laedt die native Bibliothek - genau das, woran es
                     ' scheitern kann. Ein blosser Typzugriff wuerde noch nichts laden.
                     Using o = New SessionOptions()
-                        _laufzeitDa = True
+                        _runtimeReady = True
                     End Using
                 Catch ex As Exception
-                    _laufzeitDa = False
-                    _laufzeitFehler = ex.GetType().Name & ": " & ex.Message
+                    _runtimeReady = False
+                    _runtimeError = ex.GetType().Name & ": " & ex.Message
                 End Try
             End SyncLock
         End Sub
@@ -119,10 +121,10 @@ Namespace Services
         ''' <summary>Wurde die Telemetrie der Laufzeit wirklich abgeschaltet? Nicht Kosmetik: der
         ''' Aufruf steht in demselben Try wie das Laden, und ein Fehlschlag beim Laden duerfte nicht
         ''' unbemerkt dazu fuehren, dass er uebersprungen wird.</summary>
-        Public Shared ReadOnly Property TelemetrieAbgeschaltet As Boolean
+        Public Shared ReadOnly Property TelemetryDisabled As Boolean
             Get
                 CheckRuntime()
-                Return _telemetrieAus
+                Return _telemetryOff
             End Get
         End Property
 
@@ -133,7 +135,7 @@ Namespace Services
         ''' bei jedem Neuzeichnen ausgewertet. Bei jedem Mal in drei Ordnern nach Dateien zu suchen
         ''' waere Plattenzugriff im Zeichenpfad - genau die Sorte Kosten, die man erst bemerkt, wenn
         ''' der Ordner auf einem Netzlaufwerk liegt.</summary>
-        Private Shared _bestand As Dictionary(Of String, String) = Nothing
+        Private Shared _inventory As Dictionary(Of String, String) = Nothing
 
         ''' <summary>Ein bekanntes Modell: woher es kommt, wie es heisst und woran man erkennt, dass
         ''' es unversehrt ist.
@@ -162,15 +164,42 @@ Namespace Services
             ''' erste Fassung hatte zwei getrennte Eingaenge und gab 0 bis 255 aus, die zweite hat
             ''' einen Eingang mit vier Kanaelen und gibt 0 bis 1. Ein Rueckfall auf die alte Datei
             ''' ergaebe kein aelteres Ergebnis, sondern Unsinn.</summary>
-            Public Property Vorgaenger As String() = New String() {}
-            Public Property Zweck As String = ""
+            Public Property Predecessors As String() = New String() {}
+            Public Property Purpose As String = ""
             Public Property Bytes As Long = 0
             Public Property Sha256 As String = ""
             ''' <summary>Alle Dateien eines Bausteins - erst wenn ALLE vorliegen, gibt es die
             ''' Funktion. Ein halbes Modell ist keins.</summary>
             Public Property Group As String = ""
+            ''' <summary>Darf dieses Modell auf die Grafikkarte? Eine POSITIVLISTE, und zwar aus
+            ''' Absicht: was hier nicht steht, rechnet auf dem Prozessor.
+            '''
+            ''' Der Grund ist nicht Vorsicht, sondern gemessen (Zahlen im Audit, RENDERPIPELINE):
+            '''
+            ''' Der MASKENDEKODIERER bringt die Laufzeit auf der Karte zum ABBRUCH - nicht zu einer
+            ''' Ausnahme, die sich abfangen liesse, sondern zu einem harten Ende des Prozesses aus
+            ''' nativem Code heraus. Ein Klick mit der Objektauswahl haette die Anwendung beendet.
+            ''' Ein Fehler dieser Art ist der Grund, warum hier eine Positivliste steht und keine
+            ''' Ausschlussliste: ein neues Modell, das noch niemand gemessen hat, darf nicht von
+            ''' selbst auf die Karte geraten.
+            '''
+            ''' OBJEKT ENTFERNEN, GESICHTER FINDEN und GESICHTER VERGLEICHEN laufen auf der Karte
+            ''' LANGSAMER als auf dem Prozessor - bei den beiden kleinen Modellen, weil die Fahrt
+            ''' zur Karte und zurueck mehr kostet als die Rechnung selbst, beim Fuellmodell auch bei
+            ''' voller Groesse (1024 Punkte: 7,3 Sekunden auf dem Prozessor gegen 11,3 auf der
+            ''' Karte). Sie hier einzutragen waere kein Gewinn, sondern ein Verlust.</summary>
+            Public Property GpuAllowed As Boolean = False
+
             ''' <summary>Eigene Adresse, falls dieses Modell nicht bei den anderen liegt. Leer heisst:
-            ''' <see cref="HerkunftBasis"/> plus Dateiname.</summary>
+            ''' <see cref="HerkunftBasis"/> plus Dateiname.
+            '''
+            ''' VORSICHT, hier steht NICHT die Urquelle, sondern die Abholadresse. Was dort liegt,
+            ''' muss BIT FUER BIT unsere Datei sein - Groesse und Pruefsumme werden nach dem Holen
+            ''' geprueft, und wo sie nicht passen, bleibt die Funktion aus. Das ist einmal passiert:
+            ''' hier stand die Fundstelle des ONNX-Exports, und dort liegt nur der Graph mit den
+            ''' Gewichten in einer NEBENdatei (3,8 MB statt 76,9 MB). Der Knopf haette gelaedt und
+            ''' waere trotzdem nie fertig geworden. Wer diesen Wert setzt, laedt die Adresse einmal
+            ''' selbst herunter und vergleicht die Pruefsumme mit dem Eintrag.</summary>
             Public Property Herkunft As String = ""
 
             ''' <summary>Die Adresse, von der diese Datei geholt wird.</summary>
@@ -200,36 +229,50 @@ Namespace Services
         ''' Als eigene Datei laesst sie sich austauschen, ohne eine neue Programmversion zu bauen.
         '''
         ''' KEIN Kommentar INNERHALB der Liste: VB bricht dort die implizite Zeilenfortsetzung nach
-        ''' dem Komma ab, und der Initialisierer laesst sich nicht mehr uebersetzen.</summary>
+        ''' dem Komma ab, und der Initialisierer laesst sich nicht mehr uebersetzen.
+        '''
+        ''' WOHER EINE DATEI STAMMT, steht NICHT hier. <c>Herkunft</c> ist die Adresse, von der wir
+        ''' sie holen, und das ist unser eigenes Modell-Repo - nicht die Urquelle. Die vollstaendige
+        ''' Kette je Datei (Originalprojekt, Gewichte, ONNX-Export, Pruefsumme, Modellvertrag) liegt
+        ''' dort in <c>licenses/NOTICE-*.txt</c>. Wer hier nach der Urquelle sucht, sucht am
+        ''' falschen Ort - genau das ist einmal passiert.</summary>
         Public Shared ReadOnly Property KnownEntries As IReadOnlyList(Of ModelEntry) =
             New List(Of ModelEntry) From {
                 New ModelEntry With {.Key = "mobilesam-encoder",
                                         .FileName = "mobilesam-encoder-v1.onnx", .Group = "Objektauswahl",
-                                        .Zweck = "Bildkodierer", .Bytes = 27982937,
+                                        .Purpose = "Bildkodierer", .Bytes = 27982937, .GpuAllowed = True,
                                         .Sha256 = "fec144aeb820a5a2f45ff4d6f3c46362ebd09227fdab1e6e42ae569ffa7cc3d6"},
                 New ModelEntry With {.Key = "mobilesam-decoder",
                                         .FileName = "mobilesam-decoder-v1.onnx", .Group = "Objektauswahl",
-                                        .Zweck = "Maskendekodierer", .Bytes = 16496934,
+                                        .Purpose = "Maskendekodierer", .Bytes = 16496934,
                                         .Sha256 = "a21b65b6e1b75e2c6265b36835747a0ab9169ec1ed725139a78ce90297f95126"},
                 New ModelEntry With {.Key = "midas-small",
                                         .FileName = "midas-small-v1.onnx", .Group = "Tiefe",
-                                        .Zweck = "Tiefenkarte", .Bytes = 66339845,
+                                        .Purpose = "Tiefenkarte", .Bytes = 66339845, .GpuAllowed = True,
                                         .Sha256 = "007d73146ac82eb424d7306fb2e9d15fb4d2702d5129040d9e68adeb28bc384e"},
                 New ModelEntry With {.Key = "lama",
                                         .FileName = "lama-v1.onnx", .Group = "Objekt entfernen",
-                                        .Zweck = "Lücken füllen", .Bytes = 110513159,
+                                        .Purpose = "Lücken füllen", .Bytes = 110513159,
                                         .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"},
+                New ModelEntry With {.Key = "scunet",
+                                        .FileName = "scunet-v1.onnx", .Group = "Entrauschen",
+                                        .Purpose = "Rauschen entfernen", .Bytes = 76890542, .GpuAllowed = True,
+                                        .Sha256 = "cae2172b8d2f2c08e5904a46b84b50ff26035c0fafdf8a86d5e52bd4e9cdba2d"},
+                New ModelEntry With {.Key = "nafnet",
+                                        .FileName = "nafnet-v1.onnx", .Group = "Entrauschen schnell",
+                                        .Purpose = "Rauschen entfernen, deutlich schneller", .Bytes = 118995025, .GpuAllowed = True,
+                                        .Sha256 = "052c9238b420e8f232c4030e583426a9ce2bff36d2305fb2484509361cbe395d"},
                 New ModelEntry With {.Key = "yunet",
                                         .FileName = "yunet-v1.onnx", .Group = "Personen",
-                                        .Zweck = "Gesichter finden", .Bytes = 232589,
+                                        .Purpose = "Gesichter finden", .Bytes = 232589,
                                         .Sha256 = "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"},
                 New ModelEntry With {.Key = "arcface",
                                         .FileName = "arcface-r100-v1.onnx", .Group = "Personen",
-                                        .Zweck = "Gesichter vergleichen", .Bytes = 261036388,
+                                        .Purpose = "Gesichter vergleichen", .Bytes = 261036388,
                                         .Sha256 = "f3a6bc281e72f88862f5748b53be3d76b3b48f8f1ab1f4a537941bdc4e1b01da"},
                 New ModelEntry With {.Key = "orte",
                                         .FileName = "orte-v1.sqlite", .Group = "Orte",
-                                        .Zweck = "Ortsnamen zu Koordinaten", .Bytes = 13201408,
+                                        .Purpose = "Ortsnamen zu Koordinaten", .Bytes = 13201408,
                                         .Sha256 = "95ca2b04fb0703f8cd93e038ca0b3da469bbabf8aa7c9069acfc7105bf75c42a"}}
 
         ''' <summary>Woher die Dateien kommen: DIREKT von der Ablage, ohne Umweg.
@@ -261,9 +304,9 @@ Namespace Services
             Dim e = EntryFor(key)
             If e Is Nothing Then Return ""
             If ModelPresent(e.FileName) Then Return e.FileName
-            If e.Vorgaenger IsNot Nothing Then
-                For Each alt In e.Vorgaenger
-                    If ModelPresent(alt) Then Return alt
+            If e.Predecessors IsNot Nothing Then
+                For Each older In e.Predecessors
+                    If ModelPresent(older) Then Return older
                 Next
             End If
             Return ""
@@ -316,7 +359,7 @@ Namespace Services
         Private Shared ReadOnly Property KnownFiles As String()
             Get
                 Return KnownEntries.
-                    SelectMany(Function(e) New String() {e.FileName}.Concat(If(e.Vorgaenger, New String() {}))).
+                    SelectMany(Function(e) New String() {e.FileName}.Concat(If(e.Predecessors, New String() {}))).
                     Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
             End Get
         End Property
@@ -327,25 +370,25 @@ Namespace Services
         ''' Bewusst EINMAL und nicht bei jedem Zugriff: eine Funktion, die mitten in der Arbeit
         ''' auftaucht oder verschwindet, weil jemand eine Datei verschoben hat, ist schlimmer als
         ''' eine, die erst nach einem Neustart erscheint. Wer ein Modell nachlegt, kann ueber
-        ''' <see cref="ErneutPruefen"/> auch ohne Neustart nachsehen lassen.</summary>
+        ''' <see cref="CheckAgain"/> auch ohne Neustart nachsehen lassen.</summary>
         Public Shared Sub CheckInventory()
-            Dim gefunden = New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            Dim found = New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
             For Each name In KnownFiles
-                For Each place In Suchorte
+                For Each place In SearchPaths
                     If String.IsNullOrEmpty(place) Then Continue For
-                    Dim p = Path.Combine(place, name)
-                    If File.Exists(p) Then
-                        gefunden(name) = p
+                    Dim candidate = Path.Combine(place, name)
+                    If File.Exists(candidate) Then
+                        found(name) = candidate
                         Exit For
                     End If
                 Next
             Next
-            SyncLock _sperre
-                _bestand = gefunden
+            SyncLock _lock
+                _inventory = found
             End SyncLock
             DiagnosticLogService.LogAlways("KiModell",
-                $"Modelle: {gefunden.Count} von {KnownEntries.Count} gefunden" &
-                If(gefunden.Count = 0, "", " (" & String.Join(", ", gefunden.Keys) & ")"))
+                $"Modelle: {found.Count} von {KnownEntries.Count} gefunden" &
+                If(found.Count = 0, "", " (" & String.Join(", ", found.Keys) & ")"))
         End Sub
 
         ''' <summary>Noch einmal nachsehen - fuer den Fall, dass jemand waehrend der Sitzung ein
@@ -359,14 +402,14 @@ Namespace Services
         Public Shared Function ModelPath(fileName As String) As String
             If String.IsNullOrWhiteSpace(fileName) Then Return ""
             Dim table As Dictionary(Of String, String)
-            SyncLock _sperre
-                table = _bestand
+            SyncLock _lock
+                table = _inventory
             End SyncLock
             ' Noch nie geprueft (Pruefstand, frueher Aufruf): dann jetzt, statt Nichts zu melden.
             If table Is Nothing Then
                 CheckInventory()
-                SyncLock _sperre
-                    table = _bestand
+                SyncLock _lock
+                    table = _inventory
                 End SyncLock
             End If
             Dim p As String = Nothing
@@ -379,31 +422,100 @@ Namespace Services
             Return Not String.IsNullOrEmpty(ModelPath(fileName))
         End Function
 
+        ''' <summary>Darf diese DATEI auf die Grafikkarte? Die Antwort steht am Register-Eintrag,
+        ''' gilt aber auch fuer dessen aeltere Fassungen - eine alte Datei rechnet dasselbe.
+        '''
+        ''' Unbekannte Dateien bekommen ein Nein. Wer eine eigene Datei in den Modellordner legt,
+        ''' bekommt den Prozessor, und das ist die richtige Antwort: was sie auf der Karte tut, hat
+        ''' niemand gemessen.</summary>
+        Public Shared Function IsGpuAllowed(fileName As String) As Boolean
+            If String.IsNullOrWhiteSpace(fileName) Then Return False
+            For Each entry In KnownEntries
+                If String.Equals(entry.FileName, fileName, StringComparison.OrdinalIgnoreCase) Then Return entry.GpuAllowed
+                If entry.Predecessors IsNot Nothing AndAlso
+                   entry.Predecessors.Any(Function(older) String.Equals(older, fileName, StringComparison.OrdinalIgnoreCase)) Then
+                    Return entry.GpuAllowed
+                End If
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Eine offene Sitzung und die Frage, auf welchem Rechenwerk sie gebaut wurde:
+        ''' leer heisst Prozessor, sonst steht dort der Schluessel der Grafikkarte.
+        '''
+        ''' Ohne diesen Vermerk waere der Schalter in den Einstellungen eine Luege: die Sitzungen
+        ''' bleiben offen, und eine bereits geladene bliebe auf dem Prozessor, obwohl die Karte
+        ''' inzwischen eingeschaltet ist. Und weil dort der SCHLUESSEL steht und nicht nur ein Ja,
+        ''' faellt auch der Wechsel von einer Karte auf eine andere auf.</summary>
+        Private NotInheritable Class LoadedSession
+            Public Property Session As InferenceSession
+            Public Property Accelerator As String = ""
+        End Class
+
+        ''' <summary>Die Sitzungsoptionen, mit denen jedes Modell geladen wird.</summary>
+        Private Shared Function BuildOptions() As SessionOptions
+            Dim options = New SessionOptions()
+            ' Ein Modell laeuft waehrend der Bearbeitung neben der Vorschau. Alle Kerne zu
+            ' belegen liesse die Oberflaeche stehen - die Haelfte, mindestens einer.
+            options.IntraOpNumThreads = Math.Max(1, Environment.ProcessorCount \ 2)
+            options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL
+            ' Nur noch echte Fehler. Beim Optimieren meldet die Laufzeit sonst jede
+            ' ungenutzte Groesse im Modell einzeln auf die Fehlerausgabe - hunderte Zeilen,
+            ' die niemanden etwas angehen und echte Meldungen zudecken.
+            options.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
+            Return options
+        End Function
+
         ''' <summary>Die Sitzung zu einem Modell, oder Nothing.
         '''
         ''' Sitzungen bleiben offen und werden geteilt: das Laden kostet je nach Modell hunderte
         ''' Millisekunden, und ein Klick-fuer-Klick neu geladenes Modell waere unbenutzbar. Der
-        ''' Besitz bleibt HIER - der Aufrufer darf sie nicht schliessen.</summary>
+        ''' Besitz bleibt HIER - der Aufrufer darf sie nicht schliessen.
+        '''
+        ''' Wurde der Schalter fuer die Grafikkarte seit dem Laden umgelegt, wird die alte Sitzung
+        ''' AUS DER LISTE GENOMMEN, aber NICHT geschlossen: es kann in diesem Augenblick jemand
+        ''' damit rechnen, und eine geschlossene Sitzung unter laufender Rechnung ist kein Fehler,
+        ''' sondern ein Absturz. Der Speicher wird frei, sobald niemand mehr auf sie zeigt.</summary>
         Public Shared Function Session(fileName As String) As InferenceSession
             If Not RuntimeAvailable Then Return Nothing
             Dim filePath = ModelPath(fileName)
             If String.IsNullOrEmpty(filePath) Then Return Nothing
-            SyncLock _sperre
-                Dim vorhanden As InferenceSession = Nothing
-                If _sessions.TryGetValue(filePath, vorhanden) Then Return vorhanden
+            Dim onGpu = GpuAccelerationService.ShouldUse AndAlso IsGpuAllowed(fileName)
+            ' Leer heisst Prozessor. Steht dort ein Schluessel, ist es DIESE Karte - und eine
+            ' andere Karte ist damit genauso ein Wechsel wie das Abschalten.
+            Dim target = If(onGpu, GpuAccelerationService.ActiveDeviceKey, "")
+            SyncLock _lock
+                Dim existing As LoadedSession = Nothing
+                If _sessions.TryGetValue(filePath, existing) Then
+                    If existing.Accelerator = target Then Return existing.Session
+                    _sessions.Remove(filePath)
+                End If
+                Dim builtWith = ""
+                Dim created As InferenceSession = Nothing
+                If onGpu Then
+                    Try
+                        Dim options = BuildOptions()
+                        If GpuAccelerationService.TryApply(options) Then
+                            created = New InferenceSession(filePath, options)
+                            builtWith = target
+                            GpuAccelerationService.NoteSuccess()
+                        End If
+                    Catch ex As Exception
+                        ' Die Karte hat das Modell nicht genommen. Das kostet Zeit, aber keine
+                        ' Funktion: gleich darunter laeuft derselbe Weg ueber den Prozessor.
+                        GpuAccelerationService.NoteFailure(ex.Message)
+                        DiagnosticLogService.LogAlways("KiModell",
+                            $"nicht auf der Grafikkarte: {Path.GetFileName(filePath)} - {ex.Message}")
+                        created = Nothing
+                    End Try
+                End If
                 Try
-                    Dim optionen = New SessionOptions()
-                    ' Ein Modell laeuft waehrend der Bearbeitung neben der Vorschau. Alle Kerne zu
-                    ' belegen liesse die Oberflaeche stehen - die Haelfte, mindestens einer.
-                    optionen.IntraOpNumThreads = Math.Max(1, Environment.ProcessorCount \ 2)
-                    optionen.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL
-                    ' Nur noch echte Fehler. Beim Optimieren meldet die Laufzeit sonst jede
-                    ' ungenutzte Groesse im Modell einzeln auf die Fehlerausgabe - hunderte Zeilen,
-                    ' die niemanden etwas angehen und echte Meldungen zudecken.
-                    optionen.LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
-                    Dim neu = New InferenceSession(filePath, optionen)
-                    _sessions(filePath) = neu
-                    Return neu
+                    If created Is Nothing Then
+                        created = New InferenceSession(filePath, BuildOptions())
+                        builtWith = ""
+                    End If
+                    _sessions(filePath) = New LoadedSession With {.Session = created, .Accelerator = builtWith}
+                    Return created
                 Catch ex As Exception
                     DiagnosticLogService.LogAlways("KiModell", $"laedt nicht: {Path.GetFileName(filePath)} - {ex.Message}")
                     Return Nothing
@@ -412,11 +524,11 @@ Namespace Services
         End Function
 
         ''' <summary>Alle Sitzungen schliessen. Fuer den Prueftstand und das Beenden.</summary>
-        Public Shared Sub GibFrei()
-            SyncLock _sperre
+        Public Shared Sub ReleaseAll()
+            SyncLock _lock
                 For Each s In _sessions.Values
                     Try
-                        s.Dispose()
+                        s.Session.Dispose()
                     Catch
                     End Try
                 Next

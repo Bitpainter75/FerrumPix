@@ -131,6 +131,12 @@ Namespace Services
             ' die Ameisenlinie sichtbar war, ist nur UI-Zustand und darf beim Wiederladen weder die Auswahl
             ' reaktivieren noch globale Regler nachträglich auf diese Auswahl begrenzen.
             recipeAdj.HasActiveSelection = False
+            ' Das Gegenstueck zur .fpxmp: dieses Buendel traegt das Arbeitsbild in voller Aufloesung
+            ' mit, Entrauschen und Retusche stecken also in seinen Pixeln. Der Vermerk darueber wird
+            ' hier trotzdem NICHT auf wahr gezwungen, sondern uebernommen wie er kommt: wer eine
+            ' .fpx speichert, ohne einen offenen Vorgang angewandt zu haben, hat ihn auch nicht in
+            ' den Pixeln - dann bleibt er offen und wird beim naechsten Oeffnen wieder angeboten.
+            ' Ein festes Wahr waere an dieser Stelle eine Behauptung ueber fremde Pixel.
             Dim assetMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
             If recipeAdj.Annotations IsNot Nothing Then
                 For Each ann In recipeAdj.Annotations

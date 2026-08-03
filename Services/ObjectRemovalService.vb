@@ -14,15 +14,17 @@ Namespace Services
     ''' der durch die Luecke laeuft, wird weitergezogen statt zugekleistert - genau der Fall, an dem
     ''' jede Patch-Variante scheitert, weil es an der Ausleihstelle keinen passenden Horizont gibt.
     '''
-    ''' Das Modell rechnet auf einem FESTEN Quadrat von 512 Pixeln. Das bestimmt den ganzen Aufbau:
-    ''' es bekommt nicht das Foto, sondern einen quadratischen Ausschnitt um die Luecke herum, mit
-    ''' genug Umgebung, dass es etwas zum Fortsetzen hat. Ein 40-Megapixel-Bild auf 512 Pixel zu
-    ''' quetschen wuerde jede Struktur vernichten, die es fortsetzen soll.
+    ''' Das Modell nimmt FREIE Groessen. Es bekommt trotzdem nicht das Foto, sondern einen
+    ''' Ausschnitt um die Luecke herum, mit genug Umgebung, dass es etwas zum Fortsetzen hat - ein
+    ''' 40-Megapixel-Bild auf Modellgroesse zu quetschen wuerde jede Struktur vernichten, die es
+    ''' fortsetzen soll. Wie gross gerechnet wird, entscheiden <see cref="MaxEdge"/> und
+    ''' <see cref="ToModelSize"/>; die Groesse ist dabei kein Nebenschauplatz, sondern der groesste
+    ''' Zeitposten des ganzen Vorgangs.
     '''
     ''' Zurueckgeschrieben wird NUR innerhalb der Maske, mit weichem Rand. Ausserhalb bleibt das
-    ''' Original Pixel fuer Pixel stehen: das Modell gibt sein ganzes Quadrat neu aus, und das
-    ''' unbesehen zu uebernehmen hiesse, das halbe Foto durch eine 512er Fassung seiner selbst zu
-    ''' ersetzen.</summary>
+    ''' Original Pixel fuer Pixel stehen: das Modell gibt seinen ganzen Ausschnitt neu aus, und das
+    ''' unbesehen zu uebernehmen hiesse, das halbe Foto durch eine verkleinerte Fassung seiner
+    ''' selbst zu ersetzen.</summary>
     Public NotInheritable Class ObjectRemovalService
 
         Private Sub New()
@@ -30,13 +32,19 @@ Namespace Services
 
         Public Const ModelFile As String = "lama"
 
-        ''' <summary>Groesste Kante, mit der gerechnet wird. Das Modell nimmt jede Groesse an, aber
-        ''' die Rechenzeit waechst mit der Flaeche - und ein Ausschnitt, der viel groesser ist als
-        ''' das, was die Luecke braucht, kostet nur Zeit.</summary>
-        Public Const MaxEdge As Integer = 768
+        ''' <summary>Groesste Kante, mit der gerechnet wird.
+        '''
+        ''' Stand frueher auf 768 und ist auf 1024 angehoben, weil das NICHTS kostet: die
+        ''' Rechengroesse wird ohnehin auf die naechste Zweierpotenz aufgefuellt (siehe
+        ''' <see cref="ToModelSize"/>), und alles zwischen 513 und 1024 landet in derselben Kachel.
+        ''' Bei 768 wurde also auf 1024 gerechnet und ein Drittel der Flaeche mit fortgeschriebenem
+        ''' Rand verschenkt. Mit 1024 steckt dort Bildinhalt statt Saum - mehr Aufloesung fuer die
+        ''' Fuellung, bei gleicher Rechenzeit.</summary>
+        Public Const MaxEdge As Integer = 1024
 
-        ''' <summary>Auf dieses Vielfache muessen Breite und Hoehe aufgerundet werden.</summary>
-        Public Const ModelGrid As Integer = 32
+        ''' <summary>Kleinste Rechengroesse. Darunter lohnt das Aufrunden nicht, und dem Modell
+        ''' bleibt zu wenig Umgebung.</summary>
+        Private Const SmallestModelSize As Integer = 128
 
         ''' <summary>Wie viel Umgebung mindestens um die Luecke herum mitgegeben wird, als Vielfaches
         ''' ihrer laengsten Kante. Ohne Umgebung hat das Modell nichts, was es fortsetzen koennte.</summary>
@@ -208,7 +216,7 @@ Namespace Services
                 Dim factor = Math.Min(1.0, MaxEdge / CDbl(Math.Max(window.Width, window.Height)))
                 Dim aw = Math.Max(32, CInt(Math.Round(window.Width * factor)))
                 Dim ah = Math.Max(32, CInt(Math.Round(window.Height * factor)))
-                Dim pw = ToMultipleOf(aw), ph = ToMultipleOf(ah)
+                Dim pw = ToModelSize(aw), ph = ToModelSize(ah)
 
                 Using small = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                     Using c = New SKCanvas(small)
@@ -313,10 +321,30 @@ Namespace Services
         End Function
 
         ''' <summary>Auf das naechste Vielfache aufrunden, das das Modell verlangt.</summary>
-        Private Shared Function ToMultipleOf(value As Integer) As Integer
-            Dim r = value Mod ModelGrid
-            If r = 0 Then Return value
-            Return value + (ModelGrid - r)
+        ''' <summary>Die Rechengroesse einer Achse: aufgerundet auf die naechste ZWEIERPOTENZ.
+        '''
+        ''' Das ist keine Kosmetik, sondern der groesste einzelne Zeitposten beim Entfernen. Das
+        ''' Modell baut auf Fourier-Faltungen, und deren schnelle Transformation greift nur bei
+        ''' Zweierpotenzen. Gemessen an derselben Datei:
+        '''
+        '''   512 mal 512    1,5 s        576 mal 576    9,4 s
+        '''   1024 mal 512   3,2 s        768 mal 576   11,4 s  (was hier frueher stand)
+        '''   1024 mal 1024  7,4 s        896 mal 896   18,6 s
+        '''
+        ''' 1024 mal 1024 ist also bei VIERFACHER Flaeche schneller als 576 mal 576. Wer hier auf
+        ''' ein Vielfaches von 32 zurueckgeht, macht das Entfernen um das Drei- bis Siebenfache
+        ''' langsamer, ohne dass sich am Bild etwas verbessert.
+        '''
+        ''' Aufloesung kostet das nichts: <see cref="Compute"/> fuellt den Bereich zwischen dem
+        ''' Ausschnitt und der Rechengroesse nicht mit Farbe, sondern schreibt die letzte Zeile und
+        ''' Spalte fort, und die Maske bleibt dort null. Aufgerundet wird also der SAUM, nicht das
+        ''' Bild - nichts wird gestaucht.</summary>
+        Private Shared Function ToModelSize(value As Integer) As Integer
+            Dim size = SmallestModelSize
+            While size < value
+                size *= 2
+            End While
+            Return size
         End Function
 
         ''' <summary>Ein Durchlauf des Modells.
