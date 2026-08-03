@@ -6082,6 +6082,24 @@
   <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
     <value>Redução de ruído guardada removida - os pixels ficam como estão</value>
   </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_1_Bild_f66a9fb2" xml:space="preserve">
+    <value>Incluir a edição guardada (1 foto)</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_0_Bilder_434df60f" xml:space="preserve">
+    <value>Incluir a edição guardada ({0} fotos)</value>
+  </data>
+  <data name="Bei_RAW_und_Photoshop_Dateien_liegt_Entrauschen__587cdfc7" xml:space="preserve">
+    <value>Em ficheiros RAW e do Photoshop, a redução de ruído, a remoção de objetos, o retoque e o pincel ficam apenas anotados ao lado do ficheiro. Com o visto são calculados, o que custa vários minutos por foto; sem o visto, as fotos saem sem esse trabalho.</value>
+  </data>
+  <data name="Mitrechnen_41b5eef1" xml:space="preserve">
+    <value>Incluir</value>
+  </data>
+  <data name="Ohne_f09dc501" xml:space="preserve">
+    <value>Sem</value>
+  </data>
+  <data name="Bei_0_Bild_ern_ist_eine_Bearbeitung_gespeichert__e748bf18" xml:space="preserve">
+    <value>Em {0} foto(s) há uma edição guardada que ainda tem de ser calculada nos pixels, por exemplo redução de ruído ou uma zona removida. Incluí-la custa vários minutos por foto; sem ela, a foto sai sem essa edição.</value>
+  </data>
   <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
     <value>É anotado no ficheiro acompanhante ao guardar e proposto na próxima abertura. Repor este grupo remove a anotação.</value>
   </data>
@@ -6147,5 +6165,17 @@
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Executa os modelos aprendidos na placa gráfica</value>
+  </data>
+  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
+    <value>Reduzir ruído: doseado</value>
+  </data>
+  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
+    <value>Aqui o cursor de intensidade diz ao modelo qual é a força do ruído, em vez de misturar o resultado depois. Bastante mais rápido do que a via minuciosa.</value>
+  </data>
+  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
+    <value>O cursor de intensidade entra no modelo em vez de misturar o resultado</value>
+  </data>
+  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
+    <value>Redução de ruído doseada</value>
   </data>
 </root>

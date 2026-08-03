@@ -1051,6 +1051,73 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' ── Gebackene Vorgänge im Stapel ────────────────────────────────────────
+        '
+        ' Bei einer RAW- oder PSD-Quelle stecken Entrauschen, Objektentfernen, Retusche und Striche
+        ' NICHT in der Datei, sondern nur als Vermerk daneben (siehe
+        ' ImageProcessor.HasPendingBakedOperations). Ein Stapel, der sie stillschweigend mitrechnet,
+        ' liefe je Bild minutenlang; einer, der sie stillschweigend weglässt, gäbe Bilder ohne die
+        ' Arbeit aus, die man hineingesteckt hat. Deshalb ein Kästchen - und zwar nur dann, wenn in
+        ' der Auswahl wirklich etwas offen ist. Ein Kästchen, das bei jedem Stapel dasteht und
+        ' meistens nichts tut, ist schlimmer als keines.
+        Private _dialogPendingBakedCount As Integer = 0
+        Private _dialogApplyPendingBaked As Boolean = False
+
+        ''' <summary>Wie viele Bilder der Auswahl einen offenen Vorgang tragen. Wird vor dem Öffnen
+        ''' eines Stapel-Dialogs gesetzt.</summary>
+        Public Property DialogPendingBakedCount As Integer
+            Get
+                Return _dialogPendingBakedCount
+            End Get
+            Set(value As Integer)
+                If _dialogPendingBakedCount = value Then Return
+                _dialogPendingBakedCount = Math.Max(0, value)
+                Me.RaisePropertyChanged(NameOf(DialogPendingBakedCount))
+                Me.RaisePropertyChanged(NameOf(IsDialogPendingBakedAvailable))
+                Me.RaisePropertyChanged(NameOf(DialogPendingBakedLabel))
+            End Set
+        End Property
+
+        Public ReadOnly Property IsDialogPendingBakedAvailable As Boolean
+            Get
+                Return _dialogPendingBakedCount > 0
+            End Get
+        End Property
+
+        ''' <summary>Die Beschriftung nennt die ANZAHL: "mitrechnen" allein sagt nicht, ob es um ein
+        ''' Bild oder um zweihundert geht - und genau daran hängt, ob man Minuten oder Stunden
+        ''' wartet.</summary>
+        Public ReadOnly Property DialogPendingBakedLabel As String
+            Get
+                ' Einzahl als eigener Text statt "(1 Bilder)". Eine Zahl in Klammern haette das
+                ' umgangen, sagt aber nicht, WOVON sie eine ist.
+                If _dialogPendingBakedCount = 1 Then
+                    Return LocalizationService.T("Gespeicherte Bearbeitung mitrechnen (1 Bild)")
+                End If
+                Return String.Format(LocalizationService.T("Gespeicherte Bearbeitung mitrechnen ({0} Bilder)"),
+                                     _dialogPendingBakedCount)
+            End Get
+        End Property
+
+        ''' <summary>Der Haken selbst. Vorgabe AUS: es kostet mehrere Minuten je Bild, und was so
+        ''' lange dauert, sagt man an.</summary>
+        Public Property DialogApplyPendingBaked As Boolean
+            Get
+                Return _dialogApplyPendingBaked
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogApplyPendingBaked, value)
+            End Set
+        End Property
+
+        ''' <summary>Vor einem Stapel-Dialog aufzurufen: zählt die betroffenen Bilder und setzt den
+        ''' Haken zurück. Zurückgesetzt wird bewusst - die Entscheidung gehört zum Lauf und nicht
+        ''' zum Programm.</summary>
+        Public Sub PreparePendingBakedOption(paths As IEnumerable(Of String))
+            DialogApplyPendingBaked = False
+            DialogPendingBakedCount = ImageProcessor.CountPathsWithPendingBakedOperations(paths)
+        End Sub
+
         Public Property DialogBatchFilterAppendName As Boolean
             Get
                 Return _dialogBatchFilterAppendName
@@ -2496,6 +2563,21 @@ Namespace ViewModels
             Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "", LocalizationService.T(confirmText), "")
         End Function
 
+        ''' <summary>Vor einem Ausgabeweg fragen, ob vermerkte Vorgaenge mitgerechnet werden sollen.
+        '''
+        ''' Sie stecken bei einem RAW oder PSD nicht in der Datei, sondern nur als Vermerk daneben
+        ''' (siehe <see cref="ImageProcessor.HasPendingBakedOperations"/>). Sie mitzurechnen kostet
+        ''' Minuten je Bild - deshalb wird gefragt und nicht entschieden. Ist nichts offen, kommt
+        ''' auch keine Frage.</summary>
+        Public Async Function AskApplyPendingBakedAsync(paths As IEnumerable(Of String)) As Task(Of Boolean)
+            Dim affected = ImageProcessor.CountPathsWithPendingBakedOperations(paths)
+            If affected <= 0 Then Return False
+            Return Await ShowConfirmAsync(
+                LocalizationService.T("Gespeicherte Bearbeitung anwenden?"),
+                String.Format(LocalizationService.T("Bei {0} Bild(ern) ist eine Bearbeitung gespeichert, die noch in die Bildpunkte gerechnet werden muss - etwa Entrauschen oder eine entfernte Stelle. Mitrechnen kostet mehrere Minuten je Bild; ohne kommt das Bild ohne diese Bearbeitung heraus."), affected),
+                LocalizationService.T("Mitrechnen"), LocalizationService.T("Ohne"))
+        End Function
+
         Public Async Function ShowConfirmAsync(titleText As String, messageText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of Boolean) Implements IViewerHost.ShowConfirmAsync, IEditorHost.ShowConfirmAsync
             Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "",
                                                LocalizationService.T(confirmText), LocalizationService.T(cancelText))
@@ -2813,7 +2895,7 @@ Namespace ViewModels
             }
         End Function
 
-        Public Async Function ShowFileConflictAsync(existingPath As String, incomingPath As String) As Task(Of FileConflictDialogResult)
+        Public Async Function ShowFileConflictAsync(existingPath As String, incomingPath As String) As Task(Of FileConflictDialogResult) Implements IEditorHost.ShowFileConflictAsync
             DialogExistingFile = FileConflictInfo.FromPath(existingPath)
             DialogIncomingFile = FileConflictInfo.FromPath(incomingPath)
             DialogConflictRenameText = CreateUniqueConflictName(existingPath)
@@ -3802,6 +3884,11 @@ Namespace ViewModels
                 Dim tempFile = _printTempFile
 
                 AppSettingsService.SavePrintOptions(options)
+
+                ' Die Frage nach den gebackenen Vorgaengen kommt VOR dem Schliessen des Dialogs und
+                ' vor dem Rendern: danach laeuft der Auftrag durch, und ein Bild, das erst im
+                ' Drucker auffaellt, ist zu spaet. Gefragt wird nur, wenn wirklich etwas offen ist.
+                options.ApplyPendingBakedOperations = Await AskApplyPendingBakedAsync(paths)
 
                 IsPrintDialogOpen = False
                 _printPreviewTimer?.Stop()

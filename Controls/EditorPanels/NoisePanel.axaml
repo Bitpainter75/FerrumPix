@@ -114,6 +114,19 @@
                         <TextBlock Text="Entrauschen: zügig" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
+                <!-- Der dritte Weg. Er unterscheidet sich nicht im Tempo, sondern darin, WO die
+                     Stärke wirkt: hier geht sie als angesetzte Rauschstärke IN das Modell, statt
+                     sein Ergebnis hinterher zurückzumischen. -->
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding CanDenoiseMetered}"
+                        Command="{Binding DenoiseMeteredCommand}"
+                        ToolTip.Tip="{Binding DenoiseMeteredHint}">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Entrauschen: dosiert" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
                 <!-- Was an diesem Bild gespeichert ist. Ohne diese Zeile zeigt der Zuruecksetzer der
                      Gruppe auf etwas Unsichtbares: bei einem RAW steckt das Entrauschen NICHT in der
                      Datei, sondern nur als Vermerk daneben. -->

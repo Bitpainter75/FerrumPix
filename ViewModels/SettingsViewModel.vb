@@ -3069,6 +3069,8 @@ Namespace ViewModels
                         description = LocalizationService.T("Rauschen aus hohen ISO-Werten entfernen, mit erhaltener Feinstruktur")
                     Case "Entrauschen schnell"
                         description = LocalizationService.T("Derselbe Zweck in einem Sechstel der Zeit, dafür etwas glatter")
+                    Case "Entrauschen dosiert"
+                        description = LocalizationService.T("Der Stärke-Regler geht in das Modell hinein, statt sein Ergebnis zurückzumischen")
                     Case Else
                         description = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
                 End Select
@@ -3080,6 +3082,7 @@ Namespace ViewModels
                     Case "Orte" : anzeigeName = LocalizationService.T("Orte")
                     Case "Entrauschen" : anzeigeName = LocalizationService.T("Entrauschen")
                     Case "Entrauschen schnell" : anzeigeName = LocalizationService.T("Entrauschen schnell")
+                    Case "Entrauschen dosiert" : anzeigeName = LocalizationService.T("Entrauschen dosiert")
                     Case "Objektauswahl" : anzeigeName = LocalizationService.T("Objektauswahl")
                     Case Else : anzeigeName = name
                 End Select

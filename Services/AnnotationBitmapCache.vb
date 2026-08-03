@@ -96,16 +96,45 @@ Namespace Services
                                                                     maxRenderDimension:=Single.PositiveInfinity)
             If rendered Is Nothing OrElse rendered.Bitmap Is Nothing Then Return Nothing
 
+            ' Die EIGENE Verzerrung des Objekts wird HIER in die Bitmap gerechnet - und genau
+            ' deshalb darf ein verzerrtes Objekt ueberhaupt in den Kompositor (siehe die Grenze in
+            ' OverlaySceneRenderer.MustBakeForWarp).
+            '
+            ' Der Bezug stimmt ohne Umrechnung: OwnWarp steht in Prozent DES OBJEKTS, und hier ist
+            ' das Objektrechteck bekannt. Der Versatz geht als Lage der EBENE relativ zum
+            ' Objektrechteck hinein - im Bitmap liegt das Objekt bei (ObjectX, ObjectY), die Ebene
+            ' also bei (-ObjectX, -ObjectY) - und kommt im selben Bezug zurueck.
+            '
+            ' Was die Verzerrung NICHT aendert, ist das Objektrechteck selbst: es bleibt der
+            ' Bezugsrahmen, an dem der Kompositor die Bitmap ausrichtet. Nur die Lage der Bitmap um
+            ' dieses Rechteck herum verschiebt sich, weil verzerrte Ecken darueber hinausragen
+            ' koennen.
+            Dim bitmap = rendered.Bitmap
+            Dim objectX = rendered.ObjectX
+            Dim objectY = rendered.ObjectY
+            If annotation.OwnWarp IsNot Nothing AndAlso Not annotation.OwnWarp.IsEmpty Then
+                Dim layerX = -objectX, layerY = -objectY
+                Dim warped = ImageProcessor.WarpObjectLayer(bitmap, annotation.OwnWarp,
+                                                            rendered.ObjectWidth, rendered.ObjectHeight,
+                                                            layerX, layerY)
+                If warped IsNot Nothing Then
+                    bitmap.Dispose()
+                    bitmap = warped
+                    objectX = -layerX
+                    objectY = -layerY
+                End If
+            End If
+
             ' Einmalige Umwandlung in ein unveraenderliches SKImage - jedes spaetere Zeichnen ist
             ' dann kopiefrei.
-            Dim renderedImage = SKImage.FromBitmap(rendered.Bitmap)
-            rendered.Bitmap.Dispose()
+            Dim renderedImage = SKImage.FromBitmap(bitmap)
+            bitmap.Dispose()
             If renderedImage Is Nothing Then Return Nothing
 
             Dim fresh As New Entry With {
                 .Image = renderedImage,
-                .ObjectX = rendered.ObjectX,
-                .ObjectY = rendered.ObjectY,
+                .ObjectX = objectX,
+                .ObjectY = objectY,
                 .ObjectWidth = rendered.ObjectWidth,
                 .ObjectHeight = rendered.ObjectHeight,
                 .AppearanceKey = key

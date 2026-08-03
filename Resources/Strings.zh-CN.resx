@@ -6081,6 +6081,24 @@
   <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
     <value>已删除保存的降噪记录，像素保持原样</value>
   </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_1_Bild_f66a9fb2" xml:space="preserve">
+    <value>一并计算已保存的编辑（1 张照片）</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_0_Bilder_434df60f" xml:space="preserve">
+    <value>一并计算已保存的编辑（{0} 张照片）</value>
+  </data>
+  <data name="Bei_RAW_und_Photoshop_Dateien_liegt_Entrauschen__587cdfc7" xml:space="preserve">
+    <value>对于 RAW 和 Photoshop 文件，降噪、移除对象、修复和画笔只是记录在文件旁边。勾选后会一并计算，每张照片要花几分钟；不勾选则输出的照片不含这些处理。</value>
+  </data>
+  <data name="Mitrechnen_41b5eef1" xml:space="preserve">
+    <value>一并计算</value>
+  </data>
+  <data name="Ohne_f09dc501" xml:space="preserve">
+    <value>不计算</value>
+  </data>
+  <data name="Bei_0_Bild_ern_ist_eine_Bearbeitung_gespeichert__e748bf18" xml:space="preserve">
+    <value>有 {0} 张照片保存了尚未算入像素的编辑，例如降噪或已移除的区域。一并计算每张要花几分钟；不计算则输出的照片不含该编辑。</value>
+  </data>
   <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
     <value>保存时记入随附文件，下次打开照片时再次提示。重置本组会删除该记录。</value>
   </data>
@@ -6146,5 +6164,17 @@
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>在显卡上运行学习模型</value>
+  </data>
+  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
+    <value>降噪：可调</value>
+  </data>
+  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
+    <value>这里的强度滑块直接告诉模型噪点有多强，而不是事后把结果混合回去。比彻底方式快得多。</value>
+  </data>
+  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
+    <value>强度滑块进入模型本身，而不是事后混合其结果</value>
+  </data>
+  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
+    <value>可调降噪</value>
   </data>
 </root>

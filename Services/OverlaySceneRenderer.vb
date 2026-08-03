@@ -118,12 +118,35 @@ Namespace Services
         ''' tiefer liegendes Objekt OBEN auf ein gebacken gemischtes:
         ''' - Mischmodus (braucht das fertige Komposit unter sich),
         ''' - Pinsel-/Radierer-Ebenen (Striche im Bildraum, keine freistehende Objektflaeche),
-        ''' - verzerrte Objekte (der Cache zeichnet die Verzerrung nicht),
+        ''' - verzerrte Objekte, aber nur noch teilweise (siehe <see cref="MustBakeForWarp"/>),
         ''' - Objekte, ueber denen eine eingehaengte Korrektur liegt (sie wirkt auf das Komposit).</summary>
         Public Shared Function ComputeCompositorStartIndex(adj As ImageAdjustments) As Integer
             If adj Is Nothing Then Return 0
             Return ComputeCompositorStartIndex(adj.Annotations, adj.MaskedAdjustmentLayers,
                                                Function(a) adj.IsAnnotationRenderVisible(a))
+        End Function
+
+        ''' <summary>Muss dieses Objekt wegen einer Verzerrung im gebackenen Block bleiben?
+        '''
+        ''' Frueher hiess die Antwort schlicht "jedes verzerrte Objekt", weil der Objekt-Cache die
+        ''' Verzerrung nicht zeichnete. Seit dem 2026-08-03 rechnet er die EIGENE Verzerrung des
+        ''' Objekts in seine Bitmap, und damit bleiben nur noch zwei Faelle uebrig:
+        '''
+        ''' BILDverzerrung: sie gehoert nicht dem Objekt, sondern der Geometriekette, und die laeuft
+        ''' vor dem Kompositor. Ein Objekt, das von ihr erfasst wird, muss also mit ihr gebacken
+        ''' werden.
+        '''
+        ''' Verzerrt UND gedreht: hier entscheidet die REIHENFOLGE, und die beiden Wege haben sie
+        ''' verschieden. Der Kompositor dreht die fertige - also bereits verzerrte - Bitmap; der
+        ''' gebackene Weg verzerrt, was schon gedreht gezeichnet wurde. Erst drehen und dann
+        ''' verzerren ist etwas anderes als erst verzerren und dann drehen, und der Unterschied ist
+        ''' bei schraegen Winkeln deutlich sichtbar. Solange das nicht aufgeloest ist, bleibt dieser
+        ''' Fall gebacken - lieber langsam richtig als schnell daneben.</summary>
+        Friend Shared Function MustBakeForWarp(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing Then Return False
+            If annotation.Warp IsNot Nothing AndAlso Not annotation.Warp.IsEmpty Then Return True
+            If annotation.OwnWarp Is Nothing OrElse annotation.OwnWarp.IsEmpty Then Return False
+            Return Math.Abs(annotation.RotationDegrees) > 0.01F
         End Function
 
         ''' <summary>Dieselbe Grenze auf den LEBENDEN Listen des Editors - die Sichtbarkeitsfrage
@@ -151,7 +174,7 @@ Namespace Services
                 Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
                 Dim mustBake = kind = "brush" OrElse kind = "eraser" OrElse
                                IsNonNormalBlend(annotation) OrElse
-                               ImageProcessor.HasWarp(annotation) OrElse
+                               MustBakeForWarp(annotation) OrElse
                                stackedAboveIds.Contains(If(annotation.Id, ""))
                 If mustBake Then startIndex = i + 1
             Next

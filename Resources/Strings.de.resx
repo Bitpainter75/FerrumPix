@@ -6083,6 +6083,24 @@
   <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
     <value>Gespeichertes Entrauschen entfernt - die Bildpunkte bleiben, wie sie sind</value>
   </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_1_Bild_f66a9fb2" xml:space="preserve">
+    <value>Gespeicherte Bearbeitung mitrechnen (1 Bild)</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_0_Bilder_434df60f" xml:space="preserve">
+    <value>Gespeicherte Bearbeitung mitrechnen ({0} Bilder)</value>
+  </data>
+  <data name="Bei_RAW_und_Photoshop_Dateien_liegt_Entrauschen__587cdfc7" xml:space="preserve">
+    <value>Bei RAW- und Photoshop-Dateien liegt Entrauschen, Objektentfernen, Retusche und Pinsel nur als Vermerk neben der Datei. Mit Haken werden sie mitgerechnet, was mehrere Minuten je Bild kostet; ohne Haken kommen die Bilder ohne diese Bearbeitung heraus.</value>
+  </data>
+  <data name="Mitrechnen_41b5eef1" xml:space="preserve">
+    <value>Mitrechnen</value>
+  </data>
+  <data name="Ohne_f09dc501" xml:space="preserve">
+    <value>Ohne</value>
+  </data>
+  <data name="Bei_0_Bild_ern_ist_eine_Bearbeitung_gespeichert__e748bf18" xml:space="preserve">
+    <value>Bei {0} Bild(ern) ist eine Bearbeitung gespeichert, die noch in die Bildpunkte gerechnet werden muss - etwa Entrauschen oder eine entfernte Stelle. Mitrechnen kostet mehrere Minuten je Bild; ohne kommt das Bild ohne diese Bearbeitung heraus.</value>
+  </data>
   <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
     <value>Wird beim Speichern in der Begleitdatei vermerkt und beim nächsten Öffnen angeboten. Das Zurücksetzen dieser Gruppe entfernt den Vermerk.</value>
   </data>
@@ -6148,5 +6166,17 @@
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Rechnet gelernte Modelle auf der Grafikkarte</value>
+  </data>
+  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
+    <value>Entrauschen: dosiert</value>
+  </data>
+  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
+    <value>Der Stärke-Regler sagt hier dem Modell, wie stark das Rauschen ist, statt sein Ergebnis hinterher zurückzumischen. Deutlich schneller als der gründliche Weg.</value>
+  </data>
+  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
+    <value>Der Stärke-Regler geht in das Modell hinein, statt sein Ergebnis zurückzumischen</value>
+  </data>
+  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
+    <value>Entrauschen dosiert</value>
   </data>
 </root>

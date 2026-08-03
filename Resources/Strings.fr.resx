@@ -6083,6 +6083,24 @@
   <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
     <value>Débruitage enregistré supprimé - les pixels restent tels quels</value>
   </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_1_Bild_f66a9fb2" xml:space="preserve">
+    <value>Inclure la retouche enregistrée (1 photo)</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_0_Bilder_434df60f" xml:space="preserve">
+    <value>Inclure la retouche enregistrée ({0} photos)</value>
+  </data>
+  <data name="Bei_RAW_und_Photoshop_Dateien_liegt_Entrauschen__587cdfc7" xml:space="preserve">
+    <value>Pour les fichiers RAW et Photoshop, le débruitage, la suppression d'objet, les retouches et le pinceau ne sont notés qu'à côté du fichier. Coché, ils sont calculés, ce qui coûte plusieurs minutes par photo ; décoché, les photos sortent sans ce travail.</value>
+  </data>
+  <data name="Mitrechnen_41b5eef1" xml:space="preserve">
+    <value>L'inclure</value>
+  </data>
+  <data name="Ohne_f09dc501" xml:space="preserve">
+    <value>Sans</value>
+  </data>
+  <data name="Bei_0_Bild_ern_ist_eine_Bearbeitung_gespeichert__e748bf18" xml:space="preserve">
+    <value>{0} photo(s) ont une retouche enregistrée qui doit encore être calculée dans les pixels, par exemple un débruitage ou une zone supprimée. L'inclure coûte plusieurs minutes par photo ; sans elle, la photo sort sans cette retouche.</value>
+  </data>
   <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
     <value>Noté dans le fichier annexe lors de l'enregistrement et proposé à la prochaine ouverture. Réinitialiser ce groupe supprime la note.</value>
   </data>
@@ -6148,5 +6166,17 @@
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Exécute les modèles appris sur la carte graphique</value>
+  </data>
+  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
+    <value>Débruitage : dosé</value>
+  </data>
+  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
+    <value>Ici le curseur d'intensité indique au modèle la force du bruit, au lieu de remélanger son résultat ensuite. Nettement plus rapide que la voie minutieuse.</value>
+  </data>
+  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
+    <value>Le curseur d'intensité entre dans le modèle au lieu d'en remélanger le résultat</value>
+  </data>
+  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
+    <value>Débruitage dosé</value>
   </data>
 </root>

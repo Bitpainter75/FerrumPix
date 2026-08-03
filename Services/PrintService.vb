@@ -13,6 +13,11 @@ Namespace Services
     ''' ("A4", "Fit", ...) - niemals den übersetzten Anzeigetext. Die Anzeige übersetzt das ViewModel,
     ''' sonst bricht der Vergleich in jeder anderen Sprache.</summary>
     Public Class PrintOptions
+        ''' <summary>Sollen vermerkte, aber noch nicht in den Pixeln steckende Vorgaenge
+        ''' (Entrauschen, Objektentfernen, Retusche, Striche) mitgedruckt werden? Der Nutzer wird
+        ''' danach gefragt, bevor der Auftrag losgeht - es kostet Minuten je Bild. Die VORSCHAU
+        ''' rechnet sie nie mit, sonst waere sie keine Vorschau mehr.</summary>
+        Public Property ApplyPendingBakedOperations As Boolean = False
         ''' "A4" | "A3" | "A5" | "Letter" | "Legal"
         Public Property PageSize As String = "A4"
         Public Property Landscape As Boolean = False
@@ -338,7 +343,8 @@ Namespace Services
                             ' BEARBEITETE Fassung; sonst käme aus dem Drucker ein anderes Bild, als
                             ' der Editor zeigt.
                             Dim drawnRect As SKRect
-                            Using bitmap = ImageProcessor.DecodeDevelopedForOutput(imagePath)
+                            Using bitmap = ImageProcessor.DecodeDevelopedForOutput(
+                                imagePath, True, options.ApplyPendingBakedOperations)
                                 If bitmap Is Nothing Then
                                     ' Ohne diese Spur ist eine leer gebliebene Zelle im fertigen PDF
                                     ' nicht mehr zu erklären (so fiel .fpx lange nicht auf).

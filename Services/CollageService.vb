@@ -8,6 +8,10 @@ Imports SkiaSharp
 Namespace Services
 
     Public Class CollageOptions
+        ''' <summary>Vermerkte, aber noch nicht in den Pixeln steckende Vorgaenge mitrechnen?
+        ''' Dieselbe Frage wie beim Drucken, mit derselben Vorgabe: nein, ausser der Nutzer sagt es.
+        ''' Die Vorschau rechnet sie nie mit.</summary>
+        Public Property ApplyPendingBakedOperations As Boolean = False
         Public Property OutputPath As String
         Public Property Width As Integer = 2400
         Public Property Columns As Integer = 3
@@ -177,7 +181,8 @@ Namespace Services
                         ' ihre Kachel blieb leer. DecodeForOutput ist der Funnel, der alle Formate
                         ' UND die EXIF-Orientierung behandelt; ein zweiter Orientierungsschritt
                         ' danach würde das Bild ein zweites Mal drehen.
-                        Using source = ImageProcessor.DecodeDevelopedForOutput(path, developRaw)
+                        Using source = ImageProcessor.DecodeDevelopedForOutput(
+                            path, developRaw, options.ApplyPendingBakedOperations)
                             If source Is Nothing Then
                                 DiagnosticLogService.LogAlways("Collage", $"Nicht dekodierbar, Kachel bleibt leer: {path}")
                                 Continue For

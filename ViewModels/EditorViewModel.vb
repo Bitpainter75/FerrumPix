@@ -12145,11 +12145,36 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Ob ueberhaupt einer der beiden Wege da ist. Der Staerke-Regler gehoert zu
-        ''' beiden, also darf er nicht an einem der beiden haengen.</summary>
+        ''' <summary>Wie der Weg im REZEPT heisst. Die Namen stehen in gespeicherten Rezepten und in
+        ''' Begleitdateien - sie bleiben, wie sie sind, sonst liest eine aeltere Aufnahme ins Leere.</summary>
+        Private Shared Function DenoiseRecipeName(kind As DenoiseModelService.DenoiseKind) As String
+            Select Case kind
+                Case DenoiseModelService.DenoiseKind.Fast : Return "fast"
+                Case DenoiseModelService.DenoiseKind.Metered : Return "metered"
+                Case Else : Return "quality"
+            End Select
+        End Function
+
+        ''' <summary>Der dosierte Weg, wieder mit eigener Modelldatei.</summary>
+        Public ReadOnly Property CanDenoiseMetered As Boolean
+            Get
+                Return DenoiseModelService.MeteredAvailable
+            End Get
+        End Property
+
+        Public ReadOnly Property DenoiseMeteredHint As String
+            Get
+                If Not DenoiseModelService.MeteredAvailable Then Return MissingModelHint
+                Return LocalizationService.T("Der Stärke-Regler sagt hier dem Modell, wie stark das Rauschen ist, statt sein Ergebnis hinterher zurückzumischen. Deutlich schneller als der gründliche Weg.")
+            End Get
+        End Property
+
+        ''' <summary>Ob ueberhaupt einer der Wege da ist. Der Staerke-Regler gehoert zu allen,
+        ''' also darf er nicht an einem einzelnen haengen.</summary>
         Public ReadOnly Property CanDenoiseWithAnyModel As Boolean
             Get
-                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable
+                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable OrElse
+                       DenoiseModelService.MeteredAvailable
             End Get
         End Property
 
@@ -12260,6 +12285,8 @@ Namespace ViewModels
                 Optional kind As DenoiseModelService.DenoiseKind = DenoiseModelService.DenoiseKind.Quality)
             If kind = DenoiseModelService.DenoiseKind.Fast Then
                 If Not CanDenoiseFast Then Return
+            ElseIf kind = DenoiseModelService.DenoiseKind.Metered Then
+                If Not CanDenoiseMetered Then Return
             ElseIf Not CanDenoiseWithModel Then
                 Return
             End If
@@ -12317,7 +12344,7 @@ Namespace ViewModels
                     ' diesen Eintrag waere die Wartezeit von eben spurlos weg.
                     _bakedOperations.Add(New BakedOperation With {
                         .Kind = BakedOperation.KindDenoise,
-                        .DenoiseModel = If(kind = DenoiseModelService.DenoiseKind.Fast, "fast", "quality"),
+                        .DenoiseModel = DenoiseRecipeName(kind),
                         .DenoiseStrength = CSng(strength * 100.0)})
                     MarkBakedIntoWorkingImage()
                     RaiseStoredDenoiseChanged()
@@ -12330,6 +12357,52 @@ Namespace ViewModels
                     SchedulePreviewUpdate()
                 End Sub)
         End Sub
+
+        ''' <summary>Vor dem Speichern klaeren, was mit einer gleichnamigen Datei geschehen soll.
+        '''
+        ''' Zurueck kommt der Pfad, unter dem gespeichert werden darf - oder Leer fuer "abgebrochen".
+        ''' Beim Umbenennen wird der Name aus dem Dialog genommen und die Endung des Zielformats
+        ''' angehaengt, falls sie fehlt: der Vorschlag im Dialog traegt sie, ein selbst getippter
+        ''' Name oft nicht, und eine Datei ohne Endung waere hier immer ein Versehen.
+        '''
+        ''' Die Alle-Antworten des Dialogs gelten hier wie ihre einfachen Geschwister: es geht um
+        ''' genau eine Datei.</summary>
+        Private Async Function ResolveSaveTargetConflictAsync(targetPath As String) As Task(Of String)
+            If String.IsNullOrEmpty(targetPath) OrElse Not IO.File.Exists(targetPath) Then Return targetPath
+            If _mainVm Is Nothing Then Return targetPath
+
+            Dim extension = IO.Path.GetExtension(targetPath)
+            Do
+                Dim result = Await _mainVm.ShowFileConflictAsync(targetPath, RenderSourcePath)
+                If result Is Nothing Then Return ""
+                Select Case result.Choice
+                    Case FileConflictChoice.Overwrite, FileConflictChoice.OverwriteAll
+                        Return targetPath
+                    Case FileConflictChoice.Rename
+                        Dim newName = If(result.NewName, "").Trim()
+                        If String.IsNullOrWhiteSpace(newName) Then Return ""
+                        If HasInvalidFileNameChars(IO.Path.GetFileNameWithoutExtension(newName)) Then
+                            Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
+                                                           LocalizationService.T("Der Dateiname enthält ungültige Zeichen."))
+                            Continue Do
+                        End If
+                        If String.IsNullOrEmpty(IO.Path.GetExtension(newName)) Then newName &= extension
+                        Dim folder = IO.Path.GetDirectoryName(targetPath)
+                        If String.IsNullOrEmpty(folder) Then Return ""
+                        Dim renamed = IO.Path.Combine(folder, newName)
+                        If IO.File.Exists(renamed) Then
+                            ' Der Vorschlag des Dialogs ist frei; ein selbst getippter Name kann
+                            ' wieder auf eine vorhandene Datei zeigen. Dann nochmal fragen, statt
+                            ' die naechste Datei zu ueberschreiben.
+                            targetPath = renamed
+                            Continue Do
+                        End If
+                        Return renamed
+                    Case Else
+                        Return ""   ' Ueberspringen/Abbrechen
+                End Select
+            Loop
+        End Function
 
         ''' <summary>Die Frage NACH dem Anzeigen stellen, nicht mittendrin.
         '''
@@ -12363,21 +12436,21 @@ Namespace ViewModels
             If String.IsNullOrEmpty(path) Then Return
             If _bakedOperationsAsked.Contains(path) Then Return
 
-            Dim rezept = GetCurrentAdjustments()
-            If Not ImageProcessor.HasPendingBakedOperations(rezept) Then Return
+            Dim recipe = GetCurrentAdjustments()
+            If Not ImageProcessor.HasPendingBakedOperations(recipe) Then Return
             _bakedOperationsAsked.Add(path)
 
-            Dim was = ImageProcessor.DescribePendingBakedOperations(rezept)
+            Dim pending = ImageProcessor.DescribePendingBakedOperations(recipe)
             ' Der Text der Frage steht als EIN Literal da und ist nicht aus Teilen zusammengesetzt:
             ' der Uebersetzungsschluessel wird ueber den ganzen Text gebildet, und ein
             ' zusammengesetzter waere fuer die Lokalisierungspruefung unsichtbar - er bliebe in
             ' jeder Sprache deutsch. Und KEIN Kommentar zwischen den Argumenten darunter: VB bricht
             ' dort die Zeilenfortsetzung nach dem Komma ab.
-            Dim ok = Await _mainVm.ShowConfirmAsync(
+            Dim confirmed = Await _mainVm.ShowConfirmAsync(
                 LocalizationService.T("Gespeicherte Bearbeitung anwenden?"),
-                String.Format(LocalizationService.T("Zu diesem Bild ist eine Bearbeitung gespeichert, die in die Bildpunkte gerechnet werden muss: {0}. Sie steht noch nicht im Bild, weil die Datei selbst unverändert ist. Das Anwenden kann mehrere Minuten dauern."), was),
+                String.Format(LocalizationService.T("Zu diesem Bild ist eine Bearbeitung gespeichert, die in die Bildpunkte gerechnet werden muss: {0}. Sie steht noch nicht im Bild, weil die Datei selbst unverändert ist. Das Anwenden kann mehrere Minuten dauern."), pending),
                 LocalizationService.T("Anwenden"), LocalizationService.T("Später"))
-            If Not ok Then
+            If Not confirmed Then
                 ' Nein heisst NICHT "wegwerfen": der Vermerk bleibt stehen und wird beim naechsten
                 ' Oeffnen wieder angeboten. Weg ist er nur ueber das Zuruecksetzen.
                 StatusText = LocalizationService.T("Gespeicherte Bearbeitung bleibt liegen")
@@ -12391,8 +12464,8 @@ Namespace ViewModels
         ''' Arbeitsbild, derselbe wie beim Entrauschen und beim Entfernen.</summary>
         Public Sub ApplyPendingBakedOperations()
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
-            Dim rezept = GetCurrentAdjustments()
-            If Not ImageProcessor.HasPendingBakedOperations(rezept) Then Return
+            Dim recipe = GetCurrentAdjustments()
+            If Not ImageProcessor.HasPendingBakedOperations(recipe) Then Return
 
             PushUndo()
             Dim undoItem = _lastPushedUndoEntry
@@ -12403,7 +12476,7 @@ Namespace ViewModels
                 Function()
                     Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                         Sub(full)
-                            Dim produced = ImageProcessor.ApplyPendingBakedOperations(full, rezept)
+                            Dim produced = ImageProcessor.ApplyPendingBakedOperations(full, recipe)
                             If produced Is Nothing Then Return
                             Using produced
                                 Using canvas = New SKCanvas(full)
@@ -15846,6 +15919,7 @@ Namespace ViewModels
         Public ReadOnly Property RemoveObjectCommand As ICommand
         Public ReadOnly Property DenoiseWithModelCommand As ICommand
         Public ReadOnly Property DenoiseFastCommand As ICommand
+        Public ReadOnly Property DenoiseMeteredCommand As ICommand
         Public ReadOnly Property SetBokehApertureCommand As ICommand
         Public ReadOnly Property SetSubjectGrainCommand As ICommand
         Public ReadOnly Property SetWarpModeCommand As ICommand
@@ -16202,6 +16276,8 @@ Namespace ViewModels
             DenoiseWithModelCommand = ReactiveCommand.Create(Sub() ApplyModelDenoise())
             DenoiseFastCommand = ReactiveCommand.Create(
                 Sub() ApplyModelDenoise(DenoiseModelService.DenoiseKind.Fast))
+            DenoiseMeteredCommand = ReactiveCommand.Create(
+                Sub() ApplyModelDenoise(DenoiseModelService.DenoiseKind.Metered))
             SetBokehApertureCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
@@ -19511,6 +19587,12 @@ Namespace ViewModels
                     If Not String.IsNullOrWhiteSpace(saveAsResult.TargetFolder) Then dir = saveAsResult.TargetFolder
                     If Not IO.Directory.Exists(dir) Then IO.Directory.CreateDirectory(dir)
                     targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
+                    ' EINE vorhandene Datei war bis hierher wortlos ueberschrieben worden. Wer einen
+                    ' Namen tippt, den es schon gibt, meint fast nie "die andere darf weg" - und
+                    ' gemerkt haette er es erst, wenn er sie sucht.
+                    Dim resolved = Await ResolveSaveTargetConflictAsync(targetPath)
+                    If String.IsNullOrEmpty(resolved) Then Return False
+                    targetPath = resolved
                 End If
                 targetQuality = saveAsResult.JpgQuality
             End If

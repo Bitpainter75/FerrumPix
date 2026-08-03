@@ -6083,6 +6083,24 @@
   <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
     <value>Reducción de ruido guardada eliminada: los píxeles se quedan como están</value>
   </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_1_Bild_f66a9fb2" xml:space="preserve">
+    <value>Incluir la edición guardada (1 foto)</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_0_Bilder_434df60f" xml:space="preserve">
+    <value>Incluir la edición guardada ({0} fotos)</value>
+  </data>
+  <data name="Bei_RAW_und_Photoshop_Dateien_liegt_Entrauschen__587cdfc7" xml:space="preserve">
+    <value>En archivos RAW y de Photoshop, la reducción de ruido, la eliminación de objetos, el retoque y el pincel solo están anotados junto al archivo. Con la casilla marcada se calculan, lo que cuesta varios minutos por foto; sin marcar, las fotos salen sin ese trabajo.</value>
+  </data>
+  <data name="Mitrechnen_41b5eef1" xml:space="preserve">
+    <value>Incluirla</value>
+  </data>
+  <data name="Ohne_f09dc501" xml:space="preserve">
+    <value>Sin ella</value>
+  </data>
+  <data name="Bei_0_Bild_ern_ist_eine_Bearbeitung_gespeichert__e748bf18" xml:space="preserve">
+    <value>En {0} foto(s) hay guardada una edición que todavía debe calcularse en los píxeles, por ejemplo la reducción de ruido o una zona eliminada. Incluirla cuesta varios minutos por foto; sin ella, la foto sale sin esa edición.</value>
+  </data>
   <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
     <value>Se anota en el archivo adjunto al guardar y se ofrece la próxima vez que abras la foto. Restablecer este grupo elimina la anotación.</value>
   </data>
@@ -6148,5 +6166,17 @@
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Ejecuta los modelos aprendidos en la tarjeta gráfica</value>
+  </data>
+  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
+    <value>Reducir ruido: dosificado</value>
+  </data>
+  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
+    <value>Aquí el control de intensidad le dice al modelo cuánto ruido hay, en lugar de mezclar su resultado después. Bastante más rápido que la vía minuciosa.</value>
+  </data>
+  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
+    <value>El control de intensidad entra en el modelo en lugar de mezclar su resultado</value>
+  </data>
+  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
+    <value>Reducción de ruido dosificada</value>
   </data>
 </root>

@@ -68,6 +68,14 @@
                                       IsVisible="{Binding IsDialogBatchOverwriteAvailable}"
                                       IsChecked="{Binding DialogBatchWatermarkOverwrite, Mode=TwoWay}"
                                       ToolTip.Tip="Schreibt das Wasserzeichen direkt in die Bilddateien. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
+                            <!-- Hier und NICHT in WatermarkFormView: die Form steckt auch im
+                                 Sammel-Export, dort stuende das Kaestchen sonst zweimal. -->
+                            <CheckBox Content="{Binding DialogPendingBakedLabel}"
+                                      IsChecked="{Binding DialogApplyPendingBaked, Mode=TwoWay}"
+                                      IsVisible="{Binding IsDialogPendingBakedAvailable}"
+                                      Classes="no-translate"
+                                      FontSize="{DynamicResource FP.Font.Small}"
+                                      ToolTip.Tip="Bei RAW- und Photoshop-Dateien liegt Entrauschen, Objektentfernen, Retusche und Pinsel nur als Vermerk neben der Datei. Mit Haken werden sie mitgerechnet, was mehrere Minuten je Bild kostet; ohne Haken kommen die Bilder ohne diese Bearbeitung heraus."/>
                         </StackPanel>
 
                         <views:BatchFilterDialogView Grid.Row="3"

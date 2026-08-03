@@ -2362,7 +2362,13 @@ Namespace Services
         ''' die unbearbeitete Quelle und dürfte das Rezept nicht schon eingerechnet bekommen.</summary>
         ''' <param name="developRaw">Nur wirksam, solange KEIN Rezept vorliegt. Mit Rezept wird immer
         ''' entwickelt - die eingebettete Vorschau wäre dort schlicht das falsche Bild.</param>
-        Friend Shared Function DecodeDevelopedForOutput(path As String, Optional developRaw As Boolean = True) As SKBitmap
+        ''' <param name="applyPendingBaked">Sollen vermerkte, aber noch nicht in den Pixeln
+        ''' steckende Vorgaenge (Entrauschen, Objektentfernen, Retusche, Striche) mitgerechnet
+        ''' werden? Vorgabe NEIN, und das mit Absicht: es kostet Minuten je Bild, und wer eine
+        ''' Vorschau aufbaut, wartet nicht minutenlang. Die Ausgabewege fragen den Nutzer und geben
+        ''' seine Antwort hier herein.</param>
+        Friend Shared Function DecodeDevelopedForOutput(path As String, Optional developRaw As Boolean = True,
+                                                        Optional applyPendingBaked As Boolean = False) As SKBitmap
             If FpxService.IsFpx(path) Then Return RenderFpxFullResolution(path)
 
             Dim rezept As ImageAdjustments = Nothing
@@ -2373,8 +2379,36 @@ Namespace Services
             Dim decoded = DecodeOriented(path, developRaw OrElse rezept IsNot Nothing)
             If decoded Is Nothing OrElse rezept Is Nothing Then Return decoded
             Using decoded
-                Return ProcessBitmap(decoded, rezept)
+                ' Die gebackenen Vorgaenge gehoeren VOR die Reglerkette - sie sind Teil des Bildes,
+                ' nicht eine Stufe darauf. Das Entrauschen etwa arbeitet auf dem entwickelten Bild
+                ' und nicht auf einem, dem schon Kontrast und Klarheit angetan wurden.
+                Dim input = decoded
+                Dim reapplied As SKBitmap = Nothing
+                Try
+                    If applyPendingBaked Then
+                        reapplied = ApplyPendingBakedOperations(decoded, rezept)
+                        If reapplied IsNot Nothing Then input = reapplied
+                    End If
+                    Return ProcessBitmap(input, rezept)
+                Finally
+                    reapplied?.Dispose()
+                End Try
             End Using
+        End Function
+
+        ''' <summary>Wie viele dieser Dateien tragen einen offenen Vorgang? Fuer die Frage vor dem
+        ''' Drucken oder vor einer Collage: "es dauert laenger" muss man begruenden koennen, und bei
+        ''' null betroffenen Bildern wird gar nicht erst gefragt.</summary>
+        Public Shared Function CountPathsWithPendingBakedOperations(paths As IEnumerable(Of String)) As Integer
+            If paths Is Nothing Then Return 0
+            Dim count = 0
+            For Each path In paths
+                If String.IsNullOrWhiteSpace(path) Then Continue For
+                If Not RawSidecarService.IsSidecarFormat(path) Then Continue For
+                If Not RawSidecarService.Exists(path) Then Continue For
+                If HasPendingBakedOperations(RawSidecarService.TryRead(path)) Then count += 1
+            Next
+            Return count
         End Function
 
         ''' <summary>Liegt in diesem Rezept ein Vorgang, der in die PIXEL gehoert, aber in den Pixeln
@@ -11365,10 +11399,16 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' <paramref name="workingFull"/>: voll aufgelöstes ARBEITSBILD des Editors (Umbau Stufe C) -
         ''' wenn gesetzt, ersetzt es den Datei-Decode als Pipeline-Eingang (Besitz wechselt hierher,
         ''' wird disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).
+        ''' <param name="applyPendingBaked">Vermerkte, aber noch nicht in den Pixeln steckende
+        ''' Vorgaenge mitrechnen (Entrauschen, Objektentfernen, Retusche, Striche)? Wirkt NUR, wenn
+        ''' hier selbst dekodiert wird - also im Stapel. Kommt ein fertiges Arbeitsbild herein
+        ''' (<paramref name="workingFull"/>), stecken die Vorgaenge bereits darin, und ein zweiter
+        ''' Durchlauf wuerde sie doppelt anwenden.</param>
         Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer,
                                          Optional preserveMetadata As Boolean = True,
                                          Optional workingFull As SKBitmap = Nothing,
-                                         Optional developRaw As Boolean = True) As Boolean
+                                         Optional developRaw As Boolean = True,
+                                         Optional applyPendingBaked As Boolean = False) As Boolean
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
@@ -11408,7 +11448,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' .fpx-Projekte beim echten Speichern/Konvertieren immer aus Basisbild + Rezept rendern.
                 ' composite.png ist nur ein schnelles Anzeige-/Thumbnail-Bild und kann bewusst verkleinert sein.
                 Dim isFpxSource = FpxService.IsFpx(sourcePath)
-                Using original = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeOriented(sourcePath, developRaw)))
+                Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeOriented(sourcePath, developRaw)))
+                ' Nur auf dem SELBST dekodierten Bild: ein hereingereichtes Arbeitsbild traegt die
+                ' Vorgaenge schon, und ein zweites Entrauschen sieht man erst, wenn man die Bilder
+                ' nebeneinanderlegt. Und VOR der Reglerkette, weil sie zum Bild gehoeren und nicht
+                ' zu den Reglern.
+                If workingFull Is Nothing AndAlso applyPendingBaked AndAlso decoded IsNot Nothing Then
+                    Dim reapplied = ApplyPendingBakedOperations(decoded, adj)
+                    If reapplied IsNot Nothing Then
+                        decoded.Dispose()
+                        decoded = reapplied
+                    End If
+                End If
+                Using original = decoded
                     If original Is Nothing Then Return False
 
                     Dim ext = IO.Path.GetExtension(targetPath).ToLowerInvariant()

@@ -6083,6 +6083,24 @@
   <data name="Gespeichertes_Entrauschen_entfernt_die_Bildpunkt_862531f6" xml:space="preserve">
     <value>Riduzione rumore salvata rimossa - i pixel restano come sono</value>
   </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_1_Bild_f66a9fb2" xml:space="preserve">
+    <value>Includi la modifica salvata (1 foto)</value>
+  </data>
+  <data name="Gespeicherte_Bearbeitung_mitrechnen_0_Bilder_434df60f" xml:space="preserve">
+    <value>Includi la modifica salvata ({0} foto)</value>
+  </data>
+  <data name="Bei_RAW_und_Photoshop_Dateien_liegt_Entrauschen__587cdfc7" xml:space="preserve">
+    <value>Nei file RAW e Photoshop la riduzione del rumore, la rimozione di oggetti, il ritocco e il pennello sono solo annotati accanto al file. Con la spunta vengono calcolati, il che costa diversi minuti per foto; senza, le foto escono senza quel lavoro.</value>
+  </data>
+  <data name="Mitrechnen_41b5eef1" xml:space="preserve">
+    <value>Includila</value>
+  </data>
+  <data name="Ohne_f09dc501" xml:space="preserve">
+    <value>Senza</value>
+  </data>
+  <data name="Bei_0_Bild_ern_ist_eine_Bearbeitung_gespeichert__e748bf18" xml:space="preserve">
+    <value>In {0} foto è salvata una modifica che deve ancora essere calcolata nei pixel, per esempio la riduzione del rumore o un punto rimosso. Includerla costa diversi minuti per foto; senza, la foto esce priva di quella modifica.</value>
+  </data>
   <data name="Wird_beim_Speichern_in_der_Begleitdatei_vermerkt_88a1768f" xml:space="preserve">
     <value>Viene annotato nel file collaterale al salvataggio e riproposto alla prossima apertura. Ripristinare questo gruppo rimuove l'annotazione.</value>
   </data>
@@ -6148,5 +6166,17 @@
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Esegue i modelli appresi sulla scheda grafica</value>
+  </data>
+  <data name="Entrauschen_dosiert_77106f25" xml:space="preserve">
+    <value>Riduzione rumore: dosata</value>
+  </data>
+  <data name="Der_St_rke_Regler_sagt_hier_dem_Modell_wie_stark_d2acbf55" xml:space="preserve">
+    <value>Qui il cursore dell'intensità dice al modello quanto è forte il rumore, invece di rimescolarne il risultato dopo. Molto più veloce della via accurata.</value>
+  </data>
+  <data name="Der_St_rke_Regler_geht_in_das_Modell_hinein_stat_bbd43b2e" xml:space="preserve">
+    <value>Il cursore dell'intensità entra nel modello invece di rimescolarne il risultato</value>
+  </data>
+  <data name="Entrauschen_dosiert_de184cc4" xml:space="preserve">
+    <value>Riduzione rumore dosata</value>
   </data>
 </root>

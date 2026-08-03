@@ -41,6 +41,7 @@ Namespace Services
         Public Enum DenoiseKind
             Quality = 0
             Fast = 1
+            Metered = 2
         End Enum
 
         ''' <summary>Das Modell fuer Qualitaet. Heisst ModelFile, weil es das voreingestellte ist -
@@ -50,8 +51,33 @@ Namespace Services
         ''' <summary>Und das schnelle.</summary>
         Public Const FastModelFile As String = "nafnet"
 
+        ''' <summary>Das dritte: es bekommt die Rauschstaerke ALS EINGABE statt sie hinterher
+        ''' beigemischt zu bekommen.
+        '''
+        ''' Das ist der eigentliche Unterschied und nicht das Tempo. Die beiden anderen entrauschen
+        ''' so stark, wie sie gelernt haben, und der Regler mischt das Ergebnis danach zurueck.
+        ''' Dieses hier bekommt einen VIERTEN Eingangskanal, in dem die angenommene Rauschstaerke
+        ''' steht - es entscheidet also selbst, was Rauschen ist und was Zeichnung. Gemessen
+        ''' antwortet es darauf sauber: bei zu klein angesetzter Staerke laesst es das Rauschen
+        ''' stehen, statt die Zeichnung zu glaetten.</summary>
+        Public Const MeteredModelFile As String = "drunet"
+
         Private Shared Function KeyFor(kind As DenoiseKind) As String
-            Return If(kind = DenoiseKind.Fast, FastModelFile, ModelFile)
+            Select Case kind
+                Case DenoiseKind.Fast : Return FastModelFile
+                Case DenoiseKind.Metered : Return MeteredModelFile
+                Case Else : Return ModelFile
+            End Select
+        End Function
+
+        ''' <summary>Der Name des Weges fuer den Bericht. NICHT "NameOf" nennen - das ist in VB ein
+        ''' Schluesselwort, und der Name waere still ueberdeckt.</summary>
+        Private Shared Function KindName(kind As DenoiseKind) As String
+            Select Case kind
+                Case DenoiseKind.Fast : Return "schnell"
+                Case DenoiseKind.Metered : Return "dosiert"
+                Case Else : Return "Qualität"
+            End Select
         End Function
 
         ''' <summary>Kantenlaenge einer Kachel.
@@ -101,6 +127,14 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Und der dosierte Weg, wieder mit eigener Modelldatei.</summary>
+        Public Shared ReadOnly Property MeteredAvailable As Boolean
+            Get
+                Return AiModelService.RuntimeAvailable AndAlso
+                       Not String.IsNullOrEmpty(AiModelService.BestFile(MeteredModelFile))
+            End Get
+        End Property
+
         ''' <summary>Das Bild entrauschen. Zurueck kommt eine KOPIE, oder Nothing bei jedem
         ''' Fehlschlag.
         '''
@@ -130,6 +164,14 @@ Namespace Services
             If image.ColorType <> SKColorType.Bgra8888 Then Return Nothing
 
             Dim amount = Math.Max(0.0F, Math.Min(1.0F, strength))
+
+            ' DERSELBE Regler, zwei Wege - und er darf nur EINEN davon gehen. Bei den beiden alten
+            ' Modellen wird das Ergebnis hinterher zurueckgemischt (mixAmount). Beim dosierten
+            ' Modell wandert die Staerke stattdessen in den vierten Eingangskanal: dort entscheidet
+            ' das Modell selbst, was Rauschen ist. Beides zusammen waere derselbe Regler zweimal.
+            Dim metered = (kind = DenoiseKind.Metered)
+            Dim sigma = If(metered, MeteredSigmaMin + amount * (MeteredSigmaMax - MeteredSigmaMin), 0.0F)
+            Dim mixAmount = If(metered, 1.0F, amount)
 
             Dim result As SKBitmap = Nothing
             Dim gepolstert As SKBitmap = Nothing
@@ -192,7 +234,8 @@ Namespace Services
                         If r - l = TileEdge AndAlso b - t = TileEdge AndAlso
                            keepR > keepL AndAlso keepB > keepT Then
                             DenoiseTile(session, name, quelle, result,
-                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount)
+                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB),
+                                        mixAmount, sigma)
                             done += 1
                             Progress?.Invoke(done, kacheln)
                         End If
@@ -218,8 +261,8 @@ Namespace Services
                 ' Welches Modell gerechnet hat, gehoert in den Bericht: bei zwei Wegen ist die Frage
                 ' "warum sieht das anders aus als beim letzten Mal" sonst nicht zu beantworten.
                 LastReport = $"Bild {image.Width}x{image.Height}, {done} Kacheln, " &
-                             $"{uhr.Elapsed.TotalSeconds:F0} s, Stärke {amount * 100:F0} %, " &
-                             $"{If(kind = DenoiseKind.Fast, "schnell", "Qualität")}"
+                             $"{uhr.Elapsed.TotalSeconds:F0} s, Stärke {amount * 100:F0} %" &
+                             If(metered, $" (angesetzt {sigma:F0}/255)", "") & $", {KindName(kind)}"
                 DiagnosticLogService.LogAlways("Entrauschen", LastReport)
                 Dim fertig = result
                 result = Nothing
@@ -233,14 +276,39 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.</summary>
+        ''' <summary>Wie stark das dosierte Modell das Rauschen ansetzt, in Stufen von 255.
+        '''
+        ''' Die untere Grenze ist nicht null: eine angesetzte Staerke von null hiesse "hier ist
+        ''' kein Rauschen", und dann gibt das Modell die Eingabe unveraendert zurueck - ein Knopf,
+        ''' der nichts tut. Die obere Grenze ist der Bereich, in dem das Modell trainiert wurde;
+        ''' darueber hinaus glaettet es nur noch.</summary>
+        Private Const MeteredSigmaMin As Single = 3.0F
+        Private Const MeteredSigmaMax As Single = 40.0F
+
+        ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.
+        '''
+        ''' <paramref name="sigma"/> ist die angesetzte Rauschstaerke fuer Modelle mit VIER
+        ''' Eingangskanaelen; bei den anderen bleibt sie ungenutzt. Ist sie gesetzt, dosiert das
+        ''' Modell selbst, und die nachtraegliche Mischung ueber <paramref name="amount"/> entfaellt
+        ''' - beides zusammen waere zweimal derselbe Regler.</summary>
         Private Shared Sub DenoiseTile(session As InferenceSession, name As String,
                                        source As SKBitmap, target As SKBitmap,
-                                       window As SKRectI, keep As SKRectI, amount As Single)
+                                       window As SKRectI, keep As SKRectI, amount As Single,
+                                       Optional sigma As Single = 0.0F)
             Dim w = window.Width, h = window.Height
             Dim layer = w * h
-            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, h, w})
+            Dim kanaele = If(sigma > 0.0F, 4, 3)
+            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, kanaele, h, w})
             Dim z = tensor.Buffer.Span
+            If kanaele = 4 Then
+                ' Der vierte Kanal ist eine Karte der angenommenen Rauschstaerke. Sie ist ueber die
+                ' ganze Kachel gleich: was in einem Foto wo wie stark rauscht, wissen wir nicht,
+                ' und eine geratene Karte waere schlechter als eine ehrliche Konstante.
+                Dim wert = sigma / 255.0F
+                For i = layer * 3 To layer * 4 - 1
+                    z(i) = wert
+                Next
+            End If
 
             ' Zeilenweise ueber den Speicher, nicht ueber GetPixel - bei einem ganzen Foto ist das
             ' der Unterschied zwischen Sekunden und Minuten allein fuer das Einlesen.

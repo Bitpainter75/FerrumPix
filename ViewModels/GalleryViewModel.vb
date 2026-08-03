@@ -5978,6 +5978,10 @@ Namespace ViewModels
                     .OrderSeed = CollageOrderSeed
                 }
 
+                ' Dieselbe Frage wie vor dem Drucken, aus demselben Grund: was hier gerechnet wird,
+                ' laeuft ohne Rueckfrage durch, und Minuten je Bild will niemand ungefragt.
+                options.ApplyPendingBakedOperations = Await _mainVm.AskApplyPendingBakedAsync(paths)
+
                 IsCollageDialogOpen = False
                 _collagePreviewTimer.Stop()
                 CollagePreviewImage = Nothing
@@ -6292,10 +6296,14 @@ Namespace ViewModels
             ' Ueberschreiben nur anbieten, wenn JEDE Quelle ihr eigenes Format auch schreiben kann
             ' (BMP/GIF koennen es nicht - dort entstehen neue Dateien).
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
             Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
                                                            singleImage:=targetItems.Count = 1,
                                                            sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If resize Is Nothing Then Return
+            ' Der Haken wird JETZT festgehalten: der Schreiblauf liest ihn im Hintergrund, und bis
+            ' dahin kann der naechste Dialog ihn laengst zurueckgesetzt haben.
+            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
             StatusText = LocalizationService.T("Ändere Bildgröße...")
             ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
@@ -6321,7 +6329,8 @@ Namespace ViewModels
                              adj.NoResizeUpscale = resize.NoUpscale
                              adj.ResizeInterpolation = resize.Interpolation
                              Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
-                                                             developRaw:=BatchDevelopsRaw(source))
+                                                             developRaw:=BatchDevelopsRaw(source),
+                                                             applyPendingBaked:=applyPendingBaked)
                          End Function
 
             Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
@@ -6438,9 +6447,11 @@ Namespace ViewModels
 
             Dim folderHint = BatchFolderHint(targetItems)
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar,
                                                             sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If result Is Nothing Then Return
+            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
             Dim adjustmentsTemplate = BuildBatchFilterAdjustments(result)
             If adjustmentsTemplate Is Nothing Then
@@ -6464,7 +6475,8 @@ Namespace ViewModels
                              adj.MergeNonDefaultPixelAdjustmentsFrom(adjustmentsTemplate)
                              If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
-                                                             developRaw:=BatchDevelopsRaw(source))
+                                                             developRaw:=BatchDevelopsRaw(source),
+                                                             applyPendingBaked:=applyPendingBaked)
                          End Function
 
             Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
@@ -6596,10 +6608,12 @@ Namespace ViewModels
             If targetItems.Count = 0 Then Return
 
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
+            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar,
                                                                       currentFolder:=BatchFolderHint(targetItems),
                                                                       sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If result Is Nothing OrElse result.Preset Is Nothing Then Return
+            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
             Dim annotation = CreateWatermarkAnnotation(result.Preset)
             If annotation Is Nothing Then
@@ -6618,7 +6632,8 @@ Namespace ViewModels
                              Dim adj = BatchBaseAdjustments(source)
                              adj.Annotations.Add(annotation.Clone())
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
-                                                             developRaw:=BatchDevelopsRaw(source))
+                                                             developRaw:=BatchDevelopsRaw(source),
+                                                             applyPendingBaked:=applyPendingBaked)
                          End Function
             Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
             Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
@@ -6844,9 +6859,14 @@ Namespace ViewModels
 
         ''' <param name="nameBuilder">Liefert den kompletten Namensstamm fuer eine Quelle (Muster
         ''' aus dem Dialog, siehe ExpandTargetNamePattern); Nothing = Originalname + Suffix.</param>
+        ''' <param name="makeUnique">True = einer vorhandenen Datei ausweichen (foto_1.jpg). False =
+        ''' den Namen so lassen, wie er sich ergibt; dann entscheidet der Konflikt-Dialog, was mit
+        ''' einer vorhandenen Datei geschieht. Der Stapel geht den zweiten Weg: still auszuweichen
+        ''' hiess, dass am Ende Dateien im Ordner lagen, nach deren Namen niemand gefragt hatte.</param>
         Private Shared Function CreateBatchTargetFolderPath(sourcePath As String, targetFolder As String, requestedExtension As String,
                                                             Optional nameSuffix As String = "",
-                                                            Optional nameBuilder As Func(Of String, String) = Nothing) As String
+                                                            Optional nameBuilder As Func(Of String, String) = Nothing,
+                                                            Optional makeUnique As Boolean = True) As String
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(sourcePath), requestedExtension)
             If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
             If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
@@ -6856,7 +6876,44 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(stem) Then
                 stem = If(String.IsNullOrWhiteSpace(IO.Path.GetFileNameWithoutExtension(sourcePath)), "ferrumpix-export", IO.Path.GetFileNameWithoutExtension(sourcePath)) & If(nameSuffix, "")
             End If
-            Return MakeUniqueFilePath(IO.Path.Combine(targetFolder, stem & ext))
+            Dim combined = IO.Path.Combine(targetFolder, stem & ext)
+            Return If(makeUnique, MakeUniqueFilePath(combined), combined)
+        End Function
+
+        ''' <summary>Die Ziele eines Stapels VOR dem Schreiben festlegen und dabei jeden Konflikt
+        ''' klären.
+        '''
+        ''' Warum vorher und nicht mittendrin: der Schreiblauf selbst läuft im Hintergrund, und von
+        ''' dort lässt sich kein Dialog öffnen. Für die Bedienung ist es ohnehin das bessere von
+        ''' beidem - alle Fragen am Stück, danach läuft der Stapel durch, statt alle paar Sekunden
+        ''' nach einer Antwort zu verlangen.
+        '''
+        ''' Zurück kommen nur die Paare, die wirklich geschrieben werden sollen: was der Nutzer
+        ''' übersprungen hat, fehlt hier. „Alle überschreiben" und „Alle überspringen" gelten für
+        ''' den Rest des Laufs, deshalb wird die Merkentscheidung am Anfang zurückgesetzt.</summary>
+        Private Async Function ResolveBatchTargetsAsync(sources As IEnumerable(Of String),
+                                                        targetFolder As String,
+                                                        outputExtension As Func(Of String, String),
+                                                        nameSuffix As String,
+                                                        nameBuilder As Func(Of String, String)) As Task(Of List(Of KeyValuePair(Of String, String)))
+            Dim pairs As New List(Of KeyValuePair(Of String, String))()
+            _conflictBatchDecision = Nothing
+            ' Zwei Quellen können auf denselben Namen fallen (gleicher Stamm, verschiedene Ordner).
+            ' Ohne dieses Gedächtnis wäre der zweite kein Konflikt - die Datei liegt ja noch nicht -
+            ' und überschriebe still das Ergebnis des ersten.
+            Dim claimed As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each source In If(sources, Enumerable.Empty(Of String)())
+                If String.IsNullOrEmpty(source) Then Continue For
+                Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source),
+                                                         nameSuffix, nameBuilder, makeUnique:=False)
+                If File.Exists(target) OrElse claimed.Contains(target) Then
+                    target = Await ResolveConflictTargetAsync(target, source, deleteOnOverwrite:=False)
+                    If String.IsNullOrEmpty(target) Then Continue For   ' übersprungen
+                End If
+                claimed.Add(target)
+                pairs.Add(New KeyValuePair(Of String, String)(source, target))
+            Next
+            Return pairs
         End Function
 
         ''' <param name="uploadedAssetIds">Sammelt die IDs der Assets, die danach in der Ansicht stehen sollen -
@@ -6927,13 +6984,20 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
 
             Try
+                ' Erst alle Quellen holen, dann die Ziele samt Konfliktfragen, dann schreiben -
+                ' dieselbe Ordnung wie beim lokalen Stapel, damit die Fragen am Stück kommen.
+                Dim sources As New List(Of String)()
                 For Each item In If(items, Enumerable.Empty(Of ImageItem)())
                     If item Is Nothing OrElse Not item.IsImmichAsset Then Continue For
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
-
-                    Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source), nameSuffix, nameBuilder)
-                    Dim ok = Await Task.Run(Function() writer(source, target))
+                    sources.Add(source)
+                Next
+                Dim pairs = Await ResolveBatchTargetsAsync(sources, targetFolder, outputExtension, nameSuffix, nameBuilder)
+                For Each pair In pairs
+                    Dim sourcePath = pair.Key
+                    Dim target = pair.Value
+                    Dim ok = Await Task.Run(Function() writer(sourcePath, target))
                     If ok AndAlso File.Exists(target) Then savedCount += 1
                 Next
             Catch ex As Exception
@@ -6961,19 +7025,28 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
 
             Try
-                Await Task.Run(Sub()
-                    For Each item In If(items, Enumerable.Empty(Of ImageItem)())
-                        If item Is Nothing OrElse item.IsImmichAsset OrElse Not File.Exists(item.FilePath) Then Continue For
-                        Dim sourceExt = IO.Path.GetExtension(item.FilePath)
-                        Dim targetExt = outputExtension(item.FilePath)
-                        If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
+                ' Erst die Kandidaten, dann die Ziele samt Konfliktfragen, DANN erst schreiben. Die
+                ' Fragen müssen vor den Hintergrundfaden - von dort ginge kein Dialog auf.
+                Dim candidates As New List(Of String)()
+                For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                    If item Is Nothing OrElse item.IsImmichAsset OrElse Not File.Exists(item.FilePath) Then Continue For
+                    Dim sourceExt = IO.Path.GetExtension(item.FilePath)
+                    Dim targetExt = outputExtension(item.FilePath)
+                    If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
+                    candidates.Add(item.FilePath)
+                Next
+                Dim pairs = Await ResolveBatchTargetsAsync(candidates, targetFolder, outputExtension, nameSuffix, nameBuilder)
+                If pairs.Count = 0 Then Return 0
 
-                        Dim target = CreateBatchTargetFolderPath(item.FilePath, targetFolder, targetExt, nameSuffix, nameBuilder)
-                        If writer(item.FilePath, target) AndAlso File.Exists(target) Then
+                Await Task.Run(Sub()
+                    For Each pair In pairs
+                        Dim sourcePath = pair.Key
+                        Dim target = pair.Value
+                        If writer(sourcePath, target) AndAlso File.Exists(target) Then
                             savedCount += 1
                             ' Katalog-Metadaten (Bewertung/Favorit/Etikett/Stichworte) wandern zur
                             ' Kopie mit - das Original behält seine.
-                            LibraryService.Instance.CopyEntryMeta(item.FilePath, target,
+                            LibraryService.Instance.CopyEntryMeta(sourcePath, target,
                                                                   If(metaCopy Is Nothing, True, metaCopy.CopyRating),
                                                                   If(metaCopy Is Nothing, True, metaCopy.CopyFavorite),
                                                                   If(metaCopy Is Nothing, True, metaCopy.CopyColorLabel),
@@ -7121,8 +7194,10 @@ Namespace ViewModels
             Dim folderHint = BatchFolderHint(targetItems)
             Dim samplePath = targetItems.Select(Function(i) i.FilePath).
                 FirstOrDefault(Function(pth) Not String.IsNullOrEmpty(pth) AndAlso File.Exists(pth))
+            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath)
             If result Is Nothing Then Return
+            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
             ' Die Vorlage trägt alles Bild-UNabhängige (Look, Größe, Wasserzeichen); die
             ' automatische Bildverbesserung misst dagegen PRO BILD im Writer.
@@ -7216,7 +7291,8 @@ Namespace ViewModels
                                  End If
                              End If
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
-                                                             developRaw:=BatchDevelopsRaw(source))
+                                                             developRaw:=BatchDevelopsRaw(source),
+                                                             applyPendingBaked:=applyPendingBaked)
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
@@ -7483,10 +7559,15 @@ Namespace ViewModels
         ' jedes konfliktbehafteten Stapels (Einfügen/Verschieben) zurückgesetzt.
         Private _conflictBatchDecision As FileConflictChoice? = Nothing
 
-        Private Async Function ResolveConflictTargetAsync(conflictingTarget As String, source As String) As Task(Of String)
+        ''' <param name="deleteOnOverwrite">Beim Einfügen und Verschieben wird die vorhandene Datei
+        ''' sofort gelöscht, weil die Kopie unmittelbar folgt. Der STAPEL klärt seine Ziele dagegen
+        ''' lange vor dem Schreiben - dort darf nichts vorab gelöscht werden, sonst wäre die alte
+        ''' Datei weg, falls der Lauf danach scheitert. Der Schreiber überschreibt selbst.</param>
+        Private Async Function ResolveConflictTargetAsync(conflictingTarget As String, source As String,
+                                                          Optional deleteOnOverwrite As Boolean = True) As Task(Of String)
             If _conflictBatchDecision.HasValue Then
                 If _conflictBatchDecision.Value = FileConflictChoice.OverwriteAll Then
-                    DeleteTargetForOverwrite(conflictingTarget)
+                    If deleteOnOverwrite Then DeleteTargetForOverwrite(conflictingTarget)
                     Return conflictingTarget
                 End If
                 Return Nothing   ' SkipAll
@@ -7499,13 +7580,13 @@ Namespace ViewModels
                 Select Case result.Choice
                     Case FileConflictChoice.OverwriteAll
                         _conflictBatchDecision = FileConflictChoice.OverwriteAll
-                        DeleteTargetForOverwrite(conflictingTarget)
+                        If deleteOnOverwrite Then DeleteTargetForOverwrite(conflictingTarget)
                         Return conflictingTarget
                     Case FileConflictChoice.SkipAll
                         _conflictBatchDecision = FileConflictChoice.SkipAll
                         Return Nothing
                     Case FileConflictChoice.Overwrite
-                        DeleteTargetForOverwrite(conflictingTarget)
+                        If deleteOnOverwrite Then DeleteTargetForOverwrite(conflictingTarget)
                         Return conflictingTarget
                     Case FileConflictChoice.Rename
                         Dim newName = If(result.NewName, "").Trim()

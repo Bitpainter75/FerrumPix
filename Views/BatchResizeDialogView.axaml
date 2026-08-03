@@ -17,5 +17,14 @@
                   FontSize="{DynamicResource FP.Font.Small}"
                   ToolTip.Tip="Schreibt die neue Größe direkt in die Bilddateien. Ohne Haken entstehen neue Dateien mit Formatauswahl und die Originale bleiben unangetastet."/>
 
+        <!-- Nur da, wenn in der Auswahl wirklich etwas offen ist (siehe
+             MainWindowViewModel.PreparePendingBakedOption). -->
+        <CheckBox Content="{Binding DialogPendingBakedLabel}"
+                  IsChecked="{Binding DialogApplyPendingBaked, Mode=TwoWay}"
+                  IsVisible="{Binding IsDialogPendingBakedAvailable}"
+                  Classes="no-translate"
+                  FontSize="{DynamicResource FP.Font.Small}"
+                  ToolTip.Tip="Bei RAW- und Photoshop-Dateien liegt Entrauschen, Objektentfernen, Retusche und Pinsel nur als Vermerk neben der Datei. Mit Haken werden sie mitgerechnet, was mehrere Minuten je Bild kostet; ohne Haken kommen die Bilder ohne diese Bearbeitung heraus."/>
+
     </StackPanel>
 </UserControl>

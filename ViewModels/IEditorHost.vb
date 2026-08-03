@@ -50,6 +50,10 @@ Namespace ViewModels
                                   Optional cancelText As String = "Abbrechen") As Task(Of Boolean)
         Function ShowSaveChangesAsync(titleText As String,
                                       messageText As String) As Task(Of SaveChangesDialogResult)
+        ''' <summary>Die Frage nach einer gleichnamigen Datei. Gehoert hierher und nicht in den
+        ''' Editor: den Dialog kennt der Anwendungsrahmen, der Editor kennt nur die Antwort.</summary>
+        Function ShowFileConflictAsync(existingPath As String,
+                                       incomingPath As String) As Task(Of FileConflictDialogResult)
         Function ShowSaveAsAsync(titleText As String,
                                  messageText As String,
                                  initialBaseName As String,
