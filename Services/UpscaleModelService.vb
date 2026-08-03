@@ -115,10 +115,10 @@ Namespace Services
 
         ''' <summary>Der Eintrag zu einem Schluessel, oder der erste vorhandene.</summary>
         Public Shared Function ModelFor(key As String) As UpscaleModel
-            Dim treffer = KnownModels.FirstOrDefault(
+            Dim match = KnownModels.FirstOrDefault(
                 Function(m) String.Equals(m.Key, key, StringComparison.OrdinalIgnoreCase))
-            If treffer IsNot Nothing AndAlso Not String.IsNullOrEmpty(AiModelService.BestFile(treffer.Key)) Then
-                Return treffer
+            If match IsNot Nothing AndAlso Not String.IsNullOrEmpty(AiModelService.BestFile(match.Key)) Then
+                Return match
             End If
             Return AvailableModels.FirstOrDefault()
         End Function
@@ -188,14 +188,19 @@ Namespace Services
                     y += stride
                 End While
 
+                ' Der Alphakanal kommt NICHT aus dem Modell - das rechnet drei Kanaele und weiss von
+                ' Durchsichtigkeit nichts. Ohne diesen Schritt stuende in jedem Zielpunkt volle
+                ' Deckung, und ein PNG mit freigestelltem Motiv kaeme undurchsichtig heraus.
+                If image.AlphaType <> SKAlphaType.Opaque Then ScaleAlphaInto(image, result)
+
                 clock.Stop()
                 LastReport = $"Bild {image.Width}x{image.Height} auf " &
                              $"{result.Width}x{result.Height}, {done} Kacheln, " &
                              $"{clock.Elapsed.TotalSeconds:F0} s, {model.Label}"
                 DiagnosticLogService.LogAlways("Hochskalieren", LastReport)
-                Dim fertig = result
+                Dim finished = result
                 result = Nothing
-                Return fertig
+                Return finished
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Hochskalieren", ex.Message)
                 result?.Dispose()
@@ -217,6 +222,83 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Den Alphakanal der Quelle auf die Zielgroesse ziehen und ins Ergebnis legen.
+        '''
+        ''' Das Modell rechnet DREI Kanaele und weiss von Durchsichtigkeit nichts; die Kacheln
+        ''' setzen deshalb ueberall volle Deckung. Fuer ein Foto ist das richtig, fuer ein
+        ''' freigestelltes PNG waere es der stille Verlust der Freistellung.
+        '''
+        ''' Getrennt und WEICH skaliert (bilinear): den Alphakanal punktweise zu vervielfachen
+        ''' gaebe an der freigestellten Kante eine Treppe, waehrend die Farbe daneben vom Modell
+        ''' fein gesetzt ist.
+        '''
+        ''' Bei VORMULTIPLIZIERTEN Bildern werden die drei Farbkanaele danach auf das Alpha
+        ''' begrenzt. Das Modell hat sie ohne Kenntnis der Durchsichtigkeit gerechnet und kann
+        ''' dabei darueber hinauslaufen; ein Bildpunkt mit mehr Farbe als Deckung bricht die Zusage
+        ''' dieses Formats, und was daraus wird, haengt dann am Zeichenweg.
+        '''
+        ''' Geht etwas schief, bleibt es beim undurchsichtigen Ergebnis - eine Vergroesserung ohne
+        ''' Freistellung ist immer noch besser als gar keine.</summary>
+        Private Shared Sub ScaleAlphaInto(source As SKBitmap, target As SKBitmap)
+            Try
+                Using sourceAlpha = New SKBitmap(New SKImageInfo(source.Width, source.Height,
+                                                                SKColorType.Alpha8, SKAlphaType.Premul))
+                    Dim srcStride = source.RowBytes
+                    Dim srcRow(srcStride - 1) As Byte
+                    Dim alphaStride = sourceAlpha.RowBytes
+                    Dim alphaRow(alphaStride - 1) As Byte
+                    Dim srcPixels = source.GetPixels()
+                    Dim alphaPixels = sourceAlpha.GetPixels()
+                    For y = 0 To source.Height - 1
+                        Runtime.InteropServices.Marshal.Copy(
+                            IntPtr.Add(srcPixels, y * srcStride), srcRow, 0, srcStride)
+                        For x = 0 To source.Width - 1
+                            alphaRow(x) = srcRow(x * 4 + 3)
+                        Next
+                        Runtime.InteropServices.Marshal.Copy(
+                            alphaRow, 0, IntPtr.Add(alphaPixels, y * alphaStride), alphaStride)
+                    Next
+
+                    Using scaled = New SKBitmap(New SKImageInfo(target.Width, target.Height,
+                                                               SKColorType.Alpha8, SKAlphaType.Premul))
+                        If Not sourceAlpha.ScalePixels(
+                            scaled, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then
+                            DiagnosticLogService.LogAlways("Hochskalieren", "Alphakanal liess sich nicht skalieren")
+                            Return
+                        End If
+
+                        Dim premultiplied = target.AlphaType = SKAlphaType.Premul
+                        Dim dstStride = target.RowBytes
+                        Dim dstRow(dstStride - 1) As Byte
+                        Dim scaledStride = scaled.RowBytes
+                        Dim scaledRow(scaledStride - 1) As Byte
+                        Dim dstPixels = target.GetPixels()
+                        Dim scaledPixels = scaled.GetPixels()
+                        For y = 0 To target.Height - 1
+                            Runtime.InteropServices.Marshal.Copy(
+                                IntPtr.Add(scaledPixels, y * scaledStride), scaledRow, 0, scaledStride)
+                            Runtime.InteropServices.Marshal.Copy(
+                                IntPtr.Add(dstPixels, y * dstStride), dstRow, 0, dstStride)
+                            For x = 0 To target.Width - 1
+                                Dim alpha = scaledRow(x)
+                                Dim p = x * 4
+                                dstRow(p + 3) = alpha
+                                If premultiplied Then
+                                    If dstRow(p) > alpha Then dstRow(p) = alpha
+                                    If dstRow(p + 1) > alpha Then dstRow(p + 1) = alpha
+                                    If dstRow(p + 2) > alpha Then dstRow(p + 2) = alpha
+                                End If
+                            Next
+                            Runtime.InteropServices.Marshal.Copy(
+                                dstRow, 0, IntPtr.Add(dstPixels, y * dstStride), dstStride)
+                        Next
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("Hochskalieren", $"Alphakanal nicht uebernommen: {ex.Message}")
+            End Try
+        End Sub
+
         ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben -
         ''' derselbe Aufbau wie beim Entrauschen, nur dass Ziel- und Quellraum sich um den
         ''' Massstab unterscheiden.</summary>
@@ -230,10 +312,10 @@ Namespace Services
 
             Dim srcStride = source.RowBytes
             Dim row(srcStride - 1) As Byte
-            Dim basis = source.GetPixels()
+            Dim srcPixels = source.GetPixels()
             For yy = 0 To h - 1
                 Runtime.InteropServices.Marshal.Copy(
-                    IntPtr.Add(basis, (window.Top + yy) * srcStride), row, 0, srcStride)
+                    IntPtr.Add(srcPixels, (window.Top + yy) * srcStride), row, 0, srcStride)
                 Dim line = yy * w
                 For xx = 0 To w - 1
                     Dim p = (window.Left + xx) * 4
@@ -252,28 +334,30 @@ Namespace Services
                 Dim dims = output.Dimensions.ToArray()
                 Dim rh = dims(dims.Length - 2), rw = dims(dims.Length - 1)
                 Dim rLayer = rw * rh
-                Dim werte = output.Buffer.Span
-                If werte.Length < rLayer * 3 Then Return
+                Dim values = output.Buffer.Span
+                If values.Length < rLayer * 3 Then Return
 
                 Dim dstStride = target.RowBytes
-                Dim ziel = target.GetPixels()
-                Dim zeile(dstStride - 1) As Byte
+                Dim dstPixels = target.GetPixels()
+                Dim dstRow(dstStride - 1) As Byte
                 For yy = keep.Top * scale To keep.Bottom * scale - 1
                     If yy < 0 OrElse yy >= target.Height Then Continue For
                     Runtime.InteropServices.Marshal.Copy(
-                        IntPtr.Add(ziel, yy * dstStride), zeile, 0, dstStride)
+                        IntPtr.Add(dstPixels, yy * dstStride), dstRow, 0, dstStride)
                     Dim sy = Math.Min(Math.Max(0, yy - window.Top * scale), rh - 1)
                     For xx = keep.Left * scale To keep.Right * scale - 1
                         If xx < 0 OrElse xx >= target.Width Then Continue For
                         Dim sx = Math.Min(Math.Max(0, xx - window.Left * scale), rw - 1)
                         Dim i = sy * rw + sx
                         Dim p = xx * 4
-                        zeile(p) = ToByte(werte(rLayer * 2 + i) * 255.0F)
-                        zeile(p + 1) = ToByte(werte(rLayer + i) * 255.0F)
-                        zeile(p + 2) = ToByte(werte(i) * 255.0F)
-                        zeile(p + 3) = 255
+                        dstRow(p) = ToByte(values(rLayer * 2 + i) * 255.0F)
+                        dstRow(p + 1) = ToByte(values(rLayer + i) * 255.0F)
+                        dstRow(p + 2) = ToByte(values(i) * 255.0F)
+                        ' Volle Deckung. Traegt die Quelle einen Alphakanal, wird er nach dem
+                        ' letzten Kachellauf ueber ScaleAlphaInto darueber gelegt.
+                        dstRow(p + 3) = 255
                     Next
-                    Runtime.InteropServices.Marshal.Copy(zeile, 0, IntPtr.Add(ziel, yy * dstStride), dstStride)
+                    Runtime.InteropServices.Marshal.Copy(dstRow, 0, IntPtr.Add(dstPixels, yy * dstStride), dstStride)
                 Next
             End Using
         End Sub

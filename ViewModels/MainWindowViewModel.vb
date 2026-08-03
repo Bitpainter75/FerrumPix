@@ -1345,13 +1345,13 @@ Namespace ViewModels
 
             Dim width = 0
             Dim height = 0
-            Dim skalierung = 0
+            Dim scalePercent = 0
             If _dialogExportUseResize Then
                 width = ParseResizeDimension(_dialogBatchResizeWidthText)
                 height = ParseResizeDimension(_dialogBatchResizeHeightText)
-                skalierung = _dialogBatchResizeScalePercent
+                scalePercent = _dialogBatchResizeScalePercent
                 If width > 0 OrElse height > 0 Then
-                    AppSettingsService.SaveLastBatchResizeSettings(width, height, skalierung,
+                    AppSettingsService.SaveLastBatchResizeSettings(width, height, scalePercent,
                                                                    _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation,
                                                                    _dialogBatchResizeNoUpscale, _dialogBatchResizeLongEdge)
                 End If
@@ -1371,7 +1371,7 @@ Namespace ViewModels
             If upscaleModel.Length > 0 Then
                 width = 0
                 height = 0
-                skalierung = 0
+                scalePercent = 0
             End If
 
             Return New ExportToDialogResult With {
@@ -1388,7 +1388,7 @@ Namespace ViewModels
                 .WatermarkKeepSize = keepWatermarkSize,
                 .ResizeWidth = width,
                 .ResizeHeight = height,
-                .ResizeScalePercent = skalierung,
+                .ResizeScalePercent = scalePercent,
                 .LockAspect = _dialogBatchResizeLockAspect,
                 .NoUpscale = _dialogBatchResizeNoUpscale,
                 .ResizeInterpolation = _dialogBatchResizeInterpolation,
@@ -2774,27 +2774,35 @@ Namespace ViewModels
             ' (ApplyResize entscheidet das pro Bild). Die Ergaenzung aus EINEM Beispielbild
             ' haette einem gemischten Stapel dessen Ausrichtung aufgezwungen.
 
-            ' Beim Hochskalieren bestimmt das Modell die Groesse allein: die Felder sind dann gar
-            ' nicht zu sehen, und was in ihnen vom letzten Mal stehen geblieben ist, darf auch nicht
-            ' wirken. Deshalb hier auf null - weggeblendet UND nicht angewandt.
             Dim upscaleModel = If(_dialogUpscaleModelKey, "")
-            If upscaleModel.Length > 0 Then
-                width = 0
-                height = 0
-                _dialogBatchResizeScalePercent = 0
-            End If
 
             ' Ohne Zielgroesse gaebe es sonst nichts zu tun - MIT gewaehltem Modell aber schon.
             If upscaleModel.Length = 0 AndAlso
                _dialogBatchResizeScalePercent <= 0 AndAlso width <= 0 AndAlso height <= 0 Then Return Nothing
+
+            ' GEMERKT wird, was in den Feldern STEHT, und zwar BEVOR das Modell sie beiseiteschiebt.
+            ' Sonst kostet ein einziger Lauf mit Modell dem Benutzer seine zuletzt benutzten Masse:
+            ' er findet den Dialog beim naechsten Mal leer vor, ohne je etwas geloescht zu haben.
             AppSettingsService.SaveLastBatchResizeSettings(width, height, _dialogBatchResizeScalePercent, _dialogBatchResizeLockAspect, _dialogBatchResizeInterpolation, _dialogBatchResizeNoUpscale,
                                                            _dialogBatchResizeLongEdge)
             If Not _dialogBatchResizeOverwrite Then PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
+
+            ' Beim Hochskalieren bestimmt das Modell die Groesse allein: die Felder sind dann gar
+            ' nicht zu sehen, und was in ihnen vom letzten Mal stehen geblieben ist, darf auch nicht
+            ' wirken. Deshalb hier auf null - weggeblendet UND nicht angewandt. Genullt werden dabei
+            ' nur die ORTLICHEN Werte dieses Laufs, nie die gemerkten Felder.
+            Dim scalePercent = _dialogBatchResizeScalePercent
+            If upscaleModel.Length > 0 Then
+                width = 0
+                height = 0
+                scalePercent = 0
+            End If
+
             Return New BatchResizeResult With {
                 .Width = width,
                 .Height = height,
-                .ScalePercent = _dialogBatchResizeScalePercent,
+                .ScalePercent = scalePercent,
                 .LockAspect = _dialogBatchResizeLockAspect,
                 .NoUpscale = _dialogBatchResizeNoUpscale,
                 .Interpolation = _dialogBatchResizeInterpolation,

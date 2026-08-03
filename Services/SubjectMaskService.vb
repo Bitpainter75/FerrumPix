@@ -238,14 +238,20 @@ Namespace Services
             ' Wert, der sich an echten Fotos als brauchbarster Ausgangspunkt gezeigt hat.
             Dim k = Math.Max(0.0, Math.Min(100.0, edgePct))
             Dim Steepness = CSng(1.0 + k / 100.0 * 90.0)
-            ' Der Umfang verschiebt die Grenze, und sein Weg deckt genau den Bereich ab, in dem
-            ' ueberhaupt etwas passiert.
+            ' Der Umfang verschiebt die Grenze. Der Reglerweg reicht bis plus minus zwoelf, und das
+            ' ist mehr, als gebraucht wird.
             '
             ' GEMESSEN an einem echten Foto (Himmel ueber einer Baumreihe, 4096 Punkte breit,
             ' Anteil des erfassten Himmels): bei einer Verschiebung von -4,8 sind es 10 Prozent,
             ' bei 0 gut 82, bei +2,4 schon 97 und bei +4,8 dann 99. Ausserhalb von rund plus minus
-            ' fuenf passiert nichts mehr. Vorher lag der Reglerweg bei plus minus zwoelf - zwei
-            ' Drittel davon waren Saettigung, und der brauchbare Teil draengte sich um die Mitte.
+            ' fuenf passiert nichts mehr - jenseits von etwa vierzig Reglerprozent liegt also
+            ' Saettigung, und der brauchbare Teil draengt sich um die Mitte. Die Vorgabe von 25
+            ' entspricht einer Verschiebung von 3,0 und liegt damit mitten im wirksamen Bereich.
+            '
+            ' Den Weg deswegen enger zu ziehen waere eine Scheinloesung: dieselbe Zahl bedeutet je
+            ' nach Motiv Verschiedenes, weil sie im ROHWERT des Modells verschiebt. Vorhersagbar
+            ' wird der Regler erst, wenn er die fertige Maske um Bildpunkte wachsen laesst - das
+            ' steht als eigener Punkt in OFFENE_PUNKTE.md.
             Dim Verschiebung = CSng(Math.Max(-100.0, Math.Min(100.0, umfangPct)) / 100.0 * 12.0)
             Const Mindestdeckung As Single = 0.06F
 

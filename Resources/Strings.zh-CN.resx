@@ -6252,4 +6252,58 @@
   <data name="Auf_ber_84000_unbesch_digten_Fotos_trainiert_ohn_7a563d0c" xml:space="preserve">
     <value>在超过 84000 张未受损照片上训练，没有人为劣化的素材。它比其他模型少做臆造——适合本来就不错的照片。</value>
   </data>
+  <data name="Gelernte_Modelle_13cf01bc" xml:space="preserve">
+    <value>学习模型</value>
+  </data>
+  <data name="Diese_Dateien_geh_ren_nicht_zur_Anwendung_und_we_ee5feb94" xml:space="preserve">
+    <value>这些文件不属于应用程序，只有在“模型”部分主动请求时才会下载。没有它们，相应功能不可用，其余一切照常运行。</value>
+  </data>
+  <data name="Einige_Werkzeuge_brauchen_eine_Modelldatei_die_s_1b4a6355" xml:space="preserve">
+    <value>部分工具需要模型文件，可在此下载。未加载的内容也不会出现在编辑器中。</value>
+  </data>
+  <data name="Entrauschen_gr_ndlich_1bc59b56" xml:space="preserve">
+    <value>降噪，细致</value>
+  </data>
+  <data name="Entrauschen_z_gig_39eb7044" xml:space="preserve">
+    <value>降噪，快速</value>
+  </data>
+  <data name="Hochskalieren_gr_ndlich_z_gig_und_f_r_Zeichnunge_bcb8b1b6" xml:space="preserve">
+    <value>放大：细致、快速以及用于绘画</value>
+  </data>
+  <data name="Modellsammlung_von_Philip_Hofmann_706dafc3" xml:space="preserve">
+    <value>Philip Hofmann 的模型集</value>
+  </data>
+  <data name="Hochskalieren_zur_ckhaltend_f_r_Aufnahmen_aus_de_7f09f1e7" xml:space="preserve">
+    <value>放大：克制、用于网络图片、用于绘画</value>
+  </data>
+  <data name="Ortsnamen_zu_Koordinaten_Tabelle_keine_Abfrage_i_26980837" xml:space="preserve">
+    <value>坐标对应的地名（本地表，不联网查询）</value>
+  </data>
+  <data name="Die_Modelldateien_werden_ber_ein_eigenes_Verzeic_4116b19d" xml:space="preserve">
+    <value>模型文件从专门的仓库获取，其中一并收录了各自的许可证文本和来源说明。下载后会逐位校验文件是否与预期一致。</value>
+  </data>
+  <data name="0_von_1_vorhanden_fa1a9ff3" xml:space="preserve">
+    <value>已有 {0} / {1}</value>
+  </data>
+  <data name="Rauschen_aus_hohen_ISO_Werten_entfernen_mit_erha_a0dbe306" xml:space="preserve">
+    <value>去除高感光度产生的噪点，同时保留细节结构。两种方式：细致与快速。</value>
+  </data>
+  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_5876c311" xml:space="preserve">
+    <value>将照片放大两倍或四倍，重新生成边缘而非平均像素。八个模型，分别适用于照片、网络图片和绘画。</value>
+  </data>
+  <data name="Objektauswahl_per_Klick_1c995329" xml:space="preserve">
+    <value>点击选择对象</value>
+  </data>
+  <data name="Tiefenkarte_f_r_Maske_und_Unsch_rfe_c029077d" xml:space="preserve">
+    <value>用于蒙版和虚化的深度图</value>
+  </data>
+  <data name="Objekte_entfernen_9f9083c2" xml:space="preserve">
+    <value>移除对象</value>
+  </data>
+  <data name="Gesichter_finden_0c4aff7d" xml:space="preserve">
+    <value>查找人脸</value>
+  </data>
+  <data name="Gesichter_vergleichen_e45484e4" xml:space="preserve">
+    <value>比对人脸</value>
+  </data>
 </root>

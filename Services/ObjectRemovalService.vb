@@ -334,7 +334,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Auf das naechste Vielfache aufrunden, das das Modell verlangt.</summary>
         ''' <summary>Die Rechengroesse einer Achse: aufgerundet auf die naechste ZWEIERPOTENZ.
         '''
         ''' Das ist keine Kosmetik, sondern der groesste einzelne Zeitposten beim Entfernen. Das

@@ -5539,14 +5539,12 @@ Namespace Views
                             e.Handled = True
                         End If
                     Case Key.Escape
-                        If vm.CanCancelBusy Then
-                            ' Laeuft gerade ein Modelldurchlauf, meint Esc IHN - und nichts anderes.
-                            ' Vor dieser Zeile verliess Esc waehrend eines minutenlangen Entrauschens
-                            ' den Editor, waehrend im Hintergrund weitergerechnet wurde.
-                            vm.RequestBusyCancel()
-                        ElseIf vm.IsPickingColorFromImage Then
-                            vm.CancelColorPick()
-                        ElseIf _isSelectionDragging OrElse _isLassoDrawing OrElse _isSelectionMoveDragging Then
+                        ' EIN LAUFENDER MODELLDURCHLAUF und DIE PIPETTE werden hier NICHT behandelt,
+                        ' und das ist kein Versehen: beide haengen am Esc-Zweig im Fenster-Tunnel
+                        ' (MainWindow.axaml.vb). Der Tunnel feuert vor jedem Handler der Ansicht und
+                        ' meldet die Taste als behandelt - hier stuende also toter Code, den der
+                        ' naechste Leser fuer die zustaendige Stelle haelt.
+                        If _isSelectionDragging OrElse _isLassoDrawing OrElse _isSelectionMoveDragging Then
                             ' Ein laufendes Aufziehen/Ziehen abbrechen, ohne es zu übernehmen - vorher
                             ' verließ Esc mitten im Zug den Editor.
                             CancelSelectionDrag()

@@ -12304,10 +12304,11 @@ Namespace ViewModels
         ''' <summary>Die Maske einer Auswahl als Bild in QUELLgroesse. Die Auswahl liegt im
         ''' Anzeigeraum; ueber CreateSourceMaskFromSelection wird sie zurueckgelegt, und zwar ueber
         ''' denselben Weg wie beim Anlegen einer Maskenebene - eine zweite Umrechnung daneben waere
-        ''' eine zweite Gelegenheit, sich um ein paar Bildpunkte zu vertun.</summary>
-        ''' <summary>Liegt bei <see cref="ImageProcessor.MaskAsSourceBitmap"/>: dieselbe Umrechnung
-        ''' braucht das Nachziehen eines vermerkten Objektentfernens, und zwei Fassungen davon waeren
-        ''' zwei Gelegenheiten, sich um den Massstab zu vertun.</summary>
+        ''' eine zweite Gelegenheit, sich um ein paar Bildpunkte zu vertun.
+        '''
+        ''' GERECHNET wird in <see cref="ImageProcessor.MaskAsSourceBitmap"/>: dieselbe Umrechnung
+        ''' braucht das Nachziehen eines vermerkten Objektentfernens, und zwei Fassungen davon
+        ''' waeren zwei Gelegenheiten, sich um den Massstab zu vertun.</summary>
         Private Shared Function MaskAsSourceImage(m As ImageMask, width As Integer, height As Integer) As SKBitmap
             Return ImageProcessor.MaskAsSourceBitmap(m, width, height)
         End Function

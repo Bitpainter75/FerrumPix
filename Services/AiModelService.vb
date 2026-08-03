@@ -168,8 +168,22 @@ Namespace Services
             Public Property Purpose As String = ""
             Public Property Bytes As Long = 0
             Public Property Sha256 As String = ""
-            ''' <summary>Alle Dateien eines Bausteins - erst wenn ALLE vorliegen, gibt es die
-            ''' Funktion. Ein halbes Modell ist keins.</summary>
+            ''' <summary>Womit diese Datei im Einstellungsdialog unter EINEM Eintrag steht.
+            '''
+            ''' Zwei verschiedene Dinge stehen hier zusammen, und der Unterschied ist wichtig:
+            '''
+            ''' BAUSTEINE einer Funktion (Objektauswahl: Kodierer und Dekodierer, Personen: Finden
+            ''' und Vergleichen). Dort gilt "erst wenn alle vorliegen, gibt es die Funktion" - ein
+            ''' halbes Modell ist keins.
+            '''
+            ''' WAHLMOEGLICHKEITEN derselben Funktion (Entrauschen: zwei, Hochskalieren: acht).
+            ''' Dort ist jede Datei fuer sich benutzbar, und die Dienste fragen auch einzeln nach
+            ''' ihr. Zusammen stehen sie, weil ein Dialog mit fuenf Zeilen fuer eine Funktion den
+            ''' Blick auf die anderen verstellt.
+            '''
+            ''' Der Dialog nennt in beiden Faellen den Teilstand ("3 von 8 vorhanden"), und der
+            ''' Knopf holt die ganze Gruppe. Wer nur eines der Wahlmodelle will, legt seine Datei
+            ''' selbst in den Modellordner.</summary>
             Public Property Group As String = ""
             ''' <summary>Darf dieses Modell auf die Grafikkarte? Eine POSITIVLISTE, und zwar aus
             ''' Absicht: was hier nicht steht, rechnet auf dem Prozessor.
@@ -259,7 +273,7 @@ Namespace Services
                                         .Purpose = "Rauschen entfernen", .Bytes = 76890542, .GpuAllowed = True,
                                         .Sha256 = "cae2172b8d2f2c08e5904a46b84b50ff26035c0fafdf8a86d5e52bd4e9cdba2d"},
                 New ModelEntry With {.Key = "nafnet",
-                                        .FileName = "nafnet-v1.onnx", .Group = "Entrauschen schnell",
+                                        .FileName = "nafnet-v1.onnx", .Group = "Entrauschen",
                                         .Purpose = "Rauschen entfernen, deutlich schneller", .Bytes = 118995025, .GpuAllowed = True,
                                         .Sha256 = "052c9238b420e8f232c4030e583426a9ce2bff36d2305fb2484509361cbe395d"},
                 New ModelEntry With {.Key = "realesrgan-x4",
@@ -271,11 +285,11 @@ Namespace Services
                                         .Purpose = "Zweifach, gründlich", .Bytes = 67075997, .GpuAllowed = True,
                                         .Sha256 = "c37a9de8d7b92e4fb3705b5d305080d10a2ada8fd2dd8ce25e37c26cf9d89042"},
                 New ModelEntry With {.Key = "realesrgan-fast-x4",
-                                        .FileName = "realesrgan-fast-x4-v1.onnx", .Group = "Hochskalieren schnell",
+                                        .FileName = "realesrgan-fast-x4-v1.onnx", .Group = "Hochskalieren",
                                         .Purpose = "Vierfach, zügig", .Bytes = 4866420,
                                         .Sha256 = "d92d4628a6f570a8686fa9f8b0180c712fa36b04209ce0752949fac3cd760242"},
                 New ModelEntry With {.Key = "realesrgan-fast-wdn-x4",
-                                        .FileName = "realesrgan-fast-wdn-x4-v1.onnx", .Group = "Hochskalieren schnell",
+                                        .FileName = "realesrgan-fast-wdn-x4-v1.onnx", .Group = "Hochskalieren",
                                         .Purpose = "Vierfach, zügig und entrauschend", .Bytes = 4866420,
                                         .Sha256 = "abc25fa980e4cc60ddef472f37e61b5e788831f01a8087cc4af596b4c73d5a40"},
                 New ModelEntry With {.Key = "nomos8ksc-x4",
@@ -287,11 +301,11 @@ Namespace Services
                                         .Purpose = "Vierfach, zurückhaltend", .Bytes = 66938066, .GpuAllowed = True,
                                         .Sha256 = "1eff02d848bf9e6cb2329ce944e1ac225b59c6b596a78cda4dc39b15d1c8aace"},
                 New ModelEntry With {.Key = "hfa2k-x4",
-                                        .FileName = "hfa2k-x4-v1.onnx", .Group = "Hochskalieren Zeichnung",
+                                        .FileName = "hfa2k-x4-v1.onnx", .Group = "Hochskalieren",
                                         .Purpose = "Vierfach, für Zeichnungen, zweite Wahl", .Bytes = 66938066, .GpuAllowed = True,
                                         .Sha256 = "a34129a023545e05b2b43408edac28296ade92b8926ae8c632a35e555df6eecf"},
                 New ModelEntry With {.Key = "realesrgan-anime-x4",
-                                        .FileName = "realesrgan-anime-x4-v1.onnx", .Group = "Hochskalieren Zeichnung",
+                                        .FileName = "realesrgan-anime-x4-v1.onnx", .Group = "Hochskalieren",
                                         .Purpose = "Vierfach, für Zeichnungen", .Bytes = 17939967, .GpuAllowed = True,
                                         .Sha256 = "9d094b3efa58f18f10e7eec7acd6f9ee534d4ccd50ba265c599cd6e99549bfea"},
                 New ModelEntry With {.Key = "yunet",
@@ -484,7 +498,11 @@ Namespace Services
             Public Property Accelerator As String = ""
         End Class
 
-        ''' <summary>Die Sitzungsoptionen, mit denen jedes Modell geladen wird.</summary>
+        ''' <summary>Die Sitzungsoptionen, mit denen jedes Modell geladen wird.
+        '''
+        ''' Der Aufrufer gibt sie wieder frei - sie halten ein natives Handle. Das geht, sobald die
+        ''' Sitzung steht: die Laufzeit liest die Optionen beim Bauen aus und braucht sie danach
+        ''' nicht mehr.</summary>
         Private Shared Function BuildOptions() As SessionOptions
             Dim options = New SessionOptions()
             ' Ein Modell laeuft waehrend der Bearbeitung neben der Vorschau. Alle Kerne zu
@@ -526,12 +544,13 @@ Namespace Services
                 Dim created As InferenceSession = Nothing
                 If onGpu Then
                     Try
-                        Dim options = BuildOptions()
-                        If GpuAccelerationService.TryApply(options) Then
-                            created = New InferenceSession(filePath, options)
-                            builtWith = target
-                            GpuAccelerationService.NoteSuccess()
-                        End If
+                        Using options = BuildOptions()
+                            If GpuAccelerationService.TryApply(options) Then
+                                created = New InferenceSession(filePath, options)
+                                builtWith = target
+                                GpuAccelerationService.NoteSuccess()
+                            End If
+                        End Using
                     Catch ex As Exception
                         ' Die Karte hat das Modell nicht genommen. Das kostet Zeit, aber keine
                         ' Funktion: gleich darunter laeuft derselbe Weg ueber den Prozessor.
@@ -543,7 +562,9 @@ Namespace Services
                 End If
                 Try
                     If created Is Nothing Then
-                        created = New InferenceSession(filePath, BuildOptions())
+                        Using options = BuildOptions()
+                            created = New InferenceSession(filePath, options)
+                        End Using
                         builtWith = ""
                     End If
                     _sessions(filePath) = New LoadedSession With {.Session = created, .Accelerator = builtWith}

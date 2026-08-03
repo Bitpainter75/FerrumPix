@@ -7206,51 +7206,51 @@ Namespace ViewModels
 
             ' Die Vorlage trägt alles Bild-UNabhängige (Look, Größe, Wasserzeichen); die
             ' automatische Bildverbesserung misst dagegen PRO BILD im Writer.
-            Dim vorlage As ImageAdjustments
+            Dim template As ImageAdjustments
             Select Case result.LookKind
                 Case BatchFilterDialogResult.SourceXmpPreset
-                    vorlage = XmpPresetService.LoadLook(result.LookPath)
+                    template = XmpPresetService.LoadLook(result.LookPath)
                 Case BatchFilterDialogResult.SourceLut
-                    vorlage = If(File.Exists(result.LookPath),
+                    template = If(File.Exists(result.LookPath),
                                  New ImageAdjustments With {.LutPath = result.LookPath, .LutStrength = result.LookStrength},
                                  Nothing)
                 Case BatchFilterDialogResult.SourceFilter
-                    vorlage = New ImageAdjustments With {.FilterPreset = result.LookName, .FilterStrength = result.LookStrength}
+                    template = New ImageAdjustments With {.FilterPreset = result.LookName, .FilterStrength = result.LookStrength}
                 Case BatchFilterDialogResult.SourceAuto
                     ' Die Auto-Verbesserung kommt als result.AutoEnhance herein (der Dialog setzt
                     ' dann KEIN LookKind) - dieser Zweig ist nur das Sicherheitsnetz, falls sich
                     ' die Zuordnung im Dialog je aendert.
-                    vorlage = New ImageAdjustments()
+                    template = New ImageAdjustments()
                 Case Else
-                    vorlage = New ImageAdjustments()
+                    template = New ImageAdjustments()
             End Select
-            If vorlage Is Nothing Then
+            If template Is Nothing Then
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), LocalizationService.T("Die gewählte Vorgabe konnte nicht gelesen werden."))
                 Return
             End If
             If result.ResizeScalePercent > 0 Then
                 ' Prozentuale Skalierung: die Zielmasse haengen am EINZELNEN Bild, deshalb erst im
                 ' Writer (unten) je Quelle ausgerechnet.
-                vorlage.LockResizeAspect = result.LockAspect
-                vorlage.NoResizeUpscale = result.NoUpscale
-                vorlage.ResizeInterpolation = result.ResizeInterpolation
+                template.LockResizeAspect = result.LockAspect
+                template.NoResizeUpscale = result.NoUpscale
+                template.ResizeInterpolation = result.ResizeInterpolation
             ElseIf result.ResizeWidth > 0 OrElse result.ResizeHeight > 0 Then
-                vorlage.ResizeWidth = result.ResizeWidth
-                vorlage.ResizeHeight = result.ResizeHeight
-                vorlage.LockResizeAspect = result.LockAspect
-                vorlage.NoResizeUpscale = result.NoUpscale
-                vorlage.ResizeInterpolation = result.ResizeInterpolation
+                template.ResizeWidth = result.ResizeWidth
+                template.ResizeHeight = result.ResizeHeight
+                template.LockResizeAspect = result.LockAspect
+                template.NoResizeUpscale = result.NoUpscale
+                template.ResizeInterpolation = result.ResizeInterpolation
                 ' KASTEN-Modus wie in der Bildgroessen-Stapelaktion: EIN Wert begrenzt die laengste
                 ' Kante, zwei Werte sind der Kasten, in den eingepasst wird. Ohne ihn galten die
                 ' Werte exakt - ein Stapel aus Quer- und Hochformaten wurde damit gestreckt, und die
                 ' "Lange Kante" haette hier gar nicht gewirkt.
-                vorlage.ResizeFitInsideBox = True
+                template.ResizeFitInsideBox = True
             End If
             ' Das Vergroessern mit Modell steht AUSSERHALB der beiden Zweige darueber: es gilt auch
             ' ohne Zielmasse. Es laeuft im Speicherweg vor der Reglerkette - wer also vierfach
             ' vergroessert UND eine Zielbreite eintraegt, bekommt genau die, gerechnet vom
             ' vergroesserten Bild herunter.
-            vorlage.UpscaleModel = If(result.UpscaleModel, "")
+            template.UpscaleModel = If(result.UpscaleModel, "")
             If Not String.IsNullOrEmpty(result.WatermarkPresetName) Then
                 ' Die Lauf-Kopie aus dem Dialog traegt Anker und Breite dieses Laufs; nur wenn sie
                 ' fehlt (aelteres Ergebnis), wird die gespeicherte Vorlage nachgeschlagen.
@@ -7270,7 +7270,7 @@ Namespace ViewModels
                 ' das Wasserzeichen kommt also erst nach dem Verkleinern in seiner eingestellten
                 ' Groesse darauf und ist in jeder Ausgabegroesse gleich gross.
                 annotation.ScaleWithImage = Not result.WatermarkKeepSize
-                vorlage.Annotations.Add(annotation)
+                template.Annotations.Add(annotation)
             End If
 
             StatusText = LocalizationService.T("Exportiere…")
@@ -7279,17 +7279,22 @@ Namespace ViewModels
                              ' Groesse und Objekte gehoeren dem Export und werden gesetzt statt
                              ' zusammengefuehrt.
                              Dim adj = BatchBaseAdjustments(source)
-                             adj.MergeNonDefaultPixelAdjustmentsFrom(vorlage)
-                             adj.ResizeWidth = vorlage.ResizeWidth
-                             adj.ResizeHeight = vorlage.ResizeHeight
-                             adj.ResizeScalePercent = vorlage.ResizeScalePercent
-                             adj.ResizeFitInsideBox = vorlage.ResizeFitInsideBox
-                             adj.LockResizeAspect = vorlage.LockResizeAspect
-                             adj.NoResizeUpscale = vorlage.NoResizeUpscale
-                             adj.ResizeInterpolation = vorlage.ResizeInterpolation
-                             If vorlage.Annotations IsNot Nothing Then
-                                 For Each objekt In vorlage.Annotations
-                                     If objekt IsNot Nothing Then adj.Annotations.Add(objekt.Clone())
+                             adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                             adj.ResizeWidth = template.ResizeWidth
+                             adj.ResizeHeight = template.ResizeHeight
+                             adj.ResizeScalePercent = template.ResizeScalePercent
+                             adj.ResizeFitInsideBox = template.ResizeFitInsideBox
+                             adj.LockResizeAspect = template.LockResizeAspect
+                             adj.NoResizeUpscale = template.NoResizeUpscale
+                             adj.ResizeInterpolation = template.ResizeInterpolation
+                             ' Gehoert zur GROESSE und wird deshalb gesetzt wie die Felder darueber,
+                             ' nicht zusammengefuehrt. Frueher kam es allein ueber
+                             ' MergeNonDefaultPixelAdjustmentsFrom an - das war ein Zufall und haette
+                             ' beim Einordnen als Strukturfeld still aufgehoert zu wirken.
+                             adj.UpscaleModel = template.UpscaleModel
+                             If template.Annotations IsNot Nothing Then
+                                 For Each item In template.Annotations
+                                     If item IsNot Nothing Then adj.Annotations.Add(item.Clone())
                                  Next
                              End If
                              If result.AutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)

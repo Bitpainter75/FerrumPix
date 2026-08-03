@@ -2942,7 +2942,7 @@ Namespace ViewModels
 
             Private _progress As Double = 0
             Private _running As Boolean = False
-            Private _meldung As String = ""
+            Private _message As String = ""
 
             ''' <summary>Was zusammen geholt werden muesste, in MiB.</summary>
             Public ReadOnly Property SizeText As String
@@ -2959,6 +2959,22 @@ Namespace ViewModels
                 End Get
             End Property
 
+            ''' <summary>Wie viele Dateien der Gruppe schon dasind.
+            '''
+            ''' Gebraucht, seit eine Gruppe mehrere WAHLMOEGLICHKEITEN buendeln kann statt der
+            ''' Bausteine einer einzigen Funktion: beim Hochskalieren ist jedes der acht Modelle
+            ''' fuer sich benutzbar, und wer drei davon geholt hat, hat drei davon. "Nicht
+            ''' vorhanden" waere dort schlicht falsch.</summary>
+            ''' <remarks>Ueber <c>Where</c> und nicht ueber <c>Count(Bedingung)</c>: bei einer Liste
+            ''' ist <c>Count</c> eine EIGENSCHAFT, und die verdeckt die gleichnamige
+            ''' LINQ-Erweiterung. Der Uebersetzer meldet dann, der Rueckgabetyp lasse sich nicht
+            ''' indizieren - eine Meldung, die von der Ursache wegfuehrt.</remarks>
+            Public ReadOnly Property PresentCount As Integer
+                Get
+                    Return Files.Where(Function(d) Not String.IsNullOrEmpty(AiModelService.BestFile(d.Key))).Count()
+                End Get
+            End Property
+
             ''' <summary>Läuft mindestens eine Datei in einer AELTEREN Fassung? Dann gibt es etwas
             ''' zu aktualisieren - und bis dahin arbeitet alles weiter.</summary>
             Public ReadOnly Property IsUpdatable As Boolean
@@ -2971,9 +2987,15 @@ Namespace ViewModels
             Public ReadOnly Property StatusText As String
                 Get
                     If _running Then Return LocalizationService.T("Wird geladen…")
-                    If Not String.IsNullOrEmpty(_meldung) Then Return _meldung
+                    If Not String.IsNullOrEmpty(_message) Then Return _message
                     If IsUpdatable Then Return LocalizationService.T("Eine neuere Fassung liegt bereit")
                     If IsComplete Then Return LocalizationService.T("Vorhanden")
+                    ' Ein Teilstand ist eine eigene Auskunft. Bei einer Gruppe aus lauter
+                    ' Wahlmoeglichkeiten (Hochskalieren) ist er sogar der Normalfall.
+                    Dim present = PresentCount
+                    If present > 0 Then
+                        Return String.Format(LocalizationService.T("{0} von {1} vorhanden"), present, Files.Count)
+                    End If
                     Return LocalizationService.T("Nicht vorhanden")
                 End Get
             End Property
@@ -3013,10 +3035,10 @@ Namespace ViewModels
 
             Public Property Message As String
                 Get
-                    Return _meldung
+                    Return _message
                 End Get
                 Set(value As String)
-                    Me.RaiseAndSetIfChanged(_meldung, value)
+                    Me.RaiseAndSetIfChanged(_message, value)
                     Me.RaisePropertyChanged(NameOf(StatusText))
                 End Set
             End Property
@@ -3066,15 +3088,9 @@ Namespace ViewModels
                     Case "Orte"
                         description = LocalizationService.T("Ortsnamen zu den Koordinaten im Bild, ohne Abfrage im Netz")
                     Case "Entrauschen"
-                        description = LocalizationService.T("Rauschen aus hohen ISO-Werten entfernen, mit erhaltener Feinstruktur")
-                    Case "Entrauschen schnell"
-                        description = LocalizationService.T("Derselbe Zweck in einem Sechstel der Zeit, dafür etwas glatter")
+                        description = LocalizationService.T("Rauschen aus hohen ISO-Werten entfernen, mit erhaltener Feinstruktur. Zwei Wege: gründlich und zügig.")
                     Case "Hochskalieren"
-                        description = LocalizationService.T("Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte")
-                    Case "Hochskalieren schnell"
-                        description = LocalizationService.T("Derselbe Zweck in einem Sechzehntel der Zeit - die Wahl ohne Grafikkarte")
-                    Case "Hochskalieren Zeichnung"
-                        description = LocalizationService.T("Für Gezeichnetes statt Fotografiertes: glatte Flächen, scharfe Linien")
+                        description = LocalizationService.T("Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte. Acht Modelle für Fotos, Aufnahmen aus dem Netz und Zeichnungen.")
                     Case Else
                         description = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
                 End Select
@@ -3085,10 +3101,7 @@ Namespace ViewModels
                     Case "Personen" : anzeigeName = LocalizationService.T("Personen")
                     Case "Orte" : anzeigeName = LocalizationService.T("Orte")
                     Case "Entrauschen" : anzeigeName = LocalizationService.T("Entrauschen")
-                    Case "Entrauschen schnell" : anzeigeName = LocalizationService.T("Entrauschen schnell")
                     Case "Hochskalieren" : anzeigeName = LocalizationService.T("Hochskalieren")
-                    Case "Hochskalieren schnell" : anzeigeName = LocalizationService.T("Hochskalieren schnell")
-                    Case "Hochskalieren Zeichnung" : anzeigeName = LocalizationService.T("Hochskalieren Zeichnung")
                     Case "Objektauswahl" : anzeigeName = LocalizationService.T("Objektauswahl")
                     Case Else : anzeigeName = name
                 End Select

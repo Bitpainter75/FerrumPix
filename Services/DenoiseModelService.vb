@@ -191,7 +191,7 @@ Namespace Services
                 Dim stride = Math.Max(1, TileEdge - 2 * TileOverlap)
                 Dim tileCount = ((tiledSource.Width + stride - 1) \ stride) * ((tiledSource.Height + stride - 1) \ stride)
                 Dim name = session.InputMetadata.Keys.First()
-                Dim uhr = Diagnostics.Stopwatch.StartNew()
+                Dim clock = Diagnostics.Stopwatch.StartNew()
                 Dim done = 0
 
                 Dim y = 0
@@ -237,26 +237,26 @@ Namespace Services
                 ' Vom paddeden Ergebnis bleibt nur der Bereich des echten Bildes; die gespiegelten
                 ' Raender waren Anlauf fuer das Modell und haben in der Ausgabe nichts zu suchen.
                 If padded IsNot Nothing Then
-                    Dim eng = New SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType)
-                    Using canvas = New SKCanvas(eng)
+                    Dim cropped = New SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType)
+                    Using canvas = New SKCanvas(cropped)
                         Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
                             canvas.DrawBitmap(result, 0, 0, paint)
                         End Using
                     End Using
                     result.Dispose()
-                    result = eng
+                    result = cropped
                 End If
 
-                uhr.Stop()
+                clock.Stop()
                 ' Welches Modell gerechnet hat, gehoert in den Bericht: bei zwei Wegen ist die Frage
                 ' "warum sieht das anders aus als beim letzten Mal" sonst nicht zu beantworten.
                 LastReport = $"Bild {image.Width}x{image.Height}, {done} Kacheln, " &
-                             $"{uhr.Elapsed.TotalSeconds:F0} s, Stärke {amount * 100:F0} %, " &
+                             $"{clock.Elapsed.TotalSeconds:F0} s, Stärke {amount * 100:F0} %, " &
                              $"{KindName(kind)}"
                 DiagnosticLogService.LogAlways("Entrauschen", LastReport)
-                Dim fertig = result
+                Dim finished = result
                 result = Nothing
-                Return fertig
+                Return finished
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Entrauschen", ex.Message)
                 result?.Dispose()
@@ -279,10 +279,10 @@ Namespace Services
             ' der Unterschied zwischen Sekunden und Minuten allein fuer das Einlesen.
             Dim srcStride = source.RowBytes
             Dim row(srcStride - 1) As Byte
-            Dim basis = source.GetPixels()
+            Dim srcPixels = source.GetPixels()
             For yy = 0 To h - 1
                 Runtime.InteropServices.Marshal.Copy(
-                    IntPtr.Add(basis, (window.Top + yy) * srcStride), row, 0, srcStride)
+                    IntPtr.Add(srcPixels, (window.Top + yy) * srcStride), row, 0, srcStride)
                 Dim line = yy * w
                 For xx = 0 To w - 1
                     Dim p = (window.Left + xx) * 4
@@ -307,6 +307,7 @@ Namespace Services
                 Dim dstStride = target.RowBytes
                 Dim targetPixels = target.GetPixels()
                 Dim targetRow(dstStride - 1) As Byte
+                Dim premultiplied = target.AlphaType = SKAlphaType.Premul
                 For yy = keep.Top To keep.Bottom - 1
                     Runtime.InteropServices.Marshal.Copy(
                         IntPtr.Add(targetPixels, yy * dstStride), targetRow, 0, dstStride)
@@ -341,6 +342,17 @@ Namespace Services
                         targetRow(p) = ToByte(newBlue + shift)
                         targetRow(p + 1) = ToByte(newGreen + shift)
                         targetRow(p + 2) = ToByte(newRed + shift)
+                        ' VORMULTIPLIZIERT heisst: kein Kanal darf ueber der Deckung liegen. Das
+                        ' Modell weiss davon nichts - es bekommt an einem halbdurchsichtigen Rand
+                        ' die bereits gedaempften Werte und kann sie anheben. Ein Bildpunkt mit mehr
+                        ' Farbe als Deckung bricht die Zusage des Formats, und was daraus wird,
+                        ' haengt dann am Zeichenweg. Der Alphakanal selbst bleibt unangetastet.
+                        If premultiplied Then
+                            Dim alpha = targetRow(p + 3)
+                            If targetRow(p) > alpha Then targetRow(p) = alpha
+                            If targetRow(p + 1) > alpha Then targetRow(p + 1) = alpha
+                            If targetRow(p + 2) > alpha Then targetRow(p + 2) = alpha
+                        End If
                     Next
                     Runtime.InteropServices.Marshal.Copy(targetRow, 0, IntPtr.Add(targetPixels, yy * dstStride), dstStride)
                 Next

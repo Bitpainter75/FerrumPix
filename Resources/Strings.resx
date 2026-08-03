@@ -6255,4 +6255,58 @@
   <data name="Auf_ber_84000_unbesch_digten_Fotos_trainiert_ohn_7a563d0c" xml:space="preserve">
     <value>Trained on over 84000 undamaged photos, without artificially degraded sources. It invents less than the others - for shots that are already good.</value>
   </data>
+  <data name="Gelernte_Modelle_13cf01bc" xml:space="preserve">
+    <value>Learned models</value>
+  </data>
+  <data name="Diese_Dateien_geh_ren_nicht_zur_Anwendung_und_we_ee5feb94" xml:space="preserve">
+    <value>These files are not part of the application and are fetched only when you ask for them in the Models section. Without them the matching features are missing; everything else works unchanged.</value>
+  </data>
+  <data name="Einige_Werkzeuge_brauchen_eine_Modelldatei_die_s_1b4a6355" xml:space="preserve">
+    <value>Some tools need a model file, which can be fetched here. What is not loaded does not appear in the editor either.</value>
+  </data>
+  <data name="Entrauschen_gr_ndlich_1bc59b56" xml:space="preserve">
+    <value>Denoising, thorough</value>
+  </data>
+  <data name="Entrauschen_z_gig_39eb7044" xml:space="preserve">
+    <value>Denoising, quick</value>
+  </data>
+  <data name="Hochskalieren_gr_ndlich_z_gig_und_f_r_Zeichnunge_bcb8b1b6" xml:space="preserve">
+    <value>Upscaling: thorough, quick and for drawings</value>
+  </data>
+  <data name="Modellsammlung_von_Philip_Hofmann_706dafc3" xml:space="preserve">
+    <value>Model collection by Philip Hofmann</value>
+  </data>
+  <data name="Hochskalieren_zur_ckhaltend_f_r_Aufnahmen_aus_de_7f09f1e7" xml:space="preserve">
+    <value>Upscaling: restrained, for pictures from the web, for drawings</value>
+  </data>
+  <data name="Ortsnamen_zu_Koordinaten_Tabelle_keine_Abfrage_i_26980837" xml:space="preserve">
+    <value>Place names for coordinates (a table, nothing looked up on the network)</value>
+  </data>
+  <data name="Die_Modelldateien_werden_ber_ein_eigenes_Verzeic_4116b19d" xml:space="preserve">
+    <value>The model files are fetched from a repository of their own, where they are collected together with their licence texts and provenance notes. After downloading, each file is checked to be bit for bit the expected one.</value>
+  </data>
+  <data name="0_von_1_vorhanden_fa1a9ff3" xml:space="preserve">
+    <value>{0} of {1} present</value>
+  </data>
+  <data name="Rauschen_aus_hohen_ISO_Werten_entfernen_mit_erha_a0dbe306" xml:space="preserve">
+    <value>Remove the noise of high ISO values while keeping fine detail. Two ways: thorough and quick.</value>
+  </data>
+  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_5876c311" xml:space="preserve">
+    <value>Enlarge a photo two or four times, with edges set anew instead of averaged pixels. Eight models for photos, pictures from the web and drawings.</value>
+  </data>
+  <data name="Objektauswahl_per_Klick_1c995329" xml:space="preserve">
+    <value>Selecting an object by clicking it</value>
+  </data>
+  <data name="Tiefenkarte_f_r_Maske_und_Unsch_rfe_c029077d" xml:space="preserve">
+    <value>Depth map for mask and blur</value>
+  </data>
+  <data name="Objekte_entfernen_9f9083c2" xml:space="preserve">
+    <value>Removing objects</value>
+  </data>
+  <data name="Gesichter_finden_0c4aff7d" xml:space="preserve">
+    <value>Finding faces</value>
+  </data>
+  <data name="Gesichter_vergleichen_e45484e4" xml:space="preserve">
+    <value>Comparing faces</value>
+  </data>
 </root>
