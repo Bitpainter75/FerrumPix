@@ -2258,6 +2258,13 @@ Namespace ViewModels
             End Get
             Set(value As LayerPanelRow)
                 If _suppressLayerRowSelectionSync OrElse Object.ReferenceEquals(value, _selectedLayerRow) Then Return
+                ' Der Zeilenwechsel stellt das Reglerziel um, und das baut die Objektliste neu auf -
+                ' waehrend die Liste noch mitten in ihrer Auswahlaenderung steht. Deshalb hier NICHT
+                ' aufbauen, sondern einmal danach (siehe ResumeLayerRowRebuild). Nebenbei bleiben so
+                ' die Zeilen gueltig, mit denen dieser Setter arbeitet - die uebergebene Zeile war
+                ' nach einem Aufbau mittendrin ein Ueberbleibsel, das es in der Liste nicht mehr gab.
+                SuspendLayerRowRebuild()
+                Try
                 Dim annotationIndex = If(value?.Annotation Is Nothing, -1, _annotations.IndexOf(value.Annotation))
                 Dim adjustmentId = If(value?.AdjustmentLayer Is Nothing, "", value.AdjustmentLayer.Id)
                 ' Das Merk-Flag gilt fuer GENAU DIESEN Wechsel: hier lesen und sofort abraeumen.
@@ -2409,6 +2416,9 @@ Namespace ViewModels
                     End If
                 End If
                 RefreshSelectionAdjustMode()
+                Finally
+                    ResumeLayerRowRebuild(deferToDispatcher:=True)
+                End Try
             End Set
         End Property
 
@@ -2578,12 +2588,30 @@ Namespace ViewModels
             _layerRowsSuspendDepth += 1
         End Sub
 
-        Private Sub ResumeLayerRowRebuild()
+        ''' <param name="deferToDispatcher">Fuer die Klammer um die AUSWAHLAENDERUNG der Liste. Dort
+        ''' darf der Zeilenstapel nicht angefasst werden: Avalonia verwirft eine Sammlung, die sich
+        ''' mitten in seiner Auswahlaenderung aendert ("Source collection was modified during
+        ''' selection update"). Die Ausnahme flog beim Leeren, also ganz am Anfang - die alten Zeilen
+        ''' waren weg, die neuen kamen nie an, und das Ebenenpanel blieb leer, bis irgendetwas einen
+        ''' sauberen Aufbau anstiess. Der Aufbau kommt deshalb erst, wenn die Liste mit sich fertig
+        ''' ist.</param>
+        Private Sub ResumeLayerRowRebuild(Optional deferToDispatcher As Boolean = False)
             If _layerRowsSuspendDepth > 0 Then _layerRowsSuspendDepth -= 1
             If _layerRowsSuspendDepth > 0 OrElse Not _layerRowsRebuildPending Then Return
             _layerRowsRebuildPending = False
-            RebuildLayerRows()
+            If Not deferToDispatcher Then
+                RebuildLayerRows()
+                Return
+            End If
+            ' Mehrere Zeilenwechsel kurz hintereinander brauchen trotzdem nur EINEN Aufbau.
+            If _layerRowsRebuildPosted Then Return
+            _layerRowsRebuildPosted = True
+            Dispatcher.UIThread.Post(Sub()
+                                         _layerRowsRebuildPosted = False
+                                         RebuildLayerRows()
+                                     End Sub, DispatcherPriority.Background)
         End Sub
+        Private _layerRowsRebuildPosted As Boolean
 
         Private Sub RebuildLayerRows()
             ' Waehrend einer Klammer nur vormerken - der Aufbau kommt einmal am Ende.
@@ -2602,6 +2630,7 @@ Namespace ViewModels
             ' dass der Menüpunkt nach dem Sperren plötzlich wieder "Ebene ..." hieß.
             Dim selectedGroupId = If(_selectedLayerRow IsNot Nothing AndAlso _selectedLayerRow.IsGroupHeader AndAlso
                                      _selectedLayerRow.Group IsNot Nothing, _selectedLayerRow.Group.Id, "")
+            Try
             _suppressLayerRowSelectionSync = True
             Try
                 _layerRows.Clear()
@@ -2680,6 +2709,13 @@ Namespace ViewModels
             rebuildWatch.Stop()
             DiagnosticLogService.LogAlways("Editor.LayerRows",
                                            $"neu aufgebaut zeilen={_layerRows.Count} ms={rebuildWatch.ElapsedMilliseconds}")
+            ' Ein Abbruch mittendrin laesst den Zeilenstapel GELEERT zurueck, und weil die Ausnahme
+            ' unterwegs verschluckt wird, stuerzt nichts ab: das Ebenenpanel steht einfach leer da.
+            ' Genau so trat der Fehler oben auf - ohne diese Zeile sucht man ihn wieder blind.
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.LayerRowsAbbruch", ex)
+                Throw
+            End Try
         End Sub
 
         ''' <summary>Die Miniaturen aller Zeilen nachziehen: Inhalt der Ebene und, wenn sie eine
