@@ -2092,6 +2092,38 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Nimmt Objekte über ihren INDEX in die Mehrfachauswahl auf, nachdem der Anker
+        ''' gesetzt wurde. Der Anker selbst und schon Enthaltene bleiben aussen vor.
+        '''
+        ''' WARUM ÜBER DEN INDEX UND NICHT ÜBER DAS OBJEKT: das Setzen des Ankers kann die
+        ''' Objektliste NEU AUFBAUEN. In den Anpassungswerkzeugen stellt der Setter über
+        ''' RefreshObjectAdjustMode das Reglerziel um, und das läuft durch ApplyAdjustments - danach
+        ''' stehen in _annotations KLONE. Ein vorher gemerkter Objektverweis zeigt dann auf eine
+        ''' Instanz, die nicht mehr in der Liste steht; SelectedAnnotations filtert sie heraus, und
+        ''' von einem aufgezogenen Auswahlrahmen blieb genau ein Objekt markiert. Reihenfolge und
+        ''' Anzahl der Liste bleiben beim Neuaufbau erhalten, der Index stimmt also weiter.</summary>
+        Private Sub AddExtraSelectedAnnotationsByIndex(indices As IEnumerable(Of Integer))
+            If indices Is Nothing Then Return
+            For Each i In indices
+                If i < 0 OrElse i >= _annotations.Count OrElse i = _selectedAnnotationIndex Then Continue For
+                Dim a = _annotations(i)
+                If a Is Nothing OrElse _extraSelectedAnnotations.Contains(a) Then Continue For
+                _extraSelectedAnnotations.Add(a)
+            Next
+        End Sub
+
+        ''' <summary>Die Indizes der übergebenen Objekte in der aktuellen Liste - zu bilden, BEVOR
+        ''' der Anker gesetzt wird (siehe AddExtraSelectedAnnotationsByIndex).</summary>
+        Private Function IndicesOfAnnotations(items As IEnumerable(Of ImageAnnotation)) As List(Of Integer)
+            Dim result As New List(Of Integer)()
+            If items Is Nothing Then Return result
+            For Each a In items
+                Dim i = _annotations.IndexOf(a)
+                If i >= 0 AndAlso Not result.Contains(i) Then result.Add(i)
+            Next
+            Return result
+        End Function
+
         ''' <summary>Indizes der markierten Objekte in Z-Reihenfolge (aufsteigend).</summary>
         Public Function SelectedAnnotationIndices() As List(Of Integer)
             Dim result = SelectedAnnotations.Select(Function(a) _annotations.IndexOf(a)).
@@ -2172,6 +2204,12 @@ Namespace ViewModels
 
         Private Sub RaiseMultiSelectionChanged()
             RefreshLayerRowSelectionMarks()
+            ' Die Zielmenge einer laufenden Objekt-Anpassung mitführen, solange die Auswahl noch
+            ' steht: beim Zurückschreiben ist sie bereits abgeräumt (siehe ObjectAdjustTargetIndices).
+            If IsObjectAdjustModeActive() AndAlso HasMultiAnnotationSelection Then
+                Dim indices = SelectedAnnotationIndices()
+                If indices.Contains(_objectAdjustIndex) Then _objectAdjustTargets = indices
+            End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationCount))
             Me.RaisePropertyChanged(NameOf(HasMultiAnnotationSelection))
             Me.RaisePropertyChanged(NameOf(CanGroupSelectedAnnotations))
@@ -2281,18 +2319,16 @@ Namespace ViewModels
             End If
             Dim hit = _annotations(index)
             Dim members = AnnotationsInGroup(hit.GroupId)
+            Dim memberIndices = IndicesOfAnnotations(members)
+            Dim groupId = hit.GroupId
             SelectedAnnotationIndex = index          ' setzt die Menge auf den Anker zurück
-            If members.Count > 1 Then
-                For Each m In members
-                    If Not Object.ReferenceEquals(m, hit) Then _extraSelectedAnnotations.Add(m)
-                Next
-            End If
+            If members.Count > 1 Then AddExtraSelectedAnnotationsByIndex(memberIndices)
             ' Korrekturebenen der Gruppe gehören dazu - sonst blieben sie beim Transformieren der
             ' Gruppe an Ort und Größe stehen (sie sind ja für eines dieser Objekte gemacht).
-            If Not String.IsNullOrEmpty(hit.GroupId) Then
+            If Not String.IsNullOrEmpty(groupId) Then
                 _extraSelectedAdjustmentLayers.Clear()
                 Dim layerMembers = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso
-                                                                  String.Equals(l.GroupId, hit.GroupId, StringComparison.Ordinal)).ToList()
+                                                                  String.Equals(l.GroupId, groupId, StringComparison.Ordinal)).ToList()
                 If layerMembers.Count > 0 Then
                     _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
                     For Each l In layerMembers
@@ -2322,21 +2358,22 @@ Namespace ViewModels
                     ' Der Anker fliegt raus: ein anderes markiertes Objekt übernimmt.
                     Dim nextAnchor = _extraSelectedAnnotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso _annotations.Contains(a))
                     _extraSelectedAnnotations.Remove(nextAnchor)
-                    Dim remainder = _extraSelectedAnnotations.ToList()
-                    SelectedAnnotationIndex = _annotations.IndexOf(nextAnchor)
-                    _extraSelectedAnnotations.AddRange(remainder)
+                    ' Indizes VOR dem Setzen des Ankers (siehe AddExtraSelectedAnnotationsByIndex).
+                    Dim remainderIndices = IndicesOfAnnotations(_extraSelectedAnnotations)
+                    Dim nextAnchorIndex = _annotations.IndexOf(nextAnchor)
+                    SelectedAnnotationIndex = nextAnchorIndex
+                    AddExtraSelectedAnnotationsByIndex(remainderIndices)
                 Else
                     _extraSelectedAnnotations.Remove(target)
                 End If
             Else
-                Dim remainder = _extraSelectedAnnotations.ToList()
-                Dim previousAnchor = If(_selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count,
-                                        _annotations(_selectedAnnotationIndex), Nothing)
-                SelectedAnnotationIndex = index
-                _extraSelectedAnnotations.AddRange(remainder)
-                If previousAnchor IsNot Nothing AndAlso Not Object.ReferenceEquals(previousAnchor, target) Then
-                    _extraSelectedAnnotations.Add(previousAnchor)
+                Dim remainderIndices = IndicesOfAnnotations(_extraSelectedAnnotations)
+                If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count AndAlso
+                   _selectedAnnotationIndex <> index AndAlso Not remainderIndices.Contains(_selectedAnnotationIndex) Then
+                    remainderIndices.Add(_selectedAnnotationIndex)
                 End If
+                SelectedAnnotationIndex = index
+                AddExtraSelectedAnnotationsByIndex(remainderIndices)
             End If
             RaiseMultiSelectionChanged()
             RequestOverlayStateNotify()
@@ -2389,10 +2426,15 @@ Namespace ViewModels
                 SelectedAnnotationIndex = -1
                 Return
             End If
-            SelectedAnnotationIndex = _annotations.IndexOf(hits(hits.Count - 1))
-            For Each a In hits
-                If Not Object.ReferenceEquals(a, _annotations(_selectedAnnotationIndex)) Then _extraSelectedAnnotations.Add(a)
-            Next
+            ' Erst die Indizes, dann den Anker setzen: das Setzen kann die Objektliste durch Klone
+            ' ersetzen (siehe AddExtraSelectedAnnotationsByIndex).
+            Dim hitIndices = IndicesOfAnnotations(hits)
+            If hitIndices.Count = 0 Then
+                SelectedAnnotationIndex = -1
+                Return
+            End If
+            SelectedAnnotationIndex = hitIndices(hitIndices.Count - 1)
+            AddExtraSelectedAnnotationsByIndex(hitIndices)
             RaiseMultiSelectionChanged()
             RequestOverlayStateNotify()
         End Sub
@@ -2447,10 +2489,9 @@ Namespace ViewModels
                 _annotations.Add(copy)
                 copies.Add(copy)
             Next
-            SelectedAnnotationIndex = _annotations.IndexOf(copies(copies.Count - 1))
-            For Each c In copies
-                If Not Object.ReferenceEquals(c, _annotations(_selectedAnnotationIndex)) Then _extraSelectedAnnotations.Add(c)
-            Next
+            Dim copyIndices = IndicesOfAnnotations(copies)
+            SelectedAnnotationIndex = copyIndices(copyIndices.Count - 1)
+            AddExtraSelectedAnnotationsByIndex(copyIndices)
             RebuildLayerRows()
             RaiseMultiSelectionChanged()
             RaiseResetButtonStateChanged()
@@ -15119,6 +15160,7 @@ Namespace ViewModels
                         ' das Bild (dessen Werte stehen bereits in den Feldern).
                         _imagePixelAdjustments = Nothing
                         _objectAdjustIndex = -1
+                        _objectAdjustTargets.Clear()
                     Else
                         _imagePixelAdjustments = adj.ExtractPixelAdjustments()
                         Dim objectAdj = _annotations(_objectAdjustIndex).Adjustments
@@ -15314,6 +15356,7 @@ Namespace ViewModels
             ' Geparkte Objekt-/Auswahl-Anpassungszustaende (CommitObjectAdjustModeToModel wuerde
             ' sonst die geparkten Werte von A in B zurueckschreiben).
             _objectAdjustIndex = -1
+            _objectAdjustTargets.Clear()
             _imagePixelAdjustments = Nothing
             _selectionAdjustLayerId = ""
             _selectionImagePixelAdjustments = Nothing
@@ -17610,6 +17653,7 @@ Namespace ViewModels
                 restored.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
                 _imagePixelAdjustments = Nothing
                 _objectAdjustIndex = -1
+                _objectAdjustTargets.Clear()
                 ApplyAdjustmentsKeepingSelection(restored, keepIndex)
             Finally
                 _objectAdjustSwapInProgress = False
@@ -17619,14 +17663,30 @@ Namespace ViewModels
 
         ''' <summary>Auf welche Objekte wirken die Regler im Objekt-Anpassungsmodus? Bei einer
         ''' Mehrfachauswahl auf ALLE markierten - das Panel beschreibt die Auswahl, nicht den Anker.
-        ''' Ohne Mehrfachauswahl bleibt es beim bisherigen Einzelziel.</summary>
+        ''' Ohne Mehrfachauswahl bleibt es beim bisherigen Einzelziel.
+        '''
+        ''' DIE AUSWAHL IST BEIM ZURÜCKSCHREIBEN SCHON WEG. Wer eine Mehrfachauswahl anpasst und
+        ''' danach ins Leere klickt oder ein anderes Objekt nimmt, hat im Moment des Rückschreibens
+        ''' nur noch den Anker markiert: der Setter von SelectedAnnotationIndex räumt die Menge ab,
+        ''' BEVOR er RefreshObjectAdjustMode ruft. Live aufgelöst bekämen dann nur der Anker die
+        ''' Werte und die übrigen Objekte gingen leer aus. Deshalb wird die zuletzt gültige Menge
+        ''' gemerkt und gilt weiter, solange die Anpassung desselben Ankers läuft.</summary>
         Private Function ObjectAdjustTargetIndices() As List(Of Integer)
             If HasMultiAnnotationSelection Then
                 Dim indices = SelectedAnnotationIndices()
-                If indices.Count > 0 Then Return indices
+                If indices.Count > 0 AndAlso indices.Contains(_objectAdjustIndex) Then
+                    _objectAdjustTargets = indices
+                    Return indices
+                End If
             End If
+            If _objectAdjustTargets.Contains(_objectAdjustIndex) Then Return _objectAdjustTargets.ToList()
             Return New List(Of Integer) From {_objectAdjustIndex}
         End Function
+
+        ''' <summary>Die zuletzt gültige Zielmenge der laufenden Objekt-Anpassung (siehe
+        ''' ObjectAdjustTargetIndices). Gilt nur, solange sie den aktuellen Anker enthält, und wird
+        ''' mit jedem Wechsel des Ankers verworfen.</summary>
+        Private _objectAdjustTargets As New List(Of Integer)()
 
         ''' <summary>Die Korrekturebenen, die die laufende Anpassung bekommen - bei einer Gruppe
         ''' bzw. Mehrfachauswahl alle, sonst die eine.
@@ -17825,18 +17885,27 @@ Namespace ViewModels
             _objectAdjustSwapInProgress = True
             Try
                 If IsObjectAdjustModeActive() Then
-                    ' Aktuelle Reglerwerte gehören dem bisherigen Objekt - dort hineinschreiben ...
+                    ' Aktuelle Reglerwerte gehören den bisherigen Objekten - dort hineinschreiben ...
+                    ' und zwar in ALLE der bisherigen Zielmenge, nicht nur in den Anker: sonst
+                    ' behielte von einer angepassten Mehrfachauswahl nur ein Objekt die Werte,
+                    ' sobald man abwählt oder ein anderes Objekt nimmt.
                     Dim objectValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
-                    If _objectAdjustIndex >= 0 AndAlso _objectAdjustIndex < _annotations.Count Then
-                        Dim updatedValues = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
-                        imageChanges = Not SameObjectAdjustments(_annotations(_objectAdjustIndex).Adjustments, updatedValues)
-                        _annotations(_objectAdjustIndex).Adjustments = updatedValues
-                    End If
+                    Dim updatedValues = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+                    For Each i In ObjectAdjustTargetIndices()
+                        If i < 0 OrElse i >= _annotations.Count Then Continue For
+                        If Not SameObjectAdjustments(_annotations(i).Adjustments, updatedValues) Then imageChanges = True
+                        ' Jedes Objekt bekommt eine EIGENE Kopie - ein gemeinsames Objekt zöge
+                        ' spätere Änderungen an einem von ihnen durch alle anderen mit.
+                        _annotations(i).Adjustments = If(updatedValues Is Nothing, Nothing, updatedValues.Clone())
+                    Next
                     ' ... und die geparkten Bildwerte zurück in die Regler.
                     Dim restored = BuildAdjustmentsFromFields()
                     restored.CopyPixelAdjustmentsFrom(_imagePixelAdjustments)
                     _imagePixelAdjustments = Nothing
                     _objectAdjustIndex = -1
+                    ' Die gemerkte Zielmenge gehörte zum eben abgeschlossenen Anker und ist damit
+                    ' verbraucht.
+                    _objectAdjustTargets.Clear()
                     ' Das Anwenden SETZT hier nur die Regler um. Es muss vollstaendig laufen - der
                     ' Versuch, es zu ueberspringen, kostete am 2026-08-04 die Anpassung des Objekts:
                     ' ohne das Zuruecksetzen der Regler auf die geparkten Bildwerte parkt der
@@ -17849,6 +17918,7 @@ Namespace ViewModels
                     ' Bildwerte parken, Objektwerte in die Regler.
                     _imagePixelAdjustments = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
                     _objectAdjustIndex = targetIndex
+                    _objectAdjustTargets.Clear()
                     Dim target = BuildAdjustmentsFromFields()
                     target.CopyPixelAdjustmentsFrom(If(_annotations(targetIndex).Adjustments, New ImageAdjustments()))
                     ApplyAdjustmentsKeepingSelection(target, targetIndex, scheduleRender:=False)

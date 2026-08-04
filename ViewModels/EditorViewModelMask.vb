@@ -2314,10 +2314,12 @@ Namespace ViewModels
                     ' Beim Ankerwechsel MUSS der bisherige Anker in die Zusatzliste - er ist Teil der
                     ' Auswahl und stünde sonst als einziger nicht mehr darin (nach
                     ' Umschalt+Klick verlor die zuerst markierte Ebene beim Rechtsklick ihre Markierung).
-                    Dim keptExtras = If(keepSet, _extraSelectedAnnotations.ToList(), New List(Of ImageAnnotation)())
-                    Dim previousAnchor As ImageAnnotation = Nothing
-                    If keepSet AndAlso _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
-                        previousAnchor = _annotations(_selectedAnnotationIndex)
+                    ' Gemerkt wird über den INDEX, nicht über das Objekt: das Setzen des Ankers kann
+                    ' die Objektliste durch Klone ersetzen (siehe AddExtraSelectedAnnotationsByIndex).
+                    Dim keptIndices = If(keepSet, IndicesOfAnnotations(_extraSelectedAnnotations), New List(Of Integer)())
+                    If keepSet AndAlso _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count AndAlso
+                       _selectedAnnotationIndex <> annotationIndex AndAlso Not keptIndices.Contains(_selectedAnnotationIndex) Then
+                        keptIndices.Add(_selectedAnnotationIndex)
                     End If
                     _selectedMaskedAdjustmentLayerId = ""
                     ' Auch die ZUSATZliste der Korrekturebenen raeumen: sonst blieben Mitglieder einer
@@ -2330,15 +2332,7 @@ Namespace ViewModels
                     End If
                     SelectedAnnotationIndex = annotationIndex
                     If keepSet Then
-                        Dim newAnchor = _annotations(annotationIndex)
-                        If previousAnchor IsNot Nothing AndAlso Not Object.ReferenceEquals(previousAnchor, newAnchor) Then
-                            keptExtras.Add(previousAnchor)
-                        End If
-                        For Each a In keptExtras
-                            If Not Object.ReferenceEquals(a, newAnchor) AndAlso Not _extraSelectedAnnotations.Contains(a) Then
-                                _extraSelectedAnnotations.Add(a)
-                            End If
-                        Next
+                        AddExtraSelectedAnnotationsByIndex(keptIndices)
                         RaiseMultiSelectionChanged()
                     End If
                     _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) Object.ReferenceEquals(r.Annotation, _annotations(annotationIndex)))

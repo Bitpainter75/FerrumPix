@@ -752,16 +752,25 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Die Region, die ein Objekt-Patch als Nächstes schreiben würde: die gesammelte
-        ''' Dirty-Region, sonst das Rechteck des markierten Objekts. Eine Stelle für beide Aufrufer,
-        ''' damit die Vollrender-Weiche über DIESELBE Region entscheidet, die danach gerendert wird.</summary>
+        ''' Dirty-Region, sonst die Rechtecke ALLER markierten Objekte. Eine Stelle für beide Aufrufer,
+        ''' damit die Vollrender-Weiche über DIESELBE Region entscheidet, die danach gerendert wird.
+        '''
+        ''' ALLE MARKIERTEN, nicht nur der Anker: die Regler der Anpassungswerkzeuge beschreiben die
+        ''' ganze Auswahl. Mit dem Rechteck des Ankers allein wurde nur ein Objekt neu gezeichnet, und
+        ''' die übrigen sprangen erst beim nächsten Vollrender nach - also beim Abwählen.</summary>
         Private Function CandidateAnnotationDirtyRect() As SKRectI
             If Not _annotationDirtyRect.IsEmpty Then Return _annotationDirtyRect
             If GetPreviewSource() Is Nothing Then Return SKRectI.Empty
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return SKRectI.Empty
             Dim size = GetCurrentScenePixelSize()
             If size.Width <= 0 OrElse size.Height <= 0 Then Return SKRectI.Empty
-            Return ImageProcessor.ComputeAnnotationDirtyRect(size.Width, size.Height, _annotations(_selectedAnnotationIndex),
-                                                             GetCurrentAdjustments(forPreview:=True))
+            Dim adj = GetCurrentAdjustments(forPreview:=True)
+            Dim rect = SKRectI.Empty
+            For Each a In SelectedAnnotations
+                If a Is Nothing Then Continue For
+                rect = ImageProcessor.UnionRects(rect, ImageProcessor.ComputeAnnotationDirtyRect(size.Width, size.Height, a, adj))
+            Next
+            Return rect
         End Function
 
         Private Function TryRenderAnnotationPatchSync() As Boolean
