@@ -2624,7 +2624,11 @@ Namespace Views
                 If releaseCanvas IsNot Nothing AndAlso releaseVm IsNot Nothing Then
                     Dim moved = e.GetPosition(releaseCanvas) - maskOutsideStart.Value
                     If Math.Abs(moved.X) <= 3 AndAlso Math.Abs(moved.Y) <= 3 Then
-                        releaseVm.DeselectCurrentTarget()
+                        ' DeselectCurrentTarget allein nahm nur die EBENE aus der Markierung; die
+                        ' bearbeitete Maske samt rotem Overlay blieb stehen.
+                        releaseVm.DeselectMaskTarget()
+                        UpdateSelectionOverlayVisibility()
+                        UpdateSliderLayout()
                     End If
                 End If
             End If

@@ -33,13 +33,14 @@ Namespace ViewModels
             End If
 
             ' Der ERSTE Bestandteil setzt das Ergebnis - sein Modus stünde da und hieße nichts.
-            If index = 0 OrElse component Is Nothing Then
-                ModeLabel = ""
-            Else
+            ' HINZUFÜGEN bleibt ebenfalls leer: es ist der Normalfall, und ein Pluszeichen vor jeder
+            ' Zeile sagt nichts, kostet aber die Spalte, um die alle Einträge eingerückt stünden.
+            ' Sichtbar bleibt nur, was VOM Normalfall abweicht - Abziehen und Schneiden.
+            ModeLabel = ""
+            If index > 0 AndAlso component IsNot Nothing Then
                 Select Case If(component.Mode, "").Trim().ToLowerInvariant()
                     Case "subtract" : ModeLabel = "-"
                     Case "intersect" : ModeLabel = "×"
-                    Case Else : ModeLabel = "+"
                 End Select
             End If
         End Sub

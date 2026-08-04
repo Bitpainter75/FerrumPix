@@ -1327,6 +1327,32 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasDeselectableTarget))
         End Sub
 
+        ''' <summary>Alles abwaehlen, was im Masken-Werkzeug markiert sein kann - fuer den Klick
+        ''' NEBEN das Bild.
+        '''
+        ''' <see cref="DeselectCurrentTarget"/> allein reicht dort nicht: es nimmt die Ebene aus der
+        ''' Markierung, laesst die bearbeitete Ebenenmaske samt rotem Overlay aber stehen. Sichtbar
+        ''' blieb dann eine rot gefaerbte Maske ohne Ziel - genau das, was ein Klick ins Leere
+        ''' aufloesen soll. Eine noch nicht uebernommene Auswahl faellt hier bewusst MIT: im
+        ''' Masken-Werkzeug ist sie die Maske, die man gerade sieht.</summary>
+        Public Sub DeselectMaskTarget()
+            Dim hadTarget = _editingLayerMaskId <> "" OrElse _hasActiveSelection OrElse
+                            _workingMaskId <> "" OrElse HasDeselectableTarget
+            If Not hadTarget Then Return
+            _editingLayerMaskId = ""
+            _workingMaskId = ""
+            _activeMaskComponentIndex = -1
+            _gradientDragMaskId = ""
+            _gradientDragActive = False
+            _gradientHandle = -1
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+            SetActiveSelectionIsMask(False)
+            DeselectCurrentTarget()
+            RaiseMaskComponentsChanged()
+            RaiseGradientPropertiesChanged()
+            PublishMaskBrushOverlay()
+        End Sub
+
         Public ReadOnly Property HasSelectedAdjustmentLayer As Boolean
             Get
                 Return _selectedLayerRow?.AdjustmentLayer IsNot Nothing
@@ -13351,6 +13377,13 @@ Namespace ViewModels
             ' Die Maske wird NICHT auf das Bild geklemmt: sie darf teilweise hinausragen, und wer
             ' sie wieder hereinzieht, findet sie unveraendert vor. Ein Klemmen haette sie beim
             ' Herausschieben beschnitten und beim Zurueckziehen waere sie kuerzer gewesen.
+            '
+            ' DAS GILT NUR FUER DIE FREIE AUSWAHL. Gehoert die Maske einer EBENE, schreibt
+            ' EndMaskMove sie in den Quellraum zurueck, und der reicht nur ueber das Bild - der
+            ' hinausgeschobene Teil ist danach weg (gemessen 2026-08-04: 0..400 wird zu 0..40).
+            ' Warum das so ist und was es kostet, das zu aendern, steht in
+            ' Audits/OFFENE_PUNKTE.md unter "Eine EBENENMASKE laesst sich nicht aus dem Bild
+            ' schieben".
             InvalidateSelectionLayerLink()
             SetSelectionBoundsFromPixels(neu)
             SetSelectionMaskData(_selectionMask.Copy(), neu)
