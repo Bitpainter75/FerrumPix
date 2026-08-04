@@ -12116,14 +12116,28 @@ Namespace ViewModels
             _workingMaskId = ""
             _activeMaskComponentIndex = -1
             InvalidateSelectionLayerLink()
-            If String.IsNullOrEmpty(maskId) Then Return
+            If String.IsNullOrEmpty(maskId) Then
+                RaiseMaskComponentsChanged()
+                Return
+            End If
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = maskId)
-            If mask Is Nothing Then Return
+            If mask Is Nothing Then
+                RaiseMaskComponentsChanged()
+                Return
+            End If
             ' Ein Verlauf ist gerechnet, nicht gemalt: er wird NICHT in die Auswahlmaske geladen (das
             ' machte aus zwei Punkten ein PNG und nahm ihm die Aenderbarkeit). Eine noch laufende
             ' Pixelauswahl muss trotzdem weg, sonst laegen zwei Masken gleichzeitig auf dem Bild.
             If mask.IsGradient Then
                 If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                ' Sie ist trotzdem die BEARBEITETE Maske. Vorher stieg der Weg hier ohne alles aus:
+                ' ohne Vermerk, ohne Rot, ohne Bestandteile - beim zweiten Oeffnen derselben
+                ' Ebenenmaske sah man deshalb gar nichts mehr. Woran das Rot haengt, ist bei einer
+                ' verlaufsbasierten Maske die Deckung des Verlaufs und nicht die Auswahlmaske.
+                _editingLayerMaskId = mask.Id
+                SetActiveSelectionIsMask(showAsMask)
+                RaiseGradientPropertiesChanged()
+                If showAsMask Then PublishGradientOverlay(mask)
                 Return
             End If
             Dim adj = BuildAdjustmentsFromFields()
@@ -12146,6 +12160,10 @@ Namespace ViewModels
             ' Masken-Ebene zur nächsten (beide True) bliebe sonst das ROT DER VORIGEN Maske stehen - es sähe
             ' aus, als färbe die neue Maske fremde Bereiche/Ebenen rot. Deshalb hier immer neu aufbauen.
             If showAsMask Then PublishSelectionRedOverlay()
+            ' Und die Liste der Bestandteile gehoert ZU DIESER Maske. Sie wurde bisher nur von den
+            ' Verlaufs- und Bestandteilwegen neu gebaut; wer eine Ebenenmaske einfach wieder oeffnete,
+            ' sah die Liste des letzten Aufbaus - oder gar keine.
+            RaiseMaskComponentsChanged()
         End Sub
 
         ''' <summary>Schreibt die aktuelle _selectionMask (harte Form) in die bearbeitete Ebenen-Maske
