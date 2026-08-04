@@ -1253,38 +1253,7 @@ Namespace ViewModels
                 ' gewählt -> gar keine Bild-Auswahl. Funktioniert in JEDEM Werkzeug (nicht nur Anpassen).
                 If Not String.IsNullOrWhiteSpace(adjustmentId) Then
                     Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
-                    If picked IsNot Nothing Then
-                        LoadLayerMaskIntoSelection(picked)
-                        ' Eine Korrektur lebt von ihrer Maske - wer sie im Panel anklickt, will an genau
-                        ' die heran. Das Werkzeug wechselt deshalb auf AUSWAHL, damit Rechteck, Lasso,
-                        ' Zauberstab und Masken-Pinsel sofort greifen. Bei
-                        ' Mehrfachauswahl bleibt das Werkzeug, wie es ist - dort geht es um die Menge,
-                        ' nicht um eine bestimmte Maske.
-                        ' Eine Verlaufsmaske hat weder Ameisen noch malbare Form - fuer sie ist das
-                        ' MASKEN-Werkzeug zustaendig, das ihre Griffe und Regler zeigt.
-                        '
-                        ' Eine MASKEN-Ebene (gemalt oder aus der Objektauswahl) gehoert ebenfalls
-                        ' dorthin: sie zeigt rotes Overlay, keine Laufameisen, und bearbeitet wird
-                        ' sie mit dem Maskenpinsel. Sie ins Auswahl-Werkzeug zu schicken war falsch -
-                        ' dort steht die Bedienung fuer etwas, das sie nicht ist.
-                        '
-                        ' Nur eine echte AUSWAHL-Ebene fuehrt ins Auswahl-Werkzeug.
-                        Dim istVerlauf = _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId AndAlso m.IsGradient)
-                        Dim istMaskenEbene = istVerlauf OrElse picked.IsMaskLayer
-                        Dim layerTool = If(istMaskenEbene, EditorTool.Mask, EditorTool.Selection)
-                        If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> layerTool Then
-                            CurrentTool = layerTool
-                        End If
-                        ' Eine gemalte Maskenebene wird mit dem PINSEL bearbeitet - der Verlaufsmodus
-                        ' zoege beim ersten Zug einen neuen Verlauf auf, statt sie nachzubessern.
-                        If istMaskenEbene AndAlso Not istVerlauf Then MaskMode = "Brush"
-                        If istVerlauf Then
-                            Dim verlauf = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId)
-                            MaskMode = If(verlauf IsNot Nothing AndAlso verlauf.IsRadialGradient, "Radial", "Linear")
-                            PublishGradientOverlay(verlauf)
-                            RaiseGradientPropertiesChanged()
-                        End If
-                    End If
+                    If picked IsNot Nothing Then ApplyAdjustmentLayerPresentation(picked)
                 Else
                     ' Kein Ebenen-Ziel mehr (Objekt oder nichts gewaehlt). Eine laufende Pixelauswahl
                     ' raeumt ClearSelection ab - ein VERLAUF hat aber gar keine aktive Auswahl, sein
@@ -1297,6 +1266,63 @@ Namespace ViewModels
                 RefreshSelectionAdjustMode()
             End Set
         End Property
+
+        ''' <summary>Der Anzeigezustand EINER Korrekturebene: ihre Maske in die Auswahl laden, das
+        ''' zustaendige Werkzeug samt Maskenmodus setzen und rotes Overlay bzw. Laufameisen zeigen.
+        '''
+        ''' Eine Korrektur lebt von ihrer Maske - wer sie im Panel anklickt, will an genau die heran.
+        ''' Eine Verlaufsmaske hat weder Ameisen noch malbare Form, fuer sie ist das MASKEN-Werkzeug
+        ''' zustaendig (Griffe und Regler). Eine MASKEN-Ebene (gemalt oder aus der Objektauswahl)
+        ''' gehoert ebenfalls dorthin: sie zeigt rotes Overlay und wird mit dem Maskenpinsel
+        ''' bearbeitet. Nur eine echte AUSWAHL-Ebene fuehrt ins Auswahl-Werkzeug. Bei Mehrfachauswahl
+        ''' bleibt das Werkzeug, wie es ist - dort geht es um die Menge, nicht um eine Maske.
+        '''
+        ''' Steht als EIGENE Methode da, weil derselbe Zustand auch OHNE Zeilenwechsel gebraucht
+        ''' wird - siehe <see cref="ReapplySelectedLayerPresentation"/>.</summary>
+        Private Sub ApplyAdjustmentLayerPresentation(picked As MaskedAdjustmentLayer)
+            If picked Is Nothing Then Return
+            LoadLayerMaskIntoSelection(picked)
+            Dim isGradient = _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId AndAlso m.IsGradient)
+            Dim isMaskLayer = isGradient OrElse picked.IsMaskLayer
+            Dim layerTool = If(isMaskLayer, EditorTool.Mask, EditorTool.Selection)
+            If SelectedAdjustmentLayers.Count <= 1 AndAlso _currentTool <> layerTool Then
+                CurrentTool = layerTool
+            End If
+            ' Eine gemalte Maskenebene wird mit dem PINSEL bearbeitet - der Verlaufsmodus
+            ' zoege beim ersten Zug einen neuen Verlauf auf, statt sie nachzubessern.
+            If isMaskLayer AndAlso Not isGradient Then MaskMode = "Brush"
+            If isGradient Then
+                Dim gradient = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = picked.MaskId)
+                MaskMode = If(gradient IsNot Nothing AndAlso gradient.IsRadialGradient, "Radial", "Linear")
+                PublishGradientOverlay(gradient)
+                RaiseGradientPropertiesChanged()
+            End If
+        End Sub
+
+        ''' <summary>Dieselbe Ebene noch einmal anwaehlen: den Anzeigezustand neu herstellen.
+        '''
+        ''' Ein Klick auf die BEREITS markierte Zeile meldet der Liste keinen Wechsel, der Setter
+        ''' oben laeuft also nie - und genau dann ist das rote Overlay oft mit Absicht ausgeblendet:
+        ''' nach dem ersten Reglerdreh in einem Anpassungswerkzeug und in jedem Werkzeug, das es
+        ''' verdeckt. Es gab bis dahin keine Geste, die es zurueckholt; ein Umweg ueber eine andere
+        ''' Zeile und zurueck war die einzige Moeglichkeit.
+        '''
+        ''' Der angefasste BESTANDTEIL bleibt dabei angefasst - das Laden setzt ihn sonst auf den
+        ''' zuletzt hinzugefuegten zurueck, und die Regler sprangen bei einem Klick auf eine Zeile,
+        ''' die schon markiert ist, auf einen anderen Verlauf.</summary>
+        Public Sub ReapplySelectedLayerPresentation()
+            Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
+                                                                    l.Id = _selectedMaskedAdjustmentLayerId)
+            If picked Is Nothing Then Return
+            Dim activeComponent = _activeMaskComponentIndex
+            Dim previousMaskId = _editingLayerMaskId
+            ApplyAdjustmentLayerPresentation(picked)
+            If activeComponent >= 0 AndAlso String.Equals(previousMaskId, _editingLayerMaskId, StringComparison.Ordinal) Then
+                _activeMaskComponentIndex = activeComponent
+                RaiseMaskComponentsChanged()
+            End If
+            RefreshSelectionAdjustMode()
+        End Sub
 
         Public ReadOnly Property HasSelectedPanelLayer As Boolean
             Get

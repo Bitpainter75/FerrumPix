@@ -370,6 +370,16 @@ Namespace Views
                     Return
                 End If
             End If
+            ' Ein Klick auf die BEREITS markierte Zeile meldet der Liste keinen Wechsel, der Setter
+            ' von SelectedLayerRow laeuft also nie. Genau dann fehlte das rote Overlay: es wird nach
+            ' dem ersten Reglerdreh und in jedem verdeckenden Werkzeug mit Absicht ausgeblendet, und
+            ' es gab keine Geste, die es zurueckholt - nur der Umweg ueber eine andere Zeile.
+            If Not mehrfach AndAlso row IsNot Nothing AndAlso row.AdjustmentLayer IsNot Nothing Then
+                Dim vmSame = TryCast(DataContext, EditorViewModel)
+                If vmSame IsNot Nothing AndAlso Object.ReferenceEquals(row, vmSame.SelectedLayerRow) Then
+                    vmSame.ReapplySelectedLayerPresentation()
+                End If
+            End If
             _dragCandidate = row
             _dragStartPoint = e.GetPosition(Me)
             _dragPressArgs = e
