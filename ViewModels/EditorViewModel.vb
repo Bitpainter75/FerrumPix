@@ -10948,13 +10948,28 @@ Namespace ViewModels
                             ImageProcessor.ApplyMaskBrushStroke(gradient, stroke, _selectionCombineMode = "Subtract")
                         End If
                     Else
-                        ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=True)
-                        ' Freistehende Auswahl: weiche Kante ist in die Alpha-Werte gebacken. Ebenen-Maske:
-                        ' harte Form (Feather kommt beim Rendern über mask.FeatherPixels) - nicht baken.
-                        _selectionMaskSoftBaked = (_editingLayerMaskId = "")
-                        ' Beim Bearbeiten einer Ebenen-Maske jeden Strich in die Ebene zurueckschreiben,
-                        ' damit die Anpassung der Ebene der neuen Maskenform sofort folgt.
-                        If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
+                        ' MEHRTEILIGE Ebenenmaske: der Strich geht DIREKT in ihren ersten Bestandteil
+                        ' (die Engine entscheidet, ob das ein gemaltes Raster oder die
+                        ' Pinselkorrektur eines Verlaufs ist). Ueber die Auswahl zu gehen ginge hier
+                        ' schief, seit die Auswahl die SUMME aller Bestandteile traegt: das
+                        ' Zurueckschreiben legte die Summe in den ersten Bestandteil, und die
+                        ' uebrigen kaemen beim Rendern ein zweites Mal obendrauf.
+                        Dim layerMask = EditedLayerMask()
+                        If layerMask IsNot Nothing AndAlso layerMask.ComponentCount > 1 Then
+                            Dim stroke = BuildSourceMaskFromStamp(stamp, rectPx, layerMask.Name)
+                            If stroke IsNot Nothing Then
+                                ImageProcessor.ApplyMaskBrushStroke(layerMask, stroke, _selectionCombineMode = "Subtract")
+                                ReloadEditedLayerMaskIntoSelection()
+                            End If
+                        Else
+                            ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=True)
+                            ' Freistehende Auswahl: weiche Kante ist in die Alpha-Werte gebacken. Ebenen-Maske:
+                            ' harte Form (Feather kommt beim Rendern über mask.FeatherPixels) - nicht baken.
+                            _selectionMaskSoftBaked = (_editingLayerMaskId = "")
+                            ' Beim Bearbeiten einer Ebenen-Maske jeden Strich in die Ebene zurueckschreiben,
+                            ' damit die Anpassung der Ebene der neuen Maskenform sofort folgt.
+                            If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
+                        End If
                     End If
                 End If
             End Using
@@ -12223,6 +12238,26 @@ Namespace ViewModels
             ' Und die Liste der Bestandteile gehoert ZU DIESER Maske. Sie wurde bisher nur von den
             ' Verlaufs- und Bestandteilwegen neu gebaut; wer eine Ebenenmaske einfach wieder oeffnete,
             ' sah die Liste des letzten Aufbaus - oder gar keine.
+            RaiseMaskComponentsChanged()
+        End Sub
+
+        ''' <summary>Die gerade bearbeitete Ebenenmaske - oder Nothing.</summary>
+        Private Function EditedLayerMask() As ImageMask
+            If _editingLayerMaskId = "" Then Return Nothing
+            Return _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                  String.Equals(m.Id, _editingLayerMaskId, StringComparison.Ordinal))
+        End Function
+
+        ''' <summary>Die bearbeitete Ebenenmaske neu in die Auswahl holen, damit das rote Overlay
+        ''' nach einem Strich wieder die SUMME aller Bestandteile zeigt. Der angefasste Bestandteil
+        ''' bleibt dabei angefasst - sonst spraenge die Liste bei jedem Strich auf den letzten
+        ''' zurueck.</summary>
+        Private Sub ReloadEditedLayerMaskIntoSelection()
+            Dim id = _editingLayerMaskId
+            If id = "" Then Return
+            Dim active = _activeMaskComponentIndex
+            LoadMaskIntoSelection(id, showAsMask:=True)
+            _activeMaskComponentIndex = active
             RaiseMaskComponentsChanged()
         End Sub
 

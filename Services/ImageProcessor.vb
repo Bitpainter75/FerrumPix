@@ -6019,13 +6019,42 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Alle Bestandteile einer Maske zu EINEM Alpha8-Raster in QUELLGROESSE
+        ''' zusammensetzen - dieselbe Rechnung wie im Renderweg, nur ohne die Geometriestufen
+        ''' danach. Nothing, wenn kein Bestandteil etwas liefert.</summary>
+        Private Shared Function BuildCombinedMaskRaster(mask As ImageMask) As SKBitmap
+            If mask Is Nothing OrElse mask.SourceWidthPixels <= 0 OrElse mask.SourceHeightPixels <= 0 Then Return Nothing
+            Dim components = mask.GetComponents()
+            If components.Count = 0 Then Return Nothing
+            Dim combined As SKBitmap = Nothing
+            For Each component In components
+                Dim part = BuildComponentMaskForInput(component, mask.SourceWidthPixels, mask.SourceHeightPixels,
+                                                      mask.SourceWidthPixels, mask.SourceHeightPixels, Nothing)
+                If part Is Nothing Then Continue For
+                If combined Is Nothing Then
+                    combined = part
+                Else
+                    CombineMaskInto(combined, part, component.Mode)
+                    part.Dispose()
+                End If
+            Next
+            Return combined
+        End Function
+
         ''' <summary>Inverse zu CreateSourceMaskFromSelection: projiziert eine Ebenen-Maske (ImageMask,
         ''' Quellraum) in den ANZEIGE-Bildraum und liefert eine Alpha8-Maske + Rechteck für die editierbare
         ''' Auswahlmaske (_selectionMask). Damit lässt sich eine Ebenen-Maske im Masken-Pinsel wieder als
         ''' rotes Overlay anzeigen und per +/- ändern. Inverted wird beim Sampeln aufgelöst (die editierbare
         ''' Kopie ist danach nicht invertiert); die weiche Kante (FeatherPixels) bleibt Sache der Ebene und
         ''' wird hier NICHT eingerechnet - der Pinsel bearbeitet die harte Form, der Feather wirkt beim
-        ''' Rendern (BuildPersistentMaskForOutput).</summary>
+        ''' Rendern (BuildPersistentMaskForOutput).
+        '''
+        ''' Gelesen wird die SUMME ALLER BESTANDTEILE, nicht nur der erste. Vorher stand hier
+        ''' `mask.PngBase64`, also allein der erste: ein per Plus angehaengter Verlauf wirkte im Bild
+        ''' weiter, war beim Bearbeiten aber unsichtbar - es sah aus, als waeren frühere
+        ''' Bearbeitungen verloren (Nutzerbefund 2026-08-04). Zusammengesetzt wird mit DENSELBEN
+        ''' Bausteinen wie beim Rendern (BuildComponentMaskForInput plus CombineMaskInto), damit
+        ''' Anzeige und Ergebnis nicht auseinanderlaufen koennen.</summary>
         Public Shared Function BuildSelectionMaskFromLayerMask(mask As ImageMask, adj As ImageAdjustments,
                                                                ByRef rectPx As SKRectI) As SKBitmap
             rectPx = SKRectI.Empty
@@ -6035,9 +6064,8 @@ Namespace Services
 
             Dim decoded As SKBitmap = Nothing
             Try
-                If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return Nothing
-                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                decoded = BuildCombinedMaskRaster(mask)
+                If decoded Is Nothing Then Return Nothing
                 Dim mStride = decoded.RowBytes
                 Dim mBuf = New Byte(mStride * decoded.Height - 1) {}
                 Marshal.Copy(decoded.GetPixels(), mBuf, 0, mBuf.Length)
@@ -6050,13 +6078,15 @@ Namespace Services
                     For dx = 0 To dw - 1
                         Dim sp As SKPoint
                         If Not TryGeometryOutputToSourcePoint(dx + 0.5, dy + 0.5, sourceW, sourceH, adj, sp) Then Continue For
-                        Dim mx = CInt(Math.Floor(sp.X)) - mask.Left
-                        Dim my = CInt(Math.Floor(sp.Y)) - mask.Top
+                        ' Das zusammengesetzte Raster hat QUELLGROESSE und liegt bei 0,0 - der
+                        ' Versatz der einzelnen Bestandteile steckt schon darin. Inverted ebenso:
+                        ' jeder Bestandteil bringt seine eigene Umkehrung mit.
+                        Dim mx = CInt(Math.Floor(sp.X))
+                        Dim my = CInt(Math.Floor(sp.Y))
                         Dim alpha As Byte = 0
                         If mx >= 0 AndAlso my >= 0 AndAlso mx < decoded.Width AndAlso my < decoded.Height Then
                             alpha = mBuf(my * mStride + mx)
                         End If
-                        If mask.Inverted Then alpha = CByte(255 - alpha)
                         If alpha = 0 Then Continue For
                         full(dy * dw + dx) = alpha
                         left = Math.Min(left, dx) : top = Math.Min(top, dy)
