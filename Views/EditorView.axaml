@@ -20,7 +20,8 @@
          Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen). -->
     <Grid x:Name="EditorRootGrid" RowDefinitions="60,*,Auto" ColumnDefinitions="Auto,*,330,320,300">
 
-        <!-- EIN Kontextmenue fuer Buehne, Filmstreifen und Fusszeile. -->
+        <!-- EIN Kontextmenue fuer Filmstreifen und Fusszeile. Sonst nirgends im Editor: weder auf
+             der Buehne noch in den Panels rechts (siehe OnContextRequested). -->
         <Grid.ContextMenu>
             <ContextMenu x:Name="EditorKontextMenu" Opened="OnFooterMenuOpened" ItemsSource="{Binding ContextActions}">
             <!-- Eine Vorlage fuer alle Eintraege. Symbol und Text liegen zusammen im

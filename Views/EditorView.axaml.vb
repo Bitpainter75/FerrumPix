@@ -252,13 +252,19 @@ Namespace Views
 
 
 
-        ''' <summary>Rechtsklick im Editor - AUSSER auf der Buehne.
+        ''' <summary>Rechtsklick im Editor - NUR im Filmstreifen.
         '''
         ''' AUF DEM BILD KEIN MENUE: dort gehoert die rechte Taste dem Schwenken und, mit dem Rad,
         ''' dem Zoomen. Beides auf derselben Taste hiess dauernd abzuwaegen, ob ein Druck nun ein Zug
         ''' war oder nicht - ein Menue, das nach einem kurzen Schwenk aufspringt, steht im Weg; eines,
         ''' das nach einem langsamen Klick ausbleibt, wirkt kaputt. Was auf der Buehne angeboten
         ''' wurde, steht im Menue der Fusszeile (<see cref="OnFooterMenuButtonClick"/>).
+        '''
+        ''' IN DEN PANELS AUCH NICHT: Anpassen, Ebenen und Info haengen im selben Wurzelraster wie
+        ''' das Menue, ein Rechtsklick dort brachte also die Eintraege der Fusszeile - Aktionen auf
+        ''' das ganze Bild, waehrend jemand eine Ebene oder einen Regler im Blick hat. Im Ebenenpanel
+        ''' verdraengte es zudem das Menue der Ebenenzeile, das dort das einzig sinnvolle ist.
+        ''' Deshalb faellt die Pruefung jetzt umgekehrt aus: alles ausser dem Filmstreifen ist Schluss.
         '''
         ''' IM FILMSTREIFEN BLEIBT ER: dort wird nicht geschwenkt, der Rechtsklick meint eine Kachel,
         ''' und das ist der uebliche Weg. Die betroffenen Elemente kommen wie ueberall aus
@@ -271,9 +277,8 @@ Namespace Views
             Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
             Dim hit = ContextTarget.UnderPointer(e, filmstrip)
 
-            ' Auf der Buehne ist Schluss - und zwar BEVOR irgendetwas gesetzt wird.
-            Dim stage = Me.FindControl(Of Canvas)("PreviewCanvas")
-            If hit Is Nothing AndAlso PointerIsWithin(e, stage) Then
+            ' Ausserhalb des Filmstreifens ist Schluss - und zwar BEVOR irgendetwas gesetzt wird.
+            If hit Is Nothing Then
                 e.Handled = True
                 Return
             End If
@@ -281,11 +286,11 @@ Namespace Views
             ' Ein Rechtsklick im Filmstreifen meint DIESES Bild. Die Kommandos des Editors
             ' arbeiten aber alle auf dem geladenen Bild - es reicht also nicht, das getroffene
             ' Element zu kennen, es muss auch das geladene werden.
-            If hit IsNot Nothing AndAlso Not Object.ReferenceEquals(hit, StageItem(vm)) Then
+            If Not Object.ReferenceEquals(hit, StageItem(vm)) Then
                 vm.NavigateToFilmstripItem(hit)
             End If
 
-            vm.ContextSite = If(hit IsNot Nothing, MenuSite.EditorFilmstrip, MenuSite.EditorFooter)
+            vm.ContextSite = MenuSite.EditorFilmstrip
             vm.ContextItems = ContextTarget.Affected(hit, Nothing, StageItem(vm))
 
             ' NICHT selbst oeffnen und NICHT als behandelt melden: das Menue haengt am selben
@@ -295,15 +300,6 @@ Namespace Views
             menu.PlacementTarget = Nothing
             menu.Placement = PlacementMode.Pointer
         End Sub
-
-        ''' <summary>Liegt der Zeiger ueber diesem Bereich? Rein geometrisch geprueft.</summary>
-        Private Shared Function PointerIsWithin(e As Avalonia.Input.ContextRequestedEventArgs, area As Control) As Boolean
-            If area Is Nothing OrElse Not area.IsVisible Then Return False
-            Dim pos As Avalonia.Point
-            If Not e.TryGetPosition(area, pos) Then Return False
-            Return pos.X >= 0 AndAlso pos.Y >= 0 AndAlso
-                   pos.X <= area.Bounds.Width AndAlso pos.Y <= area.Bounds.Height
-        End Function
 
         ''' <summary>Das geoeffnete Bild als Element - der Rueckfall, wenn keine Kachel getroffen
         ''' wurde.</summary>

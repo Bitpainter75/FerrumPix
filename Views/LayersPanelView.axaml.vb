@@ -151,11 +151,22 @@ Namespace Views
         ' Zeile. Der Klick wählt die Zeile zuerst aus, damit die Selected*-Kommandos auf sie wirken; kind-
         ' abhängige Einträge (Maske/Rastern) erscheinen nur, wo sie gelten. Programmatisch aufgebaut, weil
         ' ein Popup die VM-Kommandos nicht über AncestorType aus dem UserControl-DataContext erreicht.
+        '
+        ' Der Handler hängt an der LISTE, nicht an der Zeile, und sucht die gemeinte Zeile über einen
+        ' Treffertest (RowUnderPointer). Zwei Gründe: der Rechtsklick zwischen zwei Zeilen oder in den
+        ' leeren Bereich traf sonst gar keinen Handler und blubberte bis zum Wurzelraster des Editors,
+        ' wo das Menü der Fußzeile hängt - im Ebenenpanel hat es nichts zu suchen. Und der Zeilenstapel
+        ' kann sich zwischen Drücken und Loslassen neu aufbauen; die Zeile aus dem DataContext eines
+        ' alten Behälters wäre dann ein Überbleibsel, das es in der Liste nicht mehr gibt.
         Private Sub OnLayerRowContextRequested(sender As Object, e As ContextRequestedEventArgs)
-            Dim border = TryCast(sender, Control)
-            Dim row = TryCast(border?.DataContext, LayerPanelRow)
+            Dim list = TryCast(sender, Control)
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If border Is Nothing OrElse row Is Nothing OrElse vm Is Nothing Then Return
+            If list Is Nothing OrElse vm Is Nothing Then Return
+            ' Ganz vorn und ohne Bedingung: im Ebenenpanel gibt es NUR dieses Menü. Auch wenn keine
+            ' Zeile getroffen ist, darf das Ereignis nicht weiterlaufen.
+            e.Handled = True
+            Dim row = RowUnderPointer(e, list)
+            If row Is Nothing Then Return
             ' Eine bestehende MEHRFACHauswahl darf der Rechtsklick nicht zerstören - sonst wäre
             ' „Gruppieren" über das Kontextmenü nie erreichbar (der Klick hätte die Auswahl schon auf
             ' eine Zeile eingedampft). Nur wenn die angeklickte Zeile nicht dazugehört, wird gewechselt.
@@ -246,10 +257,31 @@ Namespace Views
 
             Dim menu As New ContextMenu()
             menu.ItemsSource = items
-            border.ContextMenu = menu
-            menu.Open(border)
-            e.Handled = True
+            list.ContextMenu = menu
+            menu.Open(list)
         End Sub
+
+        ''' <summary>Die Ebenenzeile unter dem Zeiger. Treffertest an der Zeigerposition und dann durch
+        ''' den SICHTBAREN Baum nach oben - der logische Elternteil ist in einer virtualisierten Liste
+        ''' nicht gesetzt, und e.Source ist beim Handler an der Liste nicht die Zeile.</summary>
+        Private Shared Function RowUnderPointer(e As ContextRequestedEventArgs, list As Control) As LayerPanelRow
+            If e Is Nothing OrElse list Is Nothing OrElse Not list.IsVisible Then Return Nothing
+            Dim pos As Point
+            ' Über die Tastatur aufgerufen gibt es keine Position - dann ist keine Zeile gemeint.
+            If Not e.TryGetPosition(list, pos) Then Return Nothing
+            If pos.X < 0 OrElse pos.Y < 0 OrElse
+               pos.X > list.Bounds.Width OrElse pos.Y > list.Bounds.Height Then Return Nothing
+            Dim target = TryCast(list.InputHitTest(pos), Visual)
+            While target IsNot Nothing
+                Dim ctrl = TryCast(target, Control)
+                If ctrl IsNot Nothing Then
+                    Dim row = TryCast(ctrl.DataContext, LayerPanelRow)
+                    If row IsNot Nothing Then Return row
+                End If
+                target = TryCast(target.GetVisualParent(), Visual)
+            End While
+            Return Nothing
+        End Function
 
         Private Function MakeLayerMenuItem(header As String, iconName As String, command As System.Windows.Input.ICommand) As MenuItem
             Dim mi As New MenuItem With {.Header = header}

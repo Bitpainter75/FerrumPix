@@ -49,6 +49,7 @@
                      Background="Transparent" BorderThickness="0" Padding="0"
                      VerticalAlignment="Stretch"
                      KeyDown="OnLayerListKeyDown"
+                     ContextRequested="OnLayerRowContextRequested"
                      DragDrop.AllowDrop="True"
                      DragDrop.DragOver="OnLayerListDragOver"
                      DragDrop.DragLeave="OnLayerListDragLeave"
@@ -61,7 +62,6 @@
                                 DragDrop.AllowDrop="True"
                                 PointerPressed="OnLayerRowPointerPressed"
                                 PointerMoved="OnLayerRowPointerMoved"
-                                ContextRequested="OnLayerRowContextRequested"
                                 DragDrop.DragOver="OnLayerRowDragOver"
                                 DragDrop.Drop="OnLayerRowDrop">
                             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="{Binding IndentMargin}">

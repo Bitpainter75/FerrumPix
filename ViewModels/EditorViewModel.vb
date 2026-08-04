@@ -2228,6 +2228,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsMultiLayerSelection))
             Me.RaisePropertyChanged(NameOf(IsSingleLayerSelection))
             Me.RaisePropertyChanged(NameOf(IsGroupRowSelected))
+            ' Beide Gruppen-Knoepfe haengen an der markierten ZEILE (Kopfzeile oder Mitglied) und
+            ' nicht nur an der Menge der markierten Objekte - sie gehoeren deshalb hierher und nicht
+            ' allein in RaiseMultiSelectionChanged.
+            Me.RaisePropertyChanged(NameOf(CanGroupSelectedAnnotations))
+            Me.RaisePropertyChanged(NameOf(CanUngroupSelectedAnnotations))
             Me.RaisePropertyChanged(NameOf(CanRenameSelectedLayer))
             Me.RaisePropertyChanged(NameOf(CanMergeSelectedAnnotations))
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
@@ -2660,10 +2665,28 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Darf die Gruppierung aufgehoben werden? Nur wenn die Auswahl die GANZE Gruppe
+        ''' meint - denn Aufheben loest die ganze Gruppe auf, nicht das angeklickte Mitglied.
+        '''
+        ''' Das ist entweder die KOPFZEILE der Gruppe im Panel oder eine Auswahl, die alle Mitglieder
+        ''' enthaelt (ein Klick auf der Buehne markiert die Gruppe als Ganzes). Steht die Auswahl
+        ''' dagegen auf EINER Ebene INNERHALB der Gruppe, bleibt der Knopf weg: er taete dort weit
+        ''' mehr, als die angeklickte Zeile hergibt.</summary>
         Public ReadOnly Property CanUngroupSelectedAnnotations As Boolean
             Get
-                Return SelectedAnnotations.Any(Function(a) a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.GroupId)) OrElse
-                       SelectedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.GroupId))
+                If IsGroupRowSelected Then Return True
+                Dim groupIds = SelectedAnnotations.Where(Function(a) a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.GroupId)).
+                                   Select(Function(a) a.GroupId).
+                               Concat(SelectedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.GroupId)).
+                                   Select(Function(l) l.GroupId)).
+                               Distinct(StringComparer.Ordinal).ToList()
+                ' Aus zwei Gruppen zugleich gibt es nichts aufzuheben, was der Nutzer so gemeint haette.
+                If groupIds.Count <> 1 Then Return False
+                Dim id = groupIds(0)
+                If AnnotationsInGroup(id).Any(Function(m) Not IsAnnotationSelected(m)) Then Return False
+                Return Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso
+                                                        String.Equals(l.GroupId, id, StringComparison.Ordinal) AndAlso
+                                                        Not IsAdjustmentLayerSelected(l))
             End Get
         End Property
 
