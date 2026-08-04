@@ -459,9 +459,22 @@ Namespace Services
         ''' <summary>Wohin ein Punkt durch ein KNOTENRASTER wandert. Ein- und Ausgabe in Bildpixeln,
         ''' die Knoten stehen in Prozent (je Knoten x, y - zeilenweise ab links oben).
         '''
+        ''' Gerechnet wird ueber DIESELBEN zwei Dreiecke je Masche, mit denen
+        ''' <see cref="WarpOverGrid"/> das Bild zeichnet und <see cref="MeshInversePoint"/> zurueck
+        ''' rechnet. Bilinear ueber die ganze Masche ist die naheliegendere Formel und stand hier
+        ''' auch: auf Knoten und Maschenkanten liefert sie dasselbe, in der Maschenmitte nicht. Ein
+        ''' Anfasser sass dadurch neben der Stelle, die er anfasst, und Hin- und Rueckweg waren nicht
+        ''' mehr umkehrbar, obwohl beide Seiten fuer sich richtig aussahen. Gemessen an 4000 mal 3000
+        ''' mit einer Woelbung von 15 Prozent der Bildhoehe: 21,0 Bildpunkte bei einem Raster von
+        ''' vier mal vier, 2,5 bei zwoelf mal zwoelf, 0,6 bei vierundzwanzig. Der Fehler faellt mit
+        ''' dem QUADRAT der Feinheit - er war deshalb je nach Rastergroesse verschieden gross und bei
+        ''' feinen Rastern unter der Wahrnehmungsschwelle, was ihn schwer zu fassen machte.
+        '''
         ''' Ausserhalb des Rasters wird FORTGESETZT statt geklemmt: der Zellenindex bleibt begrenzt,
         ''' der Anteil darin darf negativ oder groesser eins werden. Fuer ein unbewegtes Raster ist
-        ''' das exakt die Identitaet - mit Klemmung waere alles ausserhalb auf den Rand gefaltet.</summary>
+        ''' das exakt die Identitaet - mit Klemmung waere alles ausserhalb auf den Rand gefaltet. Die
+        ''' Dreiecksformel setzt genauso fort: sie ist je Dreieck affin und gilt ueber dessen Rand
+        ''' hinaus weiter.</summary>
         Public Shared Function MeshPoint(nodes As Double(), columns As Integer, rows As Integer,
                                          px As Double, py As Double,
                                          width As Double, height As Double) As SKPoint
@@ -480,10 +493,23 @@ Namespace Services
                         Return (nodes(i) / 100.0 * width, nodes(i + 1) / 100.0 * height)
                     End Function
             Dim a = K(c0, r0), b = K(c0 + 1, r0), c = K(c0, r0 + 1), d = K(c0 + 1, r0 + 1)
-            Dim topX = a.X + (b.X - a.X) * tu, topY = a.Y + (b.Y - a.Y) * tu
-            Dim bottomX = c.X + (d.X - c.X) * tu, bottomY = c.Y + (d.Y - c.Y) * tu
-            Return New SKPoint(CSng(topX + (bottomX - topX) * tv),
-                               CSng(topY + (bottomY - topY) * tv))
+
+            ' Die Diagonale laeuft von links oben nach rechts unten, wie beim Zeichnen: das erste
+            ' Dreieck ist (a, b, d), das zweite (a, d, c). Welches gemeint ist, entscheidet die
+            ' Lage im UNVERZERRTEN Quadrat - dort ist die Diagonale die Gerade tv = tu.
+            Dim w0 As Double, w1 As Double, w2 As Double
+            Dim p1 As (X As Double, Y As Double), p2 As (X As Double, Y As Double)
+            If tv <= tu Then
+                ' (0,0), (1,0), (1,1)
+                w0 = 1.0 - tu : w1 = tu - tv : w2 = tv
+                p1 = b : p2 = d
+            Else
+                ' (0,0), (1,1), (0,1)
+                w0 = 1.0 - tv : w1 = tu : w2 = tv - tu
+                p1 = d : p2 = c
+            End If
+            Return New SKPoint(CSng(w0 * a.X + w1 * p1.X + w2 * p2.X),
+                               CSng(w0 * a.Y + w1 * p1.Y + w2 * p2.Y))
         End Function
 
         ''' <summary>Die Gegenrichtung zu <see cref="MeshPoint"/>: aus welchem Bildpunkt der
