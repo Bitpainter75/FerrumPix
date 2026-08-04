@@ -2595,6 +2595,12 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanMergeSelectedAnnotations))
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
+            ' Der Masken-Knopf haengt am EINEN Zielobjekt und faellt bei mehreren Ebenen weg - er
+            ' gehoert deshalb in dieselbe Meldung wie der Rest der Fusszeile.
+            Me.RaisePropertyChanged(NameOf(CanUseAnnotationMaskButton))
+            Me.RaisePropertyChanged(NameOf(CanAddAnnotationMask))
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationHasMask))
+            Me.RaisePropertyChanged(NameOf(AnnotationMaskButtonHint))
         End Sub
 
         ''' <summary>
@@ -12897,8 +12903,14 @@ Namespace ViewModels
         ''' Eine Mehrfachauswahl bleibt aussen vor - eine gemeinsame Maske ueber mehrere Objekte
         ''' waere etwas anderes als je eine eigene, und welches von beidem gemeint ist, sagt keine
         ''' der beiden Gesten.</summary>
+        ''' <summary>Das EINE Objekt, dem eine Ebenenmaske gilt - oder Nothing.
+        '''
+        ''' Gezaehlt werden Objekte UND Korrekturebenen (<see cref="IsMultiLayerSelection"/>), nicht
+        ''' nur die Objekte: ein Objekt zusammen mit einer markierten Korrektur sind zwei Ebenen, und
+        ''' der Masken-Knopf der Fusszeile stand dabei weiter da, obwohl er nur auf eine von beiden
+        ''' wirkt. Eine markierte Gruppe faellt damit ebenfalls heraus.</summary>
         Private Function MaskTargetAnnotation() As ImageAnnotation
-            If SelectedAnnotationCount > 1 Then Return Nothing
+            If IsMultiLayerSelection Then Return Nothing
             Return CurrentObject()
         End Function
 
