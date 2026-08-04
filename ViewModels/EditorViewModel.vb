@@ -1459,6 +1459,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasSelectedAdjustmentLayer))
             Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
             Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsSelected))
+            ' Der Masken-Knopf der Fußzeile haengt an der markierten Ebene - ohne das bliebe er nach
+            ' einem Wechsel stehen, wie er beim vorigen war.
+            RaiseAnnotationMaskStateChanged()
         End Sub
 
         ''' <summary>Wählt die feste globale Einstellungsebene im Ebenenpanel als Reglerziel.
@@ -1739,6 +1742,9 @@ Namespace ViewModels
         Private Sub LoadFixedShapeItems()
             _fixedShapeItems.Clear()
             Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
+            ' Der PFAD gehoert hier NICHT hin (Patrick am 2026-08-04): jede Form dieser Liste wird
+            ' AUFGEZOGEN, der Pfad wird Punkt fuer Punkt gesetzt. Er ist ein eigenes Werkzeug und
+            ' keine Form - und stand hier zuletzt nur als zweiter Weg in dasselbe Werkzeug.
             AddFixedShape("Rectangle", "Rechteck", base & "rectangle.svg")
             AddFixedShape("RoundedRectangle", "Abgerundetes Rechteck", base & "square-rounded.svg")
             AddFixedShape("Ellipse", "Kreis/Ellipse", base & "circle.svg")
@@ -2749,6 +2755,10 @@ Namespace ViewModels
                 dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(a))
                 _annotations.Remove(a)
             Next
+            ' Ebenenmasken der entfernten Objekte mitnehmen, sofern sie niemand teilt.
+            For Each a In victims
+                RemoveMaskIfUnreferenced(a.MaskId)
+            Next
             DropOrphanedAnnotationGroups()
             SelectedAnnotationIndex = -1
             RebuildLayerRows()
@@ -2772,6 +2782,7 @@ Namespace ViewModels
             Dim offsetY = CSng(Math.Max(1.0, displaySize.Height * 0.02))
             For Each a In originals
                 Dim copy = a.Clone()
+                GiveCopyItsOwnMask(copy)
                 copy.XPixels += offsetX
                 copy.YPixels += offsetY
                 _annotations.Add(copy)
@@ -3933,6 +3944,26 @@ Namespace ViewModels
                     If _linien.Count > 0 Then
                         _linien.Clear()
                         RaiseLinesChanged()
+                    End If
+                    ' Und dasselbe fuer die Verformung: auch sie ist nichts als der Stand ihrer
+                    ' zwoelf Anfasser.
+                    If HasEnvelopeChanges Then
+                        ResetEnvelopePoints()
+                        RaiseEnvelopeChanged()
+                    End If
+                    ' Der Pfad-Stift bleibt nicht scharf, wenn man in ein ANDERES Werkzeug wechselt:
+                    ' ein liegengebliebener Entwurf oder eine nur scharfgestellte Grundlinie fing
+                    ' sonst im neuen Werkzeug jeden Klick ab (Befund: Bild einfuegen begann einen
+                    ' Pfad). Ein Entwurf mit mindestens zwei Punkten wird UEBERNOMMEN - die Arbeit
+                    ' zu verwerfen waere das Schlimmere -, weniger wird verworfen. In das
+                    ' Pfad-Werkzeug HINEIN bleibt alles stehen: dort zeichnet man ja weiter.
+                    If value <> EditorTool.Path Then
+                        If _pathDraft.Count > 0 OrElse _pathDraftTargetId <> "" Then
+                            FinishPathDraft(keep:=_pathDraft.Count >= 2)
+                        End If
+                        If String.Equals(NormalizeAnnotationKind(_pendingInsertKind), "Path", StringComparison.Ordinal) Then
+                            PendingInsertKind = ""
+                        End If
                     End If
                     ' Werkzeugwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe
                     ' AddBrushStroke) - auch zwischen zwei Ebenen-Werkzeugen (Draw -> Text usw.), wo
@@ -5143,6 +5174,7 @@ Namespace ViewModels
                 SetUndoableDouble(_perspectiveHorizontal, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveHorizontal))
                 Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
             End Set
         End Property
 
@@ -5154,6 +5186,7 @@ Namespace ViewModels
                 SetUndoableDouble(_perspectiveVertical, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveVertical))
                 Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
             End Set
         End Property
 
@@ -5165,6 +5198,7 @@ Namespace ViewModels
                 SetUndoableDouble(_perspectiveAspect, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveAspect))
                 Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
             End Set
         End Property
 
@@ -5176,15 +5210,20 @@ Namespace ViewModels
                 SetUndoableDouble(_perspectiveScale, Math.Max(-100, Math.Min(100, value)),
                                   NameOf(PerspectiveScale))
                 Me.RaisePropertyChanged(NameOf(HasPerspectiveWarning))
+                Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
             End Set
         End Property
 
-        ''' <summary>Der Hinweis erscheint nur, wenn er zutrifft: es wird verzerrt UND es gibt
+        ''' <summary>Der Hinweis erscheint nur, wenn er zutrifft: es wird gekippt UND es gibt
         ''' Objekte, die dabei nicht mitwandern. Ein Hinweis, der immer dasteht, wird nicht
-        ''' gelesen.</summary>
+        ''' gelesen. Die freien Eckversaetze kippen das Bild genauso wie die beiden Regler und
+        ''' zaehlen deshalb mit; wer nur die Ecken zieht, bekam die Warnung sonst nie.</summary>
         Public ReadOnly Property HasPerspectiveWarning As Boolean
             Get
-                If Math.Abs(_perspectiveHorizontal) < 0.01 AndAlso Math.Abs(_perspectiveVertical) < 0.01 Then Return False
+                Dim tilts = Math.Abs(_perspectiveHorizontal) >= 0.01 OrElse
+                            Math.Abs(_perspectiveVertical) >= 0.01 OrElse
+                            _perspectiveCorners.Any(Function(v) Math.Abs(v) > 0.0001)
+                If Not tilts Then Return False
                 Return _annotations IsNot Nothing AndAlso _annotations.Count > 0
             End Get
         End Property
@@ -5214,14 +5253,15 @@ Namespace ViewModels
 
         Private _warpMode As String = ""
 
-        ''' <summary>"" = keines, "Perspektive" oder "Gitter".</summary>
+        ''' <summary>"" = keines, "Perspektive", "Gitter", "Linien" oder "Verformen".</summary>
         Public Property WarpMode As String
             Get
                 Return _warpMode
             End Get
             Set(value As String)
                 Dim v = If(value, "").Trim()
-                If Not (v = "Perspektive" OrElse v = "Gitter" OrElse v = "Linien") Then v = ""
+                If Not (v = "Perspektive" OrElse v = "Gitter" OrElse v = "Linien" OrElse
+                        v = "Verformen") Then v = ""
                 ' Nochmal auf denselben Knopf: wieder abwaehlen. So wird man das Overlay los, ohne
                 ' das Werkzeug zu verlassen.
                 If String.Equals(_warpMode, v, StringComparison.Ordinal) Then v = ""
@@ -5232,12 +5272,14 @@ Namespace ViewModels
                 _warpDragIndex = -1
                 _linienDragIndex = -1
                 _linienDragTeil = -1
+                _envelopeDragIndex = -1
                 DisposeGridPreview()
                 DisposeLinePreview()
                 For Each n In {NameOf(WarpMode), NameOf(IsWarpPerspective),
-                               NameOf(IsWarpGrid), NameOf(IsWarpLines),
+                               NameOf(IsWarpGrid), NameOf(IsWarpLines), NameOf(IsWarpEnvelope),
                                NameOf(PerspectiveCornerValues), NameOf(LineValues),
-                               NameOf(WarpGridValues)}
+                               NameOf(WarpGridValues), NameOf(EnvelopeValues),
+                               NameOf(EnvelopeMeshValues), NameOf(HasEnvelopeChanges)}
                     Me.RaisePropertyChanged(n)
                 Next
                 ' Ein Modus ohne Verzerren-Wahl verzerrt gar nichts - damit wechselt auch der Raum,
@@ -5262,6 +5304,12 @@ Namespace ViewModels
         Public ReadOnly Property IsWarpGrid As Boolean
             Get
                 Return String.Equals(_warpMode, "Gitter", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsWarpEnvelope As Boolean
+            Get
+                Return String.Equals(_warpMode, "Verformen", StringComparison.Ordinal)
             End Get
         End Property
 
@@ -5369,7 +5417,7 @@ Namespace ViewModels
                            NameOf(PerspectiveCorner2X), NameOf(PerspectiveCorner2Y),
                            NameOf(PerspectiveCorner3X), NameOf(PerspectiveCorner3Y),
                            NameOf(PerspectiveCornerValues), NameOf(HasPerspectiveChanges),
-                           NameOf(HasPerspectiveWarning)}
+                           NameOf(HasPerspectiveWarning), NameOf(HasAnyImageWarp)}
                 Me.RaisePropertyChanged(n)
             Next
             RaiseResetButtonStateChanged()
@@ -5611,9 +5659,8 @@ Namespace ViewModels
         ' 45-MP-Netz bei jeder Mausbewegung waere unbezahlbar. Beim Anwenden wird dann sauber auf
         ' dem vollen Arbeitsbild gerechnet.
         '
-        ' Sie enthaelt KEINE Objekte: das Rezept-Anzeigebild ohne die eingefuegten Ebenen. Objekte
-        ' wandern bei einer Gitterverzerrung ohnehin nicht mit (sie werden erst beim Anwenden
-        ' ueberrechnet), und mitverzerrt in der Vorschau saehe man etwas, das nachher anders aussieht.
+        ' Sie enthaelt die OBJEKTE: beim Anwenden gehen sie inzwischen mit, und dieselbe Verzerrung
+        ' auf dem fertigen Anzeigebild zeigt deshalb genau das Ergebnis.
 
         Private _gridPreviewBase As SKBitmap
         Private _gridPreviewSourceX As Single()
@@ -5653,6 +5700,12 @@ Namespace ViewModels
         ''' des UNVERZERRTEN Rasters im Anzeigeraum. Letztere ist noetig, weil das Raster im
         ''' Quellraum gleichmaessig ist, im Anzeigeraum nach Beschnitt oder Drehung aber nicht.</summary>
         Private Sub PrepareGridPreview()
+            PrepareWarpPreview(_warpColumns, _warpRows)
+        End Sub
+
+        ''' <summary>Dasselbe fuer ein beliebig feines Auswertungsraster - das Verformen-Werkzeug
+        ''' fuehrt seinen Zustand in vier Randkurven und wertet sie erst hier auf Knoten aus.</summary>
+        Private Sub PrepareWarpPreview(columns As Integer, rows As Integer)
             DisposeGridPreview()
             Dim size = GetAnnotationDisplayPixelSize()
             If size.Width <= 0 OrElse size.Height <= 0 Then Return
@@ -5679,15 +5732,15 @@ Namespace ViewModels
             ' dem Anzeigebild zeigt genau das Ergebnis.
 
             PrepareGrid()
-            Dim n = (_warpColumns + 1) * (_warpRows + 1)
+            Dim n = (columns + 1) * (rows + 1)
             ReDim _gridPreviewSourceX(n - 1)
             ReDim _gridPreviewSourceY(n - 1)
             Dim bw = _gridPreviewBase.Width, bh = _gridPreviewBase.Height
-            For rowIdx = 0 To _warpRows
-                For colIdx = 0 To _warpColumns
-                    Dim i = rowIdx * (_warpColumns + 1) + colIdx
-                    Dim anzeige = SourcePercentToDisplayPercent(colIdx * 100.0 / _warpColumns,
-                                                                rowIdx * 100.0 / _warpRows)
+            For rowIdx = 0 To rows
+                For colIdx = 0 To columns
+                    Dim i = rowIdx * (columns + 1) + colIdx
+                    Dim anzeige = SourcePercentToDisplayPercent(colIdx * 100.0 / columns,
+                                                                rowIdx * 100.0 / rows)
                     If anzeige.HasValue Then
                         _gridPreviewSourceX(i) = CSng(anzeige.Value.X / 100.0 * bw)
                         _gridPreviewSourceY(i) = CSng(anzeige.Value.Y / 100.0 * bh)
@@ -5701,7 +5754,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub DisposeGridPreview()
-            If String.Equals(_vorschauQuelle, "Gitter", StringComparison.Ordinal) Then
+            ' Gitter und Verformen teilen sich Grundlage und Vorschaukanal - sie koennen nie
+            ' gleichzeitig laufen, und beide muessen hier abgeraeumt werden.
+            If String.Equals(_vorschauQuelle, "Gitter", StringComparison.Ordinal) OrElse
+               String.Equals(_vorschauQuelle, "Verformen", StringComparison.Ordinal) Then
                 ToolPreviewImage = Nothing
                 _vorschauQuelle = ""
             End If
@@ -5713,11 +5769,19 @@ Namespace ViewModels
 
         ''' <summary>Die Vorschau zum aktuellen Raster neu zeichnen.</summary>
         Private Sub RefreshGridPreview()
+            RefreshWarpPreview(_warpColumns, _warpRows, WarpGridValues, "Gitter")
+        End Sub
+
+        ''' <summary>Der gemeinsame Weg fuer Gitter und Verformen: aus den Knoten in ANZEIGE-Prozent
+        ''' wird die Kopie in Anzeigegroesse verzerrt und als Vorschau ueber das Bild gelegt.
+        ''' <paramref name="holder"/> vermerkt, wer den Vorschaukanal haelt.</summary>
+        Private Sub RefreshWarpPreview(columns As Integer, rows As Integer,
+                                       values As Double(), holder As String)
             If _gridPreviewBase Is Nothing OrElse _gridPreviewSourceX Is Nothing Then Return
-            Dim values = WarpGridValues
             If values Is Nothing OrElse values.Length < 4 Then Return
             Dim bw = _gridPreviewBase.Width, bh = _gridPreviewBase.Height
-            Dim n = (_warpColumns + 1) * (_warpRows + 1)
+            Dim n = (columns + 1) * (rows + 1)
+            If _gridPreviewSourceX.Length <> n Then Return
             Dim zx(n - 1) As Single
             Dim zy(n - 1) As Single
             For i = 0 To n - 1
@@ -5728,7 +5792,7 @@ Namespace ViewModels
             Next
 
             Dim warped = ImageGeometryMapper.WarpOverGrid(
-                _gridPreviewBase, _warpColumns, _warpRows, zx, zy,
+                _gridPreviewBase, columns, rows, zx, zy,
                 _gridPreviewSourceX, _gridPreviewSourceY)
             ' Gleiches Objekt zurueck heisst: unbewegt, also nichts zu zeigen.
             If warped Is Nothing OrElse Object.ReferenceEquals(warped, _gridPreviewBase) Then
@@ -5739,7 +5803,7 @@ Namespace ViewModels
                 Using data = SKImage.FromBitmap(warped).Encode(SKEncodedImageFormat.Png, 90)
                     Using strom = New IO.MemoryStream(data.ToArray())
                         ToolPreviewImage = New Bitmap(strom)
-                        _vorschauQuelle = "Gitter"
+                        _vorschauQuelle = holder
                     End Using
                 End Using
             End Using
@@ -6066,15 +6130,17 @@ Namespace ViewModels
                         Dim i = (rowIdx * (Steps + 1) + colIdx) * 2
                         Dim px = colIdx / CDbl(Steps) * 100.0
                         Dim py = rowIdx / CDbl(Steps) * 100.0
-                        ' ERST die bestehende Verzerrung, DANN die neue - in der Reihenfolge, in der
-                        ' sie eingestellt wurden.
+                        ' Dieselbe Reihenfolge wie beim Bild (siehe ComposeImageWarp): erst der neue
+                        ' Zug, dann was schon steht. Nur so laufen Bild und Objekte gleich - und
+                        ' genau das ist der Sinn der Sache, die Objekte sollen mitgehen.
+                        Dim n = abbildung(px, py)
+                        px = n.X : py = n.Y
                         If alt IsNot Nothing AndAlso Not alt.IsEmpty Then
                             Dim v = ExistingWarp(alt, px, py)
                             px = v.X : py = v.Y
                         End If
-                        Dim n = abbildung(px, py)
-                        node(i) = n.X
-                        node(i + 1) = n.Y
+                        node(i) = px
+                        node(i + 1) = py
                     Next
                 Next
                 a.Warp = New ObjectWarp With {
@@ -6105,9 +6171,15 @@ Namespace ViewModels
         ''' <summary>Die Abbildung des GITTERWERKZEUGS: das Raster liegt im Quellraum in Prozent, ein
         ''' Punkt wandert also zwischen seinen vier Stuetzpunkten.</summary>
         Private Function GridMapping() As Func(Of Double, Double, (X As Double, Y As Double))
-            Dim columns = _warpColumns, rows = _warpRows
-            Dim xs = CType(_warpX.Clone(), Double())
-            Dim ys = CType(_warpY.Clone(), Double())
+            PrepareGrid()
+            Return NodeMapping(_warpColumns, _warpRows,
+                               CType(_warpX.Clone(), Double()), CType(_warpY.Clone(), Double()))
+        End Function
+
+        ''' <summary>Dieselbe Abbildung fuer ein beliebiges Knotenraster. Das Verformen-Werkzeug
+        ''' wertet seine vier Randkurven auf so ein Raster aus und geht von dort denselben Weg.</summary>
+        Private Shared Function NodeMapping(columns As Integer, rows As Integer,
+                                            xs As Double(), ys As Double()) As Func(Of Double, Double, (X As Double, Y As Double))
             Return Function(px As Double, py As Double) As (X As Double, Y As Double)
                        Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * columns
                        Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * rows
@@ -6146,75 +6218,41 @@ Namespace ViewModels
                    End Function
         End Function
 
-        ''' <summary>Die Linienverzerrung ins Arbeitsbild backen - derselbe Weg wie beim Raster und
-        ''' aus demselben Grund: sie ist keine Matrix und laesst sich nicht als Zahl aufheben.</summary>
+        ''' <summary>Die Linienverzerrung ins Rezept uebernehmen - derselbe Weg wie beim Raster und
+        ''' beim Verformen: das Verschiebungsfeld wird auf einem regelmaessigen Raster ausgewertet,
+        ''' und ab dort sind alle drei Arten dasselbe.</summary>
         Public Sub ApplyLineWarp()
             ' Gilt die Verzerrung einem Objekt, ist sie dort laengst eingetragen und bleibt eine
-            ' Angabe - es gibt nichts zu backen.
+            ' Angabe - es gibt nichts zu uebernehmen.
             If WarpsTheObject Then Return
             If Not HasLineChanges Then Return
-            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
-            PushUndo()
-            Dim undoItem = _lastPushedUndoEntry
-            ' Die OBJEKTE gehen mit, ohne eingebacken zu werden.
-            ApplyWarpToObjects(LineMapping())
-            SetBusyReason(LocalizationService.T("Verzerrung wird angewendet"))
-            StatusText = LocalizationService.T("Verzerrung wird angewendet…")
-            EnqueueWorkingCommit(
-                Function()
-                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
-                        Sub(full)
-                            Dim qp As Double() = Nothing, zp As Double() = Nothing
-                            If Not LinesAsPixels(full.Width, full.Height, qp, zp) Then Return
-                            Dim steps = ImageGeometryMapper.LineGridSteps
-                            Dim sourceX As Single() = Nothing, quellY As Single() = Nothing
-                            ImageGeometryMapper.LineField(full.Width, full.Height, steps, steps,
-                                                           qp, zp, sourceX, quellY)
-                            If sourceX Is Nothing Then Return
-                            Dim targetX(sourceX.Length - 1) As Single
-                            Dim targetY(quellY.Length - 1) As Single
-                            For rowIdx = 0 To steps
-                                For colIdx = 0 To steps
-                                    Dim i = rowIdx * (steps + 1) + colIdx
-                                    targetX(i) = CSng(colIdx / CDbl(steps) * full.Width)
-                                    targetY(i) = CSng(rowIdx / CDbl(steps) * full.Height)
-                                Next
-                            Next
-                            Using kopie = full.Copy()
-                                Using warped = ImageGeometryMapper.WarpOverGrid(
-                                        kopie, steps, steps, targetX, targetY, sourceX, quellY)
-                                    If warped Is Nothing OrElse Object.ReferenceEquals(warped, kopie) Then Return
-                                    Using canvas = New SKCanvas(full)
-                                        canvas.Clear(SKColors.Transparent)
-                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                                            canvas.DrawBitmap(warped, 0, 0, paint)
-                                        End Using
-                                    End Using
-                                End Using
-                            End Using
-                        End Sub)
-                End Function,
-                Sub(patch)
-                    If patch Is Nothing Then
-                        StatusText = LocalizationService.T("Verzerren fehlgeschlagen")
-                        Return
-                    End If
-                    If undoItem IsNot Nothing Then undoItem.Patch = patch
-                    DisposeLinePreview()
-                    _linien.Clear()
-                    RaiseLinesChanged()
-                    StatusText = LocalizationService.T("Verzerrung angewendet")
-                    _hasChanges = True
-                    SchedulePreviewUpdate()
-                End Sub)
+            Dim steps = MaxImageWarpSteps
+            Dim mapping = LineMapping()
+            Dim n = (steps + 1) * (steps + 1)
+            Dim xs(n - 1) As Double
+            Dim ys(n - 1) As Double
+            For rowIdx = 0 To steps
+                For colIdx = 0 To steps
+                    Dim i = rowIdx * (steps + 1) + colIdx
+                    Dim z = mapping(colIdx / CDbl(steps) * 100.0, rowIdx / CDbl(steps) * 100.0)
+                    xs(i) = z.X
+                    ys(i) = z.Y
+                Next
+            Next
+            ApplyNodeWarp(steps, steps, xs, ys,
+                          Sub()
+                              DisposeLinePreview()
+                              _linien.Clear()
+                              RaiseLinesChanged()
+                          End Sub)
         End Sub
 
         ' ── Live-Vorschau der Linienverzerrung ──────────────────────────────────
         '
         ' Derselbe Kanal wie bei Gitter und Tiefen-Unschaerfe: EIN Vorschaubild, mit Halter-Vermerk.
-        ' Die Grundlage ist das Anzeigebild OHNE Objekte, aus demselben Grund wie dort - Objekte
-        ' werden beim Anwenden nicht mitverzerrt.
+        ' Die Grundlage ist das fertige Anzeigebild MIT Objekten: sie gehen beim Anwenden mit, und
+        ' die Vorschau soll zeigen, was danach dasteht.
 
         Private _linienVorschauBasis As SKBitmap
 
@@ -6302,6 +6340,327 @@ Namespace ViewModels
         End Sub
 
 
+        ' ── Verformen: ein Viereck mit KURVIGEN Raendern ────────────────────────
+        '
+        ' Dasselbe Viereck wie bei der Perspektive, nur sind seine vier Raender Kurven statt
+        ' Geraden: vier Ecken, dazu je Kante zwei Griffe. Das Innere folgt den Raendern als
+        ' Coons-Flaeche - jeder Punkt liegt dort, wo die vier Randkurven ihn gemeinsam hinlegen.
+        ' Damit biegt man eine Flaeche in einem Zug, wofuer man am Stuetzpunktraster ein Dutzend
+        ' Punkte einzeln nachfuehren muesste.
+        '
+        ' Ein zweiter Renderweg entsteht dabei NICHT: die Abbildung wird auf den Knoten eines
+        ' regelmaessigen Rasters ausgewertet und geht von dort denselben Weg wie Gitter- und
+        ' Linienverzerrung (WarpOverGrid). Beim Objekt steht sie als Gitter in dessen eigener
+        ' Verzerrung, beim Bild wird sie gebacken. Neu ist allein der Bedienzustand.
+        '
+        ' Die zwoelf Punkte liegen im VERZERRRAUM in Prozent, wie Raster und Linien und aus
+        ' demselben Grund: sonst wanderte die Verformung, sobald spaeter zugeschnitten oder gedreht
+        ' wird. Reihenfolge: 0 bis 3 die Ecken links oben, rechts oben, rechts unten, links unten;
+        ' danach je Kante zwei Griffe in Laufrichtung der Kante (oben, rechts, unten, links).
+
+        ''' <summary>Feinheit des Auswertungsrasters. Zwoelf Felder je Richtung bilden die Kurven
+        ''' sichtbar rund ab und bleiben beim Ziehen fluessig; feiner kostet nur Zeit, weil die
+        ''' Kruemmung zwischen den Knoten ohnehin geradlinig interpoliert wird.</summary>
+        Private Const EnvelopeSteps As Integer = 12
+
+        ''' <summary>Wie viele Hilfslinien das Overlay im Inneren zeigt. Nur zum Hinsehen - sie
+        ''' sagen, wohin sich die Flaeche zwischen den Raendern legt.</summary>
+        Private Const EnvelopeMeshSteps As Integer = 4
+
+        Private _envelope As Double() = Nothing
+        Private _envelopeDragIndex As Integer = -1
+
+        ''' <summary>Das unverformte Viereck: die vier Ecken auf dem Rechteck, die Griffe auf den
+        ''' Dritteln ihrer Kante. Genau diese Lage ist die Identitaet.</summary>
+        Private Shared Function NeutralEnvelope() As Double()
+            Dim p(23) As Double
+            Dim corners = New Double() {0, 0, 100, 0, 100, 100, 0, 100}
+            Array.Copy(corners, p, 8)
+            For edge = 0 To 3
+                Dim a = edge, b = (edge + 1) Mod 4
+                For k = 0 To 1
+                    Dim t = (k + 1) / 3.0
+                    p(8 + edge * 4 + k * 2) = corners(a * 2) + (corners(b * 2) - corners(a * 2)) * t
+                    p(9 + edge * 4 + k * 2) = corners(a * 2 + 1) + (corners(b * 2 + 1) - corners(a * 2 + 1)) * t
+                Next
+            Next
+            Return p
+        End Function
+
+        Private Sub PrepareEnvelope()
+            If _envelope IsNot Nothing AndAlso _envelope.Length = 24 Then Return
+            ResetEnvelopePoints()
+        End Sub
+
+        Private Sub ResetEnvelopePoints()
+            _envelope = NeutralEnvelope()
+            _envelopeDragIndex = -1
+        End Sub
+
+        ''' <summary>Die beiden Griffe, die an einer Ecke haengen: der erste ihrer eigenen Kante und
+        ''' der letzte der Kante davor.</summary>
+        Private Shared Function EnvelopeCornerHandles(corner As Integer) As Integer()
+            Return New Integer() {4 + corner * 2, 4 + ((corner + 3) Mod 4) * 2 + 1}
+        End Function
+
+        ''' <summary>Ein Punkt auf einer der vier Randkurven, als kubische Bezierkurve ueber Ecke,
+        ''' ihren beiden Griffen und der naechsten Ecke.</summary>
+        Private Shared Sub EnvelopeEdgePoint(p As Double(), edge As Integer, t As Double,
+                                             ByRef x As Double, ByRef y As Double)
+            Dim a = edge, b = (edge + 1) Mod 4
+            Dim h0 = 4 + edge * 2, h1 = h0 + 1
+            Dim s = 1.0 - t
+            Dim w0 = s * s * s, w1 = 3 * s * s * t, w2 = 3 * s * t * t, w3 = t * t * t
+            x = p(a * 2) * w0 + p(h0 * 2) * w1 + p(h1 * 2) * w2 + p(b * 2) * w3
+            y = p(a * 2 + 1) * w0 + p(h0 * 2 + 1) * w1 + p(h1 * 2 + 1) * w2 + p(b * 2 + 1) * w3
+        End Sub
+
+        ''' <summary>Wohin der Punkt (u, v) des Rechtecks durch die Verformung wandert; u und v
+        ''' laufen von 0 bis 1, heraus kommen Verzerrraum-Prozent.
+        '''
+        ''' Das ist die Coons-Flaeche: die Summe der beiden Randinterpolationen minus dem
+        ''' bilinearen Anteil der Ecken, der darin doppelt steckt. Untere und linke Kante sind
+        ''' entgegen ihrer Laufrichtung gespeichert und werden deshalb rueckwaerts abgetastet.
+        ''' Fuer die neutrale Lage ergibt das exakt (100u, 100v).</summary>
+        Private Shared Function EnvelopePoint(p As Double(), u As Double, v As Double) As (X As Double, Y As Double)
+            Dim tx As Double, ty As Double, rx As Double, ry As Double
+            Dim bx As Double, by As Double, lx As Double, ly As Double
+            EnvelopeEdgePoint(p, 0, u, tx, ty)
+            EnvelopeEdgePoint(p, 1, v, rx, ry)
+            EnvelopeEdgePoint(p, 2, 1.0 - u, bx, by)
+            EnvelopeEdgePoint(p, 3, 1.0 - v, lx, ly)
+            Dim x = (1 - v) * tx + v * bx + (1 - u) * lx + u * rx -
+                    ((1 - u) * (1 - v) * p(0) + u * (1 - v) * p(2) + u * v * p(4) + (1 - u) * v * p(6))
+            Dim y = (1 - v) * ty + v * by + (1 - u) * ly + u * ry -
+                    ((1 - u) * (1 - v) * p(1) + u * (1 - v) * p(3) + u * v * p(5) + (1 - u) * v * p(7))
+            Return (x, y)
+        End Function
+
+        ''' <summary>Die Verformung auf den Knoten eines regelmaessigen Rasters, in
+        ''' Verzerrraum-Prozent - die Form, in der sie der gemeinsame Renderweg erwartet.</summary>
+        Private Sub EnvelopeNodes(steps As Integer, ByRef xs As Double(), ByRef ys As Double())
+            PrepareEnvelope()
+            Dim n = (steps + 1) * (steps + 1)
+            ReDim xs(n - 1)
+            ReDim ys(n - 1)
+            For rowIdx = 0 To steps
+                For colIdx = 0 To steps
+                    Dim i = rowIdx * (steps + 1) + colIdx
+                    Dim z = EnvelopePoint(_envelope, colIdx / CDbl(steps), rowIdx / CDbl(steps))
+                    xs(i) = z.X
+                    ys(i) = z.Y
+                Next
+            Next
+        End Sub
+
+        ''' <summary>Dieselben Knoten in ANZEIGE-Prozent, im Format des Rasters:
+        ''' [spalten, zeilen, x0, y0, ...]. Punkte ohne Anzeigeort kommen als NaN heraus.</summary>
+        Private Function EnvelopeDisplayNodes(steps As Integer) As Double()
+            Dim xs As Double() = Nothing, ys As Double() = Nothing
+            EnvelopeNodes(steps, xs, ys)
+            Dim arr(1 + xs.Length * 2) As Double
+            arr(0) = steps
+            arr(1) = steps
+            For i = 0 To xs.Length - 1
+                Dim display = WarpSpaceToDisplay(xs(i), ys(i))
+                If display.HasValue Then
+                    arr(2 + i * 2) = display.Value.X
+                    arr(3 + i * 2) = display.Value.Y
+                Else
+                    arr(2 + i * 2) = Double.NaN
+                    arr(3 + i * 2) = Double.NaN
+                End If
+            Next
+            Return arr
+        End Function
+
+        ''' <summary>Die zwoelf Anfasser fuer das Overlay, in ANZEIGE-Prozent: erst die vier Ecken,
+        ''' dann die acht Kantengriffe.</summary>
+        Public ReadOnly Property EnvelopeValues As Double()
+            Get
+                PrepareEnvelope()
+                Dim arr(23) As Double
+                For i = 0 To 11
+                    Dim display = WarpSpaceToDisplay(_envelope(i * 2), _envelope(i * 2 + 1))
+                    If display.HasValue Then
+                        arr(i * 2) = display.Value.X
+                        arr(i * 2 + 1) = display.Value.Y
+                    Else
+                        arr(i * 2) = Double.NaN
+                        arr(i * 2 + 1) = Double.NaN
+                    End If
+                Next
+                Return arr
+            End Get
+        End Property
+
+        ''' <summary>Die Hilfslinien im Inneren, im Format des Rasters.</summary>
+        Public ReadOnly Property EnvelopeMeshValues As Double()
+            Get
+                Return EnvelopeDisplayNodes(EnvelopeMeshSteps)
+            End Get
+        End Property
+
+        Public ReadOnly Property HasEnvelopeChanges As Boolean
+            Get
+                PrepareEnvelope()
+                Dim neutral = NeutralEnvelope()
+                For i = 0 To 23
+                    If Math.Abs(_envelope(i) - neutral(i)) > 0.01 Then Return True
+                Next
+                Return False
+            End Get
+        End Property
+
+        Private Sub RaiseEnvelopeChanged()
+            Me.RaisePropertyChanged(NameOf(EnvelopeValues))
+            Me.RaisePropertyChanged(NameOf(EnvelopeMeshValues))
+            Me.RaisePropertyChanged(NameOf(HasEnvelopeChanges))
+        End Sub
+
+        ''' <summary>Fasst den naechstgelegenen der zwoelf Anfasser an, sofern einer in Greifweite
+        ''' liegt. Wie beim Raster im ANZEIGERAUM gemessen: greifbar ist, was man sieht.</summary>
+        Public Function TryBeginEnvelopeDrag(xPercent As Double, yPercent As Double,
+                                             slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim values = EnvelopeValues
+            If values Is Nothing Then Return False
+            Dim bestDistance = Double.MaxValue
+            Dim best = -1
+            For i = 0 To 11
+                Dim px = values(i * 2), py = values(i * 2 + 1)
+                If Double.IsNaN(px) OrElse Double.IsNaN(py) Then Continue For
+                Dim dx = (xPercent - px) / Math.Max(0.0001, slopXPercent)
+                Dim dy = (yPercent - py) / Math.Max(0.0001, slopYPercent)
+                Dim d = dx * dx + dy * dy
+                If d <= 1.0 AndAlso d < bestDistance Then
+                    bestDistance = d
+                    best = i
+                End If
+            Next
+            If best < 0 Then Return False
+            PushUndo()
+            _envelopeDragIndex = best
+            If Not WarpsTheObject Then PrepareEnvelopePreview()
+            Return True
+        End Function
+
+        Public Sub UpdateEnvelopeDrag(xPercent As Double, yPercent As Double)
+            If _envelopeDragIndex < 0 Then Return
+            Dim target = DisplayToWarpSpace(xPercent, yPercent)
+            ' Neben dem Bildinhalt gibt es keinen Quellpunkt - der Zug bleibt dann stehen, statt auf
+            ' einen geratenen Wert zu springen.
+            If Not target.HasValue Then Return
+            PrepareEnvelope()
+            ' Beim BILD bleiben die Anfasser im Bild: ausserhalb gibt es keinen Quellpunkt, ein
+            ' herausgezogener Griff waere nicht mehr anzuzeigen und damit auch nicht mehr zu fassen
+            ' (SourcePercentToDisplayPercent weist solche Punkte ab). Beim OBJEKT ist der Bezug das
+            ' Objektrechteck, dort ist Hinauswandern erlaubt und gewollt - die Ebene waechst mit.
+            Dim nx = CDbl(target.Value.X), ny = CDbl(target.Value.Y)
+            Dim limit = Not WarpsTheObject
+            If limit Then
+                nx = Klemme100(nx)
+                ny = Klemme100(ny)
+            End If
+            ' Eine Ecke nimmt ihre beiden Griffe mit. Sonst bliebe die Kante an ihren alten Griffen
+            ' haengen und beulte aus, waehrend die Ecke davonlaeuft.
+            If _envelopeDragIndex < 4 Then
+                Dim dx = nx - _envelope(_envelopeDragIndex * 2)
+                Dim dy = ny - _envelope(_envelopeDragIndex * 2 + 1)
+                For Each h In EnvelopeCornerHandles(_envelopeDragIndex)
+                    Dim hx = _envelope(h * 2) + dx
+                    Dim hy = _envelope(h * 2 + 1) + dy
+                    _envelope(h * 2) = If(limit, Klemme100(hx), hx)
+                    _envelope(h * 2 + 1) = If(limit, Klemme100(hy), hy)
+                Next
+            End If
+            _envelope(_envelopeDragIndex * 2) = nx
+            _envelope(_envelopeDragIndex * 2 + 1) = ny
+            RaiseEnvelopeChanged()
+            ' Gilt der Zug einem OBJEKT, gibt es keine Bildvorschau zu rechnen: die Verformung steht
+            ' sofort am Objekt, und das Bild darunter bleibt unangetastet.
+            If WarpsTheObject Then
+                WriteObjectEnvelope()
+                SchedulePreviewUpdate()
+            Else
+                RefreshEnvelopePreview()
+            End If
+        End Sub
+
+        Public Sub EndEnvelopeDrag()
+            Dim wasDragging = _envelopeDragIndex >= 0
+            _envelopeDragIndex = -1
+            If wasDragging AndAlso WarpsTheObject Then
+                ' Loslassen heisst anwenden - wie bei den Eck-Anfassern.
+                WriteObjectEnvelope()
+                RefreshPreviewImmediately()
+            End If
+            ' Beim BILD bleibt die Vorschau stehen: sie zeigt den Stand, den "Anwenden" backen
+            ' wuerde.
+        End Sub
+
+        Public Sub ResetEnvelope()
+            If Not HasEnvelopeChanges Then Return
+            CaptureUndoState("Verformen")
+            DisposeGridPreview()
+            ResetEnvelopePoints()
+            RaiseEnvelopeChanged()
+            ' Am Objekt IST die Verformung die Verzerrung selbst - ein gerades Viereck heisst also,
+            ' dass auch am Objekt nichts mehr stehen darf.
+            If WarpsTheObject Then
+                WriteObjectEnvelope()
+                RefreshPreviewImmediately()
+            End If
+        End Sub
+
+        ''' <summary>Die Verformung ins Arbeitsbild backen - derselbe Weg wie beim Raster.</summary>
+        Public Sub ApplyEnvelopeWarp()
+            ' Wie bei Raster und Linien: am Objekt gibt es nichts zu backen.
+            If WarpsTheObject Then Return
+            If Not HasEnvelopeChanges Then Return
+            Dim xs As Double() = Nothing, ys As Double() = Nothing
+            EnvelopeNodes(EnvelopeSteps, xs, ys)
+            ApplyNodeWarp(EnvelopeSteps, EnvelopeSteps, xs, ys,
+                          Sub()
+                              DisposeGridPreview()
+                              ResetEnvelopePoints()
+                              RaiseEnvelopeChanged()
+                          End Sub)
+        End Sub
+
+        ''' <summary>Die Verformung als Gitter in die eigene Verzerrung des markierten Objekts
+        ''' eintragen - dieselbe Form, die auch das Rasterwerkzeug dort hinterlaesst.</summary>
+        Private Sub WriteObjectEnvelope()
+            Dim a = CurrentObject()
+            If a Is Nothing Then Return
+            If Not HasEnvelopeChanges Then
+                a.OwnWarp = Nothing
+            Else
+                Dim xs As Double() = Nothing, ys As Double() = Nothing
+                EnvelopeNodes(EnvelopeSteps, xs, ys)
+                Dim node(xs.Length * 2 - 1) As Double
+                For i = 0 To xs.Length - 1
+                    node(i * 2) = xs(i)
+                    node(i * 2 + 1) = ys(i)
+                Next
+                a.OwnWarp = New ObjectWarp With {
+                    .Kind = "Gitter", .Columns = EnvelopeSteps, .Rows = EnvelopeSteps, .Nodes = node}
+            End If
+            RaiseObjectWarpChanged()
+        End Sub
+
+        ' Vorschau: derselbe Kanal und dieselbe Grundlage wie beim Raster, nur mit dem feineren
+        ' Auswertungsraster. Beide Werkzeuge koennen nie gleichzeitig laufen.
+
+        Private Sub PrepareEnvelopePreview()
+            PrepareWarpPreview(EnvelopeSteps, EnvelopeSteps)
+        End Sub
+
+        Private Sub RefreshEnvelopePreview()
+            RefreshWarpPreview(EnvelopeSteps, EnvelopeSteps,
+                               EnvelopeDisplayNodes(EnvelopeSteps), "Verformen")
+        End Sub
+
+
         ' ── Ein Objekt fuer sich verzerren ──────────────────────────────────────
         '
         ' Ist im Verzerren-Werkzeug ein Objekt markiert, gehoeren die Anfasser IHM und nicht dem
@@ -6347,7 +6706,10 @@ Namespace ViewModels
         ''' Objekt gemeint ist.</summary>
         Public ReadOnly Property ShowsObjectFrameHandles As Boolean
             Get
-                Return Not WarpsTheObject
+                ' Der PFAD ist derselbe Fall: seine Stuetzpunkte liegen auf und in dem Rechteck, das
+                ' der Rahmen zeigt. Blieben die Griffe stehen, kaeme man an die Punkte nicht mehr
+                ' heran. Der Rahmen selbst bleibt - er sagt, welches Objekt gemeint ist.
+                Return Not WarpsTheObject AndAlso Not CanEditPathNodes
             End Get
         End Property
 
@@ -6362,7 +6724,7 @@ Namespace ViewModels
                                CSng(r.Y + yPercent / 100.0 * r.Height))
         End Function
 
-        ''' <summary>Gegenrichtung zu <see cref="VerzerrRaumZuAnzeige"/>.</summary>
+        ''' <summary>Gegenrichtung zu <see cref="WarpSpaceToDisplay"/>.</summary>
         Private Function DisplayToWarpSpace(xPercent As Double, yPercent As Double) As SKPoint?
             If Not WarpsTheObject Then Return DisplayPercentToSourcePercent(xPercent, yPercent)
             Dim r = GetSelectedAnnotationDisplayRectPercent()
@@ -6547,6 +6909,7 @@ Namespace ViewModels
         Private _warpSpaceObject As Integer = -1
         Private _gridImageX As Double() = Nothing
         Private _gridImageY As Double() = Nothing
+        Private _envelopeImage As Double() = Nothing
         Private ReadOnly _linienBild As New List(Of WarpLine)()
 
         ''' <summary>Haelt Gitter und Linien in dem Raum, in dem gerade verzerrt wird.
@@ -6563,6 +6926,8 @@ Namespace ViewModels
                 PrepareGrid()
                 _gridImageX = CType(_warpX.Clone(), Double())
                 _gridImageY = CType(_warpY.Clone(), Double())
+                PrepareEnvelope()
+                _envelopeImage = CType(_envelope.Clone(), Double())
                 _linienBild.Clear()
                 _linienBild.AddRange(_linien)
             End If
@@ -6571,6 +6936,7 @@ Namespace ViewModels
             _warpDragIndex = -1
             _linienDragIndex = -1
             _linienDragTeil = -1
+            _envelopeDragIndex = -1
             DisposeGridPreview()
             DisposeLinePreview()
             _linien.Clear()
@@ -6583,12 +6949,18 @@ Namespace ViewModels
                 Else
                     ResetGrid()
                 End If
+                If _envelopeImage IsNot Nothing AndAlso _envelopeImage.Length = 24 Then
+                    _envelope = CType(_envelopeImage.Clone(), Double())
+                Else
+                    ResetEnvelopePoints()
+                End If
                 _linien.AddRange(_linienBild)
             Else
                 LoadWarpFromObject()
             End If
 
             RaiseLinesChanged()
+            RaiseEnvelopeChanged()
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
         End Sub
@@ -6597,6 +6969,9 @@ Namespace ViewModels
         ''' nicht passt (andere Art, andere Rastergroesse), faengt neutral an.</summary>
         Private Sub LoadWarpFromObject()
             ResetGrid()
+            ' Die Verformung faengt am Objekt immer neutral an: aus einem Knotenraster laesst sich
+            ' nicht zurueckrechnen, welche vier Randkurven es erzeugt haben.
+            ResetEnvelopePoints()
             Dim a = CurrentObject()
             Dim v = a?.OwnWarp
             If v Is Nothing OrElse v.IsEmpty Then Return
@@ -6712,59 +7087,144 @@ Namespace ViewModels
             ' Siehe ApplyLinienVerzerrung: am Objekt gibt es nichts zu backen.
             If WarpsTheObject Then Return
             If Not HasWarpGridChanges Then Return
-            If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
-            Dim columns = _warpColumns, rows = _warpRows
-            Dim xs = CType(_warpX.Clone(), Double())
-            Dim ys = CType(_warpY.Clone(), Double())
+            PrepareGrid()
+            ApplyNodeWarp(_warpColumns, _warpRows,
+                          CType(_warpX.Clone(), Double()), CType(_warpY.Clone(), Double()),
+                          Sub()
+                              DisposeGridPreview()
+                              ResetGrid()
+                              Me.RaisePropertyChanged(NameOf(WarpGridValues))
+                              Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+                          End Sub)
+        End Sub
+
+        ''' <summary>Ein Knotenraster ins REZEPT uebernehmen. Gitter, Linien und Verformen gehen hier
+        ''' zusammen: sie unterscheiden sich nur darin, WORAUS die Knoten entstehen.
+        ''' <paramref name="afterApply"/> raeumt danach den Stand des jeweiligen Werkzeugs auf.
+        '''
+        ''' Frueher wurde hier in die PIXEL gebacken. Das kostete die Bearbeitbarkeit und war bei RAW
+        ''' und PSD sogar ganz verloren: neben diesen Dateien liegt nur das Rezept. Jetzt wird die
+        ''' Verzerrung als Knotenraster ins Rezept geschrieben und laeuft bei jedem Render in der
+        ''' Geometriestufe mit - beim naechsten Oeffnen also wieder.</summary>
+        Private Sub ApplyNodeWarp(columns As Integer, rows As Integer,
+                                  xs As Double(), ys As Double(), afterApply As Action)
+            If Not HasDocument Then Return
 
             PushUndo()
-            ' Der Schritt zurueck merkt sich nur das Rezept - der Flicken traegt die PIXEL.
-            Dim undoItem = _lastPushedUndoEntry
-            ' Die OBJEKTE gehen mit, ohne eingebacken zu werden: sie bekommen die Verzerrung als
-            ' Angabe ins Rezept und bleiben damit aenderbar - Text laesst sich weiter tippen.
-            ApplyWarpToObjects(GridMapping())
-            SetBusyReason(LocalizationService.T("Verzerrung wird angewendet"))
-            StatusText = LocalizationService.T("Verzerrung wird angewendet…")
-            EnqueueWorkingCommit(
-                Function()
-                    Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
-                        Sub(full)
-                            Dim zx(xs.Length - 1) As Single
-                            Dim zy(ys.Length - 1) As Single
-                            For i = 0 To xs.Length - 1
-                                zx(i) = CSng(xs(i) / 100.0 * full.Width)
-                                zy(i) = CSng(ys(i) / 100.0 * full.Height)
-                            Next
-                            ' Erst auf einer KOPIE verzerren, dann zurueckzeichnen: die Quelle waehrend
-                            ' des Zeichnens gleichzeitig als Textur zu lesen und zu beschreiben gaebe
-                            ' Schlieren.
-                            Using kopie = full.Copy()
-                                Using warped = ImageGeometryMapper.WarpOverGrid(kopie, columns, rows, zx, zy)
-                                    If warped Is Nothing Then Return
-                                    Using canvas = New SKCanvas(full)
-                                        canvas.Clear(SKColors.Transparent)
-                                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                                            canvas.DrawBitmap(warped, 0, 0, paint)
-                                        End Using
-                                    End Using
-                                End Using
-                            End Using
-                        End Sub)
-                End Function,
-                Sub(patch)
-                    If patch Is Nothing Then
-                        StatusText = LocalizationService.T("Verzerren fehlgeschlagen")
-                        Return
+            ' Die OBJEKTE gehen mit: sie bekommen die Verzerrung als eigene Angabe und bleiben damit
+            ' aenderbar - Text laesst sich weiter tippen. Das Bild darunter braucht das nicht mehr,
+            ' seine Verzerrung steht ab jetzt im Rezept.
+            ApplyWarpToObjects(NodeMapping(columns, rows, xs, ys))
+            ComposeImageWarp(columns, rows, xs, ys)
+            afterApply?.Invoke()
+            StatusText = LocalizationService.T("Verzerrung angewendet")
+            _hasChanges = True
+            RefreshPreviewImmediately()
+        End Sub
+
+        ' ── Die Verzerrung des BILDES als Rezeptwert ────────────────────────────
+        '
+        ' Ein Knotenraster in Prozent des unbeschnittenen Bildes, genau die Form, die auch ein Objekt
+        ' traegt. Jede der drei Arten wird darauf abgebildet, und genau deshalb laesst sich eine
+        ' zweite Verzerrung auf eine erste setzen: die vorhandenen Stuetzpunkte wandern einfach durch
+        ' das neue Feld. Mit drei getrennten Arten muesste man fuer jede Paarung ueberlegen, was ihre
+        ' Verkettung ist.
+
+        Private _imageWarp As ObjectWarp = Nothing
+
+        ''' <summary>Traegt das Bild ein VERZERRUNGSRASTER im Rezept (Gitter, Linien, Verformen)?</summary>
+        Public ReadOnly Property HasImageWarp As Boolean
+            Get
+                Return _imageWarp IsNot Nothing AndAlso Not _imageWarp.IsEmpty
+            End Get
+        End Property
+
+        ''' <summary>Traegt das Bild IRGENDEINE Verzerrung - Raster ODER Perspektive?
+        '''
+        ''' Der Knopf zum Zuruecknehmen haengt daran und nicht am Raster allein. Die Perspektive war
+        ''' sonst nur ueber den kleinen Knopf in IHRER Gruppe erreichbar, und die ist ausgeblendet,
+        ''' sobald ein anderer Modus gewaehlt ist: eine gekippte Perspektive liess sich damit nicht
+        ''' mehr zuruecknehmen, ohne erst wieder in den Perspektive-Modus zu wechseln.</summary>
+        Public ReadOnly Property HasAnyImageWarp As Boolean
+            Get
+                Return HasImageWarp OrElse HasPerspectiveChanges
+            End Get
+        End Property
+
+        Private Sub RaiseImageWarpChanged()
+            Me.RaisePropertyChanged(NameOf(HasImageWarp))
+            Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
+        End Sub
+
+        ''' <summary>Das neue Feld auf das vorhandene setzen. Ausgewertet wird auf dem FEINEREN der
+        ''' beiden Raster: das gröbere gäbe die Krümmung des feineren nicht wieder.</summary>
+        Private Sub ComposeImageWarp(columns As Integer, rows As Integer, xs As Double(), ys As Double())
+            Dim old = _imageWarp
+            Dim steps = Math.Max(columns, rows)
+            If old IsNot Nothing AndAlso Not old.IsEmpty Then
+                steps = Math.Max(steps, Math.Max(old.Columns, old.Rows))
+            End If
+            steps = Math.Max(2, Math.Min(MaxImageWarpSteps, steps))
+
+            Dim mapping = NodeMapping(columns, rows, xs, ys)
+            Dim node((steps + 1) * (steps + 1) * 2 - 1) As Double
+            For rowIdx = 0 To steps
+                For colIdx = 0 To steps
+                    Dim i = (rowIdx * (steps + 1) + colIdx) * 2
+                    Dim px = colIdx / CDbl(steps) * 100.0
+                    Dim py = rowIdx / CDbl(steps) * 100.0
+                    ' ERST der neue Zug, DANN die vorhandene Verzerrung - und nicht umgekehrt. Der
+                    ' Zug wird im UNVERZERRTEN Quellraum abgelegt: die Trefferpruefung rechnet den
+                    ' Zeiger ueber die Umkehrung der vorhandenen Verzerrung zurueck. Wo ein Punkt am
+                    ' Ende landet, sagt also erst der Zug und dann das, was schon steht. In der
+                    ' anderen Reihenfolge wanderte ein gezogener Punkt neben den Zeiger, sobald
+                    ' schon einmal verzerrt worden war.
+                    Dim n = mapping(px, py)
+                    px = n.X : py = n.Y
+                    If old IsNot Nothing AndAlso Not old.IsEmpty Then
+                        Dim v = ExistingWarp(old, px, py)
+                        px = v.X : py = v.Y
                     End If
-                    If undoItem IsNot Nothing Then undoItem.Patch = patch
-                    DisposeGridPreview()
-                    ResetGrid()
-                    Me.RaisePropertyChanged(NameOf(WarpGridValues))
-                    Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
-                    StatusText = LocalizationService.T("Verzerrung angewendet")
-                    _hasChanges = True
-                    SchedulePreviewUpdate()
-                End Sub)
+                    node(i) = px
+                    node(i + 1) = py
+                Next
+            Next
+            _imageWarp = New ObjectWarp With {
+                .Kind = "Gitter", .Columns = steps, .Rows = steps, .Nodes = node}
+            RaiseImageWarpChanged()
+        End Sub
+
+        ''' <summary>Obergrenze der Rasterfeinheit im Rezept. Die Linienverzerrung wertet ihr Feld
+        ''' mit 48 Schritten aus; so fein gespeichert kostet jede Ruecksuche (Overlays, Pinsel,
+        ''' Retusche) das Vierfache, ohne dass man den Unterschied saehe.</summary>
+        Private Const MaxImageWarpSteps As Integer = 24
+
+        ''' <summary>Die Verzerrung des Bildes wieder wegnehmen - ALLE VIER Arten, also auch die
+        ''' Perspektive. Sie stehen im Rezept, es gibt also nichts zurueckzurechnen; anders als
+        ''' frueher, als Raster und Linien in den Pixeln standen.</summary>
+        Public Sub ResetImageWarp()
+            If Not HasAnyImageWarp Then Return
+            PushUndo()
+            _imageWarp = Nothing
+            RaiseImageWarpChanged()
+            ' Die Perspektive gehoert dazu: fuer den Nutzer ist sie eine der vier Arten in derselben
+            ' Gruppe, und ihr eigener Knopf verschwindet mit ihrer Gruppe, sobald ein anderer Modus
+            ' gewaehlt ist.
+            If HasPerspectiveChanges Then
+                _perspectiveHorizontal = 0
+                _perspectiveVertical = 0
+                _perspectiveAspect = 0
+                _perspectiveScale = 0
+                Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+                For Each n In {NameOf(PerspectiveHorizontal), NameOf(PerspectiveVertical),
+                               NameOf(PerspectiveAspect), NameOf(PerspectiveScale)}
+                    Me.RaisePropertyChanged(n)
+                Next
+                RaiseCornersChanged()
+            End If
+            _hasChanges = True
+            StatusText = LocalizationService.T("Verzerrung zurückgenommen")
+            RefreshPreviewImmediately()
         End Sub
 
         Public Property Vignette As Double
@@ -9353,6 +9813,18 @@ Namespace ViewModels
                    kind.StartsWith("Circle", StringComparison.OrdinalIgnoreCase)
         End Function
 
+        ''' <summary>Behaelt ein Text auf FREIEM Pfad seine Box? Ja, sobald die Grundlinie gezeichnet
+        ''' ist: die Punkte liegen in Prozent der Box, und jede Neuvermessung auf den geraden
+        ''' Textkasten streckte die gezeichnete Kurve auf den neuen Kasten - die Grundlinie verformte
+        ''' sich mit jedem Tastendruck. Die Box legt stattdessen RefitPathBoundsToPoints um die
+        ''' Punkte, wie beim Pfad-Objekt; ein Zug am Auswahlrahmen skaliert Grundlinie und Box
+        ''' gemeinsam.</summary>
+        Private Function FreeTextPathKeepsBox() As Boolean
+            If Not String.Equals(_annotationTextPathKind, "Free", StringComparison.OrdinalIgnoreCase) Then Return False
+            Dim a = CurrentObject()
+            Return a IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(a.PathPoints)
+        End Function
+
         Public Sub SetAnnotationTextPathKind(kind As String)
             AnnotationTextPathKind = If(String.Equals(kind, "None", StringComparison.OrdinalIgnoreCase), "", If(kind, ""))
             ' Ein Kreis braucht eine quadratische Box, sonst steht der Selektionsrahmen weit um den
@@ -9371,6 +9843,15 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
                 SyncSelectedAnnotation()
+            End If
+            ' FREIER PFAD: die Grundlinie gibt es noch nicht - also gleich danach fragen, statt den
+            ' Nutzer raten zu lassen. Steht schon eine, bleibt sie und laesst sich mit den Griffen
+            ' nachziehen.
+            If String.Equals(AnnotationTextPathKind, "Free", StringComparison.OrdinalIgnoreCase) Then
+                Dim target = CurrentObject()
+                If target IsNot Nothing AndAlso String.IsNullOrWhiteSpace(target.PathPoints) Then
+                    BeginPathDraftFor(target)
+                End If
             End If
         End Sub
 
@@ -10524,6 +11005,19 @@ Namespace ViewModels
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return
             Dim start = DisplayPercentToSourcePercent(xPercent, yPercent)
             If Not start.HasValue Then Return
+
+            ' HINZUFÜGEN, ABZIEHEN oder SCHNEIDEN heisst: dieser Verlauf gehoert IN die Maske, an der
+            ' gerade gearbeitet wird - nicht in eine neue daneben. Nur "Neue Auswahl" legt eine neue
+            ' Maske samt Ebene an. Vorher gab es diese Wahl bei Verlaeufen gar nicht, und jeder Zug
+            ' erzeugte eine weitere Ebene.
+            If Not IsSelectionCombineNew Then
+                Dim target = CurrentMaskForComponents()
+                If target IsNot Nothing Then
+                    BeginGradientComponentDrag(target, start.Value)
+                    Return
+                End If
+            End If
+
             PushUndo()
             ' Eine laufende Pixelauswahl hat mit dem Verlauf nichts zu tun und würde sonst als
             ' zweite, konkurrierende Maske weiterleben.
@@ -10553,8 +11047,72 @@ Namespace ViewModels
             _maskedAdjustmentLayers.Add(layer)
             _selectedMaskedAdjustmentLayerId = layer.Id
             _gradientDragMaskId = mask.Id
+            _workingMaskId = mask.Id
+            _activeMaskComponentIndex = -1
             _gradientDragActive = True
             _gradientHandle = -1
+            RaiseMaskComponentsChanged()
+        End Sub
+
+        ''' <summary>Die Maske, in die ein weiterer Bestandteil gehoert: die des markierten Verlaufs,
+        ''' die einer markierten Korrekturebene oder die gerade bearbeitete Ebenenmaske. Nothing =
+        ''' es gibt keine, dann entsteht wie bisher eine neue.</summary>
+        Private Function CurrentMaskForComponents() As ImageMask
+            ' 1) Ausdruecklich gemerkt: waehrend und nach einem Bestandteil-Zug. Steht ganz vorn,
+            '    damit der zweite Zug dieselbe Maske trifft wie der erste.
+            If _workingMaskId <> "" Then
+                Dim working = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                             String.Equals(m.Id, _workingMaskId, StringComparison.Ordinal))
+                If working IsNot Nothing Then Return working
+                _workingMaskId = ""
+            End If
+            ' 2) Die Ebenenmaske, die gerade bearbeitet wird (rotes Overlay).
+            If _editingLayerMaskId <> "" Then
+                Dim edited = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                            String.Equals(m.Id, _editingLayerMaskId, StringComparison.Ordinal))
+                If edited IsNot Nothing Then Return edited
+            End If
+            ' 3) Die Maske der markierten Korrekturebene - GLEICH WELCHER ART. SelectedGradientMask
+            '    taugt hier nicht: sie verlangt einen Verlauf als ersten Bestandteil.
+            Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
+                                                                   l.Id = _selectedMaskedAdjustmentLayerId)
+            If layer Is Nothing OrElse String.IsNullOrEmpty(layer.MaskId) Then Return Nothing
+            Return _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                  String.Equals(m.Id, layer.MaskId, StringComparison.Ordinal))
+        End Function
+
+        ''' <summary>Haengt einen Verlauf als weiteren Bestandteil an eine vorhandene Maske und macht
+        ''' ihn zum aktiven - der Zug bedient ab jetzt IHN.</summary>
+        Private Sub BeginGradientComponentDrag(target As ImageMask, start As SKPoint)
+            PushUndo()
+            ' Eine laufende PIXELAUSWAHL gehoert nicht dazu; sonst laege eine zweite Maske an. Die
+            ' bearbeitete EBENENMASKE ist aber keine solche Auswahl, sondern genau die Maske, an die
+            ' angehaengt wird - sie wegzuraeumen loeschte das rote Overlay und die Bindung daran.
+            If _hasActiveSelection AndAlso _editingLayerMaskId = "" Then ClearSelection(captureUndo:=False)
+            _workingMaskId = target.Id
+            Dim component As New MaskComponent With {
+                .Mode = SelectionCombineMode,
+                .Kind = If(IsMaskRadialMode, "Radial", "Linear"),
+                .GradientStartXPercent = start.X,
+                .GradientStartYPercent = start.Y,
+                .GradientEndXPercent = start.X,
+                .GradientEndYPercent = start.Y,
+                .GradientRadiusRatio = 1.0,
+                .GradientFeatherPercent = _gradientFeatherPercent,
+                .Inverted = _gradientInverted}
+            target.AddComponent(component)
+            ' Der neue Bestandteil ist der letzte, und der letzte ist der aktive.
+            _activeMaskComponentIndex = -1
+            ' Die Ebene dieser Maske markieren, damit Regler und Overlay auf sie zeigen.
+            Dim owner = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
+                                                                   String.Equals(l.MaskId, target.Id, StringComparison.Ordinal))
+            If owner IsNot Nothing Then _selectedMaskedAdjustmentLayerId = owner.Id
+            _gradientDragMaskId = target.Id
+            _gradientDragActive = True
+            _gradientHandle = -1
+            RaiseGradientPropertiesChanged()
+            RaiseMaskComponentsChanged()
+            SchedulePreviewUpdate()
         End Sub
 
         ''' <summary>Zieht den Endpunkt mit. Mit gedrückter Umschalttaste rastet die Achse auf
@@ -10565,21 +11123,27 @@ Namespace ViewModels
             If mask Is Nothing Then Return
             Dim ende = DisplayPercentToSourcePercent(xPercent, yPercent)
             If Not ende.HasValue Then Return
+            ' Der Zug spannt den AKTIVEN Bestandteil auf. Beim Anhaengen an eine vorhandene Maske ist
+            ' das der eben erzeugte - ohne das zoege man am ERSTEN Verlauf, und der neue bliebe ein
+            ' Punkt.
+            Dim component = ActiveMaskComponent()
+            If component Is Nothing Then Return
             Dim ex As Double = ende.Value.X, ey As Double = ende.Value.Y
             If rasten Then
                 ' Rasten muss in PIXELN rechnen, nicht in Prozent: bei 3:2 wäre ein "45-Grad"-Zug
                 ' in Prozent in Wahrheit 34 Grad.
-                Dim dx = (ex - mask.GradientStartXPercent) / 100.0 * mask.SourceWidthPixels
-                Dim dy = (ey - mask.GradientStartYPercent) / 100.0 * mask.SourceHeightPixels
+                Dim dx = (ex - component.GradientStartXPercent) / 100.0 * mask.SourceWidthPixels
+                Dim dy = (ey - component.GradientStartYPercent) / 100.0 * mask.SourceHeightPixels
                 Dim laenge = Math.Sqrt(dx * dx + dy * dy)
                 If laenge > 0.0001 Then
                     Dim angle = Math.Round(Math.Atan2(dy, dx) / (Math.PI / 12.0)) * (Math.PI / 12.0)
-                    ex = mask.GradientStartXPercent + Math.Cos(angle) * laenge / mask.SourceWidthPixels * 100.0
-                    ey = mask.GradientStartYPercent + Math.Sin(angle) * laenge / mask.SourceHeightPixels * 100.0
+                    ex = component.GradientStartXPercent + Math.Cos(angle) * laenge / mask.SourceWidthPixels * 100.0
+                    ey = component.GradientStartYPercent + Math.Sin(angle) * laenge / mask.SourceHeightPixels * 100.0
                 End If
             End If
-            mask.GradientEndXPercent = ex
-            mask.GradientEndYPercent = ey
+            component.GradientEndXPercent = ex
+            component.GradientEndYPercent = ey
+            CommitActiveMaskComponent(component)
             PublishGradientOverlay(mask)
             RaiseGradientPropertiesChanged()
         End Sub
@@ -10591,10 +11155,20 @@ Namespace ViewModels
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _gradientDragMaskId)
             _gradientDragMaskId = ""
             If mask Is Nothing Then Return
-            Dim dx = (mask.GradientEndXPercent - mask.GradientStartXPercent) / 100.0 * mask.SourceWidthPixels
-            Dim dy = (mask.GradientEndYPercent - mask.GradientStartYPercent) / 100.0 * mask.SourceHeightPixels
+            Dim component = ActiveMaskComponent()
+            If component Is Nothing Then Return
+            Dim dx = (component.GradientEndXPercent - component.GradientStartXPercent) / 100.0 * mask.SourceWidthPixels
+            Dim dy = (component.GradientEndYPercent - component.GradientStartYPercent) / 100.0 * mask.SourceHeightPixels
             If Math.Sqrt(dx * dx + dy * dy) < 4.0 Then
-                RemoveGradientMaskAndLayer(mask)
+                ' Ein blosser Klick laesst nichts Leeres zurueck. War der Verlauf ein WEITERER
+                ' Bestandteil, faellt nur er weg - die Maske darunter hat mit dem Fehlgriff nichts zu
+                ' tun, und sie samt Ebene zu entfernen waere ein Datenverlust.
+                If mask.ComponentCount > 1 Then
+                    mask.RemoveComponentAt(ActiveMaskComponentIndex)
+                    _activeMaskComponentIndex = -1
+                Else
+                    RemoveGradientMaskAndLayer(mask)
+                End If
                 RebuildLayerRows()
                 RaiseGradientPropertiesChanged()
                 Return
@@ -10612,8 +11186,47 @@ Namespace ViewModels
                 _maskedAdjustmentLayers.Remove(l)
                 If _selectedMaskedAdjustmentLayerId = l.Id Then _selectedMaskedAdjustmentLayerId = ""
             Next
-            _imageMasks.Remove(mask)
+            RemoveMaskIfUnreferenced(mask.Id)
             SetSelectionMaskPreviewImage(Nothing)
+        End Sub
+
+        ''' <summary>Zeigt noch irgendetwas auf diese Maske? Korrekturebenen UND Objekte zaehlen: seit
+        ''' ein Objekt eine eigene Ebenenmaske tragen darf, reicht der Blick auf die Korrekturebenen
+        ''' nicht mehr. Wer nur die eine Liste prueft, loescht die Maske unter dem Objekt weg - das
+        ''' Objekt behielte eine Kennung ohne Daten, und seine Maske waere lautlos wirkungslos.</summary>
+        Private Function IsMaskReferenced(maskId As String) As Boolean
+            If String.IsNullOrEmpty(maskId) Then Return False
+            If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso
+                                               String.Equals(l.MaskId, maskId, StringComparison.Ordinal)) Then Return True
+            Return _annotations.Any(Function(a) a IsNot Nothing AndAlso
+                                        String.Equals(a.MaskId, maskId, StringComparison.Ordinal))
+        End Function
+
+        ''' <summary>Gibt der KOPIE eines Objekts eine eigene Ebenenmaske.
+        '''
+        ''' Korrekturebenen teilen sich Masken ausdruecklich ("Neue Korrektur mit derselben Maske") -
+        ''' eine kopierte OBJEKTebene darf das nicht: wer die Maske der Kopie nachmalt, meint die
+        ''' Kopie und nicht zugleich das Original. Ohne Maske bleibt alles, wie es ist.</summary>
+        Private Sub GiveCopyItsOwnMask(copy As ImageAnnotation)
+            If copy Is Nothing OrElse String.IsNullOrEmpty(copy.MaskId) Then Return
+            Dim original = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                          String.Equals(m.Id, copy.MaskId, StringComparison.Ordinal))
+            If original Is Nothing Then
+                copy.MaskId = ""
+                Return
+            End If
+            Dim clone = original.Clone()
+            clone.Id = Guid.NewGuid().ToString("N")
+            _imageMasks.Add(clone)
+            copy.MaskId = clone.Id
+        End Sub
+
+        ''' <summary>Die EINE Stelle, die eine Maske wegraeumt: nur, wenn nichts mehr auf sie zeigt.</summary>
+        Private Sub RemoveMaskIfUnreferenced(maskId As String)
+            If String.IsNullOrEmpty(maskId) OrElse IsMaskReferenced(maskId) Then Return
+            _imageMasks.RemoveAll(Function(m) m IsNot Nothing AndAlso String.Equals(m.Id, maskId, StringComparison.Ordinal))
+            If String.Equals(_editingLayerMaskId, maskId, StringComparison.Ordinal) Then _editingLayerMaskId = ""
+            If String.Equals(_workingMaskId, maskId, StringComparison.Ordinal) Then _workingMaskId = ""
         End Sub
 
         ' --- Regler des Masken-Werkzeugs -------------------------------------------------
@@ -10625,18 +11238,179 @@ Namespace ViewModels
         Private _gradientInverted As Boolean = False
         Private _gradientRadiusRatio As Double = 1.0
 
+        ' ── Der BESTANDTEIL, an dem gerade gearbeitet wird ───────────────────────
+        '
+        ' Eine Maske kann aus mehreren Bestandteilen bestehen (Verlauf plus Verlauf plus gemalt, je
+        ' hinzugefuegt, abgezogen oder geschnitten). Griffe und Regler bedienen immer GENAU EINEN
+        ' davon. Standard ist der ZULETZT hinzugefuegte: wer einen zweiten Verlauf aufzieht, meint
+        ' ihn und nicht den ersten.
+        '
+        ' Gelesen wird eine ABSCHRIFT, zurueckgegeben wird ueber CommitActiveMaskComponent. Das ist
+        ' Absicht: der erste Bestandteil liegt in den Feldern der Maske selbst, die weiteren in ihrer
+        ' Liste - eine Referenz gaebe es also nur fuer einen Teil der Faelle, und genau daran wuerde
+        ' spaeter jemand haengenbleiben.
+
+        Private _activeMaskComponentIndex As Integer = -1
+
+        ''' <summary>Die Maske, an der gerade gearbeitet wird. AUSDRÜCKLICH gemerkt und nicht aus
+        ''' <see cref="SelectedGradientMask"/> abgeleitet: die verlangt, dass der ERSTE Bestandteil
+        ''' ein Verlauf ist. Hängt man einen Verlauf an eine GEMALTE Maske (der Normalfall bei einer
+        ''' Ebenenmaske), lieferte sie Nothing - der Zug fand seinen Bestandteil nicht, es passierte
+        ''' nichts, und der nächste Klick legte eine neue Ebene an.</summary>
+        Private _workingMaskId As String = ""
+
+        ''' <summary>Stelle des bedienten Bestandteils in der Maske. -1 bzw. zu gross heisst: der
+        ''' letzte.</summary>
+        Public Property ActiveMaskComponentIndex As Integer
+            Get
+                Dim m = CurrentMaskForComponents()
+                If m Is Nothing Then Return 0
+                Dim count = m.ComponentCount
+                If count = 0 Then Return 0
+                If _activeMaskComponentIndex < 0 OrElse _activeMaskComponentIndex >= count Then Return count - 1
+                Return _activeMaskComponentIndex
+            End Get
+            Set(value As Integer)
+                If _activeMaskComponentIndex = value Then Return
+                _activeMaskComponentIndex = value
+                RaiseGradientPropertiesChanged()
+                RaiseMaskComponentsChanged()
+            End Set
+        End Property
+
+        ''' <summary>Die Bestandteile der bearbeiteten Maske als Zeilen für das Panel.</summary>
+        Public ReadOnly Property MaskComponentRows As New ObservableCollection(Of MaskComponentRow)()
+
+        ''' <summary>Lohnt die Liste überhaupt? Bei genau einem Bestandteil sagt sie nichts, was das
+        ''' Panel nicht schon zeigt - dann bleibt sie weg.</summary>
+        Public ReadOnly Property HasMaskComponents As Boolean
+            Get
+                Return MaskComponentRows.Count > 1
+            End Get
+        End Property
+
+        Private Sub RaiseMaskComponentsChanged()
+            MaskComponentRows.Clear()
+            Dim m = CurrentMaskForComponents()
+            If m IsNot Nothing Then
+                Dim components = m.GetComponents()
+                Dim active = ActiveMaskComponentIndex
+                For i = 0 To components.Count - 1
+                    MaskComponentRows.Add(New MaskComponentRow(i, components(i), i = active))
+                Next
+            End If
+            Me.RaisePropertyChanged(NameOf(MaskComponentRows))
+            Me.RaisePropertyChanged(NameOf(HasMaskComponents))
+            Me.RaisePropertyChanged(NameOf(ActiveMaskComponentIndex))
+        End Sub
+
+        ' ── Umkehren und Verwerfen fuer JEDE Masken-Art ─────────────────────────
+        '
+        ' Die Modusreihe (Neu, Plus, Minus, Umkehren, Verwerfen) steht in allen Arten des
+        ' Masken-Werkzeugs. Was ein VERLAUF dabei umkehrt und verwirft, ist aber ein anderes Ding als
+        ' bei einer gemalten Maske: er hat keine aktive Auswahl, sondern einen Bestandteil und eine
+        ' Ebene. Die beiden Befehle entscheiden das deshalb selbst, statt es der Oberflaeche mit zwei
+        ' Knopfsaetzen aufzubuerden.
+
+        Public ReadOnly Property CanInvertMask As Boolean
+            Get
+                Return _hasActiveSelection OrElse ActiveMaskComponent() IsNot Nothing
+            End Get
+        End Property
+
+        Public Sub InvertCurrentMask()
+            If ActiveMaskComponent() IsNot Nothing AndAlso Not _hasActiveSelection Then
+                GradientInverted = Not GradientInverted
+                Return
+            End If
+            InvertSelection()
+        End Sub
+
+        Public ReadOnly Property CanDiscardMask As Boolean
+            Get
+                Return _hasActiveSelection OrElse CurrentMaskForComponents() IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Verwerfen heisst bei einer aktiven Auswahl: Auswahl weg. Bei einem markierten
+        ''' Verlauf gibt es keine Auswahl - dort ist die MASKE samt ihrer Ebene gemeint.</summary>
+        Public Sub DiscardCurrentMask()
+            If _hasActiveSelection Then
+                ClearSelection()
+                Return
+            End If
+            Dim gradient = CurrentMaskForComponents()
+            If gradient Is Nothing Then Return
+            PushUndo()
+            _workingMaskId = ""
+            RemoveGradientMaskAndLayer(gradient)
+            _activeMaskComponentIndex = -1
+            RaiseGradientPropertiesChanged()
+            PublishMaskBrushOverlay()
+            RebuildLayerRows()
+            _hasChanges = True
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Sub RaiseMaskActionStateChanged()
+            Me.RaisePropertyChanged(NameOf(CanInvertMask))
+            Me.RaisePropertyChanged(NameOf(CanDiscardMask))
+        End Sub
+
+        ''' <summary>Einen Bestandteil zum bedienten machen.</summary>
+        Public Sub SelectMaskComponent(index As Integer)
+            ActiveMaskComponentIndex = index
+        End Sub
+
+        ''' <summary>Einen Bestandteil entfernen. War es der letzte, bleibt die Maske leer stehen -
+        ''' entfernt wird sie über ihre Ebene, nicht hier.</summary>
+        Public Sub RemoveMaskComponent(index As Integer)
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing Then Return
+            If index < 0 OrElse index >= m.ComponentCount Then Return
+            PushUndo()
+            m.RemoveComponentAt(index)
+            _activeMaskComponentIndex = -1
+            RaiseGradientPropertiesChanged()
+            RaiseMaskComponentsChanged()
+            PublishGradientOverlay(m)
+            _hasChanges = True
+            SchedulePreviewUpdate()
+        End Sub
+
+        Private Function ActiveMaskComponent() As MaskComponent
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing Then Return Nothing
+            Dim components = m.GetComponents()
+            Dim index = ActiveMaskComponentIndex
+            If index < 0 OrElse index >= components.Count Then Return Nothing
+            Return components(index)
+        End Function
+
+        Private Sub CommitActiveMaskComponent(c As MaskComponent)
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing OrElse c Is Nothing Then Return
+            Dim index = ActiveMaskComponentIndex
+            If index = 0 Then
+                m.SetPrimaryFromComponent(c)
+            ElseIf m.ExtraComponents IsNot Nothing AndAlso index - 1 < m.ExtraComponents.Count Then
+                m.ExtraComponents(index - 1) = c
+            End If
+        End Sub
+
         Public Property GradientFeatherPercent As Double
             Get
-                Dim m = SelectedGradientMask
-                Return If(m IsNot Nothing, m.GradientFeatherPercent, _gradientFeatherPercent)
+                Dim c = ActiveMaskComponent()
+                Return If(c IsNot Nothing, c.GradientFeatherPercent, _gradientFeatherPercent)
             End Get
             Set(value As Double)
                 Dim v = Math.Max(0.0, Math.Min(100.0, value))
                 _gradientFeatherPercent = v
-                Dim m = SelectedGradientMask
-                If m IsNot Nothing AndAlso Math.Abs(m.GradientFeatherPercent - v) > 0.0001 Then
-                    m.GradientFeatherPercent = v
-                    PublishGradientOverlay(m)
+                Dim c = ActiveMaskComponent()
+                If c IsNot Nothing AndAlso Math.Abs(c.GradientFeatherPercent - v) > 0.0001 Then
+                    c.GradientFeatherPercent = v
+                    CommitActiveMaskComponent(c)
+                    PublishGradientOverlay(SelectedGradientMask)
                     SchedulePreviewUpdate()
                 End If
                 Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
@@ -10646,16 +11420,17 @@ Namespace ViewModels
         ''' <summary>Stauchung der zweiten Halbachse beim radialen Verlauf: 1 = Kreis, kleiner = flach.</summary>
         Public Property GradientRadiusRatio As Double
             Get
-                Dim m = SelectedGradientMask
-                Return If(m IsNot Nothing, m.GradientRadiusRatio, _gradientRadiusRatio)
+                Dim c = ActiveMaskComponent()
+                Return If(c IsNot Nothing, c.GradientRadiusRatio, _gradientRadiusRatio)
             End Get
             Set(value As Double)
                 Dim v = Math.Max(0.05, Math.Min(4.0, value))
                 _gradientRadiusRatio = v
-                Dim m = SelectedGradientMask
-                If m IsNot Nothing AndAlso Math.Abs(m.GradientRadiusRatio - v) > 0.0001 Then
-                    m.GradientRadiusRatio = v
-                    PublishGradientOverlay(m)
+                Dim c = ActiveMaskComponent()
+                If c IsNot Nothing AndAlso Math.Abs(c.GradientRadiusRatio - v) > 0.0001 Then
+                    c.GradientRadiusRatio = v
+                    CommitActiveMaskComponent(c)
+                    PublishGradientOverlay(SelectedGradientMask)
                     SchedulePreviewUpdate()
                 End If
                 Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
@@ -10664,15 +11439,16 @@ Namespace ViewModels
 
         Public Property GradientInverted As Boolean
             Get
-                Dim m = SelectedGradientMask
-                Return If(m IsNot Nothing, m.Inverted, _gradientInverted)
+                Dim c = ActiveMaskComponent()
+                Return If(c IsNot Nothing, c.Inverted, _gradientInverted)
             End Get
             Set(value As Boolean)
                 _gradientInverted = value
-                Dim m = SelectedGradientMask
-                If m IsNot Nothing AndAlso m.Inverted <> value Then
-                    m.Inverted = value
-                    PublishGradientOverlay(m)
+                Dim c = ActiveMaskComponent()
+                If c IsNot Nothing AndAlso c.Inverted <> value Then
+                    c.Inverted = value
+                    CommitActiveMaskComponent(c)
+                    PublishGradientOverlay(SelectedGradientMask)
                     SchedulePreviewUpdate()
                 End If
                 Me.RaisePropertyChanged(NameOf(GradientInverted))
@@ -10685,23 +11461,26 @@ Namespace ViewModels
         Public Property GradientAngleDegrees As Double
             Get
                 Dim m = SelectedGradientMask
-                If m Is Nothing Then Return 0
-                Dim dx = (m.GradientEndXPercent - m.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
-                Dim dy = (m.GradientEndYPercent - m.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
+                Dim c = ActiveMaskComponent()
+                If m Is Nothing OrElse c Is Nothing Then Return 0
+                Dim dx = (c.GradientEndXPercent - c.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
+                Dim dy = (c.GradientEndYPercent - c.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
                 Dim grad = Math.Atan2(dy, dx) * 180.0 / Math.PI
                 If grad < 0 Then grad += 360.0
                 Return Math.Round(grad)
             End Get
             Set(value As Double)
                 Dim m = SelectedGradientMask
-                If m Is Nothing OrElse m.SourceWidthPixels <= 0 OrElse m.SourceHeightPixels <= 0 Then Return
-                Dim dx = (m.GradientEndXPercent - m.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
-                Dim dy = (m.GradientEndYPercent - m.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
+                Dim c = ActiveMaskComponent()
+                If m Is Nothing OrElse c Is Nothing OrElse m.SourceWidthPixels <= 0 OrElse m.SourceHeightPixels <= 0 Then Return
+                Dim dx = (c.GradientEndXPercent - c.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
+                Dim dy = (c.GradientEndYPercent - c.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
                 Dim laenge = Math.Sqrt(dx * dx + dy * dy)
                 If laenge < 0.0001 Then Return
                 Dim rad = value * Math.PI / 180.0
-                m.GradientEndXPercent = m.GradientStartXPercent + Math.Cos(rad) * laenge / m.SourceWidthPixels * 100.0
-                m.GradientEndYPercent = m.GradientStartYPercent + Math.Sin(rad) * laenge / m.SourceHeightPixels * 100.0
+                c.GradientEndXPercent = c.GradientStartXPercent + Math.Cos(rad) * laenge / m.SourceWidthPixels * 100.0
+                c.GradientEndYPercent = c.GradientStartYPercent + Math.Sin(rad) * laenge / m.SourceHeightPixels * 100.0
+                CommitActiveMaskComponent(c)
                 PublishGradientOverlay(m)
                 SchedulePreviewUpdate()
                 Me.RaisePropertyChanged(NameOf(GradientAngleDegrees))
@@ -10719,18 +11498,24 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(GradientInverted))
             Me.RaisePropertyChanged(NameOf(GradientAngleDegrees))
             Me.RaisePropertyChanged(NameOf(GradientGeometry))
+            RaiseMaskComponentsChanged()
+            RaiseMaskActionStateChanged()
         End Sub
 
+        ''' <summary>Liegt gerade ein VERLAUF zum Anfassen vor? Gefragt wird der aktive Bestandteil
+        ''' und nicht die Maske: seit eine Maske aus mehreren Bestandteilen bestehen kann, ist ein
+        ''' Verlauf an einer gemalten Ebenenmaske der Normalfall - und für den ist die Antwort ja.</summary>
         Public ReadOnly Property HasSelectedGradientMask As Boolean
             Get
-                Return SelectedGradientMask IsNot Nothing
+                Dim c = ActiveMaskComponent()
+                Return c IsNot Nothing AndAlso c.IsGradient
             End Get
         End Property
 
         Public ReadOnly Property ShowRadialRatioControl As Boolean
             Get
-                Dim m = SelectedGradientMask
-                If m IsNot Nothing Then Return m.IsRadialGradient
+                Dim c = ActiveMaskComponent()
+                If c IsNot Nothing Then Return c.IsRadialGradient
                 Return IsMaskRadialMode
             End Get
         End Property
@@ -10739,14 +11524,14 @@ Namespace ViewModels
         ''' seine Griffe braucht. Nothing, wenn gerade kein Verlauf markiert ist.</summary>
         Public ReadOnly Property GradientGeometry As Double()
             Get
-                Dim m = SelectedGradientMask
-                If m Is Nothing Then Return Nothing
-                Dim a = SourcePercentToDisplayPercent(m.GradientStartXPercent, m.GradientStartYPercent)
-                Dim b = SourcePercentToDisplayPercent(m.GradientEndXPercent, m.GradientEndYPercent)
+                Dim c = ActiveMaskComponent()
+                If c Is Nothing OrElse Not c.IsGradient Then Return Nothing
+                Dim a = SourcePercentToDisplayPercent(c.GradientStartXPercent, c.GradientStartYPercent)
+                Dim b = SourcePercentToDisplayPercent(c.GradientEndXPercent, c.GradientEndYPercent)
                 If Not a.HasValue OrElse Not b.HasValue Then Return Nothing
                 Return New Double() {a.Value.X, a.Value.Y, b.Value.X, b.Value.Y,
-                                     m.GradientRadiusRatio, m.GradientFeatherPercent,
-                                     If(m.IsRadialGradient, 1.0, 0.0), If(m.Inverted, 1.0, 0.0)}
+                                     c.GradientRadiusRatio, c.GradientFeatherPercent,
+                                     If(c.IsRadialGradient, 1.0, 0.0), If(c.Inverted, 1.0, 0.0)}
             End Get
         End Property
 
@@ -10987,8 +11772,14 @@ Namespace ViewModels
         ''' Verlauf auf.</summary>
         Public Function TryBeginGradientHandleDrag(xPercent As Double, yPercent As Double,
                                                    slopXPercent As Double, slopYPercent As Double) As Boolean
-            Dim mask = SelectedGradientMask
+            ' NICHT ueber SelectedGradientMask: die verlangt einen Verlauf als ERSTEN Bestandteil.
+            ' Ein Verlauf, der an eine gemalte Ebenenmaske angehaengt wurde, faende seine Griffe
+            ' sonst nie - und weil der Griff-Versuch scheitert, zoege jeder Klick darauf einen
+            ' weiteren Verlauf auf.
+            Dim mask = CurrentMaskForComponents()
             If mask Is Nothing Then Return False
+            Dim component = ActiveMaskComponent()
+            If component Is Nothing OrElse Not component.IsGradient Then Return False
             Dim geo = GradientGeometry
             If geo Is Nothing Then Return False
             Dim handle = -1
@@ -11027,9 +11818,12 @@ Namespace ViewModels
             ' denselben benutzen wie der Treffertest, sonst springt der Wert beim Anfassen.
             _gradientSlopX = slopXPercent
             _gradientSlopY = slopYPercent
-            _gradientMoveBrush = New SKRectI(mask.BrushLeft, mask.BrushTop, mask.BrushRight, mask.BrushBottom)
-            _gradientMoveStart = New SKPoint(CSng(mask.GradientStartXPercent), CSng(mask.GradientStartYPercent))
-            _gradientMoveEnd = New SKPoint(CSng(mask.GradientEndXPercent), CSng(mask.GradientEndYPercent))
+            ' Die Startwerte kommen aus dem AKTIVEN Bestandteil, nicht aus der Maske: sonst zoege man
+            ' am zweiten Verlauf und rechnete gegen die Lage des ersten.
+            _gradientMoveBrush = New SKRectI(component.BrushLeft, component.BrushTop,
+                                             component.BrushRight, component.BrushBottom)
+            _gradientMoveStart = New SKPoint(CSng(component.GradientStartXPercent), CSng(component.GradientStartYPercent))
+            _gradientMoveEnd = New SKPoint(CSng(component.GradientEndXPercent), CSng(component.GradientEndYPercent))
             Return True
         End Function
 
@@ -11194,6 +11988,10 @@ Namespace ViewModels
             End If
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _gradientDragMaskId)
             If mask Is Nothing Then Return
+            ' Der Zug bedient den AKTIVEN Bestandteil, nicht pauschal den ersten - sonst zoege
+            ' man am zweiten Verlauf und der erste bewegte sich.
+            Dim component = ActiveMaskComponent()
+            If component Is Nothing Then Return
             If _gradientHandle = 4 Then
                 ' Stauchung: der Abstand des Zeigers QUER zur Achse ist die zweite Halbachse.
                 Dim geoS = GradientGeometry
@@ -11201,10 +11999,10 @@ Namespace ViewModels
                 Dim neu = SqueezeFromPointer(geoS, xPercent, yPercent, _gradientSlopX, _gradientSlopY)
                 If neu < 0.0 Then Return
                 If rasten Then neu = Math.Round(neu * 20.0) / 20.0
-                mask.GradientRadiusRatio = neu
+                component.GradientRadiusRatio = neu
                 _gradientRadiusRatio = neu
                 Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
-            ElseIf _gradientHandle = 3 AndAlso mask.IsRadialGradient Then
+            ElseIf _gradientHandle = 3 AndAlso component.IsRadialGradient Then
                 ' Innere Ellipse: der normierte Radius des Zeigers IST die innere Grenze. Umkehrung
                 ' der Zeichnung (innen = 1 - Uebergang/100).
                 Dim geoR = GradientGeometry
@@ -11212,8 +12010,8 @@ Namespace ViewModels
                 Dim laengeR As Double
                 Dim rR = EllipsenRadiusNormiert(geoR, xPercent, yPercent, _gradientSlopX, _gradientSlopY, laengeR)
                 If rR < 0.0 Then Return
-                mask.GradientFeatherPercent = Math.Max(2.0, Math.Min(100.0, (1.0 - Math.Max(0.02, Math.Min(0.98, rR))) * 100.0))
-                _gradientFeatherPercent = mask.GradientFeatherPercent
+                component.GradientFeatherPercent = Math.Max(2.0, Math.Min(100.0, (1.0 - Math.Max(0.02, Math.Min(0.98, rR))) * 100.0))
+                _gradientFeatherPercent = component.GradientFeatherPercent
                 Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
             ElseIf _gradientHandle = 3 Then
                 ' Uebergangsstrich: der Abstand des Zeigers von der Achsenmitte ENTLANG der Achse
@@ -11229,8 +12027,8 @@ Namespace ViewModels
                 Dim t = ((xPercent - mx) * dx + (yPercent - my) * dy) / len2
                 ' Untergrenze 2 statt 0: bei 0 faellt die Rampe auf eine harte Kante zusammen, und
                 ' die beiden Striche lägen aufeinander - der Uebergang waere nicht mehr zu fassen.
-                mask.GradientFeatherPercent = Math.Max(2.0, Math.Min(100.0, Math.Abs(t) * 200.0))
-                _gradientFeatherPercent = mask.GradientFeatherPercent
+                component.GradientFeatherPercent = Math.Max(2.0, Math.Min(100.0, Math.Abs(t) * 200.0))
+                _gradientFeatherPercent = component.GradientFeatherPercent
                 Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
             ElseIf _gradientHandle = 2 Then
                 ' Ganzer Verlauf: der Versatz wird im ANZEIGERAUM gemessen und für beide Punkte
@@ -11238,32 +12036,33 @@ Namespace ViewModels
                 Dim aNeu = DisplayOffsetToSource(_gradientMoveStart, xPercent - _gradientMoveRefX, yPercent - _gradientMoveRefY)
                 Dim bNeu = DisplayOffsetToSource(_gradientMoveEnd, xPercent - _gradientMoveRefX, yPercent - _gradientMoveRefY)
                 If Not aNeu.HasValue OrElse Not bNeu.HasValue Then Return
-                mask.GradientStartXPercent = aNeu.Value.X
-                mask.GradientStartYPercent = aNeu.Value.Y
-                mask.GradientEndXPercent = bNeu.Value.X
-                mask.GradientEndYPercent = bNeu.Value.Y
+                component.GradientStartXPercent = aNeu.Value.X
+                component.GradientStartYPercent = aNeu.Value.Y
+                component.GradientEndXPercent = bNeu.Value.X
+                component.GradientEndYPercent = bNeu.Value.Y
                 ' Pinselkorrektur mitnehmen: derselbe Versatz in QUELLPIXELN. Ein Verschieben ist eine
                 ' reine Verschiebung - das achsenparallele Rechteck bleibt achsenparallel, es muss also
                 ' nichts umgerechnet werden ausser dem Ursprung.
-                If _gradientMoveBrush.Right > _gradientMoveBrush.Left AndAlso mask.HasBrushCorrection Then
+                If _gradientMoveBrush.Right > _gradientMoveBrush.Left AndAlso component.HasBrushCorrection Then
                     Dim dxPx = CInt(Math.Round((aNeu.Value.X - _gradientMoveStart.X) / 100.0 * mask.SourceWidthPixels))
                     Dim dyPx = CInt(Math.Round((aNeu.Value.Y - _gradientMoveStart.Y) / 100.0 * mask.SourceHeightPixels))
-                    mask.BrushLeft = _gradientMoveBrush.Left + dxPx
-                    mask.BrushTop = _gradientMoveBrush.Top + dyPx
-                    mask.BrushRight = _gradientMoveBrush.Right + dxPx
-                    mask.BrushBottom = _gradientMoveBrush.Bottom + dyPx
+                    component.BrushLeft = _gradientMoveBrush.Left + dxPx
+                    component.BrushTop = _gradientMoveBrush.Top + dyPx
+                    component.BrushRight = _gradientMoveBrush.Right + dxPx
+                    component.BrushBottom = _gradientMoveBrush.Bottom + dyPx
                 End If
             Else
                 Dim source = DisplayPercentToSourcePercent(xPercent, yPercent)
                 If Not source.HasValue Then Return
                 If _gradientHandle = 0 Then
-                    mask.GradientStartXPercent = source.Value.X
-                    mask.GradientStartYPercent = source.Value.Y
+                    component.GradientStartXPercent = source.Value.X
+                    component.GradientStartYPercent = source.Value.Y
                 Else
-                    mask.GradientEndXPercent = source.Value.X
-                    mask.GradientEndYPercent = source.Value.Y
+                    component.GradientEndXPercent = source.Value.X
+                    component.GradientEndYPercent = source.Value.Y
                 End If
             End If
+            CommitActiveMaskComponent(component)
             PublishGradientOverlay(mask)
             ' Beim Korrigieren traegt die Ebene schon eine Anpassung - ohne Neurechnung saehe man
             ' nur das rote Overlay wandern, nicht die Wirkung. Der Aufruf ist entprellt.
@@ -11299,10 +12098,26 @@ Namespace ViewModels
         ''' schaltet in den Masken-Pinsel und zeigt sie als rotes Overlay. Ab jetzt bearbeitet der Pinsel
         ''' die harte Form dieser Ebenen-Maske; die "Weiche Kante" steuert mask.FeatherPixels.</summary>
         Private Sub LoadLayerMaskIntoSelection(layer As MaskedAdjustmentLayer)
+            If layer Is Nothing Then
+                _editingLayerMaskId = ""
+                InvalidateSelectionLayerLink()
+                Return
+            End If
+            LoadMaskIntoSelection(layer.MaskId, layer.IsMaskLayer)
+        End Sub
+
+        ''' <summary>Derselbe Weg fuer die Ebenenmaske eines OBJEKTS: dort gibt es keine
+        ''' Korrekturebene, nur die Maskenkennung. <paramref name="showAsMask"/> entscheidet ueber
+        ''' rotes Overlay (Maske) oder Laufameisen (Auswahl).</summary>
+        Private Sub LoadMaskIntoSelection(maskId As String, showAsMask As Boolean)
             _editingLayerMaskId = ""
+            ' Ein bewusster Wechsel auf eine andere Maske hebt auch das Merken der zuletzt
+            ' bearbeiteten auf - sonst haengte ein Verlaufszug weiter an der vorigen.
+            _workingMaskId = ""
+            _activeMaskComponentIndex = -1
             InvalidateSelectionLayerLink()
-            If layer Is Nothing Then Return
-            Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId)
+            If String.IsNullOrEmpty(maskId) Then Return
+            Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = maskId)
             If mask Is Nothing Then Return
             ' Ein Verlauf ist gerechnet, nicht gemalt: er wird NICHT in die Auswahlmaske geladen (das
             ' machte aus zwei Punkten ein PNG und nahm ihm die Aenderbarkeit). Eine noch laufende
@@ -11326,11 +12141,11 @@ Namespace ViewModels
             _editingLayerMaskId = mask.Id
             ' Overlay nach EBENEN-ART: Masken-Ebene → rotes Overlay, Auswahl-Ebene → Laufameisen. Kein
             ' Werkzeugwechsel; die Maske bleibt mit dem Masken-Pinsel editierbar (Auswahl-Werkzeug + Pinsel).
-            SetActiveSelectionIsMask(layer.IsMaskLayer)
+            SetActiveSelectionIsMask(showAsMask)
             ' SetActiveSelectionIsMask baut das Overlay NUR bei einem Artwechsel neu. Beim Wechsel von einer
             ' Masken-Ebene zur nächsten (beide True) bliebe sonst das ROT DER VORIGEN Maske stehen - es sähe
             ' aus, als färbe die neue Maske fremde Bereiche/Ebenen rot. Deshalb hier immer neu aufbauen.
-            If layer.IsMaskLayer Then PublishSelectionRedOverlay()
+            If showAsMask Then PublishSelectionRedOverlay()
         End Sub
 
         ''' <summary>Schreibt die aktuelle _selectionMask (harte Form) in die bearbeitete Ebenen-Maske
@@ -11351,6 +12166,817 @@ Namespace ViewModels
             mask.Bottom = rebuilt.Bottom
             mask.PngBase64 = rebuilt.PngBase64
             mask.Inverted = False
+        End Sub
+
+        ' ── Freier Pfad: setzen und nachziehen ──────────────────────────────────
+        '
+        ' Der ENTWURF laeuft in ANZEIGE-Prozent, weil dort auch der Zeiger liegt. Erst beim
+        ' Abschliessen wird er auf das umschliessende Rechteck bezogen und in OBJEKT-Prozent
+        ' abgelegt - ab dann macht der Pfad Verschieben, Skalieren und Drehen ohne Zutun mit.
+        '
+        ' Ein FERTIGER Pfad wird andersherum gelesen: seine Punkte kommen aus dem Objektraum in den
+        ' Anzeigeraum, werden dort gezogen und wandern zurueck. Beide Richtungen gehen ueber
+        ' dieselben zwei Funktionen, damit es keine zweite Formel gibt.
+
+        Private _pathDraft As New List(Of ImageProcessor.PathNode)()
+        ''' <summary>Bekommt ein VORHANDENES Objekt die Punkte (leer = es entsteht ein neues
+        ''' Pfad-Objekt)? So bekommt ein Textobjekt seine freie Grundlinie, ohne dass daneben ein
+        ''' zweites Objekt entsteht.</summary>
+        Private _pathDraftTargetId As String = ""
+        ''' Der Punkt, dessen Griffe der laufende Zug gerade formt (-1 = keiner).
+        Private _pathShapingIndex As Integer = -1
+        ''' Beim Nachziehen: welcher Punkt und welcher Teil von ihm haengt am Zeiger.
+        Private _pathDragIndex As Integer = -1
+        Private _pathDragPart As String = ""
+        Private _pathDragCapturedUndo As Boolean = False
+
+        ''' <summary>Zeigt das Panel des Pfad-Werkzeugs.</summary>
+        Public ReadOnly Property ShowPathAdjustments As Boolean
+            Get
+                Return _currentTool = EditorTool.Path
+            End Get
+        End Property
+
+        ''' <summary>Wartet das Werkzeug auf Pfadpunkte? Im PFAD-Werkzeug ohne markierten Pfad ja -
+        ''' dann fängt der erste Klick einen neuen an. Ist einer markiert, gehören die Klicks seinen
+        ''' Punkten; einen weiteren Pfad beginnt man dann über den Knopf im Panel.</summary>
+        Public ReadOnly Property IsPathPenActive As Boolean
+            Get
+                If _pathDraft.Count > 0 OrElse _pathDraftTargetId <> "" Then Return True
+                If String.Equals(NormalizeAnnotationKind(_pendingInsertKind), "Path", StringComparison.Ordinal) Then Return True
+                Return _currentTool = EditorTool.Path AndAlso PathEditTarget() Is Nothing
+            End Get
+        End Property
+
+        ''' <summary>Einen neuen Pfad beginnen, auch wenn gerade einer markiert ist.</summary>
+        Public Sub BeginNewPath()
+            SelectedAnnotationIndex = -1
+            _pathDraft.Clear()
+            _pathShapingIndex = -1
+            _pathDraftTargetId = ""
+            PendingInsertKind = "Path"
+            If _currentTool <> EditorTool.Path Then CurrentTool = EditorTool.Path
+            StatusText = LocalizationService.T("Punkte setzen, Eingabe schließt ab")
+            RaisePathOverlayChanged()
+        End Sub
+
+        ''' <summary>Zahl der Stützpunkte des bearbeiteten Pfades - für die Anzeige im Panel.</summary>
+        Public ReadOnly Property PathNodeCount As Integer
+            Get
+                If _pathDraft.Count > 0 Then Return _pathDraft.Count
+                Dim target = PathEditTarget()
+                If target Is Nothing Then Return 0
+                Return ImageProcessor.ParsePathPoints(target.PathPoints).Count
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSelectedPathClosed As Boolean
+            Get
+                Dim target = PathEditTarget()
+                Return target IsNot Nothing AndAlso target.PathClosed
+            End Get
+        End Property
+
+        ''' <summary>Pfad schließen oder wieder öffnen. Geschlossen heißt: der letzte Punkt läuft zum
+        ''' ersten zurück - für die KONTUR ein Unterschied, für die Füllung keiner.</summary>
+        Public Sub ToggleSelectedPathClosed()
+            Dim target = PathEditTarget()
+            If target Is Nothing Then Return
+            PushUndo()
+            target.PathClosed = Not target.PathClosed
+            _hasChanges = True
+            RaisePathOverlayChanged()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
+        End Sub
+
+        ''' <summary>Setzt einen Stützpunkt in die MITTE des längsten Abschnitts. Das ist bewusst
+        ''' keine Klickgeste auf der Kurve: die Kurve liegt unter dem Pfad selbst, und ein Klick dort
+        ''' bedeutet schon „diesen Pfad greifen". Der Knopf ist eindeutig.</summary>
+        Public Sub AddPathNode()
+            Dim target = PathEditTarget()
+            If target Is Nothing Then Return
+            Dim nodes = ImageProcessor.ParsePathPoints(target.PathPoints)
+            If nodes.Count < 2 Then Return
+            ' Laengster Abschnitt nach dem Abstand der Stuetzpunkte - fein genug, um zu treffen, was
+            ' der Nutzer meint, und ohne die Kurve abtasten zu muessen.
+            Dim best = 0
+            Dim bestLength = -1.0
+            Dim last = If(target.PathClosed, nodes.Count - 1, nodes.Count - 2)
+            For i = 0 To last
+                Dim b = nodes((i + 1) Mod nodes.Count)
+                Dim dx = b.Anchor.X - nodes(i).Anchor.X
+                Dim dy = b.Anchor.Y - nodes(i).Anchor.Y
+                Dim length = dx * dx + dy * dy
+                If length > bestLength Then
+                    bestLength = length
+                    best = i
+                End If
+            Next
+            Dim nextIndex = (best + 1) Mod nodes.Count
+            Dim mid = New SKPoint((nodes(best).Anchor.X + nodes(nextIndex).Anchor.X) / 2.0F,
+                                  (nodes(best).Anchor.Y + nodes(nextIndex).Anchor.Y) / 2.0F)
+            PushUndo()
+            nodes.Insert(best + 1, ImageProcessor.PathNode.Corner(mid.X, mid.Y))
+            target.PathPoints = ImageProcessor.FormatPathPoints(nodes)
+            _hasChanges = True
+            RaisePathOverlayChanged()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
+        End Sub
+
+        ''' <summary>Entfernt den zuletzt angefassten Stützpunkt, sonst den letzten. Unter zwei
+        ''' Punkten wäre es kein Pfad mehr - dort hört es auf.</summary>
+        Public Sub RemovePathNode()
+            Dim target = PathEditTarget()
+            If target Is Nothing Then Return
+            Dim nodes = ImageProcessor.ParsePathPoints(target.PathPoints)
+            If nodes.Count <= 2 Then Return
+            Dim index = If(_lastTouchedPathNode >= 0 AndAlso _lastTouchedPathNode < nodes.Count,
+                           _lastTouchedPathNode, nodes.Count - 1)
+            PushUndo()
+            nodes.RemoveAt(index)
+            target.PathPoints = ImageProcessor.FormatPathPoints(nodes)
+            _lastTouchedPathNode = -1
+            _hasChanges = True
+            RaisePathOverlayChanged()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
+        End Sub
+
+        ''' <summary>Macht aus dem zuletzt angefassten Punkt eine ECKE (Griffe auf den Stützpunkt)
+        ''' oder wieder eine glatte Stelle (Griffe entlang der Nachbarn ausgerichtet).</summary>
+        Public Sub ToggleLastPathNodeSmooth()
+            Dim target = PathEditTarget()
+            If target Is Nothing Then Return
+            Dim nodes = ImageProcessor.ParsePathPoints(target.PathPoints)
+            If nodes.Count < 2 Then Return
+            Dim index = If(_lastTouchedPathNode >= 0 AndAlso _lastTouchedPathNode < nodes.Count,
+                           _lastTouchedPathNode, nodes.Count - 1)
+            Dim node = nodes(index)
+            PushUndo()
+            Dim isCorner = Math.Abs(node.HandleIn.X - node.Anchor.X) < 0.0001F AndAlso
+                           Math.Abs(node.HandleIn.Y - node.Anchor.Y) < 0.0001F AndAlso
+                           Math.Abs(node.HandleOut.X - node.Anchor.X) < 0.0001F AndAlso
+                           Math.Abs(node.HandleOut.Y - node.Anchor.Y) < 0.0001F
+            If isCorner Then
+                ' Glaetten: die Griffe zeigen entlang der Verbindung der beiden Nachbarn, je ein
+                ' Drittel des Abstands lang. Das ist die uebliche Naeherung und ergibt eine Kurve,
+                ' die durch den Punkt laeuft, statt an ihm zu knicken.
+                Dim previous = nodes((index - 1 + nodes.Count) Mod nodes.Count).Anchor
+                Dim nextAnchor = nodes((index + 1) Mod nodes.Count).Anchor
+                Dim dirX = (nextAnchor.X - previous.X) / 6.0F
+                Dim dirY = (nextAnchor.Y - previous.Y) / 6.0F
+                node.HandleIn = New SKPoint(node.Anchor.X - dirX, node.Anchor.Y - dirY)
+                node.HandleOut = New SKPoint(node.Anchor.X + dirX, node.Anchor.Y + dirY)
+            Else
+                node.HandleIn = node.Anchor
+                node.HandleOut = node.Anchor
+            End If
+            nodes(index) = node
+            target.PathPoints = ImageProcessor.FormatPathPoints(nodes)
+            _hasChanges = True
+            RaisePathOverlayChanged()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
+        End Sub
+
+        ''' Der zuletzt angefasste Stuetzpunkt - Bezug fuer Entfernen und Glaetten.
+        Private _lastTouchedPathNode As Integer = -1
+
+        Public ReadOnly Property HasPathDraft As Boolean
+            Get
+                Return _pathDraft.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Solange die PUNKTE eines Pfades gemeint sind (ein Entwurf läuft oder im
+        ''' Pfad-Werkzeug ist ein Pfad bzw. eine freie Grundlinie markiert), verschwindet der
+        ''' Auswahlrahmen GANZ, nicht nur seine Griffe: er liegt auf denselben Ecken wie die
+        ''' äußeren Stützpunkte, seine Greifzonen fingen die Klicks darauf ab, und beim Setzen
+        ''' neuer Punkte über dem Objekt schluckte er den Druck. Welches Objekt gemeint ist,
+        ''' zeigen die Punkte selbst.</summary>
+        Public ReadOnly Property HidesSelectionFrameForPath As Boolean
+            Get
+                Return _pathDraft.Count > 0 OrElse _pathDraftTargetId <> "" OrElse PathEditTarget() IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Das Objekt, dessen Punkte gerade nachgezogen werden koennen: ein markierter Pfad
+        ''' oder ein Textobjekt, dessen Grundlinie ein freier Pfad ist. NUR im Pfad-Werkzeug: sonst
+        ''' laegen die Stuetzpunkte unter dem Auswahlrahmen des Objekts, und ein Zug meinte je nach
+        ''' getroffenem Pixel das eine oder das andere - dieselbe Entscheidung wie beim Verzerren,
+        ''' wo die Ecken den Rahmen verdraengen. GEDREHTE Objekte bleiben aussen vor: ihr
+        ''' Anzeigerechteck ist die unrotierte Huelle, und die Punkte laegen beim Ziehen daneben.
+        ''' Erst drehen, dann ziehen waere ein eigener Umbau.</summary>
+        Private Function PathEditTarget() As ImageAnnotation
+            If _currentTool <> EditorTool.Path Then Return Nothing
+            Dim a = CurrentObject()
+            If a Is Nothing OrElse Math.Abs(a.RotationDegrees) > 0.01F Then Return Nothing
+            Dim kind = NormalizeAnnotationKind(a.Kind)
+            Dim isFreeTextPath = String.Equals(kind, "Text", StringComparison.Ordinal) AndAlso
+                                 String.Equals(a.TextPathKind, "Free", StringComparison.OrdinalIgnoreCase)
+            If Not String.Equals(kind, "Path", StringComparison.Ordinal) AndAlso Not isFreeTextPath Then Return Nothing
+            Return a
+        End Function
+
+        ''' <summary>Der Knopf "Text auf dem Pfad": nur fuer ein markiertes PFAD-Objekt mit Punkten.
+        ''' Eine freie Grundlinie ist selbst schon Text, und ohne Punkte gaebe es nichts zu
+        ''' uebernehmen.</summary>
+        Public ReadOnly Property CanCreateTextOnPath As Boolean
+            Get
+                If _pathDraft.Count > 0 Then Return False
+                Dim a = PathEditTarget()
+                Return a IsNot Nothing AndAlso
+                       String.Equals(NormalizeAnnotationKind(a.Kind), "Path", StringComparison.Ordinal) AndAlso
+                       Not String.IsNullOrWhiteSpace(a.PathPoints)
+            End Get
+        End Property
+
+        ''' <summary>Erzeugt ein Textobjekt, dessen Grundlinie die Punkte des markierten Pfades
+        ''' uebernimmt - der Standardweg "Pfad zeichnen, Text daraufsetzen". Der Pfad selbst bleibt
+        ''' bestehen: wer nur die Linie als Grundlinie wollte, blendet ihn aus oder loescht ihn.
+        ''' Punkte und Box werden KOPIERT, nicht geteilt - zwei Objekte auf derselben Punktliste
+        ''' zoegen einander die Grundlinie weg, sobald eines skaliert wird.</summary>
+        Public Sub CreateTextOnSelectedPath()
+            Dim source = CurrentObject()
+            If source Is Nothing OrElse String.IsNullOrWhiteSpace(source.PathPoints) Then Return
+            If Not String.Equals(NormalizeAnnotationKind(source.Kind), "Path", StringComparison.Ordinal) Then Return
+            PushUndo()
+            Dim text = New ImageAnnotation With {
+                .Kind = "Text",
+                .Text = LocalizationService.T("Text"),
+                .XPixels = source.XPixels, .YPixels = source.YPixels,
+                .WidthPixels = source.WidthPixels, .HeightPixels = source.HeightPixels,
+                .RotationDegrees = source.RotationDegrees,
+                .TextPathKind = "Free",
+                .PathPoints = source.PathPoints,
+                .PathClosed = source.PathClosed,
+                .IsVisible = True
+            }
+            Dim index = _annotations.IndexOf(source)
+            If index < 0 Then index = _annotations.Count - 1
+            _annotations.Insert(index + 1, text)
+            _hasChanges = True
+            ' Danach ins TEXT-Werkzeug: dort steht das Eingabefeld, und genau das Tippen ist der
+            ' naechste Schritt. Aus dem Pfad-Werkzeug heraus bleibt das Werkzeug beim Markieren
+            ' sonst bewusst stehen (IsObjectTransformTool), deshalb der ausdrueckliche Wechsel.
+            ' Die Grundlinie bleibt im Pfad-Werkzeug an ihren Punkten aenderbar.
+            SelectedAnnotationIndex = index + 1
+            If _currentTool <> EditorTool.Text Then CurrentTool = EditorTool.Text
+            RaisePathOverlayChanged()
+            RebuildLayerRows()
+            RaiseResetButtonStateChanged()
+            AddHistoryEntry(LocalizationService.T("Text auf den Pfad gesetzt"))
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(text))
+        End Sub
+
+        Public ReadOnly Property CanEditPathNodes As Boolean
+            Get
+                Return _pathDraft.Count = 0 AndAlso PathEditTarget() IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Die Punkte des markierten Pfades in ANZEIGE-Prozent.</summary>
+        Private Function ReadPathNodesForDisplay(annotation As ImageAnnotation) As List(Of ImageProcessor.PathNode)
+            Dim nodes = ImageProcessor.ParsePathPoints(annotation.PathPoints)
+            Dim r = GetSelectedAnnotationDisplayRectPercent()
+            If r.Width <= 0 OrElse r.Height <= 0 Then Return New List(Of ImageProcessor.PathNode)()
+            Dim toDisplay = Function(p As SKPoint) New SKPoint(CSng(r.X + p.X / 100.0 * r.Width),
+                                                               CSng(r.Y + p.Y / 100.0 * r.Height))
+            Return nodes.Select(Function(n) New ImageProcessor.PathNode With {
+                .Anchor = toDisplay(n.Anchor), .HandleIn = toDisplay(n.HandleIn), .HandleOut = toDisplay(n.HandleOut)}).ToList()
+        End Function
+
+        ''' <summary>Gegenrichtung: Anzeige-Prozent zurueck in das Rechteck DES OBJEKTS. Das Rechteck
+        ''' bleibt dabei unveraendert - ein Punkt darf ueber seinen Rand hinaus, so wie eine Ecke der
+        ''' Objektverzerrung auch.</summary>
+        Private Sub WritePathNodesFromDisplay(annotation As ImageAnnotation, nodes As List(Of ImageProcessor.PathNode))
+            Dim r = GetSelectedAnnotationDisplayRectPercent()
+            If r.Width <= 0 OrElse r.Height <= 0 Then Return
+            Dim toObject = Function(p As SKPoint) New SKPoint(CSng((p.X - r.X) / r.Width * 100.0),
+                                                              CSng((p.Y - r.Y) / r.Height * 100.0))
+            annotation.PathPoints = ImageProcessor.FormatPathPoints(
+                nodes.Select(Function(n) New ImageProcessor.PathNode With {
+                    .Anchor = toObject(n.Anchor), .HandleIn = toObject(n.HandleIn), .HandleOut = toObject(n.HandleOut)}))
+        End Sub
+
+        ''' <summary>Was das Overlay zeichnet: Anzahl, geschlossen-Kennzeichen, Entwurf-Kennzeichen,
+        ''' dann je Punkt sechs Zahlen in ANZEIGE-Prozent. Nothing = nichts zu zeichnen.</summary>
+        Public ReadOnly Property PathOverlayValues As Double()
+            Get
+                Dim nodes As List(Of ImageProcessor.PathNode)
+                Dim closed = False
+                If _pathDraft.Count > 0 Then
+                    nodes = _pathDraft
+                Else
+                    Dim target = PathEditTarget()
+                    If target Is Nothing Then Return Nothing
+                    nodes = ReadPathNodesForDisplay(target)
+                    closed = target.PathClosed
+                End If
+                If nodes.Count = 0 Then Return Nothing
+                Dim values(nodes.Count * 6 + 2) As Double
+                values(0) = nodes.Count
+                values(1) = If(closed, 1.0, 0.0)
+                values(2) = If(_pathDraft.Count > 0, 1.0, 0.0)
+                For i = 0 To nodes.Count - 1
+                    Dim o = 3 + i * 6
+                    values(o) = nodes(i).Anchor.X : values(o + 1) = nodes(i).Anchor.Y
+                    values(o + 2) = nodes(i).HandleIn.X : values(o + 3) = nodes(i).HandleIn.Y
+                    values(o + 4) = nodes(i).HandleOut.X : values(o + 5) = nodes(i).HandleOut.Y
+                Next
+                Return values
+            End Get
+        End Property
+
+        Private Sub RaisePathOverlayChanged()
+            Me.RaisePropertyChanged(NameOf(PathOverlayValues))
+            Me.RaisePropertyChanged(NameOf(HasPathDraft))
+            Me.RaisePropertyChanged(NameOf(IsPathPenActive))
+            Me.RaisePropertyChanged(NameOf(CanEditPathNodes))
+            Me.RaisePropertyChanged(NameOf(HidesSelectionFrameForPath))
+            Me.RaisePropertyChanged(NameOf(CanCreateTextOnPath))
+            Me.RaisePropertyChanged(NameOf(PathNodeCount))
+            Me.RaisePropertyChanged(NameOf(IsSelectedPathClosed))
+            ' Der Auswahlrahmen legt seine Griffe ab, solange die Punkte gemeint sind - sonst laegen
+            ' beide auf demselben Rechteck.
+            Me.RaisePropertyChanged(NameOf(ShowsObjectFrameHandles))
+            RequestOverlayStateNotify()
+        End Sub
+
+        ''' <summary>Ein Druck auf die Buehne, solange Pfade gemeint sind. True heisst: verarbeitet.</summary>
+        Public Function TryBeginPathPointer(xPercent As Double, yPercent As Double,
+                                            slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim point = New SKPoint(CSng(xPercent), CSng(yPercent))
+
+            ' 1) Ein laufender Entwurf: auf den ersten Punkt geklickt heisst SCHLIESSEN.
+            If _pathDraft.Count > 0 Then
+                If _pathDraft.Count >= 2 AndAlso IsNearPathPoint(_pathDraft(0).Anchor, point, slopXPercent, slopYPercent) Then
+                    FinishPathDraft(keep:=True, closed:=True)
+                    Return True
+                End If
+                _pathDraft.Add(ImageProcessor.PathNode.Corner(point.X, point.Y))
+                _pathShapingIndex = _pathDraft.Count - 1
+                RaisePathOverlayChanged()
+                Return True
+            End If
+
+            ' 2) Punkte eines fertigen Pfades nachziehen.
+            Dim target = PathEditTarget()
+            If target IsNot Nothing Then
+                Dim nodes = ReadPathNodesForDisplay(target)
+                For i = 0 To nodes.Count - 1
+                    ' Griffe zuerst: sie liegen bei einem Eckpunkt AUF dem Stuetzpunkt, und dann soll
+                    ' der Stuetzpunkt gewinnen - deshalb zaehlt ein Griff nur, wenn er abgesetzt ist.
+                    If Not IsSamePathPoint(nodes(i).HandleOut, nodes(i).Anchor) AndAlso
+                       IsNearPathPoint(nodes(i).HandleOut, point, slopXPercent, slopYPercent) Then
+                        Return BeginPathDrag(i, "out")
+                    End If
+                    If Not IsSamePathPoint(nodes(i).HandleIn, nodes(i).Anchor) AndAlso
+                       IsNearPathPoint(nodes(i).HandleIn, point, slopXPercent, slopYPercent) Then
+                        Return BeginPathDrag(i, "in")
+                    End If
+                Next
+                For i = 0 To nodes.Count - 1
+                    If IsNearPathPoint(nodes(i).Anchor, point, slopXPercent, slopYPercent) Then
+                        Return BeginPathDrag(i, "anchor")
+                    End If
+                Next
+            End If
+
+            ' Ein Klick auf einen VORHANDENEN Pfad meint IHN und keinen neuen - sonst liesse sich ein
+            ' fertiger Pfad im Pfad-Werkzeug nie wieder anfassen. Die Auswahl uebernimmt danach der
+            ' normale Weg, und beim naechsten Klick liegen seine Punkte schon da.
+            If _pathDraft.Count = 0 Then
+                Dim hit = HitTestAnnotation(xPercent, yPercent, slopXPercent, slopYPercent)
+                If hit >= 0 AndAlso hit < _annotations.Count AndAlso _annotations(hit) IsNot Nothing AndAlso
+                   String.Equals(NormalizeAnnotationKind(_annotations(hit).Kind), "Path", StringComparison.Ordinal) Then
+                    Return False
+                End If
+            End If
+
+            ' 3) Erster Punkt - fuer ein neues Pfad-Objekt oder fuer die Grundlinie eines Textes.
+            '    Bei MARKIERTEM Pfad ist IsPathPenActive False: ein Klick ins Leere faellt dann
+            '    durch und waehlt ab, wie in jedem anderen Werkzeug - einen weiteren Pfad beginnt
+            '    man ueber den Knopf im Panel. Vorher startete genau dieser Klick einen ungewollten
+            '    Ein-Punkt-Entwurf, der die Punktanzeige des markierten Pfads verdraengte.
+            If IsPathPenActive Then
+                _pathDraft.Clear()
+                _pathDraft.Add(ImageProcessor.PathNode.Corner(point.X, point.Y))
+                _pathShapingIndex = 0
+                RaisePathOverlayChanged()
+                Return True
+            End If
+
+            Return False
+        End Function
+
+        ''' <summary>Fängt einen Entwurf an, dessen Punkte in ein VORHANDENES Objekt gehen.</summary>
+        Private Sub BeginPathDraftFor(target As ImageAnnotation)
+            If target Is Nothing Then Return
+            _pathDraft.Clear()
+            _pathShapingIndex = -1
+            _pathDraftTargetId = target.Id
+            StatusText = LocalizationService.T("Punkte setzen, Eingabe schließt ab")
+            RaisePathOverlayChanged()
+        End Sub
+
+        Private Function BeginPathDrag(index As Integer, part As String) As Boolean
+            _pathDragIndex = index
+            _pathDragPart = part
+            _pathDragCapturedUndo = False
+            _lastTouchedPathNode = index
+            RaisePathOverlayChanged()
+            Return True
+        End Function
+
+        ''' <summary>Liegt der Zeiger auf einem Stützpunkt oder Griff? Nur zur Frage, ob das
+        ''' Text-Overlay den Druck DURCHLASSEN muss - es liegt über der Bühne, und ohne diese Frage
+        ''' käme kein Druck je bei den Punkten an. Gegriffen wird weiter unten.</summary>
+        Public Function HitsPathPointPercent(xPercent As Double, yPercent As Double,
+                                             slopXPercent As Double, slopYPercent As Double) As Boolean
+            Dim values = PathOverlayValues
+            If values Is Nothing OrElse values.Length < 9 Then Return False
+            Dim count = CInt(values(0))
+            Dim point = New SKPoint(CSng(xPercent), CSng(yPercent))
+            For i = 0 To count - 1
+                Dim o = 3 + i * 6
+                If o + 5 >= values.Length Then Exit For
+                For k = 0 To 2
+                    Dim candidate = New SKPoint(CSng(values(o + k * 2)), CSng(values(o + k * 2 + 1)))
+                    If IsNearPathPoint(candidate, point, slopXPercent, slopYPercent) Then Return True
+                Next
+            Next
+            Return False
+        End Function
+
+        Private Shared Function IsNearPathPoint(a As SKPoint, b As SKPoint,
+                                                slopX As Double, slopY As Double) As Boolean
+            Dim dx = (a.X - b.X) / Math.Max(0.0001, slopX)
+            Dim dy = (a.Y - b.Y) / Math.Max(0.0001, slopY)
+            Return dx * dx + dy * dy <= 1.0
+        End Function
+
+        Private Shared Function IsSamePathPoint(a As SKPoint, b As SKPoint) As Boolean
+            Return Math.Abs(a.X - b.X) < 0.0001F AndAlso Math.Abs(a.Y - b.Y) < 0.0001F
+        End Function
+
+        ''' <summary>Zeigerbewegung: entweder formt sie die Griffe des eben gesetzten Punktes, oder
+        ''' sie zieht einen vorhandenen Punkt bzw. Griff.</summary>
+        Public Sub UpdatePathPointer(xPercent As Double, yPercent As Double)
+            Dim point = New SKPoint(CSng(xPercent), CSng(yPercent))
+            If _pathShapingIndex >= 0 AndAlso _pathShapingIndex < _pathDraft.Count Then
+                ' Der Zug vom gesetzten Punkt weg spannt die Kurve auf: der ausgehende Griff folgt dem
+                ' Zeiger, der eingehende spiegelt ihn. Ein Punkt ohne Zug bleibt damit eine Ecke.
+                Dim node = _pathDraft(_pathShapingIndex)
+                node.HandleOut = point
+                node.HandleIn = New SKPoint(node.Anchor.X * 2.0F - point.X, node.Anchor.Y * 2.0F - point.Y)
+                _pathDraft(_pathShapingIndex) = node
+                RaisePathOverlayChanged()
+                Return
+            End If
+
+            If _pathDragIndex < 0 Then Return
+            Dim target = PathEditTarget()
+            If target Is Nothing Then Return
+            Dim nodes = ReadPathNodesForDisplay(target)
+            If _pathDragIndex >= nodes.Count Then Return
+            If Not _pathDragCapturedUndo Then
+                CaptureUndoState("Pfad")
+                _pathDragCapturedUndo = True
+            End If
+            Dim edited = nodes(_pathDragIndex)
+            Select Case _pathDragPart
+                Case "anchor"
+                    ' Der Stuetzpunkt nimmt seine Griffe MIT - sonst klappt die Kurve bei jedem
+                    ' Verschieben um, statt ihre Form zu behalten.
+                    Dim dx = point.X - edited.Anchor.X, dy = point.Y - edited.Anchor.Y
+                    edited.Anchor = point
+                    edited.HandleIn = New SKPoint(edited.HandleIn.X + dx, edited.HandleIn.Y + dy)
+                    edited.HandleOut = New SKPoint(edited.HandleOut.X + dx, edited.HandleOut.Y + dy)
+                Case "in"
+                    edited.HandleIn = point
+                Case Else
+                    edited.HandleOut = point
+            End Select
+            nodes(_pathDragIndex) = edited
+            WritePathNodesFromDisplay(target, nodes)
+            RaisePathOverlayChanged()
+            SchedulePreviewUpdate()
+        End Sub
+
+        Public Sub EndPathPointer()
+            Dim wasDragging = _pathDragIndex >= 0
+            _pathShapingIndex = -1
+            _pathDragIndex = -1
+            _pathDragPart = ""
+            _pathDragCapturedUndo = False
+            If wasDragging Then
+                ' Ein Punkt darf ueber das Objektrechteck hinausgezogen werden - danach muss das
+                ' Rechteck ihm folgen. Sonst waere der Teil ausserhalb nicht mehr zu sehen: alles
+                ' andere am Objekt rechnet mit diesem Rechteck, vom Auffrischen der Anzeige bis zum
+                ' Treffertest.
+                RefitPathBoundsToPoints()
+                _hasChanges = True
+                RefreshPreviewImmediately()
+            End If
+            RaisePathOverlayChanged()
+        End Sub
+
+        ''' <summary>Zieht das Objektrechteck auf die tatsaechliche Ausdehnung des Pfades nach und
+        ''' rechnet die Punkte auf das neue Rechteck um. Am Bild aendert sich dadurch NICHTS - die
+        ''' Punkte liegen hinterher an denselben Stellen, nur ihr Bezug stimmt wieder.</summary>
+        Private Sub RefitPathBoundsToPoints()
+            Dim target = PathEditTarget()
+            If target Is Nothing Then Return
+            Dim nodes = ReadPathNodesForDisplay(target)
+            If nodes.Count < 2 Then Return
+
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+            For Each n In nodes
+                For Each p In {n.Anchor, n.HandleIn, n.HandleOut}
+                    minX = Math.Min(minX, p.X) : maxX = Math.Max(maxX, p.X)
+                    minY = Math.Min(minY, p.Y) : maxY = Math.Max(maxY, p.Y)
+                Next
+            Next
+            Const MinimumExtentPercent As Double = 1.0
+            If maxX - minX < MinimumExtentPercent Then
+                Dim mid = (minX + maxX) / 2.0
+                minX = mid - MinimumExtentPercent / 2.0 : maxX = mid + MinimumExtentPercent / 2.0
+            End If
+            If maxY - minY < MinimumExtentPercent Then
+                Dim mid = (minY + maxY) / 2.0
+                minY = mid - MinimumExtentPercent / 2.0 : maxY = mid + MinimumExtentPercent / 2.0
+            End If
+
+            Dim current = GetSelectedAnnotationDisplayRectPercent()
+            ' Nichts tun, solange sich praktisch nichts geaendert hat: sonst schriebe jeder Zug das
+            ' Rechteck neu und die Rundung wanderte mit.
+            If Math.Abs(current.X - minX) < 0.01 AndAlso Math.Abs(current.Y - minY) < 0.01 AndAlso
+               Math.Abs(current.Width - (maxX - minX)) < 0.01 AndAlso
+               Math.Abs(current.Height - (maxY - minY)) < 0.01 Then Return
+
+            Dim stored = DisplayAnnotationRectToStoredPercent(NormalizeAnnotationKind(target.Kind),
+                                                              minX, minY, maxX - minX, maxY - minY)
+            target.XPixels = CSng(PercentXToPixels(stored.X))
+            target.YPixels = CSng(PercentYToPixels(stored.Y))
+            target.WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width)))
+            target.HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height)))
+            ' Die Punkte ERST danach zurueckschreiben: sie beziehen sich auf das NEUE Rechteck.
+            WritePathNodesFromDisplay(target, nodes)
+            LoadSelectedAnnotationIntoEditor()
+        End Sub
+
+        ''' <summary>Entwurf abschliessen. <paramref name="keep"/> False verwirft ihn (Esc), True legt
+        ''' das Objekt an - sofern mindestens zwei Punkte stehen. Ein Pfad aus einem Punkt ist keiner;
+        ''' er wird stillschweigend verworfen, statt ein unsichtbares Objekt zu hinterlassen.</summary>
+        Public Sub FinishPathDraft(keep As Boolean, Optional closed As Boolean = False)
+            Dim nodes = _pathDraft.ToList()
+            Dim targetId = _pathDraftTargetId
+            _pathDraft.Clear()
+            _pathShapingIndex = -1
+            _pathDraftTargetId = ""
+            If Not keep OrElse nodes.Count < 2 Then
+                RaisePathOverlayChanged()
+                Return
+            End If
+
+            ' Die Punkte gehoeren einem VORHANDENEN Objekt (Grundlinie eines Textes): dann entsteht
+            ' kein zweites Objekt, die Punkte wandern nur in seinen Raum.
+            If targetId <> "" Then
+                Dim target = _annotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso
+                                                             String.Equals(a.Id, targetId, StringComparison.Ordinal))
+                If target IsNot Nothing Then
+                    PushUndo()
+                    target.PathClosed = closed
+                    WritePathNodesFromDisplay(target, nodes)
+                    _hasChanges = True
+                    RaisePathOverlayChanged()
+                    RebuildLayerRows()
+                    AddHistoryEntry(LocalizationService.T("Grundlinie gesetzt"))
+                    RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
+                    Return
+                End If
+            End If
+
+            ' Das umschliessende Rechteck aus Stuetzpunkten UND Griffen: ein Griff darf die Kurve
+            ' ueber die Stuetzpunkte hinaustragen, und was ausserhalb des Objektrechtecks liegt,
+            ' waere spaeter beim Skalieren nicht mehr richtig bezogen.
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+            For Each n In nodes
+                For Each p In {n.Anchor, n.HandleIn, n.HandleOut}
+                    minX = Math.Min(minX, p.X) : maxX = Math.Max(maxX, p.X)
+                    minY = Math.Min(minY, p.Y) : maxY = Math.Max(maxY, p.Y)
+                Next
+            Next
+            ' Ein waagerechter oder senkrechter Pfad hat eine Seite ohne Ausdehnung. Ein Rechteck mit
+            ' Breite oder Hoehe null liesse sich weder anfassen noch skalieren, deshalb ein Mindestmass.
+            Const MinimumExtentPercent As Double = 1.0
+            If maxX - minX < MinimumExtentPercent Then
+                Dim mid = (minX + maxX) / 2.0
+                minX = mid - MinimumExtentPercent / 2.0 : maxX = mid + MinimumExtentPercent / 2.0
+            End If
+            If maxY - minY < MinimumExtentPercent Then
+                Dim mid = (minY + maxY) / 2.0
+                minY = mid - MinimumExtentPercent / 2.0 : maxY = mid + MinimumExtentPercent / 2.0
+            End If
+
+            Dim width = maxX - minX, height = maxY - minY
+            Dim toObject = Function(p As SKPoint) New SKPoint(CSng((p.X - minX) / width * 100.0),
+                                                              CSng((p.Y - minY) / height * 100.0))
+            Dim objectNodes = nodes.Select(Function(n) New ImageProcessor.PathNode With {
+                .Anchor = toObject(n.Anchor), .HandleIn = toObject(n.HandleIn), .HandleOut = toObject(n.HandleOut)})
+
+            PushUndo()
+            Dim stored = DisplayAnnotationRectToStoredPercent("Path", minX, minY, width, height)
+            Dim annotation = New ImageAnnotation With {
+                .Kind = "Path",
+                .PathPoints = ImageProcessor.FormatPathPoints(objectNodes),
+                .PathClosed = closed,
+                .XPixels = CSng(PercentXToPixels(stored.X)),
+                .YPixels = CSng(PercentYToPixels(stored.Y)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height))),
+                .FillColor = If(closed, _annotationFillColor, "#00FFFFFF"),
+                .StrokeColor = _annotationStrokeColor,
+                .StrokeWidth = CSng(Math.Max(1.0, _annotationStrokeWidth)),
+                .Opacity = CSng(_annotationOpacity),
+                .BlendMode = _annotationBlendMode,
+                .BlendIncludesStroke = _annotationBlendIncludesStroke,
+                .IsVisible = True
+            }
+            _annotations.Add(annotation)
+            PendingInsertKind = ""
+            SelectedAnnotationIndex = _annotations.Count - 1
+            _hasChanges = True
+            RaisePathOverlayChanged()
+            RebuildLayerRows()
+            RaiseResetButtonStateChanged()
+            AddHistoryEntry(LocalizationService.T("Pfad gezeichnet"))
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
+        End Sub
+
+        ' ── Ebenenmaske und Schnittmaske am OBJEKT ──────────────────────────────
+        '
+        ' Die Maske eines Objekts ist dieselbe ImageMask wie die einer Korrekturebene und liegt in
+        ' derselben Liste. Damit gelten fuer sie ohne Zutun: Masken-Pinsel, rotes Overlay, weiche
+        ' Kante, Umkehren, Speichern im Rezept und Undo. Neu ist allein, WER auf sie zeigt.
+
+        ''' <summary>Das Objekt, dessen Ebenenmaske die Befehle hier meinen: die FUEHRENDE Auswahl.
+        ''' Eine Mehrfachauswahl bleibt aussen vor - eine gemeinsame Maske ueber mehrere Objekte
+        ''' waere etwas anderes als je eine eigene, und welches von beidem gemeint ist, sagt keine
+        ''' der beiden Gesten.</summary>
+        Private Function MaskTargetAnnotation() As ImageAnnotation
+            If SelectedAnnotationCount > 1 Then Return Nothing
+            Return CurrentObject()
+        End Function
+
+        Public ReadOnly Property CanAddAnnotationMask As Boolean
+            Get
+                Dim a = MaskTargetAnnotation()
+                Return a IsNot Nothing AndAlso String.IsNullOrEmpty(a.MaskId)
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectedAnnotationHasMask As Boolean
+            Get
+                Dim a = MaskTargetAnnotation()
+                Return a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.MaskId)
+            End Get
+        End Property
+
+        ''' <summary>Eine Schnittmaske braucht eine Basis: das naechste sichtbare Objekt darunter,
+        ''' das nicht selbst beschraenkt ist. Ganz unten im Stapel gibt es keine.</summary>
+        Public ReadOnly Property CanClipSelectedAnnotation As Boolean
+            Get
+                Dim a = MaskTargetAnnotation()
+                If a Is Nothing Then Return False
+                If a.ClipToLayerBelow Then Return True
+                Dim index = _annotations.IndexOf(a)
+                If index <= 0 Then Return False
+                For i = index - 1 To 0 Step -1
+                    Dim candidate = _annotations(i)
+                    If candidate Is Nothing OrElse Not IsAnnotationRenderVisibleLive(candidate) Then Continue For
+                    If candidate.ClipToLayerBelow Then Continue For
+                    Return True
+                Next
+                Return False
+            End Get
+        End Property
+
+        ''' <summary>Der Masken-Knopf in der Fußzeile des Ebenen-Panels tut ZWEI Dinge, je nachdem was
+        ''' die markierte Ebene schon hat: anlegen oder bearbeiten. Zwei Knöpfe nebeneinander, von
+        ''' denen immer einer grau ist, sagen dasselbe und kosten Platz.</summary>
+        Public ReadOnly Property CanUseAnnotationMaskButton As Boolean
+            Get
+                Return CanAddAnnotationMask OrElse SelectedAnnotationHasMask
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationMaskButtonHint As String
+            Get
+                Return If(SelectedAnnotationHasMask,
+                          LocalizationService.T("Ebenenmaske bearbeiten"),
+                          LocalizationService.T("Ebenenmaske hinzufügen"))
+            End Get
+        End Property
+
+        ''' <summary>Der eine Weg hinter Knopf und Maskensymbol: hat die Ebene noch keine Maske, wird
+        ''' sie angelegt UND gleich zum Bearbeiten geöffnet - wer sie anlegt, will an sie heran.</summary>
+        Public Sub UseAnnotationMask()
+            If CanAddAnnotationMask Then
+                AddMaskToSelectedAnnotation()
+                EditSelectedAnnotationMask()
+                Return
+            End If
+            EditSelectedAnnotationMask()
+        End Sub
+
+        Public ReadOnly Property SelectedAnnotationIsClipped As Boolean
+            Get
+                Dim a = MaskTargetAnnotation()
+                Return a IsNot Nothing AndAlso a.ClipToLayerBelow
+            End Get
+        End Property
+
+        ''' <summary>Legt eine Ebenenmaske am markierten Objekt an. Eine LAUFENDE Auswahl ist die
+        ''' Ansage, welcher Teil sichtbar bleiben soll; ohne Auswahl deckt die Maske erst einmal
+        ''' alles, und der Masken-Pinsel nimmt danach weg.</summary>
+        Public Sub AddMaskToSelectedAnnotation()
+            Dim a = MaskTargetAnnotation()
+            If a Is Nothing OrElse Not String.IsNullOrEmpty(a.MaskId) Then Return
+            CommitObjectAdjustModeToModel()
+            PushUndo()
+            Dim adj = BuildAdjustmentsFromFields()
+            Dim maskName = LocalizationService.T("Ebenenmaske")
+            Dim mask As ImageMask = Nothing
+            If _hasActiveSelection Then mask = ImageProcessor.CreateSourceMaskFromSelection(adj, maskName)
+            If mask Is Nothing Then mask = ImageProcessor.CreateFullCoverageMask(adj, maskName)
+            If mask Is Nothing Then Return
+            _imageMasks.Add(mask)
+            a.MaskId = mask.Id
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+            _hasChanges = True
+            RaiseAnnotationMaskStateChanged()
+            RebuildLayerRows()
+            AddHistoryEntry(LocalizationService.T("Ebenenmaske hinzugefügt"))
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))
+        End Sub
+
+        ''' <summary>Bringt die Ebenenmaske des Objekts in den Masken-Pinsel: rotes Overlay, harte
+        ''' Form malbar, weiche Kante zur Renderzeit. Derselbe Weg wie bei einer Maskenebene.</summary>
+        Public Sub EditSelectedAnnotationMask()
+            Dim a = MaskTargetAnnotation()
+            If a Is Nothing OrElse String.IsNullOrEmpty(a.MaskId) Then Return
+            LoadMaskIntoSelection(a.MaskId, showAsMask:=True)
+            If _currentTool <> EditorTool.Mask Then CurrentTool = EditorTool.Mask
+            ' Der Werkzeugwechsel startet auf VERSCHIEBEN - im Verlaufsmodus zoege der erste Zug
+            ' einen neuen Verlauf auf, statt die Maske nachzubessern.
+            MaskMode = "Brush"
+        End Sub
+
+        Public Sub RemoveSelectedAnnotationMask()
+            Dim a = MaskTargetAnnotation()
+            If a Is Nothing OrElse String.IsNullOrEmpty(a.MaskId) Then Return
+            PushUndo()
+            Dim maskId = a.MaskId
+            a.MaskId = ""
+            ' Wurde genau diese Maske gerade bearbeitet, muss das rote Overlay mit weg - sonst bleibt
+            ' es ohne Ziel stehen (dieselbe Fehlerklasse wie beim Loeschen einer Verlaufsebene).
+            If String.Equals(_editingLayerMaskId, maskId, StringComparison.Ordinal) Then
+                _editingLayerMaskId = ""
+                If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                PublishMaskBrushOverlay()
+            End If
+            RemoveMaskIfUnreferenced(maskId)
+            _hasChanges = True
+            RaiseAnnotationMaskStateChanged()
+            RebuildLayerRows()
+            AddHistoryEntry(LocalizationService.T("Ebenenmaske entfernt"))
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))
+        End Sub
+
+        Public Sub ToggleClipSelectedAnnotation()
+            Dim a = MaskTargetAnnotation()
+            If a Is Nothing Then Return
+            If Not a.ClipToLayerBelow AndAlso Not CanClipSelectedAnnotation Then Return
+            PushUndo()
+            a.ClipToLayerBelow = Not a.ClipToLayerBelow
+            _hasChanges = True
+            RaiseAnnotationMaskStateChanged()
+            RebuildLayerRows()
+            AddHistoryEntry(If(a.ClipToLayerBelow,
+                               LocalizationService.T("Auf Ebene darunter beschränkt"),
+                               LocalizationService.T("Beschränkung aufgehoben")))
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))
+        End Sub
+
+        Private Sub RaiseAnnotationMaskStateChanged()
+            Me.RaisePropertyChanged(NameOf(CanAddAnnotationMask))
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationHasMask))
+            Me.RaisePropertyChanged(NameOf(CanClipSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationIsClipped))
+            Me.RaisePropertyChanged(NameOf(CanUseAnnotationMaskButton))
+            Me.RaisePropertyChanged(NameOf(AnnotationMaskButtonHint))
         End Sub
 
         ''' <summary>Erzeugt aus der aktiven Auswahl SOFORT eine maskierte Korrekturebene (leere Anpassung),
@@ -13839,7 +15465,10 @@ Namespace ViewModels
             ' den Schriftgrad (das macht die View im Anschluss), das Rechteck folgt der Schrift. Ohne das
             ' bliebe hier die gezogene Größe stehen, sobald der Schriftgrad auf denselben ganzen Pixel
             ' gerundet wird - und der Rahmen stünde wieder neben dem Text.
-            If isTextual Then
+            ' AUSNAHME: bei einem Text auf gezeichneter Grundlinie IST die gezogene Größe gemeint -
+            ' die Punkte liegen in Prozent der Box, ein Zug am Rahmen skaliert damit die Grundlinie,
+            ' wie bei einem Pfad-Objekt (siehe FreeTextPathKeepsBox).
+            If isTextual AndAlso Not FreeTextPathKeepsBox() Then
                 Dim oldWidthPercent = _annotationWidthPercent
                 Dim oldHeightPercent = _annotationHeightPercent
                 Dim fitted = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
@@ -13901,16 +15530,15 @@ Namespace ViewModels
             Return (left, top, right - left, bottom - top)
         End Function
 
-        ''' <summary>Verschiebt die Masken der markierten Korrekturebenen um denselben Betrag wie die
-        ''' Objekte. Nur Masken, die AUSSCHLIESSLICH von markierten Ebenen benutzt werden - eine
-        ''' geteilte Maske würde sonst auch die Korrektur einer fremden Ebene mitziehen.</summary>
-        Private Sub TransformSelectedCorrectionMasks(box As (X As Double, Y As Double, Width As Double, Height As Double),
-                                                     newX As Double, newY As Double,
-                                                     sx As Double, sy As Double)
-            Dim layers = SelectedAdjustmentLayers
-            If layers.Count = 0 Then Return
-            Dim dx = PercentXToPixels(newX - box.X * sx)
-            Dim dy = PercentYToPixels(newY - box.Y * sy)
+        ''' <summary>Verschiebt die Masken der Auswahl um denselben Betrag wie die Objekte: die der
+        ''' markierten Korrekturebenen UND die Ebenenmasken der markierten Objekte. Nur Masken, die
+        ''' AUSSCHLIESSLICH der Auswahl gehören - eine geteilte Maske würde sonst auch die Wirkung
+        ''' auf einer fremden Ebene mitziehen.</summary>
+        Private Sub TransformSelectedMasks(box As (X As Double, Y As Double, Width As Double, Height As Double),
+                                           newX As Double, newY As Double,
+                                           sx As Double, sy As Double)
+            Dim masks = TransformableSelectedMasks()
+            If masks.Count = 0 Then Return
             Dim pivotX = PercentXToPixels(box.X)
             Dim pivotY = PercentYToPixels(box.Y)
             ' Verschiebung im Pivot-Bezug: die Box-Ecke ist der Fixpunkt der Skalierung.
@@ -13923,7 +15551,7 @@ Namespace ViewModels
             ' Loslassen aus Start- und Endbox in EINEM Schritt (auch schonender: einmal neu rastern
             ' statt bei jeder Mausbewegung).
             If _annotationPlacementEditActive Then Return
-            For Each mask In MasksOfSelectedCorrections()
+            For Each mask In masks
                 ImageProcessor.TransformMaskRegion(mask, sx, sy, pivotX, pivotY, offsetX, offsetY)
             Next
         End Sub
@@ -13951,6 +15579,87 @@ Namespace ViewModels
             Return result
         End Function
 
+        ''' <summary>Die Ebenenmaske eines Objekts, sofern sie AUSSCHLIESSLICH ihm gehoert. Eine
+        ''' geteilte Maske bleibt liegen - dieselbe Regel wie bei den Korrekturebenen und aus
+        ''' demselben Grund: sonst zoege das Verschieben die Maske eines fremden Nutzers mit.</summary>
+        Private Function ExclusiveMaskOfObject(a As ImageAnnotation) As ImageMask
+            If a Is Nothing OrElse String.IsNullOrWhiteSpace(a.MaskId) Then Return Nothing
+            If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.MaskId = a.MaskId) Then Return Nothing
+            If _annotations.Any(Function(o) o IsNot Nothing AndAlso Not Object.ReferenceEquals(o, a) AndAlso
+                                    String.Equals(o.MaskId, a.MaskId, StringComparison.Ordinal)) Then Return Nothing
+            Return _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = a.MaskId)
+        End Function
+
+        ''' <summary>Die Ebenenmasken der markierten OBJEKTE, jede genau einmal - das Gegenstueck zu
+        ''' MasksOfSelectedCorrections. Die Objektmaske wandert bei jeder Transformation mit, sonst
+        ''' bleibt die Freistellung an der alten Stelle stehen, waehrend das Objekt wandert.</summary>
+        Private Function MasksOfSelectedObjects() As List(Of ImageMask)
+            Dim result As New List(Of ImageMask)()
+            Dim erledigt As New HashSet(Of String)(StringComparer.Ordinal)
+            For Each a In SelectedAnnotations
+                If a Is Nothing OrElse String.IsNullOrWhiteSpace(a.MaskId) Then Continue For
+                If IsAnnotationGeometryLocked(a) Then Continue For
+                If Not erledigt.Add(a.MaskId) Then Continue For
+                Dim mask = ExclusiveMaskOfObject(a)
+                If mask IsNot Nothing Then result.Add(mask)
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Alle Masken, die eine Transformation der Auswahl mitnehmen muss: die der
+        ''' markierten Korrekturebenen UND die Ebenenmasken der markierten Objekte.</summary>
+        Private Function TransformableSelectedMasks() As List(Of ImageMask)
+            Dim result = MasksOfSelectedCorrections()
+            For Each m In MasksOfSelectedObjects()
+                If Not result.Any(Function(x) String.Equals(x.Id, m.Id, StringComparison.Ordinal)) Then result.Add(m)
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Nimmt die Ebenenmaske eines Objekts bei einer Geometrieaenderung mit: Spiegeln
+        ''' und Drehen um die Objektmitte, Verschieben und Skalieren mit der alten Ecke als
+        ''' Fixpunkt - dieselben Bausteine wie bei den Korrekturebenen. Waehrend eines Zuges rechnet
+        ''' stattdessen ApplyDeferredGroupMaskTransform beim Loslassen in EINEM Schritt. Bei TEXT
+        ''' bleibt die GROESSE aussen vor: seine Box folgt laufend dem gemessenen Textkasten, und
+        ''' jeder Tastendruck skalierte sonst die Maske mit; der bewusste Zug am Rahmen laeuft
+        ''' ohnehin ueber die Zieh-Transaktion. Verankerte Wasserzeichen bleiben ganz aussen vor:
+        ''' ihre Felder tragen den ABSTAND zum Anker, keine Lage.</summary>
+        Private Sub ApplyObjectMaskGeometryDelta(a As ImageAnnotation,
+                                                 oldX As Double, oldY As Double,
+                                                 oldW As Double, oldH As Double,
+                                                 oldRot As Double, oldFlipH As Boolean, oldFlipV As Boolean)
+            If _annotationPlacementEditActive Then Return
+            If Not String.IsNullOrEmpty(a.Anchor) Then Return
+            Dim mask = ExclusiveMaskOfObject(a)
+            If mask Is Nothing Then Return
+            Dim flipChanged = (a.FlipHorizontal <> oldFlipH) OrElse (a.FlipVertical <> oldFlipV)
+            If a.FlipHorizontal <> oldFlipH Then
+                ImageProcessor.FlipMaskRegion(mask, True, oldX + oldW / 2.0)
+            End If
+            If a.FlipVertical <> oldFlipV Then
+                ImageProcessor.FlipMaskRegion(mask, False, oldY + oldH / 2.0)
+            End If
+            ' Eine einzelne Spiegelung NEGIERT den gespeicherten Winkel, und das Spiegeln der
+            ' Pixel oben enthaelt diese Drehung schon - der Winkel-Anteil laeuft deshalb nur,
+            ' wenn die Spiegelung unveraendert ist.
+            If Not flipChanged Then
+                Dim deltaRot = CDbl(a.RotationDegrees) - oldRot
+                If Math.Abs(deltaRot) > 0.0001 Then
+                    ImageProcessor.RotateMaskRegion(mask, deltaRot,
+                                                    oldX + oldW / 2.0, oldY + oldH / 2.0)
+                End If
+            End If
+            Dim scalable = Not IsTextualAnnotationKind(NormalizeAnnotationKind(a.Kind))
+            Dim sx = If(scalable AndAlso oldW > 0.01, CDbl(a.WidthPixels) / oldW, 1.0)
+            Dim sy = If(scalable AndAlso oldH > 0.01, CDbl(a.HeightPixels) / oldH, 1.0)
+            Dim offsetX = CDbl(a.XPixels) - oldX
+            Dim offsetY = CDbl(a.YPixels) - oldY
+            If Math.Abs(offsetX) >= 0.01 OrElse Math.Abs(offsetY) >= 0.01 OrElse
+               Math.Abs(sx - 1.0) >= 0.0001 OrElse Math.Abs(sy - 1.0) >= 0.0001 Then
+                ImageProcessor.TransformMaskRegion(mask, sx, sy, oldX, oldY, offsetX, offsetY)
+            End If
+        End Sub
+
         ''' <summary>Liegt diese Korrekturebene in einer gesperrten Gruppe?</summary>
         Private Function IsAdjustmentLayerGroupLocked(layer As MaskedAdjustmentLayer) As Boolean
             If layer Is Nothing OrElse String.IsNullOrEmpty(layer.GroupId) Then Return False
@@ -13958,9 +15667,10 @@ Namespace ViewModels
             Return grp IsNot Nothing AndAlso grp.IsLocked
         End Function
 
-        ''' <summary>Dreht die Masken der markierten Korrekturen um denselben Punkt wie die Objekte.
-        ''' Die Maske wird dabei neu gerastert (siehe ImageProcessor.RotateMaskRegion).</summary>
-        Private Sub RotateSelectedCorrectionMasks(deltaDegrees As Double, box As (X As Double, Y As Double, Width As Double, Height As Double))
+        ''' <summary>Dreht die Masken der Auswahl (Korrekturebenen und Objektmasken) um denselben
+        ''' Punkt wie die Objekte. Die Maske wird dabei neu gerastert (siehe
+        ''' ImageProcessor.RotateMaskRegion).</summary>
+        Private Sub RotateSelectedMasks(deltaDegrees As Double, box As (X As Double, Y As Double, Width As Double, Height As Double))
             If Math.Abs(deltaDegrees) < 0.0001 Then Return
             If _annotationPlacementEditActive Then
                 _groupDragRotationTotal += deltaDegrees
@@ -13968,18 +15678,18 @@ Namespace ViewModels
             End If
             Dim pivotX = PercentXToPixels(box.X + box.Width / 2.0)
             Dim pivotY = PercentYToPixels(box.Y + box.Height / 2.0)
-            For Each mask In MasksOfSelectedCorrections()
+            For Each mask In TransformableSelectedMasks()
                 ImageProcessor.RotateMaskRegion(mask, deltaDegrees, pivotX, pivotY)
             Next
         End Sub
 
-        ''' <summary>Spiegelt die Masken der markierten Korrekturen an derselben Mittelachse wie die
-        ''' Objekte.</summary>
-        Private Sub FlipSelectedCorrectionMasks(horizontal As Boolean, box As (X As Double, Y As Double, Width As Double, Height As Double))
+        ''' <summary>Spiegelt die Masken der Auswahl (Korrekturebenen und Objektmasken) an derselben
+        ''' Mittelachse wie die Objekte.</summary>
+        Private Sub FlipSelectedMasks(horizontal As Boolean, box As (X As Double, Y As Double, Width As Double, Height As Double))
             Dim achse = If(horizontal,
                            PercentXToPixels(box.X + box.Width / 2.0),
                            PercentYToPixels(box.Y + box.Height / 2.0))
-            For Each mask In MasksOfSelectedCorrections()
+            For Each mask In TransformableSelectedMasks()
                 ImageProcessor.FlipMaskRegion(mask, horizontal, achse)
             Next
         End Sub
@@ -14112,11 +15822,10 @@ Namespace ViewModels
 
             Dim before = SelectionDirtyRect()
             CaptureUndoState("AnnotationGroupTransform")
-            ' Gehört eine Korrekturebene zur Auswahl (z.B. weil sie in der bewegten Gruppe liegt), zieht
-            ' ihre Maske beim VERSCHIEBEN mit - sonst bliebe die Korrektur an der alten Stelle liegen,
-            ' obwohl sie für genau dieses Objekt gemacht wurde. Beim Skalieren bleibt sie stehen: die
-            ' Maske müsste dafür neu gerastert werden (verlustbehaftet), das ist ein eigener Schritt.
-            TransformSelectedCorrectionMasks(box, xPercent, yPercent, sx, sy)
+            ' Die Masken der Auswahl ziehen mit: die einer mitmarkierten Korrekturebene und die
+            ' Ebenenmasken der Objekte selbst - sonst bliebe Wirkung bzw. Freistellung an der alten
+            ' Stelle liegen. Skalieren rastert die Maske neu (leicht verlustbehaftet).
+            TransformSelectedMasks(box, xPercent, yPercent, sx, sy)
             For Each a In selected
                 Dim r = StoredAnnotationRectToDisplayPercent(a)
                 If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
@@ -14151,9 +15860,9 @@ Namespace ViewModels
 
             Dim before = SelectionDirtyRect()
             CaptureUndoState("AnnotationGroupTransform")
-            ' Eine mitmarkierte Korrektur dreht mit - sonst bliebe sie an Ort und Lage liegen,
-            ' während ihre Objekte wandern.
-            RotateSelectedCorrectionMasks(deltaDegrees, box)
+            ' Eine mitmarkierte Korrektur und die Objektmasken drehen mit - sonst bliebe die
+            ' Wirkung an Ort und Lage liegen, während ihre Objekte wandern.
+            RotateSelectedMasks(deltaDegrees, box)
             For Each a In selected
                 Dim r = StoredAnnotationRectToDisplayPercent(a)
                 If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
@@ -14186,7 +15895,7 @@ Namespace ViewModels
 
             Dim before = SelectionDirtyRect()
             CaptureUndoState("AnnotationGroupTransform")
-            FlipSelectedCorrectionMasks(horizontal, box)
+            FlipSelectedMasks(horizontal, box)
             For Each a In selected
                 Dim r = StoredAnnotationRectToDisplayPercent(a)
                 If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
@@ -14416,7 +16125,11 @@ Namespace ViewModels
         ''' Ausgabemaße (ComputeGeometryOutputSize) und die vollständige Punktabbildung
         ''' (TrySourcePointToGeometryOutput / TryGeometryOutputToSourcePoint). Vorher baute jede
         ''' Stelle ihr eigenes Teil-Rezept, und die Pinsel-/Retusche-Abbildung ließ Crop/Resize/
-        ''' Canvas schlicht weg.</summary>
+        ''' Canvas schlicht weg.
+        '''
+        ''' Die RASTERVERZERRUNG gehört mit hinein: sie steckt seit dem Rezept-Umbau in jedem Render
+        ''' und damit im Anzeigebild. Ohne sie säßen Anfasser, Retuschepunkte und zurückgerechnete
+        ''' Pinselstriche neben dem, was man sieht.</summary>
         Private Function BuildAppliedGeometryAdjustments() As ImageAdjustments
             Dim crop = EffectiveCrop(fuerAnzeige:=True)
             Return New ImageAdjustments With {
@@ -14428,7 +16141,8 @@ Namespace ViewModels
                 .StraightenExpandCanvas = _appliedStraightenExpandCanvas,
                 .ResizeWidth = _appliedResizeWidth, .ResizeHeight = _appliedResizeHeight,
                 .CanvasWidth = _appliedCanvasWidth, .CanvasHeight = _appliedCanvasHeight,
-                .CanvasAnchor = _canvasAnchor
+                .CanvasAnchor = _canvasAnchor,
+                .ImageWarp = _imageWarp
             }
         End Function
 
@@ -15957,6 +17671,23 @@ Namespace ViewModels
         Public ReadOnly Property ToggleAnnotationGroupCollapsedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedAnnotationCommand As ICommand
         Public ReadOnly Property AddAdjustmentWithSameMaskCommand As ICommand
+        Public ReadOnly Property AddAnnotationMaskCommand As ICommand
+        Public ReadOnly Property EditAnnotationMaskCommand As ICommand
+        Public ReadOnly Property RemoveAnnotationMaskCommand As ICommand
+        Public ReadOnly Property ToggleClipToLayerBelowCommand As ICommand
+        Public ReadOnly Property MergeSelectedAnnotationsCommand As ICommand
+        Public ReadOnly Property FinishPathDraftCommand As ICommand
+        Public ReadOnly Property CancelPathDraftCommand As ICommand
+        Public ReadOnly Property BeginNewPathCommand As ICommand
+        Public ReadOnly Property AddPathNodeCommand As ICommand
+        Public ReadOnly Property RemovePathNodeCommand As ICommand
+        Public ReadOnly Property ToggleSelectedPathClosedCommand As ICommand
+        Public ReadOnly Property TogglePathNodeSmoothCommand As ICommand
+        Public ReadOnly Property CreateTextOnPathCommand As ICommand
+        Public ReadOnly Property InvertCurrentMaskCommand As ICommand
+        Public ReadOnly Property DiscardCurrentMaskCommand As ICommand
+        Public ReadOnly Property SelectMaskComponentCommand As ICommand
+        Public ReadOnly Property RemoveMaskComponentCommand As ICommand
         Public ReadOnly Property RasterizeSelectedAnnotationCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
@@ -15969,6 +17700,9 @@ Namespace ViewModels
         Public ReadOnly Property ResetColorCommand As ICommand
         Public ReadOnly Property ResetDetailCommand As ICommand
         Public ReadOnly Property ResetWarpGridCommand As ICommand
+        Public ReadOnly Property ResetImageWarpCommand As ICommand
+        Public ReadOnly Property ResetEnvelopeCommand As ICommand
+        Public ReadOnly Property ApplyEnvelopeCommand As ICommand
         Public ReadOnly Property ResetLinesCommand As ICommand
         Public ReadOnly Property ResetObjectWarpCommand As ICommand
         Public ReadOnly Property ApplyLinesCommand As ICommand
@@ -16267,6 +18001,23 @@ Namespace ViewModels
             AddAdjustmentWithSameMaskCommand = ReactiveCommand.Create(Sub()
                                                                           AddAdjustmentWithSameMask()
                                                                       End Sub)
+            AddAnnotationMaskCommand = ReactiveCommand.Create(Sub() AddMaskToSelectedAnnotation())
+            EditAnnotationMaskCommand = ReactiveCommand.Create(Sub() EditSelectedAnnotationMask())
+            RemoveAnnotationMaskCommand = ReactiveCommand.Create(Sub() RemoveSelectedAnnotationMask())
+            ToggleClipToLayerBelowCommand = ReactiveCommand.Create(Sub() ToggleClipSelectedAnnotation())
+            MergeSelectedAnnotationsCommand = ReactiveCommand.Create(Sub() MergeSelectedAnnotations())
+            FinishPathDraftCommand = ReactiveCommand.Create(Sub() FinishPathDraft(keep:=True))
+            CancelPathDraftCommand = ReactiveCommand.Create(Sub() FinishPathDraft(keep:=False))
+            BeginNewPathCommand = ReactiveCommand.Create(Sub() BeginNewPath())
+            AddPathNodeCommand = ReactiveCommand.Create(Sub() AddPathNode())
+            RemovePathNodeCommand = ReactiveCommand.Create(Sub() RemovePathNode())
+            ToggleSelectedPathClosedCommand = ReactiveCommand.Create(Sub() ToggleSelectedPathClosed())
+            TogglePathNodeSmoothCommand = ReactiveCommand.Create(Sub() ToggleLastPathNodeSmooth())
+            CreateTextOnPathCommand = ReactiveCommand.Create(Sub() CreateTextOnSelectedPath())
+            InvertCurrentMaskCommand = ReactiveCommand.Create(Sub() InvertCurrentMask())
+            DiscardCurrentMaskCommand = ReactiveCommand.Create(Sub() DiscardCurrentMask())
+            SelectMaskComponentCommand = ReactiveCommand.Create(Of Integer)(Sub(index) SelectMaskComponent(index))
+            RemoveMaskComponentCommand = ReactiveCommand.Create(Of Integer)(Sub(index) RemoveMaskComponent(index))
             RasterizeSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             RasterizeSelectedAnnotation()
                                                                         End Sub)
@@ -16316,6 +18067,9 @@ Namespace ViewModels
                                                             ResetDetailInternal()
                                                         End Sub)
             ResetWarpGridCommand = ReactiveCommand.Create(Sub() ResetWarpGrid())
+            ResetImageWarpCommand = ReactiveCommand.Create(Sub() ResetImageWarp())
+            ResetEnvelopeCommand = ReactiveCommand.Create(Sub() ResetEnvelope())
+            ApplyEnvelopeCommand = ReactiveCommand.Create(Sub() ApplyEnvelopeWarp())
             ClearDocumentBackgroundCommand = ReactiveCommand.Create(Sub() CanvasBackgroundColor = "#00000000")
             SetWarpModeCommand = ReactiveCommand.Create(Of String)(Sub(m) WarpMode = m)
             ConvertKindCommand = ReactiveCommand.Create(Sub() ConvertSelectionKind(Not ActiveSelectionIsMask))
@@ -18691,7 +20445,9 @@ Namespace ViewModels
             PushUndo()
             _suppressUndoCapture = True
             _groupDragRotationTotal = 0
-            _groupDragBoxAtStart = If(HasMultiAnnotationSelection AndAlso MasksOfSelectedCorrections().Count > 0,
+            ' Startbox merken, sobald IRGENDEINE Maske mitwandern muss - die einer mitmarkierten
+            ' Korrektur wie die Ebenenmaske eines einzelnen Objekts.
+            _groupDragBoxAtStart = If(TransformableSelectedMasks().Count > 0,
                                       CType(GetSelectionBoxDisplayRectPercent(), (X As Double, Y As Double, Width As Double, Height As Double)?),
                                       Nothing)
             _previewTimer.Stop()
@@ -18737,7 +20493,7 @@ Namespace ViewModels
             _groupDragBoxAtStart = Nothing
             _groupDragRotationTotal = 0
             If Not start.HasValue Then Return
-            Dim masks = MasksOfSelectedCorrections()
+            Dim masks = TransformableSelectedMasks()
             If masks.Count = 0 Then Return
 
             Dim ende = GetSelectionBoxDisplayRectPercent()
@@ -20045,6 +21801,7 @@ Namespace ViewModels
                 .PerspectiveCorner2X = CSng(_perspectiveCorners(4)), .PerspectiveCorner2Y = CSng(_perspectiveCorners(5)),
                 .PerspectiveCorner3X = CSng(_perspectiveCorners(6)), .PerspectiveCorner3Y = CSng(_perspectiveCorners(7)),
                 .PerspectiveScale = CSng(_perspectiveScale),
+                .ImageWarp = _imageWarp?.Clone(),
                 .LensModel = _lensModel,
                 .LensDistortionAmount = CSng(_lensDistortionAmount),
                 .LensTcaAmount = CSng(_lensTcaAmount),
@@ -20592,6 +22349,8 @@ Namespace ViewModels
             _perspectiveCorners(2) = adj.PerspectiveCorner1X : _perspectiveCorners(3) = adj.PerspectiveCorner1Y
             _perspectiveCorners(4) = adj.PerspectiveCorner2X : _perspectiveCorners(5) = adj.PerspectiveCorner2Y
             _perspectiveCorners(6) = adj.PerspectiveCorner3X : _perspectiveCorners(7) = adj.PerspectiveCorner3Y
+            _imageWarp = adj.ImageWarp?.Clone()
+            RaiseImageWarpChanged()
             _straightenDegrees = adj.StraightenDegrees
             _straightenExpandCanvas = adj.StraightenExpandCanvas
             _flipH = adj.FlipHorizontal
@@ -20959,6 +22718,11 @@ Namespace ViewModels
             _perspectiveAspect = 0
             _perspectiveScale = 0
             Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+            ' Die Rasterverzerrung gehoert genauso dazu. Sie steht seit dem Rezept-Umbau in einem
+            ' EIGENEN Feld statt in den Pixeln - ohne diese Zeile ueberlebte sie ein
+            ' "Zuruecksetzen" und wanderte beim Oeffnen des naechsten Bildes sogar mit.
+            _imageWarp = Nothing
+            RaiseImageWarpChanged()
             _whiteBalance = "Wie Aufnahme"
             _calibrationRedHue = 0
             _calibrationRedSaturation = 0
@@ -21449,6 +23213,9 @@ Namespace ViewModels
             If _isLoadingAnnotation Then Return
             If Not IsTextualAnnotationKind(SelectedAnnotationKind) Then Return
             If IsWatermarkImageSource Then Return
+            ' Die gezeichnete Grundlinie darf sich beim Tippen nicht verformen (siehe
+            ' FreeTextPathKeepsBox) - die Box bleibt stehen, der Text passt sich dem Pfad an.
+            If FreeTextPathKeepsBox() Then Return
 
             Dim size = EstimateTextAnnotationSizePercent(_annotationText, _annotationFontSize, _annotationFontFamily)
             ' Der Vergleich taugt nur ohne Pfad: bei Kreistext steht in der Box der KREIS, im
@@ -21956,6 +23723,7 @@ Namespace ViewModels
                 Case "rectspeechbubble", "rect-speech-bubble", "rectangle-speech-bubble", "rechteck sprechblase" : Return "RectSpeechBubble"
                 Case "cloud", "wolke" : Return "Cloud"
                 Case "heart", "herz" : Return "Heart"
+                Case "path", "pfad" : Return "Path"
                 Case "line", "linie" : Return "Line"
                 Case "arrow", "pfeil" : Return "Arrow"
                 Case "brush", "pinsel", "draw", "malen" : Return "Brush"
@@ -22172,9 +23940,7 @@ Namespace ViewModels
             PushUndo()
             Dim maskId = _maskedAdjustmentLayers(index).MaskId
             _maskedAdjustmentLayers.RemoveAt(index)
-            If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.MaskId = maskId) Then
-                _imageMasks.RemoveAll(Function(m) m IsNot Nothing AndAlso m.Id = maskId)
-            End If
+            RemoveMaskIfUnreferenced(maskId)
             _selectedMaskedAdjustmentLayerId = ""
             _selectedLayerRow = Nothing
             If wasActiveSelectionTarget Then ClearSelection(captureUndo:=False)
@@ -22706,7 +24472,10 @@ Namespace ViewModels
             ' Rect VOR dem Entfernen erfassen - danach ist das Objekt weg.
             Dim deletedRect = ComputeSceneDirtyRectFor(_annotations(index))
             ReanchorStackedCorrectionsBeforeRemoval({_annotations(index)})
+            Dim removedMaskId = _annotations(index).MaskId
             _annotations.RemoveAt(index)
+            ' Die Ebenenmaske des Objekts geht mit, sofern sie sich niemand teilt.
+            RemoveMaskIfUnreferenced(removedMaskId)
             ' War das das letzte Mitglied seiner Gruppe, verschwindet die Gruppe mit.
             DropOrphanedAnnotationGroups()
             If _selectedAnnotationIndex = index Then
@@ -22718,6 +24487,153 @@ Namespace ViewModels
             End If
             RaiseResetButtonStateChanged()
             RefreshOverlayAfterAnnotationChange(deletedRect)
+        End Sub
+
+        ''' <summary>Das gemeinsame Rechteck mehrerer Objekte in BASIS-Bildpunkten, samt dem Platz für
+        ''' Schatten und Leuchten (den bringt <see cref="ImageProcessor.ComputeAnnotationDirtyRect"/>
+        ''' schon mit).</summary>
+        Private Function ComputeAnnotationUnionRect(targets As IList(Of ImageAnnotation),
+                                                    baseW As Integer, baseH As Integer) As SKRectI
+            Dim rect = SKRectI.Empty
+            For Each a In targets
+                rect = ImageProcessor.UnionRects(rect, ImageProcessor.ComputeAnnotationDirtyRect(baseW, baseH, a, baseW, baseH))
+            Next
+            Return rect
+        End Function
+
+        ''' <summary>Ein Rezept-Klon zum Zeichnen einzelner Objekte.
+        '''
+        ''' Er trägt den GANZEN Stapel, dazu Masken und Gruppen - gezeichnet wird trotzdem nur, was
+        ''' als Ziel zurückkommt. Der ganze Stapel muss mit, weil eine Schnittmaske ihre Basis DARIN
+        ''' sucht und eine Ebenenmaske ihre Daten in `Masks`. Mit einem leeren Rezept fiel beides
+        ''' lautlos weg: das Objekt wurde ohne seine Maske eingebacken.
+        '''
+        ''' Die Zielobjekte kommen über den INDEX aus derselben Klonliste, nicht über die Kennung:
+        ''' die Basissuche vergleicht Referenzen, und zwei Objekte dürfen dieselbe Kennung
+        ''' tragen.</summary>
+        Private Function BuildAnnotationDrawRecipe(targets As IList(Of ImageAnnotation),
+                                                   baseW As Integer, baseH As Integer) _
+            As (Recipe As ImageAdjustments, Targets As List(Of ImageAnnotation))
+            Dim clones = _annotations.Select(Function(a) a.Clone()).ToList()
+            Dim recipe As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
+            recipe.Annotations.AddRange(clones)
+            recipe.Masks.AddRange(_imageMasks.Where(Function(m) m IsNot Nothing).Select(Function(m) m.Clone()))
+            recipe.AnnotationGroups.AddRange(_annotationGroups.Where(Function(g) g IsNot Nothing).Select(Function(g) g.Clone()))
+            Dim picked As New List(Of ImageAnnotation)()
+            For Each a In targets
+                Dim index = _annotations.IndexOf(a)
+                If index >= 0 AndAlso index < clones.Count Then picked.Add(clones(index))
+            Next
+            Return (recipe, picked)
+        End Function
+
+        ' ── Ebenen zusammenlegen ────────────────────────────────────────────────
+        '
+        ' Der Unterschied zum RASTERN: das Rastern backt ins Arbeitsbild, das Objekt verlaesst den
+        ' Stapel und liegt danach unter allen Reglern. Zusammenlegen bleibt IM Stapel - aus mehreren
+        ' Objekten wird EINES, und das behaelt Lage, Sichtbarkeit, Deckkraft und seine Stelle in der
+        ' Z-Reihenfolge. Genau das braucht man, wenn eine Anordnung fertig ist und nur noch als
+        ' Ganzes bewegt werden soll.
+
+        ''' <summary>Zusammenlegen braucht mindestens zwei Objekte. Korrekturebenen sind nicht dabei:
+        ''' sie tragen keine Pixel, sondern eine Wirkung auf alles unter ihnen - in ein Bild gebacken
+        ''' waere das etwas anderes als vorher.</summary>
+        Public ReadOnly Property CanMergeSelectedAnnotations As Boolean
+            Get
+                If SelectedAdjustmentLayers.Count > 0 Then Return False
+                Return SelectedAnnotations.Where(Function(a) a IsNot Nothing).Count() > 1
+            End Get
+        End Property
+
+        Public Sub MergeSelectedAnnotations()
+            Dim targets = SelectedAnnotations.Where(Function(a) a IsNot Nothing).
+                OrderBy(Function(a) _annotations.IndexOf(a)).ToList()
+            If targets.Count < 2 Then Return
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 Then Return
+            CommitObjectAdjustModeToModel()
+
+            Dim rect = ComputeAnnotationUnionRect(targets, baseW, baseH)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+
+            ' Die oberste Stelle merken, BEVOR etwas entfernt wird: dort landet das Ergebnis, damit
+            ' der Stapel darueber unveraendert bleibt.
+            Dim topIndex = targets.Select(Function(a) _annotations.IndexOf(a)).Max()
+            Dim groupId = targets(0).GroupId
+            If targets.Any(Function(a) Not String.Equals(a.GroupId, groupId, StringComparison.Ordinal)) Then groupId = ""
+
+            Dim recipe = BuildAnnotationDrawRecipe(targets, baseW, baseH)
+            Dim assetPath = CreateSelectionAssetTempPath("merged")
+            Try
+                Using merged = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(merged)
+                        canvas.Clear(SKColors.Transparent)
+                        ' Versatz statt Clip: der Aufrufer-Ursprung ist die linke obere Ecke des
+                        ' gemeinsamen Rechtecks, und die Objekte rechnen selbst in Bildkoordinaten.
+                        ImageProcessor.DrawAnnotationsOnCanvas(canvas, recipe.Recipe, baseW, baseH,
+                                                               rect.Left, rect.Top, rect.Width, rect.Height,
+                                                               recipe.Targets)
+                    End Using
+                    Using image = SKImage.FromBitmap(merged)
+                        Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                            Using stream = IO.File.OpenWrite(assetPath)
+                                data.SaveTo(stream)
+                            End Using
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.MergeAnnotations", ex)
+                StatusText = LocalizationService.T("Zusammenlegen fehlgeschlagen")
+                Return
+            End Try
+
+            PushUndo()
+            Dim dirty = SKRectI.Empty
+            For Each a In targets
+                dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(a))
+            Next
+            ' Eingehaengte Korrekturen zeigen sonst auf ein Objekt, das es gleich nicht mehr gibt.
+            ReanchorStackedCorrectionsBeforeRemoval(targets)
+            For Each a In targets
+                _annotations.Remove(a)
+            Next
+            For Each a In targets
+                RemoveMaskIfUnreferenced(a.MaskId)
+            Next
+
+            ' Das Ergebnis traegt seinen Inhalt bereits fertig: Maske, Beschraenkung, Mischmethode,
+            ' Deckkraft, Drehung und eigene Anpassungen der Quellen stecken in den Pixeln. Es startet
+            ' deshalb neutral - alles andere zoege dieselbe Wirkung ein zweites Mal ein.
+            Dim result = New ImageAnnotation With {
+                .Kind = "SelectionImage",
+                .Text = LocalizationService.T("Zusammengelegt"),
+                .ImagePath = assetPath,
+                .XPixels = rect.Left,
+                .YPixels = rect.Top,
+                .WidthPixels = rect.Width,
+                .HeightPixels = rect.Height,
+                .FillColor = "#00FFFFFF",
+                .StrokeColor = "#00000000",
+                .StrokeWidth = 0,
+                .Opacity = 100,
+                .BlendMode = "Normal",
+                .GroupId = groupId,
+                .IsVisible = True
+            }
+            Dim insertAt = Math.Max(0, Math.Min(_annotations.Count, topIndex - targets.Count + 1))
+            _annotations.Insert(insertAt, result)
+            DropOrphanedAnnotationGroups()
+            _extraSelectedAnnotations.Clear()
+            SelectedAnnotationIndex = _annotations.IndexOf(result)
+            RaiseMultiSelectionChanged()
+            RebuildLayerRows()
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            AddHistoryEntry(LocalizationService.T("Ebenen zusammengelegt"))
+            StatusText = LocalizationService.T("Ebenen zusammengelegt")
+            RefreshOverlayAfterAnnotationChange(ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(result)))
         End Sub
 
         ''' Läuft gerade ein Raster-Commit? Sperrt den Befehl gegen Doppelklick.
@@ -22742,16 +24658,15 @@ Namespace ViewModels
             Dim baseH = GetBaseHeight()
             If baseW <= 0 OrElse baseH <= 0 OrElse Not _workingImage.IsInitialized Then Return
             CommitObjectAdjustModeToModel()
-            Dim rect = SKRectI.Empty
-            For Each a In targets
-                rect = ImageProcessor.UnionRects(rect, ImageProcessor.ComputeAnnotationDirtyRect(baseW, baseH, a, baseW, baseH))
-            Next
+            Dim rect = ComputeAnnotationUnionRect(targets, baseW, baseH)
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
 
             ' Snapshot enthält die Objekte noch: Undo stellt Ebenen UND Pixel wieder her.
             PushUndo()
             Dim undoEntry = _lastPushedUndoEntry
-            Dim annClones = targets.Select(Function(a) a.Clone()).ToList()
+            Dim recipe = BuildAnnotationDrawRecipe(targets, baseW, baseH)
+            Dim adjDrawShared = recipe.Recipe
+            Dim annClones = recipe.Targets
             _rasterizeInFlight = True
             StatusText = LocalizationService.T("Ebene wird gerastert…")
 
@@ -22761,8 +24676,7 @@ Namespace ViewModels
                         Sub(full)
                             Using canvas = New SKCanvas(full)
                                 canvas.ClipRect(SKRect.Create(rect.Left, rect.Top, rect.Width, rect.Height))
-                                Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
-                                ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
+                                ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDrawShared, full.Width, full.Height,
                                                                        0, 0, full.Width, full.Height, annClones)
                             End Using
                         End Sub)
@@ -22780,6 +24694,10 @@ Namespace ViewModels
                     ReanchorStackedCorrectionsBeforeRemoval(targets)
                     For Each a In targets
                         _annotations.Remove(a)
+                    Next
+                    ' Die Maske ist in die Pixel eingebacken - ihre Daten braucht niemand mehr.
+                    For Each a In targets
+                        RemoveMaskIfUnreferenced(a.MaskId)
                     Next
                     DropOrphanedAnnotationGroups()
                     SelectedAnnotationIndex = -1
@@ -22802,6 +24720,7 @@ Namespace ViewModels
             CommitObjectAdjustModeToModel()
             PushUndo()
             Dim copy = _annotations(_selectedAnnotationIndex).Clone()
+            GiveCopyItsOwnMask(copy)
             copy.XPixels += 24
             copy.YPixels += 24
             _annotations.Insert(_selectedAnnotationIndex + 1, copy)
@@ -23079,7 +24998,10 @@ Namespace ViewModels
         ''' die Markierung verlieren (Werkzeugwechsel) noch beim Anklicken eines Objekts in dessen Werkzeug
         ''' springen - sonst könnte man ein Objekt hier gar nicht auswählen.</summary>
         Public Shared Function IsObjectTransformTool(tool As EditorTool) As Boolean
-            Return tool = EditorTool.Rotate OrElse tool = EditorTool.Transform OrElse tool = EditorTool.Move
+            ' Der PFAD gehoert dazu: wer in das Werkzeug wechselt, will an den markierten Pfad heran -
+            ' ihn beim Wechsel abzuwaehlen waere genau das Gegenteil.
+            Return tool = EditorTool.Rotate OrElse tool = EditorTool.Transform OrElse
+                   tool = EditorTool.Move OrElse tool = EditorTool.Path
         End Function
 
         ''' <summary>Werkzeuge, deren REGLER auf ein markiertes Objekt wirken statt aufs Bild: Anpassen,
@@ -23540,6 +25462,12 @@ Namespace ViewModels
             ' GESPERRT: Lage, Größe, Drehung und Spiegelung bleiben, wie sie sind. Alles andere
             ' (Farbe, Kontur, Effekte, Sichtbarkeit) darf weiter geändert werden.
             Dim geometrieFrei = Not IsAnnotationGeometryLocked(a)
+            ' Alte Geometrie festhalten: die Ebenenmaske des Objekts wandert nach den Schreib-
+            ' zeilen mit (ApplyObjectMaskGeometryDelta), dafür braucht es den Stand VORHER.
+            Dim maskOldX = CDbl(a.XPixels), maskOldY = CDbl(a.YPixels)
+            Dim maskOldW = CDbl(a.WidthPixels), maskOldH = CDbl(a.HeightPixels)
+            Dim maskOldRot = CDbl(a.RotationDegrees)
+            Dim maskOldFlipH = a.FlipHorizontal, maskOldFlipV = a.FlipVertical
             If geometrieFrei Then
                 a.RotationDegrees = CSng(DisplayAnnotationRotationToStored(normalizedKind, _annotationRotation))
                 a.FlipHorizontal = _annotationFlipH
@@ -23560,6 +25488,10 @@ Namespace ViewModels
                 a.YPixels = CSng(PercentYToPixels(storedRect.Y))
                 a.WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(storedRect.Width)))
                 a.HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(storedRect.Height)))
+            End If
+            If geometrieFrei Then
+                ApplyObjectMaskGeometryDelta(a, maskOldX, maskOldY, maskOldW, maskOldH,
+                                             maskOldRot, maskOldFlipH, maskOldFlipV)
             End If
             a.FillKind = _annotationFillKind
             a.TextPathKind = _annotationTextPathKind
@@ -24893,6 +26825,7 @@ Namespace ViewModels
             PushUndo()
             Dim schmutz = ComputeSceneDirtyRectFor(frame)
             _annotations.Remove(frame)
+            RemoveMaskIfUnreferenced(frame.MaskId)
             RaiseEffectsPropertiesChanged()
             RaiseResetButtonStateChanged()
             RefreshOverlayAfterAnnotationChange(schmutz)
@@ -25149,6 +27082,13 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(RetouchHintText))
             Me.RaisePropertyChanged(NameOf(ShowSelectionAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowMaskAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowPathAdjustments))
+            Me.RaisePropertyChanged(NameOf(IsPathPenActive))
+            Me.RaisePropertyChanged(NameOf(CanEditPathNodes))
+            Me.RaisePropertyChanged(NameOf(PathNodeCount))
+            Me.RaisePropertyChanged(NameOf(IsSelectedPathClosed))
+            Me.RaisePropertyChanged(NameOf(PathOverlayValues))
+            Me.RaisePropertyChanged(NameOf(ShowsObjectFrameHandles))
             Me.RaisePropertyChanged(NameOf(ShowGradientControls))
             Me.RaisePropertyChanged(NameOf(IsRefiningGradientMask))
             Me.RaisePropertyChanged(NameOf(ShowDrawControls))
@@ -25394,9 +27334,7 @@ Namespace ViewModels
             Dim removedLayerIds = removed.Select(Function(l) l.Id).ToList()
             _maskedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.FromPreset)
             For Each maskId In removedMaskIds
-                If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.MaskId, maskId, StringComparison.Ordinal)) Then
-                    _imageMasks.RemoveAll(Function(m) m IsNot Nothing AndAlso String.Equals(m.Id, maskId, StringComparison.Ordinal))
-                End If
+                RemoveMaskIfUnreferenced(maskId)
             Next
             ' Auf entfernte Ebenen zeigende Zustände aufräumen.
             If removedLayerIds.Contains(_selectedMaskedAdjustmentLayerId) Then _selectedMaskedAdjustmentLayerId = ""
@@ -25792,6 +27730,11 @@ Namespace ViewModels
         ''' zu einer Korrekturebene (rotes Overlay). Der Code trennt beides ueber IsMaskLayer
         ''' laengst; das Werkzeug macht es jetzt auch fuer den Nutzer sichtbar.</summary>
         Mask
+        ''' <summary>PFAD: Stuetzpunkte setzen und nachziehen. Ein eigenes Werkzeug und keine Form im
+        ''' Einfuegen-Werkzeug, weil sich der Pfad anders bedienen laesst als alles andere dort: jede
+        ''' andere Form zieht man auf, der Pfad wird Punkt fuer Punkt gesetzt und bleibt danach an
+        ''' seinen Punkten aenderbar.</summary>
+        Path
     End Enum
 
     Public Enum LayersPanelTab

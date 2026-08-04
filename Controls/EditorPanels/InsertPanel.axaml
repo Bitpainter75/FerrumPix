@@ -52,6 +52,30 @@
                 </ItemsRepeater>
             </Expander>
 
+            <!-- Läuft gerade ein Pfad-Entwurf, gehören Abschluss und Abbruch sichtbar hierher. Auf
+                 eine Taste allein ist kein Verlass: die Eingabetaste gehört dem Steuerelement mit
+                 dem Fokus, und nach einem Klick ins Panel ist das ein Knopf. -->
+            <StackPanel Spacing="6" IsVisible="{Binding HasPathDraft}">
+                <TextBlock Text="Punkte setzen, mit Ziehen krümmen. Ein Klick auf den ersten Punkt schließt den Pfad."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding FinishPathDraftCommand}"
+                            ToolTip.Tip="Pfad offen abschließen (Eingabe oder Doppelklick)">
+                        <TextBlock Text="Pfad abschließen" HorizontalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding CancelPathDraftCommand}"
+                            ToolTip.Tip="Entwurf verwerfen (Esc)">
+                        <TextBlock Text="Verwerfen" HorizontalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+
             <StackPanel Spacing="6" IsVisible="{Binding ShowSymbolControls}">
                 <Grid>
                     <TextBox

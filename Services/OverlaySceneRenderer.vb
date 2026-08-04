@@ -119,6 +119,8 @@ Namespace Services
         ''' - Mischmodus (braucht das fertige Komposit unter sich),
         ''' - Pinsel-/Radierer-Ebenen (Striche im Bildraum, keine freistehende Objektflaeche),
         ''' - verzerrte Objekte, aber nur noch teilweise (siehe <see cref="MustBakeForWarp"/>),
+        ''' - Objekte mit Ebenen- oder Schnittmaske (die Deckung entsteht beim KOMPONIEREN, sie steckt
+        '''   nicht in der Objekt-Bitmap; die Schnittmaske braucht ausserdem die Basis unter sich),
         ''' - Objekte, ueber denen eine eingehaengte Korrektur liegt (sie wirkt auf das Komposit).</summary>
         Public Shared Function ComputeCompositorStartIndex(adj As ImageAdjustments) As Integer
             If adj Is Nothing Then Return 0
@@ -175,6 +177,7 @@ Namespace Services
                 Dim mustBake = kind = "brush" OrElse kind = "eraser" OrElse
                                IsNonNormalBlend(annotation) OrElse
                                MustBakeForWarp(annotation) OrElse
+                               ImageProcessor.UsesLayerCoverage(annotation) OrElse
                                stackedAboveIds.Contains(If(annotation.Id, ""))
                 If mustBake Then startIndex = i + 1
             Next

@@ -157,6 +157,22 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Trägt dieses OBJEKT eine eigene Ebenenmaske? Die Zeile zeigt dafür ein kleines
+        ''' Maskensymbol - ohne das sähe man einer Ebene nicht an, dass ein Teil von ihr
+        ''' weggenommen ist, und suchte den Fehler im Objekt.</summary>
+        Public ReadOnly Property HasMask As Boolean
+            Get
+                Return Annotation IsNot Nothing AndAlso Not String.IsNullOrEmpty(Annotation.MaskId)
+            End Get
+        End Property
+
+        ''' <summary>Ist dieses Objekt auf die Deckung der Ebene darunter beschränkt?</summary>
+        Public ReadOnly Property IsClipped As Boolean
+            Get
+                Return Annotation IsNot Nothing AndAlso Annotation.ClipToLayerBelow
+            End Get
+        End Property
+
         Public ReadOnly Property IconSource As String
             Get
                 If Group IsNot Nothing Then Return "avares://FerrumPix/Assets/Icons/outline/folder.svg"
@@ -179,6 +195,8 @@ Namespace ViewModels
             RaisePropertyChanged(NameOf(IsLocked))
             RaisePropertyChanged(NameOf(LockIconSource))
             RaisePropertyChanged(NameOf(GroupToggleIconSource))
+            RaisePropertyChanged(NameOf(HasMask))
+            RaisePropertyChanged(NameOf(IsClipped))
         End Sub
 
         Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged

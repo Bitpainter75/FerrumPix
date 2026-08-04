@@ -186,6 +186,19 @@
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=CircleInverted}">
                     <TextBlock Text="Kreis invers" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
+                <!-- VORERST AUSGEBLENDET (Patrick am 2026-08-04), zusammen mit dem Pfad-Werkzeug in
+                     der Werkzeugleiste: die Grundlinie selbst zu setzen ist noch nicht intuitiv
+                     genug. Nur der Knopf ist weg - eine bereits gesetzte freie Grundlinie wird
+                     weiter gezeichnet, und der Text bleibt tippbar. Zum Wiederzeigen genügt es,
+                     IsVisible zu entfernen. -->
+                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
+                        IsVisible="False"
+                        Command="{Binding SetAnnotationTextPathKindCommand}"
+                        CommandParameter="Free"
+                        ToolTip.Tip="Grundlinie selbst setzen - Punkt für Punkt auf dem Bild, Eingabe schließt ab"
+                        Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Free}">
+                    <TextBlock Text="Freier Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
             </WrapPanel>
         </Grid>
         <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"

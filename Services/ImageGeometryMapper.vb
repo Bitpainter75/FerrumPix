@@ -406,7 +406,7 @@ Namespace Services
         Public Const LineGridSteps As Integer = 48
 
 
-        ''' <summary>Wie <see cref="VerzerreUeberGitter"/>, aber mit frei waehlbarer AUSGABEgroesse.
+        ''' <summary>Wie <see cref="WarpOverGrid"/>, aber mit frei waehlbarer AUSGABEgroesse.
         '''
         ''' Beim Bild bleibt die Groesse gleich - was aus dem Rahmen faellt, wird abgeschnitten. Ein
         ''' Objekt dagegen darf wachsen: seine Ebene ist nur so gross wie es selbst, und eine
@@ -454,6 +454,90 @@ Namespace Services
                 End Using
             End Using
             Return result
+        End Function
+
+        ''' <summary>Wohin ein Punkt durch ein KNOTENRASTER wandert. Ein- und Ausgabe in Bildpixeln,
+        ''' die Knoten stehen in Prozent (je Knoten x, y - zeilenweise ab links oben).
+        '''
+        ''' Ausserhalb des Rasters wird FORTGESETZT statt geklemmt: der Zellenindex bleibt begrenzt,
+        ''' der Anteil darin darf negativ oder groesser eins werden. Fuer ein unbewegtes Raster ist
+        ''' das exakt die Identitaet - mit Klemmung waere alles ausserhalb auf den Rand gefaltet.</summary>
+        Public Shared Function MeshPoint(nodes As Double(), columns As Integer, rows As Integer,
+                                         px As Double, py As Double,
+                                         width As Double, height As Double) As SKPoint
+            If nodes Is Nothing OrElse columns < 1 OrElse rows < 1 OrElse width <= 0 OrElse height <= 0 Then
+                Return New SKPoint(CSng(px), CSng(py))
+            End If
+            If nodes.Length <> (columns + 1) * (rows + 1) * 2 Then Return New SKPoint(CSng(px), CSng(py))
+
+            Dim u = px / width * columns
+            Dim v = py / height * rows
+            Dim c0 = Math.Max(0, Math.Min(columns - 1, CInt(Math.Floor(u))))
+            Dim r0 = Math.Max(0, Math.Min(rows - 1, CInt(Math.Floor(v))))
+            Dim tu = u - c0, tv = v - r0
+            Dim K = Function(colIdx As Integer, rowIdx As Integer) As (X As Double, Y As Double)
+                        Dim i = (rowIdx * (columns + 1) + colIdx) * 2
+                        Return (nodes(i) / 100.0 * width, nodes(i + 1) / 100.0 * height)
+                    End Function
+            Dim a = K(c0, r0), b = K(c0 + 1, r0), c = K(c0, r0 + 1), d = K(c0 + 1, r0 + 1)
+            Dim topX = a.X + (b.X - a.X) * tu, topY = a.Y + (b.Y - a.Y) * tu
+            Dim bottomX = c.X + (d.X - c.X) * tu, bottomY = c.Y + (d.Y - c.Y) * tu
+            Return New SKPoint(CSng(topX + (bottomX - topX) * tv),
+                               CSng(topY + (bottomY - topY) * tv))
+        End Function
+
+        ''' <summary>Die Gegenrichtung zu <see cref="MeshPoint"/>: aus welchem Bildpunkt der
+        ''' angegebene hervorgegangen ist.
+        '''
+        ''' Gesucht wird ueber DIESELBE Dreiecksaufteilung, mit der <see cref="WarpOverGrid"/> das
+        ''' Bild zeichnet - damit stimmt die Umkehrung exakt mit dem ueberein, was man sieht, und
+        ''' nicht nur ungefaehr. Je Masche zwei Dreiecke, baryzentrisch getestet und dieselben
+        ''' Gewichte auf das gleichmaessige Ausgangsraster angewendet.
+        '''
+        ''' False heisst: dieser Punkt kommt aus keinem Dreieck, dort liegt nach der Verzerrung also
+        ''' kein Bildinhalt mehr (die Stelle ist durchsichtig geworden).</summary>
+        Public Shared Function MeshInversePoint(nodes As Double(), columns As Integer, rows As Integer,
+                                                px As Double, py As Double,
+                                                width As Double, height As Double,
+                                                ByRef source As SKPoint) As Boolean
+            source = New SKPoint(CSng(px), CSng(py))
+            If nodes Is Nothing OrElse columns < 1 OrElse rows < 1 OrElse width <= 0 OrElse height <= 0 Then Return True
+            If nodes.Length <> (columns + 1) * (rows + 1) * 2 Then Return True
+
+            ' Ein Hauch Toleranz: ein Punkt genau auf einer Dreieckskante darf nicht durchfallen,
+            ' nur weil das Vorzeichen in der letzten Stelle kippt.
+            Const tolerance As Double = -0.000001
+            Dim warped = Function(i As Integer) As (X As Double, Y As Double)
+                             Return (nodes(i * 2) / 100.0 * width, nodes(i * 2 + 1) / 100.0 * height)
+                         End Function
+            Dim regular = Function(i As Integer) As (X As Double, Y As Double)
+                              Dim colIdx = i Mod (columns + 1)
+                              Dim rowIdx = i \ (columns + 1)
+                              Return (colIdx / CDbl(columns) * width, rowIdx / CDbl(rows) * height)
+                          End Function
+
+            For rowIdx = 0 To rows - 1
+                For colIdx = 0 To columns - 1
+                    Dim i00 = rowIdx * (columns + 1) + colIdx
+                    Dim i10 = i00 + 1
+                    Dim i01 = i00 + columns + 1
+                    Dim i11 = i01 + 1
+                    For Each three In {({i00, i10, i11}), ({i00, i11, i01})}
+                        Dim a = warped(three(0)), b = warped(three(1)), c = warped(three(2))
+                        Dim area = (b.X - a.X) * (c.Y - a.Y) - (c.X - a.X) * (b.Y - a.Y)
+                        If Math.Abs(area) < 0.0000001 Then Continue For
+                        Dim w0 = ((b.X - px) * (c.Y - py) - (c.X - px) * (b.Y - py)) / area
+                        Dim w1 = ((c.X - px) * (a.Y - py) - (a.X - px) * (c.Y - py)) / area
+                        Dim w2 = 1.0 - w0 - w1
+                        If w0 < tolerance OrElse w1 < tolerance OrElse w2 < tolerance Then Continue For
+                        Dim ra = regular(three(0)), rb = regular(three(1)), rc = regular(three(2))
+                        source = New SKPoint(CSng(w0 * ra.X + w1 * rb.X + w2 * rc.X),
+                                             CSng(w0 * ra.Y + w1 * rb.Y + w2 * rc.Y))
+                        Return True
+                    Next
+                Next
+            Next
+            Return False
         End Function
 
         ''' <summary>Wohin EIN Punkt durch ein Linienfeld wandert. Dieselbe Rechnung wie in

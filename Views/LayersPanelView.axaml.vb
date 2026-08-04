@@ -130,6 +130,23 @@ Namespace Views
             StartRenameSelectedLayer()
         End Sub
 
+        ''' Knopf in der Fußzeile: legt die Ebenenmaske an bzw. öffnet sie zum Bearbeiten.
+        Private Sub OnAnnotationMaskFooterClick(sender As Object, e As RoutedEventArgs)
+            TryCast(DataContext, EditorViewModel)?.UseAnnotationMask()
+        End Sub
+
+        ''' <summary>Klick auf das Maskensymbol EINER ZEILE: erst diese Zeile markieren, dann ihre
+        ''' Maske öffnen. Die Reihenfolge ist der Punkt - die Befehle des ViewModels arbeiten auf der
+        ''' markierten Ebene, und angeklickt wurde vielleicht eine andere.</summary>
+        Private Sub OnLayerMaskIconClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
+            If vm Is Nothing OrElse row Is Nothing Then Return
+            If Not Object.ReferenceEquals(row, vm.SelectedLayerRow) Then vm.SelectedLayerRow = row
+            vm.UseAnnotationMask()
+            e.Handled = True
+        End Sub
+
         ' Rechtsklick auf eine Ebene: dieselben Aktionen wie im Footer, aber als Kontextmenü direkt an der
         ' Zeile. Der Klick wählt die Zeile zuerst aus, damit die Selected*-Kommandos auf sie wirken; kind-
         ' abhängige Einträge (Maske/Rastern) erscheinen nur, wo sie gelten. Programmatisch aufgebaut, weil
@@ -179,6 +196,24 @@ Namespace Views
             End If
             If vm.HasSelectedAdjustmentLayer Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Neue Korrektur mit derselben Maske"), "adjustments-plus", vm.AddAdjustmentWithSameMaskCommand))
+            End If
+            ' Ebenenmaske und Schnittmaske gelten fuer GENAU EIN Objekt - bei einer Mehrfachauswahl
+            ' sagen die Eigenschaften des ViewModels schon Nein, hier bleiben die Eintraege dann weg.
+            If vm.CanAddAnnotationMask Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske hinzufügen"), "mask", vm.AddAnnotationMaskCommand))
+            End If
+            If vm.SelectedAnnotationHasMask Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske bearbeiten"), "brush", vm.EditAnnotationMaskCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske entfernen"), "circle-x", vm.RemoveAnnotationMaskCommand))
+            End If
+            If vm.CanClipSelectedAnnotation Then
+                Dim clipText = If(vm.SelectedAnnotationIsClipped,
+                                  LocalizationService.T("Beschränkung auf Ebene darunter aufheben"),
+                                  LocalizationService.T("Auf Ebene darunter beschränken"))
+                items.Add(MakeLayerMenuItem(clipText, "layers-intersect", vm.ToggleClipToLayerBelowCommand))
+            End If
+            If vm.CanMergeSelectedAnnotations Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenen zusammenlegen"), "layers-subtract", vm.MergeSelectedAnnotationsCommand))
             End If
             If vm.CanRasterizeSelectedAnnotation Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern"), "layers-union", vm.RasterizeSelectedAnnotationCommand))

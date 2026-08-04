@@ -57,7 +57,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 <img src="Screenshots/Editor_Edit.png" />
 
-**Geometry.** Crop, resize, rotate, flip and canvas size, plus three ways to distort: *Perspective* for converging verticals - four sliders, or drag the four corners in the photo; *Line warp*, where you lay a line on an edge and drag it where the edge should go; and *Grid warp* for everything a tilt cannot do. The picture follows while you drag. With an object selected, all three distort that object instead of the picture, and a distorted text can still be typed in afterwards.
+**Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort: *Perspective* for converging verticals - four sliders, or drag the four corners in the photo; *Line warp*, where you lay a line on an edge and drag it where the edge should go; *Grid warp* for everything a tilt cannot do; and *Warp*, a frame whose four edges are curves - drag a corner to place it, drag the small handles beside it to bend the edge, and the inside follows. The picture follows while you drag. All four are kept as part of the edit, not computed into the pixels: they come back when you open the picture again - in a project file as well as beside a RAW or PSD - masks follow along, and they can be taken off at any time. With an object selected, all four distort that object instead of the picture, and a distorted text can still be typed in afterwards.
 
 <img src="Screenshots/Editor_Crop.png" />
 
@@ -65,13 +65,13 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 **Details and effects.** Clarity, structure, dust and scratches, sharpening and softening, and three kinds of noise reduction - the third one for the large colour blotches a pushed exposure leaves behind. *Depth blur* takes the blur strength from each point's distance instead of one radius for everything, so lights in the background open into bright discs with the shape of an aperture. Vignette, grain and frame sit in a separate *Effects* tool.
 
-**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections; a mask brush with a soft edge; graduated and radial masks you drag onto the picture and can keep adjusting afterwards. Any of them becomes a correction layer whose adjustment applies only inside it.
+**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections; a mask brush with a soft edge; graduated and radial masks you drag onto the picture and can keep adjusting afterwards. One mask can be built from several parts, each added, subtracted or intersected. Any of them becomes a correction layer whose adjustment applies only inside it.
 
 **With a model file installed** (see below), four more things become available: clicking an object to select it, selecting by distance from the camera, removing something from the picture so that the background is continued through the gap, and denoising a photo with a model - a separate step next to the noise sliders that takes minutes rather than seconds, with a strength slider for how much of the brightness it should touch.
 
 **Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants.
 
-**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform. The layers panel holds the whole stack with visibility, reorder, rename, grouping and rasterizing.
+**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform. Text follows an arc, a circle or a wave. Any of them can carry a layer mask you paint with the mask brush, or be clipped to the layer below it. The layers panel holds the whole stack with visibility, reorder, rename, grouping, merging and rasterizing.
 
 <img src="Screenshots/Editor_Text.png" />
 

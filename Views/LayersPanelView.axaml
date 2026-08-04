@@ -64,7 +64,7 @@
                                 ContextRequested="OnLayerRowContextRequested"
                                 DragDrop.DragOver="OnLayerRowDragOver"
                                 DragDrop.Drop="OnLayerRowDrop">
-                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="{Binding IndentMargin}">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="{Binding IndentMargin}">
                                 <!-- Klapp-Pfeil nur bei einer Gruppen-Kopfzeile; sonst hält die Spalte
                                      nur die Breite, damit Symbole und Namen aller Zeilen fluchten. -->
                                 <Button Grid.Column="0" Classes="ghost"
@@ -106,9 +106,30 @@
                                              KeyDown="OnLayerRenameKeyDown"
                                              LostFocus="OnLayerRenameLostFocus" />
                                 </Panel>
+                                <!-- Merkzeichen der Ebene: Maske und Beschränkung. Beide nur, wenn sie
+                                     gelten - sonst stünden zwei blasse Symbole in jeder Zeile. -->
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2"
+                                            VerticalAlignment="Center">
+                                    <!-- Das Maskensymbol ist ANKLICKBAR: es fuehrt in den
+                                         Bearbeitungsmodus der Maske. Wer es sieht, will an die
+                                         Maske heran - ein reines Merkzeichen liesse ihn den Weg
+                                         ueber das Kontextmenue suchen. -->
+                                    <Button Classes="ghost" Padding="1" MinWidth="0"
+                                            Background="Transparent" BorderThickness="0"
+                                            IsVisible="{Binding HasMask}"
+                                            Click="OnLayerMaskIconClick"
+                                            ToolTip.Tip="Ebenenmaske bearbeiten">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
+                                                       Width="13" Height="13" Opacity="0.65" />
+                                    </Button>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg"
+                                                   Width="13" Height="13" Opacity="0.65"
+                                                   IsVisible="{Binding IsClipped}"
+                                                   ToolTip.Tip="Auf die Ebene darunter beschränkt" />
+                                </StackPanel>
                                 <!-- Schloss NUR bei gesperrten Zeilen: ein Dauergast neben dem Auge
                                      würde die Zeile zustellen. Klick entsperrt wieder. -->
-                                <Button Grid.Column="3" Classes="ghost"
+                                <Button Grid.Column="4" Classes="ghost"
                                         Width="24" Height="24" Padding="0" MinWidth="24"
                                         Background="Transparent" BorderThickness="0"
                                         IsVisible="{Binding IsLocked}"
@@ -116,7 +137,7 @@
                                         ToolTip.Tip="Ebene ist gesperrt - klicken zum Entsperren">
                                     <icons:SvgIcon Source="{Binding LockIconSource}" Width="14" Height="14" />
                                 </Button>
-                                <ToggleButton Grid.Column="4"
+                                <ToggleButton Grid.Column="5"
                                               Classes="ghost layer-eye"
                                               Width="24" Height="24" Padding="0"
                                               IsChecked="{Binding IsVisible, Mode=OneWay}"
@@ -288,6 +309,16 @@
                             IsEnabled="{Binding HasSelectedAdjustmentLayer}"
                             ToolTip.Tip="Neue Korrektur mit derselben Maske">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <!-- Ebenenmaske: EIN Knopf, der zwei Dinge tut, je nachdem was die Ebene schon
+                         hat - anlegen oder bearbeiten. Zwei Knöpfe nebeneinander, von denen immer
+                         einer grau ist, sagen dasselbe und kosten Platz. -->
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Click="OnAnnotationMaskFooterClick"
+                            IsVisible="{Binding CanUseAnnotationMaskButton}"
+                            ToolTip.Tip="{Binding AnnotationMaskButtonHint}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <!-- Gruppieren/Gruppierung aufheben: der sichtbare Weg zu Gruppen (das Kürzel

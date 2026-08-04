@@ -138,8 +138,11 @@
                         </Button>
                     </StackPanel>
                 </Border>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Classes="ghost" Padding="12,6"
+                <!-- WrapPanel statt einer Reihe: mit dem vierten Knopf passt die Wahl nicht mehr in
+                     jede Panelbreite, und ein abgeschnittener Knopf ist schlimmer als eine zweite
+                     Zeile. Der Abstand steht am Knopf, weil WrapPanel keinen kennt. -->
+                <WrapPanel Orientation="Horizontal">
+                    <Button Classes="ghost" Padding="12,6" Margin="0,0,6,6"
                             Command="{Binding SetWarpModeCommand}" CommandParameter="Perspektive"
                             Classes.active="{Binding IsWarpPerspective}"
                             ToolTip.Tip="Die vier Ecken im Bild ziehen">
@@ -149,7 +152,7 @@
                             <TextBlock Text="Perspektive" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="1" Classes="ghost" Padding="12,6"
+                    <Button Classes="ghost" Padding="12,6" Margin="0,0,6,6"
                             Command="{Binding SetWarpModeCommand}" CommandParameter="Gitter"
                             Classes.active="{Binding IsWarpGrid}"
                             ToolTip.Tip="Das Stützpunktraster im Bild ziehen">
@@ -159,7 +162,7 @@
                             <TextBlock Text="Gitter" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="2" Classes="ghost" Padding="12,6"
+                    <Button Classes="ghost" Padding="12,6" Margin="0,0,6,6"
                             Command="{Binding SetWarpModeCommand}" CommandParameter="Linien"
                             Classes.active="{Binding IsWarpLines}"
                             ToolTip.Tip="Linien auf Kanten legen und ziehen">
@@ -169,10 +172,33 @@
                             <TextBlock Text="Linien" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                    <Button Classes="ghost" Padding="12,6" Margin="0,0,6,6"
+                            Command="{Binding SetWarpModeCommand}" CommandParameter="Verformen"
+                            Classes.active="{Binding IsWarpEnvelope}"
+                            ToolTip.Tip="Die vier Ränder biegen, das Innere folgt">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier-arc.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Verformen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
                 <TextBlock Text="Erst wählen, dann liegt das jeweilige Werkzeug über dem Bild. Nochmal darauf klicken blendet es wieder aus."
                            Foreground="{DynamicResource FP.Text.Muted}"
                            FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
+                <!-- Die Verzerrung des BILDES steht im Rezept und ist damit jederzeit wieder
+                     wegzunehmen - anders als frueher, als sie in den Pixeln stand. Der Knopf nimmt
+                     ALLE VIER Arten zurueck, auch die Perspektive: deren eigener Knopf sitzt in
+                     ihrer Gruppe, und die ist ausgeblendet, sobald ein anderer Modus gewaehlt ist. -->
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                        Margin="0,8,0,0"
+                        IsVisible="{Binding HasAnyImageWarp}"
+                        Command="{Binding ResetImageWarpCommand}"
+                        ToolTip.Tip="Nimmt alle übernommenen Verzerrungen des Bildes wieder weg">
+                    <TextBlock Text="Verzerrung des Bildes zurücknehmen"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center"/>
+                </Button>
                 </StackPanel>
             </Expander>
         </Border>
@@ -306,7 +332,7 @@
                     <!-- Hinweis und Anwenden gelten nur dem BILD. Ist ein Objekt markiert, ist die
                          Verzerrung dort laengst eingetragen und bleibt eine Angabe - es gibt nichts
                          zu backen. -->
-                    <TextBlock Text="Die Punkte im Bild ziehen. Anwenden backt die Verzerrung in die Pixel - Masken passen danach nicht mehr genau."
+                    <TextBlock Text="Die Punkte im Bild ziehen. Anwenden übernimmt die Verzerrung ins Rezept: Masken gehen mit, und beim nächsten Öffnen steht sie wieder da."
                                IsVisible="{Binding WarpsTheImage}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
@@ -315,6 +341,63 @@
                             IsVisible="{Binding WarpsTheImage}"
                             IsEnabled="{Binding HasWarpGridChanges}"
                             Command="{Binding ApplyWarpGridCommand}">
+                        <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <!-- VERFORMEN: dasselbe Viereck wie die Perspektive, aber seine vier RAENDER sind Kurven.
+             Vier Ecken, je Kante zwei Griffe, das Innere folgt den Raendern. Damit biegt man eine
+             Flaeche in einem Zug, wofuer man am Stuetzpunktraster ein Dutzend Punkte einzeln
+             nachfuehren muesste. Wie das Raster wird sie GEBACKEN, nicht als Zahl gemerkt. -->
+        <Border Classes="adjustment-group">
+            <Border.IsVisible>
+                <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                    <Binding Path="IsWarpEnvelope"/>
+                    <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="verformen"/>
+                </MultiBinding>
+            </Border.IsVisible>
+            <Expander Header="Verformen" icons:ExpanderState.Key="verformen" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier-arc.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28" Height="28" Padding="0"
+                                    Command="{Binding DataContext.ResetEnvelopeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Verformung zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <TextBlock Text="Im Bild an den vier Ecken ziehen oder an den kleinen Griffen daneben: die Ecken setzen die Lage, die Griffe biegen den Rand dazwischen. Das Innere folgt den Rändern."
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBlock Text="Die Ränder bleiben im Bild. Wo einer nach innen gebogen wird, wird das Bild danach durchsichtig."
+                               IsVisible="{Binding WarpsTheImage}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
+                    <TextBlock Text="Anwenden übernimmt die Verformung ins Rezept: Masken gehen mit, und beim nächsten Öffnen steht sie wieder da."
+                               IsVisible="{Binding WarpsTheImage}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                            IsVisible="{Binding WarpsTheImage}"
+                            IsEnabled="{Binding HasEnvelopeChanges}"
+                            Command="{Binding ApplyEnvelopeCommand}">
                         <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>
@@ -368,7 +451,7 @@
                         <TextBlock Text="Letzte Linie entfernen" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>
-                    <TextBlock Text="Wird beim Anwenden in die Pixel gerechnet, wie eine Retusche. Eingefügte Objekte gehen mit, ohne eingebacken zu werden."
+                    <TextBlock Text="Anwenden übernimmt die Verzerrung ins Rezept: Masken und eingefügte Objekte gehen mit, und beim nächsten Öffnen steht sie wieder da."
                                IsVisible="{Binding WarpsTheImage}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />

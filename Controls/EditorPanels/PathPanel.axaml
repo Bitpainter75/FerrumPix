@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.PathPanel">
+    <Expander Header="Pfad" icons:ExpanderState.Key="path">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
+
+            <!-- WÄHREND DES ZEICHNENS. Der Hinweis steht hier und nicht im Tooltip: das Setzen von
+                 Punkten ist die einzige Geste im Editor, die von sich aus nicht aufhört, und ohne
+                 den Satz sucht man den Abschluss. -->
+            <StackPanel Spacing="6" IsVisible="{Binding HasPathDraft}">
+                <TextBlock Text="Klicken setzt einen Eckpunkt. Klicken und ziehen krümmt. Ein Klick auf den ersten Punkt schließt den Pfad."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding FinishPathDraftCommand}"
+                            ToolTip.Tip="Pfad offen abschließen (Eingabe oder Doppelklick)">
+                        <TextBlock Text="Pfad abschließen" HorizontalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding CancelPathDraftCommand}"
+                            ToolTip.Tip="Entwurf verwerfen (Esc)">
+                        <TextBlock Text="Verwerfen" HorizontalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+
+            <!-- OHNE ENTWURF UND OHNE MARKIERTEN PFAD: der Anfang. -->
+            <StackPanel Spacing="6">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="!HasPathDraft" />
+                        <Binding Path="!CanEditPathNodes" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <TextBlock Text="Ins Bild klicken, um den ersten Punkt zu setzen. Ein fertiger Pfad ist eine Ebene wie jede andere und lässt sich später an seinen Punkten wieder ändern."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+            </StackPanel>
+
+            <!-- MIT MARKIERTEM PFAD: die Punktarbeit. -->
+            <StackPanel Spacing="8" IsVisible="{Binding CanEditPathNodes}">
+                <TextBlock Text="Stützpunkte ziehen, um die Form zu ändern. Die runden Griffe krümmen den Abschnitt daneben."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding AddPathNodeCommand}"
+                            ToolTip.Tip="Setzt einen Stützpunkt in die Mitte des längsten Abschnitts">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/plus.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Punkt" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding RemovePathNodeCommand}"
+                            ToolTip.Tip="Entfernt den zuletzt angefassten Stützpunkt">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/minus.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Punkt" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding TogglePathNodeSmoothCommand}"
+                            ToolTip.Tip="Den zuletzt angefassten Punkt glätten oder zur Ecke machen">
+                        <TextBlock Text="Glätten / Ecke" HorizontalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding ToggleSelectedPathClosedCommand}"
+                            Classes.active="{Binding IsSelectedPathClosed}"
+                            ToolTip.Tip="Pfad schließen oder wieder öffnen">
+                        <TextBlock Text="Geschlossen" HorizontalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Small}" />
+                    </Button>
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsVisible="{Binding CanCreateTextOnPath}"
+                        Command="{Binding CreateTextOnPathCommand}"
+                        ToolTip.Tip="Erzeugt ein Textobjekt, dessen Grundlinie die Punkte dieses Pfades übernimmt. Der Pfad selbst bleibt bestehen.">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/abc.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Text auf dem Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                    IsVisible="{Binding !HasPathDraft}"
+                    Command="{Binding BeginNewPathCommand}"
+                    ToolTip.Tip="Einen weiteren Pfad beginnen">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier.svg"
+                                   Width="16" Height="16" />
+                    <TextBlock Text="Neuer Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Expander>
+</UserControl>

@@ -427,6 +427,29 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- Der PFAD steht über dem Pinsel: er ist kein Malwerkzeug, sondern zeichnet
+                         eine Form, die eine Ebene bleibt und sich später wieder ändern lässt.
+                         VORERST AUSGEBLENDET (Patrick am 2026-08-04): die Bedienung ist noch nicht
+                         intuitiv genug (Befunde in Audits/OFFENE_PUNKTE.md, Abschnitt 3b "Freier
+                         Pfad"). Ausgeblendet ist nur der WEG hinein, nichts am Werkzeug selbst:
+                         ein vorhandener Pfad wird weiter gezeichnet und lässt sich markieren,
+                         verschieben und umfärben - nur seine Stützpunkte sind ohne das Werkzeug
+                         nicht erreichbar. Zum Wiederzeigen genügt es, IsVisible hier zu entfernen
+                         (und den Knopf "Freier Pfad" im Eigenschaften-Panel). Die Form "Pfad" im
+                         Einfügen-Werkzeug ist dagegen ganz entfallen: sie gehörte nie dorthin,
+                         jede Form dort wird aufgezogen. -->
+                    <Button Classes="tool-btn-row"
+                            IsVisible="False"
+                            ToolTip.Tip="Pfad"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Path"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Path}"
+                            Classes.selected-kind="{Binding SelectedAnnotationToolbarKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Path}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier.svg" Width="18" Height="18" />
+                            <TextBlock Text="Pfad" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                        </StackPanel>
+                    </Button>
                     <Button Classes="tool-btn-row"
                             ToolTip.Tip="Pinsel"
                             IsEnabled="{Binding CanUsePixelTools}"
@@ -750,6 +773,10 @@
                                                           StrokeBrush="{DynamicResource FP.Accent}"
                                                           IsHitTestVisible="False"
                                                           IsVisible="False" />
+                        <icons:PathOverlayControl x:Name="PathOverlay"
+                                                  StrokeBrush="{DynamicResource FP.Accent}"
+                                                  IsHitTestVisible="False"
+                                                  IsVisible="False" />
                         <!-- Live-Vorschau der Gitterverzerrung: liegt UEBER dem Bild und unter den
                              Overlays, damit die Rasterpunkte darauf sichtbar bleiben. -->
                         <Image x:Name="ToolPreviewImage"
@@ -776,6 +803,11 @@
                                                       StrokeBrush="{DynamicResource FP.Accent}"
                                                       IsHitTestVisible="False"
                                                       IsVisible="False" />
+                        <icons:EnvelopeWarpOverlayControl x:Name="EnvelopeWarpOverlay"
+                                                          ZIndex="10"
+                                                          StrokeBrush="{DynamicResource FP.Accent}"
+                                                          IsHitTestVisible="False"
+                                                          IsVisible="False" />
                         <icons:SelectionOverlayControl x:Name="SelectionOverlay"
                                                        FillBrush="{Binding SelectionFillPreviewBrush}"
                                                        StrokeBrush="{DynamicResource FP.Accent}"
@@ -1042,6 +1074,11 @@
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding ShowMaskAdjustments}">
                                 <panels:MaskPanel />
+                            </Border>
+
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding ShowPathAdjustments}">
+                                <panels:PathPanel />
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

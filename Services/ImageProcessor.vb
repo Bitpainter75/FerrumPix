@@ -293,6 +293,13 @@ Namespace Services
         Private _customName As String = ""
         ' Zugehörigkeit zu einer Objekt-Gruppe (leer = keine). Siehe GroupId.
         Private _groupId As String = ""
+        ' Ebenenmaske des Objekts (leer = keine). Siehe MaskId.
+        Private _maskId As String = ""
+        ' Auf die Deckung der Ebene darunter beschränkt? Siehe ClipToLayerBelow.
+        Private _clipToLayerBelow As Boolean = False
+        ' Stützpunkte eines freien Pfades (leer = keiner). Siehe PathPoints.
+        Private _pathPoints As String = ""
+        Private _pathClosed As Boolean = False
         Private _id As String = ""
         ' Vorlagenname, aus dem ein Wasserzeichen entstanden ist. Leer = frei angelegt.
         Private _watermarkPresetName As String = ""
@@ -423,6 +430,69 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Ebenenmaske DIESES Objekts: verweist auf eine <see cref="ImageMask"/> in
+        ''' <see cref="ImageAdjustments.Masks"/>, genau wie eine Korrekturebene. Leer = keine Maske.
+        '''
+        ''' Sie begrenzt die Deckung des FERTIG gezeichneten Objekts (nach eigener Verzerrung und
+        ''' eigenen Anpassungen) und wird dabei nicht gebacken - das Objekt bleibt unveraendert
+        ''' aenderbar, und dieselbe Maske laesst sich mit dem Masken-Pinsel weiter bearbeiten.
+        ''' Mehrere Ebenen duerfen sich eine Maske teilen; geloescht wird eine Maske erst, wenn
+        ''' weder eine Korrekturebene noch ein Objekt mehr auf sie zeigt.</summary>
+        Public Property MaskId As String
+            Get
+                Return _maskId
+            End Get
+            Set(value As String)
+                SetField(_maskId, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Freier Pfad: die Stützpunkte in PROZENT DES OBJEKTRECHTECKS, je Punkt sechs Zahlen
+        ''' „ax,ay,einX,einY,ausX,ausY" (Stützpunkt, eingehender Griff, ausgehender Griff), Punkte durch
+        ''' Semikolon getrennt. Ein ECKpunkt hat beide Griffe auf seinem Stützpunkt.
+        '''
+        ''' Prozent DES OBJEKTS und nicht des Bildes: damit machen Verschieben, Skalieren, Drehen,
+        ''' Spiegeln und die eigene Verzerrung den Pfad ohne Zutun mit, genau wie bei jeder anderen
+        ''' Form. Neu ist allein die Punktliste; am Objekt selbst ändert sich nichts.
+        '''
+        ''' Genutzt von der Objektart „Path" als Form UND von einem Textobjekt mit
+        ''' <see cref="TextPathKind"/> = „Free" als Grundlinie.</summary>
+        Public Property PathPoints As String
+            Get
+                Return _pathPoints
+            End Get
+            Set(value As String)
+                SetField(_pathPoints, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Ist der freie Pfad geschlossen? Offen wird er trotzdem gefüllt (Skia schließt zum
+        ''' Füllen gedanklich) - der Unterschied liegt in der KONTUR, und die ist bei einem Pfad meist
+        ''' das Sichtbare.</summary>
+        Public Property PathClosed As Boolean
+            Get
+                Return _pathClosed
+            End Get
+            Set(value As Boolean)
+                SetField(_pathClosed, value)
+            End Set
+        End Property
+
+        ''' <summary>Schnittmaske: das Objekt erscheint nur dort, wo die Ebene DARUNTER deckt.
+        '''
+        ''' Basis ist das naechste sichtbare Objekt unter ihm, das nicht selbst beschraenkt ist -
+        ''' mehrere beschraenkte Objekte uebereinander teilen sich also dieselbe Basis, wie in einer
+        ''' Schnittmasken-Gruppe ueblich. Ohne Basis (das Objekt liegt ganz unten) bleibt der
+        ''' Schalter wirkungslos, statt das Objekt verschwinden zu lassen.</summary>
+        Public Property ClipToLayerBelow As Boolean
+            Get
+                Return _clipToLayerBelow
+            End Get
+            Set(value As Boolean)
+                SetField(_clipToLayerBelow, value)
+            End Set
+        End Property
+
         ''' <summary>Name der Wasserzeichen-Vorlage, aus der dieses Objekt entstanden ist (leer = keine).
         ''' Damit füllt das Eigenschaften-Panel das Namensfeld wieder vor, wenn das Objekt erneut markiert
         ''' wird - erneutes Speichern überschreibt dann dieselbe Vorlage, statt eine zweite anzulegen.</summary>
@@ -537,6 +607,7 @@ Namespace Services
                     Case "speechbubble", "speech-bubble", "sprechblase", "bubble" : Return base & "outline/speech-bubble-shape.svg"
                     Case "heart" : Return base & "outline/heart.svg"
                     Case "cloud" : Return base & "outline/cloud.svg"
+                    Case "path" : Return base & "outline/vector-bezier.svg"
                     Case "line" : Return base & "outline/line-shape.svg"
                     Case "arrow" : Return base & "outline/arrow-right.svg"
                     Case "frame" : Return base & "outline/frame.svg"
@@ -573,6 +644,7 @@ Namespace Services
                 Case "heart" : Return "Herz"
                 Case "cloud" : Return "Wolke"
                 Case "frame" : Return "Rahmen"
+                Case "path" : Return "Pfad"
                 Case "line" : Return "Linie"
                 Case "arrow" : Return "Pfeil"
                 Case "brush" : Return "Pinsel"
@@ -1136,6 +1208,10 @@ Namespace Services
                 .CustomName = CustomName,
                 .Id = Id,
                 .GroupId = GroupId,
+                .MaskId = MaskId,
+                .ClipToLayerBelow = ClipToLayerBelow,
+                .PathPoints = PathPoints,
+                .PathClosed = PathClosed,
                 .WatermarkPresetName = WatermarkPresetName,
                 .FrameSizePercent = FrameSizePercent,
                 .FrameCornerRadiusPercent = FrameCornerRadiusPercent,
@@ -1299,6 +1375,102 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>WEITERE Bestandteile dieser Maske, nach dem ersten. Jeder trägt seine eigene Art,
+        ''' Geometrie, Weichheit und Umkehrung und wird mit seinem <see cref="MaskComponent.Mode"/> auf
+        ''' das bisherige Ergebnis verrechnet. Leer = die Maske besteht aus genau einem Bestandteil,
+        ''' und das ist der Normalfall.
+        '''
+        ''' WARUM der erste Bestandteil nicht mit in dieser Liste steht: er liegt in den Feldern
+        ''' oberhalb, und zwar unverändert. Damit lesen und schreiben rund hundert vorhandene Stellen
+        ''' im Editor weiterhin genau das, was sie meinen - „den Bestandteil, an dem gerade gearbeitet
+        ''' wird" -, und eine gespeicherte Bearbeitung von früher öffnet ohne Wanderung. Gelesen wird
+        ''' trotzdem einheitlich, nämlich ausschließlich über <see cref="GetComponents"/>.</summary>
+        Public Property ExtraComponents As New System.Collections.Generic.List(Of MaskComponent)()
+
+        ''' <summary>Der erste Bestandteil als eigenständiges Objekt - eine ABSCHRIFT der Felder
+        ''' oberhalb, kein Verweis darauf. Wer ihn ändern will, ändert die Felder.</summary>
+        Public Function PrimaryAsComponent() As MaskComponent
+            Return New MaskComponent With {
+                .Mode = "Add",
+                .Kind = Kind,
+                .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
+                .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
+                .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
+                .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,
+                .GradientRadiusRatio = GradientRadiusRatio, .GradientFeatherPercent = GradientFeatherPercent,
+                .BrushAddPngBase64 = BrushAddPngBase64, .BrushSubtractPngBase64 = BrushSubtractPngBase64,
+                .BrushLeft = BrushLeft, .BrushTop = BrushTop, .BrushRight = BrushRight, .BrushBottom = BrushBottom}
+        End Function
+
+        ''' <summary>Schreibt einen Bestandteil in die Felder des ERSTEN zurück.</summary>
+        Public Sub SetPrimaryFromComponent(c As MaskComponent)
+            If c Is Nothing Then Return
+            Kind = c.Kind
+            Left = c.Left : Top = c.Top : Right = c.Right : Bottom = c.Bottom
+            PngBase64 = c.PngBase64 : FeatherPixels = c.FeatherPixels : Inverted = c.Inverted
+            GradientStartXPercent = c.GradientStartXPercent : GradientStartYPercent = c.GradientStartYPercent
+            GradientEndXPercent = c.GradientEndXPercent : GradientEndYPercent = c.GradientEndYPercent
+            GradientRadiusRatio = c.GradientRadiusRatio : GradientFeatherPercent = c.GradientFeatherPercent
+            BrushAddPngBase64 = c.BrushAddPngBase64 : BrushSubtractPngBase64 = c.BrushSubtractPngBase64
+            BrushLeft = c.BrushLeft : BrushTop = c.BrushTop : BrushRight = c.BrushRight : BrushBottom = c.BrushBottom
+        End Sub
+
+        ''' <summary>Trägt der erste Bestandteil überhaupt etwas? Eine frisch angelegte Maske ist
+        ''' leer, und dann gehört der erste hinzugefügte Bestandteil dorthin statt in die Liste.</summary>
+        Public ReadOnly Property HasPrimaryComponent As Boolean
+            Get
+                If IsGradient Then Return True
+                Return Right > Left AndAlso Bottom > Top AndAlso Not String.IsNullOrWhiteSpace(PngBase64)
+            End Get
+        End Property
+
+        ''' <summary>ALLE Bestandteile in Wirkreihenfolge. Die EINE Stelle, über die gelesen wird.</summary>
+        Public Function GetComponents() As System.Collections.Generic.List(Of MaskComponent)
+            Dim list As New System.Collections.Generic.List(Of MaskComponent)()
+            If HasPrimaryComponent Then list.Add(PrimaryAsComponent())
+            If ExtraComponents IsNot Nothing Then
+                For Each c In ExtraComponents
+                    If c IsNot Nothing Then list.Add(c)
+                Next
+            End If
+            Return list
+        End Function
+
+        Public ReadOnly Property ComponentCount As Integer
+            Get
+                Return GetComponents().Count
+            End Get
+        End Property
+
+        ''' <summary>Hängt einen Bestandteil an. Ist der erste noch leer, wird er DORT abgelegt - eine
+        ''' Maske, deren einziger Bestandteil in der Zusatzliste stünde, wäre für jede vorhandene
+        ''' Stelle im Editor eine leere Maske.</summary>
+        Public Sub AddComponent(c As MaskComponent)
+            If c Is Nothing Then Return
+            If Not HasPrimaryComponent Then
+                SetPrimaryFromComponent(c)
+                Return
+            End If
+            If ExtraComponents Is Nothing Then ExtraComponents = New System.Collections.Generic.List(Of MaskComponent)()
+            ExtraComponents.Add(c)
+        End Sub
+
+        ''' <summary>Entfernt den Bestandteil an dieser Stelle. Faellt der ERSTE weg, rueckt der
+        ''' naechste in seine Felder nach - sonst stuende die Maske mit leerem ersten Bestandteil da
+        ''' und gaelte ueberall als leer.</summary>
+        Public Sub RemoveComponentAt(index As Integer)
+            Dim list = GetComponents()
+            If index < 0 OrElse index >= list.Count Then Return
+            list.RemoveAt(index)
+            If list.Count = 0 Then
+                SetPrimaryFromComponent(New MaskComponent())
+                ExtraComponents = New System.Collections.Generic.List(Of MaskComponent)()
+                Return
+            End If
+            SetPrimaryFromComponent(list(0))
+            ExtraComponents = list.Skip(1).ToList()
+        End Sub
+
         Public Function Clone() As ImageMask
             Return New ImageMask With {
                 .Id = Id, .Name = Name,
@@ -1310,8 +1482,81 @@ Namespace Services
                 .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,
                 .GradientRadiusRatio = GradientRadiusRatio, .GradientFeatherPercent = GradientFeatherPercent,
                 .BrushAddPngBase64 = BrushAddPngBase64, .BrushSubtractPngBase64 = BrushSubtractPngBase64,
-                .BrushLeft = BrushLeft, .BrushTop = BrushTop, .BrushRight = BrushRight, .BrushBottom = BrushBottom
+                .BrushLeft = BrushLeft, .BrushTop = BrushTop, .BrushRight = BrushRight, .BrushBottom = BrushBottom,
+                .ExtraComponents = If(ExtraComponents Is Nothing,
+                                      New System.Collections.Generic.List(Of MaskComponent)(),
+                                      ExtraComponents.Where(Function(c) c IsNot Nothing).Select(Function(c) c.Clone()).ToList())
             }
+        End Function
+    End Class
+
+    ''' <summary>EIN Bestandteil einer Maske: entweder ein gemaltes Raster oder ein gerechneter
+    ''' Verlauf, verrechnet mit <see cref="Mode"/> auf das Ergebnis der Bestandteile davor.
+    '''
+    ''' Die Felder sind absichtlich dieselben wie die der <see cref="ImageMask"/> - der erste
+    ''' Bestandteil LIEGT dort, und beide Seiten dürfen nicht auseinanderlaufen.</summary>
+    Public Class MaskComponent
+        ''' <summary>„Add", „Subtract" oder „Intersect". Der ERSTE Bestandteil setzt das Ergebnis
+        ''' unabhängig von seinem Modus - es gibt vor ihm nichts, worauf man rechnen könnte.</summary>
+        Public Property Mode As String = "Add"
+
+        Public Property Kind As String = ""
+        Public Property Left As Integer
+        Public Property Top As Integer
+        Public Property Right As Integer
+        Public Property Bottom As Integer
+        Public Property PngBase64 As String = ""
+        Public Property FeatherPixels As Single
+        Public Property Inverted As Boolean
+        Public Property GradientStartXPercent As Double
+        Public Property GradientStartYPercent As Double
+        Public Property GradientEndXPercent As Double
+        Public Property GradientEndYPercent As Double
+        Public Property GradientRadiusRatio As Double = 1.0
+        Public Property GradientFeatherPercent As Double = 50.0
+        Public Property BrushAddPngBase64 As String = ""
+        Public Property BrushSubtractPngBase64 As String = ""
+        Public Property BrushLeft As Integer
+        Public Property BrushTop As Integer
+        Public Property BrushRight As Integer
+        Public Property BrushBottom As Integer
+
+        Public ReadOnly Property IsLinearGradient As Boolean
+            Get
+                Return String.Equals(Kind, "Linear", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsRadialGradient As Boolean
+            Get
+                Return String.Equals(Kind, "Radial", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGradient As Boolean
+            Get
+                Return IsLinearGradient OrElse IsRadialGradient
+            End Get
+        End Property
+
+        Public ReadOnly Property HasBrushCorrection As Boolean
+            Get
+                Return BrushRight > BrushLeft AndAlso BrushBottom > BrushTop AndAlso
+                       (Not String.IsNullOrWhiteSpace(BrushAddPngBase64) OrElse
+                        Not String.IsNullOrWhiteSpace(BrushSubtractPngBase64))
+            End Get
+        End Property
+
+        Public Function Clone() As MaskComponent
+            Return New MaskComponent With {
+                .Mode = Mode, .Kind = Kind,
+                .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
+                .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
+                .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
+                .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,
+                .GradientRadiusRatio = GradientRadiusRatio, .GradientFeatherPercent = GradientFeatherPercent,
+                .BrushAddPngBase64 = BrushAddPngBase64, .BrushSubtractPngBase64 = BrushSubtractPngBase64,
+                .BrushLeft = BrushLeft, .BrushTop = BrushTop, .BrushRight = BrushRight, .BrushBottom = BrushBottom}
         End Function
     End Class
 
@@ -1686,6 +1931,20 @@ Namespace Services
         Public Property PerspectiveCorner3X As Single = 0
         Public Property PerspectiveCorner3Y As Single = 0
 
+        ' ── Verzerren (Raster, Linien, Verformen) ───────────────────────────
+        '
+        ' Was keine Matrix ist, steht als KNOTENRASTER hier: je Rasterpunkt, wohin er wandert, in
+        ' Prozent des unbeschnittenen Bildes. Gitter-, Linien- und Hüllenverformung erzeugen alle
+        ' dieselbe Form - genau wie bei einem Objekt, und aus demselben Grund: nur ein Raster laesst
+        ' sich verketten, ohne fuer jede Paarung von Arten zu ueberlegen, was ihre Verkettung ist.
+        '
+        ' Frueher wurde stattdessen in die Pixel GEBACKEN. Das kostete die Bearbeitbarkeit (zurueck
+        ' ging es nur innerhalb der Sitzung) und war bei RAW und PSD sogar ganz verloren: neben
+        ' diesen Dateien liegt nur das Rezept, kein einziges Pixel. Als Rezeptwert laeuft die
+        ' Verzerrung jetzt in derselben Geometriestufe wie Beschnitt, Drehung und Perspektive - im
+        ' Bildweg UND im Maskenweg, Masken wandern also von selbst mit.
+        Public Property ImageWarp As ObjectWarp
+
         Public Property StraightenDegrees As Single = 0
         Public Property StraightenExpandCanvas As Boolean = False
         Public Property FlipHorizontal As Boolean = False
@@ -1867,6 +2126,7 @@ Namespace Services
             "PerspectiveHorizontal", "PerspectiveVertical", "PerspectiveAspect", "PerspectiveScale",
             "PerspectiveCorner0X", "PerspectiveCorner0Y", "PerspectiveCorner1X", "PerspectiveCorner1Y",
             "PerspectiveCorner2X", "PerspectiveCorner2Y", "PerspectiveCorner3X", "PerspectiveCorner3Y",
+            "ImageWarp",
             "CropLeftPercent", "CropTopPercent", "CropRightPercent", "CropBottomPercent",
             "ResizeWidth", "ResizeHeight", "LockResizeAspect", "ResizeFitInsideBox", "ResizeScalePercent", "NoResizeUpscale", "ResizeInterpolation",
             "UpscaleModel",
@@ -2099,6 +2359,7 @@ Namespace Services
                 .PerspectiveCorner1X = PerspectiveCorner1X, .PerspectiveCorner1Y = PerspectiveCorner1Y,
                 .PerspectiveCorner2X = PerspectiveCorner2X, .PerspectiveCorner2Y = PerspectiveCorner2Y,
                 .PerspectiveCorner3X = PerspectiveCorner3X, .PerspectiveCorner3Y = PerspectiveCorner3Y,
+                .ImageWarp = ImageWarp?.Clone(),
                 .StraightenDegrees = StraightenDegrees,
                 .StraightenExpandCanvas = StraightenExpandCanvas,
                 .FlipHorizontal = FlipHorizontal,
@@ -3348,6 +3609,32 @@ Namespace Services
             End If
 
             Dim rect = ComputeAnnotationRect(sourceWidth, sourceHeight, kind, annotation)
+            ' FREIER PFAD: seine Punkte duerfen ueber das Objektrechteck hinausreichen (ein Griff
+            ' traegt die Kurve nach aussen, und ein gezogener Stuetzpunkt wird bewusst nicht
+            ' geklemmt). Das Rechteck allein waere dann zu klein, und der Teil ausserhalb bliebe beim
+            ' Auffrischen der Anzeige stehen - er sah aus, als waere er abgeschnitten.
+            If Not String.IsNullOrWhiteSpace(annotation.PathPoints) Then
+                Dim nodes = ParsePathPoints(annotation.PathPoints)
+                If nodes.Count > 0 Then
+                    Dim minX = Single.MaxValue, minY = Single.MaxValue
+                    Dim maxX = Single.MinValue, maxY = Single.MinValue
+                    For Each n In nodes
+                        For Each p In {n.Anchor, n.HandleIn, n.HandleOut}
+                            minX = Math.Min(minX, p.X) : maxX = Math.Max(maxX, p.X)
+                            minY = Math.Min(minY, p.Y) : maxY = Math.Max(maxY, p.Y)
+                        Next
+                    Next
+                    If maxX > minX OrElse maxY > minY Then
+                        ' Die Grenzen sind schon sortiert (Minimum vor Maximum), es braucht also kein
+                        ' Geraderuecken - eine gespiegelte Ebene steckt in der Zeichnung, nicht hier.
+                        Dim pathRect = New SKRect(rect.Left + minX / 100.0F * rect.Width,
+                                                  rect.Top + minY / 100.0F * rect.Height,
+                                                  rect.Left + maxX / 100.0F * rect.Width,
+                                                  rect.Top + maxY / 100.0F * rect.Height)
+                        rect.Union(pathRect)
+                    End If
+                End If
+            End If
             rect = RotationBounds(rect, annotation.RotationDegrees)
 
             Dim extent = Math.Max(rect.Width, rect.Height)
@@ -3667,6 +3954,7 @@ Namespace Services
                 If original Is Nothing Then Return Nothing
 
                 Dim processed As SKBitmap = CloneBitmap(original)
+                processed = ReplaceBitmap(processed, ApplyImageWarp(processed, adj))
                 processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
                 processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
                 processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
@@ -3693,6 +3981,7 @@ Namespace Services
 
             Dim processed As SKBitmap = CloneBitmap(workingSource)
             If Not Object.ReferenceEquals(workingSource, source) Then workingSource.Dispose()
+            processed = ReplaceBitmap(processed, ApplyImageWarp(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
             processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
@@ -3713,6 +4002,7 @@ Namespace Services
             If source Is Nothing Then Return Nothing
 
             Dim processed As SKBitmap = CloneBitmap(source)
+            processed = ReplaceBitmap(processed, ApplyImageWarp(processed, adj))
             processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
             processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
             processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
@@ -3954,6 +4244,7 @@ Namespace Services
             Dim processed As SKBitmap = source
             Dim owned = False
 
+            processed = ReplaceBitmapOwned(processed, ApplyImageWarp(processed, adj), owned)
             processed = ReplaceBitmapOwned(processed, ApplyCrop(processed, adj), owned)
             processed = ReplaceBitmapOwned(processed, ApplyGeometryTransforms(processed, adj), owned)
             processed = ReplaceBitmapOwned(processed, ApplyStraighten(processed, adj), owned)
@@ -4622,6 +4913,41 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Verrechnet einen weiteren Maskenbestandteil in das bisherige Ergebnis.
+        '''
+        ''' HINZUFÜGEN nimmt je Pixel das MAXIMUM und nicht die Summe: zweimal über dieselbe Stelle
+        ''' soll dasselbe ergeben wie einmal, sonst gäbe es an Überlappungen Stufen. Dieselbe
+        ''' Entscheidung wie beim Zusammenführen der Pinselkorrektur eines Verlaufs.</summary>
+        Private Shared Sub CombineMaskInto(target As SKBitmap, source As SKBitmap, mode As String)
+            If target Is Nothing OrElse source Is Nothing Then Return
+            If target.Width <> source.Width OrElse target.Height <> source.Height Then Return
+            If target.GetPixels() = IntPtr.Zero OrElse source.GetPixels() = IntPtr.Zero Then Return
+            Dim tStride As Integer, sStride As Integer
+            Dim tb = ReadMaskBytes(target, tStride)
+            Dim sb = ReadMaskBytes(source, sStride)
+            Dim width = Math.Min(tStride, sStride)
+            Dim normalized = If(mode, "").Trim().ToLowerInvariant()
+            For y = 0 To target.Height - 1
+                Dim tOffset = y * tStride, sOffset = y * sStride
+                For x = 0 To width - 1
+                    Dim a = CInt(tb(tOffset + x)), b = CInt(sb(sOffset + x))
+                    Dim v As Integer
+                    Select Case normalized
+                        Case "subtract"
+                            v = a - b
+                        Case "intersect"
+                            v = Math.Min(a, b)
+                        Case Else
+                            v = Math.Max(a, b)
+                    End Select
+                    If v < 0 Then v = 0
+                    If v > 255 Then v = 255
+                    tb(tOffset + x) = CByte(v)
+                Next
+            Next
+            Marshal.Copy(tb, 0, target.GetPixels(), tb.Length)
+        End Sub
+
         ''' <summary>Je Pixel das Maximum aus zwei gleich grossen Alpha8-Masken, in die erste.</summary>
         Private Shared Sub MaskMaximum(target As SKBitmap, source As SKBitmap)
             If target Is Nothing OrElse source Is Nothing Then Return
@@ -4640,14 +4966,19 @@ Namespace Services
             Marshal.Copy(zb, 0, target.GetPixels(), zb.Length)
         End Sub
 
-        Private Shared Function BuildPersistentMaskForOutput(maskData As ImageMask, geometry As ImageAdjustments,
-                                                              pipelineInputWidth As Integer, pipelineInputHeight As Integer,
-                                                              targetW As Integer, targetH As Integer,
-                                                              layerOpacity As Single,
-                                                              Optional fillLayer As MaskedAdjustmentLayer = Nothing) As SKBitmap
+        ''' <summary>EIN Bestandteil einer Maske, gerastert in der EINGANGSgröße der Geometriekette.
+        ''' Nothing heißt: dieser Bestandteil trägt nichts bei (fehlend, leer oder beschädigt) - er
+        ''' wird dann übersprungen, statt die ganze Maske zu verwerfen.
+        '''
+        ''' <paramref name="sourceWidth"/>/<paramref name="sourceHeight"/> sind die QUELLMASSE DER
+        ''' MASKE; alle Bestandteile teilen sie sich, ihre Rechtecke und Verlaufspunkte beziehen sich
+        ''' darauf.</summary>
+        Private Shared Function BuildComponentMaskForInput(maskData As MaskComponent,
+                                                           sourceWidth As Integer, sourceHeight As Integer,
+                                                           pipelineInputWidth As Integer, pipelineInputHeight As Integer,
+                                                           fillLayer As MaskedAdjustmentLayer) As SKBitmap
             If maskData Is Nothing OrElse pipelineInputWidth <= 0 OrElse pipelineInputHeight <= 0 OrElse
-               targetW <= 0 OrElse targetH <= 0 OrElse
-               maskData.SourceWidthPixels <= 0 OrElse maskData.SourceHeightPixels <= 0 Then Return Nothing
+               sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return Nothing
             ' Ein VERLAUF traegt weder PNG noch Bounding-Box - er wird gleich gerechnet.
             If Not maskData.IsGradient AndAlso
                (maskData.Right <= maskData.Left OrElse maskData.Bottom <= maskData.Top OrElse
@@ -4682,10 +5013,10 @@ Namespace Services
                     Dim gx0, gy0, gAchseX, gAchseY, gInvLen2 As Double
                     Dim gRadius, gEx, gEy, gRatio, gInner As Double
                     If maskData.IsGradient Then
-                        gx0 = maskData.GradientStartXPercent / 100.0 * maskData.SourceWidthPixels
-                        gy0 = maskData.GradientStartYPercent / 100.0 * maskData.SourceHeightPixels
-                        gAchseX = maskData.GradientEndXPercent / 100.0 * maskData.SourceWidthPixels - gx0
-                        gAchseY = maskData.GradientEndYPercent / 100.0 * maskData.SourceHeightPixels - gy0
+                        gx0 = maskData.GradientStartXPercent / 100.0 * sourceWidth
+                        gy0 = maskData.GradientStartYPercent / 100.0 * sourceHeight
+                        gAchseX = maskData.GradientEndXPercent / 100.0 * sourceWidth - gx0
+                        gAchseY = maskData.GradientEndYPercent / 100.0 * sourceHeight - gy0
                         Dim len2 = gAchseX * gAchseX + gAchseY * gAchseY
                         ' Beide Punkte aufeinander = keine Achse bzw. kein Radius: dann waere die
                         ' Maske ueberall halb gedeckt statt eines Verlaufs. Lieber gar keine Maske.
@@ -4738,11 +5069,11 @@ Namespace Services
                     Dim iStride = inputMask.RowBytes
                     Dim iBuf = New Byte(iStride * pipelineInputHeight - 1) {}
                     For y = 0 To pipelineInputHeight - 1
-                        Dim sySource = CInt(Math.Floor((y + 0.5) * maskData.SourceHeightPixels / pipelineInputHeight))
+                        Dim sySource = CInt(Math.Floor((y + 0.5) * sourceHeight / pipelineInputHeight))
                         Dim sy = sySource - maskData.Top
                         Dim iRow = y * iStride
                         For x = 0 To pipelineInputWidth - 1
-                            Dim sx = CInt(Math.Floor((x + 0.5) * maskData.SourceWidthPixels / pipelineInputWidth)) - maskData.Left
+                            Dim sx = CInt(Math.Floor((x + 0.5) * sourceWidth / pipelineInputWidth)) - maskData.Left
                             Dim alpha = 0
                             If maskData.IsRadialGradient Then
                                 ' Abstand im gedrehten Ellipsensystem: 0 = Mittelpunkt, 1 = Rand.
@@ -4809,12 +5140,54 @@ Namespace Services
                     ' Verlaeufe sind bereits glatt - ihr Weichheits-Regler sitzt in der Geometrie
                     ' (GradientFeatherPercent), nicht in einem nachgeschalteten Weichzeichner.
                     If maskData.FeatherPixels > 0.05F AndAlso Not maskData.IsGradient Then
-                        Dim initialScale = (pipelineInputWidth / CSng(maskData.SourceWidthPixels) +
-                                            pipelineInputHeight / CSng(maskData.SourceHeightPixels)) / 2.0F
+                        Dim initialScale = (pipelineInputWidth / CSng(sourceWidth) +
+                                            pipelineInputHeight / CSng(sourceHeight)) / 2.0F
                         Dim blurred = BlurAlphaMask(inputMask, maskData.FeatherPixels * initialScale)
                         If blurred IsNot Nothing Then inputMask = ReplaceBitmap(inputMask, blurred)
                     End If
+                    Return inputMask
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
 
+        ''' <summary>Die fertige Maske in AUSGABEgröße: alle Bestandteile der Reihe nach gerastert,
+        ''' miteinander verrechnet und danach durch dieselbe Geometriekette geschickt wie das Bild.
+        '''
+        ''' Der ERSTE Bestandteil setzt das Ergebnis, unabhängig von seinem Modus - vor ihm gibt es
+        ''' nichts, worauf man rechnen könnte. Jeder weitere kommt mit seinem Modus hinzu:
+        ''' Hinzufügen nimmt je Pixel das MAXIMUM (nicht die Summe: zweimal dieselbe Stelle soll
+        ''' dasselbe ergeben wie einmal), Abziehen die Differenz, Schneiden das Minimum.
+        '''
+        ''' Ein Bestandteil, der nichts liefert, wird ÜBERSPRUNGEN und verwirft nicht die ganze
+        ''' Maske - dieselbe Regel wie bisher für eine beschädigte Maske, nur eine Ebene tiefer.</summary>
+        Private Shared Function BuildPersistentMaskForOutput(maskData As ImageMask, geometry As ImageAdjustments,
+                                                              pipelineInputWidth As Integer, pipelineInputHeight As Integer,
+                                                              targetW As Integer, targetH As Integer,
+                                                              layerOpacity As Single,
+                                                              Optional fillLayer As MaskedAdjustmentLayer = Nothing) As SKBitmap
+            If maskData Is Nothing OrElse pipelineInputWidth <= 0 OrElse pipelineInputHeight <= 0 OrElse
+               targetW <= 0 OrElse targetH <= 0 OrElse
+               maskData.SourceWidthPixels <= 0 OrElse maskData.SourceHeightPixels <= 0 Then Return Nothing
+            Dim components = maskData.GetComponents()
+            If components.Count = 0 Then Return Nothing
+            Try
+                Dim inputMask As SKBitmap = Nothing
+                For Each component In components
+                    Dim part = BuildComponentMaskForInput(component, maskData.SourceWidthPixels, maskData.SourceHeightPixels,
+                                                          pipelineInputWidth, pipelineInputHeight, fillLayer)
+                    If part Is Nothing Then Continue For
+                    If inputMask Is Nothing Then
+                        inputMask = part
+                    Else
+                        CombineMaskInto(inputMask, part, component.Mode)
+                        part.Dispose()
+                    End If
+                Next
+                If inputMask Is Nothing Then Return Nothing
+
+                Using inputMask
                     Dim maskPixels = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Dim pStride = maskPixels.RowBytes
                     Dim pBuf = New Byte(pStride * pipelineInputHeight - 1) {}
@@ -4828,29 +5201,9 @@ Namespace Services
                         Next
                     Next
                     Marshal.Copy(pBuf, 0, maskPixels.GetPixels(), pBuf.Length)
-                    inputMask.Dispose()
 
-                    Dim maskGeometry = New ImageAdjustments With {
-                        .CropLeftPercent = geometry.CropLeftPercent, .CropTopPercent = geometry.CropTopPercent,
-                        .CropRightPercent = geometry.CropRightPercent, .CropBottomPercent = geometry.CropBottomPercent,
-                        .RotationDegrees = geometry.RotationDegrees,
-                        .FlipHorizontal = geometry.FlipHorizontal, .FlipVertical = geometry.FlipVertical,
-                        .StraightenDegrees = geometry.StraightenDegrees,
-                        .StraightenExpandCanvas = geometry.StraightenExpandCanvas,
-                        .PerspectiveHorizontal = geometry.PerspectiveHorizontal,
-                        .PerspectiveVertical = geometry.PerspectiveVertical,
-                        .PerspectiveAspect = geometry.PerspectiveAspect,
-                        .PerspectiveScale = geometry.PerspectiveScale,
-                        .PerspectiveCorner0X = geometry.PerspectiveCorner0X, .PerspectiveCorner0Y = geometry.PerspectiveCorner0Y,
-                        .PerspectiveCorner1X = geometry.PerspectiveCorner1X, .PerspectiveCorner1Y = geometry.PerspectiveCorner1Y,
-                        .PerspectiveCorner2X = geometry.PerspectiveCorner2X, .PerspectiveCorner2Y = geometry.PerspectiveCorner2Y,
-                        .PerspectiveCorner3X = geometry.PerspectiveCorner3X, .PerspectiveCorner3Y = geometry.PerspectiveCorner3Y,
-                        .ResizeWidth = geometry.ResizeWidth, .ResizeHeight = geometry.ResizeHeight,
-                        .ResizeInterpolation = geometry.ResizeInterpolation,
-                        .CanvasWidth = geometry.CanvasWidth, .CanvasHeight = geometry.CanvasHeight,
-                        .CanvasAnchor = geometry.CanvasAnchor,
-                        .CanvasBackgroundColor = "#00000000"
-                    }
+                    Dim maskGeometry = BuildMaskGeometry(geometry)
+                    maskPixels = ReplaceBitmap(maskPixels, ApplyImageWarp(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyCrop(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyGeometryTransforms(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyStraighten(maskPixels, maskGeometry))
@@ -4897,6 +5250,140 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Genau der Teil des Rezepts, den eine Maske auf ihrem Weg vom Quellraum in die
+        ''' Ausgabe durchläuft. Ausgelagert, weil zwei Stellen ihn brauchen: das Rastern selbst und
+        ''' der Schlüssel des Deckungs-Speichers (<see cref="GetAnnotationMaskCoverage"/>). Zwei
+        ''' getrennte Feldlisten würden auseinanderlaufen, und der Speicher gäbe dann nach einem
+        ''' Zuschnitt die alte Maske zurück.</summary>
+        ' ImageWarp gehoert MIT hinein: ohne sie bliebe die Maske ungebogen liegen, waehrend das
+        ' Bild sich verzieht - derselbe Weg wie bei der Perspektive.
+        Private Shared Function BuildMaskGeometry(geometry As ImageAdjustments) As ImageAdjustments
+            Return New ImageAdjustments With {
+                .CropLeftPercent = geometry.CropLeftPercent, .CropTopPercent = geometry.CropTopPercent,
+                .CropRightPercent = geometry.CropRightPercent, .CropBottomPercent = geometry.CropBottomPercent,
+                .RotationDegrees = geometry.RotationDegrees,
+                .FlipHorizontal = geometry.FlipHorizontal, .FlipVertical = geometry.FlipVertical,
+                .StraightenDegrees = geometry.StraightenDegrees,
+                .StraightenExpandCanvas = geometry.StraightenExpandCanvas,
+                .PerspectiveHorizontal = geometry.PerspectiveHorizontal,
+                .PerspectiveVertical = geometry.PerspectiveVertical,
+                .PerspectiveAspect = geometry.PerspectiveAspect,
+                .PerspectiveScale = geometry.PerspectiveScale,
+                .PerspectiveCorner0X = geometry.PerspectiveCorner0X, .PerspectiveCorner0Y = geometry.PerspectiveCorner0Y,
+                .PerspectiveCorner1X = geometry.PerspectiveCorner1X, .PerspectiveCorner1Y = geometry.PerspectiveCorner1Y,
+                .PerspectiveCorner2X = geometry.PerspectiveCorner2X, .PerspectiveCorner2Y = geometry.PerspectiveCorner2Y,
+                .PerspectiveCorner3X = geometry.PerspectiveCorner3X, .PerspectiveCorner3Y = geometry.PerspectiveCorner3Y,
+                .ImageWarp = geometry.ImageWarp,
+                .ResizeWidth = geometry.ResizeWidth, .ResizeHeight = geometry.ResizeHeight,
+                .ResizeInterpolation = geometry.ResizeInterpolation,
+                .CanvasWidth = geometry.CanvasWidth, .CanvasHeight = geometry.CanvasHeight,
+                .CanvasAnchor = geometry.CanvasAnchor,
+                .CanvasBackgroundColor = "#00000000"
+            }
+        End Function
+
+        ''' <summary>Trägt dieses Objekt eine eigene Deckung, muss also über eine Ebene gezeichnet
+        ''' werden? Ebenenmaske oder Schnittmaske. Auch der Kompositor fragt hier: beides entsteht
+        ''' beim KOMPONIEREN und steckt nicht in der Objekt-Bitmap.</summary>
+        Friend Shared Function UsesLayerCoverage(annotation As ImageAnnotation) As Boolean
+            Return annotation IsNot Nothing AndAlso
+                   (Not String.IsNullOrEmpty(annotation.MaskId) OrElse annotation.ClipToLayerBelow)
+        End Function
+
+        ''' <summary>Pipeline-Eingangsmaße, mit denen das Rastern einer Maske genau in der
+        ''' angeforderten Ausgabegröße landet.
+        '''
+        ''' <see cref="BuildPersistentMaskForOutput"/> rastert die Maske zuerst in der EINGANGSgröße
+        ''' der Geometriekette und schickt sie danach durch dieselbe Kette wie das Bild. Den
+        ''' Korrekturebenen reicht die echte Eingangsgröße durch; beim Zeichnen der Objekte ist sie
+        ''' nicht zur Hand, wohl aber die Ausgabegröße. Also wird zurückgerechnet: die Kette auf die
+        ''' vollen Quellmaße der Maske angewendet ergibt die volle Ausgabe, deren Verhältnis zur
+        ''' angeforderten Ausgabe ist der gesuchte Maßstab. Einen Rest fängt die Nachskalierung am
+        ''' Ende von BuildPersistentMaskForOutput auf.</summary>
+        Private Shared Function MaskPipelineInputSize(maskData As ImageMask, geometry As ImageAdjustments,
+                                                      targetW As Integer, targetH As Integer) As SKSizeI
+            Dim sw = maskData.SourceWidthPixels, sh = maskData.SourceHeightPixels
+            If sw <= 0 OrElse sh <= 0 Then Return New SKSizeI(0, 0)
+            Dim full = ComputeGeometryOutputSize(sw, sh, geometry)
+            If full.Width <= 0 OrElse full.Height <= 0 Then Return New SKSizeI(sw, sh)
+            Dim scale = Math.Min(targetW / CDbl(full.Width), targetH / CDbl(full.Height))
+            If Double.IsNaN(scale) OrElse scale <= 0.0 OrElse scale >= 1.0 Then Return New SKSizeI(sw, sh)
+            Return New SKSizeI(Math.Max(1, CInt(Math.Round(sw * scale))),
+                               Math.Max(1, CInt(Math.Round(sh * scale))))
+        End Function
+
+        Private Class MaskCoverageEntry
+            Public Property Key As String
+            Public Property Coverage As Byte()
+            Public Property LastUse As Long
+        End Class
+
+        ' Gemerkte Deckungsraster von OBJEKT-Ebenenmasken, in Ausgabegröße. Ohne das Merken baute der
+        ' Region-Patch-Weg beim Ziehen für JEDEN Patch eine Maske über das ganze Bild auf - der Patch
+        ' ist ein paar hundert Pixel groß, die Maske wäre das Vielfache davon. Der Schlüssel trägt
+        ' Maskeninhalt, Geometrie und Zielmaße; ändert sich eines, entsteht ein neuer Eintrag.
+        Private Shared ReadOnly _maskCoverageCache As New List(Of MaskCoverageEntry)()
+        Private Shared ReadOnly _maskCoverageLock As New Object()
+        Private Shared _maskCoverageClock As Long = 0
+        Private Const MaskCoverageBudgetBytes As Long = 48L * 1024L * 1024L
+
+        ''' <summary>Deckungsraster einer Objekt-Ebenenmaske in Ausgabegröße, ein Byte je Pixel,
+        ''' Zeilenlänge = <paramref name="targetW"/>.
+        '''
+        ''' Das zurückgegebene Feld gehört dem Speicher und wird geteilt: NUR LESEN.</summary>
+        Private Shared Function GetAnnotationMaskCoverage(maskData As ImageMask, geometry As ImageAdjustments,
+                                                          targetW As Integer, targetH As Integer) As Byte()
+            If maskData Is Nothing OrElse geometry Is Nothing OrElse targetW <= 0 OrElse targetH <= 0 Then Return Nothing
+            Dim key = String.Join("|", MaskFingerprint(maskData),
+                                  System.Text.Json.JsonSerializer.Serialize(BuildMaskGeometry(geometry)),
+                                  targetW, targetH)
+            SyncLock _maskCoverageLock
+                For Each entry In _maskCoverageCache
+                    If String.Equals(entry.Key, key, StringComparison.Ordinal) Then
+                        _maskCoverageClock += 1
+                        entry.LastUse = _maskCoverageClock
+                        Return entry.Coverage
+                    End If
+                Next
+            End SyncLock
+
+            Dim input = MaskPipelineInputSize(maskData, geometry, targetW, targetH)
+            If input.Width <= 0 OrElse input.Height <= 0 Then Return Nothing
+            Dim coverage As Byte()
+            Using mask = BuildPersistentMaskForOutput(maskData, geometry, input.Width, input.Height,
+                                                      targetW, targetH, 1.0F)
+                ' Eine fehlende oder beschädigte Maske wirkt NICHT - und darf niemals dazu führen,
+                ' dass das Objekt ganz verschwindet. Nothing heißt hier "volle Deckung".
+                If mask Is Nothing Then Return Nothing
+                coverage = New Byte(targetW * targetH - 1) {}
+                Dim stride = mask.RowBytes
+                Dim raw = New Byte(stride * targetH - 1) {}
+                Marshal.Copy(mask.GetPixels(), raw, 0, raw.Length)
+                For y = 0 To targetH - 1
+                    Array.Copy(raw, y * stride, coverage, y * targetW, targetW)
+                Next
+            End Using
+
+            SyncLock _maskCoverageLock
+                _maskCoverageClock += 1
+                _maskCoverageCache.Add(New MaskCoverageEntry With {
+                    .Key = key, .Coverage = coverage, .LastUse = _maskCoverageClock})
+                Dim total As Long = 0
+                For Each entry In _maskCoverageCache
+                    total += entry.Coverage.LongLength
+                Next
+                While _maskCoverageCache.Count > 1 AndAlso total > MaskCoverageBudgetBytes
+                    Dim victim = _maskCoverageCache(0)
+                    For Each entry In _maskCoverageCache
+                        If entry.LastUse < victim.LastUse Then victim = entry
+                    Next
+                    total -= victim.Coverage.LongLength
+                    _maskCoverageCache.Remove(victim)
+                End While
+            End SyncLock
+            Return coverage
+        End Function
+
         ''' <summary>Exakte Ausgabemaße der Geometriekette ohne Pixelanpassungen/Objekte.</summary>
         Public Shared Function ComputeGeometryOutputSize(sourceWidth As Integer, sourceHeight As Integer,
                                                          adj As ImageAdjustments) As SKSizeI
@@ -4941,6 +5428,11 @@ Namespace Services
         Public Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
                                                               sourceWidth As Integer, sourceHeight As Integer,
                                                               adj As ImageAdjustments, ByRef output As SKPoint) As Boolean
+            ' --- Verzerren (Knotenraster) --- ZUERST, wie in der Bildkette: das Raster liegt im
+            ' unbeschnittenen Quellraum, der Beschnitt greift erst auf dem verzogenen Bild.
+            Dim warpedSource = WarpSourcePoint(sourceX, sourceY, sourceWidth, sourceHeight, adj)
+            sourceX = warpedSource.X : sourceY = warpedSource.Y
+
             Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
             If sourceX < crop.Left OrElse sourceY < crop.Top OrElse sourceX >= crop.Right OrElse sourceY >= crop.Bottom Then Return False
             Dim x = sourceX - crop.Left, y = sourceY - crop.Top
@@ -5127,8 +5619,38 @@ Namespace Services
             Dim sx As Double = p.X, sy As Double = p.Y
             If Not TryClampToRange(sx, w) OrElse Not TryClampToRange(sy, h) Then Return False
 
-            source = New SKPoint(CSng(sx + crop.Left), CSng(sy + crop.Top))
+            ' --- Verzerren (Knotenraster) zurueck --- als LETZTES, weil es in der Kette das ERSTE
+            ' war. False heisst hier: an dieser Stelle liegt nach der Verzerrung kein Bildinhalt
+            ' mehr, es gibt also keinen Quellpunkt - genau wie neben dem Beschnitt.
+            Dim beforeWarp As SKPoint = Nothing
+            If Not TryUnwarpSourcePoint(sx + crop.Left, sy + crop.Top, sourceWidth, sourceHeight, adj, beforeWarp) Then Return False
+            source = beforeWarp
             Return True
+        End Function
+
+        ''' <summary>Wohin ein Punkt des unbeschnittenen Quellraums durch die Rasterverzerrung
+        ''' wandert. Ohne Verzerrung bleibt er, wo er ist.</summary>
+        Private Shared Function WarpSourcePoint(x As Double, y As Double,
+                                                sourceWidth As Integer, sourceHeight As Integer,
+                                                adj As ImageAdjustments) As SKPoint
+            Dim v = adj?.ImageWarp
+            If v Is Nothing OrElse v.IsEmpty OrElse Not String.Equals(v.Kind, "Gitter", StringComparison.Ordinal) Then
+                Return New SKPoint(CSng(x), CSng(y))
+            End If
+            Return ImageGeometryMapper.MeshPoint(v.Nodes, v.Columns, v.Rows, x, y, sourceWidth, sourceHeight)
+        End Function
+
+        ''' <summary>Gegenrichtung zu <see cref="WarpSourcePoint"/>.</summary>
+        Private Shared Function TryUnwarpSourcePoint(x As Double, y As Double,
+                                                     sourceWidth As Integer, sourceHeight As Integer,
+                                                     adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
+            Dim v = adj?.ImageWarp
+            If v Is Nothing OrElse v.IsEmpty OrElse Not String.Equals(v.Kind, "Gitter", StringComparison.Ordinal) Then
+                source = New SKPoint(CSng(x), CSng(y))
+                Return True
+            End If
+            Return ImageGeometryMapper.MeshInversePoint(v.Nodes, v.Columns, v.Rows, x, y,
+                                                        sourceWidth, sourceHeight, source)
         End Function
 
         ''' Klemmt einen Wert in [0, size): bis 0,5 px außerhalb ist Rundungsrauschen und wird auf
@@ -5463,6 +5985,37 @@ Namespace Services
                 Return Nothing
             Finally
                 decoded?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Eine Maske, die ueberall voll deckt. Ausgangspunkt fuer "Ebenenmaske hinzufuegen"
+        ''' ohne aktive Auswahl: erst deckt sie alles, dann nimmt der Masken-Pinsel weg.
+        '''
+        ''' Sie liegt in denselben Quellmassen wie jede andere Maske. Ein winziges Raster waere
+        ''' billiger und beim RENDERN auch richtig - <see cref="BuildSelectionMaskFromLayerMask"/>
+        ''' rechnet aber mit Maskenkoordinaten IM QUELLRAUM DES BILDES, und ein Massstab dazwischen
+        ''' liesse die Maske beim Bearbeiten daneben liegen.</summary>
+        Public Shared Function CreateFullCoverageMask(adj As ImageAdjustments, name As String) As ImageMask
+            If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
+            Dim w = adj.SourceWidthPixels, h = adj.SourceHeightPixels
+            Try
+                Using bitmap = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Dim buffer = New Byte(bitmap.RowBytes * h - 1) {}
+                    Array.Fill(buffer, CByte(255))
+                    Marshal.Copy(buffer, 0, bitmap.GetPixels(), buffer.Length)
+                    Using image = SKImage.FromBitmap(bitmap)
+                        Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
+                            Return New ImageMask With {
+                                .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Ebenenmaske"), name),
+                                .SourceWidthPixels = w, .SourceHeightPixels = h,
+                                .Left = 0, .Top = 0, .Right = w, .Bottom = h,
+                                .PngBase64 = Convert.ToBase64String(data.ToArray())
+                            }
+                        End Using
+                    End Using
+                End Using
+            Catch
+                Return Nothing
             End Try
         End Function
 
@@ -5906,6 +6459,7 @@ Namespace Services
                 adj.PerspectiveHorizontal, adj.PerspectiveVertical, adj.PerspectiveAspect, adj.PerspectiveScale,
                 adj.PerspectiveCorner0X, adj.PerspectiveCorner0Y, adj.PerspectiveCorner1X, adj.PerspectiveCorner1Y,
                 adj.PerspectiveCorner2X, adj.PerspectiveCorner2Y, adj.PerspectiveCorner3X, adj.PerspectiveCorner3Y,
+                ImageWarpSignature(adj.ImageWarp),
 adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CalibrationGreenHue, adj.CalibrationGreenSaturation,
                 adj.CalibrationBlueHue, adj.CalibrationBlueSaturation, adj.CalibrationShadowTint,
@@ -5935,23 +6489,38 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             }.Select(AddressOf KeyPart))
         End Function
 
-        ' Verlaufsmasken tragen ihre Geometrie statt eines PNG - sie MUSS in den Schluessel,
-        ' sonst bliebe die Vorschau beim Ziehen der Griffe stehen (der Cache gaebe die alte
-        ' Basis zurueck, und das Werkzeug "macht nichts").
-        ''' Die Pinselkorrektur eines Verlaufs gehoert MIT in den Fingerabdruck - ohne sie bliebe die
-        ''' Vorschau beim Malen stehen, weil der Cache den unkorrigierten Verlauf zurueckgaebe.
+        ''' <summary>Fingerabdruck EINER Maske. Ausgelagert, weil neben dem Basis-Schlüssel auch der
+        ''' Deckungs-Speicher der Objekt-Ebenenmasken ihn braucht - zwei Listen derselben Felder
+        ''' liefen auseinander, und dann gäbe eine der beiden Seiten nach einem Pinselstrich die
+        ''' alte Maske zurück.
+        '''
+        ''' Verlaufsmasken tragen ihre Geometrie statt eines PNG - sie MUSS mit hinein, sonst bliebe
+        ''' die Vorschau beim Ziehen der Griffe stehen (der Cache gäbe die alte Basis zurück, und das
+        ''' Werkzeug „macht nichts"). Dasselbe gilt für die Pinselkorrektur eines Verlaufs: ohne sie
+        ''' bliebe die Vorschau beim Malen stehen.</summary>
+        Private Shared Function MaskFingerprint(m As ImageMask) As String
+            ' JEDER Bestandteil gehoert hinein, nicht nur der erste: sonst gaebe der Cache nach dem
+            ' Anhaengen eines Verlaufs an dieselbe Maske das alte Bild zurueck, und das Werkzeug
+            ' "macht nichts".
+            Return String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels) & ":" &
+                   String.Join("/", m.GetComponents().Select(AddressOf MaskComponentFingerprint))
+        End Function
+
+        Private Shared Function MaskComponentFingerprint(c As MaskComponent) As String
+            Return String.Join(":", c.Mode, c.Left, c.Top, c.Right, c.Bottom, c.FeatherPixels,
+                               c.Inverted, SelectionMaskFingerprint(c.PngBase64),
+                               c.Kind, KeyPart(c.GradientStartXPercent), KeyPart(c.GradientStartYPercent),
+                               KeyPart(c.GradientEndXPercent), KeyPart(c.GradientEndYPercent),
+                               KeyPart(c.GradientRadiusRatio), KeyPart(c.GradientFeatherPercent),
+                               c.BrushLeft, c.BrushTop, c.BrushRight, c.BrushBottom,
+                               SelectionMaskFingerprint(c.BrushAddPngBase64),
+                               SelectionMaskFingerprint(c.BrushSubtractPngBase64))
+        End Function
+
         Private Shared Function PersistentMasksFingerprint(adj As ImageAdjustments) As String
             Dim masks = If(adj.Masks, New List(Of ImageMask)()).
                 Where(Function(m) m IsNot Nothing).
-                Select(Function(m) String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels,
-                                               m.Left, m.Top, m.Right, m.Bottom, m.FeatherPixels,
-                                               m.Inverted, SelectionMaskFingerprint(m.PngBase64),
-                                               m.Kind, KeyPart(m.GradientStartXPercent), KeyPart(m.GradientStartYPercent),
-                                               KeyPart(m.GradientEndXPercent), KeyPart(m.GradientEndYPercent),
-                                               KeyPart(m.GradientRadiusRatio), KeyPart(m.GradientFeatherPercent),
-                                               m.BrushLeft, m.BrushTop, m.BrushRight, m.BrushBottom,
-                                               SelectionMaskFingerprint(m.BrushAddPngBase64),
-                                               SelectionMaskFingerprint(m.BrushSubtractPngBase64)))
+                Select(AddressOf MaskFingerprint)
             ' Ebenen IM OBJEKTSTAPEL gehören NICHT in den Basis-Schlüssel: die Basis-Stufe überspringt
             ' sie (ApplyMaskedAdjustmentLayers ohne onlyStackedAboveId), sie wirken erst im
             ' Objektdurchlauf. Stünden sie hier, würde jede Änderung an ihnen den Basis-Cache
@@ -5995,29 +6564,44 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' teilten sich 90,5 % ihre Base64-Länge mit einer anderen Maske - PNG-Kompression
         ''' quantisiert die Längen stark (drei verschiedene Masken lagen auf exakt 1092 Zeichen).
         '''
-        ''' Gemerkt wird der letzte Wert: ComputeBaseKey läuft bei jedem Vorschaubild, die Maske
-        ''' ändert sich beim Ziehen an einem Regler aber nicht. Ohne das Merken würde bei jedem Frame
-        ''' über eine womöglich megabytegroße Zeichenkette gehasht.</summary>
-        Private Shared _maskFingerprintSource As String
-        Private Shared _maskFingerprintValue As String
+        ''' Gemerkt werden die letzten MEHREREN Werte, nicht nur der letzte: ComputeBaseKey läuft bei
+        ''' jedem Vorschaubild und geht dabei über ALLE Masken, und der Deckungs-Speicher der
+        ''' Objekt-Ebenenmasken fragt gleich danach eine bestimmte noch einmal. Mit nur einem Platz
+        ''' verdrängt jede Maske die vorige, und ab der zweiten Maske wird in jedem Frame über eine
+        ''' womöglich megabytegroße Zeichenkette gehasht.</summary>
+        Private Class MaskFingerprintEntry
+            Public Property Source As String
+            Public Property Value As String
+        End Class
+
+        Private Shared ReadOnly _maskFingerprints As New List(Of MaskFingerprintEntry)()
         Private Shared ReadOnly _maskFingerprintLock As New Object()
+        Private Const MaskFingerprintSlots As Integer = 12
 
         Private Shared Function SelectionMaskFingerprint(maskBase64 As String) As String
             If String.IsNullOrEmpty(maskBase64) Then Return "0"
             SyncLock _maskFingerprintLock
-                ' Referenzgleichheit zuerst: waehrend eines Reglerzugs ist es dieselbe Instanz.
-                If _maskFingerprintSource IsNot Nothing AndAlso
-                   (Object.ReferenceEquals(_maskFingerprintSource, maskBase64) OrElse
-                    String.Equals(_maskFingerprintSource, maskBase64, StringComparison.Ordinal)) Then
-                    Return _maskFingerprintValue
-                End If
+                For i = 0 To _maskFingerprints.Count - 1
+                    Dim entry = _maskFingerprints(i)
+                    ' Referenzgleichheit zuerst: waehrend eines Reglerzugs ist es dieselbe Instanz.
+                    If Object.ReferenceEquals(entry.Source, maskBase64) OrElse
+                       String.Equals(entry.Source, maskBase64, StringComparison.Ordinal) Then
+                        ' Nach vorn holen: der zuletzt gebrauchte Eintrag wird als naechstes wieder
+                        ' gebraucht, und der aelteste faellt unten heraus.
+                        _maskFingerprints.RemoveAt(i)
+                        _maskFingerprints.Insert(0, entry)
+                        Return entry.Value
+                    End If
+                Next
 
                 Dim hash As String
                 Using sha = Security.Cryptography.SHA256.Create()
                     hash = Convert.ToHexString(sha.ComputeHash(Text.Encoding.ASCII.GetBytes(maskBase64)))
                 End Using
-                _maskFingerprintSource = maskBase64
-                _maskFingerprintValue = hash
+                _maskFingerprints.Insert(0, New MaskFingerprintEntry With {.Source = maskBase64, .Value = hash})
+                While _maskFingerprints.Count > MaskFingerprintSlots
+                    _maskFingerprints.RemoveAt(_maskFingerprints.Count - 1)
+                End While
                 Return hash
             End SyncLock
         End Function
@@ -8689,6 +9273,138 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1): sie zeigt je
         ''' Patch, wie viel Objektarbeit der Region-Weg heute leistet. Aufrufer duerfen den
         ''' Rueckgabewert ignorieren.</summary>
+        ''' <summary>Das Objekt, auf dessen Deckung eine Schnittmaske sich bezieht: das naechste
+        ''' SICHTBARE darunter, das nicht selbst beschraenkt ist. Mehrere beschraenkte Objekte
+        ''' uebereinander teilen sich damit dieselbe Basis. Nothing = keine Basis vorhanden; der
+        ''' Schalter bleibt dann wirkungslos, statt das Objekt verschwinden zu lassen.</summary>
+        Private Shared Function FindClipBase(adj As ImageAdjustments, annotations As IReadOnlyList(Of ImageAnnotation),
+                                             annotation As ImageAnnotation) As ImageAnnotation
+            If annotations Is Nothing Then Return Nothing
+            Dim index = -1
+            For i = 0 To annotations.Count - 1
+                If Object.ReferenceEquals(annotations(i), annotation) Then
+                    index = i
+                    Exit For
+                End If
+            Next
+            If index <= 0 Then Return Nothing
+            For i = index - 1 To 0 Step -1
+                Dim candidate = annotations(i)
+                If candidate Is Nothing OrElse Not adj.IsAnnotationRenderVisible(candidate) Then Continue For
+                If candidate.ClipToLayerBelow Then Continue For
+                Return candidate
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Deckung der Basis einer Schnittmaske im Gitter des Aufrufers (layerWidth mal
+        ''' layerHeight ab offsetX/offsetY), ein Byte je Pixel.
+        '''
+        ''' Die Basis wird dafuer ein ZWEITES Mal gezeichnet. Das ist bewusst: ihre eigene Zeichnung
+        ''' geht in das Komposit und ist dort nicht mehr von dem zu trennen, was schon darunter lag -
+        ''' aus dem fertigen Bild laesst sich ihre Deckung nicht zurueckgewinnen.</summary>
+        Private Shared Function BuildClipBaseCoverage(adj As ImageAdjustments, baseAnnotation As ImageAnnotation,
+                                                      sourceWidth As Integer, sourceHeight As Integer,
+                                                      offsetX As Integer, offsetY As Integer,
+                                                      layerWidth As Integer, layerHeight As Integer) As Byte()
+            Dim renderAnnotation = TransformAnnotationForGeometry(baseAnnotation, adj, sourceWidth, sourceHeight)
+            If renderAnnotation Is Nothing Then Return Nothing
+            Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
+            ' Pinsel und Radiergummi haben keine freistehende Objektflaeche - ihre Striche liegen im
+            ' Bildraum, und als Basis einer Schnittmaske taugen sie deshalb nicht.
+            If IsPaintKind(kind) Then Return Nothing
+            Dim rect = ComputeAnnotationRect(sourceWidth, sourceHeight, kind, renderAnnotation)
+            Dim vx = offsetX, vy = offsetY
+            Dim layer = RenderAnnotationToLayer(baseAnnotation, renderAnnotation, kind, rect,
+                                                sourceWidth, sourceHeight, layerWidth, layerHeight, vx, vy)
+            If layer Is Nothing Then Return Nothing
+            Try
+                Dim coverage = New Byte(layerWidth * layerHeight - 1) {}
+                Dim stride = layer.RowBytes
+                Dim raw = New Byte(stride * layer.Height - 1) {}
+                Marshal.Copy(layer.GetPixels(), raw, 0, raw.Length)
+                Dim shiftX = vx - offsetX, shiftY = vy - offsetY
+                For y = 0 To layer.Height - 1
+                    Dim ty = shiftY + y
+                    If ty < 0 OrElse ty >= layerHeight Then Continue For
+                    Dim rowIn = y * stride, rowOut = ty * layerWidth
+                    For x = 0 To layer.Width - 1
+                        Dim tx = shiftX + x
+                        If tx < 0 OrElse tx >= layerWidth Then Continue For
+                        coverage(rowOut + tx) = raw(rowIn + x * 4 + 3)
+                    Next
+                Next
+                Return coverage
+            Finally
+                layer.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Die Deckung, mit der ein Objekt gezeichnet wird: seine Ebenenmaske, seine
+        ''' Schnittmaske, oder das Produkt aus beidem. Nothing heisst volle Deckung - der Normalfall,
+        ''' und dann kostet die Sache keinen einzigen Rechenschritt.</summary>
+        Private Shared Function BuildAnnotationCoverage(adj As ImageAdjustments, annotation As ImageAnnotation,
+                                                        annotations As IReadOnlyList(Of ImageAnnotation),
+                                                        sourceWidth As Integer, sourceHeight As Integer,
+                                                        offsetX As Integer, offsetY As Integer,
+                                                        layerWidth As Integer, layerHeight As Integer,
+                                                        clipCache As Dictionary(Of String, Byte())) As Byte()
+            If Not UsesLayerCoverage(annotation) Then Return Nothing
+
+            Dim result As Byte() = Nothing
+
+            If Not String.IsNullOrEmpty(annotation.MaskId) AndAlso adj.Masks IsNot Nothing Then
+                Dim maskData = adj.Masks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                            String.Equals(m.Id, annotation.MaskId, StringComparison.Ordinal))
+                Dim full = GetAnnotationMaskCoverage(maskData, adj, sourceWidth, sourceHeight)
+                If full IsNot Nothing Then
+                    If offsetX = 0 AndAlso offsetY = 0 AndAlso layerWidth = sourceWidth AndAlso layerHeight = sourceHeight Then
+                        ' Vollrender: das Raster passt schon, es wird nur GELESEN.
+                        result = full
+                    Else
+                        result = New Byte(layerWidth * layerHeight - 1) {}
+                        For y = 0 To layerHeight - 1
+                            Dim sy = offsetY + y
+                            If sy < 0 OrElse sy >= sourceHeight Then Continue For
+                            Dim copyLeft = Math.Max(0, -offsetX)
+                            Dim copyCount = Math.Min(layerWidth - copyLeft, sourceWidth - (offsetX + copyLeft))
+                            If copyCount <= 0 Then Continue For
+                            Array.Copy(full, sy * sourceWidth + offsetX + copyLeft,
+                                       result, y * layerWidth + copyLeft, copyCount)
+                        Next
+                    End If
+                End If
+            End If
+
+            If annotation.ClipToLayerBelow Then
+                Dim baseAnnotation = FindClipBase(adj, annotations, annotation)
+                If baseAnnotation IsNot Nothing Then
+                    Dim baseKey = baseAnnotation.Id
+                    Dim clip As Byte() = Nothing
+                    If clipCache Is Nothing OrElse Not clipCache.TryGetValue(baseKey, clip) Then
+                        clip = BuildClipBaseCoverage(adj, baseAnnotation, sourceWidth, sourceHeight,
+                                                     offsetX, offsetY, layerWidth, layerHeight)
+                        If clipCache IsNot Nothing Then clipCache(baseKey) = clip
+                    End If
+                    If clip IsNot Nothing Then
+                        If result Is Nothing Then
+                            result = clip
+                        Else
+                            ' Nicht in result hineinschreiben, wenn das noch das GETEILTE Raster des
+                            ' Maskenspeichers ist - das gehoert dem Speicher und wird nur gelesen.
+                            Dim combined = New Byte(layerWidth * layerHeight - 1) {}
+                            For i = 0 To combined.Length - 1
+                                combined(i) = CByte(CInt(result(i)) * CInt(clip(i)) \ 255)
+                            Next
+                            result = combined
+                        End If
+                    End If
+                End If
+            End If
+
+            Return result
+        End Function
+
         Friend Shared Function DrawAnnotationsOnCanvas(canvas As SKCanvas, adj As ImageAdjustments,
                                                    sourceWidth As Integer, sourceHeight As Integer,
                                                    offsetX As Integer, offsetY As Integer,
@@ -8698,6 +9414,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim annotations = If(renderAnnotations, adj.Annotations)
             If annotations Is Nothing OrElse annotations.Count = 0 Then Return 0
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse layerWidth <= 0 OrElse layerHeight <= 0 Then Return 0
+
+            ' Die Schnittmaske schaut auf das Objekt DARUNTER - und damit auf den ganzen Stapel, nicht
+            ' auf die Liste, die dieser Aufruf gerade zeichnet. ApplyAnnotations reicht bei
+            ' eingehängten Korrekturen einzelne Objekte herein; mit dieser Liste als Bezug fände ein
+            ' beschränktes Objekt nie seine Basis.
+            Dim stack As IReadOnlyList(Of ImageAnnotation) = If(adj.Annotations, annotations)
+            ' Mehrere Objekte über derselben Basis zeichnen sie sonst jedes für sich noch einmal.
+            Dim clipCache As Dictionary(Of String, Byte()) = Nothing
 
             Dim drawn = 0
             For Each annotation In annotations
@@ -8721,6 +9445,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 drawn += 1
                 Dim kind = If(renderAnnotation.Kind, "Text").Trim().ToLowerInvariant()
 
+                ' Ebenenmaske und Schnittmaske des Objekts, zusammengerechnet. Nothing = volle
+                ' Deckung, und dann bleibt alles Weitere Zeile für Zeile so, wie es war.
+                Dim coverage As Byte() = Nothing
+                If UsesLayerCoverage(annotation) Then
+                    If clipCache Is Nothing Then clipCache = New Dictionary(Of String, Byte())(StringComparer.Ordinal)
+                    coverage = BuildAnnotationCoverage(adj, annotation, stack, sourceWidth, sourceHeight,
+                                                       offsetX, offsetY, layerWidth, layerHeight, clipCache)
+                End If
+
                 If IsPaintKind(kind) Then
                     Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
                     Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
@@ -8733,7 +9466,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     ' Mischmodus auch für Pinselstriche (nicht Radiergummi - der entfernt Pixel und ignoriert
                     ' den Modus): erst auf eine eigene transparente Ebene malen, dann mit dem Blend-Modus
                     ' einkomponieren - wie bei Formen/Text. Bei "Normal" direkt zeichnen (kein Extra-Speicher).
-                    Dim useBrushBlendLayer = (Not isEraser) AndAlso Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode)
+                    ' Eine Deckung braucht eine eigene Ebene, auf der sie wirken kann - der Radierer
+                    ' bleibt ausgenommen, er entfernt Pixel und liesse sich nicht sinnvoll maskieren.
+                    Dim useBrushBlendLayer = (Not isEraser) AndAlso
+                        (Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) OrElse coverage IsNot Nothing)
                     If useBrushBlendLayer Then
                         Using brushLayer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
                             Using brushLayerCanvas = New SKCanvas(brushLayer)
@@ -8746,6 +9482,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                     renderAnnotation.HardnessPercent, renderAnnotation.FlowPercent, renderAnnotation.BrushPreset, False, Nothing)
                                 End If
                             End Using
+                            ApplyCoverageToLayer(brushLayer, 0, 0, coverage, layerWidth, layerHeight)
                             DrawAnnotationLayer(canvas, brushLayer, renderAnnotation.BlendMode)
                         End Using
                     Else
@@ -8774,15 +9511,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     ' durchsichtig gesetzten Farbe - so bleibt jede der Zeichenroutinen unberuehrt.
                     DrawAnnotationViaLayer(canvas, annotation, AnnotationFillOnly(renderAnnotation), kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
-                                           renderAnnotation.BlendMode)
+                                           renderAnnotation.BlendMode, coverage)
                     DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation), kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
-                                           "Normal")
+                                           "Normal", coverage)
                 ElseIf HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) OrElse
-                       HasWarp(annotation) Then
+                       HasWarp(annotation) OrElse coverage IsNot Nothing Then
                     DrawAnnotationViaLayer(canvas, annotation, renderAnnotation, kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
-                                           renderAnnotation.BlendMode)
+                                           renderAnnotation.BlendMode, coverage)
                 Else
                     canvas.Save()
                     canvas.Translate(-offsetX, -offsetY)
@@ -8944,72 +9681,147 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return annotation.Warp IsNot Nothing AndAlso Not annotation.Warp.IsEmpty
         End Function
 
+        ''' <summary>Zeichnet ein Objekt allein auf eine transparente Ebene und verzerrt sie.
+        '''
+        ''' Rueckgabe ist die fertige Ebene; der Aufrufer gibt sie frei. <paramref name="layerX"/>
+        ''' und <paramref name="layerY"/> kommen als Lage der Ebene im Bild herein und gehen als ihre
+        ''' NEUE Lage wieder hinaus - eine Verzerrung laesst die Ebene wachsen.
+        '''
+        ''' Ausgelagert, weil zwei Wege dasselbe brauchen: das Einkomponieren des Objekts und das
+        ''' Abnehmen seines Alphas als Basis einer Schnittmaske. Zweimal gezeichnet heisst zweimal
+        ''' dieselbe Reihenfolge - die haette sonst nur eine der beiden Stellen.</summary>
+        Private Shared Function RenderAnnotationToLayer(annotation As ImageAnnotation,
+                                                        renderAnnotation As ImageAnnotation, kind As String, rect As SKRect,
+                                                        sourceWidth As Integer, sourceHeight As Integer,
+                                                        layerWidth As Integer, layerHeight As Integer,
+                                                        ByRef layerX As Integer, ByRef layerY As Integer) As SKBitmap
+            Dim layer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
+            Using layerCanvas = New SKCanvas(layer)
+                layerCanvas.Clear(SKColors.Transparent)
+                layerCanvas.Translate(-layerX, -layerY)
+                DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, sourceWidth, sourceHeight)
+            End Using
+
+            ' VERZERREN, bevor die Objektanpassungen greifen: die Verzerrung ist Geometrie und
+            ' gehoert vor die Farbe, so wie beim Bild auch. Die Ebene kann dabei wachsen, deshalb
+            ' wandert der Versatz mit.
+            Dim drawn = layer
+            Dim vx = layerX, vy = layerY
+
+            ' ERST die eigene Verzerrung des Objekts, DANN die des Bildes. Die eigene beschreibt
+            ' seine Form, die des Bildes, wo es im Bild liegt - in dieser Reihenfolge gelesen
+            ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
+            If annotation IsNot Nothing AndAlso annotation.OwnWarp IsNot Nothing AndAlso
+               Not annotation.OwnWarp.IsEmpty Then
+                ' Der Bezug ist das OBJEKTRECHTECK, nicht die Ebene: die eigene Verzerrung steht in
+                ' Prozent DES OBJEKTS, die Ebene ist aber so gross wie die gerenderte Flaeche. Mit
+                ' der Ebene als Bezug las eine kleine Verzerrung sich als eine ueber das ganze
+                ' Bild - der Text landete weit neben seinem Rahmen.
+                Dim rx = CInt(Math.Floor(rect.Left)), ry = CInt(Math.Floor(rect.Top))
+                Dim rw = Math.Max(1, CInt(Math.Round(rect.Width)))
+                Dim rh = Math.Max(1, CInt(Math.Round(rect.Height)))
+                Dim ox = vx - rx, oy = vy - ry
+                Dim warped = WarpObjectLayer(drawn, annotation.OwnWarp, rw, rh, ox, oy)
+                If warped IsNot Nothing Then
+                    If Not Object.ReferenceEquals(drawn, layer) Then drawn.Dispose()
+                    drawn = warped
+                    ' Der zurueckgegebene Versatz liegt im Raum des Rechtecks und muss zurueck in
+                    ' Bildkoordinaten.
+                    vx = rx + ox
+                    vy = ry + oy
+                End If
+            End If
+
+            If annotation IsNot Nothing AndAlso annotation.Warp IsNot Nothing AndAlso
+               Not annotation.Warp.IsEmpty Then
+                Dim warped = WarpObjectLayer(drawn, annotation.Warp, sourceWidth, sourceHeight, vx, vy)
+                If warped IsNot Nothing Then
+                    If Not Object.ReferenceEquals(drawn, layer) Then drawn.Dispose()
+                    drawn = warped
+                End If
+            End If
+
+            If Not Object.ReferenceEquals(drawn, layer) Then layer.Dispose()
+            layerX = vx
+            layerY = vy
+            Return drawn
+        End Function
+
+        ''' <summary>Multipliziert das Alpha einer fertigen Objektebene mit einer Deckung.
+        '''
+        ''' Die Ebene liegt bei <paramref name="layerX"/>/<paramref name="layerY"/> IM GITTER der
+        ''' Deckung (nicht im Bild): eine Verzerrung kann sie ueber den Rand hinaus haben wachsen
+        ''' lassen, und was dort liegt, hat keine Deckung mehr und faellt weg.
+        '''
+        ''' Gerechnet wird auf ALLEN VIER Kanaelen: die Ebene ist vormultipliziert, ein Alpha allein
+        ''' zu senken ergaebe ungueltige Pixel und beim Mischen helle Saeume.</summary>
+        Private Shared Sub ApplyCoverageToLayer(layer As SKBitmap, layerX As Integer, layerY As Integer,
+                                                coverage As Byte(), coverageWidth As Integer, coverageHeight As Integer)
+            If layer Is Nothing OrElse coverage Is Nothing Then Return
+            If coverageWidth <= 0 OrElse coverageHeight <= 0 Then Return
+            Dim stride = layer.RowBytes
+            Dim raw = New Byte(stride * layer.Height - 1) {}
+            Marshal.Copy(layer.GetPixels(), raw, 0, raw.Length)
+            For y = 0 To layer.Height - 1
+                Dim cy = layerY + y
+                Dim rowIn = y * stride
+                If cy < 0 OrElse cy >= coverageHeight Then
+                    Array.Clear(raw, rowIn, layer.Width * 4)
+                    Continue For
+                End If
+                Dim rowCoverage = cy * coverageWidth
+                For x = 0 To layer.Width - 1
+                    Dim cx = layerX + x
+                    Dim o = rowIn + x * 4
+                    If cx < 0 OrElse cx >= coverageWidth Then
+                        raw(o) = 0 : raw(o + 1) = 0 : raw(o + 2) = 0 : raw(o + 3) = 0
+                        Continue For
+                    End If
+                    Dim c = CInt(coverage(rowCoverage + cx))
+                    If c = 255 Then Continue For
+                    If c = 0 Then
+                        raw(o) = 0 : raw(o + 1) = 0 : raw(o + 2) = 0 : raw(o + 3) = 0
+                    Else
+                        raw(o) = CByte(raw(o) * c \ 255)
+                        raw(o + 1) = CByte(raw(o + 1) * c \ 255)
+                        raw(o + 2) = CByte(raw(o + 2) * c \ 255)
+                        raw(o + 3) = CByte(raw(o + 3) * c \ 255)
+                    End If
+                Next
+            Next
+            Marshal.Copy(raw, 0, layer.GetPixels(), raw.Length)
+        End Sub
+
         Private Shared Sub DrawAnnotationViaLayer(canvas As SKCanvas, annotation As ImageAnnotation,
                                                   renderAnnotation As ImageAnnotation, kind As String, rect As SKRect,
                                                   sourceWidth As Integer, sourceHeight As Integer,
                                                   layerWidth As Integer, layerHeight As Integer,
                                                   offsetX As Integer, offsetY As Integer,
-                                                  blendModeName As String)
-            Using layer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
-                Using layerCanvas = New SKCanvas(layer)
-                    layerCanvas.Clear(SKColors.Transparent)
-                    layerCanvas.Translate(-offsetX, -offsetY)
-                    DrawAnnotationOnCanvas(layerCanvas, kind, renderAnnotation, rect, sourceWidth, sourceHeight)
-                End Using
-
-                ' VERZERREN, bevor die Objektanpassungen greifen: die Verzerrung ist Geometrie und
-                ' gehoert vor die Farbe, so wie beim Bild auch. Die Ebene kann dabei wachsen, deshalb
-                ' wandert der Versatz mit.
-                Dim drawn = layer
-                Dim zwischen As SKBitmap = Nothing
-                Dim eigene As SKBitmap = Nothing
-                Dim vx = offsetX, vy = offsetY
-
-                ' ERST die eigene Verzerrung des Objekts, DANN die des Bildes. Die eigene beschreibt
-                ' seine Form, die des Bildes, wo es im Bild liegt - in dieser Reihenfolge gelesen
-                ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
-                If annotation IsNot Nothing AndAlso annotation.OwnWarp IsNot Nothing AndAlso
-                   Not annotation.OwnWarp.IsEmpty Then
-                    ' Der Bezug ist das OBJEKTRECHTECK, nicht die Ebene: die eigene Verzerrung steht in
-                    ' Prozent DES OBJEKTS, die Ebene ist aber so gross wie die gerenderte Flaeche. Mit
-                    ' der Ebene als Bezug las eine kleine Verzerrung sich als eine ueber das ganze
-                    ' Bild - der Text landete weit neben seinem Rahmen.
-                    Dim rx = CInt(Math.Floor(rect.Left)), ry = CInt(Math.Floor(rect.Top))
-                    Dim rw = Math.Max(1, CInt(Math.Round(rect.Width)))
-                    Dim rh = Math.Max(1, CInt(Math.Round(rect.Height)))
-                    Dim ox = offsetX - rx, oy = offsetY - ry
-                    zwischen = WarpObjectLayer(layer, annotation.OwnWarp, rw, rh, ox, oy)
-                    If zwischen IsNot Nothing Then
-                        drawn = zwischen
-                        ' Der zurueckgegebene Versatz liegt im Raum des Rechtecks und muss zurueck in
-                        ' Bildkoordinaten.
-                        vx = rx + ox
-                        vy = ry + oy
-                    End If
+                                                  blendModeName As String,
+                                                  Optional coverage As Byte() = Nothing)
+            Dim vx = offsetX, vy = offsetY
+            Dim drawn = RenderAnnotationToLayer(annotation, renderAnnotation, kind, rect,
+                                                sourceWidth, sourceHeight, layerWidth, layerHeight, vx, vy)
+            If drawn Is Nothing Then Return
+            Try
+                ' Die Deckung kommt NACH den Objektanpassungen: eine Weichzeichnung oder ein
+                ' Filter soll die vollen Objektpixel sehen und nicht den abgeschnittenen Rest -
+                ' sonst zoege die Maskenkante ihre eigene Unschaerfe ins Bild.
+                If HasObjectAdjustments(annotation) Then
+                    Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
+                    objectAdj.SourceWidthPixels = drawn.Width
+                    objectAdj.SourceHeightPixels = drawn.Height
+                    Using processedLayer = ProcessBitmapBase(drawn, objectAdj)
+                        ApplyCoverageToLayer(processedLayer, vx - offsetX, vy - offsetY, coverage, layerWidth, layerHeight)
+                        DrawAnnotationLayerAt(canvas, processedLayer, blendModeName, vx - offsetX, vy - offsetY)
+                    End Using
+                Else
+                    ApplyCoverageToLayer(drawn, vx - offsetX, vy - offsetY, coverage, layerWidth, layerHeight)
+                    DrawAnnotationLayerAt(canvas, drawn, blendModeName, vx - offsetX, vy - offsetY)
                 End If
-
-                If annotation IsNot Nothing AndAlso annotation.Warp IsNot Nothing AndAlso
-                   Not annotation.Warp.IsEmpty Then
-                    eigene = WarpObjectLayer(drawn, annotation.Warp, sourceWidth, sourceHeight, vx, vy)
-                    If eigene IsNot Nothing Then drawn = eigene
-                End If
-
-                Try
-                    If HasObjectAdjustments(annotation) Then
-                        Dim objectAdj = annotation.Adjustments.ExtractPixelAdjustments()
-                        objectAdj.SourceWidthPixels = drawn.Width
-                        objectAdj.SourceHeightPixels = drawn.Height
-                        Using processedLayer = ProcessBitmapBase(drawn, objectAdj)
-                            DrawAnnotationLayerAt(canvas, processedLayer, blendModeName, vx - offsetX, vy - offsetY)
-                        End Using
-                    Else
-                        DrawAnnotationLayerAt(canvas, drawn, blendModeName, vx - offsetX, vy - offsetY)
-                    End If
-                Finally
-                    eigene?.Dispose()
-                    zwischen?.Dispose()
-                End Try
-            End Using
+            Finally
+                drawn.Dispose()
+            End Try
         End Sub
 
         Private Const TransparentColorHex As String = "#00000000"
@@ -9166,6 +9978,17 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Case "cloud"
                     Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
                     DrawCloud(canvas, rect, fill, stroke, strokeWidth, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted)
+                Case "path"
+                    ' Der freie Pfad geht durch DIESELBE Fuell- und Konturroutine wie jede andere
+                    ' Form - Verlauf, Schatten, Leuchten und Mischmethode gelten damit unveraendert.
+                    Dim pathFill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
+                    Using freePath = BuildFreePath(rect, annotation.PathPoints, annotation.PathClosed)
+                        If freePath IsNot Nothing Then
+                            DrawClosedPath(canvas, freePath, fill, stroke, strokeWidth, rect,
+                                           annotation.FillKind, pathFill2,
+                                           annotation.GradientAngleDegrees, annotation.GradientInverted)
+                        End If
+                    End Using
                 Case "line"
                     DrawLine(canvas, rect, stroke, strokeWidth, False)
                 Case "arrow"
@@ -9190,12 +10013,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         ' Pfad-Parameter durchreichen wie beim normalen Text: der Renderer kann
                         ' das laengst, hier wurden sie nur nicht weitergegeben - das Wasserzeichen
                         ' blieb dadurch immer gerade.
-                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic)
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
                         Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic)
+                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
                     End If
             End Select
         End Sub
@@ -9471,7 +10294,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End SyncLock
         End Function
 
-        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False)
+        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
             ' Text an Pfad: EIN Zweig fuer Kontur und Fuellung, damit beide exakt dieselben
             ' Glyphenpositionen bekommen (und damit auch die Effekt-Maske, die ueber dieselbe
             ' Routine laeuft - Regel "Objektinhalt nur aus GENAU EINEM Renderpfad").
@@ -9482,7 +10305,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' wie Illustrator/Photoshop es tun.
             Dim path As SKPath = Nothing
             If Not String.IsNullOrWhiteSpace(textPathKind) Then
-                path = BuildTextPath(bounds, textPathKind, textPathBend, textPathStartOffset)
+                path = BuildTextPath(bounds, textPathKind, textPathBend, textPathStartOffset, pathPoints, pathClosed)
             End If
             Try
                 Using font = CreateFont(fontFamily, fontSize, bold, italic)
@@ -9604,7 +10427,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If String.IsNullOrWhiteSpace(text) Then Return 1.0F
             Try
                 Dim rect = SKRect.Create(0, 0, Math.Max(1.0F, annotation.WidthPixels), Math.Max(1.0F, annotation.HeightPixels))
-                Using path = BuildTextPath(rect, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset)
+                Using path = BuildTextPath(rect, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.PathPoints, annotation.PathClosed)
                     Using measure = New SKPathMeasure(path, False)
                         Using font = CreateFont(annotation.FontFamily, Math.Max(1.0F, annotation.FontSizePixels), annotation.Bold, annotation.Italic)
                             ' Abstand einrechnen - sonst weicht die Einpassung vom gezeichneten
@@ -9638,7 +10461,99 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' (negativ = nach unten). Welle: eine Sinusperiode, Amplitude aus der Kruemmung. Kreis:
         ''' ins Rechteck eingepasst, Start oben plus Startversatz; negative Kruemmung laeuft innen
         ''' (gegen den Uhrzeigersinn).</summary>
-        Private Shared Function BuildTextPath(rect As SKRect, kind As String, bend As Single, startOffset As Single) As SKPath
+        ''' <summary>Ein Stützpunkt eines freien Pfades, alles in Prozent des Objektrechtecks.
+        ''' <see cref="HandleIn"/> und <see cref="HandleOut"/> liegen ABSOLUT in demselben Raum, nicht
+        ''' als Abstand zum Stützpunkt: so ist jede Rechnung darauf dieselbe wie auf dem Stützpunkt,
+        ''' und beim Skalieren gibt es keine zweite Formel.</summary>
+        Public Structure PathNode
+            Public Anchor As SKPoint
+            Public HandleIn As SKPoint
+            Public HandleOut As SKPoint
+
+            ''' <summary>Eckpunkt: beide Griffe liegen auf dem Stützpunkt.</summary>
+            Public Shared Function Corner(x As Single, y As Single) As PathNode
+                Dim p = New SKPoint(x, y)
+                Return New PathNode With {.Anchor = p, .HandleIn = p, .HandleOut = p}
+            End Function
+        End Structure
+
+        Private Shared Function ParsePathNumber(text As String) As Single
+            Dim value As Single
+            If Single.TryParse(text, Globalization.NumberStyles.Float,
+                               Globalization.CultureInfo.InvariantCulture, value) Then Return value
+            Return 0.0F
+        End Function
+
+        ''' <summary>Liest die Stützpunkte eines freien Pfades. Eine unlesbare oder zu kurze Liste
+        ''' ergibt eine LEERE Liste - der Pfad zeichnet dann nichts, statt an einer halben Zahl zu
+        ''' scheitern.</summary>
+        Public Shared Function ParsePathPoints(text As String) As List(Of PathNode)
+            Dim nodes As New List(Of PathNode)()
+            If String.IsNullOrWhiteSpace(text) Then Return nodes
+            For Each part In text.Split(";"c)
+                If String.IsNullOrWhiteSpace(part) Then Continue For
+                Dim values = part.Split(","c)
+                If values.Length < 2 Then Continue For
+                Dim ax = ParsePathNumber(values(0)), ay = ParsePathNumber(values(1))
+                Dim node = PathNode.Corner(ax, ay)
+                If values.Length >= 6 Then
+                    node.HandleIn = New SKPoint(ParsePathNumber(values(2)), ParsePathNumber(values(3)))
+                    node.HandleOut = New SKPoint(ParsePathNumber(values(4)), ParsePathNumber(values(5)))
+                End If
+                nodes.Add(node)
+            Next
+            Return nodes
+        End Function
+
+        Public Shared Function FormatPathPoints(nodes As IEnumerable(Of PathNode)) As String
+            If nodes Is Nothing Then Return ""
+            Dim culture = Globalization.CultureInfo.InvariantCulture
+            Return String.Join(";", nodes.Select(Function(n) String.Join(",",
+                n.Anchor.X.ToString("0.####", culture), n.Anchor.Y.ToString("0.####", culture),
+                n.HandleIn.X.ToString("0.####", culture), n.HandleIn.Y.ToString("0.####", culture),
+                n.HandleOut.X.ToString("0.####", culture), n.HandleOut.Y.ToString("0.####", culture))))
+        End Function
+
+        ''' <summary>Baut den freien Pfad im Zielraum des Objektrechtecks. Nothing = zu wenige Punkte.
+        '''
+        ''' Jeder Abschnitt ist eine Bezierkurve vom ausgehenden Griff des einen zum eingehenden des
+        ''' naechsten Punktes. Liegen beide Griffe auf ihren Stuetzpunkten, ist die Kurve eine
+        ''' Gerade - ein Eckpunkt braucht deshalb keinen eigenen Zweig.</summary>
+        Public Shared Function BuildFreePath(rect As SKRect, pointsText As String, closed As Boolean) As SKPath
+            Dim nodes = ParsePathPoints(pointsText)
+            If nodes.Count < 2 OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim toCanvas = Function(p As SKPoint) New SKPoint(rect.Left + p.X / 100.0F * rect.Width,
+                                                              rect.Top + p.Y / 100.0F * rect.Height)
+            Dim path = New SKPath()
+            Dim start = toCanvas(nodes(0).Anchor)
+            path.MoveTo(start)
+            For i = 0 To nodes.Count - 2
+                Dim c1 = toCanvas(nodes(i).HandleOut)
+                Dim c2 = toCanvas(nodes(i + 1).HandleIn)
+                Dim target = toCanvas(nodes(i + 1).Anchor)
+                path.CubicTo(c1, c2, target)
+            Next
+            If closed Then
+                path.CubicTo(toCanvas(nodes(nodes.Count - 1).HandleOut), toCanvas(nodes(0).HandleIn), start)
+                path.Close()
+            End If
+            Return path
+        End Function
+
+        Private Shared Function BuildTextPath(rect As SKRect, kind As String, bend As Single, startOffset As Single,
+                                              Optional pathPoints As String = "",
+                                              Optional pathClosed As Boolean = False) As SKPath
+            ' Freier Pfad: die Grundlinie kommt aus den Stuetzpunkten des Objekts statt aus einer
+            ' Formel. Faellt sie aus (zu wenige Punkte), gilt weiter der Bogen darunter - ein Text
+            ' ohne Grundlinie waere sonst gar nicht zu sehen.
+            If String.Equals(kind, "Free", StringComparison.OrdinalIgnoreCase) Then
+                Dim free = BuildFreePath(rect, pathPoints, pathClosed)
+                If free IsNot Nothing Then Return free
+            End If
+            Return BuildTextPathCore(rect, kind, bend, startOffset)
+        End Function
+
+        Private Shared Function BuildTextPathCore(rect As SKRect, kind As String, bend As Single, startOffset As Single) As SKPath
             Const Steps As Integer = 96
             Dim path = New SKPath()
             Dim normalized = If(kind, "").Trim().ToLowerInvariant()
@@ -11347,6 +12262,63 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Using
             rotated.Dispose()
             Return result
+        End Function
+
+        ''' <summary>Kurzform der Rasterverzerrung fuer den Render-Schluessel. Die Knoten selbst
+        ''' waeren hunderte Zahlen im Schluessel jeder Kachel - gerundete Summen genuegen, um eine
+        ''' Aenderung zu erkennen, und ein gezogener Punkt aendert sie garantiert.</summary>
+        Private Shared Function ImageWarpSignature(v As ObjectWarp) As String
+            If v Is Nothing OrElse v.IsEmpty Then Return ""
+            Dim sum = 0.0, weighted = 0.0
+            For i = 0 To v.Nodes.Length - 1
+                sum += v.Nodes(i)
+                weighted += v.Nodes(i) * (i + 1)
+            Next
+            Return String.Format(Globalization.CultureInfo.InvariantCulture, "{0}:{1}x{2}:{3:F4}:{4:F4}",
+                                 v.Kind, v.Columns, v.Rows, sum, weighted)
+        End Function
+
+        ''' <summary>Die Verzerrung ueber ein KNOTENRASTER (Gitter, Linien, Verformen). Sie steht als
+        ''' Rezeptwert im Bild und laeuft deshalb bei jedem Render mit, statt einmal in die Pixel
+        ''' gebacken zu werden.
+        '''
+        ''' Sie ist die ERSTE Stufe der Kette, noch vor dem Beschnitt: das Raster liegt im
+        ''' unbeschnittenen Quellraum, genau dort, wo es auch gezogen wurde. Liefe sie spaeter,
+        ''' bedeuteten dieselben Prozentwerte nach jedem Zuschnitt etwas anderes.
+        '''
+        ''' Die Masse bleiben gleich - aus demselben Grund wie bei der Perspektive: die Stufe laeuft
+        ''' im Bild- UND im Maskenweg, und unterschiedliche Ausgabemasse liessen die Maske nicht mehr
+        ''' aufs Bild passen. Was aus dem Rahmen geschoben wird, ist abgeschnitten; wo nichts mehr
+        ''' liegt, bleibt es durchsichtig.</summary>
+        Private Shared Function ApplyImageWarp(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing OrElse adj Is Nothing Then Return source
+            Dim v = adj.ImageWarp
+            If v Is Nothing OrElse v.IsEmpty OrElse Not String.Equals(v.Kind, "Gitter", StringComparison.Ordinal) Then Return source
+            Dim count = (v.Columns + 1) * (v.Rows + 1)
+            ' Unbewegt heisst unbenutzt: kein Umkopieren, keine Neuabtastung.
+            Dim moved = False
+            For rowIdx = 0 To v.Rows
+                For colIdx = 0 To v.Columns
+                    Dim i = (rowIdx * (v.Columns + 1) + colIdx) * 2
+                    If Math.Abs(v.Nodes(i) - colIdx * 100.0 / v.Columns) > 0.01 OrElse
+                       Math.Abs(v.Nodes(i + 1) - rowIdx * 100.0 / v.Rows) > 0.01 Then
+                        moved = True
+                        Exit For
+                    End If
+                Next
+                If moved Then Exit For
+            Next
+            If Not moved Then Return source
+
+            Dim zx(count - 1) As Single
+            Dim zy(count - 1) As Single
+            For i = 0 To count - 1
+                zx(i) = CSng(v.Nodes(i * 2) / 100.0 * source.Width)
+                zy(i) = CSng(v.Nodes(i * 2 + 1) / 100.0 * source.Height)
+            Next
+            Dim warped = ImageGeometryMapper.WarpOverGrid(source, v.Columns, v.Rows, zx, zy)
+            If warped Is Nothing OrElse Object.ReferenceEquals(warped, source) Then Return source
+            Return warped
         End Function
 
         ''' <summary>Perspektivische Verzerrung. Die Bildmasse bleiben gleich - was aus dem Rahmen

@@ -793,6 +793,7 @@ Namespace Services
                     ("xmp-preset", "XMP-Preset"),
                     ("perspektive", "Perspektive"),
                     ("gitterverzerrung", "Gitterverzerrung"),
+                    ("verformen", "Verformen"),
                     ("resize-canvas", "Leinwand"),
                     ("hintergrund", "Hintergrund")}
             End Get

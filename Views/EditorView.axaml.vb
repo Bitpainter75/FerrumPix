@@ -80,7 +80,10 @@ Namespace Views
         Private _lastRetouchPoint As Avalonia.Point
         Private _isSelectionDragging As Boolean = False
         Private _isGradientDragging As Boolean = False
+        ''' Haengt der Zeiger gerade an einem Pfadpunkt oder formt er einen frisch gesetzten?
+        Private _isPathPointerActive As Boolean = False
         Private _isWarpDragging As Boolean = False
+        Private _isEnvelopeDragging As Boolean = False
         Private _isLinienDragging As Boolean = False
         Private _isObjectCornerDragging As Boolean = False
         Private _isPerspectiveDragging As Boolean = False
@@ -985,8 +988,31 @@ Namespace Views
         ''' <summary>Fenster-Tunnel: diese Kürzel müssen auch dann noch greifen, wenn zuvor ein
         ''' Overlay-Dialog den Fokus hatte - die View-Kürzel sind danach tot.</summary>
         Private Sub OnEditorKeyDownTunnel(sender As Object, e As KeyEventArgs)
-            If e.Handled OrElse Not PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then Return
-            Dim vm = TryCast(DataContext, EditorViewModel)
+            If e.Handled Then Return
+            Dim tunnelVm = TryCast(DataContext, EditorViewModel)
+
+            ' EIN LAUFENDER PFAD-ENTWURF wird HIER abgeschlossen, nicht erst im Handler der Ansicht:
+            ' die Eingabetaste gehoert sonst dem Steuerelement, das gerade den Fokus hat - nach einem
+            ' Klick auf einen Knopf im Panel ist das der Knopf, und der schluckt sie. Genau daran
+            ' liess sich ein Pfad nicht beenden.
+            If tunnelVm IsNot Nothing AndAlso tunnelVm.HasPathDraft AndAlso
+               Not TypeOf e.Source Is TextBox Then
+                Select Case e.Key
+                    Case Key.Enter
+                        tunnelVm.FinishPathDraft(keep:=True)
+                        UpdateSliderLayout()
+                        e.Handled = True
+                        Return
+                    Case Key.Escape
+                        tunnelVm.FinishPathDraft(keep:=False)
+                        UpdateSliderLayout()
+                        e.Handled = True
+                        Return
+                End Select
+            End If
+
+            If Not PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then Return
+            Dim vm = tunnelVm
             If vm Is Nothing Then Return
 
             Select Case e.Key
@@ -1181,6 +1207,10 @@ Namespace Views
                     _hideBrushPreviewAfterBake = False
                     ShowBrushPreviewLine(False)
                     ScrollAdjustmentsToTop()
+                Case NameOf(EditorViewModel.HidesSelectionFrameForPath)
+                    ' Entwurf beginnt oder endet, Punkte werden greifbar oder nicht: der Rahmen
+                    ' muss sofort mitziehen, sonst schluckt er den naechsten Klick.
+                    UpdateTextOverlayVisibility()
                 Case NameOf(EditorViewModel.SelectedAnnotationIndex),
                      NameOf(EditorViewModel.HasSelectedAnnotation),
                      NameOf(EditorViewModel.HasMultiAnnotationSelection),
@@ -1243,11 +1273,15 @@ Namespace Views
                      NameOf(EditorViewModel.CropWidthPixels),
                      NameOf(EditorViewModel.CropHeightPixels)
                     UpdateSliderLayout()
+                ' HasPreview ist dabei: kommt oder geht eine Werkzeug-Vorschau, muss das Bild
+                ' darunter aus- bzw. wieder eingeblendet werden - das passiert im Layoutdurchlauf.
                 Case NameOf(EditorViewModel.WarpGridValues),
                      NameOf(EditorViewModel.PerspectiveCornerValues),
                      NameOf(EditorViewModel.LineValues),
                      NameOf(EditorViewModel.ObjectCornerValues),
-                     NameOf(EditorViewModel.PreviewImage)
+                     NameOf(EditorViewModel.EnvelopeValues),
+                     NameOf(EditorViewModel.PreviewImage),
+                     NameOf(EditorViewModel.HasPreview)
                     UpdateSliderLayout()
             End Select
         End Sub
@@ -1355,6 +1389,14 @@ Namespace Views
                 Avalonia.Controls.Canvas.SetTop(afterImg, iy)
                 afterImg.Width = iw
                 afterImg.Height = ih
+                ' Liegt eine Werkzeug-Vorschau ueber dem Bild, wird das Bild darunter AUSGEBLENDET.
+                ' Die Vorschau deckt dieselbe Flaeche ab und ist das Bild, wie es nach dem Anwenden
+                ' aussieht - wo sie durchsichtig ist, ist danach auch das Bild durchsichtig. Blieb
+                ' das alte Bild stehen, schien es genau dort durch, und man sah beim Verformen
+                ' seinen alten Stand zusaetzlich zum neuen. Beim Raster fiel das nie auf, weil
+                ' dessen Randpunkte auf der Kante bleiben und die Vorschau die Flaeche immer voll
+                ' ausfuellt.
+                afterImg.IsVisible = Not vm.HasPreview
             End If
 
             Dim beforeImg = Me.FindControl(Of Image)("BeforeImageControl")
@@ -1473,7 +1515,11 @@ Namespace Views
             ' (z. B. 5760×8640, Szene auf ~3840 gedeckelt) fing das Nachschärfen sonst spürbar
             ' zu spät an. Unterhalb 1,0 ist das Overlay optisch
             ' identisch zur Szene - der frühe Start ist reines Vorladen.
-            Dim active = displayScale > 0.8 AndAlso visR > visL AndAlso visB > visT
+            ' Waehrend einer Werkzeug-Vorschau bleibt das Zoom-Detail AUS: es traegt den Stand VOR
+            ' dem Werkzeug und laege ueber dem Bild, aber unter der Vorschau - also genau dort, wo
+            ' eine durchsichtige Stelle der Vorschau den alten Stand wieder hervorholt.
+            Dim active = displayScale > 0.8 AndAlso visR > visL AndAlso visB > visT AndAlso
+                         Not vm.HasPreview
 
             vm.UpdateZoomDetailViewport(visL, visT, visR, visB, active, showBefore)
 
@@ -1660,6 +1706,11 @@ Namespace Views
                     ' jetzt der VIERTE Fall dieser Art - Zuschnittgriffe, Perspektivecken,
                     ' Rasterpunkte, Linienenden.
                     Dim startsLinesOutside = ShowsLines(vm)
+                    ' Und dieselbe Ausnahme fuer die Anfasser des Verformens: die vier Ecken liegen
+                    ' bei unbenutztem Werkzeug genau auf dem Bildrand, ein gebogener Rand ganz
+                    ' draussen.
+                    Dim startsEnvelopeOutside = ShowsEnvelope(vm) AndAlso
+                                                HitsEnvelopePoint(vm, canvas, e.GetPosition(canvas))
                     Dim startsObjectMarqueeOutside = AllowsObjectMarquee(vm)
                     If startsObjectMarqueeOutside Then
                         BeginObjectMarquee(e.GetPosition(canvas))
@@ -1669,7 +1720,7 @@ Namespace Views
                     End If
                     If Not startsSelectionDragOutside AndAlso Not startsCropHandleOutside AndAlso
                        Not startsPerspectiveCornerOutside AndAlso Not startsGridPointOutside AndAlso
-                       Not startsLinesOutside Then
+                       Not startsLinesOutside AndAlso Not startsEnvelopeOutside Then
                         ClearEditorSelections(vm)
                         e.Handled = True
                         Return
@@ -1827,6 +1878,24 @@ Namespace Views
                                            gridSlopPixels / gridRect.Width * 100.0,
                                            gridSlopPixels / gridRect.Height * 100.0) Then
                         _isWarpDragging = True
+                        e.Pointer.Capture(canvas)
+                        e.Handled = True
+                        Return
+                    End If
+                End If
+            End If
+
+            ' VERFORMEN: dieselbe Mechanik wie beim Raster, nur sind es zwoelf Anfasser statt eines
+            ' Rasters. NICHT klemmen: ein herausgezogener Rand liegt ausserhalb des Bildes.
+            If ShowsEnvelope(vm) Then
+                Dim envRect = GetDisplayedImageRect(canvas, vm)
+                If envRect.Width > 0 AndAlso envRect.Height > 0 Then
+                    Dim envPos = e.GetPosition(canvas)
+                    If vm.TryBeginEnvelopeDrag((envPos.X - envRect.Left) / envRect.Width * 100.0,
+                                               (envPos.Y - envRect.Top) / envRect.Height * 100.0,
+                                               CornerHandleTolerance / envRect.Width * 100.0,
+                                               CornerHandleTolerance / envRect.Height * 100.0) Then
+                        _isEnvelopeDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
@@ -2083,6 +2152,30 @@ Namespace Views
                     Const hitSlopPixels As Double = 10.0
                     Dim hitSlopXPercent = hitSlopPixels / imageRect.Width * 100.0
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
+
+                    ' PFAD hat VORRANG vor dem Objekt-Treffer: ein Stuetzpunkt liegt zwangslaeufig auf
+                    ' dem Pfad, den er beschreibt. Ginge der Klick zuerst an die Objekte, waere jeder
+                    ' Versuch, einen Punkt zu ziehen, ein Verschieben des ganzen Objekts.
+                    If vm.IsPathPenActive OrElse vm.CanEditPathNodes Then
+                        Const pathSlopPixels As Double = 12.0
+                        ' DOPPELKLICK schliesst den Entwurf offen ab - derselbe Abschluss wie die
+                        ' Eingabetaste, nur ohne die Hand von der Maus zu nehmen.
+                        If vm.HasPathDraft AndAlso e.ClickCount >= 2 Then
+                            vm.FinishPathDraft(keep:=True)
+                            UpdateSliderLayout()
+                            e.Handled = True
+                            Return
+                        End If
+                        If vm.TryBeginPathPointer(xPct, yPct,
+                                                  pathSlopPixels / imageRect.Width * 100.0,
+                                                  pathSlopPixels / imageRect.Height * 100.0) Then
+                            _isPathPointerActive = True
+                            e.Pointer.Capture(canvas)
+                            e.Handled = True
+                            Return
+                        End If
+                    End If
+
                     Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
 
                     ' In Anpassungswerkzeugen (Anpassen/Farbe/Effekte/Rahmen/Filter) UND im
@@ -2420,6 +2513,20 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
+            If _isEnvelopeDragging Then
+                Dim eCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                Dim eVm = TryCast(DataContext, EditorViewModel)
+                If eCanvas Is Nothing OrElse eVm Is Nothing Then Return
+                Dim eRect = GetDisplayedImageRect(eCanvas, eVm)
+                If eRect.Width <= 0 OrElse eRect.Height <= 0 Then Return
+                ' Ungeklemmt: einen Rand ueber die Bildkante hinaus zu biegen ist erlaubt.
+                Dim ePos = e.GetPosition(eCanvas)
+                eVm.UpdateEnvelopeDrag((ePos.X - eRect.Left) / eRect.Width * 100.0,
+                                       (ePos.Y - eRect.Top) / eRect.Height * 100.0)
+                UpdateSliderLayout()
+                e.Handled = True
+                Return
+            End If
             If _isObjectCornerDragging Then
                 Dim oCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim oVm = TryCast(DataContext, EditorViewModel)
@@ -2457,6 +2564,21 @@ Namespace Views
                 vm.UpdateGradientHandleDrag((gPos.X - imageRect.Left) / imageRect.Width * 100.0,
                                             (gPos.Y - imageRect.Top) / imageRect.Height * 100.0,
                                             e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+                e.Handled = True
+                Return
+            End If
+            If _isPathPointerActive Then
+                Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                If canvas Is Nothing OrElse vm Is Nothing Then Return
+                Dim imageRect = GetDisplayedImageRect(canvas, vm)
+                If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
+                ' NICHT auf das Bild geklemmt: ein Griff darf ueber die Bildkante hinausreichen, sonst
+                ' liesse sich eine Kurve am Rand nicht aufziehen.
+                Dim pPos = e.GetPosition(canvas)
+                vm.UpdatePathPointer((pPos.X - imageRect.Left) / imageRect.Width * 100.0,
+                                     (pPos.Y - imageRect.Top) / imageRect.Height * 100.0)
+                UpdateSliderLayout()
                 e.Handled = True
                 Return
             End If
@@ -2535,6 +2657,11 @@ Namespace Views
                 TryCast(DataContext, EditorViewModel)?.EndWarpDrag()
                 _isWarpDragging = False
             End If
+            If _isEnvelopeDragging Then
+                TryCast(DataContext, EditorViewModel)?.EndEnvelopeDrag()
+                _isEnvelopeDragging = False
+                UpdateSliderLayout()
+            End If
             If _isLinienDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndLineDrag()
                 _isLinienDragging = False
@@ -2548,6 +2675,11 @@ Namespace Views
             If _isGradientDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndGradientHandleDrag()
                 _isGradientDragging = False
+            End If
+            If _isPathPointerActive Then
+                TryCast(DataContext, EditorViewModel)?.EndPathPointer()
+                _isPathPointerActive = False
+                UpdateSliderLayout()
             End If
             If _isSelectionMoveDragging Then
                 TryCast(DataContext, EditorViewModel)?.CommitSelectionMoveTransaction()
@@ -2819,10 +2951,13 @@ Namespace Views
             ' Der Rahmen bekommt KEINEN Auswahlrahmen: sein Rechteck ist das ganze Bild, der Kasten
             ' laege also genau auf der Bildkante und saehe aus wie ein zweiter Rahmen. Anfassen kann
             ' man ihn ohnehin nicht (HitTestAnnotation ueberspringt ihn).
+            ' Und keiner, solange Pfadpunkte gemeint sind: der Rahmen laege auf den aeusseren
+            ' Stuetzpunkten und finge deren Klicks ab (HidesSelectionFrameForPath).
             If overlay IsNot Nothing Then overlay.IsVisible = vm IsNot Nothing AndAlso
                                                               IsLayerPlacementTool(vm.CurrentTool) AndAlso
                                                               vm.HasSelectedAnnotation AndAlso
-                                                              Not vm.IsFrameAnnotationSelected
+                                                              Not vm.IsFrameAnnotationSelected AndAlso
+                                                              Not vm.HidesSelectionFrameForPath
             UpdateSliderLayout()
         End Sub
 
@@ -3366,7 +3501,9 @@ Namespace Views
             PositionPerspectiveOverlay(ix, iy, iw, ih)
             PositionGridWarpOverlay(ix, iy, iw, ih)
             PositionLineWarpOverlay(ix, iy, iw, ih)
+            PositionEnvelopeWarpOverlay(ix, iy, iw, ih)
             PositionGradientOverlay(ix, iy, iw, ih)
+            PositionPathOverlay(ix, iy, iw, ih)
             ' ZWEI getrennte Entscheidungen, und das ist der Punkt: ob es eine MASKE ist, entscheidet
             ' allein ueber die Laufameisen - ob gerade ein rotes Bild vorliegt, nur ueber das Rot.
             ' Vorher hing beides an einer Bedingung, und immer wenn das rote Bild fehlte, erschienen
@@ -3443,6 +3580,29 @@ Namespace Views
             overlay.InvalidateVisual()
         End Sub
 
+        ''' <summary>Legt Stuetzpunkte und Griffe des freien Pfades ueber das Bild - den laufenden
+        ''' Entwurf oder den markierten fertigen Pfad. Derselbe Weg wie beim Verlaufs-Overlay: die
+        ''' Punkte kommen in Anzeige-Prozent und werden auf den dargestellten Bildbereich gerechnet,
+        ''' damit sie bei jedem Zoom- und Panstand sitzen.</summary>
+        Private Sub PositionPathOverlay(ix As Double, iy As Double, iw As Double, ih As Double)
+            Dim overlay = Me.FindControl(Of PathOverlayControl)("PathOverlay")
+            If overlay Is Nothing Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim values = If(vm Is Nothing, Nothing, vm.PathOverlayValues)
+            If values Is Nothing OrElse iw <= 0 OrElse ih <= 0 Then
+                overlay.IsVisible = False
+                overlay.NodeValues = Nothing
+                Return
+            End If
+            overlay.NodeValues = values
+            Avalonia.Controls.Canvas.SetLeft(overlay, ix)
+            Avalonia.Controls.Canvas.SetTop(overlay, iy)
+            overlay.Width = iw
+            overlay.Height = ih
+            overlay.IsVisible = True
+            overlay.InvalidateVisual()
+        End Sub
+
         ''' <summary>Legt das Stuetzpunktraster der Gitterverzerrung ueber das Bild. Wie beim
         ''' Verlaufs-Overlay kommen die Punkte in Prozent und werden hier auf den dargestellten
         ''' Bildbereich gerechnet - damit sitzen sie bei jedem Zoom- und Panstand richtig.</summary>
@@ -3462,6 +3622,22 @@ Namespace Views
                    Math.Abs(position.Y - y) <= CornerHandleTolerance Then Return True
             Next
             Return False
+        End Function
+
+        ''' <summary>Liegt der Zeiger auf einem Stuetzpunkt oder Griff eines Pfades? Gerechnet wird
+        ''' im ViewModel, hier wird nur der Zeiger in Bildprozent gebracht - dieselbe Aufteilung wie
+        ''' bei den uebrigen Anfassern.</summary>
+        Private Function HitsPathPoint(vm As EditorViewModel, canvas As Canvas,
+                                       position As Avalonia.Point) As Boolean
+            If vm Is Nothing OrElse canvas Is Nothing Then Return False
+            If Not vm.CanEditPathNodes AndAlso Not vm.HasPathDraft Then Return False
+            Dim rect = GetDisplayedImageRect(canvas, vm)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
+            Const pathSlopPixels As Double = 12.0
+            Return vm.HitsPathPointPercent((position.X - rect.Left) / rect.Width * 100.0,
+                                           (position.Y - rect.Top) / rect.Height * 100.0,
+                                           pathSlopPixels / rect.Width * 100.0,
+                                           pathSlopPixels / rect.Height * 100.0)
         End Function
 
         ''' <summary>Liegt der Zeiger auf einem Rasterpunkt? Nur zur Frage, ob ein Klick NEBEN dem
@@ -3507,6 +3683,27 @@ Namespace Views
             Return False
         End Function
 
+        ''' <summary>Liegt der Zeiger auf einem der zwoelf Anfasser des Verformen-Werkzeugs? Nur zur
+        ''' Frage, ob ein Klick neben dem Bild oder im Textkasten durchgelassen werden muss -
+        ''' gefasst wird er weiter unten.</summary>
+        Private Function HitsEnvelopePoint(vm As EditorViewModel, canvas As Canvas,
+                                           position As Avalonia.Point) As Boolean
+            If vm Is Nothing OrElse canvas Is Nothing Then Return False
+            Dim rect = GetDisplayedImageRect(canvas, vm)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
+            Dim g = vm.EnvelopeValues
+            If g Is Nothing OrElse g.Length < 24 Then Return False
+            For i = 0 To 11
+                Dim px = g(i * 2), py = g(i * 2 + 1)
+                If Double.IsNaN(px) OrElse Double.IsNaN(py) Then Continue For
+                Dim x = rect.Left + px / 100.0 * rect.Width
+                Dim y = rect.Top + py / 100.0 * rect.Height
+                If Math.Abs(position.X - x) <= CornerHandleTolerance AndAlso
+                   Math.Abs(position.Y - y) <= CornerHandleTolerance Then Return True
+            Next
+            Return False
+        End Function
+
         ''' <summary>Zeigt das Werkzeug gerade die Verzerren-Gruppen? Es MUSS dieselbe Bedingung
         ''' sein wie die des Panels (ShowTransformAdjustments), sonst liegen Regler und Anfasser
         ''' nicht zusammen. Genau das war der Fall: die Anfasser hingen an EditorTool.Transform, der
@@ -3529,6 +3726,10 @@ Namespace Views
 
         Private Shared Function ShowsLines(vm As EditorViewModel) As Boolean
             Return IsWarpTool(vm) AndAlso vm.IsWarpLines
+        End Function
+
+        Private Shared Function ShowsEnvelope(vm As EditorViewModel) As Boolean
+            Return IsWarpTool(vm) AndAlso vm.IsWarpEnvelope
         End Function
 
         ''' <summary>Legt die Live-Vorschau der Gitterverzerrung genau ueber den dargestellten
@@ -3656,6 +3857,54 @@ Namespace Views
             Avalonia.Controls.Canvas.SetTop(overlay, iy)
             overlay.Width = iw
             overlay.Height = ih
+            overlay.IsVisible = True
+            overlay.InvalidateVisual()
+        End Sub
+
+        ''' <summary>Legt das Viereck des Verformen-Werkzeugs ueber das Bild. Wie bei der Perspektive
+        ''' duerfen seine Anfasser AUSSERHALB des Bildes liegen - ein ueber die Kante gebogener Rand
+        ''' ist genau der Sinn der Sache -, deshalb bekommt das Steuerelement Platz ueber den
+        ''' Bildrand hinaus.</summary>
+        Private Sub PositionEnvelopeWarpOverlay(ix As Double, iy As Double, iw As Double, ih As Double)
+            Dim overlay = Me.FindControl(Of EnvelopeWarpOverlayControl)("EnvelopeWarpOverlay")
+            If overlay Is Nothing Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing OrElse Not ShowsEnvelope(vm) OrElse iw <= 0 OrElse ih <= 0 Then
+                overlay.IsVisible = False
+                overlay.PointValues = Nothing
+                overlay.MeshValues = Nothing
+                Return
+            End If
+            Dim e = vm.EnvelopeValues
+            If e Is Nothing OrElse e.Length < 24 Then
+                overlay.IsVisible = False
+                Return
+            End If
+            ' Rand ringsum, damit ein nach aussen gezogener Anfasser nicht abgeschnitten wird -
+            ' dieselbe Zugabe wie beim Perspektivviereck.
+            Const border As Double = 400.0
+            Dim values(e.Length - 1) As Double
+            For i = 0 To e.Length - 2 Step 2
+                values(i) = e(i) / 100.0 * iw + border
+                values(i + 1) = e(i + 1) / 100.0 * ih + border
+            Next
+            overlay.PointValues = values
+            Dim m = vm.EnvelopeMeshValues
+            If m IsNot Nothing AndAlso m.Length >= 4 Then
+                Dim mesh(m.Length - 1) As Double
+                mesh(0) = m(0) : mesh(1) = m(1)
+                For i = 2 To m.Length - 2 Step 2
+                    mesh(i) = m(i) / 100.0 * iw + border
+                    mesh(i + 1) = m(i + 1) / 100.0 * ih + border
+                Next
+                overlay.MeshValues = mesh
+            Else
+                overlay.MeshValues = Nothing
+            End If
+            Avalonia.Controls.Canvas.SetLeft(overlay, ix - border)
+            Avalonia.Controls.Canvas.SetTop(overlay, iy - border)
+            overlay.Width = iw + border * 2
+            overlay.Height = ih + border * 2
             overlay.IsVisible = True
             overlay.InvalidateVisual()
         End Sub
@@ -4419,6 +4668,10 @@ Namespace Views
             If ShowsGrid(vm) AndAlso HitsGridPoint(vm, canvas, pos) Then Return
             If ShowsPerspective(vm) AndAlso HitsWarpCorner(vm, canvas, pos) Then Return
             If ShowsLines(vm) AndAlso HitsLinePoint(vm, canvas, pos) Then Return
+            If ShowsEnvelope(vm) AndAlso HitsEnvelopePoint(vm, canvas, pos) Then Return
+            ' Dritter Fall derselben Falle: die Stuetzpunkte eines Pfades liegen IM Objektrechteck,
+            ' und der Border liegt darueber. Ohne das Durchlassen kaeme kein Druck je bei ihnen an.
+            If HitsPathPoint(vm, canvas, pos) Then Return
 
             Dim rect = GetTextOverlayRect()
             Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
@@ -5538,13 +5791,27 @@ Namespace Views
                             HandleDeleteShortcut(vm)
                             e.Handled = True
                         End If
+                    Case Key.Enter, Key.Return
+                        ' Eingabe schliesst einen laufenden Pfad-Entwurf OFFEN ab. Geschlossen wird
+                        ' er stattdessen mit einem Klick auf seinen ersten Punkt. In einem
+                        ' Eingabefeld gehoert die Taste dem Feld.
+                        If vm.HasPathDraft AndAlso Not isInputControlFocused Then
+                            vm.FinishPathDraft(keep:=True)
+                            UpdateSliderLayout()
+                            e.Handled = True
+                        End If
                     Case Key.Escape
                         ' EIN LAUFENDER MODELLDURCHLAUF und DIE PIPETTE werden hier NICHT behandelt,
                         ' und das ist kein Versehen: beide haengen am Esc-Zweig im Fenster-Tunnel
                         ' (MainWindow.axaml.vb). Der Tunnel feuert vor jedem Handler der Ansicht und
                         ' meldet die Taste als behandelt - hier stuende also toter Code, den der
                         ' naechste Leser fuer die zustaendige Stelle haelt.
-                        If _isSelectionDragging OrElse _isLassoDrawing OrElse _isSelectionMoveDragging Then
+                        If vm.HasPathDraft Then
+                            ' Ein halb gesetzter Pfad ist Arbeit: Esc verwirft ihn, verlässt aber
+                            ' nicht gleich den Editor. Übernommen wird er mit Eingabe.
+                            vm.FinishPathDraft(keep:=False)
+                            UpdateSliderLayout()
+                        ElseIf _isSelectionDragging OrElse _isLassoDrawing OrElse _isSelectionMoveDragging Then
                             ' Ein laufendes Aufziehen/Ziehen abbrechen, ohne es zu übernehmen - vorher
                             ' verließ Esc mitten im Zug den Editor.
                             CancelSelectionDrag()

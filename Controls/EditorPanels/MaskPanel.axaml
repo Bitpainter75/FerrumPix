@@ -63,6 +63,58 @@
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
                 </Button>
             </StackPanel>
+
+            <!-- MODUS-REIHE, EINMAL FÜR ALLE ARTEN. Sie stand vorher zweimal im Panel (Pinsel und
+                 Objekt) und bei den Verläufen gar nicht - dort gab es also weder Plus noch Minus,
+                 und jeder Zug erzeugte zwangsläufig eine neue Maske. Seit eine Maske aus mehreren
+                 Bestandteilen bestehen kann, gilt die Wahl für JEDE Art, und deshalb steht sie hier
+                 oben bei der Art-Auswahl statt in den Zweigen darunter.
+                 Umkehren und Verwerfen entscheiden im ViewModel selbst, ob eine Auswahl oder ein
+                 Verlauf gemeint ist - ein Verlauf hat keine aktive Auswahl. -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
+                            Classes.active="{Binding IsSelectionCombineNew}"
+                            ToolTip.Tip="Neue Maske beginnen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
+                            Classes.active="{Binding IsSelectionCombineAdd}"
+                            ToolTip.Tip="Zur Maske hinzufügen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
+                            Classes.active="{Binding IsSelectionCombineSubtract}"
+                            ToolTip.Tip="Von der Maske abziehen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Intersect"
+                            Classes.active="{Binding IsSelectionCombineIntersect}"
+                            ToolTip.Tip="Nur die Überschneidung behalten">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg" Width="16" Height="16" />
+                    </Button>
+                    <Border Width="1" Margin="4,4" Background="{DynamicResource FP.Border.Normal}" />
+                    <Button Classes="ghost" Padding="8,6"
+                            IsEnabled="{Binding CanInvertMask}"
+                            Command="{Binding InvertCurrentMaskCommand}"
+                            ToolTip.Tip="Maske umkehren">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="ghost" Padding="8,6"
+                            IsEnabled="{Binding CanDiscardMask}"
+                            Command="{Binding DiscardCurrentMaskCommand}"
+                            ToolTip.Tip="Maske verwerfen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+
             <!-- Verschieben-Zweig: hier wird nicht gemalt. Der Knopf wandelt die aktuelle Form in
                  die jeweils andere - es ist dasselbe Alpha-Raster, nur mit anderer Bedeutung. -->
             <StackPanel Spacing="8" IsVisible="{Binding IsMaskMoveMode}">
@@ -140,41 +192,6 @@
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
-                <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Classes="ghost" Padding="8,6"
-                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
-                            Classes.active="{Binding IsSelectionCombineNew}"
-                            ToolTip.Tip="Jeder Klick wählt ein neues Objekt">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
-                    </Button>
-                    <Button Classes="ghost" Padding="8,6"
-                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
-                            Classes.active="{Binding IsSelectionCombineAdd}"
-                            ToolTip.Tip="Weitere Klicks erweitern die Maske">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
-                    </Button>
-                    <Button Classes="ghost" Padding="8,6"
-                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
-                            Classes.active="{Binding IsSelectionCombineSubtract}"
-                            ToolTip.Tip="Klicks nehmen Stellen wieder weg">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
-                    </Button>
-                    <Border Width="1" Margin="4,4" Background="{DynamicResource FP.Border.Normal}" />
-                    <Button Classes="ghost" Padding="8,6"
-                            IsEnabled="{Binding HasActiveSelection}"
-                            Command="{Binding InvertSelectionCommand}"
-                            ToolTip.Tip="Maske umkehren">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
-                    </Button>
-                    <Button Classes="ghost" Padding="8,6"
-                            IsEnabled="{Binding HasActiveSelection}"
-                            Command="{Binding ClearSelectionCommand}"
-                            ToolTip.Tip="Maske verwerfen (Strg+D oder Esc)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="16" Height="16" />
-                    </Button>
-                </StackPanel>
                 <TextBlock Text="Das erste Anklicken eines Bildes dauert einen Moment, danach geht es schnell."
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsSubjectMaskRunning}"
@@ -248,41 +265,6 @@
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
-                <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Classes="ghost" Padding="8,6"
-                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
-                            Classes.active="{Binding IsSelectionCombineNew}"
-                            ToolTip.Tip="Neue Maske beginnen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
-                    </Button>
-                    <Button Classes="ghost" Padding="8,6"
-                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
-                            Classes.active="{Binding IsSelectionCombineAdd}"
-                            ToolTip.Tip="Zur Maske hinzufügen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
-                    </Button>
-                    <Button Classes="ghost" Padding="8,6"
-                            Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
-                            Classes.active="{Binding IsSelectionCombineSubtract}"
-                            ToolTip.Tip="Von der Maske abziehen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
-                    </Button>
-                    <Border Width="1" Margin="4,4" Background="{DynamicResource FP.Border.Normal}" />
-                    <Button Classes="ghost" Padding="8,6"
-                            IsEnabled="{Binding HasActiveSelection}"
-                            Command="{Binding InvertSelectionCommand}"
-                            ToolTip.Tip="Maske umkehren">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
-                    </Button>
-                    <Button Classes="ghost" Padding="8,6"
-                            IsEnabled="{Binding HasActiveSelection}"
-                            Command="{Binding ClearSelectionCommand}"
-                            ToolTip.Tip="Maske verwerfen (Strg+D oder Esc)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
-                    </Button>
-                </StackPanel>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Pinselgröße" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
@@ -329,6 +311,47 @@
                            FontSize="{DynamicResource FP.Font.Small}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !HasSelectedGradientMask}" />
+                <!-- Bestandteile der Maske. Erscheint erst ab dem zweiten: bei einem einzigen sagt die
+                     Liste nichts, was die Regler darunter nicht schon zeigen. Die angeklickte Zeile
+                     ist die, die Griffe und Regler bedienen. -->
+                <StackPanel Spacing="4" IsVisible="{Binding HasMaskComponents}">
+                    <TextBlock Text="Bestandteile"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Small}" />
+                    <ItemsControl ItemsSource="{Binding MaskComponentRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,1">
+                                    <Button Grid.Column="0" Grid.ColumnSpan="3" Classes="ghost"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                            Padding="6,3"
+                                            Classes.active="{Binding IsActive}"
+                                            Command="{Binding DataContext.SelectMaskComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding Index}"
+                                            ToolTip.Tip="Diesen Bestandteil bedienen">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="{Binding ModeLabel}"
+                                                       Width="12"
+                                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                                       FontSize="{DynamicResource FP.Font.Small}" />
+                                            <icons:SvgIcon Source="{Binding IconSource}" Width="14" Height="14" />
+                                            <TextBlock Text="{Binding KindLabel}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="3" Classes="ghost" Padding="4"
+                                            Command="{Binding DataContext.RemoveMaskComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding Index}"
+                                            ToolTip.Tip="Diesen Bestandteil entfernen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                       Width="13" Height="13" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"

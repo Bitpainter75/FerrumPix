@@ -273,6 +273,11 @@ Namespace Services
             clone.ScaleWithImage = True
             clone.BlendMode = "Normal"
             clone.BlendIncludesStroke = True
+            ' Ebenenmaske und Schnittmaske wirken beim KOMPONIEREN, nicht in der Bitmap. Objekte mit
+            ' einer von beiden bleiben ohnehin im gebackenen Block; im Schluessel stuenden sie nur
+            ' herum und wuerfen die Bitmap bei jedem Pinselstrich auf der Maske weg.
+            clone.MaskId = ""
+            clone.ClipToLayerBelow = False
         End Sub
     End Class
 End Namespace

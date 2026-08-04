@@ -6308,4 +6308,196 @@
   <data name="Gesichter_vergleichen_e45484e4" xml:space="preserve">
     <value>Comparer les visages</value>
   </data>
+  <data name="Ebenenmaske_hinzuf_gen_f95fe982" xml:space="preserve">
+    <value>Ajouter un masque de calque</value>
+  </data>
+  <data name="Ebenenmaske_bearbeiten_f7cb5b7b" xml:space="preserve">
+    <value>Modifier le masque de calque</value>
+  </data>
+  <data name="Ebenenmaske_entfernen_8f57a437" xml:space="preserve">
+    <value>Supprimer le masque de calque</value>
+  </data>
+  <data name="Auf_Ebene_darunter_beschr_nken_bea516dd" xml:space="preserve">
+    <value>Limiter au calque inférieur</value>
+  </data>
+  <data name="Beschr_nkung_auf_Ebene_darunter_aufheben_30831259" xml:space="preserve">
+    <value>Annuler la limitation au calque inférieur</value>
+  </data>
+  <data name="Ebenenmaske_629449a3" xml:space="preserve">
+    <value>Masque de calque</value>
+  </data>
+  <data name="Ebene_hat_eine_Maske_a3c013ee" xml:space="preserve">
+    <value>Le calque a un masque</value>
+  </data>
+  <data name="Auf_die_Ebene_darunter_beschr_nkt_9f5416da" xml:space="preserve">
+    <value>Limité au calque inférieur</value>
+  </data>
+  <data name="Ebenenmaske_hinzugef_gt_69799dcb" xml:space="preserve">
+    <value>Masque de calque ajouté</value>
+  </data>
+  <data name="Ebenenmaske_entfernt_1317d539" xml:space="preserve">
+    <value>Masque de calque supprimé</value>
+  </data>
+  <data name="Auf_Ebene_darunter_beschr_nkt_647d1027" xml:space="preserve">
+    <value>Limité au calque inférieur</value>
+  </data>
+  <data name="Beschr_nkung_aufgehoben_11851388" xml:space="preserve">
+    <value>Limitation annulée</value>
+  </data>
+  <data name="Ebenen_zusammenlegen_a4b3011a" xml:space="preserve">
+    <value>Fusionner les calques</value>
+  </data>
+  <data name="Ebenen_zusammengelegt_491fb489" xml:space="preserve">
+    <value>Calques fusionnés</value>
+  </data>
+  <data name="Zusammenlegen_fehlgeschlagen_a1d3488d" xml:space="preserve">
+    <value>Échec de la fusion</value>
+  </data>
+  <data name="Zusammengelegt_6c93bf44" xml:space="preserve">
+    <value>Fusionné</value>
+  </data>
+  <data name="Pfad_gezeichnet_48ab21b5" xml:space="preserve">
+    <value>Tracé dessiné</value>
+  </data>
+  <data name="Grundlinie_gesetzt_65e1bde3" xml:space="preserve">
+    <value>Ligne de base définie</value>
+  </data>
+  <data name="Punkte_setzen_Eingabe_schlie_t_ab_b1a22b98" xml:space="preserve">
+    <value>Placez des points, Entrée pour terminer</value>
+  </data>
+  <data name="Freier_Pfad_63128d0e" xml:space="preserve">
+    <value>Tracé libre</value>
+  </data>
+  <data name="Grundlinie_selbst_setzen_Punkt_f_r_Punkt_auf_dem_c2fb06fe" xml:space="preserve">
+    <value>Définissez la ligne de base vous-même : point par point sur l'image, Entrée termine</value>
+  </data>
+  <data name="Bestandteile_b8c29b8e" xml:space="preserve">
+    <value>Composants</value>
+  </data>
+  <data name="Gemalt_96970307" xml:space="preserve">
+    <value>Peint</value>
+  </data>
+  <data name="Diesen_Bestandteil_bedienen_d57637c7" xml:space="preserve">
+    <value>Travailler sur ce composant</value>
+  </data>
+  <data name="Diesen_Bestandteil_entfernen_3558bd9b" xml:space="preserve">
+    <value>Supprimer ce composant</value>
+  </data>
+  <data name="Nur_die_berschneidung_behalten_1f868e93" xml:space="preserve">
+    <value>Ne garder que le chevauchement</value>
+  </data>
+  <data name="Pfad_abschlie_en_7831f5d8" xml:space="preserve">
+    <value>Terminer le tracé</value>
+  </data>
+  <data name="Punkte_setzen_mit_Ziehen_kr_mmen_Ein_Klick_auf_d_03007268" xml:space="preserve">
+    <value>Placez des points, faites glisser pour courber. Cliquez sur le premier point pour fermer le tracé.</value>
+  </data>
+  <data name="Pfad_offen_abschlie_en_Eingabe_oder_Doppelklick_288b4d16" xml:space="preserve">
+    <value>Terminer le tracé ouvert (Entrée ou double-clic)</value>
+  </data>
+  <data name="Entwurf_verwerfen_Esc_e1166db1" xml:space="preserve">
+    <value>Abandonner le brouillon (Échap)</value>
+  </data>
+  <data name="Klicken_setzt_einen_Eckpunkt_Klicken_und_ziehen__23ddaf61" xml:space="preserve">
+    <value>Un clic pose un point d'angle. Cliquez et faites glisser pour courber. Cliquez sur le premier point pour fermer le tracé.</value>
+  </data>
+  <data name="Ins_Bild_klicken_um_den_ersten_Punkt_zu_setzen_E_bef9ac61" xml:space="preserve">
+    <value>Cliquez dans l'image pour poser le premier point. Un tracé terminé est un calque comme un autre et reste modifiable par ses points.</value>
+  </data>
+  <data name="St_tzpunkte_ziehen_um_die_Form_zu_ndern_Die_rund_ed42201b" xml:space="preserve">
+    <value>Faites glisser les points d'ancrage pour changer la forme. Les poignées rondes courbent le segment voisin.</value>
+  </data>
+  <data name="Punkt_73b58567" xml:space="preserve">
+    <value>Point</value>
+  </data>
+  <data name="Gl_tten_Ecke_3025b21f" xml:space="preserve">
+    <value>Lisser / angle</value>
+  </data>
+  <data name="Geschlossen_91703e9a" xml:space="preserve">
+    <value>Fermé</value>
+  </data>
+  <data name="Neuer_Pfad_a711c1de" xml:space="preserve">
+    <value>Nouveau tracé</value>
+  </data>
+  <data name="Setzt_einen_St_tzpunkt_in_die_Mitte_des_l_ngsten_1658ac3b" xml:space="preserve">
+    <value>Ajoute un point d'ancrage au milieu du segment le plus long</value>
+  </data>
+  <data name="Entfernt_den_zuletzt_angefassten_St_tzpunkt_0de04cf3" xml:space="preserve">
+    <value>Supprime le dernier point d'ancrage manipulé</value>
+  </data>
+  <data name="Den_zuletzt_angefassten_Punkt_gl_tten_oder_zur_E_90cf0f2c" xml:space="preserve">
+    <value>Lisser le dernier point manipulé ou en faire un angle</value>
+  </data>
+  <data name="Pfad_schlie_en_oder_wieder_ffnen_92a22332" xml:space="preserve">
+    <value>Fermer le tracé ou le rouvrir</value>
+  </data>
+  <data name="Einen_weiteren_Pfad_beginnen_fddeaa9c" xml:space="preserve">
+    <value>Commencer un autre tracé</value>
+  </data>
+  <data name="SCUNet_d720b79b" xml:space="preserve">
+    <value>SCUNet</value>
+  </data>
+  <data name="NAFNet_743a5575" xml:space="preserve">
+    <value>NAFNet</value>
+  </data>
+  <data name="Real_ESRGAN_54c8c9a4" xml:space="preserve">
+    <value>Real-ESRGAN</value>
+  </data>
+  <data name="CC_BY_4_0_efb1b2a4" xml:space="preserve">
+    <value>CC-BY-4.0</value>
+  </data>
+  <data name="GeoNames_3d0b41be" xml:space="preserve">
+    <value>GeoNames</value>
+  </data>
+  <data name="Text_auf_dem_Pfad_3dafd54d" xml:space="preserve">
+    <value>Texte sur ce tracé</value>
+  </data>
+  <data name="Erzeugt_ein_Textobjekt_dessen_Grundlinie_die_Pun_af13f5a6" xml:space="preserve">
+    <value>Crée un objet texte dont la ligne de base reprend les points de ce tracé. Le tracé lui-même est conservé.</value>
+  </data>
+  <data name="Text_auf_den_Pfad_gesetzt_c96e60eb" xml:space="preserve">
+    <value>Texte placé sur le tracé</value>
+  </data>
+  <data name="Maske_verwerfen_f5df1ee3" xml:space="preserve">
+    <value>Abandonner le masque</value>
+  </data>
+  <data name="Wird_beim_Anwenden_in_die_Pixel_gerechnet_wie_ei_77a507b3" xml:space="preserve">
+    <value>Calculé dans les pixels lors de l'application, comme une retouche - ensuite les masques ne correspondent plus exactement. Les objets insérés suivent sans être figés.</value>
+  </data>
+  <data name="Verformen_8a515612" xml:space="preserve">
+    <value>Déformation libre</value>
+  </data>
+  <data name="Die_vier_R_nder_biegen_das_Innere_folgt_839b20c3" xml:space="preserve">
+    <value>Courber les quatre bords, l'intérieur suit</value>
+  </data>
+  <data name="Verformung_zur_cksetzen_318489b1" xml:space="preserve">
+    <value>Réinitialiser la déformation</value>
+  </data>
+  <data name="Im_Bild_an_den_vier_Ecken_ziehen_oder_an_den_kle_aedae6f4" xml:space="preserve">
+    <value>Faites glisser les quatre coins dans l'image ou les petites poignées à côté : les coins fixent la position, les poignées courbent le bord entre eux. L'intérieur suit les bords.</value>
+  </data>
+  <data name="Die_R_nder_bleiben_im_Bild_Wo_einer_nach_innen_g_c94bc6e4" xml:space="preserve">
+    <value>Les bords restent dans l'image. Là où l'un est courbé vers l'intérieur, l'image devient transparente.</value>
+  </data>
+  <data name="Anwenden_rechnet_die_Verformung_in_die_Pixel_Mas_23b372fd" xml:space="preserve">
+    <value>Appliquer calcule la déformation dans les pixels - les masques ne correspondent alors plus exactement.</value>
+  </data>
+  <data name="Die_Punkte_im_Bild_ziehen_Anwenden_bernimmt_die__0ea340fe" xml:space="preserve">
+    <value>Faites glisser les points dans l'image. Appliquer reprend la déformation dans la recette : les masques suivent, et elle est de nouveau là à la prochaine ouverture.</value>
+  </data>
+  <data name="Anwenden_bernimmt_die_Verzerrung_ins_Rezept_Mask_0a0a6612" xml:space="preserve">
+    <value>Appliquer reprend la déformation dans la recette : les masques et les objets insérés suivent, et elle est de nouveau là à la prochaine ouverture.</value>
+  </data>
+  <data name="Anwenden_bernimmt_die_Verformung_ins_Rezept_Mask_bb05fc17" xml:space="preserve">
+    <value>Appliquer reprend la déformation dans la recette : les masques suivent, et elle est de nouveau là à la prochaine ouverture.</value>
+  </data>
+  <data name="Verzerrung_des_Bildes_zur_cknehmen_0851662e" xml:space="preserve">
+    <value>Retirer la déformation de l'image</value>
+  </data>
+  <data name="Nimmt_alle_bernommenen_Verzerrungen_des_Bildes_w_56b737cf" xml:space="preserve">
+    <value>Retire toutes les déformations appliquées à l'image</value>
+  </data>
+  <data name="Verzerrung_zur_ckgenommen_1032e6ac" xml:space="preserve">
+    <value>Déformation retirée</value>
+  </data>
 </root>
