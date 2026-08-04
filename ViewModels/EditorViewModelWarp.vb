@@ -1024,23 +1024,12 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Wohin ein Punkt durch eine BEREITS eingetragene Objektverzerrung wandert. Alles
-        ''' in Bildprozent.</summary>
+        ''' in Bildprozent. Ueber dieselbe Stelle wie alles andere, aus dem Grund, der bei
+        ''' <see cref="NodeMapping"/> steht.</summary>
         Private Shared Function ExistingWarp(v As ObjectWarp, px As Double, py As Double) As (X As Double, Y As Double)
             If v Is Nothing OrElse v.IsEmpty OrElse v.Kind <> "Gitter" Then Return (px, py)
-            Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * v.Columns
-            Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * v.Rows
-            Dim s0 = Math.Max(0, Math.Min(v.Columns - 1, CInt(Math.Floor(u))))
-            Dim z0 = Math.Max(0, Math.Min(v.Rows - 1, CInt(Math.Floor(w))))
-            Dim tu = u - s0, tw = w - z0
-            Dim K = Function(colIdx As Integer, rowIdx As Integer) As (X As Double, Y As Double)
-                        Dim i = (rowIdx * (v.Columns + 1) + colIdx) * 2
-                        Return (v.Nodes(i), v.Nodes(i + 1))
-                    End Function
-            Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
-            Dim top = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
-            Dim bottom = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
-            Return (top.Item1 + (bottom.Item1 - top.Item1) * tw,
-                    top.Item2 + (bottom.Item2 - top.Item2) * tw)
+            Dim p = ImageGeometryMapper.MeshPoint(v.Nodes, v.Columns, v.Rows, px, py, 100.0, 100.0)
+            Return (CDbl(p.X), CDbl(p.Y))
         End Function
 
         ''' <summary>Die Abbildung des GITTERWERKZEUGS: das Raster liegt im Quellraum in Prozent, ein
@@ -1052,24 +1041,28 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Dieselbe Abbildung fuer ein beliebiges Knotenraster. Das Verformen-Werkzeug
-        ''' wertet seine vier Randkurven auf so ein Raster aus und geht von dort denselben Weg.</summary>
+        ''' wertet seine vier Randkurven auf so ein Raster aus und geht von dort denselben Weg.
+        '''
+        ''' Gerechnet wird ueber <see cref="ImageGeometryMapper.MeshPoint"/>, also mit DERSELBEN
+        ''' Formel, mit der das Bild gezeichnet und mit der zurueckgerechnet wird. Hier stand die
+        ''' Rechnung ein zweites Mal und dabei bilinear ueber die ganze Masche statt ueber deren zwei
+        ''' Dreiecke - die Objekte wanderten damit ein Stueck anders als das Bild unter ihnen, und
+        ''' zwar am meisten in den Maschenmitten. Eine Formel an zwei Stellen laeuft frueher oder
+        ''' spaeter auseinander; hier hatte sie es schon.</summary>
         Private Shared Function NodeMapping(columns As Integer, rows As Integer,
                                             xs As Double(), ys As Double()) As Func(Of Double, Double, (X As Double, Y As Double))
+            ' Einmal verschraenken statt bei jedem Punkt: [x0, y0, x1, y1, ...], die Form, in der das
+            ' Rezept die Knoten ohnehin fuehrt.
+            Dim count = Math.Min(If(xs Is Nothing, 0, xs.Length), If(ys Is Nothing, 0, ys.Length))
+            Dim nodes(Math.Max(0, count * 2 - 1)) As Double
+            For i = 0 To count - 1
+                nodes(i * 2) = xs(i)
+                nodes(i * 2 + 1) = ys(i)
+            Next
             Return Function(px As Double, py As Double) As (X As Double, Y As Double)
-                       Dim u = Math.Max(0.0, Math.Min(1.0, px / 100.0)) * columns
-                       Dim w = Math.Max(0.0, Math.Min(1.0, py / 100.0)) * rows
-                       Dim s0 = Math.Max(0, Math.Min(columns - 1, CInt(Math.Floor(u))))
-                       Dim z0 = Math.Max(0, Math.Min(rows - 1, CInt(Math.Floor(w))))
-                       Dim tu = u - s0, tw = w - z0
-                       Dim K = Function(colIdx As Integer, rowIdx As Integer) As (X As Double, Y As Double)
-                                   Dim i = rowIdx * (columns + 1) + colIdx
-                                   Return (xs(i), ys(i))
-                               End Function
-                       Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
-                       Dim top = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
-                       Dim bottom = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
-                       Return (top.Item1 + (bottom.Item1 - top.Item1) * tw,
-                               top.Item2 + (bottom.Item2 - top.Item2) * tw)
+                       ' Bezugsgroesse 100, damit Ein- und Ausgabe Prozent bleiben.
+                       Dim p = ImageGeometryMapper.MeshPoint(nodes, columns, rows, px, py, 100.0, 100.0)
+                       Return (CDbl(p.X), CDbl(p.Y))
                    End Function
         End Function
 

@@ -9954,35 +9954,24 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Return New SKPoint(CSng(px / 100.0 * imageWidth), CSng(py / 100.0 * imageHeight))
 
                 Case "Gitter"
-                    ' Zwischen den vier umgebenden Stuetzpunkten interpolieren.
+                    ' Zwischen den vier umgebenden Stuetzpunkten interpolieren - ueber
+                    ' ImageGeometryMapper.MeshPoint, also mit DERSELBEN Formel, mit der das Bild
+                    ' gezeichnet wird (zwei Dreiecke je Masche). Hier stand sie ein drittes Mal und
+                    ' dabei bilinear ueber die ganze Masche: die Ebene wurde damit anders verzogen,
+                    ' als das Bild darunter gezeichnet wird, und am staerksten in den Maschenmitten.
+                    ' Auffallen konnte das kaum, weil es auf den Knoten selbst uebereinstimmt.
                     '
-                    ' NICHT auf 0..1 klemmen. Der Bezugsrahmen ist bei der objekteigenen Verzerrung
+                    ' Die zweite Eigenschaft, auf die es hier ankommt, bringt MeshPoint mit: es
+                    ' KLEMMT NICHT auf 0..1. Der Bezugsrahmen ist bei der objekteigenen Verzerrung
                     ' das OBJEKTRECHTECK, und ein Objekt zeichnet regelmaessig darueber hinaus - ein
                     ' Text auf Pfad legt seine Grundlinie auf einen Kreis, die Zeichen stehen
                     ' senkrecht darauf. Eine Klemmung faltet alles ausserhalb auf die Rechteckkante,
                     ' und genau das war zu sehen: gemessen an einem Kreispfad-Text blieben von der
                     ' Tinte 25 Prozent uebrig, der Rest lag ausserhalb und wurde auf den Rand
-                    ' gestaucht - bei einer Verzerrung, die gar nichts verschiebt.
-                    '
-                    ' Ausserhalb wird stattdessen ueber die Randzelle FORTGESETZT: der Zellenindex
-                    ' bleibt begrenzt (die Zeilen darunter), der Anteil darin darf negativ oder
-                    ' groesser eins werden. Fuer ein Gitter auf seinem Raster ist das exakt die
-                    ' Identitaet, ein unverzerrtes Objekt kommt also unveraendert durch.
-                    Dim u = bx / imageWidth * v.Columns
-                    Dim w = by / imageHeight * v.Rows
-                    Dim s0 = Math.Max(0, Math.Min(v.Columns - 1, CInt(Math.Floor(u))))
-                    Dim z0 = Math.Max(0, Math.Min(v.Rows - 1, CInt(Math.Floor(w))))
-                    Dim tu = u - s0, tw = w - z0
-                    Dim K = Function(colIdx As Integer, rowIdx As Integer) As (X As Double, Y As Double)
-                                Dim i = (rowIdx * (v.Columns + 1) + colIdx) * 2
-                                Return (v.Nodes(i), v.Nodes(i + 1))
-                            End Function
-                    Dim a = K(s0, z0), b = K(s0 + 1, z0), c = K(s0, z0 + 1), d = K(s0 + 1, z0 + 1)
-                    Dim topPt = (a.X + (b.X - a.X) * tu, a.Y + (b.Y - a.Y) * tu)
-                    Dim bottomPt = (c.X + (d.X - c.X) * tu, c.Y + (d.Y - c.Y) * tu)
-                    Dim px = topPt.Item1 + (bottomPt.Item1 - topPt.Item1) * tw
-                    Dim py = topPt.Item2 + (bottomPt.Item2 - topPt.Item2) * tw
-                    Return New SKPoint(CSng(px / 100.0 * imageWidth), CSng(py / 100.0 * imageHeight))
+                    ' gestaucht - bei einer Verzerrung, die gar nichts verschiebt. Ausserhalb wird
+                    ' stattdessen ueber die Randzelle FORTGESETZT.
+                    Return ImageGeometryMapper.MeshPoint(v.Nodes, v.Columns, v.Rows,
+                                                         bx, by, imageWidth, imageHeight)
 
                 Case "Linien"
                     Dim qp(v.LineSource.Length - 1) As Double
