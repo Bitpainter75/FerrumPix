@@ -6506,4 +6506,64 @@
   <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
     <value>Elimina i livelli selezionati (Canc)</value>
   </data>
+  <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
+    <value>Ricerca di volti: {0} di {1}</value>
+  </data>
+  <data name="0_Gesichter_gefunden_66a830ef" xml:space="preserve">
+    <value>{0} volti trovati</value>
+  </data>
+  <data name="Suche_abgebrochen_0_Gesichter_gefunden_8e55e905" xml:space="preserve">
+    <value>Ricerca annullata, {0} volti trovati</value>
+  </data>
+  <data name="0_Gruppen_1_davon_benannt_5fc73794" xml:space="preserve">
+    <value>{0} gruppi, {1} con nome</value>
+  </data>
+  <data name="Seite_0_von_1_2_bis_3_von_4_7ffc6ff5" xml:space="preserve">
+    <value>Pagina {0} di {1}, da {2} a {3} di {4}</value>
+  </data>
+  <data name="Suche_anhalten_Gefundenes_bleibt_gespeichert_f96443bb" xml:space="preserve">
+    <value>Interrompi la ricerca, quanto trovato resta salvato</value>
+  </data>
+  <data name="0_Personen_hast_du_selbst_benannt_Die_Namen_und__1dc0f4b7" xml:space="preserve">
+    <value>Hai assegnato tu stesso il nome a {0} persone. Quei nomi e le loro associazioni andranno persi e una nuova ricerca non li riporta indietro.</value>
+  </data>
+  <data name="Benannt_hast_du_bisher_niemanden_Ein_neuer_Suchl_d9287542" xml:space="preserve">
+    <value>Finora non hai assegnato nomi. Una nuova ricerca ritrova i volti, ma richiede lo stesso tempo della prima volta.</value>
+  </data>
+  <data name="Der_laufende_Suchlauf_lie_sich_nicht_rechtzeitig_fb6e4572" xml:space="preserve">
+    <value>Non è stato possibile interrompere in tempo la ricerca in corso. I volti trovati sono ancora nella libreria. Attendi la fine della ricerca e disattiva di nuovo il riconoscimento.</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_jetzt_aus_Sollen_die_g_b1c4b20a" xml:space="preserve">
+    <value>Il riconoscimento delle persone è ora disattivato. Vuoi rimuovere dalla libreria i volti e le persone trovati?</value>
+  </data>
+  <data name="Eine_Person_hast_du_selbst_benannt_Der_Name_und__6791e11b" xml:space="preserve">
+    <value>Hai assegnato tu stesso il nome a una persona. Quel nome e la sua associazione andranno persi e una nuova ricerca non li riporta indietro.</value>
+  </data>
+  <data name="Gefundene_Gesichter_entfernen_7e3bede7" xml:space="preserve">
+    <value>Rimuovere i volti trovati?</value>
+  </data>
+  <data name="Suchlauf_l_uft_noch_0264a622" xml:space="preserve">
+    <value>Ricerca ancora in corso</value>
+  </data>
+  <data name="den_Betrachter_ffnest_7ec3700f" xml:space="preserve">
+    <value>aprire il visualizzatore</value>
+  </data>
+  <data name="den_Vollbildmodus_ffnest_24a7ef0c" xml:space="preserve">
+    <value>aprire la modalità a schermo intero</value>
+  </data>
+  <data name="Bild_0_x_1_auf_2_x_3_4_Kacheln_5_s_6_34cd6bc6" xml:space="preserve">
+    <value>Immagine {0}x{1} a {2}x{3}, {4} tasselli, {5} s, {6}</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_dam_af17b8c1" xml:space="preserve">
+    <value>Il risultato sarebbe di {0} per {1} pixel, troppo grande per questa via.</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_br__e2e4625a" xml:space="preserve">
+    <value>Il risultato sarebbe di {0} per {1} pixel e richiederebbe {2} GB di memoria in un blocco, più di quanto questa via accetti.</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_St_rke_4_5_e6fa432a" xml:space="preserve">
+    <value>Immagine {0}x{1}, {2} tasselli, {3} s, intensità {4} %, {5}</value>
+  </data>
+  <data name="schnell_5db66027" xml:space="preserve">
+    <value>veloce</value>
+  </data>
 </root>

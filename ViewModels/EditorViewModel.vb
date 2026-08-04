@@ -6589,7 +6589,9 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Die zwoelf Anfasser fuer das Overlay, in ANZEIGE-Prozent: erst die vier Ecken,
-        ''' dann die acht Kantengriffe.</summary>
+        ''' dann die acht Kantengriffe. Punkte ohne Anzeigeort (weggeschnitten, leere
+        ''' Begradigungsecke) kommen als NaN heraus - Overlay und Trefferpruefung uebergehen sie
+        ''' EINZELN, so wie beim Stuetzpunktraster.</summary>
         Public ReadOnly Property EnvelopeValues As Double()
             Get
                 PrepareEnvelope()
@@ -10233,7 +10235,13 @@ Namespace ViewModels
                 ' Was an einer Markierung haengt, muss mitgemeldet werden. "Objekt entfernen" liest
                 ' diesen Wert und blieb sonst dauerhaft grau: der Knopf fragte einmal beim Aufbau und
                 ' erfuhr nie, dass inzwischen etwas markiert ist.
-                If before <> _hasActiveSelection Then Me.RaisePropertyChanged(NameOf(CanRemoveObject))
+                If before <> _hasActiveSelection Then
+                    Me.RaisePropertyChanged(NameOf(CanRemoveObject))
+                    ' Umkehren und Verwerfen haengen ebenfalls daran. Ohne diese Meldung blieben sie
+                    ' nach dem ersten Pinselstrich grau, bis zufaellig ein Verlaufs-Ereignis feuerte,
+                    ' und nach dem Aufheben blieben sie bedienbar.
+                    RaiseMaskActionStateChanged()
+                End If
             End Set
         End Property
 
@@ -11012,7 +11020,12 @@ Namespace ViewModels
                         If layerMask IsNot Nothing AndAlso layerMask.ComponentCount > 1 Then
                             Dim stroke = BuildSourceMaskFromStamp(stamp, rectPx, layerMask.Name)
                             If stroke IsNot Nothing Then
-                                ImageProcessor.ApplyMaskBrushStroke(layerMask, stroke, _selectionCombineMode = "Subtract")
+                                ' Der ECHTE Verknuepfungsmodus, nicht nur "abziehen ja/nein": das
+                                ' SCHNEIDEN aus der Modusreihe fiel sonst still auf Hinzufuegen
+                                ' zurueck, und die Flaeche wuchs, statt geschnitten zu werden.
+                                ImageProcessor.ApplyMaskBrushStroke(layerMask, stroke,
+                                                                    _selectionCombineMode = "Subtract",
+                                                                    _selectionCombineMode)
                                 ReloadEditedLayerMaskIntoSelection()
                             End If
                         Else
@@ -11295,6 +11308,10 @@ Namespace ViewModels
                 If mask.ComponentCount > 1 Then
                     mask.RemoveComponentAt(ActiveMaskComponentIndex)
                     _activeMaskComponentIndex = -1
+                    ' Das rote Overlay nachziehen: waehrend des Zugs wurde der eben entfernte Verlauf
+                    ' laufend mitgezeichnet und bliebe sonst darin stehen, obwohl es ihn nicht mehr
+                    ' gibt. Die andere Seite raeumt es in RemoveGradientMaskAndLayer selbst ab.
+                    PublishGradientOverlay(mask)
                 Else
                     RemoveGradientMaskAndLayer(mask)
                 End If
@@ -11462,19 +11479,31 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Verwerfen heisst bei einer aktiven Auswahl: Auswahl weg. Bei einem markierten
-        ''' Verlauf gibt es keine Auswahl - dort ist die MASKE samt ihrer Ebene gemeint.</summary>
+        ''' Verlauf gibt es keine Auswahl - dort ist die MASKE samt ihrer Ebene gemeint.
+        '''
+        ''' Zeigt ein OBJEKT auf diese Maske, muss es seine Kennung ebenfalls abgeben. Sonst raeumt
+        ''' RemoveGradientMaskAndLayer nur die Korrekturebenen ab, die Maske ueberlebt unter dem
+        ''' Objekt weiter, der Vermerk auf die bearbeitete Maske bleibt stehen, sichtbar passiert
+        ''' nichts - und PushUndo hinterlaesst einen leeren Schritt. Verworfen wird die Maske also
+        ''' wirklich; danach greift RemoveMaskIfUnreferenced.</summary>
         Public Sub DiscardCurrentMask()
             If _hasActiveSelection Then
                 ClearSelection()
                 Return
             End If
-            Dim gradient = CurrentMaskForComponents()
-            If gradient Is Nothing Then Return
+            Dim mask = CurrentMaskForComponents()
+            If mask Is Nothing Then Return
             PushUndo()
             _workingMaskId = ""
-            RemoveGradientMaskAndLayer(gradient)
+            Dim owners = _annotations.Where(Function(a) a IsNot Nothing AndAlso
+                                                String.Equals(a.MaskId, mask.Id, StringComparison.Ordinal)).ToList()
+            For Each owner In owners
+                owner.MaskId = ""
+            Next
+            RemoveGradientMaskAndLayer(mask)
             _activeMaskComponentIndex = -1
             RaiseGradientPropertiesChanged()
+            If owners.Count > 0 Then RaiseAnnotationMaskStateChanged()
             PublishMaskBrushOverlay()
             RebuildLayerRows()
             _hasChanges = True
@@ -11539,7 +11568,11 @@ Namespace ViewModels
                 If c IsNot Nothing AndAlso Math.Abs(c.GradientFeatherPercent - v) > 0.0001 Then
                     c.GradientFeatherPercent = v
                     CommitActiveMaskComponent(c)
-                    PublishGradientOverlay(SelectedGradientMask)
+                    ' Veroeffentlicht wird die Maske des AKTIVEN Bestandteils. SelectedGradientMask
+                    ' verlangt einen Verlauf als ERSTEN Bestandteil und liefert bei einem Verlauf an
+                    ' einer gemalten Ebenenmaske - dem Normalfall - Nothing; das rote Overlay wurde
+                    ' dann beim Drehen am Regler geloescht statt neu gezeichnet.
+                    PublishGradientOverlay(CurrentMaskForComponents())
                     SchedulePreviewUpdate()
                 End If
                 Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
@@ -11559,7 +11592,8 @@ Namespace ViewModels
                 If c IsNot Nothing AndAlso Math.Abs(c.GradientRadiusRatio - v) > 0.0001 Then
                     c.GradientRadiusRatio = v
                     CommitActiveMaskComponent(c)
-                    PublishGradientOverlay(SelectedGradientMask)
+                    ' Maske des AKTIVEN Bestandteils, siehe GradientFeatherPercent.
+                    PublishGradientOverlay(CurrentMaskForComponents())
                     SchedulePreviewUpdate()
                 End If
                 Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
@@ -11577,7 +11611,8 @@ Namespace ViewModels
                 If c IsNot Nothing AndAlso c.Inverted <> value Then
                     c.Inverted = value
                     CommitActiveMaskComponent(c)
-                    PublishGradientOverlay(SelectedGradientMask)
+                    ' Maske des AKTIVEN Bestandteils, siehe GradientFeatherPercent.
+                    PublishGradientOverlay(CurrentMaskForComponents())
                     SchedulePreviewUpdate()
                 End If
                 Me.RaisePropertyChanged(NameOf(GradientInverted))
@@ -11586,12 +11621,15 @@ Namespace ViewModels
 
         ''' <summary>Winkel der Verlaufsachse in Grad, gerechnet in PIXELN (nicht in Prozent, sonst
         ''' verzerrt das Seitenverhältnis die Anzeige). Schreibbar: der Verlauf dreht sich dann um
-        ''' seinen Startpunkt, die Länge bleibt.</summary>
+        ''' seinen Startpunkt, die Länge bleibt.
+        ''' Bezug ist die Maske des AKTIVEN Bestandteils, nicht SelectedGradientMask: die verlangt
+        ''' einen Verlauf als ERSTEN Bestandteil, und bei einem Verlauf an einer gemalten Ebenenmaske
+        ''' zeigte das Feld deshalb 0 und der Setter tat nichts.</summary>
         Public Property GradientAngleDegrees As Double
             Get
-                Dim m = SelectedGradientMask
+                Dim m = CurrentMaskForComponents()
                 Dim c = ActiveMaskComponent()
-                If m Is Nothing OrElse c Is Nothing Then Return 0
+                If m Is Nothing OrElse c Is Nothing OrElse Not c.IsGradient Then Return 0
                 Dim dx = (c.GradientEndXPercent - c.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
                 Dim dy = (c.GradientEndYPercent - c.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
                 Dim grad = Math.Atan2(dy, dx) * 180.0 / Math.PI
@@ -11599,9 +11637,10 @@ Namespace ViewModels
                 Return Math.Round(grad)
             End Get
             Set(value As Double)
-                Dim m = SelectedGradientMask
+                Dim m = CurrentMaskForComponents()
                 Dim c = ActiveMaskComponent()
-                If m Is Nothing OrElse c Is Nothing OrElse m.SourceWidthPixels <= 0 OrElse m.SourceHeightPixels <= 0 Then Return
+                If m Is Nothing OrElse c Is Nothing OrElse Not c.IsGradient Then Return
+                If m.SourceWidthPixels <= 0 OrElse m.SourceHeightPixels <= 0 Then Return
                 Dim dx = (c.GradientEndXPercent - c.GradientStartXPercent) / 100.0 * m.SourceWidthPixels
                 Dim dy = (c.GradientEndYPercent - c.GradientStartYPercent) / 100.0 * m.SourceHeightPixels
                 Dim laenge = Math.Sqrt(dx * dx + dy * dy)
@@ -12508,10 +12547,27 @@ Namespace ViewModels
                 ' Glaetten: die Griffe zeigen entlang der Verbindung der beiden Nachbarn, je ein
                 ' Drittel des Abstands lang. Das ist die uebliche Naeherung und ergibt eine Kurve,
                 ' die durch den Punkt laeuft, statt an ihm zu knicken.
-                Dim previous = nodes((index - 1 + nodes.Count) Mod nodes.Count).Anchor
-                Dim nextAnchor = nodes((index + 1) Mod nodes.Count).Anchor
-                Dim dirX = (nextAnchor.X - previous.X) / 6.0F
-                Dim dirY = (nextAnchor.Y - previous.Y) / 6.0F
+                ' Bei einem OFFENEN Pfad haben erster und letzter Punkt nur EINEN Nachbarn. Der
+                ' Umlauf zum jeweils anderen Ende richtete die Griffe quer durch den Pfad aus, und
+                ' die Kurve knickte unplausibel. Dort zeigt die Richtung deshalb auf den einen
+                ' vorhandenen Nachbarn; der Faktor bleibt derselbe (die halbe Nachbarstrecke der
+                ' inneren Punkte entspricht einem Drittel des einen Abschnitts).
+                Dim dirX As Single
+                Dim dirY As Single
+                If Not target.PathClosed AndAlso index = 0 Then
+                    Dim nextAnchor = nodes(1).Anchor
+                    dirX = (nextAnchor.X - node.Anchor.X) / 3.0F
+                    dirY = (nextAnchor.Y - node.Anchor.Y) / 3.0F
+                ElseIf Not target.PathClosed AndAlso index = nodes.Count - 1 Then
+                    Dim previous = nodes(nodes.Count - 2).Anchor
+                    dirX = (node.Anchor.X - previous.X) / 3.0F
+                    dirY = (node.Anchor.Y - previous.Y) / 3.0F
+                Else
+                    Dim previous = nodes((index - 1 + nodes.Count) Mod nodes.Count).Anchor
+                    Dim nextAnchor = nodes((index + 1) Mod nodes.Count).Anchor
+                    dirX = (nextAnchor.X - previous.X) / 6.0F
+                    dirY = (nextAnchor.Y - previous.Y) / 6.0F
+                End If
                 node.HandleIn = New SKPoint(node.Anchor.X - dirX, node.Anchor.Y - dirY)
                 node.HandleOut = New SKPoint(node.Anchor.X + dirX, node.Anchor.Y + dirY)
             Else
@@ -12634,9 +12690,20 @@ Namespace ViewModels
 
         ''' <summary>Gegenrichtung: Anzeige-Prozent zurueck in das Rechteck DES OBJEKTS. Das Rechteck
         ''' bleibt dabei unveraendert - ein Punkt darf ueber seinen Rand hinaus, so wie eine Ecke der
-        ''' Objektverzerrung auch.</summary>
+        ''' Objektverzerrung auch.
+        ''' Bezug ist das Rechteck der MARKIERUNG. Wer die Punkte eines anderen Objekts schreibt oder
+        ''' das Modellrechteck gerade selbst gesetzt hat, nimmt WritePathNodesInRect und gibt das
+        ''' passende Rechteck ausdruecklich mit - sonst rechnen Modell und Bezug auseinander.</summary>
         Private Sub WritePathNodesFromDisplay(annotation As ImageAnnotation, nodes As List(Of ImageProcessor.PathNode))
-            Dim r = GetSelectedAnnotationDisplayRectPercent()
+            WritePathNodesInRect(annotation, nodes, GetSelectedAnnotationDisplayRectPercent())
+        End Sub
+
+        ''' <summary>Dieselbe Umrechnung mit ausdruecklich uebergebenem Bezugsrechteck in
+        ''' Anzeige-Prozent.</summary>
+        Private Shared Sub WritePathNodesInRect(annotation As ImageAnnotation,
+                                                nodes As List(Of ImageProcessor.PathNode),
+                                                r As (X As Double, Y As Double, Width As Double, Height As Double))
+            If annotation Is Nothing OrElse nodes Is Nothing Then Return
             If r.Width <= 0 OrElse r.Height <= 0 Then Return
             Dim toObject = Function(p As SKPoint) New SKPoint(CSng((p.X - r.X) / r.Width * 100.0),
                                                               CSng((p.Y - r.Y) / r.Height * 100.0))
@@ -12908,8 +12975,12 @@ Namespace ViewModels
             target.YPixels = CSng(PercentYToPixels(stored.Y))
             target.WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width)))
             target.HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height)))
-            ' Die Punkte ERST danach zurueckschreiben: sie beziehen sich auf das NEUE Rechteck.
-            WritePathNodesFromDisplay(target, nodes)
+            ' Die Punkte beziehen sich auf das NEUE Rechteck, und genau dieses wird ausdruecklich
+            ' mitgegeben. Der Bezug ueber die Editor-Puffer taugt hier NICHT: die stehen bis
+            ' LoadSelectedAnnotationIntoEditor noch auf dem ALTEN Rechteck, und die Punkte laegen
+            ' danach im falschen Bezug - der Pfad sprang und verzerrte sich nach jedem Zug, der die
+            ' Grenzen aenderte.
+            WritePathNodesInRect(target, nodes, (minX, minY, maxX - minX, maxY - minY))
             LoadSelectedAnnotationIntoEditor()
         End Sub
 
@@ -12935,7 +13006,10 @@ Namespace ViewModels
                 If target IsNot Nothing Then
                     PushUndo()
                     target.PathClosed = closed
-                    WritePathNodesFromDisplay(target, nodes)
+                    ' Bezug ist das Rechteck DES ZIELS, nicht das der Markierung: die kann sich
+                    ' waehrend eines Grundlinien-Entwurfs ueber das Ebenenpanel geaendert haben, und
+                    ' die Punkte laegen dann im Rechteck eines fremden Objekts.
+                    WritePathNodesInRect(target, nodes, StoredAnnotationRectToDisplayPercent(target))
                     _hasChanges = True
                     RaisePathOverlayChanged()
                     RebuildLayerRows()

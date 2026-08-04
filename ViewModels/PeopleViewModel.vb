@@ -192,9 +192,12 @@ Namespace ViewModels
                 If _allPeople.Count = 0 Then Return LocalizationService.T("Noch keine Personen erkannt")
                 ' NICHT _allPeople.Count(...): VB liest das als Indexzugriff auf die Eigenschaft
                 ' Count und findet die LINQ-Fassung gar nicht erst.
-                Dim benannt = _allPeople.Where(Function(p) p.IsNamed).Count()
-                Return $"{_allPeople.Count} " & LocalizationService.T("Gruppen") & ", " &
-                       $"{benannt} " & LocalizationService.T("davon benannt")
+                Dim named = _allPeople.Where(Function(p) p.IsNamed).Count()
+                ' EINE Schablone mit Platzhaltern statt aneinandergehaengter Bruchstuecke: in
+                ' anderen Sprachen stehen Zahl und Wort in anderer Reihenfolge, und aus Stuecken
+                ' laesst sich kein Satz bauen, den ein Uebersetzer umstellen koennte.
+                Return String.Format(LocalizationService.T("{0} Gruppen, {1} davon benannt"),
+                                     _allPeople.Count, named)
             End Get
         End Property
 
@@ -216,25 +219,30 @@ Namespace ViewModels
 
         Public ReadOnly Property PeoplePageText As String
             Get
-                Return SeitenText(_peoplePage, _allPeople.Count)
+                Return PageText(_peoplePage, _allPeople.Count)
             End Get
         End Property
 
         Public ReadOnly Property FacePageText As String
             Get
-                Return SeitenText(_facePage, _allFaces.Count)
+                Return PageText(_facePage, _allFaces.Count)
             End Get
         End Property
 
         ''' <summary>"Seite 2 von 5, 61 bis 120 von 263". Die zweite Haelfte steht dabei, weil sie
-        ''' die eigentliche Frage beantwortet: wie viel ist noch da.</summary>
-        Private Shared Function SeitenText(seite As Integer, gesamt As Integer) As String
-            If gesamt = 0 Then Return ""
-            Dim seiten = Math.Max(1, CInt(Math.Ceiling(gesamt / CDbl(PeoplePageSize))))
-            Dim von = seite * PeoplePageSize + 1
-            Dim bis = Math.Min(gesamt, (seite + 1) * PeoplePageSize)
-            Return $"{LocalizationService.T("Seite")} {seite + 1} {LocalizationService.T("von")} {seiten}" &
-                   $"  ·  {von} {LocalizationService.T("bis")} {bis} {LocalizationService.T("von")} {gesamt}"
+        ''' die eigentliche Frage beantwortet: wie viel ist noch da.
+        '''
+        ''' EINE Schablone mit Platzhaltern und nicht fuenf einzeln uebersetzte Bruchstuecke: die
+        ''' Wortstellung ist von Sprache zu Sprache verschieden, und wer nur "Seite", "von" und "bis"
+        ''' vorgesetzt bekommt, kann den Satz nicht umstellen. Ausserdem heisst "von" hier zweimal
+        ''' etwas anderes - einmal die Anzahl der Seiten, einmal die Anzahl der Eintraege.</summary>
+        Private Shared Function PageText(page As Integer, total As Integer) As String
+            If total = 0 Then Return ""
+            Dim pages = Math.Max(1, CInt(Math.Ceiling(total / CDbl(PeoplePageSize))))
+            Dim first = page * PeoplePageSize + 1
+            Dim last = Math.Min(total, (page + 1) * PeoplePageSize)
+            Return String.Format(LocalizationService.T("Seite {0} von {1}, {2} bis {3} von {4}"),
+                                 page + 1, pages, first, last, total)
         End Function
 
         Public ReadOnly Property HasPeoplePaging As Boolean

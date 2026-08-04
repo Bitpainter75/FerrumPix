@@ -76,7 +76,7 @@ Namespace Services
                 options = CreateDictionary(keys, values)
                 If options = IntPtr.Zero Then Return Nothing
 
-                image = CGImageSourceCreateThumbnailAtIndex(source, UIntPtr.Zero, options)
+                image = CGImageSourceCreateThumbnailAtIndex(source, PrimaryImageIndex(source), options)
                 If image = IntPtr.Zero Then Return Nothing
 
                 data = CFDataCreateMutable(IntPtr.Zero, UIntPtr.Zero)
@@ -86,7 +86,7 @@ Namespace Services
                 If destination = IntPtr.Zero Then Return Nothing
 
                 CGImageDestinationAddImage(destination, image, IntPtr.Zero)
-                If CGImageDestinationFinalize(destination) = 0 Then Return Nothing
+                If Not CGImageDestinationFinalize(destination) Then Return Nothing
 
                 Dim length = CFDataGetLength(data)
                 Dim bytesPointer = CFDataGetBytePtr(data)
@@ -126,7 +126,7 @@ Namespace Services
                 If url = IntPtr.Zero Then Return (0, 0)
                 source = CGImageSourceCreateWithURL(url, IntPtr.Zero)
                 If source = IntPtr.Zero Then Return (0, 0)
-                properties = CGImageSourceCopyPropertiesAtIndex(source, UIntPtr.Zero, IntPtr.Zero)
+                properties = CGImageSourceCopyPropertiesAtIndex(source, PrimaryImageIndex(source), IntPtr.Zero)
                 If properties = IntPtr.Zero Then Return (0, 0)
 
                 Dim width = ReadDictionaryInteger(properties, ReadConstant(_imageIo, "kCGImagePropertyPixelWidth"))
@@ -149,6 +149,30 @@ Namespace Services
         End Function
 
         ' ── CoreFoundation-Handgriffe ────────────────────────────────────────────
+
+        ''' <summary>Der Index des HAUPTBILDES in der Datei.
+        '''
+        ''' Nicht immer 0: eine HEIF-Datei kann mehrere Bilder tragen (Sequenzen, Serienbilder,
+        ''' Tiefen- und Hilfsbilder), und welches davon das eigentliche Foto ist, steht im Container.
+        ''' Fest den Index 0 zu nehmen liefert dort ein anderes Bild und andere Masse.
+        '''
+        ''' Die Funktion gibt es erst ab macOS 10.14. Auf einem aelteren System fehlt das Symbol, und
+        ''' ein Aufruf risse mit einer Ausnahme ab - deshalb wird erst nachgesehen, ob es da ist, und
+        ''' im Zweifel bleibt es bei 0, also genau bei dem Verhalten von vorher.
+        '''
+        ''' Der Rueckgabewert ist eine Zahl und kein CoreFoundation-Objekt: nichts freizugeben.</summary>
+        Private Shared Function PrimaryImageIndex(source As IntPtr) As UIntPtr
+            If source = IntPtr.Zero Then Return UIntPtr.Zero
+            If ReadSymbolAddress(_imageIo, "CGImageSourceGetPrimaryImageIndex") = IntPtr.Zero Then
+                Return UIntPtr.Zero
+            End If
+            Try
+                Return CGImageSourceGetPrimaryImageIndex(source)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MacImageIo.PrimaryIndex", ex)
+                Return UIntPtr.Zero
+            End Try
+        End Function
 
         Private Shared Function CreateFileUrl(path As String) As IntPtr
             Dim pathBytes = Text.Encoding.UTF8.GetBytes(path)
@@ -181,7 +205,7 @@ Namespace Services
             Dim number = CFDictionaryGetValue(dictionary, key)
             If number = IntPtr.Zero Then Return 0
             Dim value As Integer
-            Return If(CFNumberGetValue(number, CFNumberSInt32Type, value) <> 0, value, 0)
+            Return If(CFNumberGetValue(number, CFNumberSInt32Type, value), value, 0)
         End Function
 
         ''' <summary>Adresse eines exportierten Symbols.</summary>
@@ -255,11 +279,15 @@ Namespace Services
         Private Shared Function CFDictionaryGetValue(dictionary As IntPtr, key As IntPtr) As IntPtr
         End Function
 
+        ' Der Rueckgabewert ist in C ein Boolean von EINEM Byte. Ihn als Integer zu holen ist
+        ' falsch: bei einer so schmalen Rueckgabe sind die oberen Registerbits laut ABI auf arm64
+        ' wie auf x64 unbestimmt, ein Nein mit Muell darueber laese sich als Ja. Deshalb Boolean
+        ' mit ausdruecklichem I1 - dann wertet die Laufzeit genau das eine Byte aus.
         <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
         Private Shared Function CFNumberGetValue(
             number As IntPtr,
             numberType As Integer,
-            ByRef value As Integer) As Integer
+            ByRef value As Integer) As <MarshalAs(UnmanagedType.I1)> Boolean
         End Function
 
         <DllImport(CoreFoundationFramework, CallingConvention:=CallingConvention.Cdecl)>
@@ -298,6 +326,12 @@ Namespace Services
             options As IntPtr) As IntPtr
         End Function
 
+        ' size_t, also so breit wie ein Zeiger. Erst ab macOS 10.14 vorhanden - der Aufruf laeuft
+        ' deshalb ueber PrimaryImageIndex, das vorher nach dem Symbol sieht.
+        <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function CGImageSourceGetPrimaryImageIndex(source As IntPtr) As UIntPtr
+        End Function
+
         <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
         Private Shared Function CGImageSourceCreateThumbnailAtIndex(
             source As IntPtr,
@@ -320,8 +354,10 @@ Namespace Services
             properties As IntPtr)
         End Sub
 
+        ' Wie bei CFNumberGetValue: in C ein Boolean von einem Byte, deshalb Boolean mit I1 und
+        ' nicht Integer.
         <DllImport(ImageIoFramework, CallingConvention:=CallingConvention.Cdecl)>
-        Private Shared Function CGImageDestinationFinalize(destination As IntPtr) As Integer
+        Private Shared Function CGImageDestinationFinalize(destination As IntPtr) As <MarshalAs(UnmanagedType.I1)> Boolean
         End Function
 
     End Class

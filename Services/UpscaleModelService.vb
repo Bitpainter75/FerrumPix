@@ -91,6 +91,15 @@ Namespace Services
         ''' Entrauschen, weil hier wirklich neue Bildpunkte entstehen.</summary>
         Private Const TileOverlap As Integer = 16
 
+        ''' <summary>Wieviel Speicher das ERGEBNIS hoechstens belegen darf.
+        '''
+        ''' Das Ziel-Bitmap liegt vollstaendig im Speicher, und zwar an einem Stueck: bei vierfacher
+        ''' Vergroesserung sind das die sechzehnfache Flaeche der Quelle mal vier Byte. Aus einem
+        ''' 45-Megapixel-Foto werden so knapp drei Gigabyte, aus einem 90-Megapixel-Foto knapp sechs. Was
+        ''' darueber liegt, scheitert an der Speicheranforderung - aber erst nach Minuten Rechnung,
+        ''' und das ist die schlechteste aller Antworten. Deshalb wird vorher gerechnet.</summary>
+        Private Const MaxOutputBytes As Long = 6L * 1024L * 1024L * 1024L
+
         ''' <summary>Was der letzte Durchlauf gerechnet hat. Wird danach angezeigt.</summary>
         Public Shared Property LastReport As String = ""
 
@@ -151,6 +160,17 @@ Namespace Services
                     Return Nothing
                 End If
 
+                ' Zuerst die Frage, ob das Ergebnis ueberhaupt passt - VOR der ersten Kachel. Ein
+                ' Lauf dieser Art kostet Minuten, und ein Abbruch am Ende haette sie verschenkt;
+                ' schlimmer noch, der Speicherweg speicherte dann ohne Vergroesserung, und der
+                ' Grund stuende nirgends.
+                Dim sizeProblem = OutputTooLarge(image.Width, image.Height, scale)
+                If sizeProblem.Length > 0 Then
+                    LastReport = sizeProblem
+                    DiagnosticLogService.LogAlways("Hochskalieren", sizeProblem)
+                    Return Nothing
+                End If
+
                 Dim tileEdge = TileEdgeFor(scale)
                 Dim stride = Math.Max(1, tileEdge - 2 * TileOverlap)
                 Dim tilesX = Math.Max(1, CInt(Math.Ceiling(image.Width / CDbl(stride))))
@@ -194,9 +214,15 @@ Namespace Services
                 If image.AlphaType <> SKAlphaType.Opaque Then ScaleAlphaInto(image, result)
 
                 clock.Stop()
-                LastReport = $"Bild {image.Width}x{image.Height} auf " &
-                             $"{result.Width}x{result.Height}, {done} Kacheln, " &
-                             $"{clock.Elapsed.TotalSeconds:F0} s, {model.Label}"
+                ' Eine SCHABLONE mit Platzhaltern statt einer Verkettung: der Bericht landet in der
+                ' Statuszeile und im Verlauf, und zusammengesetzte Texte lassen sich nicht
+                ' uebersetzen. Das Modell-Label wird EINZELN uebersetzt - es steht mit demselben
+                ' deutschen Wortlaut in den Sprachdateien wie hier im Register.
+                LastReport = String.Format(
+                    LocalizationService.T("Bild {0}x{1} auf {2}x{3}, {4} Kacheln, {5} s, {6}"),
+                    image.Width, image.Height, result.Width, result.Height, done,
+                    clock.Elapsed.TotalSeconds.ToString("F0"),
+                    LocalizationService.T(model.Label))
                 DiagnosticLogService.LogAlways("Hochskalieren", LastReport)
                 Dim finished = result
                 result = Nothing
@@ -206,6 +232,43 @@ Namespace Services
                 result?.Dispose()
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Passt das Ergebnis? Leer heisst ja, sonst steht dort der Grund im Klartext -
+        ''' derselbe Text, der danach in der Statuszeile und im Diagnoselog steht.
+        '''
+        ''' Zwei Schranken. Die erste ist hart: die Zeilenlaenge eines Bitmaps und die Laenge eines
+        ''' Speicher-Kopiervorgangs sind 32-Bit-Zahlen, ein breiteres Bild liesse sich gar nicht
+        ''' anlegen. Die zweite ist eine Vorsichtsgrenze gegen den Speicher (siehe
+        ''' <see cref="MaxOutputBytes"/>).</summary>
+        Private Shared Function OutputTooLarge(width As Integer, height As Integer, scale As Integer) As String
+            Dim outWidth = CLng(width) * scale
+            Dim outHeight = CLng(height) * scale
+            Dim rowBytes = outWidth * 4L
+            If outWidth > Integer.MaxValue OrElse outHeight > Integer.MaxValue OrElse
+               rowBytes > Integer.MaxValue Then
+                Return String.Format(
+                    LocalizationService.T("Das Ergebnis wäre {0} mal {1} Bildpunkte groß und damit zu groß für diesen Weg."),
+                    outWidth, outHeight)
+            End If
+            Dim bytes = rowBytes * outHeight
+            If bytes > MaxOutputBytes Then
+                Return String.Format(
+                    LocalizationService.T("Das Ergebnis wäre {0} mal {1} Bildpunkte groß und bräuchte {2} GB Speicher am Stück - so viel nimmt dieser Weg nicht an."),
+                    outWidth, outHeight, (bytes / (1024.0 * 1024.0 * 1024.0)).ToString("F1"))
+            End If
+            Return ""
+        End Function
+
+        ''' <summary>Der Anfang einer Bildzeile im Speicher.
+        '''
+        ''' Der Versatz wird in 64 Bit gerechnet, und das ist hier kein Schmuck: bei vierfacher
+        ''' Vergroesserung eines 45-Megapixel-Fotos ist das Ziel rund 32000 mal 22000 Bildpunkte
+        ''' gross, und Zeilennummer mal Zeilenlaenge ueberschreitet ab etwa drei Vierteln der Hoehe den Bereich einer
+        ''' 32-Bit-Zahl. In VB WIRFT die Multiplikation dann, statt still umzulaufen - der ganze
+        ''' Lauf risse ab, und gespeichert wuerde wortlos ohne Vergroesserung.</summary>
+        Private Shared Function RowStart(basePointer As IntPtr, row As Integer, stride As Integer) As IntPtr
+            Return New IntPtr(basePointer.ToInt64() + CLng(row) * CLng(stride))
         End Function
 
         ''' <summary>Den Massstab des Modells an einer kleinen Kachel messen.</summary>
@@ -251,12 +314,12 @@ Namespace Services
                     Dim alphaPixels = sourceAlpha.GetPixels()
                     For y = 0 To source.Height - 1
                         Runtime.InteropServices.Marshal.Copy(
-                            IntPtr.Add(srcPixels, y * srcStride), srcRow, 0, srcStride)
+                            RowStart(srcPixels, y, srcStride), srcRow, 0, srcStride)
                         For x = 0 To source.Width - 1
                             alphaRow(x) = srcRow(x * 4 + 3)
                         Next
                         Runtime.InteropServices.Marshal.Copy(
-                            alphaRow, 0, IntPtr.Add(alphaPixels, y * alphaStride), alphaStride)
+                            alphaRow, 0, RowStart(alphaPixels, y, alphaStride), alphaStride)
                     Next
 
                     Using scaled = New SKBitmap(New SKImageInfo(target.Width, target.Height,
@@ -276,9 +339,9 @@ Namespace Services
                         Dim scaledPixels = scaled.GetPixels()
                         For y = 0 To target.Height - 1
                             Runtime.InteropServices.Marshal.Copy(
-                                IntPtr.Add(scaledPixels, y * scaledStride), scaledRow, 0, scaledStride)
+                                RowStart(scaledPixels, y, scaledStride), scaledRow, 0, scaledStride)
                             Runtime.InteropServices.Marshal.Copy(
-                                IntPtr.Add(dstPixels, y * dstStride), dstRow, 0, dstStride)
+                                RowStart(dstPixels, y, dstStride), dstRow, 0, dstStride)
                             For x = 0 To target.Width - 1
                                 Dim alpha = scaledRow(x)
                                 Dim p = x * 4
@@ -290,7 +353,7 @@ Namespace Services
                                 End If
                             Next
                             Runtime.InteropServices.Marshal.Copy(
-                                dstRow, 0, IntPtr.Add(dstPixels, y * dstStride), dstStride)
+                                dstRow, 0, RowStart(dstPixels, y, dstStride), dstStride)
                         Next
                     End Using
                 End Using
@@ -315,7 +378,7 @@ Namespace Services
             Dim srcPixels = source.GetPixels()
             For yy = 0 To h - 1
                 Runtime.InteropServices.Marshal.Copy(
-                    IntPtr.Add(srcPixels, (window.Top + yy) * srcStride), row, 0, srcStride)
+                    RowStart(srcPixels, window.Top + yy, srcStride), row, 0, srcStride)
                 Dim line = yy * w
                 For xx = 0 To w - 1
                     Dim p = (window.Left + xx) * 4
@@ -343,21 +406,31 @@ Namespace Services
                 For yy = keep.Top * scale To keep.Bottom * scale - 1
                     If yy < 0 OrElse yy >= target.Height Then Continue For
                     Runtime.InteropServices.Marshal.Copy(
-                        IntPtr.Add(dstPixels, yy * dstStride), dstRow, 0, dstStride)
+                        RowStart(dstPixels, yy, dstStride), dstRow, 0, dstStride)
                     Dim sy = Math.Min(Math.Max(0, yy - window.Top * scale), rh - 1)
                     For xx = keep.Left * scale To keep.Right * scale - 1
                         If xx < 0 OrElse xx >= target.Width Then Continue For
                         Dim sx = Math.Min(Math.Max(0, xx - window.Left * scale), rw - 1)
                         Dim i = sy * rw + sx
                         Dim p = xx * 4
-                        dstRow(p) = ToByte(values(rLayer * 2 + i) * 255.0F)
-                        dstRow(p + 1) = ToByte(values(rLayer + i) * 255.0F)
-                        dstRow(p + 2) = ToByte(values(i) * 255.0F)
                         ' Volle Deckung. Traegt die Quelle einen Alphakanal, wird er nach dem
-                        ' letzten Kachellauf ueber ScaleAlphaInto darueber gelegt.
+                        ' letzten Kachellauf ueber ScaleAlphaInto darueber gelegt. Das steht VOR
+                        ' der Pruefung unten: ein uebergangener Bildpunkt darf kein Loch werden.
                         dstRow(p + 3) = 255
+                        Dim newRed = values(i) * 255.0F
+                        Dim newGreen = values(rLayer + i) * 255.0F
+                        Dim newBlue = values(rLayer * 2 + i) * 255.0F
+                        ' Ein einzelner unsinniger Wert darf nicht den Bildpunkt verderben - dann
+                        ' bleibt stehen, was dort schon steht, statt einen schwarzen Punkt zu
+                        ' setzen. Genau so haelt es der Entrausch-Weg auch.
+                        If Single.IsNaN(newRed) OrElse Single.IsNaN(newGreen) OrElse Single.IsNaN(newBlue) Then
+                            Continue For
+                        End If
+                        dstRow(p) = ToByte(newBlue)
+                        dstRow(p + 1) = ToByte(newGreen)
+                        dstRow(p + 2) = ToByte(newRed)
                     Next
-                    Runtime.InteropServices.Marshal.Copy(dstRow, 0, IntPtr.Add(dstPixels, yy * dstStride), dstStride)
+                    Runtime.InteropServices.Marshal.Copy(dstRow, 0, RowStart(dstPixels, yy, dstStride), dstStride)
                 Next
             End Using
         End Sub
@@ -365,6 +438,9 @@ Namespace Services
         ''' <summary>Einen gerechneten Kanalwert in eine Stufe zurueckholen. Beschnitten wird in
         ''' Fliesskomma und ERST DANN gerundet: ein Modellwert weit jenseits des Wertebereichs
         ''' wuerde beim Umwandeln in eine Ganzzahl sonst eine Ausnahme werfen.</summary>
+        ''' <remarks>Der Fang fuer NaN ist nur noch die letzte Reissleine. Die eigentliche Antwort
+        ''' darauf steht beim Aufrufer: dort wird der Bildpunkt uebergangen und behaelt, was er
+        ''' hat - hier unten ist das Original nicht mehr bekannt.</remarks>
         Private Shared Function ToByte(value As Single) As Byte
             If Single.IsNaN(value) Then Return 0
             Return CByte(Math.Max(0.0F, Math.Min(255.0F, value)))

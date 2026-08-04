@@ -22,7 +22,7 @@
                   ToolTip.Tip="foto.jpg wird zu foto_Vintage.jpg"/>
 
         <!-- Nur da, wenn in der Auswahl wirklich etwas offen ist (siehe
-             MainWindowViewModel.PreparePendingBakedOption). -->
+             MainWindowViewModel.PreparePendingBakedOptionAsync). -->
         <CheckBox Content="{Binding DialogPendingBakedLabel}"
                   IsChecked="{Binding DialogApplyPendingBaked, Mode=TwoWay}"
                   IsVisible="{Binding IsDialogPendingBakedAvailable}"

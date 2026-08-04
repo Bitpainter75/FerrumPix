@@ -88,8 +88,11 @@
                         <TextBlock Text="Modelle"/>
                     </StackPanel>
                 </Button>
-                <!-- Nur mit eingeschalteter Erkennung: ohne sie gibt es keine Gruppen, und ein
-                     Abschnitt, hinter dem nie etwas steht, ist ein leeres Versprechen. -->
+                <!-- Nur mit vorhandener Laufzeit fuer die Modelle, NICHT mit eingeschalteter
+                     Erkennung: im Abschnitt steht der Schalter selbst, und der muss auch dann
+                     erreichbar sein, wenn die Erkennung aus ist. Ohne die Laufzeit dagegen laesst
+                     sich dort nichts einschalten, und ein Abschnitt ohne bedienbaren Inhalt ist
+                     ein leeres Versprechen. -->
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
                         IsVisible="{Binding ModelRuntimeAvailable}"

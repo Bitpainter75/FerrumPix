@@ -739,20 +739,36 @@ Namespace Services
         Public Function GetPathsForPersonNames(names As IReadOnlyList(Of String)) As List(Of String)
             Dim result As New List(Of String)()
             If names Is Nothing OrElse names.Count = 0 Then Return result
+            ' Ohne Ruecksicht auf die Schreibweise vereinzelt, denn genau so wird gleich verglichen.
+            ' Stuende "Anna" und "anna" in der Liste, waeren zwei verschiedene Gruppen auf demselben
+            ' Bild verlangt - und das Bild fiele aus der Vorauswahl, obwohl es passt.
+            Dim wanted = names.Where(Function(n) Not String.IsNullOrWhiteSpace(n)).
+                               Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            If wanted.Count = 0 Then Return result
             Try
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         Dim parameters As New List(Of String)()
-                        For i = 0 To names.Count - 1
+                        For i = 0 To wanted.Count - 1
                             parameters.Add("$n" & i)
-                            cmd.Parameters.AddWithValue("$n" & i, names(i))
+                            cmd.Parameters.AddWithValue("$n" & i, wanted(i))
                         Next
+                        ' DIE VORAUSWAHL MUSS EINE OBERMENGE DER AUSWERTUNG SEIN. Verglichen wird
+                        ' oben ohne Ruecksicht auf Gross- und Kleinschreibung, gezaehlt wurde
+                        ' frueher mit - zwei Gruppen "Anna" und "anna" auf einem Bild zaehlten damit
+                        ' als zwei Personen und warfen das Bild heraus, das die eigentliche
+                        ' Auswertung danach getroffen haette. Deshalb LOWER beim Zaehlen.
+                        ' Und ">=" statt "=": das Vereinzeln hier oben und das von SQLite muessen
+                        ' nicht bis auf den letzten Buchstaben dasselbe tun (Umlaute etwa fasst
+                        ' SQLite nicht zusammen). Ein Vorfilter darf zu viel liefern, nur nie zu
+                        ' wenig - mehr als die verlangten Namen kann ohnehin nicht zusammenkommen,
+                        ' weil die Bedingung oben nur diese durchlaesst.
                         cmd.CommandText =
                             "SELECT f.FilePath FROM Face f JOIN Person p ON p.Id = f.PersonId " &
                             $"WHERE p.Name COLLATE NOCASE IN ({String.Join(",", parameters)}) " &
-                            "GROUP BY f.FilePath HAVING COUNT(DISTINCT p.Name) = $n"
-                        cmd.Parameters.AddWithValue("$n", names.Count)
+                            "GROUP BY f.FilePath HAVING COUNT(DISTINCT LOWER(p.Name)) >= $n"
+                        cmd.Parameters.AddWithValue("$n", wanted.Count)
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 result.Add(reader.GetString(0))
@@ -1117,18 +1133,51 @@ Namespace Services
         End Sub
 
         ''' <summary>Alles zu Personen wegwerfen. Fuer den Fall, dass jemand die Funktion wieder
-        ''' abschaltet - biometrische Merkmale sollen dann nicht liegenbleiben.</summary>
-        Public Sub ClearAllFaces()
+        ''' abschaltet - biometrische Merkmale sollen dann nicht liegenbleiben.
+        '''
+        ''' HAELT ZUERST EINEN LAUFENDEN SUCHLAUF AN. Sonst faellt das Leeren mitten hinein, und der
+        ''' Lauf schreibt danach weiter: die Tabellen waeren hinterher nicht leer, sondern halb
+        ''' gefuellt, und der Benutzer haette genau das nicht erreicht, wofuer er den Schalter
+        ''' umgelegt hat. Laesst der Lauf sich nicht anhalten, wird NICHTS geloescht - lieber gar
+        ''' nicht als halb: ein fehlender Scan-Vermerk zu vorhandenen Gesichtern taeuscht beim
+        ''' Wiedereinschalten einen erledigten Durchlauf vor.
+        '''
+        ''' EINE TRANSAKTION fuer alle drei Tabellen. Kaeme die zweite Loeschung nicht durch, waeren
+        ''' die Gesichter weg und die Vermerke da - dann gilt jedes Bild als bereits durchsucht, und
+        ''' ein Neu-Scan liefe nie wieder an.</summary>
+        ''' <returns>False, wenn nichts geleert wurde, weil der Suchlauf nicht anzuhalten war.</returns>
+        Public Function ClearAllFaces() As Boolean
+            If Not FaceScanRunner.RequestStopAndWait() Then
+                DiagnosticLogService.LogAlways("Library.ClearAllFaces",
+                                               "Nicht geleert: der Gesichtsdurchlauf steht noch")
+                Return False
+            End If
+
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
-                Using cmd = conn.CreateCommand()
-                    cmd.CommandText = "DELETE FROM Face; DELETE FROM Person; DELETE FROM ScannedImage;"
-                    cmd.ExecuteNonQuery()
+                Using tx = conn.BeginTransaction()
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM Face"
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM Person"
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM ScannedImage"
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    tx.Commit()
                 End Using
             End Using
             ' Es gibt keine Mitten mehr, weil es keine Gesichter mehr gibt.
             InvalidateCentroids()
-        End Sub
+            Return True
+        End Function
 
         ' ── Merkmalsreihe als BLOB ───────────────────────────────────────────────
 

@@ -6505,4 +6505,64 @@
   <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
     <value>Eliminar as camadas selecionadas (Del)</value>
   </data>
+  <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
+    <value>A procurar rostos: {0} de {1}</value>
+  </data>
+  <data name="0_Gesichter_gefunden_66a830ef" xml:space="preserve">
+    <value>{0} rostos encontrados</value>
+  </data>
+  <data name="Suche_abgebrochen_0_Gesichter_gefunden_8e55e905" xml:space="preserve">
+    <value>Procura cancelada, {0} rostos encontrados</value>
+  </data>
+  <data name="0_Gruppen_1_davon_benannt_5fc73794" xml:space="preserve">
+    <value>{0} grupos, {1} deles com nome</value>
+  </data>
+  <data name="Seite_0_von_1_2_bis_3_von_4_7ffc6ff5" xml:space="preserve">
+    <value>Página {0} de {1}, {2} a {3} de {4}</value>
+  </data>
+  <data name="Suche_anhalten_Gefundenes_bleibt_gespeichert_f96443bb" xml:space="preserve">
+    <value>Parar a procura, o que foi encontrado fica guardado</value>
+  </data>
+  <data name="0_Personen_hast_du_selbst_benannt_Die_Namen_und__1dc0f4b7" xml:space="preserve">
+    <value>Deu nome a {0} pessoas. Esses nomes e as suas associações desaparecem e uma nova procura não os traz de volta.</value>
+  </data>
+  <data name="Benannt_hast_du_bisher_niemanden_Ein_neuer_Suchl_d9287542" xml:space="preserve">
+    <value>Ainda não deu nome a ninguém. Uma nova procura volta a encontrar os rostos, mas demora o mesmo que a primeira.</value>
+  </data>
+  <data name="Der_laufende_Suchlauf_lie_sich_nicht_rechtzeitig_fb6e4572" xml:space="preserve">
+    <value>Não foi possível parar a tempo a procura em curso. Os rostos encontrados continuam na biblioteca. Espere que a procura termine e desligue o reconhecimento outra vez.</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_jetzt_aus_Sollen_die_g_b1c4b20a" xml:space="preserve">
+    <value>O reconhecimento de pessoas está agora desligado. Quer remover da biblioteca os rostos e as pessoas encontrados?</value>
+  </data>
+  <data name="Eine_Person_hast_du_selbst_benannt_Der_Name_und__6791e11b" xml:space="preserve">
+    <value>Deu nome a uma pessoa. Esse nome e a sua associação desaparecem e uma nova procura não os traz de volta.</value>
+  </data>
+  <data name="Gefundene_Gesichter_entfernen_7e3bede7" xml:space="preserve">
+    <value>Remover os rostos encontrados?</value>
+  </data>
+  <data name="Suchlauf_l_uft_noch_0264a622" xml:space="preserve">
+    <value>A procura ainda está a decorrer</value>
+  </data>
+  <data name="den_Betrachter_ffnest_7ec3700f" xml:space="preserve">
+    <value>abrir o visualizador</value>
+  </data>
+  <data name="den_Vollbildmodus_ffnest_24a7ef0c" xml:space="preserve">
+    <value>abrir o modo de ecrã inteiro</value>
+  </data>
+  <data name="Bild_0_x_1_auf_2_x_3_4_Kacheln_5_s_6_34cd6bc6" xml:space="preserve">
+    <value>Imagem {0}x{1} para {2}x{3}, {4} mosaicos, {5} s, {6}</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_dam_af17b8c1" xml:space="preserve">
+    <value>O resultado teria {0} por {1} pixels, demasiado grande para este caminho.</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_br__e2e4625a" xml:space="preserve">
+    <value>O resultado teria {0} por {1} pixels e precisaria de {2} GB de memória de uma só vez, mais do que este caminho aceita.</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_St_rke_4_5_e6fa432a" xml:space="preserve">
+    <value>Imagem {0}x{1}, {2} mosaicos, {3} s, intensidade {4} %, {5}</value>
+  </data>
+  <data name="schnell_5db66027" xml:space="preserve">
+    <value>rápido</value>
+  </data>
 </root>

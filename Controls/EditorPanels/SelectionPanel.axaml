@@ -236,7 +236,7 @@
                  gemalt, per Klick erkannt oder nach Entfernung ausgewaehlt. Deshalb steht der Knopf
                  nicht in einem der Zweige, sondern unter allen. -->
             <StackPanel Spacing="6" Margin="0,4,0,0">
-                <Separator Margin="0,2,0,2" Background="{DynamicResource FP.Border}" Height="1"/>
+                <Separator Margin="0,2,0,2" Background="{DynamicResource FP.Border.Normal}" Height="1"/>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding CanRemoveObject}"
                         Command="{Binding RemoveObjectCommand}"

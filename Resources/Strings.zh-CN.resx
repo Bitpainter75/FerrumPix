@@ -6504,4 +6504,64 @@
   <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
     <value>删除选中的图层（Del）</value>
   </data>
+  <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
+    <value>正在查找人脸：{0} / {1}</value>
+  </data>
+  <data name="0_Gesichter_gefunden_66a830ef" xml:space="preserve">
+    <value>找到 {0} 张人脸</value>
+  </data>
+  <data name="Suche_abgebrochen_0_Gesichter_gefunden_8e55e905" xml:space="preserve">
+    <value>搜索已取消，找到 {0} 张人脸</value>
+  </data>
+  <data name="0_Gruppen_1_davon_benannt_5fc73794" xml:space="preserve">
+    <value>{0} 个分组，其中 {1} 个已命名</value>
+  </data>
+  <data name="Seite_0_von_1_2_bis_3_von_4_7ffc6ff5" xml:space="preserve">
+    <value>第 {0} 页，共 {1} 页，第 {2} 到 {3} 项，共 {4} 项</value>
+  </data>
+  <data name="Suche_anhalten_Gefundenes_bleibt_gespeichert_f96443bb" xml:space="preserve">
+    <value>停止搜索，已找到的内容会保留</value>
+  </data>
+  <data name="0_Personen_hast_du_selbst_benannt_Die_Namen_und__1dc0f4b7" xml:space="preserve">
+    <value>有 {0} 位人物是你自己命名的。这些名字及其关联会消失，重新搜索也无法找回。</value>
+  </data>
+  <data name="Benannt_hast_du_bisher_niemanden_Ein_neuer_Suchl_d9287542" xml:space="preserve">
+    <value>你还没有为任何人命名。重新搜索可以再次找到这些人脸，但耗时与第一次相同。</value>
+  </data>
+  <data name="Der_laufende_Suchlauf_lie_sich_nicht_rechtzeitig_fb6e4572" xml:space="preserve">
+    <value>无法及时停止正在进行的搜索。已找到的人脸仍在图库中。请等待搜索结束，然后再次关闭识别功能。</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_jetzt_aus_Sollen_die_g_b1c4b20a" xml:space="preserve">
+    <value>人物识别已关闭。是否从图库中移除已找到的人脸和人物？</value>
+  </data>
+  <data name="Eine_Person_hast_du_selbst_benannt_Der_Name_und__6791e11b" xml:space="preserve">
+    <value>有一位人物是你自己命名的。这个名字及其关联会消失，重新搜索也无法找回。</value>
+  </data>
+  <data name="Gefundene_Gesichter_entfernen_7e3bede7" xml:space="preserve">
+    <value>移除已找到的人脸？</value>
+  </data>
+  <data name="Suchlauf_l_uft_noch_0264a622" xml:space="preserve">
+    <value>搜索仍在进行</value>
+  </data>
+  <data name="den_Betrachter_ffnest_7ec3700f" xml:space="preserve">
+    <value>打开查看器</value>
+  </data>
+  <data name="den_Vollbildmodus_ffnest_24a7ef0c" xml:space="preserve">
+    <value>打开全屏模式</value>
+  </data>
+  <data name="Bild_0_x_1_auf_2_x_3_4_Kacheln_5_s_6_34cd6bc6" xml:space="preserve">
+    <value>图像 {0}x{1} 放大到 {2}x{3}，{4} 个分块，{5} 秒，{6}</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_dam_af17b8c1" xml:space="preserve">
+    <value>结果将为 {0} 乘 {1} 像素，对此处理方式来说太大了。</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_br__e2e4625a" xml:space="preserve">
+    <value>结果将为 {0} 乘 {1} 像素，需要一次性 {2} GB 内存，超出此处理方式的上限。</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_St_rke_4_5_e6fa432a" xml:space="preserve">
+    <value>图像 {0}x{1}，{2} 个分块，{3} 秒，强度 {4} %，{5}</value>
+  </data>
+  <data name="schnell_5db66027" xml:space="preserve">
+    <value>快速</value>
+  </data>
 </root>

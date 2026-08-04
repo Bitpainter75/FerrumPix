@@ -323,7 +323,12 @@ Namespace Services
                     Dim path = AiModelService.ModelPath(fileName)
                     If Not String.IsNullOrEmpty(path) Then Return path
                 Next
-            Catch
+            Catch ex As Exception
+                ' Ohne Spur waere hinterher nicht zu unterscheiden, ob keine Modelldatei vorliegt
+                ' oder ob das Nachsehen selbst gescheitert ist - und die Probe meldete beides als
+                ' "ungeprueft".
+                DiagnosticLogService.LogAlways("Grafik",
+                    $"kleinste Modelldatei laesst sich nicht bestimmen: {ex.Message}")
             End Try
             Return ""
         End Function
@@ -447,7 +452,12 @@ Namespace Services
                     hardware.Metadata.Entries.TryGetValue("card_idx", slot)
                 End If
                 info.Key = $"{hardware.VendorId:x4}:{hardware.DeviceId:x4}:{If(slot, "")}"
-            Catch
+            Catch ex As Exception
+                ' Zurueck kommt ein leerer Eintrag - und der sieht in der Auswahl genauso aus wie
+                ' "keine Karte gefunden". Ohne diese Zeile waere die Diagnose "es steht nichts da"
+                ' nicht von "die Geraetedaten liessen sich nicht lesen" zu unterscheiden.
+                DiagnosticLogService.LogAlways("Grafik",
+                    $"Geraetedaten nicht lesbar: {ex.GetType().Name}: {ShortMessage(ex.Message)}")
             End Try
             Return info
         End Function
@@ -489,9 +499,9 @@ Namespace Services
                         If Not inVendorBlock Then Continue For
                         ' Zwei Tabulatoren sind eine Variante eines Kartenherstellers, nicht das Geraet.
                         If line.Length > 1 AndAlso line(1) = vbTab Then Continue For
-                        Dim rest = line.Substring(1)
-                        If Not rest.StartsWith(deviceTag, StringComparison.OrdinalIgnoreCase) Then Continue For
-                        Dim name = rest.Substring(deviceTag.Length).Trim()
+                        Dim remainder = line.Substring(1)
+                        If Not remainder.StartsWith(deviceTag, StringComparison.OrdinalIgnoreCase) Then Continue For
+                        Dim name = remainder.Substring(deviceTag.Length).Trim()
                         Dim bracketStart = name.IndexOf("["c)
                         Dim bracketEnd = name.LastIndexOf("]"c)
                         If bracketStart >= 0 AndAlso bracketEnd > bracketStart Then

@@ -36,11 +36,15 @@ Namespace ViewModels
             ' HINZUFÜGEN bleibt ebenfalls leer: es ist der Normalfall, und ein Pluszeichen vor jeder
             ' Zeile sagt nichts, kostet aber die Spalte, um die alle Einträge eingerückt stünden.
             ' Sichtbar bleibt nur, was VOM Normalfall abweicht - Abziehen und Schneiden.
+            ' Abziehen traegt den gewoehnlichen Bindestrich. Schneiden trug frueher das
+            ' Multiplikationszeichen - ein Sonderzeichen im sichtbaren Text, und in einer schmalen
+            ' Spalte war es ausserdem von einem Schliessen-Kreuz nicht zu unterscheiden. Ein kurzes
+            ' Wort sagt dasselbe und traegt in der Spalte.
             ModeLabel = ""
             If index > 0 AndAlso component IsNot Nothing Then
                 Select Case If(component.Mode, "").Trim().ToLowerInvariant()
                     Case "subtract" : ModeLabel = "-"
-                    Case "intersect" : ModeLabel = "×"
+                    Case "intersect" : ModeLabel = LocalizationService.T("Schnitt")
                 End Select
             End If
         End Sub

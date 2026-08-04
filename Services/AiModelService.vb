@@ -34,6 +34,8 @@ Namespace Services
 
         Private Shared ReadOnly _lock As New Object()
         Private Shared ReadOnly _sessions As New Dictionary(Of String, LoadedSession)(StringComparer.OrdinalIgnoreCase)
+        ''' <summary>Ein Schloss JE MODELLDATEI - siehe <see cref="BuildLockFor"/>.</summary>
+        Private Shared ReadOnly _buildLocks As New Dictionary(Of String, Object)(StringComparer.OrdinalIgnoreCase)
         Private Shared _runtimeChecked As Boolean = False
         Private Shared _runtimeReady As Boolean = False
         Private Shared _runtimeError As String = ""
@@ -516,6 +518,28 @@ Namespace Services
             Return options
         End Function
 
+        ''' <summary>Das Schloss, unter dem GENAU DIESE Modelldatei gebaut wird.
+        '''
+        ''' Ein Modell zu laden kostet hunderte Millisekunden bis Sekunden. Laege der Bau unter dem
+        ''' allgemeinen Schloss, wartete solange jeder andere Modellzugriff mit - die Gesichtssuche
+        ''' im Hintergrund etwa, die ein ganz anderes Modell will und mit diesem hier nichts zu tun
+        ''' hat. Je Datei ein eigenes Schloss loest beides: zwei verschiedene Modelle bauen
+        ''' nebeneinander, dieselbe Datei baut weiterhin nur einmal.
+        '''
+        ''' Das allgemeine Schloss schuetzt nur noch die beiden Listen und wird immer nur kurz
+        ''' gehalten. Die Reihenfolge ist ueberall dieselbe: erst das Schloss der Datei, darunter
+        ''' das allgemeine - nie umgekehrt.</summary>
+        Private Shared Function BuildLockFor(filePath As String) As Object
+            SyncLock _lock
+                Dim gate As Object = Nothing
+                If Not _buildLocks.TryGetValue(filePath, gate) Then
+                    gate = New Object()
+                    _buildLocks(filePath) = gate
+                End If
+                Return gate
+            End SyncLock
+        End Function
+
         ''' <summary>Die Sitzung zu einem Modell, oder Nothing.
         '''
         ''' Sitzungen bleiben offen und werden geteilt: das Laden kostet je nach Modell hunderte
@@ -525,21 +549,41 @@ Namespace Services
         ''' Wurde der Schalter fuer die Grafikkarte seit dem Laden umgelegt, wird die alte Sitzung
         ''' AUS DER LISTE GENOMMEN, aber NICHT geschlossen: es kann in diesem Augenblick jemand
         ''' damit rechnen, und eine geschlossene Sitzung unter laufender Rechnung ist kein Fehler,
-        ''' sondern ein Absturz. Der Speicher wird frei, sobald niemand mehr auf sie zeigt.</summary>
+        ''' sondern ein Absturz. Der Speicher wird frei, sobald niemand mehr auf sie zeigt.
+        '''
+        ''' Der Vermerk ueber das Rechenwerk (<see cref="LoadedSession"/>) bleibt dabei die einzige
+        ''' Wahrheit: verglichen wird immer gegen das, was JETZT gewuenscht ist, und zwar noch
+        ''' einmal unter dem Bau-Schloss - waehrend des Wartens kann ein anderer Faden dieselbe
+        ''' Sitzung schon gebaut haben.</summary>
         Public Shared Function Session(fileName As String) As InferenceSession
             If Not RuntimeAvailable Then Return Nothing
             Dim filePath = ModelPath(fileName)
             If String.IsNullOrEmpty(filePath) Then Return Nothing
+            ' Die Frage nach der Karte steht bewusst VOR jedem Schloss: sie fuehrt in die
+            ' Grafikbeschleunigung, und die fragt von dort aus wieder hier herein.
             Dim onGpu = GpuAccelerationService.ShouldUse AndAlso IsGpuAllowed(fileName)
             ' Leer heisst Prozessor. Steht dort ein Schluessel, ist es DIESE Karte - und eine
             ' andere Karte ist damit genauso ein Wechsel wie das Abschalten.
             Dim target = If(onGpu, GpuAccelerationService.ActiveDeviceKey, "")
+
+            ' Der haeufige Fall: die Sitzung steht schon und passt. Dafuer reicht ein kurzer Blick
+            ' in die Liste, ohne irgendjemanden aufzuhalten.
             SyncLock _lock
-                Dim existing As LoadedSession = Nothing
-                If _sessions.TryGetValue(filePath, existing) Then
-                    If existing.Accelerator = target Then Return existing.Session
-                    _sessions.Remove(filePath)
+                Dim ready As LoadedSession = Nothing
+                If _sessions.TryGetValue(filePath, ready) AndAlso ready.Accelerator = target Then
+                    Return ready.Session
                 End If
+            End SyncLock
+
+            SyncLock BuildLockFor(filePath)
+                SyncLock _lock
+                    Dim existing As LoadedSession = Nothing
+                    If _sessions.TryGetValue(filePath, existing) Then
+                        If existing.Accelerator = target Then Return existing.Session
+                        _sessions.Remove(filePath)
+                    End If
+                End SyncLock
+
                 Dim builtWith = ""
                 Dim created As InferenceSession = Nothing
                 If onGpu Then
@@ -567,7 +611,9 @@ Namespace Services
                         End Using
                         builtWith = ""
                     End If
-                    _sessions(filePath) = New LoadedSession With {.Session = created, .Accelerator = builtWith}
+                    SyncLock _lock
+                        _sessions(filePath) = New LoadedSession With {.Session = created, .Accelerator = builtWith}
+                    End SyncLock
                     Return created
                 Catch ex As Exception
                     DiagnosticLogService.LogAlways("KiModell", $"laedt nicht: {Path.GetFileName(filePath)} - {ex.Message}")
@@ -577,6 +623,10 @@ Namespace Services
         End Function
 
         ''' <summary>Alle Sitzungen schliessen. Fuer den Prueftstand und das Beenden.</summary>
+        ''' <remarks>Die Bau-Schloesser bleiben ABSICHTLICH stehen. Sie wegzuwerfen, waehrend ein
+        ''' anderer Faden eines davon haelt, ergaebe zwei Schloesser fuer dieselbe Datei - und dann
+        ''' bauen zwei Faeden dasselbe Modell gleichzeitig. Es sind hoechstens so viele Objekte wie
+        ''' Modelldateien.</remarks>
         Public Shared Sub ReleaseAll()
             SyncLock _lock
                 For Each s In _sessions.Values

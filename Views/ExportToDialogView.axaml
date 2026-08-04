@@ -48,7 +48,7 @@
         </Border>
 
         <!-- Nur da, wenn in der Auswahl wirklich etwas offen ist (siehe
-             MainWindowViewModel.PreparePendingBakedOption). -->
+             MainWindowViewModel.PreparePendingBakedOptionAsync). -->
         <Border Classes="adjustment-group" IsVisible="{Binding IsDialogPendingBakedAvailable}">
             <CheckBox Content="{Binding DialogPendingBakedLabel}"
                       IsChecked="{Binding DialogApplyPendingBaked, Mode=TwoWay}"

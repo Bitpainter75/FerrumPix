@@ -250,9 +250,16 @@ Namespace Services
                 clock.Stop()
                 ' Welches Modell gerechnet hat, gehoert in den Bericht: bei zwei Wegen ist die Frage
                 ' "warum sieht das anders aus als beim letzten Mal" sonst nicht zu beantworten.
-                LastReport = $"Bild {image.Width}x{image.Height}, {done} Kacheln, " &
-                             $"{clock.Elapsed.TotalSeconds:F0} s, Stärke {amount * 100:F0} %, " &
-                             $"{KindName(kind)}"
+                '
+                ' Eine SCHABLONE mit Platzhaltern statt einer Verkettung: der Bericht landet in der
+                ' Statuszeile und im Verlauf, und zusammengesetzte Texte lassen sich nicht
+                ' uebersetzen. Der Name des Weges wird EINZELN uebersetzt und danach eingesetzt.
+                LastReport = String.Format(
+                    LocalizationService.T("Bild {0}x{1}, {2} Kacheln, {3} s, Stärke {4} %, {5}"),
+                    image.Width, image.Height, done,
+                    clock.Elapsed.TotalSeconds.ToString("F0"),
+                    (amount * 100).ToString("F0"),
+                    LocalizationService.T(KindName(kind)))
                 DiagnosticLogService.LogAlways("Entrauschen", LastReport)
                 Dim finished = result
                 result = Nothing
@@ -282,7 +289,7 @@ Namespace Services
             Dim srcPixels = source.GetPixels()
             For yy = 0 To h - 1
                 Runtime.InteropServices.Marshal.Copy(
-                    IntPtr.Add(srcPixels, (window.Top + yy) * srcStride), row, 0, srcStride)
+                    RowStart(srcPixels, window.Top + yy, srcStride), row, 0, srcStride)
                 Dim line = yy * w
                 For xx = 0 To w - 1
                     Dim p = (window.Left + xx) * 4
@@ -310,7 +317,7 @@ Namespace Services
                 Dim premultiplied = target.AlphaType = SKAlphaType.Premul
                 For yy = keep.Top To keep.Bottom - 1
                     Runtime.InteropServices.Marshal.Copy(
-                        IntPtr.Add(targetPixels, yy * dstStride), targetRow, 0, dstStride)
+                        RowStart(targetPixels, yy, dstStride), targetRow, 0, dstStride)
                     Dim sy = Math.Min(yy - window.Top, rh - 1)
                     For xx = keep.Left To keep.Right - 1
                         Dim sx = Math.Min(xx - window.Left, rw - 1)
@@ -354,10 +361,21 @@ Namespace Services
                             If targetRow(p + 2) > alpha Then targetRow(p + 2) = alpha
                         End If
                     Next
-                    Runtime.InteropServices.Marshal.Copy(targetRow, 0, IntPtr.Add(targetPixels, yy * dstStride), dstStride)
+                    Runtime.InteropServices.Marshal.Copy(targetRow, 0, RowStart(targetPixels, yy, dstStride), dstStride)
                 Next
             End Using
         End Sub
+
+        ''' <summary>Der Anfang einer Bildzeile im Speicher.
+        '''
+        ''' Der Versatz wird in 64 Bit gerechnet. Hier reicht es fuer gewoehnliche Fotos zwar auch
+        ''' in 32 Bit, aber ab rund 537 Megapixeln - Panoramen aus vielen Aufnahmen erreichen das -
+        ''' ueberschreitet Zeilennummer mal Zeilenlaenge den Bereich einer 32-Bit-Zahl, und in VB
+        ''' WIRFT die Multiplikation dann, statt still umzulaufen. Derselbe Weg wie beim
+        ''' Hochskalieren, wo die Grenze schon bei gewoehnlichen Kameragroessen faellt.</summary>
+        Private Shared Function RowStart(basePointer As IntPtr, row As Integer, stride As Integer) As IntPtr
+            Return New IntPtr(basePointer.ToInt64() + CLng(row) * CLng(stride))
+        End Function
 
         ''' <summary>Einen gerechneten Kanalwert in eine Stufe zurueckholen.
         '''

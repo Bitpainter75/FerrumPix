@@ -46,7 +46,7 @@
                         Width="24" Height="24"
                         CornerRadius="4"
                         BorderThickness="1"
-                        BorderBrush="{DynamicResource FP.Border}"
+                        BorderBrush="{DynamicResource FP.Border.Normal}"
                         Background="{Binding NegativeBaseBrush}"
                         IsVisible="{Binding HasNegativeBaseColor}"
                         VerticalAlignment="Center" />

@@ -79,7 +79,7 @@
                 <!-- ENTRAUSCHEN MIT MODELL: kein Regler, sondern ein Zug in die Pixel - bei
                      mehreren Minuten Rechenzeit kann das nicht an einer Vorschau haengen.
                      Deshalb steht es abgesetzt unter den Reglern und nicht zwischen ihnen. -->
-                <Separator Margin="0,6,0,4" Background="{DynamicResource FP.Border}" Height="1"/>
+                <Separator Margin="0,6,0,4" Background="{DynamicResource FP.Border.Normal}" Height="1"/>
                 <!-- Die Staerke steht UEBER den Knoepfen, weil sie fuer beide gilt und vor dem
                      Druck eingestellt wird - danach laeuft die Rechnung minutenlang. Sie wirkt nur
                      auf die Helligkeit; die Farbe kommt immer voll aus dem Modell. -->

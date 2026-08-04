@@ -6507,4 +6507,64 @@
   <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
     <value>Delete the selected layers (Del)</value>
   </data>
+  <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
+    <value>Looking for faces: {0} of {1}</value>
+  </data>
+  <data name="0_Gesichter_gefunden_66a830ef" xml:space="preserve">
+    <value>{0} faces found</value>
+  </data>
+  <data name="Suche_abgebrochen_0_Gesichter_gefunden_8e55e905" xml:space="preserve">
+    <value>Search cancelled, {0} faces found</value>
+  </data>
+  <data name="0_Gruppen_1_davon_benannt_5fc73794" xml:space="preserve">
+    <value>{0} groups, {1} of them named</value>
+  </data>
+  <data name="Seite_0_von_1_2_bis_3_von_4_7ffc6ff5" xml:space="preserve">
+    <value>Page {0} of {1}, {2} to {3} of {4}</value>
+  </data>
+  <data name="Suche_anhalten_Gefundenes_bleibt_gespeichert_f96443bb" xml:space="preserve">
+    <value>Stop the search, what was found stays saved</value>
+  </data>
+  <data name="0_Personen_hast_du_selbst_benannt_Die_Namen_und__1dc0f4b7" xml:space="preserve">
+    <value>You named {0} people yourself. Those names and what they point to will be gone, and a new scan will not bring them back.</value>
+  </data>
+  <data name="Benannt_hast_du_bisher_niemanden_Ein_neuer_Suchl_d9287542" xml:space="preserve">
+    <value>You have not named anyone yet. A new scan finds the faces again, but it takes as long as the first one did.</value>
+  </data>
+  <data name="Der_laufende_Suchlauf_lie_sich_nicht_rechtzeitig_fb6e4572" xml:space="preserve">
+    <value>The running scan could not be stopped in time. The faces that were found are still in the library. Wait until the scan has finished, then switch the recognition off again.</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_jetzt_aus_Sollen_die_g_b1c4b20a" xml:space="preserve">
+    <value>Face recognition is now off. Should the faces and people that were found be removed from the library?</value>
+  </data>
+  <data name="Eine_Person_hast_du_selbst_benannt_Der_Name_und__6791e11b" xml:space="preserve">
+    <value>You named one person yourself. That name and what it points to will be gone, and a new scan will not bring it back.</value>
+  </data>
+  <data name="Gefundene_Gesichter_entfernen_7e3bede7" xml:space="preserve">
+    <value>Remove the faces that were found?</value>
+  </data>
+  <data name="Suchlauf_l_uft_noch_0264a622" xml:space="preserve">
+    <value>Scan still running</value>
+  </data>
+  <data name="den_Betrachter_ffnest_7ec3700f" xml:space="preserve">
+    <value>open the viewer</value>
+  </data>
+  <data name="den_Vollbildmodus_ffnest_24a7ef0c" xml:space="preserve">
+    <value>open fullscreen</value>
+  </data>
+  <data name="Bild_0_x_1_auf_2_x_3_4_Kacheln_5_s_6_34cd6bc6" xml:space="preserve">
+    <value>Picture {0}x{1} to {2}x{3}, {4} tiles, {5} s, {6}</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_dam_af17b8c1" xml:space="preserve">
+    <value>The result would be {0} by {1} pixels, which is too large for this route.</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_br__e2e4625a" xml:space="preserve">
+    <value>The result would be {0} by {1} pixels and would need {2} GB of memory in one piece, which is more than this route takes.</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_St_rke_4_5_e6fa432a" xml:space="preserve">
+    <value>Picture {0}x{1}, {2} tiles, {3} s, strength {4} %, {5}</value>
+  </data>
+  <data name="schnell_5db66027" xml:space="preserve">
+    <value>quick</value>
+  </data>
 </root>

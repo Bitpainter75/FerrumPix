@@ -234,14 +234,35 @@ Namespace Services
         '''
         ''' Warum das lange nicht auffiel: der Baumdurchlauf ueberspringt LEERE Texte, und die
         ''' allermeisten gebundenen Anzeigen sind beim Anwenden der Sprache noch leer. Erst eine, die
-        ''' schon beim Aufbau etwas anzeigt, faellt in die Falle.</summary>
+        ''' schon beim Aufbau etwas anzeigt, faellt in die Falle.
+        '''
+        ''' Die Klasse gilt fuer den KNOTEN, nicht fuer seinen Teilbaum: der Durchlauf steigt weiter
+        ''' hinab, nur dieser eine Knoten wird uebergangen.
+        '''
+        ''' Sie deckt die ANZEIGE ab, also Text, Inhalt und Ueberschrift. Kurzhinweis und Platzhalter
+        ''' bleiben ausgenommen: sie stehen in der Praxis woertlich im XAML, auch an Anzeigen mit
+        ''' dieser Klasse, und muessen dort weiter uebersetzt werden.</summary>
         Public Const KeineUebersetzung As String = "no-translate"
 
+        ''' <summary>Traegt dieser Knoten die Klasse "no-translate"? Geprueft wird auf StyledElement,
+        ''' weil dort die Klassenliste sitzt und nicht erst am TextBlock.
+        '''
+        ''' BEFUND: die Klasse wurde lange nur im Textblock-Zweig geprueft. Ein Kaestchen mit
+        ''' Classes="no-translate" und gebundenem Inhalt lief in den ContentControl-Zweig, bekam
+        ''' seinen Inhalt zugewiesen und verlor damit die Bindung - danach stand dort fuer immer der
+        ''' Wert vom Zeitpunkt des Sprachwechsels.</summary>
+        Private Shared Function IsTranslationSuppressed(node As ILogical) As Boolean
+            Dim styled = TryCast(node, StyledElement)
+            Return styled IsNot Nothing AndAlso styled.Classes.Contains(KeineUebersetzung)
+        End Function
+
         Private Shared Sub ApplyOne(node As ILogical)
+            Dim suppressed = IsTranslationSuppressed(node)
+
             Dim merker = Ursprungstexte.GetValue(node, Function(ignoriert) New NodeTexts())
             Dim textBlock = TryCast(node, TextBlock)
             If textBlock IsNot Nothing AndAlso Not String.IsNullOrEmpty(textBlock.Text) AndAlso
-               Not textBlock.Classes.Contains(KeineUebersetzung) Then
+               Not suppressed Then
                 textBlock.Text = TranslateRemembered(textBlock.Text, merker.Text)
             End If
 
@@ -260,19 +281,19 @@ Namespace Services
             ' und werden weiter uebersetzt.
             Dim content = TryCast(node, ContentControl)
             If content IsNot Nothing AndAlso content.TemplatedParent Is Nothing AndAlso
-               TypeOf content.Content Is String Then
+               TypeOf content.Content Is String AndAlso Not suppressed Then
                 content.Content = TranslateRemembered(CStr(content.Content), merker.Inhalt)
             End If
 
             Dim menuItem = TryCast(node, MenuItem)
-            If menuItem IsNot Nothing AndAlso TypeOf menuItem.Header Is String Then
+            If menuItem IsNot Nothing AndAlso TypeOf menuItem.Header Is String AndAlso Not suppressed Then
                 menuItem.Header = TranslateRemembered(CStr(menuItem.Header), merker.MenueKopf)
             End If
 
             ' Expander und TabItem erben Header nicht von MenuItem, sondern von
             ' HeaderedContentControl - ohne diesen Zweig blieben ihre Überschriften deutsch.
             Dim headered = TryCast(node, HeaderedContentControl)
-            If headered IsNot Nothing AndAlso TypeOf headered.Header Is String Then
+            If headered IsNot Nothing AndAlso TypeOf headered.Header Is String AndAlso Not suppressed Then
                 headered.Header = TranslateRemembered(CStr(headered.Header), merker.Kopf)
             End If
 

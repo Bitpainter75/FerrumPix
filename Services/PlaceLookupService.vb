@@ -143,13 +143,39 @@ Namespace Services
             Dim lonSpan = boxDegrees / cosLat
 
             Using cmd = conn.CreateCommand()
+                ' DIE DATUMSGRENZE. Die Laenge laeuft bei 180 Grad auf minus 180 um. Ein Foto bei
+                ' 179,9 Grad bekam mit einem einzigen Bereich ein Kaestchen von 179,7 bis 180,1 - das
+                ' liegt zur Haelfte ausserhalb jedes gespeicherten Wertes, und der Ort bei minus
+                ' 179,9 Grad, keine 20 km entfernt, fiel heraus. Ueberschreitet das Kaestchen die
+                ' Grenze, wird es deshalb in ZWEI Bereiche zerlegt, einen an jedem Ende.
+                ' Die Entfernungsrechnung selbst kommt damit zurecht: sie geht ueber den Sinus der
+                ' halben Differenz, und der ist ueber die Grenze hinweg richtig.
+                Dim lonMin = lon - lonSpan
+                Dim lonMax = lon + lonSpan
+                Dim lonCondition As String
+                If lonSpan >= 180.0 Then
+                    ' Das Kaestchen umspannt die ganze Erde - dann gibt es in der Laenge nichts mehr
+                    ' einzugrenzen.
+                    lonCondition = "Lon BETWEEN -180 AND 180"
+                ElseIf lonMax > 180.0 Then
+                    lonCondition = "(Lon BETWEEN $lonMin AND 180 OR Lon BETWEEN -180 AND $lonMax)"
+                    cmd.Parameters.AddWithValue("$lonMin", lonMin)
+                    cmd.Parameters.AddWithValue("$lonMax", lonMax - 360.0)
+                ElseIf lonMin < -180.0 Then
+                    lonCondition = "(Lon BETWEEN $lonMin AND 180 OR Lon BETWEEN -180 AND $lonMax)"
+                    cmd.Parameters.AddWithValue("$lonMin", lonMin + 360.0)
+                    cmd.Parameters.AddWithValue("$lonMax", lonMax)
+                Else
+                    lonCondition = "Lon BETWEEN $lonMin AND $lonMax"
+                    cmd.Parameters.AddWithValue("$lonMin", lonMin)
+                    cmd.Parameters.AddWithValue("$lonMax", lonMax)
+                End If
+
                 cmd.CommandText =
                     "SELECT Name, Country, Lat, Lon, CountryCode FROM Place " &
-                    "WHERE Lat BETWEEN $latMin AND $latMax AND Lon BETWEEN $lonMin AND $lonMax"
+                    "WHERE Lat BETWEEN $latMin AND $latMax AND " & lonCondition
                 cmd.Parameters.AddWithValue("$latMin", lat - boxDegrees)
                 cmd.Parameters.AddWithValue("$latMax", lat + boxDegrees)
-                cmd.Parameters.AddWithValue("$lonMin", lon - lonSpan)
-                cmd.Parameters.AddWithValue("$lonMax", lon + lonSpan)
 
                 Dim best As PlaceHit = Nothing
                 Dim bestKm As Double = Double.MaxValue

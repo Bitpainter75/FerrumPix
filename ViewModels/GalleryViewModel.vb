@@ -1167,6 +1167,7 @@ Namespace ViewModels
         Public ReadOnly Property ClearPersonFilterCommand As ICommand
         Public ReadOnly Property ClearPlaceFilterCommand As ICommand
         Public ReadOnly Property ScanFacesCommand As ICommand
+        Public ReadOnly Property CancelFaceScanCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
@@ -1431,6 +1432,7 @@ Namespace ViewModels
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
             ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
             ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesAsync())
+            CancelFaceScanCommand = ReactiveCommand.Create(Sub() CancelFaceScan())
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
             ' Das Panel kennt nur ImageItem und koennte lokale Bilder nicht von Immich-Assets
             ' trennen. Die Wege stellt deshalb die Galerie - dieselbe Teilung wie im Sternemenue.
@@ -3204,27 +3206,53 @@ Namespace ViewModels
             If paths.Count = 0 Then Return
 
             _faceScanRunning = True
-            FaceScanProgressText = LocalizationService.T("Gesichter werden gesucht") & $" 0/{paths.Count}"
+            ' EINE Schablone statt zusammengesetzter Bruchstuecke: in anderen Sprachen steht die Zahl
+            ' woanders im Satz, und aus aneinandergehaengten Teilen laesst sich das nicht bauen.
+            FaceScanProgressText = String.Format(LocalizationService.T("Gesichter werden gesucht: {0} von {1}"),
+                                                 0, paths.Count)
+            _faceScanCancellation = New CancellationTokenSource()
             Me.RaisePropertyChanged(NameOf(IsScanningFaces))
             Try
                 ' Der Fortschritt steht im Balken, NICHT in der Statuszeile: ein Lauf ueber einen
                 ' grossen Ordner dauert Minuten, und eine Zeile am unteren Rand ist dafuer zu leise -
                 ' man haelt das Programm sonst fuer haengengeblieben.
                 Dim reporter = New Progress(Of (Done As Integer, Total As Integer, File As String))(
-                    Sub(p) FaceScanProgressText = LocalizationService.T("Gesichter werden gesucht") &
-                                                  $" {p.Done}/{p.Total}")
-                Dim result = Await FaceScanRunner.RunAsync(paths, reporter, Nothing, force:=True).ConfigureAwait(True)
-                StatusText = $"{result.FacesFound} " & LocalizationService.T("Gesichter gefunden")
+                    Sub(p) FaceScanProgressText =
+                               String.Format(LocalizationService.T("Gesichter werden gesucht: {0} von {1}"),
+                                             p.Done, p.Total))
+                Dim result = Await FaceScanRunner.RunAsync(paths, reporter, _faceScanCancellation.Token,
+                                                           force:=True).ConfigureAwait(True)
+                ' Ein abgebrochener Lauf hat trotzdem etwas gefunden, und das bleibt auch gespeichert -
+                ' die Zahl unter den Tisch fallen zu lassen saehe aus, als waere alles umsonst gewesen.
+                StatusText = If(result.Cancelled,
+                                String.Format(LocalizationService.T("Suche abgebrochen, {0} Gesichter gefunden"),
+                                              result.FacesFound),
+                                String.Format(LocalizationService.T("{0} Gesichter gefunden"), result.FacesFound))
                 RefreshPersonFilterOptions()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.ScanFaces", ex)
             Finally
                 _faceScanRunning = False
+                _faceScanCancellation?.Dispose()
+                _faceScanCancellation = Nothing
                 Me.RaisePropertyChanged(NameOf(IsScanningFaces))
             End Try
         End Function
 
+        ''' <summary>Haelt den laufenden Durchlauf an. Der Knopf dazu steht neben dem Balken.
+        '''
+        ''' Was bis dahin gefunden wurde, BLEIBT in der Bibliothek: ein Abbruch ist "hoer auf", nicht
+        ''' "mach es rueckgaengig". Der Lauf endet nach dem Bild, an dem er gerade sitzt.</summary>
+        Public Sub CancelFaceScan()
+            Try
+                _faceScanCancellation?.Cancel()
+            Catch ex As ObjectDisposedException
+                ' Der Lauf war in derselben Sekunde von selbst fertig - dann gibt es nichts zu tun.
+            End Try
+        End Sub
+
         Private _faceScanRunning As Boolean
+        Private _faceScanCancellation As CancellationTokenSource
 
         ''' <summary>Laeuft gerade ein Durchlauf? Zeigt den Balken ueber der Galerie.</summary>
         Public ReadOnly Property IsScanningFaces As Boolean
@@ -6296,7 +6324,7 @@ Namespace ViewModels
             ' Ueberschreiben nur anbieten, wenn JEDE Quelle ihr eigenes Format auch schreiben kann
             ' (BMP/GIF koennen es nicht - dort entstehen neue Dateien).
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
-            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
+            Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
                                                            singleImage:=targetItems.Count = 1,
                                                            sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
@@ -6452,7 +6480,7 @@ Namespace ViewModels
 
             Dim folderHint = BatchFolderHint(targetItems)
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
-            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
+            Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar,
                                                             sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
             If result Is Nothing Then Return
@@ -6613,7 +6641,7 @@ Namespace ViewModels
             If targetItems.Count = 0 Then Return
 
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath))
-            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
+            Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar,
                                                                       currentFolder:=BatchFolderHint(targetItems),
                                                                       sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
@@ -7199,7 +7227,7 @@ Namespace ViewModels
             Dim folderHint = BatchFolderHint(targetItems)
             Dim samplePath = targetItems.Select(Function(i) i.FilePath).
                 FirstOrDefault(Function(pth) Not String.IsNullOrEmpty(pth) AndAlso File.Exists(pth))
-            _mainVm.PreparePendingBakedOption(targetItems.Select(Function(i) i.FilePath))
+            Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath)
             If result Is Nothing Then Return
             Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked

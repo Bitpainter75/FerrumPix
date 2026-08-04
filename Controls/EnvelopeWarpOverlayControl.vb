@@ -73,41 +73,53 @@ Namespace Controls
         Public Overrides Sub Render(context As DrawingContext)
             Dim v = PointValues
             If v Is Nothing OrElse v.Length < 24 Then Return
-            For Each value In v
-                If Double.IsNaN(value) OrElse Double.IsInfinity(value) Then Return
-            Next
 
+            ' NaN heisst: dieser eine Punkt hat nach Zuschnitt oder Begradigung keinen Anzeigeort.
+            ' Er wird UEBERSPRUNGEN, nicht geklemmt, und er nimmt die uebrigen elf nicht mit. Vorher
+            ' brach ein einziger NaN-Wert das ganze Zeichnen ab: das Overlay verschwand samt allen
+            ' Anfassern, und das Werkzeug wirkte tot, obwohl TryBeginEnvelopeDrag NaN-Anfasser
+            ' laengst einzeln uebergeht. Dieselbe Behandlung wie beim Stuetzpunktraster.
             Dim p(11) As Point
+            Dim valid(11) As Boolean
             For i = 0 To 11
-                p(i) = New Point(v(i * 2), v(i * 2 + 1))
+                Dim px = v(i * 2), py = v(i * 2 + 1)
+                valid(i) = Not (Double.IsNaN(px) OrElse Double.IsNaN(py) OrElse
+                                Double.IsInfinity(px) OrElse Double.IsInfinity(py))
+                If valid(i) Then p(i) = New Point(px, py)
             Next
 
             DrawMesh(context)
 
             ' Zwei Stifte uebereinander, wie bei den uebrigen Overlays: ein dunkler breiter
             ' darunter, damit der Rand auch auf hellem Bild sichtbar bleibt.
+            ' Jede Kante ist eine eigene Figur: fehlt einer ihrer vier Punkte, entfaellt genau sie.
             Dim shadow = New Pen(New SolidColorBrush(Color.FromArgb(120, 0, 0, 0)), 3.0)
             Dim line = New Pen(StrokeBrush, 1.4)
             Dim outline = New StreamGeometry()
+            Dim hasOutline = False
             Using sink = outline.Open()
-                sink.BeginFigure(p(0), False)
                 For edge = 0 To 3
                     Dim b = (edge + 1) Mod 4
+                    If Not (valid(edge) AndAlso valid(b) AndAlso valid(4 + edge * 2) AndAlso valid(5 + edge * 2)) Then Continue For
+                    sink.BeginFigure(p(edge), False)
                     sink.CubicBezierTo(p(4 + edge * 2), p(5 + edge * 2), p(b))
+                    sink.EndFigure(False)
+                    hasOutline = True
                 Next
-                sink.EndFigure(True)
             End Using
-            For Each pen In New Pen() {shadow, line}
-                context.DrawGeometry(Nothing, pen, outline)
-            Next
+            If hasOutline Then
+                For Each pen In New Pen() {shadow, line}
+                    context.DrawGeometry(Nothing, pen, outline)
+                Next
+            End If
 
             ' Die duennen Fuehrungen von der Ecke zu ihren beiden Griffen: ohne sie schwebten die
             ' Griffe frei im Bild und man saehe nicht, welche Kante sie biegen.
             Dim guide = New Pen(New SolidColorBrush(Color.FromArgb(140, 255, 255, 255)), 1.0)
             For edge = 0 To 3
                 Dim b = (edge + 1) Mod 4
-                context.DrawLine(guide, p(edge), p(4 + edge * 2))
-                context.DrawLine(guide, p(b), p(5 + edge * 2))
+                If valid(edge) AndAlso valid(4 + edge * 2) Then context.DrawLine(guide, p(edge), p(4 + edge * 2))
+                If valid(b) AndAlso valid(5 + edge * 2) Then context.DrawLine(guide, p(b), p(5 + edge * 2))
             Next
 
             Dim fill = New SolidColorBrush(Color.FromArgb(235, 255, 255, 255))
@@ -115,10 +127,10 @@ Namespace Controls
             ' Die Kantengriffe zuerst, damit eine Ecke, auf der ein Griff liegt, obenauf bleibt -
             ' sie ist die groebere Bewegung und wird zuerst gesucht.
             For i = 4 To 11
-                context.DrawEllipse(fill, border, p(i), HandleRadius, HandleRadius)
+                If valid(i) Then context.DrawEllipse(fill, border, p(i), HandleRadius, HandleRadius)
             Next
             For i = 0 To 3
-                context.DrawEllipse(fill, border, p(i), CornerRadius, CornerRadius)
+                If valid(i) Then context.DrawEllipse(fill, border, p(i), CornerRadius, CornerRadius)
             Next
         End Sub
 

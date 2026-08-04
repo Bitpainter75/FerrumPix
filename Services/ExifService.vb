@@ -984,19 +984,6 @@ Namespace Services
                 DiagnosticLogService.LogException("Exif.Ortsnamen", ex)
             End Try
         End Sub
-
-        ''' <summary>Holt einen Wert aus einer der vorformatierten Zusammenfassungen.</summary>
-        Private Shared Function FindSummaryValue(summary As String, key As String) As String
-            If String.IsNullOrEmpty(summary) Then Return ""
-            For Each line In summary.Split(ControlChars.Lf)
-                Dim sep = line.IndexOf(": ", StringComparison.Ordinal)
-                If sep <= 0 Then Continue For
-                If line.Substring(0, sep).Trim().Equals(key, StringComparison.OrdinalIgnoreCase) Then
-                    Return line.Substring(sep + 2).Trim()
-                End If
-            Next
-            Return ""
-        End Function
     End Class
 
 End Namespace

@@ -4925,7 +4925,10 @@ Namespace Services
             Dim tStride As Integer, sStride As Integer
             Dim tb = ReadMaskBytes(target, tStride)
             Dim sb = ReadMaskBytes(source, sStride)
-            Dim width = Math.Min(tStride, sStride)
+            ' Die BILDBREITE begrenzt die Zeile, nicht der Stride: der Stride ist die Zeilenlaenge in
+            ' BYTES und darf gepolstert sein. Bei Alpha8 sind beide heute gleich, gaebe Skia je
+            ' gepolsterte Zeilen zurueck, wuerden sonst Polsterbytes mitverrechnet.
+            Dim width = target.Width
             Dim normalized = If(mode, "").Trim().ToLowerInvariant()
             For y = 0 To target.Height - 1
                 Dim tOffset = y * tStride, sOffset = y * sStride
@@ -4956,7 +4959,8 @@ Namespace Services
             Dim zStride As Integer, qStride As Integer
             Dim zb = ReadMaskBytes(target, zStride)
             Dim qb = ReadMaskBytes(source, qStride)
-            Dim width = Math.Min(zStride, qStride)
+            ' Bildbreite statt Stride, aus demselben Grund wie in CombineMaskInto.
+            Dim width = target.Width
             For y = 0 To target.Height - 1
                 Dim zo = y * zStride, qo = y * qStride
                 For x = 0 To width - 1
@@ -5282,6 +5286,45 @@ Namespace Services
             }
         End Function
 
+        ''' <summary>Derselbe Ausschnitt des Rezepts als kurzer Schluessel - fuer den Deckungs-Speicher
+        ''' in <see cref="GetAnnotationMaskCoverage"/>.
+        '''
+        ''' WER HIER ETWAS AENDERT, AENDERT ES AUCH IN <see cref="BuildMaskGeometry"/> - und
+        ''' umgekehrt. Die Reihenfolge ist absichtlich dieselbe, damit sich beide Zeile fuer Zeile
+        ''' vergleichen lassen. Ein zu schmaler Schluessel gibt nach einer Aenderung der Geometrie
+        ''' die ALTE Deckung zurueck, und die Maske sitzt sichtbar neben dem Objekt.
+        '''
+        ''' Vorher stand hier JsonSerializer.Serialize(BuildMaskGeometry(...)): das baute bei JEDEM
+        ''' Aufruf ein volles ImageAdjustments auf und schrieb dessen mehrere hundert Eigenschaften
+        ''' in eine Zeichenkette - auch bei einem Treffer im Speicher, und beim Ziehen eines Objekts
+        ''' mit Ebenenmaske je Region-Patch und Bild.
+        '''
+        ''' CanvasBackgroundColor steht nicht drin: BuildMaskGeometry setzt sie fest auf
+        ''' durchsichtig, sie kann sich also gar nicht unterscheiden.</summary>
+        Private Shared Function MaskGeometryKey(geometry As ImageAdjustments) As String
+            If geometry Is Nothing Then Return ""
+            Return String.Join(":",
+                KeyPart(geometry.CropLeftPercent), KeyPart(geometry.CropTopPercent),
+                KeyPart(geometry.CropRightPercent), KeyPart(geometry.CropBottomPercent),
+                KeyPart(geometry.RotationDegrees),
+                KeyPart(geometry.FlipHorizontal), KeyPart(geometry.FlipVertical),
+                KeyPart(geometry.StraightenDegrees),
+                KeyPart(geometry.StraightenExpandCanvas),
+                KeyPart(geometry.PerspectiveHorizontal),
+                KeyPart(geometry.PerspectiveVertical),
+                KeyPart(geometry.PerspectiveAspect),
+                KeyPart(geometry.PerspectiveScale),
+                KeyPart(geometry.PerspectiveCorner0X), KeyPart(geometry.PerspectiveCorner0Y),
+                KeyPart(geometry.PerspectiveCorner1X), KeyPart(geometry.PerspectiveCorner1Y),
+                KeyPart(geometry.PerspectiveCorner2X), KeyPart(geometry.PerspectiveCorner2Y),
+                KeyPart(geometry.PerspectiveCorner3X), KeyPart(geometry.PerspectiveCorner3Y),
+                ImageWarpSignature(geometry.ImageWarp),
+                KeyPart(geometry.ResizeWidth), KeyPart(geometry.ResizeHeight),
+                KeyPart(geometry.ResizeInterpolation),
+                KeyPart(geometry.CanvasWidth), KeyPart(geometry.CanvasHeight),
+                KeyPart(geometry.CanvasAnchor))
+        End Function
+
         ''' <summary>Trägt dieses Objekt eine eigene Deckung, muss also über eine Ebene gezeichnet
         ''' werden? Ebenenmaske oder Schnittmaske. Auch der Kompositor fragt hier: beides entsteht
         ''' beim KOMPONIEREN und steckt nicht in der Objekt-Bitmap.</summary>
@@ -5335,7 +5378,7 @@ Namespace Services
                                                           targetW As Integer, targetH As Integer) As Byte()
             If maskData Is Nothing OrElse geometry Is Nothing OrElse targetW <= 0 OrElse targetH <= 0 Then Return Nothing
             Dim key = String.Join("|", MaskFingerprint(maskData),
-                                  System.Text.Json.JsonSerializer.Serialize(BuildMaskGeometry(geometry)),
+                                  MaskGeometryKey(geometry),
                                   targetW, targetH)
             SyncLock _maskCoverageLock
                 For Each entry In _maskCoverageCache
@@ -5736,26 +5779,58 @@ Namespace Services
         ''' <paramref name="strich"/> ist der Strich als Quellraum-Maske, wie ihn
         ''' CreateSourceMaskFromSelection liefert.
         '''
+        ''' <paramref name="mode"/> ist der Verknuepfungsmodus der Modusreihe des Masken-Panels
+        ''' ("Add", "Subtract", "Intersect"). Leer heisst: aus <paramref name="subtract"/> ableiten -
+        ''' so bleiben die vorhandenen Aufrufe mit dem blossen Schalter unveraendert richtig.
+        '''
         ''' STAND: die Anwendung ruft das bisher NUR fuer Verlaufsmasken. Striche auf eine gemalte
         ''' Ebenen-Maske laufen weiterhin ueber die Auswahl (ApplySelectionCandidate ->
         ''' WriteSelectionMaskBackToLayer), weil deren Raster zugleich die Quelle des roten Overlays
         ''' ist. MergePaintedMaskStroke ist der vorbereitete Weg dorthin und wird heute nur von der
         ''' Diagnose gefahren - siehe Audits/OFFENE_PUNKTE.md.</summary>
         Public Shared Function ApplyMaskBrushStroke(target As ImageMask, stroke As ImageMask,
-                                                    subtract As Boolean) As Boolean
+                                                    subtract As Boolean,
+                                                    Optional mode As String = "") As Boolean
             If target Is Nothing OrElse stroke Is Nothing Then Return False
-            If target.IsGradient Then Return MergeGradientBrushCorrection(target, stroke, subtract)
-            Return MergePaintedMaskStroke(target, stroke, subtract)
+            Dim effective = NormalizeMaskStrokeMode(mode, subtract)
+            If target.IsGradient Then
+                ' SCHNEIDEN laesst sich an einem GERECHNETEN Verlauf nicht ausdruecken: seine
+                ' Pinselkorrektur sind zwei begrenzte Raster ueber der Verlaufsdeckung, und "nur
+                ' behalten, was der Strich deckt" hiesse, alles AUSSERHALB des Strichs abzuziehen -
+                ' ein Raster ueber das ganze Bild, genau der Aufwand, den der begrenzte Weg
+                ' vermeidet. Der Strich bleibt deshalb wirkungslos, statt still zu einem
+                ' Hinzufuegen zu werden und die Flaeche wachsen zu lassen.
+                If String.Equals(effective, "Intersect", StringComparison.Ordinal) Then Return False
+                Return MergeGradientBrushCorrection(target, stroke, String.Equals(effective, "Subtract", StringComparison.Ordinal))
+            End If
+            Return MergePaintedMaskStroke(target, stroke, String.Equals(effective, "Subtract", StringComparison.Ordinal), effective)
+        End Function
+
+        ''' <summary>Der wirksame Verknuepfungsmodus eines Pinselstrichs. Ein leerer oder
+        ''' unbekannter Modus faellt auf den Schalter zurueck; "New" ist hier kein eigener Fall,
+        ''' der erste Strich auf eine leere Maske setzt sie ohnehin.</summary>
+        Private Shared Function NormalizeMaskStrokeMode(mode As String, subtract As Boolean) As String
+            If String.Equals(mode, "Intersect", StringComparison.OrdinalIgnoreCase) Then Return "Intersect"
+            If String.Equals(mode, "Subtract", StringComparison.OrdinalIgnoreCase) Then Return "Subtract"
+            If String.Equals(mode, "Add", StringComparison.OrdinalIgnoreCase) Then Return "Add"
+            Return If(subtract, "Subtract", "Add")
         End Function
 
         ''' <summary>Strich in eine GEMALTE Maske einrechnen: hinzufügen nimmt das Maximum, abziehen
-        ''' zieht ab. Das Rechteck wächst beim Hinzufügen mit; beim Abziehen bleibt es stehen, statt
-        ''' es teuer neu zu vermessen - ein zu großes Rechteck mit Nullen kostet nur etwas Speicher,
-        ''' ein zu kleines würde Maskenteile abschneiden.</summary>
+        ''' zieht ab, schneiden nimmt das Minimum. Das Rechteck wächst beim Hinzufügen mit; beim
+        ''' Abziehen bleibt es stehen, statt es teuer neu zu vermessen - ein zu großes Rechteck mit
+        ''' Nullen kostet nur etwas Speicher, ein zu kleines würde Maskenteile abschneiden. Beim
+        ''' SCHNEIDEN schrumpft es auf die Ueberschneidung: alles ausserhalb ist danach leer.
+        '''
+        ''' <paramref name="mode"/> ist der Verknuepfungsmodus; leer heisst "aus subtract ableiten".</summary>
         Public Shared Function MergePaintedMaskStroke(mask As ImageMask, stroke As ImageMask,
-                                                      subtract As Boolean) As Boolean
+                                                      subtract As Boolean,
+                                                      Optional mode As String = "") As Boolean
             If mask Is Nothing OrElse stroke Is Nothing OrElse mask.IsGradient Then Return False
             If stroke.Right <= stroke.Left OrElse stroke.Bottom <= stroke.Top Then Return False
+            Dim effective = NormalizeMaskStrokeMode(mode, subtract)
+            Dim isIntersect = String.Equals(effective, "Intersect", StringComparison.Ordinal)
+            subtract = String.Equals(effective, "Subtract", StringComparison.Ordinal)
             Dim sWidth = stroke.Right - stroke.Left, sHeight = stroke.Bottom - stroke.Top
             Dim sPuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
             If sPuffer Is Nothing Then Return False
@@ -5765,14 +5840,49 @@ Namespace Services
             If oldWidth > 0 AndAlso oldHeight > 0 Then altPuffer = DecodeAlphaRaster(mask.PngBase64, oldWidth, oldHeight)
 
             ' Ohne bisherige Maske ist ein ABZIEHEN gegenstandslos - sonst entstünde aus dem ersten
-            ' Radiergummi-Strich eine leere Maske, die als "es gibt eine Maske" gilt.
+            ' Radiergummi-Strich eine leere Maske, die als "es gibt eine Maske" gilt. Fuer das
+            ' SCHNEIDEN gilt dasselbe: der Schnitt mit nichts ist nichts.
             If altPuffer Is Nothing Then
-                If subtract Then Return False
+                If subtract OrElse isIntersect Then Return False
                 mask.SourceWidthPixels = stroke.SourceWidthPixels
                 mask.SourceHeightPixels = stroke.SourceHeightPixels
                 mask.Left = stroke.Left : mask.Top = stroke.Top
                 mask.Right = stroke.Right : mask.Bottom = stroke.Bottom
                 mask.PngBase64 = stroke.PngBase64
+                Return True
+            End If
+
+            ' SCHNEIDEN steht fuer sich: das Ergebnis ist die Ueberschneidung beider Rechtecke, und
+            ' je Pixel das MINIMUM. Ueber den gemeinsamen Weg unten ginge es nicht - der kopiert die
+            ' alte Maske mit einem nicht-negativen Versatz in den neuen Puffer, und beim Schneiden
+            ' liegt das neue Rechteck INNERHALB des alten.
+            If isIntersect Then
+                Dim clipLeft = Math.Max(mask.Left, stroke.Left)
+                Dim clipTop = Math.Max(mask.Top, stroke.Top)
+                Dim clipRight = Math.Min(mask.Right, stroke.Right)
+                Dim clipBottom = Math.Min(mask.Bottom, stroke.Bottom)
+                Dim clipWidth = clipRight - clipLeft, clipHeight = clipBottom - clipTop
+                If clipWidth > 0 AndAlso clipHeight > 0 Then
+                    Dim clipped = New Byte(clipWidth * clipHeight - 1) {}
+                    For y = 0 To clipHeight - 1
+                        Dim maskRow = (y + clipTop - mask.Top) * oldWidth + (clipLeft - mask.Left)
+                        Dim strokeRow = (y + clipTop - stroke.Top) * sWidth + (clipLeft - stroke.Left)
+                        Dim targetRow = y * clipWidth
+                        For x = 0 To clipWidth - 1
+                            clipped(targetRow + x) = Math.Min(altPuffer(maskRow + x), sPuffer(strokeRow + x))
+                        Next
+                    Next
+                    Dim clippedEncoded = EncodeAlphaRaster(clipped, clipWidth, clipHeight)
+                    If Not String.IsNullOrEmpty(clippedEncoded) Then
+                        mask.Left = clipLeft : mask.Top = clipTop
+                        mask.Right = clipRight : mask.Bottom = clipBottom
+                        mask.PngBase64 = clippedEncoded
+                        Return True
+                    End If
+                End If
+                ' Keine Ueberschneidung oder nichts uebrig: die Maske ist leer, nicht unveraendert.
+                mask.PngBase64 = ""
+                mask.Left = 0 : mask.Top = 0 : mask.Right = 0 : mask.Bottom = 0
                 Return True
             End If
 

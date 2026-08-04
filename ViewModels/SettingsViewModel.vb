@@ -153,13 +153,11 @@ Namespace ViewModels
         Private _savedApplicationScale As Double = 1.0
         Private _savedApplicationScaleScreen As String = "HDMI-A-1"
         Private _savedVideoHardwareAcceleration As Boolean = False
+        ' Ohne Merker fuer das Abbrechen: diese Schalter werden beim Umlegen sofort geschrieben und
+        ' vom Abbrechen bewusst nicht mehr zurueckgedreht (siehe RestoreSnapshot).
         Private _gpuAccelerationEnabled As Boolean = False
-        Private _savedGpuAccelerationEnabled As Boolean = False
         Private _gpuAccelerationDevice As String = ""
-        Private _savedGpuAccelerationDevice As String = ""
         Private _gpuAccelerationBusy As Boolean = False
-        Private _savedFaceRecognitionEnabled As Boolean = False
-        Private _savedPhotoMapEnabled As Boolean = False
         Private _savedTransparencyBackgroundMode As String = "Checkerboard"
         Private _savedTransparencyBackgroundColor As String = "#FFFFFFFF"
 
@@ -1612,14 +1610,17 @@ Namespace ViewModels
         ''' Prozent der kuerzeren Bildkante.
         '''
         ''' Relativ und nicht in Bildpunkten: 80 Punkte sind auf einem 24-Megapixel-Foto ein Kopf in
-        ''' der dritten Reihe und auf einem Handyschnappschuss ein Portraet. Ab Werk 4, gemessen
-        ''' (siehe AppSettingsService). Auf 0 gestellt bleibt alles, was die Erkennung findet.</summary>
+        ''' der dritten Reihe und auf einem Handyschnappschuss ein Portraet. Ab Werk 3, gemessen
+        ''' (siehe AppSettingsService). Auf 0 gestellt bleibt alles, was die Erkennung findet.
+        '''
+        ''' Nach oben ist bei 10 Schluss - derselbe Anschlag wie am Regler und in AppSettingsService.
+        ''' Darueber faellt schon mehr als die Haelfte aller gefundenen Gesichter weg.</summary>
         Public Property FaceMinimumSizePercent As Double
             Get
                 Return _faceMinimumSizePercent
             End Get
             Set(value As Double)
-                Dim clean = Math.Max(0, Math.Min(25, Math.Round(value)))
+                Dim clean = Math.Max(0, Math.Min(10, Math.Round(value)))
                 If _faceMinimumSizePercent = clean Then Return
                 Me.RaiseAndSetIfChanged(_faceMinimumSizePercent, clean)
                 Me.RaisePropertyChanged(NameOf(FaceMinimumSizeText))
@@ -2218,10 +2219,6 @@ Namespace ViewModels
             _savedStartupNoImageMode = _startupNoImageMode
             _savedLanguageMode = _languageMode
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
-            _savedGpuAccelerationEnabled = _gpuAccelerationEnabled
-            _savedGpuAccelerationDevice = _gpuAccelerationDevice
-            _savedFaceRecognitionEnabled = _faceRecognitionEnabled
-            _savedPhotoMapEnabled = _photoMapEnabled
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
             _savedTransparencyBackgroundColor = _transparencyBackgroundColor
             _savedFontSizeOffset = _fontSizeOffset
@@ -2284,11 +2281,12 @@ Namespace ViewModels
             StartupNoImageMode = _savedStartupNoImageMode
             LanguageMode = _savedLanguageMode
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
-            GpuAccelerationEnabled = _savedGpuAccelerationEnabled
-            SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault(
-                Function(o) String.Equals(o.Key, _savedGpuAccelerationDevice, StringComparison.Ordinal))
-            FaceRecognitionEnabled = _savedFaceRecognitionEnabled
-            PhotoMapEnabled = _savedPhotoMapEnabled
+            ' SOFORT GESPEICHERTE SCHALTER STEHEN HIER NICHT. Grafikbeschleunigung, Personenerkennung
+            ' und Fotokarte werden beim Umlegen geschrieben, weil die Dienste dahinter die
+            ' Einstellung selbst lesen und nicht auf das Uebernehmen warten. Sie hier
+            ' zurueckzudrehen hiesse, einen bereits wirksamen Schalter beim Abbrechen wieder
+            ' umzulegen - bei der Personenerkennung sogar mitsamt dem, was der Suchlauf seither
+            ' gefunden hat.
             TransparencyBackgroundMode = _savedTransparencyBackgroundMode
             TransparencyBackgroundColor = _savedTransparencyBackgroundColor
             FontSizeOffset = _savedFontSizeOffset
@@ -2369,7 +2367,10 @@ Namespace ViewModels
             VideoHardwareAcceleration = False
             GpuAccelerationEnabled = False
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault()
+            ' Das Ausschalten der Erkennung loescht hier NICHTS im Stillen: der Schalter fragt vor
+            ' dem Entfernen der gefundenen Gesichter nach (siehe SaveFeatureSettings).
             FaceRecognitionEnabled = False
+            FaceMinimumSizePercent = 3
             PhotoMapEnabled = False
             TransparencyBackgroundMode = "Checkerboard"
             TransparencyBackgroundColor = "#FFFFFFFF"
@@ -2418,19 +2419,73 @@ Namespace ViewModels
             settings.FaceMinimumSizePercent = _faceMinimumSizePercent
             AppSettingsService.Save(settings)
 
-            ' AUSSCHALTEN WIRFT DIE MERKMALE WEG. Biometrische Merkmale entstehen nur auf
-            ' ausdrueckliche Ansage, und sie sollen auch nur solange liegenbleiben - wer die
-            ' Funktion abschaltet, will sie los sein und nicht schlafend in der Bibliothek wissen.
-            ' Das ist zugleich der Weg, die Gruppierung von Grund auf neu aufzubauen: aus, ein,
-            ' neu suchen.
+            ' AUSSCHALTEN WIRFT DIE MERKMALE WEG - aber erst nach einer Rueckfrage. Biometrische
+            ' Merkmale entstehen nur auf ausdrueckliche Ansage, und sie sollen auch nur solange
+            ' liegenbleiben. Was daran haengt, ist aber mehr als das Gefundene: die von Hand
+            ' vergebenen Namen und Zuordnungen sind Handarbeit und kommen von keinem Suchlauf
+            ' zurueck. Deshalb wird gefragt, und die Frage nennt die Zahl der benannten Personen.
             If faceWasOn AndAlso Not _faceRecognitionEnabled Then
-                Try
-                    LibraryService.Instance.ClearAllFaces()
-                Catch ex As Exception
-                    DiagnosticLogService.LogException("Settings.ClearAllFaces", ex)
-                End Try
+                Dim ignored = AskAndClearFacesAsync()
             End If
         End Sub
+
+        ''' <summary>Nach dem Ausschalten der Personenerkennung: fragen, ob das Gefundene weg soll,
+        ''' und nur bei einem Ja loeschen.
+        '''
+        ''' Bei einem Nein bleibt alles liegen und die Erkennung bleibt trotzdem aus - das ist der
+        ''' Weg fuer den, der den Schalter versehentlich umgelegt hat. Wer die Gruppierung von Grund
+        ''' auf neu aufbauen will, geht denselben Weg mit Ja: aus, loeschen, ein, neu suchen.
+        '''
+        ''' Gezaehlt werden die BENANNTEN Personen. Gefundene Gesichter stellt ein neuer Suchlauf
+        ''' wieder her, Namen nicht - deshalb ist das die Zahl, an der die Entscheidung haengt.
+        '''
+        ''' Ein LAUFENDER Suchlauf wird vorher angehalten. Sonst schreibt er nach dem Leeren weiter,
+        ''' und die Tabellen sind hinterher nicht leer, sondern halb gefuellt.</summary>
+        Private Async Function AskAndClearFacesAsync() As Task
+            Try
+                Dim namedCount = 0
+                Try
+                    namedCount = Await Task.Run(Function() LibraryService.Instance.GetPersonNames().Count)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Settings.CountNamedPeople", ex)
+                End Try
+
+                If _mainVm IsNot Nothing Then
+                    Dim detail As String
+                    If namedCount = 1 Then
+                        detail = LocalizationService.T("Eine Person hast du selbst benannt. Der Name und seine Zuordnung sind danach weg und kommen durch einen neuen Suchlauf nicht zurück.")
+                    ElseIf namedCount > 1 Then
+                        detail = String.Format(LocalizationService.T("{0} Personen hast du selbst benannt. Die Namen und ihre Zuordnungen sind danach weg und kommen durch einen neuen Suchlauf nicht zurück."), namedCount)
+                    Else
+                        detail = LocalizationService.T("Benannt hast du bisher niemanden. Ein neuer Suchlauf findet die Gesichter wieder, dauert aber so lange wie beim ersten Mal.")
+                    End If
+
+                    Dim goAhead = Await _mainVm.ShowConfirmAsync(
+                        LocalizationService.T("Gefundene Gesichter entfernen?"),
+                        LocalizationService.T("Die Personenerkennung ist jetzt aus. Sollen die gefundenen Gesichter und Personen aus der Bibliothek entfernt werden?") &
+                            vbLf & vbLf & detail,
+                        "Entfernen", "Behalten")
+                    If Not goAhead Then Return
+                End If
+
+                ' Im Hintergrund, weil das Anhalten des Suchlaufs den Faden blockiert, auf dem es
+                ' laeuft - und das darf nicht die Oberflaeche sein. Das Anhalten macht
+                ' ClearAllFaces selbst; hier NICHT vorher noch einmal anhalten, sonst entscheidet
+                ' der erste Versuch ueber den Rueckgabewert des zweiten und die Meldung unten
+                ' passt nicht mehr zu dem, was wirklich passiert ist.
+                Dim cleared = Await Task.Run(Function() LibraryService.Instance.ClearAllFaces())
+
+                _mainVm?.People?.RefreshPeople()
+
+                If Not cleared AndAlso _mainVm IsNot Nothing Then
+                    Await _mainVm.ShowMessageAsync(
+                        LocalizationService.T("Suchlauf läuft noch"),
+                        LocalizationService.T("Der laufende Suchlauf ließ sich nicht rechtzeitig anhalten. Die gefundenen Gesichter stehen noch in der Bibliothek. Warte, bis der Suchlauf fertig ist, und schalte die Erkennung dann noch einmal aus."))
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.ClearAllFaces", ex)
+            End Try
+        End Function
 
         ''' Schaltet die AUSFÜHRLICHE Ablaufspur in DiagnosticLogService ein/aus (schreibt nach
         ''' %LocalAppData%/FerrumPix/logs/diagnostics.log): gezielt instrumentierte Stellen wie

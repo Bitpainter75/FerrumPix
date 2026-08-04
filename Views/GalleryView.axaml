@@ -2181,6 +2181,18 @@
                                    Text="{Binding FaceScanProgressText}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
+                        <!-- Ein Lauf über einen großen Ordner dauert Minuten. Ohne diesen Knopf
+                             bliebe nur, die Anwendung zu beenden. Gefundenes bleibt gespeichert. -->
+                        <Button Classes="ghost" Height="20" Padding="8,0,8,2"
+                                VerticalAlignment="Center" VerticalContentAlignment="Center"
+                                Focusable="False"
+                                Command="{Binding CancelFaceScanCommand}"
+                                ToolTip.Tip="Suche anhalten, Gefundenes bleibt gespeichert">
+                            <TextBlock Text="Abbrechen"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       VerticalAlignment="Center"/>
+                        </Button>
                     </StackPanel>
                     <TextBlock
                            Text="{Binding StatusText}"

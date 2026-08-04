@@ -6506,4 +6506,64 @@
   <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
     <value>Markierte Ebenen löschen (Entf)</value>
   </data>
+  <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
+    <value>Gesichter werden gesucht: {0} von {1}</value>
+  </data>
+  <data name="0_Gesichter_gefunden_66a830ef" xml:space="preserve">
+    <value>{0} Gesichter gefunden</value>
+  </data>
+  <data name="Suche_abgebrochen_0_Gesichter_gefunden_8e55e905" xml:space="preserve">
+    <value>Suche abgebrochen, {0} Gesichter gefunden</value>
+  </data>
+  <data name="0_Gruppen_1_davon_benannt_5fc73794" xml:space="preserve">
+    <value>{0} Gruppen, {1} davon benannt</value>
+  </data>
+  <data name="Seite_0_von_1_2_bis_3_von_4_7ffc6ff5" xml:space="preserve">
+    <value>Seite {0} von {1}, {2} bis {3} von {4}</value>
+  </data>
+  <data name="Suche_anhalten_Gefundenes_bleibt_gespeichert_f96443bb" xml:space="preserve">
+    <value>Suche anhalten, Gefundenes bleibt gespeichert</value>
+  </data>
+  <data name="0_Personen_hast_du_selbst_benannt_Die_Namen_und__1dc0f4b7" xml:space="preserve">
+    <value>{0} Personen hast du selbst benannt. Die Namen und ihre Zuordnungen sind danach weg und kommen durch einen neuen Suchlauf nicht zurück.</value>
+  </data>
+  <data name="Benannt_hast_du_bisher_niemanden_Ein_neuer_Suchl_d9287542" xml:space="preserve">
+    <value>Benannt hast du bisher niemanden. Ein neuer Suchlauf findet die Gesichter wieder, dauert aber so lange wie beim ersten Mal.</value>
+  </data>
+  <data name="Der_laufende_Suchlauf_lie_sich_nicht_rechtzeitig_fb6e4572" xml:space="preserve">
+    <value>Der laufende Suchlauf ließ sich nicht rechtzeitig anhalten. Die gefundenen Gesichter stehen noch in der Bibliothek. Warte, bis der Suchlauf fertig ist, und schalte die Erkennung dann noch einmal aus.</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_jetzt_aus_Sollen_die_g_b1c4b20a" xml:space="preserve">
+    <value>Die Personenerkennung ist jetzt aus. Sollen die gefundenen Gesichter und Personen aus der Bibliothek entfernt werden?</value>
+  </data>
+  <data name="Eine_Person_hast_du_selbst_benannt_Der_Name_und__6791e11b" xml:space="preserve">
+    <value>Eine Person hast du selbst benannt. Der Name und seine Zuordnung sind danach weg und kommen durch einen neuen Suchlauf nicht zurück.</value>
+  </data>
+  <data name="Gefundene_Gesichter_entfernen_7e3bede7" xml:space="preserve">
+    <value>Gefundene Gesichter entfernen?</value>
+  </data>
+  <data name="Suchlauf_l_uft_noch_0264a622" xml:space="preserve">
+    <value>Suchlauf läuft noch</value>
+  </data>
+  <data name="den_Betrachter_ffnest_7ec3700f" xml:space="preserve">
+    <value>den Betrachter öffnest</value>
+  </data>
+  <data name="den_Vollbildmodus_ffnest_24a7ef0c" xml:space="preserve">
+    <value>den Vollbildmodus öffnest</value>
+  </data>
+  <data name="Bild_0_x_1_auf_2_x_3_4_Kacheln_5_s_6_34cd6bc6" xml:space="preserve">
+    <value>Bild {0}x{1} auf {2}x{3}, {4} Kacheln, {5} s, {6}</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_dam_af17b8c1" xml:space="preserve">
+    <value>Das Ergebnis wäre {0} mal {1} Bildpunkte groß und damit zu groß für diesen Weg.</value>
+  </data>
+  <data name="Das_Ergebnis_w_re_0_mal_1_Bildpunkte_gro_und_br__e2e4625a" xml:space="preserve">
+    <value>Das Ergebnis wäre {0} mal {1} Bildpunkte groß und bräuchte {2} GB Speicher am Stück - so viel nimmt dieser Weg nicht an.</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_St_rke_4_5_e6fa432a" xml:space="preserve">
+    <value>Bild {0}x{1}, {2} Kacheln, {3} s, Stärke {4} %, {5}</value>
+  </data>
+  <data name="schnell_5db66027" xml:space="preserve">
+    <value>schnell</value>
+  </data>
 </root>

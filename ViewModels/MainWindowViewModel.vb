@@ -228,8 +228,8 @@ Namespace ViewModels
                 Select Case _currentMode
                     Case AppMode.Editor : Return " Editor"
                     Case AppMode.Viewer : Return " Viewer"
-                    Case AppMode.Settings : Return " – " & LocalizationService.T("Einstellungen")
-                    Case AppMode.People : Return " – " & LocalizationService.T("Personen verwalten")
+                    Case AppMode.Settings : Return " - " & LocalizationService.T("Einstellungen")
+                    Case AppMode.People : Return " - " & LocalizationService.T("Personen verwalten")
                     Case Else : Return ""
                 End Select
             End Get
@@ -319,6 +319,10 @@ Namespace ViewModels
             End Select
         End Sub
 
+        ''' <summary>Der Baustein wird in "... bevor du {0}?" eingesetzt und muss deshalb in der
+        ''' ZWEITEN PERSON stehen: "den Betrachter oeffnest", nicht "den Betrachter zu oeffnen".
+        ''' Sonst steht dort "bevor du den Betrachter zu oeffnen?", und in der englischen Fassung
+        ''' "before you to open the viewer?". Dasselbe gilt fuer den Baustein des Betrachters.</summary>
         Private Async Function ConfirmEditorLeaveAsync(actionDescription As String) As Task(Of Boolean)
             If Editor Is Nothing OrElse Not Editor.HasUnsavedChanges Then Return True
             Return Await Editor.ConfirmSaveBeforeLeavingAsync(actionDescription)
@@ -339,7 +343,7 @@ Namespace ViewModels
             Try
                 If String.IsNullOrWhiteSpace(leftPath) OrElse String.IsNullOrWhiteSpace(rightPath) Then Return
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("den Betrachter öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer AndAlso Viewer IsNot Nothing AndAlso
                    Not String.Equals(Viewer.CurrentImagePath, leftPath, StringComparison.OrdinalIgnoreCase) Then
@@ -355,7 +359,7 @@ Namespace ViewModels
         Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             Try
                 If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
-                    If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("den Betrachter öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer AndAlso
                    Viewer IsNot Nothing AndAlso
@@ -376,7 +380,7 @@ Namespace ViewModels
         Public Async Sub OpenImmichViewer(startPseudoPath As String, sessionItems As System.Collections.Generic.List(Of Models.ImageItem), Optional immichAlbumId As String = Nothing)
             Try
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("den Betrachter zu öffnen") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("den Betrachter öffnest") Then Return
                 End If
                 Viewer.OpenImmichSession(startPseudoPath, sessionItems, immichAlbumId)
                 CurrentMode = AppMode.Viewer
@@ -389,7 +393,7 @@ Namespace ViewModels
 
         Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task Implements IViewerHost.OpenImageInEditor
             If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
-                If Not Await ConfirmEditorLeaveAsync("ein anderes Bild zu öffnen") Then Return
+                If Not Await ConfirmEditorLeaveAsync("ein anderes Bild öffnest") Then Return
             End If
             If CurrentMode = AppMode.Viewer Then
                 If Not Await ConfirmViewerLeaveAsync("den Editor öffnest") Then Return
@@ -402,7 +406,7 @@ Namespace ViewModels
         Public Async Sub OpenSettings()
             Try
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("die Einstellungen zu öffnen") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("die Einstellungen öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer Then
                     If Not Await ConfirmViewerLeaveAsync("die Einstellungen öffnest") Then Return
@@ -429,7 +433,7 @@ Namespace ViewModels
         Public Async Sub OpenPeople()
             Try
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("die Personen zu öffnen") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("die Personen öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer Then
                     If Not Await ConfirmViewerLeaveAsync("die Personen öffnest") Then Return
@@ -462,7 +466,7 @@ Namespace ViewModels
             Try
                 If String.IsNullOrWhiteSpace(tag) OrElse Gallery Is Nothing Then Return
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("zur Galerie zu wechseln") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("zur Galerie wechselst") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer Then
                     If Not Await ConfirmViewerLeaveAsync("zur Galerie wechselst") Then Return
@@ -477,7 +481,7 @@ Namespace ViewModels
         Public Async Sub BackToGallery(Optional sourcePath As String = Nothing) Implements IViewerHost.BackToGallery
             Try
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("zur Galerie zu wechseln") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("zur Galerie wechselst") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer Then
                     If Not Await ConfirmViewerLeaveAsync("zur Galerie wechselst") Then Return
@@ -531,7 +535,7 @@ Namespace ViewModels
                     ' Wie beim bildlosen Betrachter unten: nichts tun.
                     Return
                 ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
-                    If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus zu öffnen") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus öffnest") Then Return
                     _previousModeBeforeFullscreen = AppMode.Editor
                     Viewer.OpenImage(Editor.CurrentImagePath)
                     CurrentMode = AppMode.Viewer
@@ -1112,11 +1116,24 @@ Namespace ViewModels
 
         ''' <summary>Vor einem Stapel-Dialog aufzurufen: zählt die betroffenen Bilder und setzt den
         ''' Haken zurück. Zurückgesetzt wird bewusst - die Entscheidung gehört zum Lauf und nicht
-        ''' zum Programm.</summary>
-        Public Sub PreparePendingBakedOption(paths As IEnumerable(Of String))
+        ''' zum Programm.
+        '''
+        ''' ZÄHLEN KOSTET DATEIZUGRIFFE: je markiertem RAW oder PSD wird die Begleitdatei geöffnet
+        ''' und gelesen. Bei mehreren hundert Bildern auf einem Netzlaufwerk steht die Oberfläche
+        ''' still, bis der Dialog aufgeht - deshalb läuft das Lesen im Hintergrund.</summary>
+        Public Async Function PreparePendingBakedOptionAsync(paths As IEnumerable(Of String)) As Task
             DialogApplyPendingBaked = False
-            DialogPendingBakedCount = ImageProcessor.CountPathsWithPendingBakedOperations(paths)
-        End Sub
+            ' Die Aufzählung wird VOR dem Wechsel auf den Hintergrund festgehalten: sie kommt aus
+            ' einer Auswahl der Oberfläche, und die darf sich nebenher ändern.
+            Dim fixedPaths = If(paths, Enumerable.Empty(Of String)()).ToList()
+            Dim affected = 0
+            Try
+                affected = Await Task.Run(Function() ImageProcessor.CountPathsWithPendingBakedOperations(fixedPaths))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.PreparePendingBakedOption", ex)
+            End Try
+            DialogPendingBakedCount = affected
+        End Function
 
         Public Property DialogBatchFilterAppendName As Boolean
             Get

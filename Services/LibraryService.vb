@@ -830,8 +830,11 @@ Namespace Services
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
-                    cmd.CommandText = $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath LIKE $prefix"
-                    cmd.Parameters.AddWithValue("$prefix", prefix & "%")
+                    ' Maskiert wie beim Loeschen: ein Unterstrich im Ordnernamen holte sonst auch die
+                    ' Nachbarordner herein - siehe EscapeLikeValue.
+                    cmd.CommandText = $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath LIKE $prefix" &
+                                      LikeEscapeClause
+                    cmd.Parameters.AddWithValue("$prefix", EscapeLikeValue(prefix) & "%")
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
                             Dim meta = ReadMetaRow(reader)
@@ -1047,6 +1050,25 @@ Namespace Services
             Return result
         End Function
 
+        ' ORDNERPFADE ALS LIKE-MUSTER.
+        ' In SQLite steht "%" fuer beliebig viele Zeichen und "_" fuer genau eines. In einem
+        ' Ordnernamen sind beide voellig normal, und unmaskiert wirken sie als Platzhalter: der
+        ' Ordner "100_Fotos" traf damit auch "100aFotos". Beim Lesen ist das eine zu grosse
+        ' Ergebnismenge, beim Aufraeumen loescht es die Zeilen fremder Ordner mit.
+        ' SQLite kennt von sich aus KEIN Fluchtzeichen - es muss dem Befehl mit ESCAPE genannt
+        ' werden, sonst bleibt der Rueckstrich ein gewoehnliches Zeichen und nichts ist gewonnen.
+
+        Private Const LikeEscapeClause As String = " ESCAPE '\'"
+
+        ''' <summary>Maskiert die LIKE-Platzhalter in einem Pfad. Der Rueckstrich zuerst: sonst
+        ''' verdoppelt der naechste Schritt die gerade gesetzten Fluchtzeichen mit.</summary>
+        Private Shared Function EscapeLikeValue(value As String) As String
+            Return If(value, "").
+                Replace("\", "\\").
+                Replace("%", "\%").
+                Replace("_", "\_")
+        End Function
+
         ''' <summary>Vergisst alles, was der Katalog ueber einen Ordner weiss: Aufnahmedaten,
         ''' Ortsnamen, gefundene Gesichter und den Vermerk, dass er durchsucht wurde.
         '''
@@ -1061,27 +1083,28 @@ Namespace Services
         ''' <returns>Wie viele Katalogzeilen entfernt wurden.</returns>
         Public Function DeleteFolderCatalogData(folderPath As String) As Integer
             If String.IsNullOrWhiteSpace(folderPath) Then Return 0
-            Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
-                         Path.DirectorySeparatorChar & "%"
+            ' Maskiert, sonst raeumt "100_Fotos" auch bei "100aFotos" auf - siehe EscapeLikeValue.
+            Dim prefix = EscapeLikeValue(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
+                                         Path.DirectorySeparatorChar) & "%"
             Dim removed = 0
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using tx = conn.BeginTransaction()
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
-                        cmd.CommandText = "DELETE FROM Face WHERE FilePath LIKE $p"
+                        cmd.CommandText = "DELETE FROM Face WHERE FilePath LIKE $p" & LikeEscapeClause
                         cmd.Parameters.AddWithValue("$p", prefix)
                         cmd.ExecuteNonQuery()
                     End Using
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
-                        cmd.CommandText = "DELETE FROM ScannedImage WHERE FilePath LIKE $p"
+                        cmd.CommandText = "DELETE FROM ScannedImage WHERE FilePath LIKE $p" & LikeEscapeClause
                         cmd.Parameters.AddWithValue("$p", prefix)
                         cmd.ExecuteNonQuery()
                     End Using
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
-                        cmd.CommandText = "DELETE FROM ImageMeta WHERE FilePath LIKE $p"
+                        cmd.CommandText = "DELETE FROM ImageMeta WHERE FilePath LIKE $p" & LikeEscapeClause
                         cmd.Parameters.AddWithValue("$p", prefix)
                         removed = cmd.ExecuteNonQuery()
                     End Using

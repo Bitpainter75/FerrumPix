@@ -12,10 +12,16 @@ Namespace Services
     '''
     ''' Auf macOS bringt das Betriebssystem den Dekoder selbst mit, dort ist HEIC das Standardformat
     ''' der Kamera und ein extra installiertes libheif die Ausnahme. Diesen Weg kapselt
-    ''' MacImageIoService; findet er sich, läuft ALLES darüber. Die Klasse hier fragt dafür nur
+    ''' MacImageIoService; findet er sich, wird er zuerst gefragt. Die Klasse hier fragt dafür nur
     ''' MacImageIoService.IsAvailable und kennt weder das Betriebssystem noch dessen Schnittstellen.
     ''' Meldet der Dienst False - auf Linux und Windows immer -, bleibt es beim libheif-Weg unten,
     ''' und für diese beiden Systeme ändert sich damit nichts.
+    '''
+    ''' Die Weiche steht JE DATEI und nicht je System: "die Frameworks sind geladen" heißt nicht
+    ''' "diese Datei ist lesbar". Ein älteres macOS liest HEIC, aber kein AVIF, und liefert dafür
+    ''' schlicht nichts zurück. Kommt vom Weg des Systems nichts, wird deshalb libheif gefragt,
+    ''' sofern es da ist - sonst bliebe eine .avif leer, obwohl ein funktionierender Dekoder
+    ''' installiert ist. Der Rückfall steht einmal je Programmlauf im Diagnoselog.
     '''
     ''' Geladen wird dynamisch über NativeLibrary.Load + Delegates, genau wie bei LibRaw: der
     ''' DllImport-Resolver der Assembly ist bereits belegt (nur EINER erlaubt), und so bleibt die
@@ -72,7 +78,19 @@ Namespace Services
         ''' langsamere Thumbnails als sporadische Abstürze. Der Weg über das Betriebssystem
         ''' liegt bewusst unter demselben Schloss: ImageIO wäre zwar threadsicher, aber in der
         ''' ganzen Anwendung soll immer nur EIN Decode gleichzeitig laufen.
+        '''
+        ''' Dieses Schloss deckt aber nur DIESEN Dienst. Die Regel gilt für die ganze Anwendung,
+        ''' und dafür ist <see cref="DecodeGate"/> zuständig - die teuren Wege hier laufen deshalb
+        ''' durch die Schleuse und erst darunter durch dieses Schloss. Die Reihenfolge ist immer
+        ''' dieselbe (erst Schleuse, dann Schloss), sonst könnten sich zwei Fäden verhaken. Steht
+        ''' ein Aufrufer schon in der Schleuse, ist der zweite Eintritt unschädlich: sie ist ein
+        ''' Sperrblock und lässt denselben Faden durch.
         Private Shared ReadOnly _nativeLock As New Object()
+
+        ''' <summary>Wurde der Rückfall vom Weg des Systems auf libheif schon gemeldet? Einmal je
+        ''' Programmlauf genügt - bei einem Ordner voller AVIF stünde dieselbe Zeile sonst
+        ''' hundertfach im Log und deckte alles andere zu.</summary>
+        Private Shared _fallbackLogged As Integer
 
         Private Shared _initialized As Boolean
         Private Shared _library As IntPtr
@@ -90,6 +108,23 @@ Namespace Services
         Private Shared _handleGetHeight As HandleIntFn
         Private Shared _handleRelease As ReleaseFn
         Private Shared _imageRelease As ReleaseFn
+
+        Private Shared Sub NoteFallbackToLibheif(what As String)
+            If Threading.Interlocked.Exchange(_fallbackLogged, 1) = 0 Then
+                DiagnosticLogService.LogAlways("HEIF",
+                    $"{MacImageIoService.DecoderName} liefert für {what} nichts - es wird libheif genommen")
+            End If
+        End Sub
+
+        ''' <summary>Steht der libheif-Weg wirklich bereit? Auf macOS meldet IsAvailable schon True,
+        ''' wenn nur die Frameworks des Systems geladen sind - dann sind die Zeiger hier unten leer,
+        ''' und ein Aufruf liefe ins Nichts.</summary>
+        Private Shared ReadOnly Property LibheifReady As Boolean
+            Get
+                EnsureLoaded()
+                Return _library <> IntPtr.Zero
+            End Get
+        End Property
 
         ''' <summary>True, wenn irgendein Dekoder bereitsteht: der des Betriebssystems oder libheif
         ''' (Ergebnis wird gecacht). Die Reihenfolge ist Absicht - liegt auf einem Mac zusätzlich
@@ -187,14 +222,23 @@ Namespace Services
         ''' RAW-Vorschaubild.</summary>
         Public Shared Function TryDecode(path As String) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            If MacImageIoService.IsAvailable Then
-                SyncLock _nativeLock
-                    Using preview = MacImageIoService.TryExtractPng(path)
-                        Return If(preview IsNot Nothing, DecodeToBgra(preview), Nothing)
-                    End Using
-                End SyncLock
-            End If
+            Return DecodeGate.Run(Function() DecodeWithFallback(path))
+        End Function
+
+        ''' <summary>Erst der Weg des Systems, bei leerem Ergebnis libheif.</summary>
+        Private Shared Function DecodeWithFallback(path As String) As SKBitmap
             SyncLock _nativeLock
+                If MacImageIoService.IsAvailable Then
+                    Using preview = MacImageIoService.TryExtractPng(path)
+                        If preview IsNot Nothing Then
+                            Dim bitmap = DecodeToBgra(preview)
+                            If bitmap IsNot Nothing Then Return bitmap
+                        End If
+                    End Using
+                    If Not LibheifReady Then Return Nothing
+                    NoteFallbackToLibheif("das Bild")
+                End If
+                If Not LibheifReady Then Return Nothing
                 Return DecodeCore(path)
             End SyncLock
         End Function
@@ -288,38 +332,54 @@ Namespace Services
         ''' Thumbnail-Erzeugung erwarten (gleiches Muster wie PSD/ICO).</summary>
         Public Shared Function ExtractPreview(path As String) As MemoryStream
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            ' Der Weg des Systems liefert den PNG-Strom direkt, ohne den Umweg über ein SKBitmap.
-            If MacImageIoService.IsAvailable Then
-                SyncLock _nativeLock
-                    Return MacImageIoService.TryExtractPng(path)
-                End SyncLock
-            End If
-
-            Using bmp = TryDecode(path)
-                If bmp Is Nothing Then Return Nothing
-                Using image = SKImage.FromBitmap(bmp)
-                    If image Is Nothing Then Return Nothing
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        If data Is Nothing Then Return Nothing
-                        Dim ms As New MemoryStream()
-                        data.SaveTo(ms)
-                        ms.Position = 0
-                        Return ms
-                    End Using
-                End Using
-            End Using
+            Return DecodeGate.Run(Function() ExtractPreviewWithFallback(path))
         End Function
 
-        ''' <summary>Maße ohne vollständiges Dekodieren - die Kopfdaten reichen dafür.</summary>
+        Private Shared Function ExtractPreviewWithFallback(path As String) As MemoryStream
+            SyncLock _nativeLock
+                ' Der Weg des Systems liefert den PNG-Strom direkt, ohne den Umweg über ein SKBitmap.
+                If MacImageIoService.IsAvailable Then
+                    Dim direct = MacImageIoService.TryExtractPng(path)
+                    If direct IsNot Nothing Then Return direct
+                    If Not LibheifReady Then Return Nothing
+                    NoteFallbackToLibheif("die Vorschau")
+                End If
+                If Not LibheifReady Then Return Nothing
+
+                Using bmp = DecodeCore(path)
+                    If bmp Is Nothing Then Return Nothing
+                    Using image = SKImage.FromBitmap(bmp)
+                        If image Is Nothing Then Return Nothing
+                        Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return Nothing
+                            Dim ms As New MemoryStream()
+                            data.SaveTo(ms)
+                            ms.Position = 0
+                            Return ms
+                        End Using
+                    End Using
+                End Using
+            End SyncLock
+        End Function
+
+        ''' <summary>Maße ohne vollständiges Dekodieren - die Kopfdaten reichen dafür.
+        '''
+        ''' Bewusst NICHT durch <see cref="DecodeGate"/>: das hier ist kein teurer Bildweg, sondern
+        ''' ein Blick in den Container, und die Frage nach den Maßen wird auch aus der Oberfläche
+        ''' gestellt. Sie hinter einem laufenden RAW-Decode warten zu lassen, kostete Sekunden für
+        ''' eine Auskunft von Millisekunden. Gegen gleichzeitige native Aufrufe schützt das Schloss
+        ''' dieses Dienstes.</summary>
         Public Shared Function TryGetSize(path As String) As (Width As Integer, Height As Integer)
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return (0, 0)
-            If MacImageIoService.IsAvailable Then
-                SyncLock _nativeLock
-                    Return MacImageIoService.TryGetSize(path)
-                End SyncLock
-            End If
-
             SyncLock _nativeLock
+                If MacImageIoService.IsAvailable Then
+                    Dim size = MacImageIoService.TryGetSize(path)
+                    If size.Width > 0 AndAlso size.Height > 0 Then Return size
+                    If Not LibheifReady Then Return (0, 0)
+                    NoteFallbackToLibheif("die Maße")
+                End If
+                If Not LibheifReady Then Return (0, 0)
+
                 Dim ctx As IntPtr = IntPtr.Zero
                 Dim handle As IntPtr = IntPtr.Zero
                 Dim pathPtr As IntPtr = IntPtr.Zero

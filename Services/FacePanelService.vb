@@ -98,9 +98,20 @@ Namespace Services
 
                              Dim crops = DecodeGate.Run(Function() CropAll(pending, filePath))
                              If crops Is Nothing Then Return
+                             ' Zwischen Decode und Anzeige kann das Bild gewechselt haben. Die
+                             ' Ausschnitte sind dann fertig dekodiert und werden nie eingehaengt -
+                             ' ohne dieses Freigeben blieben sie samt Bildspeicher liegen, und beim
+                             ' schnellen Blaettern kommt das oft vor.
+                             If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then
+                                 DisposeAll(crops)
+                                 Return
+                             End If
 
                              Dispatcher.UIThread.Post(Sub()
-                                                          If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
+                                                          If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then
+                                                              DisposeAll(crops)
+                                                              Return
+                                                          End If
                                                           For i = 0 To pending.Count - 1
                                                               pending(i).Thumbnail = crops(i)
                                                           Next
@@ -131,14 +142,20 @@ Namespace Services
                                  If entry.Cover IsNot Nothing Then Continue For
                                  If String.IsNullOrWhiteSpace(entry.CoverPath) OrElse Not IO.File.Exists(entry.CoverPath) Then Continue For
 
-                                 Dim bild = DecodeGate.Run(Function() CropFromFile(entry.CoverPath,
-                                                                                  entry.BoxX, entry.BoxY,
-                                                                                  entry.BoxWidth, entry.BoxHeight))
-                                 If bild Is Nothing Then Continue For
-                                 Dim ziel = entry
+                                 Dim cover = DecodeGate.Run(Function() CropFromFile(entry.CoverPath,
+                                                                                   entry.BoxX, entry.BoxY,
+                                                                                   entry.BoxWidth, entry.BoxHeight))
+                                 If cover Is Nothing Then Continue For
+                                 Dim target = entry
                                  Dispatcher.UIThread.Post(Sub()
-                                                              If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
-                                                              ziel.Cover = bild
+                                                              ' Wurde die Seite inzwischen gewechselt,
+                                                              ' haengt dieses Bild nirgends mehr ein -
+                                                              ' es muss weg, sonst bleibt es liegen.
+                                                              If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then
+                                                                  cover.Dispose()
+                                                                  Return
+                                                              End If
+                                                              target.Cover = cover
                                                           End Sub)
                              Next
                          Catch ex As Exception
@@ -162,12 +179,18 @@ Namespace Services
                                  Dim path = pendingPaths(i)
                                  If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Continue For
                                  Dim entry = pending(i)
-                                 Dim bild = DecodeGate.Run(Function() CropFromFile(path, entry.BoxX, entry.BoxY,
+                                 Dim crop = DecodeGate.Run(Function() CropFromFile(path, entry.BoxX, entry.BoxY,
                                                                                   entry.BoxWidth, entry.BoxHeight))
-                                 If bild Is Nothing Then Continue For
+                                 If crop Is Nothing Then Continue For
                                  Dispatcher.UIThread.Post(Sub()
-                                                              If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then Return
-                                                              entry.Thumbnail = bild
+                                                              ' Siehe LoadCovers: ein Ausschnitt, der
+                                                              ' nicht mehr gebraucht wird, muss
+                                                              ' freigegeben werden statt liegenzubleiben.
+                                                              If stillCurrent IsNot Nothing AndAlso Not stillCurrent() Then
+                                                                  crop.Dispose()
+                                                                  Return
+                                                              End If
+                                                              entry.Thumbnail = crop
                                                           End Sub)
                              Next
                          Catch ex As Exception
@@ -201,37 +224,70 @@ Namespace Services
         ''' Ausschnitt matschig.
         '''
         ''' Der Massstab kommt als Nebenausgabe zurueck, denn die Lage des Gesichts steht in
-        ''' Bildpunkten des ORIGINALS und muss mitwandern.</summary>
+        ''' Bildpunkten des ORIGINALS und muss mitwandern.
+        '''
+        ''' AUFRECHT, wie beim Suchen: die gespeicherte Box liegt im EXIF-gedrehten Bild (siehe
+        ''' FaceScanRunner.DecodeForScan). Ohne dieselbe Drehung hier schnitte die Kachel bei jedem
+        ''' Hochformat an einer voellig anderen Stelle.</summary>
         Private Shared Function DecodeForFace(path As String, faceSize As Double, ByRef scale As Double) As SkiaSharp.SKBitmap
             scale = 1
+            Dim decoded As SkiaSharp.SKBitmap = Nothing
+            Dim origin As SkiaSharp.SKEncodedOrigin
             Using codec = SkiaSharp.SKCodec.Create(path)
-                If codec Is Nothing Then Return SkiaSharp.SKBitmap.Decode(path)
-                Dim wanted = CropEdge * 2.0
-                If faceSize <= wanted Then Return SkiaSharp.SKBitmap.Decode(codec)
-
-                Dim gewuenscht = CSng(wanted / faceSize)
-                Dim masse = codec.GetScaledDimensions(gewuenscht)
-                If masse.Width <= 0 OrElse masse.Height <= 0 Then Return SkiaSharp.SKBitmap.Decode(codec)
-
-                Dim info = codec.Info.WithSize(masse.Width, masse.Height)
-                Dim bitmap = New SkiaSharp.SKBitmap(info)
-                If codec.GetPixels(info, bitmap.GetPixels()) <> SkiaSharp.SKCodecResult.Success Then
-                    bitmap.Dispose()
-                    Return SkiaSharp.SKBitmap.Decode(path)
+                If codec Is Nothing Then
+                    ' Kein Codec: dann auch kein Drehfeld von hier - das steht in der Datei und wird
+                    ' getrennt gelesen.
+                    decoded = SkiaSharp.SKBitmap.Decode(path)
+                    origin = ImageOrientationService.ReadOrigin(path)
+                Else
+                    origin = codec.EncodedOrigin
+                    Dim wanted = CropEdge * 2.0
+                    If faceSize <= wanted Then
+                        decoded = SkiaSharp.SKBitmap.Decode(codec)
+                    Else
+                        Dim wantedScale = CSng(wanted / faceSize)
+                        Dim size = codec.GetScaledDimensions(wantedScale)
+                        If size.Width <= 0 OrElse size.Height <= 0 Then
+                            decoded = SkiaSharp.SKBitmap.Decode(codec)
+                        Else
+                            Dim info = codec.Info.WithSize(size.Width, size.Height)
+                            Dim bitmap = New SkiaSharp.SKBitmap(info)
+                            If codec.GetPixels(info, bitmap.GetPixels()) <> SkiaSharp.SKCodecResult.Success Then
+                                bitmap.Dispose()
+                                decoded = SkiaSharp.SKBitmap.Decode(path)
+                            Else
+                                ' Der Massstab gilt in beiden Richtungen gleich und ueberlebt die
+                                ' Drehung deshalb unveraendert.
+                                scale = size.Width / CDbl(codec.Info.Width)
+                                decoded = bitmap
+                            End If
+                        End If
+                    End If
                 End If
-                scale = masse.Width / CDbl(codec.Info.Width)
-                Return bitmap
             End Using
+            Return FaceScanRunner.ApplyOrientationOwned(decoded, origin)
         End Function
+
+        ''' <summary>Gibt eine Liste von Ausschnitten frei, die niemand mehr braucht. Nothing-Eintraege
+        ''' sind normal: fuer ein nicht lesbares Bild steht dort keiner.</summary>
+        Private Shared Sub DisposeAll(bitmaps As IEnumerable(Of Bitmap))
+            If bitmaps Is Nothing Then Return
+            For Each bitmap In bitmaps
+                bitmap?.Dispose()
+            Next
+        End Sub
 
         ''' <summary>Alle Ausschnitte eines Bildes aus EINEM Decode. Ist die Datei nicht lesbar - ein
         ''' RAW etwa dekodiert Skia nicht -, kommt eine Liste voller Nothing zurueck: die Zeile bleibt
-        ''' dann ohne Bild stehen, was immer noch besser ist als gar keine Zeile.</summary>
+        ''' dann ohne Bild stehen, was immer noch besser ist als gar keine Zeile.
+        '''
+        ''' Auch hier AUFRECHT: die Boxen kommen aus dem gedrehten Bild (siehe DecodeForFace).</summary>
         Private Shared Function CropAll(entries As IReadOnlyList(Of PersonFaceEntry), filePath As String) As List(Of Bitmap)
             Dim result As New List(Of Bitmap)()
             Dim source As SkiaSharp.SKBitmap = Nothing
             Try
-                source = SkiaSharp.SKBitmap.Decode(filePath)
+                source = FaceScanRunner.ApplyOrientationOwned(SkiaSharp.SKBitmap.Decode(filePath),
+                                                              ImageOrientationService.ReadOrigin(filePath))
                 For Each entry In entries
                     result.Add(If(source Is Nothing, Nothing,
                                   CropFace(source, entry.BoxX, entry.BoxY, entry.BoxWidth, entry.BoxHeight)))

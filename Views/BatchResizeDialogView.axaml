@@ -18,7 +18,7 @@
                   ToolTip.Tip="Schreibt die neue Größe direkt in die Bilddateien. Ohne Haken entstehen neue Dateien mit Formatauswahl und die Originale bleiben unangetastet."/>
 
         <!-- Nur da, wenn in der Auswahl wirklich etwas offen ist (siehe
-             MainWindowViewModel.PreparePendingBakedOption). -->
+             MainWindowViewModel.PreparePendingBakedOptionAsync). -->
         <CheckBox Content="{Binding DialogPendingBakedLabel}"
                   IsChecked="{Binding DialogApplyPendingBaked, Mode=TwoWay}"
                   IsVisible="{Binding IsDialogPendingBakedAvailable}"
