@@ -1255,13 +1255,30 @@ Namespace ViewModels
                     Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
                     If picked IsNot Nothing Then ApplyAdjustmentLayerPresentation(picked)
                 Else
-                    ' Kein Ebenen-Ziel mehr (Objekt oder nichts gewaehlt). Eine laufende Pixelauswahl
-                    ' raeumt ClearSelection ab - ein VERLAUF hat aber gar keine aktive Auswahl, sein
-                    ' rotes Overlay haengt allein an der markierten Ebene. Ohne die zwei Zeilen bleibt
-                    ' es stehen, und die Maske sieht aus, als waere sie noch gewaehlt.
-                    If _hasActiveSelection Then ClearSelection(captureUndo:=False)
-                    RaiseGradientPropertiesChanged()
-                    PublishMaskBrushOverlay()
+                    ' Ein OBJEKT mit Ebenenmaske im MASKEN-Werkzeug: wer es dort anklickt, will an
+                    ' seine Maske heran - sie wird also wieder geoeffnet statt abgeraeumt. Ohne das
+                    ' war die Maske nach einem Klick neben das Bild nur noch ueber das Maskensymbol
+                    ' der Zeile zu erreichen; ein Klick auf die Zeile selbst - der naheliegende Weg -
+                    ' loeschte das rote Overlay, statt es zu zeigen.
+                    Dim maskedObject = If(annotationIndex >= 0 AndAlso annotationIndex < _annotations.Count,
+                                          _annotations(annotationIndex), Nothing)
+                    Dim objectMaskId = If(maskedObject Is Nothing, "", maskedObject.MaskId)
+                    If _currentTool = EditorTool.Mask AndAlso Not String.IsNullOrEmpty(objectMaskId) Then
+                        LoadMaskIntoSelection(objectMaskId, showAsMask:=True)
+                        ' Eine gemalte Maske wird mit dem PINSEL nachgebessert - im Verlaufsmodus
+                        ' zoege der erste Zug einen neuen Verlauf auf.
+                        Dim objectMask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = objectMaskId)
+                        If objectMask Is Nothing OrElse Not objectMask.IsGradient Then MaskMode = "Brush"
+                    Else
+                        ' Kein Ebenen-Ziel mehr (Objekt ohne Maske oder nichts gewaehlt). Eine laufende
+                        ' Pixelauswahl raeumt ClearSelection ab - ein VERLAUF hat aber gar keine aktive
+                        ' Auswahl, sein rotes Overlay haengt allein an der markierten Ebene. Ohne die
+                        ' zwei Zeilen bleibt es stehen, und die Maske sieht aus, als waere sie noch
+                        ' gewaehlt.
+                        If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                        RaiseGradientPropertiesChanged()
+                        PublishMaskBrushOverlay()
+                    End If
                 End If
                 RefreshSelectionAdjustMode()
             End Set
@@ -2432,6 +2449,12 @@ Namespace ViewModels
                     ' um es zu drehen oder zu spiegeln. Ein Sprung nach „Text"/„Einfügen" würde einen Klick auf
                     ' das Objekt aussehen lassen, als hätte er gar nicht selektiert.
                     If IsObjectScopeTool(_currentTool) Then targetTool = _currentTool
+                    ' Und im MASKEN-Werkzeug ebenso, sobald das Objekt eine Ebenenmaske traegt: dort
+                    ' markiert man es, um an seine Maske heranzukommen. Der Sprung ins Werkzeug des
+                    ' Objekts nahm einem genau die Bedienung weg, die man gerade brauchte - samt
+                    ' rotem Overlay.
+                    If _currentTool = EditorTool.Mask AndAlso
+                       Not String.IsNullOrEmpty(_annotations(clamped).MaskId) Then targetTool = _currentTool
                     ' Der Rahmen ist davon die Ausnahme: seine Regler stehen NUR in der Rahmengruppe
                     ' unter Effekte. Bliebe man in Anpassen oder Farbe stehen, waere die Ebene zwar
                     ' markiert, aber nirgends etwas davon zu sehen.
@@ -4085,7 +4108,16 @@ Namespace ViewModels
                     ' Overlay genau das, woran man arbeitet - dort verschwindet es sofort.
                     If CoversMaskOverlay(value) Then HideMaskOverlay()
                 End If
-                If Not IsLayerTool(value) Then SelectedAnnotationIndex = -1
+                ' Ins MASKEN-Werkzeug nimmt ein Objekt MIT Ebenenmaske seine Markierung mit: man
+                ' kommt dorthin, um genau diese Maske zu bearbeiten. Ohne die Ausnahme fiel die
+                ' Markierung beim Wechsel weg - die Zeile im Panel stand danach unmarkiert da,
+                ' Maskensymbol, Kontextmenue und Fusszeilenknopf hatten kein Ziel mehr, und der
+                ' Zustandswechsel raeumte das rote Overlay gleich mit ab.
+                Dim keepsMaskedObject = value = EditorTool.Mask AndAlso
+                                        _selectedAnnotationIndex >= 0 AndAlso
+                                        _selectedAnnotationIndex < _annotations.Count AndAlso
+                                        Not String.IsNullOrEmpty(_annotations(_selectedAnnotationIndex).MaskId)
+                If Not IsLayerTool(value) AndAlso Not keepsMaskedObject Then SelectedAnnotationIndex = -1
                 If Not CanShowBeforeAfter AndAlso _showBeforeImage Then
                     _showBeforeImage = False
                     Me.RaisePropertyChanged(NameOf(ShowBeforeImage))
@@ -13204,6 +13236,14 @@ Namespace ViewModels
             Dim maskName = LocalizationService.T("Ebenenmaske")
             Dim mask As ImageMask = Nothing
             If _hasActiveSelection Then mask = ImageProcessor.CreateSourceMaskFromSelection(adj, maskName)
+            ' Ohne Auswahl deckt die Maske alles, was das OBJEKT ausmacht - und nur dessen Bereich.
+            ' Vorher war es das ganze Bild: ein Alpha8-Raster in voller Quellgroesse (bei 45 MP also
+            ' 45 MB fuer "alles sichtbar"), und das rote Overlay lag als gleichmaessige Flaeche ueber
+            ' dem ganzen Foto, statt zu zeigen, worum es geht. Die Deckung selbst aendert sich dabei
+            ' nicht: ausserhalb seines Bereichs gibt es vom Objekt nichts zu decken.
+            If mask Is Nothing Then mask = CreateObjectCoverageMask(a, maskName)
+            ' Rueckfall, falls sich der Bereich nicht bestimmen laesst: lieber die grosse Maske als
+            ' gar keine.
             If mask Is Nothing Then mask = ImageProcessor.CreateFullCoverageMask(adj, maskName)
             If mask Is Nothing Then Return
             _imageMasks.Add(mask)
@@ -13216,16 +13256,51 @@ Namespace ViewModels
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))
         End Sub
 
+        ''' <summary>Eine Deckung, die genau den Bereich des Objekts umfasst - der Ausgangspunkt einer
+        ''' neuen Ebenenmaske ohne Auswahl.
+        '''
+        ''' Bezug ist das Rechteck, das das Objekt auf der Szene beruehrt (`ComputeAnnotationDirtyRect`),
+        ''' nicht seine Kastenmasse: bei einem gedrehten Objekt ragen die Ecken aus dem unrotierten
+        ''' Kasten heraus, und genau dort haette die Maske es beschnitten. Schatten und Schein sind
+        ''' darin enthalten, und das ist richtig so - sie gehoeren zum Objekt.
+        '''
+        ''' Gebaut wird sie ueber denselben Weg wie eine Auswahlmaske, nur mit dem Objektrechteck
+        ''' anstelle der Auswahl: auf einer KOPIE der Anpassungen, damit eine laufende Auswahl
+        ''' unberuehrt bleibt. Damit liegt sie automatisch im Quellraum und traegt dieselben
+        ''' Koordinaten wie jede andere Maske.</summary>
+        Private Function CreateObjectCoverageMask(annotation As ImageAnnotation, maskName As String) As ImageMask
+            If annotation Is Nothing Then Return Nothing
+            Dim sceneSize = GetCurrentScenePixelSize()
+            If sceneSize.Width <= 0 OrElse sceneSize.Height <= 0 Then Return Nothing
+            Dim rect = ComputeSceneDirtyRectFor(annotation)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim adj = BuildAdjustmentsFromFields()
+            adj.SelectionMaskPngBase64 = ""
+            adj.SelectionXPercent = rect.Left / CDbl(sceneSize.Width) * 100.0
+            adj.SelectionYPercent = rect.Top / CDbl(sceneSize.Height) * 100.0
+            adj.SelectionWidthPercent = rect.Width / CDbl(sceneSize.Width) * 100.0
+            adj.SelectionHeightPercent = rect.Height / CDbl(sceneSize.Height) * 100.0
+            adj.SelectionFeatherPixels = 0
+            Return ImageProcessor.CreateSourceMaskFromSelection(adj, maskName)
+        End Function
+
         ''' <summary>Bringt die Ebenenmaske des Objekts in den Masken-Pinsel: rotes Overlay, harte
         ''' Form malbar, weiche Kante zur Renderzeit. Derselbe Weg wie bei einer Maskenebene.</summary>
         Public Sub EditSelectedAnnotationMask()
             Dim a = MaskTargetAnnotation()
             If a Is Nothing OrElse String.IsNullOrEmpty(a.MaskId) Then Return
-            LoadMaskIntoSelection(a.MaskId, showAsMask:=True)
+            Dim maskId = a.MaskId
+            ' ERST das Werkzeug, DANN die Maske laden. Andersherum wurde das rote Overlay
+            ' veroeffentlicht, waehrend die Ansicht noch im vorigen Werkzeug stand - dort gehoert
+            ' kein Auswahl-Overlay hin, sie versteckte es also sofort wieder, und der Werkzeugwechsel
+            ' danach brachte nur noch ein Bild mit, das niemand mehr neu veroeffentlichte. Genau
+            ' dieses Bild sah der Nutzer nicht: Maskenwerkzeug da, Overlay weg.
+            ' Die Kennung wird vorher gemerkt, weil der Wechsel die Objektmarkierung veraendern darf.
             If _currentTool <> EditorTool.Mask Then CurrentTool = EditorTool.Mask
             ' Der Werkzeugwechsel startet auf VERSCHIEBEN - im Verlaufsmodus zoege der erste Zug
             ' einen neuen Verlauf auf, statt die Maske nachzubessern.
             MaskMode = "Brush"
+            LoadMaskIntoSelection(maskId, showAsMask:=True)
         End Sub
 
         Public Sub RemoveSelectedAnnotationMask()

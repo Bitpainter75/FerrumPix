@@ -3959,9 +3959,20 @@ Namespace Views
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
             Dim dragOverlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
+            ' DIESELBE Trennung wie in PositionSelectionOverlayFromViewModel, und aus demselben
+            ' Grund: die ART entscheidet ueber die Laufameisen, das Vorhandensein des roten Bildes
+            ' nur ueber das Rot. Hier stand nur die zweite Haelfte, und der Weg laeuft bei JEDEM
+            ' Werkzeugwechsel - also genau dann, wenn "Ebenenmaske bearbeiten" ins Masken-Werkzeug
+            ' springt. Er schaltete dort das rote Bild aus und die Ameisen ein, und ob es wieder
+            ' auftauchte, hing daran, ob gleich danach noch ein Layout-Durchlauf kam.
+            Dim isMask = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
+                         (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask)
             Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
                                 (vm.HasActiveSelection OrElse vm.HasSelectedGradientMask)
-            If showSelection Then
+            If isMask Then
+                If overlay IsNot Nothing Then overlay.IsVisible = False
+                If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = vm.SelectionMaskPreviewImage IsNot Nothing
+            ElseIf showSelection Then
                 If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
                 If overlay IsNot Nothing Then overlay.IsVisible = True
             Else
@@ -3978,8 +3989,13 @@ Namespace Views
                 HideCurrentSelectionOverlay()
                 Return
             End If
-            If overlay IsNot Nothing Then overlay.IsVisible = True
-            If maskOverlay IsNot Nothing Then maskOverlay.IsVisible = False
+            ' Auch hier gilt die Trennung: bei einer MASKE waeren Laufameisen falsch.
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim isMask = vm IsNot Nothing AndAlso (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask)
+            If overlay IsNot Nothing Then overlay.IsVisible = Not isMask
+            If maskOverlay IsNot Nothing Then
+                maskOverlay.IsVisible = isMask AndAlso vm.SelectionMaskPreviewImage IsNot Nothing
+            End If
         End Sub
 
         Private Sub HideCurrentSelectionOverlay()
