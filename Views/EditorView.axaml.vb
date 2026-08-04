@@ -83,6 +83,10 @@ Namespace Views
         ''' Haengt der Zeiger gerade an einem Pfadpunkt oder formt er einen frisch gesetzten?
         Private _isPathPointerActive As Boolean = False
         Private _isWarpDragging As Boolean = False
+        ''' <summary>Druckpunkt eines Klicks NEBEN das Bild im Masken-Werkzeug. Beim Loslassen
+        ''' entscheidet der zurueckgelegte Weg, ob es ein Klick war (Markierung faellt) oder der
+        ''' Anfang einer Zieh-Auswahl, die ausserhalb ansetzt.</summary>
+        Private _maskOutsideClickStart As Avalonia.Point? = Nothing
         Private _isEnvelopeDragging As Boolean = False
         Private _isLinienDragging As Boolean = False
         Private _isObjectCornerDragging As Boolean = False
@@ -1711,6 +1715,13 @@ Namespace Views
                     ' draussen.
                     Dim startsEnvelopeOutside = ShowsEnvelope(vm) AndAlso
                                                 HitsEnvelopePoint(vm, canvas, e.GetPosition(canvas))
+                    ' EIN KLICK NEBEN DAS BILD HEBT DIE MARKIERUNG AUF - auch im Masken-Werkzeug.
+                    ' Dort ist der Klick nicht zu verschlucken, weil eine Zieh-Auswahl ausserhalb
+                    ' ansetzen und ins Bild gezogen werden darf; unterschieden wird deshalb erst
+                    ' beim Loslassen: ohne Weg war es ein Klick, mit Weg ein Zug. Gemerkt wird nur
+                    ' der Druckpunkt.
+                    If vm.CurrentTool = EditorTool.Mask Then _maskOutsideClickStart = e.GetPosition(canvas)
+
                     Dim startsObjectMarqueeOutside = AllowsObjectMarquee(vm)
                     If startsObjectMarqueeOutside Then
                         BeginObjectMarquee(e.GetPosition(canvas))
@@ -2602,6 +2613,22 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            ' Klick neben das Bild im Masken-Werkzeug: die Markierung der Maskenebene faellt. Erst
+            ' hier zu entscheiden ist noetig, weil derselbe Druck auch der Anfang einer Zieh-Auswahl
+            ' sein kann, die ausserhalb ansetzt - ohne Weg war es ein Klick.
+            Dim maskOutsideStart = _maskOutsideClickStart
+            _maskOutsideClickStart = Nothing
+            If maskOutsideStart.HasValue Then
+                Dim releaseCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                Dim releaseVm = TryCast(DataContext, EditorViewModel)
+                If releaseCanvas IsNot Nothing AndAlso releaseVm IsNot Nothing Then
+                    Dim moved = e.GetPosition(releaseCanvas) - maskOutsideStart.Value
+                    If Math.Abs(moved.X) <= 3 AndAlso Math.Abs(moved.Y) <= 3 Then
+                        releaseVm.DeselectCurrentTarget()
+                    End If
+                End If
+            End If
+
             If _objectMarqueeActive Then
                 EndObjectMarquee()
                 e.Handled = True

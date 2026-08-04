@@ -4262,6 +4262,11 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsMaskMoveMode))
                 Me.RaisePropertyChanged(NameOf(ShowGradientControls))
             Me.RaisePropertyChanged(NameOf(IsRefiningGradientMask))
+                ' EIN WERKZEUGWECHSEL FAENGT MIT DEN VORGABEN AN. Die Werte gehoerten zur vorigen
+                ' Maske - Uebergang, Stauchung, Umkehrung, weiche Kante -, und die naechste erbte
+                ' sie stillschweigend: ein frisch aufgezogener Verlauf kam mit der Weichheit des
+                ' vorigen heraus, ohne dass irgendwo stand, warum.
+                ResetMaskToolDefaults()
                 ' Der Masken-Pinsel benutzt weiterhin die Auswahl-Maschinerie (Alpha8-Stempel in die
                 ' Auswahlmaske); die Verlaeufe legen dagegen sofort eine parametrische Maske an.
                 If String.Equals(normalized, "Verschieben", StringComparison.Ordinal) Then
@@ -4281,6 +4286,29 @@ Namespace ViewModels
                 End If
             End Set
         End Property
+
+        ''' <summary>Die Vorgaben des Maskenwerkzeugs wiederherstellen: Uebergang 50, Stauchung 1,
+        ''' nicht umgekehrt, harte Kante.
+        '''
+        ''' Betroffen sind nur die FELDER, aus denen die NAECHSTE neue Maske entsteht. Eine gerade
+        ''' markierte Maske behaelt ihre Werte, denn deren Regler lesen den angefassten Bestandteil
+        ''' und nicht diese Felder - wer einen vorhandenen Verlauf nachjustiert, sieht also weiter
+        ''' seine eigenen Zahlen.
+        '''
+        ''' Die weiche Kante bleibt stehen, solange eine EBENENMASKE bearbeitet wird: sie kommt dann
+        ''' aus der Maske selbst (LoadMaskIntoSelection setzt sie), und das Umschalten auf den Pinsel
+        ''' gehoert zum Betreten dazu - ein Zuruecksetzen wuerde ihren Wert gleich wieder
+        ''' wegwerfen.</summary>
+        Private Sub ResetMaskToolDefaults()
+            _gradientFeatherPercent = 50.0
+            _gradientRadiusRatio = 1.0
+            _gradientInverted = False
+            If _editingLayerMaskId = "" Then _selectionFeather = 0
+            Me.RaisePropertyChanged(NameOf(GradientFeatherPercent))
+            Me.RaisePropertyChanged(NameOf(GradientRadiusRatio))
+            Me.RaisePropertyChanged(NameOf(GradientInverted))
+            Me.RaisePropertyChanged(NameOf(SelectionFeather))
+        End Sub
 
         Public ReadOnly Property IsMaskBrushMode As Boolean
             Get
@@ -11751,28 +11779,22 @@ Namespace ViewModels
             End Using
         End Function
 
-        Private Function BuildGradientRedOverlayBitmap(mask As ImageMask,
-                                                       Optional livePts As List(Of SKPoint) = Nothing,
-                                                       Optional eraseMode As Boolean = False) As Bitmap
-            If mask Is Nothing OrElse Not mask.IsGradient Then Return Nothing
-            Dim displaySize = GetAnnotationDisplayPixelSize()
-            Dim bw = displaySize.Width, bh = displaySize.Height
-            If bw <= 0 OrElse bh <= 0 Then Return Nothing
-            Dim a = SourcePercentToDisplayPercent(mask.GradientStartXPercent, mask.GradientStartYPercent)
-            Dim b = SourcePercentToDisplayPercent(mask.GradientEndXPercent, mask.GradientEndYPercent)
-            If Not a.HasValue OrElse Not b.HasValue Then Return Nothing
-
-            Dim ovScale = Math.Min(1.0, MaskBrushOverlayMaxEdge / CDbl(Math.Max(bw, bh)))
-            Dim ow = Math.Max(1, CInt(Math.Round(bw * ovScale)))
-            Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
+        ''' <summary>Einen einzelnen Verlaufs-Bestandteil in das rote Overlay zeichnen. Dieselbe
+        ''' Rechnung, die der Renderer je Bildpunkt macht - hier einmal als Farbverlauf mit Matrix.
+        ''' „Abziehen" nimmt seine Flaeche wieder heraus, alles andere legt sich mit dem MAXIMUM
+        ''' darueber: zweimal dieselbe Stelle soll aussehen wie einmal.</summary>
+        Private Sub DrawGradientComponentOverlay(canvas As SKCanvas, component As MaskComponent,
+                                                 ow As Integer, oh As Integer)
+            If canvas Is Nothing OrElse component Is Nothing OrElse Not component.IsGradient Then Return
+            Dim a = SourcePercentToDisplayPercent(component.GradientStartXPercent, component.GradientStartYPercent)
+            Dim b = SourcePercentToDisplayPercent(component.GradientEndXPercent, component.GradientEndYPercent)
+            If Not a.HasValue OrElse Not b.HasValue Then Return
             Dim p0 = New SKPoint(CSng(a.Value.X / 100.0 * ow), CSng(a.Value.Y / 100.0 * oh))
             Dim p1 = New SKPoint(CSng(b.Value.X / 100.0 * ow), CSng(b.Value.Y / 100.0 * oh))
             Dim dx = p1.X - p0.X, dy = p1.Y - p0.Y
             Dim radius = CSng(Math.Sqrt(dx * dx + dy * dy))
-            If radius < 0.5 Then Return Nothing
+            If radius < 0.5 Then Return
 
-            Dim full = New SKColor(255, 0, 0, 128)
-            Dim empty = New SKColor(255, 0, 0, 0)
             ' Smoothstep in fünf Stützstellen nachbilden - eine reine Zweipunkt-Rampe zeigt an ihren
             ' Enden dieselben Kanten, die der Renderer bewusst vermeidet.
             Dim steps = New Single() {0.0F, 0.25F, 0.5F, 0.75F, 1.0F}
@@ -11780,38 +11802,65 @@ Namespace ViewModels
             For i = 0 To steps.Length - 1
                 Dim t = steps(i)
                 Dim s = t * t * (3.0 - 2.0 * t)
-                Dim deckung = CByte(Math.Round((1.0 - s) * 128.0))
-                colors(i) = New SKColor(255, 0, 0, deckung)
+                Dim coverage = CByte(Math.Round((1.0 - s) * 128.0))
+                colors(i) = New SKColor(255, 0, 0, coverage)
             Next
-            If mask.Inverted Then Array.Reverse(colors)
+            If component.Inverted Then Array.Reverse(colors)
+
+            Dim subtract = String.Equals(component.Mode, "Subtract", StringComparison.OrdinalIgnoreCase)
+            Using paint = New SKPaint With {.Style = SKPaintStyle.Fill, .IsAntialias = True,
+                                            .BlendMode = If(subtract, SKBlendMode.DstOut, SKBlendMode.Lighten)}
+                If component.IsRadialGradient Then
+                    Dim inner = CSng(Math.Max(0.0, Math.Min(0.98, 1.0 - component.GradientFeatherPercent / 100.0)))
+                    Dim pos(steps.Length - 1) As Single
+                    For i = 0 To steps.Length - 1
+                        pos(i) = inner + (1.0F - inner) * steps(i)
+                    Next
+                    ' Die Ellipse entsteht durch Drehen und Stauchen des Kreises - genau die
+                    ' Umrechnung, die der Renderer pro Pixel macht, hier einmal als Matrix.
+                    Dim angle = CSng(Math.Atan2(dy, dx) * 180.0 / Math.PI)
+                    Dim m = SKMatrix.CreateScale(1.0F, CSng(Math.Max(0.05, component.GradientRadiusRatio)), p0.X, p0.Y)
+                    m = m.PostConcat(SKMatrix.CreateRotationDegrees(angle, p0.X, p0.Y))
+                    paint.Shader = SKShader.CreateRadialGradient(p0, radius, colors, pos, SKShaderTileMode.Clamp, m)
+                Else
+                    Dim width = CSng(Math.Max(0.02, Math.Min(1.0, component.GradientFeatherPercent / 100.0)))
+                    Dim pos(steps.Length - 1) As Single
+                    For i = 0 To steps.Length - 1
+                        pos(i) = 0.5F + (steps(i) - 0.5F) * width
+                    Next
+                    paint.Shader = SKShader.CreateLinearGradient(p0, p1, colors, pos, SKShaderTileMode.Clamp)
+                End If
+                canvas.DrawRect(New SKRect(0, 0, ow, oh), paint)
+                paint.Shader?.Dispose()
+            End Using
+        End Sub
+
+        Private Function BuildGradientRedOverlayBitmap(mask As ImageMask,
+                                                       Optional livePts As List(Of SKPoint) = Nothing,
+                                                       Optional eraseMode As Boolean = False) As Bitmap
+            If mask Is Nothing Then Return Nothing
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim bw = displaySize.Width, bh = displaySize.Height
+            If bw <= 0 OrElse bh <= 0 Then Return Nothing
+
+            Dim ovScale = Math.Min(1.0, MaskBrushOverlayMaxEdge / CDbl(Math.Max(bw, bh)))
+            Dim ow = Math.Max(1, CInt(Math.Round(bw * ovScale)))
+            Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
+
+            ' ALLE Verlaufs-Bestandteile, nicht nur der erste. Vorher las diese Stelle die
+            ' Verlaufsfelder der MASKE - also den ersten Bestandteil -, und ein zweiter, per Plus
+            ' angehaengter Verlauf blieb ohne Rot: linear zuerst, radial dazu, und die radiale Maske
+            ' war unsichtbar (Nutzerbefund 2026-08-04). Gezeichnet wird jeder fuer sich, kombiniert
+            ' wird ueber den Mischmodus - Hinzufuegen nimmt das Maximum, wie im Renderweg auch.
+            Dim gradients = mask.GetComponents().Where(Function(c) c IsNot Nothing AndAlso c.IsGradient).ToList()
+            If gradients.Count = 0 Then Return Nothing
 
             Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
                 Using canvas = New SKCanvas(overlay)
                     canvas.Clear(SKColors.Transparent)
-                    Using paint = New SKPaint With {.Style = SKPaintStyle.Fill, .IsAntialias = True}
-                        If mask.IsRadialGradient Then
-                            Dim inner = CSng(Math.Max(0.0, Math.Min(0.98, 1.0 - mask.GradientFeatherPercent / 100.0)))
-                            Dim pos(steps.Length - 1) As Single
-                            For i = 0 To steps.Length - 1
-                                pos(i) = inner + (1.0F - inner) * steps(i)
-                            Next
-                            ' Die Ellipse entsteht durch Drehen und Stauchen des Kreises - genau die
-                            ' Umrechnung, die der Renderer pro Pixel macht, hier einmal als Matrix.
-                            Dim angle = CSng(Math.Atan2(dy, dx) * 180.0 / Math.PI)
-                            Dim m = SKMatrix.CreateScale(1.0F, CSng(Math.Max(0.05, mask.GradientRadiusRatio)), p0.X, p0.Y)
-                            m = m.PostConcat(SKMatrix.CreateRotationDegrees(angle, p0.X, p0.Y))
-                            paint.Shader = SKShader.CreateRadialGradient(p0, radius, colors, pos, SKShaderTileMode.Clamp, m)
-                        Else
-                            Dim width = CSng(Math.Max(0.02, Math.Min(1.0, mask.GradientFeatherPercent / 100.0)))
-                            Dim pos(steps.Length - 1) As Single
-                            For i = 0 To steps.Length - 1
-                                pos(i) = 0.5F + (steps(i) - 0.5F) * width
-                            Next
-                            paint.Shader = SKShader.CreateLinearGradient(p0, p1, colors, pos, SKShaderTileMode.Clamp)
-                        End If
-                        canvas.DrawRect(New SKRect(0, 0, ow, oh), paint)
-                        paint.Shader?.Dispose()
-                    End Using
+                    For Each component In gradients
+                        DrawGradientComponentOverlay(canvas, component, ow, oh)
+                    Next
                 End Using
                 ApplyBrushCorrectionToOverlay(overlay, mask, bw, bh)
                 ' Laufender Strich obendrauf - sonst verschwaende das Verlaufs-Overlay waehrend des
