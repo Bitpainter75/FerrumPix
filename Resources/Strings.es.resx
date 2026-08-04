@@ -6566,4 +6566,10 @@
   <data name="schnell_5db66027" xml:space="preserve">
     <value>rápido</value>
   </data>
+  <data name="Miniaturen_im_Ebenen_Panel_1778b4ed" xml:space="preserve">
+    <value>Miniaturas en el panel de capas</value>
+  </data>
+  <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
+    <value>Muestra en cada fila una pequeña imagen de lo que hay en la capa y, al lado, su máscara. Desactivado: de nuevo el símbolo de la herramienta. Con muchas capas de imagen, el panel tarda algo más la primera vez.</value>
+  </data>
 </root>

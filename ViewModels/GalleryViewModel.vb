@@ -2303,10 +2303,25 @@ Namespace ViewModels
                                                    Next
                                                    ImmichTree.Add(placesRoot)
                                                End If
+                                               ' Dieselben Listen speisen die FILTERKNOEPFE. Sie
+                                               ' werden synchron beim Oeffnen des Menues gelesen,
+                                               ' koennen also nicht selbst auf den Server warten -
+                                               ' der Abruf hier ist ohnehin faellig, und jeder
+                                               ' zweite waere nur Wartezeit.
+                                               _immichPeople = people
+                                               _immichPlaces = places
+                                               RefreshPersonFilterOptions()
+                                               RefreshPlaceFilterOptions()
                                                SyncSidebarTabWithImmich()
                                            End Sub)
                                    End Function)
         End Sub
+
+        ''' <summary>Personen und Staedte des Immich-Servers, wie sie beim Aufbau der Seitenleiste
+        ''' geholt wurden. Die Filterlisten lesen sie von hier; ohne Server bleiben sie leer, und die
+        ''' Listen sehen aus wie bisher.</summary>
+        Private _immichPeople As New List(Of ImmichPerson)()
+        Private _immichPlaces As New List(Of String)()
 
         ''' <summary>Öffnet „Alle Fotos" (Timeline ohne Album) als virtuellen Ordner.</summary>
         Private Async Function OpenImmichAllAsync(node As VirtualNavigationNode) As Task
@@ -2967,11 +2982,36 @@ Namespace ViewModels
                     PersonFilterOptions.Add(New PersonFilterOption(entry.Id, entry.Name, entry.ImageCount,
                                                                    IsPersonFilterSelected(entry.Id)))
                 Next
+                ' Und die Personen des Immich-Servers. Sie stehen HINTER den lokalen und tragen den
+                ' Vermerk ihrer Herkunft: verunden lassen sich die beiden Beststaende nicht (der
+                ' Server filtert nach genau einer Person, und ein Immich-Element steht in keiner
+                ' lokalen Tabelle), und eine Liste, die das verschweigt, verspricht etwas Falsches.
+                Dim firstImmichPerson = True
+                For Each person In _immichPeople
+                    If person Is Nothing OrElse String.IsNullOrWhiteSpace(person.Name) Then Continue For
+                    Dim matchesImmich = search.Length = 0 OrElse
+                                        person.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                    If Not matchesImmich Then Continue For
+                    PersonFilterOptions.Add(New PersonFilterOption(person.Id, person.Name, 0, False,
+                                                                   isFromImmich:=True) With {
+                        .ShowsImmichHeader = firstImmichPerson
+                    })
+                    firstImmichPerson = False
+                Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshPersonFilterOptions", ex)
             End Try
             Me.RaisePropertyChanged(NameOf(HasPersonFeature))
+            Me.RaisePropertyChanged(NameOf(HasImmichPersonOptions))
         End Sub
+
+        ''' <summary>Steht in der Personenliste ueberhaupt etwas aus Immich? Die Zwischenueberschrift
+        ''' haengt daran - ohne Server waere sie eine leere Zeile.</summary>
+        Public ReadOnly Property HasImmichPersonOptions As Boolean
+            Get
+                Return PersonFilterOptions.Any(Function(o) o IsNot Nothing AndAlso o.IsFromImmich)
+            End Get
+        End Property
 
         Public Function IsPersonFilterSelected(personId As String) As Boolean
             Return _activePersonFilters.Any(Function(p) String.Equals(p, If(personId, ""), StringComparison.Ordinal))
@@ -3020,6 +3060,20 @@ Namespace ViewModels
         Public Sub TogglePersonFilter(personId As String)
             Dim wanted = If(personId, "").Trim()
             If wanted.Length = 0 Then Return
+            ' Eine Person des SERVERS ist allein waehlbar: die Abfrage kennt genau eine Person, und
+            ' ein Immich-Element steht in keiner lokalen Tabelle - eine Verundung mit lokalen
+            ' Stichworten oder Orten gaebe es nirgends zu rechnen. Der Klick oeffnet deshalb direkt
+            ' die Server-Ansicht, wie der gleichnamige Knoten in der Seitenleiste.
+            Dim immich = PersonFilterOptions.FirstOrDefault(Function(o) o IsNot Nothing AndAlso o.IsFromImmich AndAlso
+                                                                String.Equals(o.Id, wanted, StringComparison.Ordinal))
+            If immich IsNot Nothing Then
+                ClearButtonFiltersSilently()
+                Dim ignored = OpenImmichPersonAsync(New VirtualNavigationNode(immich.Name, "ImmichPerson") With {
+                    .Id = immich.Id,
+                    .IsRemovable = False
+                })
+                Return
+            End If
             Dim next_ = _activePersonFilters.ToList()
             If next_.Contains(wanted) Then
                 next_.Remove(wanted)
@@ -3095,11 +3149,33 @@ Namespace ViewModels
                                                                  IsPlaceFilterSelected(entry.City),
                                                                  entry.CountryCode))
                 Next
+                ' Und die Staedte des Immich-Servers, hinter den lokalen und mit dem Vermerk ihrer
+                ' Herkunft - dieselbe Regel wie bei den Personen. Der Server kennt nur die STADT,
+                ' kein Land: das Feld bleibt leer, und die Beschriftung faellt entsprechend kuerzer aus.
+                Dim firstImmichPlace = True
+                For Each city In _immichPlaces
+                    If String.IsNullOrWhiteSpace(city) Then Continue For
+                    Dim matchesImmich = search.Length = 0 OrElse
+                                        city.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
+                    If Not matchesImmich Then Continue For
+                    PlaceFilterOptions.Add(New PlaceFilterOption(city, "", 0, False, "", isFromImmich:=True) With {
+                        .ShowsImmichHeader = firstImmichPlace
+                    })
+                    firstImmichPlace = False
+                Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshPlaceFilterOptions", ex)
             End Try
             Me.RaisePropertyChanged(NameOf(HasPlaceFeature))
+            Me.RaisePropertyChanged(NameOf(HasImmichPlaceOptions))
         End Sub
+
+        ''' <summary>Steht in der Ortsliste etwas aus Immich? Traegt die Zwischenueberschrift.</summary>
+        Public ReadOnly Property HasImmichPlaceOptions As Boolean
+            Get
+                Return PlaceFilterOptions.Any(Function(o) o IsNot Nothing AndAlso o.IsFromImmich)
+            End Get
+        End Property
 
         Public Function IsPlaceFilterSelected(city As String) As Boolean
             Return _activePlaceFilters.Any(Function(p) String.Equals(p, If(city, ""), StringComparison.OrdinalIgnoreCase))
@@ -3136,6 +3212,17 @@ Namespace ViewModels
         Public Sub TogglePlaceFilter(city As String)
             Dim wanted = If(city, "").Trim()
             If wanted.Length = 0 Then Return
+            ' Ein Ort des SERVERS ist allein waehlbar - dieselbe Regel wie bei den Personen.
+            Dim immich = PlaceFilterOptions.FirstOrDefault(Function(o) o IsNot Nothing AndAlso o.IsFromImmich AndAlso
+                                                               String.Equals(o.City, wanted, StringComparison.OrdinalIgnoreCase))
+            If immich IsNot Nothing Then
+                ClearButtonFiltersSilently()
+                Dim ignored = OpenImmichPlaceAsync(New VirtualNavigationNode(immich.City, "ImmichPlace") With {
+                    .Id = immich.City,
+                    .IsRemovable = False
+                })
+                Return
+            End If
             Dim next_ = _activePlaceFilters.ToList()
             Dim existing = next_.FirstOrDefault(Function(c) String.Equals(c, wanted, StringComparison.OrdinalIgnoreCase))
             If existing IsNot Nothing Then

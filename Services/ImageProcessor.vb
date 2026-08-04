@@ -2256,6 +2256,7 @@ Namespace Services
             Return False
         End Function
 
+
         Public Function Clone() As ImageAdjustments
             Dim result = New ImageAdjustments With {
                 .Exposure = Exposure,
@@ -5806,6 +5807,45 @@ Namespace Services
             Return MergePaintedMaskStroke(target, stroke, String.Equals(effective, "Subtract", StringComparison.Ordinal), effective)
         End Function
 
+        ''' <summary>Ein Pinselstrich in GENAU EINEN Bestandteil.
+        '''
+        ''' Der Bestandteil wird dafuer kurz als eigenstaendige Maske verpackt und danach
+        ''' zurueckgelesen - dieselbe Rechnung wie am ersten Bestandteil, nur mit den Feldern des
+        ''' angefassten. Ohne das landete jeder Strich in Bestandteil eins: bei einer Maske aus
+        ''' Verlauf plus Pinsel also in der Pinselkorrektur des Verlaufs, und ein Strich in einem
+        ''' Bereich, den ein SPAETERER Bestandteil deckt, aenderte die Summe dort gar nicht - er
+        ''' wurde von diesem ueberschrieben.
+        '''
+        ''' Die Quellmasse gehoeren der MASKE, nicht dem Bestandteil: alle teilen denselben
+        ''' Quellraum. Der MODUS des Bestandteils (hinzufuegen, abziehen, schneiden) gehoert
+        ''' ebenfalls ihm und darf vom Strich nicht ueberschrieben werden - der Strich sagt nur,
+        ''' wie er MIT DIESEM Bestandteil verrechnet wird.
+        '''
+        ''' Die Zuordnung Stelle zu Feldern ist dieselbe wie beim Zurueckschreiben eines Bestandteils
+        ''' im ViewModel: Stelle 0 sind die Maskenfelder, alles weitere steht in
+        ''' <see cref="ImageMask.ExtraComponents"/>.</summary>
+        Public Shared Function ApplyMaskBrushStrokeToComponent(mask As ImageMask, componentIndex As Integer,
+                                                              stroke As ImageMask, subtract As Boolean,
+                                                              Optional mode As String = "") As Boolean
+            If mask Is Nothing OrElse stroke Is Nothing Then Return False
+            Dim components = mask.GetComponents()
+            If componentIndex < 0 OrElse componentIndex >= components.Count Then Return False
+            ' Der erste Bestandteil LIEGT in den Maskenfeldern - dort braucht es keinen Umweg.
+            If componentIndex = 0 Then Return ApplyMaskBrushStroke(mask, stroke, subtract, mode)
+            If mask.ExtraComponents Is Nothing OrElse componentIndex - 1 >= mask.ExtraComponents.Count Then Return False
+
+            Dim wrapper As New ImageMask With {
+                .SourceWidthPixels = mask.SourceWidthPixels,
+                .SourceHeightPixels = mask.SourceHeightPixels
+            }
+            wrapper.SetPrimaryFromComponent(components(componentIndex))
+            If Not ApplyMaskBrushStroke(wrapper, stroke, subtract, mode) Then Return False
+            Dim updated = wrapper.PrimaryAsComponent()
+            updated.Mode = components(componentIndex).Mode
+            mask.ExtraComponents(componentIndex - 1) = updated
+            Return True
+        End Function
+
         ''' <summary>Der wirksame Verknuepfungsmodus eines Pinselstrichs. Ein leerer oder
         ''' unbekannter Modus faellt auf den Schalter zurueck; "New" ist hier kein eigener Fall,
         ''' der erste Strich auf eine leere Maske setzt sie ohnehin.</summary>
@@ -6129,17 +6169,168 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Miniatur einer MASKE fuer das Ebenenpanel: hell, wo sie deckt, dunkel, wo nicht -
+        ''' im Seitenverhaeltnis des BILDES, damit man sieht, wo im Bild sie liegt.
+        '''
+        ''' Gerechnet wird auf dem zusammengesetzten Quellraster, also ueber ALLE Bestandteile.
+        ''' Ohne Bild-Seitenverhaeltnis waere die Miniatur zwar groesser, aber ohne Aussage: bei
+        ''' mehreren Korrekturebenen ist genau die Frage, WELCHE Maske WO liegt.</summary>
+        Public Shared Function BuildMaskThumbnail(mask As ImageMask, boxSize As Integer) As SKBitmap
+            If mask Is Nothing OrElse boxSize <= 0 Then Return Nothing
+            If mask.SourceWidthPixels <= 0 OrElse mask.SourceHeightPixels <= 0 Then Return Nothing
+            Dim raster As SKBitmap = Nothing
+            Try
+                ' KLEIN rastern, nicht in Quellgroesse und dann verkleinern: die Maske eines
+                ' 45-Megapixel-Fotos ergaebe ein 45-MB-Raster - je Maske, bei jedem Aufbau des
+                ' Panels. Der Rasterisierer nimmt die Zielgroesse ohnehin als Parameter.
+                Dim size = FitIntoBox(mask.SourceWidthPixels, mask.SourceHeightPixels, boxSize)
+                raster = BuildCombinedMaskRaster(mask, size.Width, size.Height)
+                If raster Is Nothing Then Return Nothing
+                Dim thumb = New SKBitmap(size.Width, size.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(thumb)
+                    ' Der Grund ist dunkel, die Deckung hell - dieselbe Lesart wie eine Maske im
+                    ' Graustufenblick. Ein transparenter Grund liesse die Zeile durchscheinen und
+                    ' machte "deckt nicht" von "keine Maske" ununterscheidbar.
+                    canvas.Clear(New SKColor(32, 32, 32, 255))
+                    Dim dst = New SKRect(0, 0, size.Width, size.Height)
+                    Using paint = New SKPaint With {.Color = SKColors.White}
+                        ' Alpha8 zeichnet als DECKUNG der Farbe - genau das, was die Maske meint.
+                        DrawBitmapSampled(canvas, raster, New SKRect(0, 0, raster.Width, raster.Height),
+                                          dst, SamplingHigh, paint)
+                    End Using
+                End Using
+                Return thumb
+            Catch
+                Return Nothing
+            Finally
+                raster?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Miniatur eines OBJEKTS: sein Inhalt, gezeichnet mit demselben Weg wie im Bild
+        ''' (<see cref="DrawAnnotationOnCanvas"/>), nur in einen kleinen Kasten eingepasst. Bezug ist
+        ''' das Rechteck des Objekts, nicht das Bild - sonst waere ein kleines Objekt in der Miniatur
+        ''' ein Punkt.</summary>
+        ''' <summary>So viele Zeichen zeigt die Miniatur eines Textobjekts.</summary>
+        Public Const ThumbnailTextLength As Integer = 5
+
+        Public Shared Function BuildAnnotationThumbnail(annotation As ImageAnnotation,
+                                                        sourceWidth As Integer, sourceHeight As Integer,
+                                                        boxSize As Integer) As SKBitmap
+            If annotation Is Nothing OrElse boxSize <= 0 Then Return Nothing
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return Nothing
+            Try
+                Dim kind = If(annotation.Kind, "Text").Trim().ToLowerInvariant()
+                ' TEXT: nur die ersten Zeichen. Ein ganzer Satz auf dreissig Punkte gequetscht ist
+                ' ein grauer Strich - fuenf Zeichen sagen, WAS auf der Ebene steht. Die Breite geht
+                ' anteilig mit, sonst stuende der gekuerzte Text winzig links in einem Kasten, der
+                ' noch fuer den vollen Text bemessen ist.
+                If (kind = "text" OrElse kind = "watermark") AndAlso
+                   Not String.IsNullOrEmpty(annotation.Text) AndAlso
+                   annotation.Text.Length > ThumbnailTextLength Then
+                    Dim shortened = annotation.Clone()
+                    Dim keptShare = ThumbnailTextLength / CSng(annotation.Text.Length)
+                    shortened.Text = annotation.Text.Substring(0, ThumbnailTextLength)
+                    shortened.WidthPixels = Math.Max(1.0F, annotation.WidthPixels * keptShare)
+                    annotation = shortened
+                End If
+                Dim rect = ComputeAnnotationRect(sourceWidth, sourceHeight, kind, annotation)
+                Dim rectWidth = Math.Max(1.0F, rect.Width), rectHeight = Math.Max(1.0F, rect.Height)
+                ' BILD-Objekte bekommen einen eigenen, schlanken Weg: der gewoehnliche Zeichenweg
+                ' dekodiert die Datei in VOLLER Aufloesung, um sie auf dreissig Punkte zu malen -
+                ' gemessen 97 ms je Ebene, und bei mehreren Bildebenen ist das die Pause, die man
+                ' beim Ebenenwechsel spuert. Hier wird gleich verkleinert dekodiert.
+                If (kind = "image" OrElse kind = "selectionimage") AndAlso
+                   Not String.IsNullOrWhiteSpace(annotation.ImagePath) AndAlso File.Exists(annotation.ImagePath) Then
+                    Dim fromImageFile = BuildImageThumbnailFromFile(annotation.ImagePath, boxSize)
+                    If fromImageFile IsNot Nothing Then Return fromImageFile
+                End If
+                Dim size = FitIntoBox(CInt(Math.Ceiling(rectWidth)), CInt(Math.Ceiling(rectHeight)), boxSize)
+                Dim thumb = New SKBitmap(size.Width, size.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(thumb)
+                    canvas.Clear(SKColors.Transparent)
+                    ' Auf den Kasten skalieren und das Objektrechteck in den Ursprung legen. Gezeichnet
+                    ' wird danach unveraendert - Schrift, Form, Bild und Strich kommen alle aus
+                    ' derselben Routine wie im Foto.
+                    canvas.Scale(size.Width / rectWidth, size.Height / rectHeight)
+                    canvas.Translate(-rect.Left, -rect.Top)
+                    DrawAnnotationOnCanvas(canvas, kind, annotation, rect, sourceWidth, sourceHeight)
+                End Using
+                Return thumb
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Miniatur direkt aus einer Bilddatei - VERKLEINERT dekodiert.
+        '''
+        ''' Der Kodierer liefert die Datei auf Wunsch schon kleiner (`GetScaledDimensions`), und
+        ''' genau darum geht es: fuer einen Kasten von dreissig Punkten ein 24-Megapixel-Foto voll
+        ''' zu dekodieren kostet rund hundert Millisekunden - je Ebene, bei jedem Aufbau des
+        ''' Panels.</summary>
+        Private Shared Function BuildImageThumbnailFromFile(path As String, boxSize As Integer) As SKBitmap
+            Try
+                Using stream = File.OpenRead(path)
+                    Using codec = SKCodec.Create(stream)
+                        If codec Is Nothing Then Return Nothing
+                        Dim info = codec.Info
+                        If info.Width <= 0 OrElse info.Height <= 0 Then Return Nothing
+                        Dim size = FitIntoBox(info.Width, info.Height, boxSize)
+                        Dim wantedScale = Math.Max(size.Width, size.Height) / CSng(Math.Max(info.Width, info.Height))
+                        Dim codecSize = codec.GetScaledDimensions(wantedScale)
+                        Dim decodeInfo = New SKImageInfo(Math.Max(1, codecSize.Width), Math.Max(1, codecSize.Height),
+                                                         SKColorType.Bgra8888, SKAlphaType.Premul)
+                        Using decoded = New SKBitmap(decodeInfo)
+                            Dim decodeResult = codec.GetPixels(decodeInfo, decoded.GetPixels())
+                            If decodeResult <> SKCodecResult.Success AndAlso decodeResult <> SKCodecResult.IncompleteInput Then Return Nothing
+                            ' Der Kodierer trifft die gewuenschte Groesse nur in seinen eigenen
+                            ' Stufen (haelftig bei JPEG) - der Rest ist eine gewoehnliche Skalierung
+                            ' auf einem bereits kleinen Bild und kostet nichts mehr.
+                            Dim thumb = New SKBitmap(size.Width, size.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                            Using canvas = New SKCanvas(thumb)
+                                canvas.Clear(SKColors.Transparent)
+                                DrawBitmapSampled(canvas, decoded, New SKRect(0, 0, decoded.Width, decoded.Height),
+                                                  New SKRect(0, 0, size.Width, size.Height), SamplingHigh, Nothing)
+                            End Using
+                            Return thumb
+                        End Using
+                    End Using
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Groesse, die ein Bild mit diesem Seitenverhaeltnis in einem quadratischen Kasten
+        ''' bekommt - mindestens ein Bildpunkt je Seite.</summary>
+        Private Shared Function FitIntoBox(width As Integer, height As Integer, boxSize As Integer) As (Width As Integer, Height As Integer)
+            If width <= 0 OrElse height <= 0 Then Return (boxSize, boxSize)
+            Dim scale = Math.Min(boxSize / CDbl(width), boxSize / CDbl(height))
+            Return (Math.Max(1, CInt(Math.Round(width * scale))),
+                    Math.Max(1, CInt(Math.Round(height * scale))))
+        End Function
+
         ''' <summary>Alle Bestandteile einer Maske zu EINEM Alpha8-Raster in QUELLGROESSE
         ''' zusammensetzen - dieselbe Rechnung wie im Renderweg, nur ohne die Geometriestufen
         ''' danach. Nothing, wenn kein Bestandteil etwas liefert.</summary>
         Private Shared Function BuildCombinedMaskRaster(mask As ImageMask) As SKBitmap
+            If mask Is Nothing Then Return Nothing
+            Return BuildCombinedMaskRaster(mask, mask.SourceWidthPixels, mask.SourceHeightPixels)
+        End Function
+
+        ''' <summary>Dasselbe in einer beliebigen ZIELGROESSE - der Rasterisierer nimmt sie ohnehin
+        ''' entgegen. Fuer eine Miniatur ist das der Unterschied zwischen einem Raster von dreissig
+        ''' Punkten und einem von fuenfundvierzig Megapixeln.</summary>
+        Private Shared Function BuildCombinedMaskRaster(mask As ImageMask,
+                                                        targetWidth As Integer, targetHeight As Integer) As SKBitmap
             If mask Is Nothing OrElse mask.SourceWidthPixels <= 0 OrElse mask.SourceHeightPixels <= 0 Then Return Nothing
+            If targetWidth <= 0 OrElse targetHeight <= 0 Then Return Nothing
             Dim components = mask.GetComponents()
             If components.Count = 0 Then Return Nothing
             Dim combined As SKBitmap = Nothing
             For Each component In components
                 Dim part = BuildComponentMaskForInput(component, mask.SourceWidthPixels, mask.SourceHeightPixels,
-                                                      mask.SourceWidthPixels, mask.SourceHeightPixels, Nothing)
+                                                      targetWidth, targetHeight, Nothing)
                 If part Is Nothing Then Continue For
                 If combined Is Nothing Then
                     combined = part
@@ -6638,7 +6829,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' die Vorschau beim Ziehen der Griffe stehen (der Cache gäbe die alte Basis zurück, und das
         ''' Werkzeug „macht nichts"). Dasselbe gilt für die Pinselkorrektur eines Verlaufs: ohne sie
         ''' bliebe die Vorschau beim Malen stehen.</summary>
-        Private Shared Function MaskFingerprint(m As ImageMask) As String
+        ''' <remarks>Oeffentlich, weil auch die Miniatur im Ebenenpanel daran erkennt, dass sie neu
+        ''' gezeichnet werden muss - zwei Fingerabdruecke fuer dieselbe Maske liefen unweigerlich
+        ''' auseinander, und dann zeigte die Zeile die Maske von vorhin.</remarks>
+        Public Shared Function MaskFingerprint(m As ImageMask) As String
             ' JEDER Bestandteil gehoert hinein, nicht nur der erste: sonst gaebe der Cache nach dem
             ' Anhaengen eines Verlaufs an dieselbe Maske das alte Bild zurueck, und das Werkzeug
             ' "macht nichts".

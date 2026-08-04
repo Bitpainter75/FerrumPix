@@ -6567,4 +6567,10 @@
   <data name="schnell_5db66027" xml:space="preserve">
     <value>quick</value>
   </data>
+  <data name="Miniaturen_im_Ebenen_Panel_1778b4ed" xml:space="preserve">
+    <value>Thumbnails in the layers panel</value>
+  </data>
+  <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
+    <value>Shows a small picture of what is on each layer, with its mask beside it. Off: the tool symbol again. With many image layers the panel takes a little longer to build the first time.</value>
+  </data>
 </root>

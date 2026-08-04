@@ -188,6 +188,52 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Miniatur des Ebeneninhalts. Gefuellt vom ViewModel, das den Zeichenweg und den
+        ''' Zwischenspeicher dafuer hat - die Zeile ist ein Datensatz und rendert nichts selbst.
+        ''' Ohne Miniatur bleibt es beim Typsymbol: bei mehreren gleichartigen Ebenen sagte das
+        ''' nichts darueber, WAS auf ihnen liegt.</summary>
+        Public Property Thumbnail As Avalonia.Media.Imaging.Bitmap
+            Get
+                Return _thumbnail
+            End Get
+            Set(value As Avalonia.Media.Imaging.Bitmap)
+                If Object.ReferenceEquals(_thumbnail, value) Then Return
+                _thumbnail = value
+                RaisePropertyChanged(NameOf(Thumbnail))
+                RaisePropertyChanged(NameOf(HasThumbnail))
+            End Set
+        End Property
+        Private _thumbnail As Avalonia.Media.Imaging.Bitmap
+
+        Public ReadOnly Property HasThumbnail As Boolean
+            Get
+                Return _thumbnail IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Miniatur der MASKE dieser Zeile - hell, wo sie deckt. Sie steht neben der
+        ''' Inhaltsminiatur, wie in den ueblichen Bildbearbeitungen, und ist zugleich der Knopf zum
+        ''' Bearbeiten. Genau daran fehlte es: bei mehreren Korrekturebenen war nicht zu sehen,
+        ''' welche Maske wo liegt.</summary>
+        Public Property MaskThumbnail As Avalonia.Media.Imaging.Bitmap
+            Get
+                Return _maskThumbnail
+            End Get
+            Set(value As Avalonia.Media.Imaging.Bitmap)
+                If Object.ReferenceEquals(_maskThumbnail, value) Then Return
+                _maskThumbnail = value
+                RaisePropertyChanged(NameOf(MaskThumbnail))
+                RaisePropertyChanged(NameOf(HasMaskThumbnail))
+            End Set
+        End Property
+        Private _maskThumbnail As Avalonia.Media.Imaging.Bitmap
+
+        Public ReadOnly Property HasMaskThumbnail As Boolean
+            Get
+                Return _maskThumbnail IsNot Nothing
+            End Get
+        End Property
+
         Public Sub Refresh()
             RaisePropertyChanged(NameOf(LayerLabel))
             RaisePropertyChanged(NameOf(EditableName))

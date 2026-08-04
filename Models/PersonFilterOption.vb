@@ -21,16 +21,32 @@ Namespace Models
 
         Private _isSelected As Boolean
 
-        Public Sub New(id As String, name As String, count As Integer, isSelected As Boolean)
+        Public Sub New(id As String, name As String, count As Integer, isSelected As Boolean,
+                       Optional isFromImmich As Boolean = False)
             Me.Id = If(id, "")
             Me.Name = If(name, "")
             Me.Count = count
+            Me.IsFromImmich = isFromImmich
             _isSelected = isSelected
         End Sub
 
         Public ReadOnly Property Id As String
         Public ReadOnly Property Name As String
         Public ReadOnly Property Count As Integer
+
+        ''' <summary>Kommt dieser Eintrag vom Immich-Server statt aus dem lokalen Katalog?
+        '''
+        ''' Die beiden Bestaende lassen sich NICHT verunden: der Server filtert nach genau einer
+        ''' Person oder einer Stadt, und ein Immich-Element steht in keiner lokalen Tabelle. Ein
+        ''' Immich-Eintrag wird deshalb allein gewaehlt und oeffnet die Server-Abfrage; die Liste
+        ''' zeigt ihn unter einer eigenen Ueberschrift, damit man nicht auf eine Verundung
+        ''' hofft, die es nicht gibt.</summary>
+        Public ReadOnly Property IsFromImmich As Boolean
+
+        ''' <summary>Traegt dieser Eintrag die Zwischenueberschrift "Immich"? Gesetzt wird sie beim
+        ''' ERSTEN Eintrag vom Server. Eine eigene Gruppierung der Liste waere dafuer zu viel
+        ''' Maschinerie - die Ueberschrift gehoert zu genau einer Zeile.</summary>
+        Public Property ShowsImmichHeader As Boolean
 
         ''' <summary>Hat die Gruppe schon einen Namen? Direkt nach der Erkennung hat sie keinen -
         ''' die Gruppierung entsteht von selbst, der Name kommt vom Benutzer. In die Filterliste
@@ -42,10 +58,12 @@ Namespace Models
             End Get
         End Property
 
-        ''' <summary>Beschriftung mit der Anzahl in Klammern, etwa "Christina (42)".</summary>
+        ''' <summary>Beschriftung mit der Anzahl in Klammern, etwa "Christina (42)". OHNE Anzahl, wo
+        ''' es keine gibt: der Immich-Server liefert seine Personen ohne Bildzahl, und "(0)" hinter
+        ''' einem Namen liest sich wie "keine Bilder".</summary>
         Public ReadOnly Property Label As String
             Get
-                Return $"{Name} ({Count})"
+                Return If(Count > 0, $"{Name} ({Count})", Name)
             End Get
         End Property
 

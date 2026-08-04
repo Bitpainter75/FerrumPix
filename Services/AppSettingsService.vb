@@ -189,6 +189,12 @@ Namespace Services
         ''' Ob das Ebenen-Panel im Editor zuletzt eingeblendet war - gemerkter Bedienzustand (wie die
         ''' Info-Leiste), kein Schalter in den Einstellungen. Standard aus: es ist ein Profi-Werkzeug.
         Public Property EditorLayersPanelExpanded As Boolean = False
+        ''' <summary>Zeigen die Zeilen des Ebenenpanels eine Miniatur ihres Inhalts, oder das
+        ''' Typsymbol des Werkzeugs? Ab Werk an - man sieht damit, WAS auf einer Ebene liegt.
+        '''
+        ''' Abschaltbar, weil die Miniaturen Arbeit machen: ein Bild-Objekt wird dafuer aus seiner
+        ''' Datei gelesen, und bei vielen Bildebenen ist der erste Aufbau des Panels spuerbar.</summary>
+        Public Property EditorLayerThumbnails As Boolean = True
         ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
         ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
         Public Property EditorToolSidebarCollapsed As Boolean = False
@@ -1348,6 +1354,10 @@ Namespace Services
 
         Public Shared Sub SaveEditorLayersPanelExpanded(value As Boolean)
             Update(Sub(s) s.EditorLayersPanelExpanded = value)
+        End Sub
+
+        Public Shared Sub SaveEditorLayerThumbnails(value As Boolean)
+            Update(Sub(s) s.EditorLayerThumbnails = value)
         End Sub
 
         Public Shared Sub SaveEditorExpanderState(key As String, expanded As Boolean)

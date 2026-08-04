@@ -56,6 +56,7 @@ Namespace ViewModels
         Private _editorShowGrid As Boolean = False
         Private _editorInfoSidebarExpanded As Boolean = True
         Private _editorLayersPanelExpanded As Boolean = False
+        Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
         Private _editorStartupTool As String = "Selection"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -1238,6 +1239,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Zeigen die Zeilen des Ebenenpanels eine Miniatur ihres Inhalts? Aus heisst:
+        ''' wieder das Typsymbol des Werkzeugs, wie vor den Miniaturen.</summary>
+        Public Property EditorLayerThumbnails As Boolean
+            Get
+                Return _editorLayerThumbnails
+            End Get
+            Set(value As Boolean)
+                If _editorLayerThumbnails = value Then Return
+                Me.RaiseAndSetIfChanged(_editorLayerThumbnails, value)
+                AppSettingsService.SaveEditorLayerThumbnails(value)
+                _mainVm?.RefreshLayoutBindings()
+            End Set
+        End Property
+
         ''' <summary>Linke Werkzeugleiste des Editors eingeklappt (nur Symbole). Gemerkter
         ''' Bedienzustand wie Info-Leiste/Ebenen-Panel, kein Schalter auf der Einstellungsseite.</summary>
         Public Property EditorToolSidebarCollapsed As Boolean
@@ -2003,6 +2018,7 @@ Namespace ViewModels
             _editorShowGrid = _appSettings.EditorShowGrid
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
+            _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
@@ -2567,6 +2583,7 @@ Namespace ViewModels
             settings.EditorShowGrid = _editorShowGrid
             settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             settings.EditorLayersPanelExpanded = _editorLayersPanelExpanded
+            settings.EditorLayerThumbnails = _editorLayerThumbnails
             settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
             settings.EditorStartupTool = _editorStartupTool
             settings.EditorToolGroupOrder = _editorToolGroupOrder

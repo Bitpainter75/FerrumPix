@@ -6565,4 +6565,10 @@
   <data name="schnell_5db66027" xml:space="preserve">
     <value>rápido</value>
   </data>
+  <data name="Miniaturen_im_Ebenen_Panel_1778b4ed" xml:space="preserve">
+    <value>Miniaturas no painel de camadas</value>
+  </data>
+  <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
+    <value>Mostra em cada linha uma pequena imagem do que está na camada e, ao lado, a sua máscara. Desligado: novamente o símbolo da ferramenta. Com muitas camadas de imagem, o painel demora um pouco mais na primeira vez.</value>
+  </data>
 </root>

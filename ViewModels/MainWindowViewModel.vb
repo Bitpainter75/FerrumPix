@@ -137,6 +137,18 @@ Namespace ViewModels
                     '.
                     Editor?.SetEntryMode(previousMode)
                 End If
+
+                ' Zurueck aus den EINSTELLUNGEN: das offene Bild neu laden (Nutzerentscheidung
+                ' 2026-08-04). Nach diesem Ausflug stand der Editor mit leerer Flaeche da - bei
+                ' einer .fpx sichtbar als blosses Schachbrett.
+                '
+                ' Neu laden ist hier gefahrlos, weil der WEG in die Einstellungen die Speicherfrage
+                ' stellt (siehe OpenSettings): was hier ankommt, ist entweder gespeichert oder
+                ' bewusst verworfen. Und es ist die einzige Stelle, die den Zustand vollstaendig
+                ' wiederherstellt, statt einzelne Teile davon nachzuziehen.
+                If previousMode = AppMode.Settings AndAlso value = AppMode.Editor Then
+                    ReloadEditorDocumentAfterSettings()
+                End If
             End Set
         End Property
 
@@ -445,6 +457,22 @@ Namespace ViewModels
                 CurrentMode = AppMode.People
             Catch ex As Exception
                 DiagnosticLogService.LogException("MainWindowViewModel.OpenPeople", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Das offene Bild nach der Rueckkehr aus den Einstellungen neu laden. WAS dabei
+        ''' wiederhergestellt wird, entscheidet der Editor selbst - nur dort sind Filmstreifen und
+        ''' Cache-Bereich bekannt.
+        '''
+        ''' Async Sub mit eigenem Fang: eine Ausnahme in einem Async Sub landet sonst beim
+        ''' Dispatcher und beendet den Prozess - dieselbe Absicherung wie bei den uebrigen
+        ''' Moduswechseln hier.</summary>
+        Private Async Sub ReloadEditorDocumentAfterSettings()
+            Try
+                If Editor Is Nothing Then Return
+                Await Editor.ReloadCurrentDocumentAsync()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.ReloadEditorAfterSettings", ex)
             End Try
         End Sub
 

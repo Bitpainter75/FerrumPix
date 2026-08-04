@@ -191,7 +191,12 @@
                             <Flyout Placement="BottomEdgeAlignedRight"
                                     VerticalOffset="2"
                                     Opened="OnLocalizedFlyoutOpened">
-                                <StackPanel Spacing="1" MinWidth="248" MaxHeight="520">
+                                <!-- KEINE MaxHeight am Panel: ein StackPanel scrollt nicht, es SCHNEIDET AB. Mit
+                                     Kopfzeile, Knoepfen, Trennern und Suchfeld kam der Inhalt ueber die
+                                     Deckelung, und die letzten Eintraege der Liste waren nicht mehr
+                                     erreichbar. Begrenzt wird deshalb die LISTE (der ScrollViewer
+                                     darunter), und die kann scrollen. -->
+                                <StackPanel Spacing="1" MinWidth="248">
                                     <TextBlock Text="PERSONEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                Margin="10,8,10,4"/>
@@ -248,16 +253,27 @@
                                                     <!-- Click statt Command, gleicher Grund wie bei den
                                                          Stichwörtern: der Inhalt eines Aufklappfensters hängt
                                                          nicht im Baum der Ansicht. -->
-                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                            HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                            Click="OnPersonFilterItemClick">
-                                                        <Grid ColumnDefinitions="*,20">
-                                                            <TextBlock Text="{Binding Label}" Classes="no-translate"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
-                                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                                        </Grid>
-                                                    </Button>
+                                                    <StackPanel>
+                                                        <!-- Zwischenüberschrift vor dem ersten Eintrag vom
+                                                             Server. Die beiden Bestände lassen sich nicht
+                                                             verunden - ohne die Trennung sähe die Liste aus,
+                                                             als ginge das. -->
+                                                        <TextBlock Text="Immich" Classes="no-translate"
+                                                                   IsVisible="{Binding ShowsImmichHeader}"
+                                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                                   Margin="10,8,10,2"/>
+                                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                                Click="OnPersonFilterItemClick">
+                                                            <Grid ColumnDefinitions="*,20">
+                                                                <TextBlock Text="{Binding Label}" Classes="no-translate"
+                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                            </Grid>
+                                                        </Button>
+                                                    </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -302,7 +318,12 @@
                             <Flyout Placement="BottomEdgeAlignedRight"
                                     VerticalOffset="2"
                                     Opened="OnLocalizedFlyoutOpened">
-                                <StackPanel Spacing="1" MinWidth="248" MaxHeight="520">
+                                <!-- KEINE MaxHeight am Panel: ein StackPanel scrollt nicht, es SCHNEIDET AB. Mit
+                                     Kopfzeile, Knoepfen, Trennern und Suchfeld kam der Inhalt ueber die
+                                     Deckelung, und die letzten Eintraege der Liste waren nicht mehr
+                                     erreichbar. Begrenzt wird deshalb die LISTE (der ScrollViewer
+                                     darunter), und die kann scrollen. -->
+                                <StackPanel Spacing="1" MinWidth="248">
                                     <TextBlock Text="ORTE" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                Margin="10,8,10,4"/>
@@ -347,16 +368,23 @@
                                                     <!-- Click statt Command, gleicher Grund wie bei den
                                                          Stichwörtern und Personen: der Inhalt eines
                                                          Aufklappfensters hängt nicht im Baum der Ansicht. -->
-                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                            HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                            Click="OnPlaceFilterItemClick">
-                                                        <Grid ColumnDefinitions="*,20">
-                                                            <TextBlock Text="{Binding Label}" Classes="no-translate"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
-                                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                                        </Grid>
-                                                    </Button>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Immich" Classes="no-translate"
+                                                                   IsVisible="{Binding ShowsImmichHeader}"
+                                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                                   Margin="10,8,10,2"/>
+                                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                                Click="OnPlaceFilterItemClick">
+                                                            <Grid ColumnDefinitions="*,20">
+                                                                <TextBlock Text="{Binding Label}" Classes="no-translate"
+                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                            </Grid>
+                                                        </Button>
+                                                    </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -394,7 +422,12 @@
                             <Flyout Placement="BottomEdgeAlignedRight"
                                     VerticalOffset="2"
                                     Opened="OnLocalizedFlyoutOpened">
-                                <StackPanel Spacing="1" MinWidth="248" MaxHeight="520">
+                                <!-- KEINE MaxHeight am Panel: ein StackPanel scrollt nicht, es SCHNEIDET AB. Mit
+                                     Kopfzeile, Knoepfen, Trennern und Suchfeld kam der Inhalt ueber die
+                                     Deckelung, und die letzten Eintraege der Liste waren nicht mehr
+                                     erreichbar. Begrenzt wird deshalb die LISTE (der ScrollViewer
+                                     darunter), und die kann scrollen. -->
+                                <StackPanel Spacing="1" MinWidth="248">
                                     <TextBlock Text="STICHWÖRTER" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                Margin="10,8,10,4"/>

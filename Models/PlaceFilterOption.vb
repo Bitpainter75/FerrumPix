@@ -16,16 +16,25 @@ Namespace Models
         Private _isSelected As Boolean
 
         Public Sub New(city As String, country As String, count As Integer, isSelected As Boolean,
-                       Optional countryCode As String = "")
+                       Optional countryCode As String = "", Optional isFromImmich As Boolean = False)
             Me.City = If(city, "")
             Me.Country = If(country, "")
             Me.CountryCode = If(countryCode, "")
             Me.Count = count
+            Me.IsFromImmich = isFromImmich
             _isSelected = isSelected
         End Sub
 
         Public ReadOnly Property City As String
         Public ReadOnly Property Country As String
+
+        ''' <summary>Kommt dieser Ort vom Immich-Server? Gleiche Regel wie bei den Personen (siehe
+        ''' <see cref="PersonFilterOption.IsFromImmich"/>): allein waehlbar, oeffnet die
+        ''' Server-Abfrage.</summary>
+        Public ReadOnly Property IsFromImmich As Boolean
+
+        ''' <summary>Traegt die Zwischenueberschrift "Immich" - beim ERSTEN Eintrag vom Server.</summary>
+        Public Property ShowsImmichHeader As Boolean
 
         ''' <summary>Das Laenderkuerzel. Der ANGEZEIGTE Landesname kommt daraus in der Sprache der
         ''' Oberflaeche; gefiltert wird weiter ueber den gespeicherten Ortsnamen, der sich nicht mit
@@ -33,12 +42,14 @@ Namespace Models
         Public ReadOnly Property CountryCode As String
         Public ReadOnly Property Count As Integer
 
-        ''' <summary>"Norden, Deutschland (42)". Fehlt das Land, faellt es samt Komma weg.</summary>
+        ''' <summary>"Norden, Deutschland (42)". Fehlt das Land, faellt es samt Komma weg; fehlt die
+        ''' Anzahl (Immich liefert seine Staedte ohne), faellt auch sie weg - "(0)" liest sich sonst
+        ''' wie "keine Bilder".</summary>
         Public ReadOnly Property Label As String
             Get
                 Dim land = Services.PlaceLookupService.LocalizedCountry(CountryCode, Country)
                 Dim place = If(land.Length > 0, $"{City}, {land}", City)
-                Return $"{place} ({Count})"
+                Return If(Count > 0, $"{place} ({Count})", place)
             End Get
         End Property
 

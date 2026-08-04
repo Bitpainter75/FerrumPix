@@ -6564,4 +6564,10 @@
   <data name="schnell_5db66027" xml:space="preserve">
     <value>快速</value>
   </data>
+  <data name="Miniaturen_im_Ebenen_Panel_1778b4ed" xml:space="preserve">
+    <value>图层面板中的缩略图</value>
+  </data>
+  <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
+    <value>在每一行显示该图层内容的小图，旁边是它的蒙版。关闭后重新显示工具图标。图层中图像较多时，面板首次构建会稍慢一些。</value>
+  </data>
 </root>

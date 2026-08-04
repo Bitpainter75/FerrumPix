@@ -6566,4 +6566,10 @@
   <data name="schnell_5db66027" xml:space="preserve">
     <value>veloce</value>
   </data>
+  <data name="Miniaturen_im_Ebenen_Panel_1778b4ed" xml:space="preserve">
+    <value>Miniature nel pannello dei livelli</value>
+  </data>
+  <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
+    <value>Mostra in ogni riga una piccola immagine di ciò che si trova sul livello e, accanto, la sua maschera. Disattivato: di nuovo il simbolo dello strumento. Con molti livelli immagine il pannello impiega un po' di più la prima volta.</value>
+  </data>
 </root>

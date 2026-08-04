@@ -6566,4 +6566,10 @@
   <data name="schnell_5db66027" xml:space="preserve">
     <value>schnell</value>
   </data>
+  <data name="Miniaturen_im_Ebenen_Panel_1778b4ed" xml:space="preserve">
+    <value>Miniaturen im Ebenen-Panel</value>
+  </data>
+  <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
+    <value>Zeigt in jeder Zeile ein kleines Abbild dessen, was auf der Ebene liegt, und daneben ihre Maske. Aus: wieder das Symbol des Werkzeugs. Bei vielen Bild-Ebenen dauert der erste Aufbau des Panels damit etwas länger.</value>
+  </data>
 </root>

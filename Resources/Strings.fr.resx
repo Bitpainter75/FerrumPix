@@ -6566,4 +6566,10 @@
   <data name="schnell_5db66027" xml:space="preserve">
     <value>rapide</value>
   </data>
+  <data name="Miniaturen_im_Ebenen_Panel_1778b4ed" xml:space="preserve">
+    <value>Miniatures dans le panneau des calques</value>
+  </data>
+  <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
+    <value>Affiche sur chaque ligne une petite image de ce que contient le calque, avec son masque à côté. Désactivé : de nouveau le symbole de l'outil. Avec de nombreux calques d'image, le panneau met un peu plus de temps à s'afficher la première fois.</value>
+  </data>
 </root>

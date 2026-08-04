@@ -56,7 +56,7 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Classes="layers-panel-row" Padding="8,5" MinHeight="42"
+                        <Border Classes="layers-panel-row" Padding="8,5" MinHeight="46"
                                 Classes.multi-selected="{Binding IsInMultiSelection}"
                                 DragDrop.AllowDrop="True"
                                 PointerPressed="OnLayerRowPointerPressed"
@@ -78,13 +78,29 @@
                                                    Width="12" Height="12"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Button>
-                                <Border Grid.Column="1" Width="30" Height="30" CornerRadius="3"
+                                <!-- Miniatur der Ebene, sonst das Typsymbol. Die Miniatur sagt, WAS
+                                     auf der Ebene liegt; bei mehreren gleichartigen Ebenen sagte das
+                                     Symbol allein gar nichts. Sie kommt fertig aus dem ViewModel -
+                                     die Zeile rendert nichts selbst. -->
+                                <Border Grid.Column="1" Width="34" Height="34" CornerRadius="3"
                                         BorderThickness="1"
                                         BorderBrush="{DynamicResource FP.Border.Normal}"
-                                        Background="{DynamicResource FP.Bg.Root}">
-                                    <icons:SvgIcon Source="{Binding IconSource}"
-                                                   Width="18" Height="18"
-                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        Background="{DynamicResource FP.Bg.Root}"
+                                        ClipToBounds="True">
+                                    <Panel>
+                                        <!-- Die Miniatur FUELLT den Kasten (Uniform, ohne
+                                             Zentrierung): mit HorizontalAlignment="Center" nimmt ein
+                                             Bild in Avalonia nur seine eigene Punktgroesse ein, und
+                                             Uniform skaliert dann innerhalb dieser Groesse, also gar
+                                             nicht. Der Kasten wuchs, das Bild darin blieb gleich. -->
+                                        <Image Source="{Binding Thumbnail}"
+                                               Stretch="Uniform" Margin="2"
+                                               IsVisible="{Binding HasThumbnail}" />
+                                        <icons:SvgIcon Source="{Binding IconSource}"
+                                                       Width="18" Height="18"
+                                                       IsVisible="{Binding !HasThumbnail}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Panel>
                                 </Border>
                                 <!-- Name: Doppelklick auf die Beschriftung öffnet das Eingabefeld (Enter oder
                                      Verlassen übernimmt, Esc verwirft). Beides teilt sich die Zelle. -->
@@ -119,8 +135,22 @@
                                             IsVisible="{Binding HasMask}"
                                             Click="OnLayerMaskIconClick"
                                             ToolTip.Tip="Ebenenmaske bearbeiten">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
-                                                       Width="13" Height="13" Opacity="0.65" />
+                                        <Panel>
+                                            <!-- Die Maskenminiatur IST der Knopf: hell, wo die Maske
+                                                 deckt. Ohne sie war nicht zu sehen, welche Maske wo
+                                                 liegt. Fehlt sie (noch nicht gezeichnet), bleibt das
+                                                 Symbol stehen. -->
+                                            <Border Width="26" Height="26" CornerRadius="2"
+                                                    BorderThickness="1"
+                                                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                    ClipToBounds="True"
+                                                    IsVisible="{Binding HasMaskThumbnail}">
+                                                <Image Source="{Binding MaskThumbnail}" Stretch="Uniform" />
+                                            </Border>
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
+                                                           Width="13" Height="13" Opacity="0.65"
+                                                           IsVisible="{Binding !HasMaskThumbnail}" />
+                                        </Panel>
                                     </Button>
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg"
                                                    Width="13" Height="13" Opacity="0.65"
@@ -165,14 +195,14 @@
             <!-- Globale Einstellungsebene: alle nicht maskierten Regler aus Anpassen, Farbe, Details,
                  Effekte und Filter. Fest über dem Arbeitsbild, weil genau dort die Renderpipeline sie
                  anwendet; lokale maskierte Korrekturen stehen als freie Zeilen darüber. -->
-            <Border Grid.Row="2" Padding="8,5" MinHeight="42"
+            <Border Grid.Row="2" Padding="8,5" MinHeight="46"
                     Classes="global-adjustments-row"
                     Classes.active="{Binding IsGlobalAdjustmentsSelected}"
                     PointerPressed="OnGlobalAdjustmentsPointerPressed"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="3"
                             BorderThickness="1"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
                             Background="{DynamicResource FP.Bg.Input}">
@@ -205,12 +235,12 @@
             <!-- Pixel-Ebene: Retusche, Pinsel-/Radiererstriche und gerasterte Ebenen liegen alle in EINEM
                  Arbeitsbild (siehe WorkingImageService) und lassen sich deshalb nur gemeinsam ausblenden.
                  Solange sie aus ist, sind die Mal- und Retuschewerkzeuge gesperrt (CanUsePixelTools). -->
-            <Border Grid.Row="3" Padding="8,5" MinHeight="42"
+            <Border Grid.Row="3" Padding="8,5" MinHeight="46"
                     PointerPressed="OnFixedLayerPointerPressed"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="3"
                             BorderThickness="1"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
                             Background="{DynamicResource FP.Bg.Input}">
@@ -242,12 +272,12 @@
 
             <!-- Hintergrund-Ebene: das Basisbild, fest am Boden, gesperrt (nicht umsortier-/löschbar). Nur das
                  Auge blendet es aus (transparenter Grund, siehe ImageProcessor.ApplyAnnotations). -->
-            <Border Grid.Row="4" Padding="8,5" MinHeight="42"
+            <Border Grid.Row="4" Padding="8,5" MinHeight="46"
                     PointerPressed="OnFixedLayerPointerPressed"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                    <Border Grid.Column="0" Width="30" Height="30" CornerRadius="3"
+                    <Border Grid.Column="0" Width="34" Height="34" CornerRadius="3"
                             BorderThickness="1"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
                             Background="{DynamicResource FP.Bg.Input}">
