@@ -281,26 +281,49 @@
                  üblichen Ebenen-Panels). Nur die tatsächlich unterstützten Aktionen, keine Attrappen. -->
             <Border Grid.Row="5" Padding="8,6"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0">
+                <!-- WAS GERADE MARKIERT IST, entscheidet, welche Knoepfe ueberhaupt dastehen -
+                     dieselbe Regel wie im Kontextmenue, und aus derselben Quelle im ViewModel.
+                     "Nach vorne", "nach hinten", "duplizieren" und "umbenennen" wirken auf die
+                     ANKERebene; bei mehreren markierten Ebenen oder einer markierten Gruppe meinen
+                     sie also nicht das, was man sieht, und bleiben weg. Was fuer mehrere gilt
+                     (gruppieren, zusammenlegen, sperren, loeschen), steht dann an ihrer Stelle. -->
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding MoveSelectedAnnotationUpCommand}"
-                            IsEnabled="{Binding HasSelectedPanelLayer}"
+                            IsVisible="{Binding IsSingleLayerSelection}"
                             ToolTip.Tip="Ebene nach vorne">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-up.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding MoveSelectedAnnotationDownCommand}"
-                            IsEnabled="{Binding HasSelectedPanelLayer}"
+                            IsVisible="{Binding IsSingleLayerSelection}"
                             ToolTip.Tip="Ebene nach hinten">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-down.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DuplicateSelectedAnnotationCommand}"
-                            IsEnabled="{Binding HasSelectedPanelLayer}"
+                            IsVisible="{Binding IsSingleLayerSelection}"
                             ToolTip.Tip="Ebene duplizieren (Strg+D)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <!-- Mehrere: dasselbe Bild, aber der Befehl fuer die ganze Auswahl. -->
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding DuplicateSelectedAnnotationsCommand}"
+                            IsVisible="{Binding IsMultiLayerSelection}"
+                            ToolTip.Tip="Markierte Ebenen duplizieren">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <!-- Zusammenlegen gibt es nur fuer mehrere - im Kontextmenue stand es laengst,
+                         in der Fusszeile fehlte es. -->
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding MergeSelectedAnnotationsCommand}"
+                            IsVisible="{Binding CanMergeSelectedAnnotations}"
+                            ToolTip.Tip="Ebenen zusammenlegen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-subtract.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
@@ -340,31 +363,43 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-x.svg"
                                        Width="16" Height="16" />
                     </Button>
+                    <!-- Sperren gilt fuer ALLES Markierte - eine Ebene, mehrere, eine ganze Gruppe.
+                         Der Knopf bleibt deshalb in jeder Auswahl stehen. -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Click="OnToggleSelectionLockClick"
-                            IsEnabled="{Binding HasSelectedPanelLayer}"
+                            IsVisible="{Binding HasSelectedPanelLayer}"
                             ToolTip.Tip="Ebene sperren/entsperren - gesperrt sind keine Verschiebungen, Größenänderungen oder Drehungen mehr möglich">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/lock.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding RasterizeSelectedAnnotationCommand}"
-                            IsEnabled="{Binding CanRasterizeSelectedAnnotation}"
+                            IsVisible="{Binding CanRasterizeSelectedAnnotation}"
                             ToolTip.Tip="Ebene rastern">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-union.svg"
                                        Width="16" Height="16" />
                     </Button>
+                    <!-- Umbenennen gilt fuer die angeklickte ZEILE: eine einzelne Ebene oder eine
+                         Gruppe ueber ihre Kopfzeile. Bei mehreren markierten Ebenen waere unklar,
+                         welche gemeint ist. -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Click="OnRenameSelectedClick"
-                            IsEnabled="{Binding HasSelectedPanelLayer}"
+                            IsVisible="{Binding CanRenameSelectedLayer}"
                             ToolTip.Tip="Ebene umbenennen (F2)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/edit.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DeleteSelectedAnnotationCommand}"
-                            IsEnabled="{Binding HasSelectedPanelLayer}"
+                            IsVisible="{Binding IsSingleLayerSelection}"
                             ToolTip.Tip="Ebene löschen (Entf)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                       Width="16" Height="16" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding DeleteSelectedAnnotationsCommand}"
+                            IsVisible="{Binding IsMultiLayerSelection}"
+                            ToolTip.Tip="Markierte Ebenen löschen (Entf)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="16" Height="16" />
                     </Button>

@@ -165,7 +165,10 @@ Namespace Views
             If Not rowIsInSelection Then vm.SelectedLayerRow = row
 
             Dim items As New List(Of Control)()
-            Dim mehrere = vm.SelectedAnnotationCount > 1 OrElse vm.SelectedAdjustmentLayers.Count > 1
+            ' DIESELBE Quelle wie die Fusszeile (IsMultiLayerSelection). Vorher rechnete jede Stelle
+            ' ihre eigene Bedingung, und die beiden liefen auseinander: das Menue liess "nach vorne"
+            ' und "umbenennen" bei mehreren richtigerweise weg, die Fusszeile bot sie weiter an.
+            Dim mehrere = vm.IsMultiLayerSelection
             If vm.CanGroupSelectedAnnotations Then
                 Dim text = LocalizationService.T("Objekte gruppieren (Strg+G)")
                 items.Add(MakeLayerMenuItem(

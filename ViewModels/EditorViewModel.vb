@@ -1462,6 +1462,7 @@ Namespace ViewModels
             ' Der Masken-Knopf der Fußzeile haengt an der markierten Ebene - ohne das bliebe er nach
             ' einem Wechsel stehen, wie er beim vorigen war.
             RaiseAnnotationMaskStateChanged()
+            RaiseLayerFooterStateChanged()
         End Sub
 
         ''' <summary>Wählt die feste globale Einstellungsebene im Ebenenpanel als Reglerziel.
@@ -2531,6 +2532,45 @@ Namespace ViewModels
             Next
         End Sub
 
+        ''' <summary>Sind MEHRERE Ebenen markiert - Objekte, Korrekturen oder beides gemischt?
+        '''
+        ''' Die EINE Quelle dafuer, was die Fusszeile des Ebenenpanels zeigt und was das Kontextmenue
+        ''' anbietet. Beide hatten die Bedingung vorher jeweils selbst ausgerechnet; die Fusszeile
+        ''' bot damit Knoepfe an, die nur auf die Ankerebene wirken (nach vorn, nach hinten,
+        ''' umbenennen), waehrend das Menue sie richtigerweise wegliess.
+        '''
+        ''' Eine markierte GRUPPE zaehlt hier mit: mit ihrer Kopfzeile sind alle Mitglieder markiert,
+        ''' und "nach vorn" oder "umbenennen" meinen dann nicht die eine Ebene.</summary>
+        Public ReadOnly Property IsMultiLayerSelection As Boolean
+            Get
+                Return SelectedAnnotationCount + SelectedAdjustmentLayers.Count > 1
+            End Get
+        End Property
+
+        ''' <summary>Ist im Panel die Kopfzeile einer GRUPPE markiert?</summary>
+        Public ReadOnly Property IsGroupRowSelected As Boolean
+            Get
+                Return _selectedLayerRow IsNot Nothing AndAlso _selectedLayerRow.IsGroupHeader
+            End Get
+        End Property
+
+        ''' <summary>Laesst sich das Markierte umbenennen? Eine einzelne Ebene ja, eine GRUPPE auch
+        ''' (ueber ihre Kopfzeile) - eine Mehrfachauswahl von Ebenen nicht, dort waere unklar, welche
+        ''' gemeint ist.</summary>
+        Public ReadOnly Property CanRenameSelectedLayer As Boolean
+            Get
+                Return HasSelectedPanelLayer AndAlso (IsGroupRowSelected OrElse Not IsMultiLayerSelection)
+            End Get
+        End Property
+
+        ''' <summary>Gilt "nach vorne"/"nach hinten"/"duplizieren als eine Ebene"? Nur bei genau
+        ''' einer markierten Ebene: die Kommandos dahinter wirken auf die ANKERebene.</summary>
+        Public ReadOnly Property IsSingleLayerSelection As Boolean
+            Get
+                Return HasSelectedPanelLayer AndAlso Not IsMultiLayerSelection
+            End Get
+        End Property
+
         Private Sub RaiseMultiSelectionChanged()
             RefreshLayerRowSelectionMarks()
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationCount))
@@ -2540,7 +2580,21 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanUngroupSelectedAnnotations))
             Me.RaisePropertyChanged(NameOf(IsSelectionGeometryLocked))
             Me.RaisePropertyChanged(NameOf(SelectionLockLabel))
+            RaiseLayerFooterStateChanged()
             RaiseSelectionScopedPanelChanged()
+        End Sub
+
+        ''' <summary>Alles, was die Fusszeile des Ebenenpanels je nach Auswahl anders zeigt. Wer dort
+        ''' einen neuen auswahlabhaengigen Knopf baut, traegt ihn hier ein - sonst bleibt er auf dem
+        ''' Stand der vorigen Auswahl stehen.</summary>
+        Private Sub RaiseLayerFooterStateChanged()
+            Me.RaisePropertyChanged(NameOf(IsMultiLayerSelection))
+            Me.RaisePropertyChanged(NameOf(IsSingleLayerSelection))
+            Me.RaisePropertyChanged(NameOf(IsGroupRowSelected))
+            Me.RaisePropertyChanged(NameOf(CanRenameSelectedLayer))
+            Me.RaisePropertyChanged(NameOf(CanMergeSelectedAnnotations))
+            Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
+            Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
         End Sub
 
         ''' <summary>

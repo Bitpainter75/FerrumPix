@@ -73,8 +73,8 @@ Namespace Controls
         Public Overrides Sub Render(context As DrawingContext)
             Dim v = PointValues
             If v Is Nothing OrElse v.Length < 24 Then Return
-            For Each wert In v
-                If Double.IsNaN(wert) OrElse Double.IsInfinity(wert) Then Return
+            For Each value In v
+                If Double.IsNaN(value) OrElse Double.IsInfinity(value) Then Return
             Next
 
             Dim p(11) As Point
@@ -88,37 +88,37 @@ Namespace Controls
             ' darunter, damit der Rand auch auf hellem Bild sichtbar bleibt.
             Dim shadow = New Pen(New SolidColorBrush(Color.FromArgb(120, 0, 0, 0)), 3.0)
             Dim line = New Pen(StrokeBrush, 1.4)
-            Dim rand = New StreamGeometry()
-            Using zeichner = rand.Open()
-                zeichner.BeginFigure(p(0), False)
+            Dim outline = New StreamGeometry()
+            Using sink = outline.Open()
+                sink.BeginFigure(p(0), False)
                 For edge = 0 To 3
                     Dim b = (edge + 1) Mod 4
-                    zeichner.CubicBezierTo(p(4 + edge * 2), p(5 + edge * 2), p(b))
+                    sink.CubicBezierTo(p(4 + edge * 2), p(5 + edge * 2), p(b))
                 Next
-                zeichner.EndFigure(True)
+                sink.EndFigure(True)
             End Using
-            For Each stift In New Pen() {shadow, line}
-                context.DrawGeometry(Nothing, stift, rand)
+            For Each pen In New Pen() {shadow, line}
+                context.DrawGeometry(Nothing, pen, outline)
             Next
 
             ' Die duennen Fuehrungen von der Ecke zu ihren beiden Griffen: ohne sie schwebten die
             ' Griffe frei im Bild und man saehe nicht, welche Kante sie biegen.
-            Dim fuehrung = New Pen(New SolidColorBrush(Color.FromArgb(140, 255, 255, 255)), 1.0)
+            Dim guide = New Pen(New SolidColorBrush(Color.FromArgb(140, 255, 255, 255)), 1.0)
             For edge = 0 To 3
                 Dim b = (edge + 1) Mod 4
-                context.DrawLine(fuehrung, p(edge), p(4 + edge * 2))
-                context.DrawLine(fuehrung, p(b), p(5 + edge * 2))
+                context.DrawLine(guide, p(edge), p(4 + edge * 2))
+                context.DrawLine(guide, p(b), p(5 + edge * 2))
             Next
 
-            Dim fuellung = New SolidColorBrush(Color.FromArgb(235, 255, 255, 255))
+            Dim fill = New SolidColorBrush(Color.FromArgb(235, 255, 255, 255))
             Dim border = New Pen(New SolidColorBrush(Color.FromArgb(210, 0, 0, 0)), 1.2)
             ' Die Kantengriffe zuerst, damit eine Ecke, auf der ein Griff liegt, obenauf bleibt -
             ' sie ist die groebere Bewegung und wird zuerst gesucht.
             For i = 4 To 11
-                context.DrawEllipse(fuellung, border, p(i), HandleRadius, HandleRadius)
+                context.DrawEllipse(fill, border, p(i), HandleRadius, HandleRadius)
             Next
             For i = 0 To 3
-                context.DrawEllipse(fuellung, border, p(i), CornerRadius, CornerRadius)
+                context.DrawEllipse(fill, border, p(i), CornerRadius, CornerRadius)
             Next
         End Sub
 

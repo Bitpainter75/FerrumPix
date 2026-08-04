@@ -303,6 +303,53 @@
                 </Button>
             </StackPanel>
 
+            <!-- BESTANDTEILE DER MASKE. Sie gehoeren KEINEM Zweig: eine Maske kann aus Verlauf,
+                 Pinselstrich und Zauberstab zugleich bestehen, und wer gerade mit dem Pinsel
+                 dazumalt, muss dieselbe Liste sehen wie im Verlauf. Sie stand frueher im
+                 Verlaufszweig und war damit nur bei Linear und Radial da.
+                 Erscheint erst ab dem zweiten Bestandteil: bei einem einzigen sagt sie nichts, was
+                 die Regler nicht schon zeigen. Die angeklickte Zeile ist die, die Griffe und Regler
+                 bedienen. -->
+            <StackPanel Spacing="4" IsVisible="{Binding HasMaskComponents}">
+                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" />
+                <TextBlock Text="Bestandteile"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <ItemsControl ItemsSource="{Binding MaskComponentRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,1">
+                                <Button Grid.Column="0" Grid.ColumnSpan="3" Classes="ghost"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                        Padding="6,3"
+                                        Classes.active="{Binding IsActive}"
+                                        Command="{Binding DataContext.SelectMaskComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Index}"
+                                        ToolTip.Tip="Diesen Bestandteil bedienen">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding ModeLabel}"
+                                                   Width="12"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   FontSize="{DynamicResource FP.Font.Small}" />
+                                        <icons:SvgIcon Source="{Binding IconSource}" Width="14" Height="14" />
+                                        <TextBlock Text="{Binding KindLabel}"
+                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="3" Classes="ghost" Padding="4"
+                                        Command="{Binding DataContext.RemoveMaskComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Index}"
+                                        ToolTip.Tip="Diesen Bestandteil entfernen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                   Width="13" Height="13" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
             <!-- Verlaufs-Zweig -->
             <StackPanel Spacing="8" IsVisible="{Binding ShowGradientControls}">
                 <Border Height="1" Background="{DynamicResource FP.Border.Normal}" />
@@ -311,47 +358,6 @@
                            FontSize="{DynamicResource FP.Font.Small}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !HasSelectedGradientMask}" />
-                <!-- Bestandteile der Maske. Erscheint erst ab dem zweiten: bei einem einzigen sagt die
-                     Liste nichts, was die Regler darunter nicht schon zeigen. Die angeklickte Zeile
-                     ist die, die Griffe und Regler bedienen. -->
-                <StackPanel Spacing="4" IsVisible="{Binding HasMaskComponents}">
-                    <TextBlock Text="Bestandteile"
-                               Foreground="{DynamicResource FP.Text.Secondary}"
-                               FontSize="{DynamicResource FP.Font.Small}" />
-                    <ItemsControl ItemsSource="{Binding MaskComponentRows}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,1">
-                                    <Button Grid.Column="0" Grid.ColumnSpan="3" Classes="ghost"
-                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                            Padding="6,3"
-                                            Classes.active="{Binding IsActive}"
-                                            Command="{Binding DataContext.SelectMaskComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding Index}"
-                                            ToolTip.Tip="Diesen Bestandteil bedienen">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <TextBlock Text="{Binding ModeLabel}"
-                                                       Width="12"
-                                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                                       FontSize="{DynamicResource FP.Font.Small}" />
-                                            <icons:SvgIcon Source="{Binding IconSource}" Width="14" Height="14" />
-                                            <TextBlock Text="{Binding KindLabel}"
-                                                       FontSize="{DynamicResource FP.Font.Small}"
-                                                       VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="3" Classes="ghost" Padding="4"
-                                            Command="{Binding DataContext.RemoveMaskComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding Index}"
-                                            ToolTip.Tip="Diesen Bestandteil entfernen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                                       Width="13" Height="13" />
-                                    </Button>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"

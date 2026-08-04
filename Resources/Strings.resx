@@ -6501,4 +6501,10 @@
   <data name="Verzerrung_zur_ckgenommen_1032e6ac" xml:space="preserve">
     <value>Distortion taken back</value>
   </data>
+  <data name="Markierte_Ebenen_duplizieren_2145e904" xml:space="preserve">
+    <value>Duplicate the selected layers</value>
+  </data>
+  <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
+    <value>Delete the selected layers (Del)</value>
+  </data>
 </root>
