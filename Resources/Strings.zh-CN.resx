@@ -3972,6 +3972,9 @@
   <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
     <value>使用同一蒙版新建调整</value>
   </data>
+  <data name="Neue_Korrektur_mit_kopierter_Maske_933042f9" xml:space="preserve">
+    <value>新建调整并复制蒙版</value>
+  </data>
   <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
     <value>迁移的选区蒙版</value>
   </data>

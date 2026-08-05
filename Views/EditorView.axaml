@@ -243,7 +243,15 @@
         <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}"
                 IsEnabled="{Binding IsInteractionAllowed}">
             <ScrollViewer VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
-                <StackPanel Spacing="2">
+                <!-- UseLayoutRounding AUS für die Liste (die Eigenschaft vererbt sich an alle
+                     Knöpfe darin). Bei einer krummen Anwendungsskalierung rastet sonst jede Zeile
+                     einzeln auf ganze Geräte-Pixel: bei Skalierung 1,68 misst eine Zeile aus Knopf
+                     und Abstand 38 x 1,68 = 63,84 Geräte-Pixel, und gerundete Lagen ergeben
+                     abwechselnd 63 und 64 - sichtbar als ungleiche Abstände, obwohl im Layout jeder
+                     Knopf gleich hoch ist und überall derselbe Abstand steht. Ohne Rundung sitzt
+                     jede Zeile exakt auf ihrem Bruchteil, und alle Abstände sind gleich. Nur die
+                     Liste, nicht der Rahmen der Leiste: dessen Kante soll scharf bleiben. -->
+                <StackPanel Spacing="2" UseLayoutRounding="False">
                     <!-- Die drei Werkzeuggruppen liegen in einem Raster mit drei Zeilen: welche
                          Gruppe oben steht, sagt die Einstellung (Zeilennummer je Gruppe). Ein
                          gestapeltes Panel könnte das nicht - eine Reihenfolge lässt sich nicht

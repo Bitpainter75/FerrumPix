@@ -360,7 +360,7 @@
                             Command="{Binding AddAdjustmentWithSameMaskCommand}"
                             IsVisible="{Binding HasSelectedAdjustmentLayer}"
                             IsEnabled="{Binding HasSelectedAdjustmentLayer}"
-                            ToolTip.Tip="Neue Korrektur mit derselben Maske">
+                            ToolTip.Tip="Neue Korrektur mit kopierter Maske">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
                                        Width="16" Height="16" />
                     </Button>

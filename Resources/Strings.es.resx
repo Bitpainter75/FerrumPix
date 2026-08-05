@@ -3974,6 +3974,9 @@
   <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
     <value>Nueva corrección con la misma máscara</value>
   </data>
+  <data name="Neue_Korrektur_mit_kopierter_Maske_933042f9" xml:space="preserve">
+    <value>Nueva corrección con una copia de la máscara</value>
+  </data>
   <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
     <value>Máscara de selección migrada</value>
   </data>

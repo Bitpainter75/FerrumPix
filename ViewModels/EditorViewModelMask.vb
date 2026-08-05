@@ -318,6 +318,15 @@ Namespace ViewModels
                         _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = layer.MaskId))
                     If mask IsNot Nothing Then mask.FeatherPixels = CSng(clamped)
                 End If
+                ' Beim Bearbeiten einer EBENENMASKE gehoert die weiche Kante an genau diese Maske.
+                ' Im Masken-Werkzeug laeuft kein Anpassungs-Modus, der Zweig darueber greift dort also
+                ' nie - der Regler blieb ohne Wirkung auf die Ebene und war beim naechsten Oeffnen
+                ' wieder auf dem alten Wert. Dieselbe Falle wie beim Umkehren.
+                If _editingLayerMaskId <> "" Then
+                    Dim editedMask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                                    String.Equals(m.Id, _editingLayerMaskId, StringComparison.Ordinal))
+                    If editedMask IsNot Nothing Then editedMask.FeatherPixels = CSng(clamped)
+                End If
                 SchedulePreviewUpdate()
             End Set
         End Property
@@ -869,6 +878,7 @@ Namespace ViewModels
                 End If
             End Using
             PublishMaskBrushOverlay()
+            TraceLayerInventory("Pinselstrich")
             SchedulePreviewUpdate()
         End Sub
 
@@ -1164,6 +1174,78 @@ Namespace ViewModels
             SetSelectionMaskPreviewImage(Nothing)
         End Sub
 
+        ' ── Ablaufspur der Masken (In-App-Diagnoselog) ──────────────────────────
+        '
+        ' Masken sind Daten OHNE sichtbare Kennung: sieht eine Ebene falsch aus, ist von aussen nicht
+        ' zu erkennen, WELCHE Maske sie gerade benutzt und wer zuletzt hineingeschrieben hat. Diese
+        ' Zeilen beantworten genau das - eingeschaltet ueber "Diagnose-Log" in den Einstellungen,
+        ' ausgeschaltet kosten sie nichts (die teuren Angaben entstehen erst hinter der Abfrage).
+
+        Private Shared Function IsMaskTraceEnabled() As Boolean
+            Try
+                Return AppSettingsService.Load().EnableDiagnosticLogging
+            Catch
+                Return False
+            End Try
+        End Function
+
+        Private Shared Sub TraceMask(message As Func(Of String))
+            If Not IsMaskTraceEnabled() Then Return
+            Try
+                DiagnosticLogService.LogAlways("Maske", message())
+            Catch
+            End Try
+        End Sub
+
+        ''' <summary>Kurzform einer Maske fuer die Ablaufspur: Kennung, Form und Umkehrung. Die FORM
+        ''' ist ein Fingerabdruck ueber die Pixel - zwei Ebenen mit derselben Form, aber verschiedenen
+        ''' Kennungen sind Kopien; dieselbe Kennung heisst geteilt.</summary>
+        Private Function MaskTrace(maskId As String) As String
+            If String.IsNullOrEmpty(maskId) Then Return "Maske=-"
+            Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                      String.Equals(m.Id, maskId, StringComparison.Ordinal))
+            If mask Is Nothing Then Return $"Maske={Kurz(maskId)}(FEHLT)"
+            Return $"Maske={Kurz(maskId)} Form={FormKurz(mask.PngBase64)} Rand={mask.Left},{mask.Top},{mask.Right},{mask.Bottom}" &
+                   $" Umgekehrt={mask.Inverted} Teile={mask.ComponentCount}"
+        End Function
+
+        Private Shared Function Kurz(id As String) As String
+            If String.IsNullOrEmpty(id) Then Return "-"
+            Return If(id.Length <= 8, id, id.Substring(0, 8))
+        End Function
+
+        ''' <summary>Fingerabdruck der Maskenpixel: Laenge plus Kurzhash. Gleicher Wert = gleiche Form.</summary>
+        Private Shared Function FormKurz(pngBase64 As String) As String
+            If String.IsNullOrEmpty(pngBase64) Then Return "leer"
+            Try
+                Using sha = System.Security.Cryptography.SHA1.Create()
+                    Dim hash = sha.ComputeHash(System.Text.Encoding.ASCII.GetBytes(pngBase64))
+                    Return $"{pngBase64.Length}/{BitConverter.ToString(hash).Replace("-", "").Substring(0, 8).ToLowerInvariant()}"
+                End Using
+            Catch
+                Return pngBase64.Length.ToString()
+            End Try
+        End Function
+
+        ''' <summary>Der ganze Bestand in einer Zeile je Ebene: welche Ebene benutzt welche Maske und
+        ''' welche Form hat die. Nach jedem Eingriff aufgerufen - daran ist im Log sofort zu sehen, ob
+        ''' zwei Ebenen dieselbe Kennung tragen (geteilt) oder ob eine Form ueberschrieben wurde.</summary>
+        Private Sub TraceLayerInventory(anlass As String)
+            If Not IsMaskTraceEnabled() Then Return
+            Try
+                Dim zeilen = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing).
+                    Select(Function(l, i) $"  [{i}] Ebene={Kurz(l.Id)} ""{l.Name}"" {MaskTrace(l.MaskId)}").ToList()
+                Dim objekte = _annotations.Where(Function(a) a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.MaskId)).
+                    Select(Function(a) $"  [Objekt] {Kurz(a.Id)} {MaskTrace(a.MaskId)}").ToList()
+                DiagnosticLogService.LogAlways("Maske",
+                    $"Bestand nach {anlass}: {_maskedAdjustmentLayers.Count} Korrekturebenen, {_imageMasks.Count} Masken," &
+                    $" bearbeitet={Kurz(_editingLayerMaskId)} Arbeitsmaske={Kurz(_workingMaskId)}" &
+                    $" markiert={Kurz(_selectedMaskedAdjustmentLayerId)} promotet={Kurz(_selectionPromotedLayerId)}" &
+                    Environment.NewLine & String.Join(Environment.NewLine, zeilen.Concat(objekte)))
+            Catch
+            End Try
+        End Sub
+
         ''' <summary>Zeigt noch irgendetwas auf diese Maske? Korrekturebenen UND Objekte zaehlen: seit
         ''' ein Objekt eine eigene Ebenenmaske tragen darf, reicht der Blick auf die Korrekturebenen
         ''' nicht mehr. Wer nur die eine Liste prueft, loescht die Maske unter dem Objekt weg - das
@@ -1203,10 +1285,14 @@ Namespace ViewModels
             If String.IsNullOrEmpty(maskId) Then Return ""
             Dim original = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
                                                           String.Equals(m.Id, maskId, StringComparison.Ordinal))
-            If original Is Nothing Then Return ""
+            If original Is Nothing Then
+                TraceMask(Function() $"Abschrift nicht möglich: Maske {Kurz(maskId)} steht nicht mehr in der Liste")
+                Return ""
+            End If
             Dim clone = original.Clone()
             clone.Id = Guid.NewGuid().ToString("N")
             _imageMasks.Add(clone)
+            TraceMask(Function() $"Abschrift der Maske: {Kurz(maskId)} -> {Kurz(clone.Id)} Form={FormKurz(clone.PngBase64)}")
             Return clone.Id
         End Function
 
@@ -2151,6 +2237,8 @@ Namespace ViewModels
         ''' Korrekturebene, nur die Maskenkennung. <paramref name="showAsMask"/> entscheidet ueber
         ''' rotes Overlay (Maske) oder Laufameisen (Auswahl).</summary>
         Private Sub LoadMaskIntoSelection(maskId As String, showAsMask As Boolean)
+            TraceMask(Function() $"Maske wird zum Bearbeiten geöffnet: {MaskTrace(maskId)}" &
+                                 $" (vorher bearbeitet={Kurz(_editingLayerMaskId)})")
             _editingLayerMaskId = ""
             ' Ein bewusster Wechsel auf eine andere Maske hebt auch das Merken der zuletzt
             ' bearbeiteten auf - sonst haengte ein Verlaufszug weiter an der vorigen.
@@ -2237,6 +2325,9 @@ Namespace ViewModels
             If mask Is Nothing OrElse _selectionMask Is Nothing Then Return
             Dim rebuilt = ImageProcessor.CreateSourceMaskFromSelection(BuildAdjustmentsFromFields(), mask.Name)
             If rebuilt Is Nothing Then Return
+            ' WER schreibt WOHIN: die haeufigste Ursache fuer "die falsche Ebene hat sich geaendert".
+            TraceMask(Function() $"Auswahl wird in die bearbeitete Maske zurückgeschrieben: {MaskTrace(mask.Id)}" &
+                                 $" -> Form={FormKurz(rebuilt.PngBase64)}")
             mask.SourceWidthPixels = rebuilt.SourceWidthPixels
             mask.SourceHeightPixels = rebuilt.SourceHeightPixels
             mask.Left = rebuilt.Left
@@ -2435,7 +2526,11 @@ Namespace ViewModels
                 ' gewählt -> gar keine Bild-Auswahl. Funktioniert in JEDEM Werkzeug (nicht nur Anpassen).
                 If Not String.IsNullOrWhiteSpace(adjustmentId) Then
                     Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
-                    If picked IsNot Nothing Then ApplyAdjustmentLayerPresentation(picked)
+                    If picked IsNot Nothing Then
+                        TraceMask(Function() $"Zeile im Ebenenpanel gewählt: Ebene={Kurz(picked.Id)} ""{picked.Name}"" ({MaskTrace(picked.MaskId)})")
+                        ApplyAdjustmentLayerPresentation(picked)
+                        TraceLayerInventory("Auswahl der Panel-Zeile")
+                    End If
                 Else
                     ' Ein OBJEKT mit Ebenenmaske im MASKEN-Werkzeug: wer es dort anklickt, will an
                     ' seine Maske heran - sie wird also wieder geoeffnet statt abgeraeumt. Ohne das
@@ -3300,13 +3395,39 @@ Namespace ViewModels
         ''' <summary>Erzeugt aus der aktiven Auswahl SOFORT eine maskierte Korrekturebene (leere Anpassung),
         ''' statt erst bei der ersten Regleränderung. Nutzt dieselbe Source-Masken-Erzeugung + Dedup wie der
         ''' automatische Promote-Pfad, also legt eine spätere Anpassung KEINE zweite Ebene an.</summary>
+        ''' <summary>STEHT DIE AUSWAHL SCHON AUF EINER EBENE, ENTSTEHT EINE KOPIE. Der Knopf heisst
+        ''' „Neue Masken-/Auswahlebene" und tat auf einer vorhandenen Ebene gar nichts: das Promoten
+        ''' fand die Ebene, zu der die Auswahl gehoert, und gab sie unveraendert zurueck - sichtbar
+        ''' passierte nichts. Gemeint ist dort eine weitere Ebene mit derselben Form, und die entsteht
+        ''' als unabhaengige Kopie samt eigener Maske. Beliebig oft wiederholbar: die Kopie wird zur
+        ''' bearbeiteten Ebene, der naechste Druck kopiert sie wieder.</summary>
         Public Sub CreateAdjustmentLayerFromSelection()
+            TraceMask(Function() $"„Neue Masken-/Auswahlebene"" gedrückt: Auswahl aktiv={_hasActiveSelection}" &
+                                 $" bearbeitet={Kurz(_editingLayerMaskId)} markiert={Kurz(_selectedMaskedAdjustmentLayerId)}" &
+                                 $" promotet={Kurz(_selectionPromotedLayerId)}")
             If Not _hasActiveSelection Then Return
             PushUndo()
+            Dim vorher = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return
+            If _maskedAdjustmentLayers.Count = vorher Then
+                ' Nichts dazugekommen - die Auswahl gehoerte bereits zu dieser Ebene.
+                Dim name = If(layer.IsMaskLayer, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) &
+                           " " & (_maskedAdjustmentLayers.Count + 1).ToString()
+                Dim copy = DuplicateAdjustmentLayer(layer, name)
+                If copy Is Nothing Then Return
+                TraceMask(Function() $"Kopie angelegt: aus Ebene={Kurz(layer.Id)} ({MaskTrace(layer.MaskId)})" &
+                                     $" wurde Ebene={Kurz(copy.Id)} ({MaskTrace(copy.MaskId)})")
+                layer = copy
+                ' Die Kopie wird zur bearbeiteten Maske. Ohne das zeigte das Panel die neue Ebene als
+                ' markiert, jeder Pinselstrich ginge aber weiter in die alte - und der naechste Druck
+                ' auf den Knopf kopierte wieder dieselbe Ausgangsebene.
+                LoadMaskIntoSelection(copy.MaskId, copy.IsMaskLayer)
+            End If
             _selectedMaskedAdjustmentLayerId = layer.Id
             RebuildLayerRows()
+            _hasChanges = True
+            TraceLayerInventory("„Neue Masken-/Auswahlebene""")
             SchedulePreviewUpdate()
         End Sub
 
@@ -3336,12 +3457,18 @@ Namespace ViewModels
             If Not _hasActiveSelection Then Return Nothing
             ' 1. Bewusst im Panel gewählte Ebene (deren Maske gerade bearbeitet wird).
             Dim edited = LayerForEditedMask()
-            If edited IsNot Nothing Then Return edited
+            If edited IsNot Nothing Then
+                TraceMask(Function() $"Auswahl gehört zur bearbeiteten Ebene={Kurz(edited.Id)} ({MaskTrace(edited.MaskId)})")
+                Return edited
+            End If
             ' 2. Diese (unveränderte) Auswahl wurde bereits promotet → GARANTIERT dieselbe Ebene weiterbenutzen,
             '    damit erneutes Füllen die vorhandene Füllung ersetzt statt eine zweite Ebene anzulegen.
             If _selectionPromotedLayerId <> "" Then
                 Dim linked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
-                If linked IsNot Nothing Then Return linked
+                If linked IsNot Nothing Then
+                    TraceMask(Function() $"Auswahl gehört zur bereits erzeugten Ebene={Kurz(linked.Id)} ({MaskTrace(linked.MaskId)})")
+                    Return linked
+                End If
             End If
             Dim snapshot = BuildAdjustmentsFromFields()
             Dim mask = ImageProcessor.CreateSourceMaskFromSelection(snapshot,
@@ -3354,13 +3481,22 @@ Namespace ViewModels
             Dim layer As MaskedAdjustmentLayer = Nothing
             If existingMask IsNot Nothing Then
                 layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)
+                Dim gefunden = layer
+                TraceMask(Function() $"Auswahl ist inhaltsgleich mit {MaskTrace(existingMask.Id)}; " &
+                                     If(gefunden Is Nothing, "keine Ebene darauf - es entsteht eine eigene Maske",
+                                        $"weiterbenutzt wird Ebene={Kurz(gefunden.Id)}"))
             End If
             If layer Is Nothing Then
-                Dim boundMask = If(existingMask, mask)
-                If existingMask Is Nothing Then _imageMasks.Add(mask)
+                ' EIGENE Maske, auch wenn eine inhaltsgleiche schon da ist. Die Deduplizierung soll
+                ' verhindern, dass dieselbe Auswahl ZWEI Ebenen bekommt - das erledigt der Zweig
+                ' darueber, der die vorhandene Ebene weiterbenutzt. Hier gibt es KEINE solche Ebene,
+                ' die gefundene Maske gehoert also etwas anderem (zum Beispiel einem Objekt). Sie
+                ' mitzubenutzen band zwei Dinge an ein Raster: wer die Maske der einen Seite
+                ' nachmalte oder umkehrte, aenderte die andere mit.
+                _imageMasks.Add(mask)
                 layer = New MaskedAdjustmentLayer With {
                     .Name = If(_activeSelectionIsMask, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
-                    .MaskId = boundMask.Id,
+                    .MaskId = mask.Id,
                     .Adjustments = New ImageAdjustments(),
                     .IsMaskLayer = _activeSelectionIsMask
                 }
@@ -3376,6 +3512,7 @@ Namespace ViewModels
             ' einer Ebene im Panel), sodass Füllung/Anpassung dann gezielt DIESE Ebene treffen.
             _selectedMaskedAdjustmentLayerId = layer.Id
             _selectionPromotedLayerId = layer.Id
+            TraceMask(Function() $"Neue Ebene aus der Auswahl: Ebene={Kurz(layer.Id)} ({MaskTrace(layer.MaskId)})")
             Return layer
         End Function
 

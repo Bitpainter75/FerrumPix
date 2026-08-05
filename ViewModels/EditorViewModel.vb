@@ -8093,6 +8093,21 @@ Namespace ViewModels
                     HasActiveSelection = True
                 End Using
             End Using
+
+            ' WIRD GERADE DIE MASKE EINER EBENE BEARBEITET, GEHOERT DIE UMKEHRUNG AUCH DORTHIN.
+            ' Ohne das kehrte "Umkehren" nur die sichtbare Auswahl um, die Ebene behielt ihre alte
+            ' Form, und beim naechsten Oeffnen dieser Ebene - etwa nach einem Klick auf eine andere
+            ' Zeile im Ebenenpanel - war die Umkehrung wieder weg. Genau das war der Befund
+            ' "Kopie und Original sehen nach dem Umschalten wieder gleich aus": die eine Ebene
+            ' umzukehren aenderte gar nichts an den Daten. Der Pinselstrich schreibt seit jeher
+            ' zurueck (CommitMaskBrushStroke), das Umkehren tat es als einziger Weg nicht.
+            If _editingLayerMaskId <> "" Then
+                WriteSelectionMaskBackToLayer()
+                PublishMaskBrushOverlay()
+                _hasChanges = True
+                TraceLayerInventory("Umkehren")
+                SchedulePreviewUpdate()
+            End If
         End Sub
 
         ''' <param name="forceNew">Der Kandidat ist bereits die VOLLSTAENDIGE Antwort und
@@ -15231,6 +15246,11 @@ Namespace ViewModels
                     If grp IsNot Nothing Then _annotationGroups.Add(grp.Clone())
                 Next
             End If
+            ' HIER WIRD DER GANZE MASKENBESTAND ERSETZT (Klone aus dem Rezept). Ein Rezept, das VOR
+            ' einer Maskenaenderung entstanden ist und danach angewendet wird, macht genau diese
+            ' Aenderung wieder rueckgaengig - die Spur haelt deshalb fest, was hereinkommt.
+            TraceMask(Function() $"Maskenbestand aus dem Rezept ersetzt: {_imageMasks.Count} vorher, " &
+                                 $"{If(adj.Masks Is Nothing, 0, adj.Masks.Count)} nachher")
             _imageMasks.Clear()
             If adj.Masks IsNot Nothing Then
                 For Each mask In adj.Masks
@@ -15243,6 +15263,7 @@ Namespace ViewModels
                     If layer IsNot Nothing Then _maskedAdjustmentLayers.Add(layer.Clone())
                 Next
             End If
+            TraceLayerInventory("dem Wiederherstellen aus dem Rezept")
             ' ERST JETZT aufraeumen - eine Gruppe zaehlt Objekte UND Korrekturebenen als Mitglieder.
             ' Der Aufruf stand vorher VOR dem Wiederherstellen der Korrekturebenen: eine Gruppe aus
             ' reinen Masken-/Auswahlebenen hatte zu dem Zeitpunkt noch keine Mitglieder und wurde als
@@ -17603,25 +17624,44 @@ Namespace ViewModels
             index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
             If index < 0 Then Return
             PushUndo()
-            Dim copy = _maskedAdjustmentLayers(index).Clone()
-            copy.Id = Guid.NewGuid().ToString("N")
-            ' Die Kopie bekommt ihre EIGENE Maske - sonst zeigten beide Ebenen auf dieselbe, und
-            ' Umkehren, Nachmalen oder Verschieben an der Kopie aenderte das Original mit.
-            GiveCopyItsOwnMask(copy)
-            copy.Name = If(String.IsNullOrWhiteSpace(copy.Name), LocalizationService.T("Auswahl-Korrektur"), copy.Name) &
-                        " " & LocalizationService.T("Kopie")
-            _maskedAdjustmentLayers.Insert(index + 1, copy)
+            Dim source = _maskedAdjustmentLayers(index)
+            Dim copy = DuplicateAdjustmentLayer(source,
+                If(String.IsNullOrWhiteSpace(source.Name), LocalizationService.T("Auswahl-Korrektur"), source.Name) &
+                " " & LocalizationService.T("Kopie"))
+            If copy Is Nothing Then Return
             _selectedMaskedAdjustmentLayerId = copy.Id
             RebuildLayerRows()
             _hasChanges = True
             RaiseResetButtonStateChanged()
+            TraceLayerInventory("„Ebene duplizieren""")
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Legt über der markierten lokalen Korrektur einen neutralen weiteren Schritt an,
-        ''' der dieselbe persistente Maske referenziert. Anders als „Duplizieren" werden die Reglerwerte
-        ''' nicht kopiert: Mehrere Bearbeitungen derselben Stelle teilen so genau eine Maske, bleiben aber
-        ''' in Reihenfolge, Sichtbarkeit, Deckkraft und Undo/Redo vollständig unabhängig.</summary>
+        ''' <summary>Legt eine UNABHAENGIGE Kopie dieser Korrekturebene unmittelbar darueber an: eigene
+        ''' Kennung, eigene Maske, Reglerwerte mitgenommen. Die eigene Maske ist der Kern - zeigten
+        ''' beide auf dieselbe, aenderte Umkehren, Nachmalen oder Verschieben an der einen die andere
+        ''' mit. Wer sich eine Maske ausdruecklich teilen will, nimmt „Neue Korrektur mit derselben
+        ''' Maske". Ohne Undo-Punkt, Neuaufbau und Vorschau: das steuert der Aufrufer.</summary>
+        Private Function DuplicateAdjustmentLayer(source As MaskedAdjustmentLayer, name As String) As MaskedAdjustmentLayer
+            If source Is Nothing Then Return Nothing
+            Dim index = _maskedAdjustmentLayers.IndexOf(source)
+            If index < 0 Then Return Nothing
+            Dim copy = source.Clone()
+            copy.Id = Guid.NewGuid().ToString("N")
+            GiveCopyItsOwnMask(copy)
+            copy.Name = name
+            _maskedAdjustmentLayers.Insert(index + 1, copy)
+            Return copy
+        End Function
+
+        ''' <summary>Legt über der markierten lokalen Korrektur einen neutralen weiteren Schritt mit
+        ''' derselben Maskenform an. Anders als „Duplizieren" werden die Reglerwerte nicht kopiert.
+        '''
+        ''' KEINE GETEILTE MASKE MEHR (Nutzerentscheidung 2026-08-06): die neue Ebene bekommt eine
+        ''' eigene Abschrift. Vorher zeigten beide auf dieselbe `MaskId`, und wer die Maske der einen
+        ''' nachmalte oder umkehrte, aenderte die andere mit - im Ebenenpanel sahen danach alle so
+        ''' erzeugten Ebenen wieder gleich aus. Zwei Ebenen teilen sich damit an KEINER Stelle mehr
+        ''' eine Maske.</summary>
         Private Sub AddAdjustmentWithSameMask()
             If Not HasSelectedAdjustmentLayer Then Return
             Dim selectedId = _selectedMaskedAdjustmentLayerId
@@ -17646,7 +17686,10 @@ Namespace ViewModels
                 .IsMaskLayer = source.IsMaskLayer,
                 .StackAboveAnnotationId = source.StackAboveAnnotationId
             }
-            ' „Weitere Korrektur mit derselben Maske" gehört neben ihr Geschwister - also an dieselbe
+            ' Eigene Abschrift der Maske statt derselben Kennung - siehe oben.
+            GiveCopyItsOwnMask(layer)
+            If String.IsNullOrEmpty(layer.MaskId) Then Return
+            ' Die weitere Korrektur gehört neben ihr Geschwister - also an dieselbe
             ' Stelle im Stapel (StackAboveAnnotationId oben mitgenommen), nicht ans Ende.
             _maskedAdjustmentLayers.Insert(index + 1, layer)
             _selectedMaskedAdjustmentLayerId = layer.Id
@@ -17654,6 +17697,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseResetButtonStateChanged()
             RefreshSelectionAdjustMode()
+            TraceLayerInventory("„Neue Korrektur mit kopierter Maske""")
             SchedulePreviewUpdate()
         End Sub
 
