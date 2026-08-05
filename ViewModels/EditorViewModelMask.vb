@@ -1230,18 +1230,18 @@ Namespace ViewModels
         ''' <summary>Der ganze Bestand in einer Zeile je Ebene: welche Ebene benutzt welche Maske und
         ''' welche Form hat die. Nach jedem Eingriff aufgerufen - daran ist im Log sofort zu sehen, ob
         ''' zwei Ebenen dieselbe Kennung tragen (geteilt) oder ob eine Form ueberschrieben wurde.</summary>
-        Private Sub TraceLayerInventory(anlass As String)
+        Private Sub TraceLayerInventory(occasion As String)
             If Not IsMaskTraceEnabled() Then Return
             Try
-                Dim zeilen = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing).
+                Dim layerLines = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing).
                     Select(Function(l, i) $"  [{i}] Ebene={Kurz(l.Id)} ""{l.Name}"" {MaskTrace(l.MaskId)}").ToList()
-                Dim objekte = _annotations.Where(Function(a) a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.MaskId)).
+                Dim annotationLines = _annotations.Where(Function(a) a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.MaskId)).
                     Select(Function(a) $"  [Objekt] {Kurz(a.Id)} {MaskTrace(a.MaskId)}").ToList()
                 DiagnosticLogService.LogAlways("Maske",
-                    $"Bestand nach {anlass}: {_maskedAdjustmentLayers.Count} Korrekturebenen, {_imageMasks.Count} Masken," &
+                    $"Bestand nach {occasion}: {_maskedAdjustmentLayers.Count} Korrekturebenen, {_imageMasks.Count} Masken," &
                     $" bearbeitet={Kurz(_editingLayerMaskId)} Arbeitsmaske={Kurz(_workingMaskId)}" &
                     $" markiert={Kurz(_selectedMaskedAdjustmentLayerId)} promotet={Kurz(_selectionPromotedLayerId)}" &
-                    Environment.NewLine & String.Join(Environment.NewLine, zeilen.Concat(objekte)))
+                    Environment.NewLine & String.Join(Environment.NewLine, layerLines.Concat(annotationLines)))
             Catch
             End Try
         End Sub
@@ -3407,10 +3407,10 @@ Namespace ViewModels
                                  $" promotet={Kurz(_selectionPromotedLayerId)}")
             If Not _hasActiveSelection Then Return
             PushUndo()
-            Dim vorher = _maskedAdjustmentLayers.Count
+            Dim countBefore = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return
-            If _maskedAdjustmentLayers.Count = vorher Then
+            If _maskedAdjustmentLayers.Count = countBefore Then
                 ' Nichts dazugekommen - die Auswahl gehoerte bereits zu dieser Ebene.
                 Dim name = If(layer.IsMaskLayer, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) &
                            " " & (_maskedAdjustmentLayers.Count + 1).ToString()
@@ -3481,10 +3481,10 @@ Namespace ViewModels
             Dim layer As MaskedAdjustmentLayer = Nothing
             If existingMask IsNot Nothing Then
                 layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)
-                Dim gefunden = layer
+                Dim found = layer
                 TraceMask(Function() $"Auswahl ist inhaltsgleich mit {MaskTrace(existingMask.Id)}; " &
-                                     If(gefunden Is Nothing, "keine Ebene darauf - es entsteht eine eigene Maske",
-                                        $"weiterbenutzt wird Ebene={Kurz(gefunden.Id)}"))
+                                     If(found Is Nothing, "keine Ebene darauf - es entsteht eine eigene Maske",
+                                        $"weiterbenutzt wird Ebene={Kurz(found.Id)}"))
             End If
             If layer Is Nothing Then
                 ' EIGENE Maske, auch wenn eine inhaltsgleiche schon da ist. Die Deduplizierung soll
