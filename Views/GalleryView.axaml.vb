@@ -93,11 +93,13 @@ Namespace Views
         End Sub
 
         ''' <summary>Einen Ort dazunehmen oder abwaehlen. Ueber den Datenkontext der Schaltflaeche,
-        ''' gleicher Grund wie bei Personen und Stichwoertern.</summary>
+        ''' gleicher Grund wie bei Personen und Stichwoertern. Es geht der GANZE Eintrag hinueber,
+        ''' nicht nur der Name: dieselbe Stadt kann lokal und auf dem Server stehen, und nur der
+        ''' Eintrag weiss, welcher von beiden gemeint war.</summary>
         Private Sub OnPlaceFilterItemClick(sender As Object, e As RoutedEventArgs)
             Dim entry = TryCast(TryCast(sender, Button)?.DataContext, PlaceFilterOption)
             If entry Is Nothing Then Return
-            GetVm()?.TogglePlaceFilter(entry.City)
+            GetVm()?.TogglePlaceFilter(entry)
         End Sub
 
         ''' <summary>Mausradklick auf einen Filter- oder Sortierknopf setzt ihn auf den Standard

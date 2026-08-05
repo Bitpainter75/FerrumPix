@@ -1346,7 +1346,16 @@ Namespace ViewModels
             _activeMaskComponentIndex = -1
             RaiseGradientPropertiesChanged()
             RaiseMaskComponentsChanged()
-            PublishGradientOverlay(m)
+            ' Wird die Maske gerade als Ebenenmaske BEARBEITET, traegt _selectionMask noch die
+            ' alte Summe samt des entfernten Bestandteils - der naechste Pinselstrich schriebe
+            ' sie ueber WriteSelectionMaskBackToLayer als gemalte Pixel zurueck. Neu laden stellt
+            ' den kompletten Anzeigezustand her (Auswahl, Rot, Bestandteilliste), auch fuer
+            ' gemalt-erste Masken, deren Rot nicht aus dem Verlaufs-Overlay kommt.
+            If _editingLayerMaskId <> "" AndAlso String.Equals(_editingLayerMaskId, m.Id, StringComparison.Ordinal) Then
+                ReloadEditedLayerMaskIntoSelection()
+            Else
+                PublishGradientOverlay(m)
+            End If
             _hasChanges = True
             SchedulePreviewUpdate()
         End Sub
@@ -3007,9 +3016,16 @@ Namespace ViewModels
                 ClearSelection(captureUndo:=False)
             End If
             _selectedMaskedAdjustmentLayerId = ""
+            ' Auch die ZUSATZLISTE der Mehrfachauswahl leeren - und die Aenderung melden. Ohne
+            ' beides blieben die per Strg dazugenommenen Ebenen unsichtbar markiert stehen
+            ' (IsMultiLayerSelection weiter True), und "Markierte Ebenen loeschen" traf Ebenen,
+            ' die niemand mehr markiert sah. Der SelectedAnnotationIndex-Setter meldet selbst
+            ' nichts, wenn der Index schon -1 ist - deshalb hier ausdruecklich.
+            _extraSelectedAdjustmentLayers.Clear()
             _selectedLayerRow = Nothing
             SelectedAnnotationIndex = -1
             RaiseLayerPanelSelectionChanged()
+            RaiseMultiSelectionChanged()
             RefreshSelectionAdjustMode()
         End Sub
         ' ── Ebenenmaske und Schnittmaske am OBJEKT ──────────────────────────────

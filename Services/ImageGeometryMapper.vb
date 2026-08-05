@@ -405,6 +405,13 @@ Namespace Services
         ''' Zu grob, und eine Linie knickt statt zu biegen; zu fein, und die Vorschau haengt.</summary>
         Public Const LineGridSteps As Integer = 48
 
+        ''' <summary>Abtastung fuer die Warp-Dreiecke. Ohne ausdrueckliche Wahl nimmt der
+        ''' Bitmap-Shader SKSamplingOptions.Default, und das ist NAECHSTER NACHBAR - Treppen an
+        ''' jeder kontrastreichen Kante. IsAntialias am Paint hilft dagegen nicht, das wirkt nur
+        ''' auf die Dreieckskanten, nicht auf das Textur-Sampling. Mitchell wie bei der
+        ''' Perspektive (ImageProcessor.SamplingHigh), damit alle Verzerr-Stufen gleich abtasten.</summary>
+        Private Shared ReadOnly WarpSampling As New SKSamplingOptions(SKCubicResampler.Mitchell)
+
 
         ''' <summary>Wie <see cref="WarpOverGrid"/>, aber mit frei waehlbarer AUSGABEgroesse.
         '''
@@ -424,7 +431,9 @@ Namespace Services
             Dim result = New SKBitmap(targetWidth, targetHeight, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)
-                Using shader = SKShader.CreateBitmap(source, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
+                ' ToShader statt SKShader.CreateBitmap: nur ToShader hat eine Ueberladung mit
+                ' Abtastwahl, CreateBitmap bliebe auf Naechster-Nachbar stehen.
+                Using shader = source.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, WarpSampling)
                     Using paint = New SKPaint With {.Shader = shader, .IsAntialias = True}
                         Dim corners As New List(Of SKPoint)()
                         Dim texturen As New List(Of SKPoint)()
@@ -512,13 +521,134 @@ Namespace Services
                                CSng(w0 * a.Y + w1 * p1.Y + w2 * p2.Y))
         End Function
 
+        ''' <summary>Suchindex fuer <see cref="MeshInversePoint"/>: die verzerrte Lage aller Knoten
+        ''' in Pixeln und je Kachel eines groben Rasters die Dreiecke, deren Huelle sie schneidet.
+        '''
+        ''' Ohne ihn testete die Rueckrichtung JEDES der bis zu 2x24x24 Dreiecke je Punkt. Der
+        ''' Maskenweg fragt aber jeden Anzeigepixel einzeln - bei grossen Bildern Milliarden
+        ''' Dreieckstests, Wartezeit im Minutenbereich. Mit dem Index bleiben je Punkt nur die
+        ''' Dreiecke seiner Kachel uebrig.
+        '''
+        ''' Gehalten wird der ZULETZT gebaute Index (ein Eintrag genuegt: die heissen Schleifen
+        ''' fragen immer dasselbe Knotenfeld mit denselben Massen, und die Felder werden nie in
+        ''' place veraendert, nur als Ganzes ersetzt). Der Zugriff ist absichtlich sperrenfrei -
+        ''' schlimmstenfalls bauen zwei Threads doppelt, das kostet nur den Preis des frueheren
+        ''' Volldurchlaufs.</summary>
+        Private NotInheritable Class MeshInverseIndex
+            Public ReadOnly Nodes As Double()
+            Public ReadOnly Columns As Integer
+            Public ReadOnly Rows As Integer
+            Public ReadOnly Width As Double
+            Public ReadOnly Height As Double
+
+            ''' <summary>Die verzerrte Lage jedes Knotens, in Bildpixeln.</summary>
+            Public ReadOnly WarpedX As Double()
+            Public ReadOnly WarpedY As Double()
+
+            ''' <summary>Je Dreieck seine drei Knotenindizes, in Zeichenreihenfolge.</summary>
+            Public ReadOnly TriangleNodes As Integer()
+
+            ''' <summary>Je Kachel die Dreiecke, deren Huelle sie schneidet - aufsteigend, damit die
+            ''' Suche dasselbe ERSTE Dreieck findet wie der fruehere Volldurchlauf (bei einer
+            ''' Ueberfaltung liegen mehrere Dreiecke ueber einem Punkt).</summary>
+            Public ReadOnly CellTriangles As Integer()()
+            Public ReadOnly MinX As Double
+            Public ReadOnly MinY As Double
+            Public ReadOnly CellWidth As Double
+            Public ReadOnly CellHeight As Double
+            Public ReadOnly GridColumns As Integer
+            Public ReadOnly GridRows As Integer
+
+            Private Shared ReadOnly EmptyCell As Integer() = Array.Empty(Of Integer)()
+
+            Public Sub New(nodes As Double(), columns As Integer, rows As Integer,
+                           width As Double, height As Double)
+                Me.Nodes = nodes
+                Me.Columns = columns
+                Me.Rows = rows
+                Me.Width = width
+                Me.Height = height
+
+                Dim nodeCount = (columns + 1) * (rows + 1)
+                WarpedX = New Double(nodeCount - 1) {}
+                WarpedY = New Double(nodeCount - 1) {}
+                Dim lowX = Double.MaxValue, lowY = Double.MaxValue
+                Dim highX = Double.MinValue, highY = Double.MinValue
+                For i = 0 To nodeCount - 1
+                    WarpedX(i) = nodes(i * 2) / 100.0 * width
+                    WarpedY(i) = nodes(i * 2 + 1) / 100.0 * height
+                    If WarpedX(i) < lowX Then lowX = WarpedX(i)
+                    If WarpedX(i) > highX Then highX = WarpedX(i)
+                    If WarpedY(i) < lowY Then lowY = WarpedY(i)
+                    If WarpedY(i) > highY Then highY = WarpedY(i)
+                Next
+                ' Ein Pixel Rand, damit die Kantentoleranz der baryzentrischen Pruefung nicht
+                ' schon an der Huelle abgewiesen wird.
+                lowX -= 1.0 : lowY -= 1.0 : highX += 1.0 : highY += 1.0
+                MinX = lowX
+                MinY = lowY
+
+                ' Doppelt so fein wie das Knotenraster: die Kachel einer unverzerrten Masche
+                ' schneidet dann hoechstens eine Handvoll Dreiecke.
+                GridColumns = Math.Max(1, columns * 2)
+                GridRows = Math.Max(1, rows * 2)
+                CellWidth = Math.Max((highX - lowX) / GridColumns, 0.000001)
+                CellHeight = Math.Max((highY - lowY) / GridRows, 0.000001)
+
+                TriangleNodes = New Integer(columns * rows * 2 * 3 - 1) {}
+                Dim buckets(GridColumns * GridRows - 1) As List(Of Integer)
+                Dim tri = 0
+                For rowIdx = 0 To rows - 1
+                    For colIdx = 0 To columns - 1
+                        Dim i00 = rowIdx * (columns + 1) + colIdx
+                        Dim i10 = i00 + 1
+                        Dim i01 = i00 + columns + 1
+                        Dim i11 = i01 + 1
+                        ' Dieselben zwei Dreiecke je Masche wie beim Zeichnen.
+                        AddTriangle(tri, i00, i10, i11, buckets) : tri += 1
+                        AddTriangle(tri, i00, i11, i01, buckets) : tri += 1
+                    Next
+                Next
+                CellTriangles = New Integer(buckets.Length - 1)() {}
+                For i = 0 To buckets.Length - 1
+                    CellTriangles(i) = If(buckets(i) Is Nothing, EmptyCell, buckets(i).ToArray())
+                Next
+            End Sub
+
+            Private Sub AddTriangle(tri As Integer, n0 As Integer, n1 As Integer, n2 As Integer,
+                                    buckets As List(Of Integer)())
+                TriangleNodes(tri * 3) = n0
+                TriangleNodes(tri * 3 + 1) = n1
+                TriangleNodes(tri * 3 + 2) = n2
+                Dim boxMinX = Math.Min(WarpedX(n0), Math.Min(WarpedX(n1), WarpedX(n2)))
+                Dim boxMaxX = Math.Max(WarpedX(n0), Math.Max(WarpedX(n1), WarpedX(n2)))
+                Dim boxMinY = Math.Min(WarpedY(n0), Math.Min(WarpedY(n1), WarpedY(n2)))
+                Dim boxMaxY = Math.Max(WarpedY(n0), Math.Max(WarpedY(n1), WarpedY(n2)))
+                Dim fromX = Math.Max(0, Math.Min(GridColumns - 1, CInt(Math.Floor((boxMinX - MinX) / CellWidth))))
+                Dim toX = Math.Max(0, Math.Min(GridColumns - 1, CInt(Math.Floor((boxMaxX - MinX) / CellWidth))))
+                Dim fromY = Math.Max(0, Math.Min(GridRows - 1, CInt(Math.Floor((boxMinY - MinY) / CellHeight))))
+                Dim toY = Math.Max(0, Math.Min(GridRows - 1, CInt(Math.Floor((boxMaxY - MinY) / CellHeight))))
+                For gy = fromY To toY
+                    For gx = fromX To toX
+                        Dim cell = gy * GridColumns + gx
+                        If buckets(cell) Is Nothing Then buckets(cell) = New List(Of Integer)()
+                        buckets(cell).Add(tri)
+                    Next
+                Next
+            End Sub
+        End Class
+
+        ''' <summary>Der zuletzt gebaute Suchindex, siehe <see cref="MeshInverseIndex"/>.</summary>
+        Private Shared _meshInverseIndex As MeshInverseIndex
+
         ''' <summary>Die Gegenrichtung zu <see cref="MeshPoint"/>: aus welchem Bildpunkt der
         ''' angegebene hervorgegangen ist.
         '''
         ''' Gesucht wird ueber DIESELBE Dreiecksaufteilung, mit der <see cref="WarpOverGrid"/> das
         ''' Bild zeichnet - damit stimmt die Umkehrung exakt mit dem ueberein, was man sieht, und
         ''' nicht nur ungefaehr. Je Masche zwei Dreiecke, baryzentrisch getestet und dieselben
-        ''' Gewichte auf das gleichmaessige Ausgangsraster angewendet.
+        ''' Gewichte auf das gleichmaessige Ausgangsraster angewendet. Statt alle Dreiecke zu
+        ''' testen, fragt die Suche den Kachel-Index (<see cref="MeshInverseIndex"/>).
         '''
         ''' False heisst: dieser Punkt kommt aus keinem Dreieck, dort liegt nach der Verzerrung also
         ''' kein Bildinhalt mehr (die Stelle ist durchsichtig geworden).</summary>
@@ -530,38 +660,42 @@ Namespace Services
             If nodes Is Nothing OrElse columns < 1 OrElse rows < 1 OrElse width <= 0 OrElse height <= 0 Then Return True
             If nodes.Length <> (columns + 1) * (rows + 1) * 2 Then Return True
 
+            Dim index = _meshInverseIndex
+            If index Is Nothing OrElse index.Nodes IsNot nodes OrElse index.Columns <> columns OrElse
+               index.Rows <> rows OrElse index.Width <> width OrElse index.Height <> height Then
+                index = New MeshInverseIndex(nodes, columns, rows, width, height)
+                _meshInverseIndex = index
+            End If
+
+            ' Ausserhalb der Huelle aller verzerrten Knoten (plus Rand) kann kein Dreieck liegen.
+            If px < index.MinX OrElse py < index.MinY OrElse
+               px > index.MinX + index.GridColumns * index.CellWidth OrElse
+               py > index.MinY + index.GridRows * index.CellHeight Then Return False
+            Dim gx = Math.Min(index.GridColumns - 1, CInt(Math.Floor((px - index.MinX) / index.CellWidth)))
+            Dim gy = Math.Min(index.GridRows - 1, CInt(Math.Floor((py - index.MinY) / index.CellHeight)))
+
             ' Ein Hauch Toleranz: ein Punkt genau auf einer Dreieckskante darf nicht durchfallen,
             ' nur weil das Vorzeichen in der letzten Stelle kippt.
             Const tolerance As Double = -0.000001
-            Dim warped = Function(i As Integer) As (X As Double, Y As Double)
-                             Return (nodes(i * 2) / 100.0 * width, nodes(i * 2 + 1) / 100.0 * height)
-                         End Function
-            Dim regular = Function(i As Integer) As (X As Double, Y As Double)
-                              Dim colIdx = i Mod (columns + 1)
-                              Dim rowIdx = i \ (columns + 1)
-                              Return (colIdx / CDbl(columns) * width, rowIdx / CDbl(rows) * height)
-                          End Function
-
-            For rowIdx = 0 To rows - 1
-                For colIdx = 0 To columns - 1
-                    Dim i00 = rowIdx * (columns + 1) + colIdx
-                    Dim i10 = i00 + 1
-                    Dim i01 = i00 + columns + 1
-                    Dim i11 = i01 + 1
-                    For Each three In {({i00, i10, i11}), ({i00, i11, i01})}
-                        Dim a = warped(three(0)), b = warped(three(1)), c = warped(three(2))
-                        Dim area = (b.X - a.X) * (c.Y - a.Y) - (c.X - a.X) * (b.Y - a.Y)
-                        If Math.Abs(area) < 0.0000001 Then Continue For
-                        Dim w0 = ((b.X - px) * (c.Y - py) - (c.X - px) * (b.Y - py)) / area
-                        Dim w1 = ((c.X - px) * (a.Y - py) - (a.X - px) * (c.Y - py)) / area
-                        Dim w2 = 1.0 - w0 - w1
-                        If w0 < tolerance OrElse w1 < tolerance OrElse w2 < tolerance Then Continue For
-                        Dim ra = regular(three(0)), rb = regular(three(1)), rc = regular(three(2))
-                        source = New SKPoint(CSng(w0 * ra.X + w1 * rb.X + w2 * rc.X),
-                                             CSng(w0 * ra.Y + w1 * rb.Y + w2 * rc.Y))
-                        Return True
-                    Next
-                Next
+            Dim stride = columns + 1
+            For Each t In index.CellTriangles(gy * index.GridColumns + gx)
+                Dim n0 = index.TriangleNodes(t * 3)
+                Dim n1 = index.TriangleNodes(t * 3 + 1)
+                Dim n2 = index.TriangleNodes(t * 3 + 2)
+                Dim aX = index.WarpedX(n0), aY = index.WarpedY(n0)
+                Dim bX = index.WarpedX(n1), bY = index.WarpedY(n1)
+                Dim cX = index.WarpedX(n2), cY = index.WarpedY(n2)
+                Dim area = (bX - aX) * (cY - aY) - (cX - aX) * (bY - aY)
+                If Math.Abs(area) < 0.0000001 Then Continue For
+                Dim w0 = ((bX - px) * (cY - py) - (cX - px) * (bY - py)) / area
+                Dim w1 = ((cX - px) * (aY - py) - (aX - px) * (cY - py)) / area
+                Dim w2 = 1.0 - w0 - w1
+                If w0 < tolerance OrElse w1 < tolerance OrElse w2 < tolerance Then Continue For
+                ' Dieselben Gewichte auf das gleichmaessige Ausgangsraster.
+                source = New SKPoint(
+                    CSng((w0 * (n0 Mod stride) + w1 * (n1 Mod stride) + w2 * (n2 Mod stride)) / CDbl(columns) * width),
+                    CSng((w0 * (n0 \ stride) + w1 * (n1 \ stride) + w2 * (n2 \ stride)) / CDbl(rows) * height))
+                Return True
             Next
             Return False
         End Function
@@ -689,7 +823,7 @@ Namespace Services
                 canvas.Clear(SKColors.Transparent)
                 ' Klemmen an den Raendern: ohne das zeigt eine ueber die Kante gezogene Masche
                 ' durchsichtige Streifen, weil die Textur dort zu Ende ist.
-                Using shader = source.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
+                Using shader = source.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, WarpSampling)
                     Using paint = New SKPaint With {.IsAntialias = True, .Shader = shader}
                         Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, corners.ToArray(), textur.ToArray(), Nothing)
                             canvas.DrawVertices(netz, SKBlendMode.Src, paint)

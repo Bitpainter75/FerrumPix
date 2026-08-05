@@ -78,13 +78,21 @@ Namespace Services
             Directory.CreateDirectory(tempDir)
             Dim success = False
 
-            ' Hat FerrumPix die Datei selbst geschrieben, liegt die vollständige Bearbeitung bei. Dann
+            ' Hat FerrumPix die Datei selbst geschrieben, liegt die Bearbeitung der Objekte bei. Dann
             ' wird SIE genommen und nicht der Umweg über Bildebenen: Text bleibt Text, Formen bleiben
-            ' Formen, Korrekturebenen kommen zurück. Der Ebenenstapel darunter wird gar nicht gebraucht.
+            ' Formen. Der Ebenenstapel darunter wird gar nicht gebraucht - bis auf die unterste
+            ' Ebene, die das Grundbild wird.
             Try
                 Dim payload = PsdRecipeService.ExtractPayload(psdPath)
                 If payload IsNot Nothing Then
                     Dim fromRecipe = PsdRecipeService.Parse(payload, tempDir)
+                    ' Auf die Objekte NORMALISIEREN, egal was im Block steht: das Grundbild hier ist
+                    ' die fertig durchgerechnete unterste Ebene, alles Globale steckt also schon in
+                    ' den Bildpunkten. Fruehe Exporte trugen die VOLLE Bearbeitung im Block - deren
+                    ' Regler, Korrekturebenen und Geometrie wirkten beim Wiederoeffnen doppelt.
+                    ' Liefert die Normalisierung nichts (aktive Geometrie oder Transparenz im Block,
+                    ' siehe BuildPsdRoundtripRecipe), oeffnet die Datei als gewoehnliche Ebenen-PSD.
+                    If fromRecipe IsNot Nothing Then fromRecipe = ImageProcessor.BuildPsdRoundtripRecipe(fromRecipe)
                     If fromRecipe IsNot Nothing Then
                         Dim basePath = Path.Combine(tempDir, "base.png")
                         Dim ok = If(IsUsableAsBackground(doc.Layers(0), doc.Width, doc.Height),

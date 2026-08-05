@@ -6055,27 +6055,41 @@ Namespace Services
                 Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
                 Dim full = New Byte(sourceW * sourceH - 1) {}
                 Dim left = sourceW, top = sourceH, right = 0, bottom = 0
-                ' Abtastgrenzen: die vier Ecken des Anzeige-Rechtecks in den Quellraum zuruecklegen und
-                ' deren Huelle nehmen. Die Abbildung ist affin (Drehung/Begradigung/Spiegelung/Zuschnitt),
-                ' die Ecken spannen sie also auf; ein paar Pixel Rand fangen Rundung ab.
+                ' Abtastgrenzen: den RAND des Anzeige-Rechtecks in Schritten in den Quellraum
+                ' zuruecklegen und die Huelle der Treffer nehmen. Frueher reichten die vier Ecken,
+                ' kommentiert mit "die Abbildung ist affin" - das Knotenraster ist aber keine:
+                ' das Urbild eines Rechtecks kann ausserhalb der Eckenhuelle liegen, und eine
+                ' gewoelbte Auswahl wurde beim Einfrieren an den gewoelbten Stellen abgeschnitten.
+                ' Ohne Verzerrung liegen die Extreme weiter auf den Ecken, dann aendert die
+                ' Randabtastung nichts. Ein paar Pixel Rand fangen Rundung ab.
                 Dim vonY = 0, bisY = sourceH - 1, vonX = 0, bisX = sourceW - 1
                 If displayBounds.HasValue Then
                     Dim db = displayBounds.Value
                     Dim minSx = Double.MaxValue, minSy = Double.MaxValue
                     Dim maxSx = Double.MinValue, maxSy = Double.MinValue
-                    Dim corners = {(CDbl(db.Left), CDbl(db.Top)), (CDbl(db.Right), CDbl(db.Top)),
-                                 (CDbl(db.Left), CDbl(db.Bottom)), (CDbl(db.Right), CDbl(db.Bottom))}
+                    Dim randpunkte As New List(Of (X As Double, Y As Double))()
+                    Dim schritt = Math.Max(4, Math.Min(db.Width, db.Height) \ 32)
+                    For x = db.Left To db.Right Step schritt
+                        randpunkte.Add((CDbl(x), CDbl(db.Top)))
+                        randpunkte.Add((CDbl(x), CDbl(db.Bottom)))
+                    Next
+                    For y = db.Top To db.Bottom Step schritt
+                        randpunkte.Add((CDbl(db.Left), CDbl(y)))
+                        randpunkte.Add((CDbl(db.Right), CDbl(y)))
+                    Next
+                    ' Die Ecke rechts unten, falls der Schritt sie verfehlt.
+                    randpunkte.Add((CDbl(db.Right), CDbl(db.Bottom)))
                     Dim alleGetroffen = True
-                    For Each corner In corners
+                    For Each randpunkt In randpunkte
                         Dim sp As SKPoint
-                        If Not TryGeometryOutputToSourcePoint(corner.Item1, corner.Item2, sourceW, sourceH, adj, sp) Then
+                        If Not TryGeometryOutputToSourcePoint(randpunkt.X, randpunkt.Y, sourceW, sourceH, adj, sp) Then
                             alleGetroffen = False
                             Exit For
                         End If
                         minSx = Math.Min(minSx, sp.X) : maxSx = Math.Max(maxSx, sp.X)
                         minSy = Math.Min(minSy, sp.Y) : maxSy = Math.Max(maxSy, sp.Y)
                     Next
-                    ' Faellt eine Ecke aus dem Bild, wird nicht begrenzt - lieber langsam als
+                    ' Faellt ein Randpunkt aus dem Bild, wird nicht begrenzt - lieber langsam als
                     ' abgeschnitten.
                     If alleGetroffen Then
                         vonX = Math.Max(0, CInt(Math.Floor(minSx)) - 2)
@@ -9732,7 +9746,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim rect = ComputeAnnotationRect(sourceWidth, sourceHeight, kind, renderAnnotation)
             Dim vx = offsetX, vy = offsetY
             Dim layer = RenderAnnotationToLayer(baseAnnotation, renderAnnotation, kind, rect,
-                                                sourceWidth, sourceHeight, layerWidth, layerHeight, vx, vy)
+                                                sourceWidth, sourceHeight, layerWidth, layerHeight, vx, vy, adj)
             If layer Is Nothing Then Return Nothing
             Try
                 Dim coverage = New Byte(layerWidth * layerHeight - 1) {}
@@ -9927,15 +9941,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     ' durchsichtig gesetzten Farbe - so bleibt jede der Zeichenroutinen unberuehrt.
                     DrawAnnotationViaLayer(canvas, annotation, AnnotationFillOnly(renderAnnotation), kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
-                                           renderAnnotation.BlendMode, coverage)
+                                           renderAnnotation.BlendMode, coverage, adj)
                     DrawAnnotationViaLayer(canvas, annotation, AnnotationStrokeOnly(renderAnnotation), kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
-                                           "Normal", coverage)
+                                           "Normal", coverage, adj)
                 ElseIf HasObjectAdjustments(annotation) OrElse Not IsNormalAnnotationBlendMode(renderAnnotation.BlendMode) OrElse
                        HasWarp(annotation) OrElse coverage IsNot Nothing Then
                     DrawAnnotationViaLayer(canvas, annotation, renderAnnotation, kind, rect,
                                            sourceWidth, sourceHeight, layerWidth, layerHeight, offsetX, offsetY,
-                                           renderAnnotation.BlendMode, coverage)
+                                           renderAnnotation.BlendMode, coverage, adj)
                 Else
                     canvas.Save()
                     canvas.Translate(-offsetX, -offsetY)
@@ -10099,7 +10113,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                         renderAnnotation As ImageAnnotation, kind As String, rect As SKRect,
                                                         sourceWidth As Integer, sourceHeight As Integer,
                                                         layerWidth As Integer, layerHeight As Integer,
-                                                        ByRef layerX As Integer, ByRef layerY As Integer) As SKBitmap
+                                                        ByRef layerX As Integer, ByRef layerY As Integer,
+                                                        Optional adj As ImageAdjustments = Nothing) As SKBitmap
             Dim layer = New SKBitmap(layerWidth, layerHeight, SKColorType.Rgba8888, SKAlphaType.Premul)
             Using layerCanvas = New SKCanvas(layer)
                 layerCanvas.Clear(SKColors.Transparent)
@@ -10139,7 +10154,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
             If annotation IsNot Nothing AndAlso annotation.Warp IsNot Nothing AndAlso
                Not annotation.Warp.IsEmpty Then
-                Dim warped = WarpObjectLayer(drawn, annotation.Warp, sourceWidth, sourceHeight, vx, vy)
+                ' Die Bildverzerrung steht in Prozent des UNBESCHNITTENEN Quellbilds, die Ebene
+                ' liegt aber im Ausgaberaum nach der Geometrie. Ohne die Umrechnung liefen Objekte
+                ' und Bild bei Beschnitt oder Vierteldrehung sichtbar auseinander.
+                Dim effective = MapImageWarpToOutput(annotation.Warp, adj, sourceWidth, sourceHeight)
+                Dim warped = WarpObjectLayer(drawn, effective, sourceWidth, sourceHeight, vx, vy)
                 If warped IsNot Nothing Then
                     If Not Object.ReferenceEquals(drawn, layer) Then drawn.Dispose()
                     drawn = warped
@@ -10150,6 +10169,70 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             layerX = vx
             layerY = vy
             Return drawn
+        End Function
+
+        ''' <summary>Bringt die BILD-Verzerrung eines Objekts (Knoten in Prozent des unbeschnittenen
+        ''' Quellbilds) in den AUSGABEraum, in dem die Objektebene gerendert wird.
+        '''
+        ''' Das Bild selbst laeuft ApplyImageWarp als ERSTE Stufe im Quellraum und wird danach
+        ''' beschnitten, skaliert und gedreht. Die Objektebenen entstehen dagegen erst NACH der
+        ''' Geometrie im Ausgaberaum - dasselbe Knotenraster dort unveraendert anzuwenden hiesse,
+        ''' Quell-Prozent als Ausgabe-Prozent zu lesen, und mit Beschnitt oder Vierteldrehung
+        ''' liefen Objekte und Bild auseinander. Umgerechnet wird durch ABTASTEN: je Knoten des
+        ''' neuen, gleichmaessigen Ausgaberasters wird sein Quellpunkt bestimmt, durch das alte
+        ''' Raster geschickt und zurueck in die Ausgabe gelegt. Die Kette ist dieselbe Teilmenge
+        ''' der Geometrie, die auch die Objekte selbst durchlaufen (Beschnitt, Skalierung,
+        ''' Vierteldrehung, Spiegelung - KEIN Begradigen und keine Perspektive, siehe
+        ''' TransformAnnotationForGeometry).</summary>
+        Private Shared Function MapImageWarpToOutput(warp As ObjectWarp, adj As ImageAdjustments,
+                                                     outputWidth As Integer, outputHeight As Integer) As ObjectWarp
+            If warp Is Nothing OrElse warp.IsEmpty Then Return warp
+            If Not String.Equals(warp.Kind, "Gitter", StringComparison.Ordinal) Then Return warp
+            If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return warp
+            If outputWidth <= 0 OrElse outputHeight <= 0 Then Return warp
+
+            Dim rotation = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
+            Dim crop = ComputeGeometryCropRect(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
+            If crop.Width <= 0 OrElse crop.Height <= 0 Then Return warp
+            Dim preWidth = If(rotation = 90 OrElse rotation = 270, outputHeight, outputWidth)
+            Dim preHeight = If(rotation = 90 OrElse rotation = 270, outputWidth, outputHeight)
+            If preWidth <= 0 OrElse preHeight <= 0 Then Return warp
+
+            ' Ohne wirksame Geometrie ist der Quellraum der Ausgaberaum - nichts umzurechnen.
+            If rotation = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical AndAlso
+               crop.Left = 0 AndAlso crop.Top = 0 AndAlso
+               crop.Width = adj.SourceWidthPixels AndAlso crop.Height = adj.SourceHeightPixels AndAlso
+               preWidth = crop.Width AndAlso preHeight = crop.Height Then
+                Return warp
+            End If
+
+            Dim sx = preWidth / CDbl(crop.Width), sy = preHeight / CDbl(crop.Height)
+            Dim m = ImageGeometryMapper.SourceToDisplayMatrix(preWidth, preHeight, rotation,
+                                                              adj.FlipHorizontal, adj.FlipVertical)
+            Dim inverse As SKMatrix
+            If Not m.TryInvert(inverse) Then Return warp
+
+            Dim result = New ObjectWarp With {
+                .Kind = "Gitter", .Columns = warp.Columns, .Rows = warp.Rows,
+                .Nodes = New Double((warp.Columns + 1) * (warp.Rows + 1) * 2 - 1) {}}
+            For rowIdx = 0 To warp.Rows
+                For colIdx = 0 To warp.Columns
+                    Dim i = (rowIdx * (warp.Columns + 1) + colIdx) * 2
+                    ' Ausgabeknoten -> Quellpunkt -> durch das Knotenraster -> zurueck in die Ausgabe.
+                    Dim pre = inverse.MapPoint(New SKPoint(CSng(colIdx / CDbl(warp.Columns) * outputWidth),
+                                                           CSng(rowIdx / CDbl(warp.Rows) * outputHeight)))
+                    Dim srcX = pre.X / sx + crop.Left
+                    Dim srcY = pre.Y / sy + crop.Top
+                    Dim moved = ImageGeometryMapper.MeshPoint(warp.Nodes, warp.Columns, warp.Rows,
+                                                              srcX, srcY,
+                                                              adj.SourceWidthPixels, adj.SourceHeightPixels)
+                    Dim back = m.MapPoint(New SKPoint(CSng((moved.X - crop.Left) * sx),
+                                                      CSng((moved.Y - crop.Top) * sy)))
+                    result.Nodes(i) = back.X / outputWidth * 100.0
+                    result.Nodes(i + 1) = back.Y / outputHeight * 100.0
+                Next
+            Next
+            Return result
         End Function
 
         ''' <summary>Multipliziert das Alpha einer fertigen Objektebene mit einer Deckung.
@@ -10203,10 +10286,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                   layerWidth As Integer, layerHeight As Integer,
                                                   offsetX As Integer, offsetY As Integer,
                                                   blendModeName As String,
-                                                  Optional coverage As Byte() = Nothing)
+                                                  Optional coverage As Byte() = Nothing,
+                                                  Optional adj As ImageAdjustments = Nothing)
             Dim vx = offsetX, vy = offsetY
             Dim drawn = RenderAnnotationToLayer(annotation, renderAnnotation, kind, rect,
-                                                sourceWidth, sourceHeight, layerWidth, layerHeight, vx, vy)
+                                                sourceWidth, sourceHeight, layerWidth, layerHeight, vx, vy, adj)
             If drawn Is Nothing Then Return
             Try
                 ' Die Deckung kommt NACH den Objektanpassungen: eine Weichzeichnung oder ein
@@ -12918,10 +13002,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Next
                 End If
 
-                ' Die Bearbeitung als Ganzes mit hineinlegen, damit die eigene Datei später wieder mit
-                ' Text als Text und Korrekturen als Korrekturen aufgeht. Fremde Programme überspringen
-                ' den Block; wird er zu groß, bleibt er weg und die Datei ist eine gewöhnliche PSD.
-                Return PsdWriterService.Save(targetPath, composite, layers, PsdRecipeService.Build(adj))
+                ' Das Rezept fuer den Rueckweg mit hineinlegen, damit die eigene Datei spaeter wieder
+                ' mit Text als Text und Formen als Formen aufgeht. Fremde Programme ueberspringen den
+                ' Block; wird er zu gross, bleibt er weg und die Datei ist eine gewoehnliche PSD.
+                '
+                ' NICHT die volle Bearbeitung: die unterste Ebene ist bereits fertig durchgerechnet -
+                ' Regler, Korrekturebenen, Retusche und eingebackene Vorgaenge stecken in ihren
+                ' Bildpunkten. Truege das Rezept sie noch einmal, wirkte beim Wiederoeffnen alles
+                ' doppelt (Belichtung +1 wuerde +2, der Beschnitt schnitte zweimal), denn das
+                ' Grundbild des Rezeptwegs IST diese unterste Ebene.
+                Dim roundtrip = BuildPsdRoundtripRecipe(adj)
+                Return PsdWriterService.Save(targetPath, composite, layers,
+                                             If(roundtrip Is Nothing, Nothing, PsdRecipeService.Build(roundtrip)))
             Finally
                 ' Nur die selbst erzeugten Objektebenen freigeben - Hintergrund und Gesamtbild
                 ' gehören dem Aufrufer und werden hier nur gelesen.
@@ -12931,6 +13023,60 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     End If
                 Next
             End Try
+        End Function
+
+        ''' <summary>Das Rezept, das in eine exportierte PSD gehoert: NUR die Objekte samt ihren
+        ''' Gruppen und Masken, alles andere neutral.
+        '''
+        ''' Aufgebaut als AUFZAEHLUNG dessen, was mitkommt, nicht als Streichliste: ein neuer
+        ''' globaler Regler bleibt damit von selbst draussen, statt beim Vergessen doppelt zu
+        ''' wirken. Was die unterste Ebene schon traegt (Regler, Korrekturebenen, Retusche,
+        ''' Striche, eingebackene Vorgaenge), kommt beim Wiederoeffnen aus ihren Bildpunkten -
+        ''' es ist dann Bestandteil des Fotos, so wie es auch jedes fremde Programm sieht.
+        '''
+        ''' Nothing heisst: KEIN Rezeptblock, die Datei oeffnet als gewoehnliche Ebenen-PSD. Zwei
+        ''' Faelle erzwingen das, weil das Rezept sonst sichtbar Falsches ergaebe:
+        ''' - Aktive GEOMETRIE (Beschnitt, Drehung, Begradigen, Perspektive, Verzerren, Zielmass,
+        '''   Leinwand, Hochskalier-Modell): Objekte und Masken stehen im Quellraum des
+        '''   UNBESCHNITTENEN Bilds, das Grundbild des Rezeptwegs ist aber die fertig gerechnete
+        '''   Ausgabe. Die Objekte saessen neben ihrer Stelle, die Masken ebenso - die Umrechnung
+        '''   der Masken durch die Geometriekette gibt es bislang nur zur Renderzeit.
+        ''' - TRANSPARENZ im Arbeitsbild (Radierer): die unterste Ebene ist dann nicht deckend,
+        '''   der Import nimmt sie nicht als Grundbild und der Rezeptweg begaenne mit einer
+        '''   leeren Flaeche.</summary>
+        Friend Shared Function BuildPsdRoundtripRecipe(adj As ImageAdjustments) As ImageAdjustments
+            If adj Is Nothing Then Return Nothing
+            If adj.WorkingImageHasTransparency Then Return Nothing
+
+            ' Dieselben Felder, durch die auch eine Maske auf dem Weg in die Ausgabe laeuft
+            ' (BuildMaskGeometry) - dazu das Hochskalier-Modell, das die Ausgabegroesse aendert.
+            Dim geometryActive =
+                adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse
+                adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 OrElse
+                adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse
+                adj.FlipHorizontal OrElse adj.FlipVertical OrElse
+                adj.PerspectiveHorizontal <> 0 OrElse adj.PerspectiveVertical <> 0 OrElse
+                adj.PerspectiveAspect <> 0 OrElse adj.PerspectiveScale <> 0 OrElse
+                adj.PerspectiveCorner0X <> 0 OrElse adj.PerspectiveCorner0Y <> 0 OrElse
+                adj.PerspectiveCorner1X <> 0 OrElse adj.PerspectiveCorner1Y <> 0 OrElse
+                adj.PerspectiveCorner2X <> 0 OrElse adj.PerspectiveCorner2Y <> 0 OrElse
+                adj.PerspectiveCorner3X <> 0 OrElse adj.PerspectiveCorner3Y <> 0 OrElse
+                (adj.ImageWarp IsNot Nothing AndAlso Not adj.ImageWarp.IsEmpty) OrElse
+                adj.ResizeWidth > 0 OrElse adj.ResizeHeight > 0 OrElse adj.ResizeScalePercent > 0 OrElse
+                adj.CanvasWidth > 0 OrElse adj.CanvasHeight > 0 OrElse
+                Not String.IsNullOrEmpty(adj.UpscaleModel)
+            If geometryActive Then Return Nothing
+
+            Return New ImageAdjustments With {
+                .SourceWidthPixels = adj.SourceWidthPixels,
+                .SourceHeightPixels = adj.SourceHeightPixels,
+                .RecipeCoordinateVersion = adj.RecipeCoordinateVersion,
+                .Annotations = If(adj.Annotations, New List(Of ImageAnnotation)()).
+                    Where(Function(a) a IsNot Nothing).Select(Function(a) a.Clone()).ToList(),
+                .AnnotationGroups = If(adj.AnnotationGroups, New List(Of AnnotationGroup)()).
+                    Where(Function(g) g IsNot Nothing).Select(Function(g) g.Clone()).ToList(),
+                .Masks = If(adj.Masks, New List(Of ImageMask)()).
+                    Where(Function(m) m IsNot Nothing).Select(Function(m) m.Clone()).ToList()}
         End Function
 
         Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer,
@@ -14346,8 +14492,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ''' <summary>Schiebt die Pinselkorrektur eines Verlaufs mit. Sie liegt als eigenes Raster mit
         ''' eigenem Rechteck neben dem gerechneten Verlauf; bei einer reinen VERSCHIEBUNG genügt es,
-        ''' das Rechteck zu versetzen - die Bildpunkte bleiben dieselben. Beim Skalieren und Drehen
-        ''' müsste sie neu gerastert werden, das bleibt offen (siehe OFFENE_PUNKTE.md).</summary>
+        ''' das Rechteck zu versetzen - die Bildpunkte bleiben dieselben. Skalieren, Drehen und
+        ''' Spiegeln rastern neu, im Raster-Teil der drei Region-Funktionen
+        ''' (<see cref="TransformBrushCorrections"/>).</summary>
         Private Shared Sub ShiftBrushCorrections(mask As ImageMask, offsetX As Integer, offsetY As Integer)
             If mask Is Nothing OrElse (offsetX = 0 AndAlso offsetY = 0) Then Return
             Dim shift = Sub(c As MaskComponent)
@@ -14365,6 +14512,161 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 shift(c)
             Next
         End Sub
+
+        ''' <summary>Führt eine Arbeit auf JEDEM Träger einer Pinselkorrektur aus: den Feldern der
+        ''' Maske selbst und jedem Bestandteil in ExtraComponents. Die Maskenfelder laufen über die
+        ''' Abschrift PrimaryAsComponent/SetPrimaryFromComponent, damit die Arbeit nur eine Form
+        ''' kennen muss. Zurückgeschrieben wird je Träger erst nach Erfolg - ein Fehlschlag lässt
+        ''' den betroffenen Träger unangetastet.</summary>
+        Private Shared Function ForEachBrushCarrier(mask As ImageMask, op As Func(Of MaskComponent, Boolean)) As Boolean
+            If mask Is Nothing OrElse op Is Nothing Then Return True
+            Dim primary = mask.PrimaryAsComponent()
+            If primary.HasBrushCorrection Then
+                If Not op(primary) Then Return False
+                mask.SetPrimaryFromComponent(primary)
+            End If
+            If mask.ExtraComponents IsNot Nothing Then
+                For Each c In mask.ExtraComponents
+                    If c IsNot Nothing AndAlso c.HasBrushCorrection AndAlso Not op(c) Then Return False
+                Next
+            End If
+            Return True
+        End Function
+
+        ''' <summary>Rastert die Pinselkorrektur aller Träger einer Maske für eine Transformation
+        ''' neu - das Gegenstück zu ShiftBrushCorrections für alles, was KEINE reine Verschiebung
+        ''' ist. <paramref name="map"/> ist dieselbe Punktabbildung wie beim Verlauf (sie liefert
+        ''' das neue Rechteck als Hülle der vier abgebildeten Ecken), <paramref name="canvasSetup"/>
+        ''' dieselbe Transformation als Canvas-Matrix (sie zeichnet die alten Bildpunkte an die
+        ''' neue Stelle). Beide Raster eines Trägers teilen sich ein Rechteck, es wird deshalb
+        ''' EINMAL gerechnet und beide werden hineingezeichnet.</summary>
+        Private Shared Function TransformBrushCorrections(mask As ImageMask, map As MaskPointMap,
+                                                          canvasSetup As Action(Of SKCanvas),
+                                                          sampling As SKSamplingOptions) As Boolean
+            Return ForEachBrushCarrier(mask,
+                Function(c)
+                    Dim corners = {(CDbl(c.BrushLeft), CDbl(c.BrushTop)), (CDbl(c.BrushRight), CDbl(c.BrushTop)),
+                                   (CDbl(c.BrushRight), CDbl(c.BrushBottom)), (CDbl(c.BrushLeft), CDbl(c.BrushBottom))}
+                    Dim minX = Double.MaxValue, minY = Double.MaxValue
+                    Dim maxX = Double.MinValue, maxY = Double.MinValue
+                    For Each e In corners
+                        Dim p = map(e.Item1, e.Item2)
+                        minX = Math.Min(minX, p.X) : maxX = Math.Max(maxX, p.X)
+                        minY = Math.Min(minY, p.Y) : maxY = Math.Max(maxY, p.Y)
+                    Next
+                    Dim l = CInt(Math.Floor(minX)), t = CInt(Math.Floor(minY))
+                    Dim w = Math.Max(1, CInt(Math.Ceiling(maxX)) - l)
+                    Dim h = Math.Max(1, CInt(Math.Ceiling(maxY)) - t)
+
+                    Dim oldRect = New SKRect(c.BrushLeft, c.BrushTop, c.BrushRight, c.BrushBottom)
+                    Dim newAdd As String = Nothing
+                    Dim newSubtract As String = Nothing
+                    If Not RerasterBrushAlpha(c.BrushAddPngBase64, oldRect, l, t, w, h, canvasSetup, sampling, newAdd) Then Return False
+                    If Not RerasterBrushAlpha(c.BrushSubtractPngBase64, oldRect, l, t, w, h, canvasSetup, sampling, newSubtract) Then Return False
+                    c.BrushAddPngBase64 = newAdd
+                    c.BrushSubtractPngBase64 = newSubtract
+                    c.BrushLeft = l : c.BrushTop = t : c.BrushRight = l + w : c.BrushBottom = t + h
+                    Return True
+                End Function)
+        End Function
+
+        ''' <summary>Ein einzelnes Alpha8-Korrekturraster an seine neue Stelle zeichnen. Leerer
+        ''' Eingang bleibt leer (einseitige Korrekturen sind normal); ein nicht lesbares Raster
+        ''' heißt False, und der Träger bleibt dann unangetastet.</summary>
+        Private Shared Function RerasterBrushAlpha(png As String, oldRect As SKRect,
+                                                   l As Integer, t As Integer, w As Integer, h As Integer,
+                                                   canvasSetup As Action(Of SKCanvas),
+                                                   sampling As SKSamplingOptions,
+                                                   ByRef result As String) As Boolean
+            result = ""
+            If String.IsNullOrEmpty(png) Then Return True
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(png))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                Using neu = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(neu)
+                        canvas.Clear(SKColors.Transparent)
+                        ' Im QUELLRAUM zeichnen, wie beim Hauptraster: erst den Ursprung des neuen
+                        ' Rechtecks wegschieben, dann die Transformation, dann das alte Raster an
+                        ' seiner alten Stelle absetzen.
+                        canvas.Translate(CSng(-l), CSng(-t))
+                        canvasSetup(canvas)
+                        Using paint = New SKPaint With {.IsAntialias = True}
+                            Using image = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(image, oldRect, sampling, paint)
+                            End Using
+                        End Using
+                    End Using
+                    Using img = SKImage.FromPixels(neu.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return False
+                            result = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+                Return True
+            Catch
+                Return False
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Spiegelt die Pinselkorrektur aller Träger - pixelgenau wie das Hauptraster in
+        ''' FlipMaskRegion: das Raster wird in sich gespiegelt, das Rechteck wechselt die Seite.
+        ''' Kein Resampling, damit nichts weicher wird.</summary>
+        Private Shared Function FlipBrushCorrections(mask As ImageMask, horizontal As Boolean, axis As Double) As Boolean
+            Return ForEachBrushCarrier(mask,
+                Function(c)
+                    Dim newAdd = MirrorAlphaRaster(c.BrushAddPngBase64, horizontal)
+                    Dim newSubtract = MirrorAlphaRaster(c.BrushSubtractPngBase64, horizontal)
+                    If newAdd Is Nothing OrElse newSubtract Is Nothing Then Return False
+                    c.BrushAddPngBase64 = newAdd
+                    c.BrushSubtractPngBase64 = newSubtract
+                    Dim width = c.BrushRight - c.BrushLeft
+                    Dim height = c.BrushBottom - c.BrushTop
+                    If horizontal Then
+                        c.BrushLeft = CInt(Math.Round(2 * axis - c.BrushRight))
+                        c.BrushRight = c.BrushLeft + width
+                    Else
+                        c.BrushTop = CInt(Math.Round(2 * axis - c.BrushBottom))
+                        c.BrushBottom = c.BrushTop + height
+                    End If
+                    Return True
+                End Function)
+        End Function
+
+        ''' <summary>Ein Alpha8-Raster in sich spiegeln. Leer bleibt leer; Nothing heißt Fehler.</summary>
+        Private Shared Function MirrorAlphaRaster(png As String, horizontal As Boolean) As String
+            If String.IsNullOrEmpty(png) Then Return ""
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(png))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                Using gespiegelt = New SKBitmap(decoded.Width, decoded.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(gespiegelt)
+                        canvas.Clear(SKColors.Transparent)
+                        If horizontal Then
+                            canvas.Scale(-1.0F, 1.0F, decoded.Width / 2.0F, 0.0F)
+                        Else
+                            canvas.Scale(1.0F, -1.0F, 0.0F, decoded.Height / 2.0F)
+                        End If
+                        canvas.DrawBitmap(decoded, 0.0F, 0.0F)
+                    End Using
+                    Using img = SKImage.FromPixels(gespiegelt.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return Nothing
+                            Return Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+            Catch
+                Return Nothing
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
 
         Private Shared Function IsGradientMaskKind(kind As String) As Boolean
             Return String.Equals(kind, "Linear", StringComparison.OrdinalIgnoreCase) OrElse
@@ -14401,6 +14703,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                         End Function)
             If part = MaskTransformPart.GradientsOnly Then Return True
 RasterTeil:
+            ' Die Pinselkorrektur ist ebenfalls ein Raster und wandert deshalb HIER (beim
+            ' Loslassen), nicht im Verlaufsteil. Vor dem fruehen Ausstieg: ein reiner Verlauf
+            ' hat kein Hauptraster, seine Korrektur muss trotzdem mit.
+            Dim radBrush = degrees * Math.PI / 180.0
+            Dim cosBrush = Math.Cos(radBrush), sinBrush = Math.Sin(radBrush)
+            If Not TransformBrushCorrections(mask,
+                    Function(x, y)
+                        Dim bdx = x - pivotX, bdy = y - pivotY
+                        Return (pivotX + bdx * cosBrush - bdy * sinBrush,
+                                pivotY + bdx * sinBrush + bdy * cosBrush)
+                    End Function,
+                    Sub(cv) cv.RotateDegrees(CSng(degrees), CSng(pivotX), CSng(pivotY)),
+                    New SKSamplingOptions(SKCubicResampler.Mitchell)) Then Return False
             If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
 
             Dim rad = degrees * Math.PI / 180.0
@@ -14469,6 +14784,9 @@ RasterTeil:
                                         End Function)
             If part = MaskTransformPart.GradientsOnly Then Return True
 RasterTeil:
+            ' Die Pinselkorrektur spiegelt pixelgenau mit - vor dem fruehen Ausstieg, damit auch
+            ' ein reiner Verlauf (ohne Hauptraster) seine Korrektur behaelt.
+            If Not FlipBrushCorrections(mask, horizontal, axis) Then Return False
             If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
 
             Dim decoded As SKBitmap = Nothing
@@ -14520,12 +14838,30 @@ RasterTeil:
 
             MapGradientComponents(mask, Function(x, y) (pivotX + (x - pivotX) * scaleX + offsetX,
                                                         pivotY + (y - pivotY) * scaleY + offsetY))
-            ' Reine Verschiebung: die Pinselkorrektur eines Verlaufs wandert exakt mit.
+            ' Reine Verschiebung: die Pinselkorrektur eines Verlaufs wandert exakt mit - hier im
+            ' Verlaufsteil, damit sie waehrend eines Zuges LIVE folgt (das Versetzen des Rechtecks
+            ' kostet nichts). Beim Skalieren muss sie dagegen neu gerastert werden und folgt wie
+            ' das Hauptraster erst beim Loslassen (Raster-Teil unten).
             If Math.Abs(scaleX - 1.0) < 0.0001 AndAlso Math.Abs(scaleY - 1.0) < 0.0001 Then
                 ShiftBrushCorrections(mask, CInt(Math.Round(offsetX)), CInt(Math.Round(offsetY)))
             End If
             If part = MaskTransformPart.GradientsOnly Then Return True
 RasterTeil:
+            ' Beim echten Skalieren die Korrektur neu rastern - vor dem fruehen Ausstieg, damit
+            ' auch ein reiner Verlauf (ohne Hauptraster) seine Korrektur behaelt. Die reine
+            ' Verschiebung ist hier NICHT zu behandeln: sie laeuft im Verlaufsteil oben, und zwar
+            ' fuer part=All wie fuer die Zug-Folge GradientsOnly-dann-RasterOnly genau einmal.
+            If Not (Math.Abs(scaleX - 1.0) < 0.0001 AndAlso Math.Abs(scaleY - 1.0) < 0.0001) Then
+                If Not TransformBrushCorrections(mask,
+                        Function(x, y) (pivotX + (x - pivotX) * scaleX + offsetX,
+                                        pivotY + (y - pivotY) * scaleY + offsetY),
+                        Sub(cv)
+                            cv.Translate(CSng(pivotX + offsetX), CSng(pivotY + offsetY))
+                            cv.Scale(CSng(scaleX), CSng(scaleY))
+                            cv.Translate(CSng(-pivotX), CSng(-pivotY))
+                        End Sub,
+                        New SKSamplingOptions(SKCubicResampler.Mitchell)) Then Return False
+            End If
             If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
 
             Dim newLeft = pivotX + (mask.Left - pivotX) * scaleX + offsetX

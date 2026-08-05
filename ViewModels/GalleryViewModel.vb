@@ -3209,16 +3209,18 @@ Namespace ViewModels
             ApplyButtonFilters()
         End Sub
 
-        Public Sub TogglePlaceFilter(city As String)
-            Dim wanted = If(city, "").Trim()
+        Public Sub TogglePlaceFilter(entry As PlaceFilterOption)
+            If entry Is Nothing Then Return
+            Dim wanted = If(entry.City, "").Trim()
             If wanted.Length = 0 Then Return
-            ' Ein Ort des SERVERS ist allein waehlbar - dieselbe Regel wie bei den Personen.
-            Dim immich = PlaceFilterOptions.FirstOrDefault(Function(o) o IsNot Nothing AndAlso o.IsFromImmich AndAlso
-                                                               String.Equals(o.City, wanted, StringComparison.OrdinalIgnoreCase))
-            If immich IsNot Nothing Then
+            ' Ein Ort des SERVERS ist allein waehlbar - dieselbe Regel wie bei den Personen. Die
+            ' Herkunft kommt vom ANGEKLICKTEN Eintrag selbst: dieselbe Stadt kann lokal UND auf dem
+            ' Server stehen, und eine Namenssuche ueber alle Optionen liefe beim lokalen Eintrag
+            ' faelschlich auf den Server.
+            If entry.IsFromImmich Then
                 ClearButtonFiltersSilently()
-                Dim ignored = OpenImmichPlaceAsync(New VirtualNavigationNode(immich.City, "ImmichPlace") With {
-                    .Id = immich.City,
+                Dim ignored = OpenImmichPlaceAsync(New VirtualNavigationNode(entry.City, "ImmichPlace") With {
+                    .Id = entry.City,
                     .IsRemovable = False
                 })
                 Return

@@ -571,6 +571,47 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Auf Bgra8888/Premul bringen. ToAvaloniaBitmapFast ist eine reine Zeilenkopie
+        ''' und braucht exakt dieses Format; der PNG-Decode liefert je nach Plattform auch anderes.
+        ''' Dann wird einmal umgezeichnet und das Original freigegeben - einmal je Zuggeste, nicht
+        ''' je Bewegung.</summary>
+        Private Shared Function NormalizePreviewBase(bmp As SKBitmap) As SKBitmap
+            If bmp Is Nothing Then Return Nothing
+            If bmp.ColorType = SKColorType.Bgra8888 AndAlso bmp.AlphaType = SKAlphaType.Premul Then Return bmp
+            Dim norm = New SKBitmap(bmp.Width, bmp.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Using cv As New SKCanvas(norm)
+                cv.Clear(SKColors.Transparent)
+                cv.DrawBitmap(bmp, 0, 0)
+            End Using
+            bmp.Dispose()
+            Return norm
+        End Function
+
+        ' ── Drosselung der Live-Vorschau ────────────────────────────────────────
+        '
+        ' Das Ziehen liefert mehr Bewegungsereignisse, als Zeichnen noetig ist. Je UI-Durchlauf
+        ' wird hoechstens EINMAL gezeichnet, und zwar der zuletzt angeforderte Stand: die
+        ' Hintergrund-Prioritaet laeuft erst, wenn die anstehenden Eingabe-Ereignisse verarbeitet
+        ' sind, ein Schwall Bewegungen faellt also zu einem Bild zusammen. Ein gemeinsamer Kanal
+        ' fuer Gitter, Verformen und Linien - sie koennen nie gleichzeitig ziehen, und der letzte
+        ' Stand ist immer der richtige. Laeuft der aufgeschobene Zeichner NACH dem Verlassen des
+        ' Werkzeugs, greift die Nothing-Pruefung der jeweiligen Grundlage.
+        Private _warpPreviewQueued As Boolean
+        Private _warpPreviewRender As Action
+
+        Private Sub QueueWarpPreview(render As Action)
+            _warpPreviewRender = render
+            If _warpPreviewQueued Then Return
+            _warpPreviewQueued = True
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Sub()
+                    _warpPreviewQueued = False
+                    Dim r = _warpPreviewRender
+                    _warpPreviewRender = Nothing
+                    r?.Invoke()
+                End Sub, Avalonia.Threading.DispatcherPriority.Background)
+        End Sub
+
         ''' <summary>Die Grundlage der Vorschau anlegen: das Anzeigebild ohne Objekte, dazu die Lage
         ''' des UNVERZERRTEN Rasters im Anzeigeraum. Letztere ist noetig, weil das Raster im
         ''' Quellraum gleichmaessig ist, im Anzeigeraum nach Beschnitt oder Drehung aber nicht.</summary>
@@ -593,7 +634,7 @@ Namespace ViewModels
                 Using strom = New IO.MemoryStream()
                     source.Save(strom, PngBitmapEncoderOptions.Default)
                     strom.Position = 0
-                    Dim roh = SKBitmap.Decode(strom)
+                    Dim roh = NormalizePreviewBase(SKBitmap.Decode(strom))
                     If roh Is Nothing Then Return
                     _gridPreviewBase = roh
                 End Using
@@ -642,9 +683,10 @@ Namespace ViewModels
             _gridPreviewSourceY = Nothing
         End Sub
 
-        ''' <summary>Die Vorschau zum aktuellen Raster neu zeichnen.</summary>
+        ''' <summary>Die Vorschau zum aktuellen Raster neu zeichnen - gedrosselt, siehe
+        ''' <see cref="QueueWarpPreview"/>.</summary>
         Private Sub RefreshGridPreview()
-            RefreshWarpPreview(_warpColumns, _warpRows, WarpGridValues, "Gitter")
+            QueueWarpPreview(Sub() RefreshWarpPreview(_warpColumns, _warpRows, WarpGridValues, "Gitter"))
         End Sub
 
         ''' <summary>Der gemeinsame Weg fuer Gitter und Verformen: aus den Knoten in ANZEIGE-Prozent
@@ -675,12 +717,10 @@ Namespace ViewModels
                 Return
             End If
             Using warped
-                Using data = SKImage.FromBitmap(warped).Encode(SKEncodedImageFormat.Png, 90)
-                    Using strom = New IO.MemoryStream(data.ToArray())
-                        ToolPreviewImage = New Bitmap(strom)
-                        _vorschauQuelle = holder
-                    End Using
-                End Using
+                ' Direkte Zeilenkopie statt PNG-Rundlauf: der alte Weg kodierte und dekodierte je
+                ' Mausbewegung das ganze Anzeigebild und gab sein SKImage nie frei.
+                ToolPreviewImage = ImageOrientationService.ToAvaloniaBitmapFast(warped)
+                _vorschauQuelle = holder
             End Using
         End Sub
 

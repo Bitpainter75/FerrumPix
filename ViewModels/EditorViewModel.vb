@@ -14255,20 +14255,36 @@ Namespace ViewModels
                     '
                     ' Nicht über SaveImage: dort ist ein Ziel mit .psd-Endung streng verboten, und
                     ' diese Sperre bleibt genau so stehen. Ein Export ist eine eigene Handlung.
+                    '
+                    ' Gebackener Inhalt (Striche, Retusche, Entrauschen, Entferntes) steckt NUR im
+                    ' Arbeitsbild - der Datei-Render kennt es nicht (siehe den .fpx-Zweig oben).
+                    ' Dann geht das Arbeitsbild als Pipeline-Eingang in beide Render, sonst fehlten
+                    ' diese Vorgänge in der Datei und jede fremde Anwendung zeigte sie nicht.
                     Dim psdSourcePath = RenderSourcePath
                     Dim psdTarget = targetPath
+                    Dim psdWorking As SKBitmap = If(_workingImage.HasBakedContent, CloneWorkingFullForRender(), Nothing)
                     ok = Await Task.Run(Function() As Boolean
-                                            Dim withoutObjects = adj.Clone()
-                                            withoutObjects.Annotations?.Clear()
-                                            Using compositeStream = ImageProcessor.RenderPngStream(psdSourcePath, adj),
-                                                  backgroundStream = ImageProcessor.RenderPngStream(psdSourcePath, withoutObjects)
-                                                If compositeStream Is Nothing Then Return False
-                                                Using composite = SKBitmap.Decode(compositeStream),
-                                                      background = If(backgroundStream Is Nothing, Nothing, SKBitmap.Decode(backgroundStream))
-                                                    If composite Is Nothing Then Return False
-                                                    Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj)
+                                            Try
+                                                Dim withoutObjects = adj.Clone()
+                                                withoutObjects.Annotations?.Clear()
+                                                Dim processMs As Long = 0
+                                                Dim encodeMs As Long = 0
+                                                Using compositeStream = If(psdWorking IsNot Nothing,
+                                                                           ImageProcessor.RenderPngStream(psdWorking, adj, processMs, encodeMs),
+                                                                           ImageProcessor.RenderPngStream(psdSourcePath, adj)),
+                                                      backgroundStream = If(psdWorking IsNot Nothing,
+                                                                            ImageProcessor.RenderPngStream(psdWorking, withoutObjects, processMs, encodeMs),
+                                                                            ImageProcessor.RenderPngStream(psdSourcePath, withoutObjects))
+                                                    If compositeStream Is Nothing Then Return False
+                                                    Using composite = SKBitmap.Decode(compositeStream),
+                                                          background = If(backgroundStream Is Nothing, Nothing, SKBitmap.Decode(backgroundStream))
+                                                        If composite Is Nothing Then Return False
+                                                        Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj)
+                                                    End Using
                                                 End Using
-                                            End Using
+                                            Finally
+                                                psdWorking?.Dispose()
+                                            End Try
                                         End Function)
                     DiagnosticLogService.LogAlways("Editor.PsdExport",
                         $"{IO.Path.GetFileName(psdTarget)} ok={ok} annotations={adj.Annotations?.Count}")
