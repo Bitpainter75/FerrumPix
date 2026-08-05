@@ -71,7 +71,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 **Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants.
 
-**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform. Text follows an arc, a circle or a wave. Any of them can carry a layer mask you paint with the mask brush, or be clipped to the layer below it. The layers panel holds the whole stack with visibility, reorder, rename, grouping, merging and rasterizing.
+**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform. Text follows an arc, a circle or a wave. Any of them can carry a layer mask you paint with the mask brush, or be clipped to the layer below it. The layers panel holds the whole stack with visibility, reorder, rename, grouping, merging and rasterizing, and every row shows a thumbnail of what is on the layer with its mask beside it, so a stack of masks says which one sits where.
 
 <img src="Screenshots/Editor_Text.png" />
 
@@ -93,7 +93,7 @@ Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…*
 
 Seven features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, denoising a photo with a model, enlarging a photo with a model, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
 
-Enlarging with a model is offered in *Resize* and *Export to*: eight models, from twice to four times, thorough or quick, one that keeps the grain instead of removing it, one for pictures that came off the web, one that adds as little as possible, and two for drawings. Each says in a sentence what it is for. It runs before any target size you type in, so you can enlarge four times and then come back down to an exact width. The choice starts empty every time - a run costs seconds to minutes per picture.
+Enlarging with a model is offered in *Resize* and *Export to*: five models, from twice to four times, thorough or quick, one that keeps the grain instead of removing it, and one for drawings. Each says in a sentence what it is for. It runs before any target size you type in, so you can enlarge four times and then come back down to an exact width. The choice starts empty every time - a run costs seconds to minutes per picture.
 
 Finding people and naming places have to be switched on there as well, on top of fetching the file. A face is a different matter from a keyword, and where a photo was taken is one too - so neither happens unless you say so. Place names come from a table on your own machine; nothing is looked up anywhere, and there is no map view.
 
@@ -104,6 +104,8 @@ Everything runs on your own machine - nothing is sent anywhere. The files come f
 ## Immich
 
 FerrumPix can connect directly to a self-hosted Immich server: browse all photos and albums, upload local files, download originals, sync ratings, favourites and keywords, search from saved search lists, and edit an Immich photo and save the result as a new asset. Updating or deleting existing assets is possible too, but has to be enabled in Settings.
+
+The people your server recognised and the cities it knows appear in the same filter buttons as the local ones, under a heading of their own, and picking one opens it straight from the server. They stand apart because they cannot be combined with the local filters: the server looks up one person or one city at a time.
 
 FerrumPix authenticates with an API key. A key with `all` works; if you prefer a restricted one, build it up in layers - each missing permission disables exactly one function instead of breaking the integration:
 
@@ -145,7 +147,7 @@ The last two sections are reference: a full list of keyboard and mouse shortcuts
 
 ## Installation
 
-## Linux
+### Linux
 
 | Package | For | Download |
 |---|---|---|
@@ -158,7 +160,7 @@ The last two sections are reference: a full list of keyboard and mouse shortcuts
 
 On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/packages/ferrumpix-bin) in the AUR.
 
-## Windows
+### Windows
 
 | Package | For | Download |
 |---|---|---|
@@ -166,7 +168,7 @@ On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/p
 | ZIP | Portable, unpack and run (x64) | [FerrumPix-win-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-x64.zip) |
 | ZIP | Portable, unpack and run (ARM64) | [FerrumPix-win-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-arm64.zip) |
 
-## macOS
+### macOS
 
 | Package | For | Download |
 |---|---|---|
@@ -175,7 +177,7 @@ On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/p
 
 The packages are self-contained and include the .NET runtime.
 
-## Experimental
+### Experimental
 
 The ARM64 and macOS builds are untested. If you try one, please let me know whether it works.
 
@@ -194,7 +196,7 @@ opened". That does not mean the ZIP is broken. Please try this:
 
        open /Applications/FerrumPix.app
 
-## Good to know
+### Good to know
 
 The packages are self-contained and bring the .NET runtime with them, so nothing has to be
 installed for that.
