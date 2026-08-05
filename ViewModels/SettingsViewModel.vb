@@ -3034,7 +3034,7 @@ Namespace ViewModels
             ''' <summary>Wie viele Dateien der Gruppe schon dasind.
             '''
             ''' Gebraucht, seit eine Gruppe mehrere WAHLMOEGLICHKEITEN buendeln kann statt der
-            ''' Bausteine einer einzigen Funktion: beim Hochskalieren ist jedes der acht Modelle
+            ''' Bausteine einer einzigen Funktion: beim Hochskalieren ist jedes der fuenf Modelle
             ''' fuer sich benutzbar, und wer drei davon geholt hat, hat drei davon. "Nicht
             ''' vorhanden" waere dort schlicht falsch.</summary>
             ''' <remarks>Ueber <c>Where</c> und nicht ueber <c>Count(Bedingung)</c>: bei einer Liste
@@ -3162,7 +3162,7 @@ Namespace ViewModels
                     Case "Entrauschen"
                         description = LocalizationService.T("Rauschen aus hohen ISO-Werten entfernen, mit erhaltener Feinstruktur. Zwei Wege: gründlich und zügig.")
                     Case "Hochskalieren"
-                        description = LocalizationService.T("Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte. Acht Modelle für Fotos, Aufnahmen aus dem Netz und Zeichnungen.")
+                        description = LocalizationService.T("Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte. Fünf Modelle für Fotos und Zeichnungen.")
                     Case Else
                         description = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
                 End Select

@@ -178,12 +178,12 @@ Namespace Services
             ''' und Vergleichen). Dort gilt "erst wenn alle vorliegen, gibt es die Funktion" - ein
             ''' halbes Modell ist keins.
             '''
-            ''' WAHLMOEGLICHKEITEN derselben Funktion (Entrauschen: zwei, Hochskalieren: acht).
+            ''' WAHLMOEGLICHKEITEN derselben Funktion (Entrauschen: zwei, Hochskalieren: fuenf).
             ''' Dort ist jede Datei fuer sich benutzbar, und die Dienste fragen auch einzeln nach
             ''' ihr. Zusammen stehen sie, weil ein Dialog mit fuenf Zeilen fuer eine Funktion den
             ''' Blick auf die anderen verstellt.
             '''
-            ''' Der Dialog nennt in beiden Faellen den Teilstand ("3 von 8 vorhanden"), und der
+            ''' Der Dialog nennt in beiden Faellen den Teilstand ("3 von 5 vorhanden"), und der
             ''' Knopf holt die ganze Gruppe. Wer nur eines der Wahlmodelle will, legt seine Datei
             ''' selbst in den Modellordner.</summary>
             Public Property Group As String = ""
@@ -294,18 +294,6 @@ Namespace Services
                                         .FileName = "realesrgan-fast-wdn-x4-v1.onnx", .Group = "Hochskalieren",
                                         .Purpose = "Vierfach, zügig und entrauschend", .Bytes = 4866420,
                                         .Sha256 = "abc25fa980e4cc60ddef472f37e61b5e788831f01a8087cc4af596b4c73d5a40"},
-                New ModelEntry With {.Key = "nomos8ksc-x4",
-                                        .FileName = "nomos8ksc-x4-v1.onnx", .Group = "Hochskalieren",
-                                        .Purpose = "Vierfach, für Aufnahmen aus dem Netz", .Bytes = 66938066, .GpuAllowed = True,
-                                        .Sha256 = "f376e1adc0d16fa05a41828d3049bdf6bf2d65cfa805e27d30e55fd102f2ed80"},
-                New ModelEntry With {.Key = "lsdirplusn-x4",
-                                        .FileName = "lsdirplusn-x4-v1.onnx", .Group = "Hochskalieren",
-                                        .Purpose = "Vierfach, zurückhaltend", .Bytes = 66938066, .GpuAllowed = True,
-                                        .Sha256 = "1eff02d848bf9e6cb2329ce944e1ac225b59c6b596a78cda4dc39b15d1c8aace"},
-                New ModelEntry With {.Key = "hfa2k-x4",
-                                        .FileName = "hfa2k-x4-v1.onnx", .Group = "Hochskalieren",
-                                        .Purpose = "Vierfach, für Zeichnungen, zweite Wahl", .Bytes = 66938066, .GpuAllowed = True,
-                                        .Sha256 = "a34129a023545e05b2b43408edac28296ade92b8926ae8c632a35e555df6eecf"},
                 New ModelEntry With {.Key = "realesrgan-anime-x4",
                                         .FileName = "realesrgan-anime-x4-v1.onnx", .Group = "Hochskalieren",
                                         .Purpose = "Vierfach, für Zeichnungen", .Bytes = 17939967, .GpuAllowed = True,

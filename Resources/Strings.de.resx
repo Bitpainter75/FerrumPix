@@ -6236,24 +6236,6 @@
   <data name="Dasselbe_kleine_Modell_in_der_Fassung_die_das_Ko_3dd41e34" xml:space="preserve">
     <value>Dasselbe kleine Modell in der Fassung, die das Korn STEHEN lässt. Für Aufnahmen, deren Körnung zum Bild gehört und nicht mit weggerechnet werden soll.</value>
   </data>
-  <data name="Vierfach_f_r_Aufnahmen_aus_dem_Netz_1f6cc571" xml:space="preserve">
-    <value>Vierfach, für Aufnahmen aus dem Netz</value>
-  </data>
-  <data name="Auf_Fotos_trainiert_die_schon_einmal_durch_eine__c3cba7aa" xml:space="preserve">
-    <value>Auf Fotos trainiert, die schon einmal durch eine JPEG-Kompression gegangen sind - es rechnet deren Artefakte und leichte Unschärfe mit heraus. Für Bilder aus dem Netz oder aus alten Sicherungen.</value>
-  </data>
-  <data name="Vierfach_f_r_Zeichnungen_zweite_Wahl_c78c29b1" xml:space="preserve">
-    <value>Vierfach, für Zeichnungen, zweite Wahl</value>
-  </data>
-  <data name="Derselbe_Zweck_aber_auf_Einzelbildern_moderner_A_99c07c07" xml:space="preserve">
-    <value>Derselbe Zweck, aber auf Einzelbildern moderner Animationsfilme trainiert statt auf Zeichnungen allgemein. Welches der beiden besser trifft, hängt an der Vorlage.</value>
-  </data>
-  <data name="Vierfach_zur_ckhaltend_945f57bf" xml:space="preserve">
-    <value>Vierfach, zurückhaltend</value>
-  </data>
-  <data name="Auf_ber_84000_unbesch_digten_Fotos_trainiert_ohn_7a563d0c" xml:space="preserve">
-    <value>Auf über 84000 unbeschädigten Fotos trainiert, ohne künstlich verschlechterte Vorlagen. Es erfindet weniger dazu als die übrigen - für Aufnahmen, die schon gut sind.</value>
-  </data>
   <data name="Gelernte_Modelle_13cf01bc" xml:space="preserve">
     <value>Gelernte Modelle</value>
   </data>
@@ -6272,12 +6254,6 @@
   <data name="Hochskalieren_gr_ndlich_z_gig_und_f_r_Zeichnunge_bcb8b1b6" xml:space="preserve">
     <value>Hochskalieren: gründlich, zügig und für Zeichnungen</value>
   </data>
-  <data name="Modellsammlung_von_Philip_Hofmann_706dafc3" xml:space="preserve">
-    <value>Modellsammlung von Philip Hofmann</value>
-  </data>
-  <data name="Hochskalieren_zur_ckhaltend_f_r_Aufnahmen_aus_de_7f09f1e7" xml:space="preserve">
-    <value>Hochskalieren: zurückhaltend, für Aufnahmen aus dem Netz, für Zeichnungen</value>
-  </data>
   <data name="Ortsnamen_zu_Koordinaten_Tabelle_keine_Abfrage_i_26980837" xml:space="preserve">
     <value>Ortsnamen zu Koordinaten (Tabelle, keine Abfrage im Netz)</value>
   </data>
@@ -6290,8 +6266,8 @@
   <data name="Rauschen_aus_hohen_ISO_Werten_entfernen_mit_erha_a0dbe306" xml:space="preserve">
     <value>Rauschen aus hohen ISO-Werten entfernen, mit erhaltener Feinstruktur. Zwei Wege: gründlich und zügig.</value>
   </data>
-  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_5876c311" xml:space="preserve">
-    <value>Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte. Acht Modelle für Fotos, Aufnahmen aus dem Netz und Zeichnungen.</value>
+  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_d5699521" xml:space="preserve">
+    <value>Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte. Fünf Modelle für Fotos und Zeichnungen.</value>
   </data>
   <data name="Objektauswahl_per_Klick_1c995329" xml:space="preserve">
     <value>Objektauswahl per Klick</value>

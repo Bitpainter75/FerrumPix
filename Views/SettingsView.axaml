@@ -2431,18 +2431,6 @@
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Modellsammlung von Philip Hofmann" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="Hochskalieren: zurückhaltend, für Aufnahmen aus dem Netz, für Zeichnungen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/Phhofm/models" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
-                                    </Button>
-                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://creativecommons.org/licenses/by/4.0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                        <TextBlock Text="CC-BY-4.0" FontSize="{DynamicResource FP.Font.Small}"/>
-                                    </Button>
-                                </Grid>
-                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
-                                    <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="YuNet" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="Gesichter finden" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>

@@ -60,18 +60,9 @@ Namespace Services
                 New UpscaleModel With {.Key = "realesrgan-fast-wdn-x4", .Scale = 4,
                                        .Label = "Vierfach, zügig, Korn bleibt",
                                        .Hint = "Dasselbe kleine Modell in der Fassung, die das Korn STEHEN lässt. Für Aufnahmen, deren Körnung zum Bild gehört und nicht mit weggerechnet werden soll."},
-                New UpscaleModel With {.Key = "nomos8ksc-x4", .Scale = 4,
-                                       .Label = "Vierfach, für Aufnahmen aus dem Netz",
-                                       .Hint = "Auf Fotos trainiert, die schon einmal durch eine JPEG-Kompression gegangen sind - es rechnet deren Artefakte und leichte Unschärfe mit heraus. Für Bilder aus dem Netz oder aus alten Sicherungen."},
-                New UpscaleModel With {.Key = "lsdirplusn-x4", .Scale = 4,
-                                       .Label = "Vierfach, zurückhaltend",
-                                       .Hint = "Auf über 84000 unbeschädigten Fotos trainiert, ohne künstlich verschlechterte Vorlagen. Es erfindet weniger dazu als die übrigen - für Aufnahmen, die schon gut sind."},
                 New UpscaleModel With {.Key = "realesrgan-anime-x4", .Scale = 4,
                                        .Label = "Vierfach, für Zeichnungen",
-                                       .Hint = "Für Gezeichnetes statt Fotografiertes: hält Flächen glatt und Linien scharf. An einem Foto wirkt es wachsartig."},
-                New UpscaleModel With {.Key = "hfa2k-x4", .Scale = 4,
-                                       .Label = "Vierfach, für Zeichnungen, zweite Wahl",
-                                       .Hint = "Derselbe Zweck, aber auf Einzelbildern moderner Animationsfilme trainiert statt auf Zeichnungen allgemein. Welches der beiden besser trifft, hängt an der Vorlage."}}
+                                       .Hint = "Für Gezeichnetes statt Fotografiertes: hält Flächen glatt und Linien scharf. An einem Foto wirkt es wachsartig."}}
 
         ''' <summary>Kantenlaenge einer Kachel, je Massstab.
         '''

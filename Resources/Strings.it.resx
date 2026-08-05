@@ -6236,24 +6236,6 @@
   <data name="Dasselbe_kleine_Modell_in_der_Fassung_die_das_Ko_3dd41e34" xml:space="preserve">
     <value>Lo stesso piccolo modello nella versione che LASCIA la grana. Per scatti la cui grana fa parte dell'immagine e non deve sparire con essa.</value>
   </data>
-  <data name="Vierfach_f_r_Aufnahmen_aus_dem_Netz_1f6cc571" xml:space="preserve">
-    <value>Quadruplo, per immagini dal web</value>
-  </data>
-  <data name="Auf_Fotos_trainiert_die_schon_einmal_durch_eine__c3cba7aa" xml:space="preserve">
-    <value>Addestrato su foto già passate per una compressione JPEG: ne toglie per strada gli artefatti e una leggera sfocatura. Per immagini dal web o da vecchi backup.</value>
-  </data>
-  <data name="Vierfach_f_r_Zeichnungen_zweite_Wahl_c78c29b1" xml:space="preserve">
-    <value>Quadruplo, per disegni, seconda scelta</value>
-  </data>
-  <data name="Derselbe_Zweck_aber_auf_Einzelbildern_moderner_A_99c07c07" xml:space="preserve">
-    <value>Lo stesso scopo, ma addestrato su fotogrammi di film d'animazione moderni invece che su disegni in generale. Quale dei due funzioni meglio dipende dall'originale.</value>
-  </data>
-  <data name="Vierfach_zur_ckhaltend_945f57bf" xml:space="preserve">
-    <value>Quadruplo, sobrio</value>
-  </data>
-  <data name="Auf_ber_84000_unbesch_digten_Fotos_trainiert_ohn_7a563d0c" xml:space="preserve">
-    <value>Addestrato su oltre 84000 foto integre, senza originali degradati artificialmente. Inventa meno degli altri: per scatti già buoni.</value>
-  </data>
   <data name="Gelernte_Modelle_13cf01bc" xml:space="preserve">
     <value>Modelli appresi</value>
   </data>
@@ -6272,12 +6254,6 @@
   <data name="Hochskalieren_gr_ndlich_z_gig_und_f_r_Zeichnunge_bcb8b1b6" xml:space="preserve">
     <value>Ingrandimento: accurato, rapido e per disegni</value>
   </data>
-  <data name="Modellsammlung_von_Philip_Hofmann_706dafc3" xml:space="preserve">
-    <value>Raccolta di modelli di Philip Hofmann</value>
-  </data>
-  <data name="Hochskalieren_zur_ckhaltend_f_r_Aufnahmen_aus_de_7f09f1e7" xml:space="preserve">
-    <value>Ingrandimento: discreto, per immagini dalla rete, per disegni</value>
-  </data>
   <data name="Ortsnamen_zu_Koordinaten_Tabelle_keine_Abfrage_i_26980837" xml:space="preserve">
     <value>Nomi di luoghi per le coordinate (una tabella, nessuna richiesta in rete)</value>
   </data>
@@ -6290,8 +6266,8 @@
   <data name="Rauschen_aus_hohen_ISO_Werten_entfernen_mit_erha_a0dbe306" xml:space="preserve">
     <value>Rimuovere il rumore degli ISO elevati conservando la struttura fine. Due strade: accurata e rapida.</value>
   </data>
-  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_5876c311" xml:space="preserve">
-    <value>Ingrandire una foto di due o quattro volte, con bordi ricostruiti invece di pixel mediati. Otto modelli per foto, immagini dalla rete e disegni.</value>
+  <data name="Ein_Foto_zwei_oder_vierfach_vergr_ern_mit_neu_ge_d5699521" xml:space="preserve">
+    <value>Ingrandire una foto di due o quattro volte, con bordi ricostruiti invece di pixel mediati. Cinque modelli per foto e disegni.</value>
   </data>
   <data name="Objektauswahl_per_Klick_1c995329" xml:space="preserve">
     <value>Selezione di un oggetto con un clic</value>
