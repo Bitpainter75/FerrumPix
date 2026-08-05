@@ -12312,6 +12312,28 @@ Namespace ViewModels
             ElseIf RawSidecarService.IsSidecarFormat(imagePath) AndAlso
                    RawSidecarService.Exists(imagePath) Then
                 fpxAdjustments = RawSidecarService.TryRead(imagePath)
+            ElseIf PsdPreviewService.IsSupportedPsd(imagePath) Then
+                ' Photoshop-Datei mit Ebenen: sie wird als Ebenenstapel geöffnet statt als flaches
+                ' Gesamtbild. Bewusst NACH dem Begleitdatei-Zweig - wurde die Datei hier schon einmal
+                ' bearbeitet, gilt das gespeicherte Rezept, sonst überschriebe der Import die eigene
+                ' Arbeit mit dem Stand aus Photoshop.
+                '
+                ' Das Grundbild ist eine leere Fläche oder die unterste Ebene, NIE das Gesamtbild:
+                ' läge das darunter, wäre alles doppelt zu sehen (siehe PsdImportService).
+                Dim psdSource = imagePath
+                Dim importResult = Await Task.Run(Function() PsdImportService.Import(psdSource))
+                If importResult IsNot Nothing AndAlso importResult.Adjustments IsNot Nothing AndAlso
+                   File.Exists(importResult.BaseImagePath) Then
+                    fpxAdjustments = importResult.Adjustments
+                    newRenderSourcePathOverride = importResult.BaseImagePath
+                    ' Denselben Ordner-Haushalt wie beim .fpx benutzen; _currentFpxPath bleibt aber
+                    ' leer, die Identität der Datei ist und bleibt die .psd.
+                    newFpxTempDir = importResult.TempDir
+                    forceSaveAsOnly = True
+                    DiagnosticLogService.LogAlways("Editor.PsdImport",
+                        $"{IO.Path.GetFileName(psdSource)} layers={importResult.LayerCount} skipped={importResult.SkippedLayers}")
+                End If
+                ' Ohne Ergebnis bleibt alles wie bisher: das flache Gesamtbild wird geöffnet.
             End If
 
             CleanupCurrentFpxTempDir()
@@ -13972,6 +13994,7 @@ Namespace ViewModels
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
             Dim isFpxSave As Boolean = FpxService.IsFpx(targetPath)
+            Dim isPsdSave As Boolean = False
             ' Außerhalb des If-Blocks: die Einzeloptionen (Metadaten-Übernahme) werden erst nach
             ' dem erfolgreichen Speichern ausgewertet. Nothing nur bei saveAs=False - dort wird
             ' der Übernahme-Zweig nie erreicht.
@@ -14009,9 +14032,10 @@ Namespace ViewModels
                     Return False
                 End If
                 isFpxSave = FpxService.Enabled AndAlso saveAsResult.IsFpx
+                isPsdSave = saveAsResult.IsPsd
                 ' Ein .fpx-Projekt geht immer lokal (Immich speichert Bilder, keine Projektdateien).
                 ' Ein PDF ebenso - Immich führt Bild-Assets, keine Dokumente.
-                saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured AndAlso Not isFpxSave AndAlso Not saveAsResult.IsPdf
+                saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured AndAlso Not isFpxSave AndAlso Not isPsdSave AndAlso Not saveAsResult.IsPdf
                 If saveToImmich Then
                     ' Für den Immich-Upload zunächst in eine Temp-Datei rendern (nicht in den Bilder-Ordner).
                     Dim uploadTempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
@@ -14106,6 +14130,30 @@ Namespace ViewModels
                                             Return IO.File.Exists(targetPath)
                                         End Function)
                     DiagnosticLogService.LogAlways("Editor.FpxSave", $"{IO.Path.GetFileName(targetPath)} baked={_workingImage.HasBakedContent} annotations={adj.Annotations?.Count} retouchPng={retouchStageIncluded} decode={decodeMs}ms process={processMs}ms encodePng={encodeMs}ms renderPng={renderMs}ms package={packageMs}ms")
+                ElseIf isPsdSave Then
+                    ' Photoshop-Datei MIT Ebenen: das fertige Bild wird das Gesamtbild, dasselbe ohne
+                    ' Objekte die unterste Ebene, jedes Objekt darüber bekommt seine eigene. Beides in
+                    ' voller Auflösung - anders als beim .fpx-Komposit, das nur der Anzeige dient.
+                    '
+                    ' Nicht über SaveImage: dort ist ein Ziel mit .psd-Endung streng verboten, und
+                    ' diese Sperre bleibt genau so stehen. Ein Export ist eine eigene Handlung.
+                    Dim psdSourcePath = RenderSourcePath
+                    Dim psdTarget = targetPath
+                    ok = Await Task.Run(Function() As Boolean
+                                            Dim withoutObjects = adj.Clone()
+                                            withoutObjects.Annotations?.Clear()
+                                            Using compositeStream = ImageProcessor.RenderPngStream(psdSourcePath, adj),
+                                                  backgroundStream = ImageProcessor.RenderPngStream(psdSourcePath, withoutObjects)
+                                                If compositeStream Is Nothing Then Return False
+                                                Using composite = SKBitmap.Decode(compositeStream),
+                                                      background = If(backgroundStream Is Nothing, Nothing, SKBitmap.Decode(backgroundStream))
+                                                    If composite Is Nothing Then Return False
+                                                    Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj)
+                                                End Using
+                                            End Using
+                                        End Function)
+                    DiagnosticLogService.LogAlways("Editor.PsdExport",
+                        $"{IO.Path.GetFileName(psdTarget)} ok={ok} annotations={adj.Annotations?.Count}")
                 Else
                     ' Arbeitsbild als Pipeline-Eingang (Stufe C): CloneFull ist threadsicher und
                     ' wartet automatisch auf einen laufenden Region-Commit.

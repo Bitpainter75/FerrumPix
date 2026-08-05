@@ -44,6 +44,8 @@ Namespace ViewModels
                         Return ".fpx"
                     Case "PDF"
                         Return ".pdf"
+                    Case "PSD"
+                        Return ".psd"
                     Case Else
                         Return ".jpg"
                 End Select
@@ -62,6 +64,14 @@ Namespace ViewModels
         Public ReadOnly Property IsFpx As Boolean
             Get
                 Return String.Equals(Format, "FPX", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>True, wenn als Photoshop-Datei mit Ebenen geschrieben wird. Wie FPX und PDF kein
+        ''' Immich-Ziel: Immich führt Bild-Assets, keine Arbeitsdateien.</summary>
+        Public ReadOnly Property IsPsd As Boolean
+            Get
+                Return String.Equals(Format, "PSD", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 

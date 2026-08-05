@@ -12738,6 +12738,100 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' hier selbst dekodiert wird - also im Stapel. Kommt ein fertiges Arbeitsbild herein
         ''' (<paramref name="workingFull"/>), stecken die Vorgaenge bereits darin, und ein zweiter
         ''' Durchlauf wuerde sie doppelt anwenden.</param>
+        ''' <summary>Schreibt das Dokument als Photoshop-Datei MIT Ebenen - der Weg aus dem eigenen
+        ''' Format hinaus zu Photoshop, Affinity oder GIMP.
+        '''
+        ''' Bewusst ein eigener Einstieg und NICHT Teil von SaveImage: dort ist ein Ziel mit
+        ''' .psd-Endung streng verboten, und das aus gutem Grund - die Sperre hat schon einmal
+        ''' verhindert, dass eine Originaldatei durch ihre eigene Vorschau ersetzt wird. Ein Export
+        ''' ist etwas anderes als ein Speichern: er wird ausdrücklich verlangt, schreibt nie über die
+        ''' Quelle und geht durch einen eigenen Schreiber.
+        '''
+        ''' <paramref name="composite"/> ist das fertige Bild, wie der Nutzer es sieht; es wird als
+        ''' Gesamtbild eingebettet, damit fremde Programme sofort das Richtige zeigen.
+        ''' <paramref name="background"/> ist dasselbe Bild OHNE die Objekte - es wird die unterste
+        ''' Ebene. Jedes Objekt darüber bekommt seine eigene Ebene.
+        '''
+        ''' Was dabei fest wird: Korrekturebenen, Text und Formen kommen als Bildpunkte heraus. In
+        ''' der .fpx bleiben sie veränderbar, im PSD nicht - Photoshop legt sie je Art in einem
+        ''' eigenen, kaum dokumentierten Datensatz ab.</summary>
+        Public Shared Function ExportLayeredPsd(targetPath As String, composite As SKBitmap,
+                                                background As SKBitmap, adj As ImageAdjustments) As Boolean
+            If String.IsNullOrWhiteSpace(targetPath) OrElse composite Is Nothing Then Return False
+
+            Dim layers As New List(Of PsdWriterService.PsdLayerInput)()
+            Dim width = composite.Width
+            Dim height = composite.Height
+
+            Try
+                If background IsNot Nothing Then
+                    layers.Add(New PsdWriterService.PsdLayerInput With {
+                        .Name = LocalizationService.T("Hintergrund"),
+                        .Pixels = background,
+                        .Left = 0,
+                        .Top = 0
+                    })
+                End If
+
+                If adj?.Annotations IsNot Nothing Then
+                    For Each annotation In adj.Annotations
+                        If annotation Is Nothing Then Continue For
+
+                        ' Die Bildpunkte OHNE Deckkraft, Mischmethode und Beschneidung rendern: die
+                        ' drei trägt das PSD selbst. Würde der Renderer sie einbacken und das Format
+                        ' sie noch einmal anwenden, käme alles doppelt heraus - eine halb
+                        ' durchsichtige Ebene wäre plötzlich zu einem Viertel sichtbar.
+                        ' Sichtbarkeit ebenso: eine ausgeblendete Ebene wird trotzdem gezeichnet und
+                        ' reist als ausgeblendete Ebene mit, statt unterwegs verloren zu gehen.
+                        Dim forRender = annotation.Clone()
+                        forRender.Opacity = 100
+                        forRender.BlendMode = "Normal"
+                        forRender.ClipToLayerBelow = False
+                        forRender.IsVisible = True
+
+                        Dim layerBitmap = New SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul)
+                        Dim drawn = 0
+                        Using canvas = New SKCanvas(layerBitmap)
+                            canvas.Clear(SKColors.Transparent)
+                            drawn = DrawAnnotationsOnCanvas(canvas, adj, width, height, 0, 0, width, height,
+                                                            New List(Of ImageAnnotation) From {forRender})
+                        End Using
+
+                        If drawn = 0 Then
+                            layerBitmap.Dispose()
+                            Continue For
+                        End If
+
+                        ' Fällt die Beschriftung aus, tritt die Art an ihre Stelle - ein technisches
+                        ' Wort, aber nie leer und ohne neuen Ressourcentext.
+                        Dim layerName = If(String.IsNullOrWhiteSpace(annotation.LayerLabel),
+                                           If(annotation.Kind, "Layer"), annotation.LayerLabel)
+
+                        layers.Add(New PsdWriterService.PsdLayerInput With {
+                            .Name = layerName,
+                            .Pixels = layerBitmap,
+                            .Left = 0,
+                            .Top = 0,
+                            .OpacityPercent = annotation.Opacity,
+                            .BlendMode = annotation.BlendMode,
+                            .ClipToLayerBelow = annotation.ClipToLayerBelow,
+                            .IsVisible = adj.IsAnnotationRenderVisible(annotation)
+                        })
+                    Next
+                End If
+
+                Return PsdWriterService.Save(targetPath, composite, layers)
+            Finally
+                ' Nur die selbst erzeugten Objektebenen freigeben - Hintergrund und Gesamtbild
+                ' gehören dem Aufrufer und werden hier nur gelesen.
+                For Each layer In layers
+                    If layer.Pixels IsNot Nothing AndAlso Not Object.ReferenceEquals(layer.Pixels, background) Then
+                        layer.Pixels.Dispose()
+                    End If
+                Next
+            End Try
+        End Function
+
         Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer,
                                          Optional preserveMetadata As Boolean = True,
                                          Optional workingFull As SKBitmap = Nothing,

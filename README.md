@@ -19,7 +19,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Edit: crop, resize, rotate and distort, exposure and colour, curves, filters, masks, retouching, text and shapes, layers.
 - Develop RAW files from the sensor data, with lens correction from measured data for some 1300 lenses.
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
-- Open JPEG, PNG, WEBP, BMP, GIF and RAW, plus HEIC/HEIF/AVIF, TIFF and Photoshop files read-only.
+- Open JPEG, PNG, WEBP, BMP, GIF and RAW, plus HEIC/HEIF/AVIF and TIFF read-only, and Photoshop files with their layers.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
 - Connect to your own Immich server for browsing, upload, download, editing and metadata sync.
 
@@ -77,7 +77,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 **Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw.
 
-**Saving.** Save as JPEG, PNG, WEBP, TIFF or PDF, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `Ctrl+P` prints what you see, edits included.
+**Saving.** Save as JPEG, PNG, WEBP, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `Ctrl+P` prints what you see, edits included.
 
 ### RAW and other formats
 
@@ -87,7 +87,11 @@ Lens defects are corrected from measured data: distortion, the coloured fringes 
 
 Edits to a RAW go into a small `.fpxmp` sidecar next to it; the RAW itself is never modified, and the sidecar travels with the file when you move, copy or rename it in FerrumPix. A Lightroom `.xmp` sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
-Photoshop (`.psd`/`.psb`), HEIC/HEIF/AVIF and TIFF open read-only - *Save as…* writes them out in one of the normal formats. HEIC needs the system's `libheif`, except on macOS, which reads it itself; TIFF needs nothing extra.
+HEIC/HEIF/AVIF and TIFF open read-only - *Save as…* writes them out in one of the normal formats. HEIC needs the system's `libheif`, except on macOS, which reads it itself; TIFF needs nothing extra.
+
+A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture: each layer arrives as its own layer here, with its name, position, opacity, blend mode and clipping. What Photoshop stores as settings instead of pixels - adjustment layers and layer effects - cannot come along, because the file holds no computed pixels for them. The other way round, *Save as…* offers PSD as a target and writes the whole stack: the picture without objects at the bottom, every object on its own layer above it, and the finished picture alongside so that any program shows the right thing at once. Text and shapes become pixels there; in an `.fpx` they stay editable. The file has been opened in Photoshop, Affinity and GIMP.
+
+Both directions are deliberately plain for now: a stack of picture layers with name, position, opacity, blend mode, clipping and visibility. Layer masks, groups, 16-bit files and colour modes other than RGB are not covered, and a file that goes beyond what is read opens flat as before instead of half right.
 
 ### Model files
 

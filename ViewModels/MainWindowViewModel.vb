@@ -910,9 +910,10 @@ Namespace ViewModels
             Get
                 ' FPX ist ein lokales, nicht-destruktives Projektformat - ein Upload nach Immich (das Bilder
                 ' als Assets führt) ergibt keinen Sinn, daher als Ziel ausschließen. PDF genauso:
-                ' Immich verwaltet Bild-Assets, keine Dokumente.
+                ' Immich verwaltet Bild-Assets, keine Dokumente. PSD ebenso, es ist eine Arbeitsdatei.
                 Return ImmichService.IsConfigured AndAlso
                        Not String.Equals(_dialogSelectedFormat, "FPX", StringComparison.OrdinalIgnoreCase) AndAlso
+                       Not String.Equals(_dialogSelectedFormat, "PSD", StringComparison.OrdinalIgnoreCase) AndAlso
                        Not String.Equals(_dialogSelectedFormat, "PDF", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
@@ -3499,6 +3500,8 @@ Namespace ViewModels
                     Return If(FpxService.Enabled, "FPX", "JPG")
                 Case "PDF"
                     Return "PDF"
+                Case "PSD"
+                    Return "PSD"
                 Case Else
                     Return "JPG"
             End Select
@@ -3514,6 +3517,9 @@ Namespace ViewModels
             ' PDF in BEIDEN Dialogen: einzeln als druckfertige Datei speichern und stapelweise
             ' konvertieren (dort entsteht wie bei allen Formaten eine Zieldatei je Bild).
             DialogFormatOptions.Add("PDF")
+            ' PSD an derselben Bedingung wie FPX: es traegt den Ebenenstapel hinaus, und den gibt es
+            ' nur beim Speichern aus dem Editor. Im Stapel-Konvertieren waere jede Datei einebnig.
+            If includeFpx Then DialogFormatOptions.Add("PSD")
             If includeFpx AndAlso FpxService.Enabled Then DialogFormatOptions.Add("FPX")
         End Sub
 

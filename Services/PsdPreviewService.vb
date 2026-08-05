@@ -245,7 +245,8 @@ Namespace Services
         End Function
 
         ''' PackBits: n >= 0 → n+1 Bytes wörtlich; n = -1..-127 → nächstes Byte (-n)+1-mal; -128 → nichts.
-        Private Shared Function UnpackBits(packed As Byte(), packedLen As Integer, target As Byte(), targetLen As Integer) As Boolean
+        ''' Friend, weil PsdLayerReader dieselbe Entpackung für die Kanäle der Ebenen braucht.
+        Friend Shared Function UnpackBits(packed As Byte(), packedLen As Integer, target As Byte(), targetLen As Integer) As Boolean
             Dim src = 0
             Dim dst = 0
             While src < packedLen AndAlso dst < targetLen
