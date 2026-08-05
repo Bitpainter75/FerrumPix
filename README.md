@@ -145,17 +145,67 @@ The last two sections are reference: a full list of keyboard and mouse shortcuts
 
 ## Installation
 
-- Linux: AppImage, Flatpak, `.deb`, `.rpm`, portable ZIP, and [ferrumpix-bin](https://aur.archlinux.org/packages/ferrumpix-bin) in the AUR
-- Windows: Setup or portable ZIP
-- Experimental and untested, feedback welcome: ARM64 and macOS
+## Linux
+
+| Package | For | Download |
+|---|---|---|
+| AppImage | Any distribution, runs without installing | [FerrumPix-x86_64.AppImage](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-x86_64.AppImage) |
+| Flatpak | Any distribution with Flatpak, sandboxed | [FerrumPix.flatpak](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix.flatpak) |
+| DEB | Debian, Ubuntu, Mint (amd64) | [FerrumPix-amd64.deb](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-amd64.deb) |
+| RPM | Fedora, openSUSE (x86_64) | [FerrumPix-x86_64.rpm](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-x86_64.rpm) |
+| ZIP | Portable, unpack and run (x64) | [FerrumPix-linux-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-linux-x64.zip) |
+| ZIP | Portable, unpack and run (ARM64) | [FerrumPix-linux-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-linux-arm64.zip) |
+
+On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/packages/ferrumpix-bin) in the AUR.
+
+## Windows
+
+| Package | For | Download |
+|---|---|---|
+| Setup | Installs with start menu entry and file types (x64) | [FerrumPix-win-x64-Setup.exe](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-x64-Setup.exe) |
+| ZIP | Portable, unpack and run (x64) | [FerrumPix-win-x64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-x64.zip) |
+| ZIP | Portable, unpack and run (ARM64) | [FerrumPix-win-arm64.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-win-arm64.zip) |
+
+## macOS
+
+| Package | For | Download |
+|---|---|---|
+| App bundle | Intel Macs | [FerrumPix-osx-x64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-x64-unsigned.app.zip) |
+| App bundle | Apple Silicon | [FerrumPix-osx-arm64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-arm64-unsigned.app.zip) |
 
 The packages are self-contained and include the .NET runtime.
 
-On macOS the window carries the usual title bar with the red, yellow and green buttons, and the shortcuts take Command where a Mac user reaches for it, while the combinations the system has claimed for itself are left alone. The builds are unsigned, so macOS may refuse to open the app at first.
+## Experimental
 
-`libmpv` (video) and `libraw` (RAW development) are required rather than optional. The Linux packages declare both as dependencies; the Windows releases bundle them. The Flatpak builds LibRaw in but ships no `libmpv`, so it has no video support, and the macOS builds need `brew install libraw`. Where a library is present on the system, FerrumPix prefers it over a bundled copy, so it keeps getting updates and support for newer cameras.
+The ARM64 and macOS builds are untested. If you try one, please let me know whether it works.
 
-`libheif` is optional and never bundled, on any platform: it opens HEIC/HEIF/AVIF, and those are usually HEVC-encoded, which carries patent licensing in several countries - a decision for your distribution rather than for this project. Without it, HEIC files simply stay closed and everything else works. macOS is the exception: it reads these formats itself, so nothing has to be installed there.
+The macOS builds are unsigned, so Gatekeeper may say the app is "damaged" or "can't be
+opened". That does not mean the ZIP is broken. Please try this:
+
+1. Download the right build: arm64 for Apple Silicon (M1, M2, M3, M4), x64 for Intel Macs.
+2. Unzip it.
+3. Move FerrumPix to Applications.
+4. Open Terminal and run:
+
+       xattr -dr com.apple.quarantine /Applications/FerrumPix.app
+       codesign --force --deep --sign - /Applications/FerrumPix.app
+
+5. Then start it with:
+
+       open /Applications/FerrumPix.app
+
+## Good to know
+
+The packages are self-contained and bring the .NET runtime with them, so nothing has to be
+installed for that.
+
+libmpv (video) and libraw (RAW development) are needed rather than optional. The Linux
+packages ask for both, the Windows downloads bring them along. The Flatpak has LibRaw built
+in but no libmpv, so it plays no video, and on macOS libraw comes from Homebrew with
+"brew install libraw".
+
+libheif is optional and never bundled: it opens HEIC, HEIF and AVIF. Without it those files
+simply stay closed and everything else works. macOS reads them itself.
 
 ## Building from source
 
