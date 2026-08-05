@@ -6546,4 +6546,16 @@
   <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
     <value>在每一行显示该图层内容的小图，旁边是它的蒙版。关闭后重新显示工具图标。图层中图像较多时，面板首次构建会稍慢一些。</value>
   </data>
+  <data name="Textebenen_bernehmen_2a25affb" xml:space="preserve">
+    <value>要接管文字图层吗？</value>
+  </data>
+  <data name="Diese_Datei_enth_lt_0_Textebenen_Als_Text_bernom_6fd2df50" xml:space="preserve">
+    <value>该文件包含 {0} 个文字图层。作为文字接管时，内容仍可编辑，但外观可能有出入。作为图像接管时，每个像素都准确，但文字将无法再编辑。</value>
+  </data>
+  <data name="Als_Text_c54f2a8b" xml:space="preserve">
+    <value>作为文字</value>
+  </data>
+  <data name="Als_Bild_1826a60e" xml:space="preserve">
+    <value>作为图像</value>
+  </data>
 </root>

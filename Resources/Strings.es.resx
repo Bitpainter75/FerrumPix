@@ -6548,4 +6548,16 @@
   <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
     <value>Muestra en cada fila una pequeña imagen de lo que hay en la capa y, al lado, su máscara. Desactivado: de nuevo el símbolo de la herramienta. Con muchas capas de imagen, el panel tarda algo más la primera vez.</value>
   </data>
+  <data name="Textebenen_bernehmen_2a25affb" xml:space="preserve">
+    <value>¿Incorporar las capas de texto?</value>
+  </data>
+  <data name="Diese_Datei_enth_lt_0_Textebenen_Als_Text_bernom_6fd2df50" xml:space="preserve">
+    <value>Este archivo contiene {0} capas de texto. Incorporadas como texto, el contenido sigue siendo editable, pero el aspecto puede variar. Incorporadas como imagen, cada píxel es exacto, pero el texto queda fijo.</value>
+  </data>
+  <data name="Als_Text_c54f2a8b" xml:space="preserve">
+    <value>Como texto</value>
+  </data>
+  <data name="Als_Bild_1826a60e" xml:space="preserve">
+    <value>Como imagen</value>
+  </data>
 </root>

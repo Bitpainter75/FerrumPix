@@ -6548,4 +6548,16 @@
   <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
     <value>Zeigt in jeder Zeile ein kleines Abbild dessen, was auf der Ebene liegt, und daneben ihre Maske. Aus: wieder das Symbol des Werkzeugs. Bei vielen Bild-Ebenen dauert der erste Aufbau des Panels damit etwas länger.</value>
   </data>
+  <data name="Textebenen_bernehmen_2a25affb" xml:space="preserve">
+    <value>Textebenen übernehmen?</value>
+  </data>
+  <data name="Diese_Datei_enth_lt_0_Textebenen_Als_Text_bernom_6fd2df50" xml:space="preserve">
+    <value>Diese Datei enthält {0} Textebenen. Als Text übernommen lässt sich der Wortlaut weiterbearbeiten, das Aussehen kann aber abweichen. Als Bild übernommen stimmt jeder Bildpunkt, der Text ist dann fest.</value>
+  </data>
+  <data name="Als_Text_c54f2a8b" xml:space="preserve">
+    <value>Als Text</value>
+  </data>
+  <data name="Als_Bild_1826a60e" xml:space="preserve">
+    <value>Als Bild</value>
+  </data>
 </root>

@@ -12802,6 +12802,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             Continue For
                         End If
 
+                        ' Eng um den Inhalt zuschneiden. Gezeichnet wird auf einer Leinwand in voller
+                        ' Bildgroesse, weil das Zeichnen die Lage im Bild braucht - in die Datei
+                        ' gehoert aber nur das belegte Rechteck. Ohne das ist jede Ebene beim
+                        ' Zurueckladen bildgross, und Auswahlrahmen, Anfasser und Miniaturbild
+                        ' ziehen sich ueber das ganze Bild.
+                        Dim layerLeft = 0
+                        Dim layerTop = 0
+                        Dim cropped = PsdWriterService.CropToContent(layerBitmap, layerLeft, layerTop)
+                        If cropped IsNot Nothing Then
+                            layerBitmap.Dispose()
+                            layerBitmap = cropped
+                        End If
+
                         ' Fällt die Beschriftung aus, tritt die Art an ihre Stelle - ein technisches
                         ' Wort, aber nie leer und ohne neuen Ressourcentext.
                         Dim layerName = If(String.IsNullOrWhiteSpace(annotation.LayerLabel),
@@ -12810,8 +12823,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         layers.Add(New PsdWriterService.PsdLayerInput With {
                             .Name = layerName,
                             .Pixels = layerBitmap,
-                            .Left = 0,
-                            .Top = 0,
+                            .Left = layerLeft,
+                            .Top = layerTop,
                             .OpacityPercent = annotation.Opacity,
                             .BlendMode = annotation.BlendMode,
                             .ClipToLayerBelow = annotation.ClipToLayerBelow,
@@ -12820,7 +12833,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Next
                 End If
 
-                Return PsdWriterService.Save(targetPath, composite, layers)
+                ' Die Bearbeitung als Ganzes mit hineinlegen, damit die eigene Datei später wieder mit
+                ' Text als Text und Korrekturen als Korrekturen aufgeht. Fremde Programme überspringen
+                ' den Block; wird er zu groß, bleibt er weg und die Datei ist eine gewöhnliche PSD.
+                Return PsdWriterService.Save(targetPath, composite, layers, PsdRecipeService.Build(adj))
             Finally
                 ' Nur die selbst erzeugten Objektebenen freigeben - Hintergrund und Gesamtbild
                 ' gehören dem Aufrufer und werden hier nur gelesen.

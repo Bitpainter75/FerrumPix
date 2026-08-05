@@ -6548,4 +6548,16 @@
   <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
     <value>Affiche sur chaque ligne une petite image de ce que contient le calque, avec son masque à côté. Désactivé : de nouveau le symbole de l'outil. Avec de nombreux calques d'image, le panneau met un peu plus de temps à s'afficher la première fois.</value>
   </data>
+  <data name="Textebenen_bernehmen_2a25affb" xml:space="preserve">
+    <value>Reprendre les calques de texte ?</value>
+  </data>
+  <data name="Diese_Datei_enth_lt_0_Textebenen_Als_Text_bernom_6fd2df50" xml:space="preserve">
+    <value>Ce fichier contient {0} calques de texte. Repris comme texte, le contenu reste modifiable, mais l'aspect peut différer. Repris comme image, chaque pixel est exact, mais le texte est figé.</value>
+  </data>
+  <data name="Als_Text_c54f2a8b" xml:space="preserve">
+    <value>Comme texte</value>
+  </data>
+  <data name="Als_Bild_1826a60e" xml:space="preserve">
+    <value>Comme image</value>
+  </data>
 </root>

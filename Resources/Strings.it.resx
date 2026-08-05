@@ -6548,4 +6548,16 @@
   <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
     <value>Mostra in ogni riga una piccola immagine di ciò che si trova sul livello e, accanto, la sua maschera. Disattivato: di nuovo il simbolo dello strumento. Con molti livelli immagine il pannello impiega un po' di più la prima volta.</value>
   </data>
+  <data name="Textebenen_bernehmen_2a25affb" xml:space="preserve">
+    <value>Importare i livelli di testo?</value>
+  </data>
+  <data name="Diese_Datei_enth_lt_0_Textebenen_Als_Text_bernom_6fd2df50" xml:space="preserve">
+    <value>Questo file contiene {0} livelli di testo. Importati come testo, il contenuto resta modificabile, ma l'aspetto può cambiare. Importati come immagine, ogni pixel è esatto, ma il testo è fisso.</value>
+  </data>
+  <data name="Als_Text_c54f2a8b" xml:space="preserve">
+    <value>Come testo</value>
+  </data>
+  <data name="Als_Bild_1826a60e" xml:space="preserve">
+    <value>Come immagine</value>
+  </data>
 </root>

@@ -38,12 +38,36 @@ Namespace Services
             ''' Wie viele Ebenen die Datei trug, die keine Bildpunkte haben - Korrekturebenen etwa.
             Public Property SkippedLayers As Integer
             Public Property LayerCount As Integer
+            ''' <summary>True, wenn die Datei den eigenen Rezeptblock trug und die Bearbeitung
+            ''' vollständig zurückkam - Text als Text statt als Bildpunkte.</summary>
+            Public Property FromOwnRecipe As Boolean
         End Class
 
         ''' <summary>Baut aus der Datei ein Dokument mit Ebenen. Nothing, wenn die Datei keine
         ''' Ebenen trägt oder in einer Spielart vorliegt, die der Leser nicht beherrscht - dann
         ''' bleibt der Aufrufer beim gewohnten flachen Gesamtbild.</summary>
-        Public Shared Function Import(psdPath As String) As PsdImportResult
+        ''' <summary>Wie viele Ebenen der Datei einen Wortlaut tragen. Damit lässt sich vor dem Öffnen
+        ''' fragen, ob sie als Text übernommen werden sollen - ohne die Datei zweimal zu laden, denn
+        ''' gelesen wird dafür nur das Verzeichnis, nicht die Bildpunkte.</summary>
+        Public Shared Function CountTextLayers(psdPath As String) As Integer
+            If String.IsNullOrWhiteSpace(psdPath) OrElse Not File.Exists(psdPath) Then Return 0
+            ' Trägt die Datei den eigenen Block, ist die Frage gegenstandslos: dann kommt der Text
+            ' ohnehin vollständig zurück, mit Schrift und Farbe.
+            If PsdRecipeService.ExtractPayload(psdPath) IsNot Nothing Then Return 0
+
+            Dim doc = PsdLayerReader.ReadDocument(psdPath, metadataOnly:=True)
+            If doc Is Nothing Then Return 0
+            Dim count = 0
+            For Each layer In doc.Layers
+                If Not String.IsNullOrWhiteSpace(layer.TextContent) Then count += 1
+            Next
+            Return count
+        End Function
+
+        ''' <param name="textAsText">Textebenen als Textobjekte übernehmen statt als Bild. Der
+        ''' Wortlaut lässt sich dann weiterbearbeiten, das Aussehen kann aber abweichen - Schrift und
+        ''' Grad stehen in der Datei an einer Stelle, die nicht verlässlich zu lesen ist.</param>
+        Public Shared Function Import(psdPath As String, Optional textAsText As Boolean = False) As PsdImportResult
             If String.IsNullOrWhiteSpace(psdPath) OrElse Not File.Exists(psdPath) Then Return Nothing
 
             Dim doc = PsdLayerReader.ReadDocument(psdPath)
@@ -53,6 +77,44 @@ Namespace Services
             Dim tempDir = Path.Combine(Path.GetTempPath(), "FerrumPix", "psd", Guid.NewGuid().ToString("N"))
             Directory.CreateDirectory(tempDir)
             Dim success = False
+
+            ' Hat FerrumPix die Datei selbst geschrieben, liegt die vollständige Bearbeitung bei. Dann
+            ' wird SIE genommen und nicht der Umweg über Bildebenen: Text bleibt Text, Formen bleiben
+            ' Formen, Korrekturebenen kommen zurück. Der Ebenenstapel darunter wird gar nicht gebraucht.
+            Try
+                Dim payload = PsdRecipeService.ExtractPayload(psdPath)
+                If payload IsNot Nothing Then
+                    Dim fromRecipe = PsdRecipeService.Parse(payload, tempDir)
+                    If fromRecipe IsNot Nothing Then
+                        Dim basePath = Path.Combine(tempDir, "base.png")
+                        Dim ok = If(IsUsableAsBackground(doc.Layers(0), doc.Width, doc.Height),
+                                    WritePng(doc.Layers(0).Pixels, basePath),
+                                    WriteEmptyPng(doc.Width, doc.Height, basePath))
+                        If ok Then
+                            success = True
+                            Return New PsdImportResult With {
+                                .BaseImagePath = basePath,
+                                .Adjustments = fromRecipe,
+                                .TempDir = tempDir,
+                                .LayerCount = If(fromRecipe.Annotations?.Count, 0),
+                                .SkippedLayers = 0,
+                                .FromOwnRecipe = True
+                            }
+                        End If
+                    End If
+                End If
+            Catch
+                ' Ein beschädigter eigener Block darf das Öffnen nicht verhindern - dann eben der
+                ' gewöhnliche Weg über die Bildebenen darunter.
+            Finally
+                ' Nur auf dem Erfolgsweg hier freigeben; sonst braucht der gewöhnliche Weg unten die
+                ' Bildpunkte noch und räumt selbst auf.
+                If success Then
+                    For Each layer In doc.Layers
+                        layer.Pixels?.Dispose()
+                    Next
+                End If
+            End Try
 
             Try
                 Dim layers = doc.Layers
@@ -75,6 +137,31 @@ Namespace Services
                 For i = firstIndex To layers.Count - 1
                     Dim layer = layers(i)
                     If layer.Pixels Is Nothing Then Continue For
+
+                    ' Textebene als Textobjekt, wenn der Nutzer es so wollte. Lage und Größe kommen
+                    ' aus dem Ebenenrechteck, die Farbe wird aus den gerasterten Bildpunkten
+                    ' gemessen, der Schriftgrad aus der Höhe geschätzt. Die Schrift selbst bleibt die
+                    ' Vorgabe - was in der Datei dazu steht, ist nicht verlässlich zu lesen.
+                    If textAsText AndAlso Not String.IsNullOrWhiteSpace(layer.TextContent) Then
+                        adjustments.Annotations.Add(New ImageAnnotation With {
+                            .Kind = "Text",
+                            .Text = layer.TextContent,
+                            .CustomName = If(layer.Name, ""),
+                            .XPixels = layer.Left,
+                            .YPixels = layer.Top,
+                            .WidthPixels = layer.Width,
+                            .HeightPixels = layer.Height,
+                            .FontSizePixels = EstimateFontSize(layer.Height, layer.TextContent),
+                            .FillColor = MeasureDominantColor(layer.Pixels),
+                            .Opacity = layer.OpacityPercent,
+                            .BlendMode = layer.BlendMode,
+                            .ClipToLayerBelow = layer.ClipToLayerBelow,
+                            .IsVisible = layer.IsVisible,
+                            .LockAspect = False
+                        })
+                        index += 1
+                        Continue For
+                    End If
 
                     Dim assetPath = Path.Combine(tempDir, "layer" & index.ToString() & ".png")
                     If Not WritePng(layer.Pixels, assetPath) Then Continue For
@@ -150,6 +237,60 @@ Namespace Services
                 Return Math.Max(0, total - deliveredLayers)
             Catch
                 Return 0
+            End Try
+        End Function
+
+        ''' <summary>Schätzt den Schriftgrad aus der Höhe des Ebenenrechtecks. Das Rechteck umfasst
+        ''' alle Zeilen samt Ober- und Unterlängen; ein Anteil davon je Zeile kommt dem Schriftgrad
+        ''' nahe genug, um den Text an seinem Platz stehen zu lassen. Genau ist das nicht und kann es
+        ''' nicht sein - der wahre Wert steht in einem Block, der sich nicht verlässlich lesen lässt.</summary>
+        Private Shared Function EstimateFontSize(layerHeight As Integer, text As String) As Single
+            Dim lines = 1
+            If Not String.IsNullOrEmpty(text) Then
+                For Each ch In text
+                    If ch = ChrW(10) Then lines += 1
+                Next
+            End If
+            Dim perLine = CSng(Math.Max(1, layerHeight)) / Math.Max(1, lines)
+            Return Math.Max(6.0F, Math.Min(2000.0F, perLine * 0.78F))
+        End Function
+
+        ''' <summary>Die häufigste deckende Farbe der gerasterten Ebene. Für einen einfarbigen Text -
+        ''' und das ist er fast immer - trifft das genau; bei einem Farbverlauf im Text kommt die
+        ''' vorherrschende Farbe heraus, was allemal besser ist als ein festes Schwarz.</summary>
+        Private Shared Function MeasureDominantColor(bmp As SKBitmap) As String
+            If bmp Is Nothing Then Return "#FF000000"
+            Try
+                Dim counts As New Dictionary(Of Integer, Integer)()
+                ' Bei großen Ebenen nur jeden n-ten Punkt ansehen; für die Mehrheitsfarbe reicht das
+                ' und spart bei einer bildgroßen Ebene Millionen Abfragen.
+                Dim stepX = Math.Max(1, bmp.Width \ 200)
+                Dim stepY = Math.Max(1, bmp.Height \ 200)
+                For y = 0 To bmp.Height - 1 Step stepY
+                    For x = 0 To bmp.Width - 1 Step stepX
+                        Dim px = bmp.GetPixel(x, y)
+                        If px.Alpha < 200 Then Continue For
+                        Dim key = (CInt(px.Red) << 16) Or (CInt(px.Green) << 8) Or CInt(px.Blue)
+                        Dim n = 0
+                        counts.TryGetValue(key, n)
+                        counts(key) = n + 1
+                    Next
+                Next
+                If counts.Count = 0 Then Return "#FF000000"
+
+                Dim bestKey = 0
+                Dim bestCount = -1
+                For Each kv In counts
+                    If kv.Value > bestCount Then
+                        bestCount = kv.Value
+                        bestKey = kv.Key
+                    End If
+                Next
+                Return "#FF" & ((bestKey >> 16) And &HFF).ToString("X2") &
+                                ((bestKey >> 8) And &HFF).ToString("X2") &
+                                (bestKey And &HFF).ToString("X2")
+            Catch
+                Return "#FF000000"
             End Try
         End Function
 

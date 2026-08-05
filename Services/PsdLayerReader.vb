@@ -50,6 +50,9 @@ Namespace Services
             Public Property IsVisible As Boolean = True
             ''' Die Bildpunkte der Ebene, so groß wie ihr Rechteck. Gehört dem Aufrufer.
             Public Property Pixels As SKBitmap
+            ''' <summary>Der Wortlaut, wenn es eine Textebene ist, sonst "". Nur der Wortlaut - was
+            ''' die Schrift angeht, siehe PsdTextReader.</summary>
+            Public Property TextContent As String = ""
         End Class
 
         ''' <summary>Rückübersetzung der Vierzeichenschlüssel. Was hier fehlt, wird "Normal" - die
@@ -79,11 +82,14 @@ Namespace Services
         ''' <summary>Wie <see cref="ReadLayers"/>, liefert zusätzlich die Maße des Dokuments - der
         ''' Import braucht sie, weil eine Ebene kleiner sein kann als das Bild und der Ebenenstapel
         ''' trotzdem auf die richtige Fläche gehört.</summary>
-        Public Shared Function ReadDocument(filePath As String) As PsdDocumentInfo
+        ''' <param name="metadataOnly">Nur das Verzeichnis lesen, die Bildpunkte überspringen. Für
+        ''' die Frage "gibt es hier Textebenen?" - die kostet sonst das Entpacken jeder einzelnen
+        ''' Ebene, und gleich darauf wird die Datei ohnehin richtig geladen.</param>
+        Public Shared Function ReadDocument(filePath As String, Optional metadataOnly As Boolean = False) As PsdDocumentInfo
             Dim result As PsdDocumentInfo = Nothing
             Try
                 Using fs = File.OpenRead(filePath)
-                    result = ReadLayersCore(fs)
+                    result = ReadLayersCore(fs, metadataOnly)
                 End Using
             Catch
                 result = Nothing
@@ -121,7 +127,7 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function ReadLayersCore(fs As FileStream) As PsdDocumentInfo
+        Private Shared Function ReadLayersCore(fs As FileStream, Optional metadataOnly As Boolean = False) As PsdDocumentInfo
             Dim buf(25) As Byte
             If Not ReadExactly(fs, buf, 26) Then Return Nothing
             If buf(0) <> Asc("8") OrElse buf(1) <> Asc("B") OrElse buf(2) <> Asc("P") OrElse buf(3) <> Asc("S") Then Return Nothing
@@ -171,9 +177,10 @@ Namespace Services
             Dim doc As New PsdDocumentInfo With {.Width = docWidth, .Height = docHeight}
             Dim layers = doc.Layers
             For Each rec In records
-                Dim bmp = ReadChannelData(fs, rec)
-                If bmp Is Nothing AndAlso rec.HasPixels Then Return Nothing
-                If bmp Is Nothing Then Continue For
+                Dim bmp = ReadChannelData(fs, rec, metadataOnly)
+                If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing
+                If bmp Is Nothing AndAlso Not metadataOnly Then Continue For
+                If metadataOnly AndAlso Not rec.HasPixels Then Continue For
 
                 layers.Add(New PsdLayerInfo With {
                     .Name = rec.Name,
@@ -185,7 +192,8 @@ Namespace Services
                     .BlendMode = ResolveBlendName(rec.BlendKey),
                     .ClipToLayerBelow = rec.Clipping <> 0,
                     .IsVisible = (rec.Flags And 2) = 0,
-                    .Pixels = bmp
+                    .Pixels = bmp,
+                    .TextContent = rec.TextContent
                 })
             Next
 
@@ -208,6 +216,7 @@ Namespace Services
             Public Property Channels As New List(Of Integer())()
             ''' Eine Gruppenmarke oder eine Ebene ohne Fläche trägt keine Bildpunkte.
             Public Property HasPixels As Boolean = True
+            Public Property TextContent As String = ""
         End Class
 
         Private Shared Function ReadLayerRecord(fs As FileStream, isPsb As Boolean) As LayerRecord
@@ -286,6 +295,12 @@ Namespace Services
                         Next
                         If sb.Length > 0 Then rec.Name = sb.ToString()
                     End If
+                ElseIf bk = "TySh" AndAlso blockLen > 100 AndAlso blockLen < 8_000_000 Then
+                    ' Textebene: den Block als Ganzes einlesen und den Wortlaut daraus holen.
+                    Dim textBlock(CInt(blockLen) - 1) As Byte
+                    If ReadExactly(fs, textBlock, textBlock.Length) Then
+                        rec.TextContent = PsdTextReader.ExtractText(textBlock)
+                    End If
                 ElseIf bk = "lsct" AndAlso blockLen >= 4 Then
                     ' Abschnittsmarke: 1 und 2 sind Gruppenanfänge, 3 ist das Ende. Solche Ebenen
                     ' tragen keine Bildpunkte und werden übersprungen.
@@ -307,7 +322,8 @@ Namespace Services
         ''' <summary>Liest die Kanäle einer Ebene und setzt sie zu einem Bitmap zusammen. Kanäle, die
         ''' nicht zum Bild gehören - Masken etwa - werden mitgelesen und verworfen, sonst verrutscht
         ''' der Lesezeiger für alle folgenden Ebenen.</summary>
-        Private Shared Function ReadChannelData(fs As FileStream, rec As LayerRecord) As SKBitmap
+        Private Shared Function ReadChannelData(fs As FileStream, rec As LayerRecord,
+                                                Optional metadataOnly As Boolean = False) As SKBitmap
             Dim width = rec.Right - rec.Left
             Dim height = rec.Bottom - rec.Top
 
@@ -319,7 +335,8 @@ Namespace Services
                 Dim blockEnd = fs.Position + declaredLen
 
                 ' Nur die vier Bildkanäle einer Ebene mit Fläche werden ausgewertet.
-                Dim wanted = rec.HasPixels AndAlso (id = 0 OrElse id = 1 OrElse id = 2 OrElse id = -1)
+                Dim wanted = Not metadataOnly AndAlso rec.HasPixels AndAlso
+                             (id = 0 OrElse id = 1 OrElse id = 2 OrElse id = -1)
                 If wanted Then
                     Dim plane = ReadPlane(fs, width, height)
                     If plane IsNot Nothing Then

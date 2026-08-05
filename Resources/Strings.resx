@@ -6549,4 +6549,16 @@
   <data name="Zeigt_in_jeder_Zeile_ein_kleines_Abbild_dessen_w_b1456215" xml:space="preserve">
     <value>Shows a small picture of what is on each layer, with its mask beside it. Off: the tool symbol again. With many image layers the panel takes a little longer to build the first time.</value>
   </data>
+  <data name="Textebenen_bernehmen_2a25affb" xml:space="preserve">
+    <value>Take over the text layers?</value>
+  </data>
+  <data name="Diese_Datei_enth_lt_0_Textebenen_Als_Text_bernom_6fd2df50" xml:space="preserve">
+    <value>This file holds {0} text layers. Taken over as text, the wording stays editable, but the look may differ. Taken over as a picture, every pixel is right, but the text is fixed.</value>
+  </data>
+  <data name="Als_Text_c54f2a8b" xml:space="preserve">
+    <value>As text</value>
+  </data>
+  <data name="Als_Bild_1826a60e" xml:space="preserve">
+    <value>As a picture</value>
+  </data>
 </root>

@@ -12321,7 +12321,21 @@ Namespace ViewModels
                 ' Das Grundbild ist eine leere Fläche oder die unterste Ebene, NIE das Gesamtbild:
                 ' läge das darunter, wäre alles doppelt zu sehen (siehe PsdImportService).
                 Dim psdSource = imagePath
-                Dim importResult = Await Task.Run(Function() PsdImportService.Import(psdSource))
+                ' Textebenen einer FREMDEN Datei: der Wortlaut lässt sich herausholen, Schrift und
+                ' Grad nicht verlässlich. Als Text ist er weiter tippbar, sieht aber womöglich anders
+                ' aus; als Bild stimmt jeder Punkt, dafür ist er fest. Die Abwägung gehört dem Nutzer.
+                ' Bei einer eigenen Datei stellt sich die Frage nicht, dort kommt alles vollständig
+                ' zurück - CountTextLayers meldet dann 0.
+                Dim textLayers = Await Task.Run(Function() PsdImportService.CountTextLayers(psdSource))
+                Dim takeTextAsText = False
+                If textLayers > 0 Then
+                    takeTextAsText = Await _mainVm.ShowConfirmAsync(
+                        LocalizationService.T("Textebenen übernehmen?"),
+                        String.Format(LocalizationService.T("Diese Datei enthält {0} Textebenen. Als Text übernommen lässt sich der Wortlaut weiterbearbeiten, das Aussehen kann aber abweichen. Als Bild übernommen stimmt jeder Bildpunkt, der Text ist dann fest."), textLayers),
+                        LocalizationService.T("Als Text"),
+                        LocalizationService.T("Als Bild"))
+                End If
+                Dim importResult = Await Task.Run(Function() PsdImportService.Import(psdSource, takeTextAsText))
                 If importResult IsNot Nothing AndAlso importResult.Adjustments IsNot Nothing AndAlso
                    File.Exists(importResult.BaseImagePath) Then
                     fpxAdjustments = importResult.Adjustments

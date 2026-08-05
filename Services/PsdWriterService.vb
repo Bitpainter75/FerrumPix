@@ -49,6 +49,70 @@ Namespace Services
             Public Property IsVisible As Boolean = True
         End Class
 
+        ''' <summary>Schneidet eine Ebene eng um ihren sichtbaren Inhalt zu und liefert den Versatz
+        ''' dazu. Nothing, wenn nichts darauf liegt.
+        '''
+        ''' In einer PSD ist das Rechteck einer Ebene so gross wie ihr Inhalt, nicht so gross wie das
+        ''' Dokument. Wird eine volle Leinwand geschrieben, sieht das Bild zwar richtig aus - die
+        ''' Bildpunkte sitzen ja an der richtigen Stelle -, aber jedes Programm, das die Ebene
+        ''' anfasst, haelt sie fuer bildgross: Auswahlrahmen, Anfasser und Miniaturbild ziehen sich
+        ''' ueber das ganze Bild. Beim Zurueckladen in FerrumPix war das sofort zu sehen.</summary>
+        Friend Shared Function CropToContent(source As SKBitmap, ByRef offsetX As Integer, ByRef offsetY As Integer) As SKBitmap
+            If source Is Nothing OrElse source.Width < 1 OrElse source.Height < 1 Then Return Nothing
+
+            Dim width = source.Width
+            Dim height = source.Height
+            Dim buffer(width * height * 4 - 1) As Byte
+            Dim info = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+            Dim handle = Runtime.InteropServices.GCHandle.Alloc(buffer, Runtime.InteropServices.GCHandleType.Pinned)
+            Try
+                Dim converted = False
+                Using pixmap = source.PeekPixels()
+                    If pixmap IsNot Nothing Then
+                        converted = pixmap.ReadPixels(info, handle.AddrOfPinnedObject(), width * 4)
+                    End If
+                End Using
+                If Not converted Then Return Nothing
+            Finally
+                handle.Free()
+            End Try
+
+            Dim minX = width, minY = height, maxX = -1, maxY = -1
+            For y = 0 To height - 1
+                Dim rowStart = y * width * 4
+                For x = 0 To width - 1
+                    If buffer(rowStart + x * 4 + 3) <> 0 Then
+                        If x < minX Then minX = x
+                        If x > maxX Then maxX = x
+                        If y < minY Then minY = y
+                        If y > maxY Then maxY = y
+                    End If
+                Next
+            Next
+
+            ' Vollstaendig durchsichtig: es gibt nichts zu schreiben.
+            If maxX < minX OrElse maxY < minY Then Return Nothing
+
+            Dim cropWidth = maxX - minX + 1
+            Dim cropHeight = maxY - minY + 1
+            If cropWidth = width AndAlso cropHeight = height Then
+                offsetX = 0
+                offsetY = 0
+                Return Nothing  ' nichts zuzuschneiden, der Aufrufer nimmt das Original
+            End If
+
+            Dim cropped = New SKBitmap(New SKImageInfo(cropWidth, cropHeight, SKColorType.Rgba8888, SKAlphaType.Unpremul))
+            Dim target(cropWidth * cropHeight * 4 - 1) As Byte
+            For y = 0 To cropHeight - 1
+                Array.Copy(buffer, ((minY + y) * width + minX) * 4, target, y * cropWidth * 4, cropWidth * 4)
+            Next
+            Runtime.InteropServices.Marshal.Copy(target, 0, cropped.GetPixels(), target.Length)
+
+            offsetX = minX
+            offsetY = minY
+            Return cropped
+        End Function
+
         ''' <summary>Uebersetzt die Mischmethoden von FerrumPix in die Vierzeichenschluessel von
         ''' Photoshop. Was hier fehlt, wird als "norm" geschrieben - die Bildpunkte der Ebene stimmen
         ''' dann trotzdem, nur das Zusammenrechnen weicht ab. Deshalb traegt das Gesamtbild am Ende
@@ -66,8 +130,12 @@ Namespace Services
         ''' dessen liegen, was das Format zulaesst, oder das Schreiben fehlschlaegt.
         ''' <paramref name="layers"/> darf leer sein - dann entsteht eine Datei mit einer einzigen
         ''' Hintergrundebene aus dem Gesamtbild.</summary>
+        ''' <summary><paramref name="recipe"/> ist der eigene Zusatzblock aus PsdRecipeService: die
+        ''' vollstaendige Bearbeitung, damit FerrumPix seine eigene Datei spaeter wieder mit Text als
+        ''' Text oeffnen kann. Fremde Programme ueberspringen ihn. Nothing = keinen schreiben.</summary>
         Public Shared Function Save(filePath As String, composite As SKBitmap,
-                                    layers As IList(Of PsdLayerInput)) As Boolean
+                                    layers As IList(Of PsdLayerInput),
+                                    Optional recipe As Byte() = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(filePath) OrElse composite Is Nothing Then Return False
             If composite.Width < 1 OrElse composite.Height < 1 Then Return False
             If composite.Width > MaxSide OrElse composite.Height > MaxSide Then Return False
@@ -88,7 +156,7 @@ Namespace Services
                 Using fs = File.Create(tempPath)
                     WriteHeader(fs, composite.Width, composite.Height)
                     WriteU32(fs, 0)  ' Farbmodus-Daten: keine
-                    WriteU32(fs, 0)  ' Bildressourcen: keine
+                    WriteImageResources(fs, recipe)
                     WriteLayerSection(fs, usable)
                     WriteMergedImage(fs, composite)
                 End Using
@@ -118,6 +186,26 @@ Namespace Services
             WriteU32(fs, width)
             WriteU16(fs, 8)          ' 8 Bit je Kanal
             WriteU16(fs, 3)          ' Farbmodus RGB
+        End Sub
+
+        ''' <summary>Die Bildressourcen. Ohne eigenen Block bleibt die Sektion leer, wie bisher.</summary>
+        Private Shared Sub WriteImageResources(fs As Stream, recipe As Byte())
+            If recipe Is Nothing OrElse recipe.Length = 0 Then
+                WriteU32(fs, 0)
+                Return
+            End If
+
+            ' Ein Block: Signatur, Kennung, leerer Name (auf gerade Laenge gefuellt), Laenge, Daten.
+            ' Die Daten selbst werden ebenfalls auf gerade Laenge aufgefuellt.
+            Dim padded = recipe.Length + (recipe.Length And 1)
+            WriteU32(fs, 4 + 2 + 2 + 4 + padded)
+            fs.Write(Encoding.ASCII.GetBytes("8BIM"), 0, 4)
+            WriteU16(fs, PsdRecipeService.ResourceId)
+            fs.WriteByte(0)  ' Namenslaenge 0 …
+            fs.WriteByte(0)  ' … und das Fuellbyte auf gerade Laenge
+            WriteU32(fs, recipe.Length)
+            fs.Write(recipe, 0, recipe.Length)
+            If padded <> recipe.Length Then fs.WriteByte(0)
         End Sub
 
         ' ── Ebenen-Sektion ───────────────────────────────────────────────────────
