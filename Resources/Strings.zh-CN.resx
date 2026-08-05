@@ -6558,4 +6558,13 @@
   <data name="Als_Bild_1826a60e" xml:space="preserve">
     <value>作为图像</value>
   </data>
+  <data name="Textebenen_aus_Photoshop_Dateien_02d3d9a6" xml:space="preserve">
+    <value>Photoshop 文件中的文字图层</value>
+  </data>
+  <data name="Beim_ffnen_einer_Photoshop_Datei_mit_Textebenen__8c1a381c" xml:space="preserve">
+    <value>打开含文字图层的 Photoshop 文件时：作为文字接管（内容仍可编辑，外观可能有出入）、作为图像接管（每个像素都准确，文字不可再改），或每次询问。</value>
+  </data>
+  <data name="Immer_fragen_6007356b" xml:space="preserve">
+    <value>总是询问</value>
+  </data>
 </root>

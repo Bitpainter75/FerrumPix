@@ -176,29 +176,49 @@ Namespace Services
 
             Dim doc As New PsdDocumentInfo With {.Width = docWidth, .Height = docHeight}
             Dim layers = doc.Layers
-            For Each rec In records
-                Dim bmp = ReadChannelData(fs, rec, metadataOnly)
-                If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing
-                If bmp Is Nothing AndAlso Not metadataOnly Then Continue For
-                If metadataOnly AndAlso Not rec.HasPixels Then Continue For
+            ' Bricht das Lesen mittendrin ab - eine defekte Ebene oder eine Ausnahme -, sind die
+            ' Ebenen davor bereits dekodiert und haengen als Bitmap in der Liste, die danach
+            ' niemand mehr in die Hand bekommt. Bei vierhundert Megapixeln Deckel ist das
+            ' entsprechend viel nativer Speicher bis zum Finalisierer.
+            Dim completed = False
+            Try
+                For Each rec In records
+                    Dim bmp = ReadChannelData(fs, rec, metadataOnly)
+                    If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing
+                    If bmp Is Nothing AndAlso Not metadataOnly Then Continue For
+                    If metadataOnly AndAlso Not rec.HasPixels Then Continue For
 
-                layers.Add(New PsdLayerInfo With {
-                    .Name = rec.Name,
-                    .Left = rec.Left,
-                    .Top = rec.Top,
-                    .Width = rec.Right - rec.Left,
-                    .Height = rec.Bottom - rec.Top,
-                    .OpacityPercent = CSng(rec.Opacity) * 100.0F / 255.0F,
-                    .BlendMode = ResolveBlendName(rec.BlendKey),
-                    .ClipToLayerBelow = rec.Clipping <> 0,
-                    .IsVisible = (rec.Flags And 2) = 0,
-                    .Pixels = bmp,
-                    .TextContent = rec.TextContent
-                })
-            Next
-
-            Return doc
+                    layers.Add(New PsdLayerInfo With {
+                        .Name = rec.Name,
+                        .Left = rec.Left,
+                        .Top = rec.Top,
+                        .Width = rec.Right - rec.Left,
+                        .Height = rec.Bottom - rec.Top,
+                        .OpacityPercent = CSng(rec.Opacity) * 100.0F / 255.0F,
+                        .BlendMode = ResolveBlendName(rec.BlendKey),
+                        .ClipToLayerBelow = rec.Clipping <> 0,
+                        .IsVisible = (rec.Flags And 2) = 0,
+                        .Pixels = bmp,
+                        .TextContent = rec.TextContent
+                    })
+                Next
+                completed = True
+                Return doc
+            Finally
+                If Not completed Then DisposeLayerPixels(doc)
+            End Try
         End Function
+
+        ''' <summary>Gibt die Bildpunkte aller schon gelesenen Ebenen frei. Fuer die Abbruchwege -
+        ''' wer Nothing zurueckbekommt, hat keine Handhabe mehr auf das, was bis dahin entstand.</summary>
+        Private Shared Sub DisposeLayerPixels(doc As PsdDocumentInfo)
+            If doc Is Nothing Then Return
+            For Each layer In doc.Layers
+                layer.Pixels?.Dispose()
+                layer.Pixels = Nothing
+            Next
+            doc.Layers.Clear()
+        End Sub
 
         ' ── Ebenenverzeichnis ────────────────────────────────────────────────────
 

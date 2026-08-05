@@ -876,6 +876,30 @@
                             </StackPanel>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Textebenen aus Photoshop-Dateien" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Beim Öffnen einer Photoshop-Datei mit Textebenen: als Text übernehmen (der Wortlaut bleibt tippbar, das Aussehen kann abweichen), als Bild übernehmen (jeder Bildpunkt stimmt, der Text ist fest) oder jedes Mal nachfragen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsPsdTextImportAsk}"
+                                        Padding="10,6"
+                                        Command="{Binding SetPsdTextImportCommand}"
+                                        CommandParameter="Ask">Immer fragen</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsPsdTextImportText}"
+                                        Padding="10,6"
+                                        Command="{Binding SetPsdTextImportCommand}"
+                                        CommandParameter="Text">Als Text</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsPsdTextImportImage}"
+                                        Padding="10,6"
+                                        Command="{Binding SetPsdTextImportCommand}"
+                                        CommandParameter="Image">Als Bild</Button>
+                            </StackPanel>
+                        </Grid>
+
                         <StackPanel Spacing="8">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
                                 <TextBlock Text="Reihenfolge der Werkzeuggruppen" FontSize="{DynamicResource FP.Font.Body}"/>

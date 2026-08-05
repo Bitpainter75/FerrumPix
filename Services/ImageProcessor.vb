@@ -6712,6 +6712,88 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Kopiert eine Region eines Bitmaps in ein eigenes Bitmap gleicher Art. Der
+        ''' VORHER-Ausschnitt für <see cref="RestoreOutsideCoverage"/>: dort wird er wieder
+        ''' eingeblendet, wo eine Auswahl den Strich nicht durchlässt.</summary>
+        Friend Shared Function CopyRegion(source As SKBitmap, rect As SKRectI) As SKBitmap
+            If source Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim copy = New SKBitmap(rect.Width, rect.Height, source.ColorType, source.AlphaType)
+            Using canvas = New SKCanvas(copy)
+                ' Src statt SrcOver: der Ausschnitt wird exakt uebernommen, Alpha eingeschlossen.
+                Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                    canvas.DrawBitmap(source,
+                                      New SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom),
+                                      New SKRect(0, 0, rect.Width, rect.Height), paint)
+                End Using
+            End Using
+            Return copy
+        End Function
+
+        ''' <summary>Blendet den VORHER-Stand dort zurück, wo die Deckung nicht reicht:
+        ''' out = vorher·(255−Deckung) + jetzt·Deckung, über die Region <paramref name="rect"/> von
+        ''' <paramref name="target"/>. So bleibt ein gemalter oder radierter Strich auf eine Auswahl
+        ''' begrenzt, OHNE dass die Zeichenroutine davon wissen muss - sie malt wie immer, und was
+        ''' außerhalb liegt, wird danach zurückgenommen. Weiche Auswahlkanten laufen dadurch von
+        ''' selbst mit.
+        '''
+        ''' <paramref name="before"/> und <paramref name="coverage"/> haben die Maße von
+        ''' <paramref name="rect"/>. False, wenn das Farbformat nicht passt - der Aufrufer muss den
+        ''' Zug dann verwerfen, denn der Strich stünde sonst ungebremst über der ganzen Fläche.</summary>
+        Friend Shared Function RestoreOutsideCoverage(target As SKBitmap, before As SKBitmap,
+                                                      coverage As SKBitmap, rect As SKRectI) As Boolean
+            If target Is Nothing OrElse before Is Nothing OrElse coverage Is Nothing Then Return False
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
+            If before.Width <> rect.Width OrElse before.Height <> rect.Height Then Return False
+            If coverage.Width <> rect.Width OrElse coverage.Height <> rect.Height Then Return False
+            If coverage.ColorType <> SKColorType.Alpha8 Then Return False
+
+            Dim bBuf As Byte() = Nothing, bStride As Integer
+            If target.ColorType <> SKColorType.Bgra8888 OrElse Not TryBorrowBgraBuffer(before, bBuf, bStride) Then
+                DiagnosticLogService.LogAlways("ImageProcessor.StrokeCoverage",
+                    $"skipped: non-BGRA bitmap target={target.ColorType} before={before.ColorType}")
+                Return False
+            End If
+
+            Dim cStride = coverage.RowBytes
+            Dim cBuf = New Byte(cStride * coverage.Height - 1) {}
+            Marshal.Copy(coverage.GetPixels(), cBuf, 0, cBuf.Length)
+
+            ' NUR die Region anfassen: das Ziel ist das Arbeitsbild in voller Auflösung, ein
+            ' Puffer darüber wären bei 45 Megapixeln 180 MB je Strich. Gelesen und geschrieben
+            ' wird deshalb zeilenweise direkt im Bitmapspeicher.
+            Dim targetPtr = target.GetPixels()
+            Dim tStride = target.RowBytes
+            Dim rowBytes = rect.Width * 4
+            Dim left = rect.Left, top = rect.Top
+            ForEachRow(rect.Width, rect.Height,
+                       Sub(y)
+                           Dim rowPtr = IntPtr.Add(targetPtr, (top + y) * tStride + left * 4)
+                           Dim tBuf = New Byte(rowBytes - 1) {}
+                           Marshal.Copy(rowPtr, tBuf, 0, rowBytes)
+                           Dim bRow = y * bStride
+                           Dim cRow = y * cStride
+                           Dim changed = False
+                           For x = 0 To rect.Width - 1
+                               Dim m = CInt(cBuf(cRow + x))
+                               If m >= 255 Then Continue For
+                               changed = True
+                               Dim toff = x * 4, boff = bRow + x * 4
+                               If m = 0 Then
+                                   tBuf(toff) = bBuf(boff) : tBuf(toff + 1) = bBuf(boff + 1)
+                                   tBuf(toff + 2) = bBuf(boff + 2) : tBuf(toff + 3) = bBuf(boff + 3)
+                               Else
+                                   Dim inv = 255 - m
+                                   tBuf(toff) = CByte((CInt(tBuf(toff)) * m + CInt(bBuf(boff)) * inv) \ 255)
+                                   tBuf(toff + 1) = CByte((CInt(tBuf(toff + 1)) * m + CInt(bBuf(boff + 1)) * inv) \ 255)
+                                   tBuf(toff + 2) = CByte((CInt(tBuf(toff + 2)) * m + CInt(bBuf(boff + 2)) * inv) \ 255)
+                                   tBuf(toff + 3) = CByte((CInt(tBuf(toff + 3)) * m + CInt(bBuf(boff + 3)) * inv) \ 255)
+                               End If
+                           Next
+                           If changed Then Marshal.Copy(tBuf, 0, rowPtr, rowBytes)
+                       End Sub)
+            Return True
+        End Function
+
         ''' <summary>Gibt das gecachte Basis-Bitmap frei. Muss aufgerufen werden, sobald die zugehörige
         ''' Quelle verschwindet (Bildwechsel, Editor verlassen) - der Cache ist statisch und hielte sonst
         ''' ein Bitmap in Vorschauauflösung sowie eine Referenz auf das bereits disposte Quell-SKBitmap
@@ -11148,7 +11230,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return value.ToString(Globalization.CultureInfo.InvariantCulture)
         End Function
 
-        Private Shared Function FitRectKeepingAspectRatio(target As SKRect, sourceWidth As Integer, sourceHeight As Integer) As SKRect
+        ''' <summary>Friend, weil der Editor dieselbe Einpassung braucht, um einen Mauspunkt in den
+        ''' BILDPUNKT eines Bild-Objekts zurückzurechnen (Malen auf einem Objekt). Zwei Kopien dieser
+        ''' Formel liefen unweigerlich auseinander, und der Strich säße dann neben dem Zeiger.</summary>
+        Friend Shared Function FitRectKeepingAspectRatio(target As SKRect, sourceWidth As Integer, sourceHeight As Integer) As SKRect
             If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return target
             Dim targetWidth = Math.Max(1.0F, target.Width)
             Dim targetHeight = Math.Max(1.0F, target.Height)
@@ -14191,10 +14276,132 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' bei jeder Drehung ein wenig Kantenschärfe - dieselbe bewusst in Kauf genommene Einbuße wie
         ''' beim Skalieren. Gerechnet wird im Quellraum, in dem die Maske gespeichert ist.
         ''' </summary>
+        ''' <summary>Eine Punktabbildung im QUELLRAUM, in Bildpunkten. Die drei Transformationen
+        ''' unten geben sie an die GERECHNETEN Bestandteile weiter - Verläufe haben keine Bildpunkte,
+        ''' die man verschieben könnte, sondern zwei Punkte und ein Verhältnis.</summary>
+        Private Delegate Function MaskPointMap(x As Double, y As Double) As (X As Double, Y As Double)
+
+        ''' <summary>Welcher Teil einer Maske mitgenommen wird. Der Grund für die Trennung ist der
+        ''' PREIS: ein gerechneter Verlauf sind vier Zahlen und wandert praktisch umsonst mit, ein
+        ''' gemaltes Raster muss neu gerastert werden. Deshalb folgen die Verläufe schon WÄHREND
+        ''' eines Zuges, die Raster erst beim Loslassen - und dann darf der Verlauf nicht ein
+        ''' zweites Mal wandern.</summary>
+        Public Enum MaskTransformPart
+            All = 0
+            GradientsOnly = 1
+            RasterOnly = 2
+        End Enum
+
+        ''' <summary>Trägt die Maske einen gerechneten Verlauf? Nur dann lohnt die Live-Nachführung
+        ''' während eines Zuges.</summary>
+        Friend Shared Function HasGradientComponent(mask As ImageMask) As Boolean
+            If mask Is Nothing Then Return False
+            If IsGradientMaskKind(mask.Kind) Then Return True
+            If mask.ExtraComponents Is Nothing Then Return False
+            For Each c In mask.ExtraComponents
+                If c IsNot Nothing AndAlso IsGradientMaskKind(c.Kind) Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Nimmt die GERECHNETEN Anteile einer Maske mit: die Verlaufspunkte jedes
+        ''' Bestandteils. Sie stehen in Prozent des Quellraums, die Abbildung rechnet in Bildpunkten -
+        ''' also hin und zurück.
+        '''
+        ''' Ohne das bleibt eine Verlaufsmaske liegen, während ihr Objekt wandert. Sichtbar wurde es
+        ''' an einer Ebenenmaske, deren gemalter Bestandteil gelöscht war: dann gibt es gar kein
+        ''' Raster mehr, die drei Funktionen stiegen ganz oben aus, und die Maske klebte am Bild
+        ''' statt an der Ebene (Nutzerbefund 2026-08-05).</summary>
+        Private Shared Sub MapGradientComponents(mask As ImageMask, map As MaskPointMap)
+            If mask Is Nothing OrElse map Is Nothing Then Return
+            Dim sw = CDbl(Math.Max(1, mask.SourceWidthPixels))
+            Dim sh = CDbl(Math.Max(1, mask.SourceHeightPixels))
+
+            Dim mapPercent = Sub(ByRef xPercent As Double, ByRef yPercent As Double)
+                                 Dim mapped = map(xPercent / 100.0 * sw, yPercent / 100.0 * sh)
+                                 xPercent = mapped.X / sw * 100.0
+                                 yPercent = mapped.Y / sh * 100.0
+                             End Sub
+
+            If IsGradientMaskKind(mask.Kind) Then
+                Dim sx = mask.GradientStartXPercent, sy = mask.GradientStartYPercent
+                Dim ex = mask.GradientEndXPercent, ey = mask.GradientEndYPercent
+                mapPercent(sx, sy)
+                mapPercent(ex, ey)
+                mask.GradientStartXPercent = sx : mask.GradientStartYPercent = sy
+                mask.GradientEndXPercent = ex : mask.GradientEndYPercent = ey
+            End If
+
+            If mask.ExtraComponents Is Nothing Then Return
+            For Each c In mask.ExtraComponents
+                If c Is Nothing OrElse Not IsGradientMaskKind(c.Kind) Then Continue For
+                Dim csx = c.GradientStartXPercent, csy = c.GradientStartYPercent
+                Dim cex = c.GradientEndXPercent, cey = c.GradientEndYPercent
+                mapPercent(csx, csy)
+                mapPercent(cex, cey)
+                c.GradientStartXPercent = csx : c.GradientStartYPercent = csy
+                c.GradientEndXPercent = cex : c.GradientEndYPercent = cey
+            Next
+        End Sub
+
+        ''' <summary>Schiebt die Pinselkorrektur eines Verlaufs mit. Sie liegt als eigenes Raster mit
+        ''' eigenem Rechteck neben dem gerechneten Verlauf; bei einer reinen VERSCHIEBUNG genügt es,
+        ''' das Rechteck zu versetzen - die Bildpunkte bleiben dieselben. Beim Skalieren und Drehen
+        ''' müsste sie neu gerastert werden, das bleibt offen (siehe OFFENE_PUNKTE.md).</summary>
+        Private Shared Sub ShiftBrushCorrections(mask As ImageMask, offsetX As Integer, offsetY As Integer)
+            If mask Is Nothing OrElse (offsetX = 0 AndAlso offsetY = 0) Then Return
+            Dim shift = Sub(c As MaskComponent)
+                            If c Is Nothing Then Return
+                            If String.IsNullOrEmpty(c.BrushAddPngBase64) AndAlso String.IsNullOrEmpty(c.BrushSubtractPngBase64) Then Return
+                            c.BrushLeft += offsetX : c.BrushRight += offsetX
+                            c.BrushTop += offsetY : c.BrushBottom += offsetY
+                        End Sub
+            If Not String.IsNullOrEmpty(mask.BrushAddPngBase64) OrElse Not String.IsNullOrEmpty(mask.BrushSubtractPngBase64) Then
+                mask.BrushLeft += offsetX : mask.BrushRight += offsetX
+                mask.BrushTop += offsetY : mask.BrushBottom += offsetY
+            End If
+            If mask.ExtraComponents Is Nothing Then Return
+            For Each c In mask.ExtraComponents
+                shift(c)
+            Next
+        End Sub
+
+        Private Shared Function IsGradientMaskKind(kind As String) As Boolean
+            Return String.Equals(kind, "Linear", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(kind, "Radial", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Trägt die Maske überhaupt etwas, das sich mitnehmen lässt? Ein gerechneter
+        ''' Verlauf hat kein Raster - die Prüfung auf ein leeres PngBase64 allein hätte ihn
+        ''' abgewiesen.</summary>
+        Private Shared Function HasMovableMaskContent(mask As ImageMask) As Boolean
+            If mask Is Nothing Then Return False
+            If Not String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
+            If IsGradientMaskKind(mask.Kind) Then Return True
+            If mask.ExtraComponents IsNot Nothing Then
+                For Each c In mask.ExtraComponents
+                    If c IsNot Nothing AndAlso IsGradientMaskKind(c.Kind) Then Return True
+                Next
+            End If
+            Return False
+        End Function
+
         Public Shared Function RotateMaskRegion(mask As ImageMask, degrees As Double,
-                                                pivotX As Double, pivotY As Double) As Boolean
-            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(mask.PngBase64) Then Return False
+                                                pivotX As Double, pivotY As Double,
+                                                Optional part As MaskTransformPart = MaskTransformPart.All) As Boolean
+            If Not HasMovableMaskContent(mask) Then Return False
             If Math.Abs(degrees) < 0.0001 Then Return True
+            If part = MaskTransformPart.RasterOnly Then GoTo RasterTeil
+
+            Dim radForPoints = degrees * Math.PI / 180.0
+            MapGradientComponents(mask, Function(x, y)
+                                            Dim dx = x - pivotX, dy = y - pivotY
+                                            Return (pivotX + dx * Math.Cos(radForPoints) - dy * Math.Sin(radForPoints),
+                                                    pivotY + dx * Math.Sin(radForPoints) + dy * Math.Cos(radForPoints))
+                                        End Function)
+            If part = MaskTransformPart.GradientsOnly Then Return True
+RasterTeil:
+            If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
 
             Dim rad = degrees * Math.PI / 180.0
             Dim cosR = Math.Cos(rad), sinR = Math.Sin(rad)
@@ -14251,8 +14458,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ''' <summary>Spiegelt die Maskenregion an einer Achse (Gruppen-Spiegelung). Hier bleibt die
         ''' Auflösung erhalten - gespiegelt wird pixelgenau, nur die Lage wechselt die Seite.</summary>
-        Public Shared Function FlipMaskRegion(mask As ImageMask, horizontal As Boolean, axis As Double) As Boolean
-            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(mask.PngBase64) Then Return False
+        Public Shared Function FlipMaskRegion(mask As ImageMask, horizontal As Boolean, axis As Double,
+                                              Optional part As MaskTransformPart = MaskTransformPart.All) As Boolean
+            If Not HasMovableMaskContent(mask) Then Return False
+            If part = MaskTransformPart.RasterOnly Then GoTo RasterTeil
+
+            MapGradientComponents(mask, Function(x, y)
+                                            If horizontal Then Return (2.0 * axis - x, y)
+                                            Return (x, 2.0 * axis - y)
+                                        End Function)
+            If part = MaskTransformPart.GradientsOnly Then Return True
+RasterTeil:
+            If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
 
             Dim decoded As SKBitmap = Nothing
             Try
@@ -14295,9 +14512,21 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Public Shared Function TransformMaskRegion(mask As ImageMask,
                                                    scaleX As Double, scaleY As Double,
                                                    pivotX As Double, pivotY As Double,
-                                                   offsetX As Double, offsetY As Double) As Boolean
-            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(mask.PngBase64) Then Return False
+                                                   offsetX As Double, offsetY As Double,
+                                                   Optional part As MaskTransformPart = MaskTransformPart.All) As Boolean
+            If Not HasMovableMaskContent(mask) Then Return False
             If scaleX <= 0 OrElse scaleY <= 0 Then Return False
+            If part = MaskTransformPart.RasterOnly Then GoTo RasterTeil
+
+            MapGradientComponents(mask, Function(x, y) (pivotX + (x - pivotX) * scaleX + offsetX,
+                                                        pivotY + (y - pivotY) * scaleY + offsetY))
+            ' Reine Verschiebung: die Pinselkorrektur eines Verlaufs wandert exakt mit.
+            If Math.Abs(scaleX - 1.0) < 0.0001 AndAlso Math.Abs(scaleY - 1.0) < 0.0001 Then
+                ShiftBrushCorrections(mask, CInt(Math.Round(offsetX)), CInt(Math.Round(offsetY)))
+            End If
+            If part = MaskTransformPart.GradientsOnly Then Return True
+RasterTeil:
+            If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
 
             Dim newLeft = pivotX + (mask.Left - pivotX) * scaleX + offsetX
             Dim newTop = pivotY + (mask.Top - pivotY) * scaleY + offsetY

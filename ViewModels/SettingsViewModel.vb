@@ -59,6 +59,7 @@ Namespace ViewModels
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
         Private _editorStartupTool As String = "Selection"
+        Private _psdTextImport As String = "Ask"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _versteckteAnpassungsgruppen As String = ""
         Private _viewerInfoSidebarExpanded As Boolean = True
@@ -1284,6 +1285,43 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Was mit den Textebenen einer fremden Photoshop-Datei geschieht: „Ask", „Text"
+        ''' oder „Image". Ab Werk wird gefragt - beide Antworten sind vertretbar, und welche man will,
+        ''' hängt am Vorhaben. Wer immer dasselbe tut, stellt es hier einmal ein, statt die Frage bei
+        ''' jedem Bild wegzuklicken (Nutzerwunsch 2026-08-05).</summary>
+        Public Property PsdTextImport As String
+            Get
+                Return _psdTextImport
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizePsdTextImport(value)
+                If _psdTextImport = value Then Return
+                Me.RaiseAndSetIfChanged(_psdTextImport, value)
+                Me.RaisePropertyChanged(NameOf(IsPsdTextImportAsk))
+                Me.RaisePropertyChanged(NameOf(IsPsdTextImportText))
+                Me.RaisePropertyChanged(NameOf(IsPsdTextImportImage))
+                AppSettingsService.SavePsdTextImport(value)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsPsdTextImportAsk As Boolean
+            Get
+                Return String.Equals(_psdTextImport, "Ask", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPsdTextImportText As Boolean
+            Get
+                Return String.Equals(_psdTextImport, "Text", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPsdTextImportImage As Boolean
+            Get
+                Return String.Equals(_psdTextImport, "Image", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
         Public ReadOnly Property IsEditorStartupToolSelection As Boolean
             Get
                 Return String.Equals(_editorStartupTool, "Selection", StringComparison.OrdinalIgnoreCase)
@@ -1924,6 +1962,7 @@ Namespace ViewModels
         Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
+        Public ReadOnly Property SetPsdTextImportCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupUpCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupDownCommand As ICommand
         Public ReadOnly Property SetLanguageModeCommand As ICommand
@@ -2021,6 +2060,7 @@ Namespace ViewModels
             _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
+            _psdTextImport = AppSettingsService.NormalizePsdTextImport(_appSettings.PsdTextImport)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
             _versteckteAnpassungsgruppen = AppSettingsService.NormalizeHiddenAdjustmentGroups(_appSettings.HiddenAdjustmentGroups)
             RebuildEditorToolGroupItems()
@@ -2081,6 +2121,7 @@ Namespace ViewModels
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
             SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
+            SetPsdTextImportCommand = ReactiveCommand.Create(Of String)(Sub(m) PsdTextImport = m)
             MoveEditorToolGroupUpCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, -1))
             MoveEditorToolGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, 1))
             SetLanguageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) LanguageMode = m)
@@ -2586,6 +2627,7 @@ Namespace ViewModels
             settings.EditorLayerThumbnails = _editorLayerThumbnails
             settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
             settings.EditorStartupTool = _editorStartupTool
+            settings.PsdTextImport = _psdTextImport
             settings.EditorToolGroupOrder = _editorToolGroupOrder
             settings.HiddenAdjustmentGroups = _versteckteAnpassungsgruppen
             settings.DefaultSaveFormat = _defaultSaveFormat

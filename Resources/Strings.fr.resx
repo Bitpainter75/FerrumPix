@@ -6560,4 +6560,13 @@
   <data name="Als_Bild_1826a60e" xml:space="preserve">
     <value>Comme image</value>
   </data>
+  <data name="Textebenen_aus_Photoshop_Dateien_02d3d9a6" xml:space="preserve">
+    <value>Calques de texte des fichiers Photoshop</value>
+  </data>
+  <data name="Beim_ffnen_einer_Photoshop_Datei_mit_Textebenen__8c1a381c" xml:space="preserve">
+    <value>À l'ouverture d'un fichier Photoshop avec des calques de texte : les reprendre comme texte (le libellé reste modifiable, l'aspect peut différer), les reprendre comme image (chaque pixel est exact, le texte est figé) ou demander à chaque fois.</value>
+  </data>
+  <data name="Immer_fragen_6007356b" xml:space="preserve">
+    <value>Toujours demander</value>
+  </data>
 </root>

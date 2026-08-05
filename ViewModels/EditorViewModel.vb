@@ -881,6 +881,10 @@ Namespace ViewModels
         Private _retouchLivePatchHeightPercent As Double = 0
         Private _annotationDirtyRect As SKRectI = SKRectI.Empty
         Private _annotationPlacementEditActive As Boolean = False
+
+        ''' <summary>Sind die gerechneten Maskenanteile waehrend des laufenden Zuges schon
+        ''' mitgewandert? Dann nimmt die Nachfuehrung beim Loslassen nur noch die Raster.</summary>
+        Private _gradientsFollowedDuringDrag As Boolean = False
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
         ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
@@ -1976,9 +1980,17 @@ Namespace ViewModels
                     ' Und im MASKEN-Werkzeug ebenso, sobald das Objekt eine Ebenenmaske traegt: dort
                     ' markiert man es, um an seine Maske heranzukommen. Der Sprung ins Werkzeug des
                     ' Objekts nahm einem genau die Bedienung weg, die man gerade brauchte - samt
-                    ' rotem Overlay.
+                    ' rotem Overlay. Sonst SPRINGT der Editor bewusst in das Werkzeug der Ebene,
+                    ' auch aus Auswahl und Maske heraus: wer eine Ebene anklickt, will an sie heran
+                    ' (Nutzerentscheidung 2026-08-05).
                     If _currentTool = EditorTool.Mask AndAlso
                        Not String.IsNullOrEmpty(_annotations(clamped).MaskId) Then targetTool = _currentTool
+                    ' Und im ZEICHNEN-Werkzeug ebenso, sobald die Ebene ein Bild traegt: dort
+                    ' markiert man sie, um auf ihr zu malen (siehe AddBrushStroke). Ein Sprung ins
+                    ' Einfuegen-Werkzeug nahm einem den Pinsel genau in dem Moment weg, in dem man
+                    ' das Ziel dafuer bestimmt hat.
+                    If _currentTool = EditorTool.Draw AndAlso
+                       IsPaintableImageAnnotation(_annotations(clamped)) Then targetTool = _currentTool
                     ' Der Rahmen ist davon die Ausnahme: seine Regler stehen NUR in der Rahmengruppe
                     ' unter Effekte. Bliebe man in Anpassen oder Farbe stehen, waere die Ebene zwar
                     ' markiert, aber nirgends etwas davon zu sehen.
@@ -3696,16 +3708,9 @@ Namespace ViewModels
                     ' Overlay genau das, woran man arbeitet - dort verschwindet es sofort.
                     If CoversMaskOverlay(value) Then HideMaskOverlay()
                 End If
-                ' Ins MASKEN-Werkzeug nimmt ein Objekt MIT Ebenenmaske seine Markierung mit: man
-                ' kommt dorthin, um genau diese Maske zu bearbeiten. Ohne die Ausnahme fiel die
-                ' Markierung beim Wechsel weg - die Zeile im Panel stand danach unmarkiert da,
-                ' Maskensymbol, Kontextmenue und Fusszeilenknopf hatten kein Ziel mehr, und der
-                ' Zustandswechsel raeumte das rote Overlay gleich mit ab.
-                Dim keepsMaskedObject = value = EditorTool.Mask AndAlso
-                                        _selectedAnnotationIndex >= 0 AndAlso
-                                        _selectedAnnotationIndex < _annotations.Count AndAlso
-                                        Not String.IsNullOrEmpty(_annotations(_selectedAnnotationIndex).MaskId)
-                If Not IsLayerTool(value) AndAlso Not keepsMaskedObject Then SelectedAnnotationIndex = -1
+                ' Die Ausnahmen zum Abwählen stehen in ToolKeepsSelectedAnnotationOnEnter - EINE
+                ' Stelle für diesen Weg UND für SetToolCommand, das schon vorher abwählt.
+                If Not IsLayerTool(value) AndAlso Not ToolKeepsSelectedAnnotationOnEnter(value) Then SelectedAnnotationIndex = -1
                 If Not CanShowBeforeAfter AndAlso _showBeforeImage Then
                     _showBeforeImage = False
                     Me.RaisePropertyChanged(NameOf(ShowBeforeImage))
@@ -8979,16 +8984,30 @@ Namespace ViewModels
                                                  oldX As Double, oldY As Double,
                                                  oldW As Double, oldH As Double,
                                                  oldRot As Double, oldFlipH As Boolean, oldFlipV As Boolean)
-            If _annotationPlacementEditActive Then Return
             If Not String.IsNullOrEmpty(a.Anchor) Then Return
             Dim mask = ExclusiveMaskOfObject(a)
             If mask Is Nothing Then Return
+
+            ' WÄHREND eines Zuges wandern nur die GERECHNETEN Anteile mit - sie sind vier Zahlen und
+            ' kosten nichts. Ein gemaltes Raster müsste je Mausbewegung neu gerastert werden und
+            ' bleibt deshalb bis zum Loslassen liegen (ApplyDeferredGroupMaskTransform).
+            ' Ohne das steht die Freistellung während des Zuges still und das Objekt wandert
+            ' darunter durch - richtig wird es erst beim Loslassen, und dazwischen sieht man etwas,
+            ' das es so nie gab (Nutzerbefund 2026-08-05).
+            Dim part = ImageProcessor.MaskTransformPart.All
+            If _annotationPlacementEditActive Then
+                If Not ImageProcessor.HasGradientComponent(mask) Then Return
+                part = ImageProcessor.MaskTransformPart.GradientsOnly
+                ' Merken, damit die Nachführung beim Loslassen die Verläufe NICHT ein zweites Mal
+                ' verschiebt - sie sind dann schon am Ziel.
+                _gradientsFollowedDuringDrag = True
+            End If
             Dim flipChanged = (a.FlipHorizontal <> oldFlipH) OrElse (a.FlipVertical <> oldFlipV)
             If a.FlipHorizontal <> oldFlipH Then
-                ImageProcessor.FlipMaskRegion(mask, True, oldX + oldW / 2.0)
+                ImageProcessor.FlipMaskRegion(mask, True, oldX + oldW / 2.0, part)
             End If
             If a.FlipVertical <> oldFlipV Then
-                ImageProcessor.FlipMaskRegion(mask, False, oldY + oldH / 2.0)
+                ImageProcessor.FlipMaskRegion(mask, False, oldY + oldH / 2.0, part)
             End If
             ' Eine einzelne Spiegelung NEGIERT den gespeicherten Winkel, und das Spiegeln der
             ' Pixel oben enthaelt diese Drehung schon - der Winkel-Anteil laeuft deshalb nur,
@@ -8997,7 +9016,7 @@ Namespace ViewModels
                 Dim deltaRot = CDbl(a.RotationDegrees) - oldRot
                 If Math.Abs(deltaRot) > 0.0001 Then
                     ImageProcessor.RotateMaskRegion(mask, deltaRot,
-                                                    oldX + oldW / 2.0, oldY + oldH / 2.0)
+                                                    oldX + oldW / 2.0, oldY + oldH / 2.0, part)
                 End If
             End If
             Dim scalable = Not IsTextualAnnotationKind(NormalizeAnnotationKind(a.Kind))
@@ -9007,7 +9026,7 @@ Namespace ViewModels
             Dim offsetY = CDbl(a.YPixels) - oldY
             If Math.Abs(offsetX) >= 0.01 OrElse Math.Abs(offsetY) >= 0.01 OrElse
                Math.Abs(sx - 1.0) >= 0.0001 OrElse Math.Abs(sy - 1.0) >= 0.0001 Then
-                ImageProcessor.TransformMaskRegion(mask, sx, sy, oldX, oldY, offsetX, offsetY)
+                ImageProcessor.TransformMaskRegion(mask, sx, sy, oldX, oldY, offsetX, offsetY, part)
             End If
         End Sub
 
@@ -11230,9 +11249,13 @@ Namespace ViewModels
                                                                        Try
                                                                            PendingInsertKind = ""
                                                                            ' Ins Drehen-Werkzeug nimmt man das markierte Objekt MIT - dort wirken
-                                                                           ' Drehen/Spiegeln genau darauf. Für alle anderen Werkzeuge bleibt es
-                                                                           ' beim Abwählen wie bisher.
-                                                                           If Not IsObjectScopeTool(parsed) Then SelectedAnnotationIndex = -1
+                                                                           ' Drehen/Spiegeln genau darauf. Dazu die Ausnahmen für Maske und
+                                                                           ' Auswahl: sie stehen in ToolKeepsSelectedAnnotationOnEnter, weil
+                                                                           ' dieses Kommando VOR dem Setter von CurrentTool abwählt und eine
+                                                                           ' Ausnahme nur dort damit wirkungslos wäre. Für alle anderen
+                                                                           ' Werkzeuge bleibt es beim Abwählen wie bisher.
+                                                                           If Not IsObjectScopeTool(parsed) AndAlso
+                                                                              Not ToolKeepsSelectedAnnotationOnEnter(parsed) Then SelectedAnnotationIndex = -1
                                                                            CurrentTool = parsed
                                                                            SelectedLayersPanelTab = LayersPanelTab.Tool
                                                                        Finally
@@ -12326,9 +12349,14 @@ Namespace ViewModels
                 ' aus; als Bild stimmt jeder Punkt, dafür ist er fest. Die Abwägung gehört dem Nutzer.
                 ' Bei einer eigenen Datei stellt sich die Frage nicht, dort kommt alles vollständig
                 ' zurück - CountTextLayers meldet dann 0.
+                ' Die Antwort ist eine ARBEITSWEISE, keine Eigenschaft der Datei - sie steht deshalb
+                ' in den Einstellungen unter Editor. „Immer fragen" ist die Vorgabe; wer sich
+                ' festgelegt hat, bekommt die Frage gar nicht mehr. Gezählt wird trotzdem je Datei:
+                ' ohne Textebenen gibt es nichts zu entscheiden.
+                Dim textImportMode = AppSettingsService.NormalizePsdTextImport(AppSettingsService.Load().PsdTextImport)
+                Dim takeTextAsText = String.Equals(textImportMode, "Text", StringComparison.Ordinal)
                 Dim textLayers = Await Task.Run(Function() PsdImportService.CountTextLayers(psdSource))
-                Dim takeTextAsText = False
-                If textLayers > 0 Then
+                If textLayers > 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal) Then
                     takeTextAsText = Await _mainVm.ShowConfirmAsync(
                         LocalizationService.T("Textebenen übernehmen?"),
                         String.Format(LocalizationService.T("Diese Datei enthält {0} Textebenen. Als Text übernommen lässt sich der Wortlaut weiterbearbeiten, das Aussehen kann aber abweichen. Als Bild übernommen stimmt jeder Bildpunkt, der Text ist dann fest."), textLayers),
@@ -13062,6 +13090,11 @@ Namespace ViewModels
             ' Vollrender: gemessen 1,1 bis 2,2 Sekunden, in denen der Basis-Cache gesperrt war und
             ' kein Region-Patch mehr durchkam (daher der leere Rahmen beim nächsten Zug).
             Dim endRegion = CandidateAnnotationDirtyRect()
+            ' Welcher Renderweg das Loslassen abschliesst - fuer die Fehlersuche am Log: eine Maske,
+            ' die in den Daten gewandert ist, aber im Bild stehen bleibt, haengt genau hier.
+            DiagnosticLogService.LogAlways("Editor.MaskFollow",
+                $"commit: region={endRegion.Left},{endRegion.Top},{endRegion.Width}x{endRegion.Height} " &
+                $"kompositorDeckt={CompositorCoversSelection()} vollrenderNoetig={SelectedAnnotationsNeedFullRender()}")
             If HasStackedCorrections() AndAlso RequiresFullRenderForStackedCorrections(endRegion) Then
                 SchedulePreviewUpdate(markDirty:=False)
                 Return
@@ -13101,6 +13134,8 @@ Namespace ViewModels
             _groupDragRotationTotal = 0
             ' Startbox merken, sobald IRGENDEINE Maske mitwandern muss - die einer mitmarkierten
             ' Korrektur wie die Ebenenmaske eines einzelnen Objekts.
+            _gradientsFollowedDuringDrag = False
+            LogMaskFollowState("dragStart")
             _groupDragBoxAtStart = If(TransformableSelectedMasks().Count > 0,
                                       CType(GetSelectionBoxDisplayRectPercent(), (X As Double, Y As Double, Width As Double, Height As Double)?),
                                       Nothing)
@@ -13146,18 +13181,39 @@ Namespace ViewModels
             Dim rotation = _groupDragRotationTotal
             _groupDragBoxAtStart = Nothing
             _groupDragRotationTotal = 0
-            If Not start.HasValue Then Return
+            If Not start.HasValue Then
+                DiagnosticLogService.LogAlways("Editor.MaskFollow", "aufgeschobene Nachfuehrung: KEINE Startbox - die Maske bleibt stehen")
+                Return
+            End If
             Dim masks = TransformableSelectedMasks()
-            If masks.Count = 0 Then Return
+            If masks.Count = 0 Then
+                DiagnosticLogService.LogAlways("Editor.MaskFollow", "aufgeschobene Nachfuehrung: keine mitwandernde Maske mehr")
+                Return
+            End If
 
             Dim ende = GetSelectionBoxDisplayRectPercent()
-            If ende.Width <= 0 OrElse ende.Height <= 0 OrElse start.Value.Width <= 0 OrElse start.Value.Height <= 0 Then Return
+            If ende.Width <= 0 OrElse ende.Height <= 0 OrElse start.Value.Width <= 0 OrElse start.Value.Height <= 0 Then
+                DiagnosticLogService.LogAlways("Editor.MaskFollow",
+                    $"aufgeschobene Nachfuehrung: unbrauchbare Box start={start.Value.Width:F2}x{start.Value.Height:F2} ende={ende.Width:F2}x{ende.Height:F2}")
+                Return
+            End If
+            DiagnosticLogService.LogAlways("Editor.MaskFollow",
+                $"aufgeschobene Nachfuehrung: {masks.Count} Maske(n), start={start.Value.X:F2}/{start.Value.Y:F2} ende={ende.X:F2}/{ende.Y:F2} drehung={rotation:F2}")
+            For Each m In masks
+                DiagnosticLogService.LogAlways("Editor.MaskFollow", "  vorher " & DescribeMask(m))
+            Next
 
+            ' Sind die Verlaeufe waehrend des Zuges schon mitgewandert, bleibt hier nur das RASTER -
+            ' sonst wanderten sie ein zweites Mal und landeten beim doppelten Versatz.
+            Dim part = If(_gradientsFollowedDuringDrag,
+                          ImageProcessor.MaskTransformPart.RasterOnly,
+                          ImageProcessor.MaskTransformPart.All)
+            _gradientsFollowedDuringDrag = False
             If Math.Abs(rotation) > 0.0001 Then
                 Dim pivotX = PercentXToPixels(ende.X + ende.Width / 2.0)
                 Dim pivotY = PercentYToPixels(ende.Y + ende.Height / 2.0)
                 For Each mask In masks
-                    ImageProcessor.RotateMaskRegion(mask, rotation, pivotX, pivotY)
+                    ImageProcessor.RotateMaskRegion(mask, rotation, pivotX, pivotY, part)
                 Next
             End If
 
@@ -13170,14 +13226,60 @@ Namespace ViewModels
             If Math.Abs(offsetX) < 0.01 AndAlso Math.Abs(offsetY) < 0.01 AndAlso
                Math.Abs(sx - 1.0) < 0.0001 AndAlso Math.Abs(sy - 1.0) < 0.0001 Then Return
             For Each mask In masks
-                ImageProcessor.TransformMaskRegion(mask, sx, sy, pivotStartX, pivotStartY, offsetX, offsetY)
+                ImageProcessor.TransformMaskRegion(mask, sx, sy, pivotStartX, pivotStartY, offsetX, offsetY, part)
             Next
+            For Each m In masks
+                DiagnosticLogService.LogAlways("Editor.MaskFollow", "  nachher " & DescribeMask(m))
+            Next
+        End Sub
+
+        ''' <summary>Der Zustand einer Maske in einer Zeile - fuer die Fehlersuche am Log des
+        ''' Nutzers. Raster und Verlaufspunkte stehen nebeneinander, weil die beiden auf
+        ''' verschiedenen Wegen mitwandern.</summary>
+        Private Shared Function DescribeMask(m As ImageMask) As String
+            If m Is Nothing Then Return "(keine)"
+            Dim c = m.GetComponents()
+            Dim parts = String.Join(" | ", c.Select(Function(k, i) _
+                $"[{i}] {If(String.IsNullOrEmpty(k.Kind), "gemalt", k.Kind)} " &
+                $"raster={If(String.IsNullOrEmpty(k.PngBase64), "-", "ja")} " &
+                $"rect={k.Left},{k.Top},{k.Right},{k.Bottom} " &
+                $"verlauf={k.GradientStartXPercent:F2}/{k.GradientStartYPercent:F2}->{k.GradientEndXPercent:F2}/{k.GradientEndYPercent:F2}"))
+            Return $"Maske {m.Id.Substring(0, Math.Min(8, m.Id.Length))} {c.Count} Bestandteil(e): {parts}"
+        End Function
+
+        ''' <summary>Was im Moment ueber die Maskennachfuehrung entscheidet: markiertes Objekt,
+        ''' seine Maskenkennung, ob die Maske ihm ALLEIN gehoert und ob sie damit ueberhaupt in die
+        ''' Nachfuehrung kommt. Genau diese Kette entscheidet, ob eine Maske beim Verschieben
+        ''' mitwandert.</summary>
+        Private Sub LogMaskFollowState(anlass As String)
+            Dim selected = SelectedAnnotations
+            If selected.Count = 0 Then
+                DiagnosticLogService.LogAlways("Editor.MaskFollow", $"{anlass}: nichts markiert")
+                Return
+            End If
+            Dim lines As New List(Of String)()
+            For Each a In selected
+                If a Is Nothing Then Continue For
+                Dim maskId = If(a.MaskId, "")
+                If maskId = "" Then
+                    lines.Add($"{a.Kind}: ohne Ebenenmaske")
+                    Continue For
+                End If
+                Dim exclusive = ExclusiveMaskOfObject(a)
+                ' NICHT "shared" nennen: das ist in VB ein Schluesselwort.
+                Dim sharedNote = If(exclusive Is Nothing, " GETEILT-oder-fehlend", "")
+                lines.Add($"{a.Kind} maskId={maskId.Substring(0, Math.Min(8, maskId.Length))}{sharedNote} gesperrt={IsAnnotationGeometryLocked(a)} " &
+                          If(exclusive Is Nothing, "", DescribeMask(exclusive)))
+            Next
+            DiagnosticLogService.LogAlways("Editor.MaskFollow",
+                $"{anlass}: {selected.Count} markiert, mitwandernde Masken={TransformableSelectedMasks().Count} :: " & String.Join(" ;; ", lines))
         End Sub
 
         Public Sub EndSelectedAnnotationPlacementEdit()
             _annotationPlacementEditActive = False
             ' Aufgeschobene Masken-Nachführung nachholen, BEVOR der Commit die Endfassung rendert.
             ApplyDeferredGroupMaskTransform()
+            LogMaskFollowState("dragEnde")
             ' Aufzeichnen wieder freigeben (siehe PushUndo beim Zug-Start). Läuft auch über den
             ' PointerCaptureLost-Weg, damit ein abgebrochener Zug das Undo nicht dauerhaft stilllegt.
             _suppressUndoCapture = False
@@ -13447,6 +13549,8 @@ Namespace ViewModels
             _selectionAssetTempDir = ""
             _selectionClipboardPath = Nothing
             _selectionClipboardPasteCount = 0
+            ' Die Zwischenstände des Objekt-Malens liegen im selben Ordner und gehen mit ihm.
+            _objectPaintFiles.Clear()
             If String.IsNullOrWhiteSpace(tempDir) Then Return
 
             Try
@@ -16471,11 +16575,26 @@ Namespace ViewModels
         ''' gespeichert und abgespielt, sondern REGIONAL in Vollauflösung ins Arbeitsbild
         ''' eingebacken (Hintergrund-Queue). Undo läuft über den Vorher-Patch des Commits.
         ''' Pinsel und Radierer sind keine Overlay-Objekte und erzeugen keine Ebenen.
+        '''
+        ''' AUSNAHME: ist eine Ebene markiert, die ein BILD trägt, geht der Strich dorthin statt ins
+        ''' Foto (siehe EditorViewModelObjectPaint.vb) - wie in üblichen Bildbearbeitungen, wo die
+        ''' markierte Ebene das Ziel ist.
         Public Sub AddBrushStroke(points As IEnumerable(Of Avalonia.Point), Optional isEraser As Boolean = False)
             If Not CanUsePixelTools Then Return
             If points Is Nothing Then Return
             Dim normalized = points.ToList()
             If normalized.Count < 2 Then Return
+
+            ' Steht ein Ziel fest, bleibt es dabei - auch wenn das Malen scheitert. Ein Rückfall
+            ' aufs Foto wäre hier das Schlimmere: er sieht im Bild fast gleich aus, sitzt aber in
+            ' den falschen Pixeln, und auffallen würde es erst beim Verschieben der Ebene.
+            Dim imageObject = FindStrokeTargetImageAnnotation()
+            If imageObject IsNot Nothing Then
+                If Not TryPaintStrokeIntoImageAnnotation(imageObject, normalized, isEraser) Then
+                    StatusText = LocalizationService.T("Malen fehlgeschlagen")
+                End If
+                Return
+            End If
 
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
@@ -16492,6 +16611,19 @@ Namespace ViewModels
             Dim dirtyFull As SKRectI
             Dim stroke = PixelEditLayer.CreateTransientStroke(pixelPoints, BuildPixelPaintOptions(isEraser), baseW, baseH, dirtyFull)
             If stroke Is Nothing OrElse dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
+            dirtyFull = ClampRectToBitmap(dirtyFull, baseW, baseH)
+            If dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
+
+            ' Auswahl: gemalt und radiert wird nur innerhalb. Die Deckung entsteht HIER, auf dem
+            ' UI-Faden - der Commit unten läuft im Hintergrund und darf den Auswahlzustand nicht
+            ' anfassen. Nothing heisst „keine Auswahl", deckungslos heisst „der Strich liegt
+            ' vollständig ausserhalb" und wird ohne Undo-Schritt verworfen.
+            Dim anyCoverage = False
+            Dim selectionCoverage = BuildSelectionCoverageForWorkingRect(dirtyFull, anyCoverage)
+            If selectionCoverage IsNot Nothing AndAlso Not anyCoverage Then
+                selectionCoverage.Dispose()
+                Return
+            End If
 
             PushUndo()
             Dim undoEntry = _lastPushedUndoEntry
@@ -16508,21 +16640,43 @@ Namespace ViewModels
             ' damit zwischen Loslassen und Einbacken nichts flackert. Optisch ist das der alte
             ' Stand „Strich ÜBER der Farbpipeline und über Objekten" - der korrekte Stand
             ' (Strich unter Reglern und Objekten) kommt mit dem Voll-Render nach dem Commit.
-            DrawStrokeBridgeIntoScene(renderAnn, dirtyFull, baseW, baseH)
+            ' Bei aktiver Auswahl bleibt sie weg: sie kennt die Begrenzung nicht und zeigte den
+            ' Strich für einen Sekundenbruchteil auch ausserhalb.
+            If selectionCoverage Is Nothing Then DrawStrokeBridgeIntoScene(renderAnn, dirtyFull, baseW, baseH)
 
             EnqueueWorkingCommit(
                 Function()
-                    Return _workingImage.CommitRegion(dirtyFull,
-                        Sub(full)
-                            Using canvas = New SKCanvas(full)
-                                canvas.ClipRect(SKRect.Create(dirtyFull.Left, dirtyFull.Top, dirtyFull.Width, dirtyFull.Height))
-                                Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
-                                ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
-                                                                       0, 0, full.Width, full.Height,
-                                                                       New List(Of ImageAnnotation) From {renderAnn})
-                            End Using
-                        End Sub,
-                        punchesAlpha:=punchesAlpha)
+                    Try
+                        Return _workingImage.CommitRegion(dirtyFull,
+                            Sub(full)
+                                ' Der VORHER-Ausschnitt für die Auswahlgrenze: gezeichnet wird wie
+                                ' immer, und was ausserhalb der Auswahl liegt, wird danach wieder
+                                ' eingeblendet (RestoreOutsideCoverage).
+                                Dim before As SKBitmap = Nothing
+                                If selectionCoverage IsNot Nothing Then before = ImageProcessor.CopyRegion(full, dirtyFull)
+                                Try
+                                    Using canvas = New SKCanvas(full)
+                                        canvas.ClipRect(SKRect.Create(dirtyFull.Left, dirtyFull.Top, dirtyFull.Width, dirtyFull.Height))
+                                        Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
+                                        ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
+                                                                               0, 0, full.Width, full.Height,
+                                                                               New List(Of ImageAnnotation) From {renderAnn})
+                                    End Using
+                                    If selectionCoverage IsNot Nothing AndAlso
+                                       Not ImageProcessor.RestoreOutsideCoverage(full, before, selectionCoverage, dirtyFull) Then
+                                        ' Lieber nichts als ein Strich über die Auswahl hinaus:
+                                        ' CommitRegion setzt die Region aus seinem eigenen
+                                        ' Vorher-Ausschnitt zurück und meldet den Fehlschlag.
+                                        Throw New InvalidOperationException("Auswahlgrenze konnte nicht angewendet werden")
+                                    End If
+                                Finally
+                                    before?.Dispose()
+                                End Try
+                            End Sub,
+                            punchesAlpha:=punchesAlpha)
+                    Finally
+                        selectionCoverage?.Dispose()
+                    End Try
                 End Function,
                 Sub(patch)
                     ' Kein Flicken heisst: der Strich ist NICHT ins Arbeitsbild gekommen. Das
@@ -17688,6 +17842,28 @@ Namespace ViewModels
             Return tool = EditorTool.Text OrElse tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
                    tool = EditorTool.Insert OrElse tool = EditorTool.Move OrElse
                    IsObjectScopeTool(tool)
+        End Function
+
+        ''' <summary>Die AUSNAHMEN zum Abwählen beim Werkzeugwechsel: Werkzeuge, die kein
+        ''' Ebenen-Werkzeug sind und in denen die markierte Ebene trotzdem stehen bleibt.
+        '''
+        ''' Sie stehen hier, weil ZWEI Wege in ein Werkzeug führen und beide abwählen: der Setter von
+        ''' <c>CurrentTool</c> und <c>SetToolCommand</c>, an dem die Knöpfe der Werkzeugleiste hängen.
+        ''' Das Kommando wählt VOR dem Setter ab - eine Ausnahme, die nur im Setter stand, war über die
+        ''' Werkzeugleiste damit wirkungslos. Genau so war es: die Ausnahme fürs Masken-Werkzeug
+        ''' funktionierte nur, wenn das Werkzeug über die Eigenschaft gesetzt wurde.
+        '''
+        ''' Warum diese drei: im MASKEN-Werkzeug arbeitet man an der Maske des markierten Objekts, im
+        ''' AUSWAHL-Werkzeug zieht man die Auswahl auf, in der danach auf der Ebene gemalt wird. In
+        ''' beiden Fällen ist der Wechsel ein Schritt der Handlung und nicht ihr Ende.</summary>
+        Private Function ToolKeepsSelectedAnnotationOnEnter(tool As EditorTool) As Boolean
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
+            Dim annotation = _annotations(_selectedAnnotationIndex)
+            If annotation Is Nothing Then Return False
+            If tool = EditorTool.Mask AndAlso Not String.IsNullOrEmpty(annotation.MaskId) Then Return True
+            If (tool = EditorTool.Selection OrElse tool = EditorTool.Mask) AndAlso
+               IsPaintableImageAnnotation(annotation) Then Return True
+            Return False
         End Function
 
         ''' <summary>Das Drehen-Werkzeug: hier wirken Drehen/Spiegeln auf das markierte Objekt. Es darf weder
@@ -19254,10 +19430,17 @@ Namespace ViewModels
         Private Sub SetPaintMode(mode As String)
             Dim normalized = If(mode, "").Trim().ToLowerInvariant()
             Dim previousPaintMode = SelectedPaintMode
+            ' Eine markierte BILD-Ebene überlebt den Wechsel zu Pinsel und Radiergummi: auf ihr soll
+            ' ja gemalt werden (siehe AddBrushStroke). Sie hier abzuwählen hiesse, das Ziel mit dem
+            ' Griff zum Werkzeug wieder zu verlieren. Für alles andere bleibt es beim Abwählen: dort
+            ' malt man ins Foto, und ein markiertes Objekt stellte nur die Regler um.
+            Dim keepsImageLayer = (normalized = "brush" OrElse normalized = "pinsel" OrElse
+                                   normalized = "eraser" OrElse normalized = "radiergummi") AndAlso
+                                  FindStrokeTargetImageAnnotation() IsNot Nothing
             _overlayNotifySuppressDepth += 1
             Try
                 PendingInsertKind = ""
-                SelectedAnnotationIndex = -1
+                If Not keepsImageLayer Then SelectedAnnotationIndex = -1
 
                 Select Case normalized
                     Case "brush", "pinsel"

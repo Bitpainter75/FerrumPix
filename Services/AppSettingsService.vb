@@ -201,6 +201,11 @@ Namespace Services
         ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl, bisheriges
         ''' Verhalten) oder "Adjust" (Anpassen).
         Public Property EditorStartupTool As String = "Selection"
+
+        ''' <summary>Was mit den TEXTEBENEN einer fremden Photoshop-Datei geschieht: "Ask" fragt bei
+        ''' jedem Öffnen, "Text" übernimmt sie als tippbaren Text, "Image" als Bildpunkte. Ab Werk
+        ''' wird gefragt - beides ist vertretbar, und welche Seite man will, hängt am Vorhaben.</summary>
+        Public Property PsdTextImport As String = "Ask"
         ''' Reihenfolge der drei Werkzeuggruppen in der linken Editor-Leiste, von oben nach unten.
         ''' Erlaubt sind genau "Adjust", "Transform" und "Tools", jeder Name genau einmal.
         Public Property EditorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -753,6 +758,16 @@ Namespace Services
                     Return "Adjust"
                 Case Else
                     Return "Selection"
+            End Select
+        End Function
+
+        ''' <summary>Unbekanntes wird zu „nachfragen": die Frage kostet einen Klick, eine falsch
+        ''' geratene Übernahme dagegen die Arbeit an den Texten.</summary>
+        Public Shared Function NormalizePsdTextImport(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Text" : Return "Text"
+                Case "Image" : Return "Image"
+                Case Else : Return "Ask"
             End Select
         End Function
 
@@ -1358,6 +1373,10 @@ Namespace Services
 
         Public Shared Sub SaveEditorLayerThumbnails(value As Boolean)
             Update(Sub(s) s.EditorLayerThumbnails = value)
+        End Sub
+
+        Public Shared Sub SavePsdTextImport(value As String)
+            Update(Sub(s) s.PsdTextImport = NormalizePsdTextImport(value))
         End Sub
 
         Public Shared Sub SaveEditorExpanderState(key As String, expanded As Boolean)

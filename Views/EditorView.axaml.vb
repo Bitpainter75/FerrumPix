@@ -1997,6 +1997,17 @@ Namespace Views
                     Dim hitSlopXPercent = hitSlopPixels / imageRect.Width * 100.0
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
                     Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
+                    ' AUSSERHALB der Auswahl/Maske heisst: sie ist nicht mehr gemeint - und zwar
+                    ' unabhaengig davon, ob der Klick eine Ebene trifft oder ins Leere geht. Sie
+                    ' bleiben zu lassen, waehrend man eine Ebene anklickt, hinterliess Laufameisen
+                    ' um etwas, an dem gerade niemand mehr arbeitet (Nutzerbefund 2026-08-05).
+                    ' INNERHALB behaelt sie den Vorrang: dafuer ist der Untermodus da, und der
+                    ' Klick landet weiter unten in der Verschiebe-Transaktion.
+                    If vm.HasActiveSelection AndAlso Not IsPointInsideSelection(rawPos, imageRect, vm) Then
+                        vm.ClearSelection()
+                        _selectionClickOutsideActiveSelection = False
+                        UpdateSelectionOverlayVisibility()
+                    End If
                     If hitIndex >= 0 Then
                         Dim wasSelectedBefore = hitIndex >= 0 AndAlso hitIndex < vm.TextAnnotations.Count AndAlso
                                                 vm.IsAnnotationSelected(vm.TextAnnotations(hitIndex))
@@ -2023,19 +2034,12 @@ Namespace Views
                         Return
                     ElseIf vm.HasSelectedAnnotation Then
                         vm.SelectedAnnotationIndex = -1
-                    ElseIf Not vm.HasActiveSelection Then
-                        ' Im Auswahlwerkzeug bedeutet "Verschieben" ohne Objekt/Auswahl einen
-                        ' Bühnen-Pan. Der Klick bleibt dabei rein visuell; es wird keine Auswahl
-                        ' erzeugt und kein Layer selektiert.
-                        _panStartX = rawPos.X
-                        _panStartY = rawPos.Y
-                        _panStartOffsetX = _panX
-                        _panStartOffsetY = _panY
-                        _isPanDragging = True
-                        e.Pointer.Capture(canvas)
-                        e.Handled = True
-                        Return
                     End If
+                    ' Ein Buehnen-Pan stand hier einmal als letzter Zweig. Er war unerreichbar,
+                    ' seit der Objekt-Rahmen im Verschieben-Modus gilt (AllowsObjectMarquee faengt
+                    ' den Fall darueber ab), und er waere jetzt auch falsch: der Untermodus
+                    ' verschiebt die AUSWAHL, und ohne Auswahl gibt es nichts zu verschieben.
+                    ' Die Buehne bewegt man mit der rechten Maustaste, der Leertaste oder dem Knopf.
                 End If
                 Dim clickedInsideSelection = vm.HasActiveSelection AndAlso vm.SelectionMode <> "MagicWand" AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
                 If clickedInsideSelection Then
@@ -3943,7 +3947,11 @@ Namespace Views
         Private Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
             Select Case tool
                 Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color, EditorTool.Filters,
-                     EditorTool.Details, EditorTool.Effects
+                     EditorTool.Details, EditorTool.Effects, EditorTool.Draw
+                    ' ZEICHNEN gehoert dazu, seit ein Strich innerhalb einer Auswahl bleibt: die
+                    ' Laufameisen muessen dabei stehen bleiben, sonst begrenzt etwas Unsichtbares
+                    ' den Pinsel. Damit gelten dort auch Strg+A und Esc wie in den uebrigen
+                    ' Werkzeugen, in denen eine Auswahl etwas bewirkt.
                     Return True
                 Case Else
                     Return False

@@ -6560,4 +6560,13 @@
   <data name="Als_Bild_1826a60e" xml:space="preserve">
     <value>Como imagen</value>
   </data>
+  <data name="Textebenen_aus_Photoshop_Dateien_02d3d9a6" xml:space="preserve">
+    <value>Capas de texto de archivos de Photoshop</value>
+  </data>
+  <data name="Beim_ffnen_einer_Photoshop_Datei_mit_Textebenen__8c1a381c" xml:space="preserve">
+    <value>Al abrir un archivo de Photoshop con capas de texto: tomarlas como texto (el contenido sigue siendo editable, el aspecto puede variar), tomarlas como imagen (cada píxel es exacto, el texto queda fijo) o preguntar cada vez.</value>
+  </data>
+  <data name="Immer_fragen_6007356b" xml:space="preserve">
+    <value>Preguntar siempre</value>
+  </data>
 </root>

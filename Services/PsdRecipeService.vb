@@ -36,6 +36,14 @@ Namespace Services
         ''' unbemerkt um Hunderte Megabyte wächst.</summary>
         Private Const MaxAssetBytes As Long = 64L * 1024L * 1024L
 
+        ''' <summary>Dieselbe Grenze beim LESEN. Sie muss über <see cref="MaxAssetBytes"/> liegen,
+        ''' weil der Block die Inhalte als Base64 trägt (ein Drittel mehr) und das Rezept selbst
+        ''' dazukommt; 128 MB lassen jede selbst geschriebene Datei durch und weisen alles darüber
+        ''' ab. Eine Grenze nur beim Schreiben wäre die halbe Sicherung: gelesen wird auch, was ein
+        ''' fremdes oder beschädigtes Programm dort abgelegt hat, und daraus entstehen Zeichenkette,
+        ''' Base64-Umweg und Dateien im Temp-Ordner.</summary>
+        Private Const MaxPayloadBytes As Long = 128L * 1024L * 1024L
+
         Private Class RecipeEnvelope
             Public Property Signature As String = ""
             Public Property Version As Integer
@@ -98,6 +106,9 @@ Namespace Services
         ''' <paramref name="assetDir"/>. Nothing, wenn kein eigener Block vorliegt.</summary>
         Public Shared Function Parse(payload As Byte(), assetDir As String) As ImageAdjustments
             If payload Is Nothing OrElse payload.Length < 16 Then Return Nothing
+            ' Auch hier deckeln und nicht nur beim Herausholen: Parse ist öffentlich, und der
+            ' nächste Aufrufer kommt vielleicht anderswo her.
+            If payload.LongLength > MaxPayloadBytes Then Return Nothing
 
             Try
                 Dim json = Encoding.UTF8.GetString(payload)
@@ -165,7 +176,11 @@ Namespace Services
                         Dim dataStart = fs.Position
                         If dataStart + dataLen > resourcesEnd Then Return Nothing
 
-                        If id = ResourceId AndAlso dataLen > 0 AndAlso dataLen < Integer.MaxValue Then
+                        ' Zu grosse Bloecke werden UEBERSPRUNGEN, nicht gelesen: die Nummer ab 4000
+                        ' steht jedem frei, ein Riesenblock dort ist also eher ein fremder als ein
+                        ' eigener - und selbst wenn er eigen waere, kaeme er aus einer Fassung, die
+                        ' den Deckel beim Schreiben nicht hatte.
+                        If id = ResourceId AndAlso dataLen > 0 AndAlso dataLen <= MaxPayloadBytes Then
                             Dim buffer(CInt(dataLen) - 1) As Byte
                             If fs.Read(buffer, 0, buffer.Length) = buffer.Length Then Return buffer
                             Return Nothing

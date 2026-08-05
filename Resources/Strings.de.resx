@@ -6560,4 +6560,13 @@
   <data name="Als_Bild_1826a60e" xml:space="preserve">
     <value>Als Bild</value>
   </data>
+  <data name="Textebenen_aus_Photoshop_Dateien_02d3d9a6" xml:space="preserve">
+    <value>Textebenen aus Photoshop-Dateien</value>
+  </data>
+  <data name="Beim_ffnen_einer_Photoshop_Datei_mit_Textebenen__8c1a381c" xml:space="preserve">
+    <value>Beim Öffnen einer Photoshop-Datei mit Textebenen: als Text übernehmen (der Wortlaut bleibt tippbar, das Aussehen kann abweichen), als Bild übernehmen (jeder Bildpunkt stimmt, der Text ist fest) oder jedes Mal nachfragen.</value>
+  </data>
+  <data name="Immer_fragen_6007356b" xml:space="preserve">
+    <value>Immer fragen</value>
+  </data>
 </root>

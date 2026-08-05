@@ -6560,4 +6560,13 @@
   <data name="Als_Bild_1826a60e" xml:space="preserve">
     <value>Come immagine</value>
   </data>
+  <data name="Textebenen_aus_Photoshop_Dateien_02d3d9a6" xml:space="preserve">
+    <value>Livelli di testo dai file Photoshop</value>
+  </data>
+  <data name="Beim_ffnen_einer_Photoshop_Datei_mit_Textebenen__8c1a381c" xml:space="preserve">
+    <value>All'apertura di un file Photoshop con livelli di testo: acquisirli come testo (il contenuto resta modificabile, l'aspetto può cambiare), acquisirli come immagine (ogni pixel è esatto, il testo è fisso) oppure chiedere ogni volta.</value>
+  </data>
+  <data name="Immer_fragen_6007356b" xml:space="preserve">
+    <value>Chiedi sempre</value>
+  </data>
 </root>

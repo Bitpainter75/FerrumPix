@@ -69,7 +69,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 **With a model file installed** (see below), four more things become available: clicking an object to select it, selecting by distance from the camera, removing something from the picture so that the background is continued through the gap, and denoising a photo with a model - a separate step next to the noise sliders that takes minutes rather than seconds, with a strength slider for how much of the brightness it should touch.
 
-**Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants.
+**Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants. With a selection active, brush and eraser stay inside it. With a picture layer selected, they paint on that layer instead of on the photo, and the eraser takes real holes out of it.
 
 **Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform. Text follows an arc, a circle or a wave. Any of them can carry a layer mask you paint with the mask brush, or be clipped to the layer below it. The layers panel holds the whole stack with visibility, reorder, rename, grouping, merging and rasterizing, and every row shows a thumbnail of what is on the layer with its mask beside it, so a stack of masks says which one sits where.
 

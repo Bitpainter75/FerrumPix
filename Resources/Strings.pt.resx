@@ -6559,4 +6559,13 @@
   <data name="Als_Bild_1826a60e" xml:space="preserve">
     <value>Como imagem</value>
   </data>
+  <data name="Textebenen_aus_Photoshop_Dateien_02d3d9a6" xml:space="preserve">
+    <value>Camadas de texto de ficheiros do Photoshop</value>
+  </data>
+  <data name="Beim_ffnen_einer_Photoshop_Datei_mit_Textebenen__8c1a381c" xml:space="preserve">
+    <value>Ao abrir um ficheiro do Photoshop com camadas de texto: assumir como texto (o conteúdo continua editável, o aspeto pode diferir), assumir como imagem (cada pixel fica exato, o texto fica fixo) ou perguntar sempre.</value>
+  </data>
+  <data name="Immer_fragen_6007356b" xml:space="preserve">
+    <value>Perguntar sempre</value>
+  </data>
 </root>
