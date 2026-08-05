@@ -1389,6 +1389,9 @@
   <data name="Vergleich_ein_oder_ausblenden_294aac27" xml:space="preserve">
     <value>Show or hide comparison</value>
   </data>
+  <data name="Vergleich_ein_oder_ausblenden_Mittlere_Maustaste_6e9a4e5b" xml:space="preserve">
+    <value>Show or hide comparison. The middle mouse button centres the divider in the visible part of the picture</value>
+  </data>
   <data name="Vergr_ern_3779202e" xml:space="preserve">
     <value>Zoom in</value>
   </data>

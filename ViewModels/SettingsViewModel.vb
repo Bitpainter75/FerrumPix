@@ -840,7 +840,11 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_galleryOpenTarget, value)
                 Me.RaisePropertyChanged(NameOf(IsGalleryOpenViewer))
                 Me.RaisePropertyChanged(NameOf(IsGalleryOpenEditor))
-                SaveFileBrowserSettings()
+                ' SaveStartupSettings, nicht SaveFileBrowserSettings: nur dort wird GalleryOpenTarget
+                ' auch wirklich in die Datei uebernommen. Der Knopf schaltete zwar sichtbar um, die
+                ' Einstellung landete aber nie auf der Platte - der Doppelklick in der Galerie las
+                ' danach weiter den alten Wert und oeffnete den Betrachter.
+                SaveStartupSettings()
             End Set
         End Property
 

@@ -17605,6 +17605,9 @@ Namespace ViewModels
             PushUndo()
             Dim copy = _maskedAdjustmentLayers(index).Clone()
             copy.Id = Guid.NewGuid().ToString("N")
+            ' Die Kopie bekommt ihre EIGENE Maske - sonst zeigten beide Ebenen auf dieselbe, und
+            ' Umkehren, Nachmalen oder Verschieben an der Kopie aenderte das Original mit.
+            GiveCopyItsOwnMask(copy)
             copy.Name = If(String.IsNullOrWhiteSpace(copy.Name), LocalizationService.T("Auswahl-Korrektur"), copy.Name) &
                         " " & LocalizationService.T("Kopie")
             _maskedAdjustmentLayers.Insert(index + 1, copy)

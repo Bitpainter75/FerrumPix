@@ -136,8 +136,21 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Modusreihe des Masken- und des Auswahl-Werkzeugs.
+        '''
+        ''' „NEU" IM MASKEN-WERKZEUG LOEST DIE AKTUELLE MASKE AB. Der Knopf heisst „Neue Maske
+        ''' beginnen", war aber wirkungslos, solange eine vorhandene Maske bearbeitet wurde: jeder
+        ''' Strich schrieb weiter in genau diese Maske zurueck (_editingLayerMaskId) und jeder
+        ''' Verlaufszug hing sich an sie an (_workingMaskId). Aus einer bestehenden Maske heraus liess
+        ''' sich damit keine neue anfangen. Nach dem Abloesen legt der naechste Strich beziehungsweise
+        ''' der naechste Zug eine neue Maske samt eigener Ebene an.
+        '''
+        ''' Im AUSWAHL-Werkzeug bleibt „Neu" was es war - dort ist es die Verknuepfung des naechsten
+        ''' Zugs, und eine laufende Auswahl darf ein Moduswechsel nicht wegraeumen.</summary>
         Public Sub SetSelectionCombineMode(mode As String)
-            SelectionCombineMode = mode
+            Dim v = NormalizeSelectionCombineMode(mode)
+            If v = "New" AndAlso _currentTool = EditorTool.Mask Then DeselectMaskTarget()
+            SelectionCombineMode = v
         End Sub
 
         Public ReadOnly Property IsSelectionCombineNew As Boolean
@@ -1169,18 +1182,33 @@ Namespace ViewModels
         ''' eine kopierte OBJEKTebene darf das nicht: wer die Maske der Kopie nachmalt, meint die
         ''' Kopie und nicht zugleich das Original. Ohne Maske bleibt alles, wie es ist.</summary>
         Private Sub GiveCopyItsOwnMask(copy As ImageAnnotation)
-            If copy Is Nothing OrElse String.IsNullOrEmpty(copy.MaskId) Then Return
+            If copy Is Nothing Then Return
+            copy.MaskId = CloneMaskForCopy(copy.MaskId)
+        End Sub
+
+        ''' <summary>Dasselbe fuer die KOPIE einer Korrekturebene. „Duplizieren" heisst eine
+        ''' UNABHAENGIGE zweite Ebene: wer danach ihre Maske umkehrt, nachmalt oder verschiebt, meint
+        ''' die Kopie und nicht zugleich das Original. Geteilt wird eine Maske ausschliesslich ueber
+        ''' „Neue Korrektur mit derselben Maske" - dafuer gibt es den eigenen Befehl. Vorher trug die
+        ''' Kopie dieselbe MaskId, und ein Umkehren an der Kopie kehrte die Ursprungsmaske mit um.</summary>
+        Private Sub GiveCopyItsOwnMask(copy As MaskedAdjustmentLayer)
+            If copy Is Nothing Then Return
+            copy.MaskId = CloneMaskForCopy(copy.MaskId)
+        End Sub
+
+        ''' <summary>Legt eine eigenstaendige Abschrift der Maske an und liefert deren Kennung. Leere
+        ''' Kennung zurueck, wenn es die Maske nicht (mehr) gibt - eine Kennung ohne Daten waere eine
+        ''' lautlos wirkungslose Maske.</summary>
+        Private Function CloneMaskForCopy(maskId As String) As String
+            If String.IsNullOrEmpty(maskId) Then Return ""
             Dim original = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
-                                                          String.Equals(m.Id, copy.MaskId, StringComparison.Ordinal))
-            If original Is Nothing Then
-                copy.MaskId = ""
-                Return
-            End If
+                                                          String.Equals(m.Id, maskId, StringComparison.Ordinal))
+            If original Is Nothing Then Return ""
             Dim clone = original.Clone()
             clone.Id = Guid.NewGuid().ToString("N")
             _imageMasks.Add(clone)
-            copy.MaskId = clone.Id
-        End Sub
+            Return clone.Id
+        End Function
 
         ''' <summary>Die EINE Stelle, die eine Maske wegraeumt: nur, wenn nichts mehr auf sie zeigt.</summary>
         Private Sub RemoveMaskIfUnreferenced(maskId As String)

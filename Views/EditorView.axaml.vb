@@ -5546,6 +5546,41 @@ Namespace Views
             Return Math.Abs(point.X - sliderX) <= 18.0 AndAlso Math.Abs(point.Y - handleCenterY) <= 18.0
         End Function
 
+        ''' <summary>MITTLERE MAUSTASTE auf den Knopf "Vergleich": holt den Teiler in die Mitte des
+        ''' sichtbaren Ausschnitts, ohne den Vergleich umzuschalten. Der Knopf laesst nicht-linke
+        ''' Tasten unbehandelt durch, deshalb reicht ein PointerPressed an ihm.</summary>
+        Public Sub OnBeforeAfterPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            If Not e.GetCurrentPoint(Nothing).Properties.IsMiddleButtonPressed Then Return
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing OrElse Not vm.ShowBeforeImage Then Return
+            CenterComparisonSliderInView()
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Legt den Vergleichsteiler in die Mitte des SICHTBAREN Bildausschnitts. Das ist
+        ''' bei eingepasstem Bild die Bildmitte und beim Hineinzoomen die Mitte dessen, was gerade auf
+        ''' der Buehne steht. Noetig, weil der Teiler bei der halben BILDbreite steht: hineingezoomt
+        ''' liegt die oft weit ausserhalb der Buehne, und dann ist er weder zu sehen noch zu greifen.</summary>
+        Private Sub CenterComparisonSliderInView()
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If canvas Is Nothing OrElse vm Is Nothing OrElse vm.DisplayImage Is Nothing Then Return
+
+            Dim cw = canvas.Bounds.Width
+            If cw <= 0 Then Return
+            Dim scale = SliderToZoom(_zoomSliderValue) / 100.0
+            Dim iw = GetEffectiveDisplaySize(vm).Width * scale
+            If iw <= 0 Then Return
+            Dim ix = (cw - iw) / 2.0 + _panX
+
+            ' Sichtbarer Streifen des Bildes = Schnittmenge aus Bild und Buehne.
+            Dim visibleLeft = Math.Max(ix, 0.0)
+            Dim visibleRight = Math.Min(ix + iw, cw)
+            If visibleRight <= visibleLeft Then Return
+
+            MoveSlider((visibleLeft + visibleRight) / 2.0, canvas)
+        End Sub
+
         Private Sub MoveSlider(mouseX As Double, canvas As Canvas)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim displayBitmap = vm?.DisplayImage

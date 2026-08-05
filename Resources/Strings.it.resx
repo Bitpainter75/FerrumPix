@@ -1389,6 +1389,9 @@
   <data name="Vergleich_ein_oder_ausblenden_294aac27" xml:space="preserve">
     <value>Mostra o nascondi confronto</value>
   </data>
+  <data name="Vergleich_ein_oder_ausblenden_Mittlere_Maustaste_6e9a4e5b" xml:space="preserve">
+    <value>Mostra o nascondi il confronto. Il pulsante centrale del mouse centra il divisore nella parte visibile dell'immagine</value>
+  </data>
   <data name="Vergr_ern_3779202e" xml:space="preserve">
     <value>Ingrandisci</value>
   </data>

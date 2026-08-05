@@ -138,7 +138,8 @@
                             IsEnabled="{Binding CanShowBeforeAfter}"
                             Classes.active="{Binding ShowBeforeImage}"
                             Click="OnToggleBeforeAfterClick"
-                            ToolTip.Tip="Vergleich ein- oder ausblenden">
+                            PointerPressed="OnBeforeAfterPointerPressed"
+                            ToolTip.Tip="Vergleich ein- oder ausblenden. Mittlere Maustaste zentriert den Teiler im sichtbaren Ausschnitt">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                            Width="18" Height="18" />
@@ -247,7 +248,13 @@
                          Gruppe oben steht, sagt die Einstellung (Zeilennummer je Gruppe). Ein
                          gestapeltes Panel könnte das nicht - eine Reihenfolge lässt sich nicht
                          binden, eine Zeilennummer schon. -->
-                    <Grid RowDefinitions="Auto,Auto,Auto">
+                    <!-- RowSpacing hält die Knöpfe über die Gruppengrenze hinweg im selben Abstand
+                         wie innerhalb einer Gruppe (dort kommt er aus Spacing="2" der Gruppe). Ohne
+                         das stiessen zwei Gruppen unmittelbar aneinander: in der eingeklappten
+                         Leiste sind die Überschriften ausgeblendet, und ein ausgeblendetes Kind
+                         zaehlt im StackPanel auch nicht für den Abstand - genau dort sassen die
+                         Symbole je Gruppenwechsel 2 px enger als sonst. -->
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
                     <StackPanel Grid.Row="{Binding ToolGroupRowTransform}" Spacing="2">
                     <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />

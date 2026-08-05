@@ -1389,6 +1389,9 @@
   <data name="Vergleich_ein_oder_ausblenden_294aac27" xml:space="preserve">
     <value>显示或隐藏比较视图</value>
   </data>
+  <data name="Vergleich_ein_oder_ausblenden_Mittlere_Maustaste_6e9a4e5b" xml:space="preserve">
+    <value>显示或隐藏比较视图。鼠标中键将分隔线置于可见画面的中央</value>
+  </data>
   <data name="Vergr_ern_3779202e" xml:space="preserve">
     <value>放大</value>
   </data>

@@ -1390,6 +1390,9 @@
   <data name="Vergleich_ein_oder_ausblenden_294aac27" xml:space="preserve">
     <value>Mostrar ou ocultar a comparação</value>
   </data>
+  <data name="Vergleich_ein_oder_ausblenden_Mittlere_Maustaste_6e9a4e5b" xml:space="preserve">
+    <value>Mostrar ou ocultar a comparação. O botão do meio do rato centra o divisor na parte visível da imagem</value>
+  </data>
   <data name="Vergr_ern_3779202e" xml:space="preserve">
     <value>Ampliar</value>
   </data>

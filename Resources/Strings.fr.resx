@@ -1389,6 +1389,9 @@
   <data name="Vergleich_ein_oder_ausblenden_294aac27" xml:space="preserve">
     <value>Afficher ou masquer la comparaison</value>
   </data>
+  <data name="Vergleich_ein_oder_ausblenden_Mittlere_Maustaste_6e9a4e5b" xml:space="preserve">
+    <value>Afficher ou masquer la comparaison. Le bouton central de la souris centre le séparateur dans la partie visible de l'image</value>
+  </data>
   <data name="Vergr_ern_3779202e" xml:space="preserve">
     <value>Zoom avant</value>
   </data>

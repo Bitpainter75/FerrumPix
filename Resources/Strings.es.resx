@@ -1389,6 +1389,9 @@
   <data name="Vergleich_ein_oder_ausblenden_294aac27" xml:space="preserve">
     <value>Mostrar u ocultar comparacion</value>
   </data>
+  <data name="Vergleich_ein_oder_ausblenden_Mittlere_Maustaste_6e9a4e5b" xml:space="preserve">
+    <value>Mostrar u ocultar la comparación. El botón central del ratón centra el divisor en la parte visible de la imagen</value>
+  </data>
   <data name="Vergr_ern_3779202e" xml:space="preserve">
     <value>Acercar</value>
   </data>
