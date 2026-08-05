@@ -388,16 +388,23 @@ Namespace Views
             ' auf diese eine Zeile eindampfen.
             Dim mehrfach = PlatformShortcutService.HasSelectionModifier(e.KeyModifiers) OrElse
                            e.KeyModifiers.HasFlag(KeyModifiers.Shift)
-            If mehrfach AndAlso row IsNot Nothing AndAlso (row.Annotation IsNot Nothing OrElse row.AdjustmentLayer IsNot Nothing) Then
+            If mehrfach AndAlso row IsNot Nothing Then
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 If vm IsNot Nothing Then
                     Dim bereich = e.KeyModifiers.HasFlag(KeyModifiers.Shift)
                     If row.Annotation IsNot Nothing Then
                         Dim index = vm.TextAnnotations.IndexOf(row.Annotation)
                         If bereich Then vm.SelectAnnotationRangeTo(index) Else vm.ToggleAnnotationInSelection(index)
-                    Else
+                    ElseIf row.AdjustmentLayer IsNot Nothing Then
                         If bereich Then vm.SelectAdjustmentLayerRangeTo(row.AdjustmentLayer) Else vm.ToggleAdjustmentLayerInSelection(row.AdjustmentLayer)
                     End If
+                    ' Kopf- und Sonderzeilen (Gruppe, globale Einstellungen, Hintergrund): der
+                    ' Modifier-Klick tut nichts, wird aber trotzdem VERBRAUCHT. Fiele er zur
+                    ' einfach-auswaehlenden ListBox durch, machte deren Toggle aus einem Strg-Klick
+                    ' auf die bereits markierte Zeile eine GELEERTE Auswahl - und eine geleerte
+                    ' Auswahl oeffnet in Avalonia das Fenster, in dem jeder Zeilenaufbau mit
+                    ' "Source collection was modified during selection update" abbricht
+                    ' (siehe RaiseLayerPanelSelectionChanged im ViewModel).
                     e.Handled = True
                     Return
                 End If

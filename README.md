@@ -166,6 +166,9 @@ The last two sections are reference: a full list of keyboard and mouse shortcuts
 
 On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/packages/ferrumpix-bin) in the AUR.
 
+The AppImage carries built-in update information: tools that manage AppImages spot new
+versions on their own and download only what changed.
+
 ### Windows
 
 | Package | For | Download |

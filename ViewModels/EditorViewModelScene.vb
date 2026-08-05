@@ -57,8 +57,10 @@ Namespace ViewModels
         Private Sub SetSceneBitmap(sceneSk As SKBitmap)
             If sceneSk Is Nothing Then Return
             ' Ein Vollrender malt die ganze Anzeige neu - die Zugbahn-Verkettung der Blits beginnt
-            ' danach frisch.
+            ' danach frisch, und vorgemerkte Reste der ALTEN Szene sind hinfaellig (der folgende
+            ' Blit merkt sich seinen ungesehenen Teil selbst wieder vor).
             _compositorPreviousBlitRect = SKRectI.Empty
+            _displayPendingRect = SKRectI.Empty
             Dim previous = _sceneSk
             _sceneSk = sceneSk
             If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, sceneSk) Then previous.Dispose()
@@ -99,48 +101,116 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' <summary>Kopiert NUR die Zeilen des Rects aus der Szene (Rgba8888) in die persistente
-        ''' Anzeige-Bitmap und meldet der View das Neuzeichnen (SceneInvalidated). Kein neues Bitmap,
-        ''' kein Vollbild-Upload - der Grund, warum Regler wieder fein bedienbar sind.</summary>
+        ''' <summary>Beim Klemmen aufs Sichtfenster liegengebliebene Schmutzregion der Anzeige -
+        ''' nachgeblittet von FlushPendingDisplayRegion, sobald das Sichtfenster sie erreicht.</summary>
+        Private _displayPendingRect As SKRectI = SKRectI.Empty
+
+        ''' <summary>Das Sichtfenster in Szenenpixeln, mit einem halben Fenster Rand je Seite -
+        ''' derselbe Rand-Gedanke wie beim Zoom-Detail: Schwenks bleiben billig, weil der Rand schon
+        ''' hochgeladen ist. Die Anteile meldet die View bei jedem Layout-Durchlauf
+        ''' (UpdateZoomDetailViewport); Empty heisst "unbekannt oder alles sichtbar", dann wird nicht
+        ''' geklemmt - so verhalten sich Kopflos-Betrieb (Pruefstand) und Einpassen-Ansicht exakt wie
+        ''' bisher.</summary>
+        Private Function ComputeBlitViewportRect() As SKRectI
+            If _sceneSk Is Nothing Then Return SKRectI.Empty
+            Dim l = _zoomDetailVisLeft, t = _zoomDetailVisTop
+            Dim r = _zoomDetailVisRight, b = _zoomDetailVisBottom
+            If r <= l OrElse b <= t Then Return SKRectI.Empty
+            If l <= 0.0 AndAlso t <= 0.0 AndAlso r >= 1.0 AndAlso b >= 1.0 Then Return SKRectI.Empty
+            Dim marginX = (r - l) * 0.5
+            Dim marginY = (b - t) * 0.5
+            Dim rect = New SKRectI(CInt(Math.Floor(Math.Max(0.0, l - marginX) * _sceneSk.Width)),
+                                   CInt(Math.Floor(Math.Max(0.0, t - marginY) * _sceneSk.Height)),
+                                   CInt(Math.Ceiling(Math.Min(1.0, r + marginX) * _sceneSk.Width)),
+                                   CInt(Math.Ceiling(Math.Min(1.0, b + marginY) * _sceneSk.Height)))
+            If rect.Left <= 0 AndAlso rect.Top <= 0 AndAlso
+               rect.Right >= _sceneSk.Width AndAlso rect.Bottom >= _sceneSk.Height Then Return SKRectI.Empty
+            Return rect
+        End Function
+
+        ''' <summary>Blitten, was beim Klemmen aufs Sichtfenster liegenblieb - gerufen bei jeder
+        ''' Sichtfenster-Meldung der View, also bei jedem Schwenk und Zoomwechsel. Der Blit laeuft
+        ''' synchron im selben Layout-Durchlauf; die Anzeige ist damit gefuellt, bevor gezeichnet
+        ''' wird. Erst wenn das Sichtfenster (samt Rand) den Rest ganz abdeckt, ist er erledigt -
+        ''' bis dahin wird je Schwenk hoechstens ein fenstergrosses Stueck nachgeholt.</summary>
+        Private Sub FlushPendingDisplayRegion()
+            If _displayPendingRect.IsEmpty OrElse _sceneSk Is Nothing OrElse _sceneDisplay Is Nothing Then Return
+            Dim pending = _displayPendingRect
+            Dim viewport = ComputeBlitViewportRect()
+            If viewport.IsEmpty OrElse
+               (viewport.Left <= pending.Left AndAlso viewport.Top <= pending.Top AndAlso
+                viewport.Right >= pending.Right AndAlso viewport.Bottom >= pending.Bottom) Then
+                _displayPendingRect = SKRectI.Empty
+                BlitSceneRegionToDisplay(pending)
+                Return
+            End If
+            Dim visible = New SKRectI(Math.Max(pending.Left, viewport.Left), Math.Max(pending.Top, viewport.Top),
+                                      Math.Min(pending.Right, viewport.Right), Math.Min(pending.Bottom, viewport.Bottom))
+            If visible.Width <= 0 OrElse visible.Height <= 0 Then Return
+            ' Der sichtbare Teil wird frisch, der Rest bleibt vorgemerkt (ein Rechteck kann keine
+            ' Teilmenge abziehen - lieber beim naechsten Schwenk etwas doppelt blitten als Buch
+            ' ueber Rechteck-Splitter fuehren).
+            BlitSceneRegionToDisplay(visible)
+        End Sub
+
+        ''' <summary>Zeichnet die Region (Szene plus Kompositor-Objekte) DIREKT in den gesperrten
+        ''' Framebuffer der Anzeige-Bitmap und meldet der View das Neuzeichnen (SceneInvalidated).
+        '''
+        ''' Frueher wurde je Blit ein Zwischenbitmap in Regionsgroesse angelegt, komponiert und
+        ''' zeilenweise hineinkopiert - bei einer Mehrfachauswahl, deren Vereinigungsrechteck die
+        ''' Szene deckt, waren das 38 MB Anlage plus zwei Kopien JE MAUSBEWEGUNG auf dem UI-Faden
+        ''' (Nutzerbefund 2026-08-05: Ziehen zaeh, CPU hoch, GC-Laeufe im Sekundentakt).
+        ''' InstallPixels legt stattdessen eine SKBitmap-Sicht UEBER die Lock-Adresse, und alles
+        ''' wird genau einmal gezeichnet.
+        '''
+        ''' Geklemmt wird aufs Sichtfenster samt Rand (ComputeBlitViewportRect): was ausserhalb
+        ''' liegt, merkt sich _displayPendingRect, und der naechste Schwenk holt es nach
+        ''' (FlushPendingDisplayRegion). In der Einpassen-Ansicht klemmt nichts.</summary>
         Private Sub BlitSceneRegionToDisplay(rect As SKRectI)
             If _sceneSk Is Nothing OrElse _sceneDisplay Is Nothing OrElse rect.IsEmpty Then Return
             Dim clamped = New SKRectI(Math.Max(0, rect.Left), Math.Max(0, rect.Top),
                                       Math.Min(_sceneSk.Width, rect.Right), Math.Min(_sceneSk.Height, rect.Bottom))
             If clamped.Width <= 0 OrElse clamped.Height <= 0 Then Return
-            ' KOMPOSITOR: die Region erst aus der Szene kopieren, dann die Cache-Objekte
-            ' darueberzeichnen und DIESE Fassung hochladen. Die Szene selbst bleibt ohne die
-            ' Kompositor-Objekte - genau das macht ihren Zug renderfrei.
-            Dim composed As SKBitmap = Nothing
+
+            Dim viewport = ComputeBlitViewportRect()
+            If Not viewport.IsEmpty Then
+                Dim visible = New SKRectI(Math.Max(clamped.Left, viewport.Left), Math.Max(clamped.Top, viewport.Top),
+                                          Math.Min(clamped.Right, viewport.Right), Math.Min(clamped.Bottom, viewport.Bottom))
+                If visible.Width <= 0 OrElse visible.Height <= 0 Then
+                    _displayPendingRect = ImageProcessor.UnionRects(_displayPendingRect, clamped)
+                    Return
+                End If
+                If visible <> clamped Then
+                    ' Grob die GANZE Region vormerken: ein Rechteck kann den sichtbaren Teil nicht
+                    ' herausschneiden. Beim Nachholen wird etwas doppelt geblittet, mehr nicht.
+                    _displayPendingRect = ImageProcessor.UnionRects(_displayPendingRect, clamped)
+                    clamped = visible
+                End If
+            End If
+
             Try
-                composed = New SKBitmap(clamped.Width, clamped.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
-                Using canvas = New SKCanvas(composed)
-                    canvas.Translate(-clamped.Left, -clamped.Top)
-                    Dim region = New SKRect(clamped.Left, clamped.Top, clamped.Right, clamped.Bottom)
-                    canvas.ClipRect(region)
-                    canvas.DrawBitmap(_sceneSk, region, region)
-                    Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
-                    OverlaySceneRenderer.DrawCachedAnnotations(canvas, adj, _sceneSk.Width, _sceneSk.Height, _annotationBitmapCache)
-                End Using
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Editor.Compositor", ex)
-                composed?.Dispose()
-                composed = Nothing
-            End Try
-            Try
-                Using composed
-                    Using fb = _sceneDisplay.Lock()
-                        Dim source = If(composed, _sceneSk)
-                        Dim srcLeft = If(composed Is Nothing, clamped.Left, 0)
-                        Dim srcTop = If(composed Is Nothing, clamped.Top, 0)
-                        Dim srcStride = source.RowBytes
-                        Dim dstStride = fb.RowBytes
-                        Dim srcBase = source.GetPixels()
-                        Dim bytes = clamped.Width * 4
-                        Dim buffer(bytes - 1) As Byte
-                        For y = clamped.Top To clamped.Bottom - 1
-                            Runtime.InteropServices.Marshal.Copy(IntPtr.Add(srcBase, (y - clamped.Top + srcTop) * srcStride + srcLeft * 4), buffer, 0, bytes)
-                            Runtime.InteropServices.Marshal.Copy(buffer, 0, IntPtr.Add(fb.Address, y * dstStride + clamped.Left * 4), bytes)
-                        Next
+                Using fb = _sceneDisplay.Lock()
+                    Dim info = New SKImageInfo(_sceneSk.Width, _sceneSk.Height,
+                                               SKColorType.Rgba8888, SKAlphaType.Premul)
+                    Using target = New SKBitmap()
+                        If Not target.InstallPixels(info, fb.Address, fb.RowBytes) Then Return
+                        Using canvas = New SKCanvas(target)
+                            Dim region = New SKRect(clamped.Left, clamped.Top, clamped.Right, clamped.Bottom)
+                            canvas.ClipRect(region)
+                            ' Region ERSETZEN statt mischen: die Szene ist das fertige Komposit,
+                            ' inkl. Transparenz bei ausgeblendetem Hintergrund.
+                            Using replacePaint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                                canvas.DrawBitmap(_sceneSk, region, region, replacePaint)
+                            End Using
+                            Try
+                                Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
+                                OverlaySceneRenderer.DrawCachedAnnotations(canvas, adj, _sceneSk.Width, _sceneSk.Height, _annotationBitmapCache)
+                            Catch ex As Exception
+                                ' Szene ist schon drin - lieber ohne Kompositor-Objekte anzeigen
+                                ' als gar nicht (gleiches Verhalten wie der fruehere Rueckfall).
+                                DiagnosticLogService.LogException("Editor.Compositor", ex)
+                            End Try
+                        End Using
                     End Using
                 End Using
             Catch ex As ObjectDisposedException
@@ -384,6 +454,7 @@ Namespace ViewModels
         Public Sub ShutdownSceneWork()
             _sceneContentVersion += 1
             _sceneRegionPendingRect = SKRectI.Empty
+            _displayPendingRect = SKRectI.Empty
             _sceneDisplay = Nothing
             _sceneSk = Nothing
             ResetZoomDetail()
@@ -442,6 +513,9 @@ Namespace ViewModels
             _zoomDetailVisTop = visTop
             _zoomDetailVisRight = visRight
             _zoomDetailVisBottom = visBottom
+            ' Was der Blit beim Klemmen aufs Sichtfenster liegen liess, jetzt nachholen - diese
+            ' Meldung kommt bei jedem Schwenk und Zoomwechsel, synchron im Layout-Durchlauf.
+            FlushPendingDisplayRegion()
 
             ' SetZoomDetailImage/SetZoomDetailBeforeImage feuern PropertyChanged synchron. Die View
             ' positioniert daraufhin sofort das Overlay und meldet den Viewport erneut. Ohne Guard

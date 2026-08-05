@@ -2754,6 +2754,17 @@ Namespace ViewModels
             ' Genau so trat der Fehler oben auf - ohne diese Zeile sucht man ihn wieder blind.
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.LayerRowsAbbruch", ex)
+                ' SELBSTHEILUNG: laeuft ein kuenftiger Weg doch wieder in die Avalonia-Sperre
+                ' (InvalidOperationException waehrend einer Auswahlaenderung), bleibt das Panel
+                ' nicht leer stehen - ein sauberer Neuaufbau kommt, sobald die Liste mit ihrer
+                ' Auswahlaenderung fertig ist.
+                If TypeOf ex Is InvalidOperationException AndAlso Not _layerRowsRebuildPosted Then
+                    _layerRowsRebuildPosted = True
+                    Dispatcher.UIThread.Post(Sub()
+                                                 _layerRowsRebuildPosted = False
+                                                 RebuildLayerRows()
+                                             End Sub, DispatcherPriority.Background)
+                End If
                 Throw
             End Try
         End Sub
@@ -2986,17 +2997,34 @@ Namespace ViewModels
         End Function
 
         Private Sub RaiseLayerPanelSelectionChanged()
-            Me.RaisePropertyChanged(NameOf(IsMaskToolbarAccented))
-            Me.RaisePropertyChanged(NameOf(HasDeselectableTarget))
-            Me.RaisePropertyChanged(NameOf(SelectedLayerRow))
-            Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
-            Me.RaisePropertyChanged(NameOf(HasSelectedAdjustmentLayer))
-            Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
-            Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsSelected))
-            ' Der Masken-Knopf der Fußzeile haengt an der markierten Ebene - ohne das bliebe er nach
-            ' einem Wechsel stehen, wie er beim vorigen war.
-            RaiseAnnotationMaskStateChanged()
-            RaiseLayerFooterStateChanged()
+            ' Die EINE Stelle, an der das ViewModel eine Auswahlaenderung der Ebenenliste anstossen
+            ' kann - und deshalb die richtige fuer die Aufschub-Klammer. Grund (an Avalonia 12.1.1
+            ' dekompiliert): endet ein Auswahl-Commit mit GELEERTER Auswahl, erhoeht der
+            ' LostSelection-Zweig von SelectionModel.CommitOperation den UpdateCount ohne Ruecknahme.
+            ' Der ganze Rest des Commits - Bindungs-Rueckweg in den SelectedLayerRow-Setter,
+            ' SelectionChanged - laeuft dann als "laufende Auswahlaenderung", und jede Aenderung an
+            ' der gebundenen Zeilenliste wirft "Source collection was modified during selection
+            ' update" (das leere Ebenenpanel aus dem Fehlerprotokoll). Mit der Klammer hier wird ein
+            ' dabei angestossener Neuaufbau aufgeschoben, egal aus welchem der rund vierzig Aufrufer
+            ' der Anstoss kam - einzeln zu klammern waere die Sorte Vollstaendigkeit, die beim
+            ' naechsten Aufrufer wieder fehlt. Nach einem Avalonia-Update neu pruefen, ob das
+            ' Fenster noch existiert.
+            SuspendLayerRowRebuild()
+            Try
+                Me.RaisePropertyChanged(NameOf(IsMaskToolbarAccented))
+                Me.RaisePropertyChanged(NameOf(HasDeselectableTarget))
+                Me.RaisePropertyChanged(NameOf(SelectedLayerRow))
+                Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
+                Me.RaisePropertyChanged(NameOf(HasSelectedAdjustmentLayer))
+                Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
+                Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsSelected))
+                ' Der Masken-Knopf der Fußzeile haengt an der markierten Ebene - ohne das bliebe er
+                ' nach einem Wechsel stehen, wie er beim vorigen war.
+                RaiseAnnotationMaskStateChanged()
+                RaiseLayerFooterStateChanged()
+            Finally
+                ResumeLayerRowRebuild(deferToDispatcher:=True)
+            End Try
         End Sub
 
         ''' <summary>Wählt die feste globale Einstellungsebene im Ebenenpanel als Reglerziel.

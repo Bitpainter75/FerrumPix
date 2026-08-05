@@ -408,9 +408,15 @@ Namespace Services
         ''' <summary>Abtastung fuer die Warp-Dreiecke. Ohne ausdrueckliche Wahl nimmt der
         ''' Bitmap-Shader SKSamplingOptions.Default, und das ist NAECHSTER NACHBAR - Treppen an
         ''' jeder kontrastreichen Kante. IsAntialias am Paint hilft dagegen nicht, das wirkt nur
-        ''' auf die Dreieckskanten, nicht auf das Textur-Sampling. Mitchell wie bei der
-        ''' Perspektive (ImageProcessor.SamplingHigh), damit alle Verzerr-Stufen gleich abtasten.</summary>
-        Private Shared ReadOnly WarpSampling As New SKSamplingOptions(SKCubicResampler.Mitchell)
+        ''' auf die Dreieckskanten, nicht auf das Textur-Sampling.
+        '''
+        ''' LINEAR, nicht Mitchell wie bei der Perspektive - eine Kostenentscheidung, keine
+        ''' Nachlaessigkeit: die Perspektive laeuft einmal je Render in der Pipeline, dieser Weg
+        ''' aber auch je REGION-PATCH fuer jede verzerrte Objektebene, also bei jedem Ziehen eines
+        ''' Objekts je Mausbewegung. Mit Mitchell (16 Abtastungen je Pixel statt 4) wurde genau
+        ''' das zaeh und trieb die CPU hoch (Nutzerbefund 2026-08-05); die Treppen des
+        ''' Naechster-Nachbar beseitigt Linear ebenso.</summary>
+        Private Shared ReadOnly WarpSampling As New SKSamplingOptions(SKFilterMode.Linear)
 
 
         ''' <summary>Wie <see cref="WarpOverGrid"/>, aber mit frei waehlbarer AUSGABEgroesse.
