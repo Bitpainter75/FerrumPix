@@ -2350,6 +2350,7 @@ Namespace ViewModels
                                        value?.AdjustmentLayer IsNot Nothing AndAlso
                                        IsAdjustmentLayerSelected(value.AdjustmentLayer) AndAlso
                                        SelectedAdjustmentLayers.Count > 1
+                    Dim selectionSetCleared = False
                     If keepLayerSet Then
                         Dim previousPrimary = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
                         ' Ueber die ID pruefen, nicht ueber die Referenz: ApplyAdjustments ersetzt die
@@ -2361,6 +2362,7 @@ Namespace ViewModels
                         End If
                         _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
                     Else
+                        selectionSetCleared = _extraSelectedAdjustmentLayers.Count > 0
                         _extraSelectedAdjustmentLayers.Clear()
                     End If
                     _selectedMaskedAdjustmentLayerId = adjustmentId
@@ -2368,8 +2370,16 @@ Namespace ViewModels
                     ' MEHRFACHauswahl der Objekte, sonst blieben dort Zeilen markiert stehen.
                     If _extraSelectedAnnotations.Count > 0 Then
                         _extraSelectedAnnotations.Clear()
-                        RaiseMultiSelectionChanged()
+                        selectionSetCleared = True
                     End If
+                    ' Das Raeumen MUSS gemeldet werden: nur RaiseMultiSelectionChanged zieht die
+                    ' orange Kennzeichnung der Zeilen nach. Ohne die Meldung blieben die vorher mit
+                    ' Strg markierten Masken- und Auswahlebenen markiert stehen, und ein Klick auf
+                    ' eine bisher unmarkierte Zeile sah aus, als KAEME sie zur Menge hinzu - dabei
+                    ' war die Auswahl innen laengst auf diese eine Ebene eingedampft. Gemeldet wird
+                    ' erst NACH dem Setzen der fuehrenden Ebene, sonst rechnet die Auffrischung noch
+                    ' mit der alten.
+                    If selectionSetCleared Then RaiseMultiSelectionChanged()
                     SelectedAnnotationIndex = -1
                     _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.AdjustmentLayer IsNot Nothing AndAlso r.AdjustmentLayer.Id = adjustmentId)
                 Else
@@ -2477,6 +2487,27 @@ Namespace ViewModels
                 RaiseMaskComponentsChanged()
             End If
             RefreshSelectionAdjustMode()
+        End Sub
+
+        ''' <summary>Einfacher Klick auf die bereits FUEHRENDE Zeile: die Mehrfachauswahl auf genau
+        ''' diese Zeile eindampfen.
+        '''
+        ''' Der Setter oben macht das bei jedem Zeilenwechsel - nur meldet die Liste bei einem Klick
+        ''' auf ihre eigene Auswahl keinen Wechsel, der Setter laeuft also nie. Damit gab es fuer
+        ''' mehrere mit Strg markierte Masken- oder Auswahlebenen keine Geste, die wieder auf eine
+        ''' einzelne zurueckfuehrt: der Klick auf eine der markierten Zeilen tat nichts, und die
+        ''' Auswahl liess sich nur noch Zeile fuer Zeile mit Strg abraeumen.</summary>
+        Public Sub CollapseSelectionToSelectedRow()
+            Dim changed = False
+            If _extraSelectedAdjustmentLayers.Count > 0 Then
+                _extraSelectedAdjustmentLayers.Clear()
+                changed = True
+            End If
+            If _extraSelectedAnnotations.Count > 0 Then
+                _extraSelectedAnnotations.Clear()
+                changed = True
+            End If
+            If changed Then RaiseMultiSelectionChanged()
         End Sub
 
         Public ReadOnly Property HasSelectedPanelLayer As Boolean

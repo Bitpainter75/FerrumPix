@@ -409,6 +409,9 @@ Namespace Views
             If Not mehrfach AndAlso row IsNot Nothing AndAlso row.AdjustmentLayer IsNot Nothing Then
                 Dim vmSame = TryCast(DataContext, EditorViewModel)
                 If vmSame IsNot Nothing AndAlso Object.ReferenceEquals(row, vmSame.SelectedLayerRow) Then
+                    ' Erst eindampfen, dann anzeigen: der Anzeigezustand haengt daran, ob EINE Ebene
+                    ' gemeint ist (Werkzeugwechsel) oder eine Menge.
+                    vmSame.CollapseSelectionToSelectedRow()
                     vmSame.ReapplySelectedLayerPresentation()
                 End If
             End If
