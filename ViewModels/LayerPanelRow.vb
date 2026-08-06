@@ -51,7 +51,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Linker Einzug der Zeile: Mitglieder stehen sichtbar unter ihrer Kopfzeile.</summary>
+        ''' <summary>Linker Einzug der Zeile: Mitglieder stehen sichtbar unter ihrer Kopfzeile.
+        ''' Eine Schnittmaske erhält ihren zusätzlichen Einzug durch das Verbindungszeichen in der
+        ''' ersten Grid-Spalte; so bleibt ihr Bezug zur unmittelbar darunterliegenden Basis lesbar.</summary>
         Public ReadOnly Property IndentMargin As Avalonia.Thickness
             Get
                 Return New Avalonia.Thickness(If(IsGroupMember, 16, 0), 0, 0, 0)
@@ -173,6 +175,16 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Astzeichen einer Schnittmaske. Ein bloßes Schnitt-Icon neben dem Namen sagte
+        ''' zwar, DASS sie beschränkt ist, aber nicht, WELCHE Zeile ihre Basis ist. Der nach unten
+        ''' führende Ast und der Einzug verbinden sie mit der direkt folgenden Zeile.</summary>
+        Public ReadOnly Property ClipLinkIconSource As String
+            Get
+                If Not IsClipped Then Return ""
+                Return "avares://FerrumPix/Assets/Icons/outline/corner-left-down.svg"
+            End Get
+        End Property
+
         Public ReadOnly Property IconSource As String
             Get
                 If Group IsNot Nothing Then Return "avares://FerrumPix/Assets/Icons/outline/folder.svg"
@@ -207,7 +219,11 @@ Namespace ViewModels
 
         Public ReadOnly Property HasThumbnail As Boolean
             Get
-                Return _thumbnail IsNot Nothing
+                ' Bei Text zählt der Inhalt in dieser Größe nicht: er wird zum unlesbaren Strich.
+                ' Das Text-Werkzeug-Symbol sagt zuverlässiger, welche Ebene vorliegt. Die Bitmap
+                ' kann während eines laufenden Panel-Updates noch existieren, wird aber nicht gezeigt.
+                Return _thumbnail IsNot Nothing AndAlso
+                       Not (Annotation IsNot Nothing AndAlso String.Equals(Annotation.Kind, "Text", StringComparison.OrdinalIgnoreCase))
             End Get
         End Property
 
@@ -243,6 +259,7 @@ Namespace ViewModels
             RaisePropertyChanged(NameOf(GroupToggleIconSource))
             RaisePropertyChanged(NameOf(HasMask))
             RaisePropertyChanged(NameOf(IsClipped))
+            RaisePropertyChanged(NameOf(ClipLinkIconSource))
         End Sub
 
         Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged

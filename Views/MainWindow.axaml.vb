@@ -872,8 +872,11 @@ Namespace Views
                     ' den Editor. Genau so war es: die Pipette liess sich nicht abbrechen, und der
                     ' Abbruch eines Modelllaufs waere ebenso ins Leere gelaufen.
                     '
-                    ' Die Reihenfolge ist die der Dringlichkeit: ein Modelllauf rechnet Minuten, eine
-                    ' Pipette wartet auf einen Klick, und erst danach heisst Esc "verlassen".
+                    ' Die Reihenfolge ist die der Dringlichkeit: ein Modelllauf rechnet Minuten,
+                    ' eine Pipette wartet auf einen Klick. ALLES Weitere im Editor (Pfad, offene
+                    ' Verzerrung, laufender Zug, Abwählen, Auswahl aufheben) gehört danach dem
+                    ' Editor selbst. Der Fenster-Tunnel darf es nicht mit einem voreiligen
+                    ' BackToViewer verschlucken.
                     If vm.CurrentMode = AppMode.Editor AndAlso vm.Editor IsNot Nothing Then
                         If vm.Editor.CanCancelBusy Then
                             vm.Editor.RequestBusyCancel()
@@ -889,8 +892,10 @@ Namespace Views
                         End If
                     End If
                     If vm.CurrentMode = AppMode.Editor Then
-                        vm.Editor.BackToViewerCommand.Execute(Nothing)
-                        e.Handled = True
+                        ' Nicht als behandelt markieren: der Eventweg läuft weiter durch EditorView.
+                        ' Dort wird Schritt für Schritt abgebrochen bzw. abgewählt; erst wenn nichts
+                        ' mehr offen ist, ruft der Editor selbst BackToViewer (mit Speicherabfrage).
+                        Return
                     ElseIf vm.CurrentMode = AppMode.Viewer Then
                         vm.Viewer.BackToGalleryCommand.Execute(Nothing)
                         e.Handled = True

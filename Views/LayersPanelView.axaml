@@ -79,6 +79,17 @@
                                                    Width="12" Height="12"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Button>
+                                <!-- Schnittmasken sind nicht einfach ein weiteres Merkzeichen: sie
+                                     gehören zur direkt DARUNTER liegenden Basis. Der Ast nimmt die
+                                     sonst leere Klappspalte ein und rückt die Zeile damit sichtbar
+                                     ein; das Ende zeigt auf die folgende Basiszeile. -->
+                                <icons:SvgIcon Grid.Column="0"
+                                               Source="{Binding ClipLinkIconSource}"
+                                               Width="14" Height="14"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Opacity="0.75"
+                                               IsVisible="{Binding IsClipped}"
+                                               ToolTip.Tip="Schnittmaske: wirkt nur innerhalb der Deckung der Ebene direkt darunter" />
                                 <!-- Miniatur der Ebene, sonst das Typsymbol. Die Miniatur sagt, WAS
                                      auf der Ebene liegt; bei mehreren gleichartigen Ebenen sagte das
                                      Symbol allein gar nichts. Sie kommt fertig aus dem ViewModel -

@@ -425,11 +425,10 @@
                                         IsVisible="{Binding HasMode}"
                                         Command="{Binding DataContext.CycleMaskComponentModeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding Index}"
-                                        ToolTip.Tip="Verknüpfung dieses Bestandteils wechseln">
-                                    <TextBlock Text="{Binding ModeLabel}"
-                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                               FontSize="{DynamicResource FP.Font.Small}"
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        ToolTip.Tip="{Binding ModeHint}">
+                                    <icons:SvgIcon Source="{Binding ModeIconSource}"
+                                                   Width="14" Height="14"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Button>
                                 <Button Grid.Column="2" Classes="ghost"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"

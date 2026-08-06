@@ -2465,6 +2465,11 @@ Namespace Services
                 x = outW / 2.0 + scale * (cosA * dx - sinA * dy)
                 y = outH / 2.0 + scale * (sinA * dx + cosA * dy)
                 w = outW : h = outH
+                ' Ohne Leinwand-Erweiterung schneidet die Begradigung die gedrehten Ecken
+                ' ab. Der Hinweg darf sie nicht als Anzeigeort ausgeben: der Rueckweg
+                ' weist denselben Punkt sonst zu Recht ab, und Verlauf-/Maskengriffe
+                ' erscheinen neben dem Bild.
+                If Not TryClampToRange(x, w) OrElse Not TryClampToRange(y, h) Then Return False
             End If
 
             ' --- Verzerren --- (dieselbe Stelle wie im Bildweg: nach der Begradigung, vor dem
@@ -2509,6 +2514,10 @@ Namespace Services
                 End Select
                 x += offsetX : y += offsetY
             End If
+            ' Eine kleinere Leinwand ist ein weiterer Beschnitt. Erst hier sind die
+            ' endgueltigen Ausgabemasse bekannt; Punkte ausserhalb haben im sichtbaren
+            ' Bild keinen Ort und muessen wie beim Rueckweg abgewiesen werden.
+            If Not TryClampToRange(x, canvasW) OrElse Not TryClampToRange(y, canvasH) Then Return False
             output = New SKPoint(CSng(x), CSng(y))
             Return True
         End Function

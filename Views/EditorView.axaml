@@ -1542,6 +1542,16 @@
                         <!-- Bildgröße wie im Betrachter; ein "Bild x von y" wäre hier belanglos,
                              bearbeitet wird immer genau eines. Der Wert folgt Zuschnitt, Bildgröße
                              und Leinwand - es ist die Größe, die ein Export ergäbe. -->
+                        <Border Background="{DynamicResource FP.Bg.Raised}" BorderBrush="{DynamicResource FP.Border.Subtle}"
+                                BorderThickness="1" CornerRadius="5" Padding="7,2" ToolTip.Tip="Aktuelles Wirkziel">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/target.svg"
+                                               Width="14" Height="14" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding CurrentTargetText}" Foreground="{DynamicResource FP.Text.Primary}"
+                                           FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center"
+                                           MaxWidth="180" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Border>
                         <TextBlock Text="{Binding OutputSizeText}" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                     </StackPanel>

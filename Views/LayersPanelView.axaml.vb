@@ -64,7 +64,16 @@ Namespace Views
             ' zusätzlich das Reglerziel wechseln.
             Dim source = TryCast(e.Source, Visual)
             If source IsNot Nothing AndAlso source.FindAncestorOfType(Of ToggleButton)() IsNot Nothing Then Return
-            TryCast(DataContext, EditorViewModel)?.SelectGlobalAdjustmentsTarget()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            ' Eine Masken-/Auswahlebene hat zusätzlich zur markierten Zeile eine geöffnete
+            ' Arbeitsmaske. Nur das Reglerziel umzuschalten würde die Zeile zwar abwählen, das rote
+            ' Overlay aber ohne bedienbares Ziel stehen lassen. Eine freie, noch nicht übernommene
+            ' Auswahl bleibt dagegen bewusst erhalten.
+            If vm?.HasSelectedAdjustmentLayer OrElse vm?.IsEditingLayerMask Then
+                vm.DeselectMaskTarget()
+            Else
+                vm?.SelectGlobalAdjustmentsTarget()
+            End If
             e.Handled = True
         End Sub
 
@@ -89,10 +98,30 @@ Namespace Views
             If source IsNot Nothing AndAlso
                (source.FindAncestorOfType(Of ScrollBar)() IsNot Nothing OrElse
                 source.FindAncestorOfType(Of Button)() IsNot Nothing) Then Return
-            TryCast(DataContext, EditorViewModel)?.SelectGlobalAdjustmentsTarget()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            ' Der freie Listenbereich ist dieselbe Abwahlgeste wie ein Klick neben das Bild:
+            ' bei einer geöffneten Ebenenmaske muss auch ihre Arbeitskopie samt rotem Overlay
+            ' geschlossen werden. Eine freie, noch nicht übernommene Auswahl bleibt erhalten.
+            If vm?.HasSelectedAdjustmentLayer OrElse vm?.IsEditingLayerMask Then
+                vm.DeselectMaskTarget()
+            Else
+                vm?.SelectGlobalAdjustmentsTarget()
+            End If
+            ActivateObjectSelectionToolIfNothingIsSelected(vm)
             ' NICHT als behandelt markieren: der Tunnel laeuft vor der Liste, und ein behandeltes
             ' Ereignis naehme ihr das Scrollen und das Ausklappen von Gruppen.
             e.Handled = False
+        End Sub
+
+        ''' <summary>Der freie Ebenenbereich ist dieselbe Komplett-Abwahl wie ein Klick neben die
+        ''' Bühne. Bleibt danach kein Objekt, keine Maskenebene, keine Pixelauswahl und kein
+        ''' Platzierungstyp übrig, ist Auswahl/Verschieben der eindeutige Arbeitsgrundzustand.</summary>
+        Private Shared Sub ActivateObjectSelectionToolIfNothingIsSelected(vm As EditorViewModel)
+            If vm Is Nothing OrElse vm.HasSelectedAnnotation OrElse vm.HasSelectedAdjustmentLayer OrElse
+               vm.IsEditingLayerMask OrElse vm.HasActiveSelection OrElse
+               Not String.IsNullOrEmpty(vm.PendingInsertKind) Then Return
+            vm.CurrentTool = EditorTool.Selection
+            vm.SelectionMode = "Move"
         End Sub
 
         ' Tastaturbedienung auf der markierten Ebene: F2 umbenennen, Entf löschen, Strg+D duplizieren.

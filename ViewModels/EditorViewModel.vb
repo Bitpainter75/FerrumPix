@@ -810,11 +810,10 @@ Namespace ViewModels
         Private _selectedMaskedAdjustmentLayerId As String = ""
         Private _selectedAnnotationIndex As Integer = -1
         ''' <summary>ZUSÄTZLICH markierte Objekte neben dem Anker (`_selectedAnnotationIndex`).
-        ''' Bewusst als REFERENZEN und nicht als Indizes: Umsortieren, Anlegen und Löschen verschieben
-        ''' Indizes laufend, Referenzen überleben das. Der Anker steht NICHT in dieser Liste - er bleibt
-        ''' der Index, mit dem alle bestehenden Pfade (Eigenschaften-Panel, Anpassungsmodus)
-        ''' rechnen; die Liste beschreibt nur die Erweiterung auf eine Mehrfachauswahl.</summary>
-        Private ReadOnly _extraSelectedAnnotations As New List(Of ImageAnnotation)()
+        ''' Ausschließlich ihre IDs werden gehalten: Undo, Werkzeugwechsel und Anpassungsmodus ersetzen
+        ''' die Objektliste durch Klone. Referenzen würden dann lautlos auf den alten Bestand zeigen;
+        ''' IDs bleiben dagegen die gemeinsame, stabile Sprache des Ebenenstapels.</summary>
+        Private ReadOnly _extraSelectedAnnotations As New List(Of String)()
         ' Verfolgt den Raster-Paint-Eintrag, an den die aktuell laufende Pinsel-/Radiergummi-"Sitzung"
         ' noch weitere Striche anhängt, statt für jeden einzelnen Strich einen neuen Eintrag anzulegen (siehe
         ' AddBrushStroke). Per Objektreferenz statt Index verfolgt, damit ein zwischenzeitliches
@@ -1984,6 +1983,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsMaskToolbarAccented))
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
+                RaiseCurrentTargetChanged()
                 Me.RaisePropertyChanged(NameOf(ShowLayerToolOptions))
                 Me.RaisePropertyChanged(NameOf(ShowDrawControls))
                 Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
@@ -2053,8 +2053,9 @@ Namespace ViewModels
                 If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count Then
                     result.Add(_annotations(_selectedAnnotationIndex))
                 End If
-                For Each a In _extraSelectedAnnotations
-                    If a IsNot Nothing AndAlso _annotations.Contains(a) AndAlso Not result.Contains(a) Then result.Add(a)
+                For Each id In _extraSelectedAnnotations
+                    Dim a = _annotations.FirstOrDefault(Function(candidate) candidate IsNot Nothing AndAlso candidate.Id = id)
+                    If a IsNot Nothing AndAlso Not result.Contains(a) Then result.Add(a)
                 Next
                 Return result
             End Get
@@ -2075,8 +2076,8 @@ Namespace ViewModels
             For Each i In indices
                 If i < 0 OrElse i >= _annotations.Count OrElse i = _selectedAnnotationIndex Then Continue For
                 Dim a = _annotations(i)
-                If a Is Nothing OrElse _extraSelectedAnnotations.Contains(a) Then Continue For
-                _extraSelectedAnnotations.Add(a)
+                If a Is Nothing OrElse String.IsNullOrWhiteSpace(a.Id) OrElse _extraSelectedAnnotations.Contains(a.Id) Then Continue For
+                _extraSelectedAnnotations.Add(a.Id)
             Next
         End Sub
 
@@ -2090,6 +2091,15 @@ Namespace ViewModels
                 If i >= 0 AndAlso Not result.Contains(i) Then result.Add(i)
             Next
             Return result
+        End Function
+
+        ''' <summary>Löst die zusätzlichen Objekt-IDs gegen den aktuellen Bestand auf. Nach Undo
+        ''' oder einem Reglerwechsel stehen dort neue Kloninstanzen; diese Sicht liefert trotzdem
+        ''' genau dieselben ausgewählten Ebenen zurück.</summary>
+        Private Function SelectedExtraAnnotations() As IEnumerable(Of ImageAnnotation)
+            Return _extraSelectedAnnotations.Select(
+                Function(id) _annotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso a.Id = id)).
+                Where(Function(a) a IsNot Nothing)
         End Function
 
         ''' <summary>Indizes der markierten Objekte in Z-Reihenfolge (aufsteigend).</summary>
@@ -2172,6 +2182,7 @@ Namespace ViewModels
 
         Private Sub RaiseMultiSelectionChanged()
             RefreshLayerRowSelectionMarks()
+            RaiseCurrentTargetChanged()
             ' Die Zielmenge einer laufenden Objekt-Anpassung mitführen, solange die Auswahl noch
             ' steht: beim Zurückschreiben ist sie bereits abgeräumt (siehe ObjectAdjustTargetIndices).
             If IsObjectAdjustModeActive() AndAlso HasMultiAnnotationSelection Then
@@ -2305,7 +2316,7 @@ Namespace ViewModels
                 If layerMembers.Count > 0 Then
                     _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
                     For Each l In layerMembers
-                        If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l)
+                        If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l.Id)
                     Next
                 End If
             End If
@@ -2329,18 +2340,25 @@ Namespace ViewModels
                 End If
                 If _selectedAnnotationIndex = index Then
                     ' Der Anker fliegt raus: ein anderes markiertes Objekt übernimmt.
-                    Dim nextAnchor = _extraSelectedAnnotations.FirstOrDefault(Function(a) a IsNot Nothing AndAlso _annotations.Contains(a))
-                    _extraSelectedAnnotations.Remove(nextAnchor)
+                    Dim nextAnchorId = _extraSelectedAnnotations.FirstOrDefault(
+                        Function(id) _annotations.Any(Function(a) a IsNot Nothing AndAlso a.Id = id))
+                    _extraSelectedAnnotations.Remove(nextAnchorId)
                     ' Indizes VOR dem Setzen des Ankers (siehe AddExtraSelectedAnnotationsByIndex).
-                    Dim remainderIndices = IndicesOfAnnotations(_extraSelectedAnnotations)
-                    Dim nextAnchorIndex = _annotations.IndexOf(nextAnchor)
+                    Dim remainderIndices = IndicesOfAnnotations(SelectedExtraAnnotations())
+                    Dim nextAnchorIndex = -1
+                    For i = 0 To _annotations.Count - 1
+                        If _annotations(i) IsNot Nothing AndAlso _annotations(i).Id = nextAnchorId Then
+                            nextAnchorIndex = i
+                            Exit For
+                        End If
+                    Next
                     SelectedAnnotationIndex = nextAnchorIndex
                     AddExtraSelectedAnnotationsByIndex(remainderIndices)
                 Else
-                    _extraSelectedAnnotations.Remove(target)
+                    _extraSelectedAnnotations.Remove(target.Id)
                 End If
             Else
-                Dim remainderIndices = IndicesOfAnnotations(_extraSelectedAnnotations)
+                Dim remainderIndices = IndicesOfAnnotations(SelectedExtraAnnotations())
                 If _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count AndAlso
                    _selectedAnnotationIndex <> index AndAlso Not remainderIndices.Contains(_selectedAnnotationIndex) Then
                     remainderIndices.Add(_selectedAnnotationIndex)
@@ -2366,7 +2384,7 @@ Namespace ViewModels
             Dim last = Math.Max(anchorIndex, index)
             _extraSelectedAnnotations.Clear()
             For i = first To last
-                If i <> anchorIndex Then _extraSelectedAnnotations.Add(_annotations(i))
+                If i <> anchorIndex AndAlso _annotations(i) IsNot Nothing Then _extraSelectedAnnotations.Add(_annotations(i).Id)
             Next
             RaiseMultiSelectionChanged()
             RequestOverlayStateNotify()
@@ -2456,6 +2474,7 @@ Namespace ViewModels
             Dim offsetY = CSng(Math.Max(1.0, displaySize.Height * 0.02))
             For Each a In originals
                 Dim copy = a.Clone()
+                copy.Id = Guid.NewGuid().ToString("N")
                 GiveCopyItsOwnMask(copy)
                 copy.XPixels += offsetX
                 copy.YPixels += offsetY
@@ -2479,7 +2498,9 @@ Namespace ViewModels
         ' Dieselbe Mechanik wie bei den Objekten, aber eine eigene Liste: Objekt- und Korrekturebenen
         ' sind getrennte Rendergruppen, eine gemischte Gruppe gäbe es im Renderer nicht.
 
-        Private ReadOnly _extraSelectedAdjustmentLayers As New List(Of MaskedAdjustmentLayer)()
+        ''' <summary>Zusatzmenge der markierten Masken-/Auswahlebenen. Wie bei Objekt-Ebenen werden
+        ''' IDs statt Modellreferenzen gehalten, damit ein Klon-Austausch keinen Auswahlzustand verliert.</summary>
+        Private ReadOnly _extraSelectedAdjustmentLayers As New List(Of String)()
 
         ''' <summary>Die markierten Korrekturebenen - die fuehrende zuerst, dann die per Strg oder
         ''' Gruppe dazugenommenen.
@@ -2496,9 +2517,8 @@ Namespace ViewModels
                 Dim result As New List(Of MaskedAdjustmentLayer)()
                 Dim primary = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
                 If primary IsNot Nothing Then result.Add(primary)
-                For Each l In _extraSelectedAdjustmentLayers
-                    If l Is Nothing Then Continue For
-                    Dim aktuell = _maskedAdjustmentLayers.FirstOrDefault(Function(x) x IsNot Nothing AndAlso x.Id = l.Id)
+                For Each id In _extraSelectedAdjustmentLayers
+                    Dim aktuell = _maskedAdjustmentLayers.FirstOrDefault(Function(x) x IsNot Nothing AndAlso x.Id = id)
                     If aktuell IsNot Nothing AndAlso Not result.Any(Function(r) r.Id = aktuell.Id) Then result.Add(aktuell)
                 Next
                 Return result
@@ -2523,20 +2543,20 @@ Namespace ViewModels
             If Not _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = layer.Id) Then Return
             If IsAdjustmentLayerSelected(layer) Then
                 If _selectedMaskedAdjustmentLayerId = layer.Id Then
-                    Dim nextPrimary = _extraSelectedAdjustmentLayers.FirstOrDefault(
-                        Function(l) l IsNot Nothing AndAlso _maskedAdjustmentLayers.Any(Function(x) x IsNot Nothing AndAlso x.Id = l.Id))
-                    If nextPrimary IsNot Nothing Then
-                        _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = nextPrimary.Id)
+                    Dim nextPrimaryId = _extraSelectedAdjustmentLayers.FirstOrDefault(
+                        Function(id) _maskedAdjustmentLayers.Any(Function(x) x IsNot Nothing AndAlso x.Id = id))
+                    If Not String.IsNullOrWhiteSpace(nextPrimaryId) Then
+                        _extraSelectedAdjustmentLayers.Remove(nextPrimaryId)
                     End If
-                    _selectedMaskedAdjustmentLayerId = If(nextPrimary Is Nothing, "", nextPrimary.Id)
+                    _selectedMaskedAdjustmentLayerId = If(String.IsNullOrWhiteSpace(nextPrimaryId), "", nextPrimaryId)
                 Else
-                    _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = layer.Id)
+                    _extraSelectedAdjustmentLayers.Remove(layer.Id)
                 End If
             Else
                 If String.IsNullOrWhiteSpace(_selectedMaskedAdjustmentLayerId) Then
                     _selectedMaskedAdjustmentLayerId = layer.Id
                 Else
-                    _extraSelectedAdjustmentLayers.Add(layer)
+                    _extraSelectedAdjustmentLayers.Add(layer.Id)
                 End If
             End If
             _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.AdjustmentLayer IsNot Nothing AndAlso r.AdjustmentLayer.Id = _selectedMaskedAdjustmentLayerId)
@@ -2556,7 +2576,7 @@ Namespace ViewModels
             End If
             _extraSelectedAdjustmentLayers.Clear()
             For i = Math.Min(anchor, target) To Math.Max(anchor, target)
-                If i <> anchor Then _extraSelectedAdjustmentLayers.Add(_maskedAdjustmentLayers(i))
+                If i <> anchor AndAlso _maskedAdjustmentLayers(i) IsNot Nothing Then _extraSelectedAdjustmentLayers.Add(_maskedAdjustmentLayers(i).Id)
             Next
             RaiseLayerPanelSelectionChanged()
             RaiseMultiSelectionChanged()
@@ -3672,9 +3692,14 @@ Namespace ViewModels
             Set(value As EditorTool)
                 If value = EditorTool.Frame Then value = EditorTool.Effects
                 Dim previousTool = _currentTool
+                Dim verworfen As List(Of String) = Nothing
                 Me.RaiseAndSetIfChanged(_currentTool, value)
                 If previousTool <> value Then
-                    DiscardUncommittedToolEdits(previousTool)
+                    ' Jede offene Transaktion hat beim Werkzeugwechsel denselben sichtbaren
+                    ' Abschluss: sie wird entweder übernommen oder ihr Verwurf wird benannt.
+                    ' Zuschnitt/Größe/Drehung waren bereits korrekt zurückgesetzt, verschwanden
+                    ' aber im Gegensatz zu Gitter/Linien kommentarlos aus der Bedienung.
+                    verworfen = DiscardUncommittedToolEdits(previousTool)
                     ' Die Vorschau der Tiefen-Unschaerfe gehoert zum Detailwerkzeug. Sie liegt ueber
                     ' dem Bild und wuerde sonst in einem anderen Werkzeug stehen bleiben, wo ihre
                     ' Regler gar nicht mehr zu sehen sind.
@@ -3691,7 +3716,6 @@ Namespace ViewModels
                     ' gezogen hat und dann das Werkzeug wechselt, stand vor einem geraden Bild ohne
                     ' ein Wort dazu. Rueckgaengig holt es NICHT zurueck - diese Anfasser stehen im
                     ' Sitzungszustand und nicht im Rezept -, also sagt es die Fusszeile.
-                    Dim verworfen As New List(Of String)()
                     If HasWarpGridChanges Then
                         verworfen.Add(LocalizationService.T("Gitter"))
                         ResetGrid()
@@ -3711,10 +3735,6 @@ Namespace ViewModels
                         verworfen.Add(LocalizationService.T("Verformen"))
                         ResetEnvelopePoints()
                         RaiseEnvelopeChanged()
-                    End If
-                    If verworfen.Count > 0 Then
-                        StatusText = LocalizationService.T("Beim Werkzeugwechsel verworfen: ") &
-                                     String.Join(", ", verworfen)
                     End If
                     ' Der Pfad-Stift bleibt nicht scharf, wenn man in ein ANDERES Werkzeug wechselt:
                     ' ein liegengebliebener Entwurf oder eine nur scharfgestellte Grundlinie fing
@@ -3752,6 +3772,7 @@ Namespace ViewModels
                 End If
                 Me.RaisePropertyChanged(NameOf(CurrentToolLabel))
                 Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
+                RaiseCurrentTargetChanged()
                 RaiseToolContextProperties()
                 ' Werkzeugwechsel kann das Ziel der Regler umschalten (Objekt <-> Bild).
                 RefreshObjectAdjustMode()
@@ -3800,6 +3821,13 @@ Namespace ViewModels
                 If value = EditorTool.Crop AndAlso previousTool <> EditorTool.Crop Then
                     RaiseEvent FitToViewportRequested(Me, EventArgs.Empty)
                 End If
+                ' Erst NACH allen ausgelösten Vorschau- und Zustandswechseln melden: die
+                ' Rückstellung plant eine Vorschau und setzt dabei ihren eigenen Statustext. Die
+                ' Erklärung des Werkzeugwechsels ist für den Nutzer der wichtigere Abschluss.
+                If previousTool <> value AndAlso verworfen IsNot Nothing AndAlso verworfen.Count > 0 Then
+                    StatusText = LocalizationService.T("Beim Werkzeugwechsel verworfen: ") &
+                                 String.Join(", ", verworfen)
+                End If
             End Set
         End Property
 
@@ -3837,6 +3865,49 @@ Namespace ViewModels
                 End Select
             End Get
         End Property
+
+        ''' <summary>Das sichtbare WIRKZIEL des Editors. Werkzeug und Ziel sind bewusst getrennt:
+        ''' "Maske" sagt, womit gearbeitet wird; "Ebenenmaske" sagt, worauf die nächste Geste
+        ''' wirkt. So muss man den Zustand nicht aus Panel-Akzent, Overlay und Werkzeugknopf
+        ''' zusammensetzen.</summary>
+        Public ReadOnly Property CurrentTargetLabel As String
+            Get
+                If IsMultiLayerSelection Then Return LocalizationService.T("Mehrfachauswahl")
+
+                Dim adjustment = _maskedAdjustmentLayers.FirstOrDefault(
+                    Function(layer) layer IsNot Nothing AndAlso layer.Id = _selectedMaskedAdjustmentLayerId)
+                If adjustment IsNot Nothing Then
+                    If adjustment.IsMaskLayer Then Return LocalizationService.T("Maskenebene")
+                    If Not String.IsNullOrWhiteSpace(adjustment.Name) Then Return adjustment.Name
+                    Return LocalizationService.T("Auswahl")
+                End If
+
+                Dim annotation = SelectedLayer
+                If annotation IsNot Nothing Then
+                    If _currentTool = EditorTool.Mask AndAlso Not String.IsNullOrWhiteSpace(annotation.MaskId) Then
+                        Return LocalizationService.T("Ebenenmaske")
+                    End If
+                    Return LocalizationService.T(ImageAnnotation.GermanKindLabel(annotation.Kind))
+                End If
+
+                If HasActiveSelection Then
+                    Return If(_activeSelectionIsMask, LocalizationService.T("Maske"), LocalizationService.T("Auswahl"))
+                End If
+                Return LocalizationService.T("Bild")
+            End Get
+        End Property
+
+        ''' <summary>Beschriftung des immer sichtbaren Ziel-Chips in der Fußzeile.</summary>
+        Public ReadOnly Property CurrentTargetText As String
+            Get
+                Return LocalizationService.T("Ziel") & ": " & CurrentTargetLabel
+            End Get
+        End Property
+
+        Private Sub RaiseCurrentTargetChanged()
+            Me.RaisePropertyChanged(NameOf(CurrentTargetLabel))
+            Me.RaisePropertyChanged(NameOf(CurrentTargetText))
+        End Sub
 
         ''' <summary>Das Symbol des aktiven Werkzeugs, damit die Gruppenüberschrift im rechten Panel
         ''' dasselbe zeigt wie sein Eintrag in der Werkzeugleiste.</summary>
@@ -8864,6 +8935,86 @@ Namespace ViewModels
         Private _selectionClipboardWidthPercent As Double = 0
         Private _selectionClipboardHeightPercent As Double = 0
         Private _selectionClipboardPasteCount As Integer = 0
+
+        ' Ebenen-Zwischenablage: Die Pixelauswahl hat weiterhin ihre eigene Datei-Zwischenablage
+        ' darunter. Eine markierte Ebene meint bei Strg+C/V aber die EBENE selbst, nicht den gerade
+        ' sichtbaren Bildausschnitt. Kennungen statt Objektverweise ueberstehen Neuaufbau, Undo und
+        ' den Austausch der Modelllisten.
+        Private _layerClipboardAnnotationId As String = ""
+        Private _layerClipboardAdjustmentLayerId As String = ""
+
+        ''' <summary>Merkt die ausgewählte Objekt- oder lokale Einstellungsebene für Strg+V.
+        ''' Die Quelle bleibt im Dokument; beim Einfügen entsteht über den bewährten Duplizierweg
+        ''' eine neue, unabhängige Ebene samt eigener Maske.</summary>
+        Public Function CopySelectedLayerToClipboard() As Boolean
+            Dim adjustment = _maskedAdjustmentLayers.FirstOrDefault(
+                Function(layer) layer IsNot Nothing AndAlso layer.Id = _selectedMaskedAdjustmentLayerId)
+            If adjustment IsNot Nothing Then
+                _layerClipboardAnnotationId = ""
+                _layerClipboardAdjustmentLayerId = adjustment.Id
+                StatusText = LocalizationService.T("Ebene kopiert")
+                Return True
+            End If
+
+            Dim annotation = SelectedLayer
+            If annotation Is Nothing Then Return False
+            _layerClipboardAnnotationId = annotation.Id
+            _layerClipboardAdjustmentLayerId = ""
+            StatusText = LocalizationService.T("Ebene kopiert")
+            Return True
+        End Function
+
+        ''' <summary>Fügt die bei Strg+C gemerkte Ebene ein. Die ursprüngliche Kennung bleibt die
+        ''' Zwischenablagequelle, daher fügt wiederholtes Strg+V stets aus derselben Vorlage ein,
+        ''' nicht aus der zuletzt erzeugten Kopie.</summary>
+        Public Function PasteLayerClipboard() As Boolean
+            If Not String.IsNullOrWhiteSpace(_layerClipboardAnnotationId) Then
+                Dim source = _annotations.FirstOrDefault(Function(annotation) annotation IsNot Nothing AndAlso
+                                                               annotation.Id = _layerClipboardAnnotationId)
+                Dim index = _annotations.IndexOf(source)
+                If index < 0 Then Return False
+                SelectedAnnotationIndex = index
+                DuplicateSelectedAnnotation()
+                StatusText = LocalizationService.T("Ebene eingefügt")
+                Return True
+            End If
+
+            If Not String.IsNullOrWhiteSpace(_layerClipboardAdjustmentLayerId) Then
+                Dim row = _layerRows.FirstOrDefault(Function(candidate) candidate?.AdjustmentLayer IsNot Nothing AndAlso
+                                                         candidate.AdjustmentLayer.Id = _layerClipboardAdjustmentLayerId)
+                If row Is Nothing Then Return False
+                SelectedLayerRow = row
+                If Not HasSelectedAdjustmentLayer Then Return False
+                DuplicateSelectedAdjustmentLayer()
+                StatusText = LocalizationService.T("Ebene eingefügt")
+                Return True
+            End If
+            Return False
+        End Function
+
+        ''' <summary>Rendert das gesamte aktuelle Dokument in seiner Quellauflösung als PNG für
+        ''' die System-Zwischenablage. Anders als eine Bildschirmkopie enthält die Datei alle
+        ''' bestätigten Anpassungen, Masken und Objekte, bleibt aber unabhängig vom Zoom.</summary>
+        Public Async Function CopyCurrentImageToClipboardFileAsync() As Task(Of String)
+            If String.IsNullOrWhiteSpace(RenderSourcePath) OrElse Not File.Exists(RenderSourcePath) Then Return Nothing
+
+            Dim targetPath = CreateSelectionAssetTempPath("full-copy")
+            Dim adjustments = GetCurrentAdjustments()
+            Dim copied = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adjustments,
+                                                                              100, preserveMetadata:=False,
+                                                                              workingFull:=CloneWorkingFullForRender()))
+            If Not copied Then
+                Try
+                    If File.Exists(targetPath) Then File.Delete(targetPath)
+                Catch
+                End Try
+                StatusText = LocalizationService.T("Bild kopieren fehlgeschlagen")
+                Return Nothing
+            End If
+
+            StatusText = LocalizationService.T("Bild kopiert")
+            Return targetPath
+        End Function
 
         ''' Strg+C im Auswahl-Werkzeug: schneidet die Auswahl zu und merkt sie sich (samt Ursprungsposition
         ''' und -größe) als "Zwischenablage", statt sofort ein Objekt anzulegen - Strg+V fügt sie danach
@@ -14788,7 +14939,8 @@ Namespace ViewModels
         ''' gelten (siehe GetCurrentAdjustments, das für forPreview:=False ohnehin nur die
         ''' Applied-Felder liest - dieser Reset sorgt zusätzlich dafür, dass auch die Live-Vorschau
         ''' und die Eingabefelder selbst wieder den angewendeten Stand zeigen).
-        Private Sub DiscardUncommittedToolEdits(previousTool As EditorTool)
+        Private Function DiscardUncommittedToolEdits(previousTool As EditorTool) As List(Of String)
+            Dim verworfen As New List(Of String)()
             Dim reverted = False
             Select Case previousTool
                 Case EditorTool.Crop
@@ -14800,6 +14952,7 @@ Namespace ViewModels
                         ' zurück, der bereits angewendete bleibt unangetastet.
                         SetCropValues(0, 0, 0, 0)
                         reverted = True
+                        verworfen.Add(LocalizationService.T("Zuschnitt"))
                     End If
                 Case EditorTool.Resize
                     If HasImageResizeChanges Then
@@ -14816,7 +14969,10 @@ Namespace ViewModels
                         Me.RaisePropertyChanged(NameOf(CanvasHeight))
                         reverted = True
                     End If
-                    If reverted Then Me.RaisePropertyChanged(NameOf(OutputSizeText))
+                    If reverted Then
+                        Me.RaisePropertyChanged(NameOf(OutputSizeText))
+                        verworfen.Add(LocalizationService.T("Bildgröße"))
+                    End If
                 Case EditorTool.Rotate, EditorTool.Transform
                     If HasTransformChanges Then
                         _rotationDegrees = _appliedRotationDegrees
@@ -14827,13 +14983,15 @@ Namespace ViewModels
                         Me.RaisePropertyChanged(NameOf(StraightenDegrees))
                         Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
                         reverted = True
+                        verworfen.Add(LocalizationService.T("Drehen und Verzerren"))
                     End If
             End Select
             If reverted Then
                 RaiseResetButtonStateChanged()
                 ScheduleToolPreviewUpdate()
             End If
-        End Sub
+            Return verworfen
+        End Function
 
         Private Sub ClearUndoHistory()
             ResetUndoCapture()
@@ -15227,6 +15385,7 @@ Namespace ViewModels
                 If _activeSelectionIsMask <> adj.ActiveSelectionIsMask Then
                     _activeSelectionIsMask = adj.ActiveSelectionIsMask
                     Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
+                    RaiseCurrentTargetChanged()
                 End If
             End If
             _selectionScopeEnabled = adj.SelectionScopeEnabled
@@ -17548,6 +17707,7 @@ Namespace ViewModels
             CommitObjectAdjustModeToModel()
             PushUndo()
             Dim copy = _annotations(_selectedAnnotationIndex).Clone()
+            copy.Id = Guid.NewGuid().ToString("N")
             GiveCopyItsOwnMask(copy)
             copy.XPixels += 24
             copy.YPixels += 24

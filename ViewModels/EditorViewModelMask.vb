@@ -45,6 +45,7 @@ Namespace ViewModels
                 ' diesen Wert und blieb sonst dauerhaft grau: der Knopf fragte einmal beim Aufbau und
                 ' erfuhr nie, dass inzwischen etwas markiert ist.
                 If before <> _hasActiveSelection Then
+                    RaiseCurrentTargetChanged()
                     Me.RaisePropertyChanged(NameOf(CanRemoveObject))
                     ' Umkehren und Verwerfen haengen ebenfalls daran. Ohne diese Meldung blieben sie
                     ' nach dem ersten Pinselstrich grau, bis zufaellig ein Verlaufs-Ereignis feuerte,
@@ -895,6 +896,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanConvertKind))
             Me.RaisePropertyChanged(NameOf(ConvertKindText))
             Me.RaisePropertyChanged(NameOf(ConvertKindHint))
+            RaiseCurrentTargetChanged()
             If value Then PublishSelectionRedOverlay() Else SetSelectionMaskPreviewImage(Nothing)
         End Sub
 
@@ -2938,7 +2940,7 @@ Namespace ViewModels
                     If layerMembers.Count > 0 Then
                         _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
                         For Each l In layerMembers
-                            If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l)
+                            If l.Id <> _selectedMaskedAdjustmentLayerId Then _extraSelectedAdjustmentLayers.Add(l.Id)
                         Next
                     End If
                     RaiseMultiSelectionChanged()
@@ -2964,7 +2966,7 @@ Namespace ViewModels
                     ' Umschalt+Klick verlor die zuerst markierte Ebene beim Rechtsklick ihre Markierung).
                     ' Gemerkt wird über den INDEX, nicht über das Objekt: das Setzen des Ankers kann
                     ' die Objektliste durch Klone ersetzen (siehe AddExtraSelectedAnnotationsByIndex).
-                    Dim keptIndices = If(keepSet, IndicesOfAnnotations(_extraSelectedAnnotations), New List(Of Integer)())
+                    Dim keptIndices = If(keepSet, IndicesOfAnnotations(SelectedExtraAnnotations()), New List(Of Integer)())
                     If keepSet AndAlso _selectedAnnotationIndex >= 0 AndAlso _selectedAnnotationIndex < _annotations.Count AndAlso
                        _selectedAnnotationIndex <> annotationIndex AndAlso Not keptIndices.Contains(_selectedAnnotationIndex) Then
                         keptIndices.Add(_selectedAnnotationIndex)
@@ -2998,10 +3000,10 @@ Namespace ViewModels
                         ' Ebenenliste durch Klone, ein Contains ueber Objekte findet den Vorgaenger
                         ' danach nicht mehr und er landete doppelt in der Liste.
                         If previousPrimary IsNot Nothing AndAlso previousPrimary.Id <> adjustmentId AndAlso
-                           Not _extraSelectedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso l.Id = previousPrimary.Id) Then
-                            _extraSelectedAdjustmentLayers.Add(previousPrimary)
+                           Not _extraSelectedAdjustmentLayers.Contains(previousPrimary.Id) Then
+                            _extraSelectedAdjustmentLayers.Add(previousPrimary.Id)
                         End If
-                        _extraSelectedAdjustmentLayers.RemoveAll(Function(l) l IsNot Nothing AndAlso l.Id = adjustmentId)
+                        _extraSelectedAdjustmentLayers.Remove(adjustmentId)
                     Else
                         selectionSetCleared = _extraSelectedAdjustmentLayers.Count > 0
                         _extraSelectedAdjustmentLayers.Clear()
@@ -3216,6 +3218,16 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ist gerade die Arbeitskopie einer Ebenenmaske geöffnet? Der Wert trennt sie
+        ''' von einer freien, noch nicht übernommenen Auswahl: ein Klick in den leeren Bereich des
+        ''' Ebenenpanels darf letztere nicht wegwerfen, muss eine geöffnete Ebenenmaske samt ihrem
+        ''' Overlay aber vollständig schließen.</summary>
+        Public ReadOnly Property IsEditingLayerMask As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(_editingLayerMaskId)
+            End Get
+        End Property
+
         ''' <summary>True, wenn die globalen Regler das Bild und nicht eine Objekt- oder lokale
         ''' Korrekturebene bedienen. Die globale Anpassungszeile ist kein ListBox-Eintrag, daher
         ''' wird ihr aktiver Zustand separat vom Ebenenpanel dargestellt.</summary>
@@ -3418,6 +3430,12 @@ Namespace ViewModels
             Dim row = _layerRows.FirstOrDefault(Function(r) r IsNot Nothing AndAlso
                                                     Object.ReferenceEquals(r.Annotation, a))
             If row Is Nothing Then Return
+            ' Eine Textminiatur ist in einem 26-Pixel-Kasten nicht lesbar. Die Zeile zeigt bewusst
+            ' das Text-Werkzeug-Symbol; zudem sparen wir das Rasterisieren bei jedem Abwählen.
+            If String.Equals(a.Kind, "Text", StringComparison.OrdinalIgnoreCase) Then
+                row.Thumbnail = Nothing
+                Return
+            End If
             Dim key = "obj:" & a.Id & ":" & AnnotationThumbnailFingerprint(a)
             Dim size = GetCurrentScenePixelSize()
             If size.Width <= 0 OrElse size.Height <= 0 Then Return
@@ -3463,11 +3481,18 @@ Namespace ViewModels
                 Dim maskId = ""
                 If row.Annotation IsNot Nothing Then
                     maskId = row.Annotation.MaskId
-                    Dim key = "obj:" & row.Annotation.Id & ":" & AnnotationThumbnailFingerprint(row.Annotation)
-                    alive.Add(key)
-                    row.Thumbnail = GetOrBuildThumbnail(key,
-                        Function() ImageProcessor.BuildAnnotationThumbnail(row.Annotation, size.Width, size.Height,
-                                                                          LayerThumbnailBoxSize))
+                    ' Textobjekte werden im Ebenenpanel durch ihr eindeutiges Werkzeugsymbol
+                    ' dargestellt. Die Vorschau wäre bei 26 Pixeln nur ein Strich und verursacht
+                    ' bei jeder Textänderung unnötige Zeichenarbeit.
+                    If String.Equals(row.Annotation.Kind, "Text", StringComparison.OrdinalIgnoreCase) Then
+                        row.Thumbnail = Nothing
+                    Else
+                        Dim key = "obj:" & row.Annotation.Id & ":" & AnnotationThumbnailFingerprint(row.Annotation)
+                        alive.Add(key)
+                        row.Thumbnail = GetOrBuildThumbnail(key,
+                            Function() ImageProcessor.BuildAnnotationThumbnail(row.Annotation, size.Width, size.Height,
+                                                                              LayerThumbnailBoxSize))
+                    End If
                 ElseIf row.AdjustmentLayer IsNot Nothing Then
                     maskId = row.AdjustmentLayer.MaskId
                     ' Eine Korrekturebene HAT keinen eigenen Inhalt - ihre Maske ist ihr Inhalt. Sie
@@ -3649,6 +3674,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(SelectedLayerRow))
                 Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
                 Me.RaisePropertyChanged(NameOf(HasSelectedAdjustmentLayer))
+                RaiseCurrentTargetChanged()
                 Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
                 Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsSelected))
                 ' Der Masken-Knopf der Fußzeile haengt an der markierten Ebene - ohne das bliebe er

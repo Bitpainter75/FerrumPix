@@ -4,6 +4,7 @@ Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Controls.Shapes
 Imports Avalonia.Input
+Imports Avalonia.Input.Platform
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Media
@@ -536,8 +537,9 @@ Namespace Views
         ''' <summary>In welchen Werkzeugen zieht ein Zug auf freier Fläche ein OBJEKT-Auswahlrechteck?
         ''' Im VERSCHIEBEN-Werkzeug immer (dort sind Objekte das Thema, es wird nichts platziert), in
         ''' den Objekt-Werkzeugen nur, solange KEIN Objekttyp scharfgestellt ist - sonst setzt der
-        ''' Klick dort ein neues Objekt. Im Auswahl-Werkzeug NICHT: dessen Rechteck ist die
-        ''' Pixelauswahl.
+        ''' Klick dort ein neues Objekt. Im Auswahl-Werkzeug gilt er NUR im Untermodus
+        ''' "Verschieben": dann markiert der Rahmen Ebenen/Objekte; Rechteck, Ellipse und Lasso
+        ''' bleiben die Pixelauswahl.
         '''
         ''' AUCH IN DEN ANPASSUNGS-WERKZEUGEN (Anpassen/Farbe/Details/Effekte/Filter). Dort stand
         ''' einmal das Gegenteil, mit der Begründung, ein Klick ins Leere hebe die Auswahl auf - das
@@ -548,10 +550,10 @@ Namespace Views
         ''' anzufassen.</summary>
         Private Shared Function AllowsObjectMarquee(vm As EditorViewModel) As Boolean
             If vm Is Nothing Then Return False
-            ' Im AUSWAHL-Werkzeug bleibt das Rechteck die Pixelauswahl - AUSSER im Untermodus
-            ' "Verschieben": dort zieht man heute nichts auf, also markiert ein Zug dort die Objekte,
-            ' die er berührt. Ein Klick ohne Zug hebt dort weiterhin
-            ' die Auswahl auf; das entscheidet erst das Loslassen (Zugschwelle).
+            ' Im AUSWAHL-Werkzeug trennt der Untermodus die beiden Auswahlarten klar: Verschieben
+            ' markiert Ebenen per Rahmen, die Form-Untermodi markieren Bildpixel. Begin/Update des
+            ' Objekt-Rahmens sind reine View-Operationen; das ViewModel wird erst beim Loslassen in
+            ' EndObjectMarquee verändert.
             If vm.CurrentTool = EditorTool.Selection Then Return vm.SelectionMode = "Move"
             ' Im MASKEN-Werkzeug gilt dasselbe, sobald dort "Verschieben" gewaehlt ist: dort wird
             ' nicht gemalt, sondern gegriffen.
@@ -623,6 +625,7 @@ Namespace Views
                         UpdateSelectionOverlayVisibility()
                     End If
                 End If
+                ActivateObjectSelectionToolIfNothingIsSelected(vm)
                 Return
             End If
 
@@ -1696,7 +1699,7 @@ Namespace Views
                     ' Laufameisen bzw. gar keine Auswahl. "Verschieben" und
                     ' "Zauberstab" haben außerhalb des Bildes keine Zieh-Geste und räumen weiterhin auf.
                     Dim startsSelectionDragOutside = (vm.CurrentTool = EditorTool.Selection AndAlso
-                                                      vm.SelectionMode <> "Move" AndAlso vm.SelectionMode <> "MagicWand") OrElse
+                                                      vm.SelectionMode <> "MagicWand") OrElse
                                                      vm.CurrentTool = EditorTool.Mask
                     ' Dasselbe für das OBJEKT-Auswahlrechteck: es darf ausserhalb des Bildes ansetzen und
                     ' ins Bild hineingezogen werden - genau so umschliesst man Objekte, die am Bildrand
@@ -2018,13 +2021,12 @@ Namespace Views
                     Dim hitSlopXPercent = hitSlopPixels / imageRect.Width * 100.0
                     Dim hitSlopYPercent = hitSlopPixels / imageRect.Height * 100.0
                     Dim hitIndex = vm.HitTestAnnotation(xPct, yPct, hitSlopXPercent, hitSlopYPercent)
-                    ' AUSSERHALB der Auswahl/Maske heisst: sie ist nicht mehr gemeint - und zwar
-                    ' unabhaengig davon, ob der Klick eine Ebene trifft oder ins Leere geht. Sie
-                    ' bleiben zu lassen, waehrend man eine Ebene anklickt, hinterliess Laufameisen
-                    ' um etwas, an dem gerade niemand mehr arbeitet (Nutzerbefund 2026-08-05).
-                    ' INNERHALB behaelt sie den Vorrang: dafuer ist der Untermodus da, und der
-                    ' Klick landet weiter unten in der Verschiebe-Transaktion.
-                    If vm.HasActiveSelection AndAlso Not IsPointInsideSelection(rawPos, imageRect, vm) Then
+                    ' Trifft der Klick AUSSERHALB eine Ebene, ist die Bildauswahl nicht mehr
+                    ' gemeint und wird vor dem Ebenenwechsel abgewählt. Auf FREIER Fläche darf
+                    ' derselbe erste Druck dagegen einen neuen Auswahlrahmen anfangen; dort wird
+                    ' erst ein Klick ohne Zug beim Loslassen als Abwählen gewertet.
+                    If hitIndex >= 0 AndAlso vm.HasActiveSelection AndAlso
+                       Not IsPointInsideSelection(rawPos, imageRect, vm) Then
                         vm.ClearSelection()
                         _selectionClickOutsideActiveSelection = False
                         UpdateSelectionOverlayVisibility()
@@ -2088,7 +2090,6 @@ Namespace Views
                 _selectionGestureMoved = False
                 _selectionDragReplacesExisting = vm.HasActiveSelection AndAlso
                                                  vm.SelectionMode <> "MagicWand" AndAlso
-                                                 vm.SelectionMode <> "Move" AndAlso
                                                  vm.SelectionCombineMode = "New" AndAlso
                                                  Not clickedInsideSelection
                 ' Die alte Auswahl sofort wegnehmen: sie wird durch den beginnenden Zug ersetzt, und
@@ -2097,14 +2098,14 @@ Namespace Views
                 If _selectionDragReplacesExisting Then HideCurrentSelectionOverlay()
                 Select Case vm.SelectionMode
                     Case "Move"
-                        ' Verschieben ist der Default im Auswahlpanel: außerhalb einer bestehenden Auswahl
-                        ' wird keine neue Auswahl gestartet. Da hier auch keine Ziehgeste möglich ist,
-                        ' kann der Klick die Auswahl unmittelbar aufheben.
-                        If _selectionClickOutsideActiveSelection Then
-                            vm.ClearSelection()
-                            _selectionClickOutsideActiveSelection = False
-                            UpdateSelectionOverlayVisibility()
-                        End If
+                        ' Verschieben betrifft nur die vorhandene Auswahl (siehe oben). Auf freier
+                        ' Fläche beginnt der ERSTE Zug einen neuen Rechteckrahmen; ohne Bewegung
+                        ' entscheidet der Release-Zweig weiterhin "Abwählen".
+                        _selectionStart = rawPos
+                        _selectionEnd = rawPos
+                        _isSelectionDragging = True
+                        e.Pointer.Capture(canvas)
+                        UpdateSelectionOverlayFromDrag()
                     Case "MagicWand"
                         ' Einzelklick: zusammenhängende Farbfläche wählen (kein Ziehen).
                         Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
@@ -2301,9 +2302,26 @@ Namespace Views
             If vm.HasActiveSelection Then vm.ClearSelection()
             If vm.HasCropChanges Then vm.ClearPendingCrop()
 
+            ' Ein Klick neben das Bild beendet die aktuelle Bearbeitung. Ohne Ziel soll danach
+            ' kein platzierendes oder formendes Werkzeug "leer" aktiv bleiben: wie in Photoshop
+            ' landet man im universellen Objekt-Auswahlmodus. Der Helfer prüft die Restziele, damit
+            ' er nicht etwa eine noch offene Maske oder Auswahl unbemerkt verlässt.
+            ActivateObjectSelectionToolIfNothingIsSelected(vm)
+
             HideSelectionDragOverlay()
             UpdateSelectionOverlayVisibility()
             UpdateSliderLayout()
+        End Sub
+
+        ''' <summary>Setzt nach einer echten Komplett-Abwahl den neutralen Standardzustand. Das
+        ''' Auswahlwerkzeug ist dabei primär die Objekt-/Ebenenauswahl; "Verschieben" markiert per
+        ''' Klick oder Rahmen und verschiebt erst einen schon markierten Treffer.</summary>
+        Private Shared Sub ActivateObjectSelectionToolIfNothingIsSelected(vm As EditorViewModel)
+            If vm Is Nothing OrElse vm.HasSelectedAnnotation OrElse vm.HasSelectedAdjustmentLayer OrElse
+               vm.IsEditingLayerMask OrElse vm.HasActiveSelection OrElse
+               Not String.IsNullOrEmpty(vm.PendingInsertKind) Then Return
+            vm.CurrentTool = EditorTool.Selection
+            vm.SelectionMode = "Move"
         End Sub
 
         Private Sub OnSliderPointerMoved(sender As Object, e As PointerEventArgs)
@@ -2655,6 +2673,7 @@ Namespace Views
                         ' DeselectCurrentTarget allein nahm nur die EBENE aus der Markierung; die
                         ' bearbeitete Maske samt rotem Overlay blieb stehen.
                         releaseVm.DeselectMaskTarget()
+                        ActivateObjectSelectionToolIfNothingIsSelected(releaseVm)
                         UpdateSelectionOverlayVisibility()
                         UpdateSliderLayout()
                     End If
@@ -3529,15 +3548,24 @@ Namespace Views
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay Is Nothing Then Return
+
+            ' WICHTIG: Dies ist absichtlich ein REINER View-Zwischenstand. Beim Aufziehen darf
+            ' weder die Auswahl im ViewModel veraendert noch das Bildlayout neu gerechnet werden:
+            ' beides kann Korrektur-/Szenen-Render anstoßen. Die echte Auswahl wird ausschließlich
+            ' in CommitSelectionDrag beim Loslassen mit SetSelectionRect/SetSelectionEllipse gesetzt.
+            ' Gleichbleibende Styled Properties nicht erneut schreiben; jede davon invalidiert sonst
+            ' den Overlay-Render, obwohl sich beim freien Rechteckzug nur dessen Geometrie ändert.
             Dim left = Math.Min(_selectionStart.X, _selectionEnd.X)
             Dim top = Math.Min(_selectionStart.Y, _selectionEnd.Y)
             Dim width = Math.Abs(_selectionEnd.X - _selectionStart.X)
             Dim height = Math.Abs(_selectionEnd.Y - _selectionStart.Y)
-            overlay.ShapeMode = If(vm IsNot Nothing AndAlso vm.SelectionMode = "Ellipse", "Ellipse", "Rectangle")
-            overlay.CombineMode = If(vm Is Nothing, "New", vm.SelectionCombineMode)
-            overlay.Points = Nothing
-            overlay.EdgePoints = Nothing
-            overlay.IsVisible = True
+            Dim shapeMode = If(vm IsNot Nothing AndAlso vm.SelectionMode = "Ellipse", "Ellipse", "Rectangle")
+            Dim combineMode = If(vm Is Nothing, "New", vm.SelectionCombineMode)
+            If Not String.Equals(overlay.ShapeMode, shapeMode, StringComparison.Ordinal) Then overlay.ShapeMode = shapeMode
+            If Not String.Equals(overlay.CombineMode, combineMode, StringComparison.Ordinal) Then overlay.CombineMode = combineMode
+            If overlay.Points IsNot Nothing Then overlay.Points = Nothing
+            If overlay.EdgePoints IsNot Nothing Then overlay.EdgePoints = Nothing
+            If Not overlay.IsVisible Then overlay.IsVisible = True
             Avalonia.Controls.Canvas.SetLeft(overlay, left)
             Avalonia.Controls.Canvas.SetTop(overlay, top)
             overlay.Width = Math.Max(1, width)
@@ -5694,7 +5722,76 @@ Namespace Views
             End Try
         End Sub
 
-        Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)
+        ''' <summary>Kopiert das zusammengesetzte Dokument, nicht die gezoomte Bildschirmansicht.
+        ''' Die View stellt lediglich die Datei in die System-Zwischenablage; der ViewModel-Renderweg
+        ''' erzeugt sie vorher in der vollen Quellauflösung.</summary>
+        Private Async Sub CopyCurrentImageToSystemClipboardAsync(vm As EditorViewModel)
+            If vm Is Nothing Then Return
+            Dim tempPath = Await vm.CopyCurrentImageToClipboardFileAsync()
+            If String.IsNullOrWhiteSpace(tempPath) Then Return
+            Try
+                Dim owner = TopLevel.GetTopLevel(Me)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("EditorView.CopyCurrentImage", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Fügt fremden Zwischenablageinhalt als OBJEKT ein. Ein Dateimanager liefert
+        ''' Bildpfade, ein Textprogramm Text. Das unterscheidet sich bewusst von der internen
+        ''' Ebenen- und Pixelauswahl-Zwischenablage: eine fremde Bilddatei wird immer ein Bildobjekt;
+        ''' freier Text wird nur im Textwerkzeug zu einem neuen Textobjekt.</summary>
+        Private Async Function PasteExternalClipboardAsync(vm As EditorViewModel) As Task
+            If vm Is Nothing Then Return
+            Try
+                Dim owner = TopLevel.GetTopLevel(Me)
+                Dim clipboard = owner?.Clipboard
+                If clipboard Is Nothing Then
+                    If vm.CurrentTool = EditorTool.Selection Then vm.PasteSelectionClipboard()
+                    Return
+                End If
+
+                ' Dateiformat zuerst: manche Dateimanager bieten zusätzlich ihren Pfad als Text an.
+                ' Der darf im Textwerkzeug nicht als Textobjekt landen, sondern bleibt ein Bildobjekt.
+                Dim fileData = Await ClipboardPathService.ReadPathDataAsync(clipboard)
+                Dim imagePaths = fileData.Paths.Where(AddressOf IsInsertableImagePath).ToList()
+                If imagePaths.Count > 0 Then
+                    ' Ohne Zeigerposition ist die Bildmitte der verlässlichste Einfügeort. Mehrere
+                    ' Dateien bleiben durch den kleinen Versatz einzeln greifbar.
+                    Const startPercent As Double = 30.0
+                    Const cascadePercent As Double = 3.0
+                    For i = 0 To imagePaths.Count - 1
+                        vm.AddImageAnnotationAt(imagePaths(i), startPercent + i * cascadePercent,
+                                                startPercent + i * cascadePercent)
+                    Next
+                    Return
+                End If
+
+                If vm.CurrentTool = EditorTool.Text Then
+                    Dim text = Await clipboard.TryGetTextAsync()
+                    If Not String.IsNullOrWhiteSpace(text) Then
+                        ' Erst die bisherige Ebene lösen: AnnotationText synchronisiert sonst in
+                        ' genau diese hinein und würde sie vor dem Anlegen überschreiben.
+                        vm.SelectedAnnotationIndex = -1
+                        ' Eingefügter Text ist neuer INHALT, keine Fortsetzung der zuletzt benutzten
+                        ' Form. Eine transparente Altfüllung ließe ihn unsichtbar entstehen.
+                        vm.AnnotationFillColor = "#FFFFFFFF"
+                        vm.AnnotationText = text
+                        vm.AddAnnotationAt("Text", 35, 42)
+                        FocusTextOverlayEditor()
+                        Return
+                    End If
+                End If
+
+                ' Kein fremdes, passend einfügbares Format: der bisherige Auswahl-Ausschnitt bleibt
+                ' im Auswahlwerkzeug die letzte sinnvolle Strg+V-Bedeutung.
+                If vm.CurrentTool = EditorTool.Selection Then vm.PasteSelectionClipboard()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("EditorView.PasteExternalClipboard", ex)
+            End Try
+        End Function
+
+        Public Shadows Async Sub OnKeyDown(sender As Object, e As KeyEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             Dim isTextInputFocused = TypeOf e.Source Is TextBox
@@ -5773,14 +5870,29 @@ Namespace Views
                             End If
                         End If
                     Case Key.C
-                        If Not isTextInputFocused AndAlso vm.CurrentTool = EditorTool.Selection AndAlso vm.HasActiveSelection Then
+                        ' Eine markierte Ebene hat Vorrang: Strg+C/V meint dann die Ebene selbst,
+                        ' wie in einer Ebenenpalette üblich. Erst ohne Ebenenziel bleibt der bisherige
+                        ' Weg für den ausgeschnittenen Bildbereich zuständig.
+                        If Not isTextInputFocused AndAlso vm.CopySelectedLayerToClipboard() Then
+                            e.Handled = True
+                        ElseIf Not isTextInputFocused AndAlso vm.CurrentTool = EditorTool.Selection AndAlso vm.HasActiveSelection Then
                             CopySelectionToSystemClipboardAsync(vm)
                             e.Handled = True
+                        ElseIf Not isTextInputFocused Then
+                            ' Ohne Ebenen- oder Auswahlziel ist Strg+C das ganze Bild. Der Renderweg
+                            ' arbeitet aus der Quellauflösung, also unabhängig von Zoom und Vorschaugröße.
+                            e.Handled = True
+                            CopyCurrentImageToSystemClipboardAsync(vm)
                         End If
                     Case Key.V
-                        If Not isTextInputFocused AndAlso vm.CurrentTool = EditorTool.Selection Then
-                            vm.PasteSelectionClipboard()
+                        If Not isTextInputFocused AndAlso vm.PasteLayerClipboard() Then
                             e.Handled = True
+                        ElseIf Not isTextInputFocused Then
+                            ' VOR dem Await behandeln: der KeyDown läuft in der Blasenphase und
+                            ' dürfte sonst in ein darunterliegendes Textfeld oder Steuerelement
+                            ' weiterlaufen, während die Zwischenablage noch gelesen wird.
+                            e.Handled = True
+                            Await PasteExternalClipboardAsync(vm)
                         End If
                 End Select
                 If e.Handled Then Return
@@ -5913,6 +6025,11 @@ Namespace Views
                             ' Ein laufendes Aufziehen/Ziehen abbrechen, ohne es zu übernehmen - vorher
                             ' verließ Esc mitten im Zug den Editor.
                             CancelSelectionDrag()
+                        ElseIf vm.HasSelectedAdjustmentLayer OrElse vm.IsEditingLayerMask Then
+                            ' Eine geöffnete Ebenenmaske besteht aus Zeile PLUS Arbeitsmaske. Nur
+                            ' die Zeile abzuwählen ließe das rote Overlay ohne Ziel stehen; Esc
+                            ' schließt deshalb beides in einem Schritt.
+                            vm.DeselectMaskTarget()
                         ElseIf vm.HasDeselectableTarget Then
                             ' Erst abwaehlen, dann - beim naechsten Esc - verlassen. Vorher fragte
                             ' Esc bei einer frisch gezogenen Maske sofort nach dem Speichern.

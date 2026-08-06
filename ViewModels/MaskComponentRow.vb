@@ -11,6 +11,11 @@ Namespace ViewModels
         Public ReadOnly Property Index As Integer
         Public ReadOnly Property KindLabel As String
         Public ReadOnly Property ModeLabel As String
+        ''' <summary>Das Bildzeichen für die Verknüpfung. Die drei Mengenoperationen sind als
+        ''' Zeichen in einer schmalen Zeile zu ähnlich; besonders "Schnitt" wurde dort zu "Sch…".
+        ''' Das Symbol zeigt die Flächenbeziehung unmittelbar.</summary>
+        Public ReadOnly Property ModeIconSource As String
+        Public ReadOnly Property ModeHint As String
         Public ReadOnly Property IsActive As Boolean
         Public ReadOnly Property IconSource As String
 
@@ -60,11 +65,22 @@ Namespace ViewModels
             ' Spalte war es ausserdem von einem Schliessen-Kreuz nicht zu unterscheiden. Ein kurzes
             ' Wort sagt dasselbe und traegt in der Spalte.
             ModeLabel = ""
+            ModeIconSource = ""
+            ModeHint = ""
             If index > 0 AndAlso component IsNot Nothing Then
                 Select Case If(component.Mode, "").Trim().ToLowerInvariant()
-                    Case "subtract" : ModeLabel = "-"
-                    Case "intersect" : ModeLabel = LocalizationService.T("Schnitt")
-                    Case Else : ModeLabel = "+"
+                    Case "subtract"
+                        ModeLabel = "-"
+                        ModeIconSource = base & "layers-subtract.svg"
+                        ModeHint = LocalizationService.T("Von der Maske abziehen")
+                    Case "intersect"
+                        ModeLabel = LocalizationService.T("Schnitt")
+                        ModeIconSource = base & "layers-intersect.svg"
+                        ModeHint = LocalizationService.T("Nur die Überschneidung behalten")
+                    Case Else
+                        ModeLabel = "+"
+                        ModeIconSource = base & "layers-union.svg"
+                        ModeHint = LocalizationService.T("Zur Maske hinzufügen")
                 End Select
             End If
         End Sub
