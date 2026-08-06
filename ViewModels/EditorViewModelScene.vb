@@ -26,6 +26,41 @@ Namespace ViewModels
     ''' <c>Audits/RENDERPIPELINE.md</c>.</summary>
     Partial Public Class EditorViewModel
 
+        ''' <summary>Schlanker Snapshot ausschließlich für den UI-Thread-Kompositor. Ein Blit
+        ''' braucht weder Pixelregler noch Kopien von Objekten, Masken und Korrekturebenen: er liest
+        ''' nur Geometrie, Sichtbarkeit und die aktuellen Objektverweise. GetCurrentAdjustments
+        ''' klont dagegen den kompletten Rezeptbaum und war damit bei jedem Schwenk/Blit unnötige
+        ''' CPU- und GC-Last. Die Listen werden ausschließlich auf dem UI-Thread geändert, genau
+        ''' dort läuft auch DrawCachedAnnotations; deshalb ist die Referenzsicht hier sicher.</summary>
+        Private _compositorBlitSnapshot As ImageAdjustments
+        Private _compositorBlitGeometryKey As String = ""
+
+        Private Function GetCompositorBlitAdjustments() As ImageAdjustments
+            Dim crop = EffectiveCrop(fuerAnzeige:=True)
+            Dim key = String.Join("|", GetBaseWidth(), GetBaseHeight(), _rotationDegrees, _flipH, _flipV,
+                                  crop.Left, crop.Top, crop.Right, crop.Bottom, _sceneContentVersion)
+            If _compositorBlitSnapshot IsNot Nothing AndAlso String.Equals(_compositorBlitGeometryKey, key, StringComparison.Ordinal) Then
+                Return _compositorBlitSnapshot
+            End If
+
+            _compositorBlitSnapshot = New ImageAdjustments With {
+                .SourceWidthPixels = GetBaseWidth(),
+                .SourceHeightPixels = GetBaseHeight(),
+                .RotationDegrees = _rotationDegrees,
+                .FlipHorizontal = _flipH,
+                .FlipVertical = _flipV,
+                .CropLeftPercent = CSng(crop.Left),
+                .CropTopPercent = CSng(crop.Top),
+                .CropRightPercent = CSng(crop.Right),
+                .CropBottomPercent = CSng(crop.Bottom),
+                .Annotations = _annotations.ToList(),
+                .AnnotationGroups = _annotationGroups,
+                .MaskedAdjustmentLayers = _maskedAdjustmentLayers
+            }
+            _compositorBlitGeometryKey = key
+            Return _compositorBlitSnapshot
+        End Function
+
         ''' <summary>Anpassungssatz fuer die SZENE - wie die Vorschau, aber mit dem GEBACKENEN BLOCK:
         ''' alle Objekte oberhalb der Kompositor-Grenze werden am Klon ausgeblendet (das Rezept selbst
         ''' bleibt unberuehrt), die Blit-Stufe zeichnet sie aus dem Objekt-Bitmap-Cache darueber.</summary>
@@ -61,6 +96,7 @@ Namespace ViewModels
             ' Blit merkt sich seinen ungesehenen Teil selbst wieder vor).
             _compositorPreviousBlitRect = SKRectI.Empty
             _displayPendingRect = SKRectI.Empty
+            _deferredSceneRegionRects.Clear()
             Dim previous = _sceneSk
             _sceneSk = sceneSk
             If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, sceneSk) Then previous.Dispose()
@@ -105,6 +141,12 @@ Namespace ViewModels
         ''' nachgeblittet von FlushPendingDisplayRegion, sobald das Sichtfenster sie erreicht.</summary>
         Private _displayPendingRect As SKRectI = SKRectI.Empty
 
+        ''' <summary>Dirty-Teile der SZENE, die ausserhalb des Sichtfensters liegen. Anders als der
+        ''' Anzeige-Blit darf der Renderer sie nicht einfach vergessen: die persistente Szene wäre
+        ''' dort sonst beim späteren Schwenken alt. Deshalb werden Rechtecke exakt um den bereits
+        ''' gerenderten sichtbaren Teil beschnitten und beim Erreichen des Sichtfensters nachgereicht.</summary>
+        Private ReadOnly _deferredSceneRegionRects As New List(Of SKRectI)()
+
         ''' <summary>Das Sichtfenster in Szenenpixeln, mit einem halben Fenster Rand je Seite -
         ''' derselbe Rand-Gedanke wie beim Zoom-Detail: Schwenks bleiben billig, weil der Rand schon
         ''' hochgeladen ist. Die Anteile meldet die View bei jedem Layout-Durchlauf
@@ -127,6 +169,51 @@ Namespace ViewModels
                rect.Right >= _sceneSk.Width AndAlso rect.Bottom >= _sceneSk.Height Then Return SKRectI.Empty
             Return rect
         End Function
+
+        ''' <summary>Hängt die Teile von <paramref name="source"/> an, die NICHT in
+        ''' <paramref name="cut"/> liegen. Ein Rechteck zerfällt dabei höchstens in vier
+        ''' nicht-überlappende Streifen. So wird beim Schwenken nicht wieder die schon gerenderte
+        ''' Bildmitte angefordert.</summary>
+        Private Shared Sub AddRectDifference(source As SKRectI, cut As SKRectI, target As List(Of SKRectI))
+            If source.IsEmpty Then Return
+            If cut.IsEmpty Then
+                target.Add(source)
+                Return
+            End If
+            If source.Top < cut.Top Then target.Add(New SKRectI(source.Left, source.Top, source.Right, cut.Top))
+            If cut.Bottom < source.Bottom Then target.Add(New SKRectI(source.Left, cut.Bottom, source.Right, source.Bottom))
+            Dim middleTop = Math.Max(source.Top, cut.Top)
+            Dim middleBottom = Math.Min(source.Bottom, cut.Bottom)
+            If middleBottom <= middleTop Then Return
+            If source.Left < cut.Left Then target.Add(New SKRectI(source.Left, middleTop, cut.Left, middleBottom))
+            If cut.Right < source.Right Then target.Add(New SKRectI(cut.Right, middleTop, source.Right, middleBottom))
+        End Sub
+
+        Private Sub QueueDeferredSceneRegion(rect As SKRectI)
+            If rect.IsEmpty Then Return
+            _deferredSceneRegionRects.Add(rect)
+        End Sub
+
+        ''' <summary>Holt beim Schwenken ausschließlich die jetzt sichtbaren Teile bereits
+        ''' aufgeschobener Szenenänderungen in die Render-Queue. Empty bedeutet wie beim Blit:
+        ''' Sichtfenster unbekannt oder das gesamte Bild sichtbar, dann alles rendern.</summary>
+        Private Sub FlushDeferredSceneRegions()
+            If _deferredSceneRegionRects.Count = 0 Then Return
+            Dim viewport = ComputeBlitViewportRect()
+            Dim remaining As New List(Of SKRectI)()
+            For Each deferredRect In _deferredSceneRegionRects
+                Dim visible = If(viewport.IsEmpty, deferredRect, SKRectI.Intersect(deferredRect, viewport))
+                If visible.IsEmpty Then
+                    remaining.Add(deferredRect)
+                Else
+                    _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, visible)
+                    AddRectDifference(deferredRect, visible, remaining)
+                End If
+            Next
+            _deferredSceneRegionRects.Clear()
+            _deferredSceneRegionRects.AddRange(remaining)
+            If Not _sceneRegionPendingRect.IsEmpty AndAlso Not _sceneRegionWorkerBusy Then RunSceneRegionWorker()
+        End Sub
 
         ''' <summary>Blitten, was beim Klemmen aufs Sichtfenster liegenblieb - gerufen bei jeder
         ''' Sichtfenster-Meldung der View, also bei jedem Schwenk und Zoomwechsel. Der Blit laeuft
@@ -203,8 +290,9 @@ Namespace ViewModels
                                 canvas.DrawBitmap(_sceneSk, region, region, replacePaint)
                             End Using
                             Try
-                                Dim adj = GetCurrentAdjustments(forPreview:=True, includeEditorOverlayAnnotations:=True)
-                                OverlaySceneRenderer.DrawCachedAnnotations(canvas, adj, _sceneSk.Width, _sceneSk.Height, _annotationBitmapCache)
+                                Dim adj = GetCompositorBlitAdjustments()
+                                OverlaySceneRenderer.DrawCachedAnnotations(canvas, adj, _sceneSk.Width, _sceneSk.Height,
+                                                                            _annotationBitmapCache, clamped)
                             Catch ex As Exception
                                 ' Szene ist schon drin - lieber ohne Kompositor-Objekte anzeigen
                                 ' als gar nicht (gleiches Verhalten wie der fruehere Rueckfall).
@@ -321,7 +409,27 @@ Namespace ViewModels
         ''' ein waehrenddessen ausgetauschtes _sceneSk (Vollrender) verwirft das Ergebnis und rendert neu.</summary>
         Private Sub RequestSceneRegionRender(dirtyRect As SKRectI)
             If dirtyRect.IsEmpty Then Return
-            _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, dirtyRect)
+            ' Nichtnormale Blend-Modi brauchen eine zusammenhängende Komposition über ihren
+            ' Abhängigkeitsbereich. Für sie wäre ein Sichtfenster-Schnitt falsch; der Worker
+            ' erweitert denselben Bereich anschließend nochmals als Sicherheitsnetz.
+            Dim blendDep = SceneBlendCompositeRequiredRect()
+            If blendDep.RequiresComposite AndAlso Not blendDep.Rect.IsEmpty AndAlso
+               OverlaySceneRenderer.Intersects(dirtyRect, blendDep.Rect) Then
+                _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, dirtyRect)
+                If Not _sceneRegionWorkerBusy Then RunSceneRegionWorker()
+                Return
+            End If
+
+            Dim viewport = ComputeBlitViewportRect()
+            Dim visible = If(viewport.IsEmpty, dirtyRect, SKRectI.Intersect(dirtyRect, viewport))
+            If visible.IsEmpty Then
+                QueueDeferredSceneRegion(dirtyRect)
+                DiagnosticLogService.LogAlways("Editor.SceneRegion",
+                                                $"deferred=1 rect={dirtyRect.Left},{dirtyRect.Top},{dirtyRect.Width}x{dirtyRect.Height}")
+                Return
+            End If
+            _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, visible)
+            AddRectDifference(dirtyRect, visible, _deferredSceneRegionRects)
             If _sceneRegionWorkerBusy Then Return
             RunSceneRegionWorker()
         End Sub
@@ -454,6 +562,7 @@ Namespace ViewModels
         Public Sub ShutdownSceneWork()
             _sceneContentVersion += 1
             _sceneRegionPendingRect = SKRectI.Empty
+            _deferredSceneRegionRects.Clear()
             _displayPendingRect = SKRectI.Empty
             _sceneDisplay = Nothing
             _sceneSk = Nothing
@@ -516,6 +625,9 @@ Namespace ViewModels
             ' Was der Blit beim Klemmen aufs Sichtfenster liegen liess, jetzt nachholen - diese
             ' Meldung kommt bei jedem Schwenk und Zoomwechsel, synchron im Layout-Durchlauf.
             FlushPendingDisplayRegion()
+            ' Dasselbe für die SZENE: nicht sichtbare Dirty-Teile wurden beim Rendern aufgeschoben
+            ' und werden erst jetzt, wenn sie in den Viewport rücken, in den Worker eingereiht.
+            FlushDeferredSceneRegions()
 
             ' SetZoomDetailImage/SetZoomDetailBeforeImage feuern PropertyChanged synchron. Die View
             ' positioniert daraufhin sofort das Overlay und meldet den Viewport erneut. Ohne Guard

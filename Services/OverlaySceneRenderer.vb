@@ -195,7 +195,8 @@ Namespace Services
         ''' und genau dieser Thread ist der einzige, der invalidiert (Vertrag des Caches).</summary>
         Public Shared Function DrawCachedAnnotations(canvas As SKCanvas, adj As ImageAdjustments,
                                                      sceneWidth As Integer, sceneHeight As Integer,
-                                                     cache As AnnotationBitmapCache) As Integer
+                                                     cache As AnnotationBitmapCache,
+                                                     Optional clipRect As SKRectI = Nothing) As Integer
             If canvas Is Nothing OrElse adj Is Nothing OrElse cache Is Nothing Then Return 0
             If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return 0
             If sceneWidth <= 0 OrElse sceneHeight <= 0 Then Return 0
@@ -206,6 +207,14 @@ Namespace Services
                 Dim annotation = adj.Annotations(i)
                 If annotation Is Nothing OrElse Not IsOverlayAnnotation(annotation) Then Continue For
                 If Not adj.IsAnnotationRenderVisible(annotation) Then Continue For
+
+                ' Der Blit ist bereits auf ein kleines Sichtfenster geclippt. Vorher wurde dennoch
+                ' JEDE Annotation erst geklont und durch Crop/Skalierung/Drehung geschoben, bevor
+                ' Skia sie wegclippen konnte. Die Vorprüfung rechnet nur ihr konservatives Rechteck
+                ' und spart so TransformAnnotationForGeometry sowie Cache-Zugriff für Objekte, die
+                ' sicher außerhalb liegen. Pfade bleiben bewusst "möglicherweise sichtbar": ihre
+                ' Stützpunkte dürfen über das Objektrechteck hinausreichen.
+                If Not CanAnnotationIntersectClip(annotation, adj, sceneWidth, sceneHeight, clipRect) Then Continue For
 
                 Dim renderAnnotation = ImageProcessor.TransformAnnotationForGeometry(annotation, adj, sceneWidth, sceneHeight)
                 If renderAnnotation Is Nothing Then Continue For
@@ -245,6 +254,66 @@ Namespace Services
                 drawn += 1
             Next
             Return drawn
+        End Function
+
+        ''' <summary>Konservative, klonfreie Sichtfenster-Prüfung für den Kompositor. Sie bildet
+        ''' das Objekt-Rechteck mit genau derselben Crop-/Skalierungs-/Vierteldrehungs-Kette ab wie
+        ''' TransformAnnotationForGeometry, verzichtet aber auf das Klonen von Annotation und
+        ''' Pinsel-/Pfadlisten. Ein Quadrat über der halben Diagonale deckt jede lokale Drehung ab;
+        ''' Effekt-Ränder werden großzügig dazugegeben. Im Zweifel True zurückgeben - fehlende
+        ''' Optimierung ist harmlos, ein falsch übersprungenes Objekt wäre sichtbar kaputt.</summary>
+        Private Shared Function CanAnnotationIntersectClip(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                            sceneWidth As Integer, sceneHeight As Integer,
+                                                            clipRect As SKRectI) As Boolean
+            If clipRect.IsEmpty OrElse annotation Is Nothing OrElse adj Is Nothing Then Return True
+            If sceneWidth <= 0 OrElse sceneHeight <= 0 OrElse
+               adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return True
+
+            Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
+            ' Im Kompositor liegen Pinsel zwar ohnehin nicht, Pfade und verankerte Wasserzeichen
+            ' können aber außerhalb des Grundrechtecks zeichnen. Diese seltenen Fälle sicher ganz
+            ' durchlassen statt eine zweite, fehleranfällige Pfadgeometrie einzuführen.
+            If kind = "brush" OrElse kind = "eraser" OrElse
+               Not String.IsNullOrWhiteSpace(annotation.PathPoints) OrElse
+               Not String.IsNullOrWhiteSpace(annotation.TextPathKind) OrElse
+               (kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(annotation.Anchor)) Then Return True
+
+            Dim crop = ImageProcessor.ComputeGeometryCropRect(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
+            If crop.Width <= 0 OrElse crop.Height <= 0 Then Return True
+            If annotation.WidthPixels <= 0 OrElse annotation.HeightPixels <= 0 Then Return True
+
+            Dim sourceRect = New SKRect(annotation.XPixels - crop.Left, annotation.YPixels - crop.Top,
+                                        annotation.XPixels + annotation.WidthPixels - crop.Left,
+                                        annotation.YPixels + annotation.HeightPixels - crop.Top)
+            Dim mapped = ImageGeometryMapper.SourceObjectToDisplay(sourceRect, crop.Width, crop.Height,
+                                                                     sceneWidth, sceneHeight,
+                                                                     adj.RotationDegrees, adj.FlipHorizontal,
+                                                                     adj.FlipVertical, annotation.RotationDegrees)
+            Dim rect = mapped.Rect
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return True
+
+            ' Lokale Rotation: Quadrat über der halben Diagonale enthält das gedrehte Rechteck für
+            ' jeden Winkel (konservativer als die exakte, aber wesentlich teurere Bounds-Rechnung).
+            Dim halfDiagonal = CSng(Math.Sqrt(rect.Width * rect.Width + rect.Height * rect.Height) * 0.5)
+            rect = SKRect.Create(rect.MidX - halfDiagonal, rect.MidY - halfDiagonal,
+                                 halfDiagonal * 2.0F, halfDiagonal * 2.0F)
+
+            Dim objectSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
+            Dim effectPad = Math.Max(8.0F, annotation.StrokeWidth * 3.0F)
+            If annotation.ShadowEnabled Then
+                Dim blur = objectSize * Math.Max(0.0F, Math.Min(100.0F, annotation.ShadowBlur)) / 100.0F * 0.075F
+                Dim offset = Math.Max(Math.Abs(objectSize * annotation.ShadowOffsetXPercent / 100.0F),
+                                      Math.Abs(objectSize * annotation.ShadowOffsetYPercent / 100.0F))
+                Dim grow = Math.Max(0.0F, Math.Max(10.0F, Math.Min(400.0F, annotation.ShadowSizePercent)) / 100.0F - 1.0F) * objectSize * 0.5F
+                effectPad = Math.Max(effectPad, blur * 3.0F + offset + grow + 8.0F)
+            End If
+            If annotation.GlowEnabled Then
+                effectPad = Math.Max(effectPad, objectSize * Math.Max(0.0F, Math.Min(100.0F, annotation.GlowBlur)) / 100.0F * 1.8F + 8.0F)
+            End If
+            effectPad = Math.Max(effectPad, 24.0F) ' Objektanpassungen/Antialiasing: lieber etwas zu groß.
+            rect = New SKRect(rect.Left - effectPad, rect.Top - effectPad, rect.Right + effectPad, rect.Bottom + effectPad)
+            Return rect.Left < clipRect.Right AndAlso rect.Right > clipRect.Left AndAlso
+                   rect.Top < clipRect.Bottom AndAlso rect.Bottom > clipRect.Top
         End Function
     End Class
 End Namespace
