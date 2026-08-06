@@ -7156,6 +7156,7 @@ Namespace ViewModels
                 ' er nach den 90°-Knöpfen und beim freien Drehen am Anfasser aktuell bleibt.
                 Me.RaisePropertyChanged(NameOf(StraightenDegrees))
                 SyncSelectedAnnotation()
+                RaiseEnvelopeChanged()
             End Set
         End Property
 
@@ -7174,6 +7175,7 @@ Namespace ViewModels
                 End If
                 Me.RaiseAndSetIfChanged(_annotationFlipH, value)
                 SyncSelectedAnnotation()
+                RaiseEnvelopeChanged()
             End Set
         End Property
 
@@ -9844,6 +9846,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(DisplayImageWidthPixels))
             Me.RaisePropertyChanged(NameOf(DisplayImageHeightPixels))
             RaiseAnnotationPositionControlProperties()
+            RaiseEnvelopeChanged()
         End Sub
 
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double

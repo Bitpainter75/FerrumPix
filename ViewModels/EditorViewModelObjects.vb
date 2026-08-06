@@ -50,6 +50,7 @@ Namespace ViewModels
                 End If
                 Me.RaiseAndSetIfChanged(_annotationFlipV, value)
                 SyncSelectedAnnotation()
+                RaiseEnvelopeChanged()
             End Set
         End Property
 

@@ -416,7 +416,10 @@ Namespace Services
             If layer Is Nothing OrElse v Is Nothing OrElse v.IsEmpty Then Return Nothing
             If imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
 
-            Const Steps As Integer = 24
+            ' Die Anzeige wertet Freiform-Verzerrungen mit 48×48 Stützstellen aus. Der finale
+            ' Objekt-Render muss dieselbe Feinheit verwenden, sonst bleiben gekrümmte Kanten beim
+            ' Export sichtbar kantiger als in der Vorschau.
+            Const Steps As Integer = 48
             Dim node = (Steps + 1) * (Steps + 1)
 
             ' Wie weit sich ein Punkt der Ebene verschiebt, in BILDkoordinaten. Erst einmal fuer die
@@ -567,8 +570,8 @@ Namespace Services
             ' ERST die eigene Verzerrung des Objekts, DANN die des Bildes. Die eigene beschreibt
             ' seine Form, die des Bildes, wo es im Bild liegt - in dieser Reihenfolge gelesen
             ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
-            ' Die eigene Verzerrung stammt aus der bereits durch Bilddrehung/-flip transformierten
-            ' Renderkopie. Der ursprüngliche Datensatz bleibt absichtlich im Quellraum gespeichert.
+            ' Die eigene Verzerrung stammt aus der für Drehung/Flip in den Renderraum überführten
+            ' Kopie. Der gespeicherte Datensatz selbst bleibt dabei im Objektkoordinatensystem.
             If renderAnnotation IsNot Nothing AndAlso renderAnnotation.OwnWarp IsNot Nothing AndAlso
                Not renderAnnotation.OwnWarp.IsEmpty Then
                 ' Der Bezug ist das OBJEKTRECHTECK, nicht die Ebene: die eigene Verzerrung steht in

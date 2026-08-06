@@ -1788,8 +1788,9 @@ Namespace ViewModels
             If Not WarpsTheObject Then Return SourcePercentToDisplayPercent(xPercent, yPercent)
             Dim r = GetSelectedAnnotationDisplayRectPercent()
             If r.Width <= 0 OrElse r.Height <= 0 Then Return Nothing
-            Return New SKPoint(CSng(r.X + xPercent / 100.0 * r.Width),
-                               CSng(r.Y + yPercent / 100.0 * r.Height))
+            Dim point = ObjectWarpPointThroughGeometry(xPercent, yPercent)
+            Return New SKPoint(CSng(r.X + point.X / 100.0 * r.Width),
+                               CSng(r.Y + point.Y / 100.0 * r.Height))
         End Function
 
         ''' <summary>Gegenrichtung zu <see cref="WarpSpaceToDisplay"/>.</summary>
@@ -1797,8 +1798,52 @@ Namespace ViewModels
             If Not WarpsTheObject Then Return DisplayPercentToSourcePercent(xPercent, yPercent)
             Dim r = GetSelectedAnnotationDisplayRectPercent()
             If r.Width <= 0 OrElse r.Height <= 0 Then Return Nothing
-            Return New SKPoint(CSng((xPercent - r.X) / r.Width * 100.0),
-                               CSng((yPercent - r.Y) / r.Height * 100.0))
+            Dim point = DisplayPointThroughObjectWarpGeometry((xPercent - r.X) / r.Width * 100.0,
+                                                               (yPercent - r.Y) / r.Height * 100.0)
+            Return New SKPoint(CSng(point.X), CSng(point.Y))
+        End Function
+
+        ''' <summary>Die sichtbare Lage der Objektanfasser: erst eigene Objekttransformation,
+        ''' danach die Spiegelungen des Bildes.</summary>
+        Private Function ObjectWarpPointThroughGeometry(xPercent As Double, yPercent As Double) As (X As Double, Y As Double)
+            Dim geometry = BuildAppliedGeometryAdjustments()
+            Dim own = CurrentObject()
+            If own Is Nothing Then Return (xPercent, yPercent)
+            Dim point = TransformObjectWarpPoint(xPercent, yPercent, _annotationRotation,
+                                                 own.FlipHorizontal, own.FlipVertical)
+            Dim x = point.X, y = point.Y
+            If geometry.FlipHorizontal Then x = 100.0 - x
+            If geometry.FlipVertical Then y = 100.0 - y
+            Return (x, y)
+        End Function
+
+        Private Function DisplayPointThroughObjectWarpGeometry(xPercent As Double, yPercent As Double) As (X As Double, Y As Double)
+            Dim geometry = BuildAppliedGeometryAdjustments()
+            Dim x = xPercent, y = yPercent
+            If geometry.FlipHorizontal Then x = 100.0 - x
+            If geometry.FlipVertical Then y = 100.0 - y
+            Dim own = CurrentObject()
+            If own Is Nothing Then Return (x, y)
+            Return InverseTransformObjectWarpPoint(x, y, _annotationRotation,
+                                                   own.FlipHorizontal, own.FlipVertical)
+        End Function
+
+        Private Shared Function TransformObjectWarpPoint(x As Double, y As Double, rotationDegrees As Double,
+                                                         flipH As Boolean, flipV As Boolean) As (X As Double, Y As Double)
+            Dim radians = rotationDegrees * Math.PI / 180.0
+            Dim dx = x - 50.0, dy = y - 50.0
+            Dim transformedX = 50.0 + Math.Cos(radians) * dx - Math.Sin(radians) * dy
+            Dim transformedY = 50.0 + Math.Sin(radians) * dx + Math.Cos(radians) * dy
+            If flipH Then transformedX = 100.0 - transformedX
+            If flipV Then transformedY = 100.0 - transformedY
+            Return (transformedX, transformedY)
+        End Function
+
+        Private Shared Function InverseTransformObjectWarpPoint(x As Double, y As Double, rotationDegrees As Double,
+                                                                flipH As Boolean, flipV As Boolean) As (X As Double, Y As Double)
+            If flipH Then x = 100.0 - x
+            If flipV Then y = 100.0 - y
+            Return TransformObjectWarpPoint(x, y, -rotationDegrees, False, False)
         End Function
 
         Private Function CurrentObject() As ImageAnnotation
