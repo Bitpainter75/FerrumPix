@@ -14,9 +14,16 @@ Namespace ViewModels
         Public ReadOnly Property IsActive As Boolean
         Public ReadOnly Property IconSource As String
 
+        ''' <summary>Zaehlt dieser Bestandteil mit? Das Auge daneben schaltet ihn ab, ohne ihn zu
+        ''' entfernen - zum Nachsehen, was er beitraegt.</summary>
+        Public ReadOnly Property IsComponentVisible As Boolean
+
         Public Sub New(index As Integer, component As MaskComponent, isActive As Boolean)
             Me.Index = index
             Me.IsActive = isActive
+            ' Dasselbe Auge wie an einer Ebenenzeile, also auch derselbe Umschalter: gezeigt wird es
+            ' ueber die Klasse layer-eye, abgeblendet wenn nicht gesetzt.
+            Me.IsComponentVisible = component Is Nothing OrElse component.IsVisible
             Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
             If component Is Nothing Then
                 KindLabel = LocalizationService.T("Gemalt")

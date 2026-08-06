@@ -2780,12 +2780,16 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' JEDER Bestandteil gehoert hinein, nicht nur der erste: sonst gaebe der Cache nach dem
             ' Anhaengen eines Verlaufs an dieselbe Maske das alte Bild zurueck, und das Werkzeug
             ' "macht nichts".
-            Return String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels) & ":" &
+            ' Die DICHTE gehoert dazu: sie liegt an der Maske und nicht an einem Bestandteil, und
+            ' ohne sie gaebe der Zwischenspeicher nach dem Verschieben des Reglers das alte Bild
+            ' zurueck - der Regler "macht nichts".
+            Return String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels,
+                               KeyPart(m.Density), m.IsDisabled) & ":" &
                    String.Join("/", m.GetComponents().Select(AddressOf MaskComponentFingerprint))
         End Function
 
         Private Shared Function MaskComponentFingerprint(c As MaskComponent) As String
-            Return String.Join(":", c.Mode, c.Left, c.Top, c.Right, c.Bottom, c.FeatherPixels,
+            Return String.Join(":", c.Mode, c.IsVisible, c.Left, c.Top, c.Right, c.Bottom, c.FeatherPixels,
                                c.Inverted, SelectionMaskFingerprint(c.PngBase64),
                                c.Kind, KeyPart(c.GradientStartXPercent), KeyPart(c.GradientStartYPercent),
                                KeyPart(c.GradientEndXPercent), KeyPart(c.GradientEndYPercent),

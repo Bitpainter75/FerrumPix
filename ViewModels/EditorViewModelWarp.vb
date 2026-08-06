@@ -201,6 +201,9 @@ Namespace ViewModels
 
         Private ReadOnly _perspectiveCorners As Double() = New Double(7) {}
         Private _perspectiveCornerDrag As Integer = -1
+        ''' Versatz der Ecke beim Beginn des Zuges - Bezug fuer die Achsentreue mit Umschalt.
+        Private _perspectiveDragStartX As Double
+        Private _perspectiveDragStartY As Double
 
         Public Property PerspectiveCorner0X As Double
             Get
@@ -378,12 +381,17 @@ Namespace ViewModels
             If bester < 0 Then Return False
             PushUndo()
             _perspectiveCornerDrag = bester
+            _perspectiveDragStartX = _perspectiveCorners(bester * 2)
+            _perspectiveDragStartY = _perspectiveCorners(bester * 2 + 1)
             Return True
         End Function
 
         ''' <summary>Zieht die gefasste Ecke. Der Zeiger gibt die ZIELlage vor; gespeichert wird der
         ''' Versatz gegenueber der Ausgangsecke, damit die Regler daneben ihre Bedeutung behalten.</summary>
-        Public Sub UpdatePerspectiveCornerDrag(xPercent As Double, yPercent As Double)
+        ''' <param name="axisLock">Umschalt: der Versatz bleibt auf einer Achse - dieselbe Zusage wie
+        ''' am Gitterpunkt.</param>
+        Public Sub UpdatePerspectiveCornerDrag(xPercent As Double, yPercent As Double,
+                                               Optional axisLock As Boolean = False)
             If _perspectiveCornerDrag < 0 Then Return
             Dim previousStep = WarpStepSize()
             If previousStep.Width <= 0 OrElse previousStep.Height <= 0 Then Return
@@ -404,6 +412,14 @@ Namespace ViewModels
             Dim neuX = (targetX - basis(i2).X) / previousStep.Width * 100.0
             Dim neuY = (targetY - basis(i2).Y) / previousStep.Height * 100.0
 
+            ' ACHSENTREU gegen den Stand VOR dem Zug: die kleinere der beiden Bewegungen faellt weg.
+            If axisLock Then
+                If Math.Abs(neuX - _perspectiveDragStartX) >= Math.Abs(neuY - _perspectiveDragStartY) Then
+                    neuY = _perspectiveDragStartY
+                Else
+                    neuX = _perspectiveDragStartX
+                End If
+            End If
             _perspectiveCorners(i2 * 2) = Math.Max(-60.0, Math.Min(60.0, neuX))
             _perspectiveCorners(i2 * 2 + 1) = Math.Max(-60.0, Math.Min(60.0, neuY))
             RaiseCornersChanged()
@@ -432,6 +448,9 @@ Namespace ViewModels
         Private _warpX As Double() = Nothing
         Private _warpY As Double() = Nothing
         Private _warpDragIndex As Integer = -1
+        ''' Wo der laufende Zug begann - Bezug fuer die Achsentreue mit Umschalt.
+        Private _warpDragStartX As Double
+        Private _warpDragStartY As Double
 
         Public ReadOnly Property WarpColumns As Integer
             Get
@@ -1277,6 +1296,9 @@ Namespace ViewModels
 
         Private _envelope As Double() = Nothing
         Private _envelopeDragIndex As Integer = -1
+        ''' Wo der laufende Zug begann - Bezug fuer die Achsentreue mit Umschalt.
+        Private _envelopeDragStartX As Double
+        Private _envelopeDragStartY As Double
 
         ''' <summary>Das unverformte Viereck: die vier Ecken auf dem Rechteck, die Griffe auf den
         ''' Dritteln ihrer Kante. Genau diese Lage ist die Identitaet.</summary>
@@ -1450,11 +1472,22 @@ Namespace ViewModels
             If best < 0 Then Return False
             PushUndo()
             _envelopeDragIndex = best
+            PrepareEnvelope()
+            _envelopeDragStartX = _envelope(best * 2)
+            _envelopeDragStartY = _envelope(best * 2 + 1)
             If Not WarpsTheObject Then PrepareEnvelopePreview()
             Return True
         End Function
 
-        Public Sub UpdateEnvelopeDrag(xPercent As Double, yPercent As Double)
+        ''' <param name="axisLock">Umschalt: der Griff bleibt auf der Achse, die ueberwiegt - dieselbe
+        ''' Zusage wie am Rasterpunkt und an der Perspektivecke.</param>
+        ''' <param name="detachHandles">Alt: eine ECKE geht allein, ihre beiden Kantengriffe bleiben
+        ''' stehen. Sonst nimmt sie beide mit, damit die Kante nicht ausbeult - genau das will man
+        ''' aber, wenn man eine Kante absichtlich schief ziehen moechte. An einem Kantengriff selbst
+        ''' hat die Taste nichts zu tun: er nimmt ohnehin nichts mit.</param>
+        Public Sub UpdateEnvelopeDrag(xPercent As Double, yPercent As Double,
+                                      Optional axisLock As Boolean = False,
+                                      Optional detachHandles As Boolean = False)
             If _envelopeDragIndex < 0 Then Return
             Dim target = DisplayToWarpSpace(xPercent, yPercent)
             ' Neben dem Bildinhalt gibt es keinen Quellpunkt - der Zug bleibt dann stehen, statt auf
@@ -1466,14 +1499,22 @@ Namespace ViewModels
             ' (SourcePercentToDisplayPercent weist solche Punkte ab). Beim OBJEKT ist der Bezug das
             ' Objektrechteck, dort ist Hinauswandern erlaubt und gewollt - die Ebene waechst mit.
             Dim nx = CDbl(target.Value.X), ny = CDbl(target.Value.Y)
+            ' ACHSENTREU gegen den Beginn des Zuges: die kleinere der beiden Bewegungen faellt weg.
+            If axisLock Then
+                If Math.Abs(nx - _envelopeDragStartX) >= Math.Abs(ny - _envelopeDragStartY) Then
+                    ny = _envelopeDragStartY
+                Else
+                    nx = _envelopeDragStartX
+                End If
+            End If
             Dim limit = Not WarpsTheObject
             If limit Then
                 nx = Klemme100(nx)
                 ny = Klemme100(ny)
             End If
             ' Eine Ecke nimmt ihre beiden Griffe mit. Sonst bliebe die Kante an ihren alten Griffen
-            ' haengen und beulte aus, waehrend die Ecke davonlaeuft.
-            If _envelopeDragIndex < 4 Then
+            ' haengen und beulte aus, waehrend die Ecke davonlaeuft. Mit Alt bleibt genau das aus.
+            If _envelopeDragIndex < 4 AndAlso Not detachHandles Then
                 Dim dx = nx - _envelope(_envelopeDragIndex * 2)
                 Dim dy = ny - _envelope(_envelopeDragIndex * 2 + 1)
                 For Each h In EnvelopeCornerHandles(_envelopeDragIndex)
@@ -1608,6 +1649,41 @@ Namespace ViewModels
                 Return Not WarpsTheObject
             End Get
         End Property
+
+        ''' <summary>Steht eine Verzerrung offen, die noch übernommen werden muss?
+        '''
+        ''' Nur am BILD: dort ist der Zug eine schwebende Vorschau mit "Anwenden". Am OBJEKT wirkt
+        ''' er sofort und ist eine Angabe wie jede andere - es gibt nichts zu bestätigen. Die
+        ''' PERSPEKTIVE steht in Reglern, die man auch nach dem Wechsel noch sieht, und zählt
+        ''' deshalb ebenfalls nicht dazu.</summary>
+        Public ReadOnly Property HasOpenWarpTransaction As Boolean
+            Get
+                If Not WarpsTheImage Then Return False
+                Return HasWarpGridChanges OrElse HasLineChanges OrElse HasEnvelopeChanges
+            End Get
+        End Property
+
+        ''' <summary>Die offene Verzerrung übernehmen - der Eingabetaste.
+        '''
+        ''' Bis dahin ging das nur über den Knopf im Panel. Enter und Esc sind in jedem
+        ''' Referenzprogramm der Abschluss einer solchen Transaktion, und wer die Hand an der Maus
+        ''' hat, sucht sie zuerst.</summary>
+        Public Sub ApplyOpenWarpTransaction()
+            If Not HasOpenWarpTransaction Then Return
+            If HasWarpGridChanges Then ApplyWarpGrid()
+            If HasLineChanges Then ApplyLineWarp()
+            If HasEnvelopeChanges Then ApplyEnvelopeWarp()
+        End Sub
+
+        ''' <summary>Die offene Verzerrung verwerfen - der Escape-Taste. Zurück auf gerade, nichts
+        ''' wird übernommen.</summary>
+        Public Sub DiscardOpenWarpTransaction()
+            If Not HasOpenWarpTransaction Then Return
+            If HasWarpGridChanges Then ResetWarpGrid()
+            If HasLineChanges Then ResetLines()
+            If HasEnvelopeChanges Then ResetEnvelope()
+            StatusText = LocalizationService.T("Verzerrung verworfen")
+        End Sub
 
         ''' <summary>Traegt der Auswahlrahmen seine Griffe? Beim Verzerren nicht: die Ecken der
         ''' Verzerrung liegen auf DEMSELBEN Rechteck. Zwei Werkzeuge an derselben Stelle heisst, dass
@@ -1925,11 +2001,19 @@ Namespace ViewModels
             If bester < 0 Then Return False
             PushUndo()
             _warpDragIndex = bester
+            ' Der Ausgangspunkt fuer die Achsentreue: Umschalt haelt den Zug auf der Achse, die
+            ' ueberwiegt, und dafuer braucht es die Stelle, an der er begann.
+            _warpDragStartX = _warpX(bester)
+            _warpDragStartY = _warpY(bester)
             PrepareGridPreview()
             Return True
         End Function
 
-        Public Sub UpdateWarpDrag(xPercent As Double, yPercent As Double)
+        ''' <param name="axisLock">Umschalt: der Punkt bleibt auf der Achse, die ueberwiegt. Ohne das
+        ''' war ein waagerechter Zug ueber ein Dutzend Punkte nicht sauber hinzubekommen - genau
+        ''' dafuer haelt man in jedem anderen Programm die Umschalttaste.</param>
+        Public Sub UpdateWarpDrag(xPercent As Double, yPercent As Double,
+                                  Optional axisLock As Boolean = False)
             If _warpDragIndex < 0 Then Return
             Dim source = DisplayToWarpSpace(xPercent, yPercent)
             ' Neben dem Bildinhalt (Leinwandrand, leere Begradigungsecke) gibt es keinen Quellpunkt.
@@ -1943,6 +2027,16 @@ Namespace ViewModels
             Dim row = _warpDragIndex \ (_warpColumns + 1)
             Dim nx = Math.Max(0.0, Math.Min(100.0, CDbl(source.Value.X)))
             Dim ny = Math.Max(0.0, Math.Min(100.0, CDbl(source.Value.Y)))
+            ' ACHSENTREU: die kleinere der beiden Bewegungen faellt weg. Verglichen wird gegen den
+            ' Beginn des Zuges und nicht gegen den letzten Punkt - sonst waere die Achse bei jedem
+            ' Mausereignis neu zu haben, und der Punkt wanderte doch in beide Richtungen.
+            If axisLock Then
+                If Math.Abs(nx - _warpDragStartX) >= Math.Abs(ny - _warpDragStartY) Then
+                    ny = _warpDragStartY
+                Else
+                    nx = _warpDragStartX
+                End If
+            End If
             If column = 0 Then nx = 0
             If column = _warpColumns Then nx = 100
             If row = 0 Then ny = 0

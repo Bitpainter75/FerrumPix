@@ -3970,20 +3970,11 @@
   <data name="Anpassen_Farbe_Details_Effekte_und_Filter_ein_au_e5ba6acb" xml:space="preserve">
     <value>Mostrar/ocultar Ajustes, Cor, Detalhes, Efeitos e Filtros</value>
   </data>
-  <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
-    <value>Novo ajuste com a mesma máscara</value>
-  </data>
   <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
     <value>Máscara de seleção migrada</value>
   </data>
-  <data name="Migrierte_lokale_Korrektur_c9ec9edd" xml:space="preserve">
-    <value>Ajuste local migrado</value>
-  </data>
   <data name="Auswahlmaske_df2f84eb" xml:space="preserve">
     <value>Máscara de seleção</value>
-  </data>
-  <data name="Lokale_Korrektur_f2db77b0" xml:space="preserve">
-    <value>Ajuste local</value>
   </data>
   <data name="Kopie_6fa37490" xml:space="preserve">
     <value>Cópia</value>
@@ -4021,23 +4012,8 @@
   <data name="Als_Bild_kopieren_f707a88e" xml:space="preserve">
     <value>Copiar como imagem</value>
   </data>
-  <data name="Auswahl_als_Korrekturebene_62bc6d0e" xml:space="preserve">
-    <value>Seleção como camada de ajuste</value>
-  </data>
-  <data name="Aus_der_Auswahl_direkt_eine_maskierte_Korrekture_4c153e49" xml:space="preserve">
-    <value>Criar uma camada de ajuste com máscara diretamente a partir da seleção (sem precisar alterar primeiro um ajuste)</value>
-  </data>
-  <data name="Auswahl_Korrektur_0bc9f496" xml:space="preserve">
-    <value>Correção de seleção</value>
-  </data>
-  <data name="Masken_Korrektur_99247e22" xml:space="preserve">
-    <value>Correção de máscara</value>
-  </data>
   <data name="Neue_Maskenebene_7e9e5245" xml:space="preserve">
     <value>Nova camada de máscara</value>
-  </data>
-  <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
-    <value>Nova camada de ajuste</value>
   </data>
   <data name="Auto_c614ba7c" xml:space="preserve">
     <value>Auto</value>
@@ -4480,17 +4456,11 @@
   <data name="L_sst_den_Maskenrand_ber_die_angegebene_Anzahl_B_54f093a8" xml:space="preserve">
     <value>Suaviza a borda da máscara ao longo do número de píxeis indicado (0 = borda dura)</value>
   </data>
-  <data name="Aus_der_gemalten_Maske_eine_Korrekturebene_erste_21dce517" xml:space="preserve">
-    <value>Criar uma camada de ajuste a partir da máscara pintada</value>
-  </data>
   <data name="Wie_weit_der_Verlauf_zwischen_voller_und_keiner__ed5c5e3b" xml:space="preserve">
     <value>Quanto o gradiente esvanece entre efeito pleno e nulo. Pequeno = borda dura, grande = suave em todo o percurso</value>
   </data>
   <data name="Verh_ltnis_der_beiden_Halbachsen_1_00_ist_ein_Kr_b5f6ec44" xml:space="preserve">
     <value>Relação entre os dois semieixos: 1,00 é um círculo; abaixo disso a elipse achata</value>
-  </data>
-  <data name="Tauscht_gedeckte_und_freie_Seite_beim_radialen_V_c26e878a" xml:space="preserve">
-    <value>Troca o lado coberto pelo livre - num gradiente radial a correção passa a agir fora em vez de dentro</value>
   </data>
   <data name="Breite_des_Wasserzeichens_in_Bildpunkten_379de9a6" xml:space="preserve">
     <value>Largura da marca de água em píxeis de imagem</value>
@@ -6594,5 +6564,83 @@
   </data>
   <data name="Diese_Datei_ist_zugleich_die_Quelle_Wird_sie_ber_7d491ab7" xml:space="preserve">
     <value>Este ficheiro é também a origem. Substituí-lo elimina o original.</value>
+  </data>
+  <data name="Maskenebene_6cfc5826" xml:space="preserve">
+    <value>Camada de máscara</value>
+  </data>
+  <data name="Auswahlebene_07739cf6" xml:space="preserve">
+    <value>Camada de seleção</value>
+  </data>
+  <data name="bernommene_Maskenebene_1ff3f512" xml:space="preserve">
+    <value>Camada de máscara importada</value>
+  </data>
+  <data name="Tauscht_gedeckte_und_freie_Seite_beim_radialen_V_2822343e" xml:space="preserve">
+    <value>Troca o lado coberto pelo livre - num gradiente radial a máscara passa a agir fora em vez de dentro</value>
+  </data>
+  <data name="Maskeneigenschaften_4998aace" xml:space="preserve">
+    <value>Propriedades da máscara</value>
+  </data>
+  <data name="Dichte_00549d69" xml:space="preserve">
+    <value>Densidade</value>
+  </data>
+  <data name="Wie_stark_die_Maske_berhaupt_deckt_100_wirkt_wie_840aab44" xml:space="preserve">
+    <value>Com que intensidade a máscara cobre. 100 age como pintada, 50 metade em todo o lado, 0 nada</value>
+  </data>
+  <data name="Tauscht_gedeckte_und_freie_Seite_5df2abd0" xml:space="preserve">
+    <value>Troca o lado coberto pelo livre</value>
+  </data>
+  <data name="Nimmt_die_Maske_weg_Was_sie_begrenzt_hat_wirkt_d_2275ce65" xml:space="preserve">
+    <value>Retira a máscara. O que ela delimitava passa a agir em todo o lado</value>
+  </data>
+  <data name="Nur_die_Maske_zeigen_8d24d99e" xml:space="preserve">
+    <value>Mostrar apenas a máscara</value>
+  </data>
+  <data name="Zeigt_die_Maske_als_Graustufenbild_Wei_deckt_Sch_e92cde8f" xml:space="preserve">
+    <value>Mostra a máscara em tons de cinzento: o branco cobre, o preto deixa livre. Não altera nada na máscara</value>
+  </data>
+  <data name="Maske_aus_b9718769" xml:space="preserve">
+    <value>Máscara desligada</value>
+  </data>
+  <data name="Legt_die_Maske_vor_bergehend_still_die_Anpassung_3fd01ef8" xml:space="preserve">
+    <value>Suspende a máscara: o ajuste passa a agir em todo o lado. Para comparar, a máscara mantém-se</value>
+  </data>
+  <data name="Diesen_Bestandteil_ein_oder_ausschalten_4830be4b" xml:space="preserve">
+    <value>Ligar ou desligar esta parte</value>
+  </data>
+  <data name="Maske_kopieren_ca72e335" xml:space="preserve">
+    <value>Copiar máscara</value>
+  </data>
+  <data name="Maske_einf_gen_d1d543a8" xml:space="preserve">
+    <value>Colar máscara</value>
+  </data>
+  <data name="Als_Auswahl_laden_c52deaf5" xml:space="preserve">
+    <value>Carregar como seleção</value>
+  </data>
+  <data name="Legt_eine_Abschrift_dieser_Maske_ab_daa553f6" xml:space="preserve">
+    <value>Guarda uma cópia desta máscara</value>
+  </data>
+  <data name="Setzt_die_abgelegte_Maske_auf_das_markierte_Obje_e3e0adf3" xml:space="preserve">
+    <value>Coloca a máscara guardada no objeto selecionado, caso contrário na camada selecionada. Uma existente é substituída</value>
+  </data>
+  <data name="bernimmt_die_Form_der_Maske_als_Auswahl_zum_F_ll_580e9c20" xml:space="preserve">
+    <value>Assume a forma da máscara como seleção - para preencher, copiar ou para outra camada. A máscara em si mantém-se</value>
+  </data>
+  <data name="Maske_kopiert_6ce0f317" xml:space="preserve">
+    <value>Máscara copiada</value>
+  </data>
+  <data name="Maske_eingef_gt_03abd4d2" xml:space="preserve">
+    <value>Máscara colada</value>
+  </data>
+  <data name="Maske_als_Auswahl_geladen_8c4a5daf" xml:space="preserve">
+    <value>Máscara carregada como seleção</value>
+  </data>
+  <data name="Verzerrung_verworfen_e45e4d0b" xml:space="preserve">
+    <value>Distorção descartada</value>
+  </data>
+  <data name="Beim_Werkzeugwechsel_verworfen_305fdc16" xml:space="preserve">
+    <value>Descartado ao mudar de ferramenta: </value>
+  </data>
+  <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_5a75bfe7" xml:space="preserve">
+    <value>Editar a máscara de camada. Com Alt mostra apenas a máscara, com Shift suspende-a</value>
   </data>
 </root>

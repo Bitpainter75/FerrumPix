@@ -447,8 +447,8 @@ Namespace ViewModels
         ' Dann malt der Pinsel die harte Form; die weiche Kante steuert mask.FeatherPixels (Render-Feather),
         ' und jeder Strich wird in die Ebenen-Maske zurückgeschrieben. Rein transient (nicht persistiert).
         Private _editingLayerMaskId As String = ""
-        ' <> "" wenn die AKTUELLE, UNVERÄNDERTE Auswahl bereits zu dieser Korrekturebene promotet wurde
-        ' (Füllen bzw. "Neue Korrekturebene"). Deterministische Verknüpfung Auswahl→Ebene: erneutes Füllen
+        ' <> "" wenn die AKTUELLE, UNVERÄNDERTE Auswahl bereits zu dieser Maskenebene promotet wurde
+        ' (Füllen bzw. "Neue Maskenebene"). Deterministische Verknüpfung Auswahl→Ebene: erneutes Füllen
         ' und eine anschließende Anpassung treffen damit GARANTIERT dieselbe Ebene (statt sich auf eine
         ' inhaltsbasierte PngBase64-Deduplizierung zu verlassen, die schon minimal abweichende Masken nicht
         ' mehr zusammenführt - dann entstand eine zweite Ebene und die Füllung schien "nicht angewendet").
@@ -3661,7 +3661,13 @@ Namespace ViewModels
                     ' das man nicht sieht und nicht bedienen kann, ist ein stiller Zustand, der beim
                     ' naechsten Anwenden ueberrascht. Die Perspektive bleibt - sie steht in Reglern,
                     ' die man auch nach dem Wechsel noch sieht.
+                    ' NICHTS DAVON GEHT MEHR KOMMENTARLOS. Wer eine Viertelstunde an einem Gitter
+                    ' gezogen hat und dann das Werkzeug wechselt, stand vor einem geraden Bild ohne
+                    ' ein Wort dazu. Rueckgaengig holt es NICHT zurueck - diese Anfasser stehen im
+                    ' Sitzungszustand und nicht im Rezept -, also sagt es die Fusszeile.
+                    Dim verworfen As New List(Of String)()
                     If HasWarpGridChanges Then
+                        verworfen.Add(LocalizationService.T("Gitter"))
                         ResetGrid()
                         Me.RaisePropertyChanged(NameOf(WarpGridValues))
                         Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
@@ -3669,14 +3675,20 @@ Namespace ViewModels
                     ' Dasselbe fuer die Linien: sie sind nichts als der Stand ihrer Griffe, und die
                     ' sieht man nur im Werkzeug.
                     If _linien.Count > 0 Then
+                        If HasLineChanges Then verworfen.Add(LocalizationService.T("Linien"))
                         _linien.Clear()
                         RaiseLinesChanged()
                     End If
                     ' Und dasselbe fuer die Verformung: auch sie ist nichts als der Stand ihrer
                     ' zwoelf Anfasser.
                     If HasEnvelopeChanges Then
+                        verworfen.Add(LocalizationService.T("Verformen"))
                         ResetEnvelopePoints()
                         RaiseEnvelopeChanged()
+                    End If
+                    If verworfen.Count > 0 Then
+                        StatusText = LocalizationService.T("Beim Werkzeugwechsel verworfen: ") &
+                                     String.Join(", ", verworfen)
                     End If
                     ' Der Pfad-Stift bleibt nicht scharf, wenn man in ein ANDERES Werkzeug wechselt:
                     ' ein liegengebliebener Entwurf oder eine nur scharfgestellte Grundlinie fing
@@ -7392,8 +7404,8 @@ Namespace ViewModels
                     Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
                 If layer IsNot Nothing Then
                     layer.IsMaskLayer = zuMaske
-                    layer.Name = If(zuMaske, LocalizationService.T("Masken-Korrektur"),
-                                             LocalizationService.T("Auswahl-Korrektur")) &
+                    layer.Name = If(zuMaske, LocalizationService.T("Maskenebene"),
+                                             LocalizationService.T("Auswahlebene")) &
                                  layer.Name.Substring(Math.Max(0, layer.Name.LastIndexOf(" "c)))
                     RebuildLayerRows()
                     SchedulePreviewUpdate()
@@ -9868,6 +9880,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>"Vorschau bereit" melden - aber nur, wenn in der Zeile nichts Wichtigeres steht.
+        '''
+        ''' Die Vorschau laeuft nach JEDER Aenderung und meldete sich danach unbedingt. Damit war
+        ''' jede Mitteilung, die einem Handgriff folgte, nach Bruchteilen einer Sekunde weg -
+        ''' "Verzerrung angewendet" ebenso wie der Hinweis, was ein Werkzeugwechsel gerade
+        ''' weggeworfen hat. Was nur Bruchteile einer Sekunde dasteht, ist keine Mitteilung.
+        '''
+        ''' Der Ruhezustand ist derselbe, den auch die Mausposition abfragt: leer oder eben diese
+        ''' Meldung.</summary>
+        Private Sub ReportPreviewReady()
+            If Not _statusIsIdle Then Return
+            StatusText = LocalizationService.T("Vorschau bereit")
+        End Sub
+
         Private _previewFailed As Boolean
 
         ''' <summary>Die letzte Vorschau ist an einer echten Ausnahme gescheitert (nicht an einem Abbruch,
@@ -10907,6 +10933,10 @@ Namespace ViewModels
         Public ReadOnly Property DiscardCurrentMaskCommand As ICommand
         Public ReadOnly Property SelectMaskComponentCommand As ICommand
         Public ReadOnly Property RemoveMaskComponentCommand As ICommand
+        Public ReadOnly Property ToggleMaskComponentVisibleCommand As ICommand
+        Public ReadOnly Property CopyMaskCommand As ICommand
+        Public ReadOnly Property PasteMaskCommand As ICommand
+        Public ReadOnly Property LoadMaskAsSelectionCommand As ICommand
         Public ReadOnly Property RasterizeSelectedAnnotationCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationUpCommand As ICommand
         Public ReadOnly Property MoveSelectedAnnotationDownCommand As ICommand
@@ -11212,6 +11242,10 @@ Namespace ViewModels
             DiscardCurrentMaskCommand = ReactiveCommand.Create(Sub() DiscardCurrentMask())
             SelectMaskComponentCommand = ReactiveCommand.Create(Of Integer)(Sub(index) SelectMaskComponent(index))
             RemoveMaskComponentCommand = ReactiveCommand.Create(Of Integer)(Sub(index) RemoveMaskComponent(index))
+            ToggleMaskComponentVisibleCommand = ReactiveCommand.Create(Of Integer)(Sub(index) ToggleMaskComponentVisible(index))
+            CopyMaskCommand = ReactiveCommand.Create(AddressOf CopyCurrentMask)
+            PasteMaskCommand = ReactiveCommand.Create(AddressOf PasteMaskToTarget)
+            LoadMaskAsSelectionCommand = ReactiveCommand.Create(AddressOf LoadCurrentMaskAsSelection)
             RasterizeSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             RasterizeSelectedAnnotation()
                                                                         End Sub)
@@ -13137,7 +13171,7 @@ Namespace ViewModels
         ''' die Kompositor-Objekte zeichnet die Blit-Stufe unabhaengig von der Auswahl).
         Private Sub NotifyAnnotationOverlayStateChanged()
             _previewPending = False
-            StatusText = LocalizationService.T("Vorschau bereit")
+            ReportPreviewReady()
         End Sub
 
         ''' <summary>Quellwechsel Teil 1: alles aufräumen, was zur ALTEN Quelle gehört. Rein
@@ -13912,7 +13946,7 @@ Namespace ViewModels
                 result.SceneSk = Nothing
                 ComparisonImage = result.Comparison
                 _previewPending = False
-                StatusText = LocalizationService.T("Vorschau bereit")
+                ReportPreviewReady()
                 PreviewFailed = False
                 If _clearRetouchLivePatchAfterPreview Then
                     _clearRetouchLivePatchAfterPreview = False
@@ -13933,7 +13967,7 @@ Namespace ViewModels
                     If requestId <> _previewRequestId OrElse _previewPending Then
                         StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
                     Else
-                        StatusText = LocalizationService.T("Vorschau bereit")
+                        ReportPreviewReady()
                     End If
                 Else
                     ' Ein Fehler in der Pipeline DARF NICHT wie ein Erfolg aussehen. Vorher stand hier
@@ -17478,7 +17512,7 @@ Namespace ViewModels
             PushUndo()
             Dim source = _maskedAdjustmentLayers(index)
             Dim copy = DuplicateAdjustmentLayer(source,
-                If(String.IsNullOrWhiteSpace(source.Name), LocalizationService.T("Auswahl-Korrektur"), source.Name) &
+                If(String.IsNullOrWhiteSpace(source.Name), LocalizationService.T("Auswahlebene"), source.Name) &
                 " " & LocalizationService.T("Kopie"))
             If copy Is Nothing Then Return
             _selectedMaskedAdjustmentLayerId = copy.Id
@@ -17957,7 +17991,7 @@ Namespace ViewModels
                 If layer Is Nothing Then
                     _imageMasks.Add(mask)
                     layer = New MaskedAdjustmentLayer With {
-                        .Name = If(_activeSelectionIsMask, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                        .Name = If(_activeSelectionIsMask, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
                         .MaskId = mask.Id,
                         .Adjustments = New ImageAdjustments(),
                         .IsMaskLayer = _activeSelectionIsMask
@@ -19532,7 +19566,7 @@ Namespace ViewModels
                 Return
             End If
             For Each spec In specs
-                Dim maskName = LocalizationService.T("Masken-Korrektur") & " " & (_maskedAdjustmentLayers.Count + 1).ToString()
+                Dim maskName = LocalizationService.T("Maskenebene") & " " & (_maskedAdjustmentLayers.Count + 1).ToString()
                 Dim mask As ImageMask
                 If String.Equals(spec.MaskType, "CircularGradient", StringComparison.Ordinal) Then
                     mask = ImageProcessor.BuildRadialGradientMask(srcW, srcH, spec.Top, spec.Left, spec.Bottom, spec.Right,

@@ -1011,6 +1011,27 @@ Namespace Views
                 End Select
             End If
 
+            ' EINE OFFENE VERZERRUNG wird ebenfalls hier abgeschlossen, und aus demselben Grund wie
+            ' der Pfad-Entwurf: nach einem Klick ins Panel gehoert die Eingabetaste einem Knopf, der
+            ' sie schluckt. Bis dahin ging Anwenden nur ueber den Knopf, und Escape waehlte
+            ' stattdessen das Objekt ab - es schaltete damit still das Wirkziel vom Objekt aufs Bild
+            ' um, was aussah wie "der Abbruch hat etwas kaputtgemacht".
+            If tunnelVm IsNot Nothing AndAlso tunnelVm.HasOpenWarpTransaction AndAlso
+               Not TypeOf e.Source Is TextBox Then
+                Select Case e.Key
+                    Case Key.Enter
+                        tunnelVm.ApplyOpenWarpTransaction()
+                        UpdateSliderLayout()
+                        e.Handled = True
+                        Return
+                    Case Key.Escape
+                        tunnelVm.DiscardOpenWarpTransaction()
+                        UpdateSliderLayout()
+                        e.Handled = True
+                        Return
+                End Select
+            End If
+
             If Not PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then Return
             Dim vm = tunnelVm
             If vm Is Nothing Then Return
@@ -2506,7 +2527,8 @@ Namespace Views
                 ' Nicht klemmen: eine Ecke soll sich ueber die Bildkante hinausziehen lassen.
                 Dim pPos = e.GetPosition(pCanvas)
                 pVm.UpdatePerspectiveCornerDrag((pPos.X - pRect.Left) / pRect.Width * 100.0,
-                                                (pPos.Y - pRect.Top) / pRect.Height * 100.0)
+                                                (pPos.Y - pRect.Top) / pRect.Height * 100.0,
+                                                e.KeyModifiers.HasFlag(KeyModifiers.Shift))
                 UpdateSliderLayout()
                 e.Handled = True
                 Return
@@ -2519,7 +2541,8 @@ Namespace Views
                 If wRect.Width <= 0 OrElse wRect.Height <= 0 Then Return
                 Dim wPos = ClampPointToRect(e.GetPosition(wCanvas), wRect)
                 wVm.UpdateWarpDrag((wPos.X - wRect.Left) / wRect.Width * 100.0,
-                                   (wPos.Y - wRect.Top) / wRect.Height * 100.0)
+                                   (wPos.Y - wRect.Top) / wRect.Height * 100.0,
+                                   e.KeyModifiers.HasFlag(KeyModifiers.Shift))
                 UpdateSliderLayout()
                 e.Handled = True
                 Return
@@ -2533,7 +2556,9 @@ Namespace Views
                 ' Ungeklemmt: einen Rand ueber die Bildkante hinaus zu biegen ist erlaubt.
                 Dim ePos = e.GetPosition(eCanvas)
                 eVm.UpdateEnvelopeDrag((ePos.X - eRect.Left) / eRect.Width * 100.0,
-                                       (ePos.Y - eRect.Top) / eRect.Height * 100.0)
+                                       (ePos.Y - eRect.Top) / eRect.Height * 100.0,
+                                       e.KeyModifiers.HasFlag(KeyModifiers.Shift),
+                                       e.KeyModifiers.HasFlag(KeyModifiers.Alt))
                 UpdateSliderLayout()
                 e.Handled = True
                 Return
@@ -3542,7 +3567,7 @@ Namespace Views
             ' ausgeblendet, weil es sonst verdeckt, was man beurteilt. Genau dann sah man bei einer
             ' Maske ploetzlich Ameisen - die es bei einer Maske nie geben darf.
             Dim isMask = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
-                           (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask)
+                           (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask OrElse vm.IsMaskGrayscaleView)
             If isMask Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
                 If maskOverlay IsNot Nothing Then
@@ -3970,7 +3995,7 @@ Namespace Views
             ' springt. Er schaltete dort das rote Bild aus und die Ameisen ein, und ob es wieder
             ' auftauchte, hing daran, ob gleich danach noch ein Layout-Durchlauf kam.
             Dim isMask = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
-                         (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask)
+                         (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask OrElse vm.IsMaskGrayscaleView)
             Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
                                 (vm.HasActiveSelection OrElse vm.HasSelectedGradientMask)
             If isMask Then
@@ -3995,7 +4020,7 @@ Namespace Views
             End If
             ' Auch hier gilt die Trennung: bei einer MASKE waeren Laufameisen falsch.
             Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim isMask = vm IsNot Nothing AndAlso (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask)
+            Dim isMask = vm IsNot Nothing AndAlso (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask OrElse vm.IsMaskGrayscaleView)
             If overlay IsNot Nothing Then overlay.IsVisible = Not isMask
             If maskOverlay IsNot Nothing Then
                 maskOverlay.IsVisible = isMask AndAlso vm.SelectionMaskPreviewImage IsNot Nothing

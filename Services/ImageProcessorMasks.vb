@@ -328,11 +328,32 @@ Namespace Services
             If maskData Is Nothing OrElse pipelineInputWidth <= 0 OrElse pipelineInputHeight <= 0 OrElse
                targetW <= 0 OrElse targetH <= 0 OrElse
                maskData.SourceWidthPixels <= 0 OrElse maskData.SourceHeightPixels <= 0 Then Return Nothing
+
+            ' MASKE AUS: sie begrenzt nichts mehr, also volle Deckung ueberall. Das ist bewusst
+            ' etwas anderes als eine FEHLENDE Maske - die wirkt gar nicht (Nothing weiter unten),
+            ' waehrend diese hier die Anpassung ueberall wirken laesst. Genau dafuer schaltet man
+            ' sie ab: um zu sehen, was ohne sie geschaehe. Die Dichte gehoert der Maske und ist
+            ' damit ebenfalls aus; die Deckkraft der EBENE bleibt.
+            If maskData.IsDisabled Then
+                Dim opaque = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
+                Dim value = CByte(Math.Round(255.0 * Clamp(layerOpacity, 0, 1)))
+                Dim oStride = opaque.RowBytes
+                Dim oBuf = New Byte(oStride * targetH - 1) {}
+                For i = 0 To oBuf.Length - 1
+                    oBuf(i) = value
+                Next
+                Marshal.Copy(oBuf, 0, opaque.GetPixels(), oBuf.Length)
+                Return opaque
+            End If
+
             Dim components = maskData.GetComponents()
             If components.Count = 0 Then Return Nothing
             Try
                 Dim inputMask As SKBitmap = Nothing
                 For Each component In components
+                    ' Ein ausgeschalteter Bestandteil faellt hier weg, an derselben Stelle wie ein
+                    ' leerer. Damit gilt "der ERSTE setzt das Ergebnis" fuer den ersten SICHTBAREN.
+                    If Not component.IsVisible Then Continue For
                     Dim part = BuildComponentMaskForInput(component, maskData.SourceWidthPixels, maskData.SourceHeightPixels,
                                                           pipelineInputWidth, pipelineInputHeight, fillLayer)
                     If part Is Nothing Then Continue For
@@ -389,7 +410,11 @@ Namespace Services
                         maskPixels.Dispose()
                         Return Nothing
                     End If
-                    Dim opacity = Clamp(layerOpacity, 0, 1)
+                    ' Ebenen-Deckkraft UND Maskendichte, beide an derselben Stelle: die eine gehoert
+                    ' der Ebene, die andere der Maske. Ein Objekt mit Ebenenmaske kommt hier mit
+                    ' layerOpacity = 1 herein und bekommt seine Abstufung damit ueber die Dichte.
+                    Dim opacity = Clamp(layerOpacity, 0, 1) *
+                                  Clamp(CSng(maskData.Density / 100.0), 0, 1)
                     Dim result = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
                     Dim rStride = result.RowBytes
                     Dim rBuf = New Byte(rStride * targetH - 1) {}
@@ -1218,6 +1243,9 @@ Namespace Services
             If components.Count = 0 Then Return Nothing
             Dim combined As SKBitmap = Nothing
             For Each component In components
+                ' Wie im Renderweg: ausgeschaltet heisst uebersprungen. Sonst zeigte die Miniatur
+                ' eine andere Form als das Bild.
+                If Not component.IsVisible Then Continue For
                 Dim part = BuildComponentMaskForInput(component, mask.SourceWidthPixels, mask.SourceHeightPixels,
                                                       targetWidth, targetHeight, Nothing)
                 If part Is Nothing Then Continue For

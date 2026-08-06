@@ -299,7 +299,7 @@ Namespace ViewModels
             BlitSceneRegionToDisplay(clamped)
             _annotationDirtyRect = SKRectI.Empty
             _previewPending = False
-            StatusText = LocalizationService.T("Vorschau bereit")
+            ReportPreviewReady()
             ' drawn= ist der Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1).
             DiagnosticLogService.LogAlways("Editor.SceneRegion",
                                            $"rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} drawn={drawnObjects} ms={sw.ElapsedMilliseconds}")
@@ -433,7 +433,7 @@ Namespace ViewModels
                         _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, rect)
                     End If
                     _previewPending = False
-                    StatusText = LocalizationService.T("Vorschau bereit")
+                    ReportPreviewReady()
                     ' drawn= ist der Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1).
                     DiagnosticLogService.LogAlways("Editor.SceneRegion",
                                                    $"async=1 rect={clamped.Left},{clamped.Top},{clamped.Width}x{clamped.Height} pixels={CLng(clamped.Width) * CLng(clamped.Height)} drawn={drawnObjects} ms={sw.ElapsedMilliseconds}")

@@ -3969,20 +3969,11 @@
   <data name="Anpassen_Farbe_Details_Effekte_und_Filter_ein_au_e5ba6acb" xml:space="preserve">
     <value>显示或隐藏调整、颜色、细节、效果和滤镜</value>
   </data>
-  <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
-    <value>使用同一蒙版新建调整</value>
-  </data>
   <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
     <value>迁移的选区蒙版</value>
   </data>
-  <data name="Migrierte_lokale_Korrektur_c9ec9edd" xml:space="preserve">
-    <value>迁移的局部调整</value>
-  </data>
   <data name="Auswahlmaske_df2f84eb" xml:space="preserve">
     <value>选区蒙版</value>
-  </data>
-  <data name="Lokale_Korrektur_f2db77b0" xml:space="preserve">
-    <value>局部调整</value>
   </data>
   <data name="Kopie_6fa37490" xml:space="preserve">
     <value>复制</value>
@@ -4020,23 +4011,8 @@
   <data name="Als_Bild_kopieren_f707a88e" xml:space="preserve">
     <value>复制为图像</value>
   </data>
-  <data name="Auswahl_als_Korrekturebene_62bc6d0e" xml:space="preserve">
-    <value>将选区作为调整图层</value>
-  </data>
-  <data name="Aus_der_Auswahl_direkt_eine_maskierte_Korrekture_4c153e49" xml:space="preserve">
-    <value>直接从选区创建带蒙版的调整图层，无需先更改调整</value>
-  </data>
-  <data name="Auswahl_Korrektur_0bc9f496" xml:space="preserve">
-    <value>选区调整</value>
-  </data>
-  <data name="Masken_Korrektur_99247e22" xml:space="preserve">
-    <value>蒙版调整</value>
-  </data>
   <data name="Neue_Maskenebene_7e9e5245" xml:space="preserve">
     <value>新建蒙版图层</value>
-  </data>
-  <data name="Neue_Korrekturebene_d50075bf" xml:space="preserve">
-    <value>新建调整图层</value>
   </data>
   <data name="Auto_c614ba7c" xml:space="preserve">
     <value>自动</value>
@@ -4479,17 +4455,11 @@
   <data name="L_sst_den_Maskenrand_ber_die_angegebene_Anzahl_B_54f093a8" xml:space="preserve">
     <value>按指定图像像素数羽化蒙版边缘（0 = 硬边）</value>
   </data>
-  <data name="Aus_der_gemalten_Maske_eine_Korrekturebene_erste_21dce517" xml:space="preserve">
-    <value>从绘制的蒙版创建调整图层</value>
-  </data>
   <data name="Wie_weit_der_Verlauf_zwischen_voller_und_keiner__ed5c5e3b" xml:space="preserve">
     <value>渐变从完全生效到无效果的过渡距离。值小 = 硬边，值大 = 整段过渡更柔和</value>
   </data>
   <data name="Verh_ltnis_der_beiden_Halbachsen_1_00_ist_ein_Kr_b5f6ec44" xml:space="preserve">
     <value>两个半轴的比例：1.00 为圆形，低于此值时椭圆会变扁</value>
-  </data>
-  <data name="Tauscht_gedeckte_und_freie_Seite_beim_radialen_V_c26e878a" xml:space="preserve">
-    <value>交换覆盖侧和空白侧；对于径向渐变，调整将作用于外部而非内部</value>
   </data>
   <data name="Breite_des_Wasserzeichens_in_Bildpunkten_379de9a6" xml:space="preserve">
     <value>水印宽度，以图像像素为单位</value>
@@ -6593,5 +6563,83 @@
   </data>
   <data name="Diese_Datei_ist_zugleich_die_Quelle_Wird_sie_ber_7d491ab7" xml:space="preserve">
     <value>该文件同时也是源文件。覆盖它将替换原始文件。</value>
+  </data>
+  <data name="Maskenebene_6cfc5826" xml:space="preserve">
+    <value>蒙版图层</value>
+  </data>
+  <data name="Auswahlebene_07739cf6" xml:space="preserve">
+    <value>选区图层</value>
+  </data>
+  <data name="bernommene_Maskenebene_1ff3f512" xml:space="preserve">
+    <value>导入的蒙版图层</value>
+  </data>
+  <data name="Tauscht_gedeckte_und_freie_Seite_beim_radialen_V_2822343e" xml:space="preserve">
+    <value>交换覆盖侧和空白侧；对于径向渐变，蒙版将作用于外部而非内部</value>
+  </data>
+  <data name="Maskeneigenschaften_4998aace" xml:space="preserve">
+    <value>蒙版属性</value>
+  </data>
+  <data name="Dichte_00549d69" xml:space="preserve">
+    <value>浓度</value>
+  </data>
+  <data name="Wie_stark_die_Maske_berhaupt_deckt_100_wirkt_wie_840aab44" xml:space="preserve">
+    <value>蒙版的遮盖强度。100 与绘制时相同，50 处处减半，0 完全不起作用</value>
+  </data>
+  <data name="Tauscht_gedeckte_und_freie_Seite_5df2abd0" xml:space="preserve">
+    <value>交换覆盖侧和空白侧</value>
+  </data>
+  <data name="Nimmt_die_Maske_weg_Was_sie_begrenzt_hat_wirkt_d_2275ce65" xml:space="preserve">
+    <value>移除蒙版。原先被它限制的调整之后将作用于全图</value>
+  </data>
+  <data name="Nur_die_Maske_zeigen_8d24d99e" xml:space="preserve">
+    <value>仅显示蒙版</value>
+  </data>
+  <data name="Zeigt_die_Maske_als_Graustufenbild_Wei_deckt_Sch_e92cde8f" xml:space="preserve">
+    <value>以灰度图显示蒙版：白色遮盖，黑色放行。不会改动蒙版本身</value>
+  </data>
+  <data name="Maske_aus_b9718769" xml:space="preserve">
+    <value>停用蒙版</value>
+  </data>
+  <data name="Legt_die_Maske_vor_bergehend_still_die_Anpassung_3fd01ef8" xml:space="preserve">
+    <value>暂时停用蒙版：调整将作用于全图。便于对比，蒙版仍会保留</value>
+  </data>
+  <data name="Diesen_Bestandteil_ein_oder_ausschalten_4830be4b" xml:space="preserve">
+    <value>启用或停用此组成部分</value>
+  </data>
+  <data name="Maske_kopieren_ca72e335" xml:space="preserve">
+    <value>复制蒙版</value>
+  </data>
+  <data name="Maske_einf_gen_d1d543a8" xml:space="preserve">
+    <value>粘贴蒙版</value>
+  </data>
+  <data name="Als_Auswahl_laden_c52deaf5" xml:space="preserve">
+    <value>载入为选区</value>
+  </data>
+  <data name="Legt_eine_Abschrift_dieser_Maske_ab_daa553f6" xml:space="preserve">
+    <value>保存该蒙版的一份副本</value>
+  </data>
+  <data name="Setzt_die_abgelegte_Maske_auf_das_markierte_Obje_e3e0adf3" xml:space="preserve">
+    <value>将保存的蒙版应用到选中的对象，否则应用到选中的图层。原有蒙版会被替换</value>
+  </data>
+  <data name="bernimmt_die_Form_der_Maske_als_Auswahl_zum_F_ll_580e9c20" xml:space="preserve">
+    <value>将蒙版的形状转为选区，用于填充、复制或新建图层。蒙版本身保持不变</value>
+  </data>
+  <data name="Maske_kopiert_6ce0f317" xml:space="preserve">
+    <value>蒙版已复制</value>
+  </data>
+  <data name="Maske_eingef_gt_03abd4d2" xml:space="preserve">
+    <value>蒙版已粘贴</value>
+  </data>
+  <data name="Maske_als_Auswahl_geladen_8c4a5daf" xml:space="preserve">
+    <value>蒙版已载入为选区</value>
+  </data>
+  <data name="Verzerrung_verworfen_e45e4d0b" xml:space="preserve">
+    <value>已放弃变形</value>
+  </data>
+  <data name="Beim_Werkzeugwechsel_verworfen_305fdc16" xml:space="preserve">
+    <value>切换工具时已放弃：</value>
+  </data>
+  <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_5a75bfe7" xml:space="preserve">
+    <value>编辑图层蒙版。按 Alt 仅显示蒙版，按 Shift 停用蒙版</value>
   </data>
 </root>

@@ -36,6 +36,32 @@ Namespace Services
         Public Property FeatherPixels As Single
         Public Property Inverted As Boolean
 
+        ''' <summary>DICHTE der ganzen Maske in Prozent: wie stark sie überhaupt deckt. 100 = wie
+        ''' gemalt, 50 = überall halb, 0 = sie wirkt nicht mehr.
+        '''
+        ''' Eine Eigenschaft der MASKE und nicht der Ebene, und genau das ist der Punkt: die
+        ''' Ebenen-Deckkraft gibt es nur an einer Masken- oder Auswahlebene, eine Ebenenmaske am
+        ''' OBJEKT hatte deshalb gar keine Dichte - dort bedeutet die Deckkraft die des Objekts.
+        ''' Angewendet wird sie an EINER Stelle, ganz am Ende von BuildPersistentMaskForOutput, wo
+        ''' auch die Ebenen-Deckkraft einfliesst; beide multiplizieren sich.
+        '''
+        ''' Sie gehört in den Fingerabdruck der Maske, sonst gäbe der Zwischenspeicher nach einer
+        ''' Änderung das alte Bild zurück - dieselbe Regel wie für jeden Bestandteil.</summary>
+        Public Property Density As Double = 100.0
+
+        ''' <summary>Maske vorübergehend AUS: sie bleibt vollständig erhalten, deckt aber überall.
+        '''
+        ''' Zum Nachsehen, was ohne sie geschähe - der Standardhandgriff beim Aufbauen einer Maske.
+        ''' Ausdrücklich NICHT dasselbe wie eine fehlende Maske: die wirkt gar nicht (die Anpassung
+        ''' bleibt aus), diese hier lässt die Anpassung überall wirken. Beides gibt es, und beides
+        ''' wird gebraucht.</summary>
+        Public Property IsDisabled As Boolean
+
+        ''' <summary>Das Auge des ERSTEN Bestandteils. Er liegt in den Feldern der Maske selbst, also
+        ''' braucht auch sein Schalter hier seinen Platz - die weiteren tragen ihn selbst
+        ''' (MaskComponent.IsVisible).</summary>
+        Public Property PrimaryVisible As Boolean = True
+
         ''' <summary>Art der Maske. Leer = GEMALTE Maske, deren Alphawerte in PngBase64 liegen
         ''' (Rechteck, Ellipse, Lasso, Zauberstab, Masken-Pinsel). "Linear" und "Radial" =
         ''' VERLAUF, der NICHT gebacken wird, sondern bei jedem Render aus seiner Geometrie
@@ -132,6 +158,7 @@ Namespace Services
         Public Function PrimaryAsComponent() As MaskComponent
             Return New MaskComponent With {
                 .Mode = "Add",
+                .IsVisible = PrimaryVisible,
                 .Kind = Kind,
                 .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
                 .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
@@ -145,6 +172,7 @@ Namespace Services
         ''' <summary>Schreibt einen Bestandteil in die Felder des ERSTEN zurück.</summary>
         Public Sub SetPrimaryFromComponent(c As MaskComponent)
             If c Is Nothing Then Return
+            PrimaryVisible = c.IsVisible
             Kind = c.Kind
             Left = c.Left : Top = c.Top : Right = c.Right : Bottom = c.Bottom
             PngBase64 = c.PngBase64 : FeatherPixels = c.FeatherPixels : Inverted = c.Inverted
@@ -217,6 +245,7 @@ Namespace Services
                 .SourceWidthPixels = SourceWidthPixels, .SourceHeightPixels = SourceHeightPixels,
                 .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
                 .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
+                .Density = Density, .IsDisabled = IsDisabled, .PrimaryVisible = PrimaryVisible,
                 .Kind = Kind,
                 .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
                 .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,
@@ -261,6 +290,15 @@ Namespace Services
         Public Property BrushRight As Integer
         Public Property BrushBottom As Integer
 
+        ''' <summary>Zählt dieser Bestandteil beim Zusammensetzen mit? Ausgeschaltet bleibt er
+        ''' erhalten und wird nur übersprungen - zum Nachsehen, was er beiträgt.
+        '''
+        ''' Er wird an DERSELBEN Stelle übersprungen, an der ein leerer Bestandteil wegfällt, und
+        ''' die Regel "der ERSTE setzt das Ergebnis" gilt danach für den ersten SICHTBAREN. Alles
+        ''' andere wäre schwer zu erklären: eine ausgeschaltete Grundform, auf die noch abgezogen
+        ''' wird, ergäbe eine leere Maske.</summary>
+        Public Property IsVisible As Boolean = True
+
         Public ReadOnly Property IsLinearGradient As Boolean
             Get
                 Return String.Equals(Kind, "Linear", StringComparison.OrdinalIgnoreCase)
@@ -289,7 +327,7 @@ Namespace Services
 
         Public Function Clone() As MaskComponent
             Return New MaskComponent With {
-                .Mode = Mode, .Kind = Kind,
+                .Mode = Mode, .Kind = Kind, .IsVisible = IsVisible,
                 .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
                 .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
                 .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
@@ -300,10 +338,16 @@ Namespace Services
         End Function
     End Class
 
-    ''' <summary>Nicht-destruktive Pixelkorrektur, die über MaskId auf eine ImageMask begrenzt wird.</summary>
+    ''' <summary>Eine MASKEN- oder AUSWAHLEBENE: eine Maske (über MaskId) und die Regler, die nur
+    ''' innerhalb dieser Maske wirken. Welche der beiden Arten es ist, sagt IsMaskLayer - der
+    ''' Unterschied ist die Darstellung (rot gegen Laufameisen), nicht der Aufbau.
+    '''
+    ''' Der Klassenname trägt noch das Wort "Adjustment"; in der Oberfläche kommt es NICHT vor
+    ''' (Patrick am 2026-08-06: "was das mit der Korrektur soll ist mir auch unklar"). Dort gibt es
+    ''' Maskenebene, Auswahlebene, Ebene mit Maske und Bestandteil, mehr nicht.</summary>
     Public Class MaskedAdjustmentLayer
         Public Property Id As String = Guid.NewGuid().ToString("N")
-        Public Property Name As String = LocalizationService.T("Lokale Korrektur")
+        Public Property Name As String = LocalizationService.T("Maskenebene")
         Public Property MaskId As String = ""
         Public Property IsVisible As Boolean = True
         ''' <summary>GESPERRT - siehe ImageAnnotation.IsLocked. Bei einer Korrekturebene heißt das:

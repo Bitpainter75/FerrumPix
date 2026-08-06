@@ -290,6 +290,65 @@ Namespace ViewModels
             Return imageX >= rectPx.Left AndAlso imageX < rectPx.Right AndAlso imageY >= rectPx.Top AndAlso imageY < rectPx.Bottom
         End Function
 
+        ' ── Maskeneigenschaften: EIN Block fuer jede Maske ──────────────────────
+        '
+        ' Sie lagen verstreut: die weiche Kante allein im Pinsel-Zweig (also unsichtbar, sobald man
+        ' mit Verlauf oder Objektauswahl arbeitete), die Dichte gar nicht - was ihr am naechsten kam,
+        ' war die Deckkraft der Ebene, und die gibt es an einer Ebenenmaske am OBJEKT nicht. Deshalb
+        ' hier eine Gruppe, die IMMER dieselbe ist, egal woher die Maske kommt.
+        '
+        ' Das ZIEL ist dasselbe wie bei der Bestandteilliste: CurrentMaskForComponents, also die
+        ' Maske, an der gerade gearbeitet wird. Zwei Wege zur "aktuellen Maske" liefen unweigerlich
+        ' auseinander.
+
+        ''' <summary>Zeigt der Block ueberhaupt etwas? Sobald es eine Maske gibt oder eine Auswahl
+        ''' laeuft - sonst beschriebe er nichts.</summary>
+        Public ReadOnly Property ShowMaskProperties As Boolean
+            Get
+                Return _hasActiveSelection OrElse CurrentMaskForComponents() IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Die Dichte braucht eine gespeicherte Maske. Eine frei gezogene Auswahl ist noch
+        ''' keine: sie wird erst beim Anlegen einer Ebene zu einer, und bis dahin gaebe es nichts,
+        ''' worauf der Regler schreiben koennte.</summary>
+        Public ReadOnly Property ShowMaskDensity As Boolean
+            Get
+                Return CurrentMaskForComponents() IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Die weiche Kante ist eine STRECKE in Bildpunkten und meint den Rand einer
+        ''' gemalten Form. Ein VERLAUF hat keinen solchen Rand - bei ihm macht der Uebergang die
+        ''' Weichheit, und der steht als eigener Regler in seinem Zweig. Ein Regler, der dort nichts
+        ''' bewirkt, waere schlimmer als keiner.</summary>
+        Public ReadOnly Property ShowMaskFeather As Boolean
+            Get
+                If _hasActiveSelection Then Return True
+                Dim m = CurrentMaskForComponents()
+                Return m IsNot Nothing AndAlso Not m.IsGradient
+            End Get
+        End Property
+
+        ''' <summary>Wie stark die Maske ueberhaupt deckt, in Prozent. Sie liegt an der MASKE (siehe
+        ''' ImageMask.Density) und wirkt damit auch dort, wo es keine Ebene mit Deckkraft gibt.</summary>
+        Public Property MaskDensity As Double
+            Get
+                Dim m = CurrentMaskForComponents()
+                Return If(m Is Nothing, 100.0, m.Density)
+            End Get
+            Set(value As Double)
+                Dim m = CurrentMaskForComponents()
+                If m Is Nothing Then Return
+                Dim clamped = Math.Max(0, Math.Min(100, value))
+                If Math.Abs(m.Density - clamped) < 0.0001 Then Return
+                CaptureUndoState("MaskDensity")
+                m.Density = clamped
+                Me.RaisePropertyChanged(NameOf(MaskDensity))
+                SchedulePreviewUpdate()
+            End Set
+        End Property
+
         ''' Farbtoleranz des Zauberstabs in Prozent (0..100).
         Public Property SelectionTolerance As Double
             Get
@@ -326,6 +385,13 @@ Namespace ViewModels
                     Dim editedMask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
                                                                     String.Equals(m.Id, _editingLayerMaskId, StringComparison.Ordinal))
                     If editedMask IsNot Nothing Then editedMask.FeatherPixels = CSng(clamped)
+                ElseIf Not _hasActiveSelection Then
+                    ' Weder Anpassungs-Modus noch geoeffnete Ebenenmaske noch laufende Auswahl: dann
+                    ' meint der Regler die Maske, an der gearbeitet wird - dieselbe, die auch die
+                    ' Bestandteilliste und die Dichte bedienen. Ohne diesen Zweig stand die weiche
+                    ' Kante im Eigenschaften-Block, ohne irgendwo anzukommen.
+                    Dim current = CurrentMaskForComponents()
+                    If current IsNot Nothing Then current.FeatherPixels = CSng(clamped)
                 End If
                 SchedulePreviewUpdate()
             End Set
@@ -717,8 +783,100 @@ Namespace ViewModels
 
         ''' Rotes Overlay aus der committeten Maske neu bauen und veröffentlichen (nach jedem Strich-Commit).
         Private Sub PublishSelectionRedOverlay()
+            If _isMaskGrayscaleView Then
+                SetSelectionMaskPreviewImage(BuildMaskGrayscaleBitmap())
+                Return
+            End If
             SetSelectionMaskPreviewImage(BuildSelectionRedOverlayBitmap(Nothing, False))
         End Sub
+
+        Private _isMaskGrayscaleView As Boolean
+
+        ''' <summary>NUR DIE MASKE ZEIGEN, als Graustufenbild: weiss deckt, schwarz laesst frei.
+        '''
+        ''' Der Handgriff, der bisher ganz fehlte. Am roten Schleier ist nicht zu sehen, ob eine
+        ''' Stelle zu 90 oder zu 100 Prozent gedeckt ist - im Graustufenblick schon, und genau daran
+        ''' entscheidet sich, ob eine Maske sitzt. Ein reiner ANZEIGEzustand: er wird nirgends
+        ''' gespeichert und aendert an der Maske nichts.</summary>
+        Public Property IsMaskGrayscaleView As Boolean
+            Get
+                Return _isMaskGrayscaleView
+            End Get
+            Set(value As Boolean)
+                If _isMaskGrayscaleView = value Then Return
+                _isMaskGrayscaleView = value
+                Me.RaisePropertyChanged(NameOf(IsMaskGrayscaleView))
+                ' Beim Verlauf haengt das rote Overlay an einem anderen Weg als bei einer gemalten
+                ' Maske - beide muessen den Blick anbieten, sonst ist er je nach Herkunft der Maske
+                ' da oder nicht.
+                Dim gradient = CurrentMaskForComponents()
+                If gradient IsNot Nothing AndAlso gradient.IsGradient Then
+                    PublishGradientOverlay(gradient)
+                Else
+                    PublishSelectionRedOverlay()
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Die Maske als Graustufenbild ueber dem ganzen Bild: schwarzer Grund, die Deckung
+        ''' in Weiss darauf. Deckend, damit vom Foto nichts durchscheint - genau das ist der Zweck.
+        '''
+        ''' Gebaut wird es aus derselben Arbeitskopie wie das rote Overlay (_selectionMask im
+        ''' Anzeigeraum). Ein zweiter Weg zur Maskenform liefe unweigerlich auseinander.</summary>
+        Private Function BuildMaskGrayscaleBitmap() As Bitmap
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
+            If bw <= 0 OrElse bh <= 0 Then Return Nothing
+
+            Dim ovScale = Math.Min(1.0, MaskBrushOverlayMaxEdge / CDbl(Math.Max(bw, bh)))
+            Dim ow = Math.Max(1, CInt(Math.Round(bw * ovScale)))
+            Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
+
+            ' Woher die Form kommt: eine gemalte Maske liegt schon als Arbeitskopie im Anzeigeraum
+            ' (_selectionMask, mit allem was gerade gemalt wurde). Ein VERLAUF hat keine solche
+            ' Kopie - sein rotes Overlay entsteht aus der Geometrie. Fuer ihn wird dieselbe Form
+            ' geholt, ueber die auch eine Ebenenmaske zum Bearbeiten in den Anzeigeraum kommt.
+            Dim shape = _selectionMask
+            Dim shapeRect = _selectionMaskRect
+            Dim ownsShape = False
+            If shape Is Nothing Then
+                Dim current = CurrentMaskForComponents()
+                If current IsNot Nothing Then
+                    Dim rect As SKRectI
+                    shape = ImageProcessor.BuildSelectionMaskFromLayerMask(current, BuildAdjustmentsFromFields(), rect)
+                    shapeRect = rect
+                    ownsShape = shape IsNot Nothing
+                End If
+            End If
+
+            Try
+            Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(overlay)
+                    ' Schwarz ueberall: was die Maske nicht deckt, ist frei - und frei heisst hier
+                    ' schwarz, nicht durchsichtig.
+                    canvas.Clear(SKColors.Black)
+                    If shape IsNot Nothing Then
+                        Dim src = New SKRect(0, 0, shape.Width, shape.Height)
+                        Dim dst = New SKRect(CSng(shapeRect.Left * ovScale), CSng(shapeRect.Top * ovScale),
+                                             CSng(shapeRect.Right * ovScale), CSng(shapeRect.Bottom * ovScale))
+                        ' Das Weiss entsteht in einer eigenen Schicht: DstIn wirkt auf die ganze
+                        ' Schicht, und ohne sie fraesse es den schwarzen Grund gleich mit weg.
+                        canvas.SaveLayer()
+                        Using whitePaint = New SKPaint With {.Color = SKColors.White, .Style = SKPaintStyle.Fill}
+                            canvas.DrawRect(dst, whitePaint)
+                        End Using
+                        Using maskPaint = New SKPaint With {.BlendMode = SKBlendMode.DstIn, .IsAntialias = False}
+                            ImageProcessor.DrawBitmapSampled(canvas, shape, src, dst, ImageProcessor.SamplingHigh, maskPaint)
+                        End Using
+                        canvas.Restore()
+                    End If
+                End Using
+                Return ImageProcessor.ToAvaloniaBitmap(overlay)
+            End Using
+            Finally
+                If ownsShape Then shape.Dispose()
+            End Try
+        End Function
 
         ''' <summary>Art der aktiven Auswahl: True = MASKE (rotes Overlay), False = AUSWAHL (Laufameisen).
         ''' Von der View gelesen, um die richtige Darstellung zu wählen - unabhängig vom Werkzeug.</summary>
@@ -1376,6 +1534,20 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(MaskComponentRows))
             Me.RaisePropertyChanged(NameOf(HasMaskComponents))
             Me.RaisePropertyChanged(NameOf(ActiveMaskComponentIndex))
+            RaiseMaskPropertiesChanged()
+        End Sub
+
+        ''' <summary>Die Maskeneigenschaften haengen an derselben Maske wie die Bestandteilliste -
+        ''' wechselt die, wechseln beide. Deshalb an EINER Stelle gemeldet: eine zweite Liste von
+        ''' Anstoss-Stellen hat schon einmal genau die eine vergessen, auf die es ankam.</summary>
+        Private Sub RaiseMaskPropertiesChanged()
+            Me.RaisePropertyChanged(NameOf(ShowMaskProperties))
+            Me.RaisePropertyChanged(NameOf(ShowMaskDensity))
+            Me.RaisePropertyChanged(NameOf(ShowMaskFeather))
+            Me.RaisePropertyChanged(NameOf(MaskDensity))
+            Me.RaisePropertyChanged(NameOf(IsMaskDisabled))
+            Me.RaisePropertyChanged(NameOf(CanCopyMask))
+            Me.RaisePropertyChanged(NameOf(CanPasteMask))
         End Sub
 
         ' ── Umkehren und Verwerfen fuer JEDE Masken-Art ─────────────────────────
@@ -1441,6 +1613,9 @@ Namespace ViewModels
         Private Sub RaiseMaskActionStateChanged()
             Me.RaisePropertyChanged(NameOf(CanInvertMask))
             Me.RaisePropertyChanged(NameOf(CanDiscardMask))
+            ' Der Eigenschaften-Block haengt an derselben Frage "gibt es hier eine Maske" - eine
+            ' laufende Auswahl bringt ihn ebenso auf wie eine markierte Ebene.
+            RaiseMaskPropertiesChanged()
         End Sub
 
         ''' <summary>Einen Bestandteil zum bedienten machen.</summary>
@@ -1472,6 +1647,52 @@ Namespace ViewModels
             _hasChanges = True
             SchedulePreviewUpdate()
         End Sub
+
+        ''' <summary>Das Auge eines Bestandteils: er bleibt erhalten und zaehlt nur nicht mehr mit.
+        '''
+        ''' Derselbe Weg wie beim Entfernen, nur ohne Verlust - inklusive des Neuladens der
+        ''' bearbeiteten Ebenenmaske: ohne das traegt die Arbeitskopie weiter die alte Summe, und der
+        ''' naechste Pinselstrich schriebe den ausgeschalteten Bestandteil als gemalte Pixel
+        ''' zurueck.</summary>
+        Public Sub ToggleMaskComponentVisible(index As Integer)
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing Then Return
+            If index < 0 OrElse index >= m.ComponentCount Then Return
+            PushUndo()
+            If index = 0 Then
+                m.PrimaryVisible = Not m.PrimaryVisible
+            Else
+                Dim extra = m.ExtraComponents(index - 1)
+                If extra Is Nothing Then Return
+                extra.IsVisible = Not extra.IsVisible
+            End If
+            RaiseMaskComponentsChanged()
+            If _editingLayerMaskId <> "" AndAlso String.Equals(_editingLayerMaskId, m.Id, StringComparison.Ordinal) Then
+                ReloadEditedLayerMaskIntoSelection()
+            Else
+                PublishGradientOverlay(m)
+            End If
+            _hasChanges = True
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Maske vorübergehend AUS. Sie bleibt vollstaendig erhalten und deckt solange
+        ''' ueberall - so sieht man, was ohne sie geschaehe.</summary>
+        Public Property IsMaskDisabled As Boolean
+            Get
+                Dim m = CurrentMaskForComponents()
+                Return m IsNot Nothing AndAlso m.IsDisabled
+            End Get
+            Set(value As Boolean)
+                Dim m = CurrentMaskForComponents()
+                If m Is Nothing OrElse m.IsDisabled = value Then Return
+                CaptureUndoState("IsMaskDisabled")
+                m.IsDisabled = value
+                Me.RaisePropertyChanged(NameOf(IsMaskDisabled))
+                _hasChanges = True
+                SchedulePreviewUpdate()
+            End Set
+        End Property
 
         Private Function ActiveMaskComponent() As MaskComponent
             Dim m = CurrentMaskForComponents()
@@ -1646,6 +1867,13 @@ Namespace ViewModels
         Private Sub PublishGradientOverlay(mask As ImageMask,
                                            Optional livePts As List(Of SKPoint) = Nothing,
                                            Optional eraseMode As Boolean = False)
+            ' Im Graustufenblick zeigt AUCH ein Verlauf seine Deckung als Grauwerte - waere er davon
+            ' ausgenommen, haenge der Blick daran, woher die Maske stammt. Waehrend eines Zuges
+            ' bleibt es beim roten Overlay: dort geht es um die Griffe, nicht um die Deckung.
+            If _isMaskGrayscaleView AndAlso (livePts Is Nothing OrElse livePts.Count = 0) Then
+                SetSelectionMaskPreviewImage(BuildMaskGrayscaleBitmap())
+                Return
+            End If
             SetSelectionMaskPreviewImage(BuildGradientRedOverlayBitmap(mask, livePts, eraseMode))
         End Sub
 
@@ -3270,6 +3498,91 @@ Namespace ViewModels
         ''' <summary>Legt eine Ebenenmaske am markierten Objekt an. Eine LAUFENDE Auswahl ist die
         ''' Ansage, welcher Teil sichtbar bleiben soll; ohne Auswahl deckt die Maske erst einmal
         ''' alles, und der Masken-Pinsel nimmt danach weg.</summary>
+        ' ── Masken übertragen ───────────────────────────────────────────────────
+        '
+        ' Eine Maske ist Arbeit: aufgezogen, nachgemalt, an der Kante gefeilt. Sie ein zweites Mal
+        ' zu bauen, weil dieselbe Form auch auf einer anderen Ebene gebraucht wird, war bisher der
+        ' einzige Weg. Kopiert wird immer eine ABSCHRIFT mit eigener Kennung - zwei Ebenen teilen
+        ' sich nie eine Maske, sonst zoege das Nachmalen an der einen die andere mit.
+
+        ''' Die abgelegte Abschrift. Sitzungszustand, gehoert NICHT ins Rezept.
+        Private _copiedMask As ImageMask
+
+        Public ReadOnly Property CanCopyMask As Boolean
+            Get
+                Return CurrentMaskForComponents() IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Zielt das Einfuegen ueberhaupt irgendwohin? Ein markiertes Objekt geht vor: wer
+        ''' eines angeklickt hat, meint es. Sonst die markierte Masken- oder Auswahlebene.</summary>
+        Public ReadOnly Property CanPasteMask As Boolean
+            Get
+                If _copiedMask Is Nothing Then Return False
+                Return MaskTargetAnnotation() IsNot Nothing OrElse PasteTargetLayer() IsNot Nothing
+            End Get
+        End Property
+
+        Private Function PasteTargetLayer() As MaskedAdjustmentLayer
+            If String.IsNullOrEmpty(_selectedMaskedAdjustmentLayerId) Then Return Nothing
+            Return _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
+                                                              l.Id = _selectedMaskedAdjustmentLayerId)
+        End Function
+
+        Public Sub CopyCurrentMask()
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing Then Return
+            _copiedMask = m.Clone()
+            Me.RaisePropertyChanged(NameOf(CanPasteMask))
+            StatusText = LocalizationService.T("Maske kopiert")
+        End Sub
+
+        ''' <summary>Setzt die abgelegte Maske auf das markierte Objekt oder die markierte Ebene.
+        '''
+        ''' Als eigene Maske mit eigener Kennung, und die bisherige des Ziels wird ERSETZT. Ein
+        ''' Zusammenfuehren waere eine zweite Bedeutung fuer denselben Handgriff; wer verbinden will,
+        ''' haengt einen Bestandteil an.</summary>
+        Public Sub PasteMaskToTarget()
+            If _copiedMask Is Nothing Then Return
+            Dim annotation = MaskTargetAnnotation()
+            Dim layer = If(annotation Is Nothing, PasteTargetLayer(), Nothing)
+            If annotation Is Nothing AndAlso layer Is Nothing Then Return
+            PushUndo()
+            Dim copy = _copiedMask.Clone()
+            copy.Id = Guid.NewGuid().ToString("N")
+            _imageMasks.Add(copy)
+            If annotation IsNot Nothing Then
+                annotation.MaskId = copy.Id
+                RaiseAnnotationMaskStateChanged()
+                RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
+            Else
+                layer.MaskId = copy.Id
+                LoadLayerMaskIntoSelection(layer)
+            End If
+            _hasChanges = True
+            RaiseMaskComponentsChanged()
+            RebuildLayerRows()
+            AddHistoryEntry(LocalizationService.T("Maske eingefügt"))
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Die Maske als AUSWAHL laden: dieselbe Form, aber sie begrenzt statt abzustufen.
+        '''
+        ''' Der Standardweg, um eine einmal gebaute Form weiterzuverwenden - fuellen, kopieren, eine
+        ''' zweite Ebene daraus machen. Die Maske selbst bleibt, wo sie ist.</summary>
+        Public Sub LoadCurrentMaskAsSelection()
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing Then Return
+            PushUndo()
+            LoadMaskIntoSelection(m.Id, showAsMask:=False)
+            ' Die geladene Auswahl haengt an keiner Ebene mehr - sonst schriebe der naechste Strich
+            ' in die Maske zurueck, aus der sie nur ABGELEITET ist.
+            _editingLayerMaskId = ""
+            SetActiveSelectionIsMask(False)
+            StatusText = LocalizationService.T("Maske als Auswahl geladen")
+            RaiseMaskComponentsChanged()
+        End Sub
+
         Public Sub AddMaskToSelectedAnnotation()
             Dim a = MaskTargetAnnotation()
             If a Is Nothing OrElse Not String.IsNullOrEmpty(a.MaskId) Then Return
@@ -3411,7 +3724,7 @@ Namespace ViewModels
             If layer Is Nothing Then Return
             If _maskedAdjustmentLayers.Count = countBefore Then
                 ' Nichts dazugekommen - die Auswahl gehoerte bereits zu dieser Ebene.
-                Dim name = If(layer.IsMaskLayer, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) &
+                Dim name = If(layer.IsMaskLayer, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) &
                            " " & (_maskedAdjustmentLayers.Count + 1).ToString()
                 Dim copy = DuplicateAdjustmentLayer(layer, name)
                 If copy Is Nothing Then Return
@@ -3493,7 +3806,7 @@ Namespace ViewModels
                 ' nachmalte oder umkehrte, aenderte die andere mit.
                 _imageMasks.Add(mask)
                 layer = New MaskedAdjustmentLayer With {
-                    .Name = If(_activeSelectionIsMask, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                    .Name = If(_activeSelectionIsMask, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
                     .MaskId = mask.Id,
                     .Adjustments = New ImageAdjustments(),
                     .IsMaskLayer = _activeSelectionIsMask

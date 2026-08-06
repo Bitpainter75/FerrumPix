@@ -69,8 +69,9 @@
                  und jeder Zug erzeugte zwangsläufig eine neue Maske. Seit eine Maske aus mehreren
                  Bestandteilen bestehen kann, gilt die Wahl für JEDE Art, und deshalb steht sie hier
                  oben bei der Art-Auswahl statt in den Zweigen darunter.
-                 Umkehren und Verwerfen entscheiden im ViewModel selbst, ob eine Auswahl oder ein
-                 Verlauf gemeint ist - ein Verlauf hat keine aktive Auswahl. -->
+                 Sie sagt jetzt NUR noch, was der nächste Zug tut. Umkehren und Verwerfen standen
+                 hinter einem Trenner mit darin, gehören aber zur vorhandenen Maske und nicht zum
+                 nächsten Zug - sie stehen bei den Maskeneigenschaften weiter unten. -->
             <StackPanel Spacing="8">
                 <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
@@ -98,19 +99,6 @@
                             Classes.active="{Binding IsSelectionCombineIntersect}"
                             ToolTip.Tip="Nur die Überschneidung behalten">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg" Width="16" Height="16" />
-                    </Button>
-                    <Border Width="1" Margin="4,4" Background="{DynamicResource FP.Border.Normal}" />
-                    <Button Classes="ghost" Padding="8,6"
-                            IsEnabled="{Binding CanInvertMask}"
-                            Command="{Binding InvertCurrentMaskCommand}"
-                            ToolTip.Tip="Maske umkehren">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
-                    </Button>
-                    <Button Classes="ghost" Padding="8,6"
-                            IsEnabled="{Binding CanDiscardMask}"
-                            Command="{Binding DiscardCurrentMaskCommand}"
-                            ToolTip.Tip="Maske verwerfen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
                     </Button>
                 </StackPanel>
             </StackPanel>
@@ -276,10 +264,49 @@
                                              Minimum="1" Maximum="500" Increment="1"
                                              FormatString="F0" />
                 </Grid>
-                <!-- Beim Pinsel bleibt „Weiche Kante“ eine Strecke in Bildpixeln: sie wird in die
-                     Stempel gebacken (siehe SelectionMaskSoftBaked). Der Verlauf braucht dagegen
-                     einen Anteil und hat deshalb seinen eigenen Regler weiter unten. -->
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
+                        ToolTip.Tip="Aus der gemalten Maske eine Maskenebene erstellen">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                                       Width="16" Height="16" />
+                        <TextBlock Text="Neue Maskenebene" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <!-- MASKENEIGENSCHAFTEN. Ein Ort fuer das, was die MASKE als Ganzes ausmacht, und zwar
+                 fuer jede Herkunft derselbe: gemalt, Verlauf, Tiefe, Objektauswahl, Ebenenmaske am
+                 Objekt. Vorher lag die weiche Kante allein im Pinsel-Zweig - wer mit dem Verlauf
+                 oder der Objektauswahl arbeitete, sah sie gar nicht -, und eine Dichte gab es nur
+                 als Deckkraft der Ebene, die eine Ebenenmaske am Objekt nicht hat.
+                 Umkehren und Verwerfen stehen hier statt in der Modusreihe: sie tun etwas mit der
+                 vorhandenen Maske und sagen nicht, was der naechste Zug tut. -->
+            <StackPanel Spacing="8" IsVisible="{Binding ShowMaskProperties}">
+                <Border Height="1" Background="{DynamicResource FP.Border.Normal}" />
+                <TextBlock Text="Maskeneigenschaften"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowMaskDensity}">
+                    <TextBlock Text="Dichte" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie stark die Maske überhaupt deckt. 100 wirkt wie gemalt, 50 überall halb, 0 gar nicht mehr" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="100"
+                                       Value="{Binding MaskDensity}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding MaskDensity, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+                <!-- Die weiche Kante bleibt eine Strecke in Bildpixeln: sie wird in die Stempel
+                     gebacken (siehe SelectionMaskSoftBaked). Ein VERLAUF braucht dagegen einen
+                     Anteil und hat dafuer seinen eigenen Regler „Uebergang" in seinem Zweig -
+                     deshalb faellt die Zeile dort weg, statt wirkungslos dazustehen. -->
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowMaskFeather}">
                     <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                ToolTip.Tip="Lässt den Maskenrand über die angegebene Anzahl Bildpixel weich auslaufen (0 = harte Kante)" />
@@ -291,16 +318,69 @@
                                              Minimum="0" Maximum="200" Increment="1"
                                              FormatString="F0" />
                 </Grid>
-                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding HasActiveSelection}"
-                        Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
-                        ToolTip.Tip="Aus der gemalten Maske eine Maskenebene erstellen">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
-                                       Width="16" Height="16" />
-                        <TextBlock Text="Neue Maskenebene" />
-                    </StackPanel>
+                <!-- PRÜFEN. Zwei Anzeigezustände, die an der Maske selbst nichts ändern: der
+                     Graustufenblick zeigt die Deckung als Grauwerte (am roten Schleier ist 90 von
+                     100 Prozent nicht zu sehen), und "Maske aus" lässt sie überall decken, damit
+                     man sieht, was ohne sie geschähe. Der zweite ist ausdrücklich NICHT dasselbe
+                     wie eine fehlende Maske: die wirkt gar nicht. -->
+                <CheckBox Content="Nur die Maske zeigen"
+                          IsChecked="{Binding IsMaskGrayscaleView}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Zeigt die Maske als Graustufenbild: Weiß deckt, Schwarz lässt frei. Ändert an der Maske nichts" />
+                <CheckBox Content="Maske aus"
+                          IsChecked="{Binding IsMaskDisabled}"
+                          IsVisible="{Binding ShowMaskDensity}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Legt die Maske vorübergehend still: die Anpassung wirkt dann überall. Zum Vergleichen, die Maske bleibt erhalten" />
+
+                <!-- ÜBERTRAGEN. Eine Maske ist Arbeit; sie ein zweites Mal zu bauen, weil dieselbe
+                     Form auch woanders gebraucht wird, war bisher der einzige Weg. Kopiert wird
+                     immer eine Abschrift mit eigener Kennung - zwei Ebenen teilen sich nie eine
+                     Maske. Eingefügt wird auf das markierte Objekt, sonst auf die markierte Ebene. -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            IsEnabled="{Binding CanCopyMask}"
+                            Command="{Binding CopyMaskCommand}"
+                            ToolTip.Tip="Legt eine Abschrift dieser Maske ab">
+                        <TextBlock Text="Maske kopieren" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center" />
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            IsEnabled="{Binding CanPasteMask}"
+                            Command="{Binding PasteMaskCommand}"
+                            ToolTip.Tip="Setzt die abgelegte Maske auf das markierte Objekt, sonst auf die markierte Ebene. Eine vorhandene wird ersetzt">
+                        <TextBlock Text="Maske einfügen" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center" />
+                    </Button>
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanCopyMask}"
+                        Command="{Binding LoadMaskAsSelectionCommand}"
+                        ToolTip.Tip="Übernimmt die Form der Maske als Auswahl - zum Füllen, Kopieren oder für eine weitere Ebene. Die Maske selbst bleibt">
+                    <TextBlock Text="Als Auswahl laden" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
                 </Button>
+
+                <!-- BESCHRIFTET statt als Symbol, und mit dem Wort "Maske" darin: als blosses
+                     Symbolpaar in der Modusreihe war nicht zu sehen, dass die beiden etwas ganz
+                     anderes tun als die vier davor. Ohne Symbol, weil "Maske umkehren" mit einem
+                     davor nicht mehr in die halbe Panelbreite passt. -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            IsEnabled="{Binding CanInvertMask}"
+                            Command="{Binding InvertCurrentMaskCommand}"
+                            ToolTip.Tip="Tauscht gedeckte und freie Seite">
+                        <TextBlock Text="Maske umkehren" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center" />
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            IsEnabled="{Binding CanDiscardMask}"
+                            Command="{Binding DiscardCurrentMaskCommand}"
+                            ToolTip.Tip="Nimmt die Maske weg. Was sie begrenzt hat, wirkt danach überall">
+                        <TextBlock Text="Maske verwerfen" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center" />
+                    </Button>
+                </Grid>
             </StackPanel>
 
             <!-- BESTANDTEILE DER MASKE. Sie gehoeren KEINEM Zweig: eine Maske kann aus Verlauf,
@@ -318,8 +398,23 @@
                 <ItemsControl ItemsSource="{Binding MaskComponentRows}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,1">
-                                <Button Grid.Column="0" Grid.ColumnSpan="3" Classes="ghost"
+                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,1">
+                                <!-- Das Auge, wie an einer Ebenenzeile: ausgeschaltet bleibt der
+                                     Bestandteil erhalten und zaehlt nur nicht mehr mit. Bis dahin
+                                     gab es nur das Kreuz - wer wissen wollte, was ein Bestandteil
+                                     beitraegt, musste ihn entfernen und neu anlegen. -->
+                                <ToggleButton Grid.Column="0"
+                                              Classes="ghost layer-eye"
+                                              Width="20" Height="20" Padding="0"
+                                              Margin="0,0,4,0"
+                                              IsChecked="{Binding IsComponentVisible, Mode=OneWay}"
+                                              Command="{Binding DataContext.ToggleMaskComponentVisibleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              CommandParameter="{Binding Index}"
+                                              ToolTip.Tip="Diesen Bestandteil ein- oder ausschalten">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                                   Width="12" Height="12" />
+                                </ToggleButton>
+                                <Button Grid.Column="1" Classes="ghost"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Padding="6,3"
                                         Classes.active="{Binding IsActive}"
@@ -344,7 +439,7 @@
                                 <!-- Dieselbe Darstellung wie die Suchlisten im Galeriebaum: ein
                                      kleines, zurueckhaltendes Kreuz statt eines Muelleimers. Der
                                      Muelleimer wog schwerer als die Zeile selbst. -->
-                                <Button Grid.Column="3"
+                                <Button Grid.Column="2"
                                         Classes="ghost"
                                         Width="18"
                                         Height="18"
@@ -412,7 +507,7 @@
                 <CheckBox Content="Wirkung umkehren"
                           IsChecked="{Binding GradientInverted}"
                           FontSize="{DynamicResource FP.Font.Small}"
-                          ToolTip.Tip="Tauscht gedeckte und freie Seite - beim radialen Verlauf wirkt die Korrektur dann aussen statt innen" />
+                          ToolTip.Tip="Tauscht gedeckte und freie Seite - beim radialen Verlauf wirkt die Maske dann aussen statt innen" />
             </StackPanel>
 
     

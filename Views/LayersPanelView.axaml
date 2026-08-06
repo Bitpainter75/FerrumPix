@@ -83,10 +83,15 @@
                                      auf der Ebene liegt; bei mehreren gleichartigen Ebenen sagte das
                                      Symbol allein gar nichts. Sie kommt fertig aus dem ViewModel -
                                      die Zeile rendert nichts selbst. -->
+                                <!-- Bei einer Masken- oder Auswahlebene IST diese Miniatur ihre
+                                     Maske - also gelten hier dieselben zwei Handgriffe wie am
+                                     Maskensymbol eines Objekts. Ohne Taste bleibt alles wie
+                                     bisher. -->
                                 <Border Grid.Column="1" Width="34" Height="34" CornerRadius="3"
                                         BorderThickness="1"
                                         BorderBrush="{DynamicResource FP.Border.Normal}"
                                         Background="{DynamicResource FP.Bg.Root}"
+                                        PointerPressed="OnLayerMaskGesturePressed"
                                         ClipToBounds="True">
                                     <Panel>
                                         <!-- Die Miniatur FUELLT den Kasten (Uniform, ohne
@@ -135,7 +140,8 @@
                                             Background="Transparent" BorderThickness="0"
                                             IsVisible="{Binding HasMask}"
                                             Click="OnLayerMaskIconClick"
-                                            ToolTip.Tip="Ebenenmaske bearbeiten">
+                                            PointerPressed="OnLayerMaskGesturePressed"
+                                            ToolTip.Tip="Ebenenmaske bearbeiten. Mit Alt nur die Maske zeigen, mit Umschalt stilllegen">
                                         <Panel>
                                             <!-- Die Maskenminiatur IST der Knopf: hell, wo die Maske
                                                  deckt. Ohne sie war nicht zu sehen, welche Maske wo

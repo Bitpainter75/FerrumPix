@@ -138,6 +138,44 @@ Namespace Views
         ''' <summary>Klick auf das Maskensymbol EINER ZEILE: erst diese Zeile markieren, dann ihre
         ''' Maske öffnen. Die Reihenfolge ist der Punkt - die Befehle des ViewModels arbeiten auf der
         ''' markierten Ebene, und angeklickt wurde vielleicht eine andere.</summary>
+        ''' <summary>Alt- und Umschalt-Klick auf eine Maskenminiatur: nur die Maske zeigen bzw. sie
+        ''' stilllegen. Die beiden Handgriffe, die jeder aus anderen Bildbearbeitungen mitbringt.
+        '''
+        ''' Warum PointerPressed und nicht Click: ein Click-Ereignis trägt die Modifiertasten nicht
+        ''' mit. Ohne Taste bleibt das Ereignis UNbehandelt, der gewöhnliche Klick läuft also weiter
+        ''' wie bisher und öffnet die Maske zum Bearbeiten.
+        '''
+        ''' Bei einem OBJEKT wird die Maske dabei geöffnet: sie gilt erst dann als "die Maske, an der
+        ''' gearbeitet wird", und ohne das träfe der Schalter die zuletzt geöffnete - also die
+        ''' falsche. Bei einer Masken- oder Auswahlebene genügt das Markieren der Zeile.</summary>
+        Private Sub OnLayerMaskGesturePressed(sender As Object, e As PointerPressedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
+            If ApplyMaskGesture(vm, row, e.KeyModifiers) Then e.Handled = True
+        End Sub
+
+        ''' <summary>Die Entscheidung selbst, ohne Ereignis drumherum: was tut ein Klick mit dieser
+        ''' Taste auf dieser Zeile? True heisst "verbraucht".
+        '''
+        ''' Als eigene Funktion, damit der Pruefstand sie mit echten Tasten aufrufen kann - ein
+        ''' PointerPressedEventArgs laesst sich nicht sinnvoll von Hand bauen, und ein Waechter, der
+        ''' nur den Quelltext liest, waere gruen, waehrend die Gesten nichts tun.</summary>
+        Friend Shared Function ApplyMaskGesture(vm As EditorViewModel, row As LayerPanelRow,
+                                                modifiers As KeyModifiers) As Boolean
+            If vm Is Nothing OrElse row Is Nothing Then Return False
+            Dim showsMaskOnly = modifiers.HasFlag(KeyModifiers.Alt)
+            Dim turnsMaskOff = modifiers.HasFlag(KeyModifiers.Shift)
+            If Not showsMaskOnly AndAlso Not turnsMaskOff Then Return False
+            ' Eine Zeile ohne jede Maske hat nichts zu zeigen und nichts stillzulegen.
+            If Not row.HasMask AndAlso row.AdjustmentLayer Is Nothing Then Return False
+
+            If Not Object.ReferenceEquals(row, vm.SelectedLayerRow) Then vm.SelectedLayerRow = row
+            If row.HasMask Then vm.UseAnnotationMask()
+            If showsMaskOnly Then vm.IsMaskGrayscaleView = Not vm.IsMaskGrayscaleView
+            If turnsMaskOff Then vm.IsMaskDisabled = Not vm.IsMaskDisabled
+            Return True
+        End Function
+
         Private Sub OnLayerMaskIconClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
