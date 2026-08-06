@@ -200,6 +200,11 @@ Namespace Services
         Public Property Rows As Integer = 0
         Public Property Nodes As Double() = New Double() {}
 
+        ''' <summary>Die zwölf Kontrollpunkte einer mit dem Verformen-Werkzeug erstellten
+        ''' Hüllkurve. Das Raster bleibt die maßgebliche Renderdarstellung; diese Werte bewahren
+        ''' zusätzlich die editierbaren Ecken und Bézier-Anfasser.</summary>
+        Public Property EnvelopePoints As Double() = New Double() {}
+
         ''' <summary>Linien: je Linie QuelleAx, QuelleAy, QuelleBx, QuelleBy und dasselbe fuer das
         ''' Ziel, alles in Bildprozent.</summary>
         Public Property LineSource As Double() = New Double() {}
@@ -224,6 +229,7 @@ Namespace Services
                 .Corners = If(Corners Is Nothing, New Double() {}, CType(Corners.Clone(), Double())),
                 .Columns = Columns, .Rows = Rows,
                 .Nodes = If(Nodes Is Nothing, New Double() {}, CType(Nodes.Clone(), Double())),
+                .EnvelopePoints = If(EnvelopePoints Is Nothing, New Double() {}, CType(EnvelopePoints.Clone(), Double())),
                 .LineSource = If(LineSource Is Nothing, New Double() {}, CType(LineSource.Clone(), Double())),
                 .LineTarget = If(LineTarget Is Nothing, New Double() {}, CType(LineTarget.Clone(), Double()))}
         End Function

@@ -567,8 +567,10 @@ Namespace Services
             ' ERST die eigene Verzerrung des Objekts, DANN die des Bildes. Die eigene beschreibt
             ' seine Form, die des Bildes, wo es im Bild liegt - in dieser Reihenfolge gelesen
             ' ergibt beides zusammen genau das, was man auf dem Schirm erwartet.
-            If annotation IsNot Nothing AndAlso annotation.OwnWarp IsNot Nothing AndAlso
-               Not annotation.OwnWarp.IsEmpty Then
+            ' Die eigene Verzerrung stammt aus der bereits durch Bilddrehung/-flip transformierten
+            ' Renderkopie. Der ursprüngliche Datensatz bleibt absichtlich im Quellraum gespeichert.
+            If renderAnnotation IsNot Nothing AndAlso renderAnnotation.OwnWarp IsNot Nothing AndAlso
+               Not renderAnnotation.OwnWarp.IsEmpty Then
                 ' Der Bezug ist das OBJEKTRECHTECK, nicht die Ebene: die eigene Verzerrung steht in
                 ' Prozent DES OBJEKTS, die Ebene ist aber so gross wie die gerenderte Flaeche. Mit
                 ' der Ebene als Bezug las eine kleine Verzerrung sich als eine ueber das ganze
@@ -577,7 +579,7 @@ Namespace Services
                 Dim rw = Math.Max(1, CInt(Math.Round(rect.Width)))
                 Dim rh = Math.Max(1, CInt(Math.Round(rect.Height)))
                 Dim ox = vx - rx, oy = vy - ry
-                Dim warped = WarpObjectLayer(drawn, annotation.OwnWarp, rw, rh, ox, oy)
+                Dim warped = WarpObjectLayer(drawn, renderAnnotation.OwnWarp, rw, rh, ox, oy)
                 If warped IsNot Nothing Then
                     If Not Object.ReferenceEquals(drawn, layer) Then drawn.Dispose()
                     drawn = warped

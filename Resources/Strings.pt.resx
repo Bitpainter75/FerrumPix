@@ -6655,4 +6655,11 @@
   <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_5a75bfe7" xml:space="preserve">
     <value>Editar a máscara de camada. Com Alt mostra apenas a máscara, com Shift suspende-a</value>
   </data>
+  <data name="Aktuelles_Wirkziel_9a067ba2" xml:space="preserve"><value>Alvo de edição atual</value></data>
+  <data name="Schnittmaske_wirkt_nur_innerhalb_der_Deckung_der_f18339c4" xml:space="preserve"><value>Máscara de recorte: atua apenas dentro da opacidade da camada diretamente abaixo</value></data>
+  <data name="Ebene_kopiert_eaa7fcac" xml:space="preserve"><value>Camada copiada</value></data>
+  <data name="Ebene_eingef_gt_f6dc233e" xml:space="preserve"><value>Camada colada</value></data>
+  <data name="Bild_kopiert_109ab6ed" xml:space="preserve"><value>Imagem copiada</value></data>
+  <data name="Bild_kopieren_fehlgeschlagen_99d62d50" xml:space="preserve"><value>Não foi possível copiar a imagem</value></data>
+  <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Recorte</value></data>
 </root>

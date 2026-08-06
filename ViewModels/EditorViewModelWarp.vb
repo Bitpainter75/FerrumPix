@@ -1363,10 +1363,11 @@ Namespace ViewModels
         ' wird. Reihenfolge: 0 bis 3 die Ecken links oben, rechts oben, rechts unten, links unten;
         ' danach je Kante zwei Griffe in Laufrichtung der Kante (oben, rechts, unten, links).
 
-        ''' <summary>Feinheit des Auswertungsrasters. Zwoelf Felder je Richtung bilden die Kurven
-        ''' sichtbar rund ab und bleiben beim Ziehen fluessig; feiner kostet nur Zeit, weil die
-        ''' Kruemmung zwischen den Knoten ohnehin geradlinig interpoliert wird.</summary>
-        Private Const EnvelopeSteps As Integer = 12
+        ''' <summary>Feinheit des Auswertungsrasters. Vierundzwanzig Felder je Richtung nähern die
+        ''' Bézier-Ränder auch bei stark gezogenen Griffen sichtbar glatt an. Die 625 Knoten bleiben
+        ''' klein gegenüber dem Bildrender, halbieren aber die längsten geradlinigen Segmente der
+        ''' früheren 12×12-Näherung.</summary>
+        Private Const EnvelopeSteps As Integer = 24
 
         ''' <summary>Wie viele Hilfslinien das Overlay im Inneren zeigt. Nur zum Hinsehen - sie
         ''' sagen, wohin sich die Flaeche zwischen den Raendern legt.</summary>
@@ -1674,7 +1675,8 @@ Namespace ViewModels
                     node(i * 2 + 1) = ys(i)
                 Next
                 a.OwnWarp = New ObjectWarp With {
-                    .Kind = "Gitter", .Columns = EnvelopeSteps, .Rows = EnvelopeSteps, .Nodes = node}
+                    .Kind = "Gitter", .Columns = EnvelopeSteps, .Rows = EnvelopeSteps, .Nodes = node,
+                    .EnvelopePoints = CType(_envelope.Clone(), Double())}
             End If
             RaiseObjectWarpChanged()
         End Sub
@@ -2046,16 +2048,25 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
         End Sub
 
-        ''' <summary>Gitter und Linien aus der eigenen Verzerrung des markierten Objekts holen. Was
-        ''' nicht passt (andere Art, andere Rastergroesse), faengt neutral an.</summary>
+        ''' <summary>Gitter, Linien und die editierbare Hüllkurve aus der eigenen Verzerrung des
+        ''' markierten Objekts holen.</summary>
         Private Sub LoadWarpFromObject()
             ResetGrid()
-            ' Die Verformung faengt am Objekt immer neutral an: aus einem Knotenraster laesst sich
-            ' nicht zurueckrechnen, welche vier Randkurven es erzeugt haben.
             ResetEnvelopePoints()
             Dim a = CurrentObject()
             Dim v = a?.OwnWarp
             If v Is Nothing OrElse v.IsEmpty Then Return
+
+            ' Neue Dokumente bewahren die zwölf Originalpunkte. Für ältere Dokumente lässt sich die
+            ' Hüllkurve aus den Knoten bei einem Drittel und zwei Dritteln der vier Ränder exakt
+            ' zurückgewinnen (das Verformen-Raster besitzt 12 oder 24, also durch drei teilbare,
+            ' Felder). So führt auch das erste Nachbearbeiten eines alten Objekts nicht zum Reset.
+            If v.EnvelopePoints IsNot Nothing AndAlso v.EnvelopePoints.Length = 24 Then
+                _envelope = CType(v.EnvelopePoints.Clone(), Double())
+            Else
+                Dim restored As Double() = Nothing
+                If TryRestoreEnvelopeFromGrid(v, restored) Then _envelope = restored
+            End If
 
             If v.Kind = "Gitter" AndAlso v.Columns = _warpColumns AndAlso v.Rows = _warpRows Then
                 For i = 0 To _warpX.Length - 1
@@ -2072,6 +2083,46 @@ Namespace ViewModels
                 Next
             End If
         End Sub
+
+        Private Shared Function TryRestoreEnvelopeFromGrid(warp As ObjectWarp,
+                                                            ByRef points As Double()) As Boolean
+            If warp Is Nothing OrElse warp.Kind <> "Gitter" OrElse warp.Columns < 3 OrElse warp.Rows < 3 OrElse
+               warp.Columns Mod 3 <> 0 OrElse warp.Rows Mod 3 <> 0 OrElse
+               warp.Nodes Is Nothing OrElse warp.Nodes.Length <> (warp.Columns + 1) * (warp.Rows + 1) * 2 Then Return False
+
+            Dim p = NeutralEnvelope()
+            Dim thirdColumn = warp.Columns \ 3, thirdRow = warp.Rows \ 3
+            RestoreEnvelopeEdgeFromGrid(warp, p, 0, 0, 0, thirdColumn, 0, thirdColumn * 2, 0, warp.Columns, 0)
+            RestoreEnvelopeEdgeFromGrid(warp, p, 1, warp.Columns, 0, warp.Columns, thirdRow, warp.Columns, thirdRow * 2, warp.Columns, warp.Rows)
+            RestoreEnvelopeEdgeFromGrid(warp, p, 2, warp.Columns, warp.Rows, thirdColumn * 2, warp.Rows, thirdColumn, warp.Rows, 0, warp.Rows)
+            RestoreEnvelopeEdgeFromGrid(warp, p, 3, 0, warp.Rows, 0, thirdRow * 2, 0, thirdRow, 0, 0)
+            points = p
+            Return True
+        End Function
+
+        ''' <summary>Gewinnt die zwei kubischen Bézier-Griffe einer Kante aus ihren Proben bei
+        ''' t=1/3 und t=2/3 zurück. Die Formel ist die Umkehrung der kubischen Bézier-Gleichung.</summary>
+        Private Shared Sub RestoreEnvelopeEdgeFromGrid(warp As ObjectWarp, points As Double(), edge As Integer,
+                                                        startColumn As Integer, startRow As Integer,
+                                                        firstColumn As Integer, firstRow As Integer,
+                                                        secondColumn As Integer, secondRow As Integer,
+                                                        endColumn As Integer, endRow As Integer)
+            Dim p0 = EnvelopeGridNode(warp, startColumn, startRow)
+            Dim b1 = EnvelopeGridNode(warp, firstColumn, firstRow)
+            Dim b2 = EnvelopeGridNode(warp, secondColumn, secondRow)
+            Dim p3 = EnvelopeGridNode(warp, endColumn, endRow)
+            points(edge * 2) = p0.X : points(edge * 2 + 1) = p0.Y
+            Dim handle = 8 + edge * 4
+            points(handle) = 3 * b1.X - 1.5 * b2.X - (5.0 / 6.0) * p0.X + (1.0 / 3.0) * p3.X
+            points(handle + 1) = 3 * b1.Y - 1.5 * b2.Y - (5.0 / 6.0) * p0.Y + (1.0 / 3.0) * p3.Y
+            points(handle + 2) = -1.5 * b1.X + 3 * b2.X + (1.0 / 3.0) * p0.X - (5.0 / 6.0) * p3.X
+            points(handle + 3) = -1.5 * b1.Y + 3 * b2.Y + (1.0 / 3.0) * p0.Y - (5.0 / 6.0) * p3.Y
+        End Sub
+
+        Private Shared Function EnvelopeGridNode(warp As ObjectWarp, column As Integer, row As Integer) As (X As Double, Y As Double)
+            Dim i = (row * (warp.Columns + 1) + column) * 2
+            Return (warp.Nodes(i), warp.Nodes(i + 1))
+        End Function
 
         ''' <summary>Fasst den naechstgelegenen Rasterpunkt an, sofern einer in Greifweite liegt.
         ''' Die Trefferpruefung laeuft im ANZEIGERAUM: greifbar ist, was man sieht, und der Abstand

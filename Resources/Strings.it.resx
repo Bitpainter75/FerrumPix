@@ -6656,4 +6656,11 @@
   <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_5a75bfe7" xml:space="preserve">
     <value>Modifica la maschera di livello. Con Alt mostra solo la maschera, con Maiusc la disattiva</value>
   </data>
+  <data name="Aktuelles_Wirkziel_9a067ba2" xml:space="preserve"><value>Destinazione di modifica attuale</value></data>
+  <data name="Schnittmaske_wirkt_nur_innerhalb_der_Deckung_der_f18339c4" xml:space="preserve"><value>Maschera di ritaglio: agisce solo all'interno dell'opacità del livello sottostante</value></data>
+  <data name="Ebene_kopiert_eaa7fcac" xml:space="preserve"><value>Livello copiato</value></data>
+  <data name="Ebene_eingef_gt_f6dc233e" xml:space="preserve"><value>Livello incollato</value></data>
+  <data name="Bild_kopiert_109ab6ed" xml:space="preserve"><value>Immagine copiata</value></data>
+  <data name="Bild_kopieren_fehlgeschlagen_99d62d50" xml:space="preserve"><value>Impossibile copiare l'immagine</value></data>
+  <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Ritaglio</value></data>
 </root>

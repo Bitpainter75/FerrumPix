@@ -6656,4 +6656,11 @@
   <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_5a75bfe7" xml:space="preserve">
     <value>Modifier le masque de calque. Alt affiche uniquement le masque, Maj le met en pause</value>
   </data>
+  <data name="Aktuelles_Wirkziel_9a067ba2" xml:space="preserve"><value>Cible d’édition actuelle</value></data>
+  <data name="Schnittmaske_wirkt_nur_innerhalb_der_Deckung_der_f18339c4" xml:space="preserve"><value>Masque d’écrêtage : agit uniquement dans l’opacité du calque inférieur</value></data>
+  <data name="Ebene_kopiert_eaa7fcac" xml:space="preserve"><value>Calque copié</value></data>
+  <data name="Ebene_eingef_gt_f6dc233e" xml:space="preserve"><value>Calque collé</value></data>
+  <data name="Bild_kopiert_109ab6ed" xml:space="preserve"><value>Image copiée</value></data>
+  <data name="Bild_kopieren_fehlgeschlagen_99d62d50" xml:space="preserve"><value>Échec de la copie de l’image</value></data>
+  <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Recadrage</value></data>
 </root>

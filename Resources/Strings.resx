@@ -6657,4 +6657,11 @@
   <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_5a75bfe7" xml:space="preserve">
     <value>Edit the layer mask. Alt shows the mask only, Shift puts it on hold</value>
   </data>
+  <data name="Aktuelles_Wirkziel_9a067ba2" xml:space="preserve"><value>Current editing target</value></data>
+  <data name="Schnittmaske_wirkt_nur_innerhalb_der_Deckung_der_f18339c4" xml:space="preserve"><value>Clipping mask: only affects the opacity of the layer directly below</value></data>
+  <data name="Ebene_kopiert_eaa7fcac" xml:space="preserve"><value>Layer copied</value></data>
+  <data name="Ebene_eingef_gt_f6dc233e" xml:space="preserve"><value>Layer pasted</value></data>
+  <data name="Bild_kopiert_109ab6ed" xml:space="preserve"><value>Image copied</value></data>
+  <data name="Bild_kopieren_fehlgeschlagen_99d62d50" xml:space="preserve"><value>Failed to copy image</value></data>
+  <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Crop</value></data>
 </root>

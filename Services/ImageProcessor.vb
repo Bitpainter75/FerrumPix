@@ -3345,6 +3345,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             transformed.RotationDegrees = objectGeometry.RotationDegrees
             If adj.FlipHorizontal Then transformed.FlipHorizontal = Not transformed.FlipHorizontal
             If adj.FlipVertical Then transformed.FlipVertical = Not transformed.FlipVertical
+            ' OwnWarp lebt im lokalen Bildraum des Objekts. Die Zeichenroutine bekommt unten die
+            ' bereits gedrehte/gespiegelte Kopie; blieben ihre Knoten dabei im alten Raum, folgte
+            ' zwar das Rechteck dem Bild, seine Verformung bzw. Verzerrung aber nicht. Das Gitter
+            ' wird deshalb mit derselben Bildmatrix in den Ausgaberaum überführt.
+            transformed.OwnWarp = TransformOwnWarpForGeometry(transformed.OwnWarp,
+                                                               renderAnnotation.XPixels, renderAnnotation.YPixels,
+                                                               renderAnnotation.WidthPixels, renderAnnotation.HeightPixels,
+                                                               objectGeometry.Rect, preWidth, preHeight,
+                                                               rotation, adj.FlipHorizontal, adj.FlipVertical)
 
             If IsPaintKind(transformed.Kind) AndAlso transformed.Strokes IsNot Nothing Then
                 transformed.Strokes = transformed.Strokes.Select(
@@ -3353,6 +3362,45 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     ToList()
             End If
             Return transformed
+        End Function
+
+        ''' <summary>Überführt eine objektlokale Verzerrung durch Vierteldrehung und Spiegelung des
+        ''' Bildes. Die gespeicherte Verzerrung bleibt unberührt; nur die flüchtige Renderkopie
+        ''' erhält ein äquivalentes Gitter im Ausgaberaum.</summary>
+        Private Shared Function TransformOwnWarpForGeometry(warp As ObjectWarp,
+                                                             sourceX As Single, sourceY As Single,
+                                                             sourceWidth As Single, sourceHeight As Single,
+                                                             outputRect As SKRect,
+                                                             preWidth As Integer, preHeight As Integer,
+                                                             rotation As Integer, flipH As Boolean, flipV As Boolean) As ObjectWarp
+            If warp Is Nothing OrElse warp.IsEmpty Then Return warp
+            If rotation = 0 AndAlso Not flipH AndAlso Not flipV Then Return warp
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse
+               outputRect.Width <= 0 OrElse outputRect.Height <= 0 Then Return warp
+
+            Dim matrix = ImageGeometryMapper.SourceToDisplayMatrix(preWidth, preHeight, rotation, flipH, flipV)
+            Dim inverse As SKMatrix
+            If Not matrix.TryInvert(inverse) Then Return warp
+            Dim warpWidth = Math.Max(1, CInt(Math.Round(sourceWidth)))
+            Dim warpHeight = Math.Max(1, CInt(Math.Round(sourceHeight)))
+
+            Const steps As Integer = 12
+            Dim nodes((steps + 1) * (steps + 1) * 2 - 1) As Double
+            For row = 0 To steps
+                For column = 0 To steps
+                    Dim index = (row * (steps + 1) + column) * 2
+                    Dim outputPoint = New SKPoint(outputRect.Left + CSng(column / CDbl(steps) * outputRect.Width),
+                                                  outputRect.Top + CSng(row / CDbl(steps) * outputRect.Height))
+                    Dim sourcePoint = inverse.MapPoint(outputPoint)
+                    Dim localX = sourcePoint.X - sourceX
+                    Dim localY = sourcePoint.Y - sourceY
+                    Dim moved = MovePoint(warp, localX, localY, warpWidth, warpHeight)
+                    Dim mapped = matrix.MapPoint(New SKPoint(sourceX + moved.X, sourceY + moved.Y))
+                    nodes(index) = (mapped.X - outputRect.Left) / outputRect.Width * 100.0
+                    nodes(index + 1) = (mapped.Y - outputRect.Top) / outputRect.Height * 100.0
+                Next
+            Next
+            Return New ObjectWarp With {.Kind = "Gitter", .Columns = steps, .Rows = steps, .Nodes = nodes}
         End Function
 
         ''' <summary>Striche in die Ausgabegeometrie. Ueber die gemeinsame Matrix des Mappers statt

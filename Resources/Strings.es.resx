@@ -6656,4 +6656,11 @@
   <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_5a75bfe7" xml:space="preserve">
     <value>Editar la máscara de capa. Con Alt se muestra solo la máscara, con Mayús se desactiva</value>
   </data>
+  <data name="Aktuelles_Wirkziel_9a067ba2" xml:space="preserve"><value>Objetivo de edición actual</value></data>
+  <data name="Schnittmaske_wirkt_nur_innerhalb_der_Deckung_der_f18339c4" xml:space="preserve"><value>Máscara de recorte: solo actúa dentro de la opacidad de la capa situada debajo</value></data>
+  <data name="Ebene_kopiert_eaa7fcac" xml:space="preserve"><value>Capa copiada</value></data>
+  <data name="Ebene_eingef_gt_f6dc233e" xml:space="preserve"><value>Capa pegada</value></data>
+  <data name="Bild_kopiert_109ab6ed" xml:space="preserve"><value>Imagen copiada</value></data>
+  <data name="Bild_kopieren_fehlgeschlagen_99d62d50" xml:space="preserve"><value>No se pudo copiar la imagen</value></data>
+  <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Recorte</value></data>
 </root>
