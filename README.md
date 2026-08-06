@@ -57,7 +57,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 <img src="Screenshots/Editor_Edit.png" />
 
-**Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort: *Perspective* for converging verticals - four sliders, or drag the four corners in the photo; *Line warp*, where you lay a line on an edge and drag it where the edge should go; *Grid warp* for everything a tilt cannot do; and *Warp*, a frame whose four edges are curves - drag a corner to place it, drag the small handles beside it to bend the edge, and the inside follows. The picture follows while you drag. All four are kept as part of the edit, not computed into the pixels: they come back when you open the picture again - in a project file as well as beside a RAW or PSD - masks follow along, and they can be taken off at any time. With an object selected, all four distort that object instead of the picture, and a distorted text can still be typed in afterwards.
+**Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort: *Perspective* for converging verticals, *Line warp*, where you lay a line on an edge and drag it where the edge should go, *Grid warp* for everything a tilt cannot do, and *Warp*, a frame whose edges you bend. The picture follows while you drag. None of them is computed into the pixels: they come back when you open the picture again, masks follow along, and they can be taken off at any time. With an object selected, they distort that object instead, and a distorted text can still be typed in afterwards.
 
 <img src="Screenshots/Editor_Crop.png" />
 
@@ -81,7 +81,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 ### RAW and other formats
 
-RAW files are developed from the actual sensor data, under a fixed film-like base curve rather than being stretched until the brightest parts are nearly white - so a photo keeps the exposure it was taken with, and colours land close to what other raw developers show. Coloured speckle is cleaned up before the colour information is reconstructed, where it is still possible to tell it apart from detail.
+RAW files are developed from the actual sensor data: a photo keeps the exposure it was taken with, colours land close to what other raw developers show, and coloured speckle is cleaned up along the way.
 
 Lens defects are corrected from measured data: distortion, the coloured fringes in the corners and the darkening towards the edges. FerrumPix brings an open collection covering some 1300 lenses and recognises lens and camera from the shot data. If there is no data for your lens, nothing is changed - a wrong lens curve is more visible than a missing one. It can be adjusted or switched off per photo.
 
@@ -89,21 +89,21 @@ Edits to a RAW go into a small `.fpxmp` sidecar next to it; the RAW itself is ne
 
 HEIC/HEIF/AVIF and TIFF open read-only - *Save as…* writes them out in one of the normal formats. HEIC needs the system's `libheif`, except on macOS, which reads it itself; TIFF needs nothing extra.
 
-A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture: each layer arrives as its own layer here, with its name, position, opacity, blend mode and clipping. What Photoshop stores as settings instead of pixels - adjustment layers and layer effects - cannot come along, because the file holds no computed pixels for them. The other way round, *Save as…* offers PSD as a target and writes the whole stack: the picture without objects at the bottom, every object on its own layer above it, and the finished picture alongside so that any program shows the right thing at once. Text and shapes become pixels for everyone else; the file has been opened in Photoshop, Affinity and GIMP. It also carries the whole edit alongside those layers, so opening it in FerrumPix again gives you back the text as text, the shapes as shapes and the corrections as corrections. Other programs skip that part, and saving the file in one of them drops it.
+A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture, each with its name, position, opacity, blend mode and clipping. Adjustment layers and layer effects cannot come along. *Save as…* writes the whole stack back out, so the file opens as it should in Photoshop, Affinity or GIMP - and reopened in FerrumPix it gives you back the text as text, the shapes as shapes and the corrections as corrections.
 
-Where a file from Photoshop carries text layers, FerrumPix asks on opening whether to take them over as text or as a picture. As text the wording can be typed on, with position, size and colour taken from the layer and the size of the type estimated from its height; the font falls back to the default, because what the file says about it sits in a part that cannot be read with any confidence. As a picture every pixel is exactly as it was and the words are fixed. Written out, text is always pixels for other programs.
+Text layers can be taken over as text you can keep typing on, or as a picture with every pixel as it was. FerrumPix asks on opening, and the answer can be set once in the settings.
 
-Both directions are deliberately plain for now: a stack of picture layers with name, position, opacity, blend mode, clipping and visibility. Layer masks, groups, 16-bit files and colour modes other than RGB are not covered, and a file that goes beyond what is read opens flat as before instead of half right.
+Layer masks, groups, 16-bit files and colour modes other than RGB are not covered. A file that goes beyond what is read opens flat instead of half right.
 
 ### Model files
 
 Seven features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, denoising a photo with a model, enlarging a photo with a model, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
 
-Enlarging with a model is offered in *Resize* and *Export to*: five models, from twice to four times, thorough or quick, one that keeps the grain instead of removing it, and one for drawings. Each says in a sentence what it is for. It runs before any target size you type in, so you can enlarge four times and then come back down to an exact width. The choice starts empty every time - a run costs seconds to minutes per picture.
+Enlarging with a model is offered in *Resize* and *Export to*: five models, from twice to four times, thorough or quick, one that keeps the grain instead of removing it, and one for drawings. Each says in a sentence what it is for, and a run costs seconds to minutes per picture.
 
 Finding people and naming places have to be switched on there as well, on top of fetching the file. A face is a different matter from a keyword, and where a photo was taken is one too - so neither happens unless you say so. Place names come from a table on your own machine; nothing is looked up anywhere, and there is no map view.
 
-The same section has a switch for the graphics card. It is off to begin with; turned on, denoising, enlarging, click-to-select and the depth map run on the card instead of the processor and finish several times sooner, with the same result. FerrumPix names the card it found, will try it out when you ask, and lets you pick if the machine has more than one. Whatever the card cannot take - or will not do faster - keeps running on the processor, and if the card fails outright nothing is lost but time.
+The same section has a switch for the graphics card. It is off to begin with; turned on, denoising, enlarging, click-to-select and the depth map run on the card and finish several times sooner, with the same result. FerrumPix names the card it found and lets you pick if the machine has more than one.
 
 Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), [SCUNet](https://github.com/cszn/SCUNet) (Apache-2.0), [NAFNet](https://github.com/megvii-research/NAFNet) (MIT), [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (BSD-3-Clause), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0), the [ONNX Model Zoo](https://github.com/onnx/models) (Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
 
@@ -149,6 +149,8 @@ The editor can be set up to match how you work: which tool it opens with, the or
 
 Two switches concern RAW development: adapting the base brightness to the camera model using reference values for over 200 models (off by default), and whether the lens correction is on for new photos (on by default - it does nothing unless there is data for your lens).
 
+Your version is at the top, with a link to the download page when a different one has been published.
+
 The last two sections are reference: a full list of keyboard and mouse shortcuts, and a *Technology* section listing everything FerrumPix is built on with a link to each licence.
 
 ## Installation
@@ -166,8 +168,7 @@ The last two sections are reference: a full list of keyboard and mouse shortcuts
 
 On Arch and its derivatives there is [ferrumpix-bin](https://aur.archlinux.org/packages/ferrumpix-bin) in the AUR.
 
-The AppImage carries built-in update information: tools that manage AppImages spot new
-versions on their own and download only what changed.
+The AppImage carries update information, so tools that manage AppImages find new versions on their own.
 
 ### Windows
 
@@ -183,8 +184,6 @@ versions on their own and download only what changed.
 |---|---|---|
 | App bundle | Intel Macs | [FerrumPix-osx-x64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-x64-unsigned.app.zip) |
 | App bundle | Apple Silicon | [FerrumPix-osx-arm64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-arm64-unsigned.app.zip) |
-
-The packages are self-contained and include the .NET runtime.
 
 ### Experimental
 

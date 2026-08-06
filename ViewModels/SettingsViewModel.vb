@@ -73,6 +73,9 @@ Namespace ViewModels
         Private _runningApplicationScale As Double = 1.0
         Private _runningApplicationScaleScreen As String = "HDMI-A-1"
         Private ReadOnly _applicationScaleScreens As New ObservableCollection(Of String)()
+        Private _availableVersion As String = ""
+        Private _updateCheckDone As Boolean = False
+        Private _updateCheckRunning As Boolean = False
         Private _cleanupResultMessage As String = ""
         Private _thumbnailCacheResultMessage As String = ""
         Private _videoHardwareAcceleration As Boolean = False
@@ -205,6 +208,48 @@ Namespace ViewModels
                 Return If(plus >= 0, informational.Substring(0, plus), informational)
             End Get
         End Property
+
+        ''' <summary>Die veröffentlichte Nummer, wenn sie sich von der laufenden unterscheidet -
+        ''' sonst leer.</summary>
+        Public ReadOnly Property AvailableVersion As String
+            Get
+                Return _availableVersion
+            End Get
+        End Property
+
+        ''' <summary>Steuert den Hinweis neben der Versionsangabe.</summary>
+        Public ReadOnly Property IsUpdateAvailable As Boolean
+            Get
+                Return _availableVersion.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Fragt beim Öffnen der Einstellungen einmal nach, welche Fassung veröffentlicht
+        ''' ist. Weicht sie von der laufenden ab, erscheint der Hinweis neben der Versionsangabe.
+        '''
+        ''' Einmal je Sitzung, und nur nach einer Antwort, die ankam: scheitert der Abruf, bleibt
+        ''' die Sperre offen, damit ein späteres Öffnen es noch einmal versuchen kann. Gescheitert
+        ''' wird still - es gibt nichts anzuzeigen und nichts zu melden.</summary>
+        Public Async Sub BeginUpdateCheck()
+            If _updateCheckDone OrElse _updateCheckRunning Then Return
+            _updateCheckRunning = True
+            Try
+                Dim published = Await UpdateCheckService.FetchLatestVersionAsync()
+                ' Leer heißt: keine brauchbare Antwort. Dann bleibt die Sperre offen.
+                If published.Length = 0 Then Return
+                _updateCheckDone = True
+                Dim other = If(UpdateCheckService.IsDifferent(published, DisplayVersion), published, "")
+                If String.Equals(other, _availableVersion, StringComparison.Ordinal) Then Return
+                _availableVersion = other
+                Me.RaisePropertyChanged(NameOf(AvailableVersion))
+                Me.RaisePropertyChanged(NameOf(IsUpdateAvailable))
+            Catch ex As Exception
+                ' Ein Async Sub reicht Ausnahmen an niemanden weiter - unbehandelt beendet das die App.
+                DiagnosticLogService.LogException("SettingsViewModel.BeginUpdateCheck", ex)
+            Finally
+                _updateCheckRunning = False
+            End Try
+        End Sub
 
         Public ReadOnly Property IsDarkThemeMode As Boolean
             Get

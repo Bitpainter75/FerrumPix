@@ -208,9 +208,6 @@ Namespace Views
                         text, PlatformShortcutService.FormatPrimaryShortcut("D")),
                     "copy", vm.DuplicateSelectedAnnotationCommand))
             End If
-            If vm.HasSelectedAdjustmentLayer Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Neue Korrektur mit kopierter Maske"), "adjustments-plus", vm.AddAdjustmentWithSameMaskCommand))
-            End If
             ' Ebenenmaske und Schnittmaske gelten fuer GENAU EIN Objekt - bei einer Mehrfachauswahl
             ' sagen die Eigenschaften des ViewModels schon Nein, hier bleiben die Eintraege dann weg.
             If vm.CanAddAnnotationMask Then

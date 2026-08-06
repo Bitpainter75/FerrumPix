@@ -11055,7 +11055,6 @@ Namespace ViewModels
         Public ReadOnly Property UngroupSelectedAnnotationsCommand As ICommand
         Public ReadOnly Property ToggleAnnotationGroupCollapsedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedAnnotationCommand As ICommand
-        Public ReadOnly Property AddAdjustmentWithSameMaskCommand As ICommand
         Public ReadOnly Property AddAnnotationMaskCommand As ICommand
         Public ReadOnly Property EditAnnotationMaskCommand As ICommand
         Public ReadOnly Property RemoveAnnotationMaskCommand As ICommand
@@ -11389,9 +11388,6 @@ Namespace ViewModels
             DuplicateSelectedAnnotationCommand = ReactiveCommand.Create(Sub()
                                                                             DuplicateSelectedAnnotation()
                                                                         End Sub)
-            AddAdjustmentWithSameMaskCommand = ReactiveCommand.Create(Sub()
-                                                                          AddAdjustmentWithSameMask()
-                                                                      End Sub)
             AddAnnotationMaskCommand = ReactiveCommand.Create(Sub() AddMaskToSelectedAnnotation())
             EditAnnotationMaskCommand = ReactiveCommand.Create(Sub() EditSelectedAnnotationMask())
             RemoveAnnotationMaskCommand = ReactiveCommand.Create(Sub() RemoveSelectedAnnotationMask())
@@ -17640,8 +17636,7 @@ Namespace ViewModels
         ''' <summary>Legt eine UNABHAENGIGE Kopie dieser Korrekturebene unmittelbar darueber an: eigene
         ''' Kennung, eigene Maske, Reglerwerte mitgenommen. Die eigene Maske ist der Kern - zeigten
         ''' beide auf dieselbe, aenderte Umkehren, Nachmalen oder Verschieben an der einen die andere
-        ''' mit. Wer sich eine Maske ausdruecklich teilen will, nimmt „Neue Korrektur mit derselben
-        ''' Maske". Ohne Undo-Punkt, Neuaufbau und Vorschau: das steuert der Aufrufer.</summary>
+        ''' mit. Ohne Undo-Punkt, Neuaufbau und Vorschau: das steuert der Aufrufer.</summary>
         Private Function DuplicateAdjustmentLayer(source As MaskedAdjustmentLayer, name As String) As MaskedAdjustmentLayer
             If source Is Nothing Then Return Nothing
             Dim index = _maskedAdjustmentLayers.IndexOf(source)
@@ -17653,53 +17648,6 @@ Namespace ViewModels
             _maskedAdjustmentLayers.Insert(index + 1, copy)
             Return copy
         End Function
-
-        ''' <summary>Legt über der markierten lokalen Korrektur einen neutralen weiteren Schritt mit
-        ''' derselben Maskenform an. Anders als „Duplizieren" werden die Reglerwerte nicht kopiert.
-        '''
-        ''' KEINE GETEILTE MASKE MEHR (Nutzerentscheidung 2026-08-06): die neue Ebene bekommt eine
-        ''' eigene Abschrift. Vorher zeigten beide auf dieselbe `MaskId`, und wer die Maske der einen
-        ''' nachmalte oder umkehrte, aenderte die andere mit - im Ebenenpanel sahen danach alle so
-        ''' erzeugten Ebenen wieder gleich aus. Zwei Ebenen teilen sich damit an KEINER Stelle mehr
-        ''' eine Maske.</summary>
-        Private Sub AddAdjustmentWithSameMask()
-            If Not HasSelectedAdjustmentLayer Then Return
-            Dim selectedId = _selectedMaskedAdjustmentLayerId
-            CommitSelectionAdjustModeToModel()
-            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
-
-            Dim index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = selectedId)
-            If index < 0 Then Return
-            Dim source = _maskedAdjustmentLayers(index)
-            If String.IsNullOrWhiteSpace(source.MaskId) OrElse
-               Not _imageMasks.Any(Function(m) m IsNot Nothing AndAlso m.Id = source.MaskId) Then Return
-
-            PushUndo()
-            ' Die ART der Quelle mitnehmen: eine zweite Korrektur auf DERSELBEN Maske ist wieder eine
-            ' Masken- bzw. Auswahl-Ebene. Ohne das entstand neben einer Masken-Ebene eine Auswahl-Ebene
-            ' auf derselben Maske - also genau die unerwünschte Mischung auf einer Maske.
-            Dim layer = New MaskedAdjustmentLayer With {
-                .Name = If(source.IsMaskLayer, LocalizationService.T("Masken-Korrektur"), LocalizationService.T("Auswahl-Korrektur")) &
-                        " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
-                .MaskId = source.MaskId,
-                .Adjustments = New ImageAdjustments(),
-                .IsMaskLayer = source.IsMaskLayer,
-                .StackAboveAnnotationId = source.StackAboveAnnotationId
-            }
-            ' Eigene Abschrift der Maske statt derselben Kennung - siehe oben.
-            GiveCopyItsOwnMask(layer)
-            If String.IsNullOrEmpty(layer.MaskId) Then Return
-            ' Die weitere Korrektur gehört neben ihr Geschwister - also an dieselbe
-            ' Stelle im Stapel (StackAboveAnnotationId oben mitgenommen), nicht ans Ende.
-            _maskedAdjustmentLayers.Insert(index + 1, layer)
-            _selectedMaskedAdjustmentLayerId = layer.Id
-            RebuildLayerRows()
-            _hasChanges = True
-            RaiseResetButtonStateChanged()
-            RefreshSelectionAdjustMode()
-            TraceLayerInventory("„Neue Korrektur mit kopierter Maske""")
-            SchedulePreviewUpdate()
-        End Sub
 
         Private Sub MoveSelectedAnnotation(direction As Integer)
             If HasSelectedAdjustmentLayer Then

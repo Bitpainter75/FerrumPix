@@ -428,6 +428,9 @@ Namespace ViewModels
                     Settings?.BeginEditSession()
                 End If
                 Settings?.RefreshThumbnailCacheFolders()
+                ' Die Frage nach einer neueren Fassung stellt sich nur hier - der Hinweis steht
+                ' neben der Versionsangabe, und woanders wird nichts abgefragt.
+                Settings?.BeginUpdateCheck()
                 CurrentMode = AppMode.Settings
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher

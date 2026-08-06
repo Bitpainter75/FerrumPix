@@ -356,14 +356,6 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-subtract.svg"
                                        Width="16" Height="16" />
                     </Button>
-                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
-                            Command="{Binding AddAdjustmentWithSameMaskCommand}"
-                            IsVisible="{Binding HasSelectedAdjustmentLayer}"
-                            IsEnabled="{Binding HasSelectedAdjustmentLayer}"
-                            ToolTip.Tip="Neue Korrektur mit kopierter Maske">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
-                                       Width="16" Height="16" />
-                    </Button>
                     <!-- Ebenenmaske: EIN Knopf, der zwei Dinge tut, je nachdem was die Ebene schon
                          hat - anlegen oder bearbeiten. Zwei Knöpfe nebeneinander, von denen immer
                          einer grau ist, sagen dasselbe und kosten Platz. -->

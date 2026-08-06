@@ -134,6 +134,14 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Der Hinweis neben der Versionsangabe führt zur zuletzt veröffentlichten Fassung.
+        ''' Die Adresse steht im Dienst, der auch die Nummer holt - eine zweite Stelle mit derselben
+        ''' Adresse liefe irgendwann auseinander.</summary>
+        Public Sub OnReleasePageClick(sender As Object, e As RoutedEventArgs)
+            OpenExternalUrl(UpdateCheckService.ReleasesAddress)
+            e.Handled = True
+        End Sub
+
         ''' <summary>Öffnet den Lizenztext des angeklickten Bestandteils. Die Adresse steht im
         ''' Tag der Schaltfläche, damit die Liste im XAML gepflegt werden kann, ohne hier für
         ''' jeden Eintrag eine eigene Behandlung anzulegen.</summary>

@@ -157,7 +157,20 @@
 
                         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" ColumnSpacing="12" >
                             <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding DisplayVersion}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="{Binding DisplayVersion}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="10,4" VerticalAlignment="Center"
+                                        IsVisible="{Binding IsUpdateAvailable}"
+                                        Click="OnReleasePageClick"
+                                        ToolTip.Tip="Veröffentlichte Fassung herunterladen">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="14" Height="14"
+                                                       IconBrush="{DynamicResource FP.Accent}"/>
+                                        <TextBlock Text="Aktualisierung verfügbar:" Foreground="{DynamicResource FP.Accent}"/>
+                                        <TextBlock Text="{Binding AvailableVersion}" Foreground="{DynamicResource FP.Accent}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">

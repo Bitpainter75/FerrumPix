@@ -3973,9 +3973,6 @@
   <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
     <value>Novo ajuste com a mesma máscara</value>
   </data>
-  <data name="Neue_Korrektur_mit_kopierter_Maske_933042f9" xml:space="preserve">
-    <value>Novo ajuste com uma cópia da máscara</value>
-  </data>
   <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
     <value>Máscara de seleção migrada</value>
   </data>
@@ -6573,5 +6570,11 @@
   </data>
   <data name="Immer_fragen_6007356b" xml:space="preserve">
     <value>Perguntar sempre</value>
+  </data>
+  <data name="Aktualisierung_verf_gbar_c20b1333" xml:space="preserve">
+    <value>Atualização disponível:</value>
+  </data>
+  <data name="Ver_ffentlichte_Fassung_herunterladen_08d01ad8" xml:space="preserve">
+    <value>Transferir a versão publicada</value>
   </data>
 </root>

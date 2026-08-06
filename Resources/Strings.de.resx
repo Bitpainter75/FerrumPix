@@ -3974,9 +3974,6 @@
   <data name="Neue_Korrektur_mit_derselben_Maske_cc5e705b" xml:space="preserve">
     <value>Neue Korrektur mit derselben Maske</value>
   </data>
-  <data name="Neue_Korrektur_mit_kopierter_Maske_933042f9" xml:space="preserve">
-    <value>Neue Korrektur mit kopierter Maske</value>
-  </data>
   <data name="Migrierte_Auswahlmaske_131c0495" xml:space="preserve">
     <value>Migrierte Auswahlmaske</value>
   </data>
@@ -6574,5 +6571,11 @@
   </data>
   <data name="Immer_fragen_6007356b" xml:space="preserve">
     <value>Immer fragen</value>
+  </data>
+  <data name="Aktualisierung_verf_gbar_c20b1333" xml:space="preserve">
+    <value>Aktualisierung verfügbar:</value>
+  </data>
+  <data name="Ver_ffentlichte_Fassung_herunterladen_08d01ad8" xml:space="preserve">
+    <value>Veröffentlichte Fassung herunterladen</value>
   </data>
 </root>

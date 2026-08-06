@@ -1260,9 +1260,8 @@ Namespace ViewModels
 
         ''' <summary>Gibt der KOPIE eines Objekts eine eigene Ebenenmaske.
         '''
-        ''' Korrekturebenen teilen sich Masken ausdruecklich ("Neue Korrektur mit derselben Maske") -
-        ''' eine kopierte OBJEKTebene darf das nicht: wer die Maske der Kopie nachmalt, meint die
-        ''' Kopie und nicht zugleich das Original. Ohne Maske bleibt alles, wie es ist.</summary>
+        ''' Wer die Maske der Kopie nachmalt, meint die Kopie und nicht zugleich das Original. Ohne
+        ''' Maske bleibt alles, wie es ist.</summary>
         Private Sub GiveCopyItsOwnMask(copy As ImageAnnotation)
             If copy Is Nothing Then Return
             copy.MaskId = CloneMaskForCopy(copy.MaskId)
@@ -1270,9 +1269,9 @@ Namespace ViewModels
 
         ''' <summary>Dasselbe fuer die KOPIE einer Korrekturebene. „Duplizieren" heisst eine
         ''' UNABHAENGIGE zweite Ebene: wer danach ihre Maske umkehrt, nachmalt oder verschiebt, meint
-        ''' die Kopie und nicht zugleich das Original. Geteilt wird eine Maske ausschliesslich ueber
-        ''' „Neue Korrektur mit derselben Maske" - dafuer gibt es den eigenen Befehl. Vorher trug die
-        ''' Kopie dieselbe MaskId, und ein Umkehren an der Kopie kehrte die Ursprungsmaske mit um.</summary>
+        ''' die Kopie und nicht zugleich das Original. Zwei Ebenen teilen sich an KEINER Stelle eine
+        ''' Maske. Vorher trug die Kopie dieselbe MaskId, und ein Umkehren an der Kopie kehrte die
+        ''' Ursprungsmaske mit um.</summary>
         Private Sub GiveCopyItsOwnMask(copy As MaskedAdjustmentLayer)
             If copy Is Nothing Then Return
             copy.MaskId = CloneMaskForCopy(copy.MaskId)
@@ -3442,9 +3441,8 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Die Ebene, deren Maske gerade als Auswahl bearbeitet wird - oder Nothing.
-        ''' WICHTIG: Eine Maske kann von MEHREREN Ebenen geteilt werden ("Neue Korrektur mit derselben
-        ''' Maske"). Dann entscheidet die im Panel GEWÄHLTE Ebene; ein blindes LastOrDefault über die
-        ''' MaskId träfe sonst die zuletzt angelegte Ebene und schriebe Füllung/Maske auf die FALSCHE.</summary>
+        ''' Entschieden wird über die im Panel GEWÄHLTE Ebene; ein blindes LastOrDefault über die
+        ''' MaskId träfe die zuletzt angelegte Ebene und schriebe Füllung/Maske auf die FALSCHE.</summary>
         Private Function LayerForEditedMask() As MaskedAdjustmentLayer
             If _editingLayerMaskId = "" Then Return Nothing
             Dim picked = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
