@@ -1081,8 +1081,14 @@ Namespace ViewModels
             ' Bewertung der zuletzt in der Einzelansicht geoeffneten Datei, waehrend links der
             ' Name der fokussierten Flaeche stand - und ein Klick auf einen Stern haette sie dem
             ' falschen Bild gegeben.
-            ApplyCatalogAttributes(path)
+            '
+            ' ERST das Panel auf das Bild stellen, DANN die Katalogwerte setzen - wie im Oeffnen-
+            ' und im Blaettern-Weg. Andersherum raeumte LoadInfoPanelData sie gleich wieder ab: es
+            ' geht ueber InfoPanel.ShowItem, und das setzt beim Pfadwechsel alles auf Anfang. Vor
+            ' dem gemeinsamen Panel hielt der Betrachter diese Werte selbst, da war die Reihenfolge
+            ' noch gleichgueltig.
             LoadInfoPanelData(path)
+            ApplyCatalogAttributes(path)
             Me.RaisePropertyChanged(NameOf(CanEdit))
         End Sub
 

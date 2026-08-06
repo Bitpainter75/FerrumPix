@@ -29,20 +29,20 @@ Namespace ViewModels
         ''' Originals (Nutzerbefund 2026-08-06). Die Vorschau kommt weiter aus der Quelle, denn das
         ''' MOTIV stimmt ja; nur die Zahlen daneben duerfen nicht von ihr kommen.</summary>
         Public Shared Function ForPlannedWrite(targetPath As String, previewSourcePath As String) As FileConflictInfo
-            Dim unbekannt = LocalizationService.T("wird berechnet")
+            Dim pending = LocalizationService.T("wird berechnet")
             Dim info As New FileConflictInfo With {
                 .FilePath = targetPath,
                 .FileName = IO.Path.GetFileName(targetPath),
-                .FileSizeText = unbekannt,
+                .FileSizeText = pending,
                 .ModifiedText = "-",
-                .DimensionsText = unbekannt,
+                .DimensionsText = pending,
                 .FileTypeText = $"{IO.Path.GetExtension(targetPath).TrimStart("."c).ToUpperInvariant()}-Datei"
             }
             ' Nur die Vorschau, nicht die Masse: TryLoadImageInfo wuerde beides setzen.
             If Not String.IsNullOrEmpty(previewSourcePath) AndAlso File.Exists(previewSourcePath) Then
-                Dim nurBild As New FileConflictInfo()
-                TryLoadImageInfo(nurBild, previewSourcePath)
-                info.Preview = nurBild.Preview
+                Dim previewOnly As New FileConflictInfo()
+                TryLoadImageInfo(previewOnly, previewSourcePath)
+                info.Preview = previewOnly.Preview
             End If
             Return info
         End Function

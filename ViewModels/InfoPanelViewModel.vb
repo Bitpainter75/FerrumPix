@@ -15,11 +15,14 @@ Imports ReactiveUI
 Namespace ViewModels
 
     ''' <summary>
-    ''' Der Zustand des Infopanels fuer EIN Bild.
+    ''' Der Zustand des Infopanels fuer EIN Bild oder fuer eine Auswahl.
     '''
-    ''' Warum eigenstaendig: dasselbe Panel haengt jetzt auch an der Galerie. Betrachter und Editor
-    ''' tragen ihren Panel-Zustand noch selbst, weil dort Bildwechsel, Immich-Sitzung und Vergleich
-    ''' mit hineinspielen. Die Galerie braucht davon nichts - sie zeigt schlicht das markierte Bild.
+    ''' Galerie, Betrachter und Editor haengen ALLE DREI hier: was die Leiste anzeigt, ist ueberall
+    ''' dasselbe. Verschieden bleiben nur die LADEWEGE - der Betrachter wechselt dreistufig und holt
+    ''' fuer Immich erst die Datei, der Editor rechnet sein Histogramm aus dem bearbeiteten Bild.
+    ''' Wer seinen eigenen Weg mitbringt, stellt <see cref="OwnerLoadsDetails"/> und fuettert das
+    ''' Panel ueber <see cref="SetOwnedPath"/>, <see cref="ApplyOwnedState"/> und
+    ''' <see cref="ApplyOwnedTags"/>; die Galerie laedt selbst.
     '''
     ''' Geschrieben wird ueber den Katalog, genau wie im Betrachter. Das markierte Element bekommt
     ''' die Aenderung zusaetzlich direkt, sonst zeigte die Kachel daneben weiter den alten Stand.
@@ -141,9 +144,9 @@ Namespace ViewModels
         ''' gehangen - beim Wechsel von einem Bild auf ein VIDEO waere der Block sichtbar
         ''' geblieben.</summary>
         Public Sub SetOwnedPath(path As String)
-            Dim neu = If(path, "")
-            If String.Equals(_path, neu, StringComparison.OrdinalIgnoreCase) Then Return
-            _path = neu
+            Dim wanted = If(path, "")
+            If String.Equals(_path, wanted, StringComparison.OrdinalIgnoreCase) Then Return
+            _path = wanted
             RaiseStateChanged()
         End Sub
 
@@ -160,9 +163,9 @@ Namespace ViewModels
         ''' NICHT "tags" als Parametername: VB unterscheidet keine Gross- und Kleinschreibung, der
         ''' Parameter verdeckte die Eigenschaft Tags und Tags.Clear() leerte die Eingabe.
         Public Sub ApplyOwnedTags(loadedTags As IEnumerable(Of String))
-            Dim liste = If(loadedTags, Enumerable.Empty(Of String)()).ToList()
+            Dim wanted = If(loadedTags, Enumerable.Empty(Of String)()).ToList()
             Tags.Clear()
-            For Each tag In liste
+            For Each tag In wanted
                 Tags.Add(tag)
             Next
             RefreshTagSuggestions()
@@ -306,6 +309,11 @@ Namespace ViewModels
         ''' <summary>Die Elemente, an deren Meldungen das Panel gerade haengt.</summary>
         Private ReadOnly _watchedItems As New List(Of ImageItem)()
 
+        ''' <summary>Laeuft gerade ein Schreibvorgang des Panels auf seine eigenen Elemente?
+        ''' Dann ist die Auswahl waehrenddessen halb geschrieben, und ein Neueinlesen daraus
+        ''' ergaebe einen Zustand, den niemand gewaehlt hat.</summary>
+        Private _isWritingItems As Boolean
+
         ''' <summary>Das Panel hoert seinen Elementen ZU, statt auf Anstoesse von aussen zu warten.
         '''
         ''' Bewertung, Herz und Etikett lassen sich an vielen Stellen aendern: Sternemenue der
@@ -317,18 +325,21 @@ Namespace ViewModels
         ''' Die Elemente melden ihre Aenderung ohnehin, sonst zeigte die Kachel sie nicht. Wer
         ''' kuenftig einen neuen Weg baut, ist damit bauartbedingt versorgt.</summary>
         Private Sub WatchItems()
-            For Each alt In _watchedItems
-                RemoveHandler alt.PropertyChanged, AddressOf OnWatchedItemChanged
+            For Each previous In _watchedItems
+                RemoveHandler previous.PropertyChanged, AddressOf OnWatchedItemChanged
             Next
             _watchedItems.Clear()
-            For Each aktuell In _items
-                If aktuell Is Nothing Then Continue For
-                AddHandler aktuell.PropertyChanged, AddressOf OnWatchedItemChanged
-                _watchedItems.Add(aktuell)
+            For Each current In _items
+                If current Is Nothing Then Continue For
+                AddHandler current.PropertyChanged, AddressOf OnWatchedItemChanged
+                _watchedItems.Add(current)
             Next
         End Sub
 
         Private Sub OnWatchedItemChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
+            ' Der eigene Schreibvorgang zaehlt nicht als Aenderung "von aussen": das Panel kennt
+            ' den Wert bereits und meldet ihn selbst, sobald alle Elemente ihn tragen.
+            If _isWritingItems Then Return
             Select Case e.PropertyName
                 Case NameOf(ImageItem.Rating), NameOf(ImageItem.IsFavorite), NameOf(ImageItem.ColorLabel)
                     ReloadRatingStateFromItems()
@@ -791,12 +802,24 @@ Namespace ViewModels
                 Return _colorLabel
             End Get
             Set(value As String)
-                _colorLabel = If(value, "")
-                For Each entry In _items
-                    entry.ColorLabel = _colorLabel
-                Next
+                Dim newLabel = If(value, "")
+                _colorLabel = newLabel
+                ' Aus der ORTSVARIABLEN schreiben und den Lauscher dabei stumm stellen. Beides
+                ' zusammen, weil hier zwei Fallen liegen: das gesetzte Element meldet SOFORT, und
+                ' das Neueinlesen sah die Auswahl dann halb geschrieben - ein Element rot, die
+                ' uebrigen noch leer, also "gemischt", also leer. Der Rest der Schleife trug
+                ' anschliessend genau dieses Leer weiter, und der Katalog bekam es auch (gemessen
+                ' 2026-08-06: von drei markierten Bildern behielt nur das erste die Farbe).
+                _isWritingItems = True
+                Try
+                    For Each entry In _items
+                        entry.ColorLabel = newLabel
+                    Next
+                Finally
+                    _isWritingItems = False
+                End Try
                 Dim affected = Targets()
-                If affected.Count > 0 AndAlso PersistColorLabel IsNot Nothing Then PersistColorLabel.Invoke(affected, _colorLabel)
+                If affected.Count > 0 AndAlso PersistColorLabel IsNot Nothing Then PersistColorLabel.Invoke(affected, newLabel)
                 RaiseColorLabelChanged()
             End Set
         End Property

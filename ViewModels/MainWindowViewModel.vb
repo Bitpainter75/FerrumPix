@@ -3078,11 +3078,11 @@ Namespace ViewModels
             ' Namen existiert bereits" die falsche Auskunft - es ist dieselbe Datei, und sie wird
             ' ersetzt. Kommt vor, wenn der Zielordner der Ordner der Quelle ist und das Namensmuster
             ' nichts anhaengt (Nutzerbefund 2026-08-06: Bildgroesse aendern in den aktuellen Ordner).
-            Dim aufSichSelbst = incomingIsPlanned AndAlso PathIdentity.AreSame(existingPath, incomingPath)
+            Dim targetIsSource = incomingIsPlanned AndAlso PathIdentity.AreSame(existingPath, incomingPath)
 
             DialogExistingFile = FileConflictInfo.FromPath(existingPath)
             DialogExistingFile.Headline = LocalizationService.T("Datei im Zielordner")
-            DialogExistingFile.Subtitle = If(aufSichSelbst,
+            DialogExistingFile.Subtitle = If(targetIsSource,
                                              LocalizationService.T("die gerade bearbeitete Datei"),
                                              LocalizationService.T("bereits vorhanden"))
 
@@ -3097,12 +3097,12 @@ Namespace ViewModels
                                              LocalizationService.T("neue Datei"))
 
             DialogConflictRenameText = CreateUniqueConflictName(existingPath)
-            Dim frage = If(aufSichSelbst,
+            Dim question = If(targetIsSource,
                            LocalizationService.T("Diese Datei ist zugleich die Quelle. Wird sie überschrieben, ist das Original ersetzt."),
                            LocalizationService.T("Eine Datei mit diesem Namen existiert bereits. Möchten Sie die bestehende Datei wirklich überschreiben?"))
             Dim result = Await ShowDialogAsync(AppDialogKind.FileConflict,
                                                "Datei überschreiben?",
-                                               frage,
+                                               question,
                                                "",
                                                "Überschreiben",
                                                "Abbrechen")
