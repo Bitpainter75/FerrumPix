@@ -12399,6 +12399,13 @@ Namespace ViewModels
             If asset Is Nothing Then Return
 
             _immichSourceFileName = asset.FileName
+            ' Der Aufnahmeort kommt vom Server: die Temp-Kopie steht in keinem Katalog, und die
+            ' Leiste bliebe sonst ohne Ort - obwohl Galerie und Betrachter ihn zeigen. Das Element
+            ' meldet die Aenderung, das Panel liest sie von dort.
+            If _infoItem IsNot Nothing Then
+                _infoItem.PlaceCity = asset.City
+                _infoItem.PlaceCountry = asset.Country
+            End If
             ' Etikett ist rein lokal - unter dem Pseudo-Pfad des Assets abgelegt (wie in der Galerie).
             InfoPanel.ApplyOwnedState(asset.Rating, asset.IsFavorite,
                                       LibraryService.Instance.GetColorLabel(ImmichService.MakePseudoPath(asset.Id, asset.FileName)))
@@ -12413,6 +12420,17 @@ Namespace ViewModels
             If _infoItem Is Nothing OrElse
                Not String.Equals(_infoItem.FilePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 _infoItem = ImageItem.CreateLightweight(imagePath)
+                ' Bei einer Immich-Temp-Kopie sofort der zuletzt gespeicherte Ort aus dem Index -
+                ' der Serverabruf laeuft erst danach an, und ohne diesen Stand bliebe die Zeile bis
+                ' zu seiner Antwort leer.
+                If ImmichService.IsImmichTempPath(imagePath) Then
+                    Dim assetId = IO.Path.GetFileNameWithoutExtension(imagePath)
+                    If Not String.IsNullOrEmpty(assetId) Then
+                        Dim place = ImmichIndexService.Instance.GetPlace(ImmichService.ServerKey, assetId)
+                        _infoItem.PlaceCity = place.City
+                        _infoItem.PlaceCountry = place.Country
+                    End If
+                End If
             End If
             Return _infoItem
         End Function

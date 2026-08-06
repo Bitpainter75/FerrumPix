@@ -343,6 +343,11 @@ Namespace ViewModels
             Select Case e.PropertyName
                 Case NameOf(ImageItem.Rating), NameOf(ImageItem.IsFavorite), NameOf(ImageItem.ColorLabel)
                     ReloadRatingStateFromItems()
+                Case NameOf(ImageItem.PlaceCity), NameOf(ImageItem.PlaceCountry)
+                    ' Bei einem Serverbild kommen die Aufnahmedaten erst mit dem Detail-Abruf, und
+                    ' der haengt am Sichtbereich - der Ort trifft also womoeglich erst ein, wenn die
+                    ' Leiste das Bild schon zeigt.
+                    LoadPlace()
             End Select
         End Sub
 
@@ -444,9 +449,10 @@ Namespace ViewModels
 
         ''' <summary>Der Aufnahmeort, etwa "Norden, Deutschland".
         '''
-        ''' Er kommt aus dem Katalog und nicht aus der Datei: die Koordinaten stehen zwar im Bild,
-        ''' der NAME dazu aber nirgends - den schlaegt die Ortstabelle nach, und das Ergebnis liegt
-        ''' im Katalog.</summary>
+        ''' Bei einem lokalen Bild kommt er aus dem Katalog und nicht aus der Datei: die Koordinaten
+        ''' stehen zwar im Bild, der NAME dazu aber nirgends - den schlaegt die Ortstabelle nach, und
+        ''' das Ergebnis liegt im Katalog. Bei einem Immich-Asset hat der Server ihn schon benannt
+        ''' und schickt ihn mit; dort haengt er am Element (siehe PlacePanelService).</summary>
         Public ReadOnly Property PlaceText As String Implements IInfoSidebarPanel.PlaceText
             Get
                 Return _placeText
@@ -460,7 +466,10 @@ Namespace ViewModels
         End Property
 
         Private Sub LoadPlace()
-            _placeText = PlacePanelService.TextFor(If(_items.Count = 1, _items(0)?.FilePath, ""))
+            ' Ueber das ELEMENT, nicht ueber den Pfad: ein Immich-Asset traegt seinen Ort selbst,
+            ' ein lokales Bild holt ihn aus dem Katalog. Der Pfad allein reichte nur fuer das eine
+            ' von beiden, und bei einem Serverbild blieb die Zeile deshalb leer.
+            _placeText = PlacePanelService.TextFor(If(_items.Count = 1, _items(0), Nothing))
             Me.RaisePropertyChanged(NameOf(PlaceText))
             Me.RaisePropertyChanged(NameOf(HasPlace))
         End Sub

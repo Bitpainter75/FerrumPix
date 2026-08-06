@@ -108,6 +108,48 @@ Namespace Services
             End Try
         End Function
 
+        Private Shared _codeByCountryName As Dictionary(Of String, String)
+
+        ''' <summary>Das ISO-Kuerzel zu einem ENGLISCHEN Landesnamen ("Germany" -> "DE").
+        '''
+        ''' Fuer Ortsnamen, die von aussen kommen: ein Immich-Server benennt den Aufnahmeort selbst,
+        ''' schickt aber nur den englischen Landesnamen und kein Kuerzel. Ueber den Umweg steht auch
+        ''' dort der Landesname in der Sprache der Oberflaeche, statt als einziger Eintrag der Leiste
+        ''' englisch dazustehen.
+        '''
+        ''' Gebaut wird die Zuordnung EINMAL aus den Regionen, die .NET kennt - die Ortstabelle
+        ''' taugt dafuer nicht: sie ist Beigabe und fehlt womoeglich, waehrend der Serverbestand
+        ''' trotzdem Orte hat. Ein unbekannter Name gibt einen leeren Text, und der Aufrufer bleibt
+        ''' beim Namen, den er hat.</summary>
+        Public Shared Function CountryCodeForName(countryName As String) As String
+            Dim wanted = If(countryName, "").Trim()
+            If wanted.Length = 0 Then Return ""
+            SyncLock _lock
+                If _codeByCountryName Is Nothing Then
+                    Dim map As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+                    Try
+                        For Each culture In CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+                            Try
+                                Dim region As New RegionInfo(culture.Name)
+                                Dim code = region.TwoLetterISORegionName
+                                If code.Length <> 2 Then Continue For
+                                map(region.EnglishName) = code
+                                map(region.NativeName) = code
+                            Catch
+                                ' Eine Kultur ohne Region (z.B. "eo") - die naechste.
+                            End Try
+                        Next
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Orte.Laendernamen", ex)
+                    End Try
+                    _codeByCountryName = map
+                End If
+                Dim found As String = Nothing
+                If _codeByCountryName.TryGetValue(wanted, found) Then Return found
+            End SyncLock
+            Return ""
+        End Function
+
         ''' <summary>Der naechstgelegene Ort, oder Nothing, wenn keiner nah genug liegt.</summary>
         Public Shared Function Nearest(latitude As Double, longitude As Double) As PlaceHit
             If Double.IsNaN(latitude) OrElse Double.IsNaN(longitude) Then Return Nothing

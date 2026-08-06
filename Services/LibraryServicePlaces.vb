@@ -40,14 +40,41 @@ Namespace Services
         Private Sub New()
         End Sub
 
+        ''' <summary>Der Ort eines ELEMENTS. Ueber diesen Weg gehen Galerie, Betrachter und Editor,
+        ''' denn nur das Element weiss, ob es lokal liegt oder auf einem Immich-Server.
+        '''
+        ''' Was das ELEMENT selbst weiss, gilt. Gefuellt ist das nur bei einem Immich-Asset: der
+        ''' Server hat den Ort benannt und liefert ihn mit den Aufnahmedaten, waehrend der Weg ueber
+        ''' den Katalog dafuer nichts faende - ein Pseudo-Pfad steht dort nicht, und Koordinaten zum
+        ''' Nachschlagen gibt es auch keine. Bei einem lokalen Bild ist das Feld leer, und es geht
+        ''' den gewohnten Weg ueber den Katalog.</summary>
+        Public Shared Function TextFor(item As Models.ImageItem) As String
+            If item Is Nothing Then Return ""
+            Dim city = If(item.PlaceCity, "").Trim()
+            Dim countryName = If(item.PlaceCountry, "").Trim()
+            If city.Length = 0 AndAlso countryName.Length = 0 Then Return TextFor(item.FilePath)
+            ' Der Server schickt den Landesnamen englisch und ohne Kuerzel; erst ueber den Namen
+            ' steht er in der Sprache der Oberflaeche - wie bei einem lokalen Bild auch.
+            Return Compose(city, PlaceLookupService.LocalizedCountry(
+                PlaceLookupService.CountryCodeForName(countryName), countryName))
+        End Function
+
         Public Shared Function TextFor(filePath As String) As String
             If String.IsNullOrWhiteSpace(filePath) Then Return ""
-            ' Ein Immich-Element liegt nicht im Dateisystem und steht in keinem lokalen Katalog.
+            ' Ein Immich-Element liegt nicht im Dateisystem und steht in keinem lokalen Katalog -
+            ' fuer den fuehrt der Weg ueber das Element (Ueberladung oben).
             If ImmichService.IsImmichPseudoPath(filePath) Then Return ""
             Dim place = LibraryService.Instance.GetPlace(filePath)
-            Dim land = PlaceLookupService.LocalizedCountry(place.CountryCode, place.Country)
-            If place.City.Length > 0 AndAlso land.Length > 0 Then Return $"{place.City}, {land}"
-            Return If(place.City.Length > 0, place.City, land)
+            Return Compose(place.City, PlaceLookupService.LocalizedCountry(place.CountryCode, place.Country))
+        End Function
+
+        ''' <summary>"Norden, Deutschland". Fehlt eines von beiden, faellt es samt Komma weg - eine
+        ''' Zeile, die mit einem Komma beginnt, sieht nach einem Fehler aus.</summary>
+        Private Shared Function Compose(city As String, country As String) As String
+            Dim town = If(city, "").Trim()
+            Dim state = If(country, "").Trim()
+            If town.Length > 0 AndAlso state.Length > 0 Then Return $"{town}, {state}"
+            Return If(town.Length > 0, town, state)
         End Function
 
     End Class

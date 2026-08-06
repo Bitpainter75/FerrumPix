@@ -101,22 +101,40 @@ Namespace Services
                 EnsureColumn(conn, "AssetList", "FileSize", "INTEGER NOT NULL DEFAULT 0")
                 EnsureColumn(conn, "AssetList", "DateTaken", "TEXT")
                 EnsureColumn(conn, "AssetList", "DateModified", "TEXT")
+                EnsureColumn(conn, "AssetList", "City", "TEXT")
+                EnsureColumn(conn, "AssetList", "Country", "TEXT")
+                ' DER ALTBESTAND MUSS WEG, NICHT NUR DIE SPALTE DAZU. Ein gespeicherter Eintrag gilt
+                ' so lange als gültig, wie sein UpdatedAt zum Server passt - ein alter Eintrag ohne
+                ' Ortsspalten sähe damit für immer aus wie "dieses Bild hat keinen Ort", und der
+                ' Ort käme nie an. Die Tabelle ist reiner Zwischenspeicher: was hier fehlt, holt der
+                ' nächste Detail-Abruf.
+                If EnsureColumn(conn, "AssetMeta", "City", "TEXT") Then ClearAssetMeta(conn)
+                EnsureColumn(conn, "AssetMeta", "Country", "TEXT")
             End Using
         End Sub
 
-        Private Shared Sub EnsureColumn(conn As SqliteConnection, tableName As String,
-                                        columnName As String, definition As String)
+        ''' <returns>True, wenn die Spalte gerade erst angelegt wurde.</returns>
+        Private Shared Function EnsureColumn(conn As SqliteConnection, tableName As String,
+                                             columnName As String, definition As String) As Boolean
             Using check = conn.CreateCommand()
                 check.CommandText = $"PRAGMA table_info({tableName})"
                 Using reader = check.ExecuteReader()
                     While reader.Read()
-                        If String.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase) Then Return
+                        If String.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase) Then Return False
                     End While
                 End Using
             End Using
             Using alter = conn.CreateCommand()
                 alter.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {definition}"
                 alter.ExecuteNonQuery()
+            End Using
+            Return True
+        End Function
+
+        Private Shared Sub ClearAssetMeta(conn As SqliteConnection)
+            Using cmd = conn.CreateCommand()
+                cmd.CommandText = "DELETE FROM AssetMeta"
+                cmd.ExecuteNonQuery()
             End Using
         End Sub
 
@@ -129,7 +147,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt " &
+                        cmd.CommandText = "SELECT AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt,City,Country " &
                                           "FROM AssetList WHERE ServerKey=$s ORDER BY Position"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         Using r = cmd.ExecuteReader()
@@ -146,7 +164,9 @@ Namespace Services
                                     .Width = If(r.IsDBNull(8), 0, r.GetInt32(8)),
                                     .Height = If(r.IsDBNull(9), 0, r.GetInt32(9)),
                                     .IsFavorite = Not r.IsDBNull(10) AndAlso r.GetInt32(10) <> 0,
-                                    .UpdatedAt = If(r.IsDBNull(11), "", r.GetString(11))
+                                    .UpdatedAt = If(r.IsDBNull(11), "", r.GetString(11)),
+                                    .City = If(r.IsDBNull(12), "", r.GetString(12)),
+                                    .Country = If(r.IsDBNull(13), "", r.GetString(13))
                                 })
                             End While
                         End Using
@@ -176,8 +196,8 @@ Namespace Services
                         End Using
                         Using ins = conn.CreateCommand()
                             ins.Transaction = transaction
-                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt) " &
-                                              "VALUES($s,$pos,$a,$n,$v,$c,$m,$fs,$dt,$dm,$w,$h,$f,$u)"
+                            ins.CommandText = "INSERT INTO AssetList(ServerKey,Position,AssetId,FileName,IsVideo,FileCreatedAt,FileModifiedAt,FileSize,DateTaken,DateModified,Width,Height,IsFavorite,UpdatedAt,City,Country) " &
+                                              "VALUES($s,$pos,$a,$n,$v,$c,$m,$fs,$dt,$dm,$w,$h,$f,$u,$city,$country)"
                             Dim pS = ins.Parameters.Add("$s", SqliteType.Text)
                             Dim pPos = ins.Parameters.Add("$pos", SqliteType.Integer)
                             Dim pA = ins.Parameters.Add("$a", SqliteType.Text)
@@ -192,6 +212,8 @@ Namespace Services
                             Dim pH = ins.Parameters.Add("$h", SqliteType.Integer)
                             Dim pF = ins.Parameters.Add("$f", SqliteType.Integer)
                             Dim pU = ins.Parameters.Add("$u", SqliteType.Text)
+                            Dim pCity = ins.Parameters.Add("$city", SqliteType.Text)
+                            Dim pCountry = ins.Parameters.Add("$country", SqliteType.Text)
                             pS.Value = serverKey
                             For i = 0 To assets.Count - 1
                                 Dim a = assets(i)
@@ -209,6 +231,8 @@ Namespace Services
                                 pH.Value = a.Height
                                 pF.Value = If(a.IsFavorite, 1, 0)
                                 pU.Value = If(a.UpdatedAt, "")
+                                pCity.Value = If(a.City, "")
+                                pCountry.Value = If(a.Country, "")
                                 ins.ExecuteNonQuery()
                             Next
                         End Using
@@ -228,7 +252,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite " &
+                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite,City,Country " &
                                           "FROM AssetMeta WHERE ServerKey=$s AND AssetId=$a"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", assetId)
@@ -253,7 +277,9 @@ Namespace Services
                                 .Tags = SplitTags(If(r.IsDBNull(10), "", r.GetString(10))),
                                 .Width = If(r.IsDBNull(11), 0, r.GetInt32(11)),
                                 .Height = If(r.IsDBNull(12), 0, r.GetInt32(12)),
-                                .IsFavorite = Not r.IsDBNull(13) AndAlso r.GetInt32(13) <> 0
+                                .IsFavorite = Not r.IsDBNull(13) AndAlso r.GetInt32(13) <> 0,
+                                .City = If(r.IsDBNull(14), "", r.GetString(14)),
+                                .Country = If(r.IsDBNull(15), "", r.GetString(15))
                             }
                             Return asset
                         End Using
@@ -265,6 +291,40 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Ort und Land eines Assets, OHNE die Altersprüfung über <c>UpdatedAt</c>.
+        '''
+        ''' Für den Editor: er arbeitet auf einer heruntergeladenen Temp-Kopie und kennt vom Asset
+        ''' nur noch die ID im Dateinamen - der Änderungszeitstempel, an dem sonst die Gültigkeit
+        ''' hängt, ist dort nicht mehr zur Hand. Für einen Ortsnamen reicht der gespeicherte Stand:
+        ''' er ändert sich praktisch nie, und die Alternative wäre eine leere Zeile.</summary>
+        Public Function GetPlace(serverKey As String, assetId As String) As (City As String, Country As String)
+            If String.IsNullOrEmpty(serverKey) OrElse String.IsNullOrEmpty(assetId) Then Return ("", "")
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    ' Zuerst der Detail-Zwischenspeicher, dann der Katalog: beide tragen den Ort,
+                    ' aber nur der erste ist bei einem Asset gefüllt, das nie in der Timeline stand
+                    ' (Album, Person, Ort).
+                    For Each table In {"AssetMeta", "AssetList"}
+                        Using cmd = conn.CreateCommand()
+                            cmd.CommandText = $"SELECT COALESCE(City,''),COALESCE(Country,'') FROM {table} WHERE ServerKey=$s AND AssetId=$a"
+                            cmd.Parameters.AddWithValue("$s", serverKey)
+                            cmd.Parameters.AddWithValue("$a", assetId)
+                            Using r = cmd.ExecuteReader()
+                                If Not r.Read() Then Continue For
+                                Dim city = r.GetString(0)
+                                Dim country = r.GetString(1)
+                                If city.Length > 0 OrElse country.Length > 0 Then Return (city, country)
+                            End Using
+                        End Using
+                    Next
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.GetPlace", ex)
+            End Try
+            Return ("", "")
+        End Function
+
         ''' <summary>Speichert/aktualisiert die Detaildaten eines Assets.</summary>
         Public Sub Put(serverKey As String, asset As ImmichAsset)
             If String.IsNullOrEmpty(serverKey) OrElse asset Is Nothing OrElse String.IsNullOrEmpty(asset.Id) Then Return
@@ -273,10 +333,10 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
-                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite) " &
-                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$fc,$fm,$dt,$dm,$tags,$w,$h,$fav) " &
+                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite,City,Country) " &
+                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$fc,$fm,$dt,$dm,$tags,$w,$h,$fav,$city,$country) " &
                             "ON CONFLICT(ServerKey,AssetId) DO UPDATE SET " &
-                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,FileCreatedAt=$fc,FileModifiedAt=$fm,DateTaken=$dt,DateModified=$dm,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav"
+                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,FileCreatedAt=$fc,FileModifiedAt=$fm,DateTaken=$dt,DateModified=$dm,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav,City=$city,Country=$country"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", asset.Id)
                         cmd.Parameters.AddWithValue("$u", If(asset.UpdatedAt, ""))
@@ -293,6 +353,8 @@ Namespace Services
                         cmd.Parameters.AddWithValue("$w", asset.Width)
                         cmd.Parameters.AddWithValue("$h", asset.Height)
                         cmd.Parameters.AddWithValue("$fav", If(asset.IsFavorite, 1, 0))
+                        cmd.Parameters.AddWithValue("$city", If(asset.City, ""))
+                        cmd.Parameters.AddWithValue("$country", If(asset.Country, ""))
                         cmd.ExecuteNonQuery()
                     End Using
                 End Using

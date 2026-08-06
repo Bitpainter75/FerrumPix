@@ -430,6 +430,43 @@ Namespace Models
             End Set
         End Property
 
+        ''' <summary>Aufnahmeort eines IMMICH-Assets, so wie ihn der Server benannt hat.
+        '''
+        ''' Nur dort: ein lokales Bild holt seinen Ortsnamen aus dem Katalog, der am Dateipfad
+        ''' haengt. Ein Immich-Asset hat keinen - sein Pseudo-Pfad steht in keinem Katalog, und die
+        ''' eigene Ortstabelle bekaeme dafuer auch keine Koordinaten zu sehen. Der Server hat den
+        ''' Namen aber laengst und liefert ihn mit den uebrigen Aufnahmedaten.
+        '''
+        ''' MELDET SEINE AENDERUNG: die Aufnahmedaten eines Serverbildes koennen NACH dem Anzeigen
+        ''' eintreffen (der Detail-Abruf haengt am Sichtbereich). Ohne Meldung staende die Leiste
+        ''' dann bei dem Stand, den das Element beim Anklicken gerade hatte.</summary>
+        Public Property PlaceCity As String
+            Get
+                Return _placeCity
+            End Get
+            Set(value As String)
+                Dim wanted = If(value, "")
+                If String.Equals(_placeCity, wanted, StringComparison.Ordinal) Then Return
+                _placeCity = wanted
+                RaisePropertyChanged()
+            End Set
+        End Property
+        Private _placeCity As String = ""
+
+        ''' Landesname des Servers, englisch und ohne Kuerzel (siehe PlacePanelService).
+        Public Property PlaceCountry As String
+            Get
+                Return _placeCountry
+            End Get
+            Set(value As String)
+                Dim wanted = If(value, "")
+                If String.Equals(_placeCountry, wanted, StringComparison.Ordinal) Then Return
+                _placeCountry = wanted
+                RaisePropertyChanged()
+            End Set
+        End Property
+        Private _placeCountry As String = ""
+
         Private _hasExifMetadata As Boolean
         Public Property HasExifMetadata As Boolean
             Get
@@ -836,6 +873,8 @@ Namespace Models
             item.ExifCamera = asset.Camera
             item.ExifIso = asset.Iso
             item.ExifAperture = asset.Aperture
+            item.PlaceCity = If(asset.City, "")
+            item.PlaceCountry = If(asset.Country, "")
             Dim created = If(asset.FileCreatedAt.HasValue, asset.FileCreatedAt.Value, DateTime.MinValue)
             item.FileCreatedAt = created
             item.DateModified = If(asset.FileModifiedAt.HasValue, asset.FileModifiedAt.Value, created)
@@ -856,6 +895,8 @@ Namespace Models
             ExifCamera = asset.Camera
             ExifIso = asset.Iso
             ExifAperture = asset.Aperture
+            PlaceCity = If(asset.City, "")
+            PlaceCountry = If(asset.Country, "")
             If replaceMissingDates OrElse asset.ExifDateTaken.HasValue Then ExifDateTaken = asset.ExifDateTaken
             If replaceMissingDates OrElse asset.ExifDateModified.HasValue Then ExifDateModified = asset.ExifDateModified
             If asset.FileCreatedAt.HasValue Then

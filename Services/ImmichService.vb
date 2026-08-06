@@ -47,6 +47,13 @@ Namespace Services
         Public Property Rating As Integer
         ''' Flache Stichwörter (Immich-Tag-Pfade, z.B. "Reise/Italien").
         Public Property Tags As New List(Of String)()
+        ''' <summary>Aufnahmeort, wie ihn der Server aus den Koordinaten benannt hat. Für ein
+        ''' Immich-Asset ist das die EINZIGE Quelle: es liegt in keinem lokalen Katalog, und die
+        ''' eigene Ortstabelle wird für Serverbilder nicht befragt.</summary>
+        Public Property City As String = ""
+        ''' Landesname des Servers (englisch, z.B. "Germany") - ohne Kürzel, die Übersetzung läuft
+        ''' deshalb über den Namen (siehe PlaceLookupService.CountryCodeForName).
+        Public Property Country As String = ""
     End Class
 
     ''' <summary>Eine benannte Person aus der serverseitigen Gesichtserkennung von Immich.</summary>
@@ -1119,6 +1126,8 @@ Namespace Services
                 Dim make = If(a.ExifInfo.Make, "").Trim()
                 Dim model = If(a.ExifInfo.Model, "").Trim()
                 item.Camera = String.Join(" ", {make, model}.Where(Function(s) Not String.IsNullOrEmpty(s))).Trim()
+                item.City = If(a.ExifInfo.City, "").Trim()
+                item.Country = If(a.ExifInfo.Country, "").Trim()
             End If
             If a.Tags IsNot Nothing Then
                 item.Tags = a.Tags.
@@ -1807,6 +1816,10 @@ Namespace Services
             Public Property Description As String
             Public Property Rating As Double?
             Public Property FileSizeInByte As Double?
+            ' Der Server benennt den Aufnahmeort selbst (Rückwärtssuche aus den Koordinaten) und
+            ' liefert ihn in der Metadaten-Suche wie im Detail-Abruf mit.
+            Public Property City As String
+            Public Property Country As String
         End Class
 
         Private Class ImmichSearchResponseDto
