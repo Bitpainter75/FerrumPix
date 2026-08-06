@@ -104,6 +104,9 @@ Namespace ViewModels
 
             If String.IsNullOrEmpty(_path) Then Return
 
+            ' Betrachter und Editor holen die Aufnahmedaten selbst (siehe OwnerLoadsDetails).
+            If OwnerLoadsDetails Then Return
+
             ' Sofort ein Stand des RICHTIGEN Bildes, damit nie die Angaben des vorherigen stehen
             ' bleiben. Ein Immich-Asset steht in keinem lokalen Katalog - dort kommt das, was das
             ' Element selbst weiss, und der Rest nach dem Holen der Datei.
@@ -113,6 +116,55 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Name))
             LoadBaseData()
             LoadInBackground(token, _path, item)
+        End Sub
+
+        ''' <summary>Der Besitzer liefert Aufnahmedaten, Histogramm, Bewertung, Herz, Etikett und
+        ''' Stichwoerter selbst; das Panel laedt dann nichts nach.
+        '''
+        ''' Betrachter und Editor stellen das ein, weil ihre LADEWEGE andere sind als der der
+        ''' Galerie und es bleiben sollen: der Betrachter wechselt dreistufig (sofort ein
+        ''' provisorischer Stand, dann die Aufnahmedaten, dann das Histogramm), holt fuer ein
+        ''' Immich-Asset das Original in den Temp-Ordner und schreibt das Gelesene in den Katalog
+        ''' zurueck; der Editor rechnet sein Histogramm aus dem BEARBEITETEN Bild und nicht aus der
+        ''' Datei - sonst zeigte die Leiste die Tonwerte vor allen Reglern.
+        '''
+        ''' Gemeinsam bleibt alles, was die Leiste ANZEIGT: Reiter, Farbetikett, Personen, Ort und
+        ''' der Zustand von Bewertung, Herz und Stichwoertern.</summary>
+        Public Property OwnerLoadsDetails As Boolean
+
+        ''' <summary>Sagt dem Panel, welches Bild gerade gilt, ohne seine Ladewege anzustossen.
+        '''
+        ''' Der Betrachter wechselt den Pfad frueher, als er das Panel fuettert (erst kommt das Bild
+        ''' auf die Buehne, dann laufen die Aufnahmedaten nach). Ohne diesen Weg haetten der
+        ''' Histogramm-Block und die Reiterleiste in der Zwischenzeit noch am vorherigen Bild
+        ''' gehangen - beim Wechsel von einem Bild auf ein VIDEO waere der Block sichtbar
+        ''' geblieben.</summary>
+        Public Sub SetOwnedPath(path As String)
+            Dim neu = If(path, "")
+            If String.Equals(_path, neu, StringComparison.OrdinalIgnoreCase) Then Return
+            _path = neu
+            RaiseStateChanged()
+        End Sub
+
+        ''' <summary>Bewertung, Herz und Etikett setzen, OHNE sie zurueckzuschreiben. Fuer den
+        ''' Besitzer beim Bildwechsel: er hat die Werte gerade erst gelesen, und der Weg ueber die
+        ''' Eigenschaften loeste sofort ein Speichern desselben Wertes aus - beim Blaettern also je
+        ''' Bild ein Schreibvorgang in Katalog oder Server.</summary>
+        Public Sub ApplyOwnedState(rating As Integer, favorite As Boolean, colorLabel As String)
+            ApplyRatingState(rating, favorite, colorLabel)
+        End Sub
+
+        ''' <summary>Die Stichwoerter anzeigen, ohne sie zu schreiben. Gegenstueck zu
+        ''' <see cref="ApplyOwnedState"/> fuer den Besitzer-Betrieb.</summary>
+        ''' NICHT "tags" als Parametername: VB unterscheidet keine Gross- und Kleinschreibung, der
+        ''' Parameter verdeckte die Eigenschaft Tags und Tags.Clear() leerte die Eingabe.
+        Public Sub ApplyOwnedTags(loadedTags As IEnumerable(Of String))
+            Dim liste = If(loadedTags, Enumerable.Empty(Of String)()).ToList()
+            Tags.Clear()
+            For Each tag In liste
+                Tags.Add(tag)
+            Next
+            RefreshTagSuggestions()
         End Sub
 
         ''' <summary>Was das Element selbst ueber sich weiss - Name, Masse, Groesse. Fuer ein
@@ -485,6 +537,7 @@ Namespace ViewModels
                 BuildSummary()
                 Return
             End If
+            If OwnerLoadsDetails Then Return
             If String.IsNullOrEmpty(_path) Then Return
             LoadInBackground(Interlocked.Increment(_loadToken), _path, _item)
         End Sub
@@ -630,6 +683,9 @@ Namespace ViewModels
             End Get
             Set(value As ExifData)
                 Me.RaiseAndSetIfChanged(_exifInfo, If(value, New ExifData()))
+                ' Der angezeigte Name kommt aus den Aufnahmedaten. Im Besitzer-Betrieb setzt sie
+                ' der Betrachter oder der Editor, und dann meldet ihn sonst niemand.
+                Me.RaisePropertyChanged(NameOf(Name))
             End Set
         End Property
 

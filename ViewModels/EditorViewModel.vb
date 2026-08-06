@@ -20,7 +20,6 @@ Namespace ViewModels
 
     Partial Public Class EditorViewModel
         Inherits ViewModelBase
-        Implements IInfoSidebarPanel
 
         ''' Die vollste Leiste der App: links Navigation + Dateiname, mittig die vier
         ''' Modus-Schalter, rechts Speichern/Speichern unter und acht Symbolschalter.
@@ -825,10 +824,6 @@ Namespace ViewModels
         Private _isLoadingAnnotation As Boolean
         Private _annotationFontOptionsCache As IReadOnlyList(Of String)
         Private _isUpdatingResize As Boolean
-        Private _rating As Integer = 0
-        Private _isFavorite As Boolean = False
-        Private _colorLabel As String = ""
-        Private _newTagText As String = ""
         Private _hasChanges As Boolean
         Private _statusText As String = ""
         ' True, solange die Statuszeile nichts Wichtiges sagt (leer oder „Vorschau bereit"). Nur dann
@@ -837,8 +832,6 @@ Namespace ViewModels
         Private _mousePositionText As String = ""
         Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
         Private _saveQuality As Integer = 90
-        Private _histogramImage As Bitmap
-        Private _exifInfo As ExifData
         Private _previewPending As Boolean
         Private _annotationCompositePreviewPending As Boolean
         Private _annotationCompositePreviewRetries As Integer
@@ -899,7 +892,6 @@ Namespace ViewModels
         Private _thumbCacheScopeId As String = Nothing
         Private _thumbCacheScopeName As String = Nothing
         Private _currentIndex As Integer = -1
-        Private _selectedInfoTab As InfoSidebarTab = InfoSidebarTab.General
         Private _selectedLayersPanelTab As LayersPanelTab = LayersPanelTab.Tool
         ' Vorschau-Deckel (längste Kante). Früher 0 = volle Quellauflösung - damit lief die GESAMTE
         ' Editor-Pipeline z.B. in 49 MP (gemessen: Full-Render 7-8 s, Composite-Patch 1-2 s), und die
@@ -978,86 +970,20 @@ Namespace ViewModels
         Private _lastPushedUndoEntry As UndoEntry
 
         Public Property FilmstripItems As BulkObservableCollection(Of ImageItem)
-        Public Property Tags As ObservableCollection(Of String)
 
-        ''' <summary>Die Leiste ist EIN Steuerelement fuer Galerie, Betrachter und Editor. Fehlt die
-        ''' Eigenschaft in einem der drei, ist die Bindung dort tot (siehe INFOPANEL_GALERIE.md).
-        ''' Gezeigt und berichtigt wird deshalb in allen dreien dasselbe.</summary>
-        Public ReadOnly Property People As New ObservableCollection(Of PersonFaceEntry)() Implements IInfoSidebarPanel.People
+        ''' <summary>Die Info-Leiste. Sie ist EIN Steuerelement fuer Galerie, Betrachter und Editor,
+        ''' und ihr Zustand liegt seit dem 2026-08-06 auch nur noch an EINER Stelle: Reiter,
+        ''' Farbetikett, Bewertung, Herz, Stichwoerter, Personen und Ort trug vorher jede der drei
+        ''' Ansichten selbst, wortgleich und je rund 250 Zeilen.
+        '''
+        ''' Der Editor bleibt Besitzer seiner Daten
+        ''' (<see cref="InfoPanelViewModel.OwnerLoadsDetails"/>): Aufnahmedaten und Histogramm setzt
+        ''' er beim LADEN eines Bildes selbst. Das Histogramm laeuft bewusst nicht bei jedem
+        ''' Reglerdreh mit - es zeigt den Stand der Datei, so wie schon vor dem Zusammenlegen
+        ''' (Patrick, 2026-08-06). Die Tonwertkurve im Anpassen-Werkzeug hat davon nichts: sie
+        ''' rechnet mit eigenen Zahlen (<c>_curveHistogramCounts</c>) und bleibt live.</summary>
+        Public ReadOnly Property InfoPanel As New InfoPanelViewModel()
 
-        ''' <summary>Die schon vergebenen Namen fuer die Vorschlagsliste am Namensfeld. Denselben
-        ''' Namen ein zweites Mal zu tippen macht aus einer Person zwei.</summary>
-        Public ReadOnly Property PersonNameSuggestions As New ObservableCollection(Of String)() Implements IInfoSidebarPanel.PersonNameSuggestions
-
-        Public ReadOnly Property HasPeople As Boolean Implements IInfoSidebarPanel.HasPeople
-            Get
-                Return People.Count > 0
-            End Get
-        End Property
-
-        ''' <summary>Die Gesichter des offenen Bildes. Ob der Nachschub noch passt, entscheidet hier
-        ''' der PFAD und keine Marke: der Editor haelt genau ein Bild offen, und damit sagt der Pfad
-        ''' schon alles.</summary>
-        Private Sub LoadPeople(imagePath As String)
-            People.Clear()
-            Dim entries = FacePanelService.BuildEntries(imagePath)
-            FacePanelService.FillNameSuggestions(PersonNameSuggestions)
-            For Each entry In entries
-                People.Add(entry)
-            Next
-            ' Faellt der Reiter weg, waere sein Inhalt auch weg - dann zurueck auf "Allgemein".
-            If People.Count = 0 AndAlso _selectedInfoTab = InfoSidebarTab.People Then
-                SelectedInfoTab = InfoSidebarTab.General
-            End If
-            Me.RaisePropertyChanged(NameOf(HasPeople))
-            Me.RaisePropertyChanged(NameOf(IsInfoTabPeople))
-            FacePanelService.LoadThumbnails(entries, imagePath,
-                                            Function() String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase))
-        End Sub
-
-        Public Sub RenamePerson(personId As String, newName As String, faceId As String) Implements IInfoSidebarPanel.RenamePerson
-            If String.IsNullOrWhiteSpace(personId) Then Return
-            Try
-                ' NUR bei einer echten Aenderung neu aufbauen - siehe InfoPanelViewModel.RenamePerson.
-                If LibraryService.Instance.ApplyPersonName(personId, newName, faceId) <>
-                   LibraryService.PersonNameOutcome.Unchanged Then LoadPeople(_currentImagePath)
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Editor.RenamePerson", ex)
-            End Try
-        End Sub
-
-        Public Sub DetachFace(faceId As String) Implements IInfoSidebarPanel.DetachFace
-            If String.IsNullOrWhiteSpace(faceId) Then Return
-            Try
-                LibraryService.Instance.DetachFace(faceId)
-                LoadPeople(_currentImagePath)
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Editor.DetachFace", ex)
-            End Try
-        End Sub
-
-        Private _placeText As String = ""
-
-        ''' <summary>Der Aufnahmeort, etwa "Norden, Deutschland". Kommt aus dem Katalog: die
-        ''' Koordinaten stehen im Bild, der Name dazu nirgends.</summary>
-        Public ReadOnly Property PlaceText As String Implements IInfoSidebarPanel.PlaceText
-            Get
-                Return _placeText
-            End Get
-        End Property
-
-        Public ReadOnly Property HasPlace As Boolean Implements IInfoSidebarPanel.HasPlace
-            Get
-                Return Not String.IsNullOrEmpty(_placeText)
-            End Get
-        End Property
-
-        Private Sub LoadPlace(imagePath As String)
-            _placeText = PlacePanelService.TextFor(imagePath)
-            Me.RaisePropertyChanged(NameOf(PlaceText))
-            Me.RaisePropertyChanged(NameOf(HasPlace))
-        End Sub
-        Public Property TagSuggestions As ObservableCollection(Of String)
         Public Property HistoryItems As ObservableCollection(Of String)
         Private Shared ReadOnly FallbackFontOptions As IReadOnlyList(Of String) =
             New List(Of String) From {"Arial", "Segoe UI", "DejaVu Sans", "Liberation Sans", "Times New Roman", "Georgia", "Courier New", "Consolas", "Verdana", "Tahoma"}
@@ -3316,6 +3242,63 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Haengt das Panel an den Editor.
+        '''
+        ''' Zwei Dinge gehoeren dem Besitzer, nicht dem Panel: WIE eine Aenderung dauerhaft wird
+        ''' (an den Immich-Server oder in den Katalog, das Etikett immer lokal unter dem Pfad bzw.
+        ''' Pseudo-Pfad) und WOHER Aufnahmedaten und Histogramm kommen - der Editor setzt beide beim
+        ''' Laden selbst (siehe <see cref="InfoPanelViewModel.OwnerLoadsDetails"/>).</summary>
+        Private Sub SetUpInfoPanel()
+            InfoPanel.OwnerLoadsDetails = True
+            InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
+            InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
+
+            InfoPanel.PersistRating = Sub(items, value)
+                                          Dim immichAssetId = CurrentImmichAssetId()
+                                          If immichAssetId IsNot Nothing Then
+                                              Dim ignored = ImmichService.SetRatingAsync(immichAssetId, value)
+                                          ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
+                                              LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
+                                          End If
+                                      End Sub
+
+            InfoPanel.PersistFavorite = Sub(items, value)
+                                            Dim immichAssetId = CurrentImmichAssetId()
+                                            If immichAssetId IsNot Nothing Then
+                                                Dim ignored = ImmichService.SetFavoriteAsync(immichAssetId, value)
+                                            ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                LibraryService.Instance.SetFavorite(_currentImagePath, value)
+                                            End If
+                                        End Sub
+
+            ' Das Etikett bleibt auch bei Immich lokal - unter dem Pseudo-Pfad, damit die
+            ' Galerie-Kachel denselben Eintrag sieht.
+            InfoPanel.PersistColorLabel = Sub(items, value)
+                                              RaiseFooterColorLabelState()
+                                              Dim immichAssetId = CurrentImmichAssetId()
+                                              If immichAssetId IsNot Nothing Then
+                                                  LibraryService.Instance.SetColorLabelForMany(
+                                                      {ImmichService.MakePseudoPath(immichAssetId, _immichSourceFileName)}, value)
+                                              ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
+                                                  LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, value, syncToXmp:=True)
+                                              End If
+                                          End Sub
+
+            ' Gezielt DAS EINE Stichwort setzen oder entfernen. Beim Server geht es ohnehin nur so,
+            ' und lokal wird die angezeigte Liste zurueckgeschrieben - sie gehoert hier zu genau
+            ' einem Bild, anders als im Sammelmodus der Galerie.
+            InfoPanel.PersistTag = Sub(items, tag, gesetzt)
+                                       Dim immichAssetId = CurrentImmichAssetId()
+                                       If immichAssetId IsNot Nothing Then
+                                           Dim ignored = If(gesetzt,
+                                                            ImmichService.AddTagToAssetAsync(immichAssetId, tag),
+                                                            ImmichService.RemoveTagFromAssetAsync(immichAssetId, tag))
+                                       ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
+                                           LibraryService.Instance.SetTags(_currentImagePath, InfoPanel.Tags, syncToXmp:=True)
+                                       End If
+                                   End Sub
+        End Sub
+
         ''' <summary>Ob das Ebenen-Panel rechts eingeblendet ist. Umschaltbar wie die Info-Leiste
         ''' (ToggleLayersPanelCommand), gemerkt in den Einstellungen (EditorLayersPanelExpanded).</summary>
         Public ReadOnly Property IsLayersPanelVisible As Boolean
@@ -3373,6 +3356,11 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                 Me.RaisePropertyChanged(NameOf(HasDocument))
                 Me.RaisePropertyChanged(NameOf(ShowEditorEmptyState))
+                ' Das Panel erfaehrt den Pfad hier schon; Aufnahmedaten und Histogramm laufen erst
+                ' im Ladeweg nach. Ohne das haengen Histogramm-Block und Reiterleiste in der
+                ' Zwischenzeit noch am vorherigen Bild - beim Wechsel auf ein VIDEO bliebe der
+                ' Block sichtbar.
+                InfoPanel.SetOwnedPath(value)
             End Set
         End Property
 
@@ -8059,6 +8047,78 @@ Namespace ViewModels
             SetActiveSelectionIsMask(False)
         End Sub
 
+        ''' <summary>Löscht den Inhalt der aktiven Pixelauswahl aus dem Arbeitsbild: was innerhalb der
+        ''' Laufameisen liegt, wird durchsichtig.
+        '''
+        ''' Das Gegenstück zum Füllen, und der Weg, den die Entf-Taste bei einer laufenden Auswahl
+        ''' nimmt (vorher hob sie die Auswahl nur auf, weil es diesen Weg noch nicht gab).
+        '''
+        ''' Es wirkt NUR auf eine freie Pixelauswahl, nicht auf eine Ebenenmaske: die gehört einer
+        ''' Ebene, ihr Overlay ist in den Pixelwerkzeugen ausgeblendet, und eine unsichtbare Grenze
+        ''' zu löschen wäre nicht zu erklären (dieselbe Regel wie beim Pinsel,
+        ''' <see cref="HasPixelSelectionScope"/>).
+        '''
+        ''' Die Auswahl bleibt danach stehen: sie ist der Ort, an dem man als Nächstes füllt oder
+        ''' weiterarbeitet. Aufgehoben wird sie wie bisher mit Esc.</summary>
+        Public Sub EraseSelection()
+            If Not CanUsePixelTools Then Return
+            If Not HasPixelSelectionScope Then Return
+            If Not _workingImage.IsInitialized Then Return
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 Then Return
+
+            ' Die Deckung entsteht HIER, auf dem UI-Faden: der Commit unten läuft im Hintergrund und
+            ' darf den Auswahlzustand nicht anfassen. Das Rechteck kommt beschnitten zurück, also
+            ' bleibt der Undo-Patch so klein wie die Auswahl.
+            Dim rect = New SKRectI(0, 0, baseW, baseH)
+            Dim anyCoverage = False
+            Dim coverage = BuildSelectionCoverageForWorkingRect(rect, anyCoverage)
+            If coverage Is Nothing OrElse Not anyCoverage OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then
+                coverage?.Dispose()
+                Return
+            End If
+
+            PushUndo()
+            Dim undoEntry = _lastPushedUndoEntry
+            Dim eraseRect = rect
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+
+            EnqueueWorkingCommit(
+                Function()
+                    Try
+                        Return _workingImage.CommitRegion(eraseRect,
+                            Sub(full)
+                                Using canvas = New SKCanvas(full)
+                                    canvas.ClipRect(SKRect.Create(eraseRect.Left, eraseRect.Top, eraseRect.Width, eraseRect.Height))
+                                    ' DstOut stanzt echte Alpha-Löcher: das Ziel behält nur, was die
+                                    ' Deckung NICHT abdeckt. Die weiche Kante der Auswahl steckt im
+                                    ' Alpha der Deckung und kommt damit von selbst mit.
+                                    Using paint As New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                                        canvas.DrawBitmap(coverage, eraseRect.Left, eraseRect.Top, paint)
+                                    End Using
+                                End Using
+                            End Sub,
+                            punchesAlpha:=True)
+                    Finally
+                        coverage.Dispose()
+                    End Try
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Löschen fehlgeschlagen")
+                        SchedulePreviewUpdate()
+                        Return
+                    End If
+                    If undoEntry IsNot Nothing Then undoEntry.Patch = patch
+                    ' Unter den gelöschten Pixeln liegt jetzt der Transparenz-Hintergrund.
+                    Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+                    AddHistoryEntry(LocalizationService.T("Auswahl gelöscht"))
+                    SchedulePreviewUpdate()
+                End Sub)
+        End Sub
+
         ''' <summary>Verwirft die aktive Auswahl beim Anwenden von Geometrie (Crop/Resize/Canvas/Transform):
         ''' die Auswahlmaske liegt im Basisbild-Raum und würde danach nicht mehr zum Bild passen - der
         ''' Anpassungs-Skopus greift ohnehin nur bei neutraler Geometrie (siehe
@@ -9760,150 +9820,36 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property Rating As Integer
-            Get
-                Return _rating
-            End Get
-            Set(value As Integer)
-                Me.RaiseAndSetIfChanged(_rating, value)
-                Dim immichAssetId = CurrentImmichAssetId()
-                If immichAssetId IsNot Nothing Then
-                    Dim ignored = ImmichService.SetRatingAsync(immichAssetId, value)
-                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                    LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
-                End If
-            End Set
-        End Property
-
-        Public Property IsFavorite As Boolean
-            Get
-                Return _isFavorite
-            End Get
-            Set(value As Boolean)
-                Me.RaiseAndSetIfChanged(_isFavorite, value)
-                Dim immichAssetId = CurrentImmichAssetId()
-                If immichAssetId IsNot Nothing Then
-                    Dim ignored = ImmichService.SetFavoriteAsync(immichAssetId, value)
-                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                    LibraryService.Instance.SetFavorite(_currentImagePath, value)
-                End If
-            End Set
-        End Property
-
-        ''' Farbetikett (Hex der Akzentfarben-Palette, "" = keins) - lokal in der Bibliotheks-DB;
-        ''' bei Immich-Assets unter dem Pseudo-Pfad, damit die Galerie-Kachel denselben Eintrag sieht.
-        Public Property ColorLabel As String
-            Get
-                Return _colorLabel
-            End Get
-            Set(value As String)
-                Dim normalized = If(value, "")
-                If String.Equals(_colorLabel, normalized, StringComparison.OrdinalIgnoreCase) Then Return
-                _colorLabel = normalized
-                RaiseColorLabelProperties()
-                Dim immichAssetId = CurrentImmichAssetId()
-                If immichAssetId IsNot Nothing Then
-                    LibraryService.Instance.SetColorLabelForMany(
-                        {ImmichService.MakePseudoPath(immichAssetId, _immichSourceFileName)}, normalized)
-                ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                    LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, normalized, syncToXmp:=True)
-                End If
-            End Set
-        End Property
-
-        Private Sub RaiseColorLabelProperties()
-            Me.RaisePropertyChanged(NameOf(ColorLabel))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelOrange))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelRed))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelPink))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelPurple))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelBlue))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelCyan))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelTeal))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelGreen))
-            Me.RaisePropertyChanged(NameOf(IsColorLabelYellow))
-            Me.RaisePropertyChanged(NameOf(HasColorLabel))
-            _mainVm?.RefreshWindowTitle()
-            Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
-        End Sub
-
+        '<summary>Das Farbetikett des offenen Bildes. Gehalten wird es im Panel; hier steht nur
+        ''' noch, was die FUSSLEISTE davon braucht - der Punkt vor dem Dateinamen und der
+        ''' Fenstertitel. Geaendert wird es ueber die Leiste, und der Ruecklauf kommt ueber
+        ''' <see cref="InfoPanelViewModel.PersistColorLabel"/> hier an.</summary>
         Public ReadOnly Property HasColorLabel As Boolean
             Get
-                Return Not String.IsNullOrEmpty(_colorLabel)
+                Return Not String.IsNullOrEmpty(InfoPanel.ColorLabel)
             End Get
         End Property
 
         ''' Punkt in der Fussleiste vor dem Dateinamen (gleiche Darstellung wie die Galerie-Kachel).
         Public ReadOnly Property ColorLabelBrush As Avalonia.Media.IBrush
             Get
-                If String.IsNullOrEmpty(_colorLabel) Then Return Avalonia.Media.Brushes.Transparent
+                If String.IsNullOrEmpty(InfoPanel.ColorLabel) Then Return Avalonia.Media.Brushes.Transparent
                 Try
-                    Return New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(_colorLabel))
+                    Return New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(InfoPanel.ColorLabel))
                 Catch
                     Return Avalonia.Media.Brushes.Transparent
                 End Try
             End Get
         End Property
 
-        Private Function IsColorLabelValue(hex As String) As Boolean
-            Return String.Equals(_colorLabel, hex, StringComparison.OrdinalIgnoreCase)
-        End Function
+        ''' <summary>Was die Fussleiste und der Fenstertitel am Farbetikett haengen haben. Laeuft,
+        ''' sobald das Panel eines setzt.</summary>
+        Private Sub RaiseFooterColorLabelState()
+            Me.RaisePropertyChanged(NameOf(HasColorLabel))
+            Me.RaisePropertyChanged(NameOf(ColorLabelBrush))
+            _mainVm?.RefreshWindowTitle()
+        End Sub
 
-        Public ReadOnly Property IsColorLabelOrange As Boolean
-            Get
-                Return IsColorLabelValue("#F08A1A")
-            End Get
-        End Property
-        Public ReadOnly Property IsColorLabelRed As Boolean
-            Get
-                Return IsColorLabelValue("#E74C3C")
-            End Get
-        End Property
-        Public ReadOnly Property IsColorLabelPink As Boolean
-            Get
-                Return IsColorLabelValue("#F03B88")
-            End Get
-        End Property
-        Public ReadOnly Property IsColorLabelPurple As Boolean
-            Get
-                Return IsColorLabelValue("#8B5CF6")
-            End Get
-        End Property
-        Public ReadOnly Property IsColorLabelBlue As Boolean
-            Get
-                Return IsColorLabelValue("#3B82F6")
-            End Get
-        End Property
-        Public ReadOnly Property IsColorLabelCyan As Boolean
-            Get
-                Return IsColorLabelValue("#0891B2")
-            End Get
-        End Property
-        Public ReadOnly Property IsColorLabelTeal As Boolean
-            Get
-                Return IsColorLabelValue("#0F766E")
-            End Get
-        End Property
-        Public ReadOnly Property IsColorLabelGreen As Boolean
-            Get
-                Return IsColorLabelValue("#22C55E")
-            End Get
-        End Property
-        ''' Gelb kam mit dem XMP-Sidecar-Import dazu (xmp:Label="Yellow").
-        Public ReadOnly Property IsColorLabelYellow As Boolean
-            Get
-                Return IsColorLabelValue("#FACC15")
-            End Get
-        End Property
-
-        Public Property NewTagText As String
-            Get
-                Return _newTagText
-            End Get
-            Set(value As String)
-                Me.RaiseAndSetIfChanged(_newTagText, value)
-            End Set
-        End Property
 
         Public Property StatusText As String
             Get
@@ -10022,121 +9968,6 @@ Namespace ViewModels
                 End If
                 Me.RaiseAndSetIfChanged(_saveQuality, value)
             End Set
-        End Property
-
-        Public Property HistogramImage As Bitmap
-            Get
-                Return _histogramImage
-            End Get
-            Set(value As Bitmap)
-                Dim previous = _histogramImage
-                Me.RaiseAndSetIfChanged(_histogramImage, value)
-                If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
-            End Set
-        End Property
-
-        ''' <summary>Die Info-Leiste zeigt hier immer etwas: der Editor hat stets ein geladenes Bild.
-        ''' Die beiden Eigenschaften gibt es nur, weil sich die Leiste die Galerie teilt, wo bei
-        ''' mehreren markierten Bildern oder einem Ordner nichts anzuzeigen ist.</summary>
-        Public ReadOnly Property HasInfoContent As Boolean
-            Get
-                Return True
-            End Get
-        End Property
-
-        Public ReadOnly Property InfoPlaceholderText As String
-            Get
-                Return ""
-            End Get
-        End Property
-
-        ''' <summary>Der Editor zeigt immer genau EIN Bild - die Uebersicht ueber mehrere gibt es
-        ''' nur in der Galerie.</summary>
-        Public ReadOnly Property IsSummary As Boolean
-            Get
-                Return False
-            End Get
-        End Property
-
-        Public ReadOnly Property IsSingleImage As Boolean
-            Get
-                Return True
-            End Get
-        End Property
-
-        ''' <summary>Gehoert zum gemeinsamen Vertrag der Info-Leiste. Im Editor liegt nie ein Video
-        ''' auf der Buehne, die Antwort ist hier also immer Ja - die Eigenschaft muss es aber geben,
-        ''' sonst liefe die Bindung der Leiste in diesem Modus ins Leere.</summary>
-        Public ReadOnly Property HasHistogram As Boolean
-            Get
-                Return True
-            End Get
-        End Property
-
-        Public ReadOnly Property Name As String
-            Get
-                Return If(_exifInfo?.FileName, "")
-            End Get
-        End Property
-
-        ''' <summary>Bleibt leer: die Uebersicht ueber mehrere Bilder gibt es nur in der Galerie.
-        ''' Die Info-Leiste ist dieselbe, also muss die Eigenschaft da sein.</summary>
-        Public ReadOnly Property SummaryFacts As New ObservableCollection(Of ExifTag)()
-
-        Public Property ExifInfo As ExifData
-            Get
-                Return _exifInfo
-            End Get
-            Set(value As ExifData)
-                Me.RaiseAndSetIfChanged(_exifInfo, value)
-            End Set
-        End Property
-
-        Public Property SelectedInfoTab As InfoSidebarTab
-            Get
-                Return _selectedInfoTab
-            End Get
-            Set(value As InfoSidebarTab)
-                If _selectedInfoTab = value Then Return
-                Me.RaiseAndSetIfChanged(_selectedInfoTab, value)
-                RaiseInfoTabStateChanged()
-            End Set
-        End Property
-
-        Public ReadOnly Property IsInfoTabGeneral As Boolean
-            Get
-                Return _selectedInfoTab = InfoSidebarTab.General
-            End Get
-        End Property
-
-        Public ReadOnly Property IsInfoTabPeople As Boolean
-            Get
-                Return _selectedInfoTab = InfoSidebarTab.People
-            End Get
-        End Property
-
-        Public ReadOnly Property IsInfoTabExif As Boolean
-            Get
-                Return _selectedInfoTab = InfoSidebarTab.Exif
-            End Get
-        End Property
-
-        Public ReadOnly Property IsInfoTabIptc As Boolean
-            Get
-                Return _selectedInfoTab = InfoSidebarTab.Iptc
-            End Get
-        End Property
-
-        Public ReadOnly Property IsInfoTabXmp As Boolean
-            Get
-                Return _selectedInfoTab = InfoSidebarTab.Xmp
-            End Get
-        End Property
-
-        Public ReadOnly Property IsInfoTabIcc As Boolean
-            Get
-                Return _selectedInfoTab = InfoSidebarTab.Icc
-            End Get
         End Property
 
         Public Property SelectedLayersPanelTab As LayersPanelTab
@@ -10823,8 +10654,6 @@ Namespace ViewModels
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property SetColorLabelCommand As ICommand
-        Public ReadOnly Property AddTagCommand As ICommand
-        Public ReadOnly Property RemoveTagCommand As ICommand
         Public ReadOnly Property OpenTagSearchCommand As ICommand
         Public ReadOnly Property SaveCommand As ICommand
         Public ReadOnly Property SaveAsCommand As ICommand
@@ -11151,7 +10980,6 @@ Namespace ViewModels
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
         Public ReadOnly Property ToggleLayersPanelCommand As ICommand
         Public ReadOnly Property ToggleToolSidebarCommand As ICommand
-        Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property SetLayersPanelTabCommand As ICommand
         Public ReadOnly Property BackToViewerCommand As ICommand
         Public ReadOnly Property BackToGalleryCommand As ICommand
@@ -11173,9 +11001,8 @@ Namespace ViewModels
         Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
-            Tags = New ObservableCollection(Of String)()
-            TagSuggestions = New ObservableCollection(Of String)(LibraryService.Instance.GetAllTags())
             HistoryItems = New ObservableCollection(Of String)()
+            SetUpInfoPanel()
             ' Ebenen-Panel-Anzeige (umgekehrte Reihenfolge) an den Objektstapel koppeln. Wer die
             ' Liste in einem Rutsch umbaut, klammert das mit SuspendLayerRowRebuild - sonst baut
             ' JEDE einzelne Aenderung das ganze Panel neu auf.
@@ -11198,46 +11025,20 @@ Namespace ViewModels
                                                                         getCount:=Function() _folderPaths.Count,
                                                                         commit:=AddressOf NavigateToFilmstripIndexAsync)
 
+            ' Dieselben drei Befehle bedienen Kontextmenue und Fusszeile. Sie wirken auf das Panel,
+            ' damit Leiste und Menue denselben Stand zeigen - vorher lagen die Werte zweimal.
             SetRatingCommand = ReactiveCommand.Create(Of String)(Sub(r)
                                                                      Dim v As Integer
                                                                      If Integer.TryParse(r, v) Then
-                                                                         Rating = If(Rating = v, 0, v)
+                                                                         InfoPanel.Rating = If(InfoPanel.Rating = v, 0, v)
                                                                      End If
                                                                  End Sub)
 
-            ToggleFavoriteCommand = ReactiveCommand.Create(Sub() IsFavorite = Not IsFavorite)
+            ToggleFavoriteCommand = ReactiveCommand.Create(Sub() InfoPanel.IsFavorite = Not InfoPanel.IsFavorite)
             ' Gleiche Farbe erneut = Etikett entfernen (wie im Galerie-Kontextmenü).
             SetColorLabelCommand = ReactiveCommand.Create(Of String)(
-                Sub(hex) ColorLabel = If(String.Equals(_colorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
+                Sub(hex) InfoPanel.ColorLabel = If(String.Equals(InfoPanel.ColorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
 
-            AddTagCommand = ReactiveCommand.Create(Sub()
-                                                       ' Die Schreibweise bleibt, wie sie getippt wurde: aus einer
-                                                       ' Beistelldatei kommen Stichwoerter ebenfalls mit Grossbuchstaben,
-                                                       ' und Immich behaelt sie auch. Verglichen wird dafuer ohne
-                                                       ' Ruecksicht darauf - sonst stuende "Berlin" zweimal da.
-                                                       Dim tag = NewTagText.Trim()
-                                                       If String.IsNullOrEmpty(tag) OrElse
-                                                          Tags.Any(Function(vorhanden) String.Equals(vorhanden, tag, StringComparison.OrdinalIgnoreCase)) Then Return
-                                                       Tags.Add(tag)
-                                                       NewTagText = ""
-                                                       Dim immichAssetId = CurrentImmichAssetId()
-                                                       If immichAssetId IsNot Nothing Then
-                                                           Dim ignored = ImmichService.AddTagToAssetAsync(immichAssetId, tag)
-                                                       ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                           LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
-                                                       End If
-                                                       RefreshTagSuggestions()
-                                                   End Sub)
-
-            RemoveTagCommand = ReactiveCommand.Create(Of String)(Sub(tag)
-                                                                     If Not Tags.Remove(tag) Then Return
-                                                                     Dim immichAssetId = CurrentImmichAssetId()
-                                                                     If immichAssetId IsNot Nothing Then
-                                                                         Dim ignored = ImmichService.RemoveTagFromAssetAsync(immichAssetId, tag)
-                                                                     ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                                         LibraryService.Instance.SetTags(_currentImagePath, Tags, syncToXmp:=True)
-                                                                     End If
-                                                                 End Sub)
             OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) _mainVm?.OpenTagSearchInGallery(tag))
 
             SetToolCommand = ReactiveCommand.Create(Of String)(Sub(toolName)
@@ -11624,6 +11425,9 @@ Namespace ViewModels
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
                                                                    _mainVm.Settings.EditorInfoSidebarExpanded = Not _mainVm.Settings.EditorInfoSidebarExpanded
                                                                    Me.RaisePropertyChanged(NameOf(IsInfoSidebarVisible))
+                                                                   ' Das Panel muss es auch wissen: die Leiste bindet ihre
+                                                                   ' Innenteile an SEINEN Zustand, nicht an den des Editors.
+                                                                   InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
                                                                End Sub)
             ToggleLayersPanelCommand = ReactiveCommand.Create(Sub()
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
@@ -11637,7 +11441,6 @@ Namespace ViewModels
                                                                   Me.RaisePropertyChanged(NameOf(AreToolSidebarLabelsVisible))
                                                                   Me.RaisePropertyChanged(NameOf(ToolSidebarWidth))
                                                               End Sub)
-            SetInfoTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName) SetInfoTab(tabName))
             SetLayersPanelTabCommand = ReactiveCommand.Create(Of String)(Sub(tabName)
                                                                               If String.Equals(tabName, "History", StringComparison.OrdinalIgnoreCase) Then
                                                                                   SelectedLayersPanelTab = LayersPanelTab.History
@@ -12215,7 +12018,7 @@ Namespace ViewModels
                 ShowBeforeImage = _comparisonAutoEnabled AndAlso CanShowBeforeAfter
                 ' Geleert wurde schon oben, vor dem Setzen des Pfades - siehe dort.
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
-                ExifInfo = Nothing
+                InfoPanel.ExifInfo = Nothing
                 ClearHistogramData()
                 Await PreparePreviewSourceAsync(RenderSourcePath,
                                                 scheduleInitialRender:=Not publishAtomically,
@@ -12267,7 +12070,7 @@ Namespace ViewModels
                     Return
                 End If
                 VerifyWorkingImageDimensions()
-                ExifInfo = BuildImageInfo(RenderSourcePath)
+                InfoPanel.ExifInfo = BuildImageInfo(RenderSourcePath)
                 RefreshHistogram()
                 Dim info = New FileInfo(path)
                 Dim kb = info.Length / 1024.0
@@ -12439,7 +12242,7 @@ Namespace ViewModels
                 ComparisonImage = Nothing
                 CurrentImage = Nothing
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
-                ExifInfo = Nothing
+                InfoPanel.ExifInfo = Nothing
                 ClearHistogramData()
                 Await PreparePreviewSourceAsync(RenderSourcePath,
                                                 scheduleInitialRender:=Not publishAtomically,
@@ -12498,7 +12301,7 @@ Namespace ViewModels
                     Return False
                 End If
                 VerifyWorkingImageDimensions()
-                ExifInfo = BuildImageInfo(RenderSourcePath)
+                InfoPanel.ExifInfo = BuildImageInfo(RenderSourcePath)
                 RefreshHistogram()
                 Dim info = New FileInfo(imagePath)
                 Dim kb = info.Length / 1024.0
@@ -12576,21 +12379,17 @@ Namespace ViewModels
 
         Private Sub LoadLibraryMeta(imagePath As String)
             ' Auch beim direkten Oeffnen ohne Galerie-Scan zuerst den portablen .fpxmp-Katalog
-            ' einlesen; die folgenden Properties spiegeln danach denselben Stand wie die Sidecar.
+            ' einlesen; das Panel spiegelt danach denselben Stand wie die Sidecar.
             LibraryService.Instance.ImportFpxmpCatalogData(imagePath)
-            _rating = LibraryService.Instance.GetRating(imagePath)
-            Me.RaisePropertyChanged(NameOf(Rating))
-            _isFavorite = LibraryService.Instance.GetFavorite(imagePath)
-            Me.RaisePropertyChanged(NameOf(IsFavorite))
-            _colorLabel = LibraryService.Instance.GetColorLabel(imagePath)
-            RaiseColorLabelProperties()
-            Tags.Clear()
-            For Each tag In LibraryService.Instance.GetTags(imagePath)
-                Tags.Add(tag)
-            Next
-            RefreshTagSuggestions()
-            LoadPeople(imagePath)
-            LoadPlace(imagePath)
+            ' Das Panel auf dieses Bild stellen: Personen und Ort holt es selbst.
+            InfoPanel.ShowItem(EnsureInfoItem(imagePath))
+            ' Ueber ApplyOwnedState, nicht ueber die Eigenschaften: die Werte kommen gerade aus dem
+            ' Katalog, und der Weg ueber die Setter schriebe sie sofort wieder dorthin zurueck.
+            InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(imagePath),
+                                      LibraryService.Instance.GetFavorite(imagePath),
+                                      LibraryService.Instance.GetColorLabel(imagePath))
+            InfoPanel.ApplyOwnedTags(LibraryService.Instance.GetTags(imagePath))
+            RaiseFooterColorLabelState()
         End Sub
 
         Private Async Function LoadImmichMetaAsync(assetId As String) As Task
@@ -12598,26 +12397,25 @@ Namespace ViewModels
             If asset Is Nothing Then Return
 
             _immichSourceFileName = asset.FileName
-            _rating = asset.Rating
-            Me.RaisePropertyChanged(NameOf(Rating))
-            _isFavorite = asset.IsFavorite
-            Me.RaisePropertyChanged(NameOf(IsFavorite))
             ' Etikett ist rein lokal - unter dem Pseudo-Pfad des Assets abgelegt (wie in der Galerie).
-            _colorLabel = LibraryService.Instance.GetColorLabel(ImmichService.MakePseudoPath(asset.Id, asset.FileName))
-            RaiseColorLabelProperties()
-            Tags.Clear()
-            For Each tag In If(asset.Tags, New List(Of String)())
-                Tags.Add(tag)
-            Next
-            RefreshTagSuggestions()
+            InfoPanel.ApplyOwnedState(asset.Rating, asset.IsFavorite,
+                                      LibraryService.Instance.GetColorLabel(ImmichService.MakePseudoPath(asset.Id, asset.FileName)))
+            InfoPanel.ApplyOwnedTags(asset.Tags)
+            RaiseFooterColorLabelState()
         End Function
 
-        Private Sub RefreshTagSuggestions()
-            TagSuggestions.Clear()
-            For Each tag In LibraryService.Instance.GetAllTags()
-                TagSuggestions.Add(tag)
-            Next
-        End Sub
+        ''' <summary>Das Element, das dem Panel das offene Bild beschreibt. Es wird nur bei einem
+        ''' echten Bildwechsel neu gebaut: das Panel erkennt an DIESER Instanz, dass es dasselbe
+        ''' Bild ist, und laesst Personen, Ort und Stichwoerter dann stehen.</summary>
+        Private Function EnsureInfoItem(imagePath As String) As ImageItem
+            If _infoItem Is Nothing OrElse
+               Not String.Equals(_infoItem.FilePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+                _infoItem = ImageItem.CreateLightweight(imagePath)
+            End If
+            Return _infoItem
+        End Function
+
+        Private _infoItem As ImageItem
 
         ''' <summary>Leert den Filmstreifen samt Thumbnails. Herausgezogen, damit das Verwerfen eines
         ''' neuen Bildes dieselbe Räumung nutzt wie der Neuaufbau beim Laden.</summary>
@@ -13629,7 +13427,7 @@ Namespace ViewModels
             _forceSaveAsOnly = False
             ClearFilmstrip()
             ClearUndoHistory()
-            ExifInfo = Nothing
+            InfoPanel.ExifInfo = Nothing
             ClearHistogramData()
             StatusText = ""
             _hasChanges = False
@@ -19633,31 +19431,6 @@ Namespace ViewModels
             Return "Anpassung"
         End Function
 
-        Private Sub SetInfoTab(tabName As String)
-            Select Case If(tabName, "").Trim().ToLowerInvariant()
-                Case "people"
-                    SelectedInfoTab = InfoSidebarTab.People
-                Case "exif"
-                    SelectedInfoTab = InfoSidebarTab.Exif
-                Case "iptc"
-                    SelectedInfoTab = InfoSidebarTab.Iptc
-                Case "xmp"
-                    SelectedInfoTab = InfoSidebarTab.Xmp
-                Case "icc"
-                    SelectedInfoTab = InfoSidebarTab.Icc
-                Case Else
-                    SelectedInfoTab = InfoSidebarTab.General
-            End Select
-        End Sub
-
-        Private Sub RaiseInfoTabStateChanged()
-            Me.RaisePropertyChanged(NameOf(IsInfoTabGeneral))
-            Me.RaisePropertyChanged(NameOf(IsInfoTabPeople))
-            Me.RaisePropertyChanged(NameOf(IsInfoTabExif))
-            Me.RaisePropertyChanged(NameOf(IsInfoTabIptc))
-            Me.RaisePropertyChanged(NameOf(IsInfoTabXmp))
-            Me.RaisePropertyChanged(NameOf(IsInfoTabIcc))
-        End Sub
 
 
 
@@ -20018,24 +19791,24 @@ Namespace ViewModels
             If FpxService.IsFpx(_currentImagePath) Then
                 ' Eine geoeffnete FPX zeigt im Infopanel den gespeicherten Projektstand, nicht das
                 ' unveraenderte base.* und auch keinen spaeter neu berechneten Zwischen-Preview.
-                HistogramImage = ImageProcessor.BuildHistogramImage(_currentImagePath, 240, 120)
+                InfoPanel.HistogramImage = ImageProcessor.BuildHistogramImage(_currentImagePath, 240, 120)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
                 Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
                 Return
             End If
             Dim previewSource = GetPreviewSource()
             If previewSource IsNot Nothing Then
-                HistogramImage = ImageProcessor.BuildHistogramImage(previewSource, 240, 120)
+                InfoPanel.HistogramImage = ImageProcessor.BuildHistogramImage(previewSource, 240, 120)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(previewSource)
             Else
-                HistogramImage = ImageProcessor.BuildHistogramImage(RenderSourcePath, 240, 120)
+                InfoPanel.HistogramImage = ImageProcessor.BuildHistogramImage(RenderSourcePath, 240, 120)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(RenderSourcePath)
             End If
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub
 
         Private Sub ClearHistogramData()
-            HistogramImage = Nothing
+            InfoPanel.HistogramImage = Nothing
             _curveHistogramCounts = (New Integer(255) {}, New Integer(255) {}, New Integer(255) {}, New Integer(255) {})
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub

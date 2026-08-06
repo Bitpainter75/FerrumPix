@@ -5938,10 +5938,14 @@ Namespace Views
                 ' Ebenenpanel. Ein Textobjekt außerhalb des Textwerkzeugs hat keine Zeile
                 ' markiert - Entf landete deshalb beim Löschen der BILDDATEI.
                 vm.DeleteSelectedAnnotationCommand.Execute(Nothing)
+            ElseIf vm.HasPixelSelectionScope Then
+                ' Laufameisen auf dem Bild: Entf löscht den Inhalt der Auswahl, er wird
+                ' durchsichtig. Die Auswahl bleibt stehen, aufgehoben wird sie mit Esc.
+                vm.EraseSelection()
             ElseIf vm.HasActiveSelection Then
-                ' Eine aktive Pixelauswahl ist ein Bildbearbeitungskontext. Löschen darf hier
-                ' niemals als Fallback die aktuelle Bilddatei löschen; bis ein eigener
-                ' maskierter Pixel-Erase-Commit existiert, hebt es sicher die Auswahl auf.
+                ' Eine Ebenenmaske ist zwar eine Auswahl, aber keine, deren Inhalt man löscht -
+                ' ihr Overlay ist in den Pixelwerkzeugen gar nicht zu sehen. Löschen darf hier
+                ' niemals als Fallback die Bilddatei treffen, also hebt es sicher die Auswahl auf.
                 vm.ClearSelection()
             Else
                 vm.DeleteCurrentCommand.Execute(Nothing)

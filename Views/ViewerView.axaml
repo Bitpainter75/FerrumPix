@@ -494,7 +494,10 @@
             </Button>
         </Grid>
 
-        <views:InfoSidebarView Grid.Row="1" Grid.Column="1" Width="320"/>
+        <!-- Der Datenkontext ist das Panel, nicht der Betrachter: seinen Zustand haelt seit dem
+             2026-08-06 das gemeinsame InfoPanelViewModel, dasselbe wie in Galerie und Editor. -->
+        <views:InfoSidebarView Grid.Row="1" Grid.Column="1" Width="320"
+                               DataContext="{Binding InfoPanel}"/>
 
         <Border Grid.Row="2" Grid.ColumnSpan="2"
                 Classes="window-drag"
@@ -587,7 +590,7 @@
                                        IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                        Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center" 
-                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                                    Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="1">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                                Classes="rating-star"
@@ -595,7 +598,7 @@
                                                VerticalAlignment="Center" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
-                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                                    Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="2">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                                Classes="rating-star"
@@ -603,7 +606,7 @@
                                                VerticalAlignment="Center" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
-                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                                    Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="3">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                                Classes="rating-star"
@@ -611,7 +614,7 @@
                                                VerticalAlignment="Center" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
-                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                                    Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="4">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                                Classes="rating-star"
@@ -619,7 +622,7 @@
                                                VerticalAlignment="Center" />
                             </Button>
                             <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
-                                    Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                                    Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
                                     Command="{Binding SetRatingCommand}" CommandParameter="5">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg"
                                                Classes="rating-star"
@@ -634,11 +637,11 @@
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
                                                    Width="20" Height="20"
                                                    Classes="fav-heart"
-                                                   IsVisible="{Binding !IsFavorite}" />
+                                                   IsVisible="{Binding !InfoPanel.IsFavorite}" />
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg"
                                                    Width="20" Height="20"
                                                    Classes="fav-heart active"
-                                                   IsVisible="{Binding IsFavorite}" />
+                                                   IsVisible="{Binding InfoPanel.IsFavorite}" />
                                 </Grid>
                             </Button>
                         </StackPanel>
