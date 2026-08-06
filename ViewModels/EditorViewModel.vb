@@ -67,6 +67,10 @@ Namespace ViewModels
         ' Speichern fiele die Transparenz weg (siehe WorkingImageService.HasAlphaHoles).
         Private _newDocTransparentBackground As Boolean = False
         Private _pendingNewDocTransparent As Boolean = False
+        ' Die im Dialog "Neues Bild" gewaehlte Hintergrundfarbe, damit die Hintergrund-Gruppe des
+        ' Anpassungspanels sie nach dem Oeffnen anzeigt. Jedes andere Bild startet durchsichtig;
+        ' nur diese Uebergabe darf davon abweichen (leer = nichts zu uebernehmen).
+        Private _pendingNewDocCanvasBackground As String = ""
         ' Immich-Album, aus dem das aktuelle Bild stammt - ein Upload des bearbeiteten Bildes nach Immich
         ' landet dann gleich in diesem Album (leer = nur in die Bibliothek).
         Private _immichSourceAlbumId As String = Nothing
@@ -12395,8 +12399,10 @@ Namespace ViewModels
             ' gerade öffnet.
             Dim incomingNewDocTempDir = _pendingNewDocTempDir
             Dim incomingNewDocTransparent = _pendingNewDocTransparent
+            Dim incomingNewDocBackground = _pendingNewDocCanvasBackground
             _pendingNewDocTempDir = ""
             _pendingNewDocTransparent = False
+            _pendingNewDocCanvasBackground = ""
             CleanupCurrentNewDocTempDir()
             CleanupCurrentSelectionAssetTempDir()
             _currentNewDocTempDir = incomingNewDocTempDir
@@ -12418,6 +12424,9 @@ Namespace ViewModels
             _currentImagePath = imagePath
             ' Wie oben: der gewaehlte Reiter ueberlebt den Bildwechsel.
             ResetAdjustmentsInternal(resetEditorUi:=True)
+            ' Direkt danach, weil das Ruecksetzen den Hintergrund auf durchsichtig stellt: nur ein
+            ' gerade angelegtes Dokument bringt seine im Dialog gewaehlte Farbe mit.
+            ApplyPendingNewDocumentBackground(incomingNewDocBackground)
             ' Nach dem Zuruecksetzen: die Rezeptfelder sind dann auf "wie vorgegeben", und die
             ' Statuszeile zeigt das Objektiv DIESES Bildes statt des vorigen.
             RefreshLensCorrection()
@@ -13703,6 +13712,14 @@ Namespace ViewModels
             ' Temp-Ordner auf und darf dabei nicht den gerade angelegten erwischen.
             _pendingNewDocTempDir = tempDir
             _pendingNewDocTransparent = transparent
+            ' Die gewaehlte Farbe steckt schon in den Pixeln der Temp-PNG. Sie zusaetzlich als
+            ' Dokumenthintergrund zu fuehren macht sie im Anpassungspanel sichtbar und fuellt
+            ' spaeter Radiertes und erweiterte Leinwand in derselben Farbe.
+            If transparent Then
+                _pendingNewDocCanvasBackground = "#00000000"
+            Else
+                _pendingNewDocCanvasBackground = ParseNewDocColor(backgroundMode, backgroundColor).ToString()
+            End If
 
             ' Die einelementige Pfadliste ist Absicht: ohne allPaths liest LoadFilmstripContext das
             ' VERZEICHNIS des Pfads aus - also den Temp-Ordner. So zeigt der Filmstreifen „1 / 1".
@@ -13710,6 +13727,7 @@ Namespace ViewModels
             If Not opened Then
                 _pendingNewDocTempDir = ""
                 _pendingNewDocTransparent = False
+                _pendingNewDocCanvasBackground = ""
                 Try
                     If Directory.Exists(tempDir) Then Directory.Delete(tempDir, True)
                 Catch
@@ -13723,6 +13741,21 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsNewDocument))
             Return True
         End Function
+
+        ''' <summary>Uebernimmt die im Dialog "Neues Bild" gewaehlte Hintergrundfarbe als
+        ''' Dokumenthintergrund. Laeuft direkt nach dem Ruecksetzen und schreibt das Feld selbst -
+        ''' ueber die Eigenschaft waere daraus ein Undo-Schritt und eine ungespeicherte Aenderung
+        ''' geworden, obwohl das Dokument noch unberuehrt ist.</summary>
+        Private Sub ApplyPendingNewDocumentBackground(pendingColor As String)
+            If String.IsNullOrWhiteSpace(pendingColor) Then Return
+            _canvasBackgroundColor = NormalizeAvaloniaColor(pendingColor, "#00000000")
+            For Each n In {NameOf(CanvasBackgroundColor), NameOf(CanvasBackgroundColorValue),
+                           NameOf(CanvasBackgroundBrush), NameOf(HasDocumentBackground),
+                           NameOf(IsDocumentBackgroundBlack), NameOf(IsDocumentBackgroundWhite),
+                           NameOf(IsDocumentBackgroundTransparent)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
 
         Private Shared Function ParseNewDocColor(backgroundMode As String, backgroundColor As String) As SKColor
             If Not String.Equals(backgroundMode, "Color", StringComparison.Ordinal) Then Return SKColors.White
@@ -15219,7 +15252,10 @@ Namespace ViewModels
             _appliedCanvasHeight = adj.CanvasHeight
             _lockCanvasAspect = adj.LockCanvasAspect
             _canvasAnchor = If(String.IsNullOrWhiteSpace(adj.CanvasAnchor), "Center", adj.CanvasAnchor)
-            _canvasBackgroundColor = If(String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor), "#FF000000", adj.CanvasBackgroundColor)
+            ' Keine Farbe im Rezept heisst durchsichtig - genau das rechnet auch die Pipeline
+            ' (ApplyDocumentBackground laesst ein leeres Feld unberuehrt). Ein Ersatzwert Schwarz
+            ' haette hier eine Farbe erfunden, die niemand gewaehlt hat.
+            _canvasBackgroundColor = If(String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor), "#00000000", adj.CanvasBackgroundColor)
             _filterPreset = adj.FilterPreset
             _filterStrength = If(adj.FilterStrength <= 0, 100, adj.FilterStrength)
             _lutPath = adj.LutPath
@@ -15619,7 +15655,9 @@ Namespace ViewModels
             _appliedCanvasHeight = 0
             _lockCanvasAspect = True
             _canvasAnchor = "Center"
-            _canvasBackgroundColor = "#FF000000"
+            ' Ein frisch geoeffnetes Bild hat keinen Dokumenthintergrund. Nur "Neues Bild" darf eine
+            ' Farbe mitbringen, die setzt ApplyPendingNewDocumentBackground nach diesem Ruecksetzen.
+            _canvasBackgroundColor = "#00000000"
             _filterPreset = "Keine"
             _filterStrength = 100
             _lutPath = ""
