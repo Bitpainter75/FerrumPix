@@ -133,7 +133,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Column="1" RowDefinitions="*,74">
+        <Grid Grid.Column="1" RowDefinitions="*,66">
         <ScrollViewer x:Name="SettingsScrollViewer" Grid.Row="0" Padding="28,26,24,32"
                       Margin="0,0,8,0"
                       HorizontalScrollBarVisibility="Disabled"

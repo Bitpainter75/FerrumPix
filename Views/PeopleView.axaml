@@ -43,7 +43,7 @@
          wie beim Ordnen und Bewerten. In den Einstellungen legt man fest, WIE das Programm
          arbeitet - das ist etwas anderes. Die zwei Schalter der Erkennung bleiben deshalb dort,
          und ein Knopf oben rechts führt hin. -->
-    <Grid RowDefinitions="Auto,*,74">
+    <Grid RowDefinitions="Auto,*,66">
 
         <Border Grid.Row="0" Classes="section" Margin="24,20,24,0">
             <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="14">

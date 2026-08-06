@@ -24,7 +24,7 @@
                 <Border x:Name="TopWindowDragArea"
                         Grid.Row="0"
                         Classes="toolbar window-drag"
-                        Height="50"
+                        Height="46"
                         IsVisible="{Binding IsWindowChromeVisible}">
                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
                         <StackPanel x:Name="WindowLogoPanel"

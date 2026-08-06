@@ -1160,7 +1160,8 @@ Namespace Views
             If vm Is Nothing Then Return
             vm.SelectOnly(item)
             _selectionAnchor = item
-            OpenGalleryItem(item)
+            ' Das Auge auf der Kachel heisst „anzeigen" - daneben sitzt der Stift zum Bearbeiten.
+            OpenGalleryItemInViewer(item)
             e.Handled = True
         End Sub
 
@@ -1391,7 +1392,8 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not IsSingleGallerySelection(vm) Then Return
             Dim item = GetItemFromSender(sender)
-            OpenGalleryItem(If(item, vm.SelectedItem))
+            ' „Anzeigen" im Kontext- und Fussmenue, daneben steht „Bearbeiten".
+            OpenGalleryItemInViewer(If(item, vm.SelectedItem))
         End Sub
 
         ''' <summary>Zwei markierte Bilder nebeneinander im Betrachter oeffnen. Genau ZWEI - bei einem
@@ -2545,6 +2547,8 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>Der unbenannte Weg hinein: Doppelklick auf die Kachel, Eingabetaste, Play-Badge.
+        ''' NUR hier gilt die Einstellung „Bild aus der Galerie öffnet mit".</summary>
         Private Sub OpenGalleryItem(item As ImageItem)
             Dim vm = GetVm()
             If vm Is Nothing OrElse item Is Nothing Then Return
@@ -2559,10 +2563,26 @@ Namespace Views
             End If
         End Sub
 
-        ''' <summary>Womit ein Bild geoeffnet wird. Diese eine Stelle entscheidet fuer ALLE Wege
-        ''' hinein - Doppelklick, Eingabetaste und die Kacheln. Videos gehen immer in den
-        ''' Betrachter: der Editor kann sie nicht, und ein leerer Editor waere schlechter als eine
-        ''' Einstellung, die einmal nicht greift.</summary>
+        ''' <summary>Der benannte Weg: „Anzeigen" im Kontext- und Fußmenü und das Auge auf der
+        ''' Kachel. Der Eintrag sagt, wohin es geht, also geht es dorthin - die Einstellung hat hier
+        ''' nichts zu entscheiden (Nutzerbefund 2026-08-06: beide landeten im Editor, sobald die
+        ''' Einstellung auf Editor stand). Wer bearbeiten will, hat daneben „Bearbeiten".</summary>
+        Private Sub OpenGalleryItemInViewer(item As ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse item Is Nothing Then Return
+
+            If item.IsFolder Then
+                vm.NavigateToFolder(item.FilePath)
+                SelectFolderInTree(item.FilePath)
+            Else
+                vm.OpenSelectedInViewer()
+            End If
+        End Sub
+
+        ''' <summary>Womit ein Bild geoeffnet wird, wenn der Weg hinein nichts anderes sagt -
+        ''' Doppelklick, Eingabetaste, Play-Badge. Videos gehen immer in den Betrachter: der Editor
+        ''' kann sie nicht, und ein leerer Editor waere schlechter als eine Einstellung, die einmal
+        ''' nicht greift.</summary>
         Private Shared Function ShouldOpenInEditor(item As ImageItem) As Boolean
             If item Is Nothing OrElse item.IsVideoFile Then Return False
             Return AppSettingsService.Load().GalleryOpenTarget = "Editor"

@@ -52,14 +52,17 @@ Namespace Views
 
         ''' <summary>macOS erhaelt den nativen NSWindow-Rahmen mit den roten, gelben und
         ''' gruenen Fensterknoepfen. Der Clientbereich reicht dabei in die vorhandene
-        ''' 50-Pixel-Kopfleiste hinein. Auf Windows und Linux bleiben die in XAML
+        ''' Kopfleiste hinein. Auf Windows und Linux bleiben die in XAML
         ''' gesetzten rahmenlosen, selbst gezeichneten Fensterdekorationen unveraendert.</summary>
         Private Sub ConfigurePlatformWindowChrome()
             If Not _usesNativeMacWindowChrome Then Return
 
             WindowDecorations = WindowDecorations.Full
             ExtendClientAreaToDecorationsHint = True
-            ExtendClientAreaTitleBarHeightHint = 50
+            ' Muss zur Hoehe von TopWindowDragArea in MainWindow.axaml passen: der Hinweis
+            ' bestimmt, wieviel Platz macOS fuer die Titelleiste freihaelt, und eine Zahl daneben
+            ' schiebt entweder den Inhalt unter die Fensterknoepfe oder laesst einen Streifen frei.
+            ExtendClientAreaTitleBarHeightHint = 46
 
             ' Rundung, Rand, Schatten UND das Abschneiden der Fensterecken gehoeren
             ' auf macOS ausschliesslich NSWindow. Der Avalonia-Rahmen darf weder eine

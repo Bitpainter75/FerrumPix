@@ -26,7 +26,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="GalleryRootGrid" RowDefinitions="60,*,60">
+    <Grid x:Name="GalleryRootGrid" RowDefinitions="56,*,40">
 
         <!-- EIN Kontextmenue fuer Kachel, Zeile und Fusszeile. -->
         <Grid.ContextMenu>
@@ -64,7 +64,7 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Classes="toolbar" Height="60" Padding="16,0">
+        <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Classes="toolbar" Height="56" Padding="16,0">
             <Grid ColumnDefinitions="Auto,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <Button Classes="icon-btn" Width="36" Height="36"
@@ -2148,7 +2148,10 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Classes="statusbar window-drag" Height="60" Padding="20,10">
+        <!-- Höhe wie die Fußzeilen von Editor und Betrachter: dort ergibt sich 40 aus 6 Rand,
+             28 Knopfhöhe, 6 Rand. Eine Fußzeile, die je nach Ansicht anders hoch ist, springt beim
+             Umschalten. -->
+        <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Classes="statusbar window-drag" Height="40" Padding="20,6">
             <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
                     <!-- Zeigt dasselbe Menü wie ein Rechtsklick auf ein Bild: dort stecken inzwischen die
@@ -2158,25 +2161,25 @@
                     <!-- Immer bedienbar, auch ohne Auswahl: es bleiben Aktionen, die kein Bild
                          brauchen - neuer Ordner, einfügen, neues Bild, Vollbild. Der Bauplan
                          entscheidet, was davon erscheint. -->
-                    <Button Classes="icon-btn" Width="34" Height="34"
-                            Margin="-10,0,0,0"
+                    <Button Classes="icon-btn" Width="28" Height="28"
+                            Margin="-7,0,0,0"
                             Click="OnGalleryMenuButtonClick"
                             ToolTip.Tip="Menü">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/menu-2.svg"
-                                       Width="20" Height="20"/>
+                                       Width="18" Height="18"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="34" Height="34"
+                    <Button Classes="icon-btn" Width="28" Height="28"
                             Command="{Binding SelectAllCommand}"
                             ToolTip.Tip="Alle auswählen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
-                                       Width="20" Height="20"/>
+                                       Width="18" Height="18"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="34" Height="34"
+                    <Button Classes="icon-btn" Width="28" Height="28"
                             Command="{Binding ClearSelectionCommand}"
                             IsEnabled="{Binding HasSelection}"
                             ToolTip.Tip="Alle abwählen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg"
-                                       Width="20" Height="20"/>
+                                       Width="18" Height="18"/>
                     </Button>
                     <TextBlock
                                Text="{Binding FooterStatusText}"
