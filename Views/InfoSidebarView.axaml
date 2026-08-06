@@ -27,12 +27,13 @@
                    FontSize="{DynamicResource FP.Font.Body}"/>
         <Grid RowDefinitions="Auto,*" RowSpacing="14" IsVisible="{Binding HasInfoContent}">
             <StackPanel Spacing="0">
-                <TextBlock Text="Info" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                <!-- Ohne Ueberschrift: die Leiste steht in einer eigenen Spalte, "Info" sagte
+                     nichts, was der Inhalt nicht schon zeigt, und kostete eine Zeile Hoehe. -->
                 <!-- Bei mehreren Bildern gibt es nur die Übersicht: EXIF, IPTC, XMP und ICC
                      beschreiben genau eine Datei, und eine von zwölf zu zeigen wäre falsch. -->
                 <!-- Spacing knapper als sonst: fünf Reiter müssen in die 320px breite Seitenleiste passen,
                      auch bei längeren Übersetzungen von "Allgemein". -->
-                <StackPanel Orientation="Horizontal" Spacing="9" Margin="0,14,0,0"
+                <StackPanel Orientation="Horizontal" Spacing="9"
                             IsVisible="{Binding IsSingleImage}">
                     <Button Classes="info-tab" Command="{Binding SetInfoTabCommand}" CommandParameter="General" Classes.active="{Binding IsInfoTabGeneral}">
                         <TextBlock Text="Allgemein"/>
@@ -93,7 +94,7 @@
                                  die ganze Spaltenbreite zum Umbrechen statt der halben. Darunter
                                  eine Leerzeile Abstand zu den Wertzeilen. -->
                             <TextBlock Text="{Binding ExifInfo.FileName}" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
                                 <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
                                     <TextBlock Text="{Binding ExifInfo.ImageWidth}"/>
@@ -120,6 +121,20 @@
                                 <TextBlock Grid.Row="6" Grid.Column="1" HorizontalAlignment="Right"
                                            Text="{Binding ExifInfo.FileModified, Converter={StaticResource ExifDateConverter}}"
                                            IsVisible="{Binding ExifInfo.FileModified, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+                                <!-- Der Ort steht als Zeile HIER und nicht mehr als eigener Block mit
+                                     Ueberschrift und Trennlinie: er ist eine Angabe wie Abmessungen oder
+                                     Dateigroesse und braucht dafuer keine drei Zeilen Hoehe.
+                                     OHNE Beschriftung und ueber BEIDE Spalten: die Nadel sagt schon, was
+                                     es ist, und lange Ortsnamen ("Sant Feliu de Guixols, Katalonien,
+                                     Spanien") haben so die ganze Breite zum Umbrechen statt der halben.
+                                     Der Abstand oben trennt ihn von den Datumszeilen darueber. -->
+                                <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6"
+                                            Margin="0,12,0,0" IsVisible="{Binding HasPlace}">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                                                   Width="14" Height="14" VerticalAlignment="Top" Margin="0,2,0,0" Opacity="0.75"/>
+                                    <TextBlock Text="{Binding PlaceText}" Classes="no-translate"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
 
@@ -130,11 +145,21 @@
 
                         <StackPanel Spacing="10" IsVisible="{Binding HasHistogram}">
                             <TextBlock Text="Histogramm" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                            <Border Height="92" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
-                                <Image Source="{Binding HistogramImage}"
-                                       Stretch="Fill"
-                                       RenderOptions.BitmapInterpolationMode="LowQuality"/>
-                            </Border>
+                            <!-- Solange nichts da ist, steht der Hinweis im leeren Kasten: bei einem
+                                 RAW dauert der Volldecode spuerbar, und ein leerer Rahmen sieht in der
+                                 Zeit aus wie ein Fehler statt wie Arbeit. -->
+                            <Panel Height="92">
+                                <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                                    <Image Source="{Binding HistogramImage}"
+                                           Stretch="Fill"
+                                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                                </Border>
+                                <TextBlock Text="wird berechnet"
+                                           IsVisible="{Binding HistogramImage, Converter={x:Static ObjectConverters.IsNull}}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                            </Panel>
                         </StackPanel>
 
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
@@ -263,23 +288,6 @@
                                     <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Foreground="{DynamicResource FP.Text.Secondary}"/>
                                 </Button>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Ort. Steht bei den Personen, weil beides aus derselben Quelle kommt:
-                             was das Bild über sich selbst verrät, ohne dass jemand es eingetippt hat.
-                             Der Name stammt aus der örtlichen Ortstabelle - die Koordinaten stehen im
-                             Bild, der Name nirgends. Ohne Ortsangabe fällt der ganze Block weg. -->
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
-                                IsVisible="{Binding HasPlace}"/>
-
-                        <StackPanel Spacing="10" IsVisible="{Binding HasPlace}">
-                            <TextBlock Text="Ort" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
-                                               Width="16" Height="16" VerticalAlignment="Center" Opacity="0.75"/>
-                                <TextBlock Text="{Binding PlaceText}" Classes="no-translate"
-                                           TextWrapping="Wrap" VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
 

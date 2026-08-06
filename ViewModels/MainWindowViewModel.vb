@@ -3072,13 +3072,37 @@ Namespace ViewModels
             }
         End Function
 
-        Public Async Function ShowFileConflictAsync(existingPath As String, incomingPath As String) As Task(Of FileConflictDialogResult) Implements IEditorHost.ShowFileConflictAsync
+        Public Async Function ShowFileConflictAsync(existingPath As String, incomingPath As String,
+                                                    Optional incomingIsPlanned As Boolean = False) As Task(Of FileConflictDialogResult) Implements IEditorHost.ShowFileConflictAsync
+            ' Schreibt der Lauf auf die Datei, die er gerade LIEST? Dann ist "eine Datei mit diesem
+            ' Namen existiert bereits" die falsche Auskunft - es ist dieselbe Datei, und sie wird
+            ' ersetzt. Kommt vor, wenn der Zielordner der Ordner der Quelle ist und das Namensmuster
+            ' nichts anhaengt (Nutzerbefund 2026-08-06: Bildgroesse aendern in den aktuellen Ordner).
+            Dim aufSichSelbst = incomingIsPlanned AndAlso PathIdentity.AreSame(existingPath, incomingPath)
+
             DialogExistingFile = FileConflictInfo.FromPath(existingPath)
-            DialogIncomingFile = FileConflictInfo.FromPath(incomingPath)
+            DialogExistingFile.Headline = LocalizationService.T("Datei im Zielordner")
+            DialogExistingFile.Subtitle = If(aufSichSelbst,
+                                             LocalizationService.T("die gerade bearbeitete Datei"),
+                                             LocalizationService.T("bereits vorhanden"))
+
+            DialogIncomingFile = If(incomingIsPlanned,
+                                    FileConflictInfo.ForPlannedWrite(existingPath, incomingPath),
+                                    FileConflictInfo.FromPath(incomingPath))
+            DialogIncomingFile.Headline = If(incomingIsPlanned,
+                                             LocalizationService.T("Datei, die geschrieben wird"),
+                                             LocalizationService.T("Datei, die kopiert/verschoben wird"))
+            DialogIncomingFile.Subtitle = If(incomingIsPlanned,
+                                             LocalizationService.T("entsteht erst beim Speichern"),
+                                             LocalizationService.T("neue Datei"))
+
             DialogConflictRenameText = CreateUniqueConflictName(existingPath)
+            Dim frage = If(aufSichSelbst,
+                           LocalizationService.T("Diese Datei ist zugleich die Quelle. Wird sie überschrieben, ist das Original ersetzt."),
+                           LocalizationService.T("Eine Datei mit diesem Namen existiert bereits. Möchten Sie die bestehende Datei wirklich überschreiben?"))
             Dim result = Await ShowDialogAsync(AppDialogKind.FileConflict,
                                                "Datei überschreiben?",
-                                               "Eine Datei mit diesem Namen existiert bereits. Möchten Sie die bestehende Datei wirklich überschreiben?",
+                                               frage,
                                                "",
                                                "Überschreiben",
                                                "Abbrechen")

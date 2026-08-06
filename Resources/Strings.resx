@@ -6582,4 +6582,19 @@
   <data name="Auswahl_gel_scht_eb97789d" xml:space="preserve">
     <value>Selection deleted</value>
   </data>
+  <data name="wird_berechnet_51492443" xml:space="preserve">
+    <value>being calculated</value>
+  </data>
+  <data name="Datei_die_geschrieben_wird_a86fca4e" xml:space="preserve">
+    <value>File to be written</value>
+  </data>
+  <data name="entsteht_erst_beim_Speichern_185d8fcc" xml:space="preserve">
+    <value>created when saving</value>
+  </data>
+  <data name="die_gerade_bearbeitete_Datei_ee18624c" xml:space="preserve">
+    <value>the file being edited</value>
+  </data>
+  <data name="Diese_Datei_ist_zugleich_die_Quelle_Wird_sie_ber_7d491ab7" xml:space="preserve">
+    <value>This file is also the source. Overwriting it replaces the original.</value>
+  </data>
 </root>

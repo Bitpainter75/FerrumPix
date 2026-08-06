@@ -51,9 +51,15 @@ Namespace ViewModels
         Function ShowSaveChangesAsync(titleText As String,
                                       messageText As String) As Task(Of SaveChangesDialogResult)
         ''' <summary>Die Frage nach einer gleichnamigen Datei. Gehoert hierher und nicht in den
-        ''' Editor: den Dialog kennt der Anwendungsrahmen, der Editor kennt nur die Antwort.</summary>
+        ''' Editor: den Dialog kennt der Anwendungsrahmen, der Editor kennt nur die Antwort.
+        '''
+        ''' <paramref name="incomingIsPlanned"/> unterscheidet die beiden Anlaesse: beim Kopieren und
+        ''' Verschieben kommt eine VORHANDENE Datei herueber und ihre Angaben stimmen; beim Stapel
+        ''' und beim Speichern wird eine neue erst GERECHNET, und dann darf der Dialog nicht die
+        ''' Werte der Quelle als die der neuen Datei zeigen.</summary>
         Function ShowFileConflictAsync(existingPath As String,
-                                       incomingPath As String) As Task(Of FileConflictDialogResult)
+                                       incomingPath As String,
+                                       Optional incomingIsPlanned As Boolean = False) As Task(Of FileConflictDialogResult)
         Function ShowSaveAsAsync(titleText As String,
                                  messageText As String,
                                  initialBaseName As String,

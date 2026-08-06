@@ -87,6 +87,7 @@ Namespace ViewModels
             _isSummary = False
             _items.Clear()
             If item IsNot Nothing Then _items.Add(item)
+            WatchItems()
             _item = item
             _path = path
 
@@ -206,6 +207,7 @@ Namespace ViewModels
             ResetPanel()
             _isSummary = True
             _items = images
+            WatchItems()
             RaiseStateChanged()
 
             LoadSummaryBaseData()
@@ -228,6 +230,7 @@ Namespace ViewModels
             Dim token = Interlocked.Increment(_loadToken)
             _isSummary = False
             _items = New List(Of ImageItem)()
+            WatchItems()
             _item = Nothing
             _path = ""
             ' DER REITER BLEIBT STEHEN. Wer sich die EXIF-Daten ansieht und weiterblaettert, will
@@ -290,6 +293,46 @@ Namespace ViewModels
             ApplyRatingState(If(ratings.Count = 1, ratings(0), 0),
                                 favorites.Count = 1 AndAlso favorites(0),
                                 If(labels.Count = 1, labels(0), ""))
+        End Sub
+
+        ''' <summary>Bewertung, Herz und Etikett aus den angezeigten Elementen NEU einlesen.
+        '''
+        ''' Es wird NICHTS geschrieben: die Werte kommen von den Elementen selbst.</summary>
+        Public Sub ReloadRatingStateFromItems()
+            If _items Is Nothing OrElse _items.Count = 0 Then Return
+            LoadSummaryBaseData()
+        End Sub
+
+        ''' <summary>Die Elemente, an deren Meldungen das Panel gerade haengt.</summary>
+        Private ReadOnly _watchedItems As New List(Of ImageItem)()
+
+        ''' <summary>Das Panel hoert seinen Elementen ZU, statt auf Anstoesse von aussen zu warten.
+        '''
+        ''' Bewertung, Herz und Etikett lassen sich an vielen Stellen aendern: Sternemenue der
+        ''' Fusszeile, Kontextmenue, Klick auf die Kachel, Ruecknahme nach einem abgelehnten
+        ''' Immich-Schreibvorgang. Jeden dieser Wege daran zu erinnern, das Panel anzustossen, ist
+        ''' eine Liste, die jemand vergisst - genau das ist beim Herz auf der Kachel passiert
+        ''' (Nutzerbefund 2026-08-06, nachdem die uebrigen Wege schon versorgt waren).
+        '''
+        ''' Die Elemente melden ihre Aenderung ohnehin, sonst zeigte die Kachel sie nicht. Wer
+        ''' kuenftig einen neuen Weg baut, ist damit bauartbedingt versorgt.</summary>
+        Private Sub WatchItems()
+            For Each alt In _watchedItems
+                RemoveHandler alt.PropertyChanged, AddressOf OnWatchedItemChanged
+            Next
+            _watchedItems.Clear()
+            For Each aktuell In _items
+                If aktuell Is Nothing Then Continue For
+                AddHandler aktuell.PropertyChanged, AddressOf OnWatchedItemChanged
+                _watchedItems.Add(aktuell)
+            Next
+        End Sub
+
+        Private Sub OnWatchedItemChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
+            Select Case e.PropertyName
+                Case NameOf(ImageItem.Rating), NameOf(ImageItem.IsFavorite), NameOf(ImageItem.ColorLabel)
+                    ReloadRatingStateFromItems()
+            End Select
         End Sub
 
         ''' <summary>Die gemeinsamen Stichwoerter der Auswahl - der TEURE Teil der Uebersicht.

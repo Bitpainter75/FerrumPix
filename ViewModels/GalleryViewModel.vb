@@ -4526,6 +4526,8 @@ Namespace ViewModels
             Return drives
         End Function
 
+        ''' <summary>Das Herz auf der KACHEL. Ein eigener Weg neben dem der Fusszeile, weil er genau
+        ''' ein Bild umschaltet statt der ganzen Auswahl.</summary>
         Private Sub DoToggleFavorite(item As ImageItem)
             If item Is Nothing OrElse item.IsFolder Then Return
             Dim newVal = Not item.IsFavorite
@@ -7706,7 +7708,10 @@ Namespace ViewModels
             End If
 
             Do
-                Dim result = Await _mainVm.ShowFileConflictAsync(conflictingTarget, source)
+                ' incomingIsPlanned: der Stapel SCHREIBT die Zieldatei erst, sie existiert noch
+                ' nicht. Ohne die Angabe zeigte der Dialog die Werte der QUELLE als die der neuen
+                ' Datei - beim Verkleinern also weiter die Masse des Originals.
+                Dim result = Await _mainVm.ShowFileConflictAsync(conflictingTarget, source, incomingIsPlanned:=True)
                 If result Is Nothing Then Return Nothing
 
                 Select Case result.Choice

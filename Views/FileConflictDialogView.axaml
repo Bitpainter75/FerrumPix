@@ -12,8 +12,8 @@
                 CornerRadius="7"
                 Padding="14">
             <StackPanel Spacing="10">
-                <TextBlock Text="Datei im Zielordner" FontWeight="SemiBold"/>
-                <TextBlock Text="bereits vorhanden" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                <TextBlock Text="{Binding DialogExistingFile.Headline}" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding DialogExistingFile.Subtitle}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
                 <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
                     <Image Source="{Binding DialogExistingFile.Preview}" Stretch="UniformToFill"/>
                 </Border>
@@ -36,8 +36,8 @@
                 CornerRadius="7"
                 Padding="14">
             <StackPanel Spacing="10">
-                <TextBlock Text="Datei, die kopiert/verschoben wird" FontWeight="SemiBold"/>
-                <TextBlock Text="neue Datei" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                <TextBlock Text="{Binding DialogIncomingFile.Headline}" FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding DialogIncomingFile.Subtitle}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
                 <Border Height="150" Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
                     <Image Source="{Binding DialogIncomingFile.Preview}" Stretch="UniformToFill"/>
                 </Border>

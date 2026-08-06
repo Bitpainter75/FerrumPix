@@ -7738,7 +7738,9 @@ Namespace ViewModels
 
             Dim extension = IO.Path.GetExtension(targetPath)
             Do
-                Dim result = Await _mainVm.ShowFileConflictAsync(targetPath, RenderSourcePath)
+                ' incomingIsPlanned: gespeichert wird das BEARBEITETE Bild, nicht die Quelldatei.
+                ' Ihre Groesse und Masse waeren hier eine Behauptung ueber etwas, das erst entsteht.
+                Dim result = Await _mainVm.ShowFileConflictAsync(targetPath, RenderSourcePath, incomingIsPlanned:=True)
                 If result Is Nothing Then Return ""
                 Select Case result.Choice
                     Case FileConflictChoice.Overwrite, FileConflictChoice.OverwriteAll

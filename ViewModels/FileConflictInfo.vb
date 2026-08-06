@@ -14,6 +14,39 @@ Namespace ViewModels
         Public Property FileTypeText As String
         Public Property Preview As Bitmap
 
+        ''' <summary>Ueberschrift und Unterzeile der Karte. Sie gehoeren zum ANLASS und nicht zur
+        ''' Datei: beim Kopieren kommt eine vorhandene Datei herueber, beim Stapel und beim Speichern
+        ''' entsteht eine neue. Vorher stand beides fest im XAML, und der Stapel behauptete damit
+        ''' "Datei, die kopiert/verschoben wird" ueber einem Bild, das erst noch gerechnet wird.</summary>
+        Public Property Headline As String = ""
+        Public Property Subtitle As String = ""
+
+        ''' <summary>Die Datei, die GESCHRIEBEN werden soll - es gibt sie noch nicht.
+        '''
+        ''' Groesse, Zeitstempel und Masse stehen deshalb NICHT da: sie entstehen erst beim Rechnen.
+        ''' Vorher las der Dialog hier die QUELLdatei aus und zeigte deren Werte als die der neuen
+        ''' Datei - beim Verkleinern auf 800x800 stand dort weiter die Groesse und "1600 x 1600" des
+        ''' Originals (Nutzerbefund 2026-08-06). Die Vorschau kommt weiter aus der Quelle, denn das
+        ''' MOTIV stimmt ja; nur die Zahlen daneben duerfen nicht von ihr kommen.</summary>
+        Public Shared Function ForPlannedWrite(targetPath As String, previewSourcePath As String) As FileConflictInfo
+            Dim unbekannt = LocalizationService.T("wird berechnet")
+            Dim info As New FileConflictInfo With {
+                .FilePath = targetPath,
+                .FileName = IO.Path.GetFileName(targetPath),
+                .FileSizeText = unbekannt,
+                .ModifiedText = "-",
+                .DimensionsText = unbekannt,
+                .FileTypeText = $"{IO.Path.GetExtension(targetPath).TrimStart("."c).ToUpperInvariant()}-Datei"
+            }
+            ' Nur die Vorschau, nicht die Masse: TryLoadImageInfo wuerde beides setzen.
+            If Not String.IsNullOrEmpty(previewSourcePath) AndAlso File.Exists(previewSourcePath) Then
+                Dim nurBild As New FileConflictInfo()
+                TryLoadImageInfo(nurBild, previewSourcePath)
+                info.Preview = nurBild.Preview
+            End If
+            Return info
+        End Function
+
         Public Shared Function FromPath(path As String) As FileConflictInfo
             Dim info As New FileConflictInfo With {
                 .FilePath = path,
