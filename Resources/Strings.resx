@@ -6333,6 +6333,15 @@
   <data name="Diesen_Bestandteil_entfernen_3558bd9b" xml:space="preserve">
     <value>Remove this part</value>
   </data>
+  <data name="Diesen_Bestandteil_nach_oben_a091cc0a" xml:space="preserve">
+    <value>Move this part up</value>
+  </data>
+  <data name="Diesen_Bestandteil_nach_unten_5cb87b16" xml:space="preserve">
+    <value>Move this part down</value>
+  </data>
+  <data name="Verkn_pfung_dieses_Bestandteils_wechseln_0b387e76" xml:space="preserve">
+    <value>Change how this part combines</value>
+  </data>
   <data name="Nur_die_berschneidung_behalten_1f868e93" xml:space="preserve">
     <value>Keep only the overlap</value>
   </data>
@@ -6566,6 +6575,9 @@
   </data>
   <data name="Diese_Datei_ist_zugleich_die_Quelle_Wird_sie_ber_7d491ab7" xml:space="preserve">
     <value>This file is also the source. Overwriting it replaces the original.</value>
+  </data>
+  <data name="Ebene_12651719" xml:space="preserve">
+    <value>Layer</value>
   </data>
   <data name="Maskenebene_6cfc5826" xml:space="preserve">
     <value>Mask layer</value>

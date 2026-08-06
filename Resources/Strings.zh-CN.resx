@@ -6330,6 +6330,15 @@
   <data name="Diesen_Bestandteil_entfernen_3558bd9b" xml:space="preserve">
     <value>移除此组成部分</value>
   </data>
+  <data name="Diesen_Bestandteil_nach_oben_a091cc0a" xml:space="preserve">
+    <value>上移此组成部分</value>
+  </data>
+  <data name="Diesen_Bestandteil_nach_unten_5cb87b16" xml:space="preserve">
+    <value>下移此组成部分</value>
+  </data>
+  <data name="Verkn_pfung_dieses_Bestandteils_wechseln_0b387e76" xml:space="preserve">
+    <value>更改此组成部分的组合方式</value>
+  </data>
   <data name="Nur_die_berschneidung_behalten_1f868e93" xml:space="preserve">
     <value>仅保留重叠部分</value>
   </data>
@@ -6563,6 +6572,9 @@
   </data>
   <data name="Diese_Datei_ist_zugleich_die_Quelle_Wird_sie_ber_7d491ab7" xml:space="preserve">
     <value>该文件同时也是源文件。覆盖它将替换原始文件。</value>
+  </data>
+  <data name="Ebene_12651719" xml:space="preserve">
+    <value>图层</value>
   </data>
   <data name="Maskenebene_6cfc5826" xml:space="preserve">
     <value>蒙版图层</value>

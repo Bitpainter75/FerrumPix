@@ -62,6 +62,21 @@ Namespace Services
         ''' (MaskComponent.IsVisible).</summary>
         Public Property PrimaryVisible As Boolean = True
 
+        ''' <summary>Umkehrung des FERTIGEN Ergebnisses, nachdem alle Bestandteile verrechnet sind -
+        ''' im Unterschied zu <see cref="Inverted"/>, das dem ersten Bestandteil gehört.
+        '''
+        ''' Nötig, weil sich das Umkehren einer mehrteiligen Maske nicht auf ihre Teile verteilen
+        ''' lässt: Hinzufügen und Schneiden sind zwar Gegenstücke (Maximum gegen Minimum), das
+        ''' Abziehen ist als geklemmte Differenz aber keines - eine Umkehrung Bestandteil für
+        ''' Bestandteil wäre nur bei harten Kanten richtig und bei jedem Zwischenwert falsch.
+        ''' Vorher wurde stattdessen die Summe in den ersten Bestandteil geschrieben, während die
+        ''' übrigen stehenblieben und ein zweites Mal obendrauf kamen.
+        '''
+        ''' Angewendet an genau den zwei Stellen, die Bestandteile zusammensetzen: dem Renderweg
+        ''' und dem Raster für Miniatur und Bearbeiten. Gehört in den Fingerabdruck, sonst gäbe der
+        ''' Zwischenspeicher nach dem Umkehren das alte Bild zurück.</summary>
+        Public Property InvertResult As Boolean
+
         ''' <summary>Art der Maske. Leer = GEMALTE Maske, deren Alphawerte in PngBase64 liegen
         ''' (Rechteck, Ellipse, Lasso, Zauberstab, Masken-Pinsel). "Linear" und "Radial" =
         ''' VERLAUF, der NICHT gebacken wird, sondern bei jedem Render aus seiner Geometrie
@@ -246,6 +261,7 @@ Namespace Services
                 .Left = Left, .Top = Top, .Right = Right, .Bottom = Bottom,
                 .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
                 .Density = Density, .IsDisabled = IsDisabled, .PrimaryVisible = PrimaryVisible,
+                .InvertResult = InvertResult,
                 .Kind = Kind,
                 .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
                 .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,

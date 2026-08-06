@@ -398,7 +398,7 @@
                 <ItemsControl ItemsSource="{Binding MaskComponentRows}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,1">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="0,1">
                                 <!-- Das Auge, wie an einer Ebenenzeile: ausgeschaltet bleibt der
                                      Bestandteil erhalten und zaehlt nur nicht mehr mit. Bis dahin
                                      gab es nur das Kreuz - wer wissen wollte, was ein Bestandteil
@@ -414,7 +414,24 @@
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
                                                    Width="12" Height="12" />
                                 </ToggleButton>
-                                <Button Grid.Column="1" Classes="ghost"
+                                <!-- Das Zeichen ist zugleich der Umschalter: hinzufuegen, abziehen,
+                                     schneiden, und wieder von vorn. Der ERSTE Bestandteil hat
+                                     keines - er setzt das Ergebnis, und ein Modus staende dort
+                                     ohne Gegenueber. -->
+                                <Button Grid.Column="1"
+                                        Classes="ghost"
+                                        Width="20" Height="20" Padding="0"
+                                        Margin="0,0,2,0"
+                                        IsVisible="{Binding HasMode}"
+                                        Command="{Binding DataContext.CycleMaskComponentModeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Index}"
+                                        ToolTip.Tip="Verknüpfung dieses Bestandteils wechseln">
+                                    <TextBlock Text="{Binding ModeLabel}"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Button>
+                                <Button Grid.Column="2" Classes="ghost"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                         Padding="6,3"
                                         Classes.active="{Binding IsActive}"
@@ -422,24 +439,43 @@
                                         CommandParameter="{Binding Index}"
                                         ToolTip.Tip="Diesen Bestandteil bedienen">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <!-- Das Zeichen steht nur da, wenn es eines gibt (Abziehen,
-                                             Schneiden). Ohne feste Breite ruecken die Eintraege
-                                             beim Normalfall "Hinzufuegen" ganz nach links, statt
-                                             hinter einer leeren Spalte zu warten. -->
-                                        <TextBlock Text="{Binding ModeLabel}"
-                                                   IsVisible="{Binding ModeLabel, Converter={StaticResource StringNotEmptyToBoolConverter}}"
-                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                   FontSize="{DynamicResource FP.Font.Small}" />
                                         <icons:SvgIcon Source="{Binding IconSource}" Width="14" Height="14" />
                                         <TextBlock Text="{Binding KindLabel}"
                                                    FontSize="{DynamicResource FP.Font.Small}"
                                                    VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
+                                <!-- Die Reihenfolge ist keine Anzeigefrage: der erste Bestandteil
+                                     setzt das Ergebnis, jeder weitere wird darauf verrechnet. Wer
+                                     einen abgezogenen nach oben holt, aendert damit das Bild. -->
+                                <Button Grid.Column="3"
+                                        Classes="ghost"
+                                        Width="18" Height="18" Padding="0"
+                                        IsEnabled="{Binding CanMoveUp}"
+                                        Command="{Binding DataContext.MoveMaskComponentUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Index}"
+                                        ToolTip.Tip="Diesen Bestandteil nach oben">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-up.svg"
+                                                   Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Opacity="0.75" />
+                                </Button>
+                                <Button Grid.Column="4"
+                                        Classes="ghost"
+                                        Width="18" Height="18" Padding="0"
+                                        IsEnabled="{Binding CanMoveDown}"
+                                        Command="{Binding DataContext.MoveMaskComponentDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Index}"
+                                        ToolTip.Tip="Diesen Bestandteil nach unten">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
+                                                   Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Opacity="0.75" />
+                                </Button>
                                 <!-- Dieselbe Darstellung wie die Suchlisten im Galeriebaum: ein
                                      kleines, zurueckhaltendes Kreuz statt eines Muelleimers. Der
                                      Muelleimer wog schwerer als die Zeile selbst. -->
-                                <Button Grid.Column="2"
+                                <Button Grid.Column="5"
                                         Classes="ghost"
                                         Width="18"
                                         Height="18"

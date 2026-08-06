@@ -65,7 +65,7 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 **Details and effects.** Clarity, structure, dust and scratches, sharpening and softening, and three kinds of noise reduction - the third one for the large colour blotches a pushed exposure leaves behind. *Depth blur* takes the blur strength from each point's distance instead of one radius for everything, so lights in the background open into bright discs with the shape of an aperture. Vignette, grain and frame sit in a separate *Effects* tool.
 
-**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections; a mask brush with a soft edge; graduated and radial masks you drag onto the picture and can keep adjusting afterwards. One mask can be built from several parts, each added, subtracted or intersected. Any of them becomes a correction layer whose adjustment applies only inside it.
+**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections; a mask brush with a soft edge; graduated and radial masks you drag onto the picture and can keep adjusting afterwards. One mask can be built from several parts, each added, subtracted or intersected, and you can reorder them or change how a part combines at any time. Any of them becomes a mask layer whose adjustment applies only inside it.
 
 **With a model file installed** (see below), four more things become available: clicking an object to select it, selecting by distance from the camera, removing something from the picture so that the background is continued through the gap, and denoising a photo with a model - a separate step next to the noise sliders that takes minutes rather than seconds, with a strength slider for how much of the brightness it should touch.
 

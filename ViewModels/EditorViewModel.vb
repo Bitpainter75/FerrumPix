@@ -960,6 +960,13 @@ Namespace ViewModels
         Private NotInheritable Class UndoEntry
             Public Adjustments As ImageAdjustments
             Public Patch As WorkingImagePatch
+            ''' <summary>Der ARBEITSSTAND des Verzerren-Werkzeugs: Stützpunktraster, Linien und
+            ''' Verformen-Punkte. Sie stehen NICHT im Rezept - eine noch nicht übernommene Verzerrung
+            ''' ist Sitzungszustand -, und genau deshalb war Strg+Z dort wirkungslos: der
+            ''' Schnappschuss enthielt nur das Rezept, der Schritt wurde verbraucht und sichtbar
+            ''' änderte sich nichts. Nothing heißt: zu diesem Schritt gab es keinen offenen
+            ''' Arbeitsstand.</summary>
+            Public WarpSession As WarpSessionState
         End Class
 
         Private ReadOnly _undoStack As New Stack(Of UndoEntry)()
@@ -1891,8 +1898,24 @@ Namespace ViewModels
                 ' So bleiben die vielen bestehenden Aufrufstellen unveraendert richtig.
                 _extraSelectedAnnotations.Clear()
                 _selectedAnnotationIndex = clamped
+                Dim layerSetCleared = False
                 If clamped >= 0 Then
                     _selectedMaskedAdjustmentLayerId = ""
+                    ' Und die ZUSATZliste der Masken- und Auswahlebenen dazu. Die fuehrende Ebene
+                    ' allein zu loeschen genuegt nicht: wer zwei Ebenen mit Strg markierte und danach
+                    ' auf der LEINWAND ein Objekt ohne Gruppe anklickte, sah sie weiter orange
+                    ' stehen, und Transformieren, Sperren oder "Markierte Ebenen loeschen" trafen
+                    ' Ebenen, die niemand mehr meinte. Im Panel war der Fall laengst versorgt, auf
+                    ' der Leinwand nicht - dort fuehrt der Weg ueber SelectAnnotationWithGroup, und
+                    ' das raeumte nur im Gruppen-Zweig auf.
+                    '
+                    ' NUR beim Setzen eines Ankers: mit clamped = -1 kommt auch der Weg herein, der
+                    ' gerade eine Ebenen-Mehrfachauswahl AUFGEBAUT hat und danach die Objektauswahl
+                    ' abraeumt (Korrekturzeile im Panel) - dort waere das Leeren ein Selbstmord.
+                    If _extraSelectedAdjustmentLayers.Count > 0 Then
+                        _extraSelectedAdjustmentLayers.Clear()
+                        layerSetCleared = True
+                    End If
                     _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) Object.ReferenceEquals(r.Annotation, _annotations(clamped)))
                 ElseIf String.IsNullOrWhiteSpace(_selectedMaskedAdjustmentLayerId) Then
                     _selectedLayerRow = Nothing
@@ -1950,6 +1973,9 @@ Namespace ViewModels
                 LoadSelectedAnnotationIntoEditor()
                 Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
                 Me.RaisePropertyChanged(NameOf(SelectedLayer))
+                ' Nur RaiseMultiSelectionChanged zieht die orange Kennzeichnung der Zeilen nach -
+                ' ohne die Meldung blieben die eben geraeumten Ebenen markiert stehen.
+                If layerSetCleared Then RaiseMultiSelectionChanged()
                 RaiseLayerPanelSelectionChanged()
                 Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
                 Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
@@ -7338,7 +7364,12 @@ Namespace ViewModels
             _maskeSchiebt = False
             ' Beim Bearbeiten einer Ebenen-Maske wandert die verschobene Form zurueck in die Ebene -
             ' sonst saehe man sie an der neuen Stelle, und die Korrektur bliebe an der alten.
-            If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
+            ' Bei einer MEHRTEILIGEN Maske lehnt das Zurueckschreiben ab (es wuerde die Summe in den
+            ' ersten Bestandteil legen); dort wandert stattdessen jeder Bestandteil einzeln.
+            If _editingLayerMaskId <> "" AndAlso Not WriteSelectionMaskBackToLayer() Then
+                MoveEditedMaskComponents(_selectionMaskRect.Left - _maskeSchiebtRechteck.Left,
+                                         _selectionMaskRect.Top - _maskeSchiebtRechteck.Top)
+            End If
             SchedulePreviewUpdate()
         End Sub
 
@@ -8180,7 +8211,17 @@ Namespace ViewModels
             ' umzukehren aenderte gar nichts an den Daten. Der Pinselstrich schreibt seit jeher
             ' zurueck (CommitMaskBrushStroke), das Umkehren tat es als einziger Weg nicht.
             If _editingLayerMaskId <> "" Then
-                WriteSelectionMaskBackToLayer()
+                If Not WriteSelectionMaskBackToLayer() Then
+                    ' MEHRTEILIGE Maske: das Zurueckschreiben lehnt ab, weil die Auswahl die Summe
+                    ' aller Bestandteile traegt. Umgekehrt wird deshalb das ERGEBNIS, nicht die
+                    ' Form - die Bestandteile bleiben unangetastet und aenderbar. Danach die
+                    ' Arbeitskopie neu holen, sonst zeigte das Overlay die alte Deckung.
+                    Dim edited = EditedLayerMask()
+                    If edited IsNot Nothing AndAlso edited.ComponentCount > 1 Then
+                        edited.InvertResult = Not edited.InvertResult
+                        ReloadEditedLayerMaskIntoSelection()
+                    End If
+                End If
                 PublishMaskBrushOverlay()
                 _hasChanges = True
                 TraceLayerInventory("Umkehren")
@@ -10934,6 +10975,9 @@ Namespace ViewModels
         Public ReadOnly Property SelectMaskComponentCommand As ICommand
         Public ReadOnly Property RemoveMaskComponentCommand As ICommand
         Public ReadOnly Property ToggleMaskComponentVisibleCommand As ICommand
+        Public ReadOnly Property MoveMaskComponentUpCommand As ICommand
+        Public ReadOnly Property MoveMaskComponentDownCommand As ICommand
+        Public ReadOnly Property CycleMaskComponentModeCommand As ICommand
         Public ReadOnly Property CopyMaskCommand As ICommand
         Public ReadOnly Property PasteMaskCommand As ICommand
         Public ReadOnly Property LoadMaskAsSelectionCommand As ICommand
@@ -11243,6 +11287,9 @@ Namespace ViewModels
             SelectMaskComponentCommand = ReactiveCommand.Create(Of Integer)(Sub(index) SelectMaskComponent(index))
             RemoveMaskComponentCommand = ReactiveCommand.Create(Of Integer)(Sub(index) RemoveMaskComponent(index))
             ToggleMaskComponentVisibleCommand = ReactiveCommand.Create(Of Integer)(Sub(index) ToggleMaskComponentVisible(index))
+            MoveMaskComponentUpCommand = ReactiveCommand.Create(Of Integer)(Sub(index) MoveMaskComponent(index, -1))
+            MoveMaskComponentDownCommand = ReactiveCommand.Create(Of Integer)(Sub(index) MoveMaskComponent(index, 1))
+            CycleMaskComponentModeCommand = ReactiveCommand.Create(Of Integer)(Sub(index) CycleMaskComponentMode(index))
             CopyMaskCommand = ReactiveCommand.Create(AddressOf CopyCurrentMask)
             PasteMaskCommand = ReactiveCommand.Create(AddressOf PasteMaskToTarget)
             LoadMaskAsSelectionCommand = ReactiveCommand.Create(AddressOf LoadCurrentMaskAsSelection)
@@ -14701,7 +14748,8 @@ Namespace ViewModels
 
             If Not shouldCapture Then Return
 
-            _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments()})
+            _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
+                                               .WarpSession = CaptureWarpSession()})
             ClearRedoStack()
             _lastUndoProperty = propertyName
             _lastUndoCapturedAt = now
@@ -14850,7 +14898,7 @@ Namespace ViewModels
             ' GetCurrentAdjustments klont alle Objekte und Retusche-Punkte und serialisiert fünf Kurven -
             ' einmal reicht, der Schnappschuss taugt auch als Vorlage für die Beschriftung.
             Dim snapshot = GetCurrentAdjustments()
-            Dim entry As New UndoEntry With {.Adjustments = snapshot}
+            Dim entry As New UndoEntry With {.Adjustments = snapshot, .WarpSession = CaptureWarpSession()}
             _undoStack.Push(entry)
             _lastPushedUndoEntry = entry
             ClearRedoStack()
@@ -14868,13 +14916,18 @@ Namespace ViewModels
             Dim entry = _undoStack.Pop()
             ' Der Patch wandert in den Redo-Eintrag: RevertPatch tauscht die Region und hält
             ' danach die Wiederholen-Pixel im selben Objekt (Tausch-Schema im Service).
-            _redoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch})
+            _redoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch,
+                                                .WarpSession = CaptureWarpSession()})
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
             Finally
                 _suppressUndoCapture = False
             End Try
+            ' Der offene Arbeitsstand des Verzerren-Werkzeugs steht nicht im Rezept und kommt
+            ' deshalb hier zurueck - sonst verbrauchte Strg+Z waehrend einer Verzerrung einen
+            ' Schritt, ohne sichtbar etwas zu tun.
+            RestoreWarpSession(entry.WarpSession)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
@@ -14896,13 +14949,15 @@ Namespace ViewModels
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
             Dim entry = _redoStack.Pop()
-            _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch})
+            _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch,
+                                                .WarpSession = CaptureWarpSession()})
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
             Finally
                 _suppressUndoCapture = False
             End Try
+            RestoreWarpSession(entry.WarpSession)
             RefreshSelectionAdjustMode()
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)

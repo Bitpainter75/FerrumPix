@@ -105,6 +105,24 @@ Namespace Services
             Marshal.Copy(tb, 0, target.GetPixels(), tb.Length)
         End Sub
 
+        ''' <summary>Kehrt eine Alpha8-Maske an Ort und Stelle um (255 minus Deckung). Die EINE
+        ''' Umsetzung von <see cref="ImageMask.InvertResult"/>; beide Stellen, die Bestandteile
+        ''' zusammensetzen, rufen sie am Ende.</summary>
+        Private Shared Sub InvertAlphaMaskInPlace(mask As SKBitmap)
+            If mask Is Nothing OrElse mask.GetPixels() = IntPtr.Zero Then Return
+            Dim stride As Integer
+            Dim buffer = ReadMaskBytes(mask, stride)
+            ' Bildbreite statt Stride, aus demselben Grund wie in CombineMaskInto.
+            Dim width = mask.Width
+            For y = 0 To mask.Height - 1
+                Dim offset = y * stride
+                For x = 0 To width - 1
+                    buffer(offset + x) = CByte(255 - CInt(buffer(offset + x)))
+                Next
+            Next
+            Marshal.Copy(buffer, 0, mask.GetPixels(), buffer.Length)
+        End Sub
+
         ''' <summary>Je Pixel das Maximum aus zwei gleich grossen Alpha8-Masken, in die erste.</summary>
         Private Shared Sub MaskMaximum(target As SKBitmap, source As SKBitmap)
             If target Is Nothing OrElse source Is Nothing Then Return
@@ -365,6 +383,10 @@ Namespace Services
                     End If
                 Next
                 If inputMask Is Nothing Then Return Nothing
+                ' Umkehrung des FERTIGEN Ergebnisses, nach allen Bestandteilen und vor der Geometrie.
+                ' Traegt kein Bestandteil etwas bei, bleibt es bei Nothing: eine leere Maske wirkt
+                ' gar nicht, und daran aendert auch das Umkehren nichts.
+                If maskData.InvertResult Then InvertAlphaMaskInPlace(inputMask)
 
                 Using inputMask
                     Dim maskPixels = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Bgra8888, SKAlphaType.Premul)
@@ -564,32 +586,38 @@ Namespace Services
                     If String.Equals(entry.Key, key, StringComparison.Ordinal) Then
                         _maskCoverageClock += 1
                         entry.LastUse = _maskCoverageClock
-                        Return entry.Coverage
+                        ' Ein LEERES Feld ist der gemerkte Fall "diese Maske liefert nichts" - siehe
+                        ' unten. Eine echte Deckung hat immer targetW mal targetH Bytes.
+                        Return If(entry.Coverage.Length = 0, Nothing, entry.Coverage)
                     End If
                 Next
             End SyncLock
 
             Dim input = MaskPipelineInputSize(maskData, geometry, targetW, targetH)
             If input.Width <= 0 OrElse input.Height <= 0 Then Return Nothing
-            Dim coverage As Byte()
+            Dim coverage As Byte() = Nothing
             Using mask = BuildPersistentMaskForOutput(maskData, geometry, input.Width, input.Height,
                                                       targetW, targetH, 1.0F)
                 ' Eine fehlende oder beschädigte Maske wirkt NICHT - und darf niemals dazu führen,
                 ' dass das Objekt ganz verschwindet. Nothing heißt hier "volle Deckung".
-                If mask Is Nothing Then Return Nothing
-                coverage = New Byte(targetW * targetH - 1) {}
-                Dim stride = mask.RowBytes
-                Dim raw = New Byte(stride * targetH - 1) {}
-                Marshal.Copy(mask.GetPixels(), raw, 0, raw.Length)
-                For y = 0 To targetH - 1
-                    Array.Copy(raw, y * stride, coverage, y * targetW, targetW)
-                Next
+                If mask IsNot Nothing Then
+                    coverage = New Byte(targetW * targetH - 1) {}
+                    Dim stride = mask.RowBytes
+                    Dim raw = New Byte(stride * targetH - 1) {}
+                    Marshal.Copy(mask.GetPixels(), raw, 0, raw.Length)
+                    For y = 0 To targetH - 1
+                        Array.Copy(raw, y * stride, coverage, y * targetW, targetW)
+                    Next
+                End If
             End Using
 
             SyncLock _maskCoverageLock
                 _maskCoverageClock += 1
+                ' AUCH DAS NICHTS WIRD GEMERKT. Ohne diesen Eintrag baute eine dauerhaft defekte
+                ' Objektmaske beim Ziehen für JEDEN Region-Patch die volle Maske neu auf - der
+                ' teuerste Weg für das Ergebnis "wirkt gar nicht".
                 _maskCoverageCache.Add(New MaskCoverageEntry With {
-                    .Key = key, .Coverage = coverage, .LastUse = _maskCoverageClock})
+                    .Key = key, .Coverage = If(coverage, Array.Empty(Of Byte)()), .LastUse = _maskCoverageClock})
                 Dim total As Long = 0
                 For Each entry In _maskCoverageCache
                     total += entry.Coverage.LongLength
@@ -606,7 +634,6 @@ Namespace Services
             Return coverage
         End Function
 
-        ''' <summary>Friert die momentan aktive OutputSpace-Auswahl als persistente SourceSpace-Maske ein.</summary>
         ''' <summary>Packt ein Alpha8-PNG in einen dichten Bytepuffer der erwarteten Groesse aus.
         ''' Nothing bei leerem String, unlesbaren Daten, falschem Farbtyp oder abweichender Groesse -
         ''' ein stiller Rueckfall auf halbe Deckung waere hier schlimmer als gar keine Korrektur.</summary>
@@ -656,18 +683,6 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Verrechnet einen Pinselstrich (als Quellraum-Maske, wie ihn
-        ''' CreateSourceMaskFromSelection liefert) in die Pinselkorrektur eines VERLAUFS.
-        '''
-        ''' <paramref name="abziehen"/> steuert, in welches der beiden Raster der Strich geht. Beide
-        ''' werden mit MAXIMUM verrechnet, nicht addiert: zweimal ueber dieselbe Stelle zu streichen
-        ''' soll sie nicht "doppelt" wegnehmen (das gaebe sichtbare Stufen an Ueberlappungen), sondern
-        ''' dasselbe Ergebnis liefern wie einmal. Ein Strich in die eine Richtung LOESCHT ausserdem
-        ''' die Gegenrichtung an denselben Stellen - sonst liesse sich ein versehentliches Abziehen
-        ''' nie wieder zurueckholen, weil beide Raster gegeneinander stehen blieben.
-        '''
-        ''' Gerechnet wird nur auf der VEREINIGUNG der bemalten Rechtecke, nicht auf dem ganzen Bild:
-        ''' bei 50 MP waeren das sonst zwei Puffer von je 50 MB pro Strich.</summary>
         ''' <summary>EINE Stelle, an der ein Maskenpinsel-Strich sein Ziel kennt. Die drei Fälle -
         ''' gemalte Maske, Verlauf mit Pinselkorrektur, kein Ziel - standen vorher als If-Zweige im
         ''' EditorViewModel verstreut, und genau dort ist derselbe Fehler dreimal passiert (Commit,
@@ -870,6 +885,18 @@ Namespace Services
             Return True
         End Function
 
+        ''' <summary>Verrechnet einen Pinselstrich (als Quellraum-Maske, wie ihn
+        ''' CreateSourceMaskFromSelection liefert) in die Pinselkorrektur eines VERLAUFS.
+        '''
+        ''' <paramref name="abziehen"/> steuert, in welches der beiden Raster der Strich geht. Beide
+        ''' werden mit MAXIMUM verrechnet, nicht addiert: zweimal ueber dieselbe Stelle zu streichen
+        ''' soll sie nicht "doppelt" wegnehmen (das gaebe sichtbare Stufen an Ueberlappungen), sondern
+        ''' dasselbe Ergebnis liefern wie einmal. Ein Strich in die eine Richtung LOESCHT ausserdem
+        ''' die Gegenrichtung an denselben Stellen - sonst liesse sich ein versehentliches Abziehen
+        ''' nie wieder zurueckholen, weil beide Raster gegeneinander stehen blieben.
+        '''
+        ''' Gerechnet wird nur auf der VEREINIGUNG der bemalten Rechtecke, nicht auf dem ganzen Bild:
+        ''' bei 50 MP waeren das sonst zwei Puffer von je 50 MB pro Strich.</summary>
         Public Shared Function MergeGradientBrushCorrection(mask As ImageMask, stroke As ImageMask,
                                                             subtract As Boolean) As Boolean
             If mask Is Nothing OrElse stroke Is Nothing OrElse Not mask.IsGradient Then Return False
@@ -931,6 +958,8 @@ Namespace Services
             Return True
         End Function
 
+        ''' <summary>Friert die momentan aktive Auswahl (Anzeigeraum) als persistente Maske im
+        ''' Quellraum ein.</summary>
         ''' <paramref name="displayBounds"/>: wenn gesetzt, wird NUR der Quellbereich abgetastet, der
         ''' auf dieses Anzeige-Rechteck abbilden kann - fuer einen Pinselstempel ist das ein Fleck
         ''' statt des ganzen Bildes. Gemessen kostete der volle Durchlauf bei 20 MP 2,3 Sekunden JE
@@ -1121,13 +1150,13 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>So viele Zeichen zeigt die Miniatur eines Textobjekts.</summary>
+        Public Const ThumbnailTextLength As Integer = 5
+
         ''' <summary>Miniatur eines OBJEKTS: sein Inhalt, gezeichnet mit demselben Weg wie im Bild
         ''' (<see cref="DrawAnnotationOnCanvas"/>), nur in einen kleinen Kasten eingepasst. Bezug ist
         ''' das Rechteck des Objekts, nicht das Bild - sonst waere ein kleines Objekt in der Miniatur
         ''' ein Punkt.</summary>
-        ''' <summary>So viele Zeichen zeigt die Miniatur eines Textobjekts.</summary>
-        Public Const ThumbnailTextLength As Integer = 5
-
         Public Shared Function BuildAnnotationThumbnail(annotation As ImageAnnotation,
                                                         sourceWidth As Integer, sourceHeight As Integer,
                                                         boxSize As Integer) As SKBitmap
@@ -1256,6 +1285,10 @@ Namespace Services
                     part.Dispose()
                 End If
             Next
+            ' Dieselbe Umkehrung wie im Renderweg - sonst zeigten Miniatur und Arbeitskopie eine
+            ' andere Form als das Bild. Die DICHTE bleibt hier bewusst draussen (sie wuerde beim
+            ' Zurueckschreiben ein zweites Mal wirken), die Umkehrung gehoert dagegen zur Form.
+            If mask.InvertResult Then InvertAlphaMaskInPlace(combined)
             Return combined
         End Function
 
@@ -1436,10 +1469,6 @@ Namespace Services
             Return EncodeSourceMaskFromAlpha(full, sourceW, sourceH, name)
         End Function
 
-        ''' <summary>Baut aus der aktiven Auswahl eine Alpha8-Maske in der Größe des verarbeiteten Bildes
-        ''' (<paramref name="targetW"/>×<paramref name="targetH"/>). Unregelmäßige Auswahlen kommen aus der
-        ''' gespeicherten Alpha8-Maske (Display-Pixel, per Nearest-Sampling auf die Zielgröße gebracht),
-        ''' Rechtecke direkt aus den Prozentwerten. Liefert Nothing, wenn keine nutzbare Auswahl vorliegt.</summary>
         ''' <summary>Weiche Kante: zeichnet die Alpha8-Maske mit Weichzeichner in eine neue Maske gleicher
         ''' Größe. Skias Sigma entspricht etwa dem halben Radius. Nothing, wenn nichts zu tun ist.</summary>
         Private Shared Function BlurAlphaMask(mask As SKBitmap, radiusPixels As Single) As SKBitmap
@@ -1501,6 +1530,10 @@ Namespace Services
             Return blurred
         End Function
 
+        ''' <summary>Baut aus der aktiven Auswahl eine Alpha8-Maske in der Größe des verarbeiteten Bildes
+        ''' (<paramref name="targetW"/>×<paramref name="targetH"/>). Unregelmäßige Auswahlen kommen aus der
+        ''' gespeicherten Alpha8-Maske (Display-Pixel, per Nearest-Sampling auf die Zielgröße gebracht),
+        ''' Rechtecke direkt aus den Prozentwerten. Liefert Nothing, wenn keine nutzbare Auswahl vorliegt.</summary>
         Private Shared Function BuildSelectionScopeMaskCore(adj As ImageAdjustments, targetW As Integer, targetH As Integer) As SKBitmap
             If targetW <= 0 OrElse targetH <= 0 Then Return Nothing
             ' Maskenpixel und Masken-Rechteck werden vom Editor im sichtbaren Display-Raum gespeichert.
@@ -2215,24 +2248,6 @@ Namespace Services
             End Using
         End Sub
 
-        ''' <summary>Weicher Pinselstrich als Alpha8-Maske in der Größe von <paramref name="rect"/>
-        ''' (Display-Bildraum). Die Strichpunkte liegen im Display-Bildraum; sie werden um rect.Left/Top
-        ''' in die Stempel-lokalen Koordinaten verschoben. Für den Commit eines Strichs, danach über
-        ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.</summary>
-        ''' <summary>Bildet eine gespeicherte Maske im QUELLRAUM auf ein neues Rechteck ab - dieselbe
-        ''' Abbildung, die eine Gruppen-Transformation auf ihre Objekte anwendet. Ohne das bliebe die
-        ''' Korrektur einer mitbewegten Ebene an Ort und Größe stehen.
-        ''' Die Maske wird dafür neu gerastert - das kostet etwas Kantenschärfe, ist aber die einzige
-        ''' Möglichkeit, solange die Ursprungsform nicht als Geometrie aufbewahrt wird.</summary>
-        ''' <summary>
-        ''' Dreht die Maskenregion um einen Punkt - das Gegenstück zu <see cref="TransformMaskRegion"/>
-        ''' für Gruppen-Drehungen. Ohne das blieb die Korrektur einer mitgedrehten Gruppe an Ort und
-        ''' Lage liegen, während ihre Objekte wanderten.
-        '''
-        ''' Die Maske wird dabei NEU GERASTERT (Alpha8 kennt keine Drehung im Rechteck), verliert also
-        ''' bei jeder Drehung ein wenig Kantenschärfe - dieselbe bewusst in Kauf genommene Einbuße wie
-        ''' beim Skalieren. Gerechnet wird im Quellraum, in dem die Maske gespeichert ist.
-        ''' </summary>
         ''' <summary>Eine Punktabbildung im QUELLRAUM, in Bildpunkten. Die drei Transformationen
         ''' unten geben sie an die GERECHNETEN Bestandteile weiter - Verläufe haben keine Bildpunkte,
         ''' die man verschieben könnte, sondern zwei Punkte und ein Verhältnis.</summary>
@@ -2323,6 +2338,184 @@ Namespace Services
                 shift(c)
             Next
         End Sub
+
+        ''' <summary>Trägt dieser Bestandteil ein GEMALTES Raster? Ein Verlauf wird gerechnet und
+        ''' hat keines; ein leeres oder entartetes Rechteck zählt nicht.</summary>
+        Private Shared Function HasPaintedRaster(c As MaskComponent) As Boolean
+            Return c IsNot Nothing AndAlso Not c.IsGradient AndAlso
+                   Not String.IsNullOrWhiteSpace(c.PngBase64) AndAlso
+                   c.Right > c.Left AndAlso c.Bottom > c.Top
+        End Function
+
+        ''' <summary>Führt eine Arbeit auf JEDEM gemalten Raster einer Maske aus - dem in den Feldern
+        ''' der Maske selbst und dem jedes Bestandteils in ExtraComponents. Dasselbe Muster wie
+        ''' <see cref="ForEachBrushCarrier"/>, und aus demselben Grund: die drei Region-Funktionen
+        ''' fassten nur das PRIMÄRE Raster an. Ein gemalter Bestandteil, der einem Verlauf
+        ''' hinzugefügt wurde, blieb beim Verschieben, Skalieren, Drehen und Spiegeln des Objekts am
+        ''' Bild kleben, während Verlauf und Pinselkorrektur mitgingen.</summary>
+        Private Shared Function ForEachRasterCarrier(mask As ImageMask, op As Func(Of MaskComponent, Boolean)) As Boolean
+            If mask Is Nothing OrElse op Is Nothing Then Return True
+            Dim primary = mask.PrimaryAsComponent()
+            If HasPaintedRaster(primary) Then
+                If Not op(primary) Then Return False
+                mask.SetPrimaryFromComponent(primary)
+            End If
+            If mask.ExtraComponents IsNot Nothing Then
+                For Each c In mask.ExtraComponents
+                    If c IsNot Nothing AndAlso HasPaintedRaster(c) AndAlso Not op(c) Then Return False
+                Next
+            End If
+            Return True
+        End Function
+
+        ''' <summary>Rastert EIN gemaltes Raster für eine Drehung um einen Punkt neu. Das neue Rechteck
+        ''' ist die Hülle der vier gedrehten Ecken; gezeichnet wird im Quellraum.</summary>
+        Private Shared Function RotateComponentRaster(c As MaskComponent, degrees As Double,
+                                                      pivotX As Double, pivotY As Double) As Boolean
+            Dim rad = degrees * Math.PI / 180.0
+            Dim cosR = Math.Cos(rad), sinR = Math.Sin(rad)
+            Dim corners = {(CDbl(c.Left), CDbl(c.Top)), (CDbl(c.Right), CDbl(c.Top)),
+                           (CDbl(c.Right), CDbl(c.Bottom)), (CDbl(c.Left), CDbl(c.Bottom))}
+            Dim minX = Double.MaxValue, minY = Double.MaxValue, maxX = Double.MinValue, maxY = Double.MinValue
+            For Each e In corners
+                Dim dx = e.Item1 - pivotX, dy = e.Item2 - pivotY
+                Dim nx = pivotX + dx * cosR - dy * sinR
+                Dim ny = pivotY + dx * sinR + dy * cosR
+                minX = Math.Min(minX, nx) : maxX = Math.Max(maxX, nx)
+                minY = Math.Min(minY, ny) : maxY = Math.Max(maxY, ny)
+            Next
+
+            Dim l = CInt(Math.Floor(minX)), t = CInt(Math.Floor(minY))
+            Dim w = Math.Max(1, CInt(Math.Ceiling(maxX)) - l), h = Math.Max(1, CInt(Math.Ceiling(maxY)) - t)
+
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(c.PngBase64))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                Using rotated = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(rotated)
+                        canvas.Clear(SKColors.Transparent)
+                        ' Im QUELLRAUM zeichnen: erst den Ursprung des neuen Rechtecks wegschieben,
+                        ' dann um den Drehpunkt drehen, dann die Maske an ihrer alten Stelle absetzen.
+                        canvas.Translate(CSng(-l), CSng(-t))
+                        canvas.RotateDegrees(CSng(degrees), CSng(pivotX), CSng(pivotY))
+                        Using paint = New SKPaint With {.IsAntialias = True}
+                            ' Ueber SKImage, weil nur DrawImage die Abtastung entgegennimmt -
+                            ' DrawBitmap hat dafuer keine Ueberladung mehr.
+                            Using image = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(image, New SKRect(c.Left, c.Top,
+                                                                  c.Left + decoded.Width, c.Top + decoded.Height),
+                                                 New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
+                            End Using
+                        End Using
+                    End Using
+                    Using img = SKImage.FromPixels(rotated.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return False
+                            c.PngBase64 = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+                c.Left = l : c.Top = t : c.Right = l + w : c.Bottom = t + h
+                Return True
+            Catch
+                Return False
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Spiegelt EIN gemaltes Raster pixelgenau an einer Achse. Die Auflösung bleibt
+        ''' erhalten, nur die Lage wechselt die Seite.</summary>
+        Private Shared Function FlipComponentRaster(c As MaskComponent, horizontal As Boolean, axis As Double) As Boolean
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(c.PngBase64))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                Dim w = decoded.Width, h = decoded.Height
+                Dim l = c.Left, t = c.Top
+                If horizontal Then
+                    l = CInt(Math.Round(2 * axis - c.Right))
+                Else
+                    t = CInt(Math.Round(2 * axis - c.Bottom))
+                End If
+
+                Using mirrored = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(mirrored)
+                        canvas.Clear(SKColors.Transparent)
+                        If horizontal Then
+                            canvas.Scale(-1.0F, 1.0F, w / 2.0F, 0.0F)
+                        Else
+                            canvas.Scale(1.0F, -1.0F, 0.0F, h / 2.0F)
+                        End If
+                        canvas.DrawBitmap(decoded, 0.0F, 0.0F)
+                    End Using
+                    Using img = SKImage.FromPixels(mirrored.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return False
+                            c.PngBase64 = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+                c.Left = l : c.Top = t : c.Right = l + w : c.Bottom = t + h
+                Return True
+            Catch
+                Return False
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Verschiebt oder skaliert EIN gemaltes Raster. Eine reine Verschiebung behält die
+        ''' Bildpunkte und versetzt nur das Rechteck - kein erneutes Abtasten, keine weicher werdende
+        ''' Kante nach dem dritten Zug.</summary>
+        Private Shared Function TransformComponentRaster(c As MaskComponent,
+                                                         scaleX As Double, scaleY As Double,
+                                                         pivotX As Double, pivotY As Double,
+                                                         offsetX As Double, offsetY As Double) As Boolean
+            Dim newLeft = pivotX + (c.Left - pivotX) * scaleX + offsetX
+            Dim newTop = pivotY + (c.Top - pivotY) * scaleY + offsetY
+            Dim newRight = pivotX + (c.Right - pivotX) * scaleX + offsetX
+            Dim newBottom = pivotY + (c.Bottom - pivotY) * scaleY + offsetY
+
+            Dim l = CInt(Math.Round(newLeft)), t = CInt(Math.Round(newTop))
+            Dim r = CInt(Math.Round(newRight)), b = CInt(Math.Round(newBottom))
+            Dim w = Math.Max(1, r - l), h = Math.Max(1, b - t)
+
+            Dim decoded As SKBitmap = Nothing
+            Try
+                decoded = SKBitmap.Decode(Convert.FromBase64String(c.PngBase64))
+                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                If w = decoded.Width AndAlso h = decoded.Height Then
+                    ' Reine Verschiebung: die Pixel bleiben, nur das Rechteck wandert.
+                    c.Left = l : c.Top = t : c.Right = l + decoded.Width : c.Bottom = t + decoded.Height
+                    Return True
+                End If
+                Using scaled = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(scaled)
+                        canvas.Clear(SKColors.Transparent)
+                        Using paint = New SKPaint With {.IsAntialias = True}
+                            Using image = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(image, New SKRect(0, 0, w, h),
+                                                 New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
+                            End Using
+                        End Using
+                    End Using
+                    Using img = SKImage.FromPixels(scaled.PeekPixels())
+                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return False
+                            c.PngBase64 = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+                c.Left = l : c.Top = t : c.Right = l + w : c.Bottom = t + h
+                Return True
+            Catch
+                Return False
+            Finally
+                decoded?.Dispose()
+            End Try
+        End Function
 
         ''' <summary>Führt eine Arbeit auf JEDEM Träger einer Pinselkorrektur aus: den Feldern der
         ''' Maske selbst und jedem Bestandteil in ExtraComponents. Die Maskenfelder laufen über die
@@ -2493,12 +2686,22 @@ Namespace Services
             If IsGradientMaskKind(mask.Kind) Then Return True
             If mask.ExtraComponents IsNot Nothing Then
                 For Each c In mask.ExtraComponents
-                    If c IsNot Nothing AndAlso IsGradientMaskKind(c.Kind) Then Return True
+                    If c Is Nothing Then Continue For
+                    ' Ein GEMALTER Zusatzbestandteil zaehlt genauso: eine Maske mit leerem ersten und
+                    ' nur gemaltem zweiten Bestandteil galt vorher als unbeweglich und blieb liegen.
+                    If IsGradientMaskKind(c.Kind) OrElse Not String.IsNullOrWhiteSpace(c.PngBase64) Then Return True
                 Next
             End If
             Return False
         End Function
 
+        ''' <summary>Dreht die Maskenregion um einen Punkt - das Gegenstück zu
+        ''' <see cref="TransformMaskRegion"/> für Gruppen-Drehungen. Ohne das blieb die Korrektur einer
+        ''' mitgedrehten Gruppe an Ort und Lage liegen, während ihre Objekte wanderten.
+        '''
+        ''' Die Raster werden dabei NEU GERASTERT (Alpha8 kennt keine Drehung im Rechteck), verlieren
+        ''' also bei jeder Drehung ein wenig Kantenschärfe - dieselbe bewusst in Kauf genommene Einbuße
+        ''' wie beim Skalieren. Gerechnet wird im Quellraum, in dem die Maske gespeichert ist.</summary>
         Public Shared Function RotateMaskRegion(mask As ImageMask, degrees As Double,
                                                 pivotX As Double, pivotY As Double,
                                                 Optional part As MaskTransformPart = MaskTransformPart.All) As Boolean
@@ -2527,59 +2730,9 @@ RasterTeil:
                     End Function,
                     Sub(cv) cv.RotateDegrees(CSng(degrees), CSng(pivotX), CSng(pivotY)),
                     New SKSamplingOptions(SKCubicResampler.Mitchell)) Then Return False
-            If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
-
-            Dim rad = degrees * Math.PI / 180.0
-            Dim cosR = Math.Cos(rad), sinR = Math.Sin(rad)
-            Dim corners = {(CDbl(mask.Left), CDbl(mask.Top)), (CDbl(mask.Right), CDbl(mask.Top)),
-                         (CDbl(mask.Right), CDbl(mask.Bottom)), (CDbl(mask.Left), CDbl(mask.Bottom))}
-            Dim minX = Double.MaxValue, minY = Double.MaxValue, maxX = Double.MinValue, maxY = Double.MinValue
-            For Each e In corners
-                Dim dx = e.Item1 - pivotX, dy = e.Item2 - pivotY
-                Dim nx = pivotX + dx * cosR - dy * sinR
-                Dim ny = pivotY + dx * sinR + dy * cosR
-                minX = Math.Min(minX, nx) : maxX = Math.Max(maxX, nx)
-                minY = Math.Min(minY, ny) : maxY = Math.Max(maxY, ny)
-            Next
-
-            Dim l = CInt(Math.Floor(minX)), t = CInt(Math.Floor(minY))
-            Dim w = Math.Max(1, CInt(Math.Ceiling(maxX)) - l), h = Math.Max(1, CInt(Math.Ceiling(maxY)) - t)
-
-            Dim decoded As SKBitmap = Nothing
-            Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
-                Using gedreht = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
-                    Using canvas = New SKCanvas(gedreht)
-                        canvas.Clear(SKColors.Transparent)
-                        ' Im QUELLRAUM zeichnen: erst den Ursprung des neuen Rechtecks wegschieben,
-                        ' dann um den Drehpunkt drehen, dann die Maske an ihrer alten Stelle absetzen.
-                        canvas.Translate(CSng(-l), CSng(-t))
-                        canvas.RotateDegrees(CSng(degrees), CSng(pivotX), CSng(pivotY))
-                        Using paint = New SKPaint With {.IsAntialias = True}
-                            ' Ueber SKImage, weil nur DrawImage die Abtastung entgegennimmt -
-                            ' DrawBitmap hat dafuer keine Ueberladung mehr.
-                            Using image = SKImage.FromBitmap(decoded)
-                                canvas.DrawImage(image, New SKRect(mask.Left, mask.Top,
-                                                                  mask.Left + decoded.Width, mask.Top + decoded.Height),
-                                                 New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
-                            End Using
-                        End Using
-                    End Using
-                    Using img = SKImage.FromPixels(gedreht.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return False
-                            mask.PngBase64 = Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
-                End Using
-                mask.Left = l : mask.Top = t : mask.Right = l + w : mask.Bottom = t + h
-                Return True
-            Catch
-                Return False
-            Finally
-                decoded?.Dispose()
-            End Try
+            ' JEDES gemalte Raster, nicht nur das primaere: ein gemalter Bestandteil neben einem
+            ' Verlauf gehoert genauso zur Maske.
+            Return ForEachRasterCarrier(mask, Function(c) RotateComponentRaster(c, degrees, pivotX, pivotY))
         End Function
 
         ''' <summary>Spiegelt die Maskenregion an einer Achse (Gruppen-Spiegelung). Hier bleibt die
@@ -2598,46 +2751,17 @@ RasterTeil:
             ' Die Pinselkorrektur spiegelt pixelgenau mit - vor dem fruehen Ausstieg, damit auch
             ' ein reiner Verlauf (ohne Hauptraster) seine Korrektur behaelt.
             If Not FlipBrushCorrections(mask, horizontal, axis) Then Return False
-            If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
-
-            Dim decoded As SKBitmap = Nothing
-            Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
-                Dim w = decoded.Width, h = decoded.Height
-                Dim l = mask.Left, t = mask.Top
-                If horizontal Then
-                    l = CInt(Math.Round(2 * axis - mask.Right))
-                Else
-                    t = CInt(Math.Round(2 * axis - mask.Bottom))
-                End If
-
-                Using gespiegelt = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
-                    Using canvas = New SKCanvas(gespiegelt)
-                        canvas.Clear(SKColors.Transparent)
-                        If horizontal Then
-                            canvas.Scale(-1.0F, 1.0F, w / 2.0F, 0.0F)
-                        Else
-                            canvas.Scale(1.0F, -1.0F, 0.0F, h / 2.0F)
-                        End If
-                        canvas.DrawBitmap(decoded, 0.0F, 0.0F)
-                    End Using
-                    Using img = SKImage.FromPixels(gespiegelt.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return False
-                            mask.PngBase64 = Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
-                End Using
-                mask.Left = l : mask.Top = t : mask.Right = l + w : mask.Bottom = t + h
-                Return True
-            Catch
-                Return False
-            Finally
-                decoded?.Dispose()
-            End Try
+            ' JEDES gemalte Raster, aus demselben Grund wie beim Drehen.
+            Return ForEachRasterCarrier(mask, Function(c) FlipComponentRaster(c, horizontal, axis))
         End Function
 
+        ''' <summary>Bildet eine gespeicherte Maske im QUELLRAUM auf ein neues Rechteck ab - dieselbe
+        ''' Abbildung, die eine Gruppen-Transformation auf ihre Objekte anwendet. Ohne das bliebe die
+        ''' Korrektur einer mitbewegten Ebene an Ort und Größe stehen.
+        '''
+        ''' Beim echten Skalieren werden die Raster neu gerastert - das kostet etwas Kantenschärfe,
+        ''' ist aber die einzige Möglichkeit, solange die Ursprungsform nicht als Geometrie
+        ''' aufbewahrt wird. Eine reine Verschiebung behält die Bildpunkte.</summary>
         Public Shared Function TransformMaskRegion(mask As ImageMask,
                                                    scaleX As Double, scaleY As Double,
                                                    pivotX As Double, pivotY As Double,
@@ -2673,52 +2797,15 @@ RasterTeil:
                         End Sub,
                         New SKSamplingOptions(SKCubicResampler.Mitchell)) Then Return False
             End If
-            If String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
-
-            Dim newLeft = pivotX + (mask.Left - pivotX) * scaleX + offsetX
-            Dim newTop = pivotY + (mask.Top - pivotY) * scaleY + offsetY
-            Dim newRight = pivotX + (mask.Right - pivotX) * scaleX + offsetX
-            Dim newBottom = pivotY + (mask.Bottom - pivotY) * scaleY + offsetY
-
-            Dim l = CInt(Math.Round(newLeft)), t = CInt(Math.Round(newTop))
-            Dim r = CInt(Math.Round(newRight)), b = CInt(Math.Round(newBottom))
-            Dim w = Math.Max(1, r - l), h = Math.Max(1, b - t)
-
-            Dim decoded As SKBitmap = Nothing
-            Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
-                If w = decoded.Width AndAlso h = decoded.Height Then
-                    ' Reine Verschiebung: die Pixel bleiben, nur das Rechteck wandert.
-                    mask.Left = l : mask.Top = t : mask.Right = l + decoded.Width : mask.Bottom = t + decoded.Height
-                    Return True
-                End If
-                Using skaliert = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
-                    Using canvas = New SKCanvas(skaliert)
-                        canvas.Clear(SKColors.Transparent)
-                        Using paint = New SKPaint With {.IsAntialias = True}
-                            Using image = SKImage.FromBitmap(decoded)
-                                canvas.DrawImage(image, New SKRect(0, 0, w, h),
-                                                 New SKSamplingOptions(SKCubicResampler.Mitchell), paint)
-                            End Using
-                        End Using
-                    End Using
-                    Using img = SKImage.FromPixels(skaliert.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return False
-                            mask.PngBase64 = Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
-                End Using
-                mask.Left = l : mask.Top = t : mask.Right = l + w : mask.Bottom = t + h
-                Return True
-            Catch
-                Return False
-            Finally
-                decoded?.Dispose()
-            End Try
+            ' JEDES gemalte Raster, aus demselben Grund wie beim Drehen.
+            Return ForEachRasterCarrier(mask,
+                Function(c) TransformComponentRaster(c, scaleX, scaleY, pivotX, pivotY, offsetX, offsetY))
         End Function
 
+        ''' <summary>Weicher Pinselstrich als Alpha8-Maske in der Größe von <paramref name="rect"/>
+        ''' (Display-Bildraum). Die Strichpunkte liegen im Display-Bildraum; sie werden um rect.Left/Top
+        ''' in die Stempel-lokalen Koordinaten verschoben. Für den Commit eines Strichs, danach über
+        ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.</summary>
         Public Shared Function BuildSoftBrushStampMask(pts As IReadOnlyList(Of SKPoint), radius As Single,
                                                        softnessPx As Single, rect As SKRectI) As SKBitmap
             If pts Is Nothing OrElse pts.Count = 0 OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing

@@ -311,8 +311,8 @@ Namespace ViewModels
             Get
                 Dim previousStep = WarpStepSize()
                 If previousStep.Width <= 0 OrElse previousStep.Height <= 0 Then Return Nothing
-                Dim anzeige = GetAnnotationDisplayPixelSize()
-                If anzeige.Width <= 0 OrElse anzeige.Height <= 0 Then Return Nothing
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
 
                 Dim corners = ImageGeometryMapper.WarpCorners(previousStep.Width, previousStep.Height,
                                                                  _perspectiveHorizontal, _perspectiveVertical,
@@ -434,14 +434,14 @@ Namespace ViewModels
         '
         ' Das Raster lebt im QUELLRAUM (Prozent des unbeschnittenen Arbeitsbildes), nicht im
         ' Anzeigeraum - aus demselben Grund wie bei den Verlaufsmasken: sonst wanderte die
-        ' Verzerrung, sobald zugeschnitten oder gedreht wird, und das Backen traefe eine andere
+        ' Verzerrung, sobald zugeschnitten oder gedreht wird, und das Anwenden traefe eine andere
         ' Stelle als die, auf die man gezogen hat. Fuer die Anzeige werden die Punkte einzeln in den
         ' Anzeigeraum zurueckgerechnet; was ausserhalb des sichtbaren Ausschnitts liegt, kommt als
         ' NaN heraus und wird weder gezeichnet noch angefasst.
         '
-        ' Es ist bewusst KEIN Rezeptwert. Eine Gitterverzerrung laesst sich nicht als Matrix
-        ' schreiben, also auch nicht nachtraeglich mit dem Bild mitfuehren - sie wird gebacken, wie
-        ' die Retusche. Bis zum Backen ist sie nur eine Vorschau.
+        ' Das RASTER selbst ist Sitzungszustand: es sagt nur, wohin gezogen wurde. Beim Anwenden
+        ' wird daraus ein Knotenfeld im REZEPT (ComposeImageWarp, siehe unten) - nichts wird in die
+        ' Pixel gebacken, und deshalb laesst sich eine zweite Verzerrung auf eine erste setzen.
 
         Private _warpColumns As Integer = 4
         Private _warpRows As Integer = 4
@@ -479,6 +479,12 @@ Namespace ViewModels
                 _warpColumns = v
                 _warpRows = v
                 ResetGrid()
+                ' Am OBJEKT muss das neutrale Raster auch dorthin: sonst stand das Overlay auf
+                ' neutral, waehrend das Objekt weiter mit der alten Verzerrung gerendert wurde.
+                If WarpsTheObject Then
+                    WriteObjectGrid()
+                    RefreshPreviewImmediately()
+                End If
                 Me.RaisePropertyChanged(NameOf(WarpGridSize))
                 Me.RaisePropertyChanged(NameOf(WarpGridValues))
                 Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
@@ -771,7 +777,65 @@ Namespace ViewModels
                            Math.Abs(TargetBx - SourceBx) > 0.02 OrElse Math.Abs(TargetBy - SourceBy) > 0.02
                 End Get
             End Property
+
+            Public Function Clone() As WarpLine
+                Return New WarpLine With {
+                    .SourceAx = SourceAx, .SourceAy = SourceAy, .SourceBx = SourceBx, .SourceBy = SourceBy,
+                    .TargetAx = TargetAx, .TargetAy = TargetAy, .TargetBx = TargetBx, .TargetBy = TargetBy}
+            End Function
         End Class
+
+        ''' <summary>Der ARBEITSSTAND des Verzerren-Werkzeugs, wie ihn ein Undo-Eintrag mitnimmt:
+        ''' Stützpunktraster samt seiner Größe, die Linien und die Verformen-Punkte.
+        '''
+        ''' Er steht bewusst NICHT im Rezept - eine noch nicht übernommene Verzerrung ist
+        ''' Sitzungszustand. Genau daran war Strg+Z während einer offenen Verzerrung wirkungslos: der
+        ''' Schnappschuss enthielt nur das Rezept, der Schritt wurde verbraucht, und die Griffe
+        ''' blieben stehen, wo sie waren.</summary>
+        Friend NotInheritable Class WarpSessionState
+            Public Columns As Integer
+            Public Rows As Integer
+            Public GridX As Double()
+            Public GridY As Double()
+            Public Envelope As Double()
+            Public Lines As List(Of WarpLine)
+        End Class
+
+        ''' <summary>Den offenen Arbeitsstand sichern - oder Nothing, wenn es keinen gibt. Die Felder
+        ''' sind klein (ein 12er-Raster sind 338 Zahlen), das Sichern kostet also nichts.</summary>
+        Private Function CaptureWarpSession() As WarpSessionState
+            If _warpX Is Nothing AndAlso _envelope Is Nothing AndAlso _linien.Count = 0 Then Return Nothing
+            Return New WarpSessionState With {
+                .Columns = _warpColumns, .Rows = _warpRows,
+                .GridX = If(_warpX Is Nothing, Nothing, CType(_warpX.Clone(), Double())),
+                .GridY = If(_warpY Is Nothing, Nothing, CType(_warpY.Clone(), Double())),
+                .Envelope = If(_envelope Is Nothing, Nothing, CType(_envelope.Clone(), Double())),
+                .Lines = _linien.Select(Function(l) l.Clone()).ToList()}
+        End Function
+
+        ''' <summary>Den gesicherten Arbeitsstand zurückholen. Ein laufender Zug wird dabei
+        ''' abgebrochen und die Vorschau verworfen - sie zeigte sonst den Stand von vorhin.</summary>
+        Private Sub RestoreWarpSession(state As WarpSessionState)
+            If state Is Nothing Then Return
+            _warpColumns = state.Columns
+            _warpRows = state.Rows
+            _warpX = If(state.GridX Is Nothing, Nothing, CType(state.GridX.Clone(), Double()))
+            _warpY = If(state.GridY Is Nothing, Nothing, CType(state.GridY.Clone(), Double()))
+            _envelope = If(state.Envelope Is Nothing, Nothing, CType(state.Envelope.Clone(), Double()))
+            _linien.Clear()
+            If state.Lines IsNot Nothing Then _linien.AddRange(state.Lines.Select(Function(l) l.Clone()))
+            _warpDragIndex = -1
+            _linienDragIndex = -1
+            _linienDragTeil = -1
+            _envelopeDragIndex = -1
+            DisposeGridPreview()
+            DisposeLinePreview()
+            RaiseLinesChanged()
+            RaiseEnvelopeChanged()
+            Me.RaisePropertyChanged(NameOf(WarpGridSize))
+            Me.RaisePropertyChanged(NameOf(WarpGridValues))
+            Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
+        End Sub
 
         Private ReadOnly _linien As New List(Of WarpLine)()
         ''' <summary>Welche Linie gerade gezogen wird, und woran: 0 Anfang, 1 Ende, 2 die ganze
@@ -935,6 +999,12 @@ Namespace ViewModels
         Public Sub UpdateLineDrag(xPercent As Double, yPercent As Double)
             If _linienDragIndex < 0 OrElse _linienDragIndex >= _linien.Count Then Return
             Dim l = _linien(_linienDragIndex)
+            ' GEKLEMMT WIRD NUR AM BILD. Am OBJEKT ist der Bezugsraum sein Rechteck, und dort soll
+            ' sich ein Linienende ueber den Rahmen hinausziehen lassen - Gitter und Verformen halten
+            ' es genauso (limit = Not WarpsTheObject). Vorher klemmte diese Stelle immer, und am
+            ' Objekt liess sich keine Kante nach aussen ziehen.
+            Dim clampToImage = Not WarpsTheObject
+            Dim clamp = Function(value As Double) If(clampToImage, ClampPercent(value), value)
 
             If _linienDragTeil = 2 Then
                 ' Die ganze Ziellinie mitnehmen: die Verschiebung wird im ANZEIGERAUM genommen und
@@ -948,12 +1018,12 @@ Namespace ViewModels
                 Dim na = DisplayToWarpSpace(va.Value.X + dx, va.Value.Y + dy)
                 Dim nb = DisplayToWarpSpace(vb.Value.X + dx, vb.Value.Y + dy)
                 If Not na.HasValue OrElse Not nb.HasValue Then Return
-                l.TargetAx = Klemme100(na.Value.X) : l.TargetAy = Klemme100(na.Value.Y)
-                l.TargetBx = Klemme100(nb.Value.X) : l.TargetBy = Klemme100(nb.Value.Y)
+                l.TargetAx = clamp(na.Value.X) : l.TargetAy = clamp(na.Value.Y)
+                l.TargetBx = clamp(nb.Value.X) : l.TargetBy = clamp(nb.Value.Y)
             Else
                 Dim source = DisplayToWarpSpace(xPercent, yPercent)
                 If Not source.HasValue Then Return
-                Dim nx = Klemme100(source.Value.X), ny = Klemme100(source.Value.Y)
+                Dim nx = clamp(source.Value.X), ny = clamp(source.Value.Y)
                 Select Case _linienDragTeil
                     Case 0
                         l.TargetAx = nx : l.TargetAy = ny
@@ -975,7 +1045,8 @@ Namespace ViewModels
             End If
         End Sub
 
-        Private Shared Function Klemme100(value As Double) As Double
+        ''' <summary>Auf das Bild klemmen: 0 bis 100 Prozent.</summary>
+        Private Shared Function ClampPercent(value As Double) As Double
             Return Math.Max(0.0, Math.Min(100.0, value))
         End Function
 
@@ -1005,6 +1076,14 @@ Namespace ViewModels
             _linien.RemoveAt(_linien.Count - 1)
             DisposeLinePreview()
             RaiseLinesChanged()
+            ' Am OBJEKT muss die Verzerrung nachgezogen werden, genau wie beim Ziehen und beim
+            ' Zuruecksetzen. Ohne das zeigte das Overlay eine Linie weniger, das Objekt wurde aber
+            ' weiter mit der entfernten Linie gerendert - bis irgendein anderer Zug OwnWarp neu
+            ' schrieb.
+            If WarpsTheObject Then
+                WriteObjectLines()
+                RefreshPreviewImmediately()
+            End If
         End Sub
 
         Public Sub ResetLines()
@@ -1257,12 +1336,11 @@ Namespace ViewModels
                 Return
             End If
             Using warped
-                Using data = SKImage.FromBitmap(warped).Encode(SKEncodedImageFormat.Png, 90)
-                    Using strom = New IO.MemoryStream(data.ToArray())
-                        ToolPreviewImage = New Bitmap(strom)
-                        _vorschauQuelle = "Linien"
-                    End Using
-                End Using
+                ' Direkte Zeilenkopie statt PNG-Rundlauf, wie bei der Gittervorschau: der alte Weg
+                ' kodierte und dekodierte je Mausbewegung das ganze Anzeigebild und gab sein SKImage
+                ' nie frei.
+                ToolPreviewImage = ImageOrientationService.ToAvaloniaBitmapFast(warped)
+                _vorschauQuelle = "Linien"
             End Using
         End Sub
 
@@ -1278,7 +1356,7 @@ Namespace ViewModels
         ' Ein zweiter Renderweg entsteht dabei NICHT: die Abbildung wird auf den Knoten eines
         ' regelmaessigen Rasters ausgewertet und geht von dort denselben Weg wie Gitter- und
         ' Linienverzerrung (WarpOverGrid). Beim Objekt steht sie als Gitter in dessen eigener
-        ' Verzerrung, beim Bild wird sie gebacken. Neu ist allein der Bedienzustand.
+        ' Verzerrung, beim Bild als Knotenfeld im Rezept. Neu ist allein der Bedienzustand.
         '
         ' Die zwoelf Punkte liegen im VERZERRRAUM in Prozent, wie Raster und Linien und aus
         ' demselben Grund: sonst wanderte die Verformung, sobald spaeter zugeschnitten oder gedreht
@@ -1509,8 +1587,8 @@ Namespace ViewModels
             End If
             Dim limit = Not WarpsTheObject
             If limit Then
-                nx = Klemme100(nx)
-                ny = Klemme100(ny)
+                nx = ClampPercent(nx)
+                ny = ClampPercent(ny)
             End If
             ' Eine Ecke nimmt ihre beiden Griffe mit. Sonst bliebe die Kante an ihren alten Griffen
             ' haengen und beulte aus, waehrend die Ecke davonlaeuft. Mit Alt bleibt genau das aus.
@@ -1520,8 +1598,8 @@ Namespace ViewModels
                 For Each h In EnvelopeCornerHandles(_envelopeDragIndex)
                     Dim hx = _envelope(h * 2) + dx
                     Dim hy = _envelope(h * 2 + 1) + dy
-                    _envelope(h * 2) = If(limit, Klemme100(hx), hx)
-                    _envelope(h * 2 + 1) = If(limit, Klemme100(hy), hy)
+                    _envelope(h * 2) = If(limit, ClampPercent(hx), hx)
+                    _envelope(h * 2 + 1) = If(limit, ClampPercent(hy), hy)
                 Next
             End If
             _envelope(_envelopeDragIndex * 2) = nx
@@ -1545,8 +1623,8 @@ Namespace ViewModels
                 WriteObjectEnvelope()
                 RefreshPreviewImmediately()
             End If
-            ' Beim BILD bleibt die Vorschau stehen: sie zeigt den Stand, den "Anwenden" backen
-            ' wuerde.
+            ' Beim BILD bleibt die Vorschau stehen: sie zeigt den Stand, den "Anwenden" ins Rezept
+            ' schreiben wuerde.
         End Sub
 
         Public Sub ResetEnvelope()
@@ -1563,9 +1641,11 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' <summary>Die Verformung ins Arbeitsbild backen - derselbe Weg wie beim Raster.</summary>
+        ''' <summary>Die Verformung anwenden - derselbe Weg wie beim Raster: sie wandert als
+        ''' Knotenfeld ins Rezept, nicht in die Pixel.</summary>
         Public Sub ApplyEnvelopeWarp()
-            ' Wie bei Raster und Linien: am Objekt gibt es nichts zu backen.
+            ' Wie bei Raster und Linien: am Objekt gibt es nichts anzuwenden, dort steht die
+            ' Verzerrung schon laufend im Objekt selbst.
             If WarpsTheObject Then Return
             If Not HasEnvelopeChanges Then Return
             Dim xs As Double() = Nothing, ys As Double() = Nothing
@@ -1642,8 +1722,8 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Das Gegenstueck: die Verzerrung trifft das BILD und muss deshalb gebacken
-        ''' werden. Nur dann gibt es etwas anzuwenden.</summary>
+        ''' <summary>Das Gegenstueck: die Verzerrung trifft das BILD und braucht deshalb ein
+        ''' ausdrueckliches "Anwenden". Nur dann gibt es etwas zu uebernehmen.</summary>
         Public ReadOnly Property WarpsTheImage As Boolean
             Get
                 Return Not WarpsTheObject
@@ -1895,6 +1975,11 @@ Namespace ViewModels
         Private _warpSpaceObject As Integer = -1
         Private _gridImageX As Double() = Nothing
         Private _gridImageY As Double() = Nothing
+        ''' Die Rastergroesse gehoert zum beiseitegelegten BILD-Stand dazu. Ohne sie ging er verloren,
+        ''' sobald man die Groesse wechselte, waehrend ein Objekt markiert war: beim Abwaehlen passte
+        ''' die Feldlaenge nicht mehr, und der Stand fiel kommentarlos auf neutral zurueck.
+        Private _gridImageColumns As Integer = -1
+        Private _gridImageRows As Integer = -1
         Private _envelopeImage As Double() = Nothing
         Private ReadOnly _linienBild As New List(Of WarpLine)()
 
@@ -1912,6 +1997,8 @@ Namespace ViewModels
                 PrepareGrid()
                 _gridImageX = CType(_warpX.Clone(), Double())
                 _gridImageY = CType(_warpY.Clone(), Double())
+                _gridImageColumns = _warpColumns
+                _gridImageRows = _warpRows
                 PrepareEnvelope()
                 _envelopeImage = CType(_envelope.Clone(), Double())
                 _linienBild.Clear()
@@ -1928,8 +2015,16 @@ Namespace ViewModels
             _linien.Clear()
 
             If jetzt < 0 Then
-                Dim count = (_warpColumns + 1) * (_warpRows + 1)
-                If _gridImageX IsNot Nothing AndAlso _gridImageX.Length = count Then
+                ' Die Rastergroesse kommt MIT zurueck: sie gehoert zum beiseitegelegten Stand. Wer
+                ' sie am Objekt gewechselt hat, meinte das Objekt - der Bildstand darf daran nicht
+                ' zerbrechen.
+                Dim count = (_gridImageColumns + 1) * (_gridImageRows + 1)
+                If _gridImageX IsNot Nothing AndAlso _gridImageColumns >= 2 AndAlso _gridImageX.Length = count Then
+                    If _gridImageColumns <> _warpColumns OrElse _gridImageRows <> _warpRows Then
+                        _warpColumns = _gridImageColumns
+                        _warpRows = _gridImageRows
+                        Me.RaisePropertyChanged(NameOf(WarpGridSize))
+                    End If
                     _warpX = CType(_gridImageX.Clone(), Double())
                     _warpY = CType(_gridImageY.Clone(), Double())
                 Else
@@ -2065,7 +2160,7 @@ Namespace ViewModels
                 Return
             End If
             ' Die Vorschau BLEIBT nach dem Loslassen stehen: sie zeigt den Stand, den "Anwenden"
-            ' backen wuerde. Sie verschwindet erst beim Zuruecksetzen, beim Anwenden oder wenn das
+            ' uebernehmen wuerde. Sie verschwindet erst beim Zuruecksetzen, beim Anwenden oder wenn das
             ' Werkzeug gewechselt wird - sonst saehe man sein Ergebnis nur waehrend des Ziehens.
         End Sub
 
@@ -2084,11 +2179,12 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' <summary>Die Verzerrung ins Arbeitsbild backen. Ab hier ist sie Teil der Pixel - genau
-        ''' wie bei der Retusche, und aus demselben Grund: sie ist nicht als Rezeptwert
-        ''' darstellbar.</summary>
+        ''' <summary>Die Verzerrung uebernehmen: sie wandert als Knotenfeld ins Rezept und laeuft ab
+        ''' dann in der Geometriestufe mit - Masken gehen ueber dieselbe Stufe mit, und beim
+        ''' naechsten Oeffnen steht sie wieder da.</summary>
         Public Sub ApplyWarpGrid()
-            ' Siehe ApplyLinienVerzerrung: am Objekt gibt es nichts zu backen.
+            ' Siehe ApplyLineWarp: am Objekt gibt es nichts zu uebernehmen, dort steht die
+            ' Verzerrung schon laufend im Objekt.
             If WarpsTheObject Then Return
             If Not HasWarpGridChanges Then Return
             PrepareGrid()
@@ -2211,6 +2307,11 @@ Namespace ViewModels
             PushUndo()
             _imageWarp = Nothing
             RaiseImageWarpChanged()
+            ' Eine stehende Vorschau MUSS mit weg. Sie liegt ueber dem Bild und zeigte sonst den
+            ' alten Stand weiter, waehrend das Bild darunter ausgeblendet ist - "zurueckgenommen"
+            ' stand in der Fusszeile, zu sehen war die Verzerrung.
+            DisposeGridPreview()
+            DisposeLinePreview()
             ' Die Perspektive gehoert dazu: fuer den Nutzer ist sie eine der vier Arten in derselben
             ' Gruppe, und ihr eigener Knopf verschwindet mit ihrer Gruppe, sobald ein anderer Modus
             ' gewaehlt ist.

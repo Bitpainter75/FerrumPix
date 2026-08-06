@@ -6331,6 +6331,15 @@
   <data name="Diesen_Bestandteil_entfernen_3558bd9b" xml:space="preserve">
     <value>Remover este componente</value>
   </data>
+  <data name="Diesen_Bestandteil_nach_oben_a091cc0a" xml:space="preserve">
+    <value>Mover este componente para cima</value>
+  </data>
+  <data name="Diesen_Bestandteil_nach_unten_5cb87b16" xml:space="preserve">
+    <value>Mover este componente para baixo</value>
+  </data>
+  <data name="Verkn_pfung_dieses_Bestandteils_wechseln_0b387e76" xml:space="preserve">
+    <value>Alterar como este componente se combina</value>
+  </data>
   <data name="Nur_die_berschneidung_behalten_1f868e93" xml:space="preserve">
     <value>Manter apenas a sobreposição</value>
   </data>
@@ -6564,6 +6573,9 @@
   </data>
   <data name="Diese_Datei_ist_zugleich_die_Quelle_Wird_sie_ber_7d491ab7" xml:space="preserve">
     <value>Este ficheiro é também a origem. Substituí-lo elimina o original.</value>
+  </data>
+  <data name="Ebene_12651719" xml:space="preserve">
+    <value>Camada</value>
   </data>
   <data name="Maskenebene_6cfc5826" xml:space="preserve">
     <value>Camada de máscara</value>

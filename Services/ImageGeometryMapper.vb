@@ -134,8 +134,8 @@ Namespace Services
         ' ── Perspektivische Verzerrung ──────────────────────────────────────────
         '
         ' Eine Homographie, also eine 3x3 MIT perspektivischer Zeile. Sie ist die einzige
-        ' Verzerrung, die sich noch als Matrix schreiben laesst - alles Freiformige (Gitter) kann
-        ' das nicht und muss gebacken werden.
+        ' Verzerrung, die sich als Matrix schreiben laesst - alles Freiformige (Gitter) kann das
+        ' nicht und wird als Knotenfeld gefuehrt.
         '
         ' SkiaSharp bringt keine Abbildung "Viereck auf Viereck" mit, also wird sie hier gerechnet.
         ' Das Verfahren ist der Standardweg fuer Einheitsquadrat auf Viereck; der Pruefstand haelt
@@ -267,9 +267,9 @@ Namespace Services
         '
         ' Freiform: ein Raster von Stuetzpunkten wird verschoben, das Bild folgt dazwischen weich.
         ' Das laesst sich NICHT als Matrix schreiben - eine Matrix bildet Geraden auf Geraden ab,
-        ' ein Gitter tut genau das nicht. Deshalb ist diese Verzerrung die einzige der drei, die in
-        ' die Pixel gebacken werden muss, mit allem was daran haengt: Masken passen danach nicht
-        ' mehr genau, und rueckgaengig geht es nur innerhalb der Sitzung.
+        ' ein Gitter tut genau das nicht. Gefuehrt wird es deshalb als KNOTENFELD im Rezept
+        ' (ImageAdjustments.ImageWarp), nicht in den Pixeln: Masken laufen ueber dieselbe Stufe mit,
+        ' und eine zweite Verzerrung setzt sich auf die erste.
         '
         ' Gezeichnet wird als Dreiecksnetz mit Texturkoordinaten. Jede Masche bekommt damit ihre
         ' eigene Abbildung, und Skia interpoliert dazwischen - das ist derselbe Weg, den
@@ -707,7 +707,7 @@ Namespace Services
         End Function
 
         ''' <summary>Wohin EIN Punkt durch ein Linienfeld wandert. Dieselbe Rechnung wie in
-        ''' <see cref="LinienFeld"/>, nur fuer einen einzelnen Punkt - fuer ein Objekt lohnt kein
+        ''' <see cref="LineField"/>, nur fuer einen einzelnen Punkt - fuer ein Objekt lohnt kein
         ''' ganzes Raster, und die Formel darf trotzdem nur an einer Stelle stehen.</summary>
         Public Shared Function LinePoint(px As Double, py As Double,
                                            source As Double(), target As Double()) As SKPoint

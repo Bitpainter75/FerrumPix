@@ -2091,7 +2091,10 @@ Namespace Views
                                                  vm.SelectionMode <> "Move" AndAlso
                                                  vm.SelectionCombineMode = "New" AndAlso
                                                  Not clickedInsideSelection
-                If _selectionDragReplacesExisting Then SetCurrentSelectionOverlayVisible(False)
+                ' Die alte Auswahl sofort wegnehmen: sie wird durch den beginnenden Zug ersetzt, und
+                ' sie noch bis zum ersten Zwischenstand stehen zu lassen sieht aus, als kaeme die
+                ' neue zur alten hinzu.
+                If _selectionDragReplacesExisting Then HideCurrentSelectionOverlay()
                 Select Case vm.SelectionMode
                     Case "Move"
                         ' Verschieben ist der Default im Auswahlpanel: außerhalb einer bestehenden Auswahl
@@ -4009,22 +4012,6 @@ Namespace Views
             End If
             If dragOverlay IsNot Nothing AndAlso Not _isSelectionDragging AndAlso Not _isLassoDrawing Then dragOverlay.IsVisible = False
             UpdateSliderLayout()
-        End Sub
-
-        Private Sub SetCurrentSelectionOverlayVisible(isVisible As Boolean)
-            Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
-            Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
-            If Not isVisible Then
-                HideCurrentSelectionOverlay()
-                Return
-            End If
-            ' Auch hier gilt die Trennung: bei einer MASKE waeren Laufameisen falsch.
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim isMask = vm IsNot Nothing AndAlso (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask OrElse vm.IsMaskGrayscaleView)
-            If overlay IsNot Nothing Then overlay.IsVisible = Not isMask
-            If maskOverlay IsNot Nothing Then
-                maskOverlay.IsVisible = isMask AndAlso vm.SelectionMaskPreviewImage IsNot Nothing
-            End If
         End Sub
 
         Private Sub HideCurrentSelectionOverlay()

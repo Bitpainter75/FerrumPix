@@ -662,10 +662,6 @@ Namespace ViewModels
             Return pts
         End Function
 
-        ''' <summary>Baut das rote Quick-Mask-Overlay: die aktuelle Auswahlmaske rot getönt (Alpha ∝ Deckung)
-        ''' auf eine gedeckelte Overlay-Auflösung heruntergerechnet, plus optional den laufenden Strich als
-        ''' Live-Vorschau (Subtrahieren stanzt via DstOut). Rückgabe deckt das ganze Anzeigebild ab und wird
-        ''' vom View auf das Bildrechteck gestreckt. Nothing, wenn nichts zu zeigen ist.</summary>
         ''' <summary>Die rot eingefaerbte COMMITTETE Maske in Overlay-Aufloesung, waehrend ein Strich
         ''' laeuft. Sie aendert sich innerhalb eines Strichs nicht - vorher wurde sie trotzdem bei
         ''' JEDER Mausbewegung neu skaliert (hochwertige Abtastung ueber die ganze Flaeche), und das
@@ -684,6 +680,10 @@ Namespace ViewModels
             _maskOverlayBasisHoehe = 0
         End Sub
 
+        ''' <summary>Baut das rote Quick-Mask-Overlay: die aktuelle Auswahlmaske rot getönt (Alpha ∝ Deckung)
+        ''' auf eine gedeckelte Overlay-Auflösung heruntergerechnet, plus optional den laufenden Strich als
+        ''' Live-Vorschau (Subtrahieren stanzt via DstOut). Rückgabe deckt das ganze Anzeigebild ab und wird
+        ''' vom View auf das Bildrechteck gestreckt. Nothing, wenn nichts zu zeigen ist.</summary>
         Private Function BuildSelectionRedOverlayBitmap(livePts As List(Of SKPoint), eraseMode As Boolean) As Bitmap
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
@@ -1528,7 +1528,7 @@ Namespace ViewModels
                 Dim components = m.GetComponents()
                 Dim active = ActiveMaskComponentIndex
                 For i = 0 To components.Count - 1
-                    MaskComponentRows.Add(New MaskComponentRow(i, components(i), i = active))
+                    MaskComponentRows.Add(New MaskComponentRow(i, components(i), i = active, components.Count))
                 Next
             End If
             Me.RaisePropertyChanged(NameOf(MaskComponentRows))
@@ -1666,6 +1666,16 @@ Namespace ViewModels
                 If extra Is Nothing Then Return
                 extra.IsVisible = Not extra.IsVisible
             End If
+            AfterMaskComponentChange(m)
+        End Sub
+
+        ''' <summary>Der gemeinsame Abschluss jeder Änderung an der Bestandteilliste: Liste neu
+        ''' aufbauen, Overlay nachziehen, Vorschau anstoßen.
+        '''
+        ''' Das NEULADEN einer bearbeiteten Ebenenmaske gehört dazu: ohne das trägt die Arbeitskopie
+        ''' weiter die alte Summe, und der nächste Pinselstrich schriebe den alten Stand zurück.</summary>
+        Private Sub AfterMaskComponentChange(m As ImageMask)
+            RaiseGradientPropertiesChanged()
             RaiseMaskComponentsChanged()
             If _editingLayerMaskId <> "" AndAlso String.Equals(_editingLayerMaskId, m.Id, StringComparison.Ordinal) Then
                 ReloadEditedLayerMaskIntoSelection()
@@ -1674,6 +1684,58 @@ Namespace ViewModels
             End If
             _hasChanges = True
             SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Verschiebt einen Bestandteil in der Reihe - <paramref name="delta"/> ist -1 für
+        ''' nach oben und +1 für nach unten. Die Reihenfolge ist keine Anzeigefrage: der ERSTE
+        ''' sichtbare Bestandteil setzt das Ergebnis, jeder weitere wird mit seinem Modus darauf
+        ''' verrechnet. Wer einen abgezogenen Bestandteil nach oben holt, ändert damit das Bild.
+        '''
+        ''' Der Bestandteil, der auf Platz eins landet, verliert seinen Modus - dort gibt es nichts,
+        ''' worauf man rechnen könnte. Der bisher erste bekommt beim Abrutschen „Hinzufügen", weil er
+        ''' bis dahin gar keinen trug.
+        '''
+        ''' Der ANGEFASSTE Bestandteil wandert mit: sonst zeigten die Regler nach dem Verschieben auf
+        ''' einen anderen als den, den man gerade in der Hand hatte.</summary>
+        Public Sub MoveMaskComponent(index As Integer, delta As Integer)
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing Then Return
+            Dim components = m.GetComponents()
+            Dim target = index + delta
+            If index < 0 OrElse index >= components.Count Then Return
+            If target < 0 OrElse target >= components.Count Then Return
+            PushUndo()
+            Dim moved = components(index)
+            components.RemoveAt(index)
+            components.Insert(target, moved)
+            m.SetPrimaryFromComponent(components(0))
+            m.ExtraComponents = components.Skip(1).ToList()
+            If _activeMaskComponentIndex = index Then
+                _activeMaskComponentIndex = target
+            ElseIf _activeMaskComponentIndex = target Then
+                _activeMaskComponentIndex = index
+            End If
+            TraceMask(Function() $"Bestandteil {index} nach {target} verschoben: {MaskTrace(m.Id)}")
+            AfterMaskComponentChange(m)
+        End Sub
+
+        ''' <summary>Schaltet den Verknüpfungsmodus eines Bestandteils weiter: hinzufügen, abziehen,
+        ''' schneiden, und wieder von vorn. Der ERSTE Bestandteil hat keinen - er setzt das Ergebnis,
+        ''' und ein Modus stünde dort ohne Gegenüber.</summary>
+        Public Sub CycleMaskComponentMode(index As Integer)
+            Dim m = CurrentMaskForComponents()
+            If m Is Nothing OrElse index <= 0 Then Return
+            If m.ExtraComponents Is Nothing OrElse index - 1 >= m.ExtraComponents.Count Then Return
+            Dim c = m.ExtraComponents(index - 1)
+            If c Is Nothing Then Return
+            PushUndo()
+            Select Case If(c.Mode, "").Trim().ToLowerInvariant()
+                Case "subtract" : c.Mode = "Intersect"
+                Case "intersect" : c.Mode = "Add"
+                Case Else : c.Mode = "Subtract"
+            End Select
+            TraceMask(Function() $"Bestandteil {index} steht jetzt auf {c.Mode}: {MaskTrace(m.Id)}")
+            AfterMaskComponentChange(m)
         End Sub
 
         ''' <summary>Maske vorübergehend AUS. Sie bleibt vollstaendig erhalten und deckt solange
@@ -1877,74 +1939,125 @@ Namespace ViewModels
             SetSelectionMaskPreviewImage(BuildGradientRedOverlayBitmap(mask, livePts, eraseMode))
         End Sub
 
-        ''' Zwischenspeicher der projizierten Pinselkorrektur (siehe ApplyBrushCorrectionToOverlay).
-        ''' Sitzungszustand, gehoert NICHT ins Rezept.
-        Private _korrCacheKey As String = ""
-        Private _korrCacheHinzu As Byte()
-        Private _korrCacheWeg As Byte()
-        Private _korrCacheQuelleLinks As Integer = Integer.MinValue
-        Private _korrCacheQuelleOben As Integer = Integer.MinValue
+        ''' <summary>Ein einmal projiziertes Raster samt der Quell-Lage, zu der es gehört. Bewegt sich
+        ''' NUR die Lage, wird beim Abtasten verschoben statt neu projiziert.</summary>
+        Private Class ProjectedMaskRaster
+            Public Property Data As Byte()
+            Public Property SourceLeft As Integer
+            Public Property SourceTop As Integer
+        End Class
 
-        ''' <summary>Rechnet die PINSELKORREKTUR eines Verlaufs ins rote Overlay ein. Ohne das zeigt
-        ''' das Overlay nur die Geometrie - man malt und sieht nichts, obwohl das Bild sich ändert.
+        ''' Zwischenspeicher der projizierten Masken-Raster (Pinselkorrekturen und gemalte
+        ''' Bestandteile im roten Overlay). Sitzungszustand, gehoert NICHT ins Rezept.
+        Private ReadOnly _projectedMaskRasters As New Dictionary(Of String, ProjectedMaskRaster)()
+        Private _projectedMaskScope As String = ""
+        Private Const ProjectedMaskRasterSlots As Integer = 16
+
+        ''' <summary>Der Zwischenspeicher gilt für EINE Overlay-Größe und EINE Geometrie. Ändert sich
+        ''' eines von beidem, sind alle Einträge wertlos - dann lieber leeren als je Eintrag prüfen.</summary>
+        Private Sub EnsureProjectedMaskScope(scope As String)
+            If String.Equals(scope, _projectedMaskScope, StringComparison.Ordinal) Then Return
+            _projectedMaskScope = scope
+            _projectedMaskRasters.Clear()
+        End Sub
+
+        Private Function ProjectedMaskScopeKey(adj As ImageAdjustments, ow As Integer, oh As Integer,
+                                               bw As Integer, bh As Integer) As String
+            Return String.Join("|", ow, oh, bw, bh,
+                               adj.RotationDegrees, adj.StraightenDegrees,
+                               adj.FlipHorizontal, adj.FlipVertical,
+                               adj.CropLeftPercent, adj.CropTopPercent,
+                               adj.CropRightPercent, adj.CropBottomPercent)
+        End Function
+
+        ''' <summary>Projiziert ein Raster aus dem QUELLRAUM auf die Overlay-Größe, mit
+        ''' Zwischenspeicher.
         '''
-        ''' Die Korrekturraster liegen im QUELLRAUM, das Overlay im Anzeigeraum. Statt die Projektion
-        ''' hier ein zweites Mal zu schreiben, wird jedes Raster kurz als GEMALTE Maske verpackt und
-        ''' durch <see cref="ImageProcessor.BuildSelectionMaskFromLayerMask"/> geschickt - denselben
-        ''' Weg, über den eine Ebenen-Maske zum Bearbeiten in den Anzeigeraum kommt. Zuschnitt,
-        ''' Drehung und Begradigung stimmen damit automatisch.</summary>
-        Private Sub ApplyBrushCorrectionToOverlay(overlay As SKBitmap, mask As ImageMask,
-                                                  displayWidth As Integer, displayHeight As Integer)
-            If overlay Is Nothing OrElse mask Is Nothing OrElse Not mask.HasBrushCorrection Then Return
-            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return
-            Dim adj = BuildAdjustmentsFromFields()
+        ''' ZWISCHENSPEICHER, kein Luxus: die Projektion läuft über die GANZE Anzeigefläche mit einer
+        ''' Matrixrechnung je Pixel - gemessen 454 ms bei 3 MP, und sie liefe mehrfach pro
+        ''' Mausbewegung. Während eines Strichs oder eines Reglerzuges ändert sich das committete
+        ''' Raster aber gar nicht.
+        '''
+        ''' Die LAGE steht bewusst NICHT im Schlüssel, nur die Größe: beim Verschieben der Maske
+        ''' ändert sich allein der Ursprung, und dann wäre jeder Zwischenschritt ein Fehlschlag -
+        ''' 218 ms je Mausbewegung. Ein reiner Versatz lässt sich im Anzeigeraum nachziehen (eine
+        ''' affine Abbildung macht aus einer Verschiebung wieder eine Verschiebung), deshalb liefert
+        ''' die Funktion den Versatz zurück und der Aufrufer tastet verschoben ab.</summary>
+        Private Function ProjectMaskRasterCached(mask As ImageMask, pngBase64 As String,
+                                                 srcLeft As Integer, srcTop As Integer,
+                                                 srcRight As Integer, srcBottom As Integer,
+                                                 adj As ImageAdjustments,
+                                                 ow As Integer, oh As Integer, bw As Integer, bh As Integer,
+                                                 ByRef offsetX As Integer, ByRef offsetY As Integer) As Byte()
+            offsetX = 0 : offsetY = 0
+            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(pngBase64) Then Return Nothing
+            If srcRight <= srcLeft OrElse srcBottom <= srcTop Then Return Nothing
+            If mask.SourceWidthPixels <= 0 OrElse mask.SourceHeightPixels <= 0 Then Return Nothing
 
-            ' ZWISCHENSPEICHER, kein Luxus: die Projektion laeuft ueber die GANZE Anzeigeflaeche mit
-            ' einer Matrixrechnung je Pixel - gemessen 454 ms bei 3 MP, und sie wuerde ZWEIMAL pro
-            ' Mausbewegung laufen. Waehrend eines Strichs aendert sich die committete Korrektur aber
-            ' gar nicht; nur der laufende Strich kommt oben drauf. Der Schluessel enthaelt alles, was
-            ' das Ergebnis bestimmt - Raster, Rechteck, Overlay- und Anzeigegroesse und die Geometrie.
-            ' Die LAGE des Korrekturrechtecks steht bewusst NICHT im Schluessel, nur seine Groesse:
-            ' beim Verschieben der Maske aendert sich allein der Ursprung, und dann waere jeder
-            ' Zwischenschritt ein Fehlschlag - 218 ms je Mausbewegung. Ein reiner Versatz laesst sich
-            ' im Anzeigeraum nachziehen (eine affine Abbildung macht aus einer Verschiebung wieder
-            ' eine Verschiebung), deshalb wird das Ergebnis unten nur verschoben abgetastet.
-            Dim key = String.Join("|", mask.Id,
-                                         mask.BrushRight - mask.BrushLeft, mask.BrushBottom - mask.BrushTop,
-                                         mask.BrushAddPngBase64.GetHashCode(),
-                                         mask.BrushSubtractPngBase64.GetHashCode(),
-                                         overlay.Width, overlay.Height, displayWidth, displayHeight,
-                                         adj.RotationDegrees, adj.StraightenDegrees,
-                                         adj.FlipHorizontal, adj.FlipVertical,
-                                         adj.CropLeftPercent, adj.CropTopPercent,
-                                         adj.CropRightPercent, adj.CropBottomPercent)
-            Dim hinzu As Byte(), weg As Byte()
-            Dim offsetX = 0, offsetY = 0
-            If key = _korrCacheKey Then
-                hinzu = _korrCacheHinzu
-                weg = _korrCacheWeg
-                ' Nur die Lage ist anders: den Versatz im Anzeigeraum bestimmen und beim Abtasten
-                ' abziehen, statt die ganze Projektion zu wiederholen.
-                If mask.BrushLeft <> _korrCacheQuelleLinks OrElse mask.BrushTop <> _korrCacheQuelleOben Then
-                    Dim alt = SourcePercentToDisplayPercent(_korrCacheQuelleLinks * 100.0 / mask.SourceWidthPixels,
-                                                            _korrCacheQuelleOben * 100.0 / mask.SourceHeightPixels)
-                    Dim neu = SourcePercentToDisplayPercent(mask.BrushLeft * 100.0 / mask.SourceWidthPixels,
-                                                            mask.BrushTop * 100.0 / mask.SourceHeightPixels)
-                    If alt.HasValue AndAlso neu.HasValue Then
-                        offsetX = CInt(Math.Round((neu.Value.X - alt.Value.X) / 100.0 * overlay.Width))
-                        offsetY = CInt(Math.Round((neu.Value.Y - alt.Value.Y) / 100.0 * overlay.Height))
+            Dim key = String.Join("|", ImageProcessor.MaskRasterFingerprint(pngBase64),
+                                  srcRight - srcLeft, srcBottom - srcTop)
+            Dim entry As ProjectedMaskRaster = Nothing
+            If _projectedMaskRasters.TryGetValue(key, entry) AndAlso entry IsNot Nothing Then
+                If entry.SourceLeft <> srcLeft OrElse entry.SourceTop <> srcTop Then
+                    Dim before = SourcePercentToDisplayPercent(entry.SourceLeft * 100.0 / mask.SourceWidthPixels,
+                                                               entry.SourceTop * 100.0 / mask.SourceHeightPixels)
+                    Dim after = SourcePercentToDisplayPercent(srcLeft * 100.0 / mask.SourceWidthPixels,
+                                                              srcTop * 100.0 / mask.SourceHeightPixels)
+                    If before.HasValue AndAlso after.HasValue Then
+                        offsetX = CInt(Math.Round((after.Value.X - before.Value.X) / 100.0 * ow))
+                        offsetY = CInt(Math.Round((after.Value.Y - before.Value.Y) / 100.0 * oh))
                     End If
                 End If
-            Else
-                hinzu = ProjectCorrectionRasterToDisplay(mask, mask.BrushAddPngBase64, adj, overlay.Width, overlay.Height, displayWidth, displayHeight)
-                weg = ProjectCorrectionRasterToDisplay(mask, mask.BrushSubtractPngBase64, adj, overlay.Width, overlay.Height, displayWidth, displayHeight)
-                _korrCacheKey = key
-                _korrCacheHinzu = hinzu
-                _korrCacheWeg = weg
-                _korrCacheQuelleLinks = mask.BrushLeft
-                _korrCacheQuelleOben = mask.BrushTop
+                Return entry.Data
             End If
-            If hinzu Is Nothing AndAlso weg Is Nothing Then Return
+
+            Dim data = ProjectSourceRasterToDisplay(mask, pngBase64, srcLeft, srcTop, srcRight, srcBottom,
+                                                    adj, ow, oh, bw, bh)
+            If data Is Nothing Then Return Nothing
+            If _projectedMaskRasters.Count >= ProjectedMaskRasterSlots Then _projectedMaskRasters.Clear()
+            _projectedMaskRasters(key) = New ProjectedMaskRaster With {
+                .Data = data, .SourceLeft = srcLeft, .SourceTop = srcTop}
+            Return data
+        End Function
+
+        ''' <summary>Rechnet die PINSELKORREKTUREN einer Maske ins rote Overlay ein. Ohne das zeigt
+        ''' das Overlay nur die Geometrie - man malt und sieht nichts, obwohl das Bild sich ändert.
+        '''
+        ''' JEDER Bestandteil, nicht nur der erste: eine Korrektur am zweiten Verlauf wirkte im Bild,
+        ''' blieb im Overlay aber unsichtbar. Die Korrekturen aller Träger werden dafür zu je einem
+        ''' Hinzu- und Weg-Raster zusammengefasst (Maximum je Bildpunkt).
+        '''
+        ''' Die Korrekturraster liegen im QUELLRAUM, das Overlay im Anzeigeraum; die Projektion
+        ''' übernimmt <see cref="ProjectMaskRasterCached"/>.</summary>
+        Private Sub ApplyBrushCorrectionToOverlay(overlay As SKBitmap, mask As ImageMask,
+                                                  displayWidth As Integer, displayHeight As Integer)
+            If overlay Is Nothing OrElse mask Is Nothing Then Return
+            If displayWidth <= 0 OrElse displayHeight <= 0 Then Return
+            Dim carriers = mask.GetComponents().Where(Function(c) c IsNot Nothing AndAlso c.HasBrushCorrection).ToList()
+            If carriers.Count = 0 Then Return
+            Dim adj = BuildAdjustmentsFromFields()
+            EnsureProjectedMaskScope(ProjectedMaskScopeKey(adj, overlay.Width, overlay.Height, displayWidth, displayHeight))
+
+            Dim pixelCount = overlay.Width * overlay.Height
+            Dim added As Byte() = Nothing, removed As Byte() = Nothing
+            For Each c In carriers
+                Dim dx As Integer, dy As Integer
+                Dim addRaster = ProjectMaskRasterCached(mask, c.BrushAddPngBase64, c.BrushLeft, c.BrushTop,
+                                                        c.BrushRight, c.BrushBottom, adj,
+                                                        overlay.Width, overlay.Height, displayWidth, displayHeight, dx, dy)
+                If addRaster IsNot Nothing Then
+                    If added Is Nothing Then added = New Byte(pixelCount - 1) {}
+                    AccumulateShiftedMaximum(added, addRaster, overlay.Width, overlay.Height, dx, dy)
+                End If
+                Dim removeRaster = ProjectMaskRasterCached(mask, c.BrushSubtractPngBase64, c.BrushLeft, c.BrushTop,
+                                                           c.BrushRight, c.BrushBottom, adj,
+                                                           overlay.Width, overlay.Height, displayWidth, displayHeight, dx, dy)
+                If removeRaster IsNot Nothing Then
+                    If removed Is Nothing Then removed = New Byte(pixelCount - 1) {}
+                    AccumulateShiftedMaximum(removed, removeRaster, overlay.Width, overlay.Height, dx, dy)
+                End If
+            Next
+            If added Is Nothing AndAlso removed Is Nothing Then Return
 
             Dim stride = overlay.RowBytes
             Dim buffer = New Byte(stride * overlay.Height - 1) {}
@@ -1953,15 +2066,11 @@ Namespace ViewModels
             ' und Rot muss mitgezogen werden, sonst leuchtet ein aufgehellter Bereich falsch.
             For y = 0 To overlay.Height - 1
                 Dim row = y * stride, iRow = y * overlay.Width
-                Dim qy = y - offsetY
                 For x = 0 To overlay.Width - 1
-                    Dim qx = x - offsetX
                     Dim a = CInt(buffer(row + x * 4 + 3))
-                    If qx >= 0 AndAlso qy >= 0 AndAlso qx < overlay.Width AndAlso qy < overlay.Height Then
-                        Dim i = qy * overlay.Width + qx
-                        If hinzu IsNot Nothing Then a += CInt(hinzu(i)) * 128 \ 255
-                        If weg IsNot Nothing Then a -= CInt(weg(i)) * 128 \ 255
-                    End If
+                    Dim i = iRow + x
+                    If added IsNot Nothing Then a += CInt(added(i)) * 128 \ 255
+                    If removed IsNot Nothing Then a -= CInt(removed(i)) * 128 \ 255
                     a = Math.Max(0, Math.Min(128, a))
                     Dim o = row + x * 4
                     buffer(o) = 0
@@ -1973,17 +2082,43 @@ Namespace ViewModels
             Runtime.InteropServices.Marshal.Copy(buffer, 0, overlay.GetPixels(), buffer.Length)
         End Sub
 
-        ''' <summary>Ein Korrekturraster (Quellraum) auf die Overlay-Größe bringen. Nothing, wenn es
-        ''' leer ist oder sich nicht projizieren lässt.</summary>
-        Private Function ProjectCorrectionRasterToDisplay(mask As ImageMask, pngBase64 As String,
-                                                          adj As ImageAdjustments,
-                                                          overlayWidth As Integer, overlayHeight As Integer,
-                                                          displayWidth As Integer, displayHeight As Integer) As Byte()
+        ''' <summary>Legt ein verschoben abgetastetes Raster mit dem MAXIMUM auf ein Sammelraster -
+        ''' zweimal dieselbe Stelle sieht aus wie einmal, dieselbe Regel wie beim Zusammensetzen der
+        ''' Bestandteile.</summary>
+        Private Shared Sub AccumulateShiftedMaximum(target As Byte(), source As Byte(),
+                                                    width As Integer, height As Integer,
+                                                    offsetX As Integer, offsetY As Integer)
+            If target Is Nothing OrElse source Is Nothing Then Return
+            For y = 0 To height - 1
+                Dim qy = y - offsetY
+                If qy < 0 OrElse qy >= height Then Continue For
+                Dim zRow = y * width, qRow = qy * width
+                For x = 0 To width - 1
+                    Dim qx = x - offsetX
+                    If qx < 0 OrElse qx >= width Then Continue For
+                    If source(qRow + qx) > target(zRow + x) Then target(zRow + x) = source(qRow + qx)
+                Next
+            Next
+        End Sub
+
+        ''' <summary>Ein Raster aus dem Quellraum auf die Overlay-Größe bringen. Nothing, wenn es
+        ''' leer ist oder sich nicht projizieren lässt.
+        '''
+        ''' Statt die Projektion hier ein zweites Mal zu schreiben, wird das Raster kurz als GEMALTE
+        ''' Maske verpackt und durch <see cref="ImageProcessor.BuildSelectionMaskFromLayerMask"/>
+        ''' geschickt - denselben Weg, über den eine Ebenenmaske zum Bearbeiten in den Anzeigeraum
+        ''' kommt. Zuschnitt, Drehung und Begradigung stimmen damit automatisch.</summary>
+        Private Function ProjectSourceRasterToDisplay(mask As ImageMask, pngBase64 As String,
+                                                      srcLeft As Integer, srcTop As Integer,
+                                                      srcRight As Integer, srcBottom As Integer,
+                                                      adj As ImageAdjustments,
+                                                      overlayWidth As Integer, overlayHeight As Integer,
+                                                      displayWidth As Integer, displayHeight As Integer) As Byte()
             If String.IsNullOrWhiteSpace(pngBase64) Then Return Nothing
             Dim helperMask = New ImageMask With {
                 .SourceWidthPixels = mask.SourceWidthPixels, .SourceHeightPixels = mask.SourceHeightPixels,
-                .Left = mask.BrushLeft, .Top = mask.BrushTop,
-                .Right = mask.BrushRight, .Bottom = mask.BrushBottom,
+                .Left = srcLeft, .Top = srcTop,
+                .Right = srcRight, .Bottom = srcBottom,
                 .PngBase64 = pngBase64
             }
             Dim rectPx As SKRectI
@@ -2009,21 +2144,25 @@ Namespace ViewModels
             End Using
         End Function
 
-        ''' <summary>Einen einzelnen Verlaufs-Bestandteil in das rote Overlay zeichnen. Dieselbe
-        ''' Rechnung, die der Renderer je Bildpunkt macht - hier einmal als Farbverlauf mit Matrix.
-        ''' „Abziehen" nimmt seine Flaeche wieder heraus, alles andere legt sich mit dem MAXIMUM
-        ''' darueber: zweimal dieselbe Stelle soll aussehen wie einmal.</summary>
-        Private Sub DrawGradientComponentOverlay(canvas As SKCanvas, component As MaskComponent,
-                                                 ow As Integer, oh As Integer)
-            If canvas Is Nothing OrElse component Is Nothing OrElse Not component.IsGradient Then Return
+        ''' <summary>Die Deckung EINES Verlaufs-Bestandteils als Byte je Overlay-Punkt (0 bis 255).
+        ''' Dieselbe Rechnung, die der Renderer je Bildpunkt macht - hier einmal als Farbverlauf mit
+        ''' Matrix.
+        '''
+        ''' Geliefert wird die reine Deckung und nicht schon das fertige Rot: der Modus des
+        ''' Bestandteils (hinzufügen, abziehen, schneiden) wird erst beim Zusammensetzen angewendet,
+        ''' und zwar mit denselben Regeln wie im Renderweg. Über Mischmodi des Canvas ging das nicht
+        ''' mehr, seit auch GEMALTE Bestandteile in derselben Reihe stehen.</summary>
+        Private Function BuildGradientComponentCoverage(component As MaskComponent,
+                                                        ow As Integer, oh As Integer) As Byte()
+            If component Is Nothing OrElse Not component.IsGradient Then Return Nothing
             Dim a = SourcePercentToDisplayPercent(component.GradientStartXPercent, component.GradientStartYPercent)
             Dim b = SourcePercentToDisplayPercent(component.GradientEndXPercent, component.GradientEndYPercent)
-            If Not a.HasValue OrElse Not b.HasValue Then Return
+            If Not a.HasValue OrElse Not b.HasValue Then Return Nothing
             Dim p0 = New SKPoint(CSng(a.Value.X / 100.0 * ow), CSng(a.Value.Y / 100.0 * oh))
             Dim p1 = New SKPoint(CSng(b.Value.X / 100.0 * ow), CSng(b.Value.Y / 100.0 * oh))
             Dim dx = p1.X - p0.X, dy = p1.Y - p0.Y
             Dim radius = CSng(Math.Sqrt(dx * dx + dy * dy))
-            If radius < 0.5 Then Return
+            If radius < 0.5 Then Return Nothing
 
             ' Smoothstep in fünf Stützstellen nachbilden - eine reine Zweipunkt-Rampe zeigt an ihren
             ' Enden dieselben Kanten, die der Renderer bewusst vermeidet.
@@ -2032,37 +2171,73 @@ Namespace ViewModels
             For i = 0 To steps.Length - 1
                 Dim t = steps(i)
                 Dim s = t * t * (3.0 - 2.0 * t)
-                Dim coverage = CByte(Math.Round((1.0 - s) * 128.0))
-                colors(i) = New SKColor(255, 0, 0, coverage)
+                colors(i) = New SKColor(255, 255, 255, CByte(Math.Round((1.0 - s) * 255.0)))
             Next
             If component.Inverted Then Array.Reverse(colors)
 
-            Dim subtract = String.Equals(component.Mode, "Subtract", StringComparison.OrdinalIgnoreCase)
-            Using paint = New SKPaint With {.Style = SKPaintStyle.Fill, .IsAntialias = True,
-                                            .BlendMode = If(subtract, SKBlendMode.DstOut, SKBlendMode.Lighten)}
-                If component.IsRadialGradient Then
-                    Dim inner = CSng(Math.Max(0.0, Math.Min(0.98, 1.0 - component.GradientFeatherPercent / 100.0)))
-                    Dim pos(steps.Length - 1) As Single
-                    For i = 0 To steps.Length - 1
-                        pos(i) = inner + (1.0F - inner) * steps(i)
+            Using surface = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(surface)
+                    canvas.Clear(SKColors.Transparent)
+                    Using paint = New SKPaint With {.Style = SKPaintStyle.Fill, .IsAntialias = True}
+                        If component.IsRadialGradient Then
+                            Dim inner = CSng(Math.Max(0.0, Math.Min(0.98, 1.0 - component.GradientFeatherPercent / 100.0)))
+                            Dim pos(steps.Length - 1) As Single
+                            For i = 0 To steps.Length - 1
+                                pos(i) = inner + (1.0F - inner) * steps(i)
+                            Next
+                            ' Die Ellipse entsteht durch Drehen und Stauchen des Kreises - genau die
+                            ' Umrechnung, die der Renderer pro Pixel macht, hier einmal als Matrix.
+                            Dim angle = CSng(Math.Atan2(dy, dx) * 180.0 / Math.PI)
+                            Dim m = SKMatrix.CreateScale(1.0F, CSng(Math.Max(0.05, component.GradientRadiusRatio)), p0.X, p0.Y)
+                            m = m.PostConcat(SKMatrix.CreateRotationDegrees(angle, p0.X, p0.Y))
+                            paint.Shader = SKShader.CreateRadialGradient(p0, radius, colors, pos, SKShaderTileMode.Clamp, m)
+                        Else
+                            Dim width = CSng(Math.Max(0.02, Math.Min(1.0, component.GradientFeatherPercent / 100.0)))
+                            Dim pos(steps.Length - 1) As Single
+                            For i = 0 To steps.Length - 1
+                                pos(i) = 0.5F + (steps(i) - 0.5F) * width
+                            Next
+                            paint.Shader = SKShader.CreateLinearGradient(p0, p1, colors, pos, SKShaderTileMode.Clamp)
+                        End If
+                        canvas.DrawRect(New SKRect(0, 0, ow, oh), paint)
+                        paint.Shader?.Dispose()
+                    End Using
+                End Using
+                Dim stride = surface.RowBytes
+                Dim buffer = New Byte(stride * oh - 1) {}
+                Runtime.InteropServices.Marshal.Copy(surface.GetPixels(), buffer, 0, buffer.Length)
+                Dim result = New Byte(ow * oh - 1) {}
+                For y = 0 To oh - 1
+                    Dim row = y * stride, targetRow = y * ow
+                    For x = 0 To ow - 1
+                        result(targetRow + x) = buffer(row + x * 4 + 3)
                     Next
-                    ' Die Ellipse entsteht durch Drehen und Stauchen des Kreises - genau die
-                    ' Umrechnung, die der Renderer pro Pixel macht, hier einmal als Matrix.
-                    Dim angle = CSng(Math.Atan2(dy, dx) * 180.0 / Math.PI)
-                    Dim m = SKMatrix.CreateScale(1.0F, CSng(Math.Max(0.05, component.GradientRadiusRatio)), p0.X, p0.Y)
-                    m = m.PostConcat(SKMatrix.CreateRotationDegrees(angle, p0.X, p0.Y))
-                    paint.Shader = SKShader.CreateRadialGradient(p0, radius, colors, pos, SKShaderTileMode.Clamp, m)
-                Else
-                    Dim width = CSng(Math.Max(0.02, Math.Min(1.0, component.GradientFeatherPercent / 100.0)))
-                    Dim pos(steps.Length - 1) As Single
-                    For i = 0 To steps.Length - 1
-                        pos(i) = 0.5F + (steps(i) - 0.5F) * width
-                    Next
-                    paint.Shader = SKShader.CreateLinearGradient(p0, p1, colors, pos, SKShaderTileMode.Clamp)
-                End If
-                canvas.DrawRect(New SKRect(0, 0, ow, oh), paint)
-                paint.Shader?.Dispose()
+                Next
+                Return result
             End Using
+        End Function
+
+        ''' <summary>Verrechnet einen Bestandteil auf das bisherige Ergebnis - dieselben drei Regeln
+        ''' wie im Renderweg: Hinzufügen nimmt das Maximum, Abziehen die Differenz, Schneiden das
+        ''' Minimum.</summary>
+        Private Shared Sub CombineCoverageInto(target As Byte(), source As Byte(), mode As String)
+            If target Is Nothing OrElse source Is Nothing OrElse target.Length <> source.Length Then Return
+            Dim normalized = If(mode, "").Trim().ToLowerInvariant()
+            For i = 0 To target.Length - 1
+                Dim a = CInt(target(i)), b = CInt(source(i))
+                Dim v As Integer
+                Select Case normalized
+                    Case "subtract"
+                        v = a - b
+                    Case "intersect"
+                        v = Math.Min(a, b)
+                    Case Else
+                        v = Math.Max(a, b)
+                End Select
+                If v < 0 Then v = 0
+                If v > 255 Then v = 255
+                target(i) = CByte(v)
+            Next
         End Sub
 
         Private Function BuildGradientRedOverlayBitmap(mask As ImageMask,
@@ -2077,21 +2252,70 @@ Namespace ViewModels
             Dim ow = Math.Max(1, CInt(Math.Round(bw * ovScale)))
             Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
 
-            ' ALLE Verlaufs-Bestandteile, nicht nur der erste. Vorher las diese Stelle die
-            ' Verlaufsfelder der MASKE - also den ersten Bestandteil -, und ein zweiter, per Plus
-            ' angehaengter Verlauf blieb ohne Rot: linear zuerst, radial dazu, und die radiale Maske
-            ' war unsichtbar (Nutzerbefund 2026-08-04). Gezeichnet wird jeder fuer sich, kombiniert
-            ' wird ueber den Mischmodus - Hinzufuegen nimmt das Maximum, wie im Renderweg auch.
-            Dim gradients = mask.GetComponents().Where(Function(c) c IsNot Nothing AndAlso c.IsGradient).ToList()
-            If gradients.Count = 0 Then Return Nothing
+            ' ALLE Bestandteile in ihrer Reihenfolge, gemalte wie gerechnete. Vorher las diese Stelle
+            ' die Verlaufsfelder der MASKE - also den ersten Bestandteil -, und ein zweiter, per Plus
+            ' angehaengter Verlauf blieb ohne Rot (Nutzerbefund 2026-08-04). Danach zeichnete sie zwar
+            ' alle VERLAEUFE, aber keinen gemalten Anteil: an einer Maske aus gemalt plus Verlauf
+            ' verschwand der gemalte Teil, solange man an einem Regler drehte.
+            '
+            ' Zusammengesetzt wird wie im Renderweg: der erste SICHTBARE Bestandteil setzt das
+            ' Ergebnis, jeder weitere kommt mit seinem Modus hinzu.
+            Dim components = mask.GetComponents().Where(Function(c) c IsNot Nothing AndAlso c.IsVisible).ToList()
+            If components.Count = 0 Then Return Nothing
+
+            Dim adj = BuildAdjustmentsFromFields()
+            EnsureProjectedMaskScope(ProjectedMaskScopeKey(adj, ow, oh, bw, bh))
+            Dim coverage As Byte() = Nothing
+            For Each component In components
+                Dim part As Byte() = Nothing
+                If component.IsGradient Then
+                    part = BuildGradientComponentCoverage(component, ow, oh)
+                ElseIf Not String.IsNullOrWhiteSpace(component.PngBase64) Then
+                    Dim dx As Integer, dy As Integer
+                    Dim projected = ProjectMaskRasterCached(mask, component.PngBase64,
+                                                            component.Left, component.Top,
+                                                            component.Right, component.Bottom,
+                                                            adj, ow, oh, bw, bh, dx, dy)
+                    If projected IsNot Nothing Then
+                        part = New Byte(ow * oh - 1) {}
+                        AccumulateShiftedMaximum(part, projected, ow, oh, dx, dy)
+                        If component.Inverted Then
+                            For i = 0 To part.Length - 1
+                                part(i) = CByte(255 - CInt(part(i)))
+                            Next
+                        End If
+                    End If
+                End If
+                If part Is Nothing Then Continue For
+                If coverage Is Nothing Then
+                    coverage = part
+                Else
+                    CombineCoverageInto(coverage, part, component.Mode)
+                End If
+            Next
+            If coverage Is Nothing Then Return Nothing
+            ' Umkehrung des Ergebnisses, wie im Renderweg nach allen Bestandteilen.
+            If mask.InvertResult Then
+                For i = 0 To coverage.Length - 1
+                    coverage(i) = CByte(255 - CInt(coverage(i)))
+                Next
+            End If
 
             Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
-                Using canvas = New SKCanvas(overlay)
-                    canvas.Clear(SKColors.Transparent)
-                    For Each component In gradients
-                        DrawGradientComponentOverlay(canvas, component, ow, oh)
+                Dim stride = overlay.RowBytes
+                Dim puffer = New Byte(stride * oh - 1) {}
+                ' Premultipliziertes BGRA in reinem Rot: Deckung steht im Alphakanal, und Rot muss
+                ' denselben Wert tragen. Halbe Staerke, damit das Bild darunter sichtbar bleibt.
+                For y = 0 To oh - 1
+                    Dim row = y * stride, qRow = y * ow
+                    For x = 0 To ow - 1
+                        Dim a = CByte(CInt(coverage(qRow + x)) * 128 \ 255)
+                        Dim o = row + x * 4
+                        puffer(o + 2) = a
+                        puffer(o + 3) = a
                     Next
-                End Using
+                Next
+                Runtime.InteropServices.Marshal.Copy(puffer, 0, overlay.GetPixels(), puffer.Length)
                 ApplyBrushCorrectionToOverlay(overlay, mask, bw, bh)
                 ' Laufender Strich obendrauf - sonst verschwaende das Verlaufs-Overlay waehrend des
                 ' Ziehens und kaeme erst beim Loslassen zurueck.
@@ -2542,16 +2766,74 @@ Namespace ViewModels
             RaiseMaskComponentsChanged()
         End Sub
 
+        ''' <summary>Verschiebt eine MEHRTEILIGE bearbeitete Ebenenmaske als Ganzes um den zurückgelegten
+        ''' Weg eines Maskenzuges - der Weg für den Fall, in dem <see cref="WriteSelectionMaskBackToLayer"/>
+        ''' ablehnt. Verschoben wird nicht die Summe, sondern jeder Bestandteil, über denselben Baustein
+        ''' wie beim Verschieben eines Objekts (Verlaufspunkte, gemalte Raster, Pinselkorrekturen).
+        '''
+        ''' Der Weg kommt aus dem ANZEIGE-Raum und muss in den Quellraum. Statt Anfang und Ende
+        ''' einzeln abzubilden - beide können neben dem Bild liegen, sobald man die Maske hinausschiebt -
+        ''' wird die Abbildung EINMAL in der Bildmitte differenziert und auf den Weg angewendet. Für
+        ''' Zuschnitt, Drehung, Spiegelung, Begradigung und Größenänderung ist das exakt; bei
+        ''' Perspektive und Verzerrung ist es eine Näherung, wie überall sonst an dieser Naht.</summary>
+        Private Sub MoveEditedMaskComponents(displayDeltaX As Double, displayDeltaY As Double)
+            Dim mask = EditedLayerMask()
+            If mask Is Nothing OrElse mask.ComponentCount <= 1 Then Return
+            If mask.SourceWidthPixels <= 0 OrElse mask.SourceHeightPixels <= 0 Then Return
+            Dim size = GetAnnotationDisplayPixelSize()
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+            If Math.Abs(displayDeltaX) < 0.5 AndAlso Math.Abs(displayDeltaY) < 0.5 Then Return
+
+            ' Ein Schritt von einem Prozent der Anzeige in jede Richtung: gross genug, um nicht in der
+            ' Rundung unterzugehen, klein genug, um lokal zu bleiben.
+            Dim center = DisplayPercentToSourcePercent(50.0, 50.0)
+            Dim stepRight = DisplayPercentToSourcePercent(51.0, 50.0)
+            Dim stepDown = DisplayPercentToSourcePercent(50.0, 51.0)
+            If Not center.HasValue OrElse Not stepRight.HasValue OrElse Not stepDown.HasValue Then Return
+
+            Dim pixelsPerPercentX = size.Width / 100.0, pixelsPerPercentY = size.Height / 100.0
+            Dim sw = mask.SourceWidthPixels / 100.0, sh = mask.SourceHeightPixels / 100.0
+            ' Ableitung der Quellkoordinate nach der Anzeigekoordinate, in Bildpunkten je Bildpunkt.
+            Dim sourceXperX = (stepRight.Value.X - center.Value.X) * sw / pixelsPerPercentX
+            Dim sourceYperX = (stepRight.Value.Y - center.Value.Y) * sh / pixelsPerPercentX
+            Dim sourceXperY = (stepDown.Value.X - center.Value.X) * sw / pixelsPerPercentY
+            Dim sourceYperY = (stepDown.Value.Y - center.Value.Y) * sh / pixelsPerPercentY
+
+            Dim offsetX = sourceXperX * displayDeltaX + sourceXperY * displayDeltaY
+            Dim offsetY = sourceYperX * displayDeltaX + sourceYperY * displayDeltaY
+            If Math.Abs(offsetX) < 0.5 AndAlso Math.Abs(offsetY) < 0.5 Then Return
+
+            ImageProcessor.TransformMaskRegion(mask, 1.0, 1.0, 0.0, 0.0, offsetX, offsetY)
+            TraceMask(Function() $"Mehrteilige Maske verschoben um {offsetX:F1}/{offsetY:F1} Quellpunkte: {MaskTrace(mask.Id)}")
+            ' Die Arbeitskopie stammt aus der Maske - ohne Neuladen zeigte das Overlay den Weg, den
+            ' der Zeiger genommen hat, und die Daten den, den die Maske genommen hat.
+            ReloadEditedLayerMaskIntoSelection()
+        End Sub
+
         ''' <summary>Schreibt die aktuelle _selectionMask (harte Form) in die bearbeitete Ebenen-Maske
         ''' zurück (Anzeige- → Quellraum via CreateSourceMaskFromSelection). FeatherPixels bleibt unberührt
         ''' (die "Weiche Kante" pflegt sie über die bestehende Brücke). Danach folgt die Anpassung der
-        ''' Ebene der neuen Maske, weil der Render adj.Masks je Frame neu liest.</summary>
-        Private Sub WriteSelectionMaskBackToLayer()
-            If _editingLayerMaskId = "" Then Return
+        ''' Ebene der neuen Maske, weil der Render adj.Masks je Frame neu liest.
+        '''
+        ''' NUR FUER EINTEILIGE MASKEN. Seit die Auswahl die SUMME aller Bestandteile traegt, waere
+        ''' das Zurueckschreiben bei einer mehrteiligen Maske ein Abflachen: die Summe landete im
+        ''' ersten Bestandteil, und die uebrigen kaemen beim Rendern ein zweites Mal obendrauf - ein
+        ''' hinzugefuegter Verlauf addierte sich nach dem Umkehren wieder auf, ein abgezogener
+        ''' Bestandteil mit Zwischenwerten wurde doppelt abgezogen, und ein spaeter geloeschter
+        ''' Bestandteil liesse seinen Geist im Primaerraster zurueck. Wer eine mehrteilige Maske
+        ''' aendern will, geht deshalb an den BESTANDTEIL (ApplyMaskBrushStrokeToComponent) oder ans
+        ''' Ergebnis (ImageMask.InvertResult).</summary>
+        ''' <returns>False, wenn nichts geschrieben wurde - der Aufrufer muss dann seinen eigenen Weg gehen.</returns>
+        Private Function WriteSelectionMaskBackToLayer() As Boolean
+            If _editingLayerMaskId = "" Then Return False
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _editingLayerMaskId)
-            If mask Is Nothing OrElse _selectionMask Is Nothing Then Return
+            If mask Is Nothing OrElse _selectionMask Is Nothing Then Return False
+            If mask.ComponentCount > 1 Then
+                TraceMask(Function() $"Zurueckschreiben abgelehnt, die Maske hat {mask.ComponentCount} Bestandteile: {MaskTrace(mask.Id)}")
+                Return False
+            End If
             Dim rebuilt = ImageProcessor.CreateSourceMaskFromSelection(BuildAdjustmentsFromFields(), mask.Name)
-            If rebuilt Is Nothing Then Return
+            If rebuilt Is Nothing Then Return False
             ' WER schreibt WOHIN: die haeufigste Ursache fuer "die falsche Ebene hat sich geaendert".
             TraceMask(Function() $"Auswahl wird in die bearbeitete Maske zurückgeschrieben: {MaskTrace(mask.Id)}" &
                                  $" -> Form={FormKurz(rebuilt.PngBase64)}")
@@ -2563,7 +2845,11 @@ Namespace ViewModels
             mask.Bottom = rebuilt.Bottom
             mask.PngBase64 = rebuilt.PngBase64
             mask.Inverted = False
-        End Sub
+            ' Die Auswahl zeigt das FERTIGE Ergebnis, eine Umkehrung darin ist also schon in diesen
+            ' Bildpunkten. Bliebe der Schalter stehen, kehrte er sie ein zweites Mal um.
+            mask.InvertResult = False
+            Return True
+        End Function
         ''' <summary>Objektstapel in ANZEIGE-Reihenfolge fürs Ebenen-Panel: _annotations umgekehrt (vorderste
         ''' Ebene zuerst/oben). Wird von RebuildLayerRows synchron gehalten.</summary>
         Public ReadOnly Property LayerRows As ObservableCollection(Of LayerPanelRow)
@@ -2591,8 +2877,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Auswahl des gemeinsamen Panel-Stapels. Objektzeilen übersetzen weiter auf den
-        ''' bestehenden SelectedAnnotationIndex; Korrekturzeilen bleiben ein eigenes Renderziel.</summary>
         ''' <summary>Setzt die View kurz vor einem RECHTSklick auf eine bereits markierte Zeile: die
         ''' ListBox setzt ihr SelectedItem auch bei der rechten Maustaste, und ohne diese Ausnahme
         ''' zerstörte das die Mehrfachauswahl, bevor das Kontextmenü aufgeht. Wird beim nächsten
@@ -2607,6 +2891,8 @@ Namespace ViewModels
         End Property
         Private _preserveMultiSelectionOnNextRowChange As Boolean
 
+        ''' <summary>Auswahl des gemeinsamen Panel-Stapels. Objektzeilen übersetzen weiter auf den
+        ''' bestehenden SelectedAnnotationIndex; Korrekturzeilen bleiben ein eigenes Renderziel.</summary>
         Public Property SelectedLayerRow As LayerPanelRow
             Get
                 Return _selectedLayerRow
@@ -3119,14 +3405,6 @@ Namespace ViewModels
             End Try
         End Sub
 
-        ''' <summary>Die Miniaturen aller Zeilen nachziehen: Inhalt der Ebene und, wenn sie eine
-        ''' Maske traegt, die Maske daneben.
-        '''
-        ''' Gezeichnet wird nur, was sich geaendert hat. `RebuildLayerRows` laeuft bei jeder
-        ''' Kleinigkeit, und ein Objekt bei jedem Durchlauf neu zu zeichnen waere bei einem Stapel
-        ''' aus dreissig Ebenen jedes Mal dreissig Renderdurchlaeufe. Der Schluessel ist deshalb ein
-        ''' Fingerabdruck aus dem, was man SIEHT; bleibt er gleich, wird die vorhandene Miniatur
-        ''' weitergereicht.</summary>
         ''' <summary>Die Miniatur EINER Zeile nachziehen - gerufen beim Abwaehlen des Objekts.
         '''
         ''' Waehrend der Arbeit an einer Ebene bleibt ihre Miniatur stehen: man sieht sie dabei
@@ -3147,6 +3425,14 @@ Namespace ViewModels
                 Function() ImageProcessor.BuildAnnotationThumbnail(a, size.Width, size.Height, LayerThumbnailBoxSize))
         End Sub
 
+        ''' <summary>Die Miniaturen aller Zeilen nachziehen: Inhalt der Ebene und, wenn sie eine
+        ''' Maske traegt, die Maske daneben.
+        '''
+        ''' Gezeichnet wird nur, was sich geaendert hat. `RebuildLayerRows` laeuft bei jeder
+        ''' Kleinigkeit, und ein Objekt bei jedem Durchlauf neu zu zeichnen waere bei einem Stapel
+        ''' aus dreissig Ebenen jedes Mal dreissig Renderdurchlaeufe. Der Schluessel ist deshalb ein
+        ''' Fingerabdruck aus dem, was man SIEHT; bleibt er gleich, wird die vorhandene Miniatur
+        ''' weitergereicht.</summary>
         Private Sub RefreshLayerRowThumbnails()
             ' Abgeschaltet heisst: gar nichts zeichnen und alles freigeben. Die Zeile faellt dann von
             ' selbst auf das Typsymbol des Werkzeugs zurueck (die Ansicht entscheidet an
@@ -3269,29 +3555,6 @@ Namespace ViewModels
             End Try
         End Function
 
-        ''' <summary>Woran man einer Ebene ansieht, dass ihre Miniatur nicht mehr stimmt: Form, Lage,
-        ''' Groesse, Farben, Text und Bildinhalt. Die Lage gehoert dazu, weil das Objektrechteck den
-        ''' Ausschnitt der Miniatur bestimmt.</summary>
-        ''' <summary>Woran die Miniatur eines Objekts erkennt, dass sie nicht mehr stimmt.
-        '''
-        ''' Gelesen werden ALLE Eigenschaften des Objekts ueber eine AUSNAHME-Liste - ein neues
-        ''' Rezeptfeld ist damit von selbst dabei, bis es hier bewusst ausgenommen wird. Eine
-        ''' handgepflegte Positivliste stand hier zuerst und war der Fehler: sie kannte Text und
-        ''' Farbe, aber weder Textpfad noch Schatten noch Schein, und wer den Text auf eine Kurve
-        ''' legte, sah in der Zeile weiter das Bild von vorhin.
-        '''
-        ''' BILLIG muss sie sein, denn beim Aufbau des Panels wird sie fuer JEDE Zeile gerechnet.
-        ''' Der Aussehens-Schluessel des Objekt-Bitmap-Speichers taugt dafuer NICHT: er serialisiert
-        ''' das ganze Objekt samt Anpassungssatz und allen Pinselstrichen und kostete an einer Ebene
-        ''' mit 200 Strichen 0,77 ms - bei einem Stapel eine spuerbare Pause bei jedem
-        ''' Ebenenwechsel. Sammlungen und lange Texte gehen deshalb nur mit ihrer GROESSE ein.
-        '''
-        ''' Drei bewusste Auslassungen:
-        ''' - Lage und Drehung: die Miniatur zeigt den Inhalt, nicht die Stelle im Bild. Stuenden
-        '''   sie drin, waere beim Verschieben bei jeder Mausbewegung neu zu zeichnen.
-        ''' - Der Anpassungssatz des Objekts: die Miniatur zeichnet ueber `DrawAnnotationOnCanvas`
-        '''   und zeigt ihn ohnehin nicht.
-        ''' - Die Maskenkennung: die Maske steht als eigene Miniatur daneben.</summary>
         ''' <summary>Die gelesenen Eigenschaften, beim ersten Gebrauch bestimmt. NICHT als
         ''' Feldinitialisierer: der liefe vor der Ausnahmeliste, die er braucht, und ein Fehler in
         ''' einem statischen Initialisierer legt die ganze Klasse lahm - der Editor liess sich dann
@@ -3315,6 +3578,26 @@ Namespace ViewModels
             Return _thumbnailKeyProperties
         End Function
 
+        ''' <summary>Woran die Miniatur eines Objekts erkennt, dass sie nicht mehr stimmt.
+        '''
+        ''' Gelesen werden ALLE Eigenschaften des Objekts ueber eine AUSNAHME-Liste - ein neues
+        ''' Rezeptfeld ist damit von selbst dabei, bis es hier bewusst ausgenommen wird. Eine
+        ''' handgepflegte Positivliste stand hier zuerst und war der Fehler: sie kannte Text und
+        ''' Farbe, aber weder Textpfad noch Schatten noch Schein, und wer den Text auf eine Kurve
+        ''' legte, sah in der Zeile weiter das Bild von vorhin.
+        '''
+        ''' BILLIG muss sie sein, denn beim Aufbau des Panels wird sie fuer JEDE Zeile gerechnet.
+        ''' Der Aussehens-Schluessel des Objekt-Bitmap-Speichers taugt dafuer NICHT: er serialisiert
+        ''' das ganze Objekt samt Anpassungssatz und allen Pinselstrichen und kostete an einer Ebene
+        ''' mit 200 Strichen 0,77 ms - bei einem Stapel eine spuerbare Pause bei jedem
+        ''' Ebenenwechsel. Sammlungen und lange Texte gehen deshalb nur mit ihrer GROESSE ein.
+        '''
+        ''' Drei bewusste Auslassungen:
+        ''' - Lage und Drehung: die Miniatur zeigt den Inhalt, nicht die Stelle im Bild. Stuenden
+        '''   sie drin, waere beim Verschieben bei jeder Mausbewegung neu zu zeichnen.
+        ''' - Der Anpassungssatz des Objekts: die Miniatur zeichnet ueber `DrawAnnotationOnCanvas`
+        '''   und zeigt ihn ohnehin nicht.
+        ''' - Die Maskenkennung: die Maske steht als eigene Miniatur daneben.</summary>
         Private Shared Function AnnotationThumbnailFingerprint(a As ImageAnnotation) As String
             If a Is Nothing Then Return ""
             Dim sb As New Text.StringBuilder(256)
@@ -3412,11 +3695,11 @@ Namespace ViewModels
         ' derselben Liste. Damit gelten fuer sie ohne Zutun: Masken-Pinsel, rotes Overlay, weiche
         ' Kante, Umkehren, Speichern im Rezept und Undo. Neu ist allein, WER auf sie zeigt.
 
-        ''' <summary>Das Objekt, dessen Ebenenmaske die Befehle hier meinen: die FUEHRENDE Auswahl.
-        ''' Eine Mehrfachauswahl bleibt aussen vor - eine gemeinsame Maske ueber mehrere Objekte
-        ''' waere etwas anderes als je eine eigene, und welches von beidem gemeint ist, sagt keine
-        ''' der beiden Gesten.</summary>
         ''' <summary>Das EINE Objekt, dem eine Ebenenmaske gilt - oder Nothing.
+        '''
+        ''' Eine Mehrfachauswahl bleibt aussen vor: eine gemeinsame Maske ueber mehrere Objekte waere
+        ''' etwas anderes als je eine eigene, und welches von beidem gemeint ist, sagt keine der
+        ''' Gesten.
         '''
         ''' Gezaehlt werden Objekte UND Korrekturebenen (<see cref="IsMultiLayerSelection"/>), nicht
         ''' nur die Objekte: ein Objekt zusammen mit einer markierten Korrektur sind zwei Ebenen, und
@@ -3704,10 +3987,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationMaskButtonHint))
         End Sub
 
-        ''' <summary>Erzeugt aus der aktiven Auswahl SOFORT eine maskierte Korrekturebene (leere Anpassung),
-        ''' statt erst bei der ersten Regleränderung. Nutzt dieselbe Source-Masken-Erzeugung + Dedup wie der
-        ''' automatische Promote-Pfad, also legt eine spätere Anpassung KEINE zweite Ebene an.</summary>
-        ''' <summary>STEHT DIE AUSWAHL SCHON AUF EINER EBENE, ENTSTEHT EINE KOPIE. Der Knopf heisst
+        ''' <summary>Erzeugt aus der aktiven Auswahl SOFORT eine Masken- oder Auswahlebene (leere
+        ''' Anpassung), statt erst bei der ersten Regleränderung. Nutzt dieselbe Masken-Erzeugung und
+        ''' Dedup wie der automatische Weg, also legt eine spätere Anpassung KEINE zweite Ebene an.
+        '''
+        ''' STEHT DIE AUSWAHL SCHON AUF EINER EBENE, ENTSTEHT EINE KOPIE. Der Knopf heisst
         ''' „Neue Masken-/Auswahlebene" und tat auf einer vorhandenen Ebene gar nichts: das Promoten
         ''' fand die Ebene, zu der die Auswahl gehoert, und gab sie unveraendert zurueck - sichtbar
         ''' passierte nichts. Gemeint ist dort eine weitere Ebene mit derselben Form, und die entsteht
@@ -3743,10 +4027,6 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Erzeugt (oder findet) die persistente Korrekturebene der aktiven Auswahl und gibt sie
-        ''' zurück - OHNE Undo/Rebuild/Preview (der Aufrufer steuert das). Dedup gegen den Auto-Promote-Pfad,
-        ''' also legt eine spätere Anpassung KEINE zweite Ebene an. Setzt _editingLayerMaskId, damit
-        ''' Füllung/Anpassung anschließend auf DIESER Ebene landen.</summary>
         ''' <summary>Löst die Verknüpfung "diese Auswahl gehört bereits zu Ebene X". MUSS bei jeder
         ''' Auswahl-/Maskenänderung laufen, damit eine NEUE Auswahl eine eigene Ebene bekommt.</summary>
         Private Sub InvalidateSelectionLayerLink()
@@ -3764,6 +4044,10 @@ Namespace ViewModels
             Return _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = _editingLayerMaskId)
         End Function
 
+        ''' <summary>Erzeugt (oder findet) die dauerhafte Ebene der aktiven Auswahl und gibt sie
+        ''' zurück - OHNE Undo, Neuaufbau und Vorschau (der Aufrufer steuert das). Dedup gegen den
+        ''' automatischen Weg, also legt eine spätere Anpassung KEINE zweite Ebene an. Setzt
+        ''' _editingLayerMaskId, damit Füllung und Anpassung anschließend auf DIESER Ebene landen.</summary>
         Private Function PromoteActiveSelectionToLayer() As MaskedAdjustmentLayer
             If Not _hasActiveSelection Then Return Nothing
             ' 1. Bewusst im Panel gewählte Ebene (deren Maske gerade bearbeitet wird).

@@ -78,7 +78,7 @@ Namespace ViewModels
                     If Not String.IsNullOrWhiteSpace(AdjustmentLayer.Name) Then Return AdjustmentLayer.Name
                     Return If(AdjustmentLayer.IsMaskLayer, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene"))
                 End If
-                Return If(Annotation Is Nothing, "Ebene", Annotation.LayerLabel)
+                Return If(Annotation Is Nothing, LocalizationService.T("Ebene"), Annotation.LayerLabel)
             End Get
         End Property
 

@@ -405,9 +405,16 @@ Namespace Views
                 Dim vmRight = TryCast(DataContext, EditorViewModel)
                 Dim rightRow = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
                 If vmRight IsNot Nothing AndAlso rightRow IsNot Nothing Then
+                    ' Trifft der Rechtsklick die schon FUEHRENDE Zeile, meldet die ListBox gar
+                    ' keinen Wechsel - das Merk-Flag wuerde nie verbraucht und galte fuer den
+                    ' naechsten Klick weiter. Ein spaeterer Linksklick auf eine andere markierte
+                    ' Zeile behielte dann die Menge, statt auf sie einzugrenzen. Dort braucht es
+                    ' den Schutz ohnehin nicht: ohne Wechsel zerstoert auch nichts die Menge.
+                    Dim isLeadingRow = Object.ReferenceEquals(rightRow, vmRight.SelectedLayerRow)
                     vmRight.PreserveMultiSelectionOnNextRowChange =
-                        (rightRow.Annotation IsNot Nothing AndAlso vmRight.IsAnnotationSelected(rightRow.Annotation)) OrElse
-                        (rightRow.AdjustmentLayer IsNot Nothing AndAlso vmRight.IsAdjustmentLayerSelected(rightRow.AdjustmentLayer))
+                        Not isLeadingRow AndAlso
+                        ((rightRow.Annotation IsNot Nothing AndAlso vmRight.IsAnnotationSelected(rightRow.Annotation)) OrElse
+                         (rightRow.AdjustmentLayer IsNot Nothing AndAlso vmRight.IsAdjustmentLayerSelected(rightRow.AdjustmentLayer)))
                 End If
                 Return
             End If
@@ -448,13 +455,18 @@ Namespace Views
             ' von SelectedLayerRow laeuft also nie. Genau dann fehlte das rote Overlay: es wird nach
             ' dem ersten Reglerdreh und in jedem verdeckenden Werkzeug mit Absicht ausgeblendet, und
             ' es gab keine Geste, die es zurueckholt - nur der Umweg ueber eine andere Zeile.
-            If Not mehrfach AndAlso row IsNot Nothing AndAlso row.AdjustmentLayer IsNot Nothing Then
+            ' Das EINDAMPFEN gilt fuer BEIDE Zeilenarten: ein Klick auf die fuehrende Zeile einer
+            ' Objekt-Mehrfachauswahl grenzte vorher auf nichts ein, weil hier nur Ebenenzeilen
+            ' abgefragt wurden. Das Wiederherstellen des Anzeigezustands bleibt den Ebenenzeilen
+            ' vorbehalten - bei einem Objekt gibt es kein rotes Overlay zurueckzuholen.
+            If Not mehrfach AndAlso row IsNot Nothing AndAlso
+               (row.AdjustmentLayer IsNot Nothing OrElse row.Annotation IsNot Nothing) Then
                 Dim vmSame = TryCast(DataContext, EditorViewModel)
                 If vmSame IsNot Nothing AndAlso Object.ReferenceEquals(row, vmSame.SelectedLayerRow) Then
                     ' Erst eindampfen, dann anzeigen: der Anzeigezustand haengt daran, ob EINE Ebene
                     ' gemeint ist (Werkzeugwechsel) oder eine Menge.
                     vmSame.CollapseSelectionToSelectedRow()
-                    vmSame.ReapplySelectedLayerPresentation()
+                    If row.AdjustmentLayer IsNot Nothing Then vmSame.ReapplySelectedLayerPresentation()
                 End If
             End If
             _dragCandidate = row

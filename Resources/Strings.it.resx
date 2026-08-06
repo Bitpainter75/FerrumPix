@@ -6332,6 +6332,15 @@
   <data name="Diesen_Bestandteil_entfernen_3558bd9b" xml:space="preserve">
     <value>Rimuovi questo componente</value>
   </data>
+  <data name="Diesen_Bestandteil_nach_oben_a091cc0a" xml:space="preserve">
+    <value>Sposta su questo componente</value>
+  </data>
+  <data name="Diesen_Bestandteil_nach_unten_5cb87b16" xml:space="preserve">
+    <value>Sposta giù questo componente</value>
+  </data>
+  <data name="Verkn_pfung_dieses_Bestandteils_wechseln_0b387e76" xml:space="preserve">
+    <value>Cambia come si combina questo componente</value>
+  </data>
   <data name="Nur_die_berschneidung_behalten_1f868e93" xml:space="preserve">
     <value>Mantieni solo la sovrapposizione</value>
   </data>
@@ -6565,6 +6574,9 @@
   </data>
   <data name="Diese_Datei_ist_zugleich_die_Quelle_Wird_sie_ber_7d491ab7" xml:space="preserve">
     <value>Questo file è anche l'origine. Sovrascriverlo sostituisce l'originale.</value>
+  </data>
+  <data name="Ebene_12651719" xml:space="preserve">
+    <value>Livello</value>
   </data>
   <data name="Maskenebene_6cfc5826" xml:space="preserve">
     <value>Livello maschera</value>

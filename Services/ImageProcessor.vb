@@ -388,6 +388,14 @@ Namespace Services
         ''' Maske im linken oberen Viertel und trifft nichts von dem, was sie treffen soll.</summary>
         Friend Shared Function MaskAsSourceBitmap(m As ImageMask, width As Integer, height As Integer) As SKBitmap
             If m Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return Nothing
+            ' Den kurzen Weg nimmt nur die EINTEILIGE gemalte Maske. Alles andere - mehrere
+            ' Bestandteile oder ein gerechneter Verlauf - geht über den gemeinsamen Rasterisierer,
+            ' der die Zielgröße ohnehin entgegennimmt. Vorher las diese Stelle allein den ersten
+            ' Bestandteil: die Masken hier sind heute konstruktionsbedingt einteilig, eine
+            ' mehrteilige verlöre ihre übrigen Teile aber still.
+            If m.ComponentCount > 1 OrElse m.IsGradient OrElse m.InvertResult Then
+                Return BuildCombinedMaskRaster(m, width, height)
+            End If
             If String.IsNullOrWhiteSpace(m.PngBase64) Then Return Nothing
             Dim w = m.Right - m.Left, h = m.Bottom - m.Top
             If w <= 0 OrElse h <= 0 Then Return Nothing
@@ -2784,8 +2792,16 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' ohne sie gaebe der Zwischenspeicher nach dem Verschieben des Reglers das alte Bild
             ' zurueck - der Regler "macht nichts".
             Return String.Join(":", m.Id, m.SourceWidthPixels, m.SourceHeightPixels,
-                               KeyPart(m.Density), m.IsDisabled) & ":" &
+                               KeyPart(m.Density), m.IsDisabled, m.InvertResult) & ":" &
                    String.Join("/", m.GetComponents().Select(AddressOf MaskComponentFingerprint))
+        End Function
+
+        ''' <summary>Der Fingerabdruck EINES Rasters - fuer Zwischenspeicher ausserhalb des
+        ''' Prozessors, die ein einzelnes Raster wiedererkennen muessen (das rote Overlay). Sie
+        ''' benutzten dafuer <c>String.GetHashCode</c>, und der kollidiert grundsaetzlich; hier
+        ''' laeuft derselbe gepufferte SHA-Weg wie im Rendercache.</summary>
+        Public Shared Function MaskRasterFingerprint(base64 As String) As String
+            Return SelectionMaskFingerprint(base64)
         End Function
 
         Private Shared Function MaskComponentFingerprint(c As MaskComponent) As String

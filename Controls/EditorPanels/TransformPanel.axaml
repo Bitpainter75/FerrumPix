@@ -206,8 +206,8 @@
         <!-- PERSPEKTIVE: eine Matrix, und deshalb in derselben Geometriestufe wie Drehen und
              Beschnitt - Masken wandern von selbst mit. Objekte tun das NICHT: ein Rechteck bleibt
              unter einer Perspektive kein Rechteck, dafuer muessten sie Vierecke werden.
-             Bewusst getrennt von der Gitterverzerrung darunter: die eine ist ein Rezeptwert und
-             beliebig oft aenderbar, die andere wird in die Pixel gebacken. -->
+             Bewusst getrennt von der Gitterverzerrung darunter: die eine ist eine Matrix und wirkt
+             laufend, die andere ein Knotenfeld mit eigenem "Anwenden". Im Rezept stehen beide. -->
         <Border Classes="adjustment-group" >
             <Border.IsVisible>
                 <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -288,8 +288,8 @@
         </Border>
 
         <!-- GITTERVERZERRUNG: freie Verzerrung ueber ein Stuetzpunktraster. Bewusst mit eigenem
-             "Anwenden": sie ist NICHT als Rezeptwert darstellbar und wird beim Anwenden in die
-             Pixel gebacken - danach ist sie Teil des Bildes, wie eine Retusche. -->
+             "Anwenden": bis dahin ist sie eine Vorschau, danach ein Knotenfeld IM REZEPT - nichts
+             wird in die Pixel gebacken, und eine zweite Verzerrung setzt sich auf die erste. -->
         <Border Classes="adjustment-group" >
             <Border.IsVisible>
                 <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -331,7 +331,7 @@
                     </Grid>
                     <!-- Hinweis und Anwenden gelten nur dem BILD. Ist ein Objekt markiert, ist die
                          Verzerrung dort laengst eingetragen und bleibt eine Angabe - es gibt nichts
-                         zu backen. -->
+                         zu uebernehmen. -->
                     <TextBlock Text="Die Punkte im Bild ziehen. Anwenden übernimmt die Verzerrung ins Rezept: Masken gehen mit, und beim nächsten Öffnen steht sie wieder da."
                                IsVisible="{Binding WarpsTheImage}"
                                Foreground="{DynamicResource FP.Text.Muted}"
@@ -351,7 +351,8 @@
         <!-- VERFORMEN: dasselbe Viereck wie die Perspektive, aber seine vier RAENDER sind Kurven.
              Vier Ecken, je Kante zwei Griffe, das Innere folgt den Raendern. Damit biegt man eine
              Flaeche in einem Zug, wofuer man am Stuetzpunktraster ein Dutzend Punkte einzeln
-             nachfuehren muesste. Wie das Raster wird sie GEBACKEN, nicht als Zahl gemerkt. -->
+             nachfuehren muesste. Wie das Raster wandert sie beim Anwenden als Knotenfeld ins
+             Rezept. -->
         <Border Classes="adjustment-group">
             <Border.IsVisible>
                 <MultiBinding Converter="{StaticResource AllTrueConverter}">
@@ -408,7 +409,8 @@
         <!-- LINIENVERZERRUNG. Man legt eine Linie auf eine KANTE im Bild und zieht sie an ihren
              neuen Platz; die Kante geht als Ganzes mit, die Umgebung folgt weich. Das ist der
              Unterschied zum Stuetzpunktraster darueber: dort muesste man einer Kante ein Dutzend
-             Punkte einzeln nachfuehren. Wie das Raster wird sie GEBACKEN, nicht als Zahl gemerkt. -->
+             Punkte einzeln nachfuehren. Wie das Raster wandert sie beim Anwenden als Knotenfeld
+             ins Rezept. -->
         <Border Classes="adjustment-group" IsVisible="{Binding IsWarpLines}">
             <Expander Header="Linienverzerrung" icons:ExpanderState.Key="linienverzerrung" IsExpanded="True">
                 <Expander.HeaderTemplate>
