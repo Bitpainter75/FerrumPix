@@ -3348,10 +3348,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             transformed.RotationDegrees = objectGeometry.RotationDegrees
             If adj.FlipHorizontal Then transformed.FlipHorizontal = Not transformed.FlipHorizontal
             If adj.FlipVertical Then transformed.FlipVertical = Not transformed.FlipVertical
-            ' Die Bilddrehung ist bereits Teil der Zeichenroutine. Bildspiegelungen müssen das
-            ' Objektfeld noch auf die andere Seite übertragen.
+            ' Die Bilddrehung steckt zwar bereits in der Zeichenroutine, das eigene Warp-Feld wird
+            ' aber ERST DANACH über die fertige Objekt-Ebene gelegt. Es muss daher dieselbe
+            ' Vierteldrehung (und danach dieselben Bildspiegelungen) durchlaufen. Ohne diese Drehung
+            ' blieb etwa ein eingezogenes oberes Feld nach „Bild um 90° drehen" oben, während der
+            ' Objektinhalt nach rechts weiterdrehte.
             transformed.OwnWarp = TransformOwnWarpForGeometry(renderAnnotation.OwnWarp,
-                                                               0, adj.FlipHorizontal, adj.FlipVertical)
+                                                               ImageGeometryMapper.SourceObjectRotationToDisplay(
+                                                                   0, rotation, adj.FlipHorizontal, adj.FlipVertical),
+                                                               adj.FlipHorizontal, adj.FlipVertical)
             If IsPaintKind(transformed.Kind) AndAlso transformed.Strokes IsNot Nothing Then
                 transformed.Strokes = transformed.Strokes.Select(
                     Function(stroke) TransformStrokeForGeometry(stroke, preWidth, preHeight, rotation, adj.FlipHorizontal, adj.FlipVertical)).

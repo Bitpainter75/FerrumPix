@@ -10085,7 +10085,12 @@ Namespace ViewModels
         ''' Der Ruhezustand ist derselbe, den auch die Mausposition abfragt: leer oder eben diese
         ''' Meldung.</summary>
         Private Sub ReportPreviewReady()
-            If Not _statusIsIdle Then Return
+            ' „wird aktualisiert" bleibt während der Berechnung bewusst NICHT ruhig: es hat
+            ' Vorrang vor der Mausposition. Es ist aber der Zwischenstand genau dieser Vorschau
+            ' und darf deshalb durch ihren erfolgreichen Abschluss ersetzt werden. Andere
+            ' Mitteilungen (Speichern, Werkzeugwechsel, Fehler) bleiben weiterhin unangetastet.
+            Dim isOwnPendingStatus = String.Equals(_statusText, LocalizationService.T("Vorschau wird aktualisiert..."), StringComparison.Ordinal)
+            If Not _statusIsIdle AndAlso Not isOwnPendingStatus Then Return
             StatusText = LocalizationService.T("Vorschau bereit")
         End Sub
 
