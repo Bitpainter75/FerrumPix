@@ -237,6 +237,9 @@
   <data name="Bild_d4248534" xml:space="preserve">
     <value>immagine</value>
   </data>
+  <data name="Bild_wird_ge_ffnet_cbcbad00" xml:space="preserve">
+    <value>Apertura immagine…</value>
+  </data>
   <data name="Bild_verschieben_0223e726" xml:space="preserve">
     <value>Sposta immagine</value>
   </data>

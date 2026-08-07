@@ -3585,6 +3585,36 @@ Namespace ViewModels
                                            foundThisRun.AddRange(added)
                                            foundCount += added.Count
                                        End If
+
+                                       ' Dritte Stufe: die Bilder eines Immich-Servers. Sie stehen in
+                                       ' keinem Katalog, also findet die Stufe darüber sie nie.
+                                       ' Gesucht wird über den LOKALEN Index, ohne eine einzige
+                                       ' Serveranfrage. Nur ohne Suchordner: eine Suche, die
+                                       ' ausdrücklich einen Ordner auf der Platte meint, meint keinen
+                                       ' Server.
+                                       Dim serverKey = ImmichService.ServerKey
+                                       If ImmichService.IsConfigured AndAlso Not String.IsNullOrEmpty(serverKey) Then
+                                           Dim immichPending As New List(Of ImmichAsset)()
+                                           For Each asset In ImmichIndexService.Instance.GetAssetList(serverKey)
+                                               token.ThrowIfCancellationRequested()
+                                               If asset Is Nothing OrElse asset.IsVideo Then Continue For
+                                               scannedCount += 1
+                                               immichPending.Add(asset)
+                                               If immichPending.Count < 120 Then Continue For
+                                               Dim addedImmich = Await PublishImmichSearchBatchAsync(node, immichPending, serverKey, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, token)
+                                               foundCount += addedImmich.Count
+                                               immichPending.Clear()
+                                               Dim localFoundImmich = foundCount
+                                               Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                   If Not SearchMayPublish(node, token) Then Return
+                                                   StatusText = $"Suche läuft... {localFoundImmich:N0} {LocalizationService.T("Bilder")}"
+                                               End Sub)
+                                           Next
+                                           If immichPending.Count > 0 Then
+                                               Dim addedImmich = Await PublishImmichSearchBatchAsync(node, immichPending, serverKey, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, token)
+                                               foundCount += addedImmich.Count
+                                           End If
+                                       End If
                                    End If
                                End Function, token)
 
@@ -3726,20 +3756,7 @@ Namespace ViewModels
 
             For Each meta In metas
                 searchToken.ThrowIfCancellationRequested()
-                If meta Is Nothing Then Continue For
-                If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Continue For
-                If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
-                If Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Continue For
-                If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Continue For
-                If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
-                If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
-                If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
-                    If Not selectedRatings.Contains(meta.Rating) Then Continue For
-                Else
-                    If ratingMin = 0 AndAlso meta.Rating <> 0 Then Continue For
-                    If ratingMin > 0 AndAlso meta.Rating < ratingMin Then Continue For
-                End If
-                If Not Await EvaluateConditionsAsync(meta, node.Conditions, node.ConditionCombinator) Then Continue For
+                If Not Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
                 matches.Add(meta)
             Next
 
@@ -3750,6 +3767,66 @@ Namespace ViewModels
                 If Not SearchMayPublish(node, searchToken) Then Return
                 AddMetasToVirtualFolder(matches, thumbnailToken, cacheScopeId, cacheScopeName)
                 AppendSearchListResults(node, matchedPaths)
+            End Sub)
+
+            Return matchedPaths
+        End Function
+
+        ''' <summary>Passt diese Zeile auf die gespeicherte Suche? EINE Stelle für alle drei Quellen
+        ''' (Ordner, Katalog, Immich-Index) - drei Kopien derselben Kette wären genau die Bauart, bei
+        ''' der eine neue Bedingung in zweien landet und in der dritten fehlt.</summary>
+        Private Async Function MatchesSavedSearchAsync(node As VirtualNavigationNode,
+                                                       meta As LibraryImageMeta,
+                                                       textQuery As String,
+                                                       favoriteMode As String,
+                                                       ratingMin As Integer,
+                                                       selectedRatings As HashSet(Of Integer)) As Task(Of Boolean)
+            If meta Is Nothing Then Return False
+            If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Return False
+            If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Return False
+            If Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Return False
+            If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Return False
+            If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Return False
+            If favoriteMode = "Not" AndAlso meta.IsFavorite Then Return False
+            If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
+                If Not selectedRatings.Contains(meta.Rating) Then Return False
+            Else
+                If ratingMin = 0 AndAlso meta.Rating <> 0 Then Return False
+                If ratingMin > 0 AndAlso meta.Rating < ratingMin Then Return False
+            End If
+            Return Await EvaluateConditionsAsync(meta, node.Conditions, node.ConditionCombinator)
+        End Function
+
+        ''' <summary>Der dritte Zweig einer Suchliste: die Bilder eines Immich-Servers, gesucht über
+        ''' den LOKALEN Index. Sie tragen einen Pseudo-Pfad und stehen deshalb in keinem Katalog -
+        ''' ohne diesen Zweig fand eine gespeicherte Suche sie nie.</summary>
+        Private Async Function PublishImmichSearchBatchAsync(node As VirtualNavigationNode,
+                                                             assets As List(Of ImmichAsset),
+                                                             serverKey As String,
+                                                             textQuery As String,
+                                                             favoriteMode As String,
+                                                             ratingMin As Integer,
+                                                             selectedRatings As HashSet(Of Integer),
+                                                             thumbnailToken As CancellationToken,
+                                                             searchToken As CancellationToken) As Task(Of List(Of String))
+            Dim matched As New List(Of ImmichAsset)()
+            For Each asset In assets
+                searchToken.ThrowIfCancellationRequested()
+                Dim meta = BuildSearchMetaFromImmichAsset(serverKey, asset)
+                If meta Is Nothing Then Continue For
+                If Not Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
+                matched.Add(asset)
+            Next
+
+            If matched.Count = 0 Then Return New List(Of String)()
+            Dim matchedPaths = matched.Select(Function(a) ImmichService.MakePseudoPath(a.Id, a.FileName)).ToList()
+
+            Await Dispatcher.UIThread.InvokeAsync(Sub()
+                If Not SearchMayPublish(node, searchToken) Then Return
+                AddPrebuiltItemsToVirtualFolder(matched.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList())
+                ' Die Treffer bewusst NICHT in node.Results merken: beim nächsten Öffnen prüft die
+                ' erste Stufe jeden gemerkten Pfad mit File.Exists, und ein Pseudo-Pfad fällt dort
+                ' immer durch. Der Immich-Zweig läuft ohnehin bei jedem Öffnen neu und ist billig.
             End Sub)
 
             Return matchedPaths
@@ -3780,19 +3857,7 @@ Namespace ViewModels
                     }
                 End If
 
-                If Not MatchesSavedSearchText(file, meta.Tags, textQuery) Then Continue For
-                If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
-                If Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Continue For
-                If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Continue For
-                If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
-                If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
-                If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
-                    If Not selectedRatings.Contains(meta.Rating) Then Continue For
-                Else
-                    If ratingMin = 0 AndAlso meta.Rating <> 0 Then Continue For
-                    If ratingMin > 0 AndAlso meta.Rating < ratingMin Then Continue For
-                End If
-                If Not Await EvaluateConditionsAsync(meta, node.Conditions, node.ConditionCombinator) Then Continue For
+                If Not Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
                 matches.Add(meta)
             Next
 
@@ -3938,6 +4003,14 @@ Namespace ViewModels
                             result.Tags = merged
                         End If
                     End If
+
+                    ' Und die Gesichtsregionen: sie stehen in derselben Beistelldatei und tragen,
+                    ' WER und WO. Ohne diesen Weg käme eine Zuordnung, die in einem anderen Programm
+                    ' entstanden ist, nie an - und wer FerrumPix neu aufsetzt, finge bei null an,
+                    ' obwohl die Namen neben den Fotos liegen.
+                    If Not String.IsNullOrEmpty(sidecarPath) Then
+                        LibraryService.Instance.ImportFaceRegionsFromXmp(filePath, sidecarPath)
+                    End If
                 End If
             Catch
             End Try
@@ -3945,6 +4018,11 @@ Namespace ViewModels
         End Function
 
         Private Shared Sub ResolveMissingMetaFields(meta As LibraryImageMeta)
+            ' Ein Immich-Asset liegt in keinem Dateisystem: sein Pfad ist eine Kennung, kein Ort.
+            ' Alles, was es an Metadaten gibt, steht schon im Immich-Index (siehe
+            ' BuildSearchMetaFromImmichAsset) - hier gaebe es nur eine Ausnahme je Bild und einen
+            ' Katalogschreiber, der einen Pseudo-Pfad einträgt.
+            If ImmichService.IsImmichPseudoPath(meta.FilePath) Then Return
             Try
                 Dim data = ExifService.ReadExif(meta.FilePath)
                 Dim fields = ExifService.ExtractSearchFields(data, meta.FilePath)
@@ -4035,6 +4113,39 @@ Namespace ViewModels
         Private Shared Sub ResetPersonNameCache()
             _personNamesByPath = Nothing
         End Sub
+
+        ''' <summary>Ein Immich-Asset als Suchzeile, damit eine Suchliste dieselben Bedingungen
+        ''' darauf anwenden kann wie auf ein lokales Bild.
+        '''
+        ''' Gesucht wird über den LOKALEN Index, nicht über den Server. Das ist der Punkt: die
+        ''' Asset-Liste liegt ohnehin auf der Platte, eine Suche darüber kostet keine einzige
+        ''' Anfrage - eine Suche, die einen Server mit zehntausenden Fotos Bild für Bild befragt,
+        ''' wäre etwas ganz anderes und ist ausdrücklich nicht gemeint.
+        '''
+        ''' Die Liste trägt nur die Grunddaten; Kamera, ISO, Blende, Bewertung und Stichwörter
+        ''' stehen im Metadaten-Zwischenspeicher und werden übernommen, wo er zu diesem Stand des
+        ''' Assets passt. Fehlen sie, bleibt das Feld leer - nachgeladen wird NICHT, das wäre je
+        ''' Bild eine Serveranfrage mitten im Suchlauf.</summary>
+        Private Shared Function BuildSearchMetaFromImmichAsset(serverKey As String, asset As ImmichAsset) As LibraryImageMeta
+            If asset Is Nothing OrElse String.IsNullOrEmpty(asset.Id) Then Return Nothing
+            Dim detail = ImmichIndexService.Instance.TryGet(serverKey, asset.Id, asset.UpdatedAt)
+            Dim taken = If(asset.ExifDateTaken, asset.FileCreatedAt)
+            If detail IsNot Nothing Then taken = If(detail.ExifDateTaken, taken)
+            Return New LibraryImageMeta With {
+                .FilePath = ImmichService.MakePseudoPath(asset.Id, asset.FileName),
+                .IsFavorite = If(detail IsNot Nothing, detail.IsFavorite, asset.IsFavorite),
+                .Rating = If(detail IsNot Nothing, detail.Rating, asset.Rating),
+                .Tags = If(detail IsNot Nothing AndAlso detail.Tags IsNot Nothing, detail.Tags, New List(Of String)()),
+                .DateTaken = If(taken.HasValue, taken.Value.ToString("yyyy-MM-dd HH:mm:ss"), ""),
+                .Camera = If(detail IsNot Nothing, detail.Camera, ""),
+                .Iso = If(detail IsNot Nothing, detail.Iso, Nothing),
+                .Aperture = If(detail IsNot Nothing, detail.Aperture, Nothing),
+                .ImageWidth = If(asset.Width > 0, asset.Width, If(detail Is Nothing, 0, detail.Width)),
+                .ImageHeight = If(asset.Height > 0, asset.Height, If(detail Is Nothing, 0, detail.Height)),
+                .City = If(Not String.IsNullOrWhiteSpace(asset.City), asset.City, If(detail Is Nothing, "", detail.City)),
+                .Country = If(Not String.IsNullOrWhiteSpace(asset.Country), asset.Country, If(detail Is Nothing, "", detail.Country))
+            }
+        End Function
 
         Private Shared Function CompareNumericCondition(actual As Double?, op As String, valueText As String) As Boolean
             If Not actual.HasValue Then Return False

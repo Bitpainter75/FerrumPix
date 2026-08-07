@@ -31,19 +31,13 @@ Your originals are never changed behind your back: edits to RAW and Photoshop fi
 
 Folder tree, grid and list view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken and image size.
 
-Ratings, colour labels and keywords are read from XMP sidecars written by Lightroom, darktable or digiKam, so a collection you tagged elsewhere arrives with its work intact. Only empty fields are filled and keywords are merged.
+Ratings, colour labels and keywords are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact.
 
-An info panel shows the selected picture with its shot data, histogram, rating, label and keywords, and with several selected it shows what they have in common - a rating or a keyword set there applies to all of them. A keyword click lists every picture carrying it, and a button next to the filter holds all keywords in use with their counts, several selectable at once.
+An info panel shows the selected picture with its shot data, histogram, rating, label and keywords; with several selected it shows what they have in common and lets you set them all at once.
 
-With people switched on, a second button does the same for the people in your photos: photos of the same person end up in one group, you give the group its name in the info panel, and a face put with the wrong person is taken back out there. Detecting again reaches older photos too and leaves what you named by hand alone. With places switched on, a third button lists every place a photo was taken. The three buttons narrow each other down: a person, at a place, with a keyword is one question with three parts. A middle click on any filter or sort button puts it back to its default.
+Photos can be filtered by keyword, by person and by where they were taken, alone or in combination. FerrumPix finds the people in your photos, groups them, and you give each group its name; the names are stored beside the picture, so they stay with the photos. A people area of its own shows a wall of faces for sorting out a library that grew over years.
 
-Person and place are also shown in the info panel of the viewer and the editor, so a picture on screen says who is on it and where it was taken.
-
-For the bigger clean-up there is a people area of its own, reached from the gallery: a wall of faces, one per group, and opening a group shows every face in it - the place to sort out a library that grew over years. Point at a face to see the whole photo it came from.
-
-Batch work runs from the context menu or the footer menu: rename, convert, resize, watermark, filters, metadata removal - and *Export to*, which puts all of it into one dialog with a name pattern, a look, a size, a watermark and a target format, locally or straight to Immich. `.fpx` projects are one of the targets, so a batch can come out as files you can keep editing.
-
-Photos can also be printed, laid out as contact sheets, or combined into a collage - each of them showing your edits, not the untouched file on disk.
+Batch work runs over a whole selection: rename, convert, resize, watermark, filters, metadata removal, and *Export to* for putting a name pattern, a look, a size and a target format into one run, locally or straight to Immich. Photos can also be printed, laid out as contact sheets or combined into a collage, each showing your edits.
 
 ## Viewer
 
@@ -51,27 +45,27 @@ Photos can also be printed, laid out as contact sheets, or combined into a colla
 
 Fullscreen viewing with zoom, pan, slideshow, filmstrip navigation, rating, tagging and deleting, and an info panel with EXIF, IPTC, XMP, ICC and a live histogram. Videos play inline.
 
-Two photos can be put side by side: pick two in the gallery and choose *Compare*, or pin the one you are looking at. One zoom applies to both halves and dragging one moves the other, so you always see the same part of both pictures; for shots that are not framed alike, that link can be switched off. With a photo pinned, the filmstrip and the arrow keys page the other side onward against your fixed reference, and the button between the halves - or the space bar - swaps them. Each half carries its own stars, favourite and delete, so a series can be culled in one pass. RAW files are developed here rather than shown as the camera's embedded preview.
+Two photos can be put side by side for comparison, sharing one zoom so you always see the same part of both. Pin one of them and page through the rest against it, rating and deleting as you go, which is the quick way to cull a series. RAW files are developed here rather than shown as the camera's embedded preview.
 
 ## Editor
 
 <img src="Screenshots/Editor_Edit.png" />
 
-**Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort: *Perspective* for converging verticals, *Line warp*, where you lay a line on an edge and drag it where the edge should go, *Grid warp* for everything a tilt cannot do, and *Warp*, a frame whose edges you bend. The picture follows while you drag. None of them is computed into the pixels: they come back when you open the picture again, masks follow along, and they can be taken off at any time. With an object selected, they distort that object instead, and a distorted text can still be typed in afterwards.
+**Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, and a frame whose edges you bend. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
 
 <img src="Screenshots/Editor_Crop.png" />
 
-**Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. *Auto* measures the photo and sets a sensible starting point that you can then change. Slider settings can be saved under a name and put on any other photo, which is the usual way to develop a series consistently.
+**Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. *Auto* sets a sensible starting point, and a set of slider values can be saved and put on any other photo.
 
-**Details and effects.** Clarity, structure, dust and scratches, sharpening and softening, and three kinds of noise reduction - the third one for the large colour blotches a pushed exposure leaves behind. *Depth blur* takes the blur strength from each point's distance instead of one radius for everything, so lights in the background open into bright discs with the shape of an aperture. Vignette, grain and frame sit in a separate *Effects* tool.
+**Details and effects.** Clarity, structure, dust and scratches, sharpening, softening and three kinds of noise reduction. *Depth blur* takes its strength from how far away each point is, so lights in the background open into bright discs. Vignette, grain and frame sit in a separate *Effects* tool.
 
-**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections; a mask brush with a soft edge; graduated and radial masks you drag onto the picture and can keep adjusting afterwards. One mask can be built from several parts, each added, subtracted or intersected, and you can reorder them or change how a part combines at any time. Any of them becomes a mask layer whose adjustment applies only inside it.
+**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections, a soft-edged mask brush, and graduated and radial masks you drag onto the picture. One mask can be built from several parts, each added, subtracted or intersected and changeable afterwards, and any of them becomes a layer whose adjustment applies only inside it. A mask can be looked at on its own, switched off, or copied onto another layer.
 
-**With a model file installed** (see below), four more things become available: clicking an object to select it, selecting by distance from the camera, removing something from the picture so that the background is continued through the gap, and denoising a photo with a model - a separate step next to the noise sliders that takes minutes rather than seconds, with a strength slider for how much of the brightness it should touch.
+**With a model file installed** (see below), four more things become available: clicking an object to select it, selecting by distance from the camera, removing something so the background is continued through the gap, and denoising a photo with a model.
 
-**Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants. With a selection active, brush and eraser stay inside it. With a picture layer selected, they paint on that layer instead of on the photo, and the eraser takes real holes out of it.
+**Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants. A selection keeps them inside it, and with a picture layer selected they work on that layer instead of on the photo.
 
-**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform. Text follows an arc, a circle or a wave. Any of them can carry a layer mask you paint with the mask brush, or be clipped to the layer below it. The layers panel holds the whole stack with visibility, reorder, rename, grouping, merging and rasterizing, and every row shows a thumbnail of what is on the layer with its mask beside it, so a stack of masks says which one sits where.
+**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs.
 
 <img src="Screenshots/Editor_Text.png" />
 
@@ -83,27 +77,17 @@ Two photos can be put side by side: pick two in the gallery and choose *Compare*
 
 RAW files are developed from the actual sensor data: a photo keeps the exposure it was taken with, colours land close to what other raw developers show, and coloured speckle is cleaned up along the way.
 
-Lens defects are corrected from measured data: distortion, the coloured fringes in the corners and the darkening towards the edges. FerrumPix brings an open collection covering some 1300 lenses and recognises lens and camera from the shot data. If there is no data for your lens, nothing is changed - a wrong lens curve is more visible than a missing one. It can be adjusted or switched off per photo.
+Lens defects are corrected from measured data covering some 1300 lenses: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed.
 
-Edits to a RAW go into a small `.fpxmp` sidecar next to it; the RAW itself is never modified, and the sidecar travels with the file when you move, copy or rename it in FerrumPix. A Lightroom `.xmp` sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
+Edits to a RAW go into a small sidecar next to it; the RAW itself is never modified. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
-HEIC/HEIF/AVIF and TIFF open read-only - *Save as…* writes them out in one of the normal formats. HEIC needs the system's `libheif`, except on macOS, which reads it itself; TIFF needs nothing extra.
-
-A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture, each with its name, position, opacity, blend mode and clipping. Adjustment layers and layer effects cannot come along. *Save as…* writes the whole stack back out, so the file opens as it should in Photoshop, Affinity or GIMP - and reopened in FerrumPix it gives you back the text as text, the shapes as shapes and the corrections as corrections.
-
-Text layers can be taken over as text you can keep typing on, or as a picture with every pixel as it was. FerrumPix asks on opening, and the answer can be set once in the settings.
-
-Layer masks, groups, 16-bit files and colour modes other than RGB are not covered. A file that goes beyond what is read opens flat instead of half right.
+HEIC/HEIF/AVIF and TIFF open read-only. A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture and can be written back out, so it goes on to Photoshop, Affinity or GIMP; text can come in as text you keep typing on or as a picture. Layer masks, groups, 16-bit files and colour modes other than RGB are not covered.
 
 ### Model files
 
-Seven features use an extra file: selecting an object by clicking it, working by distance (the depth mask and the depth blur), removing an object, denoising a photo with a model, enlarging a photo with a model, finding the people in your photos, and turning coordinates into a place name. They are not part of the package. The settings have a *Models* section that says how big each file is, fetches it when you press the button, and checks afterwards that what arrived is what was meant. Nothing is fetched unless you press it, and where a file is missing, the matching controls are simply not there.
+Seven features use an extra file: selecting an object by clicking it, working by distance, removing an object, denoising, enlarging with a model, finding the people in your photos, and turning coordinates into a place name. The settings have a *Models* section that fetches each file on request; where one is missing, the matching controls are simply not there. Finding people and naming places have to be switched on there as well.
 
-Enlarging with a model is offered in *Resize* and *Export to*: five models, from twice to four times, thorough or quick, one that keeps the grain instead of removing it, and one for drawings. Each says in a sentence what it is for, and a run costs seconds to minutes per picture.
-
-Finding people and naming places have to be switched on there as well, on top of fetching the file. A face is a different matter from a keyword, and where a photo was taken is one too - so neither happens unless you say so. Place names come from a table on your own machine; nothing is looked up anywhere, and there is no map view.
-
-The same section has a switch for the graphics card. It is off to begin with; turned on, denoising, enlarging, click-to-select and the depth map run on the card and finish several times sooner, with the same result. FerrumPix names the card it found and lets you pick if the machine has more than one.
+Enlarging offers five models, from twice to four times, thorough or quick, one that keeps the grain and one for drawings. A switch in the same section lets the graphics card do the work, which finishes several times sooner with the same result.
 
 Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), [SCUNet](https://github.com/cszn/SCUNet) (Apache-2.0), [NAFNet](https://github.com/megvii-research/NAFNet) (MIT), [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (BSD-3-Clause), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0), the [ONNX Model Zoo](https://github.com/onnx/models) (Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models).
 
@@ -111,7 +95,7 @@ Everything runs on your own machine - nothing is sent anywhere. The files come f
 
 FerrumPix can connect directly to a self-hosted Immich server: browse all photos and albums, upload local files, download originals, sync ratings, favourites and keywords, search from saved search lists, and edit an Immich photo and save the result as a new asset. Updating or deleting existing assets is possible too, but has to be enabled in Settings.
 
-The people your server recognised and the cities it knows appear in the same filter buttons as the local ones, under a heading of their own, and picking one opens it straight from the server. They stand apart because they cannot be combined with the local filters: the server looks up one person or one city at a time.
+The people your server recognised and the cities it knows appear in the same filter buttons as the local ones, under a heading of their own.
 
 FerrumPix authenticates with an API key. A key with `all` works; if you prefer a restricted one, build it up in layers - each missing permission disables exactly one function instead of breaking the integration:
 
@@ -135,7 +119,7 @@ asset.upload  albumAsset.create  asset.copy
 
 Plus `album.create` and `album.update` if FerrumPix should create and rename albums, and `asset.delete` with `album.delete` if *Allow deleting* is on.
 
-One option needs a word of warning: *Update existing assets* replaces the file of an existing asset. The permission guarding that endpoint has changed names across Immich versions, so if saving fails with HTTP 403, look for the entry covering asset replacement in your version's API key dialog - or leave the option off, in which case FerrumPix always creates a new asset.
+*Update existing assets* replaces the file of an existing asset, and the permission for it is named differently across Immich versions. Left off, FerrumPix always creates a new asset instead.
 
 ## Settings
 
@@ -143,15 +127,9 @@ One option needs a word of warning: *Update existing assets* replaces the file o
 
 Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the Immich connection.
 
-The gallery has a few of its own: whether a double-click opens a photo in the viewer or in the editor, whether the info panel starts open, and whether file work follows a folder that is only a link to somewhere else, such as a second hard disk. Looking at and editing those photos is never restricted.
+Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
 
-The editor can be set up to match how you work: which tool it opens with, the order of the groups in the tool bar, a default target format for saving and exporting, and how a photo is fitted into the editing area. Twenty-four adjustment groups can be hidden if you never use them - that only changes the display, your values are kept.
-
-Two switches concern RAW development: adapting the base brightness to the camera model using reference values for over 200 models (off by default), and whether the lens correction is on for new photos (on by default - it does nothing unless there is data for your lens).
-
-Your version is at the top, with a link to the download page when a different one has been published.
-
-The last two sections are reference: a full list of keyboard and mouse shortcuts, and a *Technology* section listing everything FerrumPix is built on with a link to each licence.
+Your version is at the top, with a link to the download page when a different one has been published. The last two sections are reference: all keyboard and mouse shortcuts, and everything FerrumPix is built on with a link to each licence.
 
 ## Installation
 

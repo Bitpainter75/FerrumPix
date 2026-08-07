@@ -82,6 +82,33 @@
                 <ContentControl x:Name="MainContentHost" Grid.Row="1" Content="{Binding CurrentContent}"/>
             </Grid>
 
+            <!-- EIN BILD WIRD GEOEFFNET. Der Editor wechselt den Modus erst, wenn das Bild offen
+                 ist; bei einem RAW dauert das Sekunden, und ohne Anzeige haelt man den Klick fuer
+                 danebengegangen. Erscheint erst nach einer Viertelsekunde - ein JPEG ist vorher da.
+                 Faengt die Maus ab, damit der zweite Klick gar nicht erst irgendwo landet.
+                 UNTER den Dialogen: eine Rueckfrage muss davor liegen. -->
+            <Border ZIndex="498"
+                    IsVisible="{Binding ShowsDocumentOpen}"
+                    Background="#66000000"
+                    IsHitTestVisible="True">
+                <Border Background="{DynamicResource FP.Bg.Elevated}"
+                        BorderBrush="{DynamicResource FP.Border.Strong}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="18,12"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <ProgressBar IsIndeterminate="True" Width="120" Height="4"
+                                     VerticalAlignment="Center" />
+                        <TextBlock Classes="no-translate"
+                                   Text="{Binding DocumentOpenText}"
+                                   VerticalAlignment="Center"
+                                   FontSize="{DynamicResource FP.Font.Body}" />
+                    </StackPanel>
+                </Border>
+            </Border>
+
             <views:DialogOverlayView x:Name="DialogOverlay" ZIndex="500"/>
 
             <!-- Der Druckdialog liegt hier und nicht in einer der Modus-Views, weil er aus

@@ -1052,7 +1052,9 @@ Namespace Services
 
             ' Fall 3: benannte Gruppe, und der neue Name gehoert schon jemandem.
             If currentName.Length > 0 AndAlso targetId IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(faceId) Then
+                Dim affectedPath = GetPathForFace(faceId)
                 MoveFaceToPerson(faceId, targetId)
+                SyncFaceRegionsToXmp({affectedPath})
                 Return PersonNameOutcome.FaceMoved
             End If
 
@@ -1063,14 +1065,194 @@ Namespace Services
             If IsUnknownBin(personId) Then
                 If String.IsNullOrWhiteSpace(faceId) OrElse clean.Length = 0 Then Return PersonNameOutcome.Unchanged
                 Dim ziel = If(targetId, CreateNamedPerson(clean))
+                Dim affectedPath = GetPathForFace(faceId)
                 MoveFaceToPerson(faceId, ziel)
+                SyncFaceRegionsToXmp({affectedPath})
                 Return PersonNameOutcome.FaceMoved
             End If
 
             ' Fall 1 und 2.
             NamePerson(personId, clean, faceId)
+            SyncFaceRegionsToXmp(GetFacesForPerson(personId, 10000).Select(Function(f) f.FilePath))
             Return PersonNameOutcome.GroupNamed
         End Function
+
+        ''' <summary>Schreibt die benannten Gesichter dieser Bilder in ihre XMP-Beistelldatei.
+        '''
+        ''' WARUM ÜBERHAUPT: ohne das bleiben die Personen in FerrumPix eingesperrt. Ein Stichwort
+        ''' trägt zwar den Namen, aber nicht, WO im Bild jemand ist; beim Wechsel zu einem anderen
+        ''' Programm oder beim Neuaufsetzen wäre die Zuordnung weg.
+        '''
+        ''' WANN: nur aus einer BEWUSSTEN Benennung heraus, und nur, wenn der Nutzer den Abgleich
+        ''' mit XMP eingeschaltet hat - dieselbe Regel und dieselben zwei Schalter wie beim Katalog
+        ''' (<c>SyncCatalogToXmp</c>, <c>CreateXmpSidecarIfMissing</c>). Im Fotobestand entsteht
+        ''' nichts als Nebenwirkung.
+        '''
+        ''' IM HINTERGRUND: eine Person kann auf hunderten Bildern liegen, und jedes davon ist eine
+        ''' eigene Datei. Auf dem Bedienfaden stünde die Oberfläche.
+        '''
+        ''' Geschrieben werden IMMER ALLE benannten Gesichter des Bildes, nicht nur das eben
+        ''' benannte: <c>WriteRegions</c> ersetzt den Regionenblock als Ganzes, ein Einzelschreiben
+        ''' löschte also die übrigen Personen aus der Datei.</summary>
+        Public Sub SyncFaceRegionsToXmp(paths As IEnumerable(Of String))
+            If paths Is Nothing Then Return
+            Dim settings = AppSettingsService.Load()
+            If Not settings.SyncCatalogToXmp Then Return
+            Dim createIfMissing = settings.CreateXmpSidecarIfMissing
+            Dim targets = paths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                               Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            If targets.Count = 0 Then Return
+
+            Threading.Tasks.Task.Run(Sub()
+                                         For Each path In targets
+                                             Try
+                                                 WriteFaceRegionsForImage(path, createIfMissing)
+                                             Catch ex As Exception
+                                                 DiagnosticLogService.LogException("Library.SyncFaceRegionsToXmp", ex)
+                                             End Try
+                                         Next
+                                     End Sub)
+        End Sub
+
+        ''' <summary>Übernimmt die benannten Gesichtsregionen aus einer XMP-Beistelldatei in die
+        ''' Bibliothek. Das Gegenstück zu <see cref="SyncFaceRegionsToXmp"/>.
+        '''
+        ''' WARUM: wer nur schreibt, verliert bei jedem Zyklus etwas. Eine Zuordnung, die in
+        ''' Lightroom, digiKam oder Picasa entstanden ist, käme nie an, und wer FerrumPix neu
+        ''' aufsetzt, finge bei null an, obwohl die Namen neben den Fotos liegen.
+        '''
+        ''' ZWEI SPERREN, damit das nicht bei jedem Ordnerscan Zeilen anhäuft:
+        ''' 1. Trägt das Bild schon ein BENANNTES Gesicht, passiert gar nichts - dann hat entweder
+        '''    der eigene Lauf oder ein früherer Import es versorgt, und die Datei wird nicht einmal
+        '''    aufgemacht. Diese Prüfung steht ZUERST, weil sie eine Abfrage kostet und das Lesen der
+        '''    Beistelldatei einen XML-Durchlauf je Bild.
+        ''' 2. Zu einer Region, an deren Stelle schon ein Gesicht liegt, kommt keine zweite Zeile.
+        '''
+        ''' Die übernommenen Gesichter gelten als HANDARBEIT: sie tragen keine Merkmale (in der Datei
+        ''' steht nur ein Rechteck), ein späterer Durchlauf darf sie also nicht umgruppieren.</summary>
+        Public Sub ImportFaceRegionsFromXmp(imagePath As String, sidecarPath As String)
+            If String.IsNullOrWhiteSpace(imagePath) OrElse String.IsNullOrWhiteSpace(sidecarPath) Then Return
+            Try
+                Dim existing = GetFacesForImage(imagePath)
+                If existing.Any(Function(f) Not String.IsNullOrWhiteSpace(f.Name)) Then Return
+
+                Dim regions = XmpFaceRegionService.ReadRegions(sidecarPath).
+                              Where(Function(r) r IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(r.Name) AndAlso
+                                                r.Width > 0 AndAlso r.Height > 0).ToList()
+                If regions.Count = 0 Then Return
+
+                Dim size = XmpFaceRegionService.ReadOrientedPixelSize(imagePath)
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return
+
+                Dim stamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+                For Each region In regions
+                    Dim width = region.Width * size.Width
+                    Dim height = region.Height * size.Height
+                    Dim x = region.CenterX * size.Width - width / 2
+                    Dim y = region.CenterY * size.Height - height / 2
+                    If width < 1 OrElse height < 1 Then Continue For
+                    If existing.Any(Function(f) RectsMeanSameFace(f.X, f.Y, f.Width, f.Height, x, y, width, height)) Then Continue For
+                    InsertImportedFace(imagePath, FindOrCreatePersonByName(region.Name), x, y, width, height, stamp)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.ImportFaceRegionsFromXmp", ex)
+            End Try
+        End Sub
+
+        ''' Meinen zwei Rechtecke denselben Kopf? Dieselbe Frage wie in <c>OverlapsManual</c>, nur
+        ''' auf zwei rohen Rechtecken statt auf einem gefundenen Gesicht.
+        Private Shared Function RectsMeanSameFace(ax As Double, ay As Double, aw As Double, ah As Double,
+                                                  bx As Double, by As Double, bw As Double, bh As Double) As Boolean
+            Dim x1 = Math.Max(ax, bx), y1 = Math.Max(ay, by)
+            Dim x2 = Math.Min(ax + aw, bx + bw), y2 = Math.Min(ay + ah, by + bh)
+            Dim intersection = Math.Max(0.0, x2 - x1) * Math.Max(0.0, y2 - y1)
+            Dim union = aw * ah + bw * bh - intersection
+            If union > 0 AndAlso intersection / union >= 0.4 Then Return True
+            Dim bCenterX = bx + bw / 2, bCenterY = by + bh / 2
+            Return bCenterX >= ax AndAlso bCenterX <= ax + aw AndAlso bCenterY >= ay AndAlso bCenterY <= ay + ah
+        End Function
+
+        ''' Die Person zu diesem Namen, oder eine neue. Ohne die Suche entstünde je Bild eine eigene
+        ''' Gruppe mit demselben Namen.
+        Private Function FindOrCreatePersonByName(name As String) As String
+            Dim clean = If(name, "").Trim()
+            If clean.Length = 0 Then Return Nothing
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT Id FROM Person WHERE Name=$n COLLATE NOCASE LIMIT 1"
+                    cmd.Parameters.AddWithValue("$n", clean)
+                    Dim r = cmd.ExecuteScalar()
+                    If r IsNot Nothing AndAlso Not TypeOf r Is DBNull Then Return CStr(r)
+                End Using
+            End Using
+            Return CreateNamedPerson(clean)
+        End Function
+
+        Private Sub InsertImportedFace(imagePath As String, personId As String,
+                                       x As Double, y As Double, width As Double, height As Double,
+                                       stamp As String)
+            If String.IsNullOrWhiteSpace(personId) Then Return
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "INSERT INTO Face(Id,FilePath,PersonId,X,Y,Width,Height,Score,IsManual,ScannedAt) " &
+                                      "VALUES($id,$p,$person,$x,$y,$w,$h,1.0,1,$t)"
+                    cmd.Parameters.AddWithValue("$id", Guid.NewGuid().ToString("N"))
+                    cmd.Parameters.AddWithValue("$p", imagePath)
+                    cmd.Parameters.AddWithValue("$person", personId)
+                    cmd.Parameters.AddWithValue("$x", x)
+                    cmd.Parameters.AddWithValue("$y", y)
+                    cmd.Parameters.AddWithValue("$w", width)
+                    cmd.Parameters.AddWithValue("$h", height)
+                    cmd.Parameters.AddWithValue("$t", stamp)
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        End Sub
+
+        ''' Zu welchem Bild gehoert dieses Gesicht? Vor einem Verschieben zu fragen, nicht danach -
+        ''' die Zeile bleibt zwar stehen, aber der Weg dahin ist nach dem Umhaengen ein anderer.
+        Private Function GetPathForFace(faceId As String) As String
+            If String.IsNullOrWhiteSpace(faceId) Then Return ""
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT FilePath FROM Face WHERE Id=$id"
+                        cmd.Parameters.AddWithValue("$id", faceId)
+                        Dim r = cmd.ExecuteScalar()
+                        Return If(r Is Nothing OrElse TypeOf r Is DBNull, "", CStr(r))
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.GetPathForFace", ex)
+                Return ""
+            End Try
+        End Function
+
+        Private Sub WriteFaceRegionsForImage(imagePath As String, createIfMissing As Boolean)
+            ' Ein Immich-Asset hat keine Datei, neben die etwas gelegt werden könnte.
+            If ImmichService.IsImmichPseudoPath(imagePath) OrElse Not IO.File.Exists(imagePath) Then Return
+
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then
+                If Not createIfMissing Then Return
+                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                If String.IsNullOrWhiteSpace(sidecarPath) Then Return
+            End If
+
+            Dim size = XmpFaceRegionService.ReadOrientedPixelSize(imagePath)
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+
+            Dim regions = GetFacesForImage(imagePath).
+                Where(Function(f) Not String.IsNullOrWhiteSpace(f.Name)).
+                Select(Function(f) XmpFaceRegionService.ToRegion(f.Name, f.X, f.Y, f.Width, f.Height,
+                                                                 size.Width, size.Height)).
+                Where(Function(r) r IsNot Nothing).
+                ToList()
+            XmpFaceRegionService.WriteRegions(sidecarPath, size.Width, size.Height, regions)
+        End Sub
 
         ''' <summary>Legt eine Person mit diesem Namen an. Fuer ein Gesicht, das aus dem Ablagekorb
         ''' zu jemandem geht, den es noch nicht gibt.</summary>

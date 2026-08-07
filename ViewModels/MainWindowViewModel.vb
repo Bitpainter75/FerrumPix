@@ -86,6 +86,61 @@ Namespace ViewModels
         ''' dort legt man fest, WIE das Programm arbeitet, hier arbeitet man am Bestand.</summary>
         Public Property People As PeopleViewModel
 
+        ' ── Ein Bild wird geoeffnet ─────────────────────────────────────────────
+        '
+        ' Der Editor wechselt den Modus ERST, wenn das Bild offen ist - vorher weiss niemand, ob es
+        ' ueberhaupt aufgeht. Bei einem RAW dauert das Sekunden, und in dieser Zeit passierte
+        ' sichtbar gar nichts: man haelt den Klick fuer danebengegangen und klickt noch einmal
+        ' (Nutzerbefund 2026-08-07). Deshalb zwei Dinge, und beide gehoeren HIERHIN, weil hier ALLE
+        ' Wege in den Editor zusammenlaufen - aus der Galerie, aus dem Betrachter, aus dem
+        ' Filmstreifen.
+
+        ''' <summary>Wie lange geoeffnet werden darf, bevor es angezeigt wird. Dieselbe
+        ''' Viertelsekunde wie beim Beschaeftigt-Zustand des Editors: ein JPEG ist vorher da, und
+        ''' fuer das waere die Anzeige nur ein Aufblitzen.</summary>
+        Private Const DocumentOpenDelayMs As Integer = 250
+
+        Private _documentOpenInFlight As Boolean = False
+        Private _showsDocumentOpen As Boolean = False
+        Private _documentOpenRun As Integer = 0
+
+        ''' <summary>Der sichtbare Zustand - es wird geoeffnet, und es dauert schon merklich.</summary>
+        Public ReadOnly Property ShowsDocumentOpen As Boolean
+            Get
+                Return _showsDocumentOpen
+            End Get
+        End Property
+
+        ''' Ohne Dateinamen: welches Bild man angeklickt hat, weiss man gerade selbst am besten.
+        Public ReadOnly Property DocumentOpenText As String
+            Get
+                Return LocalizationService.T("Bild wird geöffnet…")
+            End Get
+        End Property
+
+        ''' <summary>Eigenes Try, weil es ein <c>Async Sub</c> ist: eine Ausnahme darin landet sonst
+        ''' beim Dispatcher und beendet den Prozess (siehe FALLEN_UND_ENTSCHEIDUNGEN.md).</summary>
+        Private Async Sub BeginDocumentOpenIndicator()
+            Try
+                _documentOpenRun += 1
+                Dim run = _documentOpenRun
+                Await Task.Delay(DocumentOpenDelayMs)
+                ' Schon fertig oder ein neuer Versuch dazwischen? Dann gehoert die Anzeige nicht mehr uns.
+                If run <> _documentOpenRun OrElse Not _documentOpenInFlight OrElse _showsDocumentOpen Then Return
+                _showsDocumentOpen = True
+                Me.RaisePropertyChanged(NameOf(ShowsDocumentOpen))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.BeginDocumentOpenIndicator", ex)
+            End Try
+        End Sub
+
+        Private Sub EndDocumentOpenIndicator()
+            _documentOpenRun += 1
+            If Not _showsDocumentOpen Then Return
+            _showsDocumentOpen = False
+            Me.RaisePropertyChanged(NameOf(ShowsDocumentOpen))
+        End Sub
+
         ''' <summary>Meldet die Fensterbreite an alle Leisten. Wird von MainWindow bei jeder
         ''' Größenänderung gerufen; meldet nur, wenn sich an mindestens einer Schwelle etwas
         ''' ändert - sonst liefe bei jedem Pixel Ziehen eine Runde Bindungsaktualisierungen.</summary>
@@ -404,15 +459,29 @@ Namespace ViewModels
         End Sub
 
         Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task Implements IViewerHost.OpenImageInEditor
-            If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
-                If Not Await ConfirmEditorLeaveAsync("ein anderes Bild öffnest") Then Return
-            End If
-            If CurrentMode = AppMode.Viewer Then
-                If Not Await ConfirmViewerLeaveAsync("den Editor öffnest") Then Return
-            End If
-            Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId)
-            If Not opened Then Return
-            CurrentMode = AppMode.Editor
+            ' EIN Oeffnen zur Zeit. Der zweite Klick auf dasselbe Bild - der, mit dem man nachhilft,
+            ' weil scheinbar nichts passiert - startete sonst einen zweiten Decode neben dem ersten.
+            ' Die Rueckfragen unten stehen bewusst INNERHALB der Sperre: sie gehoeren zum Oeffnen,
+            ' und zwei Speicherabfragen uebereinander waeren das Gegenteil einer Hilfe.
+            If _documentOpenInFlight Then Return
+            _documentOpenInFlight = True
+            Try
+                If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, StringComparison.OrdinalIgnoreCase) Then
+                    If Not Await ConfirmEditorLeaveAsync("ein anderes Bild öffnest") Then Return
+                End If
+                If CurrentMode = AppMode.Viewer Then
+                    If Not Await ConfirmViewerLeaveAsync("den Editor öffnest") Then Return
+                End If
+                ' Erst NACH den Rueckfragen: solange ein Dialog offen steht, wird nichts geoeffnet,
+                ' und eine Warteanzeige hinter der Frage waere schlicht falsch.
+                BeginDocumentOpenIndicator()
+                Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId)
+                If Not opened Then Return
+                CurrentMode = AppMode.Editor
+            Finally
+                _documentOpenInFlight = False
+                EndDocumentOpenIndicator()
+            End Try
         End Function
 
         Public Async Sub OpenSettings()

@@ -142,18 +142,57 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Die Bildgroesse, auf die sich die gespeicherten Gesichtsrechtecke beziehen.
+        '''
+        ''' Das ist die GEDREHTE Groesse, nicht die im Dateikopf: der Gesichtsscan arbeitet auf dem
+        ''' aufgerichteten Bild (siehe FaceScanRunner.DecodeForScan). Wer hier die rohe Kopfgroesse
+        ''' naehme, teilte bei einem hochkant aufgenommenen Foto durch die falsche Kante - die Region
+        ''' saesse quer.
+        '''
+        ''' Gelesen wird nur der KOPF, kein Decode: das laeuft ueber jedes Bild einer Person.</summary>
+        Public Shared Function ReadOrientedPixelSize(imagePath As String) As (Width As Integer, Height As Integer)
+            If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return (0, 0)
+            Try
+                Dim w = 0, h = 0
+                Using codec = SkiaSharp.SKCodec.Create(imagePath)
+                    If codec Is Nothing Then Return (0, 0)
+                    w = codec.Info.Width
+                    h = codec.Info.Height
+                End Using
+                If w <= 0 OrElse h <= 0 Then Return (0, 0)
+                Select Case ImageOrientationService.ReadOrigin(imagePath)
+                    Case SkiaSharp.SKEncodedOrigin.LeftTop, SkiaSharp.SKEncodedOrigin.RightTop,
+                         SkiaSharp.SKEncodedOrigin.RightBottom, SkiaSharp.SKEncodedOrigin.LeftBottom
+                        Return (h, w)
+                End Select
+                Return (w, h)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Xmp.RegionenBildgroesse", ex)
+                Return (0, 0)
+            End Try
+        End Function
+
         ''' <summary>Rechnet ein gefundenes Gesicht in eine Region um. Die Werte werden auf 0 bis 1
         ''' geklemmt: ein Gesicht am Bildrand kann rechnerisch darueber hinausragen, und ein
         ''' negativer Mittelpunkt waere fuer jeden Leser Unsinn.</summary>
         Public Shared Function ToRegion(name As String, face As DetectedFace,
                                         imageWidth As Integer, imageHeight As Integer) As FaceRegion
             If face Is Nothing OrElse imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
+            Return ToRegion(name, face.X, face.Y, face.Width, face.Height, imageWidth, imageHeight)
+        End Function
+
+        ''' <summary>Dasselbe aus einem gespeicherten Gesichtsrechteck der Bibliothek - dort liegen
+        ''' die Werte als Zahlen, nicht als <c>DetectedFace</c>. EINE Umrechnung fuer beide Wege.</summary>
+        Public Shared Function ToRegion(name As String,
+                                        x As Double, y As Double, width As Double, height As Double,
+                                        imageWidth As Integer, imageHeight As Integer) As FaceRegion
+            If imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
             Return New FaceRegion With {
                 .Name = If(name, ""),
-                .CenterX = Klemme((face.X + face.Width / 2) / imageWidth),
-                .CenterY = Klemme((face.Y + face.Height / 2) / imageHeight),
-                .Width = Klemme(face.Width / imageWidth),
-                .Height = Klemme(face.Height / imageHeight)}
+                .CenterX = Klemme((x + width / 2) / imageWidth),
+                .CenterY = Klemme((y + height / 2) / imageHeight),
+                .Width = Klemme(width / imageWidth),
+                .Height = Klemme(height / imageHeight)}
         End Function
 
         Private Shared Function Klemme(v As Double) As Double

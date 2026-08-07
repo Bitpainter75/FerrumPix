@@ -828,6 +828,8 @@ Namespace ViewModels
         ' True, solange die Statuszeile nichts Wichtiges sagt (leer oder „Vorschau bereit"). Nur dann
         ' darf die Mausposition ihren Platz übernehmen - siehe FooterStatusText.
         Private _statusIsIdle As Boolean = True
+        ''' In der Zeile steht ein Zwischenstand der Vorschau selbst (siehe IsOwnPreviewPendingText).
+        Private _statusIsOwnPreviewPending As Boolean = False
         Private _mousePositionText As String = ""
         Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
         Private _saveQuality As Integer = 90
@@ -10095,10 +10097,29 @@ Namespace ViewModels
                 ' falsch. Leer zählt mit dazu - dort verdeckt die Mausposition nichts.
                 _statusIsIdle = String.IsNullOrEmpty(value) OrElse
                                 String.Equals(value, LocalizationService.T("Vorschau bereit"), StringComparison.Ordinal)
+                ' Aus demselben Grund hier und nicht später: ob dieser Text ein EIGENER Zwischenstand
+                ' der Vorschau ist (siehe ReportPreviewReady).
+                _statusIsOwnPreviewPending = IsOwnPreviewPendingText(value)
                 Me.RaiseAndSetIfChanged(_statusText, value)
                 RaiseFooterStatusChanged()
             End Set
         End Property
+
+        ''' <summary>Steht in der Zeile ein Zwischenstand der VORSCHAU SELBST?
+        '''
+        ''' Es sind ZWEI, und genau daran hing ein Fehler: „wird aktualisiert" schreibt das Planen,
+        ''' „wird berechnet" der laufende Render. Erkannt wurde nur das erste, also ließ der
+        ''' Abschluss die Zeile auf dem zweiten stehen - ab dem ersten Reglerdreh meldete die Fußzeile
+        ''' nie wieder „Vorschau bereit", und mit ihr verschwand die Mausposition für den Rest der
+        ''' Sitzung, weil die nur im Ruhezustand erscheint.
+        '''
+        ''' Beide stehen deshalb HIER an einer Stelle. Wer eine dritte Vorschau-Meldung einführt,
+        ''' trägt sie hier ein - sonst bleibt die Zeile wieder darauf stehen.</summary>
+        Private Shared Function IsOwnPreviewPendingText(text As String) As Boolean
+            If String.IsNullOrEmpty(text) Then Return False
+            Return String.Equals(text, LocalizationService.T("Vorschau wird aktualisiert..."), StringComparison.Ordinal) OrElse
+                   String.Equals(text, LocalizationService.T("Vorschau wird berechnet…"), StringComparison.Ordinal)
+        End Function
 
         ''' <summary>"Vorschau bereit" melden - aber nur, wenn in der Zeile nichts Wichtigeres steht.
         '''
@@ -10110,12 +10131,11 @@ Namespace ViewModels
         ''' Der Ruhezustand ist derselbe, den auch die Mausposition abfragt: leer oder eben diese
         ''' Meldung.</summary>
         Private Sub ReportPreviewReady()
-            ' „wird aktualisiert" bleibt während der Berechnung bewusst NICHT ruhig: es hat
-            ' Vorrang vor der Mausposition. Es ist aber der Zwischenstand genau dieser Vorschau
-            ' und darf deshalb durch ihren erfolgreichen Abschluss ersetzt werden. Andere
-            ' Mitteilungen (Speichern, Werkzeugwechsel, Fehler) bleiben weiterhin unangetastet.
-            Dim isOwnPendingStatus = String.Equals(_statusText, LocalizationService.T("Vorschau wird aktualisiert..."), StringComparison.Ordinal)
-            If Not _statusIsIdle AndAlso Not isOwnPendingStatus Then Return
+            ' Die eigenen Zwischenstände bleiben während der Berechnung bewusst NICHT ruhig: sie
+            ' haben Vorrang vor der Mausposition. Sie gehören aber genau dieser Vorschau und dürfen
+            ' deshalb durch ihren erfolgreichen Abschluss ersetzt werden. Andere Mitteilungen
+            ' (Speichern, Werkzeugwechsel, Fehler) bleiben weiterhin unangetastet.
+            If Not _statusIsIdle AndAlso Not _statusIsOwnPreviewPending Then Return
             StatusText = LocalizationService.T("Vorschau bereit")
         End Sub
 

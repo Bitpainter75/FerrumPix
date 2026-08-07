@@ -957,20 +957,22 @@ Namespace Services
         ''' genug, bleibt das Feld leer (PlaceLookupService.MaxDistanceKm) - ein falscher Ortsname
         ''' waere schlechter als keiner.
         '''
-        ''' Ein schon gesetztes Feld bleibt unangetastet. Das ist aber NOCH KEIN Vorrang der Datei:
-        ''' IPTC "City" und XMP "photoshop:City" landen gar nicht in <c>ExifData</c>, sondern erst in
-        ''' den Katalog-Zusammenfassungen, die an anderer Stelle entstehen. Solange das nicht
-        ''' zusammengefuehrt ist, fuellt hier allein die Ortstabelle - siehe den Hinweis im Rumpf und
-        ''' die offenen Punkte.
+        ''' WAS IN DER DATEI STEHT, HAT VORRANG. IPTC "City" und XMP "photoshop:City" hat jemand
+        ''' bewusst gesetzt; sie sind genauer als der naechstgelegene Ort ab tausend Einwohnern und
+        ''' benennen oft etwas, das in keiner Tabelle steht (ein Gehoeft, einen Strandabschnitt).
+        ''' Die Ortstabelle fuellt deshalb nur, wo die Datei schweigt.
         '''
         ''' Ohne Ortstabelle passiert schlicht nichts weiter - sie ist Beigabe, kein Bestandteil.</summary>
         Private Shared Sub FillPlaceNames(result As ExifSearchFields, data As ExifData)
             Try
-                ' OFFEN: Ortsangaben, die schon IN der Datei stehen (IPTC "City", XMP
-                ' "photoshop:City"), muessen Vorrang bekommen - sie sind genauer als der
-                ' naechstgelegene Ort und jemand hat sie bewusst gesetzt. Sie liegen nur nicht in
-                ' ExifData, sondern erst in den Katalog-Zusammenfassungen, die an anderer Stelle
-                ' entstehen. Bis das zusammengefuehrt ist, fuellt hier allein die Ortstabelle.
+                If result.City.Length = 0 Then result.City = ReadPlaceFieldFromFile(data, "City", "photoshop:City")
+                If result.Country.Length = 0 Then
+                    result.Country = ReadPlaceFieldFromFile(data, "Country/Primary Location Name", "photoshop:Country")
+                End If
+
+                ' Steht der Ort in der Datei, ist die Tabelle nicht mehr gefragt. Das Laenderkuerzel
+                ' bleibt dann leer: es gehoert zur Tabelle, und aus einem frei geschriebenen
+                ' Landesnamen laesst es sich nicht sicher ableiten (siehe LibraryImageMeta).
                 If result.City.Length > 0 Then Return
                 If Not result.GpsLatitude.HasValue OrElse Not result.GpsLongitude.HasValue Then Return
                 If Not PlaceLookupService.Enabled Then Return
@@ -984,6 +986,26 @@ Namespace Services
                 DiagnosticLogService.LogException("Exif.Ortsnamen", ex)
             End Try
         End Sub
+
+        ''' <summary>Ein Ortsfeld, wie es IN der Datei steht - erst IPTC, dann XMP.
+        '''
+        ''' IPTC zuerst, weil es das aeltere und engere Feld ist: was dort steht, hat ein Programm
+        ''' bewusst dorthin geschrieben. XMP traegt denselben Wert oft mit, aber auch mal einen
+        ''' generierten. Gross- und Kleinschreibung des Tag-Namens bleibt aussen vor, die Schreibung
+        ''' unterscheidet sich zwischen den Lesern.</summary>
+        Private Shared Function ReadPlaceFieldFromFile(data As ExifData, iptcName As String, xmpName As String) As String
+            If data Is Nothing Then Return ""
+            For Each source In {(Tags:=data.IptcTags, Name:=iptcName), (Tags:=data.XmpTags, Name:=xmpName)}
+                If source.Tags Is Nothing Then Continue For
+                For Each tag In source.Tags
+                    If tag Is Nothing OrElse tag.Name Is Nothing Then Continue For
+                    If Not String.Equals(tag.Name.Trim(), source.Name, StringComparison.OrdinalIgnoreCase) Then Continue For
+                    Dim value = If(tag.Value, "").Trim()
+                    If value.Length > 0 Then Return value
+                Next
+            Next
+            Return ""
+        End Function
     End Class
 
 End Namespace
