@@ -1244,8 +1244,14 @@ Namespace Views
                     ' einzelnen Objekt stehen und die Auswahl sähe aus, als hätte sie nicht gegriffen.
                     UpdateTextOverlayVisibility()
                     UpdateSliderLayout()
+                Case NameOf(EditorViewModel.SelectionMode)
+                    ' Der Untermodus entscheidet im Auswahl-Werkzeug, ob der Rahmen der markierten
+                    ' Ebene ueberhaupt dasteht (IsLayerPlacementTool): in Verschieben ja, in
+                    ' Rechteck, Ellipse, Lasso und Zauberstab nicht - dort schluckte er den Druck,
+                    ' mit dem man die Pixelauswahl aufzieht.
+                    UpdateTextOverlayVisibility()
+                    UpdateSliderLayout()
                 Case NameOf(EditorViewModel.HasActiveSelection),
-                     NameOf(EditorViewModel.SelectionMode),
                      NameOf(EditorViewModel.SelectionXPercent),
                      NameOf(EditorViewModel.SelectionYPercent),
                      NameOf(EditorViewModel.SelectionWidthPercent),
@@ -2375,7 +2381,7 @@ Namespace Views
             ElseIf Not _isPanDragging AndAlso Not _isCropDragging AndAlso Not _isBrushDrawing AndAlso
                Not _isRetouching AndAlso Not _isTextDragging AndAlso Not _isDraggingSlider AndAlso Not _isSelectionDragging AndAlso Not _isSelectionMoveDragging AndAlso Not _isLassoDrawing AndAlso
                cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso
-               cursorVm.HasSelectedAnnotation AndAlso IsLayerPlacementTool(cursorVm.CurrentTool) Then
+               cursorVm.HasSelectedAnnotation AndAlso IsLayerPlacementTool(cursorVm) Then
                 Dim mode = NoHandlesWhileWarping(cursorVm, If(SelectionAcceptsDrag(cursorVm), GetTextDragMode(e.GetPosition(cursorCanvas), GetTextOverlayRect(), OverlayHitRotation(cursorVm)), TextDragMode.None))
                 cursorCanvas.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(cursorVm))
             ElseIf cursorCanvas IsNot Nothing Then
@@ -3032,7 +3038,7 @@ Namespace Views
             ' Und keiner, solange Pfadpunkte gemeint sind: der Rahmen laege auf den aeusseren
             ' Stuetzpunkten und finge deren Klicks ab (HidesSelectionFrameForPath).
             If overlay IsNot Nothing Then overlay.IsVisible = vm IsNot Nothing AndAlso
-                                                              IsLayerPlacementTool(vm.CurrentTool) AndAlso
+                                                              IsLayerPlacementTool(vm) AndAlso
                                                               vm.HasSelectedAnnotation AndAlso
                                                               Not vm.IsFrameAnnotationSelected AndAlso
                                                               Not vm.HidesSelectionFrameForPath
@@ -4578,7 +4584,7 @@ Namespace Views
             ' diese Routine setzt IsVisible am Ende unbedingt auf True und haette die Abschaltung
             ' dort sonst gleich wieder aufgehoben. Sein Rechteck ist das ganze Bild, der Auswahl-
             ' rahmen laege also genau auf der Bildkante und saehe aus wie ein zweiter Rahmen.
-            If overlay Is Nothing OrElse vm Is Nothing OrElse Not IsLayerPlacementTool(vm.CurrentTool) OrElse
+            If overlay Is Nothing OrElse vm Is Nothing OrElse Not IsLayerPlacementTool(vm) OrElse
                Not vm.HasSelectedAnnotation OrElse vm.IsFrameAnnotationSelected Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
                 Return
@@ -4687,6 +4693,20 @@ Namespace Views
                    tool = EditorTool.Move OrElse EditorViewModel.IsObjectScopeTool(tool)
         End Function
 
+        ''' <summary>Dieselbe Frage, aber mit Blick auf den Untermodus: zeigt das Werkzeug den
+        ''' Auswahlrahmen einer markierten Ebene, und darf ein Zug darin sie verschieben?
+        '''
+        ''' Das AUSWAHL-Werkzeug gehört seit dem 2026-08-07 dazu, aber NUR im Untermodus
+        ''' VERSCHIEBEN. In Rechteck, Ellipse, Lasso und Zauberstab liegt der Rahmen über der Bühne
+        ''' und schluckte jeden Druck - dort zieht man die PIXELauswahl auf, und die braucht ihn.
+        ''' Aus genau demselben Grund fehlt das Zeichnen-Werkzeug ganz: dort malt man auf der
+        ''' markierten Ebene, und welche gemeint ist, sagt ihre Zeile im Ebenenpanel.</summary>
+        Private Shared Function IsLayerPlacementTool(vm As EditorViewModel) As Boolean
+            If vm Is Nothing Then Return False
+            If vm.CurrentTool = EditorTool.Selection Then Return vm.SelectionMode = "Move"
+            Return IsLayerPlacementTool(vm.CurrentTool)
+        End Function
+
 
         Private Shared Function ParseAvaloniaColor(value As String, fallback As Color) As Color
             If String.IsNullOrWhiteSpace(value) Then Return fallback
@@ -4763,6 +4783,15 @@ Namespace Views
             ' Dritter Fall derselben Falle: die Stuetzpunkte eines Pfades liegen IM Objektrechteck,
             ' und der Border liegt darueber. Ohne das Durchlassen kaeme kein Druck je bei ihnen an.
             If HitsPathPoint(vm, canvas, pos) Then Return
+            ' Vierter Fall, seit der Rahmen auch im AUSWAHL-Werkzeug steht: liegt der Druck INNERHALB
+            ' einer laufenden Pixelauswahl, ist sie gemeint und nicht die Ebene darunter - dafuer ist
+            ' der Untermodus Verschieben da (siehe MASKEN_EBENEN_AUSWAHL.md). Durchlassen statt
+            ' behandeln: der Canvas-Zweig startet dann die Verschiebe-Transaktion.
+            If vm.CurrentTool = EditorTool.Selection AndAlso vm.HasActiveSelection Then
+                Dim selectionRect = GetDisplayedImageRect(canvas, vm)
+                If selectionRect.Width > 0 AndAlso selectionRect.Height > 0 AndAlso
+                   IsPointInsideSelection(pos, selectionRect, vm) Then Return
+            End If
 
             Dim rect = GetTextOverlayRect()
             Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(pos, rect, OverlayHitRotation(vm)), TextDragMode.None))
@@ -6062,15 +6091,21 @@ Namespace Views
         End Sub
 
         Private Shared Sub HandleDeleteShortcut(vm As EditorViewModel)
-            If vm.HasSelectedPanelLayer OrElse vm.HasSelectedAnnotation Then
+            If vm.HasPixelSelectionScope Then
+                ' Laufameisen auf dem Bild: Entf löscht den INHALT der Auswahl, er wird
+                ' durchsichtig. Die Auswahl bleibt stehen, aufgehoben wird sie mit Esc.
+                '
+                ' Das steht VOR der markierten Ebene, und das ist der Punkt: wer eine Ebene markiert
+                ' und darauf eine Auswahl aufzieht, meint mit Entf diese Auswahl und nicht die
+                ' Ebene. Vorher gewann die Ebene, und der Griff zur Entf-Taste löschte sie ganz
+                ' (Nutzerbefund 2026-08-07). EraseSelection löscht dann aus dem Bild der markierten
+                ' Ebene. Die Ebene selbst löscht Entf weiterhin - nur eben ohne aktive Auswahl.
+                vm.EraseSelection()
+            ElseIf vm.HasSelectedPanelLayer OrElse vm.HasSelectedAnnotation Then
                 ' Auch das auf dem Bild markierte Objekt zählt, nicht nur die Zeile im
                 ' Ebenenpanel. Ein Textobjekt außerhalb des Textwerkzeugs hat keine Zeile
                 ' markiert - Entf landete deshalb beim Löschen der BILDDATEI.
                 vm.DeleteSelectedAnnotationCommand.Execute(Nothing)
-            ElseIf vm.HasPixelSelectionScope Then
-                ' Laufameisen auf dem Bild: Entf löscht den Inhalt der Auswahl, er wird
-                ' durchsichtig. Die Auswahl bleibt stehen, aufgehoben wird sie mit Esc.
-                vm.EraseSelection()
             ElseIf vm.HasActiveSelection Then
                 ' Eine Ebenenmaske ist zwar eine Auswahl, aber keine, deren Inhalt man löscht -
                 ' ihr Overlay ist in den Pixelwerkzeugen gar nicht zu sehen. Löschen darf hier

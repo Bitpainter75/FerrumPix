@@ -3797,11 +3797,13 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Public Shared Function BuildMagicWandMaskFromFile(sourcePath As String, adj As ImageAdjustments,
                                                           seedX As Integer, seedY As Integer, tolerance As Single,
                                                           ByRef bounds As SKRectI,
-                                                          Optional workingFull As SKBitmap = Nothing) As SKBitmap
+                                                          Optional workingFull As SKBitmap = Nothing,
+                                                          Optional confineRect As SKRectI = Nothing,
+                                                          Optional confine As SKBitmap = Nothing) As SKBitmap
             bounds = SKRectI.Empty
             Using processed = RenderDisplayImage(sourcePath, adj, workingFull)
                 If processed Is Nothing Then Return Nothing
-                Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds)
+                Return BuildMagicWandMask(processed, seedX, seedY, tolerance, bounds, confineRect, confine)
             End Using
         End Function
 

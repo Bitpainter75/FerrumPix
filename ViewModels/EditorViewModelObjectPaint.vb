@@ -163,6 +163,150 @@ Namespace ViewModels
             }
         End Function
 
+        ''' <summary>Die markierte Ebene als GRENZE einer Pixelauswahl - der Rückweg zu
+        ''' <see cref="BuildSelectionCoverage"/>: dort begrenzt die Auswahl, was auf der Ebene
+        ''' passiert, hier begrenzt die Ebene, wo eine Auswahl überhaupt entstehen darf.
+        '''
+        ''' Auf dem UI-Faden entsteht nur diese BESCHREIBUNG. Das Bild der Ebene zu dekodieren kostet
+        ''' bei einem eingefügten Foto zu viel für einen Zeigerdruck; die Deckung baut daraus der
+        ''' Worker (<see cref="BuildAnnotationConfineMask"/>).</summary>
+        Private NotInheritable Class AnnotationConfinePlan
+            ''' Hülle der Ebene im ANZEIGE-Raster. Außerhalb liegt nichts von ihr.
+            Public Rect As SKRectI
+            ''' Bilddatei der Ebene. Leer heißt: die Ebene trägt kein Bild (Text, Form, SVG), dann
+            ''' ist ihr RECHTECK die Grenze.
+            Public ImagePath As String = ""
+            Public Placement As AnnotationImagePlacement
+        End Class
+
+        ''' <summary>Der Bauplan für die markierte Ebene, oder Nothing, wenn es nichts zu begrenzen
+        ''' gibt: keine oder mehrere markierte Ebenen (bei mehreren wäre nicht gesagt, welche gemeint
+        ''' ist), eine unsichtbare Ebene, oder der Rahmen - dessen Rechteck ist immer das ganze Bild,
+        ''' ihn zu begrenzen hieße gar nicht begrenzen.</summary>
+        Private Function BuildSelectedAnnotationConfinePlan() As AnnotationConfinePlan
+            Dim selected = SelectedAnnotations
+            If selected Is Nothing OrElse selected.Count <> 1 Then Return Nothing
+            Dim target = selected(0)
+            If target Is Nothing OrElse Not target.IsVisible Then Return Nothing
+            If String.Equals(NormalizeAnnotationKind(target.Kind), "Frame", StringComparison.Ordinal) Then Return Nothing
+
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
+            Dim rect = GetAnnotationDisplayPixelRect(target)
+            If rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+
+            Dim placement As AnnotationImagePlacement = Nothing
+            Dim imagePath = ""
+            If IsPaintableImageAnnotation(target) Then
+                ' Nur der KOPF der Datei, nicht der Decode - der gehört in den Worker.
+                Dim size = ReadImageSize(target.ImagePath)
+                If size.Width > 0 AndAlso size.Height > 0 Then
+                    placement = BuildAnnotationImagePlacement(target, size.Width, size.Height)
+                    If placement IsNot Nothing Then imagePath = target.ImagePath
+                End If
+            End If
+            If placement Is Nothing Then
+                ' Ohne Bild ist das Objektrechteck selbst die Grenze. Ein Raster von 1 mal 1 macht
+                ' daraus denselben Fall wie beim Bild: Drehung und Spiegelung liegen schon in der
+                ' Einpassung, eine zweite Formel dafür braucht es nicht.
+                Dim objectRect = New SKRect(CSng(rect.X), CSng(rect.Y),
+                                            CSng(rect.X + rect.Width), CSng(rect.Y + rect.Height))
+                placement = New AnnotationImagePlacement With {
+                    .FitRect = objectRect,
+                    .CenterX = objectRect.MidX,
+                    .CenterY = objectRect.MidY,
+                    .RotationDegrees = StoredAnnotationRotationToDisplay(target),
+                    .FlipHorizontal = target.FlipHorizontal Xor _appliedFlipH,
+                    .FlipVertical = target.FlipVertical Xor _appliedFlipV,
+                    .ImageWidth = 1,
+                    .ImageHeight = 1
+                }
+            End If
+
+            Dim hull = ComputeConfineHull(placement, displaySize.Width, displaySize.Height)
+            If hull.Width <= 0 OrElse hull.Height <= 0 Then Return Nothing
+            Return New AnnotationConfinePlan With {.Rect = hull, .ImagePath = imagePath, .Placement = placement}
+        End Function
+
+        ''' <summary>Die Hülle der Ebene im Anzeige-Raster: die vier Ecken ihres Bildes hinüber,
+        ''' davon das umschließende Rechteck. Ein Punkt Rand fängt die Rundung ab. Eine gedrehte
+        ''' Ebene füllt diese Hülle nicht aus - was in ihr wirklich zur Ebene gehört, sagt erst die
+        ''' Deckung.</summary>
+        Private Shared Function ComputeConfineHull(placement As AnnotationImagePlacement,
+                                                   displayWidth As Integer, displayHeight As Integer) As SKRectI
+            Dim corners = {placement.ImageToDisplay(0, 0),
+                           placement.ImageToDisplay(placement.ImageWidth, 0),
+                           placement.ImageToDisplay(0, placement.ImageHeight),
+                           placement.ImageToDisplay(placement.ImageWidth, placement.ImageHeight)}
+            Dim minX = corners.Min(Function(p) CDbl(p.X))
+            Dim maxX = corners.Max(Function(p) CDbl(p.X))
+            Dim minY = corners.Min(Function(p) CDbl(p.Y))
+            Dim maxY = corners.Max(Function(p) CDbl(p.Y))
+            Dim left = Math.Max(0, CInt(Math.Floor(minX)) - 1)
+            Dim top = Math.Max(0, CInt(Math.Floor(minY)) - 1)
+            Dim right = Math.Min(displayWidth, CInt(Math.Ceiling(maxX)) + 1)
+            Dim bottom = Math.Min(displayHeight, CInt(Math.Ceiling(maxY)) + 1)
+            If right <= left OrElse bottom <= top Then Return SKRectI.Empty
+            Return New SKRectI(left, top, right, bottom)
+        End Function
+
+        ''' <summary>Die Deckung der Ebene im Anzeige-Raster, als Alpha8 in der Größe von
+        ''' <c>plan.Rect</c>. GEZEICHNET statt Punkt für Punkt gerechnet: dieselbe Kette wie in
+        ''' <c>ImageToDisplay</c>, nur als Leinwand-Transformation - damit setzt Skia die Ebene
+        ''' dorthin, wo der Renderer sie auch hinsetzt, und das Skalieren fällt ab. Eine gespiegelte
+        ''' Pixelschleife über ein bildschirmfüllendes Objekt kostete Millionen Rückrechnungen.
+        '''
+        ''' Läuft im HINTERGRUND (hier steht der Decode) und fasst deshalb nichts am ViewModel an.
+        ''' Nothing heißt „nicht begrenzen".</summary>
+        Private Shared Function BuildAnnotationConfineMask(plan As AnnotationConfinePlan) As SKBitmap
+            If plan Is Nothing OrElse plan.Placement Is Nothing Then Return Nothing
+            If plan.Rect.Width <= 0 OrElse plan.Rect.Height <= 0 Then Return Nothing
+            Dim placement = plan.Placement
+            Dim mask As SKBitmap = Nothing
+            Try
+                mask = New SKBitmap(plan.Rect.Width, plan.Rect.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(mask)
+                    canvas.Clear(SKColors.Transparent)
+                    canvas.Translate(-plan.Rect.Left, -plan.Rect.Top)
+                    ' Die Reihenfolge ist die von ImageToDisplay, von außen nach innen: zuerst die
+                    ' Drehung, dann die Spiegelungen, zuletzt die Einpassung des Bildes.
+                    If Math.Abs(placement.RotationDegrees) > 0.001 Then
+                        canvas.RotateDegrees(CSng(placement.RotationDegrees),
+                                             CSng(placement.CenterX), CSng(placement.CenterY))
+                    End If
+                    If placement.FlipHorizontal Then
+                        canvas.Translate(CSng(2.0 * placement.CenterX), 0)
+                        canvas.Scale(-1, 1)
+                    End If
+                    If placement.FlipVertical Then
+                        canvas.Translate(0, CSng(2.0 * placement.CenterY))
+                        canvas.Scale(1, -1)
+                    End If
+                    If String.IsNullOrWhiteSpace(plan.ImagePath) Then
+                        Using paint As New SKPaint With {.Color = SKColors.White, .IsAntialias = False}
+                            canvas.DrawRect(placement.FitRect, paint)
+                        End Using
+                    Else
+                        Using decoded = SKBitmap.Decode(plan.ImagePath)
+                            If decoded Is Nothing Then
+                                mask.Dispose()
+                                Return Nothing
+                            End If
+                            Using image = SKImage.FromBitmap(decoded)
+                                canvas.DrawImage(image, placement.FitRect,
+                                                 New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), Nothing)
+                            End Using
+                        End Using
+                    End If
+                End Using
+                Return mask
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.AnnotationConfine", ex)
+                mask?.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Backt einen Pinsel-/Radiererstrich in das Bild eines Objekts. True heißt: der
         ''' Strich ist hier behandelt worden und gehört NICHT mehr ins Foto - auch dann, wenn er das
         ''' Objekt gar nicht getroffen hat (die markierte Ebene ist das Ziel, wie in üblichen
@@ -239,29 +383,101 @@ Namespace ViewModels
             Return True
         End Function
 
+        ''' <summary>Löscht den Inhalt der aktiven Pixelauswahl aus dem BILD DER MARKIERTEN EBENE.
+        ''' True heißt: die Entf-Taste ist hier behandelt worden - auch dann, wenn die Auswahl die
+        ''' Ebene gar nicht berührt. Die markierte Ebene ist das Ziel, dieselbe Regel wie beim
+        ''' Pinsel; ein Rückfall aufs Foto säße in den falschen Pixeln und fiele erst beim
+        ''' Verschieben der Ebene auf.
+        '''
+        ''' Trägt die markierte Ebene kein Bild (Text, Form, SVG) oder ist keine markiert, gibt es
+        ''' hier nichts zu löschen und der Aufrufer nimmt seinen bisherigen Weg ins Arbeitsbild.</summary>
+        Private Function TryEraseSelectionFromImageAnnotation() As Boolean
+            Dim target = FindStrokeTargetImageAnnotation()
+            If target Is Nothing Then Return False
+
+            ' Wie beim Strich: der QUELLPFAD ist der Stand, auf dem der nächste Schritt aufbaut -
+            ' nicht zwingend der, auf den das Objekt gerade zeigt.
+            If Not Object.ReferenceEquals(_objectPaintTarget, target) Then
+                _objectPaintTarget = target
+                _objectPaintNextSource = target.ImagePath
+                _objectPaintSize = ReadImageSize(target.ImagePath)
+            End If
+            Dim sourcePath = If(String.IsNullOrEmpty(_objectPaintNextSource), target.ImagePath, _objectPaintNextSource)
+            If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then
+                _objectPaintSize = ReadImageSize(target.ImagePath)
+                If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then Return False
+            End If
+
+            Dim placement = BuildAnnotationImagePlacement(target, _objectPaintSize.Width, _objectPaintSize.Height)
+            If placement Is Nothing Then Return False
+
+            ' Das ganze Ebenenbild als Region: BuildSelectionCoverage schneidet es selbst auf das
+            ' zurecht, was die Auswahl überhaupt erreichen kann.
+            Dim dirty = New SKRectI(0, 0, _objectPaintSize.Width, _objectPaintSize.Height)
+            Dim anyCoverage = False
+            Dim coverage = BuildSelectionCoverage(dirty,
+                                                  Function(px, py) CType(placement.ImageToDisplay(px, py), SKPoint?),
+                                                  Function(dx, dy) CType(placement.DisplayToImage(dx, dy), SKPoint?),
+                                                  anyCoverage)
+            ' Ohne Deckung gäbe es keine Grenze - dann wäre das Löschen das ganze Ebenenbild, und
+            ' genau das ist nicht gemeint. Deckt die Auswahl nichts von der Ebene, passiert nichts:
+            ' kein Undo-Schritt, keine neue Datei.
+            If coverage Is Nothing OrElse Not anyCoverage OrElse dirty.Width <= 0 OrElse dirty.Height <= 0 Then
+                coverage?.Dispose()
+                Return True
+            End If
+
+            Dim targetPath = CreateSelectionAssetTempPath("erase")
+            _objectPaintNextSource = targetPath
+            EnqueueObjectErase(target, sourcePath, targetPath, dirty, coverage)
+            Return True
+        End Function
+
         ''' <summary>Reiht den schweren Teil ein: dekodieren, zeichnen, schreiben. Die Züge laufen
         ''' STRENG NACHEINANDER - jeder baut auf der Datei des vorigen auf, und eine Verzahnung
         ''' verlöre den früheren Strich.</summary>
         Private Sub EnqueueObjectPaint(target As ImageAnnotation, sourcePath As String, targetPath As String,
                                        renderAnnotation As ImageAnnotation, dirty As SKRectI, coverage As SKBitmap)
-            ' Merkmal des Dokuments beim Einreihen: kommt der Zug erst nach einem Bildwechsel an die
-            ' Reihe, gehört er zum alten Bild und verfällt (dieselbe Regel wie bei den
+            ' Der Text wird HIER aufgelöst, nicht drinnen aus einer Variablen: T() liest den Schlüssel
+            ' aus dem Literal, ein T(variable) fiele aus der Lokalisierung heraus.
+            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Malen fehlgeschlagen"),
+                                   Function() PaintObjectStrokeToFile(sourcePath, targetPath, renderAnnotation, dirty, coverage),
+                                   Sub() coverage?.Dispose())
+        End Sub
+
+        ''' Dasselbe für das Ausstanzen der Auswahl - derselbe Weg, damit ein Löschen und ein Strich
+        ''' auf derselben Ebene sich nicht überholen können.
+        Private Sub EnqueueObjectErase(target As ImageAnnotation, sourcePath As String, targetPath As String,
+                                       dirty As SKRectI, coverage As SKBitmap)
+            EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Löschen fehlgeschlagen"),
+                                   Function() EraseCoverageToFile(sourcePath, targetPath, dirty, coverage),
+                                   Sub() coverage?.Dispose())
+        End Sub
+
+        ''' <summary>Die gemeinsame Warteschlange für jede Änderung am Bild einer Ebene. Sie ist
+        ''' EINE Kette und keine je Art: Malen und Löschen bauen beide auf der Datei des vorigen
+        ''' Schrittes auf. <paramref name="failureMessage"/> kommt FERTIG ÜBERSETZT herein.</summary>
+        Private Sub EnqueueObjectImageEdit(target As ImageAnnotation, targetPath As String,
+                                           failureMessage As String,
+                                           work As Func(Of Boolean), cleanup As Action)
+            ' Merkmal des Dokuments beim Einreihen: kommt der Schritt erst nach einem Bildwechsel an
+            ' die Reihe, gehört er zum alten Bild und verfällt (dieselbe Regel wie bei den
             ' Arbeitsbild-Commits).
             Dim documentStamp = _selectionAssetTempDir
             _objectPaintChain = _objectPaintChain.ContinueWith(
                 Sub(prev)
                     Dim ok = False
                     Try
-                        ok = PaintObjectStrokeToFile(sourcePath, targetPath, renderAnnotation, dirty, coverage)
+                        ok = work()
                     Catch ex As Exception
                         DiagnosticLogService.LogException("Editor.ObjectPaint", ex)
                     Finally
-                        coverage?.Dispose()
+                        cleanup?.Invoke()
                     End Try
                     Avalonia.Threading.Dispatcher.UIThread.Post(
                         Sub()
                             If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
-                            ApplyObjectPaintResult(target, targetPath, ok)
+                            ApplyObjectPaintResult(target, targetPath, ok, failureMessage)
                         End Sub)
                 End Sub, TaskScheduler.Default)
         End Sub
@@ -269,9 +485,10 @@ Namespace ViewModels
         ''' <summary>Das Ergebnis eines Zuges übernehmen - auf dem UI-Faden und in der Reihenfolge,
         ''' in der die Züge gemalt wurden. Der Schnappschuss entsteht genau hier: er trägt den
         ''' vorigen Pfad, und der IST das Rückgängig.</summary>
-        Private Sub ApplyObjectPaintResult(target As ImageAnnotation, newPath As String, ok As Boolean)
+        Private Sub ApplyObjectPaintResult(target As ImageAnnotation, newPath As String, ok As Boolean,
+                                           failureMessage As String)
             If Not ok OrElse String.IsNullOrEmpty(newPath) Then
-                StatusText = LocalizationService.T("Malen fehlgeschlagen")
+                StatusText = failureMessage
                 ' Der nächste Zug darf nicht auf einer Datei aufbauen, die nie entstanden ist.
                 If Object.ReferenceEquals(_objectPaintTarget, target) Then _objectPaintNextSource = target.ImagePath
                 Return
@@ -316,6 +533,50 @@ Namespace ViewModels
                     Return WriteObjectPaintFile(painted, targetPath)
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Der schwere Teil des Löschens, im Hintergrund: Objektbild dekodieren, die Deckung
+        ''' der Auswahl als echtes Alpha-Loch ausstanzen, Ergebnis als neue Datei schreiben.</summary>
+        Private Function EraseCoverageToFile(sourcePath As String, targetPath As String,
+                                             dirty As SKRectI, coverage As SKBitmap) As Boolean
+            If coverage Is Nothing Then Return False
+            Using decoded = SKBitmap.Decode(sourcePath)
+                If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
+                Dim clamped = ClampRectToBitmap(dirty, decoded.Width, decoded.Height)
+                If clamped.Width <> dirty.Width OrElse clamped.Height <> dirty.Height Then Return False
+                Using punched = PunchCoverageFromImageCopy(decoded, dirty, coverage)
+                    If punched Is Nothing Then Return False
+                    Return WriteObjectPaintFile(punched, targetPath)
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Stanzt die Deckung aus einer ARBEITSKOPIE des Objektbilds. Bgra8888/Premul aus
+        ''' demselben Grund wie beim Malen: nur dort entstehen echte Alpha-Löcher, und ein JPEG kommt
+        ''' ganz ohne Alphakanal herein. <c>DstOut</c> behält, was die Deckung NICHT abdeckt - die
+        ''' weiche Kante der Auswahl steckt im Alpha der Deckung und kommt von selbst mit. Dieselbe
+        ''' Rechnung wie in <c>EraseSelection</c> fürs Arbeitsbild, nur im Raster der Ebene.</summary>
+        Private Shared Function PunchCoverageFromImageCopy(source As SKBitmap, dirty As SKRectI,
+                                                           coverage As SKBitmap) As SKBitmap
+            Dim copy = New SKBitmap(source.Width, source.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Try
+                Using canvas = New SKCanvas(copy)
+                    canvas.Clear(SKColors.Transparent)
+                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                        canvas.DrawBitmap(source, 0, 0, paint)
+                    End Using
+                End Using
+                Using canvas = New SKCanvas(copy)
+                    canvas.ClipRect(SKRect.Create(dirty.Left, dirty.Top, dirty.Width, dirty.Height))
+                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
+                        canvas.DrawBitmap(coverage, dirty.Left, dirty.Top, paint)
+                    End Using
+                End Using
+                Return copy
+            Catch
+                copy.Dispose()
+                Throw
+            End Try
         End Function
 
         ''' <summary>Zeichnet den Strich in eine ARBEITSKOPIE des Objektbilds. Die Kopie liegt in

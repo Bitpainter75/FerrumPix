@@ -1932,11 +1932,19 @@ Namespace ViewModels
                     ' Und im MASKEN-Werkzeug ebenso, sobald das Objekt eine Ebenenmaske traegt: dort
                     ' markiert man es, um an seine Maske heranzukommen. Der Sprung ins Werkzeug des
                     ' Objekts nahm einem genau die Bedienung weg, die man gerade brauchte - samt
-                    ' rotem Overlay. Sonst SPRINGT der Editor bewusst in das Werkzeug der Ebene,
-                    ' auch aus Auswahl und Maske heraus: wer eine Ebene anklickt, will an sie heran
+                    ' rotem Overlay. Sonst SPRINGT der Editor aus der Maske heraus bewusst in das
+                    ' Werkzeug der Ebene: wer eine Ebene anklickt, will an sie heran
                     ' (Nutzerentscheidung 2026-08-05).
                     If _currentTool = EditorTool.Mask AndAlso
                        Not String.IsNullOrEmpty(_annotations(clamped).MaskId) Then targetTool = _currentTool
+                    ' Im AUSWAHL-Werkzeug bleibt der Editor IMMER stehen. Dort markiert man eine
+                    ' Ebene, um auf ihr eine Pixelauswahl aufzuziehen - Zauberstab, Rechteck, Lasso;
+                    ' ein Sprung ins Werkzeug der Ebene nahm einem genau diese Werkzeuge weg
+                    ' (Nutzerbefund 2026-08-07). Verloren geht dabei nichts: der Platzierungstyp
+                    ' akzentuiert weiterhin das Werkzeugsymbol der Ebene, und ihre Eigenschaften
+                    ' stehen unter den Auswahleinstellungen - ShowAnnotationProperties haengt am
+                    ' markierten Objekt, nicht am Werkzeug.
+                    If _currentTool = EditorTool.Selection Then targetTool = _currentTool
                     ' Und im ZEICHNEN-Werkzeug ebenso, sobald die Ebene ein Bild traegt: dort
                     ' markiert man sie, um auf ihr zu malen (siehe AddBrushStroke). Ein Sprung ins
                     ' Einfuegen-Werkzeug nahm einem den Pinsel genau in dem Moment weg, in dem man
@@ -7330,12 +7338,24 @@ Namespace ViewModels
                 Dim adjustments = GetCurrentAdjustments()
                 Dim workingFull = CloneWorkingFullForRender()
                 Dim tolerance = CSng(_selectionTolerance / 100.0)
+                ' Ist genau EINE Ebene markiert, ist SIE das Ziel. Ohne diese Grenze las der
+                ' Zauberstab die fertige Szene und lief an der Ebenenkante einfach ins Foto weiter -
+                ' die Auswahl war danach groesser als die Ebene, auf der man arbeitete
+                ' (Nutzerbefund 2026-08-07). Der Bauplan entsteht hier, die Deckung im Worker.
+                Dim confinePlan = BuildSelectedAnnotationConfinePlan()
+                Dim confineRect = If(confinePlan Is Nothing, SKRectI.Empty, confinePlan.Rect)
                 Dim result = Await Task.Run(Function()
-                                                Dim workerBounds As SKRectI
-                                                Dim workerMask = ImageProcessor.BuildMagicWandMaskFromFile(
-                                                    sourcePath, adjustments, seedX, seedY, tolerance, workerBounds,
-                                                    workingFull:=workingFull)
-                                                Return (Mask:=workerMask, Bounds:=workerBounds)
+                                                Dim workerConfine = BuildAnnotationConfineMask(confinePlan)
+                                                Try
+                                                    Dim workerBounds As SKRectI
+                                                    Dim workerMask = ImageProcessor.BuildMagicWandMaskFromFile(
+                                                        sourcePath, adjustments, seedX, seedY, tolerance, workerBounds,
+                                                        workingFull:=workingFull,
+                                                        confineRect:=confineRect, confine:=workerConfine)
+                                                    Return (Mask:=workerMask, Bounds:=workerBounds)
+                                                Finally
+                                                    workerConfine?.Dispose()
+                                                End Try
                                             End Function)
 
                 If generation <> Volatile.Read(_magicWandGeneration) OrElse
@@ -7347,7 +7367,7 @@ Namespace ViewModels
                 Using mask = result.Mask
                     If mask Is Nothing OrElse result.Bounds.Width <= 0 OrElse result.Bounds.Height <= 0 Then
                         DiagnosticLogService.LogAlways("Editor.MagicWand",
-                            $"noSelection seed={seedX},{seedY} display={bw}x{bh} pct={xPercent:0.###},{yPercent:0.###} tol={_selectionTolerance:0.###}")
+                            $"noSelection seed={seedX},{seedY} display={bw}x{bh} pct={xPercent:0.###},{yPercent:0.###} tol={_selectionTolerance:0.###} confine={If(confinePlan Is Nothing, "aus", $"{confineRect.Left},{confineRect.Top},{confineRect.Width}x{confineRect.Height}")}")
                         Return
                     End If
                     PushUndo()
@@ -8177,10 +8197,15 @@ Namespace ViewModels
         ''' <see cref="HasPixelSelectionScope"/>).
         '''
         ''' Die Auswahl bleibt danach stehen: sie ist der Ort, an dem man als Nächstes füllt oder
-        ''' weiterarbeitet. Aufgehoben wird sie wie bisher mit Esc.</summary>
+        ''' weiterarbeitet. Aufgehoben wird sie wie bisher mit Esc.
+        '''
+        ''' Ist eine Ebene mit einem Bild markiert, wird aus IHR gelöscht statt aus dem Foto - genau
+        ''' wie ein Pinselstrich in ihr Bild geht (<see cref="AddBrushStroke"/>). Vorher löschte die
+        ''' Entf-Taste in diesem Fall die ganze Ebene (Nutzerbefund 2026-08-07).</summary>
         Public Sub EraseSelection()
             If Not CanUsePixelTools Then Return
             If Not HasPixelSelectionScope Then Return
+            If TryEraseSelectionFromImageAnnotation() Then Return
             If Not _workingImage.IsInitialized Then Return
             Dim baseW = GetBaseWidth()
             Dim baseH = GetBaseHeight()
@@ -17977,16 +18002,22 @@ Namespace ViewModels
         ''' Werkzeugleiste damit wirkungslos. Genau so war es: die Ausnahme fürs Masken-Werkzeug
         ''' funktionierte nur, wenn das Werkzeug über die Eigenschaft gesetzt wurde.
         '''
-        ''' Warum diese drei: im MASKEN-Werkzeug arbeitet man an der Maske des markierten Objekts, im
-        ''' AUSWAHL-Werkzeug zieht man die Auswahl auf, in der danach auf der Ebene gemalt wird. In
-        ''' beiden Fällen ist der Wechsel ein Schritt der Handlung und nicht ihr Ende.</summary>
+        ''' Warum diese: im MASKEN-Werkzeug arbeitet man an der Maske des markierten Objekts, im
+        ''' AUSWAHL-Werkzeug zieht man die Auswahl auf, in der danach auf der Ebene gearbeitet wird.
+        ''' In beiden Fällen ist der Wechsel ein Schritt der Handlung und nicht ihr Ende.
+        '''
+        ''' Das AUSWAHL-Werkzeug hält die Ebene seit dem 2026-08-07 unabhängig von ihrer Art. Es ist
+        ''' die Gegenrichtung zu der Regel im Setter von <c>SelectedAnnotationIndex</c>, dass ein
+        ''' Klick auf eine Ebene im Auswahl-Werkzeug dort stehen bleibt: hin und zurück müssen
+        ''' dasselbe ergeben, sonst verliert der Wechsel aus Verschieben ins Auswahl-Werkzeug genau
+        ''' die Ebene, für die man wechselt.</summary>
         Private Function ToolKeepsSelectedAnnotationOnEnter(tool As EditorTool) As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_selectedAnnotationIndex)
             If annotation Is Nothing Then Return False
+            If tool = EditorTool.Selection Then Return True
             If tool = EditorTool.Mask AndAlso Not String.IsNullOrEmpty(annotation.MaskId) Then Return True
-            If (tool = EditorTool.Selection OrElse tool = EditorTool.Mask) AndAlso
-               IsPaintableImageAnnotation(annotation) Then Return True
+            If tool = EditorTool.Mask AndAlso IsPaintableImageAnnotation(annotation) Then Return True
             Return False
         End Function
 

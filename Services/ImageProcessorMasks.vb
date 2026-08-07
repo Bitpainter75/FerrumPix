@@ -1789,13 +1789,45 @@ Namespace Services
         ''' <summary>Zauberstab: wählt ab dem Klickpunkt die zusammenhängende Fläche ähnlicher Farbe (4er-
         ''' Nachbarschaft, Toleranz 0..1 als maximaler Kanalabstand). Liefert eine Alpha8-Maske in der Größe
         ''' des umschließenden Rechtecks, oder Nothing. <paramref name="bounds"/> erhält dieses Rechteck in
-        ''' Bildpixeln.</summary>
+        ''' Bildpixeln.
+        '''
+        ''' <paramref name="confineRect"/> und <paramref name="confine"/> BEGRENZEN den Lauf auf eine
+        ''' markierte Ebene: außerhalb des Rechtecks, und innerhalb dort, wo die Alpha8-Deckung nichts
+        ''' hergibt, gilt jedes Pixel als abgelehnt. Gelesen wird weiterhin die fertige SZENE - das ist
+        ''' die Farbe, die der Nutzer anklickt; ohne die Grenze lief die Füllung über die Ebenenkante
+        ''' hinaus ins Foto weiter. Ein leeres Rechteck heißt „nicht begrenzen"; ein Rechteck ohne
+        ''' Deckung begrenzt allein auf das Rechteck.</summary>
         Public Shared Function BuildMagicWandMask(image As SKBitmap, seedX As Integer, seedY As Integer,
-                                                  tolerance As Single, ByRef bounds As SKRectI) As SKBitmap
+                                                  tolerance As Single, ByRef bounds As SKRectI,
+                                                  Optional confineRect As SKRectI = Nothing,
+                                                  Optional confine As SKBitmap = Nothing) As SKBitmap
             bounds = SKRectI.Empty
             If image Is Nothing Then Return Nothing
             Dim w = image.Width, h = image.Height
             If seedX < 0 OrElse seedY < 0 OrElse seedX >= w OrElse seedY >= h Then Return Nothing
+
+            ' Die Deckung EINMAL in ein verwaltetes Feld holen: die Schleife unten fragt sie je Pixel,
+            ' und SkiaSharps GetPixel geht dabei jedes Mal durch P/Invoke.
+            Dim confineActive = confineRect.Width > 0 AndAlso confineRect.Height > 0
+            Dim confineBuf As Byte() = Nothing
+            Dim confineStride = 0
+            If confineActive AndAlso confine IsNot Nothing Then
+                If confine.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                confineStride = confine.RowBytes
+                Dim confineLength = confineStride * confine.Height
+                If confineLength <= 0 OrElse confine.GetPixels() = IntPtr.Zero Then Return Nothing
+                confineBuf = New Byte(confineLength - 1) {}
+                Marshal.Copy(confine.GetPixels(), confineBuf, 0, confineLength)
+            End If
+            Dim confineWidth = If(confine Is Nothing, 0, confine.Width)
+            Dim confineHeight = If(confine Is Nothing, 0, confine.Height)
+            ' Der Klick selbst muss auf der Ebene liegen. Von einem Punkt daneben aus liefe die
+            ' Füllung sofort gegen die Grenze und ergäbe eine Auswahl aus einem einzigen Pixel -
+            ' „nichts gefunden" ist die ehrlichere Antwort.
+            If confineActive Then
+                If Not PointIsInsideConfine(seedX, seedY, confineRect, confineBuf, confineStride,
+                                            confineWidth, confineHeight) Then Return Nothing
+            End If
 
             ' ProcessBitmap bleibt ohne Objekt-Overlays meist Bgra8888, ApplyAnnotations liefert
             ' dagegen bewusst Rgba8888. Der Zauberstab muss beide Szenenformate lesen können; die
@@ -1833,6 +1865,11 @@ Namespace Services
             While stack.Count > 0
                 Dim idx = stack.Pop()
                 Dim x = idx Mod w, y = idx \ w
+                If confineActive AndAlso Not PointIsInsideConfine(x, y, confineRect, confineBuf, confineStride,
+                                                                  confineWidth, confineHeight) Then
+                    state(idx) = 2
+                    Continue While
+                End If
                 Dim o = y * stride + x * 4
                 If Math.Abs(CInt(buf(o + rIdx)) - sr) > tol OrElse
                    Math.Abs(CInt(buf(o + gIdx)) - sg) > tol OrElse
@@ -1877,6 +1914,21 @@ Namespace Services
             Next
             Marshal.Copy(mbuf, 0, mask.GetPixels(), mbuf.Length)
             Return mask
+        End Function
+
+        ''' <summary>Liegt dieser Bildpunkt auf der Ebene, auf die begrenzt wird? Ohne Deckung
+        ''' entscheidet allein das Rechteck; mit Deckung zusätzlich, ob dort überhaupt etwas von der
+        ''' Ebene liegt. Ein halb durchsichtiger Rand zählt dazu - abgeschnitten wird erst bei
+        ''' vollständiger Durchsichtigkeit, sonst franste die Auswahl an weichen Kanten aus.</summary>
+        Private Shared Function PointIsInsideConfine(x As Integer, y As Integer, confineRect As SKRectI,
+                                                     confineBuf As Byte(), confineStride As Integer,
+                                                     confineWidth As Integer, confineHeight As Integer) As Boolean
+            If x < confineRect.Left OrElse y < confineRect.Top OrElse
+               x >= confineRect.Right OrElse y >= confineRect.Bottom Then Return False
+            If confineBuf Is Nothing Then Return True
+            Dim lx = x - confineRect.Left, ly = y - confineRect.Top
+            If lx < 0 OrElse ly < 0 OrElse lx >= confineWidth OrElse ly >= confineHeight Then Return False
+            Return confineBuf(ly * confineStride + lx) > 0
         End Function
 
         Private Shared Function ReadMaskBytes(mask As SKBitmap, ByRef stride As Integer) As Byte()
