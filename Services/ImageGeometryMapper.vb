@@ -463,7 +463,12 @@ Namespace Services
                             Return Nothing
                         End If
                         Using netz = SKVertices.CreateCopy(SKVertexMode.Triangles, corners.ToArray(), texturen.ToArray(), Nothing)
-                            canvas.DrawVertices(netz, SKBlendMode.SrcOver, paint)
+                            ' Das Netz ist eine geschlossene, zusammenhaengende Flaeche. Mit SrcOver
+                            ' werden die halbtransparenten Randpixel benachbarter Dreiecke beim
+                            ' Objekt-Export mehrfach ueberlagert; das zeigt sich besonders an einer
+                            ' gebogenen Aussenkante als sichtbare Naht. Der Bild-Renderer verwendet
+                            ' deshalb ebenfalls Src: jedes Netzpixel wird genau einmal geschrieben.
+                            canvas.DrawVertices(netz, SKBlendMode.Src, paint)
                         End Using
                     End Using
                 End Using

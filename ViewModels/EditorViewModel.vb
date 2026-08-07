@@ -10750,6 +10750,11 @@ Namespace ViewModels
                 ' Vorher lief der Pfad in SaveImage gegen den RAW-Ziel-Guard und scheiterte immer
                 ' kommentarlos mit "Speichern fehlgeschlagen".
                 If SavesBackToImmich AndAlso IsCurrentImageSidecarFormat Then Return False
+                ' Ein GEÖFFNETES FPX-Dokument ist immer sein eigenes Projektziel. Die
+                ' Bildpipeline arbeitet dafür zwar auf dem entpackten Basisbild, gespeichert wird
+                ' aber ausschließlich in _currentFpxPath durch FpxService.Save. Keine Prüfung des
+                ' Basisbild-Formats oder eines alten Save-as-Flags darf diesen Weg deaktivieren.
+                If Not String.IsNullOrWhiteSpace(_currentFpxPath) Then Return True
                 ' Formate, die SaveImage nicht erzeugen kann (.tiff/.bmp/.gif/.heic/...), bekamen
                 ' beim in-place-Speichern still JPEG-Bytes unter der alten Endung.
                 ' SaveImage lehnt das jetzt zentral ab; hier lenkt der deaktivierte Knopf auf
@@ -12285,7 +12290,10 @@ Namespace ViewModels
                 newRenderSourcePathOverride = loaded.BaseImagePath
                 newFpxPath = path
                 newFpxTempDir = loaded.TempDir
-                newForceSaveAsOnly = True
+                ' Das Basisbild liegt zwar nur entpackt im Temp-Ordner, das Ziel ist aber die
+                ' originale .fpx-Projektdatei. FpxService.Save schreibt das Bündel atomar neu;
+                ' deshalb ist direktes Speichern hier ausdrücklich sicher und gewollt.
+                newForceSaveAsOnly = False
                 ' Gebackenes Arbeitsbild (voll aufgelöstes retouch.png): PreparePreviewSource
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
@@ -12459,7 +12467,9 @@ Namespace ViewModels
                 newRenderSourcePathOverride = loaded.BaseImagePath
                 newFpxPath = fpxSource
                 newFpxTempDir = loaded.TempDir
-                forceSaveAsOnly = True   ' das Basisbild ist eine Temp-Kopie -> Speichern nur als neue Datei
+                ' Das Basisbild ist eine Temp-Kopie, die .fpx-Datei selbst aber ein schreibbares,
+                ' atomar ersetzbares Projektziel. Direktspeichern erhält Rezept und Ebenen.
+                forceSaveAsOnly = False
                 ' Gebackenes Arbeitsbild (voll aufgelöstes retouch.png): PreparePreviewSource
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
@@ -15393,7 +15403,7 @@ Namespace ViewModels
             _perspectiveCorners(2) = adj.PerspectiveCorner1X : _perspectiveCorners(3) = adj.PerspectiveCorner1Y
             _perspectiveCorners(4) = adj.PerspectiveCorner2X : _perspectiveCorners(5) = adj.PerspectiveCorner2Y
             _perspectiveCorners(6) = adj.PerspectiveCorner3X : _perspectiveCorners(7) = adj.PerspectiveCorner3Y
-            _imageWarp = adj.ImageWarp?.Clone()
+            _imageWarp = NormalizeImageWarpSteps(adj.ImageWarp?.Clone())
             RaiseImageWarpChanged()
             _straightenDegrees = adj.StraightenDegrees
             _straightenExpandCanvas = adj.StraightenExpandCanvas

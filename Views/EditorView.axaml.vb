@@ -909,7 +909,7 @@ Namespace Views
             ' oder Strg. Die rechte Maustaste bleibt zusätzlich als Zoom-beim-Schwenken unterstützt
             ' (siehe Pan-Neuverankerung unten).
             '
-            ' AUSGENOMMEN PINSEL UND RETUSCHE. Zoomen heisst hier ZOOMEN AUF DEN ZEIGER, und das
+            ' AUSGENOMMEN PINSEL, RADIERER, RETUSCHE UND MASKENPINSEL. Zoomen heisst hier ZOOMEN AUF DEN ZEIGER, und das
             ' verschiebt den sichtbaren Ausschnitt - genau das darf beim Malen nicht passieren. Wer
             ' in einen Ausschnitt hineingezoomt hat und dort arbeitet, verliert sonst mitten im
             ' Strich die Stelle, an der er gerade ist. Verschoben wird bewusst: über den Knopf
@@ -924,7 +924,8 @@ Namespace Views
             Dim toolVm = TryCast(DataContext, EditorViewModel)
             If toolVm IsNot Nothing AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
                Not _isPanDragging AndAlso Not pointerPoint.Properties.IsRightButtonPressed AndAlso
-               (toolVm.CurrentTool = EditorTool.Draw OrElse toolVm.CurrentTool = EditorTool.Retouch) Then
+               (toolVm.CurrentTool = EditorTool.Draw OrElse toolVm.CurrentTool = EditorTool.Retouch OrElse
+                IsMaskBrushActive(toolVm)) Then
                 AdjustActiveToolSize(toolVm, If(e.Delta.Y > 0, 1, -1))
                 e.Handled = True
                 Return
@@ -6138,7 +6139,7 @@ Namespace Views
         End Sub
 
         Private Sub AdjustActiveToolSize(vm As EditorViewModel, direction As Integer)
-            If vm.CurrentTool = EditorTool.Draw Then
+            If vm.CurrentTool = EditorTool.Draw OrElse IsMaskBrushActive(vm) Then
                 vm.BrushSize = vm.BrushSize + direction * If(vm.BrushSize >= 5, 1.0, 0.2)
             ElseIf vm.CurrentTool = EditorTool.Retouch Then
                 vm.RetouchRadius = vm.RetouchRadius + direction * If(vm.RetouchRadius >= 5, 1.0, 0.2)

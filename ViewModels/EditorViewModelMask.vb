@@ -3789,6 +3789,16 @@ Namespace ViewModels
         ''' <summary>Der eine Weg hinter Knopf und Maskensymbol: hat die Ebene noch keine Maske, wird
         ''' sie angelegt UND gleich zum Bearbeiten geöffnet - wer sie anlegt, will an sie heran.</summary>
         Public Sub UseAnnotationMask()
+            ' Der Maskenknopf im Ebenenpanel gilt auch fuer Korrektur- und Maskenebenen.
+            ' Bei einer bereits ausgewaehlten solchen Zeile lief er vorher ausschliesslich ueber
+            ' MaskTargetAnnotation (also ein Bildobjekt) und kehrte still zurueck. Dadurch konnte
+            ' man die Maske nur beim zufaelligen Wechsel VON einer anderen Zeile oeffnen; danach
+            ' sah der Knopf aus, als lasse sich eine bestehende Maske nicht mehr bearbeiten.
+            Dim adjustmentLayer = PasteTargetLayer()
+            If adjustmentLayer IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(adjustmentLayer.MaskId) Then
+                ApplyAdjustmentLayerPresentation(adjustmentLayer)
+                Return
+            End If
             If CanAddAnnotationMask Then
                 AddMaskToSelectedAnnotation()
                 EditSelectedAnnotationMask()

@@ -524,6 +524,7 @@ Namespace Services
             Return New SKPoint(CSng(bx), CSng(by))
         End Function
 
+
         ''' <summary>Traegt dieses Objekt eine Verzerrung - eine eigene oder die des Bildes?
         '''
         ''' Entscheidet mit darueber, ob ueber eine eigene Ebene gezeichnet wird. Ohne diese Frage

@@ -3594,25 +3594,34 @@ Namespace ViewModels
                                        ' Server.
                                        Dim serverKey = ImmichService.ServerKey
                                        If ImmichService.IsConfigured AndAlso Not String.IsNullOrEmpty(serverKey) Then
-                                           Dim immichPending As New List(Of ImmichAsset)()
-                                           For Each asset In ImmichIndexService.Instance.GetAssetList(serverKey)
-                                               token.ThrowIfCancellationRequested()
-                                               If asset Is Nothing OrElse asset.IsVideo Then Continue For
-                                               scannedCount += 1
-                                               immichPending.Add(asset)
-                                               If immichPending.Count < 120 Then Continue For
-                                               Dim addedImmich = Await PublishImmichSearchBatchAsync(node, immichPending, serverKey, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, token)
-                                               foundCount += addedImmich.Count
-                                               immichPending.Clear()
-                                               Dim localFoundImmich = foundCount
-                                               Await Dispatcher.UIThread.InvokeAsync(Sub()
-                                                   If Not SearchMayPublish(node, token) Then Return
-                                                   StatusText = $"Suche läuft... {localFoundImmich:N0} {LocalizationService.T("Bilder")}"
-                                               End Sub)
-                                           Next
-                                           If immichPending.Count > 0 Then
-                                               Dim addedImmich = Await PublishImmichSearchBatchAsync(node, immichPending, serverKey, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, token)
-                                               foundCount += addedImmich.Count
+                                           ' Die Timeline im lokalen Index kennt keine Gesichter. Fuer
+                                           ' einen Personenfilter holen wir deshalb nur die IDs der
+                                           ' betroffenen Personen vom Server und schneiden damit die
+                                           ' Indexmenge - ohne Filter bleibt die Suche weiterhin rein
+                                           ' lokal und verursacht keine Netzabfrage.
+                                           Dim allowedImmichPersonAssets = Await ResolveImmichPersonAssetIdsAsync(node.PersonQueries, token)
+                                           If allowedImmichPersonAssets Is Nothing OrElse allowedImmichPersonAssets.Count > 0 Then
+                                               Dim immichPending As New List(Of ImmichAsset)()
+                                               For Each asset In ImmichIndexService.Instance.GetAssetList(serverKey)
+                                                   token.ThrowIfCancellationRequested()
+                                                   If asset Is Nothing OrElse asset.IsVideo Then Continue For
+                                                   If allowedImmichPersonAssets IsNot Nothing AndAlso Not allowedImmichPersonAssets.Contains(asset.Id) Then Continue For
+                                                   scannedCount += 1
+                                                   immichPending.Add(asset)
+                                                   If immichPending.Count < 120 Then Continue For
+                                                   Dim addedImmich = Await PublishImmichSearchBatchAsync(node, immichPending, serverKey, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, token, skipPersonQuery:=allowedImmichPersonAssets IsNot Nothing)
+                                                   foundCount += addedImmich.Count
+                                                   immichPending.Clear()
+                                                   Dim localFoundImmich = foundCount
+                                                   Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                       If Not SearchMayPublish(node, token) Then Return
+                                                       StatusText = $"Suche läuft... {localFoundImmich:N0} {LocalizationService.T("Bilder")}"
+                                                   End Sub)
+                                               Next
+                                               If immichPending.Count > 0 Then
+                                                   Dim addedImmich = Await PublishImmichSearchBatchAsync(node, immichPending, serverKey, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, token, skipPersonQuery:=allowedImmichPersonAssets IsNot Nothing)
+                                                   foundCount += addedImmich.Count
+                                               End If
                                            End If
                                        End If
                                    End If
@@ -3780,11 +3789,12 @@ Namespace ViewModels
                                                        textQuery As String,
                                                        favoriteMode As String,
                                                        ratingMin As Integer,
-                                                       selectedRatings As HashSet(Of Integer)) As Task(Of Boolean)
+                                                       selectedRatings As HashSet(Of Integer),
+                                                       Optional skipPersonQuery As Boolean = False) As Task(Of Boolean)
             If meta Is Nothing Then Return False
             If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Return False
             If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Return False
-            If Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Return False
+            If Not skipPersonQuery AndAlso Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Return False
             If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Return False
             If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Return False
             If favoriteMode = "Not" AndAlso meta.IsFavorite Then Return False
@@ -3795,6 +3805,56 @@ Namespace ViewModels
                 If ratingMin > 0 AndAlso meta.Rating < ratingMin Then Return False
             End If
             Return Await EvaluateConditionsAsync(meta, node.Conditions, node.ConditionCombinator)
+        End Function
+
+        ''' <summary>Die Asset-IDs der Immich-Personen, die fuer einen gespeicherten
+        ''' Personenfilter gemeinsam gelten. Die Assetliste im lokalen Index traegt bewusst keine
+        ''' Gesichter; erst der gezielte Serverabruf pro ausgewaehlter Person liefert diese
+        ''' Zuordnung. Ohne Personenfilter gibt Nothing zurueck, damit der normale Suchlauf keine
+        ''' Netzverbindung benoetigt.</summary>
+        Private Async Function ResolveImmichPersonAssetIdsAsync(personNames As IList(Of String),
+                                                                 token As CancellationToken) As Task(Of HashSet(Of String))
+            Dim wanted = If(personNames, New List(Of String)()).
+                Where(Function(n) Not String.IsNullOrWhiteSpace(n)).
+                Select(Function(n) n.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            If wanted.Count = 0 Then Return Nothing
+
+            Dim people = _immichPeople.Where(Function(p) p IsNot Nothing AndAlso
+                                                           Not String.IsNullOrWhiteSpace(p.Id) AndAlso
+                                                           Not String.IsNullOrWhiteSpace(p.Name)).ToList()
+            If people.Count = 0 Then people = Await ImmichService.GetPeopleAsync(token)
+
+            Dim result As HashSet(Of String) = Nothing
+            For Each name In wanted
+                token.ThrowIfCancellationRequested()
+                Dim ids = people.Where(Function(p) String.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)).
+                                 Select(Function(p) p.Id).Distinct(StringComparer.Ordinal).ToList()
+                ' Die Filter wirken als UND. Ist eine Person auf dem Server unbekannt, kann kein
+                ' Asset die gesamte Bedingung erfuellen.
+                If ids.Count = 0 Then Return New HashSet(Of String)(StringComparer.Ordinal)
+
+                Dim assetsForName As New HashSet(Of String)(StringComparer.Ordinal)
+                For Each personId In ids
+                    Dim page = 1
+                    Do
+                        token.ThrowIfCancellationRequested()
+                        Dim response = Await ImmichService.GetAssetsPageAsync(page, Nothing, token, personId)
+                        For Each asset In response.Items
+                            If asset IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(asset.Id) Then assetsForName.Add(asset.Id)
+                        Next
+                        If response.NextPage <= 0 Then Exit Do
+                        page = response.NextPage
+                    Loop
+                Next
+
+                If result Is Nothing Then
+                    result = assetsForName
+                Else
+                    result.IntersectWith(assetsForName)
+                End If
+                If result.Count = 0 Then Return result
+            Next
+            Return If(result, New HashSet(Of String)(StringComparer.Ordinal))
         End Function
 
         ''' <summary>Der dritte Zweig einer Suchliste: die Bilder eines Immich-Servers, gesucht über
@@ -3808,13 +3868,14 @@ Namespace ViewModels
                                                              ratingMin As Integer,
                                                              selectedRatings As HashSet(Of Integer),
                                                              thumbnailToken As CancellationToken,
-                                                             searchToken As CancellationToken) As Task(Of List(Of String))
+                                                             searchToken As CancellationToken,
+                                                             Optional skipPersonQuery As Boolean = False) As Task(Of List(Of String))
             Dim matched As New List(Of ImmichAsset)()
             For Each asset In assets
                 searchToken.ThrowIfCancellationRequested()
                 Dim meta = BuildSearchMetaFromImmichAsset(serverKey, asset)
                 If meta Is Nothing Then Continue For
-                If Not Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
+                If Not Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings, skipPersonQuery) Then Continue For
                 matched.Add(asset)
             Next
 
@@ -4511,7 +4572,14 @@ Namespace ViewModels
                 ' Aufraeumen die Bilder eines inzwischen geoeffneten Ordners wegwerfen.
                 If currentRunResults IsNot Nothing AndAlso _isVirtualFolder Then
                     Dim keep = cleaned.ToHashSet(PathIdentity.Comparer)
-                    _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not keep.Contains(i.FilePath))
+                    ' Immich-Treffer sind absichtlich nicht in Results: ein Pseudo-Pfad besteht
+                    ' nicht im Dateisystem und wuerde beim naechsten Oeffnen als "verwaist"
+                    ' entfernt. Die Bereinigung darf deshalb ausschliesslich die persistenten,
+                    ' lokalen Treffer ausraeumen. Vorher verschwand mit jeder bereinigten lokalen
+                    ' Datei die gesamte Immich-Teilmenge der gerade angezeigten Suche.
+                    _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso
+                                         Not ImmichService.IsImmichPseudoPath(i.FilePath) AndAlso
+                                         Not keep.Contains(i.FilePath))
                     FilterAndSort()
                 End If
                 SaveSearches()

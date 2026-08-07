@@ -1133,7 +1133,9 @@ Namespace ViewModels
         ''' wandert - ebenfalls in Bildprozent.</summary>
         Private Sub ApplyWarpToObjects(abbildung As Func(Of Double, Double, (X As Double, Y As Double)))
             If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return
-            Const Steps As Integer = 12
+            ' Bild und mitwandernde Objekte muessen auf derselben Feinheit ausgewertet werden.
+            ' Ein groberes Objektmesh zeigte sonst im Export andere Knicke als das Bild darunter.
+            Const Steps As Integer = 48
             For Each a In _annotations
                 If a Is Nothing Then Continue For
                 Dim alt = a.Warp
@@ -1363,11 +1365,11 @@ Namespace ViewModels
         ' wird. Reihenfolge: 0 bis 3 die Ecken links oben, rechts oben, rechts unten, links unten;
         ' danach je Kante zwei Griffe in Laufrichtung der Kante (oben, rechts, unten, links).
 
-        ''' <summary>Feinheit des Auswertungsrasters. Vierundzwanzig Felder je Richtung nähern die
-        ''' Bézier-Ränder auch bei stark gezogenen Griffen sichtbar glatt an. Die 625 Knoten bleiben
-        ''' klein gegenüber dem Bildrender, halbieren aber die längsten geradlinigen Segmente der
-        ''' früheren 12×12-Näherung.</summary>
-        Private Const EnvelopeSteps As Integer = 24
+        ''' <summary>Feinheit des Auswertungsrasters. Achtundvierzig Felder je Richtung halten die
+        ''' Bézier-Ränder auch im JPEG-/PNG-Export mit vielen Bildpunkten sichtbar glatt. Bei 24×24
+        ''' waren die einzelnen linearen Mesh-Segmente an stark gebogenen Kanten noch klar zu sehen.
+        ''' Die 2401 Knoten sind gegenüber dem Bildrender weiterhin klein.</summary>
+        Private Const EnvelopeSteps As Integer = 48
 
         ''' <summary>Wie viele Hilfslinien das Overlay im Inneren zeigt. Nur zum Hinsehen - sie
         ''' sagen, wohin sich die Flaeche zwischen den Raendern legt.</summary>
@@ -2356,11 +2358,10 @@ Namespace ViewModels
         ''' beiden Raster: das gröbere gäbe die Krümmung des feineren nicht wieder.</summary>
         Private Sub ComposeImageWarp(columns As Integer, rows As Integer, xs As Double(), ys As Double())
             Dim old = _imageWarp
-            Dim steps = Math.Max(columns, rows)
-            If old IsNot Nothing AndAlso Not old.IsEmpty Then
-                steps = Math.Max(steps, Math.Max(old.Columns, old.Rows))
-            End If
-            steps = Math.Max(2, Math.Min(MaxImageWarpSteps, steps))
+            ' Das Bedienraster darf grob bleiben, das Rezept nicht: Gitter, Linien und Envelope
+            ' werden ausnahmslos in ein 48×48-Auswertungsmesh übernommen. So sieht derselbe
+            ' Zug in Vorschau, nach erneutem Öffnen und beim JPEG-/PNG-Export gleich aus.
+            Dim steps = MaxImageWarpSteps
 
             Dim mapping = NodeMapping(columns, rows, xs, ys)
             Dim node((steps + 1) * (steps + 1) * 2 - 1) As Double
@@ -2390,10 +2391,39 @@ Namespace ViewModels
             RaiseImageWarpChanged()
         End Sub
 
+        ''' <summary>Hebt ältere Rezept-Meshes beim Öffnen auf die einheitliche 48×48-Auflösung.
+        ''' Die Stützstellen werden über dieselbe Dreiecksabbildung ermittelt; bei Teilern von 48
+        ''' (insbesondere den früheren 4, 12 und 24) bleibt die bestehende Verformung dabei exakt
+        ''' erhalten, der Export wertet sie anschließend aber überall gleich fein aus.</summary>
+        Private Shared Function NormalizeImageWarpSteps(warp As ObjectWarp) As ObjectWarp
+            If warp Is Nothing OrElse warp.IsEmpty OrElse warp.Kind <> "Gitter" OrElse
+               (warp.Columns = MaxImageWarpSteps AndAlso warp.Rows = MaxImageWarpSteps) Then Return warp
+
+            Dim normalized = warp.Clone()
+            normalized.Columns = MaxImageWarpSteps
+            normalized.Rows = MaxImageWarpSteps
+            Dim node((MaxImageWarpSteps + 1) * (MaxImageWarpSteps + 1) * 2 - 1) As Double
+            For rowIdx = 0 To MaxImageWarpSteps
+                For colIdx = 0 To MaxImageWarpSteps
+                    Dim i = (rowIdx * (MaxImageWarpSteps + 1) + colIdx) * 2
+                    Dim p = ExistingWarp(warp,
+                                         colIdx / CDbl(MaxImageWarpSteps) * 100.0,
+                                         rowIdx / CDbl(MaxImageWarpSteps) * 100.0)
+                    node(i) = p.X
+                    node(i + 1) = p.Y
+                Next
+            Next
+            normalized.Nodes = node
+            Return normalized
+        End Function
+
         ''' <summary>Obergrenze der Rasterfeinheit im Rezept. Die Linienverzerrung wertet ihr Feld
         ''' mit 48 Schritten aus; so fein gespeichert kostet jede Ruecksuche (Overlays, Pinsel,
         ''' Retusche) das Vierfache, ohne dass man den Unterschied saehe.</summary>
-        Private Const MaxImageWarpSteps As Integer = 24
+        ' Die Obergrenze ist zugleich die Exportauflösung des gespeicherten Meshes. Sie darf nicht
+        ' unter EnvelopeSteps liegen, sonst wird eine glatte Verformung beim Speichern wieder auf
+        ' ein gröberes Gitter heruntergerechnet.
+        Private Const MaxImageWarpSteps As Integer = 48
 
         ''' <summary>Die Verzerrung des Bildes wieder wegnehmen - ALLE VIER Arten, also auch die
         ''' Perspektive. Sie stehen im Rezept, es gibt also nichts zurueckzurechnen; anders als
