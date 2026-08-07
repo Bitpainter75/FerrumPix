@@ -1620,8 +1620,8 @@
   <data name="Ansicht_5c388792" xml:space="preserve">
     <value>Vista</value>
   </data>
-  <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
-    <value>Aplicar recorte a la vista previa</value>
+  <data name="Ausschnitt_anwenden_Eingabetaste_fb55b886" xml:space="preserve">
+    <value>Aplicar recorte (Intro)</value>
   </data>
   <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>Patrón de archivo o etiquetas</value>

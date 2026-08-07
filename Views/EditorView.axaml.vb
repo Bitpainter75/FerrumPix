@@ -1035,6 +1035,17 @@ Namespace Views
                 End Select
             End If
 
+            ' EIN AUFGEZOGENER RAHMEN wird mit der Eingabetaste bestaetigt, genau wie ueber den Knopf
+            ' "Zuschneiden anwenden". Auch das gehoert in den Tunnel: nach einem Klick auf ein
+            ' Seitenverhaeltnis im Panel liegt der Fokus auf diesem Knopf, und der schluckt die Taste.
+            If tunnelVm IsNot Nothing AndAlso e.Key = Key.Enter AndAlso
+               tunnelVm.CurrentTool = EditorTool.Crop AndAlso tunnelVm.HasCropChanges AndAlso
+               Not _isCropDragging AndAlso Not TypeOf e.Source Is TextBox Then
+                tunnelVm.ApplyCropCommand.Execute(Nothing)
+                e.Handled = True
+                Return
+            End If
+
             If Not PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then Return
             Dim vm = tunnelVm
             If vm Is Nothing Then Return

@@ -1620,8 +1620,8 @@
   <data name="Ansicht_5c388792" xml:space="preserve">
     <value>查看</value>
   </data>
-  <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
-    <value>将裁剪应用到预览</value>
+  <data name="Ausschnitt_anwenden_Eingabetaste_fb55b886" xml:space="preserve">
+    <value>应用裁剪（回车）</value>
   </data>
   <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>文件名模式或标签</value>

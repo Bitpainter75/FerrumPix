@@ -3402,11 +3402,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImagePsd))
-                ' Der Dateityp entscheidet, ob das Zuschneiden bestaetigt werden muss.
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageSidecarFormat))
                 Me.RaisePropertyChanged(NameOf(IsCurrentDocumentFpx))
-                Me.RaisePropertyChanged(NameOf(UsesLiveCrop))
-                Me.RaisePropertyChanged(NameOf(ShowApplyCropButton))
                 Me.RaisePropertyChanged(NameOf(CanSaveSidecar))
                 Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
                 Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
@@ -3816,10 +3813,10 @@ Namespace ViewModels
                 If value = EditorTool.Retouch AndAlso previousTool <> EditorTool.Retouch AndAlso Not IsRepairMode Then
                     BeginRetouchLiveBuffersAsync()
                 End If
-                ' Sidecar-Bilder zeigen im Zuschneide-Werkzeug das GANZE Bild und sonst nur den
+                ' Rezept-Dokumente zeigen im Zuschneide-Werkzeug das GANZE Bild und sonst nur den
                 ' Ausschnitt - beim Betreten wie beim Verlassen wechselt also die Anzeigegroesse.
                 If (value = EditorTool.Crop) <> (previousTool = EditorTool.Crop) Then
-                    NotifyLiveCropDisplayChanged()
+                    NotifyCropDisplayChanged()
                     ' Beim VERLASSEN wechselt die Anzeige vom ganzen Bild auf den Ausschnitt, also auf
                     ' eine andere Groesse. Ohne dieses Signal behielt die Ansicht den Zoom des ganzen
                     ' Bildes bei, und der Ausschnitt blieb klein stehen. Der Zoom-MODUS entscheidet
@@ -3829,6 +3826,10 @@ Namespace ViewModels
                 ' Ins Zuschneiden: das Bild einpassen, sonst zieht man an Anfassern, die neben der
                 ' Flaeche liegen. Gilt fuer JEDEN Dateityp.
                 If value = EditorTool.Crop AndAlso previousTool <> EditorTool.Crop Then
+                    ' Wo das ganze Bild zu sehen ist, legt sich der Rahmen auf den bereits
+                    ' bestaetigten Ausschnitt. Sonst stuende er um das ganze Bild, und ein
+                    ' vorhandener Zuschnitt saehe aus, als waere er weg.
+                    If ShowsFullImageWhileCropping Then SyncCropFrameToApplied()
                     RaiseEvent FitToViewportRequested(Me, EventArgs.Empty)
                 End If
                 ' Erst NACH allen ausgelösten Vorschau- und Zustandswechseln melden: die
@@ -10812,19 +10813,6 @@ Namespace ViewModels
         ' weil das Weggeschnittene gar nicht mehr auf dem Schirm ist), in JEDEM ANDEREN Werkzeug
         ' zeigt die Vorschau nur noch den Ausschnitt.
 
-        ''' <summary>True = der Zuschnitt wirkt sofort und bleibt aenderbar.
-        ''' False = der Zuschnitt wird erst mit "Zuschneiden anwenden" uebernommen.
-        '''
-        ''' Gilt fuer alle Dokumente, die ihr REZEPT neben dem unbeschnittenen Ursprungsbild
-        ''' aufbewahren: RAW und PSD ueber die .fpxmp-Begleitdatei, .fpx ueber das Buendel selbst
-        ''' (Basisbild + Rezept in EINER Datei). In allen drei Faellen ist der Ausschnitt eine Zahl
-        ''' im Rezept, kein Schnitt in Pixeln - er laesst sich beliebig oft wieder aufziehen.</summary>
-        Public ReadOnly Property UsesLiveCrop As Boolean
-            Get
-                Return IsCurrentImageSidecarFormat OrElse IsCurrentDocumentFpx
-            End Get
-        End Property
-
         ''' <summary>Ein .fpx-Buendel ist offen - entweder frisch geladen (_currentFpxPath) oder als
         ''' Datei mit dieser Endung.</summary>
         Public ReadOnly Property IsCurrentDocumentFpx As Boolean
@@ -10833,40 +10821,81 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Der Knopf "Zuschneiden anwenden" - nur dort, wo es etwas zu bestaetigen gibt.</summary>
-        Public ReadOnly Property ShowApplyCropButton As Boolean
+        ''' <summary>True = im Zuschneide-Werkzeug ist das GANZE Bild zu sehen, der Rahmen liegt
+        ''' darauf und laesst sich jederzeit wieder aufziehen.
+        '''
+        ''' Gilt fuer Dokumente, die ihr Rezept neben dem unbeschnittenen Ursprungsbild aufbewahren:
+        ''' RAW und PSD ueber die .fpxmp-Begleitdatei, .fpx ueber das Buendel selbst. Dort ist der
+        ''' Ausschnitt eine Zahl im Rezept und kein Schnitt in Pixeln - das ganze Bild ist immer noch
+        ''' da, also wird es im Werkzeug auch gezeigt.
+        '''
+        ''' Bei schreibbaren Formaten zeigt das Werkzeug dagegen den bereits bestaetigten Ausschnitt;
+        ''' der Rahmen schneidet von dort aus weiter.</summary>
+        Public ReadOnly Property ShowsFullImageWhileCropping As Boolean
             Get
-                Return Not UsesLiveCrop
+                Return IsCurrentImageSidecarFormat OrElse IsCurrentDocumentFpx
             End Get
         End Property
 
-        ''' <summary>Der Zuschnitt, mit dem gerechnet werden soll.
+        ''' <summary>Der Zuschnitt, mit dem gerechnet wird - IMMER nur der BESTAETIGTE.
         '''
-        ''' <paramref name="fuerAnzeige"/> True = was der Nutzer JETZT sehen soll. Nur dann wird im
-        ''' Zuschneide-Werkzeug eines Sidecar-Bildes auf null zurueckgegangen (ganzes Bild sichtbar);
+        ''' Ein aufgezogener Rahmen ist eine Absichtserklaerung, kein Schnitt: er wirkt erst mit
+        ''' "Zuschneiden anwenden" bzw. der Eingabetaste. Frueher galt fuer RAW/PSD/.fpx die
+        ''' Ausnahme, dass der Rahmen selbst schon der Ausschnitt war - wer ihn dort nur anfasste und
+        ''' das Werkzeug verliess, hatte das Bild beschnitten, ohne es je bestaetigt zu haben.
+        '''
+        ''' <paramref name="fuerAnzeige"/> True = was der Nutzer JETZT sehen soll. Nur dann faellt im
+        ''' Zuschneide-Werkzeug eines Rezept-Dokuments der Ausschnitt weg (ganzes Bild sichtbar);
         ''' fuer das Speichern und fuer die Maskengeometrie gilt immer der echte Ausschnitt.</summary>
         Private Function EffectiveCrop(fuerAnzeige As Boolean) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
-            If Not UsesLiveCrop Then
-                Return (_appliedCropLeft, _appliedCropTop, _appliedCropRight, _appliedCropBottom)
+            If fuerAnzeige AndAlso _currentTool = EditorTool.Crop AndAlso ShowsFullImageWhileCropping Then
+                Return (0.0, 0.0, 0.0, 0.0)
             End If
-            If fuerAnzeige AndAlso _currentTool = EditorTool.Crop Then Return (0.0, 0.0, 0.0, 0.0)
-            Return (_cropLeft, _cropTop, _cropRight, _cropBottom)
+            Return (_appliedCropLeft, _appliedCropTop, _appliedCropRight, _appliedCropBottom)
         End Function
 
-        ''' <summary>Beim Betreten und Verlassen des Zuschneide-Werkzeugs aendert sich bei einem
-        ''' Sidecar-Bild die ANGEZEIGTE Bildgroesse (ganzes Bild gegen Ausschnitt). Vorschau und
+        ''' <summary>Beim Betreten und Verlassen des Zuschneide-Werkzeugs wechselt bei einem
+        ''' Rezept-Dokument die ANGEZEIGTE Bildgroesse (ganzes Bild gegen Ausschnitt). Vorschau und
         ''' Zoom muessen das mitbekommen, sonst bliebe ein Bild in der alten Groesse stehen.</summary>
-        Private Sub NotifyLiveCropDisplayChanged()
-            If Not UsesLiveCrop Then Return
-            If Math.Abs(_cropLeft) < 0.0001 AndAlso Math.Abs(_cropTop) < 0.0001 AndAlso
-               Math.Abs(_cropRight) < 0.0001 AndAlso Math.Abs(_cropBottom) < 0.0001 Then Return
+        Private Sub NotifyCropDisplayChanged()
+            If Not ShowsFullImageWhileCropping Then Return
+            If Math.Abs(_appliedCropLeft) < 0.0001 AndAlso Math.Abs(_appliedCropTop) < 0.0001 AndAlso
+               Math.Abs(_appliedCropRight) < 0.0001 AndAlso Math.Abs(_appliedCropBottom) < 0.0001 Then Return
             RaiseDisplayImageGeometryProperties()
             SchedulePreviewUpdate(markDirty:=False)
             RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
         End Sub
 
+        ''' <summary>Der Rahmen uebernimmt den bestaetigten Ausschnitt. Beim Betreten des Werkzeugs
+        ''' liegt er damit genau auf dem, was schon zugeschnitten ist (statt auf dem ganzen Bild),
+        ''' beim Verlassen nimmt er jede unbestaetigte Aenderung zurueck.
+        '''
+        ''' Ohne Klemmen: beide Seiten messen hier am ganzen Bild, es gibt nichts zu begrenzen.</summary>
+        Private Sub SyncCropFrameToApplied()
+            _cropLeft = _appliedCropLeft
+            _cropTop = _appliedCropTop
+            _cropRight = _appliedCropRight
+            _cropBottom = _appliedCropBottom
+            Me.RaisePropertyChanged(NameOf(CropLeft))
+            Me.RaisePropertyChanged(NameOf(CropTop))
+            Me.RaisePropertyChanged(NameOf(CropRight))
+            Me.RaisePropertyChanged(NameOf(CropBottom))
+            AfterCropChanged()
+            RaiseResetButtonStateChanged()
+        End Sub
+
+        ''' <summary>Es gibt etwas zu bestaetigen: der Rahmen weicht vom bestaetigten Ausschnitt ab.
+        ''' Wo das ganze Bild zu sehen ist, liegen beide im selben Massstab und werden verglichen;
+        ''' sonst ist der Rahmen ein ZUSAETZLICHER Schnitt im bereits beschnittenen Bild, und jeder
+        ''' Wert ueber null ist eine Aenderung.</summary>
         Public ReadOnly Property HasCropChanges As Boolean
             Get
+                If ShowsFullImageWhileCropping Then
+                    Return Math.Abs(_cropLeft - _appliedCropLeft) > 0.0001 OrElse
+                           Math.Abs(_cropTop - _appliedCropTop) > 0.0001 OrElse
+                           Math.Abs(_cropRight - _appliedCropRight) > 0.0001 OrElse
+                           Math.Abs(_cropBottom - _appliedCropBottom) > 0.0001
+                End If
                 Return _cropLeft > 0.0001 OrElse _cropTop > 0.0001 OrElse
                        _cropRight > 0.0001 OrElse _cropBottom > 0.0001
             End Get
@@ -12273,11 +12302,9 @@ Namespace ViewModels
             CleanupCurrentNewDocTempDir()
             CleanupCurrentSelectionAssetTempDir()
             _currentFpxPath = newFpxPath
-            ' Der CurrentImagePath-Setter meldet die Zuschneide-Art mit, sieht _currentFpxPath aber
+            ' Der CurrentImagePath-Setter meldet die Dokumentart mit, sieht _currentFpxPath aber
             ' noch nicht (das steht erst hier). Beim .fpx-Laden also nachmelden.
             Me.RaisePropertyChanged(NameOf(IsCurrentDocumentFpx))
-            Me.RaisePropertyChanged(NameOf(UsesLiveCrop))
-            Me.RaisePropertyChanged(NameOf(ShowApplyCropButton))
             _renderSourcePathOverride = newRenderSourcePathOverride
             _currentFpxTempDir = newFpxTempDir
             _forceSaveAsOnly = newForceSaveAsOnly
@@ -14007,27 +14034,34 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>
-        ''' Bäckt den offenen Beschnitt in den angewendeten hinein. Weil _appliedCrop* am Original
-        ''' gemessen wird, _crop* aber am angezeigten (bereits beschnittenen) Bild, werden die neuen
-        ''' Kanten in den verbleibenden Ausschnitt hineingerechnet - erst dadurch lässt sich mehrfach
-        ''' hintereinander zuschneiden. Danach ist der offene Beschnitt leer: das Auswahlrechteck legt
-        ''' sich wieder um das ganze (neue) Bild, statt im alten Maßstab stehen zu bleiben.
-        ''' Addiert werden ganze Pixel des Originals: angewendeter und offener Beschnitt liegen im
-        ''' selben Raster (kein Neuabtasten dazwischen), also darf hier nichts runden. Nur das Ergebnis
-        ''' geht wieder als Prozent in die Adjustments.
+        ''' Übernimmt den Rahmen als bestätigten Beschnitt - der EINZIGE Weg, auf dem ein Zuschnitt
+        ''' wirksam wird (Knopf oder Eingabetaste).
+        '''
+        ''' Wie gerechnet wird, hängt daran, worauf der Rahmen liegt:
+        ''' - Ganzes Bild sichtbar (RAW/PSD/.fpx): Rahmen und bestätigter Ausschnitt messen beide am
+        '''   Original, der Rahmen ERSETZT ihn also. Nur so lässt sich ein Zuschnitt dort auch wieder
+        '''   aufziehen.
+        ''' - Sonst: _appliedCrop* misst am Original, _crop* am angezeigten (bereits beschnittenen)
+        '''   Bild - die neuen Kanten werden in den verbleibenden Ausschnitt HINEINgerechnet, erst
+        '''   dadurch lässt sich mehrfach hintereinander zuschneiden. Danach ist der Rahmen leer und
+        '''   legt sich wieder um das ganze (neue) Bild, statt im alten Maßstab stehen zu bleiben.
+        ''' Gerechnet wird in ganzen Pixeln des Originals: beide liegen im selben Raster (kein
+        ''' Neuabtasten dazwischen), also darf hier nichts runden. Nur das Ergebnis geht wieder als
+        ''' Prozent in die Adjustments.
         ''' </summary>
         Private Async Function ApplyCropAsync() As Task
             If Not HasCropChanges Then Return
             PushUndo()
             ClearActiveSelectionForGeometry()
 
+            Dim replacesAppliedCrop = ShowsFullImageWhileCropping
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
             If baseWidth > 0 AndAlso baseHeight > 0 Then
-                Dim leftPx = PercentToPixels(_appliedCropLeft, baseWidth) + CropLeftPixels
-                Dim rightPx = PercentToPixels(_appliedCropRight, baseWidth) + CropRightPixels
-                Dim topPx = PercentToPixels(_appliedCropTop, baseHeight) + CropTopPixels
-                Dim bottomPx = PercentToPixels(_appliedCropBottom, baseHeight) + CropBottomPixels
+                Dim leftPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropLeft, baseWidth)) + CropLeftPixels
+                Dim rightPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropRight, baseWidth)) + CropRightPixels
+                Dim topPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropTop, baseHeight)) + CropTopPixels
+                Dim bottomPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropBottom, baseHeight)) + CropBottomPixels
 
                 ' Ein Pixel muss stehen bleiben, sonst hätte das Ergebnis keine Fläche mehr.
                 rightPx = Math.Min(rightPx, Math.Max(0, baseWidth - 1 - leftPx))
@@ -14039,10 +14073,20 @@ Namespace ViewModels
                 _appliedCropBottom = PixelsToPercent(bottomPx, baseHeight)
             End If
 
-            _cropLeft = 0
-            _cropTop = 0
-            _cropRight = 0
-            _cropBottom = 0
+            ' Wo das ganze Bild zu sehen bleibt, bleibt auch der Rahmen liegen - er zeigt jetzt genau
+            ' den bestaetigten Ausschnitt. Ihn dort auf null zu setzen hiesse, den eben bestaetigten
+            ' Zuschnitt sofort wieder aufzuziehen.
+            If replacesAppliedCrop Then
+                _cropLeft = _appliedCropLeft
+                _cropTop = _appliedCropTop
+                _cropRight = _appliedCropRight
+                _cropBottom = _appliedCropBottom
+            Else
+                _cropLeft = 0
+                _cropTop = 0
+                _cropRight = 0
+                _cropBottom = 0
+            End If
             Me.RaisePropertyChanged(NameOf(CropLeft))
             Me.RaisePropertyChanged(NameOf(CropTop))
             Me.RaisePropertyChanged(NameOf(CropRight))
@@ -14504,12 +14548,33 @@ Namespace ViewModels
                     ' dekodieren, der Wechsel endete in einem leeren Editor.
                     ' Deshalb bleibt nach „Speichern unter → PDF" das aktuelle Bild geöffnet.
                     Dim savedAsPdf = saveAsResult IsNot Nothing AndAlso saveAsResult.IsPdf
-                    If saveAs AndAlso Not savedAsPdf AndAlso Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                    ' EIN SPEICHERN, DAS DIE REGLER IN DIE PIXEL SCHREIBT, MACHT DIE ZIELDATEI ZUM
+                    ' NEUEN AUSGANGSPUNKT - und der Editor muss das mitmachen. Vorher blieben die
+                    ' Werte danach einfach stehen, waehrend die Renderquelle schon die geschriebene
+                    ' Datei war: ein zweites "Speichern" legte denselben Zuschnitt ein zweites Mal
+                    ' darauf und schnitt das Bild noch einmal um denselben Anteil kleiner. Sichtbar
+                    ' wurde es erst spaeter, weil die Anzeige bis dahin unveraendert stehen blieb.
+                    ' Es traf jeden gebackenen Wert gleichermassen (Drehen, Groesse, Objekte), nur
+                    ' beim Zuschnitt faellt es sofort auf.
+                    ' Kein Neuoeffnen bei .fpx (das Rezept liegt im Buendel, das Basisbild bleibt
+                    ' unangetastet - dort ist ein zweites Speichern folgenlos).
+                    Dim savedPixelsIntoFile = Not savedAsPdf AndAlso Not isFpxSave
+                    Dim targetIsOtherFile = Not String.Equals(targetPath, _currentImagePath, StringComparison.OrdinalIgnoreCase)
+                    If Not savedAsPdf AndAlso (savedPixelsIntoFile OrElse targetIsOtherFile) Then
                         ' nach „Speichern unter" arbeitet der Editor auf der
                         ' GESPEICHERTEN Datei weiter (.fpx bzw. exportiertes Bild), nicht mehr auf dem
                         ' Ursprungsbild. _hasChanges ist False, der Wechsel fragt also nicht nach.
                         Dim statusAfterSave = StatusText
-                        Await OpenImageAsync(targetPath)
+                        If targetIsOtherFile Then
+                            Await OpenImageAsync(targetPath)
+                        Else
+                            ' Derselbe Pfad: die Filmstreifen-Liste muss erhalten bleiben. Ohne sie
+                            ' faellt eine Such- oder Auswahlliste auf den blossen Ordnerinhalt zurueck,
+                            ' und der Nutzer haette nach einem Strg+S eine andere Nachbarschaft.
+                            Dim filmstripPaths = If(_folderPaths IsNot Nothing AndAlso _folderPaths.Count > 0,
+                                                    New List(Of String)(_folderPaths), Nothing)
+                            Await OpenImageAsync(targetPath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+                        End If
                         StatusText = statusAfterSave
                     Else
                         ClearPreviewSource()
@@ -14997,13 +15062,19 @@ Namespace ViewModels
             Dim reverted = False
             Select Case previousTool
                 Case EditorTool.Crop
-                    ' NUR wo es ein "Bestätigen" gibt. Bei RAW/PSD/.fpx IST der offene Beschnitt der
-                    ' Beschnitt (UsesLiveCrop) - ihn beim Werkzeugwechsel zu verwerfen hiesse, ihn
-                    ' genau in dem Moment wegzuwerfen, in dem er sichtbar werden soll.
-                    If HasCropChanges AndAlso Not UsesLiveCrop Then
-                        ' Nicht bestätigter Beschnitt wird verworfen: der offene Beschnitt geht auf Null
-                        ' zurück, der bereits angewendete bleibt unangetastet.
-                        SetCropValues(0, 0, 0, 0)
+                    ' OHNE AUSNAHME, auch bei RAW/PSD/.fpx: wer den Rahmen nur angefasst und nicht
+                    ' bestaetigt hat, will nicht beschnitten werden. Dort galt der Rahmen frueher
+                    ' selbst als Ausschnitt - ein Werkzeugwechsel schnitt das Bild, ohne dass es je
+                    ' jemand bestaetigt hatte.
+                    If HasCropChanges Then
+                        ' Nicht bestaetigter Beschnitt wird verworfen: der Rahmen geht auf den
+                        ' bestaetigten Stand zurueck, der bleibt unangetastet. Wo das ganze Bild zu
+                        ' sehen war, ist das der bestaetigte Ausschnitt selbst, sonst die Null.
+                        If ShowsFullImageWhileCropping Then
+                            SyncCropFrameToApplied()
+                        Else
+                            SetCropValues(0, 0, 0, 0)
+                        End If
                         reverted = True
                         verworfen.Add(LocalizationService.T("Zuschnitt"))
                     End If
@@ -15333,30 +15404,25 @@ Namespace ViewModels
             _appliedStraightenExpandCanvas = adj.StraightenExpandCanvas
             _appliedFlipH = adj.FlipHorizontal
             _appliedFlipV = adj.FlipVertical
-            ' WOHIN der geladene Beschnitt gehoert, haengt an der Dokumentart:
-            ' - schreibbare Formate: er ist bereits angewendet, der offene Beschnitt startet leer,
-            '   sonst laege das Auswahlrechteck sofort wieder im Massstab des Originals.
-            ' - RAW/PSD/.fpx (UsesLiveCrop): es GIBT keinen angewendeten Stand, der Wert ist der
-            '   lebende Ausschnitt. Landete er in _appliedCrop*, waere ein gespeicherter Zuschnitt
-            '   nach dem Laden unsichtbar und beim naechsten Speichern verloren.
-            If UsesLiveCrop Then
-                _cropLeft = adj.CropLeftPercent
-                _cropTop = adj.CropTopPercent
-                _cropRight = adj.CropRightPercent
-                _cropBottom = adj.CropBottomPercent
-                _appliedCropLeft = 0
-                _appliedCropTop = 0
-                _appliedCropRight = 0
-                _appliedCropBottom = 0
+            ' Ein geladener Beschnitt ist IMMER ein bestaetigter - er stand ja schon im Rezept. Der
+            ' Rahmen startet leer; wo das ganze Bild sichtbar bleibt, legt ihn das Betreten des
+            ' Werkzeugs auf den bestaetigten Ausschnitt (SyncCropFrameToApplied).
+            _appliedCropLeft = adj.CropLeftPercent
+            _appliedCropTop = adj.CropTopPercent
+            _appliedCropRight = adj.CropRightPercent
+            _appliedCropBottom = adj.CropBottomPercent
+            If _currentTool = EditorTool.Crop AndAlso ShowsFullImageWhileCropping Then
+                ' Rueckgaengig, Vorgabe, Rezeptwechsel BEI OFFENEM Werkzeug: der Rahmen muss dem
+                ' neuen Stand folgen, sonst zeigte er den vorigen Ausschnitt als "unbestaetigt".
+                _cropLeft = _appliedCropLeft
+                _cropTop = _appliedCropTop
+                _cropRight = _appliedCropRight
+                _cropBottom = _appliedCropBottom
             Else
                 _cropLeft = 0
                 _cropTop = 0
                 _cropRight = 0
                 _cropBottom = 0
-                _appliedCropLeft = adj.CropLeftPercent
-                _appliedCropTop = adj.CropTopPercent
-                _appliedCropRight = adj.CropRightPercent
-                _appliedCropBottom = adj.CropBottomPercent
             End If
             _resizeWidth = adj.ResizeWidth
             _resizeHeight = adj.ResizeHeight
@@ -16079,14 +16145,9 @@ Namespace ViewModels
                 SyncResizeHeightFromWidth()
             End If
             RaiseCropPropertiesChanged()
-            ' Ohne "Anwenden"-Knopf ist die Reglerbewegung selbst die Aenderung - sie muss das
-            ' Dokument als ungespeichert markieren, sonst ginge der Ausschnitt beim Verlassen
-            ' kommentarlos verloren.
-            If UsesLiveCrop Then
-                _hasChanges = True
-                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
-                RaiseResetButtonStateChanged()
-            End If
+            ' Der Rahmen allein macht das Dokument NICHT ungespeichert: er ist erst eine Absicht.
+            ' Zur Aenderung wird er mit dem Bestaetigen (ApplyCropAsync).
+            Me.RaisePropertyChanged(NameOf(HasCropChanges))
         End Sub
 
         Private Sub RaiseCropPropertiesChanged()
@@ -16242,7 +16303,8 @@ Namespace ViewModels
             Get
                 Dim width = GetBaseWidth()
                 If width <= 0 Then Return 0
-                Return Math.Max(1, width - PercentToPixels(_appliedCropLeft, width) - PercentToPixels(_appliedCropRight, width))
+                Dim crop = EffectiveCrop(fuerAnzeige:=True)
+                Return Math.Max(1, width - PercentToPixels(crop.Left, width) - PercentToPixels(crop.Right, width))
             End Get
         End Property
 
@@ -16250,7 +16312,8 @@ Namespace ViewModels
             Get
                 Dim height = GetBaseHeight()
                 If height <= 0 Then Return 0
-                Return Math.Max(1, height - PercentToPixels(_appliedCropTop, height) - PercentToPixels(_appliedCropBottom, height))
+                Dim crop = EffectiveCrop(fuerAnzeige:=True)
+                Return Math.Max(1, height - PercentToPixels(crop.Top, height) - PercentToPixels(crop.Bottom, height))
             End Get
         End Property
 
@@ -18891,13 +18954,18 @@ Namespace ViewModels
         End Sub
 
         Public Sub ClearPendingCrop(Optional captureUndo As Boolean = True)
-            ' Nur im Zuschneide-Werkzeug gibt es einen schwebenden Rahmen zum Verwerfen. Bei
-            ' Live-Zuschnitt (RAW/FPX) sind die Crop-Felder ausserhalb des Werkzeugs das stehende
-            ' Rezept - ein Reglerklick oder eine neue Auswahl darf den Zuschnitt nicht loeschen.
+            ' Nur im Zuschneide-Werkzeug gibt es einen schwebenden Rahmen zum Verwerfen.
             If Not ShowCropAdjustments Then Return
             If Not HasCropChanges Then Return
             If captureUndo Then PushUndo()
-            SetCropPercentages(0, 0, 0, 0)
+            ' Zurueck auf den BESTAETIGTEN Stand, nicht auf null: wo das ganze Bild zu sehen ist,
+            ' liegt der Rahmen auf dem bestaetigten Ausschnitt, und ein Klick neben das Bild soll ihn
+            ' nicht aufziehen.
+            If ShowsFullImageWhileCropping Then
+                SyncCropFrameToApplied()
+            Else
+                SetCropPercentages(0, 0, 0, 0)
+            End If
         End Sub
 
         ''' captureUndo=True markiert den Beginn eines Zuges (Mausklick), False die Zwischenpunkte

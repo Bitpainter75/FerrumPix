@@ -1621,8 +1621,8 @@
   <data name="Ansicht_5c388792" xml:space="preserve">
     <value>Exibir</value>
   </data>
-  <data name="Ausschnitt_auf_die_Vorschau_anwenden_8e64a5a3" xml:space="preserve">
-    <value>Aplicar o corte à pré-visualização</value>
+  <data name="Ausschnitt_anwenden_Eingabetaste_fb55b886" xml:space="preserve">
+    <value>Aplicar o corte (Enter)</value>
   </data>
   <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>Padrão de arquivo ou etiquetas</value>
