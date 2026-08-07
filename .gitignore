@@ -10,8 +10,5 @@
 /Audits/
 /Media/
 
-# Interne Planungsunterlagen, nicht Teil der Veröffentlichung
 /CHANGELOG.md
-
-# Editor-Benutzerdateien gehoeren nicht ins Repo
 *.DotSettings.user

@@ -248,10 +248,19 @@ Namespace Services
         ''' dem Komma ab, und der Initialisierer laesst sich nicht mehr uebersetzen.
         '''
         ''' WOHER EINE DATEI STAMMT, steht NICHT hier. <c>Herkunft</c> ist die Adresse, von der wir
-        ''' sie holen, und das ist unser eigenes Modell-Repo - nicht die Urquelle. Die vollstaendige
-        ''' Kette je Datei (Originalprojekt, Gewichte, ONNX-Export, Pruefsumme, Modellvertrag) liegt
-        ''' dort in <c>licenses/NOTICE-*.txt</c>. Wer hier nach der Urquelle sucht, sucht am
-        ''' falschen Ort - genau das ist einmal passiert.</summary>
+        ''' sie holen, und das ist bei allen bis auf eine unser eigenes Modell-Repo - nicht die
+        ''' Urquelle. Die vollstaendige Kette je Datei (Originalprojekt, Gewichte, ONNX-Export,
+        ''' Pruefsumme, Modellvertrag) liegt dort in <c>licenses/NOTICE-*.txt</c>. Wer hier nach der
+        ''' Urquelle sucht, sucht am falschen Ort - genau das ist einmal passiert.
+        '''
+        ''' DIE EINE AUSNAHME IST ARCFACE, und zwar aus Lizenzgruenden. Der ONNX Model Zoo stellt
+        ''' die Datei unter die Apache-2.0 seines Repos; die Gewichte stammen aber von InsightFace,
+        ''' und dort sind die vortrainierten Modelle ausdruecklich auf nicht-kommerzielle Forschung
+        ''' beschraenkt. Fuer eine GPL-3-Anwendung, die jedem Empfaenger auch die kommerzielle
+        ''' Nutzung zusichert, ist das ein Widerspruch. Sein <c>Herkunft</c> zeigt deshalb auf den
+        ''' Herausgeber selbst: der Anwender holt die Datei dort, statt dass WIR sie weitergeben.
+        ''' Am 2026-08-08 geprueft, die Datei dort ist mit unserer bit fuer bit gleich. Warum ein
+        ''' Modellwechsel das NICHT loest, steht in Audits/PERSONEN_UND_ORTE.md, Abschnitt 3a.</summary>
         Public Shared ReadOnly Property KnownEntries As IReadOnlyList(Of ModelEntry) =
             New List(Of ModelEntry) From {
                 New ModelEntry With {.Key = "mobilesam-encoder",
@@ -305,6 +314,7 @@ Namespace Services
                 New ModelEntry With {.Key = "arcface",
                                         .FileName = "arcface-r100-v1.onnx", .Group = "Personen",
                                         .Purpose = "Gesichter vergleichen", .Bytes = 261036388,
+                                        .Herkunft = "https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8/resolve/main/arcfaceresnet100-8.onnx",
                                         .Sha256 = "f3a6bc281e72f88862f5748b53be3d76b3b48f8f1ab1f4a537941bdc4e1b01da"},
                 New ModelEntry With {.Key = "orte",
                                         .FileName = "orte-v1.sqlite", .Group = "Orte",
