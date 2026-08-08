@@ -646,7 +646,7 @@ Namespace Views
         ''' ist der Klick primär AUSWAHL, verschoben wird erst, wenn der Druck in einem BEREITS
         ''' markierten Objekt beginnt. Sonst würde jedes Antippen eines
         ''' Objekts es sofort mitziehen, und eine Mehrfachauswahl liesse sich kaum aufbauen.
-        ''' In den Objekt-Werkzeugen (Text/Einfügen) bleibt es bei „Auswählen und Ziehen in EINER
+        ''' In den Objekt-Werkzeugen (Text/Einfügen) bleibt es bei "Auswählen und Ziehen in EINER
         ''' Geste" - dort war genau das ausdrücklich gewünscht.</summary>
         Private Shared Function StartsMoveDragOnSelectPress(vm As EditorViewModel, wasAlreadySelected As Boolean) As Boolean
             If vm Is Nothing Then Return False
@@ -3660,7 +3660,7 @@ Namespace Views
             ' die Ameisen. Es fehlt aber regelmaessig mit Absicht: beim ersten Reglerdreh wird es
             ' ausgeblendet, weil es sonst verdeckt, was man beurteilt. Genau dann sah man bei einer
             ' Maske ploetzlich Ameisen - die es bei einer Maske nie geben darf.
-            Dim isMask = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
+            Dim isMask = vm IsNot Nothing AndAlso EditorViewModel.IsSelectionScopeTool(vm.CurrentTool) AndAlso
                            (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask OrElse vm.IsMaskGrayscaleView)
             If isMask Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
@@ -3673,7 +3673,7 @@ Namespace Views
                 End If
                 Return
             End If
-            If vm Is Nothing OrElse Not IsSelectionScopeTool(vm.CurrentTool) OrElse Not vm.HasActiveSelection Then
+            If vm Is Nothing OrElse Not EditorViewModel.IsSelectionScopeTool(vm.CurrentTool) OrElse Not vm.HasActiveSelection Then
                 HideCurrentSelectionOverlay()
                 Return
             End If
@@ -4059,15 +4059,6 @@ Namespace Views
             overlay.InvalidateVisual()
         End Sub
 
-        ''' <summary>Werkzeuge, in denen das Auswahl-Overlay (nur als Anzeige, nicht interaktiv) sichtbar
-        ''' bleiben soll. Die Liste steht im ViewModel und NICHT hier: sie entscheidet dort auch, ob
-        ''' „Alles auswählen" das Werkzeug wechseln muss. Zweimal geführt liefe sie auseinander, und
-        ''' der Fehler säße im Übergang - Ameisenlinie sichtbar, aber Strg+A ohne Wirkung oder
-        ''' umgekehrt.</summary>
-        Private Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
-            Return EditorViewModel.IsSelectionScopeTool(tool)
-        End Function
-
         Private Sub UpdateSelectionOverlayVisibility()
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionOverlay")
             Dim maskOverlay = Me.FindControl(Of Image)("SelectionMaskOverlay")
@@ -4079,9 +4070,9 @@ Namespace Views
             ' Werkzeugwechsel - also genau dann, wenn "Ebenenmaske bearbeiten" ins Masken-Werkzeug
             ' springt. Er schaltete dort das rote Bild aus und die Ameisen ein, und ob es wieder
             ' auftauchte, hing daran, ob gleich danach noch ein Layout-Durchlauf kam.
-            Dim isMask = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
+            Dim isMask = vm IsNot Nothing AndAlso EditorViewModel.IsSelectionScopeTool(vm.CurrentTool) AndAlso
                          (vm.ActiveSelectionIsMask OrElse vm.HasSelectedGradientMask OrElse vm.IsMaskGrayscaleView)
-            Dim showSelection = vm IsNot Nothing AndAlso IsSelectionScopeTool(vm.CurrentTool) AndAlso
+            Dim showSelection = vm IsNot Nothing AndAlso EditorViewModel.IsSelectionScopeTool(vm.CurrentTool) AndAlso
                                 (vm.HasActiveSelection OrElse vm.HasSelectedGradientMask)
             If isMask Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
@@ -6156,7 +6147,7 @@ Namespace Views
                             ' Erst abwaehlen, dann - beim naechsten Esc - verlassen. Vorher fragte
                             ' Esc bei einer frisch gezogenen Maske sofort nach dem Speichern.
                             vm.DeselectCurrentTarget()
-                        ElseIf IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection Then
+                        ElseIf EditorViewModel.IsSelectionScopeTool(vm.CurrentTool) AndAlso vm.HasActiveSelection Then
                             vm.ClearSelection()
                         Else
                             vm.BackToViewerCommand.Execute(Nothing)

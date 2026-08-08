@@ -8423,7 +8423,7 @@ Namespace ViewModels
 
         ''' <summary>Werkzeuge, in denen eine Auswahl etwas bewirkt und ihre Ameisenlinie zu sehen
         ''' ist. DIE EINE Liste dafür: die Ansicht entscheidet an ihr, ob sie das Auswahl-Overlay
-        ''' zeigt, das ViewModel, ob „Alles auswählen" vorher das Werkzeug wechseln muss. Zweimal
+        ''' zeigt, das ViewModel, ob "Alles auswählen" vorher das Werkzeug wechseln muss. Zweimal
         ''' geführt liefe sie auseinander, und der Fehler säße im Übergang.
         '''
         ''' ZEICHNEN gehört dazu, seit ein Strich innerhalb einer Auswahl bleibt: die Laufameisen
@@ -17641,9 +17641,9 @@ Namespace ViewModels
             ' der Zeile einer anderen Gruppe abgelegt werden und haengt sich dann dort hinein. Nur
             ' IN SICH SELBST geht nicht - das ergaebe einen Ring, und der Renderer liefe im Kreis.
             If dragged.IsGroupHeader AndAlso dragged.Group IsNot Nothing Then
-                Dim zielGruppe = If(targetRow.IsGroupHeader, targetRow.Group?.Id,
-                                    If(targetRow.MemberOfGroup?.Id, ""))
-                If IsGroupInside(zielGruppe, dragged.Group.Id) Then Return False
+                Dim targetGroupId = If(targetRow.IsGroupHeader, targetRow.Group?.Id,
+                                       If(targetRow.MemberOfGroup?.Id, ""))
+                If IsGroupInside(targetGroupId, dragged.Group.Id) Then Return False
             End If
             ' Eine KORREKTUREBENE darf in den Objektstapel gezogen werden - dort wirkt sie auf alles
             ' unter ihr. Umgekehrt bleibt ein Objekt ein Objekt: es in den Korrekturblock zu ziehen

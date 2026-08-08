@@ -65,7 +65,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **With a model file installed** (see below), four more things become available: clicking an object to select it, selecting by distance from the camera, removing something so the background is continued through the gap (on the photo or inside a marked layer), and denoising a photo with a model.
 
-**Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants. A selection keeps them inside it, and with a picture layer selected they work on that layer instead of on the photo. An empty layer to paint on is one click away in the layers panel, its transparent pixels can be locked so strokes stay inside what is already there, and Ctrl-clicking a layer thumbnail loads its shape as a selection.
+**Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants. A selection keeps them inside it, and with a picture layer selected they work on that layer instead of on the photo. An empty layer to paint on is one click away in the layers panel, its transparent pixels can be locked so strokes stay inside what is already there, and CTRL-clicking a layer thumbnail loads its shape as a selection.
 
 **Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups.
 
@@ -73,7 +73,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw.
 
-**Saving.** Save as JPEG, PNG, WEBP, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `Ctrl+P` prints what you see, edits included.
+**Saving.** Save as JPEG, PNG, WEBP, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `CTRL+P` prints what you see, edits included.
 
 ### RAW and other formats
 
