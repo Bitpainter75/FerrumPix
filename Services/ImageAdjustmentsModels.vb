@@ -442,9 +442,14 @@ Namespace Services
         Public Property HasActiveSelection As Boolean = False
 
         ''' <summary>Art der aktiven Auswahl: True = MASKE (rotes Overlay), False = AUSWAHL
-        ''' (Laufameisen). Gehoert in den gespeicherten Zustand, weil das Wiederherstellen sie sonst
+        ''' (Laufameisen). Gehoert in den Rueckgaengig-Zustand, weil das Wiederherstellen sie sonst
         ''' raten muesste - und pauschal auf "Auswahl" zurueckfiel. Nach einem Rueckgaengig zeigte
-        ''' eine Maske dann Laufameisen statt des roten Overlays.</summary>
+        ''' eine Maske dann Laufameisen statt des roten Overlays.
+        '''
+        ''' In ein DOKUMENT gehoert sie so wenig wie HasActiveSelection: beim Oeffnen holte sie ein
+        ''' rotes Overlay herauf, das zu keiner markierten Ebene mehr gehoerte (siehe
+        ''' FpxService.StripTransientSelectionState). Sie ist deshalb auch keine Pixel-Anpassung und
+        ''' reist weder mit einer Vorlage noch mit einem Objekt mit.</summary>
         Public Property ActiveSelectionIsMask As Boolean = False
         Public Property SelectionXPercent As Double = 0
         Public Property SelectionYPercent As Double = 0
@@ -525,7 +530,8 @@ Namespace Services
             "UpscaleModel",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
             "RetouchSpots", "Annotations", "AnnotationGroups", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
-            "SelectionScopeEnabled", "HasActiveSelection", "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
+            "SelectionScopeEnabled", "HasActiveSelection", "ActiveSelectionIsMask",
+            "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
             "SelectionMaskPngBase64", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"

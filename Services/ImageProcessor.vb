@@ -2201,6 +2201,37 @@ Namespace Services
         ''' <summary>Der Kern der Korrekturebenen. <paramref name="owned"/> wandert wie in
         ''' <see cref="ApplyPixelAdjustmentStagesCore"/> durch: ohne sichtbare Korrektur - der Regelfall -
         ''' fällt hier gar keine Kopie mehr an.</summary>
+        ''' Das Objekt mit dieser Kennung, oder Nothing.
+        Private Shared Function FindAnnotationById(adj As ImageAdjustments, id As String) As ImageAnnotation
+            If adj Is Nothing OrElse adj.Annotations Is Nothing OrElse String.IsNullOrEmpty(id) Then Return Nothing
+            For Each a In adj.Annotations
+                If a IsNot Nothing AndAlso String.Equals(a.Id, id, StringComparison.Ordinal) Then Return a
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Multipliziert eine Alpha8-Maske Punkt fuer Punkt mit einer Deckung (ein Byte je
+        ''' Punkt, gleiche Maße). Damit wird aus "wo die Maske gilt" ein "wo die Maske UND die Ebene
+        ''' darunter gelten".</summary>
+        Private Shared Sub MultiplyMaskByCoverage(mask As SKBitmap, coverage As Byte())
+            If mask Is Nothing OrElse coverage Is Nothing Then Return
+            If mask.ColorType <> SKColorType.Alpha8 Then Return
+            Dim w = mask.Width, h = mask.Height
+            If coverage.Length < w * h Then Return
+            Dim stride = mask.RowBytes
+            Dim buffer = New Byte(stride * h - 1) {}
+            Marshal.Copy(mask.GetPixels(), buffer, 0, buffer.Length)
+            For y = 0 To h - 1
+                Dim row = y * stride, cov = y * w
+                For x = 0 To w - 1
+                    Dim m = CInt(buffer(row + x))
+                    If m = 0 Then Continue For
+                    buffer(row + x) = CByte((m * CInt(coverage(cov + x)) + 127) \ 255)
+                Next
+            Next
+            Marshal.Copy(buffer, 0, mask.GetPixels(), buffer.Length)
+        End Sub
+
         Private Shared Function ApplyMaskedAdjustmentLayersCore(source As SKBitmap, adj As ImageAdjustments,
                                                                 pipelineInputWidth As Integer,
                                                                 pipelineInputHeight As Integer,
@@ -2260,6 +2291,20 @@ Namespace Services
                                                           processed.Width, processed.Height, layer.Opacity,
                                                           If(modulateFill, layer, Nothing))
                     If mask Is Nothing Then Continue For
+                    ' SCHNITTMASKE: die Korrektur gilt nur, wo das Objekt deckt, ueber dem sie
+                    ' einsortiert ist. Die Deckung kommt aus derselben Quelle wie die Schnittmaske
+                    ' eines Objekts (BuildClipBaseCoverage) - zwei Wege dahin liefen auseinander.
+                    ' Ohne Anker gibt es keine Ebene darunter, dann bleibt der Schalter wirkungslos;
+                    ' dieselbe Entscheidung wie am Objekt, wo eine fehlende Basis den Schalter
+                    ' verpuffen laesst, statt die Ebene verschwinden zu lassen.
+                    If layer.ClipToLayerBelow AndAlso stackedAbove.Length > 0 Then
+                        Dim clipBase = FindAnnotationById(adj, stackedAbove)
+                        If clipBase IsNot Nothing AndAlso adj.IsAnnotationRenderVisible(clipBase) Then
+                            Dim clip = BuildClipBaseCoverage(adj, clipBase, pipelineInputWidth, pipelineInputHeight,
+                                                             0, 0, processed.Width, processed.Height)
+                            If clip IsNot Nothing Then MultiplyMaskByCoverage(mask, clip)
+                        End If
+                    End If
                     If hasAdj Then
                         ' Teilt diese Ebene ihre Anpassung mit anderen, wird EINMAL ueber die
                         ' Vereinigung aller ihrer Masken angewendet - an der Stelle der ERSTEN
@@ -3211,11 +3256,20 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         '''
         ''' Am Ende der Kette, damit sie ALLES fuellt, was vorher durchsichtig geblieben ist:
         ''' erweiterte Leinwand, leere Ecken von Begradigen und Verzerren, weggeradierte Stellen.</summary>
+        ''' <summary>Die Hintergrundfarbe des Dokuments, oder durchsichtig. EINE Stelle dafuer: sie
+        ''' wird an zwei Enden gebraucht - unter dem fertigen Bild (hier) und unter den Objekten,
+        ''' wenn die Hintergrundebene ausgeblendet ist. Zwei Auslegungen von "keine Farbe gesetzt"
+        ''' liefen auseinander.</summary>
+        Friend Shared Function DocumentBackgroundColor(adj As ImageAdjustments) As SKColor
+            If adj Is Nothing OrElse String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor) Then Return SKColors.Transparent
+            Dim color As SKColor
+            If Not SKColor.TryParse(adj.CanvasBackgroundColor, color) Then Return SKColors.Transparent
+            Return color
+        End Function
+
         Private Shared Function ApplyDocumentBackground(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
-            If String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor) Then Return source
-            Dim color As SKColor
-            If Not SKColor.TryParse(adj.CanvasBackgroundColor, color) Then Return source
+            Dim color = DocumentBackgroundColor(adj)
             ' Voellig durchsichtig heisst: keine Farbe gewuenscht.
             If color.Alpha = 0 Then Return source
 

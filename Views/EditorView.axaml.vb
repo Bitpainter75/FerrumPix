@@ -2877,7 +2877,13 @@ Namespace Views
             If isEraser Then
                 Dim eraserFill = vm.EraserFillColorValue
                 If eraserFill.A <= 0 Then
-                    line.Stroke = TransparentEraserPreviewBrush
+                    ' DAS SCHACHBRETT IST EINE AUSSAGE ÜBER DAS ERGEBNIS - und sie stimmt nur im
+                    ' Foto: dort entsteht ein echtes Loch. Auf einer BILD-EBENE kommt unter dem Strich
+                    ' das zum Vorschein, was darunter liegt (Nutzerbefund 2026-08-08: "im Live zeigt
+                    ' der Radierer dann das Schachbrett"). Was das ist, weiss die Ansicht nicht - die
+                    ' Szene ohne genau diese Ebene liegt ihr nicht vor. Also behauptet sie nichts
+                    ' mehr: die Kontur zeigt weiter, WO radiert wird, die Fläche bleibt frei.
+                    line.Stroke = If(vm.PaintsOnImageLayer, Nothing, TransparentEraserPreviewBrush)
                 Else
                     line.Stroke = New SolidColorBrush(eraserFill)
                 End If
@@ -5763,6 +5769,21 @@ Namespace Views
             End Try
         End Sub
 
+        ''' <summary>Schneidet die Auswahl aus dem Bild und legt sie in die System-Zwischenablage -
+        ''' dieselbe Datei, die auch die eigene Auswahl-Ablage merkt. Die Reihenfolge macht das
+        ''' ViewModel: erst kopieren, dann löschen.</summary>
+        Private Async Sub CutSelectionToSystemClipboardAsync(vm As EditorViewModel)
+            If vm Is Nothing Then Return
+            Dim tempPath = vm.CutSelectionToClipboardFile()
+            If String.IsNullOrWhiteSpace(tempPath) Then Return
+            Try
+                Dim owner = TopLevel.GetTopLevel(Me)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {tempPath}, cut:=False)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("EditorView.CutSelection", ex)
+            End Try
+        End Sub
+
         ''' <summary>Kopiert das zusammengesetzte Dokument, nicht die gezoomte Bildschirmansicht.
         ''' Die View stellt lediglich die Datei in die System-Zwischenablage; der ViewModel-Renderweg
         ''' erzeugt sie vorher in der vollen Quellauflösung.</summary>
@@ -5788,7 +5809,7 @@ Namespace Views
                 Dim owner = TopLevel.GetTopLevel(Me)
                 Dim clipboard = owner?.Clipboard
                 If clipboard Is Nothing Then
-                    If vm.CurrentTool = EditorTool.Selection Then vm.PasteSelectionClipboard()
+                    vm.PasteSelectionClipboardIfAny()
                     Return
                 End If
 
@@ -5796,6 +5817,13 @@ Namespace Views
                 ' Der darf im Textwerkzeug nicht als Textobjekt landen, sondern bleibt ein Bildobjekt.
                 Dim fileData = Await ClipboardPathService.ReadPathDataAsync(clipboard)
                 Dim imagePaths = fileData.Paths.Where(AddressOf IsInsertableImagePath).ToList()
+                ' UNSER EIGENER Ausschnitt kommt über die System-Zwischenablage als Datei zurück.
+                ' Dann gilt der eigene Weg: er kennt Lage, Größe und einen lesbaren Namen, während
+                ' der Weg für fremde Dateien eine Ebene anlegte, die nach der Zwischendatei heisst.
+                If imagePaths.Count = 1 AndAlso vm.IsOwnSelectionClipboardFile(imagePaths(0)) Then
+                    vm.PasteSelectionClipboardIfAny()
+                    Return
+                End If
                 If imagePaths.Count > 0 Then
                     ' Ohne Zeigerposition ist die Bildmitte der verlässlichste Einfügeort. Mehrere
                     ' Dateien bleiben durch den kleinen Versatz einzeln greifbar.
@@ -5824,9 +5852,11 @@ Namespace Views
                     End If
                 End If
 
-                ' Kein fremdes, passend einfügbares Format: der bisherige Auswahl-Ausschnitt bleibt
-                ' im Auswahlwerkzeug die letzte sinnvolle Strg+V-Bedeutung.
-                If vm.CurrentTool = EditorTool.Selection Then vm.PasteSelectionClipboard()
+                ' Kein fremdes, passend einfügbares Format: dann der zuletzt kopierte oder
+                ' ausgeschnittene Auswahl-Ausschnitt, und zwar aus JEDEM Werkzeug heraus. Er wird zu
+                ' einer neuen Bild-Ebene - vorher ging das nur im Auswahl-Werkzeug, und anderswo tat
+                ' Strg+V gar nichts.
+                vm.PasteSelectionClipboardIfAny()
             Catch ex As Exception
                 DiagnosticLogService.LogException("EditorView.PasteExternalClipboard", ex)
             End Try
@@ -5881,11 +5911,13 @@ Namespace Views
                         End If
                         e.Handled = True
                     Case Key.A
-                        ' Das plattformübliche Alles-auswählen-Kürzel wählt das ganze Bild aus, aber nur dort, wo eine Auswahl überhaupt etwas
-                        ' bewirkt (Auswahl-Werkzeug und die Werkzeuge, deren Regler auf die Auswahl wirken).
-                        ' In einem Textfeld bleibt es das gewohnte „alles markieren".
-                        If Not isTextInputFocused AndAlso IsSelectionScopeTool(vm.CurrentTool) Then
-                            vm.SelectAll()
+                        ' Das plattformübliche Alles-auswählen-Kürzel wählt das ganze Bild aus, aus
+                        ' JEDEM Werkzeug heraus: wer alles auswählt, will etwas damit tun, und in
+                        ' einem Werkzeug ohne Ameisenlinie wechselt das ViewModel dafür ins
+                        ' Auswahl-Werkzeug. In einem Textfeld bleibt es das gewohnte
+                        ' „alles markieren".
+                        If Not isTextInputFocused Then
+                            vm.SelectAllForCurrentTarget()
                             e.Handled = True
                         End If
                     Case Key.D
@@ -5916,7 +5948,10 @@ Namespace Views
                         ' Weg für den ausgeschnittenen Bildbereich zuständig.
                         If Not isTextInputFocused AndAlso vm.CopySelectedLayerToClipboard() Then
                             e.Handled = True
-                        ElseIf Not isTextInputFocused AndAlso vm.CurrentTool = EditorTool.Selection AndAlso vm.HasActiveSelection Then
+                        ElseIf Not isTextInputFocused AndAlso vm.HasActiveSelection Then
+                            ' Eine stehende Auswahl meint IHREN Ausschnitt, gleich in welchem
+                            ' Werkzeug - vorher galt das nur im Auswahl-Werkzeug, und anderswo kopierte
+                            ' Strg+C stillschweigend das ganze Bild.
                             CopySelectionToSystemClipboardAsync(vm)
                             e.Handled = True
                         ElseIf Not isTextInputFocused Then
@@ -5924,6 +5959,14 @@ Namespace Views
                             ' arbeitet aus der Quellauflösung, also unabhängig von Zoom und Vorschaugröße.
                             e.Handled = True
                             CopyCurrentImageToSystemClipboardAsync(vm)
+                        End If
+                    Case Key.X
+                        ' AUSSCHNEIDEN gibt es nur für die Auswahl im Bild: erst in die
+                        ' Zwischenablage, dann aus dem Bild. Eine markierte EBENE bleibt außen vor -
+                        ' sie wird gelöscht, nicht ausgeschnitten, und dafür gibt es Entf.
+                        If Not isTextInputFocused AndAlso Not vm.HasSelectedPanelLayer AndAlso vm.HasActiveSelection Then
+                            e.Handled = True
+                            CutSelectionToSystemClipboardAsync(vm)
                         End If
                     Case Key.V
                         If Not isTextInputFocused AndAlso vm.PasteLayerClipboard() Then

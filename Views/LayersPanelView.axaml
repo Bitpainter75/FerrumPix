@@ -65,7 +65,7 @@
                                 PointerMoved="OnLayerRowPointerMoved"
                                 DragDrop.DragOver="OnLayerRowDragOver"
                                 DragDrop.Drop="OnLayerRowDrop">
-                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="{Binding IndentMargin}">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto" Margin="{Binding IndentMargin}">
                                 <!-- Klapp-Pfeil nur bei einer Gruppen-Kopfzeile; sonst hält die Spalte
                                      nur die Breite, damit Symbole und Namen aller Zeilen fluchten. -->
                                 <Button Grid.Column="0" Classes="ghost"
@@ -102,7 +102,8 @@
                                         BorderThickness="1"
                                         BorderBrush="{DynamicResource FP.Border.Normal}"
                                         Background="{DynamicResource FP.Bg.Root}"
-                                        PointerPressed="OnLayerMaskGesturePressed"
+                                        PointerPressed="OnLayerThumbnailGesturePressed"
+                                        ToolTip.Tip="Mit Strg die Form dieser Ebene als Auswahl laden"
                                         ClipToBounds="True">
                                     <Panel>
                                         <!-- Die Miniatur FUELLT den Kasten (Uniform, ohne
@@ -152,7 +153,7 @@
                                             IsVisible="{Binding HasMask}"
                                             Click="OnLayerMaskIconClick"
                                             PointerPressed="OnLayerMaskGesturePressed"
-                                            ToolTip.Tip="Ebenenmaske bearbeiten. Mit Alt nur die Maske zeigen, mit Umschalt stilllegen">
+                                            ToolTip.Tip="Ebenenmaske bearbeiten. Mit Alt nur die Maske zeigen, mit Umschalt stilllegen, mit Strg als Auswahl laden">
                                         <Panel>
                                             <!-- Die Maskenminiatur IST der Knopf: hell, wo die Maske
                                                  deckt. Ohne sie war nicht zu sehen, welche Maske wo
@@ -174,18 +175,37 @@
                                                    Width="13" Height="13" Opacity="0.65"
                                                    IsVisible="{Binding IsClipped}"
                                                    ToolTip.Tip="Auf die Ebene darunter beschränkt" />
+                                    <!-- Eigene Anpassungen der Ebene: das Symbol steht nur da, wenn
+                                         welche gesetzt sind, und ist zugleich ihr Schalter - an
+                                         heisst Akzentfarbe, aus heisst gedämpft, dieselbe Sprache
+                                         wie das Auge. Ohne das sieht man einer Ebene nicht an, dass
+                                         an ihr gedreht wurde, und sucht die Wirkung beim Bild. -->
+                                    <ToggleButton Classes="ghost layer-eye" Padding="0"
+                                                  Width="22" Height="22"
+                                                  IsVisible="{Binding HasOwnAdjustments}"
+                                                  IsChecked="{Binding AdjustmentsActive, Mode=OneWay}"
+                                                  Command="{Binding DataContext.ToggleLayerAdjustmentsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  CommandParameter="{Binding}"
+                                                  ToolTip.Tip="Anpassungen dieser Ebene ein- oder ausschalten">
+                                        <icons:SvgIcon Width="13" Height="13"
+                                                       Source="avares://FerrumPix/Assets/Icons/outline/adjustments-alt.svg" />
+                                    </ToggleButton>
                                 </StackPanel>
-                                <!-- Schloss NUR bei gesperrten Zeilen: ein Dauergast neben dem Auge
-                                     würde die Zeile zustellen. Klick entsperrt wieder. -->
-                                <Button Grid.Column="4" Classes="ghost"
-                                        Width="24" Height="24" Padding="0" MinWidth="24"
-                                        Background="Transparent" BorderThickness="0"
-                                        IsVisible="{Binding IsLocked}"
-                                        Click="OnToggleRowLockClick"
-                                        ToolTip.Tip="Ebene ist gesperrt - klicken zum Entsperren">
-                                    <icons:SvgIcon Source="{Binding LockIconSource}" Width="14" Height="14" />
-                                </Button>
-                                <ToggleButton Grid.Column="5"
+                                <!-- Das Schloss steht an JEDER Zeile, nicht nur an gesperrten: als
+                                     Merkzeichen war es nur zu sehen, wenn schon gesperrt war - der
+                                     Weg zum Sperren führte über die Fußzeile oder das Kontextmenü.
+                                     Jetzt ist es der Schalter selbst, in derselben Sprache wie das
+                                     Auge daneben: zu heisst Akzentfarbe, offen heisst gedämpft.
+                                     Das Symbol wechselt zusätzlich zwischen offenem und
+                                     geschlossenem Schloss. -->
+                                <ToggleButton Grid.Column="4" Classes="ghost layer-eye"
+                                              Width="24" Height="24" Padding="0"
+                                              IsChecked="{Binding IsLocked, Mode=OneWay}"
+                                              Click="OnToggleRowLockClick"
+                                              ToolTip.Tip="Ebene sperren - gesperrt sind keine Verschiebungen, Größenänderungen oder Drehungen mehr möglich">
+                                    <icons:SvgIcon Source="{Binding LockIconSource}" Width="15" Height="15" />
+                                </ToggleButton>
+                                <ToggleButton Grid.Column="6"
                                               Classes="ghost layer-eye"
                                               Width="24" Height="24" Padding="0"
                                               IsChecked="{Binding IsVisible, Mode=OneWay}"
@@ -284,7 +304,10 @@
 
             <!-- Untere Werkzeugleiste: Aktionen auf der markierten Ebene (wie die Icon-Reihe unten in
                  üblichen Ebenen-Panels). Nur die tatsächlich unterstützten Aktionen, keine Attrappen. -->
-            <Border Grid.Row="3" Padding="8,6"
+            <!-- Schmaler Rand links und rechts: die Knopfreihe soll in EINE Zeile passen, und die
+                 acht Pixel je Seite waren genau das, was am Ende fehlte. Oben und unten bleibt es
+                 beim gewohnten Abstand. -->
+            <Border Grid.Row="3" Padding="1,6"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0">
                 <!-- WAS GERADE MARKIERT IST, entscheidet, welche Knoepfe ueberhaupt dastehen -
                      dieselbe Regel wie im Kontextmenue, und aus derselben Quelle im ViewModel.
@@ -292,7 +315,20 @@
                      ANKERebene; bei mehreren markierten Ebenen oder einer markierten Gruppe meinen
                      sie also nicht das, was man sieht, und bleiben weg. Was fuer mehrere gilt
                      (gruppieren, zusammenlegen, sperren, loeschen), steht dann an ihrer Stelle. -->
-                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                <!-- UMBRUCH statt Abschneiden: die Reihe wächst mit dem, was markiert ist, und das
+                     Panel ist schmal. Als Reihe ohne Umbruch fielen die letzten Knöpfe rechts
+                     einfach heraus - man sah nicht, dass sie fehlen. Rechtsbündig bleibt es, die
+                     zweite Zeile beginnt also unter dem ersten Knopf der ersten. -->
+                <WrapPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                           ItemSpacing="2" LineSpacing="2">
+                    <!-- Eine leere Malebene anlegen. Steht als EINZIGER Knopf hier immer da: er
+                         braucht keine Markierung, sondern schafft erst eine. -->
+                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
+                            Command="{Binding AddPaintLayerCommand}"
+                            ToolTip.Tip="Neue Malebene: eine leere Ebene zum Bemalen anlegen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pencil-plus.svg"
+                                       Width="16" Height="16" />
+                    </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding MoveSelectedAnnotationUpCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
@@ -360,15 +396,13 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-x.svg"
                                        Width="16" Height="16" />
                     </Button>
-                    <!-- Sperren gilt fuer ALLES Markierte - eine Ebene, mehrere, eine ganze Gruppe.
-                         Der Knopf bleibt deshalb in jeder Auswahl stehen. -->
-                    <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
-                            Click="OnToggleSelectionLockClick"
-                            IsVisible="{Binding HasSelectedPanelLayer}"
-                            ToolTip.Tip="Ebene sperren/entsperren - gesperrt sind keine Verschiebungen, Größenänderungen oder Drehungen mehr möglich">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/lock.svg"
-                                       Width="16" Height="16" />
-                    </Button>
+                    <!-- Sperren steht jetzt an der ZEILE (Schloss neben dem Auge) und nicht mehr
+                         hier: dort gehört es hin, und die Reihe hier war zu voll. Für mehrere
+                         markierte Ebenen bleibt der Weg über das Kontextmenü, das weiterhin alles
+                         Markierte gemeinsam sperrt. -->
+                    <!-- Transparente Punkte sperren steht NICHT hier, sondern im Kontextmenü der
+                         Zeile (Nutzerwunsch 2026-08-08): die Reihe war voll, und der Schalter wird
+                         einmal gesetzt und dann lange nicht mehr angefasst. -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding RasterizeSelectedAnnotationCommand}"
                             IsVisible="{Binding CanRasterizeSelectedAnnotation}"
@@ -400,7 +434,7 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="16" Height="16" />
                     </Button>
-                </StackPanel>
+                </WrapPanel>
             </Border>
         </Grid>
     </Border>

@@ -394,6 +394,16 @@ Namespace Services
         ''' sie müssen bei jedem Render auf das Komposit angewendet werden.</summary>
         Public Property StackAboveAnnotationId As String = ""
 
+        ''' <summary>AUF DIE EBENE DARUNTER BESCHRÄNKT: die Korrektur wirkt nur dort, wo das Objekt
+        ''' deckt, über dem sie einsortiert ist - dieselbe Schnittmaske, die es an einem OBJEKT schon
+        ''' gibt (<see cref="ImageAnnotation.ClipToLayerBelow"/>).
+        '''
+        ''' Sie braucht dafür einen Anker: ohne <see cref="StackAboveAnnotationId"/> liegt die
+        ''' Korrektur im Basisbild, UNTER allen Objekten, und es gibt keine Ebene darunter, auf die
+        ''' sich etwas beschränken liesse. Der Schalter bleibt dort ohne Wirkung, statt heimlich
+        ''' etwas anderes zu bedeuten.</summary>
+        Public Property ClipToLayerBelow As Boolean = False
+
         ''' <summary>DEKLARATIVE Füllung (kein PNG/Objekt): leer = keine Füllung, sonst "Solid"/
         ''' "LinearGradient"/"RadialGradient". Bei einer AUSWAHL-Ebene wird die Füllung SICHTBAR in die
         ''' Auswahl komponiert (Farbe/Verlauf); bei einer MASKEN-Ebene stuft die LUMINANZ der Füllung die
@@ -411,6 +421,7 @@ Namespace Services
                 .IsVisible = IsVisible, .IsLocked = IsLocked, .Opacity = Opacity, .FromPreset = FromPreset, .IsMaskLayer = IsMaskLayer,
                 .GroupId = GroupId,
                 .StackAboveAnnotationId = StackAboveAnnotationId,
+                .ClipToLayerBelow = ClipToLayerBelow,
                 .FillKind = FillKind, .FillColor = FillColor, .FillColor2 = FillColor2,
                 .FillAngle = FillAngle, .FillInverted = FillInverted,
                 .Adjustments = If(Adjustments Is Nothing, New ImageAdjustments(), Adjustments.Clone())

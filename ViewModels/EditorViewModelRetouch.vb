@@ -43,6 +43,11 @@ Namespace ViewModels
 
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
             If Not CanUsePixelTools Then Return
+            ' Ist eine Bild-Ebene markiert, geht der Zug in DEREN Bild - dieselbe Regel wie beim
+            ' Pinsel. Entschieden wird das EINMAL, beim Zugbeginn (captureUndo): ein Punkt mitten im
+            ' Zug darf nicht plötzlich ins Foto rutschen, nur weil sich unterwegs etwas an der
+            ' Markierung ändert. Der Weg selbst steht in EditorViewModelObjectRetouch.vb.
+            If TryAddObjectRetouchSpot(xPercent, yPercent, captureUndo) Then Return
             ' Klick liegt im Anzeigebild (nach Crop/Drehung/Resize/Canvas) - vollständig ins
             ' Arbeitsbild zurückrechnen. NaN = außerhalb des Bildinhalts (Canvas-Rand): dort gibt
             ' es keinen Source-Pixel, der Punkt wird verworfen.
@@ -252,6 +257,13 @@ Namespace ViewModels
         End Function
 
         Private Sub BeginRetouchLiveBuffersAsync()
+            ' Ist eine Bild-Ebene markiert, gehören die Live-Puffer IHR: sie tragen dann die Ebene
+            ' allein statt der Szene (siehe EditorViewModelObjectRetouch.vb). Der Weg hierher ist
+            ' derselbe - Werkzeugwechsel, Alt-Klick, Zugbeginn -, nur das Ziel ist ein anderes.
+            If FindStrokeTargetImageAnnotation() IsNot Nothing Then
+                BeginObjectRetouchLiveBuffersAsync()
+                Return
+            End If
             If _retouchBuffersInitializing Then Return
             ' Vorwaermen (Werkzeugwechsel/Alt+Klick): passende Puffer nicht neu bauen.
             If RetouchLiveBuffersMatchCommittedState() Then Return
@@ -324,7 +336,12 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Sub PublishRetouchLivePreview(force As Boolean)
+        ''' <param name="markPreviewPending">Ob danach ein Vorschaudurchlauf ansteht. Im FOTO ja: der
+        ''' Flicken überbrückt nur, bis der Commit-Render landet. Auf einer EBENE nicht - dort IST der
+        ''' Flicken die Ansicht, und das fertige Bild kommt über den Objekt-Überblendweg. Stünde die
+        ''' Marke trotzdem, bliebe die Fußzeile auf "Vorschau wird aktualisiert" stehen, ohne dass
+        ''' jemals ein Durchlauf käme, der sie zurücknimmt.</param>
+        Private Sub PublishRetouchLivePreview(force As Boolean, Optional markPreviewPending As Boolean = True)
             If _retouchLiveBitmap Is Nothing OrElse _retouchLivePatchRect.IsEmpty Then Return
             Dim now = DateTime.UtcNow
             If force OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= 24.0 Then
@@ -339,8 +356,10 @@ Namespace ViewModels
                     RetouchLivePatchImage = patch
                     UpdateRetouchLivePatchPercentages()
                 End If
-                _previewPending = True
-                StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+                If markPreviewPending Then
+                    _previewPending = True
+                    StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
+                End If
             End If
         End Sub
 
@@ -369,13 +388,7 @@ Namespace ViewModels
             Dim now = DateTime.UtcNow
             If force OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= 24.0 Then
                 _lastRetouchLivePreviewUtc = now
-                Dim strokeSpots = _retouchSpots.
-                    Skip(Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))).
-                    Where(Function(s) s IsNot Nothing).
-                    Select(Function(s) TransformRetouchSpotToDisplayGeometry(s)).
-                    Where(Function(s) s IsNot Nothing).
-                    ToList()
-                Dim patch = ImageProcessor.RenderRetouchMaskPatch(strokeSpots,
+                Dim patch = ImageProcessor.RenderRetouchMaskPatch(CurrentStrokeDisplaySpots(),
                                                                   _retouchLivePatchRect,
                                                                   _retouchLiveMaskBitmapWidth,
                                                                   _retouchLiveMaskBitmapHeight,
@@ -389,6 +402,21 @@ Namespace ViewModels
                 End If
             End If
         End Sub
+
+        ''' <summary>Die Punkte des laufenden Zuges im ANZEIGERASTER - die orange Maske wird dort
+        ''' gezeichnet. Bei einem Zug auf einer EBENE liegen sie schon so vor (sie entstehen aus der
+        ''' Zeigerspur), beim Foto stehen sie im Arbeitsbild und werden hierher abgebildet. EINE
+        ''' Stelle für beide Herkünfte: die Vorschau selbst darf nicht wissen müssen, wohin der Zug
+        ''' geht.</summary>
+        Private Function CurrentStrokeDisplaySpots() As List(Of RetouchSpot)
+            If _objectRetouchDisplaySpots.Count > 0 Then Return _objectRetouchDisplaySpots.ToList()
+            Return _retouchSpots.
+                Skip(Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))).
+                Where(Function(s) s IsNot Nothing).
+                Select(Function(s) TransformRetouchSpotToDisplayGeometry(s)).
+                Where(Function(s) s IsNot Nothing).
+                ToList()
+        End Function
 
         Private Function RetouchLiveBufferUsesDisplayGeometry() As Boolean
             ' Die Live-Puffer entstehen aus RenderPreviewSkBitmap/TryCloneBaseCachedBitmap mit
@@ -524,6 +552,8 @@ Namespace ViewModels
         ''' läuft über den Vorher-Patch des Commits.
         Public Sub CommitRetouchStroke()
             If Not _retouchStrokeActive Then Return
+            ' Ein Zug auf einer Ebene geht in ihre Bilddatei, nicht ins Arbeitsbild.
+            If TryCommitObjectRetouchStroke() Then Return
             _retouchStrokeActive = False
             RaiseSaveAvailabilityChanged()
             Dim strokeStart = Math.Max(0, Math.Min(_retouchStrokeStartSpotIndex, _retouchSpots.Count))
@@ -637,6 +667,10 @@ Namespace ViewModels
                 _retouchLiveSampleBitmap = Nothing
             End If
             _retouchBuffersKey = Nothing
+            ' Die Puffer sind EINE Einrichtung für zwei Ziele (Foto und Ebene) - der Vermerk der
+            ' Ebene muss deshalb mit ihnen fallen, sonst gälte er für Puffer, die es nicht mehr gibt.
+            _objectRetouchBufferStamp = ""
+            _objectRetouchLiveReady = False
             _retouchLiveMaskBitmapWidth = 0
             _retouchLiveMaskBitmapHeight = 0
         End Sub

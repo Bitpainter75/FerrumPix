@@ -4,6 +4,7 @@ Imports System.IO
 Imports System.Linq
 Imports System.Runtime.InteropServices
 Imports System.Threading.Tasks
+Imports ReactiveUI
 Imports SkiaSharp
 Imports FerrumPix.Services
 
@@ -38,6 +39,89 @@ Namespace ViewModels
         Private _objectPaintNextSource As String = ""
         Private _objectPaintSize As (Width As Integer, Height As Integer) = (0, 0)
         Private _objectPaintChain As Task = Task.CompletedTask
+
+        Private _nextPaintLayerNumber As Integer = 1
+
+        ''' <summary>Legt eine leere MALEBENE an: ein durchsichtiges Raster in der Größe des
+        ''' Anzeigebilds, als oberste Ebene, markiert und im Zeichnen-Werkzeug - man kann also sofort
+        ''' loslegen.
+        '''
+        ''' Sie ist technisch eine Bild-Ebene, und das ist der ganze Trick: Malen, Radieren,
+        ''' Retuschieren, Verschieben, Deckkraft, Mischmethode, Ebenenmaske, Duplizieren, Rastern und
+        ''' das Einbetten beim Speichern gelten damit ohne eine einzige neue Zeile. Neu ist allein,
+        ''' dass sie leer anfängt.
+        '''
+        ''' Zwei Entscheidungen dahinter:
+        ''' - Das Raster hat die volle Größe des Anzeigebilds. Ein kleineres wäre ein Pinselstrich in
+        '''   niedrigerer Auflösung, und das sähe man beim Speichern. Der Preis steht in
+        '''   <c>Audits/EDITOR_OBJEKTE.md</c>: jeder Zug dekodiert und schreibt dieses Raster.
+        ''' - Die Art ist <c>SelectionImage</c> und nicht <c>Image</c>. Nur dort trägt die Zeile den
+        '''   eigenen Namen ("Malebene 1") statt eines Dateinamens, und nur dort wird das Raster auf
+        '''   das Ebenenrechteck gespannt statt seitenverhältnisgetreu eingepasst - beides ist genau
+        '''   das, was eine Malebene braucht.</summary>
+        Public Sub AddPaintLayer()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return
+
+            Dim path = CreateSelectionAssetTempPath("layer")
+            If Not WriteEmptyPaintLayerFile(displaySize.Width, displaySize.Height, path) Then
+                StatusText = LocalizationService.T("Die Malebene konnte nicht angelegt werden.")
+                Return
+            End If
+
+            PushUndo()
+            ' Eine Malebene entsteht nie über ein scharfgestelltes Werkzeug: sie darf weder Kontur
+            ' noch Mischmodus noch "ausgeblendet" aus den Puffern eines anderen Objekts erben.
+            ResetAnnotationBuffersToImageDefaults()
+            Dim stored = DisplayAnnotationRectToStoredPercent("SelectionImage", 0, 0, 100, 100)
+            Dim annotation = New ImageAnnotation With {
+                .Kind = "SelectionImage",
+                .IsPaintLayer = True,
+                .Text = LocalizationService.T("Malebene") & " " & _nextPaintLayerNumber.ToString(),
+                .ImagePath = path,
+                .XPixels = CSng(PercentXToPixels(stored.X)),
+                .YPixels = CSng(PercentYToPixels(stored.Y)),
+                .WidthPixels = CSng(Math.Max(1.0, PercentXToPixels(stored.Width))),
+                .HeightPixels = CSng(Math.Max(1.0, PercentYToPixels(stored.Height))),
+                .FillColor = "#00FFFFFF",
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("SelectionImage", 0)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
+                .IsVisible = True
+            }
+            _nextPaintLayerNumber += 1
+            HardenAnnotationBuffersForNewObject()
+            _annotations.Add(annotation)
+            ' Das leere Raster zählt beim Speicherdeckel mit: es ist der Stand, auf dem der erste Zug
+            ' aufbaut, und danach genauso ein Zwischenstand wie jeder andere.
+            RegisterObjectPaintFile(path)
+            ' ERST das Werkzeug, dann die Markierung: der Setter entscheidet an beidem, ob er stehen
+            ' bleibt (siehe dort), und im Zeichnen-Werkzeug bleibt eine Bild-Ebene stehen. Der PINSEL
+            ' und nicht der Radiergummi: auf einer leeren Ebene hätte der nichts zu tun.
+            CurrentTool = EditorTool.Draw
+            IsEraserMode = False
+            SelectedAnnotationIndex = _annotations.Count - 1
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            AddHistoryEntry("Malebene angelegt")
+            RefreshPreviewImmediately()
+        End Sub
+
+        ''' Ein vollständig durchsichtiges Raster als Startpunkt der Malebene.
+        Private Shared Function WriteEmptyPaintLayerFile(width As Integer, height As Integer, path As String) As Boolean
+            If width <= 0 OrElse height <= 0 Then Return False
+            Try
+                Using bitmap = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                    Using canvas = New SKCanvas(bitmap)
+                        canvas.Clear(SKColors.Transparent)
+                    End Using
+                    Return WriteObjectPaintFile(bitmap, path)
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.PaintLayer", ex)
+                Return False
+            End Try
+        End Function
 
         ''' <summary>Liegt eine freie PIXELAUSWAHL an - Laufameisen aus Rechteck, Ellipse, Lasso oder
         ''' Zauberstab? Eine MASKE zählt bewusst nicht dazu: sie gehört einer Ebene, ihr rotes Overlay
@@ -186,7 +270,12 @@ Namespace ViewModels
         Private Function BuildSelectedAnnotationConfinePlan() As AnnotationConfinePlan
             Dim selected = SelectedAnnotations
             If selected Is Nothing OrElse selected.Count <> 1 Then Return Nothing
-            Dim target = selected(0)
+            Return BuildAnnotationConfinePlan(selected(0))
+        End Function
+
+        ''' <summary>Derselbe Bauplan für eine BESTIMMTE Ebene - für den Weg, der die Form einer Zeile
+        ''' als Auswahl lädt, ohne sie dafür zu markieren.</summary>
+        Private Function BuildAnnotationConfinePlan(target As ImageAnnotation) As AnnotationConfinePlan
             If target Is Nothing OrElse Not target.IsVisible Then Return Nothing
             If String.Equals(NormalizeAnnotationKind(target.Kind), "Frame", StringComparison.Ordinal) Then Return Nothing
 
@@ -226,6 +315,230 @@ Namespace ViewModels
             Dim hull = ComputeConfineHull(placement, displaySize.Width, displaySize.Height)
             If hull.Width <= 0 OrElse hull.Height <= 0 Then Return Nothing
             Return New AnnotationConfinePlan With {.Rect = hull, .ImagePath = imagePath, .Placement = placement}
+        End Function
+
+        ''' <summary>RADIEREN AUF EINER EBENE GEHT IN IHRE EBENENMASKE, nicht in ihre Bildpunkte.
+        ''' True heißt: hier behandelt.
+        '''
+        ''' Das ist der Unterschied zwischen "weg" und "nicht mehr zu sehen". Die Pixel bleiben, die
+        ''' Maske nimmt die Deckung: der Zug lässt sich mit dem Maskenpinsel zurückholen, die Maske
+        ''' verschieben, abstufen, umkehren oder ganz entfernen. Und es geht auf JEDER Ebene, die eine
+        ''' Maske tragen kann - auch auf Text, Formen und SVG, die gar kein Raster haben und in die
+        ''' man deshalb bisher nicht radieren konnte.
+        '''
+        ''' Gebaut aus vorhandenen Teilen, keine neue Rechnung: der Strich wird zum weichen
+        ''' Alpha8-Stempel wie beim Maskenpinsel, über denselben Weg wie eine eingefrorene Auswahl in
+        ''' den QUELLRAUM gebracht und mit <c>ApplyMaskBrushStroke</c> abgezogen - dieselbe Funktion,
+        ''' die auch der Maskenpinsel benutzt.
+        '''
+        ''' NICHT hier landet der Radierer mit gesetzter Hintergrundfarbe: der malt eine Farbe, das
+        ''' ist ein gewöhnlicher Strich und gehört in die Bildpunkte.</summary>
+        Private Function TryEraseIntoAnnotationMask(target As ImageAnnotation,
+                                                    displayPoints As IReadOnlyList(Of Avalonia.Point)) As Boolean
+            If target Is Nothing OrElse displayPoints Is Nothing OrElse displayPoints.Count < 2 Then Return False
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return False
+
+            Dim pts = displayPoints.
+                Select(Function(p) New SKPoint(CSng(p.X / 100.0 * displaySize.Width),
+                                               CSng(p.Y / 100.0 * displaySize.Height))).ToList()
+            ' Radius und weiche Kante wie beim Zeichnen: der Ring, den die Ansicht zeigt, ist der
+            ' Durchmesser, und die Härte bestimmt, wie weit die Kante ausläuft.
+            Dim radius = CSng(Math.Max(0.5, _brushSize / 2.0))
+            Dim softness = CSng(Math.Max(0.0, radius * (1.0 - Math.Max(0.0, Math.Min(100.0, _brushHardness)) / 100.0)))
+
+            Dim margin = CInt(Math.Ceiling(radius + softness + 2))
+            Dim minX = Integer.MaxValue, minY = Integer.MaxValue, maxX = Integer.MinValue, maxY = Integer.MinValue
+            For Each p In pts
+                minX = Math.Min(minX, CInt(Math.Floor(p.X))) : maxX = Math.Max(maxX, CInt(Math.Ceiling(p.X)))
+                minY = Math.Min(minY, CInt(Math.Floor(p.Y))) : maxY = Math.Max(maxY, CInt(Math.Ceiling(p.Y)))
+            Next
+            Dim rectPx = New SKRectI(Math.Max(0, minX - margin), Math.Max(0, minY - margin),
+                                     Math.Min(displaySize.Width, maxX + margin),
+                                     Math.Min(displaySize.Height, maxY + margin))
+            If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return True
+
+            Dim strokeMask As ImageMask
+            Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx)
+                If stamp Is Nothing Then Return True
+                strokeMask = BuildSourceMaskFromDisplayStamp(stamp, rectPx)
+            End Using
+            If strokeMask Is Nothing Then Return False
+
+            PushUndo()
+            Dim mask = EnsureAnnotationLayerMask(target)
+            If mask Is Nothing Then Return False
+            If Not ImageProcessor.ApplyMaskBrushStroke(mask, strokeMask, subtract:=True) Then Return False
+
+            _hasChanges = True
+            RaiseAnnotationMaskStateChanged()
+            RebuildLayerRows()
+            AddHistoryEntry("Radiert")
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
+            Return True
+        End Function
+
+        ''' <summary>Die Ebenenmaske dieser Ebene - vorhandene oder eine neue, die ihren Bereich
+        ''' deckt. OHNE eigenen Rückgängig-Punkt und ohne Verlaufseintrag: sie entsteht mitten in
+        ''' einem Radierstrich, und der ist EIN Schritt.</summary>
+        Private Function EnsureAnnotationLayerMask(target As ImageAnnotation) As ImageMask
+            If target Is Nothing Then Return Nothing
+            If Not String.IsNullOrEmpty(target.MaskId) Then
+                Dim vorhanden = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                               String.Equals(m.Id, target.MaskId, StringComparison.Ordinal))
+                If vorhanden IsNot Nothing Then Return vorhanden
+            End If
+            Dim maskName = LocalizationService.T("Ebenenmaske")
+            Dim mask = CreateObjectCoverageMask(target, maskName)
+            If mask Is Nothing Then mask = ImageProcessor.CreateFullCoverageMask(BuildAdjustmentsFromFields(), maskName)
+            If mask Is Nothing Then Return Nothing
+            _imageMasks.Add(mask)
+            target.MaskId = mask.Id
+            Return mask
+        End Function
+
+        ''' <summary>Ein Alpha8-Stempel aus dem ANZEIGERAUM als Maske im QUELLRAUM. Derselbe Weg, den
+        ''' auch eine eingefrorene Auswahl nimmt (<c>CreateSourceMaskFromSelection</c>) - er kennt
+        ''' Zuschnitt, Drehung, Spiegelung und Verzerrung. Ein zweiter Weg dorthin liefe
+        ''' auseinander.</summary>
+        Private Function BuildSourceMaskFromDisplayStamp(stamp As SKBitmap, rectPx As SKRectI) As ImageMask
+            If stamp Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return Nothing
+            Dim adj = BuildAdjustmentsFromFields()
+            If adj Is Nothing Then Return Nothing
+            ' Die Auswahlfelder dieser KOPIE tragen den Strich - der Auswahlzustand des Editors
+            ' bleibt unangetastet.
+            adj.HasActiveSelection = True
+            adj.SelectionShapeMode = "MagicWand"
+            adj.SelectionShapePointsX = Nothing
+            adj.SelectionShapePointsY = Nothing
+            adj.SelectionFeatherPixels = 0
+            ' Die weiche Kante steckt schon in den Stempelwerten - ein zweites Weichzeichnen wäre
+            ' doppelt.
+            adj.SelectionMaskSoftBaked = True
+            adj.SelectionMaskLeft = rectPx.Left
+            adj.SelectionMaskTop = rectPx.Top
+            adj.SelectionMaskRight = rectPx.Right
+            adj.SelectionMaskBottom = rectPx.Bottom
+            adj.SelectionMaskPngBase64 = EncodeMaskBitmapToBase64(stamp)
+            If String.IsNullOrEmpty(adj.SelectionMaskPngBase64) Then Return Nothing
+            Return ImageProcessor.CreateSourceMaskFromSelection(adj, LocalizationService.T("Radierer"), rectPx)
+        End Function
+
+        ''' <summary>Die eigenen Anpassungen einer Ebene EIN- oder AUSSCHALTEN. Sie bleiben dabei
+        ''' vollständig erhalten - genau dafür ist der Schalter da: um zu sehen, wie die Ebene ohne
+        ''' sie aussieht. Über die ZEILE, nicht über die Markierung, wie das Auge daneben.</summary>
+        Public Sub ToggleLayerAdjustments(row As LayerPanelRow)
+            If row Is Nothing OrElse row.Annotation Is Nothing Then Return
+            If row.Annotation.Adjustments Is Nothing OrElse Not row.Annotation.Adjustments.HasPixelAdjustments() Then Return
+            PushUndo()
+            row.Annotation.AdjustmentsHidden = Not row.Annotation.AdjustmentsHidden
+            _hasChanges = True
+            RebuildLayerRows()
+            RaiseResetButtonStateChanged()
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(row.Annotation))
+        End Sub
+
+        ''' <summary>Die eigenen Anpassungen einer Ebene VERWERFEN. Anders als das Ausschalten ist das
+        ''' endgültig (bis zum Rückgängig): die Ebene rendert danach wieder wie unbearbeitet, und das
+        ''' Symbol verschwindet aus ihrer Zeile.</summary>
+        Public Sub ClearLayerAdjustments(row As LayerPanelRow)
+            Dim target = If(row?.Annotation, CurrentObject())
+            If target Is Nothing OrElse target.Adjustments Is Nothing Then Return
+            If Not target.Adjustments.HasPixelAdjustments() Then Return
+            PushUndo()
+            target.Adjustments = Nothing
+            target.AdjustmentsHidden = False
+            _hasChanges = True
+            ' Die Regler zeigen die Werte der markierten Ebene - nach dem Verwerfen müssen sie den
+            ' neutralen Stand zeigen, sonst stünde dort noch, was es nicht mehr gibt.
+            If Object.ReferenceEquals(target, CurrentObject()) Then RefreshObjectAdjustMode()
+            RebuildLayerRows()
+            RaiseResetButtonStateChanged()
+            AddHistoryEntry("Anpassungen der Ebene verworfen")
+            RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
+        End Sub
+
+        ''' <summary>Trägt die markierte Ebene eigene Anpassungen? Der Kontextmenü-Eintrag zum
+        ''' Verwerfen hängt daran.</summary>
+        Public ReadOnly Property SelectedLayerHasOwnAdjustments As Boolean
+            Get
+                Dim target = CurrentObject()
+                Return target IsNot Nothing AndAlso target.Adjustments IsNot Nothing AndAlso
+                       target.Adjustments.HasPixelAdjustments()
+            End Get
+        End Property
+
+        ''' <summary>Geht ein Strich gerade in das BILD EINER EBENE statt ins Foto? Die Ansicht fragt
+        ''' danach, weil der Radiergummi dort etwas anderes freilegt: im Foto entsteht ein echtes Loch
+        ''' (Schachbrett), auf einer Ebene kommt das zum Vorschein, was darunter liegt.</summary>
+        Public ReadOnly Property PaintsOnImageLayer As Boolean
+            Get
+                Return FindStrokeTargetImageAnnotation() IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>TRANSPARENTE PUNKTE DER MARKIERTEN EBENE SPERREN. Ein Strich, eine Retusche und
+        ''' das Entfernen bleiben dann in der Form, die die Ebene schon hat.
+        '''
+        ''' MIT Rückgängig-Punkt: der Schalter ändert nicht das Bild, wohl aber, was der nächste Zug
+        ''' anrichtet - und er steht im Rezept, gehört also zum Zustand, den ein Schritt zurück
+        ''' wiederherstellt.</summary>
+        Public Property LayerTransparencyLocked As Boolean
+            Get
+                Dim target = FindStrokeTargetImageAnnotation()
+                Return target IsNot Nothing AndAlso target.LockTransparentPixels
+            End Get
+            Set(value As Boolean)
+                Dim target = FindStrokeTargetImageAnnotation()
+                If target Is Nothing OrElse target.LockTransparentPixels = value Then Return
+                PushUndo()
+                target.LockTransparentPixels = value
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(LayerTransparencyLocked))
+                RaiseResetButtonStateChanged()
+            End Set
+        End Property
+
+        ''' <summary>DIE FORM DER EBENE ALS AUSWAHL - der Griff, der in üblichen Bildbearbeitungen am
+        ''' Ebenenbild hängt (Klick auf die Miniatur mit Taste). True heißt: es gibt jetzt eine
+        ''' Auswahl.
+        '''
+        ''' Sie kommt aus derselben Deckung, mit der eine Auswahl auf eine Ebene BEGRENZT wird
+        ''' (<see cref="BuildAnnotationConfineMask"/>) - dieselbe Form, nur andersherum benutzt. Ein
+        ''' zweiter Weg zur Form einer Ebene liefe unweigerlich auseinander.
+        '''
+        ''' Eine Ebene OHNE Bild (Text, Form, SVG) liefert ihr Rechteck; das ist ehrlicher als gar
+        ''' nichts und deckt sich mit dem, was die Begrenzung dort tut. Der Decode läuft hier auf dem
+        ''' UI-Faden: es ist ein bewusster Klick, kein Zeigerzug, und der Griff soll sofort greifen.</summary>
+        Public Function LoadSelectionFromAnnotationAlpha(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing OrElse Not annotation.IsVisible Then Return False
+            If Not _annotations.Contains(annotation) Then Return False
+
+            Dim plan = BuildAnnotationConfinePlan(annotation)
+            If plan Is Nothing Then Return False
+            Dim mask = BuildAnnotationConfineMask(plan)
+            If mask Is Nothing Then Return False
+            Try
+                ' Als AUSWAHL, nicht als Maske: es sind Laufameisen um die Form der Ebene, und sie
+                ' verrechnet sich mit dem eingestellten Verknüpfungsmodus wie jede andere Auswahl.
+                ApplySelectionCandidate(mask, plan.Rect, "MagicWand", Nothing, Nothing)
+            Finally
+                mask.Dispose()
+            End Try
+
+            ' DANACH GEHÖRT DIE BÜHNE DER AUSWAHL, NICHT DER EBENE. Die Ebene wird dafür abgewählt und
+            ' der Editor stellt auf Auswahl/Verschieben:
+            ' - Ihr Rahmen läge sonst über dem Bild, bei einer Malebene über dem GANZEN Bild, und
+            '   verdeckte genau die Ameisenlinie, die man gerade geholt hat.
+            ' - Und ein Zug darin verschöbe die EBENE statt der Auswahl - der Rahmen fängt jeden
+            '   Druck ab (siehe IsLayerPlacementTool).
+            ' Erst die Auswahl, dann das Werkzeug: der Wechsel ins Auswahl-Werkzeug setzt den
+            ' Verknüpfungsmodus zurück, und der galt noch für DIESEN Zug.
+            CurrentTool = EditorTool.Selection
+            SelectionMode = "Move"
+            SelectedAnnotationIndex = -1
+            AddHistoryEntry("Auswahl aus Ebene")
+            Return True
         End Function
 
         ''' <summary>Die Hülle der Ebene im Anzeige-Raster: die vier Ecken ihres Bildes hinüber,
@@ -324,19 +637,8 @@ Namespace ViewModels
             Dim displaySize = GetAnnotationDisplayPixelSize()
             If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return False
 
-            ' Der QUELLPFAD ist nicht zwingend der, auf den das Objekt gerade zeigt: liegt noch ein
-            ' Zug in der Warteschlange, baut dieser hier auf DESSEN Ergebnis auf. Sonst ginge der
-            ' vorige Strich verloren, sobald zwei schnell hintereinander kommen.
-            If Not Object.ReferenceEquals(_objectPaintTarget, target) Then
-                _objectPaintTarget = target
-                _objectPaintNextSource = target.ImagePath
-                _objectPaintSize = ReadImageSize(target.ImagePath)
-            End If
-            Dim sourcePath = If(String.IsNullOrEmpty(_objectPaintNextSource), target.ImagePath, _objectPaintNextSource)
-            If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then
-                _objectPaintSize = ReadImageSize(target.ImagePath)
-                If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then Return False
-            End If
+            Dim sourcePath = ""
+            If Not BeginObjectImageEdit(target, sourcePath) Then Return False
 
             Dim placement = BuildAnnotationImagePlacement(target, _objectPaintSize.Width, _objectPaintSize.Height)
             If placement Is Nothing Then Return False
@@ -395,18 +697,8 @@ Namespace ViewModels
             Dim target = FindStrokeTargetImageAnnotation()
             If target Is Nothing Then Return False
 
-            ' Wie beim Strich: der QUELLPFAD ist der Stand, auf dem der nächste Schritt aufbaut -
-            ' nicht zwingend der, auf den das Objekt gerade zeigt.
-            If Not Object.ReferenceEquals(_objectPaintTarget, target) Then
-                _objectPaintTarget = target
-                _objectPaintNextSource = target.ImagePath
-                _objectPaintSize = ReadImageSize(target.ImagePath)
-            End If
-            Dim sourcePath = If(String.IsNullOrEmpty(_objectPaintNextSource), target.ImagePath, _objectPaintNextSource)
-            If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then
-                _objectPaintSize = ReadImageSize(target.ImagePath)
-                If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then Return False
-            End If
+            Dim sourcePath = ""
+            If Not BeginObjectImageEdit(target, sourcePath) Then Return False
 
             Dim placement = BuildAnnotationImagePlacement(target, _objectPaintSize.Width, _objectPaintSize.Height)
             If placement Is Nothing Then Return False
@@ -433,6 +725,28 @@ Namespace ViewModels
             Return True
         End Function
 
+        ''' <summary>Der Stand, auf dem der nächste Schritt an dieser Ebene aufbaut, und ihre Maße.
+        '''
+        ''' Der QUELLPFAD ist nicht zwingend der, auf den das Objekt gerade zeigt: liegt noch ein Zug
+        ''' in der Warteschlange, baut dieser hier auf DESSEN Ergebnis auf. Sonst ginge der vorige
+        ''' Schritt verloren, sobald zwei schnell hintereinander kommen. Deshalb führen Malen,
+        ''' Löschen und Retusche denselben Vermerk - eine eigene Buchhaltung je Werkzeug ließe die
+        ''' drei einander überschreiben. False heißt: die Ebene trägt kein lesbares Bild.</summary>
+        Private Function BeginObjectImageEdit(target As ImageAnnotation, ByRef sourcePath As String) As Boolean
+            If target Is Nothing Then Return False
+            If Not Object.ReferenceEquals(_objectPaintTarget, target) Then
+                _objectPaintTarget = target
+                _objectPaintNextSource = target.ImagePath
+                _objectPaintSize = ReadImageSize(target.ImagePath)
+            End If
+            sourcePath = If(String.IsNullOrEmpty(_objectPaintNextSource), target.ImagePath, _objectPaintNextSource)
+            If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then
+                _objectPaintSize = ReadImageSize(target.ImagePath)
+                If _objectPaintSize.Width <= 0 OrElse _objectPaintSize.Height <= 0 Then Return False
+            End If
+            Return True
+        End Function
+
         ''' <summary>Reiht den schweren Teil ein: dekodieren, zeichnen, schreiben. Die Züge laufen
         ''' STRENG NACHEINANDER - jeder baut auf der Datei des vorigen auf, und eine Verzahnung
         ''' verlöre den früheren Strich.</summary>
@@ -440,8 +754,11 @@ Namespace ViewModels
                                        renderAnnotation As ImageAnnotation, dirty As SKRectI, coverage As SKBitmap)
             ' Der Text wird HIER aufgelöst, nicht drinnen aus einer Variablen: T() liest den Schlüssel
             ' aus dem Literal, ein T(variable) fiele aus der Lokalisierung heraus.
+            ' Die Sperre der transparenten Punkte wird HIER gelesen, auf dem UI-Faden: der Hintergrund
+            ' darf die Ebene nicht anfassen, und wer sie mitten im Zug umlegt, meint den nächsten.
+            Dim lockTransparent = target.LockTransparentPixels
             EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Malen fehlgeschlagen"),
-                                   Function() PaintObjectStrokeToFile(sourcePath, targetPath, renderAnnotation, dirty, coverage),
+                                   Function() PaintObjectStrokeToFile(sourcePath, targetPath, renderAnnotation, dirty, coverage, lockTransparent),
                                    Sub() coverage?.Dispose())
         End Sub
 
@@ -455,11 +772,17 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Die gemeinsame Warteschlange für jede Änderung am Bild einer Ebene. Sie ist
-        ''' EINE Kette und keine je Art: Malen und Löschen bauen beide auf der Datei des vorigen
-        ''' Schrittes auf. <paramref name="failureMessage"/> kommt FERTIG ÜBERSETZT herein.</summary>
+        ''' EINE Kette und keine je Art: Malen, Löschen und Retusche bauen alle auf der Datei des
+        ''' vorigen Schrittes auf. <paramref name="failureMessage"/> kommt FERTIG ÜBERSETZT herein.
+        '''
+        ''' <paramref name="cleanup"/> läuft im HINTERGRUND (dort werden die Puffer des Schrittes
+        ''' frei), <paramref name="onUiDone"/> dagegen auf dem UI-Faden, nachdem das Ergebnis
+        ''' übernommen ist - für alles, was so lange stehen bleiben muss, bis das neue Bild da ist.
+        ''' Beides ist optional.</summary>
         Private Sub EnqueueObjectImageEdit(target As ImageAnnotation, targetPath As String,
                                            failureMessage As String,
-                                           work As Func(Of Boolean), cleanup As Action)
+                                           work As Func(Of Boolean), cleanup As Action,
+                                           Optional onUiDone As Action = Nothing)
             ' Merkmal des Dokuments beim Einreihen: kommt der Schritt erst nach einem Bildwechsel an
             ' die Reihe, gehört er zum alten Bild und verfällt (dieselbe Regel wie bei den
             ' Arbeitsbild-Commits).
@@ -478,6 +801,7 @@ Namespace ViewModels
                         Sub()
                             If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
                             ApplyObjectPaintResult(target, targetPath, ok, failureMessage)
+                            onUiDone?.Invoke()
                         End Sub)
                 End Sub, TaskScheduler.Default)
         End Sub
@@ -523,12 +847,13 @@ Namespace ViewModels
         ''' Ergebnis als neue Datei schreiben.</summary>
         Private Function PaintObjectStrokeToFile(sourcePath As String, targetPath As String,
                                                  renderAnnotation As ImageAnnotation,
-                                                 dirty As SKRectI, coverage As SKBitmap) As Boolean
+                                                 dirty As SKRectI, coverage As SKBitmap,
+                                                 lockTransparent As Boolean) As Boolean
             Using decoded = SKBitmap.Decode(sourcePath)
                 If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
                 Dim clamped = ClampRectToBitmap(dirty, decoded.Width, decoded.Height)
                 If clamped.Width <> dirty.Width OrElse clamped.Height <> dirty.Height Then Return False
-                Using painted = PaintStrokeOntoImageCopy(decoded, renderAnnotation, dirty, coverage)
+                Using painted = PaintStrokeOntoImageCopy(decoded, renderAnnotation, dirty, coverage, lockTransparent)
                     If painted Is Nothing Then Return False
                     Return WriteObjectPaintFile(painted, targetPath)
                 End Using
@@ -579,12 +904,53 @@ Namespace ViewModels
             End Try
         End Function
 
+        ''' <summary>DIE VORHANDENE FORM DER EBENE ALS DECKUNG - der Alphakanal des Bildes selbst,
+        ''' als Alpha8 im Ausschnitt. Damit sperrt <c>LockTransparentPixels</c>: was die Ebene nicht
+        ''' schon deckt, wird nach dem Zeichnen wieder auf den Vorher-Stand zurückgeblendet.
+        '''
+        ''' GEZEICHNET statt Punkt für Punkt gerechnet: Skia übernimmt beim Zeichnen in ein
+        ''' Alpha8-Ziel genau den Alphakanal, und das ist derselbe Weg, den auch die Begrenzung einer
+        ''' Auswahl auf eine Ebene geht.</summary>
+        Private Shared Function BuildAlphaCoverage(source As SKBitmap, rect As SKRectI) As SKBitmap
+            If source Is Nothing OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            Dim coverage As SKBitmap = Nothing
+            Try
+                coverage = New SKBitmap(rect.Width, rect.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+                Using canvas = New SKCanvas(coverage)
+                    canvas.Clear(SKColors.Transparent)
+                    canvas.DrawBitmap(source,
+                                      New SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom),
+                                      New SKRect(0, 0, rect.Width, rect.Height))
+                End Using
+                Return coverage
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.AlphaCoverage", ex)
+                coverage?.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Sperrt die transparenten Punkte NACHTRÄGLICH: außerhalb der vorhandenen Form der
+        ''' Ebene kommt der Vorher-Stand zurück. Dieselbe Nachnahme wie bei einer Auswahl, nur ist die
+        ''' Deckung hier der eigene Alphakanal - und deshalb dürfen beide nacheinander laufen: jede
+        ''' blendet für sich auf denselben Vorher-Stand zurück, gemalt bleibt nur, was BEIDE
+        ''' erlauben.</summary>
+        Private Shared Function ApplyTransparencyLock(copy As SKBitmap, before As SKBitmap,
+                                                      original As SKBitmap, dirty As SKRectI) As Boolean
+            If copy Is Nothing OrElse before Is Nothing OrElse original Is Nothing Then Return False
+            Using alphaCoverage = BuildAlphaCoverage(original, dirty)
+                If alphaCoverage Is Nothing Then Return False
+                Return ImageProcessor.RestoreOutsideCoverage(copy, before, alphaCoverage, dirty)
+            End Using
+        End Function
+
         ''' <summary>Zeichnet den Strich in eine ARBEITSKOPIE des Objektbilds. Die Kopie liegt in
         ''' Bgra8888/Premul: nur dort stanzt der Radierer echte Löcher (DstOut), und ein JPEG kommt
         ''' ganz ohne Alphakanal herein. Eine Auswahl wird nach dem Zeichnen wieder herausgerechnet -
         ''' dieselbe Nachnahme wie im Foto, damit die Zeichenroutine nichts davon wissen muss.</summary>
         Private Shared Function PaintStrokeOntoImageCopy(source As SKBitmap, renderAnnotation As ImageAnnotation,
-                                                         dirty As SKRectI, coverage As SKBitmap) As SKBitmap
+                                                         dirty As SKRectI, coverage As SKBitmap,
+                                                         Optional lockTransparent As Boolean = False) As SKBitmap
             Dim copy = New SKBitmap(source.Width, source.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
             Try
                 Using canvas = New SKCanvas(copy)
@@ -595,7 +961,7 @@ Namespace ViewModels
                 End Using
 
                 Dim before As SKBitmap = Nothing
-                If coverage IsNot Nothing Then before = ImageProcessor.CopyRegion(copy, dirty)
+                If coverage IsNot Nothing OrElse lockTransparent Then before = ImageProcessor.CopyRegion(copy, dirty)
                 Try
                     Using canvas = New SKCanvas(copy)
                         canvas.ClipRect(SKRect.Create(dirty.Left, dirty.Top, dirty.Width, dirty.Height))
@@ -607,6 +973,12 @@ Namespace ViewModels
                     End Using
                     If coverage IsNot Nothing Then
                         If Not ImageProcessor.RestoreOutsideCoverage(copy, before, coverage, dirty) Then
+                            copy.Dispose()
+                            Return Nothing
+                        End If
+                    End If
+                    If lockTransparent Then
+                        If Not ApplyTransparencyLock(copy, before, source, dirty) Then
                             copy.Dispose()
                             Return Nothing
                         End If

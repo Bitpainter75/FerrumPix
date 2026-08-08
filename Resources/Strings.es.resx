@@ -6666,4 +6666,18 @@
   <data name="Bild_kopiert_109ab6ed" xml:space="preserve"><value>Imagen copiada</value></data>
   <data name="Bild_kopieren_fehlgeschlagen_99d62d50" xml:space="preserve"><value>No se pudo copiar la imagen</value></data>
   <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Recorte</value></data>
+  <data name="Malebene_c58eef25" xml:space="preserve"><value>Capa de pintura</value></data>
+  <data name="Die_Auswahl_liegt_nicht_auf_der_markierten_Ebene_096701ed" xml:space="preserve"><value>La selección no está sobre la capa marcada.</value></data>
+  <data name="Mit_Strg_die_Form_dieser_Ebene_als_Auswahl_laden_8f622a58" xml:space="preserve"><value>Con Ctrl, cargar la forma de esta capa como selección</value></data>
+  <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_d2c1cc4b" xml:space="preserve"><value>Editar la máscara de capa. Con Alt se muestra solo la máscara, con Mayús se desactiva, con Ctrl se carga como selección</value></data>
+  <data name="Transparente_Punkte_sperren_Striche_bleiben_in_d_3102d050" xml:space="preserve"><value>Bloquear los píxeles transparentes: los trazos se quedan dentro de la forma que ya tiene la capa</value></data>
+  <data name="Neue_Malebene_eine_leere_Ebene_zum_Bemalen_anleg_3d028994" xml:space="preserve"><value>Nueva capa de pintura: crear una capa vacía para pintar</value></data>
+  <data name="Die_Malebene_konnte_nicht_angelegt_werden_caaceb00" xml:space="preserve"><value>No se pudo crear la capa de pintura.</value></data>
+  <data name="Ebene_sperren_gesperrt_sind_keine_Verschiebungen_4861b501" xml:space="preserve"><value>Bloquear la capa: una capa bloqueada no se puede mover, redimensionar ni girar</value></data>
+  <data name="Radieren_fehlgeschlagen_53fe9cab" xml:space="preserve"><value>No se pudo borrar</value></data>
+  <data name="Radierer_46044487" xml:space="preserve"><value>Borrador</value></data>
+  <data name="Transparente_Punkte_sperren_da912f07" xml:space="preserve"><value>Bloquear los píxeles transparentes</value></data>
+  <data name="Transparente_Punkte_freigeben_66d0baa3" xml:space="preserve"><value>Desbloquear los píxeles transparentes</value></data>
+  <data name="Anpassungen_dieser_Ebene_ein_oder_ausschalten_7076645d" xml:space="preserve"><value>Activar o desactivar los ajustes de esta capa</value></data>
+  <data name="Anpassungen_dieser_Ebene_verwerfen_1a0f1d69" xml:space="preserve"><value>Descartar los ajustes de esta capa</value></data>
 </root>

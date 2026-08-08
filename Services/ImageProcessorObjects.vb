@@ -24,9 +24,13 @@ Namespace Services
 
     Partial Public Class ImageProcessor
 
-        ''' <summary>Trägt das Objekt eigene Pixel-Anpassungen? Nur dann lohnt die eigene Ebene.</summary>
+        ''' <summary>Trägt das Objekt eigene Pixel-Anpassungen, und sind sie eingeschaltet? Nur dann
+        ''' lohnt die eigene Ebene. AUSGESCHALTETE Anpassungen bleiben vollständig erhalten und werden
+        ''' nur übersprungen - genau wie das Auge der Bildanpassungen es fürs ganze Bild tut. Die eine
+        ''' Stelle dafür: jeder Renderweg fragt hier.</summary>
         Private Shared Function HasObjectAdjustments(annotation As ImageAnnotation) As Boolean
-            Return annotation IsNot Nothing AndAlso annotation.Adjustments IsNot Nothing AndAlso annotation.Adjustments.HasPixelAdjustments()
+            Return annotation IsNot Nothing AndAlso Not annotation.AdjustmentsHidden AndAlso
+                   annotation.Adjustments IsNot Nothing AndAlso annotation.Adjustments.HasPixelAdjustments()
         End Function
 
         ''' <summary>Zeichnet ein Objekt (samt Drehung, Spiegelung, Schatten/Glühen) auf die übergebene
@@ -74,12 +78,19 @@ Namespace Services
 
             Dim result As SKBitmap
             If adj.BackgroundHidden Then
-                ' Hintergrund-Ebene aus: die Objekte schweben auf transparentem Grund (durchsichtiges PNG,
-                ' im Editor der Schachbrett-Hintergrund). Die teure Basis-Pipeline lief zwar, wird hier aber
-                ' verworfen - das ist der Preis fürs saubere Ein-/Ausschalten über einen einzigen Schalter.
+                ' Hintergrund-Ebene aus: die Objekte schweben auf dem GRUND DES DOKUMENTS - der
+                ' Hintergrundfarbe aus der Bildgrößen-Gruppe, ab Werk durchsichtig (im Editor das
+                ' Schachbrett, gespeichert ein durchsichtiges PNG). Die teure Basis-Pipeline lief zwar,
+                ' wird hier aber verworfen - das ist der Preis fürs saubere Ein-/Ausschalten über einen
+                ' einzigen Schalter.
+                '
+                ' Die Farbe MUSS hier noch einmal aufgelegt werden: sie kommt in der Basis-Kette unter
+                ' das Bild (ApplyDocumentBackground, gleich nach der Leinwandgröße), und genau diese
+                ' Basis wird hier weggeworfen. Ohne das war der Grund nach dem Ausblenden immer
+                ' durchsichtig, auch wenn im Werkzeug eine Farbe stand (Nutzerbefund 2026-08-08).
                 result = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
                 Using clearCanvas = New SKCanvas(result)
-                    clearCanvas.Clear(SKColors.Transparent)
+                    clearCanvas.Clear(DocumentBackgroundColor(adj))
                 End Using
             Else
                 result = CloneBitmapForAnnotationComposite(source)

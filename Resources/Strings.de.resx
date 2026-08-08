@@ -6666,4 +6666,18 @@
   <data name="Bild_kopiert_109ab6ed" xml:space="preserve"><value>Bild kopiert</value></data>
   <data name="Bild_kopieren_fehlgeschlagen_99d62d50" xml:space="preserve"><value>Bild kopieren fehlgeschlagen</value></data>
   <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Zuschnitt</value></data>
+  <data name="Malebene_c58eef25" xml:space="preserve"><value>Malebene</value></data>
+  <data name="Die_Auswahl_liegt_nicht_auf_der_markierten_Ebene_096701ed" xml:space="preserve"><value>Die Auswahl liegt nicht auf der markierten Ebene.</value></data>
+  <data name="Mit_Strg_die_Form_dieser_Ebene_als_Auswahl_laden_8f622a58" xml:space="preserve"><value>Mit Strg die Form dieser Ebene als Auswahl laden</value></data>
+  <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_d2c1cc4b" xml:space="preserve"><value>Ebenenmaske bearbeiten. Mit Alt nur die Maske zeigen, mit Umschalt stilllegen, mit Strg als Auswahl laden</value></data>
+  <data name="Transparente_Punkte_sperren_Striche_bleiben_in_d_3102d050" xml:space="preserve"><value>Transparente Punkte sperren - Striche bleiben in der vorhandenen Form der Ebene</value></data>
+  <data name="Neue_Malebene_eine_leere_Ebene_zum_Bemalen_anleg_3d028994" xml:space="preserve"><value>Neue Malebene: eine leere Ebene zum Bemalen anlegen</value></data>
+  <data name="Die_Malebene_konnte_nicht_angelegt_werden_caaceb00" xml:space="preserve"><value>Die Malebene konnte nicht angelegt werden.</value></data>
+  <data name="Ebene_sperren_gesperrt_sind_keine_Verschiebungen_4861b501" xml:space="preserve"><value>Ebene sperren - gesperrt sind keine Verschiebungen, Größenänderungen oder Drehungen mehr möglich</value></data>
+  <data name="Radieren_fehlgeschlagen_53fe9cab" xml:space="preserve"><value>Radieren fehlgeschlagen</value></data>
+  <data name="Radierer_46044487" xml:space="preserve"><value>Radierer</value></data>
+  <data name="Transparente_Punkte_sperren_da912f07" xml:space="preserve"><value>Transparente Punkte sperren</value></data>
+  <data name="Transparente_Punkte_freigeben_66d0baa3" xml:space="preserve"><value>Transparente Punkte freigeben</value></data>
+  <data name="Anpassungen_dieser_Ebene_ein_oder_ausschalten_7076645d" xml:space="preserve"><value>Anpassungen dieser Ebene ein- oder ausschalten</value></data>
+  <data name="Anpassungen_dieser_Ebene_verwerfen_1a0f1d69" xml:space="preserve"><value>Anpassungen dieser Ebene verwerfen</value></data>
 </root>

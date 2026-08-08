@@ -330,6 +330,12 @@ Namespace Services
         ''' ImageAdjustments.PixelAdjustmentProperties).</summary>
         Public Property Adjustments As ImageAdjustments = Nothing
 
+        ''' <summary>Die eigenen Anpassungen dieser Ebene sind AUSGESCHALTET. Sie bleiben vollständig
+        ''' erhalten und werden beim Rendern nur übersprungen - dasselbe, was das Auge der Zeile
+        ''' „Bildanpassungen" fürs ganze Bild tut. Genau dafür schaltet man sie ab: um zu sehen, wie
+        ''' die Ebene ohne sie aussieht.</summary>
+        Public Property AdjustmentsHidden As Boolean = False
+
         ''' Nur bei Kind "Brush"/"Eraser" befüllt. Kein PropertyChanged: die Liste wächst ausschließlich
         ''' beim Malen, und die Vorschau wird dabei ohnehin explizit angestoßen.
         Public Property Strokes As New List(Of BrushStroke)()
@@ -381,6 +387,21 @@ Namespace Services
                 RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(LayerLabel)))
             End Set
         End Property
+
+        ''' <summary>Diese Ebene ist eine leere MALEBENE: ein durchsichtiges Raster in Bildgröße, das
+        ''' erst durch Pinsel, Radierer und Retusche etwas zeigt. Technisch ist sie eine Bild-Ebene wie
+        ''' jede andere - der Merker sagt nur, wie sie ENTSTANDEN ist, und daran hängen zwei Dinge: sie
+        ''' fängt auf der Leinwand keine Klicks (ihr Rechteck deckt das ganze Bild, und durchsichtig
+        ''' wäre nicht zu sehen, was man da greift), und ein Klick auf ihre Zeile führt ins
+        ''' Zeichnen-Werkzeug statt ins Verschieben.</summary>
+        Public Property IsPaintLayer As Boolean = False
+
+        ''' <summary>TRANSPARENTE PUNKTE SIND GESPERRT: ein Strich, eine Retusche oder ein Entfernen
+        ''' bleibt in der Form, die die Ebene schon hat, und kann sie nicht vergrößern. Umgesetzt als
+        ''' Nachnahme über den vorhandenen Alphakanal - wo die Ebene durchsichtig ist, wird der
+        ''' Vorher-Stand wieder eingeblendet. Der Radiergummi bleibt davon unberührt: er nimmt Deckung
+        ''' weg, und das ist keine Vergrößerung.</summary>
+        Public Property LockTransparentPixels As Boolean = False
 
         ''' <summary>Vom Nutzer vergebener Ebenenname; leer = automatische Beschriftung. Ändert LayerLabel.</summary>
         Public Property CustomName As String
@@ -1213,6 +1234,9 @@ Namespace Services
                 .OwnWarp = OwnWarp?.Clone(),
                 .ImagePath = ImagePath,
                 .SourceFileName = SourceFileName,
+                .IsPaintLayer = IsPaintLayer,
+                .LockTransparentPixels = LockTransparentPixels,
+                .AdjustmentsHidden = AdjustmentsHidden,
                 .XPixels = XPixels,
                 .YPixels = YPixels,
                 .WidthPixels = WidthPixels,

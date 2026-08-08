@@ -1953,6 +1953,18 @@ Namespace ViewModels
                     ' das Ziel dafuer bestimmt hat.
                     If _currentTool = EditorTool.Draw AndAlso
                        IsPaintableImageAnnotation(_annotations(clamped)) Then targetTool = _currentTool
+                    ' Im RETUSCHE-Werkzeug aus demselben Grund: dort markiert man eine Bild-Ebene,
+                    ' um auf ihr zu stempeln, zu verwischen oder zu reparieren (siehe
+                    ' EditorViewModelObjectRetouch.vb).
+                    If _currentTool = EditorTool.Retouch AndAlso
+                       IsPaintableImageAnnotation(_annotations(clamped)) Then targetTool = _currentTool
+                    ' Eine MALEBENE führt immer ins Zeichnen-Werkzeug, aus welchem man auch kommt: sie
+                    ' ist zum Bemalen da, und ins Verschieben zu springen (die Art ist technisch eine
+                    ' Auswahl-Kopie) nähme einem genau das weg. Verschieben geht danach über die
+                    ' Werkzeugleiste - der Wechsel dorthin behält die markierte Ebene.
+                    If _annotations(clamped).IsPaintLayer AndAlso Not IsObjectScopeTool(_currentTool) AndAlso
+                       _currentTool <> EditorTool.Retouch AndAlso _currentTool <> EditorTool.Selection AndAlso
+                       _currentTool <> EditorTool.Mask Then targetTool = EditorTool.Draw
                     ' Der Rahmen ist davon die Ausnahme: seine Regler stehen NUR in der Rahmengruppe
                     ' unter Effekte. Bliebe man in Anpassen oder Farbe stehen, waere die Ebene zwar
                     ' markiert, aber nirgends etwas davon zu sehen.
@@ -2225,6 +2237,12 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanRenameSelectedLayer))
             Me.RaisePropertyChanged(NameOf(CanMergeSelectedAnnotations))
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
+            ' BEIDE: ob der Knopf ueberhaupt dasteht (PaintsOnImageLayer) und wie er aussieht. Ohne
+            ' die erste Meldung blieb er unsichtbar - die Bindung wurde einmal beim Aufbau
+            ' ausgewertet, als noch nichts markiert war, und danach nie wieder.
+            Me.RaisePropertyChanged(NameOf(PaintsOnImageLayer))
+            Me.RaisePropertyChanged(NameOf(LayerTransparencyLocked))
+            Me.RaisePropertyChanged(NameOf(SelectedLayerHasOwnAdjustments))
             Me.RaisePropertyChanged(NameOf(HasSelectedPanelLayer))
             ' Der Masken-Knopf haengt am EINEN Zielobjekt und faellt bei mehreren Ebenen weg - er
             ' gehoert deshalb in dieselbe Meldung wie der Rest der Fusszeile.
@@ -2412,6 +2430,10 @@ Namespace ViewModels
             Dim hits As New List(Of ImageAnnotation)()
             For Each a In _annotations
                 If a Is Nothing OrElse Not adj.IsAnnotationRenderVisible(a) Then Continue For
+                ' Eine MALEBENE deckt das ganze Bild: sie läge in JEDEM aufgezogenen Rahmen und
+                ' machte damit jede Mehrfachauswahl zunichte. Dieselbe Entscheidung wie beim
+                ' Treffertest - markiert wird sie über die Ebenenliste.
+                If a.IsPaintLayer Then Continue For
                 Dim r = StoredAnnotationRectToDisplayPercent(a)
                 If r.Width <= 0 OrElse r.Height <= 0 Then Continue For
                 If r.X > right OrElse r.X + r.Width < left OrElse r.Y > bottom OrElse r.Y + r.Height < top Then Continue For
@@ -6247,6 +6269,8 @@ Namespace ViewModels
             _cloneSourceXPercent = Math.Max(0, Math.Min(100, xPercent))
             _cloneSourceYPercent = Math.Max(0, Math.Min(100, yPercent))
             _hasCloneOffset = False
+            ' Der Versatz auf einer EBENE wird genauso hinfällig - er gehört zur alten Quelle.
+            _objectHasCloneOffset = False
             RaiseCloneSourceProperties()
             ' Alt+Klick kuendigt einen Stempel-Zug an: Live-Puffer vorwaermen (siehe CurrentTool).
             BeginRetouchLiveBuffersAsync()
@@ -6257,6 +6281,7 @@ Namespace ViewModels
             _cloneSourceXPercent = -1
             _cloneSourceYPercent = -1
             _hasCloneOffset = False
+            _objectHasCloneOffset = False
             RaiseCloneSourceProperties()
         End Sub
 
@@ -6266,6 +6291,9 @@ Namespace ViewModels
         ''' Bild gewandert ist; dann greift der Ringmittelwert.
         Public Function GetCloneSamplePercent(xPercent As Double, yPercent As Double) As (X As Double, Y As Double, IsValid As Boolean)
             If Not IsCloneMode OrElse Not HasCloneSource Then Return (0, 0, False)
+            ' Auf einer EBENE steht der Versatz in Anzeigepunkten, nicht in Arbeitsbild-Pixeln.
+            Dim onLayer = TryGetObjectCloneSamplePercent(xPercent, yPercent)
+            If onLayer.HasValue Then Return onLayer.Value
             If Not _hasCloneOffset Then Return (_cloneSourceXPercent, _cloneSourceYPercent, True)
 
             Dim baseWidth = Math.Max(1, GetBaseWidth())
@@ -6903,6 +6931,16 @@ Namespace ViewModels
             Set(value As Avalonia.Media.Color)
                 EraserFillColor = value.ToString()
             End Set
+        End Property
+
+        ''' <summary>Nimmt der Radiergummi DECKUNG weg (statt eine Farbe zu malen)? Nur dann ist er
+        ''' ein Radierer im Wortsinn - mit gesetzter Hintergrundfarbe malt er sie, und das ist ein
+        ''' gewöhnlicher Strich. Die Frage entscheidet, ob ein Zug auf einer Ebene in ihre
+        ''' EBENENMASKE geht oder in ihre Bildpunkte.</summary>
+        Public ReadOnly Property EraserRemovesCoverage As Boolean
+            Get
+                Return EraserFillColorValue.A = 0
+            End Get
         End Property
 
         Public ReadOnly Property AnnotationStrokeBrush As Avalonia.Media.IBrush
@@ -8023,6 +8061,9 @@ Namespace ViewModels
         ''' <summary>Das Markierte verschwinden lassen und die Luecke fuellen.</summary>
         Public Sub ApplyObjectRemoval()
             If Not CanRemoveObject Then Return
+            ' Ist eine Bild-Ebene markiert, wird aus IHR entfernt - dieselbe Regel wie beim Pinsel und
+            ' bei der Retusche. Der Weg steht in EditorViewModelObjectRetouch.vb.
+            If TryRemoveObjectFromImageAnnotation() Then Return
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
             Dim recipe = GetCurrentAdjustments()
@@ -8171,6 +8212,61 @@ Namespace ViewModels
             SetSelectionShape("Rectangle", Nothing, Nothing)
             HasActiveSelection = True
         End Sub
+
+        ''' <summary>ALLES AUSWÄHLEN, aus jedem Werkzeug heraus. Ist gerade keines aktiv, in dem eine
+        ''' Auswahl etwas bewirkt, wird ins AUSWAHL-Werkzeug gewechselt: wer alles auswählt, will
+        ''' etwas damit tun, und in einem Werkzeug ohne Ameisenlinie wäre die Auswahl unsichtbar
+        ''' entstanden. Ohne Bild passiert nichts.</summary>
+        Public Sub SelectAllForCurrentTarget()
+            If GetBaseWidth() <= 0 OrElse GetBaseHeight() <= 0 Then Return
+            If Not IsSelectionScopeTool(_currentTool) Then CurrentTool = EditorTool.Selection
+            SelectAll()
+        End Sub
+
+        ''' <summary>Werkzeuge, in denen eine Auswahl etwas bewirkt und ihre Ameisenlinie zu sehen ist.
+        ''' Dieselbe Liste, an der auch die Ansicht ihr Overlay entscheidet - sie steht hier, damit
+        ''' das ViewModel sie nicht raten muss.</summary>
+        Public Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
+            Select Case tool
+                Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color,
+                     EditorTool.Filters, EditorTool.Details, EditorTool.Effects, EditorTool.Draw
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
+        ''' <summary>DIE AUSWAHL AUSSCHNEIDEN: erst in die Zwischenablage, dann aus dem Bild. Der Weg
+        ''' setzt sich aus den beiden vorhandenen zusammen, damit Kopieren und Ausschneiden nie
+        ''' auseinanderlaufen - und die Reihenfolge ist Pflicht: was schon gelöscht ist, lässt sich
+        ''' nicht mehr kopieren. Leer zurück heisst: es gab nichts auszuschneiden.</summary>
+        Public Function CutSelectionToClipboardFile() As String
+            If Not HasPixelSelectionScope Then Return Nothing
+            Dim tempPath = CopySelectionToClipboardFile()
+            If String.IsNullOrWhiteSpace(tempPath) Then Return Nothing
+            EraseSelection()
+            AddHistoryEntry("Auswahl ausgeschnitten")
+            Return tempPath
+        End Function
+
+        ''' <summary>Ist dieser Pfad UNSER eigener Auswahl-Ausschnitt? Beim Ausschneiden legt der
+        ''' Editor ihn zusätzlich in die System-Zwischenablage, und von dort kommt er als DATEI
+        ''' zurück. Ohne diese Frage entstünde daraus eine gewöhnliche Bild-Ebene, die nach ihrer
+        ''' Zwischendatei heisst ("Bild: selection_a1b2…") - der eigene Weg kennt dagegen Lage, Größe
+        ''' und einen lesbaren Namen (Nutzerbefund 2026-08-08).</summary>
+        Public Function IsOwnSelectionClipboardFile(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse String.IsNullOrWhiteSpace(_selectionClipboardPath) Then Return False
+            Return String.Equals(IO.Path.GetFullPath(path), IO.Path.GetFullPath(_selectionClipboardPath),
+                                 StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Fügt den zuletzt kopierten oder ausgeschnittenen Auswahl-Ausschnitt als NEUE
+        ''' Bild-Ebene ein. True heisst: es lag etwas bereit.</summary>
+        Public Function PasteSelectionClipboardIfAny() As Boolean
+            If String.IsNullOrWhiteSpace(_selectionClipboardPath) OrElse Not File.Exists(_selectionClipboardPath) Then Return False
+            PasteSelectionClipboard()
+            Return True
+        End Function
 
         Public Sub ClearSelection(Optional captureUndo As Boolean = True)
             ' Die gesammelten Klicks der Objektauswahl gehoeren zu GENAU dieser Maske. Bleiben sie
@@ -11260,6 +11356,10 @@ Namespace ViewModels
         Public ReadOnly Property ClearSelectionCommand As ICommand
         Public ReadOnly Property InvertSelectionCommand As ICommand
         Public ReadOnly Property CopySelectionCommand As ICommand
+        Public ReadOnly Property AddPaintLayerCommand As ICommand
+        Public ReadOnly Property ToggleTransparencyLockCommand As ICommand
+        Public ReadOnly Property ToggleLayerAdjustmentsCommand As ICommand
+        Public ReadOnly Property ClearLayerAdjustmentsCommand As ICommand
         Public ReadOnly Property CreateAdjustmentLayerFromSelectionCommand As ICommand
         Public ReadOnly Property FillSelectionCommand As ICommand
         Public ReadOnly Property SetSelectionModeCommand As ICommand
@@ -11637,6 +11737,14 @@ Namespace ViewModels
             ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
             InvertSelectionCommand = ReactiveCommand.Create(Sub() InvertSelection())
             CopySelectionCommand = ReactiveCommand.Create(Sub() CopySelectionToNewObject())
+            AddPaintLayerCommand = ReactiveCommand.Create(Sub() AddPaintLayer())
+            ToggleTransparencyLockCommand = ReactiveCommand.Create(
+                Sub() LayerTransparencyLocked = Not LayerTransparencyLocked)
+            ' Über die ZEILE, wie das Auge daneben: der Schalter soll wirken, ohne dass man die Ebene
+            ' vorher anklickt.
+            ToggleLayerAdjustmentsCommand = ReactiveCommand.Create(Of LayerPanelRow)(
+                Sub(row) ToggleLayerAdjustments(row))
+            ClearLayerAdjustmentsCommand = ReactiveCommand.Create(Sub() ClearLayerAdjustments(Nothing))
             CreateAdjustmentLayerFromSelectionCommand = ReactiveCommand.Create(Sub() CreateAdjustmentLayerFromSelection())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
@@ -13159,7 +13267,44 @@ Namespace ViewModels
             Return False
         End Function
 
+        ''' <summary>SCHREIBT DIE REGLERWERTE SOFORT IN DIE MARKIERTEN OBJEKTE, statt erst beim
+        ''' Abwählen. Zwei Dinge hingen daran, und beide waren kaputt (Nutzerbefund 2026-08-08):
+        '''
+        ''' - **Das Bild.** Der Kompositor zeichnet die Objekte aus den LEBENDEN Ebenen
+        '''   (<c>GetCompositorBlitAdjustments</c> reicht <c>_annotations</c> unverändert weiter) und
+        '''   holt ihre Bitmap aus dem Zwischenspeicher, dessen Schlüssel den Anpassungssatz enthält.
+        '''   Solange die Werte nur im Puffer standen, sah er nichts davon - und ein Objekt, das der
+        '''   Kompositor zeichnet, ist aus der gebackenen Szene ausgeblendet, also blieb auch der
+        '''   Patch-Weg wirkungslos. Eine Reglerbewegung tat sichtbar gar nichts.
+        ''' - **Das Symbol in der Ebenenzeile.** Es hängt an <c>Adjustments</c> des Objekts; ohne
+        '''   Durchschreiben erschien es erst nach dem Abwählen.
+        '''
+        ''' Doppelt wirkt dabei nichts: <c>GetCurrentAdjustments</c> SETZT denselben Satz auf dem Klon
+        ''' (Zuweisung, keine Verrechnung), und der Abschluss schreibt am Ende dieselben Werte noch
+        ''' einmal.</summary>
+        Private Sub PushObjectAdjustValuesToTargets()
+            If _objectAdjustSwapInProgress OrElse Not IsObjectAdjustModeActive() Then Return
+            Dim objectValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
+            Dim values = If(objectValues.HasPixelAdjustments(), objectValues, Nothing)
+            Dim hadMark = False
+            Dim hasMark = values IsNot Nothing
+            For Each i In ObjectAdjustTargetIndices()
+                If i < 0 OrElse i >= _annotations.Count Then Continue For
+                Dim vorhanden = _annotations(i).Adjustments
+                If vorhanden IsNot Nothing AndAlso vorhanden.HasPixelAdjustments() Then hadMark = True
+                ' Jedes Objekt bekommt eine EIGENE Kopie - ein gemeinsames Objekt zöge spätere
+                ' Änderungen an einem von ihnen durch alle anderen mit.
+                _annotations(i).Adjustments = If(values Is Nothing, Nothing, values.Clone())
+            Next
+            ' Die Zeilen nur neu bauen, wenn das SYMBOL sich ändert - bei jedem Reglerschritt wäre
+            ' das eine Neuberechnung der ganzen Liste für nichts.
+            If hadMark <> hasMark Then RebuildLayerRows()
+        End Sub
+
         Private Sub RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
+            ' ZUERST die Werte ins Objekt, dann die Ansicht anfordern: der Kompositor liest sie von
+            ' dort, und der Zwischenspeicher entscheidet an ihnen, ob er die Bitmap neu rendert.
+            PushObjectAdjustValuesToTargets()
             ' Verzerrte Objekte kennen kein brauchbares Dirty-Rechteck (siehe
             ' SelectedAnnotationsNeedFullRender) - fuer sie gilt immer der Vollrender.
             If SelectedAnnotationsNeedFullRender() Then
@@ -16848,6 +16993,30 @@ Namespace ViewModels
             Dim normalized = points.ToList()
             If normalized.Count < 2 Then Return
 
+            ' RADIEREN AUF EINER EBENE GEHT IN IHRE EBENENMASKE, nicht in ihre Bildpunkte: die Pixel
+            ' bleiben, die Deckung geht weg, und der Zug ist mit dem Maskenpinsel zurückzuholen. Das
+            ' gilt für JEDE Ebene, die eine Maske tragen kann - auch für Text, Formen und SVG, in die
+            ' sich bisher gar nicht radieren liess. Nicht dafür gilt es, wenn der Radierer eine
+            ' Hintergrundfarbe trägt: der malt eine Farbe und gehört in die Bildpunkte.
+            '
+            ' EINE AUSNAHME: die MALEBENE. Sie ist das eigene Raster, angelegt zum Bemalen - dort
+            ' heisst radieren, dass die Farbe weg ist, und nicht, dass sie unter einer Maske
+            ' liegenbleibt (Nutzerbefund 2026-08-08: "radiere ich einen Malpinselstrich auf einer
+            ' Malebene, bleibt der Strich als transparente Stelle erhalten"). Bei allem anderen -
+            ' eingefügtes Bild, Text, Form, SVG - sind die Pixel fremd oder gar nicht da, und die
+            ' Maske ist der richtige Weg.
+            If isEraser AndAlso EraserRemovesCoverage Then
+                Dim maskObject = MaskTargetAnnotation()
+                If maskObject IsNot Nothing AndAlso maskObject.IsVisible AndAlso
+                   Not maskObject.IsPaintLayer AndAlso
+                   Not String.Equals(NormalizeAnnotationKind(maskObject.Kind), "Frame", StringComparison.Ordinal) Then
+                    If Not TryEraseIntoAnnotationMask(maskObject, normalized) Then
+                        StatusText = LocalizationService.T("Radieren fehlgeschlagen")
+                    End If
+                    Return
+                End If
+            End If
+
             ' Steht ein Ziel fest, bleibt es dabei - auch wenn das Malen scheitert. Ein Rückfall
             ' aufs Foto wäre hier das Schlimmere: er sieht im Bild fast gleich aus, sitzt aber in
             ' den falschen Pixeln, und auffallen würde es erst beim Verschieben der Ebene.
@@ -17956,6 +18125,11 @@ Namespace ViewModels
                 ' waere mehr anzufassen. Auswaehlbar bleibt er ueber die Ebenenliste, verschieben
                 ' laesst er sich ohnehin nicht.
                 If String.Equals(a.Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then Continue For
+                ' Eine MALEBENE aus demselben Grund: ihr Rechteck deckt das ganze Bild, und sie ist
+                ' durchsichtig - ein Klick irgendwohin griffe sie, und man saehe nicht einmal, was man
+                ' da erwischt hat. Markiert wird sie ueber die Ebenenliste; verschieben laesst sie
+                ' sich danach an ihrem Rahmen wie jedes andere Objekt.
+                If a.IsPaintLayer Then Continue For
                 ' Ausgeblendete Ebenen sind auf der Leinwand nicht zu sehen; ein Klick auf ihre alte
                 ' Stelle darf sie nicht selektieren (und damit ins zugehörige Werkzeug springen).
                 If Not a.IsVisible Then Continue For
@@ -18111,6 +18285,9 @@ Namespace ViewModels
             If tool = EditorTool.Selection Then Return True
             If tool = EditorTool.Mask AndAlso Not String.IsNullOrEmpty(annotation.MaskId) Then Return True
             If tool = EditorTool.Mask AndAlso IsPaintableImageAnnotation(annotation) Then Return True
+            ' Und ins RETUSCHE-Werkzeug, sobald die Ebene ein Bild traegt: Stempel, Verwischen und
+            ' Reparaturpinsel arbeiten dort in ihrem Bild, und ohne Markierung haetten sie kein Ziel.
+            If tool = EditorTool.Retouch AndAlso IsPaintableImageAnnotation(annotation) Then Return True
             Return False
         End Function
 
@@ -19683,12 +19860,12 @@ Namespace ViewModels
         Private Sub SetPaintMode(mode As String)
             Dim normalized = If(mode, "").Trim().ToLowerInvariant()
             Dim previousPaintMode = SelectedPaintMode
-            ' Eine markierte BILD-Ebene überlebt den Wechsel zu Pinsel und Radiergummi: auf ihr soll
-            ' ja gemalt werden (siehe AddBrushStroke). Sie hier abzuwählen hiesse, das Ziel mit dem
+            ' Eine markierte BILD-Ebene überlebt den Wechsel zu Pinsel, Radiergummi, Verwischen,
+            ' Reparaturpinsel und Stempel: auf ihr soll ja gearbeitet werden (siehe AddBrushStroke
+            ' und EditorViewModelObjectRetouch.vb). Sie hier abzuwählen hiesse, das Ziel mit dem
             ' Griff zum Werkzeug wieder zu verlieren. Für alles andere bleibt es beim Abwählen: dort
-            ' malt man ins Foto, und ein markiertes Objekt stellte nur die Regler um.
-            Dim keepsImageLayer = (normalized = "brush" OrElse normalized = "pinsel" OrElse
-                                   normalized = "eraser" OrElse normalized = "radiergummi") AndAlso
+            ' arbeitet man im Foto, und ein markiertes Objekt stellte nur die Regler um.
+            Dim keepsImageLayer = KeepsImageLayerPaintMode(normalized) AndAlso
                                   FindStrokeTargetImageAnnotation() IsNot Nothing
             _overlayNotifySuppressDepth += 1
             Try
@@ -19739,6 +19916,22 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentToolIconSource))
             RaiseCloneSourceProperties()
         End Sub
+
+        ''' <summary>Die Malmodi, die auf dem BILD EINER EBENE arbeiten können und deshalb ihre
+        ''' Markierung behalten müssen. Die Namen sind die der Werkzeugleiste - dieselbe Liste wie
+        ''' im Auswerten unten, nur eine Frage früher gestellt: dort wird das Werkzeug gesetzt, hier
+        ''' entschieden, ob es sein Ziel dabei verliert.</summary>
+        Private Shared Function KeepsImageLayerPaintMode(normalized As String) As Boolean
+            Select Case normalized
+                Case "brush", "pinsel", "eraser", "radiergummi",
+                     "blur", "verwischen",
+                     "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche",
+                     "clone", "stempel"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
 
         Private Shared Function IsRetouchPaintMode(mode As String) As Boolean
             Select Case If(mode, "").Trim()

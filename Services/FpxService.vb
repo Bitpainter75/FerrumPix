@@ -109,9 +109,47 @@ Namespace Services
                     adj.SelectionScopeEnabled = True
                 End If
             End If
-            adj.HasActiveSelection = False
+            StripTransientSelectionState(adj)
             Return adj
         End Function
+
+        ''' <summary>Raeumt den TRANSIENTEN Auswahlzustand aus einem Dokumentrezept: ob gerade eine
+        ''' Auswahl lief (<c>HasActiveSelection</c>), welcher ART sie war (<c>ActiveSelectionIsMask</c>)
+        ''' und ihre Arbeitskopie (<c>SelectionMaskPngBase64</c> samt Rechteck und Form).
+        '''
+        ''' Bisher stand hier nur die erste Haelfte, und das reichte nicht: die ART und die
+        ''' Arbeitskopie kamen weiter mit. Beim Oeffnen setzte das Wiederherstellen die Art auf
+        ''' "Maske" und legte die Arbeitskopie zurueck, und weil JEDE Aenderung der Auswahlmaske bei
+        ''' einer Masken-Art das rote Overlay veroeffentlicht, lag es sofort ueber dem Bild. Die
+        ''' Ansicht zeigt es allein an der Art und am Vorhandensein des Bildes, nicht an
+        ''' HasActiveSelection. Sichtbar wurde es als "rotes Overlay einer Maske, obwohl im
+        ''' Ebenenpanel nichts markiert ist und das Auswahlwerkzeug steht" (Nutzerbefund 2026-08-08) -
+        ''' und weil das Wiederherstellen die Bindung an die Ebene loescht, gehoerte das Rot zu gar
+        ''' nichts mehr.
+        '''
+        ''' Die Arbeitskopie bleibt NUR bei gesetztem <c>SelectionScopeEnabled</c> stehen: dort ist
+        ''' sie kein UI-Zustand, sondern der Render-Skopus alter Rezepte, deren Auswahl sich nicht in
+        ''' eine Maskenebene ueberfuehren liess. Die weiche Kante bleibt immer erhalten, sie gehoert
+        ''' zum Rezept.</summary>
+        Private Shared Sub StripTransientSelectionState(adj As ImageAdjustments)
+            If adj Is Nothing Then Return
+            adj.HasActiveSelection = False
+            adj.ActiveSelectionIsMask = False
+            If adj.SelectionScopeEnabled Then Return
+            adj.SelectionMaskPngBase64 = ""
+            adj.SelectionMaskLeft = 0
+            adj.SelectionMaskTop = 0
+            adj.SelectionMaskRight = 0
+            adj.SelectionMaskBottom = 0
+            adj.SelectionMaskSoftBaked = False
+            adj.SelectionXPercent = 0
+            adj.SelectionYPercent = 0
+            adj.SelectionWidthPercent = 0
+            adj.SelectionHeightPercent = 0
+            adj.SelectionShapeMode = "Rectangle"
+            adj.SelectionShapePointsX = Nothing
+            adj.SelectionShapePointsY = Nothing
+        End Sub
 
         ' ── Speichern ───────────────────────────────────────────────────────────
 
@@ -128,9 +166,10 @@ Namespace Services
             ' ohne die im Editor lebende Bearbeitung anzufassen.
             Dim recipeAdj = adjustments.Clone()
             ' Persistente lokale Korrekturen liegen in Masks + MaskedAdjustmentLayers. Ob daneben gerade
-            ' die Ameisenlinie sichtbar war, ist nur UI-Zustand und darf beim Wiederladen weder die Auswahl
-            ' reaktivieren noch globale Regler nachträglich auf diese Auswahl begrenzen.
-            recipeAdj.HasActiveSelection = False
+            ' eine Auswahl lief, welcher Art sie war und wie sie aussah, ist nur UI-Zustand und darf beim
+            ' Wiederladen weder die Auswahl reaktivieren noch ein rotes Overlay heraufholen noch globale
+            ' Regler nachträglich auf diese Auswahl begrenzen (siehe StripTransientSelectionState).
+            StripTransientSelectionState(recipeAdj)
             ' Das Gegenstueck zur .fpxmp: dieses Buendel traegt das Arbeitsbild in voller Aufloesung
             ' mit, Entrauschen und Retusche stecken also in seinen Pixeln. Der Vermerk darueber wird
             ' hier trotzdem NICHT auf wahr gezwungen, sondern uebernommen wie er kommt: wer eine

@@ -159,6 +159,24 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Trägt diese Ebene eigene Anpassungen aus den Reglerwerkzeugen? Dann zeigt die
+        ''' Zeile ein Symbol dafür - sonst sieht man einer Ebene nicht an, dass an ihr gedreht wurde,
+        ''' und sucht die Wirkung beim Bild.</summary>
+        Public ReadOnly Property HasOwnAdjustments As Boolean
+            Get
+                Return Annotation IsNot Nothing AndAlso Annotation.Adjustments IsNot Nothing AndAlso
+                       Annotation.Adjustments.HasPixelAdjustments()
+            End Get
+        End Property
+
+        ''' <summary>Sind sie eingeschaltet? Ausgeschaltet bleiben sie erhalten und werden nur
+        ''' übersprungen.</summary>
+        Public ReadOnly Property AdjustmentsActive As Boolean
+            Get
+                Return HasOwnAdjustments AndAlso Not Annotation.AdjustmentsHidden
+            End Get
+        End Property
+
         ''' <summary>Trägt dieses OBJEKT eine eigene Ebenenmaske? Die Zeile zeigt dafür ein kleines
         ''' Maskensymbol - ohne das sähe man einer Ebene nicht an, dass ein Teil von ihr
         ''' weggenommen ist, und suchte den Fehler im Objekt.</summary>
@@ -168,10 +186,12 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Ist dieses Objekt auf die Deckung der Ebene darunter beschränkt?</summary>
+        ''' <summary>Ist diese Ebene auf die Deckung der Ebene darunter beschränkt? Gilt für Objekte
+        ''' UND für Korrekturebenen, die über einem Objekt einsortiert sind.</summary>
         Public ReadOnly Property IsClipped As Boolean
             Get
-                Return Annotation IsNot Nothing AndAlso Annotation.ClipToLayerBelow
+                If Annotation IsNot Nothing Then Return Annotation.ClipToLayerBelow
+                Return AdjustmentLayer IsNot Nothing AndAlso AdjustmentLayer.ClipToLayerBelow
             End Get
         End Property
 

@@ -149,12 +149,6 @@ Namespace Views
             e.Handled = True
         End Sub
 
-        ''' Knopf in der Fußzeile: sperrt bzw. entsperrt die aktuelle Auswahl.
-        Private Sub OnToggleSelectionLockClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            vm?.ToggleSelectionLocked()
-        End Sub
-
         Private Sub OnRenameSelectedClick(sender As Object, e As RoutedEventArgs)
             StartRenameSelectedLayer()
         End Sub
@@ -180,7 +174,17 @@ Namespace Views
         Private Sub OnLayerMaskGesturePressed(sender As Object, e As PointerPressedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
-            If ApplyMaskGesture(vm, row, e.KeyModifiers) Then e.Handled = True
+            If ApplyMaskGesture(vm, row, e.KeyModifiers, fromMaskIcon:=True) Then e.Handled = True
+        End Sub
+
+        ''' <summary>Dieselben Gesten an der ZEILENMINIATUR. Der Unterschied ist Strg: an der
+        ''' Miniatur meint es die Form der EBENE, am Maskensymbol die Maske - genau wie in üblichen
+        ''' Bildbearbeitungen, wo beide Kacheln nebeneinander liegen. Bei einer Masken- oder
+        ''' Auswahlebene IST die Zeilenminiatur ihre Maske, dort fällt der Unterschied weg.</summary>
+        Private Sub OnLayerThumbnailGesturePressed(sender As Object, e As PointerPressedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)
+            If ApplyMaskGesture(vm, row, e.KeyModifiers, fromMaskIcon:=False) Then e.Handled = True
         End Sub
 
         ''' <summary>Die Entscheidung selbst, ohne Ereignis drumherum: was tut ein Klick mit dieser
@@ -190,10 +194,28 @@ Namespace Views
         ''' PointerPressedEventArgs laesst sich nicht sinnvoll von Hand bauen, und ein Waechter, der
         ''' nur den Quelltext liest, waere gruen, waehrend die Gesten nichts tun.</summary>
         Friend Shared Function ApplyMaskGesture(vm As EditorViewModel, row As LayerPanelRow,
-                                                modifiers As KeyModifiers) As Boolean
+                                                modifiers As KeyModifiers,
+                                                Optional fromMaskIcon As Boolean = True) As Boolean
             If vm Is Nothing OrElse row Is Nothing Then Return False
             Dim showsMaskOnly = modifiers.HasFlag(KeyModifiers.Alt)
             Dim turnsMaskOff = modifiers.HasFlag(KeyModifiers.Shift)
+            Dim loadsSelection = modifiers.HasFlag(KeyModifiers.Control)
+
+            ' STRG: die Form als Auswahl laden. Woher die Form kommt, sagt die angeklickte Kachel -
+            ' am Maskensymbol (und an der Zeile einer Masken- oder Auswahlebene, deren Miniatur IHRE
+            ' Maske ist) die Maske, an der Zeilenminiatur eines Objekts seine eigene Deckung.
+            If loadsSelection Then
+                Dim meansMask = fromMaskIcon OrElse row.AdjustmentLayer IsNot Nothing
+                If meansMask AndAlso (row.HasMask OrElse row.AdjustmentLayer IsNot Nothing) Then
+                    If Not Object.ReferenceEquals(row, vm.SelectedLayerRow) Then vm.SelectedLayerRow = row
+                    If row.HasMask AndAlso row.AdjustmentLayer Is Nothing Then vm.UseAnnotationMask()
+                    vm.LoadCurrentMaskAsSelection()
+                    Return True
+                End If
+                If row.Annotation IsNot Nothing Then Return vm.LoadSelectionFromAnnotationAlpha(row.Annotation)
+                Return False
+            End If
+
             If Not showsMaskOnly AndAlso Not turnsMaskOff Then Return False
             ' Eine Zeile ohne jede Maske hat nichts zu zeigen und nichts stillzulegen.
             If Not row.HasMask AndAlso row.AdjustmentLayer Is Nothing Then Return False
@@ -283,6 +305,21 @@ Namespace Views
             If vm.SelectedAnnotationHasMask Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske bearbeiten"), "brush", vm.EditAnnotationMaskCommand))
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske entfernen"), "circle-x", vm.RemoveAnnotationMaskCommand))
+            End If
+            ' Eigene Anpassungen der Ebene verwerfen. Ausschalten geht am Symbol der Zeile; hier
+            ' steht der endgültige Weg, denn ein Symbol, das zwei Dinge tut, tut keines davon
+            ' verständlich.
+            If vm.SelectedLayerHasOwnAdjustments Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Anpassungen dieser Ebene verwerfen"),
+                                            "adjustments-cancel", vm.ClearLayerAdjustmentsCommand))
+            End If
+            ' Transparente Punkte sperren: gilt für eine Ebene, in deren Bild gearbeitet wird, und
+            ' wird einmal gesetzt statt dauernd umgelegt - deshalb hier und nicht in der Fußzeile.
+            If vm.PaintsOnImageLayer Then
+                Dim lockText = If(vm.LayerTransparencyLocked,
+                                  LocalizationService.T("Transparente Punkte freigeben"),
+                                  LocalizationService.T("Transparente Punkte sperren"))
+                items.Add(MakeLayerMenuItem(lockText, "lock-square", vm.ToggleTransparencyLockCommand))
             End If
             If vm.CanClipSelectedAnnotation Then
                 Dim clipText = If(vm.SelectedAnnotationIsClipped,

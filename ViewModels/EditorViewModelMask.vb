@@ -3754,6 +3754,14 @@ Namespace ViewModels
         ''' das nicht selbst beschraenkt ist. Ganz unten im Stapel gibt es keine.</summary>
         Public ReadOnly Property CanClipSelectedAnnotation As Boolean
             Get
+                ' Eine KORREKTUREBENE kann es auch, aber nur mit Anker: ohne ihn liegt sie im
+                ' Basisbild, unter allen Objekten, und es gibt keine Ebene darunter (siehe
+                ' MaskedAdjustmentLayer.ClipToLayerBelow).
+                Dim adjustmentLayer = PasteTargetLayer()
+                If adjustmentLayer IsNot Nothing Then
+                    If adjustmentLayer.ClipToLayerBelow Then Return True
+                    Return Not String.IsNullOrEmpty(adjustmentLayer.StackAboveAnnotationId)
+                End If
                 Dim a = MaskTargetAnnotation()
                 If a Is Nothing Then Return False
                 If a.ClipToLayerBelow Then Return True
@@ -3809,6 +3817,8 @@ Namespace ViewModels
 
         Public ReadOnly Property SelectedAnnotationIsClipped As Boolean
             Get
+                Dim adjustmentLayer = PasteTargetLayer()
+                If adjustmentLayer IsNot Nothing Then Return adjustmentLayer.ClipToLayerBelow
                 Dim a = MaskTargetAnnotation()
                 Return a IsNot Nothing AndAlso a.ClipToLayerBelow
             End Get
@@ -4000,6 +4010,21 @@ Namespace ViewModels
         End Sub
 
         Public Sub ToggleClipSelectedAnnotation()
+            ' Die markierte KORREKTUREBENE geht vor: sie ist es, die man gerade in der Hand hat.
+            Dim adjustmentLayer = PasteTargetLayer()
+            If adjustmentLayer IsNot Nothing Then
+                If Not adjustmentLayer.ClipToLayerBelow AndAlso Not CanClipSelectedAnnotation Then Return
+                PushUndo()
+                adjustmentLayer.ClipToLayerBelow = Not adjustmentLayer.ClipToLayerBelow
+                _hasChanges = True
+                RaiseAnnotationMaskStateChanged()
+                RebuildLayerRows()
+                AddHistoryEntry(If(adjustmentLayer.ClipToLayerBelow,
+                                   LocalizationService.T("Auf Ebene darunter beschränkt"),
+                                   LocalizationService.T("Beschränkung aufgehoben")))
+                SchedulePreviewUpdate()
+                Return
+            End If
             Dim a = MaskTargetAnnotation()
             If a Is Nothing Then Return
             If Not a.ClipToLayerBelow AndAlso Not CanClipSelectedAnnotation Then Return
