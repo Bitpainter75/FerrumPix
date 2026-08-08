@@ -1918,8 +1918,8 @@
   <data name="Oben_rechts_4646e5f8" xml:space="preserve">
     <value>Oben rechts</value>
   </data>
-  <data name="Objekt_duplizieren_Strg_D_d123f119" xml:space="preserve">
-    <value>Objekt duplizieren (Strg+D)</value>
+  <data name="Objekt_duplizieren_STRG_D_605c2196" xml:space="preserve">
+    <value>Objekt duplizieren (STRG+D)</value>
   </data>
   <data name="Objekt_ein_ausblenden_c0adc9c1" xml:space="preserve">
     <value>Objekt ein-/ausblenden</value>
@@ -1927,8 +1927,8 @@
   <data name="Objekt_l_schen_b6dd7857" xml:space="preserve">
     <value>Objekt löschen</value>
   </data>
-  <data name="Objekt_l_schen_Entf_efd16004" xml:space="preserve">
-    <value>Objekt löschen (Entf)</value>
+  <data name="Objekt_l_schen_ENTF_df0b914b" xml:space="preserve">
+    <value>Objekt löschen (ENTF)</value>
   </data>
   <data name="Objekt_nach_hinten_91ade9ea" xml:space="preserve">
     <value>Objekt nach hinten</value>
@@ -2074,8 +2074,8 @@
   <data name="W_hle_unten_einen_Objekttyp_aus_und_klicke_dann__4add2974" xml:space="preserve">
     <value>Wähle unten einen Objekttyp aus und klicke dann ins Bild, um ihn dort zu platzieren.</value>
   </data>
-  <data name="Ziehen_zum_Drehen_Shift_15_Schritte_af03841b" xml:space="preserve">
-    <value>Ziehen zum Drehen (Shift = 15°-Schritte)</value>
+  <data name="Ziehen_zum_Drehen_SHIFT_15_Schritte_d836fd02" xml:space="preserve">
+    <value>Ziehen zum Drehen (SHIFT = 15°-Schritte)</value>
   </data>
   <data name="Zoom_9b3cbed5" xml:space="preserve">
     <value>Zoom</value>
@@ -2330,8 +2330,8 @@
   <data name="Stempel_cf577b82" xml:space="preserve">
     <value>Stempel</value>
   </data>
-  <data name="Stempel_Alt_Klick_setzt_die_Quelle_f61845f4" xml:space="preserve">
-    <value>Stempel (Alt+Klick setzt die Quelle)</value>
+  <data name="Stempel_ALT_Klick_setzt_die_Quelle_0822113c" xml:space="preserve">
+    <value>Stempel (ALT+Klick setzt die Quelle)</value>
   </data>
   <data name="Struktur_8ad87337" xml:space="preserve">
     <value>Struktur</value>
@@ -2798,8 +2798,8 @@
   <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
     <value>Album gelöscht: {0}</value>
   </data>
-  <data name="Auswahl_aufheben_Strg_D_oder_Esc_cdb5d463" xml:space="preserve">
-    <value>Auswahl aufheben (Strg+D oder Esc)</value>
+  <data name="Auswahl_aufheben_STRG_D_oder_ESC_6d0a4c49" xml:space="preserve">
+    <value>Auswahl aufheben (STRG+D oder ESC)</value>
   </data>
   <data name="Auswahl_im_Bild_erstellen_dann_kopieren_oder_f_l_f8265df4" xml:space="preserve">
     <value>Auswahl im Bild erstellen, dann kopieren oder füllen. Strg+A wählt alles aus, Strg+D hebt die Auswahl auf, Esc bricht das Aufziehen ab.</value>
@@ -2861,8 +2861,8 @@
   <data name="Ebenen_Panel_3c793049" xml:space="preserve">
     <value>Ebenen-Panel</value>
   </data>
-  <data name="Ebene_duplizieren_Strg_D_30ab0842" xml:space="preserve">
-    <value>Ebene duplizieren (Strg+D)</value>
+  <data name="Ebene_duplizieren_STRG_D_13686ce4" xml:space="preserve">
+    <value>Ebene duplizieren (STRG+D)</value>
   </data>
   <data name="Ebene_nach_vorne_84ecd146" xml:space="preserve">
     <value>Ebene nach vorne</value>
@@ -2870,8 +2870,8 @@
   <data name="Ebene_nach_hinten_1a9faf5b" xml:space="preserve">
     <value>Ebene nach hinten</value>
   </data>
-  <data name="Ebene_l_schen_Entf_063fd7c1" xml:space="preserve">
-    <value>Ebene löschen (Entf)</value>
+  <data name="Ebene_l_schen_ENTF_465039e7" xml:space="preserve">
+    <value>Ebene löschen (ENTF)</value>
   </data>
   <data name="Ebene_ein_ausblenden_fae4f2cc" xml:space="preserve">
     <value>Ebene ein-/ausblenden</value>
@@ -2942,8 +2942,8 @@
   <data name="Wird_mit_Immich_abgeglichen_ce6c1ecb" xml:space="preserve">
     <value>Wird mit Immich abgeglichen…</value>
   </data>
-  <data name="Beim_Ziehen_an_den_Anfassern_bleibt_das_Verh_ltn_01a7585a" xml:space="preserve">
-    <value>Beim Ziehen an den Anfassern bleibt das Verhältnis von Breite zu Höhe erhalten - wie bei Bildgröße. Aus: das Bild wird auf die gezogene Größe gestreckt (Shift erzwingt das Verhältnis weiterhin).</value>
+  <data name="Beim_Ziehen_an_den_Anfassern_bleibt_das_Verh_ltn_d5bac12e" xml:space="preserve">
+    <value>Beim Ziehen an den Anfassern bleibt das Verhältnis von Breite zu Höhe erhalten - wie bei Bildgröße. Aus: das Bild wird auf die gezogene Größe gestreckt (SHIFT erzwingt das Verhältnis weiterhin).</value>
   </data>
   <data name="Bewertung_Etikett_dbc10b78" xml:space="preserve">
     <value>Bewertung &amp; Etikett</value>
@@ -3032,8 +3032,8 @@
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_oder_Strg__a67aab8f" xml:space="preserve">
     <value>Bewertung setzen (dieselbe Zahl erneut oder Strg+0 entfernt sie)</value>
   </data>
-  <data name="Strg_Q_170b2b61" xml:space="preserve">
-    <value>Strg+Q</value>
+  <data name="STRG_Q_018e5081" xml:space="preserve">
+    <value>STRG+Q</value>
   </data>
   <data name="Favorit_ein_aus_1b5c90d6" xml:space="preserve">
     <value>Favorit ein/aus</value>
@@ -3041,8 +3041,8 @@
   <data name="Pfeiltasten_Bild_auf_ab_Pos1_Ende_089188b4" xml:space="preserve">
     <value>Pfeiltasten, Bild auf/ab, Pos1, Ende</value>
   </data>
-  <data name="Auswahl_bewegen_Umschalt_Bereich_erweitern_e675c648" xml:space="preserve">
-    <value>Auswahl bewegen (Umschalt: Bereich erweitern)</value>
+  <data name="Auswahl_bewegen_SHIFT_Bereich_erweitern_274e18c9" xml:space="preserve">
+    <value>Auswahl bewegen (SHIFT: Bereich erweitern)</value>
   </data>
   <data name="Eingabe_oder_Doppelklick_679e9e9a" xml:space="preserve">
     <value>Eingabe oder Doppelklick</value>
@@ -3050,14 +3050,14 @@
   <data name="Bild_ffnen_4beb4809" xml:space="preserve">
     <value>Bild öffnen</value>
   </data>
-  <data name="Leertaste_halten_15b04274" xml:space="preserve">
-    <value>Leertaste (halten)</value>
+  <data name="LEERTASTE_halten_73db5134" xml:space="preserve">
+    <value>LEERTASTE (halten)</value>
   </data>
   <data name="Schnellvorschau_419601fa" xml:space="preserve">
     <value>Schnellvorschau</value>
   </data>
-  <data name="Strg_A_4d8db788" xml:space="preserve">
-    <value>Strg+A</value>
+  <data name="STRG_A_f9bf2e0a" xml:space="preserve">
+    <value>STRG+A</value>
   </data>
   <data name="Alles_ausw_hlen_becdd6af" xml:space="preserve">
     <value>Alles auswählen</value>
@@ -3068,35 +3068,35 @@
   <data name="Kopieren_Ausschneiden_Einf_gen_eb819efb" xml:space="preserve">
     <value>Kopieren / Ausschneiden / Einfügen</value>
   </data>
-  <data name="Strg_F_05b84635" xml:space="preserve">
-    <value>Strg+F</value>
+  <data name="STRG_F_1def19c7" xml:space="preserve">
+    <value>STRG+F</value>
   </data>
   <data name="Suche_fd281588" xml:space="preserve">
     <value>Suche</value>
   </data>
-  <data name="Strg_W_049f6d81" xml:space="preserve">
-    <value>Strg+W</value>
+  <data name="STRG_W_1503f6f8" xml:space="preserve">
+    <value>STRG+W</value>
   </data>
-  <data name="Strg_R_fa0fdb7c" xml:space="preserve">
-    <value>Strg+R</value>
+  <data name="STRG_R_7f6dc9b3" xml:space="preserve">
+    <value>STRG+R</value>
   </data>
-  <data name="Strg_D_7de6019a" xml:space="preserve">
-    <value>Strg+D</value>
+  <data name="STRG_D_9b96a959" xml:space="preserve">
+    <value>STRG+D</value>
   </data>
   <data name="F2_999d0cd6" xml:space="preserve">
     <value>F2</value>
   </data>
-  <data name="Entf_50660d74" xml:space="preserve">
-    <value>Entf</value>
+  <data name="ENTF_90326b05" xml:space="preserve">
+    <value>ENTF</value>
   </data>
   <data name="Aktualisieren_87c65f26" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>
-  <data name="Esc_1f7a4f9e" xml:space="preserve">
-    <value>Esc</value>
+  <data name="ESC_042b890a" xml:space="preserve">
+    <value>ESC</value>
   </data>
-  <data name="Strg_Mausrad_oder_Rechtsklick_Mausrad_6a8d113a" xml:space="preserve">
-    <value>Strg+Mausrad oder Rechtsklick+Mausrad</value>
+  <data name="STRG_Mausrad_oder_Rechtsklick_Mausrad_00071ede" xml:space="preserve">
+    <value>STRG+Mausrad oder Rechtsklick+Mausrad</value>
   </data>
   <data name="Kachelgr_e_ndern_e84982b6" xml:space="preserve">
     <value>Kachelgröße ändern</value>
@@ -3116,8 +3116,8 @@
   <data name="Bild_einpassen_58bd9313" xml:space="preserve">
     <value>Bild einpassen</value>
   </data>
-  <data name="Leertaste_9eeb28a0" xml:space="preserve">
-    <value>Leertaste</value>
+  <data name="LEERTASTE_00f00043" xml:space="preserve">
+    <value>LEERTASTE</value>
   </data>
   <data name="Diashow_starten_stoppen_2930a311" xml:space="preserve">
     <value>Diashow starten/stoppen</value>
@@ -3128,14 +3128,14 @@
   <data name="Nach_links_rechts_drehen_36ee2c3b" xml:space="preserve">
     <value>Nach links / rechts drehen</value>
   </data>
-  <data name="Strg_I_38b20eaa" xml:space="preserve">
-    <value>Strg+I</value>
+  <data name="STRG_I_d7ab115f" xml:space="preserve">
+    <value>STRG+I</value>
   </data>
   <data name="Info_Leiste_ein_aus_3d1dadd7" xml:space="preserve">
     <value>Info-Leiste ein/aus</value>
   </data>
-  <data name="Strg_E_98c415e6" xml:space="preserve">
-    <value>Strg+E</value>
+  <data name="STRG_E_2f7728b4" xml:space="preserve">
+    <value>STRG+E</value>
   </data>
   <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_9acb05b5" xml:space="preserve">
     <value>Zurück zur Galerie (im Vollbild: Vollbild verlassen)</value>
@@ -3149,8 +3149,8 @@
   <data name="R_ckg_ngig_Wiederholen_579d24d3" xml:space="preserve">
     <value>Rückgängig / Wiederholen</value>
   </data>
-  <data name="Strg_S_1f1d1d5c" xml:space="preserve">
-    <value>Strg+S</value>
+  <data name="STRG_S_a17947ac" xml:space="preserve">
+    <value>STRG+S</value>
   </data>
   <data name="Speichern_wenn_nicht_m_glich_Speichern_unter_e8f908b6" xml:space="preserve">
     <value>Speichern (wenn nicht möglich: Speichern unter)</value>
@@ -3167,8 +3167,8 @@
   <data name="Objekt_duplizieren_ohne_Objekt_Auswahl_aufheben_56d12fa8" xml:space="preserve">
     <value>Objekt duplizieren; ohne Objekt: Auswahl aufheben</value>
   </data>
-  <data name="Strg_P_568a12fb" xml:space="preserve">
-    <value>Strg+P</value>
+  <data name="STRG_P_80d9c652" xml:space="preserve">
+    <value>STRG+P</value>
   </data>
   <data name="Vorschau_anwenden_1445fbbc" xml:space="preserve">
     <value>Vorschau anwenden</value>
@@ -3185,11 +3185,11 @@
   <data name="Pfeiltasten_5a95be86" xml:space="preserve">
     <value>Pfeiltasten</value>
   </data>
-  <data name="Objekt_verschieben_Umschalt_gr_ere_Schritte_1dea48ec" xml:space="preserve">
-    <value>Objekt verschieben (Umschalt: größere Schritte)</value>
+  <data name="Objekt_verschieben_SHIFT_gr_ere_Schritte_46120732" xml:space="preserve">
+    <value>Objekt verschieben (SHIFT: größere Schritte)</value>
   </data>
-  <data name="Alt_beim_Ziehen_von_Objekten_0833b704" xml:space="preserve">
-    <value>Alt (beim Ziehen von Objekten)</value>
+  <data name="ALT_beim_Ziehen_von_Objekten_01065500" xml:space="preserve">
+    <value>ALT (beim Ziehen von Objekten)</value>
   </data>
   <data name="Einrasten_vor_bergehend_aus_ebad018d" xml:space="preserve">
     <value>Einrasten vorübergehend aus</value>
@@ -3374,8 +3374,8 @@
   <data name="Drucken_1c14ea4d" xml:space="preserve">
     <value>Drucken...</value>
   </data>
-  <data name="Drucken_Strg_P_73b2de57" xml:space="preserve">
-    <value>Drucken (Strg+P)</value>
+  <data name="Drucken_STRG_P_a03f2eca" xml:space="preserve">
+    <value>Drucken (STRG+P)</value>
   </data>
   <data name="Drucken_fehlgeschlagen_6bac9264" xml:space="preserve">
     <value>Drucken fehlgeschlagen</value>
@@ -3581,8 +3581,8 @@
   <data name="Neues_Bild_28f91b41" xml:space="preserve">
     <value>Neues Bild</value>
   </data>
-  <data name="Neues_Bild_Strg_N_38de3aa5" xml:space="preserve">
-    <value>Neues Bild (Strg+N)</value>
+  <data name="Neues_Bild_STRG_N_a7ccfd38" xml:space="preserve">
+    <value>Neues Bild (STRG+N)</value>
   </data>
   <data name="Unbenannt_b34d612b" xml:space="preserve">
     <value>Unbenannt</value>
@@ -3740,8 +3740,8 @@
   <data name="Blau_S_ttigung_66494e39" xml:space="preserve">
     <value>Blau Sättigung</value>
   </data>
-  <data name="Strg_N_275f0654" xml:space="preserve">
-    <value>Strg+N</value>
+  <data name="STRG_N_c9271111" xml:space="preserve">
+    <value>STRG+N</value>
   </data>
   <data name="Neues_Bild_anlegen_9b816660" xml:space="preserve">
     <value>Neues Bild anlegen</value>
@@ -3875,8 +3875,8 @@
   <data name="berblendung_7441d5c9" xml:space="preserve">
     <value>Überblendung</value>
   </data>
-  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_Umschalt__8bcf3a0f" xml:space="preserve">
-    <value>Ziehen setzt Farbton und Sättigung; mit Umschalt nur die Sättigung</value>
+  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_SHIFT_nur_462f7fee" xml:space="preserve">
+    <value>Ziehen setzt Farbton und Sättigung; mit SHIFT nur die Sättigung</value>
   </data>
   <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
     <value>Wirkt auf das ganze Bild, unabhängig vom Tonwert</value>
@@ -4064,50 +4064,50 @@
   <data name="Strg_Pfeil_links_Strg_Pfeil_rechts_105062ba" xml:space="preserve">
     <value>Strg+Pfeil links / Strg+Pfeil rechts</value>
   </data>
-  <data name="Bild_nach_links_drehen_Strg_Pfeil_links_4817edca" xml:space="preserve">
-    <value>Bild nach links drehen (Strg+Pfeil links)</value>
+  <data name="Bild_nach_links_drehen_STRG_PFEIL_LINKS_66bb14c0" xml:space="preserve">
+    <value>Bild nach links drehen (STRG+PFEIL LINKS)</value>
   </data>
-  <data name="Bild_nach_rechts_drehen_Strg_Pfeil_rechts_34a9a828" xml:space="preserve">
-    <value>Bild nach rechts drehen (Strg+Pfeil rechts)</value>
+  <data name="Bild_nach_rechts_drehen_STRG_PFEIL_RECHTS_90d51662" xml:space="preserve">
+    <value>Bild nach rechts drehen (STRG+PFEIL RECHTS)</value>
   </data>
   <data name="Werkzeug_Bildgr_e_Text_Zeichnen_Einf_gen_5b7b9566" xml:space="preserve">
     <value>Werkzeug: Bildgröße / Text / Zeichnen / Einfügen</value>
   </data>
-  <data name="Strg_0_a3622365" xml:space="preserve">
-    <value>Strg+0</value>
+  <data name="STRG_0_ee78f157" xml:space="preserve">
+    <value>STRG+0</value>
   </data>
-  <data name="Strg_B_d7c995b1" xml:space="preserve">
-    <value>Strg+B</value>
+  <data name="STRG_B_50bf5b82" xml:space="preserve">
+    <value>STRG+B</value>
   </data>
-  <data name="Strg_C_e180266d" xml:space="preserve">
-    <value>Strg+C</value>
+  <data name="STRG_C_c0bfc1e1" xml:space="preserve">
+    <value>STRG+C</value>
   </data>
-  <data name="Strg_G_a8e90537" xml:space="preserve">
-    <value>Strg+G</value>
+  <data name="STRG_G_2941c0c1" xml:space="preserve">
+    <value>STRG+G</value>
   </data>
-  <data name="Strg_T_5d85b26c" xml:space="preserve">
-    <value>Strg+T</value>
+  <data name="STRG_T_be84c2ed" xml:space="preserve">
+    <value>STRG+T</value>
   </data>
-  <data name="Strg_V_0c87a974" xml:space="preserve">
-    <value>Strg+V</value>
+  <data name="STRG_V_7eb2c110" xml:space="preserve">
+    <value>STRG+V</value>
   </data>
-  <data name="Strg_X_5ae494a5" xml:space="preserve">
-    <value>Strg+X</value>
+  <data name="STRG_X_833022c2" xml:space="preserve">
+    <value>STRG+X</value>
   </data>
-  <data name="Strg_Y_00ebae83" xml:space="preserve">
-    <value>Strg+Y</value>
+  <data name="STRG_Y_c3988cb6" xml:space="preserve">
+    <value>STRG+Y</value>
   </data>
-  <data name="Strg_Z_bd55875e" xml:space="preserve">
-    <value>Strg+Z</value>
+  <data name="STRG_Z_88d18814" xml:space="preserve">
+    <value>STRG+Z</value>
   </data>
-  <data name="Strg_1_bis_Strg_5_344fe0c7" xml:space="preserve">
-    <value>Strg+1 bis Strg+5</value>
+  <data name="STRG_1_bis_STRG_5_93754288" xml:space="preserve">
+    <value>STRG+1 bis STRG+5</value>
   </data>
-  <data name="Strg_Pfeil_links_56022ea2" xml:space="preserve">
-    <value>Strg+Pfeil links</value>
+  <data name="STRG_PFEIL_LINKS_895c9972" xml:space="preserve">
+    <value>STRG+PFEIL LINKS</value>
   </data>
-  <data name="Strg_Pfeil_rechts_2d1d6844" xml:space="preserve">
-    <value>Strg+Pfeil rechts</value>
+  <data name="STRG_PFEIL_RECHTS_63e2840d" xml:space="preserve">
+    <value>STRG+PFEIL RECHTS</value>
   </data>
   <data name="Bild_auf_094e1a7a" xml:space="preserve">
     <value>Bild auf</value>
@@ -4115,11 +4115,11 @@
   <data name="Bild_ab_5936ced2" xml:space="preserve">
     <value>Bild ab</value>
   </data>
-  <data name="Pos1_509bf088" xml:space="preserve">
-    <value>Pos1</value>
+  <data name="POS1_e3382971" xml:space="preserve">
+    <value>POS1</value>
   </data>
-  <data name="Ende_920e9c46" xml:space="preserve">
-    <value>Ende</value>
+  <data name="ENDE_d1627b7f" xml:space="preserve">
+    <value>ENDE</value>
   </data>
   <data name="Plus_2d05d0f1" xml:space="preserve">
     <value>Plus</value>
@@ -4127,11 +4127,11 @@
   <data name="Minus_02b11141" xml:space="preserve">
     <value>Minus</value>
   </data>
-  <data name="Pfeil_links_oder_Bild_auf_a072f7c6" xml:space="preserve">
-    <value>Pfeil links oder Bild auf</value>
+  <data name="PFEIL_LINKS_oder_Bild_auf_c182eb6a" xml:space="preserve">
+    <value>PFEIL LINKS oder Bild auf</value>
   </data>
-  <data name="Pfeil_rechts_oder_Bild_ab_a5ecf0e5" xml:space="preserve">
-    <value>Pfeil rechts oder Bild ab</value>
+  <data name="PFEIL_RECHTS_oder_Bild_ab_d77ef841" xml:space="preserve">
+    <value>PFEIL RECHTS oder Bild ab</value>
   </data>
   <data name="Eine_Seite_nach_oben_fc24e606" xml:space="preserve">
     <value>Eine Seite nach oben</value>
@@ -4193,23 +4193,23 @@
   <data name="Favorit_ein_aus_Galerie_und_Betrachter_37855f03" xml:space="preserve">
     <value>Favorit ein/aus (Galerie und Betrachter)</value>
   </data>
-  <data name="Strg_K_e12b34b4" xml:space="preserve">
-    <value>Strg+K</value>
+  <data name="STRG_K_af3d307e" xml:space="preserve">
+    <value>STRG+K</value>
   </data>
   <data name="Gruppe_auf_oder_zuklappen_37ee4059" xml:space="preserve">
     <value>Gruppe auf- oder zuklappen</value>
   </data>
-  <data name="Objekte_gruppieren_Strg_G_8f7b8599" xml:space="preserve">
-    <value>Objekte gruppieren (Strg+G)</value>
+  <data name="Objekte_gruppieren_STRG_G_d3273b10" xml:space="preserve">
+    <value>Objekte gruppieren (STRG+G)</value>
   </data>
-  <data name="Gruppierung_aufheben_Strg_Umschalt_G_83e2db35" xml:space="preserve">
-    <value>Gruppierung aufheben (Strg+Umschalt+G)</value>
+  <data name="Gruppierung_aufheben_STRG_SHIFT_G_b4fccb8a" xml:space="preserve">
+    <value>Gruppierung aufheben (STRG+SHIFT+G)</value>
   </data>
   <data name="Gruppe_f4e8075c" xml:space="preserve">
     <value>Gruppe</value>
   </data>
-  <data name="Strg_Klick_f7bbde58" xml:space="preserve">
-    <value>Strg+Klick</value>
+  <data name="STRG_Klick_05434707" xml:space="preserve">
+    <value>STRG+Klick</value>
   </data>
   <data name="Objekt_zur_Auswahl_hinzuf_gen_oder_herausnehmen_2ecab8d9" xml:space="preserve">
     <value>Objekt zur Auswahl hinzufügen oder herausnehmen</value>
@@ -4217,8 +4217,8 @@
   <data name="Markierte_Objekte_gruppieren_771bf31d" xml:space="preserve">
     <value>Markierte Objekte gruppieren</value>
   </data>
-  <data name="Strg_Umschalt_G_e8482b18" xml:space="preserve">
-    <value>Strg+Umschalt+G</value>
+  <data name="STRG_SHIFT_G_f3d8b91f" xml:space="preserve">
+    <value>STRG+SHIFT+G</value>
   </data>
   <data name="Gruppierung_aufheben_286fb0a0" xml:space="preserve">
     <value>Gruppierung aufheben</value>
@@ -4232,11 +4232,11 @@
   <data name="Markierte_Objekte_gruppieren_ohne_Mehrfachauswah_bb56593e" xml:space="preserve">
     <value>Markierte Objekte gruppieren; ohne Mehrfachauswahl: Werkzeug Einfügen</value>
   </data>
-  <data name="Markierte_Ebenen_gruppieren_Strg_G_53ed2acf" xml:space="preserve">
-    <value>Markierte Ebenen gruppieren (Strg+G)</value>
+  <data name="Markierte_Ebenen_gruppieren_STRG_G_d530595d" xml:space="preserve">
+    <value>Markierte Ebenen gruppieren (STRG+G)</value>
   </data>
-  <data name="Strg_M_6a3609ac" xml:space="preserve">
-    <value>Strg+M</value>
+  <data name="STRG_M_bfa5645a" xml:space="preserve">
+    <value>STRG+M</value>
   </data>
   <data name="Markierte_Ebenen_gruppieren_e2bff6df" xml:space="preserve">
     <value>Markierte Ebenen gruppieren</value>
@@ -4361,11 +4361,11 @@
   <data name="Neue_Zeile_im_Text_Objekt_Text_bricht_nie_automa_e8fc07cc" xml:space="preserve">
     <value>Neue Zeile im Text-Objekt (Text bricht nie automatisch um)</value>
   </data>
-  <data name="Neue_Zeile_mit_Strg_Enter_oder_Umschalt_Enter_fae9a32e" xml:space="preserve">
-    <value>Neue Zeile mit Strg+Enter oder Umschalt+Enter</value>
+  <data name="Neue_Zeile_mit_STRG_ENTER_oder_SHIFT_ENTER_b57e8880" xml:space="preserve">
+    <value>Neue Zeile mit STRG+ENTER oder SHIFT+ENTER</value>
   </data>
-  <data name="Strg_Enter_oder_Umschalt_Enter_08237fda" xml:space="preserve">
-    <value>Strg+Enter oder Umschalt+Enter</value>
+  <data name="STRG_ENTER_oder_SHIFT_ENTER_e0cc821b" xml:space="preserve">
+    <value>STRG+ENTER oder SHIFT+ENTER</value>
   </data>
   <data name="Kein_Wasserzeichen_gespeichert_b079d262" xml:space="preserve">
     <value>Kein Wasserzeichen gespeichert</value>
@@ -4601,8 +4601,8 @@
   <data name="Pinsel_Maske_frei_ins_Bild_malen_Hinzuf_gen_und__2195d79c" xml:space="preserve">
     <value>Pinsel: Maske frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter</value>
   </data>
-  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__ae7499c8" xml:space="preserve">
-    <value>Linearer Verlauf: im Bild ziehen, die Maske läuft vom Startpunkt zum Endpunkt aus. Umschalt rastet die Richtung</value>
+  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__d50f14a4" xml:space="preserve">
+    <value>Linearer Verlauf: im Bild ziehen, die Maske läuft vom Startpunkt zum Endpunkt aus. SHIFT rastet die Richtung</value>
   </data>
   <data name="Radialer_Verlauf_von_der_Mitte_nach_aussen_ziehe_f885ecaf" xml:space="preserve">
     <value>Radialer Verlauf: von der Mitte nach aussen ziehen. Mit „Umkehren“ wirkt die Maske aussen statt innen</value>
@@ -4664,8 +4664,8 @@
   <data name="Bildvergleich_4c30b57f" xml:space="preserve">
     <value>Bildvergleich</value>
   </data>
-  <data name="Pfeil_links_oder_rechts_478c9dd8" xml:space="preserve">
-    <value>Pfeil links oder rechts</value>
+  <data name="PFEIL_LINKS_oder_rechts_fc56da1c" xml:space="preserve">
+    <value>PFEIL LINKS oder rechts</value>
   </data>
   <data name="Nur_die_rechte_Fl_che_bl_ttert_weiter_das_angehe_61b1444d" xml:space="preserve">
     <value>Nur die rechte Fläche blättert weiter, das angeheftete Bild bleibt links stehen</value>
@@ -6185,8 +6185,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Anwenden abgebrochen - das Bild ist unverändert</value>
   </data>
-  <data name="Abbrechen_Esc_Das_Entrauschen_steigt_an_der_n_ch_3adced7f" xml:space="preserve">
-    <value>Abbrechen (Esc). Das Entrauschen steigt an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.</value>
+  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
+    <value>Abbrechen (ESC). Das Entrauschen steigt an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Hochskalieren mit Modell</value>
@@ -6362,8 +6362,8 @@
   <data name="Pfad_offen_abschlie_en_Eingabe_oder_Doppelklick_288b4d16" xml:space="preserve">
     <value>Pfad offen abschließen (Eingabe oder Doppelklick)</value>
   </data>
-  <data name="Entwurf_verwerfen_Esc_e1166db1" xml:space="preserve">
-    <value>Entwurf verwerfen (Esc)</value>
+  <data name="Entwurf_verwerfen_ESC_3c4f74a0" xml:space="preserve">
+    <value>Entwurf verwerfen (ESC)</value>
   </data>
   <data name="Klicken_setzt_einen_Eckpunkt_Klicken_und_ziehen__23ddaf61" xml:space="preserve">
     <value>Klicken setzt einen Eckpunkt. Klicken und ziehen krümmt. Ein Klick auf den ersten Punkt schließt den Pfad.</value>
@@ -6470,8 +6470,8 @@
   <data name="Markierte_Ebenen_duplizieren_2145e904" xml:space="preserve">
     <value>Markierte Ebenen duplizieren</value>
   </data>
-  <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
-    <value>Markierte Ebenen löschen (Entf)</value>
+  <data name="Markierte_Ebenen_l_schen_ENTF_d59915b7" xml:space="preserve">
+    <value>Markierte Ebenen löschen (ENTF)</value>
   </data>
   <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
     <value>Gesichter werden gesucht: {0} von {1}</value>
@@ -6674,8 +6674,8 @@
   <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Zuschnitt</value></data>
   <data name="Malebene_c58eef25" xml:space="preserve"><value>Malebene</value></data>
   <data name="Die_Auswahl_liegt_nicht_auf_der_markierten_Ebene_096701ed" xml:space="preserve"><value>Die Auswahl liegt nicht auf der markierten Ebene.</value></data>
-  <data name="Mit_Strg_die_Form_dieser_Ebene_als_Auswahl_laden_8f622a58" xml:space="preserve"><value>Mit Strg die Form dieser Ebene als Auswahl laden</value></data>
-  <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_d2c1cc4b" xml:space="preserve"><value>Ebenenmaske bearbeiten. Mit Alt nur die Maske zeigen, mit Umschalt stilllegen, mit Strg als Auswahl laden</value></data>
+  <data name="Mit_STRG_die_Form_dieser_Ebene_als_Auswahl_laden_6b7daeb1" xml:space="preserve"><value>Mit STRG die Form dieser Ebene als Auswahl laden</value></data>
+  <data name="Ebenenmaske_bearbeiten_Mit_ALT_nur_die_Maske_zei_517eab2e" xml:space="preserve"><value>Ebenenmaske bearbeiten. Mit ALT nur die Maske zeigen, mit SHIFT stilllegen, mit STRG als Auswahl laden</value></data>
   <data name="Transparente_Punkte_sperren_Striche_bleiben_in_d_3102d050" xml:space="preserve"><value>Transparente Punkte sperren - Striche bleiben in der vorhandenen Form der Ebene</value></data>
   <data name="Neue_Malebene_eine_leere_Ebene_zum_Bemalen_anleg_3d028994" xml:space="preserve"><value>Neue Malebene: eine leere Ebene zum Bemalen anlegen</value></data>
   <data name="Die_Malebene_konnte_nicht_angelegt_werden_caaceb00" xml:space="preserve"><value>Die Malebene konnte nicht angelegt werden.</value></data>
@@ -6686,4 +6686,55 @@
   <data name="Transparente_Punkte_freigeben_66d0baa3" xml:space="preserve"><value>Transparente Punkte freigeben</value></data>
   <data name="Anpassungen_dieser_Ebene_ein_oder_ausschalten_7076645d" xml:space="preserve"><value>Anpassungen dieser Ebene ein- oder ausschalten</value></data>
   <data name="Anpassungen_dieser_Ebene_verwerfen_1a0f1d69" xml:space="preserve"><value>Anpassungen dieser Ebene verwerfen</value></data>
+  <data name="Auswahl_aus_dem_Pfad_erstellt_a4e144eb" xml:space="preserve">
+    <value>Auswahl aus dem Pfad erstellt</value>
+  </data>
+  <data name="Weiterzeichnen_Punkte_setzen_Eingabe_schlie_t_ab_fc2e2cc6" xml:space="preserve">
+    <value>Weiterzeichnen: Punkte setzen, Eingabe schließt ab</value>
+  </data>
+  <data name="Pfad_weitergezeichnet_dafcf769" xml:space="preserve">
+    <value>Pfad weitergezeichnet</value>
+  </data>
+  <data name="Klicken_setzt_einen_Eckpunkt_Klicken_und_ziehen__b9c5c60f" xml:space="preserve">
+    <value>Klicken setzt einen Eckpunkt. Klicken und ziehen krümmt. Ein Klick auf den ersten Punkt schließt den Pfad. Die RÜCKTASTE nimmt den letzten Punkt zurück, SHIFT hält den Winkel.</value>
+  </data>
+  <data name="St_tzpunkte_ziehen_um_die_Form_zu_ndern_Die_rund_e6f9c195" xml:space="preserve">
+    <value>Stützpunkte ziehen, um die Form zu ändern. Die runden Griffe krümmen den Abschnitt daneben; an einem glatten Punkt drehen sie gemeinsam, Alt löst sie voneinander. Ein Klick auf die Kurve setzt dort einen Punkt, Alt auf einem Punkt entfernt ihn, ein Doppelklick auf ein offenes Ende zeichnet weiter.</value>
+  </data>
+  <data name="Auswahl_aus_dem_Pfad_0f077285" xml:space="preserve">
+    <value>Auswahl aus dem Pfad</value>
+  </data>
+  <data name="Macht_aus_der_Kurve_eine_Auswahl_Wer_den_Freiste_43952471" xml:space="preserve">
+    <value>Macht aus der Kurve eine Auswahl. Wer den Freisteller später ändern will, zieht einen Stützpunkt und drückt noch einmal.</value>
+  </data>
+  <data name="Pfade_verbinden_013b2130" xml:space="preserve">
+    <value>Pfade verbinden</value>
+  </data>
+  <data name="Pfade_verbunden_a4fa2066" xml:space="preserve">
+    <value>Pfade verbunden</value>
+  </data>
+  <data name="Ein_Pfad_braucht_mindestens_zwei_Punkte_cd908ae1" xml:space="preserve">
+    <value>Ein Pfad braucht mindestens zwei Punkte.</value>
+  </data>
+  <data name="Macht_aus_zwei_markierten_offenen_Pfaden_einen_V_17f237fc" xml:space="preserve">
+    <value>Macht aus zwei markierten offenen Pfaden einen. Verbunden werden die beiden Enden, die einander am nächsten liegen.</value>
+  </data>
+  <data name="St_tzpunkte_ziehen_um_die_Form_zu_ndern_Die_rund_01d4f66b" xml:space="preserve">
+    <value>Stützpunkte ziehen, um die Form zu ändern. Die runden Griffe krümmen den Abschnitt daneben; an einem glatten Punkt drehen sie gemeinsam, ALT löst sie voneinander. Ein Klick auf die Kurve setzt dort einen Punkt, ALT auf einem Punkt entfernt ihn, ein Doppelklick auf ein offenes Ende zeichnet weiter. Mit SHIFT sammelt man mehrere Punkte ein und bewegt oder entfernt sie zusammen.</value>
+  </data>
+  <data name="Gruppenmaske_6ff6d2b4" xml:space="preserve">
+    <value>Gruppenmaske</value>
+  </data>
+  <data name="Gruppenmaske_hinzugef_gt_5e9ea1a1" xml:space="preserve">
+    <value>Gruppenmaske hinzugefügt</value>
+  </data>
+  <data name="Gruppenmaske_entfernt_2afa5b00" xml:space="preserve">
+    <value>Gruppenmaske entfernt</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_de231e0e" xml:space="preserve">
+    <value>Bilder werden geschrieben…</value>
+  </data>
+  <data name="Ins_Bild_klicken_um_den_ersten_Punkt_zu_setzen_E_8b978da9" xml:space="preserve">
+    <value>Ins Bild klicken, um den ersten Punkt zu setzen. Ein fertiger Pfad zeichnet zunächst nichts ins Bild - er ist Geometrie: für eine Auswahl, eine Grundlinie für Text oder eine Form. Wer eine sichtbare Kurve will, zieht die Konturbreite hoch.</value>
+  </data>
 </root>

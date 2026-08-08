@@ -1385,7 +1385,13 @@ Namespace Services
             Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
             Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
             Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
-            Dim strokeWidth = Math.Max(1.0F, renderAnnotation.StrokeWidth)
+            ' NULL HEISST KEINE KONTUR - dieselbe Regel wie im Bildrender (DrawAnnotationOnCanvas).
+            ' Die Untergrenze steht hier ein ZWEITES Mal, und genau daran zeichnete der Kompositor
+            ' weiter eine Haarlinie, nachdem der Bildrender sie schon nicht mehr zog: das markierte
+            ' Objekt kommt aus DIESEM Weg (Nutzerbefund 2026-08-08: "beim Pfad bleibt weiterhin eine
+            ' Linie zu sehen"). Zwei Stellen, eine Regel - siehe EDITOR_OBJEKTE.md.
+            Dim strokeWidth = If(renderAnnotation.StrokeWidth <= 0.0F, 0.0F,
+                                 Math.Max(1.0F, renderAnnotation.StrokeWidth))
 
             ' KEIN Using: das Bitmap gehoert ab hier dem Aufrufer (Overlay-Fassung oder Cache).
             Dim bitmap = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)

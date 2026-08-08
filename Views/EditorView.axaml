@@ -85,13 +85,13 @@
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding ShowNewDocumentDialogCommand}"
-                            ToolTip.Tip="Neues Bild (Strg+N)">
+                            ToolTip.Tip="Neues Bild (STRG+N)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
                                        Width="20" Height="20" />
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding PrintCommand}"
-                            ToolTip.Tip="Drucken (Strg+P)">
+                            ToolTip.Tip="Drucken (STRG+P)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
                                        Width="20" Height="20" />
                     </Button>
@@ -445,17 +445,12 @@
 
                     <!-- Der PFAD steht über dem Pinsel: er ist kein Malwerkzeug, sondern zeichnet
                          eine Form, die eine Ebene bleibt und sich später wieder ändern lässt.
-                         VORERST AUSGEBLENDET (Patrick am 2026-08-04): die Bedienung ist noch nicht
-                         intuitiv genug (Befunde in Audits/OFFENE_PUNKTE.md, Abschnitt 3b "Freier
-                         Pfad"). Ausgeblendet ist nur der WEG hinein, nichts am Werkzeug selbst:
-                         ein vorhandener Pfad wird weiter gezeichnet und lässt sich markieren,
-                         verschieben und umfärben - nur seine Stützpunkte sind ohne das Werkzeug
-                         nicht erreichbar. Zum Wiederzeigen genügt es, IsVisible hier zu entfernen
-                         (und den Knopf "Freier Pfad" im Eigenschaften-Panel). Die Form "Pfad" im
-                         Einfügen-Werkzeug ist dagegen ganz entfallen: sie gehörte nie dorthin,
-                         jede Form dort wird aufgezogen. -->
+                         Von 2026-08-04 bis 2026-08-08 ausgeblendet, weil die Bedienung nicht trug;
+                         wieder da, seit das Zeichnen am Zeiger hängt, glatte Punkte glatt bleiben,
+                         die Kurve selbst anfassbar ist und ein Pfad zur Auswahl wird (Einzelheiten
+                         in Audits/EDITOR_OBJEKTE.md). Die Form "Pfad" im Einfügen-Werkzeug bleibt
+                         entfallen: sie gehörte nie dorthin, jede Form dort wird aufgezogen. -->
                     <Button Classes="tool-btn-row"
-                            IsVisible="False"
                             ToolTip.Tip="Pfad"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Path"
@@ -513,7 +508,7 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Stempel (Alt+Klick setzt die Quelle)"
+                            ToolTip.Tip="Stempel (ALT+Klick setzt die Quelle)"
                             IsEnabled="{Binding CanUsePixelTools}"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Clone"
@@ -907,7 +902,7 @@
                                         Background="{DynamicResource FP.Accent}" BorderBrush="White"
                                         BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Top"
                                         Margin="0,-36,0,0" IsHitTestVisible="False"
-                                        ToolTip.Tip="Ziehen zum Drehen (Shift = 15°-Schritte)" />
+                                        ToolTip.Tip="Ziehen zum Drehen (SHIFT = 15°-Schritte)" />
                                 <Border Width="14" Height="14" CornerRadius="7"
                                         Background="{DynamicResource FP.Accent}" BorderBrush="White"
                                         BorderThickness="1" HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -1029,7 +1024,7 @@
                                         Width="26" Height="26" Padding="0"
                                         IsVisible="{Binding CanCancelBusy}"
                                         Command="{Binding CancelBusyCommand}"
-                                        ToolTip.Tip="Abbrechen (Esc). Das Entrauschen steigt an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.">
+                                        ToolTip.Tip="Abbrechen (ESC). Das Entrauschen steigt an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.">
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
                                                    Width="14" Height="14" />
                                 </Button>

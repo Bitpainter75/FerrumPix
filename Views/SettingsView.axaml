@@ -1762,15 +1762,15 @@
                                 <TextBlock Grid.Column="1" Text="Vollbild ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+1 bis Strg+5" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+1 bis STRG+5" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bewertung setzen (dieselbe Zahl erneut entfernt sie)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+0" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+0" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bewertung entfernen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Q" Tag="MacFavorite" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Q" Tag="MacFavorite" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Favorit ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                         </StackPanel>
@@ -1779,7 +1779,7 @@
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Pfeiltasten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                <TextBlock Grid.Column="1" Text="Auswahl bewegen (Umschalt: Bereich erweitern)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Auswahl bewegen (SHIFT: Bereich erweitern)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Bild auf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
@@ -1790,11 +1790,11 @@
                                 <TextBlock Grid.Column="1" Text="Eine Seite nach unten" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Pos1" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="POS1" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Zum ersten Element" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Ende" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ENDE" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Zum letzten Element" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1802,51 +1802,51 @@
                                 <TextBlock Grid.Column="1" Text="Bild öffnen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Leertaste (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="LEERTASTE (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Schnellvorschau" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+A" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+A" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Alles auswählen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+C" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+C" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Kopieren" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+X" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+X" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Ausschneiden" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+V" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+V" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Einfügen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+F" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+F" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Suche" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+W" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+W" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Filter anwenden" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+R" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+R" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bildgröße ändern" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+D" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+D" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Konvertieren nach" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+T" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+T" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Exportieren nach" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl drucken" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ENTF" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Löschen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1858,11 +1858,11 @@
                                 <TextBlock Grid.Column="1" Text="Aktualisieren" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ESC" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl aufheben" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Kachelgröße ändern" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                         </StackPanel>
@@ -1870,15 +1870,15 @@
                         <TextBlock Text="Bildvergleich" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Leertaste" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="LEERTASTE" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Seiten tauschen - das rechte Bild wird das neue angeheftete" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Pfeil links oder rechts" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="PFEIL LINKS oder rechts" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Nur die rechte Fläche blättert weiter, das angeheftete Bild bleibt links stehen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ESC" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Vergleich beenden" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1894,11 +1894,11 @@
                                 <TextBlock Grid.Column="1" Text="Ausschnitt verschieben; gekoppelt zieht die andere Fläche mit" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Mausrad oder Rechtsklick+Mausrad" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Mausrad oder Rechtsklick+Mausrad" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Zoomen - ein Wert gilt für beide Flächen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ENTF" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Im Vergleich ohne Wirkung - gelöscht wird über die Marke auf dem jeweiligen Bild" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                         </StackPanel>
@@ -1906,11 +1906,11 @@
                         <TextBlock Text="Betrachter" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Pfeil links oder Bild auf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="PFEIL LINKS oder Bild auf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Voriges Bild" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Pfeil rechts oder Bild ab" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="PFEIL RECHTS oder Bild ab" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Nächstes Bild" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1926,47 +1926,47 @@
                                 <TextBlock Grid.Column="1" Text="Bild einpassen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Leertaste" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="LEERTASTE" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Diashow starten/stoppen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Pfeil links" Tag="MacRotateLeft" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+PFEIL LINKS" Tag="MacRotateLeft" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Nach links drehen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Pfeil rechts" Tag="MacRotateRight" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+PFEIL RECHTS" Tag="MacRotateRight" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Nach rechts drehen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+R" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+R" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bildgröße ändern" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+D" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+D" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Konvertieren nach" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+T" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+T" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Exportieren nach" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+W" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+W" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Filter anwenden" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+I" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+I" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Info-Leiste ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+E" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+E" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Im Editor öffnen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Drucken" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ENTF" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Löschen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1974,11 +1974,11 @@
                                 <TextBlock Grid.Column="1" Text="Umbenennen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ESC" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Zurück zur Galerie (im Vollbild: Vollbild verlassen)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Am Mauszeiger zoomen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -1990,95 +1990,95 @@
                         <TextBlock Text="Editor" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+N" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+N" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Neues Bild anlegen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Z" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Z" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Rückgängig" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Y" Tag="MacRedo" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Y" Tag="MacRedo" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Wiederholen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+S" Tag="MacSave" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+S" Tag="MacSave" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Speichern (wenn nicht möglich: Speichern unter)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+A" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+A" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Alles auswählen (bei Auswahl-Werkzeugen)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+C" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+C" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl kopieren" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+V" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+V" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl einfügen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+D" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+D" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Objekt duplizieren; ohne Objekt: Auswahl aufheben" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Klick" Tag="Selection" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Klick" Tag="Selection" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Objekt zur Auswahl hinzufügen oder herausnehmen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Umschalt+G" Tag="PrimaryShift" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+SHIFT+G" Tag="PrimaryShift" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Gruppierung aufheben" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+P" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Drucken (aktueller Bearbeitungsstand)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+R" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+R" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeug: Bildgröße" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+T" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+T" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeug: Text" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+B" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+B" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeug: Zeichnen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+G" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+G" Tag="Primary" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Markierte Ebenen gruppieren" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+M" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+M" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeug: Einfügen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+I" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+I" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeug: Bild" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+K" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+K" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Werkzeug: QR-Code" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Pfeil links" Tag="MacRotateLeft" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+PFEIL LINKS" Tag="MacRotateLeft" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Nach links drehen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Pfeil rechts" Tag="MacRotateRight" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+PFEIL RECHTS" Tag="MacRotateRight" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Nach rechts drehen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+E" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+E" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Radierer umschalten (im Zeichnen-Werkzeug)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Pfeiltasten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                <TextBlock Grid.Column="1" Text="Objekt verschieben (Umschalt: größere Schritte)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Objekt verschieben (SHIFT: größere Schritte)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Alt (beim Ziehen von Objekten)" Tag="MacOption" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ALT (beim Ziehen von Objekten)" Tag="MacOption" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Einrasten vorübergehend aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -2090,19 +2090,19 @@
                                 <TextBlock Grid.Column="1" Text="Werkzeuggröße größer" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Leertaste (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="LEERTASTE (halten)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bildausschnitt verschieben" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Entf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ENTF" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Objekt löschen; ohne Objekt: Bild löschen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Esc" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ESC" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Auswahl abwählen, Zug abbrechen, Editor verlassen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Am Mauszeiger zoomen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
@@ -2110,7 +2110,7 @@
                                 <TextBlock Grid.Column="1" Text="Bildausschnitt verschieben" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="Strg+Enter oder Umschalt+Enter" Tag="MacTextNewline" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="STRG+ENTER oder SHIFT+ENTER" Tag="MacTextNewline" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Neue Zeile im Text-Objekt (Text bricht nie automatisch um)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                         </StackPanel>

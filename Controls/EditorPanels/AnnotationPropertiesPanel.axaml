@@ -77,7 +77,7 @@
         <TextBox x:Name="AnnotationTextBox"
                  Text="{Binding AnnotationText}"
                  PlaceholderText="Text, QR-Inhalt oder Symbol eingeben"
-                 ToolTip.Tip="Neue Zeile mit Strg+Enter oder Umschalt+Enter"
+                 ToolTip.Tip="Neue Zeile mit STRG+ENTER oder SHIFT+ENTER"
                  FontSize="{DynamicResource FP.Font.Body}"
                  AcceptsReturn="True"
                  TextWrapping="NoWrap"
@@ -186,13 +186,10 @@
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=CircleInverted}">
                     <TextBlock Text="Kreis invers" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
-                <!-- VORERST AUSGEBLENDET (Patrick am 2026-08-04), zusammen mit dem Pfad-Werkzeug in
-                     der Werkzeugleiste: die Grundlinie selbst zu setzen ist noch nicht intuitiv
-                     genug. Nur der Knopf ist weg - eine bereits gesetzte freie Grundlinie wird
-                     weiter gezeichnet, und der Text bleibt tippbar. Zum Wiederzeigen genügt es,
-                     IsVisible zu entfernen. -->
+                <!-- Wieder da seit 2026-08-08, zusammen mit dem Pfad-Werkzeug: die Grundlinie selbst
+                     zu setzen geht denselben Weg wie das Zeichnen eines Pfades und hängt damit
+                     ebenfalls am Zeiger. -->
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        IsVisible="False"
                         Command="{Binding SetAnnotationTextPathKindCommand}"
                         CommandParameter="Free"
                         ToolTip.Tip="Grundlinie selbst setzen - Punkt für Punkt auf dem Bild, Eingabe schließt ab"
@@ -360,7 +357,7 @@
                   IsChecked="{Binding AnnotationLockAspect}"
                   IsVisible="{Binding ShowAnnotationAspectLock}"
                   FontSize="{DynamicResource FP.Font.Small}"
-                  ToolTip.Tip="Beim Ziehen an den Anfassern bleibt das Verhältnis von Breite zu Höhe erhalten - wie bei Bildgröße. Aus: das Bild wird auf die gezogene Größe gestreckt (Shift erzwingt das Verhältnis weiterhin)."/>
+                  ToolTip.Tip="Beim Ziehen an den Anfassern bleibt das Verhältnis von Breite zu Höhe erhalten - wie bei Bildgröße. Aus: das Bild wird auf die gezogene Größe gestreckt (SHIFT erzwingt das Verhältnis weiterhin)."/>
         <Grid ColumnDefinitions="92,*" VerticalAlignment="Top"
               IsVisible="{Binding ShowWatermarkAnchorControls}">
             <TextBlock Text="Anker" Foreground="{DynamicResource FP.Text.Secondary}"

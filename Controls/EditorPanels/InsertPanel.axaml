@@ -69,7 +69,7 @@
                     </Button>
                     <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                             Command="{Binding CancelPathDraftCommand}"
-                            ToolTip.Tip="Entwurf verwerfen (Esc)">
+                            ToolTip.Tip="Entwurf verwerfen (ESC)">
                         <TextBlock Text="Verwerfen" HorizontalAlignment="Center"
                                    FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>

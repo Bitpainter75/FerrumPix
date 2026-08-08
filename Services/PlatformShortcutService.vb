@@ -213,12 +213,14 @@ Namespace Services
             End If
 
             Dim map As New Dictionary(Of String, String)(StringComparer.Ordinal)
-            AddShortcut(map, "Strg+Pfeil links", "⌘R")
-            AddShortcut(map, "Strg+Pfeil rechts", "⌥⌘R")
-            AddShortcut(map, "Strg+Umschalt+G", "⇧⌘G")
-            AddShortcut(map, "Strg+Enter", "⌃Enter")
+            ' Die Suchmuster sind der WORTLAUT aus der Oberflaeche und muessen sich mit ihm
+            ' aendern - seit die Tastennamen in Grossbuchstaben stehen, also STRG und SHIFT.
+            AddShortcut(map, "STRG+PFEIL LINKS", "⌘R")
+            AddShortcut(map, "STRG+PFEIL RECHTS", "⌥⌘R")
+            AddShortcut(map, "STRG+SHIFT+G", "⇧⌘G")
+            AddShortcut(map, "STRG+ENTER", "⌃ENTER")
             For Each key In {"A", "C", "D", "F", "G", "N", "P", "S", "V", "X", "Z"}
-                AddShortcut(map, "Strg+" & key, "⌘" & key)
+                AddShortcut(map, "STRG+" & key, "⌘" & key)
             Next
 
             Dim items = map.ToList()

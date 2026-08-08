@@ -45,7 +45,14 @@ Namespace Services
             Dim alphaFactor = Clamp(renderAnnotation.Opacity, 0, 100) / 100.0F
             Dim fill = ApplyAlpha(ParseColor(renderAnnotation.FillColor, SKColors.White), alphaFactor)
             Dim stroke = ApplyAlpha(ParseColor(renderAnnotation.StrokeColor, SKColors.Black), alphaFactor)
-            Dim strokeWidth = Math.Max(1.0F, renderAnnotation.StrokeWidth)
+            ' NULL HEISST KEINE KONTUR. Das Mindestmaß von einem Punkt gilt erst AB einer gewollten
+            ' Kontur: es fängt den Fall ab, dass eine sehr dünne Kontur beim Verkleinern ganz
+            ' verschwindet. Vorher galt es auch für die Null, und dann zeichnete ein Objekt mit
+            ' ausdrücklich abgeschalteter Kontur trotzdem eine Haarlinie - beim freien Pfad, dessen
+            ' ganze Erscheinung die Kontur ist, war das besonders sichtbar (Nutzerbefund 2026-08-08:
+            ' "ich habe die Kontur beim Pfad auf 0, dennoch wird eine Linie gezeichnet").
+            Dim strokeWidth = If(renderAnnotation.StrokeWidth <= 0.0F, 0.0F,
+                                 Math.Max(1.0F, renderAnnotation.StrokeWidth))
 
             canvas.Save()
             If Math.Abs(renderAnnotation.RotationDegrees) > 0.01F Then
@@ -104,7 +111,8 @@ Namespace Services
             ' (Normalfall) bleibt es bei EINEM Aufruf über alle Objekte - kein Mehraufwand.
             Dim stacked = If(adj.MaskedAdjustmentLayers, New System.Collections.Generic.List(Of MaskedAdjustmentLayer)()).
                 Where(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId)).ToList()
-            If stacked.Count = 0 Then
+            Dim hasRenderStepGroup = HasRenderStepGroupMember(adj)
+            If stacked.Count = 0 AndAlso Not hasRenderStepGroup Then
                 Using canvas = New SKCanvas(result)
                     DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height, adj.Annotations)
                 End Using
@@ -125,24 +133,222 @@ Namespace Services
                 result = ReplaceBitmap(result, ConvertBitmapToColorType(result, SKColorType.Bgra8888))
             End If
 
-            For Each annotation In adj.Annotations
-                Using canvas = New SKCanvas(result)
-                    DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height,
-                                            New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
-                End Using
-                If stacked.Any(Function(l) String.Equals(l.StackAboveAnnotationId, annotation.Id, StringComparison.Ordinal)) Then
-                    ' KEIN Using um das Ergebnis: es WIRD das neue Komposit (ReplaceBitmap gibt das
-                    ' alte frei). Ein Using würde genau das Bitmap freigeben, mit dem weitergezeichnet
-                    ' wird.
-                    Dim corrected = ApplyMaskedAdjustmentLayers(result, adj, source.Width, source.Height, annotation.Id)
-                    If corrected IsNot Nothing Then result = ReplaceBitmap(result, corrected)
+            Dim index = 0
+            While index < adj.Annotations.Count
+                Dim annotation = adj.Annotations(index)
+                Dim chain = RenderStepChainFor(adj, annotation)
+                If chain.Count = 0 Then
+                    Using canvas = New SKCanvas(result)
+                        DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height,
+                                                New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
+                    End Using
+                    If stacked.Any(Function(l) String.Equals(l.StackAboveAnnotationId, annotation.Id, StringComparison.Ordinal)) Then
+                        ' KEIN Using um das Ergebnis: es WIRD das neue Komposit (ReplaceBitmap gibt das
+                        ' alte frei). Ein Using würde genau das Bitmap freigeben, mit dem weitergezeichnet
+                        ' wird.
+                        Dim corrected = ApplyMaskedAdjustmentLayers(result, adj, source.Width, source.Height, annotation.Id)
+                        If corrected IsNot Nothing Then result = ReplaceBitmap(result, corrected)
+                    End If
+                    index += 1
+                    Continue While
                 End If
-            Next
+
+                ' DIE GRUPPE ALS RENDERSCHRITT, und zwar in beliebiger Verschachtelung: die ÄUSSERSTE
+                ' Gruppe der Kette öffnet eine Ebene, jede Untergruppe darin eine weitere. Der Lauf
+                ' rechnet sich selbst rekursiv (siehe DrawGroupRun).
+                Dim groupX = 0, groupY = 0
+                Dim groupLayer = DrawGroupRun(adj, source, stacked, chain(0), index, groupX, groupY)
+                If groupLayer IsNot Nothing Then
+                    Try
+                        ' Das Ziel ist hier das ganze Bild, seine Ecke also 0/0.
+                        CompositeGroupLayer(result, 0, 0, groupLayer, groupX, groupY, chain(0), adj,
+                                            source.Width, source.Height)
+                    Finally
+                        groupLayer.Dispose()
+                    End Try
+                End If
+            End While
 
             If result.ColorType <> targetColorType Then
                 result = ReplaceBitmap(result, ConvertBitmapToColorType(result, targetColorType))
             End If
             Return result
+        End Function
+
+        ''' <summary>Die Kette der WIRKSAMEN Gruppen eines Objekts, von außen nach innen. Leer heißt
+        ''' Durchgriff: das Objekt wird einzeln gezeichnet, wie eh und je.
+        '''
+        ''' Gruppen im Durchgriff (volle Deckkraft, Normal, keine Maske) fallen aus der Kette heraus -
+        ''' sie öffnen keine Ebene, und eine Untergruppe darin gehört damit unmittelbar in die nächste
+        ''' wirksame Gruppe darüber.</summary>
+        Friend Shared Function RenderStepChainFor(adj As ImageAdjustments, annotation As ImageAnnotation) As List(Of AnnotationGroup)
+            If adj Is Nothing OrElse annotation Is Nothing OrElse String.IsNullOrEmpty(annotation.GroupId) Then
+                Return New List(Of AnnotationGroup)()
+            End If
+            Return adj.GroupChainOf(annotation.GroupId).Where(Function(g) g.IsRenderStep()).ToList()
+        End Function
+
+        ''' <summary>Die äußerste wirksame Gruppe eines Objekts - oder Nothing.</summary>
+        Friend Shared Function RenderStepGroupFor(adj As ImageAdjustments, annotation As ImageAnnotation) As AnnotationGroup
+            Dim chain = RenderStepChainFor(adj, annotation)
+            Return If(chain.Count = 0, Nothing, chain(0))
+        End Function
+
+        ''' <summary>Zeichnet einen zusammenhängenden Lauf von Objekten, die alle in
+        ''' <paramref name="group"/> liegen, auf EINE durchsichtige Ebene und gibt sie zurück.
+        ''' <paramref name="index"/> steht danach hinter dem letzten verarbeiteten Objekt.
+        '''
+        ''' Trifft der Lauf auf ein Objekt, das zusätzlich in einer UNTERgruppe liegt, ruft er sich
+        ''' für diese selbst auf und komponiert deren fertige Ebene mit ihrer Deckkraft, Mischmethode
+        ''' und Maske ein. So entsteht die Verschachtelung ohne einen zweiten Weg.</summary>
+        Private Shared Function DrawGroupRun(adj As ImageAdjustments, source As SKBitmap,
+                                             stacked As List(Of MaskedAdjustmentLayer),
+                                             group As AnnotationGroup, ByRef index As Integer,
+                                             ByRef originX As Integer, ByRef originY As Integer) As SKBitmap
+            ' WIE GROSS MUSS DIE EBENE SEIN? Ein Vorlauf ohne zu zeichnen beantwortet das: er geht
+            ' denselben Weg wie die Schleife darunter und sammelt die Rechtecke ein.
+            '
+            ' DAS IST KEINE FEINHEIT. Eine Gruppenebene in voller Bildgroesse kostet bei 45
+            ' Megapixeln rund 180 MiB, und verschachtelte Gruppen legen je Stufe eine weitere an.
+            ' Gezeichnet wird darauf aber nur die Flaeche der Mitglieder.
+            Dim bounds = ComputeGroupRunBounds(adj, source, stacked, group, index)
+            ' MIT EINER EINGEHAENGTEN KORREKTUR BLEIBT ES BEI VOLLER GROESSE: die Korrekturebenen
+            ' rechnen in Bildkoordinaten und kennen keinen Versatz - auf einem zugeschnittenen
+            ' Traeger saesse ihre Maske falsch. Der Regelfall ohne Korrektur bekommt den Zuschnitt.
+            Dim rect = bounds.Rect
+            If bounds.HasStackedAdjustment OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then
+                rect = New SKRectI(0, 0, source.Width, source.Height)
+            End If
+            originX = rect.Left
+            originY = rect.Top
+
+            Dim layer = New SKBitmap(rect.Width, rect.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Using layerCanvas = New SKCanvas(layer)
+                layerCanvas.Clear(SKColors.Transparent)
+            End Using
+
+            While index < adj.Annotations.Count
+                Dim current = adj.Annotations(index)
+                Dim chain = RenderStepChainFor(adj, current)
+                Dim position = chain.FindIndex(Function(g) Object.ReferenceEquals(g, group))
+                ' Gehört das Objekt gar nicht (mehr) zu dieser Gruppe, ist der Lauf hier zu Ende.
+                If position < 0 Then Exit While
+
+                If position = chain.Count - 1 Then
+                    ' Unmittelbares Mitglied: auf diese Ebene zeichnen.
+                    Using layerCanvas = New SKCanvas(layer)
+                        DrawAnnotationsOnCanvas(layerCanvas, adj, source.Width, source.Height,
+                                                originX, originY, layer.Width, layer.Height,
+                                                New System.Collections.Generic.List(Of ImageAnnotation) From {current})
+                    End Using
+                    ' EINE KORREKTUR IN DER GRUPPE BLEIBT IN DER GRUPPE. Genau das ist der zweite
+                    ' Teil des Renderschritts: sie sieht nur, was die Gruppe bisher gezeichnet hat,
+                    ' und nicht das Bild darunter.
+                    If stacked.Any(Function(l) String.Equals(l.StackAboveAnnotationId, current.Id, StringComparison.Ordinal)) Then
+                        Dim corrected = ApplyMaskedAdjustmentLayers(layer, adj, source.Width, source.Height, current.Id)
+                        If corrected IsNot Nothing Then layer = ReplaceBitmap(layer, corrected)
+                    End If
+                    index += 1
+                Else
+                    ' Es liegt tiefer: die nächste Gruppe der Kette bekommt eine eigene Ebene.
+                    Dim child = chain(position + 1)
+                    Dim childX = 0, childY = 0
+                    Dim childLayer = DrawGroupRun(adj, source, stacked, child, index, childX, childY)
+                    If childLayer IsNot Nothing Then
+                        Try
+                            CompositeGroupLayer(layer, originX, originY, childLayer, childX, childY,
+                                                child, adj, source.Width, source.Height)
+                        Finally
+                            childLayer.Dispose()
+                        End Try
+                    End If
+                End If
+            End While
+            Return layer
+        End Function
+
+        ''' <summary>Der Vorlauf zu <see cref="DrawGroupRun"/>: wie weit reicht der Lauf, welche
+        ''' Flaeche nimmt er ein, und haengt an einem seiner Objekte eine Korrektur?
+        '''
+        ''' Er geht genau denselben Weg wie die Schleife dort (Abbruch, sobald ein Objekt nicht mehr
+        ''' zu dieser Gruppe gehoert) und zaehlt die Objekte der UNTERgruppen mit - deren Ebenen
+        ''' landen ja in dieser. <paramref name="startIndex"/> wird nicht veraendert.</summary>
+        Private Shared Function ComputeGroupRunBounds(adj As ImageAdjustments, source As SKBitmap,
+                                                      stacked As List(Of MaskedAdjustmentLayer),
+                                                      group As AnnotationGroup, startIndex As Integer) _
+                                                      As (Rect As SKRectI, HasStackedAdjustment As Boolean)
+            Dim union = SKRectI.Empty
+            Dim hasStacked = False
+            Dim scan = startIndex
+            While scan < adj.Annotations.Count
+                Dim current = adj.Annotations(scan)
+                If Not RenderStepChainFor(adj, current).Any(Function(g) Object.ReferenceEquals(g, group)) Then Exit While
+                ' Nur was wirklich gezeichnet wird, spannt die Ebene auf. Die Sichtbarkeit geht
+                ' ueber denselben Chokepoint wie beim Zeichnen, sonst spannte ein ausgeblendetes
+                ' Objekt die Ebene weiter auf, als sie sein muss.
+                If adj.IsAnnotationRenderVisible(current) Then
+                    Dim rendered = TransformAnnotationForGeometry(current, adj, source.Width, source.Height)
+                    If rendered IsNot Nothing Then
+                        Dim rect = ComputeAnnotationDirtyRectCore(source.Width, source.Height, rendered)
+                        If rect.Width > 0 AndAlso rect.Height > 0 Then
+                            union = If(union.IsEmpty, rect, SKRectI.Union(union, rect))
+                        End If
+                    End If
+                End If
+                If stacked IsNot Nothing AndAlso
+                   stacked.Any(Function(l) String.Equals(l.StackAboveAnnotationId, current.Id, StringComparison.Ordinal)) Then
+                    hasStacked = True
+                End If
+                scan += 1
+            End While
+            If Not union.IsEmpty Then
+                union = SKRectI.Intersect(union, New SKRectI(0, 0, source.Width, source.Height))
+            End If
+            Return (union, hasStacked)
+        End Function
+
+        ''' <summary>Legt die fertige Ebene einer Gruppe ins Ziel: erst ihre MASKE darauf, dann mit
+        ''' Deckkraft und Mischmethode der Gruppe hinein.</summary>
+        ''' <param name="targetX">Ecke des ZIELS im Bildraum - bei einer Gruppe in einer Gruppe ist
+        ''' das Ziel selbst zugeschnitten.</param>
+        ''' <param name="layerX">Ecke der Gruppenebene im Bildraum.</param>
+        Private Shared Sub CompositeGroupLayer(target As SKBitmap, targetX As Integer, targetY As Integer,
+                                               groupLayer As SKBitmap, layerX As Integer, layerY As Integer,
+                                               group As AnnotationGroup, adj As ImageAdjustments,
+                                               width As Integer, height As Integer)
+            If target Is Nothing OrElse groupLayer Is Nothing OrElse group Is Nothing Then Return
+            ' DIE MASKE DER GRUPPE liegt auf der fertigen Gruppenebene - sie deckt damit alles ab,
+            ' was die Gruppe gezeichnet hat, statt jedes Mitglied einzeln. Genau dafür gibt es die
+            ' Ebene; ohne sie liesse sich eine Gruppenmaske nur als Kopie an jedes Mitglied
+            ' verteilen, und an den Überlappungen sähe man es.
+            If Not String.IsNullOrEmpty(group.MaskId) AndAlso adj.Masks IsNot Nothing Then
+                Dim groupMask = adj.Masks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                            String.Equals(m.Id, group.MaskId, StringComparison.Ordinal))
+                Dim coverage = GetAnnotationMaskCoverage(groupMask, adj, width, height)
+                ' Die Deckung steht in BILDgroesse, die Ebene kann zugeschnitten sein - deshalb ihre
+                ' Ecke mitgeben, sonst laege die Maske um den Zuschnitt verschoben.
+                If coverage IsNot Nothing Then ApplyCoverageToLayer(groupLayer, layerX, layerY, coverage, width, height)
+            End If
+            Using canvas = New SKCanvas(target)
+                Dim alpha = CByte(Math.Max(0, Math.Min(255, Math.Round(Clamp(CSng(group.Opacity), 0, 100) / 100.0 * 255.0))))
+                Using paint = New SKPaint With {
+                    .BlendMode = ResolveAnnotationBlendMode(group.BlendMode),
+                    .IsAntialias = True,
+                    .Color = New SKColor(255, 255, 255, alpha)}
+                    canvas.DrawBitmap(groupLayer, layerX - targetX, layerY - targetY, paint)
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Gibt es ueberhaupt ein Objekt in einer wirksamen Gruppe? Die Frage entscheidet,
+        ''' ob der teure Weg ueber Einzelzeichnungen noetig ist - ohne sie bleibt es beim EINEN
+        ''' Aufruf ueber alle Objekte.</summary>
+        Private Shared Function HasRenderStepGroupMember(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse adj.Annotations Is Nothing Then Return False
+            For Each a In adj.Annotations
+                If RenderStepGroupFor(adj, a) IsNot Nothing Then Return True
+            Next
+            Return False
         End Function
 
         ''' <summary>Zeichnet die Objekte in Z-Reihenfolge und gibt zurueck, WIE VIELE wirklich
@@ -2099,6 +2305,9 @@ Namespace Services
                     canvas.DrawPath(path, fillPaint)
                 End Using
             End If
+            ' Ohne Breite keine Kontur: eine Breite von null bedeutet ausdrücklich "keine", und Skia
+            ' zeichnet bei null trotzdem eine Haarlinie.
+            If strokeWidth <= 0.0F OrElse stroke.Alpha = 0 Then Return
             Using strokePaint = New SKPaint With {.Color = stroke, .Style = SKPaintStyle.Stroke, .StrokeWidth = strokeWidth, .IsAntialias = True, .StrokeCap = SKStrokeCap.Round, .StrokeJoin = SKStrokeJoin.Round}
                 canvas.DrawPath(path, strokePaint)
             End Using

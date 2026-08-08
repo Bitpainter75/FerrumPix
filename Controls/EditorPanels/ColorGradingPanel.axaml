@@ -53,7 +53,7 @@
                     <TextBlock Classes="zone-label" Text="Schatten"/>
                     <icons:ColorGradeWheel Hue="{Binding ColorGradeShadowHue, Mode=TwoWay}"
                                            Saturation="{Binding ColorGradeShadowSaturation, Mode=TwoWay}"
-                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit Umschalt nur die Sättigung"/>
+                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit SHIFT nur die Sättigung"/>
                     <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
                         <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeShadowLuminance}"/>
                         <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
@@ -65,7 +65,7 @@
                     <TextBlock Classes="zone-label" Text="Mitten"/>
                     <icons:ColorGradeWheel Hue="{Binding ColorGradeMidtoneHue, Mode=TwoWay}"
                                            Saturation="{Binding ColorGradeMidtoneSaturation, Mode=TwoWay}"
-                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit Umschalt nur die Sättigung"/>
+                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit SHIFT nur die Sättigung"/>
                     <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
                         <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeMidtoneLuminance}"/>
                         <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"
@@ -77,7 +77,7 @@
                     <TextBlock Classes="zone-label" Text="Lichter"/>
                     <icons:ColorGradeWheel Hue="{Binding ColorGradeHighlightHue, Mode=TwoWay}"
                                            Saturation="{Binding ColorGradeHighlightSaturation, Mode=TwoWay}"
-                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit Umschalt nur die Sättigung"/>
+                                           ToolTip.Tip="Ziehen setzt Farbton und Sättigung; mit SHIFT nur die Sättigung"/>
                     <Grid ColumnDefinitions="*,40" Margin="0,4,0,0">
                         <icons:RoundSlider Minimum="-100" Maximum="100" Value="{Binding ColorGradeHighlightLuminance}"/>
                         <icons:SliderValueUpDown Grid.Column="1" Classes="slider-value"

@@ -35,7 +35,7 @@
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Linear"
                         Classes.active="{Binding IsMaskLinearMode}"
-                        ToolTip.Tip="Linearer Verlauf: im Bild ziehen, die Maske läuft vom Startpunkt zum Endpunkt aus. Umschalt rastet die Richtung">
+                        ToolTip.Tip="Linearer Verlauf: im Bild ziehen, die Maske läuft vom Startpunkt zum Endpunkt aus. SHIFT rastet die Richtung">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg" Width="16" Height="16" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"

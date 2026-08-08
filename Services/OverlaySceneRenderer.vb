@@ -121,11 +121,15 @@ Namespace Services
         ''' - verzerrte Objekte, aber nur noch teilweise (siehe <see cref="MustBakeForWarp"/>),
         ''' - Objekte mit Ebenen- oder Schnittmaske (die Deckung entsteht beim KOMPONIEREN, sie steckt
         '''   nicht in der Objekt-Bitmap; die Schnittmaske braucht ausserdem die Basis unter sich),
-        ''' - Objekte, ueber denen eine eingehaengte Korrektur liegt (sie wirkt auf das Komposit).</summary>
+        ''' - Objekte, ueber denen eine eingehaengte Korrektur liegt (sie wirkt auf das Komposit),
+        ''' - Mitglieder einer WIRKSAMEN Gruppe (Deckkraft unter 100 oder eigene Mischmethode): der
+        '''   Kompositor zeichnet jedes Objekt fuer sich und kennt keine Gruppenebene; einzeln
+        '''   eingeblendet saehen die Ueberlappungen anders aus als im fertigen Bild.</summary>
         Public Shared Function ComputeCompositorStartIndex(adj As ImageAdjustments) As Integer
             If adj Is Nothing Then Return 0
             Return ComputeCompositorStartIndex(adj.Annotations, adj.MaskedAdjustmentLayers,
-                                               Function(a) adj.IsAnnotationRenderVisible(a))
+                                               Function(a) adj.IsAnnotationRenderVisible(a),
+                                               Function(a) ImageProcessor.RenderStepGroupFor(adj, a) IsNot Nothing)
         End Function
 
         ''' <summary>Muss dieses Objekt wegen einer Verzerrung im gebackenen Block bleiben?
@@ -156,7 +160,8 @@ Namespace Services
         ''' ImageAdjustments steckt, im Editor aber in dessen eigener Gruppenliste.</summary>
         Public Shared Function ComputeCompositorStartIndex(annotations As IReadOnlyList(Of ImageAnnotation),
                                                            maskedLayers As IEnumerable(Of MaskedAdjustmentLayer),
-                                                           isRenderVisible As Func(Of ImageAnnotation, Boolean)) As Integer
+                                                           isRenderVisible As Func(Of ImageAnnotation, Boolean),
+                                                           Optional isInRenderStepGroup As Func(Of ImageAnnotation, Boolean) = Nothing) As Integer
             If annotations Is Nothing OrElse annotations.Count = 0 Then Return 0
             Dim stackedAboveIds As New HashSet(Of String)(StringComparer.Ordinal)
             If maskedLayers IsNot Nothing Then
@@ -178,7 +183,8 @@ Namespace Services
                                IsNonNormalBlend(annotation) OrElse
                                MustBakeForWarp(annotation) OrElse
                                ImageProcessor.UsesLayerCoverage(annotation) OrElse
-                               stackedAboveIds.Contains(If(annotation.Id, ""))
+                               stackedAboveIds.Contains(If(annotation.Id, "")) OrElse
+                               (isInRenderStepGroup IsNot Nothing AndAlso isInRenderStepGroup(annotation))
                 If mustBake Then startIndex = i + 1
             Next
             Return startIndex

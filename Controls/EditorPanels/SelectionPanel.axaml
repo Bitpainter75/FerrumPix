@@ -89,7 +89,7 @@
                 <Button Classes="ghost" Padding="8,6"
                         IsEnabled="{Binding HasActiveSelection}"
                         Command="{Binding ClearSelectionCommand}"
-                        ToolTip.Tip="Auswahl aufheben (Strg+D oder Esc)">
+                        ToolTip.Tip="Auswahl aufheben (STRG+D oder ESC)">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
                 </Button>
             </StackPanel>

@@ -1414,6 +1414,10 @@ Namespace ViewModels
             If String.IsNullOrEmpty(maskId) Then Return False
             If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso
                                                String.Equals(l.MaskId, maskId, StringComparison.Ordinal)) Then Return True
+            ' Auch eine GRUPPE kann eine Maske halten - ohne diese Zeile raeumte das Aufraeumen
+            ' eine Maske weg, auf die die Gruppe noch zeigt.
+            If _annotationGroups.Any(Function(g) g IsNot Nothing AndAlso
+                                         String.Equals(g.MaskId, maskId, StringComparison.Ordinal)) Then Return True
             Return _annotations.Any(Function(a) a IsNot Nothing AndAlso
                                         String.Equals(a.MaskId, maskId, StringComparison.Ordinal))
         End Function
@@ -2925,15 +2929,23 @@ Namespace ViewModels
                 End If
                 If value IsNot Nothing AndAlso value.IsGroupHeader Then
                     ' Kopfzeile einer Gruppe: alle Mitglieder markieren, Anker ist das oberste.
-                    Dim members = AnnotationsInGroup(value.Group.Id)
+                    ' MIT UNTERGRUPPEN: die Kopfzeile meint die Gruppe als Ganzes, und dazu gehoert
+                    ' alles, was in ihr liegt - auch das, was in einer Gruppe darin liegt.
+                    Dim members = AnnotationsInGroupTree(value.Group.Id)
                     Dim layerMembers = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso
-                                                                     String.Equals(l.GroupId, value.Group.Id, StringComparison.Ordinal)).ToList()
+                                                                     IsGroupInside(l.GroupId, value.Group.Id)).ToList()
                     _extraSelectedAdjustmentLayers.Clear()
                     _selectedMaskedAdjustmentLayerId = ""
                     If members.Count = 0 Then
                         SelectedAnnotationIndex = -1
                     Else
-                        SelectAnnotationWithGroup(_annotations.IndexOf(members(members.Count - 1)))
+                        ' AUSDRUECKLICH statt ueber SelectAnnotationWithGroup: das nimmt die Gruppe
+                        ' des ANKERS, und der letzte Eintrag des Baums kann zu einer UNTERgruppe
+                        ' gehoeren - die Auswahl waere dann auf diese eingedampft, obwohl die
+                        ' Kopfzeile der aeusseren angeklickt wurde.
+                        Dim memberIndices = IndicesOfAnnotations(members)
+                        SelectedAnnotationIndex = _annotations.IndexOf(members(members.Count - 1))
+                        AddExtraSelectedAnnotationsByIndex(memberIndices)
                     End If
                     ' Korrekturebenen der Gruppe gehören zur Auswahl dazu - eine Gruppe wird als GANZES
                     ' markiert, auch wenn Objekte und Korrekturen darin gemischt sind.
@@ -3239,6 +3251,11 @@ Namespace ViewModels
 
         Public Property SelectedLayerOpacity As Double
             Get
+                ' EINE GRUPPENZEILE meint die GRUPPE, nicht ihre Mitglieder. Vorher setzte der Regler
+                ' dort die Deckkraft jedes einzelnen Mitglieds - an den Überlappungen sah man dann
+                ' zwei Stufen statt einer gleichmäßigen Fläche, und "die Gruppe weich einblenden" ging
+                ' gar nicht.
+                If ShowGroupProperties Then Return GroupOpacity
                 If _selectedLayerRow?.AdjustmentLayer IsNot Nothing Then
                     Return Math.Round(Math.Max(0, Math.Min(1, _selectedLayerRow.AdjustmentLayer.Opacity)) * 100.0, 2)
                 End If
@@ -3246,6 +3263,11 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 Dim clamped = Math.Max(0, Math.Min(100, value))
+                If ShowGroupProperties Then
+                    GroupOpacity = clamped
+                    Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
+                    Return
+                End If
                 If _selectedLayerRow?.AdjustmentLayer IsNot Nothing Then
                     Dim nextOpacity = CSng(clamped / 100.0)
                     If Math.Abs(_selectedLayerRow.AdjustmentLayer.Opacity - nextOpacity) < 0.0001F Then Return
@@ -3260,6 +3282,32 @@ Namespace ViewModels
                 End If
                 Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
             End Set
+        End Property
+
+        ''' <summary>Die Mischmethode der markierten Zeile - dieselbe Weiche wie bei der Deckkraft:
+        ''' eine GRUPPENzeile meint die Gruppe, eine Objektzeile das Objekt.</summary>
+        Public Property SelectedLayerBlendModeOption As AnnotationBlendModeOption
+            Get
+                If ShowGroupProperties Then Return SelectedGroupBlendModeOption
+                Return SelectedAnnotationBlendModeOption
+            End Get
+            Set(value As AnnotationBlendModeOption)
+                If value Is Nothing Then Return
+                If ShowGroupProperties Then
+                    GroupBlendMode = value.Key
+                Else
+                    SelectedAnnotationBlendModeOption = value
+                End If
+                Me.RaisePropertyChanged(NameOf(SelectedLayerBlendModeOption))
+            End Set
+        End Property
+
+        ''' <summary>Ist die Mischmethode der Kopfleiste überhaupt einstellbar? Bei einem markierten
+        ''' Objekt oder einer markierten Gruppe ja, sonst nicht.</summary>
+        Public ReadOnly Property CanEditSelectedLayerBlendMode As Boolean
+            Get
+                Return HasSelectedAnnotation OrElse ShowGroupProperties
+            End Get
         End Property
 
         ''' <summary>Waehrend eines Massenwechsels an der Objektliste NICHT je Objekt neu aufbauen.
@@ -3327,6 +3375,38 @@ Namespace ViewModels
                 ' Mitglieder liegen zusammenhängend (siehe GroupSelectedAnnotations), der Block ist also
                 ' genau hier zu Ende; eine eingeklappte Gruppe zeigt nur ihre Kopfzeile.
                 Dim emittedGroups As New HashSet(Of String)(StringComparer.Ordinal)
+
+                ' Die Gruppenkette einer Kennung, von aussen nach innen - dieselbe Reihenfolge, in der
+                ' die Kopfzeilen erscheinen muessen. Ein Ring wird abgefangen.
+                Dim chainOf = Function(groupId As String) As List(Of AnnotationGroup)
+                                Dim result As New List(Of AnnotationGroup)()
+                                Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
+                                Dim current = FindAnnotationGroup(groupId)
+                                While current IsNot Nothing AndAlso seen.Add(current.Id)
+                                    result.Insert(0, current)
+                                    current = FindAnnotationGroup(current.ParentGroupId)
+                                End While
+                                Return result
+                            End Function
+
+                ' Zugeklappt ist eine Zeile, sobald IRGENDEINE Gruppe ueber ihr zugeklappt ist -
+                ' nicht nur die unmittelbare.
+                Dim isHidden = Function(chain As List(Of AnnotationGroup), bisIndex As Integer) As Boolean
+                                    For k = 0 To Math.Min(bisIndex, chain.Count - 1)
+                                        If chain(k).IsCollapsed Then Return True
+                                    Next
+                                    Return False
+                                End Function
+
+                ' Die noch fehlenden Kopfzeilen der Kette ausgeben, von aussen nach innen und je mit
+                ' ihrer Tiefe. Eine Untergruppe erscheint damit eingerueckt unter ihrer Elterngruppe.
+                Dim emitHeaders = Sub(chain As List(Of AnnotationGroup))
+                                     For k = 0 To chain.Count - 1
+                                         If isHidden(chain, k - 1) Then Exit For
+                                         If emittedGroups.Add(chain(k).Id) Then _layerRows.Add(New LayerPanelRow(chain(k), k))
+                                     Next
+                                 End Sub
+
                 For i = _annotations.Count - 1 To 0 Step -1
                     Dim a = _annotations(i)
                     ' Korrekturebenen, die ÜBER diesem Objekt einsortiert sind, stehen im Panel direkt
@@ -3348,9 +3428,10 @@ Namespace ViewModels
                         Dim imBlock = aGroup IsNot Nothing AndAlso
                                       String.Equals(stacked.GroupId, aGroup.Id, StringComparison.Ordinal)
                         If imBlock Then
-                            If aGroup.IsCollapsed Then Continue For
-                            If emittedGroups.Add(aGroup.Id) Then _layerRows.Add(New LayerPanelRow(aGroup))
-                            _layerRows.Add(New LayerPanelRow(stacked, aGroup))
+                            Dim aChain = chainOf(aGroup.Id)
+                            If isHidden(aChain, aChain.Count - 1) Then Continue For
+                            emitHeaders(aChain)
+                            _layerRows.Add(New LayerPanelRow(stacked, aGroup, aChain.Count))
                         Else
                             _layerRows.Add(New LayerPanelRow(stacked))
                         End If
@@ -3360,8 +3441,9 @@ Namespace ViewModels
                         _layerRows.Add(New LayerPanelRow(a))
                         Continue For
                     End If
-                    If emittedGroups.Add(grp.Id) Then _layerRows.Add(New LayerPanelRow(grp))
-                    If Not grp.IsCollapsed Then _layerRows.Add(New LayerPanelRow(a, grp))
+                    Dim chain = chainOf(grp.Id)
+                    emitHeaders(chain)
+                    If Not isHidden(chain, chain.Count - 1) Then _layerRows.Add(New LayerPanelRow(a, grp, chain.Count))
                 Next
                 For i = _maskedAdjustmentLayers.Count - 1 To 0 Step -1
                     Dim l = _maskedAdjustmentLayers(i)
@@ -3371,8 +3453,9 @@ Namespace ViewModels
                         _layerRows.Add(New LayerPanelRow(l))
                         Continue For
                     End If
-                    If emittedGroups.Add(lgrp.Id) Then _layerRows.Add(New LayerPanelRow(lgrp))
-                    If Not lgrp.IsCollapsed Then _layerRows.Add(New LayerPanelRow(l, lgrp))
+                    Dim lchain = chainOf(lgrp.Id)
+                    emitHeaders(lchain)
+                    If Not isHidden(lchain, lchain.Count - 1) Then _layerRows.Add(New LayerPanelRow(l, lgrp, lchain.Count))
                 Next
                 If Not String.IsNullOrEmpty(selectedGroupId) Then
                     _selectedLayerRow = _layerRows.FirstOrDefault(Function(r) r.IsGroupHeader AndAlso
@@ -3677,6 +3760,15 @@ Namespace ViewModels
                 RaiseCurrentTargetChanged()
                 Me.RaisePropertyChanged(NameOf(SelectedLayerOpacity))
                 Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsSelected))
+                ' Die Gruppenregler haengen an der markierten KOPFZEILE - ohne diese Meldung zeigten
+                ' sie nach einem Zeilenwechsel weiter die Werte der vorigen Gruppe.
+                Me.RaisePropertyChanged(NameOf(ShowGroupProperties))
+                Me.RaisePropertyChanged(NameOf(IsSelectedGroupRenderStep))
+                Me.RaisePropertyChanged(NameOf(GroupOpacity))
+                Me.RaisePropertyChanged(NameOf(GroupBlendMode))
+                Me.RaisePropertyChanged(NameOf(SelectedGroupBlendModeOption))
+                Me.RaisePropertyChanged(NameOf(SelectedLayerBlendModeOption))
+                Me.RaisePropertyChanged(NameOf(CanEditSelectedLayerBlendMode))
                 ' Der Masken-Knopf der Fußzeile haengt an der markierten Ebene - ohne das bliebe er
                 ' nach einem Wechsel stehen, wie er beim vorigen war.
                 RaiseAnnotationMaskStateChanged()
@@ -3736,8 +3828,17 @@ Namespace ViewModels
             Return CurrentObject()
         End Function
 
+        ''' <summary>Die GRUPPE, der eine Maske gilt: die markierte Kopfzeile. Eine Gruppenmaske
+        ''' liegt auf der Gruppenebene und deckt damit alles ab, was die Gruppe zeichnet - anders
+        ''' als eine Maske an jedem Mitglied, die an den Überlappungen sichtbar würde.</summary>
+        Private Function MaskTargetGroup() As AnnotationGroup
+            Return SelectedGroupForProperties()
+        End Function
+
         Public ReadOnly Property CanAddAnnotationMask As Boolean
             Get
+                Dim g = MaskTargetGroup()
+                If g IsNot Nothing Then Return String.IsNullOrEmpty(g.MaskId)
                 Dim a = MaskTargetAnnotation()
                 Return a IsNot Nothing AndAlso String.IsNullOrEmpty(a.MaskId)
             End Get
@@ -3745,6 +3846,8 @@ Namespace ViewModels
 
         Public ReadOnly Property SelectedAnnotationHasMask As Boolean
             Get
+                Dim g = MaskTargetGroup()
+                If g IsNot Nothing Then Return Not String.IsNullOrEmpty(g.MaskId)
                 Dim a = MaskTargetAnnotation()
                 Return a IsNot Nothing AndAlso Not String.IsNullOrEmpty(a.MaskId)
             End Get
@@ -3797,6 +3900,14 @@ Namespace ViewModels
         ''' <summary>Der eine Weg hinter Knopf und Maskensymbol: hat die Ebene noch keine Maske, wird
         ''' sie angelegt UND gleich zum Bearbeiten geöffnet - wer sie anlegt, will an sie heran.</summary>
         Public Sub UseAnnotationMask()
+            ' DIE GRUPPE ZUERST. Eine markierte Gruppenzeile setzt ganz nebenbei auch die fuehrende
+            ' KORREKTUREBENE der Gruppe (siehe den Kopfzeilen-Zweig von SelectedLayerRow); ohne diese
+            ' Abzweigung oeffnete der Knopf deren Maske statt der Maske der Gruppe.
+            If MaskTargetGroup() IsNot Nothing Then
+                If CanAddAnnotationMask Then AddMaskToSelectedAnnotation()
+                EditSelectedAnnotationMask()
+                Return
+            End If
             ' Der Maskenknopf im Ebenenpanel gilt auch fuer Korrektur- und Maskenebenen.
             ' Bei einer bereits ausgewaehlten solchen Zeile lief er vorher ausschliesslich ueber
             ' MaskTargetAnnotation (also ein Bildobjekt) und kehrte still zurueck. Dadurch konnte
@@ -3913,6 +4024,13 @@ Namespace ViewModels
         End Sub
 
         Public Sub AddMaskToSelectedAnnotation()
+            ' DIE GRUPPE GEHT VOR: ist ihre Kopfzeile markiert, ist sie gemeint und nicht eines
+            ' ihrer Mitglieder.
+            Dim targetGroup = MaskTargetGroup()
+            If targetGroup IsNot Nothing Then
+                AddMaskToSelectedGroup(targetGroup)
+                Return
+            End If
             Dim a = MaskTargetAnnotation()
             If a Is Nothing OrElse Not String.IsNullOrEmpty(a.MaskId) Then Return
             CommitObjectAdjustModeToModel()
@@ -3953,6 +4071,87 @@ Namespace ViewModels
         ''' anstelle der Auswahl: auf einer KOPIE der Anpassungen, damit eine laufende Auswahl
         ''' unberuehrt bleibt. Damit liegt sie automatisch im Quellraum und traegt dieselben
         ''' Koordinaten wie jede andere Maske.</summary>
+        ''' <summary>Legt die Maske der GRUPPE an. Eine laufende Auswahl ist die Ansage, welcher Teil
+        ''' der Gruppe sichtbar bleiben soll; ohne Auswahl deckt sie erst einmal alles, was die
+        ''' Gruppe zeichnet, und der Maskenpinsel nimmt danach weg.
+        '''
+        ''' Der Bereich kommt aus der VEREINIGUNG der Mitglieder - dieselbe Überlegung wie am Objekt,
+        ''' wo die Maske nur dessen Bereich deckt statt des ganzen Bildes: ein bildgroßes Raster
+        ''' kostet bei 45 Megapixeln 45 MB für „alles sichtbar", und das rote Overlay läge als
+        ''' gleichmäßige Fläche über dem ganzen Foto.</summary>
+        Private Sub AddMaskToSelectedGroup(group As AnnotationGroup)
+            If group Is Nothing OrElse Not String.IsNullOrEmpty(group.MaskId) Then Return
+            CommitObjectAdjustModeToModel()
+            PushUndo()
+            Dim adj = BuildAdjustmentsFromFields()
+            Dim maskName = LocalizationService.T("Gruppenmaske")
+            Dim mask As ImageMask = Nothing
+            If _hasActiveSelection Then mask = ImageProcessor.CreateSourceMaskFromSelection(adj, maskName)
+            If mask Is Nothing Then mask = CreateGroupCoverageMask(group, maskName)
+            If mask Is Nothing Then mask = ImageProcessor.CreateFullCoverageMask(adj, maskName)
+            If mask Is Nothing Then Return
+            _imageMasks.Add(mask)
+            group.MaskId = mask.Id
+            If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+            _hasChanges = True
+            RaiseAnnotationMaskStateChanged()
+            RebuildLayerRows()
+            AddHistoryEntry(LocalizationService.T("Gruppenmaske hinzugefügt"))
+            RequestOverlayStateNotify()
+            RefreshPreviewImmediately()
+        End Sub
+
+        Private Sub RemoveMaskFromSelectedGroup(group As AnnotationGroup)
+            If group Is Nothing OrElse String.IsNullOrEmpty(group.MaskId) Then Return
+            PushUndo()
+            Dim maskId = group.MaskId
+            group.MaskId = ""
+            ' Wurde genau diese Maske gerade bearbeitet, muss das rote Overlay mit weg - sonst bleibt
+            ' es ohne Ziel stehen.
+            If String.Equals(_editingLayerMaskId, maskId, StringComparison.Ordinal) Then
+                _editingLayerMaskId = ""
+                If _hasActiveSelection Then ClearSelection(captureUndo:=False)
+                PublishMaskBrushOverlay()
+            End If
+            RemoveMaskIfUnreferenced(maskId)
+            _hasChanges = True
+            RaiseAnnotationMaskStateChanged()
+            RebuildLayerRows()
+            AddHistoryEntry(LocalizationService.T("Gruppenmaske entfernt"))
+            RequestOverlayStateNotify()
+            RefreshPreviewImmediately()
+        End Sub
+
+        ''' <summary>Der Bereich, den eine Gruppe im Szenenraum einnimmt: die Vereinigung der
+        ''' Rechtecke ihrer sichtbaren Mitglieder.
+        '''
+        ''' MITGLIEDER SIND AUCH DIE DER UNTERGRUPPEN (<c>AnnotationsInGroupTree</c>). Mit den
+        ''' unmittelbaren allein blieb die Vereinigung bei einer Gruppe, die nur eine Untergruppe
+        ''' enthaelt, LEER - die Maske fiel dann auf das ganze Bild zurueck, und bei gemischten
+        ''' Gruppen fehlte der Teil in den Untergruppen (Befund 2026-08-09).</summary>
+        Private Function CreateGroupCoverageMask(group As AnnotationGroup, maskName As String) As ImageMask
+            If group Is Nothing Then Return Nothing
+            Dim sceneSize = GetCurrentScenePixelSize()
+            If sceneSize.Width <= 0 OrElse sceneSize.Height <= 0 Then Return Nothing
+            Dim union = SKRectI.Empty
+            For Each member In AnnotationsInGroupTree(group.Id)
+                If member Is Nothing OrElse Not IsAnnotationRenderVisibleLive(member) Then Continue For
+                Dim rect = ComputeSceneDirtyRectFor(member)
+                If rect.Width <= 0 OrElse rect.Height <= 0 Then Continue For
+                union = If(union.IsEmpty, rect, SKRectI.Union(union, rect))
+            Next
+            If union.IsEmpty OrElse union.Width <= 0 OrElse union.Height <= 0 Then Return Nothing
+            Dim adj = BuildAdjustmentsFromFields()
+            adj.SelectionMaskPngBase64 = ""
+            adj.SelectionXPercent = union.Left / CDbl(sceneSize.Width) * 100.0
+            adj.SelectionYPercent = union.Top / CDbl(sceneSize.Height) * 100.0
+            adj.SelectionWidthPercent = union.Width / CDbl(sceneSize.Width) * 100.0
+            adj.SelectionHeightPercent = union.Height / CDbl(sceneSize.Height) * 100.0
+            adj.SelectionShapeMode = "Rectangle"
+            adj.HasActiveSelection = True
+            Return ImageProcessor.CreateSourceMaskFromSelection(adj, maskName)
+        End Function
+
         Private Function CreateObjectCoverageMask(annotation As ImageAnnotation, maskName As String) As ImageMask
             If annotation Is Nothing Then Return Nothing
             Dim sceneSize = GetCurrentScenePixelSize()
@@ -3972,9 +4171,16 @@ Namespace ViewModels
         ''' <summary>Bringt die Ebenenmaske des Objekts in den Masken-Pinsel: rotes Overlay, harte
         ''' Form malbar, weiche Kante zur Renderzeit. Derselbe Weg wie bei einer Maskenebene.</summary>
         Public Sub EditSelectedAnnotationMask()
-            Dim a = MaskTargetAnnotation()
-            If a Is Nothing OrElse String.IsNullOrEmpty(a.MaskId) Then Return
-            Dim maskId = a.MaskId
+            Dim targetGroup = MaskTargetGroup()
+            Dim maskId As String
+            If targetGroup IsNot Nothing Then
+                If String.IsNullOrEmpty(targetGroup.MaskId) Then Return
+                maskId = targetGroup.MaskId
+            Else
+                Dim a = MaskTargetAnnotation()
+                If a Is Nothing OrElse String.IsNullOrEmpty(a.MaskId) Then Return
+                maskId = a.MaskId
+            End If
             ' ERST das Werkzeug, DANN die Maske laden. Andersherum wurde das rote Overlay
             ' veroeffentlicht, waehrend die Ansicht noch im vorigen Werkzeug stand - dort gehoert
             ' kein Auswahl-Overlay hin, sie versteckte es also sofort wieder, und der Werkzeugwechsel
@@ -3989,6 +4195,11 @@ Namespace ViewModels
         End Sub
 
         Public Sub RemoveSelectedAnnotationMask()
+            Dim targetGroup = MaskTargetGroup()
+            If targetGroup IsNot Nothing Then
+                RemoveMaskFromSelectedGroup(targetGroup)
+                Return
+            End If
             Dim a = MaskTargetAnnotation()
             If a Is Nothing OrElse String.IsNullOrEmpty(a.MaskId) Then Return
             PushUndo()

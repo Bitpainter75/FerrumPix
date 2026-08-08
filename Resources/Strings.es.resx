@@ -1918,8 +1918,8 @@
   <data name="Oben_rechts_4646e5f8" xml:space="preserve">
     <value>Arriba a la derecha</value>
   </data>
-  <data name="Objekt_duplizieren_Strg_D_d123f119" xml:space="preserve">
-    <value>Duplicar objeto (Ctrl+D)</value>
+  <data name="Objekt_duplizieren_STRG_D_605c2196" xml:space="preserve">
+    <value>Duplicar objeto (CTRL+D)</value>
   </data>
   <data name="Objekt_ein_ausblenden_c0adc9c1" xml:space="preserve">
     <value>Mostrar/ocultar objeto</value>
@@ -1927,8 +1927,8 @@
   <data name="Objekt_l_schen_b6dd7857" xml:space="preserve">
     <value>Eliminar objeto</value>
   </data>
-  <data name="Objekt_l_schen_Entf_efd16004" xml:space="preserve">
-    <value>Eliminar objeto (Supr)</value>
+  <data name="Objekt_l_schen_ENTF_df0b914b" xml:space="preserve">
+    <value>Eliminar objeto (SUPR)</value>
   </data>
   <data name="Objekt_nach_hinten_91ade9ea" xml:space="preserve">
     <value>Enviar objeto atrás</value>
@@ -2074,8 +2074,8 @@
   <data name="W_hle_unten_einen_Objekttyp_aus_und_klicke_dann__4add2974" xml:space="preserve">
     <value>Elige un tipo de objeto abajo y luego haz clic en la imagen para colocarlo allí.</value>
   </data>
-  <data name="Ziehen_zum_Drehen_Shift_15_Schritte_af03841b" xml:space="preserve">
-    <value>Arrastra para rotar (Mayús = pasos de 15°)</value>
+  <data name="Ziehen_zum_Drehen_SHIFT_15_Schritte_d836fd02" xml:space="preserve">
+    <value>Arrastra para rotar (MAYÚS = pasos de 15°)</value>
   </data>
   <data name="Zoom_9b3cbed5" xml:space="preserve">
     <value>Zoom</value>
@@ -2330,8 +2330,8 @@
   <data name="Stempel_cf577b82" xml:space="preserve">
     <value>Tampón de clonar</value>
   </data>
-  <data name="Stempel_Alt_Klick_setzt_die_Quelle_f61845f4" xml:space="preserve">
-    <value>Tampón de clonar (Alt+clic define el origen)</value>
+  <data name="Stempel_ALT_Klick_setzt_die_Quelle_0822113c" xml:space="preserve">
+    <value>Tampón de clonar (ALT+clic define el origen)</value>
   </data>
   <data name="Struktur_8ad87337" xml:space="preserve">
     <value>Estructura</value>
@@ -2798,8 +2798,8 @@
   <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
     <value>Álbum eliminado: {0}</value>
   </data>
-  <data name="Auswahl_aufheben_Strg_D_oder_Esc_cdb5d463" xml:space="preserve">
-    <value>Deseleccionar (Ctrl+D o Esc)</value>
+  <data name="Auswahl_aufheben_STRG_D_oder_ESC_6d0a4c49" xml:space="preserve">
+    <value>Deseleccionar (CTRL+D o ESC)</value>
   </data>
   <data name="Auswahl_im_Bild_erstellen_dann_kopieren_oder_f_l_f8265df4" xml:space="preserve">
     <value>Crea una selección en la imagen y luego cópiala o rellénala. Ctrl+A selecciona todo, Ctrl+D deselecciona, Esc cancela mientras arrastras.</value>
@@ -2861,8 +2861,8 @@
   <data name="Ebenen_Panel_3c793049" xml:space="preserve">
     <value>Panel de capas</value>
   </data>
-  <data name="Ebene_duplizieren_Strg_D_30ab0842" xml:space="preserve">
-    <value>Duplicar capa (Ctrl+D)</value>
+  <data name="Ebene_duplizieren_STRG_D_13686ce4" xml:space="preserve">
+    <value>Duplicar capa (CTRL+D)</value>
   </data>
   <data name="Ebene_nach_vorne_84ecd146" xml:space="preserve">
     <value>Traer capa al frente</value>
@@ -2870,8 +2870,8 @@
   <data name="Ebene_nach_hinten_1a9faf5b" xml:space="preserve">
     <value>Enviar capa atrás</value>
   </data>
-  <data name="Ebene_l_schen_Entf_063fd7c1" xml:space="preserve">
-    <value>Eliminar capa (Supr)</value>
+  <data name="Ebene_l_schen_ENTF_465039e7" xml:space="preserve">
+    <value>Eliminar capa (SUPR)</value>
   </data>
   <data name="Ebene_ein_ausblenden_fae4f2cc" xml:space="preserve">
     <value>Mostrar/ocultar capa</value>
@@ -2942,8 +2942,8 @@
   <data name="Wird_mit_Immich_abgeglichen_ce6c1ecb" xml:space="preserve">
     <value>Sincronizando con Immich…</value>
   </data>
-  <data name="Beim_Ziehen_an_den_Anfassern_bleibt_das_Verh_ltn_01a7585a" xml:space="preserve">
-    <value>Al arrastrar los tiradores se conserva la relación entre ancho y alto - como en Tamaño de imagen. Desactivado: la imagen se estira al tamaño arrastrado (Mayús sigue forzando la relación).</value>
+  <data name="Beim_Ziehen_an_den_Anfassern_bleibt_das_Verh_ltn_d5bac12e" xml:space="preserve">
+    <value>Al arrastrar los tiradores se conserva la relación entre ancho y alto - como en Tamaño de imagen. Desactivado: la imagen se estira al tamaño arrastrado (MAYÚS sigue forzando la relación).</value>
   </data>
   <data name="Bewertung_Etikett_dbc10b78" xml:space="preserve">
     <value>Valoración y etiqueta</value>
@@ -3032,8 +3032,8 @@
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_oder_Strg__a67aab8f" xml:space="preserve">
     <value>Establecer valoración (el mismo número otra vez o Ctrl+0 la quita)</value>
   </data>
-  <data name="Strg_Q_170b2b61" xml:space="preserve">
-    <value>Ctrl+Q</value>
+  <data name="STRG_Q_018e5081" xml:space="preserve">
+    <value>CTRL+Q</value>
   </data>
   <data name="Favorit_ein_aus_1b5c90d6" xml:space="preserve">
     <value>Favorito sí/no</value>
@@ -3041,8 +3041,8 @@
   <data name="Pfeiltasten_Bild_auf_ab_Pos1_Ende_089188b4" xml:space="preserve">
     <value>Teclas de flecha, RePág/AvPág, Inicio, Fin</value>
   </data>
-  <data name="Auswahl_bewegen_Umschalt_Bereich_erweitern_e675c648" xml:space="preserve">
-    <value>Mover la selección (Mayús: ampliar el rango)</value>
+  <data name="Auswahl_bewegen_SHIFT_Bereich_erweitern_274e18c9" xml:space="preserve">
+    <value>Mover la selección (MAYÚS: ampliar el rango)</value>
   </data>
   <data name="Eingabe_oder_Doppelklick_679e9e9a" xml:space="preserve">
     <value>Intro o doble clic</value>
@@ -3050,14 +3050,14 @@
   <data name="Bild_ffnen_4beb4809" xml:space="preserve">
     <value>Abrir imagen</value>
   </data>
-  <data name="Leertaste_halten_15b04274" xml:space="preserve">
+  <data name="LEERTASTE_halten_73db5134" xml:space="preserve">
     <value>Espacio (mantener)</value>
   </data>
   <data name="Schnellvorschau_419601fa" xml:space="preserve">
     <value>Vista previa rápida</value>
   </data>
-  <data name="Strg_A_4d8db788" xml:space="preserve">
-    <value>Ctrl+A</value>
+  <data name="STRG_A_f9bf2e0a" xml:space="preserve">
+    <value>CTRL+A</value>
   </data>
   <data name="Alles_ausw_hlen_becdd6af" xml:space="preserve">
     <value>Seleccionar todo</value>
@@ -3068,35 +3068,35 @@
   <data name="Kopieren_Ausschneiden_Einf_gen_eb819efb" xml:space="preserve">
     <value>Copiar / Cortar / Pegar</value>
   </data>
-  <data name="Strg_F_05b84635" xml:space="preserve">
-    <value>Ctrl+F</value>
+  <data name="STRG_F_1def19c7" xml:space="preserve">
+    <value>CTRL+F</value>
   </data>
   <data name="Suche_fd281588" xml:space="preserve">
     <value>Buscar</value>
   </data>
-  <data name="Strg_W_049f6d81" xml:space="preserve">
-    <value>Ctrl+W</value>
+  <data name="STRG_W_1503f6f8" xml:space="preserve">
+    <value>CTRL+W</value>
   </data>
-  <data name="Strg_R_fa0fdb7c" xml:space="preserve">
-    <value>Ctrl+R</value>
+  <data name="STRG_R_7f6dc9b3" xml:space="preserve">
+    <value>CTRL+R</value>
   </data>
-  <data name="Strg_D_7de6019a" xml:space="preserve">
-    <value>Ctrl+D</value>
+  <data name="STRG_D_9b96a959" xml:space="preserve">
+    <value>CTRL+D</value>
   </data>
   <data name="F2_999d0cd6" xml:space="preserve">
     <value>F2</value>
   </data>
-  <data name="Entf_50660d74" xml:space="preserve">
-    <value>Supr</value>
+  <data name="ENTF_90326b05" xml:space="preserve">
+    <value>SUPR</value>
   </data>
   <data name="Aktualisieren_87c65f26" xml:space="preserve">
     <value>Actualizar</value>
   </data>
-  <data name="Esc_1f7a4f9e" xml:space="preserve">
-    <value>Esc</value>
+  <data name="ESC_042b890a" xml:space="preserve">
+    <value>ESC</value>
   </data>
-  <data name="Strg_Mausrad_oder_Rechtsklick_Mausrad_6a8d113a" xml:space="preserve">
-    <value>Ctrl+rueda del ratón o clic derecho+rueda</value>
+  <data name="STRG_Mausrad_oder_Rechtsklick_Mausrad_00071ede" xml:space="preserve">
+    <value>CTRL+rueda del ratón o clic derecho+rueda</value>
   </data>
   <data name="Kachelgr_e_ndern_e84982b6" xml:space="preserve">
     <value>Cambiar tamaño de miniaturas</value>
@@ -3116,8 +3116,8 @@
   <data name="Bild_einpassen_58bd9313" xml:space="preserve">
     <value>Ajustar imagen</value>
   </data>
-  <data name="Leertaste_9eeb28a0" xml:space="preserve">
-    <value>Espacio</value>
+  <data name="LEERTASTE_00f00043" xml:space="preserve">
+    <value>ESPACIO</value>
   </data>
   <data name="Diashow_starten_stoppen_2930a311" xml:space="preserve">
     <value>Iniciar/detener presentación</value>
@@ -3128,14 +3128,14 @@
   <data name="Nach_links_rechts_drehen_36ee2c3b" xml:space="preserve">
     <value>Girar a la izquierda / derecha</value>
   </data>
-  <data name="Strg_I_38b20eaa" xml:space="preserve">
-    <value>Ctrl+I</value>
+  <data name="STRG_I_d7ab115f" xml:space="preserve">
+    <value>CTRL+I</value>
   </data>
   <data name="Info_Leiste_ein_aus_3d1dadd7" xml:space="preserve">
     <value>Panel de información sí/no</value>
   </data>
-  <data name="Strg_E_98c415e6" xml:space="preserve">
-    <value>Ctrl+E</value>
+  <data name="STRG_E_2f7728b4" xml:space="preserve">
+    <value>CTRL+E</value>
   </data>
   <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_9acb05b5" xml:space="preserve">
     <value>Volver a la galería (en pantalla completa: salir de ella)</value>
@@ -3149,8 +3149,8 @@
   <data name="R_ckg_ngig_Wiederholen_579d24d3" xml:space="preserve">
     <value>Deshacer / Rehacer</value>
   </data>
-  <data name="Strg_S_1f1d1d5c" xml:space="preserve">
-    <value>Ctrl+S</value>
+  <data name="STRG_S_a17947ac" xml:space="preserve">
+    <value>CTRL+S</value>
   </data>
   <data name="Speichern_wenn_nicht_m_glich_Speichern_unter_e8f908b6" xml:space="preserve">
     <value>Guardar (si no es posible: Guardar como)</value>
@@ -3167,8 +3167,8 @@
   <data name="Objekt_duplizieren_ohne_Objekt_Auswahl_aufheben_56d12fa8" xml:space="preserve">
     <value>Duplicar objeto; sin objeto: anular la selección</value>
   </data>
-  <data name="Strg_P_568a12fb" xml:space="preserve">
-    <value>Ctrl+P</value>
+  <data name="STRG_P_80d9c652" xml:space="preserve">
+    <value>CTRL+P</value>
   </data>
   <data name="Vorschau_anwenden_1445fbbc" xml:space="preserve">
     <value>Aplicar vista previa</value>
@@ -3185,11 +3185,11 @@
   <data name="Pfeiltasten_5a95be86" xml:space="preserve">
     <value>Teclas de flecha</value>
   </data>
-  <data name="Objekt_verschieben_Umschalt_gr_ere_Schritte_1dea48ec" xml:space="preserve">
-    <value>Mover objeto (Mayús: pasos mayores)</value>
+  <data name="Objekt_verschieben_SHIFT_gr_ere_Schritte_46120732" xml:space="preserve">
+    <value>Mover objeto (MAYÚS: pasos mayores)</value>
   </data>
-  <data name="Alt_beim_Ziehen_von_Objekten_0833b704" xml:space="preserve">
-    <value>Alt (al arrastrar objetos)</value>
+  <data name="ALT_beim_Ziehen_von_Objekten_01065500" xml:space="preserve">
+    <value>ALT (al arrastrar objetos)</value>
   </data>
   <data name="Einrasten_vor_bergehend_aus_ebad018d" xml:space="preserve">
     <value>Desactivar el ajuste temporalmente</value>
@@ -3374,8 +3374,8 @@
   <data name="Drucken_1c14ea4d" xml:space="preserve">
     <value>Imprimir...</value>
   </data>
-  <data name="Drucken_Strg_P_73b2de57" xml:space="preserve">
-    <value>Imprimir (Ctrl+P)</value>
+  <data name="Drucken_STRG_P_a03f2eca" xml:space="preserve">
+    <value>Imprimir (CTRL+P)</value>
   </data>
   <data name="Drucken_fehlgeschlagen_6bac9264" xml:space="preserve">
     <value>Error al imprimir</value>
@@ -3581,8 +3581,8 @@
   <data name="Neues_Bild_28f91b41" xml:space="preserve">
     <value>Imagen nueva</value>
   </data>
-  <data name="Neues_Bild_Strg_N_38de3aa5" xml:space="preserve">
-    <value>Imagen nueva (Ctrl+N)</value>
+  <data name="Neues_Bild_STRG_N_a7ccfd38" xml:space="preserve">
+    <value>Imagen nueva (CTRL+N)</value>
   </data>
   <data name="Unbenannt_b34d612b" xml:space="preserve">
     <value>Sin título</value>
@@ -3740,8 +3740,8 @@
   <data name="Blau_S_ttigung_66494e39" xml:space="preserve">
     <value>Saturación azul</value>
   </data>
-  <data name="Strg_N_275f0654" xml:space="preserve">
-    <value>Ctrl+N</value>
+  <data name="STRG_N_c9271111" xml:space="preserve">
+    <value>CTRL+N</value>
   </data>
   <data name="Neues_Bild_anlegen_9b816660" xml:space="preserve">
     <value>Crear una imagen nueva</value>
@@ -3875,8 +3875,8 @@
   <data name="berblendung_7441d5c9" xml:space="preserve">
     <value>Fusión</value>
   </data>
-  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_Umschalt__8bcf3a0f" xml:space="preserve">
-    <value>Arrastra para ajustar tono y saturación; con Mayús solo la saturación</value>
+  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_SHIFT_nur_462f7fee" xml:space="preserve">
+    <value>Arrastra para ajustar tono y saturación; con MAYÚS solo la saturación</value>
   </data>
   <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
     <value>Afecta a toda la imagen, independientemente del tono</value>
@@ -4064,50 +4064,50 @@
   <data name="Strg_Pfeil_links_Strg_Pfeil_rechts_105062ba" xml:space="preserve">
     <value>Ctrl+Flecha izquierda / Ctrl+Flecha derecha</value>
   </data>
-  <data name="Bild_nach_links_drehen_Strg_Pfeil_links_4817edca" xml:space="preserve">
-    <value>Girar la imagen a la izquierda (Ctrl+Flecha izquierda)</value>
+  <data name="Bild_nach_links_drehen_STRG_PFEIL_LINKS_66bb14c0" xml:space="preserve">
+    <value>Girar la imagen a la izquierda (CTRL+FLECHA IZQUIERDA)</value>
   </data>
-  <data name="Bild_nach_rechts_drehen_Strg_Pfeil_rechts_34a9a828" xml:space="preserve">
-    <value>Girar la imagen a la derecha (Ctrl+Flecha derecha)</value>
+  <data name="Bild_nach_rechts_drehen_STRG_PFEIL_RECHTS_90d51662" xml:space="preserve">
+    <value>Girar la imagen a la derecha (CTRL+FLECHA DERECHA)</value>
   </data>
   <data name="Werkzeug_Bildgr_e_Text_Zeichnen_Einf_gen_5b7b9566" xml:space="preserve">
     <value>Herramienta: Tamaño de imagen / Texto / Dibujar / Insertar</value>
   </data>
-  <data name="Strg_0_a3622365" xml:space="preserve">
-    <value>Ctrl+0</value>
+  <data name="STRG_0_ee78f157" xml:space="preserve">
+    <value>CTRL+0</value>
   </data>
-  <data name="Strg_B_d7c995b1" xml:space="preserve">
-    <value>Ctrl+B</value>
+  <data name="STRG_B_50bf5b82" xml:space="preserve">
+    <value>CTRL+B</value>
   </data>
-  <data name="Strg_C_e180266d" xml:space="preserve">
-    <value>Ctrl+C</value>
+  <data name="STRG_C_c0bfc1e1" xml:space="preserve">
+    <value>CTRL+C</value>
   </data>
-  <data name="Strg_G_a8e90537" xml:space="preserve">
-    <value>Ctrl+G</value>
+  <data name="STRG_G_2941c0c1" xml:space="preserve">
+    <value>CTRL+G</value>
   </data>
-  <data name="Strg_T_5d85b26c" xml:space="preserve">
-    <value>Ctrl+T</value>
+  <data name="STRG_T_be84c2ed" xml:space="preserve">
+    <value>CTRL+T</value>
   </data>
-  <data name="Strg_V_0c87a974" xml:space="preserve">
-    <value>Ctrl+V</value>
+  <data name="STRG_V_7eb2c110" xml:space="preserve">
+    <value>CTRL+V</value>
   </data>
-  <data name="Strg_X_5ae494a5" xml:space="preserve">
-    <value>Ctrl+X</value>
+  <data name="STRG_X_833022c2" xml:space="preserve">
+    <value>CTRL+X</value>
   </data>
-  <data name="Strg_Y_00ebae83" xml:space="preserve">
-    <value>Ctrl+Y</value>
+  <data name="STRG_Y_c3988cb6" xml:space="preserve">
+    <value>CTRL+Y</value>
   </data>
-  <data name="Strg_Z_bd55875e" xml:space="preserve">
-    <value>Ctrl+Z</value>
+  <data name="STRG_Z_88d18814" xml:space="preserve">
+    <value>CTRL+Z</value>
   </data>
-  <data name="Strg_1_bis_Strg_5_344fe0c7" xml:space="preserve">
-    <value>Ctrl+1 a Ctrl+5</value>
+  <data name="STRG_1_bis_STRG_5_93754288" xml:space="preserve">
+    <value>CTRL+1 a CTRL+5</value>
   </data>
-  <data name="Strg_Pfeil_links_56022ea2" xml:space="preserve">
-    <value>Ctrl+Flecha izquierda</value>
+  <data name="STRG_PFEIL_LINKS_895c9972" xml:space="preserve">
+    <value>CTRL+FLECHA IZQUIERDA</value>
   </data>
-  <data name="Strg_Pfeil_rechts_2d1d6844" xml:space="preserve">
-    <value>Ctrl+Flecha derecha</value>
+  <data name="STRG_PFEIL_RECHTS_63e2840d" xml:space="preserve">
+    <value>CTRL+FLECHA DERECHA</value>
   </data>
   <data name="Bild_auf_094e1a7a" xml:space="preserve">
     <value>Re Pág</value>
@@ -4115,11 +4115,11 @@
   <data name="Bild_ab_5936ced2" xml:space="preserve">
     <value>Av Pág</value>
   </data>
-  <data name="Pos1_509bf088" xml:space="preserve">
-    <value>Inicio</value>
+  <data name="POS1_e3382971" xml:space="preserve">
+    <value>INICIO</value>
   </data>
-  <data name="Ende_920e9c46" xml:space="preserve">
-    <value>Fin</value>
+  <data name="ENDE_d1627b7f" xml:space="preserve">
+    <value>FIN</value>
   </data>
   <data name="Plus_2d05d0f1" xml:space="preserve">
     <value>Más</value>
@@ -4127,11 +4127,11 @@
   <data name="Minus_02b11141" xml:space="preserve">
     <value>Menos</value>
   </data>
-  <data name="Pfeil_links_oder_Bild_auf_a072f7c6" xml:space="preserve">
-    <value>Flecha izquierda o Re Pág</value>
+  <data name="PFEIL_LINKS_oder_Bild_auf_c182eb6a" xml:space="preserve">
+    <value>FLECHA IZQUIERDA o Re Pág</value>
   </data>
-  <data name="Pfeil_rechts_oder_Bild_ab_a5ecf0e5" xml:space="preserve">
-    <value>Flecha derecha o Av Pág</value>
+  <data name="PFEIL_RECHTS_oder_Bild_ab_d77ef841" xml:space="preserve">
+    <value>FLECHA DERECHA o Av Pág</value>
   </data>
   <data name="Eine_Seite_nach_oben_fc24e606" xml:space="preserve">
     <value>Una página hacia arriba</value>
@@ -4193,23 +4193,23 @@
   <data name="Favorit_ein_aus_Galerie_und_Betrachter_37855f03" xml:space="preserve">
     <value>Favorito sí/no (galería y visor)</value>
   </data>
-  <data name="Strg_K_e12b34b4" xml:space="preserve">
-    <value>Ctrl+K</value>
+  <data name="STRG_K_af3d307e" xml:space="preserve">
+    <value>CTRL+K</value>
   </data>
   <data name="Gruppe_auf_oder_zuklappen_37ee4059" xml:space="preserve">
     <value>Expandir o contraer el grupo</value>
   </data>
-  <data name="Objekte_gruppieren_Strg_G_8f7b8599" xml:space="preserve">
-    <value>Agrupar objetos (Ctrl+G)</value>
+  <data name="Objekte_gruppieren_STRG_G_d3273b10" xml:space="preserve">
+    <value>Agrupar objetos (CTRL+G)</value>
   </data>
-  <data name="Gruppierung_aufheben_Strg_Umschalt_G_83e2db35" xml:space="preserve">
-    <value>Desagrupar (Ctrl+Mayús+G)</value>
+  <data name="Gruppierung_aufheben_STRG_SHIFT_G_b4fccb8a" xml:space="preserve">
+    <value>Desagrupar (CTRL+MAYÚS+G)</value>
   </data>
   <data name="Gruppe_f4e8075c" xml:space="preserve">
     <value>Grupo</value>
   </data>
-  <data name="Strg_Klick_f7bbde58" xml:space="preserve">
-    <value>Ctrl+Clic</value>
+  <data name="STRG_Klick_05434707" xml:space="preserve">
+    <value>CTRL+Clic</value>
   </data>
   <data name="Objekt_zur_Auswahl_hinzuf_gen_oder_herausnehmen_2ecab8d9" xml:space="preserve">
     <value>Añadir un objeto a la selección o quitarlo</value>
@@ -4217,8 +4217,8 @@
   <data name="Markierte_Objekte_gruppieren_771bf31d" xml:space="preserve">
     <value>Agrupar los objetos seleccionados</value>
   </data>
-  <data name="Strg_Umschalt_G_e8482b18" xml:space="preserve">
-    <value>Ctrl+Mayús+G</value>
+  <data name="STRG_SHIFT_G_f3d8b91f" xml:space="preserve">
+    <value>CTRL+MAYÚS+G</value>
   </data>
   <data name="Gruppierung_aufheben_286fb0a0" xml:space="preserve">
     <value>Desagrupar</value>
@@ -4232,11 +4232,11 @@
   <data name="Markierte_Objekte_gruppieren_ohne_Mehrfachauswah_bb56593e" xml:space="preserve">
     <value>Agrupar los objetos seleccionados; sin selección múltiple: herramienta Insertar</value>
   </data>
-  <data name="Markierte_Ebenen_gruppieren_Strg_G_53ed2acf" xml:space="preserve">
-    <value>Agrupar las capas seleccionadas (Ctrl+G)</value>
+  <data name="Markierte_Ebenen_gruppieren_STRG_G_d530595d" xml:space="preserve">
+    <value>Agrupar las capas seleccionadas (CTRL+G)</value>
   </data>
-  <data name="Strg_M_6a3609ac" xml:space="preserve">
-    <value>Ctrl+M</value>
+  <data name="STRG_M_bfa5645a" xml:space="preserve">
+    <value>CTRL+M</value>
   </data>
   <data name="Markierte_Ebenen_gruppieren_e2bff6df" xml:space="preserve">
     <value>Agrupar las capas seleccionadas</value>
@@ -4361,11 +4361,11 @@
   <data name="Neue_Zeile_im_Text_Objekt_Text_bricht_nie_automa_e8fc07cc" xml:space="preserve">
     <value>Nueva línea en un objeto de texto (el texto nunca se ajusta automáticamente)</value>
   </data>
-  <data name="Neue_Zeile_mit_Strg_Enter_oder_Umschalt_Enter_fae9a32e" xml:space="preserve">
-    <value>Nueva línea con Ctrl+Entrar o Mayús+Entrar</value>
+  <data name="Neue_Zeile_mit_STRG_ENTER_oder_SHIFT_ENTER_b57e8880" xml:space="preserve">
+    <value>Nueva línea con CTRL+ENTRAR o MAYÚS+ENTRAR</value>
   </data>
-  <data name="Strg_Enter_oder_Umschalt_Enter_08237fda" xml:space="preserve">
-    <value>Ctrl+Entrar o Mayús+Entrar</value>
+  <data name="STRG_ENTER_oder_SHIFT_ENTER_e0cc821b" xml:space="preserve">
+    <value>CTRL+ENTRAR o MAYÚS+ENTRAR</value>
   </data>
   <data name="Kein_Wasserzeichen_gespeichert_b079d262" xml:space="preserve">
     <value>No hay marcas de agua guardadas</value>
@@ -4601,8 +4601,8 @@
   <data name="Pinsel_Maske_frei_ins_Bild_malen_Hinzuf_gen_und__2195d79c" xml:space="preserve">
     <value>Pincel: pinta la máscara libremente sobre la imagen: añadir y restar con el selector de abajo</value>
   </data>
-  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__ae7499c8" xml:space="preserve">
-    <value>Degradado lineal: arrastra sobre la imagen, la máscara se desvanece del punto inicial al final. Mayús fija la dirección</value>
+  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__d50f14a4" xml:space="preserve">
+    <value>Degradado lineal: arrastra sobre la imagen, la máscara se desvanece del punto inicial al final. MAYÚS fija la dirección</value>
   </data>
   <data name="Radialer_Verlauf_von_der_Mitte_nach_aussen_ziehe_f885ecaf" xml:space="preserve">
     <value>Degradado radial: arrastra desde el centro hacia fuera. Con «Invertir» la máscara actúa fuera en vez de dentro</value>
@@ -4664,8 +4664,8 @@
   <data name="Bildvergleich_4c30b57f" xml:space="preserve">
     <value>Comparación de fotos</value>
   </data>
-  <data name="Pfeil_links_oder_rechts_478c9dd8" xml:space="preserve">
-    <value>Flecha izquierda o derecha</value>
+  <data name="PFEIL_LINKS_oder_rechts_fc56da1c" xml:space="preserve">
+    <value>FLECHA IZQUIERDA o derecha</value>
   </data>
   <data name="Nur_die_rechte_Fl_che_bl_ttert_weiter_das_angehe_61b1444d" xml:space="preserve">
     <value>Solo el lado derecho avanza; la foto fijada permanece a la izquierda</value>
@@ -6185,8 +6185,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Aplicación cancelada: la foto no ha cambiado</value>
   </data>
-  <data name="Abbrechen_Esc_Das_Entrauschen_steigt_an_der_n_ch_3adced7f" xml:space="preserve">
-    <value>Cancelar (Esc). La reducción de ruido se detiene en el siguiente mosaico y la eliminación tras su pasada; en ambos casos la foto no cambia.</value>
+  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
+    <value>Cancelar (ESC). La reducción de ruido se detiene en el siguiente mosaico y la eliminación tras su pasada; en ambos casos la foto no cambia.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Escalar con un modelo</value>
@@ -6362,8 +6362,8 @@
   <data name="Pfad_offen_abschlie_en_Eingabe_oder_Doppelklick_288b4d16" xml:space="preserve">
     <value>Terminar el trazado abierto (Intro o doble clic)</value>
   </data>
-  <data name="Entwurf_verwerfen_Esc_e1166db1" xml:space="preserve">
-    <value>Descartar el borrador (Esc)</value>
+  <data name="Entwurf_verwerfen_ESC_3c4f74a0" xml:space="preserve">
+    <value>Descartar el borrador (ESC)</value>
   </data>
   <data name="Klicken_setzt_einen_Eckpunkt_Klicken_und_ziehen__23ddaf61" xml:space="preserve">
     <value>Un clic coloca un punto de esquina. Haz clic y arrastra para curvar. Haz clic en el primer punto para cerrar el trazado.</value>
@@ -6470,8 +6470,8 @@
   <data name="Markierte_Ebenen_duplizieren_2145e904" xml:space="preserve">
     <value>Duplicar las capas seleccionadas</value>
   </data>
-  <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
-    <value>Eliminar las capas seleccionadas (Supr)</value>
+  <data name="Markierte_Ebenen_l_schen_ENTF_d59915b7" xml:space="preserve">
+    <value>Eliminar las capas seleccionadas (SUPR)</value>
   </data>
   <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
     <value>Buscando caras: {0} de {1}</value>
@@ -6674,8 +6674,8 @@
   <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Recorte</value></data>
   <data name="Malebene_c58eef25" xml:space="preserve"><value>Capa de pintura</value></data>
   <data name="Die_Auswahl_liegt_nicht_auf_der_markierten_Ebene_096701ed" xml:space="preserve"><value>La selección no está sobre la capa marcada.</value></data>
-  <data name="Mit_Strg_die_Form_dieser_Ebene_als_Auswahl_laden_8f622a58" xml:space="preserve"><value>Con Ctrl, cargar la forma de esta capa como selección</value></data>
-  <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_d2c1cc4b" xml:space="preserve"><value>Editar la máscara de capa. Con Alt se muestra solo la máscara, con Mayús se desactiva, con Ctrl se carga como selección</value></data>
+  <data name="Mit_STRG_die_Form_dieser_Ebene_als_Auswahl_laden_6b7daeb1" xml:space="preserve"><value>Con CTRL, cargar la forma de esta capa como selección</value></data>
+  <data name="Ebenenmaske_bearbeiten_Mit_ALT_nur_die_Maske_zei_517eab2e" xml:space="preserve"><value>Editar la máscara de capa. Con ALT se muestra solo la máscara, con MAYÚS se desactiva, con CTRL se carga como selección</value></data>
   <data name="Transparente_Punkte_sperren_Striche_bleiben_in_d_3102d050" xml:space="preserve"><value>Bloquear los píxeles transparentes: los trazos se quedan dentro de la forma que ya tiene la capa</value></data>
   <data name="Neue_Malebene_eine_leere_Ebene_zum_Bemalen_anleg_3d028994" xml:space="preserve"><value>Nueva capa de pintura: crear una capa vacía para pintar</value></data>
   <data name="Die_Malebene_konnte_nicht_angelegt_werden_caaceb00" xml:space="preserve"><value>No se pudo crear la capa de pintura.</value></data>
@@ -6686,4 +6686,55 @@
   <data name="Transparente_Punkte_freigeben_66d0baa3" xml:space="preserve"><value>Desbloquear los píxeles transparentes</value></data>
   <data name="Anpassungen_dieser_Ebene_ein_oder_ausschalten_7076645d" xml:space="preserve"><value>Activar o desactivar los ajustes de esta capa</value></data>
   <data name="Anpassungen_dieser_Ebene_verwerfen_1a0f1d69" xml:space="preserve"><value>Descartar los ajustes de esta capa</value></data>
+  <data name="Auswahl_aus_dem_Pfad_erstellt_a4e144eb" xml:space="preserve">
+    <value>Selección creada a partir del trazado</value>
+  </data>
+  <data name="Weiterzeichnen_Punkte_setzen_Eingabe_schlie_t_ab_fc2e2cc6" xml:space="preserve">
+    <value>Continuar: coloca puntos, Intro finaliza</value>
+  </data>
+  <data name="Pfad_weitergezeichnet_dafcf769" xml:space="preserve">
+    <value>Trazado continuado</value>
+  </data>
+  <data name="Klicken_setzt_einen_Eckpunkt_Klicken_und_ziehen__b9c5c60f" xml:space="preserve">
+    <value>Un clic coloca un punto de esquina. Clic y arrastrar lo curva. Un clic en el primer punto cierra el trazado. RETROCESO deshace el último punto, MAYÚS mantiene el ángulo.</value>
+  </data>
+  <data name="St_tzpunkte_ziehen_um_die_Form_zu_ndern_Die_rund_e6f9c195" xml:space="preserve">
+    <value>Arrastra los puntos de anclaje para cambiar la forma. Los tiradores redondos curvan el tramo contiguo; en un punto suave giran juntos, Alt los separa. Un clic en la curva añade un punto, Alt sobre un punto lo elimina, un doble clic en un extremo abierto sigue dibujando.</value>
+  </data>
+  <data name="Auswahl_aus_dem_Pfad_0f077285" xml:space="preserve">
+    <value>Selección a partir del trazado</value>
+  </data>
+  <data name="Macht_aus_der_Kurve_eine_Auswahl_Wer_den_Freiste_43952471" xml:space="preserve">
+    <value>Convierte la curva en una selección. Para cambiar el recorte más tarde, arrastra un punto de anclaje y vuelve a pulsar.</value>
+  </data>
+  <data name="Pfade_verbinden_013b2130" xml:space="preserve">
+    <value>Unir trazados</value>
+  </data>
+  <data name="Pfade_verbunden_a4fa2066" xml:space="preserve">
+    <value>Trazados unidos</value>
+  </data>
+  <data name="Ein_Pfad_braucht_mindestens_zwei_Punkte_cd908ae1" xml:space="preserve">
+    <value>Un trazado necesita al menos dos puntos.</value>
+  </data>
+  <data name="Macht_aus_zwei_markierten_offenen_Pfaden_einen_V_17f237fc" xml:space="preserve">
+    <value>Convierte dos trazados abiertos marcados en uno. Se unen los dos extremos más cercanos entre sí.</value>
+  </data>
+  <data name="St_tzpunkte_ziehen_um_die_Form_zu_ndern_Die_rund_01d4f66b" xml:space="preserve">
+    <value>Arrastra los puntos de anclaje para cambiar la forma. Los tiradores redondos curvan el tramo contiguo; en un punto suave giran juntos, ALT los separa. Un clic en la curva añade un punto, ALT sobre un punto lo elimina, un doble clic en un extremo abierto sigue dibujando. Con MAYÚS se reúnen varios puntos para moverlos o eliminarlos juntos.</value>
+  </data>
+  <data name="Gruppenmaske_6ff6d2b4" xml:space="preserve">
+    <value>Máscara de grupo</value>
+  </data>
+  <data name="Gruppenmaske_hinzugef_gt_5e9ea1a1" xml:space="preserve">
+    <value>Máscara de grupo añadida</value>
+  </data>
+  <data name="Gruppenmaske_entfernt_2afa5b00" xml:space="preserve">
+    <value>Máscara de grupo eliminada</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_de231e0e" xml:space="preserve">
+    <value>Escribiendo fotos…</value>
+  </data>
+  <data name="Ins_Bild_klicken_um_den_ersten_Punkt_zu_setzen_E_8b978da9" xml:space="preserve">
+    <value>Haz clic en la foto para colocar el primer punto. Un trazado terminado no dibuja nada al principio: es geometría, para una selección, una línea base de texto o una forma. Para una curva visible, sube el grosor del contorno.</value>
+  </data>
 </root>

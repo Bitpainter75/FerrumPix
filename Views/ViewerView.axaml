@@ -74,7 +74,7 @@
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding PrintCommand}"
-                            ToolTip.Tip="Drucken (Strg+P)">
+                            ToolTip.Tip="Drucken (STRG+P)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
                                Width="20" Height="20"/>
                     </Button>
@@ -107,14 +107,14 @@
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateLeftCommand}"
                             IsEnabled="{Binding IsSingleImageMode}"
-                            ToolTip.Tip="Bild nach links drehen (Strg+Pfeil links)">
+                            ToolTip.Tip="Bild nach links drehen (STRG+PFEIL LINKS)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
                                Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="38" Height="38"
                             Command="{Binding RotateRightCommand}"
                             IsEnabled="{Binding IsSingleImageMode}"
-                            ToolTip.Tip="Bild nach rechts drehen (Strg+Pfeil rechts)">
+                            ToolTip.Tip="Bild nach rechts drehen (STRG+PFEIL RECHTS)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
                                Width="20" Height="20"/>
                     </Button>

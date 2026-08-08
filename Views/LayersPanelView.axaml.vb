@@ -130,8 +130,11 @@ Namespace Views
                 e.Handled = True
                 StartRenameSelectedLayer()
             ElseIf e.Key = Key.Delete Then
+                ' DIESELBE Regel wie auf der Bühne, und deshalb dieselbe Stelle: hier stand eine
+                ' kürzere Fassung, die immer die Ebene löschte. Wer im Panel gearbeitet hatte und
+                ' danach Entf drückte, bekam damit nie den Inhalt einer Auswahl gelöscht.
                 e.Handled = True
-                TryCast(DataContext, EditorViewModel)?.DeleteSelectedAnnotationCommand.Execute(Nothing)
+                TryCast(DataContext, EditorViewModel)?.ApplyDeleteShortcut()
             ElseIf e.Key = Key.D AndAlso PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then
                 e.Handled = True
                 TryCast(DataContext, EditorViewModel)?.DuplicateSelectedAnnotationCommand.Execute(Nothing)
@@ -270,14 +273,14 @@ Namespace Views
             ' und "umbenennen" bei mehreren richtigerweise weg, die Fusszeile bot sie weiter an.
             Dim mehrere = vm.IsMultiLayerSelection
             If vm.CanGroupSelectedAnnotations Then
-                Dim text = LocalizationService.T("Objekte gruppieren (Strg+G)")
+                Dim text = LocalizationService.T("Objekte gruppieren (STRG+G)")
                 items.Add(MakeLayerMenuItem(
                     PlatformShortcutService.FormatShortcutInLabel(
                         text, PlatformShortcutService.FormatPrimaryShortcut("G")),
                     "folder", vm.GroupSelectedAnnotationsCommand))
             End If
             If vm.CanUngroupSelectedAnnotations Then
-                Dim text = LocalizationService.T("Gruppierung aufheben (Strg+Umschalt+G)")
+                Dim text = LocalizationService.T("Gruppierung aufheben (STRG+SHIFT+G)")
                 items.Add(MakeLayerMenuItem(
                     PlatformShortcutService.FormatShortcutInLabel(
                         text, PlatformShortcutService.FormatPrimaryShortcut("G", includeShift:=True)),
@@ -291,7 +294,7 @@ Namespace Views
             If mehrere Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte duplizieren"), "copy", vm.DuplicateSelectedAnnotationsCommand))
             Else
-                Dim text = LocalizationService.T("Ebene duplizieren (Strg+D)")
+                Dim text = LocalizationService.T("Ebene duplizieren (STRG+D)")
                 items.Add(MakeLayerMenuItem(
                     PlatformShortcutService.FormatShortcutInLabel(
                         text, PlatformShortcutService.FormatPrimaryShortcut("D")),
@@ -353,7 +356,7 @@ Namespace Views
             If mehrere Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Objekte löschen"), "trash", vm.DeleteSelectedAnnotationsCommand))
             Else
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene löschen (Entf)"), "trash", vm.DeleteSelectedAnnotationCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene löschen (ENTF)"), "trash", vm.DeleteSelectedAnnotationCommand))
             End If
 
             Dim menu As New ContextMenu()

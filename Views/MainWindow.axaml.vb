@@ -771,6 +771,25 @@ Namespace Views
                     End If
                 End If
 
+                ' ENTF IM EDITOR AUS DEMSELBEN GRUND WIE STRG+P: unabhaengig davon, wo der Fokus
+                ' gerade steht. Die Ansicht hoert die Taste nur, wenn das fokussierte Element unter
+                ' ihr haengt - und genau das ist nach einem Klick auf einen Knopf im rechten
+                ' Bedienfeld nicht mehr der Fall, sobald dieses Bedienfeld daraufhin verschwindet.
+                ' So verhielt es sich bei "Auswahl aus dem Pfad": der Knopf wird mit dem Pfad-
+                ' Bedienfeld ausgeblendet, der Fokus faellt weg, die Taste ging ans Fenster, und die
+                ' frisch entstandene Auswahl liess sich nicht leeren (Nutzerbefund 2026-08-09,
+                ' zweimal gemeldet - die Regel selbst war da laengst richtig, sie wurde nur nie
+                ' gefragt).
+                '
+                ' WAS die Taste bedeutet, steht weiterhin an einer einzigen Stelle im ViewModel.
+                ' Ein Eingabefeld behaelt sie: dort loescht sie Zeichen.
+                If e.Key = Key.Delete AndAlso vm.CurrentMode = AppMode.Editor AndAlso
+                   vm.Editor IsNot Nothing AndAlso Not IsTextInputSource(e.Source) Then
+                    vm.Editor.ApplyDeleteShortcut()
+                    e.Handled = True
+                    Return
+                End If
+
                 ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,
                 ' wo die darunterliegenden Ansichten keine Tasten mehr sehen.
                 If e.Key = Key.F11 OrElse

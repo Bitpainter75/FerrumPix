@@ -1012,6 +1012,13 @@ Namespace Views
                         UpdateSliderLayout()
                         e.Handled = True
                         Return
+                    Case Key.Back
+                        ' SCHRITTWEISE ZURUECK im Entwurf. Esc verwirft alles - ohne die Ruecktaste
+                        ' dazwischen kostete ein einziger verrutschter Punkt die ganze Arbeit.
+                        tunnelVm.RemoveLastPathDraftPoint()
+                        UpdateSliderLayout()
+                        e.Handled = True
+                        Return
                 End Select
             End If
 
@@ -2222,7 +2229,11 @@ Namespace Views
                         End If
                         If vm.TryBeginPathPointer(xPct, yPct,
                                                   pathSlopPixels / imageRect.Width * 100.0,
-                                                  pathSlopPixels / imageRect.Height * 100.0) Then
+                                                  pathSlopPixels / imageRect.Height * 100.0,
+                                                  e.KeyModifiers.HasFlag(KeyModifiers.Shift),
+                                                  e.KeyModifiers.HasFlag(KeyModifiers.Alt),
+                                                  e.ClickCount >= 2,
+                                                  e.KeyModifiers.HasFlag(KeyModifiers.Shift)) Then
                             _isPathPointerActive = True
                             e.Pointer.Capture(canvas)
                             e.Handled = True
@@ -2652,10 +2663,32 @@ Namespace Views
                 ' liesse sich eine Kurve am Rand nicht aufziehen.
                 Dim pPos = e.GetPosition(canvas)
                 vm.UpdatePathPointer((pPos.X - imageRect.Left) / imageRect.Width * 100.0,
-                                     (pPos.Y - imageRect.Top) / imageRect.Height * 100.0)
+                                     (pPos.Y - imageRect.Top) / imageRect.Height * 100.0,
+                                     e.KeyModifiers.HasFlag(KeyModifiers.Shift),
+                                     e.KeyModifiers.HasFlag(KeyModifiers.Alt))
                 UpdateSliderLayout()
                 e.Handled = True
                 Return
+            End If
+
+            ' DAS GUMMIBAND: waehrend ein Entwurf laeuft, haengt der kommende Abschnitt am Zeiger -
+            ' auch OHNE gedrueckte Taste. Deshalb steht der Zweig hier und nicht oben bei den
+            ' Zuegen: dort kommt nur an, was gerade gegriffen ist.
+            Dim draftVm = TryCast(DataContext, EditorViewModel)
+            If draftVm IsNot Nothing AndAlso draftVm.HasPathDraft Then
+                Dim draftCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                If draftCanvas IsNot Nothing Then
+                    Dim draftRect = GetDisplayedImageRect(draftCanvas, draftVm)
+                    If draftRect.Width > 0 AndAlso draftRect.Height > 0 Then
+                        Const pathSlopPixels As Double = 12.0
+                        Dim dPos = e.GetPosition(draftCanvas)
+                        draftVm.UpdatePathHoverPoint((dPos.X - draftRect.Left) / draftRect.Width * 100.0,
+                                                     (dPos.Y - draftRect.Top) / draftRect.Height * 100.0,
+                                                     pathSlopPixels / draftRect.Width * 100.0,
+                                                     pathSlopPixels / draftRect.Height * 100.0)
+                        UpdateSliderLayout()
+                    End If
+                End If
             End If
             If _isSelectionDragging Then
                 Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
@@ -3122,6 +3155,12 @@ Namespace Views
         Private Sub OnPreviewCanvasPointerExited(sender As Object, e As PointerEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm IsNot Nothing Then vm.MousePositionText = ""
+            ' Das Gummiband gehoert zum Zeiger. Bleibt es stehen, zeigt es auf eine Stelle, an der
+            ' der Zeiger nicht mehr ist - und beim naechsten Klick entstuende der Punkt woanders.
+            If vm IsNot Nothing Then
+                vm.ClearPathHoverPoint()
+                UpdateSliderLayout()
+            End If
             If Not _isGuideDragging Then HideRulerMarkers()
         End Sub
 
@@ -4593,8 +4632,16 @@ Namespace Views
             ' diese Routine setzt IsVisible am Ende unbedingt auf True und haette die Abschaltung
             ' dort sonst gleich wieder aufgehoben. Sein Rechteck ist das ganze Bild, der Auswahl-
             ' rahmen laege also genau auf der Bildkante und saehe aus wie ein zweiter Rahmen.
+            '
+            ' DASSELBE GILT FUER PFADPUNKTE, und genau daran ist es aufgefallen (Nutzerbefund
+            ' 2026-08-08: "die gestrichelte Linie der Box verhindert, dass man die Anfasser anfassen
+            ' kann", und zwar erst beim ERNEUTEN Markieren). UpdateTextOverlayVisibility blendete den
+            ' Rahmen richtig aus, der naechste Layout-Durchlauf holte ihn zurueck - und der laeuft bei
+            ' jeder Zeigerbewegung. Wer eine Abschaltung dort ergaenzt, muss sie IMMER auch hier
+            ' ergaenzen; die beiden Bedingungen gehoeren zusammen.
             If overlay Is Nothing OrElse vm Is Nothing OrElse Not IsLayerPlacementTool(vm) OrElse
-               Not vm.HasSelectedAnnotation OrElse vm.IsFrameAnnotationSelected Then
+               Not vm.HasSelectedAnnotation OrElse vm.IsFrameAnnotationSelected OrElse
+               vm.HidesSelectionFrameForPath Then
                 If overlay IsNot Nothing Then overlay.IsVisible = False
                 Return
             End If
@@ -6136,30 +6183,11 @@ Namespace Views
             End Select
         End Sub
 
+        ''' <summary>Die Bedeutung der Entf-Taste steht im ViewModel (<c>ApplyDeleteShortcut</c>) -
+        ''' es gibt zwei Tastaturwege dorthin, den der Bühne und den der Ebenenliste, und zwei
+        ''' Fassungen derselben Regel laufen auseinander.</summary>
         Private Shared Sub HandleDeleteShortcut(vm As EditorViewModel)
-            If vm.HasPixelSelectionScope Then
-                ' Laufameisen auf dem Bild: Entf löscht den INHALT der Auswahl, er wird
-                ' durchsichtig. Die Auswahl bleibt stehen, aufgehoben wird sie mit Esc.
-                '
-                ' Das steht VOR der markierten Ebene, und das ist der Punkt: wer eine Ebene markiert
-                ' und darauf eine Auswahl aufzieht, meint mit Entf diese Auswahl und nicht die
-                ' Ebene. Vorher gewann die Ebene, und der Griff zur Entf-Taste löschte sie ganz
-                ' (Nutzerbefund 2026-08-07). EraseSelection löscht dann aus dem Bild der markierten
-                ' Ebene. Die Ebene selbst löscht Entf weiterhin - nur eben ohne aktive Auswahl.
-                vm.EraseSelection()
-            ElseIf vm.HasSelectedPanelLayer OrElse vm.HasSelectedAnnotation Then
-                ' Auch das auf dem Bild markierte Objekt zählt, nicht nur die Zeile im
-                ' Ebenenpanel. Ein Textobjekt außerhalb des Textwerkzeugs hat keine Zeile
-                ' markiert - Entf landete deshalb beim Löschen der BILDDATEI.
-                vm.DeleteSelectedAnnotationCommand.Execute(Nothing)
-            ElseIf vm.HasActiveSelection Then
-                ' Eine Ebenenmaske ist zwar eine Auswahl, aber keine, deren Inhalt man löscht -
-                ' ihr Overlay ist in den Pixelwerkzeugen gar nicht zu sehen. Löschen darf hier
-                ' niemals als Fallback die Bilddatei treffen, also hebt es sicher die Auswahl auf.
-                vm.ClearSelection()
-            Else
-                vm.DeleteCurrentCommand.Execute(Nothing)
-            End If
+            vm.ApplyDeleteShortcut()
         End Sub
 
         Public Shadows Sub OnKeyUp(sender As Object, e As KeyEventArgs)

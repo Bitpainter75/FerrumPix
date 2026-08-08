@@ -19,7 +19,7 @@
                  Punkten ist die einzige Geste im Editor, die von sich aus nicht aufhört, und ohne
                  den Satz sucht man den Abschluss. -->
             <StackPanel Spacing="6" IsVisible="{Binding HasPathDraft}">
-                <TextBlock Text="Klicken setzt einen Eckpunkt. Klicken und ziehen krümmt. Ein Klick auf den ersten Punkt schließt den Pfad."
+                <TextBlock Text="Klicken setzt einen Eckpunkt. Klicken und ziehen krümmt. Ein Klick auf den ersten Punkt schließt den Pfad. Die RÜCKTASTE nimmt den letzten Punkt zurück, SHIFT hält den Winkel."
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
@@ -32,7 +32,7 @@
                     </Button>
                     <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                             Command="{Binding CancelPathDraftCommand}"
-                            ToolTip.Tip="Entwurf verwerfen (Esc)">
+                            ToolTip.Tip="Entwurf verwerfen (ESC)">
                         <TextBlock Text="Verwerfen" HorizontalAlignment="Center"
                                    FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
@@ -47,7 +47,7 @@
                         <Binding Path="!CanEditPathNodes" />
                     </MultiBinding>
                 </StackPanel.IsVisible>
-                <TextBlock Text="Ins Bild klicken, um den ersten Punkt zu setzen. Ein fertiger Pfad ist eine Ebene wie jede andere und lässt sich später an seinen Punkten wieder ändern."
+                <TextBlock Text="Ins Bild klicken, um den ersten Punkt zu setzen. Ein fertiger Pfad zeichnet zunächst nichts ins Bild - er ist Geometrie: für eine Auswahl, eine Grundlinie für Text oder eine Form. Wer eine sichtbare Kurve will, zieht die Konturbreite hoch."
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
@@ -55,7 +55,7 @@
 
             <!-- MIT MARKIERTEM PFAD: die Punktarbeit. -->
             <StackPanel Spacing="8" IsVisible="{Binding CanEditPathNodes}">
-                <TextBlock Text="Stützpunkte ziehen, um die Form zu ändern. Die runden Griffe krümmen den Abschnitt daneben."
+                <TextBlock Text="Stützpunkte ziehen, um die Form zu ändern. Die runden Griffe krümmen den Abschnitt daneben; an einem glatten Punkt drehen sie gemeinsam, ALT löst sie voneinander. Ein Klick auf die Kurve setzt dort einen Punkt, ALT auf einem Punkt entfernt ihn, ein Doppelklick auf ein offenes Ende zeichnet weiter. Mit SHIFT sammelt man mehrere Punkte ein und bewegt oder entfernt sie zusammen."
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
@@ -94,6 +94,26 @@
                                    FontSize="{DynamicResource FP.Font.Small}" />
                     </Button>
                 </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsVisible="{Binding CanJoinPaths}"
+                        Command="{Binding JoinPathsCommand}"
+                        ToolTip.Tip="Macht aus zwei markierten offenen Pfaden einen. Verbunden werden die beiden Enden, die einander am nächsten liegen.">
+                    <TextBlock Text="Pfade verbinden" HorizontalAlignment="Center"
+                               FontSize="{DynamicResource FP.Font.Small}" />
+                </Button>
+
+                <!-- AUSWAHL AUS DEM PFAD: der Grund, aus dem es das Werkzeug gibt. Steht deshalb
+                     VOR dem Text auf dem Pfad und mit Akzent - alles andere hier ist Zuarbeit. -->
+                <Button Classes="accent" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsVisible="{Binding CanCreateSelectionFromPath}"
+                        Command="{Binding CreateSelectionFromPathCommand}"
+                        ToolTip.Tip="Macht aus der Kurve eine Auswahl. Wer den Freisteller später ändern will, zieht einen Stützpunkt und drückt noch einmal.">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/lasso.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Auswahl aus dem Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                         IsVisible="{Binding CanCreateTextOnPath}"
                         Command="{Binding CreateTextOnPathCommand}"

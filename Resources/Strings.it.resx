@@ -1918,8 +1918,8 @@
   <data name="Oben_rechts_4646e5f8" xml:space="preserve">
     <value>In alto a destra</value>
   </data>
-  <data name="Objekt_duplizieren_Strg_D_d123f119" xml:space="preserve">
-    <value>Duplica oggetto (Ctrl+D)</value>
+  <data name="Objekt_duplizieren_STRG_D_605c2196" xml:space="preserve">
+    <value>Duplica oggetto (CTRL+D)</value>
   </data>
   <data name="Objekt_ein_ausblenden_c0adc9c1" xml:space="preserve">
     <value>Mostra/nascondi oggetto</value>
@@ -1927,8 +1927,8 @@
   <data name="Objekt_l_schen_b6dd7857" xml:space="preserve">
     <value>Elimina oggetto</value>
   </data>
-  <data name="Objekt_l_schen_Entf_efd16004" xml:space="preserve">
-    <value>Elimina oggetto (Canc)</value>
+  <data name="Objekt_l_schen_ENTF_df0b914b" xml:space="preserve">
+    <value>Elimina oggetto (CANC)</value>
   </data>
   <data name="Objekt_nach_hinten_91ade9ea" xml:space="preserve">
     <value>Sposta oggetto indietro</value>
@@ -2074,8 +2074,8 @@
   <data name="W_hle_unten_einen_Objekttyp_aus_und_klicke_dann__4add2974" xml:space="preserve">
     <value>Scegli un tipo di oggetto qui sotto, poi fai clic sull'immagine per posizionarlo lì.</value>
   </data>
-  <data name="Ziehen_zum_Drehen_Shift_15_Schritte_af03841b" xml:space="preserve">
-    <value>Trascina per ruotare (Maiusc = passi di 15°)</value>
+  <data name="Ziehen_zum_Drehen_SHIFT_15_Schritte_d836fd02" xml:space="preserve">
+    <value>Trascina per ruotare (MAIUSC = passi di 15°)</value>
   </data>
   <data name="Zoom_9b3cbed5" xml:space="preserve">
     <value>Zoom</value>
@@ -2330,8 +2330,8 @@
   <data name="Stempel_cf577b82" xml:space="preserve">
     <value>Timbro clone</value>
   </data>
-  <data name="Stempel_Alt_Klick_setzt_die_Quelle_f61845f4" xml:space="preserve">
-    <value>Timbro clone (Alt+clic imposta l'origine)</value>
+  <data name="Stempel_ALT_Klick_setzt_die_Quelle_0822113c" xml:space="preserve">
+    <value>Timbro clone (ALT+clic imposta l'origine)</value>
   </data>
   <data name="Struktur_8ad87337" xml:space="preserve">
     <value>Struttura</value>
@@ -2798,8 +2798,8 @@
   <data name="Album_gel_scht_0_69f50494" xml:space="preserve">
     <value>Album eliminato: {0}</value>
   </data>
-  <data name="Auswahl_aufheben_Strg_D_oder_Esc_cdb5d463" xml:space="preserve">
-    <value>Deseleziona (Ctrl+D o Esc)</value>
+  <data name="Auswahl_aufheben_STRG_D_oder_ESC_6d0a4c49" xml:space="preserve">
+    <value>Deseleziona (CTRL+D o ESC)</value>
   </data>
   <data name="Auswahl_im_Bild_erstellen_dann_kopieren_oder_f_l_f8265df4" xml:space="preserve">
     <value>Crea una selezione nell'immagine, poi copiala o riempila. Ctrl+A seleziona tutto, Ctrl+D deseleziona, Esc annulla mentre trascini.</value>
@@ -2861,8 +2861,8 @@
   <data name="Ebenen_Panel_3c793049" xml:space="preserve">
     <value>Pannello livelli</value>
   </data>
-  <data name="Ebene_duplizieren_Strg_D_30ab0842" xml:space="preserve">
-    <value>Duplica livello (Ctrl+D)</value>
+  <data name="Ebene_duplizieren_STRG_D_13686ce4" xml:space="preserve">
+    <value>Duplica livello (CTRL+D)</value>
   </data>
   <data name="Ebene_nach_vorne_84ecd146" xml:space="preserve">
     <value>Porta livello avanti</value>
@@ -2870,8 +2870,8 @@
   <data name="Ebene_nach_hinten_1a9faf5b" xml:space="preserve">
     <value>Porta livello indietro</value>
   </data>
-  <data name="Ebene_l_schen_Entf_063fd7c1" xml:space="preserve">
-    <value>Elimina livello (Canc)</value>
+  <data name="Ebene_l_schen_ENTF_465039e7" xml:space="preserve">
+    <value>Elimina livello (CANC)</value>
   </data>
   <data name="Ebene_ein_ausblenden_fae4f2cc" xml:space="preserve">
     <value>Mostra/nascondi livello</value>
@@ -2942,8 +2942,8 @@
   <data name="Wird_mit_Immich_abgeglichen_ce6c1ecb" xml:space="preserve">
     <value>Sincronizzazione con Immich…</value>
   </data>
-  <data name="Beim_Ziehen_an_den_Anfassern_bleibt_das_Verh_ltn_01a7585a" xml:space="preserve">
-    <value>Trascinando le maniglie il rapporto tra larghezza e altezza viene mantenuto - come in Dimensione immagine. Disattivato: l'immagine viene stirata alla dimensione trascinata (Maiusc forza comunque il rapporto).</value>
+  <data name="Beim_Ziehen_an_den_Anfassern_bleibt_das_Verh_ltn_d5bac12e" xml:space="preserve">
+    <value>Trascinando le maniglie il rapporto tra larghezza e altezza viene mantenuto - come in Dimensione immagine. Disattivato: l'immagine viene stirata alla dimensione trascinata (MAIUSC forza comunque il rapporto).</value>
   </data>
   <data name="Bewertung_Etikett_dbc10b78" xml:space="preserve">
     <value>Valutazione ed etichetta</value>
@@ -3032,8 +3032,8 @@
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_oder_Strg__a67aab8f" xml:space="preserve">
     <value>Imposta la valutazione (lo stesso numero di nuovo o Ctrl+0 la rimuove)</value>
   </data>
-  <data name="Strg_Q_170b2b61" xml:space="preserve">
-    <value>Ctrl+Q</value>
+  <data name="STRG_Q_018e5081" xml:space="preserve">
+    <value>CTRL+Q</value>
   </data>
   <data name="Favorit_ein_aus_1b5c90d6" xml:space="preserve">
     <value>Preferito sì/no</value>
@@ -3041,8 +3041,8 @@
   <data name="Pfeiltasten_Bild_auf_ab_Pos1_Ende_089188b4" xml:space="preserve">
     <value>Frecce, Pag su/giù, Inizio, Fine</value>
   </data>
-  <data name="Auswahl_bewegen_Umschalt_Bereich_erweitern_e675c648" xml:space="preserve">
-    <value>Sposta la selezione (Maiusc: estendi l'intervallo)</value>
+  <data name="Auswahl_bewegen_SHIFT_Bereich_erweitern_274e18c9" xml:space="preserve">
+    <value>Sposta la selezione (MAIUSC: estendi l'intervallo)</value>
   </data>
   <data name="Eingabe_oder_Doppelklick_679e9e9a" xml:space="preserve">
     <value>Invio o doppio clic</value>
@@ -3050,14 +3050,14 @@
   <data name="Bild_ffnen_4beb4809" xml:space="preserve">
     <value>Apri immagine</value>
   </data>
-  <data name="Leertaste_halten_15b04274" xml:space="preserve">
+  <data name="LEERTASTE_halten_73db5134" xml:space="preserve">
     <value>Spazio (tenere premuto)</value>
   </data>
   <data name="Schnellvorschau_419601fa" xml:space="preserve">
     <value>Anteprima rapida</value>
   </data>
-  <data name="Strg_A_4d8db788" xml:space="preserve">
-    <value>Ctrl+A</value>
+  <data name="STRG_A_f9bf2e0a" xml:space="preserve">
+    <value>CTRL+A</value>
   </data>
   <data name="Alles_ausw_hlen_becdd6af" xml:space="preserve">
     <value>Seleziona tutto</value>
@@ -3068,35 +3068,35 @@
   <data name="Kopieren_Ausschneiden_Einf_gen_eb819efb" xml:space="preserve">
     <value>Copia / Taglia / Incolla</value>
   </data>
-  <data name="Strg_F_05b84635" xml:space="preserve">
-    <value>Ctrl+F</value>
+  <data name="STRG_F_1def19c7" xml:space="preserve">
+    <value>CTRL+F</value>
   </data>
   <data name="Suche_fd281588" xml:space="preserve">
     <value>Cerca</value>
   </data>
-  <data name="Strg_W_049f6d81" xml:space="preserve">
-    <value>Ctrl+W</value>
+  <data name="STRG_W_1503f6f8" xml:space="preserve">
+    <value>CTRL+W</value>
   </data>
-  <data name="Strg_R_fa0fdb7c" xml:space="preserve">
-    <value>Ctrl+R</value>
+  <data name="STRG_R_7f6dc9b3" xml:space="preserve">
+    <value>CTRL+R</value>
   </data>
-  <data name="Strg_D_7de6019a" xml:space="preserve">
-    <value>Ctrl+D</value>
+  <data name="STRG_D_9b96a959" xml:space="preserve">
+    <value>CTRL+D</value>
   </data>
   <data name="F2_999d0cd6" xml:space="preserve">
     <value>F2</value>
   </data>
-  <data name="Entf_50660d74" xml:space="preserve">
-    <value>Canc</value>
+  <data name="ENTF_90326b05" xml:space="preserve">
+    <value>CANC</value>
   </data>
   <data name="Aktualisieren_87c65f26" xml:space="preserve">
     <value>Aggiorna</value>
   </data>
-  <data name="Esc_1f7a4f9e" xml:space="preserve">
-    <value>Esc</value>
+  <data name="ESC_042b890a" xml:space="preserve">
+    <value>ESC</value>
   </data>
-  <data name="Strg_Mausrad_oder_Rechtsklick_Mausrad_6a8d113a" xml:space="preserve">
-    <value>Ctrl+rotellina o clic destro+rotellina</value>
+  <data name="STRG_Mausrad_oder_Rechtsklick_Mausrad_00071ede" xml:space="preserve">
+    <value>CTRL+rotellina o clic destro+rotellina</value>
   </data>
   <data name="Kachelgr_e_ndern_e84982b6" xml:space="preserve">
     <value>Cambia dimensione riquadri</value>
@@ -3116,8 +3116,8 @@
   <data name="Bild_einpassen_58bd9313" xml:space="preserve">
     <value>Adatta immagine</value>
   </data>
-  <data name="Leertaste_9eeb28a0" xml:space="preserve">
-    <value>Spazio</value>
+  <data name="LEERTASTE_00f00043" xml:space="preserve">
+    <value>SPAZIO</value>
   </data>
   <data name="Diashow_starten_stoppen_2930a311" xml:space="preserve">
     <value>Avvia/ferma presentazione</value>
@@ -3128,14 +3128,14 @@
   <data name="Nach_links_rechts_drehen_36ee2c3b" xml:space="preserve">
     <value>Ruota a sinistra / destra</value>
   </data>
-  <data name="Strg_I_38b20eaa" xml:space="preserve">
-    <value>Ctrl+I</value>
+  <data name="STRG_I_d7ab115f" xml:space="preserve">
+    <value>CTRL+I</value>
   </data>
   <data name="Info_Leiste_ein_aus_3d1dadd7" xml:space="preserve">
     <value>Barra info sì/no</value>
   </data>
-  <data name="Strg_E_98c415e6" xml:space="preserve">
-    <value>Ctrl+E</value>
+  <data name="STRG_E_2f7728b4" xml:space="preserve">
+    <value>CTRL+E</value>
   </data>
   <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_9acb05b5" xml:space="preserve">
     <value>Torna alla galleria (a schermo intero: esci dallo schermo intero)</value>
@@ -3149,8 +3149,8 @@
   <data name="R_ckg_ngig_Wiederholen_579d24d3" xml:space="preserve">
     <value>Annulla / Ripeti</value>
   </data>
-  <data name="Strg_S_1f1d1d5c" xml:space="preserve">
-    <value>Ctrl+S</value>
+  <data name="STRG_S_a17947ac" xml:space="preserve">
+    <value>CTRL+S</value>
   </data>
   <data name="Speichern_wenn_nicht_m_glich_Speichern_unter_e8f908b6" xml:space="preserve">
     <value>Salva (se non possibile: Salva con nome)</value>
@@ -3167,8 +3167,8 @@
   <data name="Objekt_duplizieren_ohne_Objekt_Auswahl_aufheben_56d12fa8" xml:space="preserve">
     <value>Duplica oggetto; senza oggetto: annulla la selezione</value>
   </data>
-  <data name="Strg_P_568a12fb" xml:space="preserve">
-    <value>Ctrl+P</value>
+  <data name="STRG_P_80d9c652" xml:space="preserve">
+    <value>CTRL+P</value>
   </data>
   <data name="Vorschau_anwenden_1445fbbc" xml:space="preserve">
     <value>Applica anteprima</value>
@@ -3185,11 +3185,11 @@
   <data name="Pfeiltasten_5a95be86" xml:space="preserve">
     <value>Frecce</value>
   </data>
-  <data name="Objekt_verschieben_Umschalt_gr_ere_Schritte_1dea48ec" xml:space="preserve">
-    <value>Sposta oggetto (Maiusc: passi più grandi)</value>
+  <data name="Objekt_verschieben_SHIFT_gr_ere_Schritte_46120732" xml:space="preserve">
+    <value>Sposta oggetto (MAIUSC: passi più grandi)</value>
   </data>
-  <data name="Alt_beim_Ziehen_von_Objekten_0833b704" xml:space="preserve">
-    <value>Alt (durante il trascinamento di oggetti)</value>
+  <data name="ALT_beim_Ziehen_von_Objekten_01065500" xml:space="preserve">
+    <value>ALT (durante il trascinamento di oggetti)</value>
   </data>
   <data name="Einrasten_vor_bergehend_aus_ebad018d" xml:space="preserve">
     <value>Disattiva temporaneamente l'aggancio</value>
@@ -3374,8 +3374,8 @@
   <data name="Drucken_1c14ea4d" xml:space="preserve">
     <value>Stampa...</value>
   </data>
-  <data name="Drucken_Strg_P_73b2de57" xml:space="preserve">
-    <value>Stampa (Ctrl+P)</value>
+  <data name="Drucken_STRG_P_a03f2eca" xml:space="preserve">
+    <value>Stampa (CTRL+P)</value>
   </data>
   <data name="Drucken_fehlgeschlagen_6bac9264" xml:space="preserve">
     <value>Stampa non riuscita</value>
@@ -3581,8 +3581,8 @@
   <data name="Neues_Bild_28f91b41" xml:space="preserve">
     <value>Nuova immagine</value>
   </data>
-  <data name="Neues_Bild_Strg_N_38de3aa5" xml:space="preserve">
-    <value>Nuova immagine (Ctrl+N)</value>
+  <data name="Neues_Bild_STRG_N_a7ccfd38" xml:space="preserve">
+    <value>Nuova immagine (CTRL+N)</value>
   </data>
   <data name="Unbenannt_b34d612b" xml:space="preserve">
     <value>Senza nome</value>
@@ -3740,8 +3740,8 @@
   <data name="Blau_S_ttigung_66494e39" xml:space="preserve">
     <value>Saturazione blu</value>
   </data>
-  <data name="Strg_N_275f0654" xml:space="preserve">
-    <value>Ctrl+N</value>
+  <data name="STRG_N_c9271111" xml:space="preserve">
+    <value>CTRL+N</value>
   </data>
   <data name="Neues_Bild_anlegen_9b816660" xml:space="preserve">
     <value>Crea una nuova immagine</value>
@@ -3875,8 +3875,8 @@
   <data name="berblendung_7441d5c9" xml:space="preserve">
     <value>Fusione</value>
   </data>
-  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_Umschalt__8bcf3a0f" xml:space="preserve">
-    <value>Trascina per tonalità e saturazione; con Maiusc solo la saturazione</value>
+  <data name="Ziehen_setzt_Farbton_und_S_ttigung_mit_SHIFT_nur_462f7fee" xml:space="preserve">
+    <value>Trascina per tonalità e saturazione; con MAIUSC solo la saturazione</value>
   </data>
   <data name="Wirkt_auf_das_ganze_Bild_unabh_ngig_vom_Tonwert_ddd82eb2" xml:space="preserve">
     <value>Agisce sull'intera immagine, indipendentemente dal tono</value>
@@ -4064,50 +4064,50 @@
   <data name="Strg_Pfeil_links_Strg_Pfeil_rechts_105062ba" xml:space="preserve">
     <value>Ctrl+Freccia sinistra / Ctrl+Freccia destra</value>
   </data>
-  <data name="Bild_nach_links_drehen_Strg_Pfeil_links_4817edca" xml:space="preserve">
-    <value>Ruota l'immagine a sinistra (Ctrl+Freccia sinistra)</value>
+  <data name="Bild_nach_links_drehen_STRG_PFEIL_LINKS_66bb14c0" xml:space="preserve">
+    <value>Ruota l'immagine a sinistra (CTRL+FRECCIA SINISTRA)</value>
   </data>
-  <data name="Bild_nach_rechts_drehen_Strg_Pfeil_rechts_34a9a828" xml:space="preserve">
-    <value>Ruota l'immagine a destra (Ctrl+Freccia destra)</value>
+  <data name="Bild_nach_rechts_drehen_STRG_PFEIL_RECHTS_90d51662" xml:space="preserve">
+    <value>Ruota l'immagine a destra (CTRL+FRECCIA DESTRA)</value>
   </data>
   <data name="Werkzeug_Bildgr_e_Text_Zeichnen_Einf_gen_5b7b9566" xml:space="preserve">
     <value>Strumento: Dimensioni immagine / Testo / Disegna / Inserisci</value>
   </data>
-  <data name="Strg_0_a3622365" xml:space="preserve">
-    <value>Ctrl+0</value>
+  <data name="STRG_0_ee78f157" xml:space="preserve">
+    <value>CTRL+0</value>
   </data>
-  <data name="Strg_B_d7c995b1" xml:space="preserve">
-    <value>Ctrl+B</value>
+  <data name="STRG_B_50bf5b82" xml:space="preserve">
+    <value>CTRL+B</value>
   </data>
-  <data name="Strg_C_e180266d" xml:space="preserve">
-    <value>Ctrl+C</value>
+  <data name="STRG_C_c0bfc1e1" xml:space="preserve">
+    <value>CTRL+C</value>
   </data>
-  <data name="Strg_G_a8e90537" xml:space="preserve">
-    <value>Ctrl+G</value>
+  <data name="STRG_G_2941c0c1" xml:space="preserve">
+    <value>CTRL+G</value>
   </data>
-  <data name="Strg_T_5d85b26c" xml:space="preserve">
-    <value>Ctrl+T</value>
+  <data name="STRG_T_be84c2ed" xml:space="preserve">
+    <value>CTRL+T</value>
   </data>
-  <data name="Strg_V_0c87a974" xml:space="preserve">
-    <value>Ctrl+V</value>
+  <data name="STRG_V_7eb2c110" xml:space="preserve">
+    <value>CTRL+V</value>
   </data>
-  <data name="Strg_X_5ae494a5" xml:space="preserve">
-    <value>Ctrl+X</value>
+  <data name="STRG_X_833022c2" xml:space="preserve">
+    <value>CTRL+X</value>
   </data>
-  <data name="Strg_Y_00ebae83" xml:space="preserve">
-    <value>Ctrl+Y</value>
+  <data name="STRG_Y_c3988cb6" xml:space="preserve">
+    <value>CTRL+Y</value>
   </data>
-  <data name="Strg_Z_bd55875e" xml:space="preserve">
-    <value>Ctrl+Z</value>
+  <data name="STRG_Z_88d18814" xml:space="preserve">
+    <value>CTRL+Z</value>
   </data>
-  <data name="Strg_1_bis_Strg_5_344fe0c7" xml:space="preserve">
-    <value>Ctrl+1 a Ctrl+5</value>
+  <data name="STRG_1_bis_STRG_5_93754288" xml:space="preserve">
+    <value>CTRL+1 a CTRL+5</value>
   </data>
-  <data name="Strg_Pfeil_links_56022ea2" xml:space="preserve">
-    <value>Ctrl+Freccia sinistra</value>
+  <data name="STRG_PFEIL_LINKS_895c9972" xml:space="preserve">
+    <value>CTRL+FRECCIA SINISTRA</value>
   </data>
-  <data name="Strg_Pfeil_rechts_2d1d6844" xml:space="preserve">
-    <value>Ctrl+Freccia destra</value>
+  <data name="STRG_PFEIL_RECHTS_63e2840d" xml:space="preserve">
+    <value>CTRL+FRECCIA DESTRA</value>
   </data>
   <data name="Bild_auf_094e1a7a" xml:space="preserve">
     <value>Pag su</value>
@@ -4115,11 +4115,11 @@
   <data name="Bild_ab_5936ced2" xml:space="preserve">
     <value>Pag giù</value>
   </data>
-  <data name="Pos1_509bf088" xml:space="preserve">
-    <value>Inizio</value>
+  <data name="POS1_e3382971" xml:space="preserve">
+    <value>INIZIO</value>
   </data>
-  <data name="Ende_920e9c46" xml:space="preserve">
-    <value>Fine</value>
+  <data name="ENDE_d1627b7f" xml:space="preserve">
+    <value>FINE</value>
   </data>
   <data name="Plus_2d05d0f1" xml:space="preserve">
     <value>Più</value>
@@ -4127,11 +4127,11 @@
   <data name="Minus_02b11141" xml:space="preserve">
     <value>Meno</value>
   </data>
-  <data name="Pfeil_links_oder_Bild_auf_a072f7c6" xml:space="preserve">
-    <value>Freccia sinistra o Pag su</value>
+  <data name="PFEIL_LINKS_oder_Bild_auf_c182eb6a" xml:space="preserve">
+    <value>FRECCIA SINISTRA o Pag su</value>
   </data>
-  <data name="Pfeil_rechts_oder_Bild_ab_a5ecf0e5" xml:space="preserve">
-    <value>Freccia destra o Pag giù</value>
+  <data name="PFEIL_RECHTS_oder_Bild_ab_d77ef841" xml:space="preserve">
+    <value>FRECCIA DESTRA o Pag giù</value>
   </data>
   <data name="Eine_Seite_nach_oben_fc24e606" xml:space="preserve">
     <value>Una pagina in su</value>
@@ -4193,23 +4193,23 @@
   <data name="Favorit_ein_aus_Galerie_und_Betrachter_37855f03" xml:space="preserve">
     <value>Preferito sì/no (galleria e visualizzatore)</value>
   </data>
-  <data name="Strg_K_e12b34b4" xml:space="preserve">
-    <value>Ctrl+K</value>
+  <data name="STRG_K_af3d307e" xml:space="preserve">
+    <value>CTRL+K</value>
   </data>
   <data name="Gruppe_auf_oder_zuklappen_37ee4059" xml:space="preserve">
     <value>Espandi o comprimi il gruppo</value>
   </data>
-  <data name="Objekte_gruppieren_Strg_G_8f7b8599" xml:space="preserve">
-    <value>Raggruppa oggetti (Ctrl+G)</value>
+  <data name="Objekte_gruppieren_STRG_G_d3273b10" xml:space="preserve">
+    <value>Raggruppa oggetti (CTRL+G)</value>
   </data>
-  <data name="Gruppierung_aufheben_Strg_Umschalt_G_83e2db35" xml:space="preserve">
-    <value>Separa gruppo (Ctrl+Maiusc+G)</value>
+  <data name="Gruppierung_aufheben_STRG_SHIFT_G_b4fccb8a" xml:space="preserve">
+    <value>Separa gruppo (CTRL+MAIUSC+G)</value>
   </data>
   <data name="Gruppe_f4e8075c" xml:space="preserve">
     <value>Gruppo</value>
   </data>
-  <data name="Strg_Klick_f7bbde58" xml:space="preserve">
-    <value>Ctrl+clic</value>
+  <data name="STRG_Klick_05434707" xml:space="preserve">
+    <value>CTRL+clic</value>
   </data>
   <data name="Objekt_zur_Auswahl_hinzuf_gen_oder_herausnehmen_2ecab8d9" xml:space="preserve">
     <value>Aggiungere un oggetto alla selezione o rimuoverlo</value>
@@ -4217,8 +4217,8 @@
   <data name="Markierte_Objekte_gruppieren_771bf31d" xml:space="preserve">
     <value>Raggruppa gli oggetti selezionati</value>
   </data>
-  <data name="Strg_Umschalt_G_e8482b18" xml:space="preserve">
-    <value>Ctrl+Maiusc+G</value>
+  <data name="STRG_SHIFT_G_f3d8b91f" xml:space="preserve">
+    <value>CTRL+MAIUSC+G</value>
   </data>
   <data name="Gruppierung_aufheben_286fb0a0" xml:space="preserve">
     <value>Separa gruppo</value>
@@ -4232,11 +4232,11 @@
   <data name="Markierte_Objekte_gruppieren_ohne_Mehrfachauswah_bb56593e" xml:space="preserve">
     <value>Raggruppa gli oggetti selezionati; senza selezione multipla: strumento Inserisci</value>
   </data>
-  <data name="Markierte_Ebenen_gruppieren_Strg_G_53ed2acf" xml:space="preserve">
-    <value>Raggruppa i livelli selezionati (Ctrl+G)</value>
+  <data name="Markierte_Ebenen_gruppieren_STRG_G_d530595d" xml:space="preserve">
+    <value>Raggruppa i livelli selezionati (CTRL+G)</value>
   </data>
-  <data name="Strg_M_6a3609ac" xml:space="preserve">
-    <value>Ctrl+M</value>
+  <data name="STRG_M_bfa5645a" xml:space="preserve">
+    <value>CTRL+M</value>
   </data>
   <data name="Markierte_Ebenen_gruppieren_e2bff6df" xml:space="preserve">
     <value>Raggruppa i livelli selezionati</value>
@@ -4361,11 +4361,11 @@
   <data name="Neue_Zeile_im_Text_Objekt_Text_bricht_nie_automa_e8fc07cc" xml:space="preserve">
     <value>Nuova riga in un oggetto di testo (il testo non va mai a capo automaticamente)</value>
   </data>
-  <data name="Neue_Zeile_mit_Strg_Enter_oder_Umschalt_Enter_fae9a32e" xml:space="preserve">
-    <value>Nuova riga con Ctrl+Invio o Maiusc+Invio</value>
+  <data name="Neue_Zeile_mit_STRG_ENTER_oder_SHIFT_ENTER_b57e8880" xml:space="preserve">
+    <value>Nuova riga con CTRL+INVIO o MAIUSC+INVIO</value>
   </data>
-  <data name="Strg_Enter_oder_Umschalt_Enter_08237fda" xml:space="preserve">
-    <value>Ctrl+Invio o Maiusc+Invio</value>
+  <data name="STRG_ENTER_oder_SHIFT_ENTER_e0cc821b" xml:space="preserve">
+    <value>CTRL+INVIO o MAIUSC+INVIO</value>
   </data>
   <data name="Kein_Wasserzeichen_gespeichert_b079d262" xml:space="preserve">
     <value>Nessuna filigrana salvata</value>
@@ -4601,8 +4601,8 @@
   <data name="Pinsel_Maske_frei_ins_Bild_malen_Hinzuf_gen_und__2195d79c" xml:space="preserve">
     <value>Pennello: dipingi la maschera liberamente sull’immagine — aggiungi e sottrai con il selettore sotto</value>
   </data>
-  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__ae7499c8" xml:space="preserve">
-    <value>Gradiente lineare: trascina sull’immagine, la maschera sfuma dal punto iniziale a quello finale. Maiusc blocca la direzione</value>
+  <data name="Linearer_Verlauf_im_Bild_ziehen_die_Maske_l_uft__d50f14a4" xml:space="preserve">
+    <value>Gradiente lineare: trascina sull’immagine, la maschera sfuma dal punto iniziale a quello finale. MAIUSC blocca la direzione</value>
   </data>
   <data name="Radialer_Verlauf_von_der_Mitte_nach_aussen_ziehe_f885ecaf" xml:space="preserve">
     <value>Gradiente radiale: trascina dal centro verso l’esterno. Con «Inverti» la maschera agisce all’esterno</value>
@@ -4664,8 +4664,8 @@
   <data name="Bildvergleich_4c30b57f" xml:space="preserve">
     <value>Confronto foto</value>
   </data>
-  <data name="Pfeil_links_oder_rechts_478c9dd8" xml:space="preserve">
-    <value>Freccia sinistra o destra</value>
+  <data name="PFEIL_LINKS_oder_rechts_fc56da1c" xml:space="preserve">
+    <value>FRECCIA SINISTRA o destra</value>
   </data>
   <data name="Nur_die_rechte_Fl_che_bl_ttert_weiter_das_angehe_61b1444d" xml:space="preserve">
     <value>Solo il lato destro avanza; la foto fissata resta a sinistra</value>
@@ -6185,8 +6185,8 @@
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Applicazione annullata - la foto è invariata</value>
   </data>
-  <data name="Abbrechen_Esc_Das_Entrauschen_steigt_an_der_n_ch_3adced7f" xml:space="preserve">
-    <value>Annulla (Esc). La riduzione del rumore si ferma al riquadro successivo, la rimozione dopo la sua passata - in entrambi i casi la foto resta invariata.</value>
+  <data name="Abbrechen_ESC_Das_Entrauschen_steigt_an_der_n_ch_4e3132fa" xml:space="preserve">
+    <value>Annulla (ESC). La riduzione del rumore si ferma al riquadro successivo, la rimozione dopo la sua passata - in entrambi i casi la foto resta invariata.</value>
   </data>
   <data name="Hochskalieren_mit_Modell_36fbab7e" xml:space="preserve">
     <value>Ingrandire con un modello</value>
@@ -6362,8 +6362,8 @@
   <data name="Pfad_offen_abschlie_en_Eingabe_oder_Doppelklick_288b4d16" xml:space="preserve">
     <value>Concludi il tracciato aperto (Invio o doppio clic)</value>
   </data>
-  <data name="Entwurf_verwerfen_Esc_e1166db1" xml:space="preserve">
-    <value>Scarta la bozza (Esc)</value>
+  <data name="Entwurf_verwerfen_ESC_3c4f74a0" xml:space="preserve">
+    <value>Scarta la bozza (ESC)</value>
   </data>
   <data name="Klicken_setzt_einen_Eckpunkt_Klicken_und_ziehen__23ddaf61" xml:space="preserve">
     <value>Un clic crea un punto d'angolo. Fai clic e trascina per curvare. Fai clic sul primo punto per chiudere il tracciato.</value>
@@ -6470,8 +6470,8 @@
   <data name="Markierte_Ebenen_duplizieren_2145e904" xml:space="preserve">
     <value>Duplica i livelli selezionati</value>
   </data>
-  <data name="Markierte_Ebenen_l_schen_Entf_d53d89ac" xml:space="preserve">
-    <value>Elimina i livelli selezionati (Canc)</value>
+  <data name="Markierte_Ebenen_l_schen_ENTF_d59915b7" xml:space="preserve">
+    <value>Elimina i livelli selezionati (CANC)</value>
   </data>
   <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
     <value>Ricerca di volti: {0} di {1}</value>
@@ -6674,8 +6674,8 @@
   <data name="Zuschnitt_123247c8" xml:space="preserve"><value>Ritaglio</value></data>
   <data name="Malebene_c58eef25" xml:space="preserve"><value>Livello di pittura</value></data>
   <data name="Die_Auswahl_liegt_nicht_auf_der_markierten_Ebene_096701ed" xml:space="preserve"><value>La selezione non si trova sul livello marcato.</value></data>
-  <data name="Mit_Strg_die_Form_dieser_Ebene_als_Auswahl_laden_8f622a58" xml:space="preserve"><value>Con Ctrl carica la forma di questo livello come selezione</value></data>
-  <data name="Ebenenmaske_bearbeiten_Mit_Alt_nur_die_Maske_zei_d2c1cc4b" xml:space="preserve"><value>Modifica la maschera di livello. Con Alt mostra solo la maschera, con Maiusc la disattiva, con Ctrl la carica come selezione</value></data>
+  <data name="Mit_STRG_die_Form_dieser_Ebene_als_Auswahl_laden_6b7daeb1" xml:space="preserve"><value>Con CTRL carica la forma di questo livello come selezione</value></data>
+  <data name="Ebenenmaske_bearbeiten_Mit_ALT_nur_die_Maske_zei_517eab2e" xml:space="preserve"><value>Modifica la maschera di livello. Con ALT mostra solo la maschera, con MAIUSC la disattiva, con CTRL la carica come selezione</value></data>
   <data name="Transparente_Punkte_sperren_Striche_bleiben_in_d_3102d050" xml:space="preserve"><value>Blocca i punti trasparenti: i tratti restano nella forma che il livello ha già</value></data>
   <data name="Neue_Malebene_eine_leere_Ebene_zum_Bemalen_anleg_3d028994" xml:space="preserve"><value>Nuovo livello di pittura: crea un livello vuoto su cui dipingere</value></data>
   <data name="Die_Malebene_konnte_nicht_angelegt_werden_caaceb00" xml:space="preserve"><value>Non è stato possibile creare il livello di pittura.</value></data>
@@ -6686,4 +6686,55 @@
   <data name="Transparente_Punkte_freigeben_66d0baa3" xml:space="preserve"><value>Sblocca i punti trasparenti</value></data>
   <data name="Anpassungen_dieser_Ebene_ein_oder_ausschalten_7076645d" xml:space="preserve"><value>Attivare o disattivare le regolazioni di questo livello</value></data>
   <data name="Anpassungen_dieser_Ebene_verwerfen_1a0f1d69" xml:space="preserve"><value>Scartare le regolazioni di questo livello</value></data>
+  <data name="Auswahl_aus_dem_Pfad_erstellt_a4e144eb" xml:space="preserve">
+    <value>Selezione creata dal tracciato</value>
+  </data>
+  <data name="Weiterzeichnen_Punkte_setzen_Eingabe_schlie_t_ab_fc2e2cc6" xml:space="preserve">
+    <value>Prosegui: imposta i punti, Invio conclude</value>
+  </data>
+  <data name="Pfad_weitergezeichnet_dafcf769" xml:space="preserve">
+    <value>Tracciato proseguito</value>
+  </data>
+  <data name="Klicken_setzt_einen_Eckpunkt_Klicken_und_ziehen__b9c5c60f" xml:space="preserve">
+    <value>Un clic imposta un punto d'angolo. Clic e trascinamento lo curva. Un clic sul primo punto chiude il tracciato. BACKSPACE annulla l'ultimo punto, MAIUSC mantiene l'angolo.</value>
+  </data>
+  <data name="St_tzpunkte_ziehen_um_die_Form_zu_ndern_Die_rund_e6f9c195" xml:space="preserve">
+    <value>Trascina i punti di ancoraggio per cambiare la forma. Le maniglie tonde curvano il tratto accanto; su un punto morbido ruotano insieme, Alt le separa. Un clic sulla curva vi aggiunge un punto, Alt su un punto lo rimuove, un doppio clic su un'estremità aperta prosegue il disegno.</value>
+  </data>
+  <data name="Auswahl_aus_dem_Pfad_0f077285" xml:space="preserve">
+    <value>Selezione dal tracciato</value>
+  </data>
+  <data name="Macht_aus_der_Kurve_eine_Auswahl_Wer_den_Freiste_43952471" xml:space="preserve">
+    <value>Trasforma la curva in una selezione. Per modificare lo scontorno in seguito, trascina un punto di ancoraggio e premi di nuovo.</value>
+  </data>
+  <data name="Pfade_verbinden_013b2130" xml:space="preserve">
+    <value>Unisci tracciati</value>
+  </data>
+  <data name="Pfade_verbunden_a4fa2066" xml:space="preserve">
+    <value>Tracciati uniti</value>
+  </data>
+  <data name="Ein_Pfad_braucht_mindestens_zwei_Punkte_cd908ae1" xml:space="preserve">
+    <value>Un tracciato ha bisogno di almeno due punti.</value>
+  </data>
+  <data name="Macht_aus_zwei_markierten_offenen_Pfaden_einen_V_17f237fc" xml:space="preserve">
+    <value>Unisce due tracciati aperti selezionati in uno. Vengono collegate le due estremità più vicine.</value>
+  </data>
+  <data name="St_tzpunkte_ziehen_um_die_Form_zu_ndern_Die_rund_01d4f66b" xml:space="preserve">
+    <value>Trascina i punti di ancoraggio per cambiare la forma. Le maniglie tonde curvano il tratto accanto; su un punto morbido ruotano insieme, ALT le separa. Un clic sulla curva vi aggiunge un punto, ALT su un punto lo rimuove, un doppio clic su un'estremità aperta prosegue il disegno. Con MAIUSC si raccolgono più punti per spostarli o rimuoverli insieme.</value>
+  </data>
+  <data name="Gruppenmaske_6ff6d2b4" xml:space="preserve">
+    <value>Maschera di gruppo</value>
+  </data>
+  <data name="Gruppenmaske_hinzugef_gt_5e9ea1a1" xml:space="preserve">
+    <value>Maschera di gruppo aggiunta</value>
+  </data>
+  <data name="Gruppenmaske_entfernt_2afa5b00" xml:space="preserve">
+    <value>Maschera di gruppo rimossa</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_de231e0e" xml:space="preserve">
+    <value>Scrittura delle foto…</value>
+  </data>
+  <data name="Ins_Bild_klicken_um_den_ersten_Punkt_zu_setzen_E_8b978da9" xml:space="preserve">
+    <value>Fai clic sulla foto per impostare il primo punto. Un tracciato finito non disegna nulla all'inizio: è geometria, per una selezione, una linea di base per il testo o una forma. Per una curva visibile, aumenta lo spessore del contorno.</value>
+  </data>
 </root>

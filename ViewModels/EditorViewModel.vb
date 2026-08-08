@@ -1930,6 +1930,20 @@ Namespace ViewModels
             End Get
             Set(value As Integer)
                 Dim clamped = If(value >= 0 AndAlso value < _annotations.Count, value, -1)
+                ' EIN LAUFENDER PFAD-ENTWURF ENDET, WENN MAN EINE EBENE MARKIERT - nach derselben
+                ' Regel wie beim Werkzeugwechsel: ab zwei Punkten wird er uebernommen, darunter ist
+                ' er nichts und wird verworfen. Sonst laeuft er neben der neuen Markierung weiter,
+                ' und weil die Stuetzpunkt-Bedienung einen Entwurf ausschliesst, standen am
+                ' angeklickten Pfad keine Knoepfe (Nutzerbefund 2026-08-09: nach "Neuer Pfad" und
+                ' einem Klick neben das Bild fehlte die ganze Punktarbeit).
+                '
+                ' VOR dem Abbruch oben: uebernimmt der Entwurf, legt er selbst eine Ebene an und
+                ' markiert sie - danach ist der angeklickte Index wieder ein anderer als der
+                ' markierte, und der Klick kommt an. Angehaengt wird ans Ende, die Indizes der
+                ' vorhandenen Ebenen verschieben sich dabei nicht.
+                If clamped >= 0 AndAlso _pathDraft.Count > 0 Then
+                    FinishPathDraft(keep:=_pathDraft.Count >= 2)
+                End If
                 If clamped = _selectedAnnotationIndex AndAlso _extraSelectedAnnotations.Count = 0 Then Return
                 ' Die Miniatur der Zeile wird beim ABWAEHLEN nachgezogen, nicht bei jeder Aenderung
                 ' (Nutzerentscheidung 2026-08-04). Waehrend man tippt oder malt, sieht man die
@@ -1938,6 +1952,9 @@ Namespace ViewModels
                 RefreshThumbnailForAnnotationIndex(_selectedAnnotationIndex)
                 ' Ebenenwechsel beendet eine laufende Pinsel-/Radiergummi-Mal-Sitzung (siehe AddBrushStroke).
                 _pixelEditLayer.ResetActiveStroke()
+                ' Und die gesammelten PFADPUNKTE des vorigen Objekts: sie stehen als Indizes da und
+                ' zeigten am neuen Objekt auf irgendwelche Punkte.
+                ClearPathNodeSelection()
                 ' Ein einfaches Setzen des Ankers ist immer eine EINZELauswahl - die Mehrfachauswahl
                 ' entsteht ausschliesslich ueber SelectAnnotationWithGroup/ToggleAnnotationInSelection.
                 ' So bleiben die vielen bestehenden Aufrufstellen unveraendert richtig.
@@ -1975,6 +1992,15 @@ Namespace ViewModels
                     ' um es zu drehen oder zu spiegeln. Ein Sprung nach „Text"/„Einfügen" würde einen Klick auf
                     ' das Objekt aussehen lassen, als hätte er gar nicht selektiert.
                     If IsObjectScopeTool(_currentTool) Then targetTool = _currentTool
+                    ' EIN PFAD ZIEHT AUS DEN REGLER-WERKZEUGEN TROTZDEM WEITER. Anpassen, Farbe,
+                    ' Details, Effekte und Filter arbeiten auf Bildpunkten, und die hat er nicht -
+                    ' dort waere seine Zeile markiert, ohne dass irgendetwas davon zu bedienen
+                    ' waere. Beim Drehen, Verschieben und Transformieren bleibt es dagegen beim
+                    ' Werkzeug: dort ist der Pfad als Objekt gemeint (Nutzerbefund 2026-08-09).
+                    If IsObjectAdjustTool(_currentTool) AndAlso
+                       String.Equals(NormalizeAnnotationKind(_annotations(clamped).Kind), "Path", StringComparison.Ordinal) Then
+                        targetTool = EditorTool.Path
+                    End If
                     ' Und im MASKEN-Werkzeug ebenso, sobald das Objekt eine Ebenenmaske traegt: dort
                     ' markiert man es, um an seine Maske heranzukommen. Der Sprung ins Werkzeug des
                     ' Objekts nahm einem genau die Bedienung weg, die man gerade brauchte - samt
@@ -1990,7 +2016,15 @@ Namespace ViewModels
                     ' akzentuiert weiterhin das Werkzeugsymbol der Ebene, und ihre Eigenschaften
                     ' stehen unter den Auswahleinstellungen - ShowAnnotationProperties haengt am
                     ' markierten Objekt, nicht am Werkzeug.
-                    If _currentTool = EditorTool.Selection Then targetTool = _currentTool
+                    ' EIN PFAD IST DAVON AUSGENOMMEN. Auf ihm gibt es nichts auszuwaehlen - er hat
+                    ' keine Pixel -, und im Auswahl-Werkzeug kommt man an seine Stuetzpunkte nicht
+                    ' heran. Wer seine Zeile anklickt, sah deshalb einen Auswahlrahmen und sonst
+                    ' nichts (Nutzerbefund 2026-08-09). Ein TEXT auf freiem Pfad bleibt ein
+                    ' Textobjekt und faellt nicht darunter.
+                    If _currentTool = EditorTool.Selection AndAlso
+                       Not String.Equals(NormalizeAnnotationKind(_annotations(clamped).Kind), "Path", StringComparison.Ordinal) Then
+                        targetTool = _currentTool
+                    End If
                     ' Und im ZEICHNEN-Werkzeug ebenso, sobald die Ebene ein Bild traegt: dort
                     ' markiert man sie, um auf ihr zu malen (siehe AddBrushStroke). Ein Sprung ins
                     ' Einfuegen-Werkzeug nahm einem den Pinsel genau in dem Moment weg, in dem man
@@ -2203,6 +2237,13 @@ Namespace ViewModels
             For Each row In _layerRows
                 Dim inside = mehrere AndAlso ((row.Annotation IsNot Nothing AndAlso objects.Contains(row.Annotation)) OrElse
                                             (row.AdjustmentLayer IsNot Nothing AndAlso layers.Contains(row.AdjustmentLayer)))
+                ' EINE UNTERGRUPPE ZAEHLT MIT, wenn alles in ihr markiert ist: ihre Kopfzeile blieb
+                ' sonst als einzige Zeile dunkel, waehrend rundherum alles markiert war - es sah aus,
+                ' als gehoere sie nicht dazu (Nutzerbefund 2026-08-09).
+                If Not inside AndAlso mehrere AndAlso row.IsGroupHeader AndAlso row.Group IsNot Nothing Then
+                    Dim baum = AnnotationsInGroupTree(row.Group.Id)
+                    inside = baum.Count > 0 AndAlso baum.All(Function(a) objects.Contains(a))
+                End If
                 row.IsInMultiSelection = inside
             Next
         End Sub
@@ -2258,6 +2299,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationCount))
             Me.RaisePropertyChanged(NameOf(HasMultiAnnotationSelection))
             Me.RaisePropertyChanged(NameOf(CanGroupSelectedAnnotations))
+            ' Zwei markierte Pfade lassen sich verbinden - der Knopf haengt an genau dieser Menge.
+            Me.RaisePropertyChanged(NameOf(CanJoinPaths))
             Me.RaisePropertyChanged(NameOf(ShowSingleAnnotationEffects))
             Me.RaisePropertyChanged(NameOf(CanUngroupSelectedAnnotations))
             Me.RaisePropertyChanged(NameOf(IsSelectionGeometryLocked))
@@ -2342,6 +2385,19 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationYSliderValue))
         End Sub
 
+        ''' <summary>Die Gruppenkette einer Kennung, von AUSSEN nach INNEN. Ein Ring wird abgefangen -
+        ''' ueber die Oberflaeche gibt es ihn nicht, aber eine Datei kann alles enthalten.</summary>
+        Public Function AnnotationGroupChain(groupId As String) As List(Of AnnotationGroup)
+            Dim chain As New List(Of AnnotationGroup)()
+            Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
+            Dim current = FindAnnotationGroup(groupId)
+            While current IsNot Nothing AndAlso seen.Add(current.Id)
+                chain.Insert(0, current)
+                current = FindAnnotationGroup(current.ParentGroupId)
+            End While
+            Return chain
+        End Function
+
         Public Function FindAnnotationGroup(groupId As String) As AnnotationGroup
             If String.IsNullOrEmpty(groupId) Then Return Nothing
             Return _annotationGroups.FirstOrDefault(Function(g) g IsNot Nothing AndAlso String.Equals(g.Id, groupId, StringComparison.Ordinal))
@@ -2353,14 +2409,34 @@ Namespace ViewModels
             Return _annotations.Where(Function(a) a IsNot Nothing AndAlso String.Equals(a.GroupId, groupId, StringComparison.Ordinal)).ToList()
         End Function
 
+        ''' <summary>Alle Objekte einer Gruppe EINSCHLIESSLICH ihrer Untergruppen, in Stapelfolge.
+        ''' Beim Verschieben einer Gruppe ist das der Block, der wandern muss - nur die unmittelbaren
+        ''' Mitglieder zu nehmen risse eine Untergruppe auseinander.</summary>
+        Public Function AnnotationsInGroupTree(groupId As String) As List(Of ImageAnnotation)
+            If String.IsNullOrEmpty(groupId) Then Return New List(Of ImageAnnotation)()
+            Return _annotations.Where(Function(a) a IsNot Nothing AndAlso
+                                          AnnotationGroupChain(a.GroupId).Any(Function(g) String.Equals(g.Id, groupId, StringComparison.Ordinal))).ToList()
+        End Function
+
+        ''' <summary>Liegt <paramref name="groupId"/> in <paramref name="ancestorId"/> oder IST es sie?
+        ''' Die Frage verhindert beim Verschieben den Ring: eine Gruppe darf nicht in sich selbst.</summary>
+        Public Function IsGroupInside(groupId As String, ancestorId As String) As Boolean
+            If String.IsNullOrEmpty(groupId) OrElse String.IsNullOrEmpty(ancestorId) Then Return False
+            Return AnnotationGroupChain(groupId).Any(Function(g) String.Equals(g.Id, ancestorId, StringComparison.Ordinal))
+        End Function
+
         ''' <summary>Entfernt Gruppen ohne Mitglieder. Läuft nach jedem Eingriff, der Objekte entfernt
         ''' oder ihre Zugehörigkeit ändert - eine leere Gruppe hätte im Panel eine Zeile ohne Inhalt.</summary>
         Private Sub DropOrphanedAnnotationGroups()
             For i = _annotationGroups.Count - 1 To 0 Step -1
                 Dim grp = _annotationGroups(i)
+                ' Eine Gruppe mit UNTERgruppen ist nicht verwaist, auch wenn sie selbst kein Objekt
+                ' unmittelbar enthaelt - sonst raeumte das Aufraeumen jede aeussere Gruppe weg,
+                ' sobald man eine Verschachtelung anlegt.
                 Dim hatMitglieder = grp IsNot Nothing AndAlso
                     (_annotations.Any(Function(a) a IsNot Nothing AndAlso String.Equals(a.GroupId, grp.Id, StringComparison.Ordinal)) OrElse
-                     _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, grp.Id, StringComparison.Ordinal)))
+                     _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, grp.Id, StringComparison.Ordinal)) OrElse
+                     _annotationGroups.Any(Function(g) g IsNot Nothing AndAlso String.Equals(g.ParentGroupId, grp.Id, StringComparison.Ordinal)))
                 If Not hatMitglieder Then _annotationGroups.RemoveAt(i)
             Next
         End Sub
@@ -2374,7 +2450,10 @@ Namespace ViewModels
                 Return
             End If
             Dim hit = _annotations(index)
-            Dim members = AnnotationsInGroup(hit.GroupId)
+            ' Der GANZE Baum der Gruppe: mit Untergruppen gehoeren deren Mitglieder mit dazu, sonst
+            ' bliebe von einer markierten Gruppe die Haelfte unmarkiert und jede Anpassung ginge an
+            ' ihr vorbei (Nutzerbefund 2026-08-09).
+            Dim members = AnnotationsInGroupTree(hit.GroupId)
             Dim memberIndices = IndicesOfAnnotations(members)
             Dim groupId = hit.GroupId
             SelectedAnnotationIndex = index          ' setzt die Menge auf den Anker zurück
@@ -2384,7 +2463,7 @@ Namespace ViewModels
             If Not String.IsNullOrEmpty(groupId) Then
                 _extraSelectedAdjustmentLayers.Clear()
                 Dim layerMembers = _maskedAdjustmentLayers.Where(Function(l) l IsNot Nothing AndAlso
-                                                                  String.Equals(l.GroupId, groupId, StringComparison.Ordinal)).ToList()
+                                                                  IsGroupInside(l.GroupId, groupId)).ToList()
                 If layerMembers.Count > 0 Then
                     _selectedMaskedAdjustmentLayerId = layerMembers(layerMembers.Count - 1).Id
                     For Each l In layerMembers
@@ -2759,6 +2838,35 @@ Namespace ViewModels
         ''' bisherigen relativen Reihenfolge. Ohne diese Verdichtung wäre die Gruppe nur eine Markierung:
         ''' ein fremdes Objekt könnte zwischen zwei Mitgliedern liegen, und „Gruppe nach vorn" hätte keine
         ''' definierte Bedeutung.</summary>
+        ''' <summary>WAS DIE ENTF-TASTE BEDEUTET - die EINE Stelle dafuer.
+        '''
+        ''' Die Reihenfolge ist die ganze Regel:
+        ''' 1. Laufameisen auf dem Bild: Entf loescht den INHALT der Auswahl, sie bleibt stehen. Das
+        '''    steht VOR der markierten Ebene, und das ist der Punkt - wer eine Ebene markiert und
+        '''    darauf eine Auswahl aufzieht, meint mit Entf diese Auswahl und nicht die Ebene.
+        ''' 2. Sonst die markierte Ebene (auch ein auf dem BILD markiertes Objekt ohne Panelzeile).
+        ''' 3. Eine Maske ist zwar eine Auswahl, aber keine, deren Inhalt man loescht - sie wird
+        '''    aufgehoben.
+        ''' 4. Erst ganz zuletzt die BILDDATEI.
+        '''
+        ''' SIE STEHT IM VIEWMODEL UND NICHT IN DER ANSICHT, weil es zwei Tastaturwege gibt: den der
+        ''' Buehne und den der Ebenenliste. Der zweite hatte seine eigene, kuerzere Fassung - er
+        ''' loeschte immer die Ebene und meldete die Taste als behandelt. Wer im Panel gearbeitet
+        ''' hatte und danach Entf drueckte, bekam damit nie den Auswahlinhalt geloescht
+        ''' (Nutzerbefund 2026-08-09: "die Entf-Taste auf der Pfad-Auswahl geht nicht"). Zwei
+        ''' Fassungen derselben Regel laufen auseinander; jetzt ist es eine.</summary>
+        Public Sub ApplyDeleteShortcut()
+            If HasPixelSelectionScope Then
+                EraseSelection()
+            ElseIf HasSelectedPanelLayer OrElse HasSelectedAnnotation Then
+                DeleteSelectedAnnotationCommand.Execute(Nothing)
+            ElseIf HasActiveSelection Then
+                ClearSelection()
+            Else
+                DeleteCurrentCommand.Execute(Nothing)
+            End If
+        End Sub
+
         Public Sub GroupSelectedAnnotations()
             If SelectedAnnotationCount = 0 Then
                 ' Nur Korrekturebenen markiert.
@@ -2781,7 +2889,45 @@ Namespace ViewModels
 
             Dim grp As New AnnotationGroup With {.Name = NextAnnotationGroupName()}
             _annotationGroups.Add(grp)
+            ' EINE GANZ MARKIERTE GRUPPE WANDERT ALS GRUPPE HINEIN, statt auseinandergenommen zu
+            ' werden - so entsteht eine Verschachtelung. Nur teilweise markiert bleibt es beim alten
+            ' Verhalten: die markierten Objekte kommen einzeln in die neue Gruppe. Alles andere waere
+            ' eine Ueberraschung, denn dann bewegte sich auch, was gar nicht markiert war.
+            Dim wholeGroups As New HashSet(Of String)(StringComparer.Ordinal)
             For Each m In members
+                If m Is Nothing OrElse String.IsNullOrEmpty(m.GroupId) Then Continue For
+                ' VON AUSSEN NACH INNEN die ERSTE Gruppe suchen, die GANZ markiert ist. Vorher wurde
+                ' nur die aeusserste geprueft: war die nur teilweise markiert, fiel auch eine
+                ' vollstaendig markierte UNTERgruppe durch, und ihre Mitglieder wanderten einzeln in
+                ' die neue Gruppe - die Verschachtelung ging verloren (Nutzerbefund 2026-08-08).
+                Dim chain = AnnotationGroupChain(m.GroupId)
+                If chain.Any(Function(g) wholeGroups.Contains(g.Id)) Then Continue For
+                For Each candidate In chain
+                    Dim id = candidate.Id
+                    Dim allSelected = _annotations.Where(Function(a) a IsNot Nothing AndAlso
+                                                          AnnotationGroupChain(a.GroupId).Any(Function(g) g.Id = id)).
+                                                All(Function(a) members.Contains(a))
+                    If allSelected Then
+                        wholeGroups.Add(id)
+                        Exit For
+                    End If
+                Next
+            Next
+            For Each id In wholeGroups
+                Dim child = FindAnnotationGroup(id)
+                If child IsNot Nothing Then child.ParentGroupId = grp.Id
+            Next
+            For Each m In members
+                If m Is Nothing Then Continue For
+                ' Mitglieder einer ganz markierten Gruppe behalten ihre Gruppe - die haengt jetzt
+                ' selbst in der neuen.
+                '
+                ' GEFRAGT WIRD NACH DER GANZEN KETTE und nicht nach ihrem ersten Glied: die Schleife
+                ' darueber hat die Elternkennung schon gesetzt, aeusserstes Glied ist also bereits
+                ' die NEUE Gruppe. Auf sie zu pruefen traf nie zu, und jedes Mitglied wurde aus
+                ' seiner Gruppe gerissen.
+                Dim chain = AnnotationGroupChain(m.GroupId)
+                If chain.Any(Function(g) wholeGroups.Contains(g.Id)) Then Continue For
                 m.GroupId = grp.Id
             Next
             ' Mit markierte Korrekturebenen kommen mit hinein und hängen sich über das oberste
@@ -2826,11 +2972,19 @@ Namespace ViewModels
 
             PushUndo()
             For Each id In groupIds
+                ' Die aufgeloeste Gruppe kann selbst in einer liegen: ihre Mitglieder ruecken dann
+                ' eine Ebene nach AUSSEN statt ganz herauszufallen. Dasselbe gilt fuer ihre
+                ' Untergruppen.
+                Dim dissolved = FindAnnotationGroup(id)
+                Dim newParentId = If(dissolved Is Nothing, "", If(dissolved.ParentGroupId, ""))
                 For Each m In AnnotationsInGroup(id)
-                    m.GroupId = ""
+                    m.GroupId = newParentId
                 Next
                 For Each l In _maskedAdjustmentLayers
-                    If l IsNot Nothing AndAlso String.Equals(l.GroupId, id, StringComparison.Ordinal) Then l.GroupId = ""
+                    If l IsNot Nothing AndAlso String.Equals(l.GroupId, id, StringComparison.Ordinal) Then l.GroupId = newParentId
+                Next
+                For Each g In _annotationGroups
+                    If g IsNot Nothing AndAlso String.Equals(g.ParentGroupId, id, StringComparison.Ordinal) Then g.ParentGroupId = newParentId
                 Next
             Next
             DropOrphanedAnnotationGroups()
@@ -11352,6 +11506,8 @@ Namespace ViewModels
         Public ReadOnly Property ToggleSelectedPathClosedCommand As ICommand
         Public ReadOnly Property TogglePathNodeSmoothCommand As ICommand
         Public ReadOnly Property CreateTextOnPathCommand As ICommand
+        Public ReadOnly Property CreateSelectionFromPathCommand As ICommand
+        Public ReadOnly Property JoinPathsCommand As ICommand
         Public ReadOnly Property InvertCurrentMaskCommand As ICommand
         Public ReadOnly Property DiscardCurrentMaskCommand As ICommand
         Public ReadOnly Property SelectMaskComponentCommand As ICommand
@@ -11668,6 +11824,8 @@ Namespace ViewModels
             ToggleSelectedPathClosedCommand = ReactiveCommand.Create(Sub() ToggleSelectedPathClosed())
             TogglePathNodeSmoothCommand = ReactiveCommand.Create(Sub() ToggleLastPathNodeSmooth())
             CreateTextOnPathCommand = ReactiveCommand.Create(Sub() CreateTextOnSelectedPath())
+            CreateSelectionFromPathCommand = ReactiveCommand.Create(Sub() CreateSelectionFromSelectedPath())
+            JoinPathsCommand = ReactiveCommand.Create(Sub() JoinSelectedPaths())
             InvertCurrentMaskCommand = ReactiveCommand.Create(Sub() InvertCurrentMask())
             DiscardCurrentMaskCommand = ReactiveCommand.Create(Sub() DiscardCurrentMask())
             SelectMaskComponentCommand = ReactiveCommand.Create(Of Integer)(Sub(index) SelectMaskComponent(index))
@@ -13204,7 +13362,8 @@ Namespace ViewModels
             If selected.Count = 0 Then Return False
             If MasksOfSelectedCorrections().Count > 0 Then Return False
             Dim startIndex = OverlaySceneRenderer.ComputeCompositorStartIndex(
-                _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive)
+                _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive,
+                AddressOf IsAnnotationInRenderStepGroupLive)
             For Each annotation In selected
                 Dim index = _annotations.IndexOf(annotation)
                 If index < startIndex Then Return False
@@ -13217,8 +13376,21 @@ Namespace ViewModels
         Private Function IsAnnotationRenderVisibleLive(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing OrElse Not annotation.IsVisible Then Return False
             If String.IsNullOrEmpty(annotation.GroupId) Then Return True
-            Dim group = FindAnnotationGroup(annotation.GroupId)
-            Return group Is Nothing OrElse group.IsVisible
+            ' Die GANZE Kette: eine ausgeblendete Elterngruppe nimmt die Untergruppe mit.
+            For Each g In AnnotationGroupChain(annotation.GroupId)
+                If Not g.IsVisible Then Return False
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Liegt das Objekt in einer WIRKSAMEN Gruppe? Dieselbe Frage wie im Rezept-Klon
+        ''' (<c>ImageProcessor.RenderStepGroupFor</c>), nur auf der lebenden Gruppenliste des
+        ''' Editors - der Kompositor muss solche Mitglieder gebacken lassen.</summary>
+        Private Function IsAnnotationInRenderStepGroupLive(annotation As ImageAnnotation) As Boolean
+            If annotation Is Nothing OrElse String.IsNullOrEmpty(annotation.GroupId) Then Return False
+            ' Es genuegt EINE wirksame Gruppe in der Kette: sobald irgendwo darueber eine Ebene
+            ' entsteht, kann der Kompositor das Objekt nicht mehr einzeln darueber zeichnen.
+            Return AnnotationGroupChain(annotation.GroupId).Any(Function(g) g.IsRenderStep())
         End Function
 
         ''' <summary>Das Rechteck des VORHERIGEN Kompositor-Blits. Ein schneller, gebogener Zug
@@ -16922,6 +17094,10 @@ Namespace ViewModels
                 Case "Frame" : Return EditorTool.Effects
                 Case "Brush", "Eraser" : Return EditorTool.Draw
                 Case "SelectionFill", "SelectionImage" : Return EditorTool.Move
+                ' DER PFAD FUEHRT IN SEIN EIGENES WERKZEUG. Ohne diesen Zweig fiel er auf den
+                ' Rueckfall unten und landete im EINFUEGEN-Werkzeug: wer seine Zeile anklickte,
+                ' bekam die Symbolauswahl statt seiner Stuetzpunkte (Nutzerbefund 2026-08-09).
+                Case "Path" : Return EditorTool.Path
                 Case Else : Return EditorTool.Insert
             End Select
         End Function
@@ -17461,13 +17637,13 @@ Namespace ViewModels
             Dim a = RowIsAdjustmentKind(dragged)
             Dim b = RowIsAdjustmentKind(targetRow)
             If Not a.HasValue OrElse Not b.HasValue Then Return False
-            ' Gruppen verschachteln sich nicht: eine Gruppen-Kopfzeile darf nicht auf der
-            ' MITGLIEDSZEILE einer fremden Gruppe abgelegt werden - eingefuegt wuerde mitten in
-            ' deren zusammenhaengenden Block, und die Zielgruppe zerfiele. Auf der Kopfzeile
-            ' bleibt das Ablegen erlaubt (davor bzw. dahinter, nie hinein).
-            If dragged.IsGroupHeader AndAlso targetRow.IsGroupMember AndAlso
-               Not String.Equals(targetRow.MemberOfGroup?.Id, dragged.Group?.Id, StringComparison.Ordinal) Then
-                Return False
+            ' GRUPPEN LASSEN SICH VERSCHACHTELN (seit 2026-08-08): eine Gruppen-Kopfzeile darf auf
+            ' der Zeile einer anderen Gruppe abgelegt werden und haengt sich dann dort hinein. Nur
+            ' IN SICH SELBST geht nicht - das ergaebe einen Ring, und der Renderer liefe im Kreis.
+            If dragged.IsGroupHeader AndAlso dragged.Group IsNot Nothing Then
+                Dim zielGruppe = If(targetRow.IsGroupHeader, targetRow.Group?.Id,
+                                    If(targetRow.MemberOfGroup?.Id, ""))
+                If IsGroupInside(zielGruppe, dragged.Group.Id) Then Return False
             End If
             ' Eine KORREKTUREBENE darf in den Objektstapel gezogen werden - dort wirkt sie auf alles
             ' unter ihr. Umgekehrt bleibt ein Objekt ein Objekt: es in den Korrekturblock zu ziehen
@@ -17664,7 +17840,9 @@ Namespace ViewModels
 
             ' ── Objekt-Ebenen ────────────────────────────────────────────────
             If targetRow.IsGroupHeader Then
-                Dim members = AnnotationsInGroup(targetRow.Group.Id)
+                ' Der GANZE Baum der Zielgruppe: mit Untergruppen liegt ihr letztes Mitglied
+                ' tiefer, und davor einzufuegen risse die Verschachtelung auseinander.
+                Dim members = AnnotationsInGroupTree(targetRow.Group.Id)
                 If members.Count = 0 Then Return
                 targetIndex = _annotations.IndexOf(members(members.Count - 1)) + 1
                 targetGroup = If(below, targetRow.Group.Id, "")
@@ -17676,8 +17854,9 @@ Namespace ViewModels
 
             Dim objBlock As List(Of ImageAnnotation)
             If dragged.IsGroupHeader Then
-                objBlock = AnnotationsInGroup(dragged.Group.Id)
+                objBlock = AnnotationsInGroupTree(dragged.Group.Id)
                 If String.Equals(targetGroup, dragged.Group.Id, StringComparison.Ordinal) Then Return
+                If IsGroupInside(targetGroup, dragged.Group.Id) Then Return
             Else
                 If dragged.Annotation Is Nothing Then Return
                 objBlock = New List(Of ImageAnnotation) From {dragged.Annotation}
@@ -17698,6 +17877,13 @@ Namespace ViewModels
                 _annotations.Insert(targetIndex + k, objBlock(k))
                 If Not dragged.IsGroupHeader Then objBlock(k).GroupId = targetGroup
             Next
+            ' EINE GEZOGENE GRUPPE haengt sich um: ihre Mitglieder behalten ihre eigene Gruppe, aber
+            ' die Gruppe selbst bekommt die Zielgruppe als Eltern - so wird aus dem Ziehen ein
+            ' Verschachteln. Ohne Ziel (ausserhalb jeder Gruppe abgelegt) rueckt sie nach aussen.
+            If dragged.IsGroupHeader AndAlso dragged.Group IsNot Nothing Then
+                Dim gezogen = FindAnnotationGroup(dragged.Group.Id)
+                If gezogen IsNot Nothing Then gezogen.ParentGroupId = If(targetGroup, "")
+            End If
             DropOrphanedAnnotationGroups()
             ' Nach dem Umsortieren die Auswahl aufheben (gleiche Begründung wie beim einfachen
             ' Umsortieren: die Kompositor-Grenze kann sich verschoben haben).
@@ -17729,13 +17915,20 @@ Namespace ViewModels
                 row.Refresh()
                 _hasChanges = True
                 RaiseResetButtonStateChanged()
-                If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso String.Equals(l.GroupId, row.Group.Id, StringComparison.Ordinal)) Then
+                ' BEIDE Abfragen gehen ueber den GANZEN Baum der Gruppe, nicht nur ueber ihre
+                ' unmittelbaren Mitglieder. Eine Korrekturebene in einer Untergruppe verlangt
+                ' denselben Vollrender, und der schnelle Regionsweg muss auch den Bereich der
+                ' Untergruppen auffrischen - sonst blieben deren Bildpunkte nach dem Ausblenden bis
+                ' zum naechsten Vollrender stehen (Befund 2026-08-09).
+                If _maskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso
+                                                   (String.Equals(l.GroupId, row.Group.Id, StringComparison.Ordinal) OrElse
+                                                    IsGroupInside(l.GroupId, row.Group.Id))) Then
                     ' Korrekturebenen wirken auf die BASIS - dort hilft kein Objekt-Region-Patch.
                     SchedulePreviewUpdate()
                     Return
                 End If
                 Dim dirty = SKRectI.Empty
-                For Each m In AnnotationsInGroup(row.Group.Id)
+                For Each m In AnnotationsInGroupTree(row.Group.Id)
                     dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(m))
                 Next
                 RefreshOverlayAfterAnnotationChange(dirty)
@@ -18330,7 +18523,14 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_selectedAnnotationIndex)
             If annotation Is Nothing Then Return False
-            If tool = EditorTool.Selection Then Return True
+            ' EIN PFAD IST DAVON AUSGENOMMEN, aus demselben Grund wie beim Anklicken seiner Zeile:
+            ' im Auswahl-Werkzeug gibt es auf ihm nichts auszuwaehlen und an seine Stuetzpunkte
+            ' kommt man nicht heran. Bliebe er markiert, verschwaende die Kurve (ohne Kontur
+            ' zeichnet er nichts) und stattdessen stuende ein Auswahlrahmen da - sichtbar waere
+            ' also nur noch die Box (Nutzerbefund 2026-08-09).
+            If tool = EditorTool.Selection Then
+                Return Not String.Equals(NormalizeAnnotationKind(annotation.Kind), "Path", StringComparison.Ordinal)
+            End If
             If tool = EditorTool.Mask AndAlso Not String.IsNullOrEmpty(annotation.MaskId) Then Return True
             If tool = EditorTool.Mask AndAlso IsPaintableImageAnnotation(annotation) Then Return True
             ' Und ins RETUSCHE-Werkzeug, sobald die Ebene ein Bild traegt: Stempel, Verwischen und
@@ -18465,7 +18665,7 @@ Namespace ViewModels
                 If _editingLayerMaskId <> "" Then WriteSelectionMaskBackToLayer()
                 Dim localValues = BuildAdjustmentsFromFields().ExtractPixelAdjustments()
                 ' Auf JEDE ausgewaehlte Ebene schreiben, nicht nur auf die fuehrende - sonst bekaeme
-                ' bei einer Gruppe nur eine Maske die Anpassung. Die Ziele werden HIER aufgeloest und
+                ' bei einer Gruppe nur eine Maske die Anpassung. Die Ziele werden HIER aufgelöst und
                 ' nicht beim Scharfstellen gemerkt: RefreshSelectionAdjustMode steigt frueh aus, wenn
                 ' der Modus schon auf derselben fuehrenden Ebene laeuft - ein Merken dort liefe bei
                 ' genau dem Fall nie. Beim Abschluss steht die Auswahl noch (der Wechsel auf eine
@@ -18692,20 +18892,42 @@ Namespace ViewModels
 
         Private Sub ApplyAdjustmentsKeepingSelection(adj As ImageAdjustments, keepIndex As Integer,
                                                      Optional scheduleRender As Boolean = True)
+            ' DIE GANZE AUSWAHL GEHOERT DAZU, nicht nur der Anker. ApplyAdjustments raeumt die
+            ' Mehrfachauswahl mit ab; wurde nur der Anker zurueckgesetzt, blieb von einer markierten
+            ' GRUPPE nach dem Werkzeugwechsel genau ein Objekt markiert (Nutzerbefund 2026-08-08).
+            ' Gemerkt wird ueber INDIZES: der Neuaufbau ersetzt die Objekte durch Klone, ein
+            ' gemerkter Verweis zeigt danach auf eine Instanz, die nicht mehr in der Liste steht.
+            Dim extraIndices = IndicesOfAnnotations(SelectedExtraAnnotations())
+            ' Und die markierte GRUPPENZEILE: sie zeigt auf kein Objekt, wird von der Suche unten
+            ' also nie gefunden - ohne sie fiel die Auswahl im Panel auf ein Mitglied zurueck.
+            Dim groupRowId = If(_selectedLayerRow IsNot Nothing AndAlso _selectedLayerRow.IsGroupHeader AndAlso
+                                _selectedLayerRow.Group IsNot Nothing, _selectedLayerRow.Group.Id, "")
             ApplyAdjustments(adj, scheduleRender:=scheduleRender)
             If keepIndex < 0 OrElse keepIndex >= _annotations.Count Then Return
             _selectedAnnotationIndex = keepIndex
+            ' NACH dem Anker, wie ueberall: das Setzen des Ankers leert die Zusatzliste.
+            AddExtraSelectedAnnotationsByIndex(extraIndices)
             ' Die MARKIERTE ZEILE gehoert dazu. ApplyAdjustments baut Objektliste und Ebenenzeilen
             ' neu auf und raeumt dabei beides ab; nur den Index zurueckzusetzen liess das Objekt auf
             ' dem Bild markiert erscheinen, waehrend im Ebenenpanel nichts stand. Die Zeile wird ueber
             ' das Objekt an dieser Stelle gesucht, nicht ueber die alte Instanz - die gibt es nach
             ' dem Neuaufbau nicht mehr.
-            _selectedLayerRow = _layerRows.FirstOrDefault(
-                Function(r) Object.ReferenceEquals(r.Annotation, _annotations(keepIndex)))
+            If groupRowId <> "" Then
+                _selectedLayerRow = _layerRows.FirstOrDefault(
+                    Function(r) r.IsGroupHeader AndAlso r.Group IsNot Nothing AndAlso
+                                String.Equals(r.Group.Id, groupRowId, StringComparison.Ordinal))
+            Else
+                _selectedLayerRow = Nothing
+            End If
+            If _selectedLayerRow Is Nothing Then
+                _selectedLayerRow = _layerRows.FirstOrDefault(
+                    Function(r) Object.ReferenceEquals(r.Annotation, _annotations(keepIndex)))
+            End If
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationIndex))
             Me.RaisePropertyChanged(NameOf(SelectedLayer))
             Me.RaisePropertyChanged(NameOf(HasSelectedAnnotation))
             Me.RaisePropertyChanged(NameOf(CanRasterizeSelectedAnnotation))
+            RaiseMultiSelectionChanged()
             RaiseLayerPanelSelectionChanged()
         End Sub
 
@@ -18862,7 +19084,8 @@ Namespace ViewModels
             ' in der Szene stehen und das Objekt stuende doppelt da. Die Grenze wird deshalb vor
             ' und nach der Aenderung bestimmt und verglichen.
             Dim compositorStartBefore = OverlaySceneRenderer.ComputeCompositorStartIndex(
-                _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive)
+                _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive,
+                AddressOf IsAnnotationInRenderStepGroupLive)
             a.BlendMode = _annotationBlendMode
             a.BlendIncludesStroke = _annotationBlendIncludesStroke
             ' GESPERRT: Lage, Größe, Drehung und Spiegelung bleiben, wie sie sind. Alles andere
@@ -18965,7 +19188,8 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
             Dim needsFullRender = SelectedAnnotationsNeedFullRender() OrElse
                                   OverlaySceneRenderer.ComputeCompositorStartIndex(
-                                      _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive) <> compositorStartBefore
+                                      _annotations, _maskedAdjustmentLayers, AddressOf IsAnnotationRenderVisibleLive,
+                AddressOf IsAnnotationInRenderStepGroupLive) <> compositorStartBefore
             If needsFullRender Then
                 ' Ganze Szene neu: siehe SelectedAnnotationsNeedFullRender. Der Zeitgeber buendelt
                 ' die Anforderungen eines laufenden Zuges zu EINEM Render.

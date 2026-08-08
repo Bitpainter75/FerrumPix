@@ -612,13 +612,49 @@ Namespace Services
             Return Nothing
         End Function
 
+        ''' <summary>Die Gruppe zu einer Kennung.</summary>
+        Public Function FindGroupById(groupId As String) As AnnotationGroup
+            If String.IsNullOrEmpty(groupId) OrElse AnnotationGroups Is Nothing Then Return Nothing
+            For Each g In AnnotationGroups
+                If g IsNot Nothing AndAlso String.Equals(g.Id, groupId, StringComparison.Ordinal) Then Return g
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Die Gruppenkette von AUSSEN nach INNEN: die äußerste Gruppe zuerst, die
+        ''' unmittelbare zuletzt. Leer, wenn die Kennung zu keiner Gruppe gehört.
+        '''
+        ''' DER RING WIRD ABGEFANGEN. Eine Gruppe, die sich mittelbar selbst enthält, gibt es über die
+        ''' Oberfläche nicht - aber eine Datei kann alles enthalten, und eine Endlosschleife im
+        ''' Renderer wäre ein hängendes Programm statt eines falschen Bildes.</summary>
+        Public Function GroupChainOf(groupId As String) As System.Collections.Generic.List(Of AnnotationGroup)
+            Dim chain As New System.Collections.Generic.List(Of AnnotationGroup)()
+            Dim seen As New System.Collections.Generic.HashSet(Of String)(StringComparer.Ordinal)
+            Dim current = FindGroupById(groupId)
+            While current IsNot Nothing AndAlso seen.Add(current.Id)
+                chain.Insert(0, current)
+                current = FindGroupById(current.ParentGroupId)
+            End While
+            Return chain
+        End Function
+
         ''' <summary>DER Chokepoint für „wird dieses Objekt gezeichnet?": eigenes IsVisible UND die
-        ''' Sichtbarkeit seiner Gruppe. Jede Renderstelle, die bisher `annotation.IsVisible` gelesen hat,
-        ''' muss hierüber gehen - sonst blendet der Gruppenschalter im Panel nichts aus.</summary>
+        ''' Sichtbarkeit seiner Gruppe - und der ihrer Elterngruppen. Jede Renderstelle, die bisher
+        ''' `annotation.IsVisible` gelesen hat, muss hierüber gehen - sonst blendet der Gruppenschalter
+        ''' im Panel nichts aus.</summary>
         Public Function IsAnnotationRenderVisible(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing OrElse Not annotation.IsVisible Then Return False
-            Dim group = FindAnnotationGroup(annotation)
-            Return group Is Nothing OrElse group.IsVisible
+            Return IsGroupChainVisible(annotation.GroupId)
+        End Function
+
+        ''' <summary>Sind ALLE Gruppen der Kette sichtbar? Eine ausgeblendete Elterngruppe nimmt die
+        ''' Untergruppe mit, auch wenn deren eigenes Auge offen ist.</summary>
+        Public Function IsGroupChainVisible(groupId As String) As Boolean
+            If String.IsNullOrEmpty(groupId) Then Return True
+            For Each g In GroupChainOf(groupId)
+                If Not g.IsVisible Then Return False
+            Next
+            Return True
         End Function
 
         ''' <summary>Wie IsAnnotationRenderVisible, aber für lokale Korrekturebenen: eigene Sichtbarkeit
@@ -628,21 +664,16 @@ Namespace Services
         Public Function IsAnnotationGeometryLocked(annotation As ImageAnnotation) As Boolean
             If annotation Is Nothing Then Return False
             If annotation.IsLocked Then Return True
-            If String.IsNullOrEmpty(annotation.GroupId) OrElse AnnotationGroups Is Nothing Then Return False
-            For Each g In AnnotationGroups
-                If g IsNot Nothing AndAlso String.Equals(g.Id, annotation.GroupId, StringComparison.Ordinal) Then Return g.IsLocked
+            ' EINE gesperrte Gruppe der Kette genügt: wer die äußere sperrt, meint alles darin.
+            For Each g In GroupChainOf(annotation.GroupId)
+                If g.IsLocked Then Return True
             Next
             Return False
         End Function
 
         Public Function IsMaskedLayerRenderVisible(layer As MaskedAdjustmentLayer) As Boolean
             If layer Is Nothing OrElse Not layer.IsVisible Then Return False
-            If String.IsNullOrEmpty(layer.GroupId) Then Return True
-            If AnnotationGroups Is Nothing Then Return True
-            For Each g In AnnotationGroups
-                If g IsNot Nothing AndAlso String.Equals(g.Id, layer.GroupId, StringComparison.Ordinal) Then Return g.IsVisible
-            Next
-            Return True
+            Return IsGroupChainVisible(layer.GroupId)
         End Function
 
         ''' <summary>True, sobald irgendeine Pixel-Anpassung von der Voreinstellung abweicht. Nur dann muss

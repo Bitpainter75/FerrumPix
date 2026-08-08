@@ -7341,6 +7341,10 @@ Namespace ViewModels
                 Dim pairs = Await ResolveBatchTargetsAsync(candidates, targetFolder, outputExtension, nameSuffix, nameBuilder)
                 If pairs.Count = 0 Then Return 0
 
+                ' ES DAUERT, UND ZWAR SICHTBAR. Ein Stapel mit Modell-Hochskalierung rechnet je Bild
+                ' Minuten; ohne Anzeige sitzt die Oberflaeche still da und ist von einem Haenger
+                ' nicht zu unterscheiden (Nutzerbefund 2026-08-08).
+                _mainVm.BeginBusyOverlay(LocalizationService.T("Bilder werden geschrieben…"))
                 Await Task.Run(Sub()
                     For Each pair In pairs
                         Dim sourcePath = pair.Key
@@ -7359,6 +7363,8 @@ Namespace ViewModels
                 End Sub)
             Catch ex As Exception
                 errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
             End Try
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Konvertierung fehlgeschlagen"), errorMessage)

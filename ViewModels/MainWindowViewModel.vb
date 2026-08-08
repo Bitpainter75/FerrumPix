@@ -112,11 +112,38 @@ Namespace ViewModels
         End Property
 
         ''' Ohne Dateinamen: welches Bild man angeklickt hat, weiss man gerade selbst am besten.
+        ''' Ein STAPELLAUF setzt hier seinen eigenen Text (siehe BeginBusyOverlay).
         Public ReadOnly Property DocumentOpenText As String
             Get
+                If Not String.IsNullOrEmpty(_busyOverlayText) Then Return _busyOverlayText
                 Return LocalizationService.T("Bild wird geöffnet…")
             End Get
         End Property
+
+        ''' Text eines laufenden Stapels - leer heisst "es wird ein Bild geoeffnet".
+        Private _busyOverlayText As String = ""
+
+        ''' <summary>Dieselbe Anzeige fuer einen LANGEN VORGANG, der kein Bildoeffnen ist: Stapel
+        ''' schreiben, Hochskalieren, Konvertieren. Ohne sie sass die Oberflaeche waehrend eines
+        ''' Stapels still da - bei einem Modelllauf ueber mehrere Bilder minutenlang, und nichts
+        ''' unterschied das von einem Haenger (Nutzerbefund 2026-08-08 zum Hochskalieren).
+        '''
+        ''' <paramref name="text"/> kommt FERTIG UEBERSETZT herein: T() liest seinen Schluessel aus
+        ''' dem Literal, ein T(variable) fiele aus der Lokalisierung heraus.</summary>
+        Public Sub BeginBusyOverlay(text As String)
+            _busyOverlayText = If(text, "")
+            Me.RaisePropertyChanged(NameOf(DocumentOpenText))
+            _documentOpenInFlight = True
+            BeginDocumentOpenIndicator()
+        End Sub
+
+        Public Sub EndBusyOverlay()
+            _documentOpenInFlight = False
+            EndDocumentOpenIndicator()
+            If _busyOverlayText = "" Then Return
+            _busyOverlayText = ""
+            Me.RaisePropertyChanged(NameOf(DocumentOpenText))
+        End Sub
 
         ''' <summary>Eigenes Try, weil es ein <c>Async Sub</c> ist: eine Ausnahme darin landet sonst
         ''' beim Dispatcher und beendet den Prozess (siehe FALLEN_UND_ENTSCHEIDUNGEN.md).</summary>

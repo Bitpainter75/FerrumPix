@@ -59,6 +59,21 @@ Namespace Services
                 Using m = BuildPersistentMaskForOutput(md, adj, pipelineInputWidth, pipelineInputHeight,
                                                        zielBreite, zielHoehe, g.Opacity, If(modFill, g, Nothing))
                     If m Is Nothing Then Continue For
+                    ' DIE SCHNITTMASKE DES GESCHWISTERS GILT AUCH HIER. Sie steckt NICHT in der
+                    ' Maske, sondern wird beim Anwenden aufmultipliziert - die Hauptschleife tut das
+                    ' fuer die erste Ebene, und ohne dieselben Zeilen hier ging die Beschraenkung
+                    ' jedes weiteren Geschwisters beim Vereinigen verloren: seine Korrektur wirkte
+                    ' dann ausserhalb der Ebene, auf die sie beschraenkt war (Nutzerbefund
+                    ' 2026-08-08). Dieselbe Quelle wie dort, damit die zwei Wege nicht auseinander
+                    ' laufen.
+                    If g.ClipToLayerBelow AndAlso stacked.Length > 0 Then
+                        Dim clipBase = FindAnnotationById(adj, stacked)
+                        If clipBase IsNot Nothing AndAlso adj.IsAnnotationRenderVisible(clipBase) Then
+                            Dim clip = BuildClipBaseCoverage(adj, clipBase, pipelineInputWidth, pipelineInputHeight,
+                                                             0, 0, zielBreite, zielHoehe)
+                            If clip IsNot Nothing Then MultiplyMaskByCoverage(m, clip)
+                        End If
+                    End If
                     If m.Width <> ersteMaske.Width OrElse m.Height <> ersteMaske.Height Then Continue For
                     If result Is Nothing Then result = CloneBitmap(ersteMaske)
                     MaskMaximum(result, m)

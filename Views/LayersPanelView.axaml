@@ -27,14 +27,17 @@
                                                  Value="{Binding SelectedLayerOpacity, Mode=TwoWay}"
                                                  Minimum="0" Maximum="100" Increment="1" FormatString="F0" />
                     </Grid>
+                    <!-- Deckkraft und Mischen gelten der markierten ZEILE. Ist es eine
+                         Gruppenzeile, meinen sie die GANZE Gruppe: sie kommt dann auf eine eigene
+                         Ebene und wird als Ganzes eingeblendet oder gemischt. -->
                     <Grid ColumnDefinitions="70,*" VerticalAlignment="Center"
-                          IsEnabled="{Binding HasSelectedAnnotation}">
+                          IsEnabled="{Binding CanEditSelectedLayerBlendMode}">
                         <TextBlock Grid.Column="0" Text="Mischen"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <ComboBox Grid.Column="1" Margin="6,0,0,0"
                                   ItemsSource="{Binding AnnotationBlendModeOptions}"
-                                  SelectedItem="{Binding SelectedAnnotationBlendModeOption, Mode=TwoWay}"
+                                  SelectedItem="{Binding SelectedLayerBlendModeOption, Mode=TwoWay}"
                                   FontSize="{DynamicResource FP.Font.Small}"
                                   HorizontalAlignment="Stretch" />
                     </Grid>
@@ -103,7 +106,7 @@
                                         BorderBrush="{DynamicResource FP.Border.Normal}"
                                         Background="{DynamicResource FP.Bg.Root}"
                                         PointerPressed="OnLayerThumbnailGesturePressed"
-                                        ToolTip.Tip="Mit Strg die Form dieser Ebene als Auswahl laden"
+                                        ToolTip.Tip="Mit STRG die Form dieser Ebene als Auswahl laden"
                                         ClipToBounds="True">
                                     <Panel>
                                         <!-- Die Miniatur FUELLT den Kasten (Uniform, ohne
@@ -153,7 +156,7 @@
                                             IsVisible="{Binding HasMask}"
                                             Click="OnLayerMaskIconClick"
                                             PointerPressed="OnLayerMaskGesturePressed"
-                                            ToolTip.Tip="Ebenenmaske bearbeiten. Mit Alt nur die Maske zeigen, mit Umschalt stilllegen, mit Strg als Auswahl laden">
+                                            ToolTip.Tip="Ebenenmaske bearbeiten. Mit ALT nur die Maske zeigen, mit SHIFT stilllegen, mit STRG als Auswahl laden">
                                         <Panel>
                                             <!-- Die Maskenminiatur IST der Knopf: hell, wo die Maske
                                                  deckt. Ohne sie war nicht zu sehen, welche Maske wo
@@ -346,7 +349,7 @@
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DuplicateSelectedAnnotationCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
-                            ToolTip.Tip="Ebene duplizieren (Strg+D)">
+                            ToolTip.Tip="Ebene duplizieren (STRG+D)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
                                        Width="16" Height="16" />
                     </Button>
@@ -383,7 +386,7 @@
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding GroupSelectedAnnotationsCommand}"
                             IsVisible="{Binding CanGroupSelectedAnnotations}"
-                            ToolTip.Tip="Markierte Ebenen gruppieren (Strg+G)">
+                            ToolTip.Tip="Markierte Ebenen gruppieren (STRG+G)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
                                        Width="16" Height="16" />
                     </Button>
@@ -392,7 +395,7 @@
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding UngroupSelectedAnnotationsCommand}"
                             IsVisible="{Binding CanUngroupSelectedAnnotations}"
-                            ToolTip.Tip="Gruppierung aufheben (Strg+Umschalt+G)">
+                            ToolTip.Tip="Gruppierung aufheben (STRG+SHIFT+G)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-x.svg"
                                        Width="16" Height="16" />
                     </Button>
@@ -423,14 +426,14 @@
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DeleteSelectedAnnotationCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
-                            ToolTip.Tip="Ebene löschen (Entf)">
+                            ToolTip.Tip="Ebene löschen (ENTF)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="16" Height="16" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DeleteSelectedAnnotationsCommand}"
                             IsVisible="{Binding IsMultiLayerSelection}"
-                            ToolTip.Tip="Markierte Ebenen löschen (Entf)">
+                            ToolTip.Tip="Markierte Ebenen löschen (ENTF)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
                                        Width="16" Height="16" />
                     </Button>

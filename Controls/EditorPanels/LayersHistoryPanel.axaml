@@ -8,7 +8,7 @@
             <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                     Command="{Binding DuplicateSelectedAnnotationCommand}"
                     IsEnabled="{Binding HasSelectedAnnotation}"
-                    ToolTip.Tip="Objekt duplizieren (Strg+D)">
+                    ToolTip.Tip="Objekt duplizieren (STRG+D)">
                 <TextBlock Text="⧉" FontSize="{DynamicResource FP.Glyph.Medium}" />
             </Button>
             <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
@@ -26,7 +26,7 @@
             <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                     Command="{Binding DeleteSelectedAnnotationCommand}"
                     IsEnabled="{Binding HasSelectedAnnotation}"
-                    ToolTip.Tip="Objekt löschen (Entf)">
+                    ToolTip.Tip="Objekt löschen (ENTF)">
                 <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Muted}" />
             </Button>
         </StackPanel>

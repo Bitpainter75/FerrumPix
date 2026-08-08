@@ -19,18 +19,28 @@ Namespace ViewModels
         Public ReadOnly Property MemberOfGroup As AnnotationGroup
         Private _isRenaming As Boolean
 
-        Public Sub New(annotation As ImageAnnotation, Optional memberOfGroup As AnnotationGroup = Nothing)
+        ''' <summary>Wie tief die Zeile im Gruppenbaum liegt: 0 ganz aussen. Der Einzug rechnet damit,
+        ''' statt „Mitglied ja/nein" zu fragen - Gruppen lassen sich verschachteln, und ohne die Tiefe
+        ''' stuenden alle Ebenen der Verschachtelung gleich weit links.</summary>
+        Public Property Depth As Integer
+
+        Public Sub New(annotation As ImageAnnotation, Optional memberOfGroup As AnnotationGroup = Nothing,
+                       Optional depth As Integer = 0)
             Me.Annotation = annotation
             Me.MemberOfGroup = memberOfGroup
+            Me.Depth = depth
         End Sub
 
-        Public Sub New(layer As MaskedAdjustmentLayer, Optional memberOfGroup As AnnotationGroup = Nothing)
+        Public Sub New(layer As MaskedAdjustmentLayer, Optional memberOfGroup As AnnotationGroup = Nothing,
+                       Optional depth As Integer = 0)
             AdjustmentLayer = layer
             Me.MemberOfGroup = memberOfGroup
+            Me.Depth = depth
         End Sub
 
-        Public Sub New(group As AnnotationGroup)
+        Public Sub New(group As AnnotationGroup, Optional depth As Integer = 0)
             Me.Group = group
+            Me.Depth = depth
         End Sub
 
         Public ReadOnly Property IsAdjustmentLayer As Boolean
@@ -56,7 +66,7 @@ Namespace ViewModels
         ''' ersten Grid-Spalte; so bleibt ihr Bezug zur unmittelbar darunterliegenden Basis lesbar.</summary>
         Public ReadOnly Property IndentMargin As Avalonia.Thickness
             Get
-                Return New Avalonia.Thickness(If(IsGroupMember, 16, 0), 0, 0, 0)
+                Return New Avalonia.Thickness(Math.Max(0, Depth) * 16, 0, 0, 0)
             End Get
         End Property
 

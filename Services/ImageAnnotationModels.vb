@@ -1319,9 +1319,47 @@ Namespace Services
         ''' Öffnen verloren ginge; ohne Wirkung auf das Bild.</summary>
         Public Property IsCollapsed As Boolean = False
 
+        ''' <summary>Deckkraft der GANZEN Gruppe in Prozent, und die Mischmethode, mit der sie als
+        ''' Ganzes ins Bild kommt.
+        '''
+        ''' SOLANGE HIER 100 UND „Normal" STEHT, IST DIE GRUPPE EIN DURCHGRIFF: die Mitglieder werden
+        ''' einzeln gezeichnet, genau wie vorher, und eine Korrektur in der Gruppe wirkt weiter auf
+        ''' alles unter ihr. Erst ein anderer Wert macht sie zu einem eigenen Renderschritt - dann
+        ''' kommen die Mitglieder auf eine eigene Ebene, diese Ebene bekommt Deckkraft und
+        ''' Mischmethode, und eine Korrektur darin bleibt in der Gruppe.
+        '''
+        ''' Diese Regel ist von Photoshop übernommen und hat einen handfesten Grund: sie lässt jedes
+        ''' bestehende Dokument Punkt für Punkt so aussehen wie vorher. Eine Gruppe, die immer
+        ''' geklammert hätte, würde alte Bilder still verändern.</summary>
+        Public Property Opacity As Double = 100
+        Public Property BlendMode As String = "Normal"
+
+        ''' <summary>Die Gruppe, in der diese Gruppe LIEGT (leer = oberste Ebene). Damit lassen sich
+        ''' Gruppen verschachteln; die Kette wird über <see cref="ImageAdjustments.GroupChainOf"/>
+        ''' gelesen, und die fängt auch einen Ring ab.</summary>
+        Public Property ParentGroupId As String = ""
+
+        ''' <summary>Die Maske der GANZEN Gruppe - dieselbe <c>ImageMask</c> wie an einem Objekt, nur
+        ''' auf die Gruppenebene angewandt. Sie deckt damit alles ab, was die Gruppe zeichnet, statt
+        ''' jedes Mitglied einzeln. Leer = keine.</summary>
+        Public Property MaskId As String = ""
+
+        ''' <summary>Wirkt die Gruppe als eigener Renderschritt? Die EINE Stelle, an der das
+        ''' entschieden wird - Renderer, Kompositor-Grenze und Panel fragen sie alle.
+        '''
+        ''' Eine MASKE zwingt sie ebenfalls dazu: eine Deckung braucht eine Ebene, auf der sie wirken
+        ''' kann. Ohne diese Zeile wäre eine Gruppenmaske bei voller Deckkraft wirkungslos.</summary>
+        Public Function IsRenderStep() As Boolean
+            If Opacity < 99.95 Then Return True
+            If Not String.IsNullOrEmpty(MaskId) Then Return True
+            Return Not String.Equals(If(BlendMode, "Normal").Trim(), "Normal", StringComparison.OrdinalIgnoreCase)
+        End Function
+
         Public Function Clone() As AnnotationGroup
             Return New AnnotationGroup With {
-                .Id = Id, .Name = Name, .IsVisible = IsVisible, .IsLocked = IsLocked, .IsCollapsed = IsCollapsed
+                .Id = Id, .Name = Name, .IsVisible = IsVisible, .IsLocked = IsLocked, .IsCollapsed = IsCollapsed,
+                .Opacity = Opacity, .BlendMode = BlendMode, .MaskId = MaskId,
+                .ParentGroupId = ParentGroupId
             }
         End Function
     End Class
