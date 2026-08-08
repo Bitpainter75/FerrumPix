@@ -4021,21 +4021,12 @@ Namespace Views
         End Sub
 
         ''' <summary>Werkzeuge, in denen das Auswahl-Overlay (nur als Anzeige, nicht interaktiv) sichtbar
-        ''' bleiben soll: das Auswahl-Werkzeug selbst UND die pixel-anpassenden Werkzeuge, deren Regler jetzt
-        ''' nur innerhalb der Auswahl wirken - so sieht der Nutzer, warum sich nur ein Teil ändert. In
-        ''' Geometrie-/Ebenen-Werkzeugen dagegen ausgeblendet (dort wird die Auswahl ohnehin verworfen).</summary>
+        ''' bleiben soll. Die Liste steht im ViewModel und NICHT hier: sie entscheidet dort auch, ob
+        ''' „Alles auswählen" das Werkzeug wechseln muss. Zweimal geführt liefe sie auseinander, und
+        ''' der Fehler säße im Übergang - Ameisenlinie sichtbar, aber Strg+A ohne Wirkung oder
+        ''' umgekehrt.</summary>
         Private Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
-            Select Case tool
-                Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color, EditorTool.Filters,
-                     EditorTool.Details, EditorTool.Effects, EditorTool.Draw
-                    ' ZEICHNEN gehoert dazu, seit ein Strich innerhalb einer Auswahl bleibt: die
-                    ' Laufameisen muessen dabei stehen bleiben, sonst begrenzt etwas Unsichtbares
-                    ' den Pinsel. Damit gelten dort auch Strg+A und Esc wie in den uebrigen
-                    ' Werkzeugen, in denen eine Auswahl etwas bewirkt.
-                    Return True
-                Case Else
-                    Return False
-            End Select
+            Return EditorViewModel.IsSelectionScopeTool(tool)
         End Function
 
         Private Sub UpdateSelectionOverlayVisibility()

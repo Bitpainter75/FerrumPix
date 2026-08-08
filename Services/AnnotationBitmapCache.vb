@@ -278,6 +278,14 @@ Namespace Services
             ' herum und wuerfen die Bitmap bei jedem Pinselstrich auf der Maske weg.
             clone.MaskId = ""
             clone.ClipToLayerBelow = False
+            ' Herkunft und Malregel sind kein Aussehen: ob die Ebene als Malebene entstanden ist und
+            ' ob ihre transparenten Punkte gesperrt sind, entscheidet, was der NÄCHSTE Zug tut - an
+            ' den Bildpunkten ändert es nichts. Im Schlüssel würden sie die fertige Bitmap wegwerfen,
+            ' sobald jemand den Schalter umlegt.
+            clone.IsPaintLayer = False
+            clone.LockTransparentPixels = False
+            ' AdjustmentsHidden bleibt BEWUSST drin: ausgeschaltete Anpassungen sehen anders aus, und
+            ' genau daran erkennt der Zwischenspeicher, dass er neu rendern muss.
         End Sub
     End Class
 End Namespace

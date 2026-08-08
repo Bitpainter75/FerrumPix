@@ -8223,9 +8223,13 @@ Namespace ViewModels
             SelectAll()
         End Sub
 
-        ''' <summary>Werkzeuge, in denen eine Auswahl etwas bewirkt und ihre Ameisenlinie zu sehen ist.
-        ''' Dieselbe Liste, an der auch die Ansicht ihr Overlay entscheidet - sie steht hier, damit
-        ''' das ViewModel sie nicht raten muss.</summary>
+        ''' <summary>Werkzeuge, in denen eine Auswahl etwas bewirkt und ihre Ameisenlinie zu sehen
+        ''' ist. DIE EINE Liste dafür: die Ansicht entscheidet an ihr, ob sie das Auswahl-Overlay
+        ''' zeigt, das ViewModel, ob „Alles auswählen" vorher das Werkzeug wechseln muss. Zweimal
+        ''' geführt liefe sie auseinander, und der Fehler säße im Übergang.
+        '''
+        ''' ZEICHNEN gehört dazu, seit ein Strich innerhalb einer Auswahl bleibt: die Laufameisen
+        ''' müssen dabei stehen bleiben, sonst begrenzt etwas Unsichtbares den Pinsel.</summary>
         Public Shared Function IsSelectionScopeTool(tool As EditorTool) As Boolean
             Select Case tool
                 Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color,
