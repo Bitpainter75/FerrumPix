@@ -5078,6 +5078,9 @@
   <data name="Objekt_entfernt_3d51bb68" xml:space="preserve">
     <value>Oggetto rimosso</value>
   </data>
+  <data name="Objekt_aus_der_Ebene_entfernt_2859083d" xml:space="preserve">
+    <value>Oggetto rimosso dal livello</value>
+  </data>
   <data name="Scharf_von_282f9fea" xml:space="preserve">
     <value>Nitido da</value>
   </data>
@@ -6175,6 +6178,9 @@
   </data>
   <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
     <value>Rimozione annullata - la foto è invariata</value>
+  </data>
+  <data name="Entfernen_abgebrochen_die_Ebene_ist_unver_ndert_5114fac5" xml:space="preserve">
+    <value>Rimozione annullata - il livello è invariato</value>
   </data>
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Applicazione annullata - la foto è invariata</value>

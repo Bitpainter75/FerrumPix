@@ -5094,6 +5094,9 @@
   <data name="Objekt_entfernt_3d51bb68" xml:space="preserve">
     <value>已移除对象</value>
   </data>
+  <data name="Objekt_aus_der_Ebene_entfernt_2859083d" xml:space="preserve">
+    <value>已从图层中移除对象</value>
+  </data>
   <data name="Scharf_von_282f9fea" xml:space="preserve">
     <value>清晰起点</value>
   </data>
@@ -6173,6 +6176,9 @@
   </data>
   <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
     <value>已取消移除，照片未改变</value>
+  </data>
+  <data name="Entfernen_abgebrochen_die_Ebene_ist_unver_ndert_5114fac5" xml:space="preserve">
+    <value>已取消移除，图层未改变</value>
   </data>
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>已取消应用，照片未改变</value>

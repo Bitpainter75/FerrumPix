@@ -5079,6 +5079,9 @@
   <data name="Objekt_entfernt_3d51bb68" xml:space="preserve">
     <value>Object removed</value>
   </data>
+  <data name="Objekt_aus_der_Ebene_entfernt_2859083d" xml:space="preserve">
+    <value>Object removed from the layer</value>
+  </data>
   <data name="Scharf_von_282f9fea" xml:space="preserve">
     <value>Sharp from</value>
   </data>
@@ -6176,6 +6179,9 @@
   </data>
   <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
     <value>Removal cancelled - the picture is unchanged</value>
+  </data>
+  <data name="Entfernen_abgebrochen_die_Ebene_ist_unver_ndert_5114fac5" xml:space="preserve">
+    <value>Removal cancelled - the layer is unchanged</value>
   </data>
   <data name="Anwenden_abgebrochen_das_Bild_ist_unver_ndert_a6a00426" xml:space="preserve">
     <value>Applying cancelled - the picture is unchanged</value>

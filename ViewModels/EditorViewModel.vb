@@ -527,10 +527,16 @@ Namespace ViewModels
         ''' <summary>Rechnet gerade etwas, das eine Aenderung verdirbt? Das sind die Vorgaenge, die
         ''' in die PIXEL gehen, und die Modelllaeufe. Der laufende Vorschau-Render gehoert
         ''' ausdruecklich NICHT dazu: der laeuft dauernd und ist in Sekundenbruchteilen vorbei -
-        ''' darauf zu sperren hiesse, die Oberflaeche staendig zu sperren.</summary>
+        ''' darauf zu sperren hiesse, die Oberflaeche staendig zu sperren.
+        '''
+        ''' Von der Warteschlange der EBENENBILDER zaehlen nur die MODELLAEUFE mit
+        ''' (<c>_pendingLayerModelRuns</c>). Ein Strich, ein Radierer-Zug oder ein Stempel darauf ist
+        ''' nach Sekundenbruchteilen vorbei; die dazuzunehmen hiesse, bei jedem Pinselstrich einen
+        ''' Schleier ueber das Bild zu legen.</summary>
         Public ReadOnly Property IsBusy As Boolean
             Get
-                Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning
+                Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
+                       _pendingLayerModelRuns > 0
             End Get
         End Property
 
@@ -583,11 +589,18 @@ Namespace ViewModels
         ' eine Schaltflaeche, die niemand trifft.
         Private _busyCancellation As Threading.CancellationTokenSource
 
+        ''' <summary>Derselbe Merker fuer die Warteschlange der EBENENBILDER, und bewusst ein EIGENES
+        ''' Feld: <c>BeginCancellableBusy</c> raeumt seinen Vorgaenger weg, ein Modelllauf auf einer
+        ''' Ebene haette damit den Merker eines laufenden Arbeitsbild-Vorgangs verworfen und dessen
+        ''' X ins Leere zeigen lassen. Beide Wege sperren die Oberflaeche, gleichzeitig laufen kann
+        ''' also ohnehin nur, was schon lief.</summary>
+        Private _layerRunCancellation As Threading.CancellationTokenSource
+
         ''' <summary>Laesst sich das, was gerade laeuft, abbrechen? Steuert das X in der
         ''' Warte-Anzeige und die Esc-Taste.</summary>
         Public ReadOnly Property CanCancelBusy As Boolean
             Get
-                Return _busyCancellation IsNot Nothing
+                Return _busyCancellation IsNot Nothing OrElse _layerRunCancellation IsNot Nothing
             End Get
         End Property
 
@@ -596,15 +609,26 @@ Namespace ViewModels
         ''' sagt die Anzeige danach "wird abgebrochen" und nicht einfach nichts mehr - sonst haelt
         ''' man den Knopf fuer kaputt und drueckt weiter.</summary>
         Public Sub RequestBusyCancel()
-            If _busyCancellation Is Nothing Then Return
-            Try
-                _busyCancellation.Cancel()
-            Catch ex As ObjectDisposedException
-                ' Der Vorgang war in derselben Sekunde fertig - dann gibt es nichts abzubrechen.
-                Return
-            End Try
+            ' BEIDE Merker, nicht nur einer: das X sagt "brich ab, was gerade laeuft", und welcher
+            ' der beiden Wege das ist, sieht man ihm nicht an. Sind ausnahmsweise beide gesetzt,
+            ' waere ein Abbruch, der nur die Haelfte trifft, die schlechtere Auskunft.
+            Dim hitSomething = TryCancel(_busyCancellation)
+            hitSomething = TryCancel(_layerRunCancellation) OrElse hitSomething
+            If Not hitSomething Then Return
             SetBusyReason(LocalizationService.T("Wird abgebrochen…"))
         End Sub
+
+        ''' <summary>Einen Merker umlegen. False heisst: da war nichts mehr abzubrechen.</summary>
+        Private Shared Function TryCancel(source As Threading.CancellationTokenSource) As Boolean
+            If source Is Nothing Then Return False
+            Try
+                source.Cancel()
+            Catch ex As ObjectDisposedException
+                ' Der Vorgang war in derselben Sekunde fertig - dann gibt es nichts abzubrechen.
+                Return False
+            End Try
+            Return True
+        End Function
 
         ''' <summary>Beginn eines abbrechbaren Vorgangs. Gibt die Marke, die in die Dienste geht.</summary>
         Private Function BeginCancellableBusy() As Threading.CancellationToken
@@ -627,6 +651,26 @@ Namespace ViewModels
         ''' waere bei einem gewollten Abbruch die falsche Auskunft.</summary>
         Private Function BusyWasCancelled() As Boolean
             Return _busyCancellation IsNot Nothing AndAlso _busyCancellation.IsCancellationRequested
+        End Function
+
+        ''' <summary>Dasselbe Dreigespann fuer einen Modelllauf auf einer EBENE. Getrenntes Feld,
+        ''' siehe <c>_layerRunCancellation</c>.</summary>
+        Private Function BeginCancellableLayerRun() As Threading.CancellationToken
+            EndCancellableLayerRun()
+            _layerRunCancellation = New Threading.CancellationTokenSource()
+            Me.RaisePropertyChanged(NameOf(CanCancelBusy))
+            Return _layerRunCancellation.Token
+        End Function
+
+        Private Sub EndCancellableLayerRun()
+            If _layerRunCancellation Is Nothing Then Return
+            _layerRunCancellation.Dispose()
+            _layerRunCancellation = Nothing
+            Me.RaisePropertyChanged(NameOf(CanCancelBusy))
+        End Sub
+
+        Private Function LayerRunWasCancelled() As Boolean
+            Return _layerRunCancellation IsNot Nothing AndAlso _layerRunCancellation.IsCancellationRequested
         End Function
 
         ''' <summary>Was gerade laeuft, in einem Wort. Wird von den langen Wegen gesetzt, bevor sie

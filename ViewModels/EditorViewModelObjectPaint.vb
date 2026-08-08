@@ -40,6 +40,11 @@ Namespace ViewModels
         Private _objectPaintSize As (Width As Integer, Height As Integer) = (0, 0)
         Private _objectPaintChain As Task = Task.CompletedTask
 
+        ''' <summary>Wie viele MODELLAEUFE gerade in der Warteschlange der Ebenenbilder stecken. Nur
+        ''' sie zaehlen in den Beschaeftigt-Zustand (siehe <c>IsBusy</c>); ein Strich, ein
+        ''' Radierer-Zug oder ein Stempel bleibt aussen vor.</summary>
+        Private _pendingLayerModelRuns As Integer = 0
+
         Private _nextPaintLayerNumber As Integer = 1
 
         ''' <summary>Legt eine leere MALEBENE an: ein durchsichtiges Raster in der Größe des
@@ -778,15 +783,28 @@ Namespace ViewModels
         ''' <paramref name="cleanup"/> läuft im HINTERGRUND (dort werden die Puffer des Schrittes
         ''' frei), <paramref name="onUiDone"/> dagegen auf dem UI-Faden, nachdem das Ergebnis
         ''' übernommen ist - für alles, was so lange stehen bleiben muss, bis das neue Bild da ist.
-        ''' Beides ist optional.</summary>
+        ''' Beides ist optional.
+        '''
+        ''' <paramref name="countsAsBusy"/> markiert einen MODELLLAUF: er sperrt die Oberfläche und
+        ''' bekommt das X zum Abbrechen. Der Zähler wird hier geführt und nicht beim Aufrufer, weil
+        ''' der Schritt an einer Stelle aussteigt, die der Aufrufer nicht sieht - nach einem
+        ''' Bildwechsel verfällt er, und ein dort vergessenes Herunterzählen ließe den Schleier für
+        ''' immer stehen. <paramref name="cancelledMessage"/> ist die Meldung für den gewollten
+        ''' Abbruch; "fehlgeschlagen" wäre dort die falsche Auskunft.</summary>
         Private Sub EnqueueObjectImageEdit(target As ImageAnnotation, targetPath As String,
                                            failureMessage As String,
                                            work As Func(Of Boolean), cleanup As Action,
-                                           Optional onUiDone As Action = Nothing)
+                                           Optional onUiDone As Action = Nothing,
+                                           Optional countsAsBusy As Boolean = False,
+                                           Optional cancelledMessage As String = "")
             ' Merkmal des Dokuments beim Einreihen: kommt der Schritt erst nach einem Bildwechsel an
             ' die Reihe, gehört er zum alten Bild und verfällt (dieselbe Regel wie bei den
             ' Arbeitsbild-Commits).
             Dim documentStamp = _selectionAssetTempDir
+            If countsAsBusy Then
+                _pendingLayerModelRuns += 1
+                RefreshBusyState()
+            End If
             _objectPaintChain = _objectPaintChain.ContinueWith(
                 Sub(prev)
                     Dim ok = False
@@ -799,9 +817,22 @@ Namespace ViewModels
                     End Try
                     Avalonia.Threading.Dispatcher.UIThread.Post(
                         Sub()
-                            If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
-                            ApplyObjectPaintResult(target, targetPath, ok, failureMessage)
-                            onUiDone?.Invoke()
+                            Try
+                                If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
+                                ' Abgebrochen heißt: kein Ergebnis, aber auch kein Fehler. Die Ebene
+                                ' zeigt weiter auf ihre bisherige Datei.
+                                Dim cancelled = countsAsBusy AndAlso LayerRunWasCancelled()
+                                ApplyObjectPaintResult(target, targetPath, ok,
+                                                       If(cancelled AndAlso cancelledMessage <> "",
+                                                          cancelledMessage, failureMessage))
+                                If Not cancelled Then onUiDone?.Invoke()
+                            Finally
+                                If countsAsBusy Then
+                                    _pendingLayerModelRuns -= 1
+                                    EndCancellableLayerRun()
+                                    RefreshBusyState()
+                                End If
+                            End Try
                         End Sub)
                 End Sub, TaskScheduler.Default)
         End Sub
@@ -1057,13 +1088,22 @@ Namespace ViewModels
         '''
         ''' Rückgabe Nothing heißt „keine Auswahl, nichts zu begrenzen"; davon unterscheidet
         ''' <paramref name="anyCoverage"/> den Fall „Auswahl vorhanden, deckt diese Region aber
-        ''' nicht".</summary>
+        ''' nicht".
+        '''
+        ''' <paramref name="allowMaskSelection"/> nimmt auch eine MASKE als Quelle an. Für einen
+        ''' STRICH ist das falsch (siehe <c>HasPixelSelectionScope</c>): die Maske gehört einer Ebene,
+        ''' ihr rotes Overlay ist in den Malwerkzeugen ausgeblendet, und eine unsichtbare Begrenzung
+        ''' wäre nicht zu erklären. Wo die Auswahl dagegen der AUFTRAG ist und nicht die Grenze -
+        ''' beim Entfernen -, ist die Art der Auswahl gleichgültig: der Weg ins Arbeitsbild nimmt dort
+        ''' seit jeher jede, und eine Maske aus der Objektauswahl ist genau der übliche Weg, das zu
+        ''' Entfernende zu bestimmen.</summary>
         Private Function BuildSelectionCoverage(ByRef rect As SKRectI,
                                                 mapToDisplay As Func(Of Double, Double, SKPoint?),
                                                 mapFromDisplay As Func(Of Double, Double, SKPoint?),
-                                                ByRef anyCoverage As Boolean) As SKBitmap
+                                                ByRef anyCoverage As Boolean,
+                                                Optional allowMaskSelection As Boolean = False) As SKBitmap
             anyCoverage = False
-            If Not HasPixelSelectionScope Then Return Nothing
+            If Not If(allowMaskSelection, _hasActiveSelection, HasPixelSelectionScope) Then Return Nothing
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
 
             Dim ownsMask = False

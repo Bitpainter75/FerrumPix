@@ -561,6 +561,11 @@ Namespace ViewModels
         Private Function TryRemoveObjectFromImageAnnotation() As Boolean
             Dim target = FindStrokeTargetImageAnnotation()
             If target Is Nothing Then Return False
+            ' Kein zweiter Lauf, solange der erste rechnet. Der Schleier braucht eine Viertelsekunde,
+            ' bis er sperrt - ein schneller Doppelklick kaeme also durch, rechnete auf dem Ergebnis
+            ' des ersten und raeumte dessen Abbruchmerker weg. True heisst weiterhin "hier behandelt":
+            ' ein Rueckfall ins Arbeitsbild waere die falsche Antwort auf "einmal genuegt".
+            If _pendingLayerModelRuns > 0 Then Return True
 
             Dim sourcePath = ""
             If Not BeginObjectImageEdit(target, sourcePath) Then Return False
@@ -571,10 +576,14 @@ Namespace ViewModels
             ' zurecht, was die Auswahl überhaupt erreichen kann.
             Dim region = New SKRectI(0, 0, _objectPaintSize.Width, _objectPaintSize.Height)
             Dim anyCoverage = False
+            ' MIT Masken: hier ist die Auswahl der AUFTRAG und nicht die Grenze eines Striches. Die
+            ' Objektauswahl per Klick liefert eine MASKE, und sie ist der übliche Weg, das zu
+            ' Entfernende zu bestimmen - ohne diesen Schalter kam sie auf einer Ebene nie an, und die
+            ' Fußzeile behauptete dann, die Auswahl liege daneben.
             Dim coverage = BuildSelectionCoverage(region,
                                                   Function(px, py) CType(placement.ImageToDisplay(px, py), SKPoint?),
                                                   Function(dx, dy) CType(placement.DisplayToImage(dx, dy), SKPoint?),
-                                                  anyCoverage)
+                                                  anyCoverage, allowMaskSelection:=True)
             ' Deckt die Auswahl nichts von der Ebene, passiert nichts: kein Modelllauf, kein
             ' Rückgängig-Schritt. Ohne Deckung gäbe es gar keinen Auftrag.
             If coverage Is Nothing OrElse Not anyCoverage OrElse region.Width <= 0 OrElse region.Height <= 0 Then
@@ -586,14 +595,16 @@ Namespace ViewModels
             Dim targetPath = CreateSelectionAssetTempPath("removal")
             _objectPaintNextSource = targetPath
             StatusText = LocalizationService.T("Objekt wird entfernt…")
-            ' BEWUSST OHNE die Sperre samt Abbruchknopf, die der Weg ins Arbeitsbild nimmt: die
-            ' Warteschlange der Ebenenbilder zählt nicht in den Beschäftigt-Zustand, das X erschiene
-            ' also gar nicht - stünde aber auf einem Abbruchmerker, den ein ANDERER laufender Vorgang
-            ' erwischt hätte. Solange nichts sperrt, kann man derweil weiterarbeiten; die Kette hält
-            ' die Reihenfolge auf der Ebene ohnehin ein.
+            ' MIT Sperre und Abbruchknopf, wie der Weg ins Arbeitsbild: der Modelllauf dauert bei
+            ' einem großen Ebenenbild Sekunden, und ohne Schleier sähe das aus wie ein Hänger. Der
+            ' Abbruchmerker ist ein EIGENER (siehe _layerRunCancellation) - der gemeinsame hätte den
+            ' eines laufenden Arbeitsbild-Vorgangs verworfen. Die übrigen Schritte auf einer Ebene
+            ' (Strich, Radierer, Stempel) sperren weiterhin nichts; sie sind sofort vorbei.
             Dim lockTransparent = target.LockTransparentPixels
+            Dim cancel = BeginCancellableLayerRun()
+            SetBusyReason(LocalizationService.T("Objekt wird entfernt"))
             EnqueueObjectImageEdit(target, targetPath, LocalizationService.T("Entfernen fehlgeschlagen"),
-                                   Function() RemoveObjectFromImageToFile(sourcePath, targetPath, region, coverage, lockTransparent),
+                                   Function() RemoveObjectFromImageToFile(sourcePath, targetPath, region, coverage, lockTransparent, cancel),
                                    Sub() coverage?.Dispose(),
                                    Sub()
                                        ' Der Fehlschlag hat seine Meldung schon gesetzt; erkennbar ist
@@ -604,18 +615,29 @@ Namespace ViewModels
                                        ' da ist. OHNE eigenen Rückgängig-Schritt: der für das
                                        ' Entfernen liegt schon auf dem Stapel und trägt die Pixel.
                                        ClearSelection(captureUndo:=False)
-                                       StatusText = LocalizationService.T("Objekt entfernt")
-                                       AddHistoryEntry(LocalizationService.T("Objekt entfernt"))
-                                   End Sub)
+                                       ' Sagt AUSDRÜCKLICH, wo es passiert ist. "Objekt entfernt"
+                                       ' allein lässt offen, ob das Foto oder die Ebene getroffen
+                                       ' wurde - und genau diese Frage stellt sich hier.
+                                       StatusText = LocalizationService.T("Objekt aus der Ebene entfernt")
+                                       AddHistoryEntry(LocalizationService.T("Objekt aus der Ebene entfernt"))
+                                   End Sub,
+                                   countsAsBusy:=True,
+                                   cancelledMessage:=LocalizationService.T("Entfernen abgebrochen - die Ebene ist unverändert"))
             Return True
         End Function
 
         ''' <summary>Der schwere Teil, im Hintergrund: Ebenenbild dekodieren, die Deckung der Auswahl
         ''' als Maske übergeben, das Modell füllen lassen und AUSSERHALB der Maske den Vorher-Stand
-        ''' wieder einblenden. Genau dieselbe Nachnahme wie beim Malen innerhalb einer Auswahl.</summary>
+        ''' wieder einblenden. Genau dieselbe Nachnahme wie beim Malen innerhalb einer Auswahl.
+        '''
+        ''' <paramref name="cancel"/> geht bis in den Dienst durch. Ein Abbruch wirkt nicht sofort:
+        ''' das Füllen ist EIN Modelldurchlauf, der sich nicht anhalten lässt (siehe
+        ''' <c>ObjectRemovalService.Fill</c>). Zurück kommt dann False, und die Ebene behält ihre
+        ''' bisherige Datei.</summary>
         Private Shared Function RemoveObjectFromImageToFile(sourcePath As String, targetPath As String,
                                                             region As SKRectI, coverage As SKBitmap,
-                                                            lockTransparent As Boolean) As Boolean
+                                                            lockTransparent As Boolean,
+                                                            cancel As Threading.CancellationToken) As Boolean
             If coverage Is Nothing Then Return False
             Using decoded = SKBitmap.Decode(sourcePath)
                 If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then Return False
@@ -637,7 +659,7 @@ Namespace ViewModels
                     Using mask = BuildFullMaskFromCoverage(coverage, clamped, decoded.Width, decoded.Height)
                         If mask Is Nothing Then Return False
                         Using before = ImageProcessor.CopyRegion(copy, clamped)
-                            Using filled = ObjectRemovalService.Fill(copy, mask)
+                            Using filled = ObjectRemovalService.Fill(copy, mask, cancel)
                                 If filled Is Nothing Then Return False
                                 Using canvas = New SKCanvas(copy)
                                     canvas.Clear(SKColors.Transparent)
