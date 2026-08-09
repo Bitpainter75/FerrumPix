@@ -3247,7 +3247,9 @@ Namespace ViewModels
                     Case "Objekt entfernen"
                         description = LocalizationService.T("Markiertes verschwinden lassen, der Hintergrund wird fortgesetzt")
                     Case "Personen"
-                        description = LocalizationService.T("Gesichter finden und dieselbe Person zusammenfassen")
+                        ' Der Lizenzhinweis gehoert HIERHER und nicht nur in den Technologie-Abschnitt:
+                        ' hier steht der Knopf, der die Datei holt. Danach ist sie da.
+                        description = LocalizationService.T("Gesichter finden und dieselbe Person zusammenfassen. Das Modell zum Vergleichen kommt aus dem ONNX Model Zoo auf Hugging Face und ist nur für nicht-kommerzielle Forschung freigegeben.")
                     Case "Orte"
                         description = LocalizationService.T("Ortsnamen zu den Koordinaten im Bild, ohne Abfrage im Netz")
                     Case "Entrauschen"
@@ -3279,6 +3281,30 @@ Namespace ViewModels
         ''' auf dem die Anwendung etwas aus dem Netz holt.</summary>
         Public Async Function FetchModelGroupAsync(group As ModelGroup) As Task
             If group Is Nothing OrElse group.Running Then Return
+
+            ' EINE RUECKFRAGE VOR DEM HOLEN, wenn in der Gruppe ein Modell mit fremder Bedingung
+            ' steckt. Ein Hinweis im Einstellungsdialog steht neben dem Knopf und wird ueberlesen;
+            ' die Bedingung trifft aber den, der gerade klickt. Gefragt wird VOR dem Zug ins Netz,
+            ' nicht danach - hinterher liegt die Datei schon da.
+            '
+            ' Der Text NENNT ArcFace, weil es das einzige solche Modell ist und eine Bedingung ohne
+            ' Namen nichts wert waere. Kommt ein zweites dazu, braucht es hier seinen eigenen Text.
+            Dim needsConsent = group.Files.Any(Function(d) d.NonCommercialOnly)
+            If needsConsent Then
+                ' OHNE GEGENUEBER WIRD NICHT GEHOLT. Sonst haette die Rueckfrage eine Luecke: ein
+                ' Weg, auf dem die Einstellungen ohne Fenster dastehen, holte die Datei
+                ' stillschweigend - und die Zustimmung waere eine Verzierung.
+                If _mainVm Is Nothing Then
+                    group.Message = LocalizationService.T("Zum Herunterladen muss die Bedingung bestätigt werden.")
+                    Return
+                End If
+                Dim goAhead = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Nur für nicht-kommerzielle Forschung"),
+                    LocalizationService.T("ArcFace ResNet100 wird aus dem ONNX Model Zoo auf Hugging Face heruntergeladen. Die vortrainierten Gewichte stammen laut InsightFace aus Daten, die nur für nicht-kommerzielle Forschung freigegeben sind. Bei kommerzieller Nutzung von FerrumPix darf das Modell nicht heruntergeladen oder verwendet werden; die übrigen Funktionen bleiben verfügbar."),
+                    "Herunterladen", "Abbrechen")
+                If Not goAhead Then Return
+            End If
+
             group.Message = ""
             group.Running = True
             group.Progress = 0

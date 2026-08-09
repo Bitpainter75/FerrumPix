@@ -174,14 +174,19 @@ Namespace ViewModels
         Public Sub UpdateWindowWidth(width As Double)
             If Double.IsNaN(width) OrElse Double.IsInfinity(width) Then Return
 
+            ' ZWEI Schwellen je Leiste, nicht eine: die Filterknöpfe der Galerie behalten ihre
+            ' Beschriftung länger als der Rest. Wird nur die erste verglichen, bleibt die zweite
+            ' beim Überschreiten ihrer eigenen Schwelle stumm und die Beschriftungen hängen fest.
             Dim targets = {CType(Me, ViewModelBase), Gallery, Viewer, Editor, Settings}
-            Dim before = targets.Select(Function(vm) vm IsNot Nothing AndAlso vm.AreToolbarLabelsVisible).ToArray()
+            Dim beforeToolbar = targets.Select(Function(vm) vm IsNot Nothing AndAlso vm.AreToolbarLabelsVisible).ToArray()
+            Dim beforeFilter = targets.Select(Function(vm) vm IsNot Nothing AndAlso vm.AreFilterLabelsVisible).ToArray()
             ViewModelBase.SetWindowWidth(width)
 
             For index = 0 To targets.Length - 1
                 Dim target = targets(index)
                 If target Is Nothing Then Continue For
-                If target.AreToolbarLabelsVisible <> before(index) Then target.RaiseToolbarLabelsChanged()
+                If target.AreToolbarLabelsVisible <> beforeToolbar(index) OrElse
+                   target.AreFilterLabelsVisible <> beforeFilter(index) Then target.RaiseToolbarLabelsChanged()
             Next
         End Sub
 

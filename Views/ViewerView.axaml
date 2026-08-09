@@ -13,7 +13,7 @@
              KeyDown="OnKeyDown"
              PointerReleased="OnGlobalPointerReleased">
 
-    <Grid x:Name="ViewerRootGrid" RowDefinitions="56,*,Auto" ColumnDefinitions="*,320">
+    <Grid x:Name="ViewerRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="*,320">
 
         <!-- EIN Kontextmenue fuer Buehne, Filmstreifen und Fusszeile. Welcher Ort gemeint ist
              und welche Elemente, entscheidet OnContextRequested. -->
@@ -51,28 +51,34 @@
         </Grid.ContextMenu>
 
 
-        <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="toolbar" Height="56" Padding="24,0">
-            <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                    <Button Classes="icon-btn" Width="38" Height="38"
+        <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="toolbar" Height="52" Padding="16,0">
+            <!-- EINE SPALTE, drei Ausrichtungen. Mit "*,Auto,*" sass die Mitte NICHT in der Mitte:
+                 eine Sternspalte wird nie schmaler als ihr Inhalt, und die breitere Seite schob die
+                 mittlere Gruppe weg. Der Ausgleich stand als negativer Rand daneben und stimmte nur
+                 bei einer einzigen Fensterbreite. Uebereinander gelegt ist die Mitte wirklich
+                 mittig - und weil die Leiste ueber die ganze Fensterbreite geht, auch mittig zum
+                 Fenster. -->
+            <Grid VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding BackToGalleryCommand}"
                             ToolTip.Tip="Zurück zur Galerie">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
                                        Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding PreviousCommand}"
                             ToolTip.Tip="Vorheriges Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
                                Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding NextCommand}"
                             ToolTip.Tip="Nächstes Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding PrintCommand}"
                             ToolTip.Tip="Drucken (STRG+P)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
@@ -81,7 +87,7 @@
 
                     <!-- Anheften: das aktuelle Bild festhalten, das naechste kommt daneben. Der
                          bequeme Weg in den Vergleich, ohne den Umweg ueber die Galerie. -->
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Classes.active="{Binding IsImagePinned}"
                             IsEnabled="{Binding CanPinForCompare}"
                             Click="OnTogglePinClick"
@@ -94,7 +100,7 @@
                          Anheften: das Anheften beantwortet "welches Bild halte ich fest", dieser
                          "wie bewegen sich die Flaechen". Nur im Vergleich sichtbar, weil er sonst
                          nichts bedeutet. -->
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             IsVisible="{Binding IsCompareMode}"
                             Classes.active="{Binding IsCompareViewportLinked}"
                             Click="OnToggleCompareViewportLinkClick"
@@ -104,14 +110,14 @@
                     </Button>
 
 
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding RotateLeftCommand}"
                             IsEnabled="{Binding IsSingleImageMode}"
                             ToolTip.Tip="Bild nach links drehen (STRG+PFEIL LINKS)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
                                Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding RotateRightCommand}"
                             IsEnabled="{Binding IsSingleImageMode}"
                             ToolTip.Tip="Bild nach rechts drehen (STRG+PFEIL RECHTS)">
@@ -120,8 +126,8 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="-110,0,0,0">
-                    <Button Classes="ghost" Height="38"
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Button Classes="ghost" Height="34"
                             Command="{Binding ToggleSlideshowCommand}"
                             ToolTip.Tip="Diashow starten">
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -129,7 +135,7 @@
                             <TextBlock Text="Diashow starten" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="ghost" Height="38" Command="{Binding EditCommand}" ToolTip.Tip="Anpassen"
+                    <Button Classes="ghost" Height="34" Command="{Binding EditCommand}" ToolTip.Tip="Anpassen"
                             IsEnabled="{Binding CanEdit}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
@@ -138,35 +144,41 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right" >
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right" >
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding DeleteCurrentCommand}"
                             IsEnabled="{Binding CanDeleteCurrent}"
                             ToolTip.Tip="Löschen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                       Width="18" Height="18"/>
+                                       Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Click="OnToggleFilmstripClick"
                             Classes.active="{Binding ShowFilmstrip}"
                             ToolTip.Tip="Filmstreifen ein- oder ausblenden">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
-                                       Width="18" Height="18"/>
+                                       Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Classes.active="{Binding IsInfoSidebarVisible}"
                             Command="{Binding ToggleInfoSidebarCommand}"
                             ToolTip.Tip="Info">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg"
                                        Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Click="OnSettingsClick"
                             ToolTip.Tip="Einstellungen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings.svg"
-                                       Width="18" Height="18"/>
+                                       Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <!-- EIN PUNKT NAeHER, und zwar gemessen: das Vollbild-Zeichen laesst in seinem
+                         24er-Raster 3 Einheiten Luft je Seite, Zahnrad, Auge und Info nur 2. Bei 20
+                         Punkt Groesse sind das 2,5 gegen 1,67 Punkt - die Luecke links davon fiele
+                         sonst um knapp einen Punkt breiter aus als alle anderen in der Reihe.
+                         Gleicher Abstand ist eben nicht gleich AUSSEHENDER Abstand. -->
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            Margin="-1,0,0,0"
                             Click="OnToggleFullscreenClick"
                             ToolTip.Tip="Vollbild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/maximize.svg"
@@ -541,8 +553,9 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <!-- Eine Spalte, drei Ausrichtungen - Begruendung an der Kopfleiste oben. -->
+                <Grid Grid.Row="1" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" HorizontalAlignment="Left">
                         <!-- Farbetikett steht jetzt als Fenstertitel oben in der Mitte, neben dem
                              Dateinamen - wie im Editor. -->
                         <!-- Dasselbe Fussmenue wie in der Galerie, aber nur mit dem, was fuer EIN
@@ -559,7 +572,7 @@
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center">
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                                 Command="{Binding ZoomOutCommand}" ToolTip.Tip="Verkleinern">
                             <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
@@ -584,7 +597,7 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                             <TextBlock Text="{Binding MousePositionText}" Margin="0,0,20,0"
                                        IsVisible="{Binding MousePositionText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"

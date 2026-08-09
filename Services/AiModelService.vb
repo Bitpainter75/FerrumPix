@@ -218,6 +218,17 @@ Namespace Services
             ''' selbst herunter und vergleicht die Pruefsumme mit dem Eintrag.</summary>
             Public Property Herkunft As String = ""
 
+            ''' <summary>Traegt diese Datei eine Bedingung, die unsere eigene Lizenz NICHT deckt?
+            '''
+            ''' Genau ein Modell tut das (ArcFace, Begruendung bei <c>KnownEntries</c>), und die
+            ''' Bedingung steht nicht im Weg der Anwendung, sondern im Weg des Anwenders: er laedt
+            ''' die Datei herunter und darf sie kommerziell nicht benutzen. Deshalb ist es ein
+            ''' Merkmal des Eintrags und keine Abfrage auf den Schluessel irgendwo in der
+            ''' Oberflaeche - wer ein zweites solches Modell auftraegt, setzt hier das Merkmal und
+            ''' bekommt die Rueckfrage vor dem Herunterladen; ihren TEXT muss er schreiben, denn
+            ''' eine Bedingung ohne Namen und Quelle sagt nichts.</summary>
+            Public Property NonCommercialOnly As Boolean = False
+
             ''' <summary>Die Adresse, von der diese Datei geholt wird.</summary>
             Public ReadOnly Property Address As String
                 Get
@@ -315,6 +326,7 @@ Namespace Services
                                         .FileName = "arcface-r100-v1.onnx", .Group = "Personen",
                                         .Purpose = "Gesichter vergleichen", .Bytes = 261036388,
                                         .Herkunft = "https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8/resolve/main/arcfaceresnet100-8.onnx",
+                                        .NonCommercialOnly = True,
                                         .Sha256 = "f3a6bc281e72f88862f5748b53be3d76b3b48f8f1ab1f4a537941bdc4e1b01da"},
                 New ModelEntry With {.Key = "orte",
                                         .FileName = "orte-v1.sqlite", .Group = "Orte",

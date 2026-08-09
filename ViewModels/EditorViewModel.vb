@@ -25,7 +25,7 @@ Namespace ViewModels
         ''' Modus-Schalter, rechts Speichern/Speichern unter und acht Symbolschalter.
         Protected Overrides ReadOnly Property ToolbarLabelWidthThreshold As Double
             Get
-                Return 1500
+                Return 1600
             End Get
         End Property
 

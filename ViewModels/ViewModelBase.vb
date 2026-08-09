@@ -44,9 +44,27 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Eine ZWEITE Schwelle, für die Beschriftungen an den Filterknöpfen. Sie stehen
+        ''' neben einem Suchfeld, das mitschrumpft, und geben deshalb später auf als die übrigen
+        ''' Beschriftungen: erst weicht der Platz um sie herum, dann sie selbst. Ohne Überschreibung
+        ''' dieselbe Schwelle wie sonst - nur die Galerie hat solche Knöpfe.</summary>
+        Protected Overridable ReadOnly Property FilterLabelWidthThreshold As Double
+            Get
+                Return ToolbarLabelWidthThreshold
+            End Get
+        End Property
+
+        ''' <summary>False, wenn neben den Filterknöpfen kein Text mehr Platz hat.</summary>
+        Public ReadOnly Property AreFilterLabelsVisible As Boolean
+            Get
+                Return _windowWidth <= 0 OrElse _windowWidth >= FilterLabelWidthThreshold
+            End Get
+        End Property
+
         ''' <summary>Von MainWindowViewModel nach einer Breitenänderung gerufen.</summary>
         Friend Sub RaiseToolbarLabelsChanged()
             Me.RaisePropertyChanged(NameOf(AreToolbarLabelsVisible))
+            Me.RaisePropertyChanged(NameOf(AreFilterLabelsVisible))
         End Sub
 
     End Class

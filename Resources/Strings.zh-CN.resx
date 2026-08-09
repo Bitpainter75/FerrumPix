@@ -5691,8 +5691,8 @@
   <data name="Gesichter_vergleichen_Modelldatei_c264f3b0" xml:space="preserve">
     <value>比较人脸（模型文件）</value>
   </data>
-  <data name="Gesichter_finden_und_dieselbe_Person_zusammenfas_cf89104f" xml:space="preserve">
-    <value>查找人脸并将同一人归为一组</value>
+  <data name="Gesichter_finden_und_dieselbe_Person_zusammenfas_a2fad162" xml:space="preserve">
+    <value>查找人脸并将同一人归为一组。用于比对的模型来自 Hugging Face 上的 ONNX Model Zoo，仅供非商业研究使用。</value>
   </data>
   <data name="Ortsnamen_zu_den_Koordinaten_im_Bild_ohne_Abfrag_844f8c14" xml:space="preserve">
     <value>根据照片中的坐标获取地名，无需联网查询</value>
@@ -6734,5 +6734,20 @@
   </data>
   <data name="Ins_Bild_klicken_um_den_ersten_Punkt_zu_setzen_E_8b978da9" xml:space="preserve">
     <value>在图片上单击以设置第一个锚点。完成的路径起初不会画出任何东西——它是几何：用于选区、文字基线或形状。想要可见的曲线，就把描边宽度调大。</value>
+  </data>
+  <data name="Zum_Herunterladen_muss_die_Bedingung_best_tigt_w_0721ff85" xml:space="preserve">
+    <value>下载前需要确认该条件。</value>
+  </data>
+  <data name="Nur_nicht_kommerzielle_Forschung_985350fd" xml:space="preserve">
+    <value>仅限非商业研究</value>
+  </data>
+  <data name="Nur_f_r_nicht_kommerzielle_Forschung_e3d3e9dc" xml:space="preserve">
+    <value>仅限非商业研究</value>
+  </data>
+  <data name="ArcFace_ResNet100_wird_aus_dem_ONNX_Model_Zoo_au_33a7a9f7" xml:space="preserve">
+    <value>ArcFace ResNet100 从 Hugging Face 上的 ONNX Model Zoo 下载。据 InsightFace 说明，其预训练权重来自仅供非商业研究使用的数据。将 FerrumPix 用于商业用途时，不得下载或使用该模型；其余功能仍然可用。</value>
+  </data>
+  <data name="ArcFace_ResNet100_wird_optional_aus_dem_ONNX_Mod_37dec9c8" xml:space="preserve">
+    <value>ArcFace ResNet100 可选择性地从 ONNX Model Zoo 下载。据 InsightFace 说明，其预训练权重来自仅供非商业研究使用的数据。将 FerrumPix 用于商业用途时，不得下载或使用该模型；其余功能仍然可用。</value>
   </data>
 </root>

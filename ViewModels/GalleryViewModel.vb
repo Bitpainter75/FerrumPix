@@ -25,6 +25,17 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Personen, Orte und Stichwörter tragen ihren Namen neben dem Symbol. Der Platz
+        ''' dafür kommt aus dem Suchfeld, das bis zu seiner Mindestbreite mitschrumpft; erst danach
+        ''' weichen die drei Namen. Die Schwelle liegt deutlich über der für die übrigen
+        ''' Beschriftungen: die Namen sollen gehen, SOLANGE das Suchfeld noch brauchbar breit ist,
+        ''' und nicht erst, wenn es schon an seiner Mindestbreite klebt.</summary>
+        Protected Overrides ReadOnly Property FilterLabelWidthThreshold As Double
+            Get
+                Return 1550
+            End Get
+        End Property
+
         Private ReadOnly _mainVm As MainWindowViewModel
         Private _currentFolder As String = Nothing
         Private _selectedItem As ImageItem

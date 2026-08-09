@@ -26,7 +26,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="GalleryRootGrid" RowDefinitions="56,*,40">
+    <Grid x:Name="GalleryRootGrid" RowDefinitions="52,*,40">
 
         <!-- EIN Kontextmenue fuer Kachel, Zeile und Fusszeile. -->
         <Grid.ContextMenu>
@@ -64,24 +64,24 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Classes="toolbar" Height="56" Padding="16,0">
+        <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Classes="toolbar" Height="52" Padding="16,0">
             <Grid ColumnDefinitions="Auto,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Button Classes="icon-btn" Width="36" Height="36"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding NavigateUpCommand}"
                             IsEnabled="{Binding CanNavigateBack}"
                             ToolTip.Tip="Zurück">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
                                Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="36" Height="36"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding NavigateForwardCommand}"
                             IsEnabled="{Binding CanNavigateForward}"
                             ToolTip.Tip="Vorwärts">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                Width="20" Height="20"/>
                     </Button>
-                    <Button Classes="icon-btn" Width="36" Height="36"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding NavigateParentCommand}"
                             IsEnabled="{Binding HasBreadcrumbParent}"
                             ToolTip.Tip="Eine Ebene nach oben">
@@ -90,10 +90,10 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6" Margin="8,0,18,0">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8" Margin="8,0,18,0">
                     <Button Classes="icon-btn"
-                            Width="36"
-                            Height="36"
+                            Width="34"
+                            Height="34"
                             Command="{Binding NavigatePicturesCommand}"
                             ToolTip.Tip="Zum Bilder-Ordner">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
@@ -139,9 +139,9 @@
                             BorderThickness="1"
                             CornerRadius="8"
                             Padding="12,8"
-                            MinWidth="190"
-                            Height="32"
-                            Margin="0,0,12,0">
+                            MinWidth="120"
+                            Height="34"
+                            Margin="0,0,8,0">
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
                                    Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
@@ -179,7 +179,7 @@
                          eingeschaltet ist oder die Modelle fehlen - nicht ausgegraut, so hält es die
                          Anwendung bei allen Modellfunktionen. Die Erkennung wird unten IM Menü
                          ausgelöst: ohne das wäre der Knopf beim ersten Öffnen leer und tot. -->
-                    <Button Grid.Column="1" Padding="10,7" Margin="0,0,8,0"
+                    <Button Grid.Column="1" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasPersonFilter}"
                             IsVisible="{Binding HasPersonFeature}"
@@ -297,8 +297,12 @@
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/users.svg"
-                                       Classes="filter-glyph" Width="18" Height="18"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/users.svg"
+                                           Classes="filter-glyph" Width="20" Height="20"/>
+                            <TextBlock Text="Personen" VerticalAlignment="Center"
+                                       IsVisible="{Binding AreFilterLabelsVisible}"/>
+                        </StackPanel>
                     </Button>
 
                     <!-- Orte. Neben den Personen, weil beides aus dem Bild selbst kommt und nicht
@@ -306,7 +310,7 @@
                          fehlt oder nicht eingeschaltet ist - wie bei allen Modellfunktionen.
                          Mehrere Orte wirken als ODER: ein Bild hat genau einen Aufnahmeort, ein UND
                          ergäbe immer eine leere Liste. -->
-                    <Button Grid.Column="2" Padding="10,7" Margin="0,0,8,0"
+                    <Button Grid.Column="2" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasPlaceFilter}"
                             IsVisible="{Binding HasPlaceFeature}"
@@ -404,14 +408,18 @@
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
-                                       Classes="filter-glyph" Width="18" Height="18"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                                           Classes="filter-glyph" Width="20" Height="20"/>
+                            <TextBlock Text="Orte" VerticalAlignment="Center"
+                                       IsVisible="{Binding AreFilterLabelsVisible}"/>
+                        </StackPanel>
                     </Button>
 
                     <!-- Stichwörter. Dieselbe Sorte Einschränkung wie Personen, nur über den
                          ganzen Bestand statt über den offenen Ordner. Die Liste entsteht beim
                          Öffnen neu, damit frisch vergebene Stichwörter dabei sind. -->
-                    <Button Grid.Column="3" Padding="10,7" Margin="0,0,8,0"
+                    <Button Grid.Column="3" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasTagFilter}"
                             Click="OnTagFilterButtonClick"
@@ -499,11 +507,15 @@
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/tag.svg"
-                                       Classes="filter-glyph" Width="18" Height="18"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/tag.svg"
+                                           Classes="filter-glyph" Width="20" Height="20"/>
+                            <TextBlock Text="Stichwörter" VerticalAlignment="Center"
+                                       IsVisible="{Binding AreFilterLabelsVisible}"/>
+                        </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="4" Padding="10,7" Margin="0,0,8,0"
+                    <Button Grid.Column="4" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasActiveFilter}"
                             Tag="Filter"
@@ -791,7 +803,7 @@
 
                     <Button Grid.Column="5"
                             MinWidth="156" MaxWidth="260"
-                            Padding="10,7" Margin="0,0,8,0"
+                            Height="34" Padding="8,5" Margin="0,0,8,0"
                             Tag="Sort"
                             PointerPressed="OnFilterButtonPointerPressed"
                             ToolTip.Tip="Sortieren">
@@ -977,28 +989,32 @@
                     </Button>
 
                     <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
-                        <Button Classes="icon-btn" Width="36" Height="36"
+                        <Button Classes="icon-btn" Width="34" Height="34"
                                 Classes.active="{Binding IsListView}"
                                 Command="{Binding SetViewModeCommand}" CommandParameter="List"
                                 ToolTip.Tip="Listenansicht">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/list.svg"
                                    Width="20" Height="20" Opacity="0.78"/>
                         </Button>
-                        <Button Classes="icon-btn" Width="36" Height="36"
+                        <Button Classes="icon-btn" Width="34" Height="34"
                                 Classes.active="{Binding IsGridView}"
                                 Command="{Binding SetViewModeCommand}" CommandParameter="Grid"
                                 ToolTip.Tip="Rasteransicht">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-grid.svg"
                                    Width="20" Height="20"/>
                         </Button>
-                        <Button Classes="icon-btn" Width="36" Height="36"
+                        <Button Classes="icon-btn" Width="34" Height="34"
                                 Classes.active="{Binding IsInfoSidebarVisible}"
                                 Command="{Binding ToggleInfoSidebarCommand}"
                                 ToolTip.Tip="Info">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg"
                                    Width="20" Height="20"/>
                         </Button>
-                        <Button Classes="icon-btn" Width="36" Height="36"
+                        <!-- Ein Punkt näher - dieselbe gemessene Ursache wie in Betrachter und
+                             Editor: das Vollbild-Zeichen lässt in seinem 24er-Raster 3 Einheiten
+                             Luft je Seite, das Info-Zeichen davor nur 2. -->
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Margin="-1,0,0,0"
                                 Click="OnFullscreenClick"
                                 ToolTip.Tip="Vollbild">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/maximize.svg"
@@ -2152,8 +2168,12 @@
              28 Knopfhöhe, 6 Rand. Eine Fußzeile, die je nach Ansicht anders hoch ist, springt beim
              Umschalten. -->
         <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Classes="statusbar window-drag" Height="40" Padding="20,6">
-            <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+            <!-- EINE SPALTE, drei Ausrichtungen. Mit "*,Auto,*" sass die Mitte NICHT in der Mitte:
+                 eine Sternspalte wird nie schmaler als ihr Inhalt, und die breitere Seite schob die
+                 mittlere Gruppe weg. Mittig heisst hier mittig zur LEISTE - die beginnt rechts der
+                 Ordnerspalte, und weiter links waere die Mitte halb unter der Seitenleiste. -->
+            <Grid VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center" HorizontalAlignment="Left">
                     <!-- Zeigt dasselbe Menü wie ein Rechtsklick auf ein Bild: dort stecken inzwischen die
                          meisten Stapelfunktionen, und ein Rechtsklick ist nicht auf jedem Gerät bequem.
                          Die Einträge tragen keine IsVisible-Bindungen - OnGalleryMenuButtonClick setzt
@@ -2189,7 +2209,7 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                             Command="{Binding DecreaseThumbnailSizeCommand}" ToolTip.Tip="Verkleinern">
                         <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
@@ -2205,7 +2225,7 @@
                     </Button>
                 </StackPanel>
                 
-                <StackPanel Grid.Column="2" Spacing="12" Orientation="Horizontal" HorizontalAlignment="Right">
+                <StackPanel Spacing="12" Orientation="Horizontal" HorizontalAlignment="Right">
                     <!-- Der Durchlauf dauert bei einem grossen Ordner Minuten. Ein Balken mit Zahl
                          sagt, dass etwas passiert und wie weit es ist - die Statuszeile allein wäre
                          dafür zu leise, man hielte das Programm für hängengeblieben. -->

@@ -5692,8 +5692,8 @@
   <data name="Gesichter_vergleichen_Modelldatei_c264f3b0" xml:space="preserve">
     <value>Comparação de rostos (ficheiro de modelo)</value>
   </data>
-  <data name="Gesichter_finden_und_dieselbe_Person_zusammenfas_cf89104f" xml:space="preserve">
-    <value>Deteta rostos e agrupa a mesma pessoa</value>
+  <data name="Gesichter_finden_und_dieselbe_Person_zusammenfas_a2fad162" xml:space="preserve">
+    <value>Deteta rostos e agrupa a mesma pessoa. O modelo que os compara vem do ONNX Model Zoo no Hugging Face e só está autorizado para investigação não comercial.</value>
   </data>
   <data name="Ortsnamen_zu_den_Koordinaten_im_Bild_ohne_Abfrag_844f8c14" xml:space="preserve">
     <value>Nomes de locais para as coordenadas da foto, sem consultar a rede</value>
@@ -6735,5 +6735,20 @@
   </data>
   <data name="Ins_Bild_klicken_um_den_ersten_Punkt_zu_setzen_E_8b978da9" xml:space="preserve">
     <value>Clique na foto para definir o primeiro ponto. Um caminho terminado não desenha nada no início: é geometria, para uma seleção, uma linha de base de texto ou uma forma. Para uma curva visível, aumente a espessura do contorno.</value>
+  </data>
+  <data name="Zum_Herunterladen_muss_die_Bedingung_best_tigt_w_0721ff85" xml:space="preserve">
+    <value>Para transferir é preciso confirmar a condição.</value>
+  </data>
+  <data name="Nur_nicht_kommerzielle_Forschung_985350fd" xml:space="preserve">
+    <value>Apenas investigação não comercial</value>
+  </data>
+  <data name="Nur_f_r_nicht_kommerzielle_Forschung_e3d3e9dc" xml:space="preserve">
+    <value>Apenas para investigação não comercial</value>
+  </data>
+  <data name="ArcFace_ResNet100_wird_aus_dem_ONNX_Model_Zoo_au_33a7a9f7" xml:space="preserve">
+    <value>O ArcFace ResNet100 é transferido do ONNX Model Zoo no Hugging Face. Segundo o InsightFace, os pesos pré-treinados provêm de dados autorizados apenas para investigação não comercial. Em caso de utilização comercial do FerrumPix, o modelo não pode ser transferido nem utilizado; as restantes funções continuam disponíveis.</value>
+  </data>
+  <data name="ArcFace_ResNet100_wird_optional_aus_dem_ONNX_Mod_37dec9c8" xml:space="preserve">
+    <value>O ArcFace ResNet100 é transferido opcionalmente do ONNX Model Zoo. Segundo o InsightFace, os pesos pré-treinados provêm de dados autorizados apenas para investigação não comercial. Em caso de utilização comercial do FerrumPix, o modelo não pode ser transferido nem utilizado; as restantes funções continuam disponíveis.</value>
   </data>
 </root>

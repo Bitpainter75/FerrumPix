@@ -18,7 +18,7 @@
 
     <!-- Erste Spalte Auto statt fest 190: die Breite kommt aus ToolSidebarWidth, damit die
          Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen). -->
-    <Grid x:Name="EditorRootGrid" RowDefinitions="56,*,Auto" ColumnDefinitions="Auto,*,330,320,300">
+    <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="Auto,*,330,320,300">
 
         <!-- EIN Kontextmenue fuer Filmstreifen und Fusszeile. Sonst nirgends im Editor: weder auf
              der Buehne noch in den Panels rechts (siehe OnContextRequested). -->
@@ -61,35 +61,41 @@
              gerade hier stehen die Knoepfe, die am meisten anrichten: Rueckgaengig und
              Speichern greifen auf ein Bild zu, das in diesem Augenblick Kachel fuer Kachel
              neu geschrieben wird. -->
-        <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="56" Padding="24,0"
+        <Border Grid.Row="0" Grid.ColumnSpan="5" Classes="toolbar" Height="52" Padding="16,0"
                 IsEnabled="{Binding IsInteractionAllowed}">
-            <Grid ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
-                    <Button Classes="icon-btn" Width="38" Height="38"
+            <!-- EINE SPALTE, drei Ausrichtungen. Mit "*,Auto,*" sass die Mitte NICHT in der Mitte:
+                 eine Sternspalte wird nie schmaler als ihr Inhalt, und die breitere Seite schob die
+                 mittlere Gruppe weg. Der Ausgleich stand als negativer Rand daneben und stimmte nur
+                 bei einer einzigen Fensterbreite. Uebereinander gelegt ist die Mitte wirklich
+                 mittig - und weil die Leiste ueber die ganze Fensterbreite geht, auch mittig zum
+                 Fenster. -->
+            <Grid VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding BackToViewerCommand}"
                             ToolTip.Tip="Zurück">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
                                        Width="20" Height="20" />
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding PreviousCommand}"
                             ToolTip.Tip="Vorheriges Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
                                        Width="20" Height="20" />
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding NextCommand}"
                             ToolTip.Tip="Nächstes Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
                                        Width="20" Height="20" />
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding ShowNewDocumentDialogCommand}"
                             ToolTip.Tip="Neues Bild (STRG+N)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
                                        Width="20" Height="20" />
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding PrintCommand}"
                             ToolTip.Tip="Drucken (STRG+P)">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/printer.svg"
@@ -97,59 +103,14 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="-110,0,0,0">
-                    <Button Name="PanModeButton" Classes="ghost" Height="38" Padding="8,2"
-                            Margin="0,0,0,0" ToolTip.Tip="Verschieben-Modus ein- oder ausschalten"
-                            Focusable="False"
-                            Click="OnPanModeToggleClick">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pinned.svg"
-                                           Width="20" Height="20" />
-                            <TextBlock Text="Verschieben" IsVisible="{Binding AreToolbarLabelsVisible}" />
-                        </StackPanel>
-                    </Button>
+                <!-- Die mittlere Gruppe steht NICHT hier, sondern als eigenes Kind des
+                     Wurzelrasters in der Bild-Spalte (siehe unter dieser Leiste). Sie soll ueber der
+                     Buehne mittig sitzen, nicht ueber dem Fenster - und wo die Buehne anfaengt und
+                     aufhoert, weiss nur das Wurzelraster: links die Werkzeugspalte, rechts bis zu
+                     drei Panels, die sich zu- und abschalten. -->
 
-                    <Button Name="RulerModeButton" Classes="ghost" Height="38" Padding="8,2"
-                            Margin="0,0,0,0" ToolTip.Tip="Lineale und Hilfslinien ein- oder ausblenden"
-                            Focusable="False"
-                            Click="OnRulerModeToggleClick">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ruler-2.svg"
-                                           Width="20" Height="20" />
-                            <TextBlock Text="Lineale" IsVisible="{Binding AreToolbarLabelsVisible}" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Name="GridModeButton" Classes="ghost" Height="38" Padding="8,2"
-                            Margin="0,0,0,0" ToolTip.Tip="Raster ein- oder ausblenden (Größe: Einstellungen → Editor)"
-                            Focusable="False"
-                            Click="OnGridModeToggleClick">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-pattern.svg"
-                                           Width="20" Height="20" />
-                            <TextBlock Text="Raster" IsVisible="{Binding AreToolbarLabelsVisible}" />
-                        </StackPanel>
-                    </Button>
-
-                    <Button Classes="ghost"
-                            Height="38"
-                            Padding="8,2"
-                            Margin="0,0,0,0"
-                            IsEnabled="{Binding CanShowBeforeAfter}"
-                            Classes.active="{Binding ShowBeforeImage}"
-                            Click="OnToggleBeforeAfterClick"
-                            PointerPressed="OnBeforeAfterPointerPressed"
-                            ToolTip.Tip="Vergleich ein- oder ausblenden. Mittlere Maustaste zentriert den Teiler im sichtbaren Ausschnitt">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
-                                           Width="18" Height="18" />
-                            <TextBlock Text="Vergleich" IsVisible="{Binding AreToolbarLabelsVisible}" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-                    
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             IsEnabled="{Binding CanUndo}"
                             Command="{Binding UndoCommand}"
                             ToolTip.Tip="Rückgängig">
@@ -161,7 +122,7 @@
                                   Data="M 8 5 L 4 9 L 8 13 M 5 9 H 12 C 15 9 17 11 17 14 C 17 17 15 19 12 19 H 8" />
                         </Canvas>
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             IsEnabled="{Binding CanRedo}"
                             Command="{Binding RedoCommand}"
                             ToolTip.Tip="Wiederholen">
@@ -173,7 +134,7 @@
                                   Data="M 12 5 L 16 9 L 12 13 M 15 9 H 8 C 5 9 3 11 3 14 C 3 17 5 19 8 19 H 12" />
                         </Canvas>
                     </Button>
-                    <Button Classes="accent" Height="38" Padding="16,7" Command="{Binding SaveCommand}"
+                    <Button Classes="accent" Height="34" Padding="14,5" Command="{Binding SaveCommand}"
                             ToolTip.Tip="Speichern"
                             IsEnabled="{Binding CanSaveInPlace}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -182,22 +143,22 @@
                             <TextBlock Text="Speichern" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="ghost active" Height="38" Padding="12,7" Command="{Binding SaveAsCommand}"
-                            ToolTip.Tip="Speichern unter...">
+                    <Button Classes="ghost active" Height="34" Padding="10,5" Command="{Binding SaveAsCommand}"
+                            ToolTip.Tip="Speichern unter">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/file-export.svg"
                                            Width="20" Height="20" />
-                            <TextBlock Text="Speichern unter..." IsVisible="{Binding AreToolbarLabelsVisible}" />
+                            <TextBlock Text="Speichern unter" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="icon-btn"
-                            Width="38" Height="38"
+                            Width="34" Height="34"
                             Command="{Binding DeleteCurrentCommand}"
                             ToolTip.Tip="Löschen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                       Width="18" Height="18" />
+                                       Width="20" Height="20" />
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Classes.active="{Binding IsLayersPanelVisible}"
                             Command="{Binding ToggleLayersPanelCommand}"
                             ToolTip.Tip="Ebenen-Panel">
@@ -205,15 +166,15 @@
                                        Height="20" />
                     </Button>
                     <Button Classes="icon-btn"
-                            Width="38" Height="38"
+                            Width="34" Height="34"
                             Click="OnToggleFilmstripClick"
                             Classes.active="{Binding ShowFilmstrip}"
                             IsEnabled="{Binding CanToggleFilmstrip}"
                             ToolTip.Tip="Filmstreifen ein- oder ausblenden">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
-                                       Width="18" Height="18" />
+                                       Width="20" Height="20" />
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <Button Classes="icon-btn" Width="34" Height="34"
                             Classes.active="{Binding IsInfoSidebarVisible}"
                             Command="{Binding ToggleInfoSidebarCommand}"
                             ToolTip.Tip="Info-Seitenleiste">
@@ -221,13 +182,18 @@
                                        Height="20" />
                     </Button>
                     <Button Classes="icon-btn"
-                            Width="38" Height="38"
+                            Width="34" Height="34"
                             Click="OnSettingsClick"
                             ToolTip.Tip="Einstellungen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings.svg"
-                                       Width="18" Height="18" />
+                                       Width="20" Height="20" />
                     </Button>
-                    <Button Classes="icon-btn" Width="38" Height="38"
+                    <!-- EIN PUNKT NAeHER, und zwar gemessen: das Vollbild-Zeichen laesst in seinem
+                         24er-Raster 3 Einheiten Luft je Seite, das Zahnrad davor nur 2. Bei 20 Punkt
+                         Groesse sind das 2,5 gegen 1,67 Punkt - die Luecke links davon fiele sonst um
+                         knapp einen Punkt breiter aus als alle anderen in der Reihe. -->
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            Margin="-1,0,0,0"
                             Click="OnFullscreenClick"
                             ToolTip.Tip="Vollbild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/maximize.svg"
@@ -236,6 +202,67 @@
                 </StackPanel>
             </Grid>
         </Border>
+
+        <!-- MITTIG ZUR BUEHNE, nicht zum Fenster. Deshalb steht diese Gruppe im Wurzelraster in
+             Spalte 1 (der Buehne) und nicht in der Leiste darueber: die Leiste geht ueber alle
+             Spalten, die Buehne nicht. Die Spalten rechts fallen beim Abschalten ihres Panels auf
+             Breite 0 (UpdateInfoSidebarLayoutState, UpdateLayersPanelLayout) - die Gruppe wandert
+             dadurch von selbst mit, ohne dass hier etwas gerechnet wird.
+
+             NACH der Leiste im Baum, liegt also darueber. Das IsEnabled der Leiste muss sie selbst
+             mitbringen, sonst bliebe sie bedienbar, waehrend der Rest gesperrt ist. -->
+        <StackPanel Grid.Row="0" Grid.Column="1"
+                    Orientation="Horizontal" Spacing="8"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    IsEnabled="{Binding IsInteractionAllowed}">
+            <Button Name="PanModeButton" Classes="ghost" Height="34" Padding="6,0"
+                    ToolTip.Tip="Verschieben-Modus ein- oder ausschalten"
+                    Focusable="False"
+                    Click="OnPanModeToggleClick">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pinned.svg"
+                                   Width="20" Height="20" />
+                    <TextBlock Text="Verschieben" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                </StackPanel>
+            </Button>
+
+            <Button Name="RulerModeButton" Classes="ghost" Height="34" Padding="6,0"
+                    ToolTip.Tip="Lineale und Hilfslinien ein- oder ausblenden"
+                    Focusable="False"
+                    Click="OnRulerModeToggleClick">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ruler-2.svg"
+                                   Width="20" Height="20" />
+                    <TextBlock Text="Lineale" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                </StackPanel>
+            </Button>
+
+            <Button Name="GridModeButton" Classes="ghost" Height="34" Padding="6,0"
+                    ToolTip.Tip="Raster ein- oder ausblenden (Größe: Einstellungen → Editor)"
+                    Focusable="False"
+                    Click="OnGridModeToggleClick">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-pattern.svg"
+                                   Width="20" Height="20" />
+                    <TextBlock Text="Raster" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                </StackPanel>
+            </Button>
+
+            <Button Classes="ghost"
+                    Height="34"
+                    Padding="6,0"
+                    IsEnabled="{Binding CanShowBeforeAfter}"
+                    Classes.active="{Binding ShowBeforeImage}"
+                    Click="OnToggleBeforeAfterClick"
+                    PointerPressed="OnBeforeAfterPointerPressed"
+                    ToolTip.Tip="Vergleich ein- oder ausblenden. Mittlere Maustaste zentriert den Teiler im sichtbaren Ausschnitt">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                   Width="20" Height="20" />
+                    <TextBlock Text="Vergleich" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
 
         <!-- GESPERRT, solange ein langer Vorgang laeuft - genau wie die Regler rechts. Ein
              Werkzeugwechsel mitten im Entrauschen fuehrt sonst zu einem Bild, dessen Zustand
@@ -1503,8 +1530,9 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                <!-- Eine Spalte, drei Ausrichtungen - Begruendung an der Kopfleiste oben. -->
+                <Grid Grid.Row="1" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" HorizontalAlignment="Left">
                         <!-- Fussmenue wie in Galerie und Betrachter, hier bewusst KURZ: die
                              Stapelfunktionen der Galerie arbeiten auf der Datei, waehrend im Editor
                              ungespeicherte Aenderungen offen sein koennen. Was bleibt, ist das, was
@@ -1550,37 +1578,9 @@
                         <TextBlock Text="{Binding OutputSizeText}" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                        <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
-                                Focusable="False"
-                                Click="OnZoomOutClick" ToolTip.Tip="Verkleinern">
-                            <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
-                        </Button>
-                        <icons:RoundSlider Name="EditorZoomSlider" Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
-                                           VerticalAlignment="Center" />
-                        <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
-                                Focusable="False"
-                                Click="OnZoomInClick" ToolTip.Tip="Vergrößern">
-                            <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
-                        </Button>
-                        <Button Classes="ghost" Height="26" Padding="8,2" Margin="12,0,0,0" Focusable="False"
-                                Classes.active="{Binding IsZoomActualActive}"
-                                Click="OnZoomActualClick" ToolTip.Tip="Auf 100 Prozent springen">
-                            <TextBlock Name="ZoomPercentText" Text="100%" Foreground="{DynamicResource FP.Text.Primary}"
-                                       VerticalAlignment="Center" />
-                        </Button>
-                        <Button Classes="ghost" Height="26" Padding="8,2" Margin="8,0,0,0" Focusable="False"
-                                Classes.active="{Binding IsZoomFitActive}"
-                                Click="OnZoomFitClick"
-                                ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
-                                               Width="20" Height="20" />
-                                <TextBlock Text="Einpassen" VerticalAlignment="Center" IsVisible="{Binding AreToolbarLabelsVisible}" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <!-- Die Zoom-Gruppe steht NICHT hier, sondern als eigenes Kind des Wurzelrasters
+                         in der Bild-Spalte - gleiche Begruendung wie oben in der Kopfleiste. -->
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
                             <!-- Ein Platz für zwei Angaben: über dem Bild die Mausposition, sonst der
                                  Status. Rechtsbündig, damit die Zahlen beim Fahren über das Bild nicht
@@ -1656,6 +1656,46 @@
                 </Grid>
             </Grid>
         </Border>
+
+        <!-- MITTIG ZUR BUEHNE wie die Gruppe in der Kopfleiste, deshalb ebenfalls in Spalte 1 des
+             Wurzelrasters. Die senkrechte Lage kommt von unten: die Fussleiste traegt 6 Punkt
+             Innenrand, darueber liegt ihre 28 Punkt hohe Bedienzeile (RowDefinitions="Auto,28").
+             Aendert sich eines von beiden, gehoert es hier mit geaendert - deshalb stehen beide
+             Zahlen nebeneinander im Rand. -->
+        <StackPanel Grid.Row="2" Grid.Column="1"
+                    Orientation="Horizontal" Spacing="4"
+                    Height="28" Margin="0,0,0,6"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                    IsEnabled="{Binding IsInteractionAllowed}">
+            <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
+                    Focusable="False"
+                    Click="OnZoomOutClick" ToolTip.Tip="Verkleinern">
+                <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
+            </Button>
+            <icons:RoundSlider Name="EditorZoomSlider" Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
+                               VerticalAlignment="Center" />
+            <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
+                    Focusable="False"
+                    Click="OnZoomInClick" ToolTip.Tip="Vergrößern">
+                <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" />
+            </Button>
+            <Button Classes="ghost" Height="26" Padding="8,2" Margin="12,0,0,0" Focusable="False"
+                    Classes.active="{Binding IsZoomActualActive}"
+                    Click="OnZoomActualClick" ToolTip.Tip="Auf 100 Prozent springen">
+                <TextBlock Name="ZoomPercentText" Text="100%" Foreground="{DynamicResource FP.Text.Primary}"
+                           VerticalAlignment="Center" />
+            </Button>
+            <Button Classes="ghost" Height="26" Padding="8,2" Margin="8,0,0,0" Focusable="False"
+                    Classes.active="{Binding IsZoomFitActive}"
+                    Click="OnZoomFitClick"
+                    ToolTip.Tip="Bild vollständig in die Vorschau einpassen">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
+                                   Width="20" Height="20" />
+                    <TextBlock Text="Einpassen" VerticalAlignment="Center" IsVisible="{Binding AreToolbarLabelsVisible}" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
 
         <!-- Schnellvorschau-Overlay (Mausrad-Klick auf Filmstrip) -->
         <Panel Name="FilmstripPreviewOverlay"
