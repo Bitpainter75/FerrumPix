@@ -6,7 +6,7 @@ FerrumPix is a desktop photo manager and image editor for Linux and Windows, wit
 
 It is built with [Avalonia UI](https://avaloniaui.net/) and .NET 10, in VB.NET, which I still love even though it is rare nowadays. This started as a private project - an application built exactly the way I always wanted one to look and work - and it is free and open source for anyone who finds it useful.
 
-To be transparent: yes, I use AI to support my development workflow. However, anyone who actually codes knows that AI cannot build a complete, production-ready application on its own. It still requires a massive amount of manual work, architecture planning, and debugging. I am currently investing a lot of time, a ton of passion, unique ideas, and genuine hard work went into this project.
+To be transparent: yes, I use AI to support my development workflow. However, it still requires a massive amount of manual work, architecture planning, and debugging. I am currently investing a lot of time. A ton of passion, unique ideas, and genuine hard work went into this project.
 
 FerrumPix is in active development. The gallery, viewer, editor, settings and Immich integration are already usable. Current work focuses on stability, performance, workflow polish and cleanup.
 
