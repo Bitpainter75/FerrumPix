@@ -123,8 +123,6 @@ Plus `album.create` and `album.update` if FerrumPix should create and rename alb
 
 ## Settings
 
-<img src="Screenshots/Settings.png" />
-
 Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the Immich connection.
 
 Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
