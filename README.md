@@ -49,11 +49,9 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 ## Editor
 
-<img src="Screenshots/Editor_Edit.png" />
+<img src="Screenshots/Editor_Text.png" />
 
 **Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, and a frame whose edges you bend. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
-
-<img src="Screenshots/Editor_Crop.png" />
 
 **Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. *Auto* sets a sensible starting point, and a set of slider values can be saved and put on any other photo.
 
@@ -69,7 +67,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups.
 
-<img src="Screenshots/Editor_Text.png" />
+<img src="Screenshots/Editor_Edit.png" />
 
 **Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw.
 
