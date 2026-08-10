@@ -542,17 +542,31 @@ Namespace Services
                 If Not String.IsNullOrEmpty(description) Then fields.Add("""description"":" & JsonSerializer.Serialize(description))
                 Dim rating = If(raw.ExifInfo?.Rating.HasValue, CInt(Math.Round(raw.ExifInfo.Rating.Value)), 0)
                 If rating >= 1 AndAlso rating <= 5 Then fields.Add("""rating"":" & rating.ToString(Globalization.CultureInfo.InvariantCulture))
+                ' JEDEN Schreibstatus auswerten. Vorher liefen beide Aufrufe ins Leere und die
+                ' Funktion meldete danach Erfolg - ein 403 oder 500 blieb also unsichtbar, das neue
+                ' Asset stand ohne Beschreibung, Bewertung und Stichwoerter da, und weil "sauber
+                ' ersetzt" gemeldet war, wanderte das Original in den Papierkorb. Genau die
+                ' Angaben, die dann nur noch dort standen.
+                Dim alleAngekommen = True
                 If fields.Count > 0 Then
-                    Await UpdateAssetAsync(targetId, "{" & String.Join(",", fields) & "}", cancellationToken).ConfigureAwait(False)
+                    If Not Await UpdateAssetAsync(targetId, "{" & String.Join(",", fields) & "}", cancellationToken).ConfigureAwait(False) Then
+                        alleAngekommen = False
+                    End If
                 End If
 
                 For Each tag In If(raw.Tags, New List(Of ImmichTagDto)())
                     If tag Is Nothing OrElse String.IsNullOrEmpty(tag.Id) Then Continue For
-                    Await TagAssetsAsync(tag.Id, targetId, add:=True, cancellationToken:=cancellationToken).ConfigureAwait(False)
+                    If Not Await TagAssetsAsync(tag.Id, targetId, add:=True, cancellationToken:=cancellationToken).ConfigureAwait(False) Then
+                        alleAngekommen = False
+                    End If
                 Next
 
                 Await RefreshAssetDetailCacheAsync(targetId, $"nach CopyAssetMetadata von {raw.Id}", cancellationToken).ConfigureAwait(False)
-                Return True
+                If Not alleAngekommen Then
+                    DiagnosticLogService.LogAlways("Immich.CopyAssetMetadata",
+                        $"{raw.Id} → {targetId}: nicht alles uebernommen, das Original bleibt")
+                End If
+                Return alleAngekommen
             Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
                 Throw
             Catch ex As Exception
@@ -590,6 +604,106 @@ Namespace Services
                 DiagnosticLogService.LogException("Immich.DeleteAssets", ex)
                 Return False
             End Try
+        End Function
+
+        ' ── Papierkorb ──────────────────────────────────────────────────────────
+        '
+        ' Gelöscht wird ohne den Schalter „endgültig löschen" in den Papierkorb (DeleteAssetsAsync mit
+        ' force=False). Ohne Ansicht wäre der Rückweg allein die Weboberfläche des Servers.
+        '
+        ' DIE FALLE, und sie hätte stillen Schaden angerichtet: `isTrashed:true` im Suchrumpf wird von
+        ' Immich STILLSCHWEIGEND IGNORIERT. Die Antwort sieht richtig aus und enthält den normalen
+        ' Bestand - wer danach baut, zeigt dem Nutzer seine ganze Mediathek und nennt sie Papierkorb.
+        ' Ausgewertet wird `trashedBefore`: ein Zeitpunkt, vor dem gelöscht wurde. Er steht bewusst
+        ' einen Tag in der ZUKUNFT, damit eine abweichende Uhr auf dem Server nicht die zuletzt
+        ' gelöschten Bilder verschluckt.
+
+        ''' <summary>Eine Seite des Papierkorbs, neueste zuerst.</summary>
+        Public Shared Function GetTrashedAssetsPageAsync(page As Integer, Optional cancellationToken As CancellationToken = Nothing) As Task(Of ImmichAssetPage)
+            Return GetAssetsPageAsync(page, cancellationToken:=cancellationToken, trashed:=True)
+        End Function
+
+        ''' <summary>Holt Assets aus dem Papierkorb zurück. Sie landen wieder dort, wo sie waren -
+        ''' Alben und Metadaten bleiben, weil das Asset dasselbe bleibt.</summary>
+        Public Shared Async Function RestoreAssetsAsync(assetIds As IEnumerable(Of String), Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+            If Not IsConfigured Then Return False
+            Dim ids = If(assetIds, Enumerable.Empty(Of String)()).Where(Function(s) Not String.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal).ToList()
+            If ids.Count = 0 Then Return False
+            Try
+                Dim body = "{""ids"":[" & String.Join(",", ids.Select(Function(i) JsonSerializer.Serialize(i))) & "]}"
+                Using content = New StringContent(body, Encoding.UTF8, "application/json")
+                    Using resp = Await GetClient().PostAsync(ApiUrl("trash/restore/assets"), content, cancellationToken).ConfigureAwait(False)
+                        If Not resp.IsSuccessStatusCode Then
+                            Dim err = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                            LastError = $"HTTP {CInt(resp.StatusCode)}"
+                            DiagnosticLogService.LogAlways("Immich.RestoreAssets",
+                                                           $"HTTP {CInt(resp.StatusCode)} n={ids.Count} {err.Substring(0, Math.Min(300, err.Length))}")
+                            Return False
+                        End If
+                    End Using
+                End Using
+                For Each id In ids
+                    InvalidateAssetCaches(id)
+                Next
+                Return True
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Immich.RestoreAssets", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Leert den Papierkorb VOLLSTAENDIG (POST /trash/empty). Danach ist nichts mehr
+        ''' wiederherstellbar, auch nicht das, was jemand vor Wochen gelöscht hat - der Aufrufer fragt
+        ''' deshalb vorher nach.</summary>
+        Public Shared Async Function EmptyTrashAsync(Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+            If Not IsConfigured Then Return False
+            Try
+                Using content = New StringContent("", Encoding.UTF8, "application/json")
+                    Using resp = Await GetClient().PostAsync(ApiUrl("trash/empty"), content, cancellationToken).ConfigureAwait(False)
+                        If Not resp.IsSuccessStatusCode Then
+                            Dim err = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                            LastError = $"HTTP {CInt(resp.StatusCode)}"
+                            DiagnosticLogService.LogAlways("Immich.EmptyTrash",
+                                                           $"HTTP {CInt(resp.StatusCode)} {err.Substring(0, Math.Min(300, err.Length))}")
+                            Return False
+                        End If
+                    End Using
+                End Using
+                Return True
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Immich.EmptyTrash", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Wie viele Assets im Papierkorb liegen; -1, wenn der Server es nicht sagt. Die
+        ''' Zahl steht am Baumknoten und beantwortet die Frage "lohnt ein Blick" ohne eine ganze
+        ''' Seite zu holen.</summary>
+        Public Shared Async Function GetTrashedCountAsync(Optional cancellationToken As CancellationToken = Nothing) As Task(Of Integer)
+            If Not IsConfigured Then Return -1
+            Try
+                Using resp = Await GetClient().GetAsync(ApiUrl("assets/statistics?isTrashed=true"), cancellationToken).ConfigureAwait(False)
+                    If Not resp.IsSuccessStatusCode Then Return -1
+                    Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                    Using doc = JsonDocument.Parse(body)
+                        Dim total As JsonElement
+                        If doc.RootElement.TryGetProperty("total", total) AndAlso total.ValueKind = JsonValueKind.Number Then
+                            Return total.GetInt32()
+                        End If
+                    End Using
+                End Using
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.TrashedCount", ex)
+            End Try
+            Return -1
         End Function
 
         ' Die Hauptversion des Servers entscheidet, wie ein vorhandenes Asset ersetzt wird (siehe
@@ -918,14 +1032,16 @@ Namespace Services
         Public Shared Async Function GetAssetsPageAsync(page As Integer, Optional albumId As String = Nothing,
                                                         Optional cancellationToken As CancellationToken = Nothing,
                                                         Optional personId As String = Nothing,
-                                                        Optional city As String = Nothing) As Task(Of ImmichAssetPage)
+                                                        Optional city As String = Nothing,
+                                                        Optional trashed As Boolean = False) As Task(Of ImmichAssetPage)
             Dim result As New ImmichAssetPage()
             If Not IsConfigured Then Return result
             Try
                 Dim client = GetClient()
-                ' Ein gemeinsamer Fetcher fuer "Alle Fotos", Alben, Personen und Orte - search/metadata
-                ' filtert wahlweise per albumIds, personIds (Gesichtserkennung des Servers) oder city.
-                Dim requestBody = BuildAssetPageSearchBody(page, albumId, personId, city, includeExif:=True)
+                ' Ein gemeinsamer Fetcher fuer "Alle Fotos", Alben, Personen, Orte und den Papierkorb -
+                ' search/metadata filtert wahlweise per albumIds, personIds (Gesichtserkennung des
+                ' Servers), city oder trashedBefore.
+                Dim requestBody = BuildAssetPageSearchBody(page, albumId, personId, city, includeExif:=True, trashed:=trashed)
                 Dim statusCode As Integer
                 Dim body As String
                 Using content = New StringContent(requestBody, Encoding.UTF8, "application/json")
@@ -942,7 +1058,7 @@ Namespace Services
                 If IsWithExifRejected(statusCode, body) Then
                     DiagnosticLogService.LogAlways("Immich.GetAssetsPage",
                                                    $"HTTP {statusCode} für withExif - Wiederholung ohne EXIF")
-                    requestBody = BuildAssetPageSearchBody(page, albumId, personId, city, includeExif:=False)
+                    requestBody = BuildAssetPageSearchBody(page, albumId, personId, city, includeExif:=False, trashed:=trashed)
                     Using content = New StringContent(requestBody, Encoding.UTF8, "application/json")
                         Using resp = Await client.PostAsync(ApiUrl("search/metadata"), content, cancellationToken).ConfigureAwait(False)
                             statusCode = CInt(resp.StatusCode)
@@ -982,11 +1098,18 @@ Namespace Services
         ''' Als eigene Naht lässt sich der API-Vertrag ohne einen laufenden Immich-Server prüfen.</summary>
         Private Shared Function BuildAssetPageSearchBody(page As Integer, albumId As String,
                                                          personId As String, city As String,
-                                                         Optional includeExif As Boolean = True) As String
+                                                         Optional includeExif As Boolean = True,
+                                                         Optional trashed As Boolean = False) As String
             Dim filters As New List(Of String)()
             If Not String.IsNullOrWhiteSpace(albumId) Then filters.Add($"""albumIds"":[""{albumId}""]")
             If Not String.IsNullOrWhiteSpace(personId) Then filters.Add($"""personIds"":[""{personId}""]")
             If Not String.IsNullOrWhiteSpace(city) Then filters.Add($"""city"":{JsonSerializer.Serialize(city)}")
+            ' NICHT isTrashed: das Feld wird stillschweigend ignoriert und die Antwort enthaelt dann
+            ' den ganzen normalen Bestand. Ausgewertet wird der Zeitpunkt, und er liegt bewusst einen
+            ' Tag voraus, damit eine abweichende Serveruhr nichts verschluckt.
+            If trashed Then
+                filters.Add($"""trashedBefore"":{JsonSerializer.Serialize(DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ", Globalization.CultureInfo.InvariantCulture))}")
+            End If
             Dim filterPrefix = If(filters.Count > 0, String.Join(",", filters) & ",", "")
             Dim exifPart = If(includeExif, ",""withExif"":true", "")
             Return $"{{{filterPrefix}""page"":{Math.Max(1, page)},""size"":{AssetPageSize}{exifPart}}}"

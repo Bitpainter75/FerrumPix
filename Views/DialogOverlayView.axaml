@@ -198,6 +198,11 @@
                                             IsVisible="{Binding IsSaveAsImmichAvailable}"
                                             Click="OnDialogSaveTargetClick"
                                             Tag="Immich">Immich</Button>
+                                    <Button Classes="segmented"
+                                            Classes.active="{Binding IsSaveAsTargetNextcloud}"
+                                            IsVisible="{Binding IsSaveAsNextcloudAvailable}"
+                                            Click="OnDialogSaveTargetClick"
+                                            Tag="Nextcloud">Nextcloud</Button>
                                 </StackPanel>
 
                                 <TextBlock Grid.Row="3"

@@ -130,8 +130,9 @@
                 </Expander.HeaderTemplate>
                 <StackPanel Spacing="2" Margin="0,8,0,0">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Körnung" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                        <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Wie stark das Korn im Bild liegt." />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            Value="{Binding Grain}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
@@ -147,13 +148,22 @@
                                                  Value="{Binding GrainSize, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Frequenz" Foreground="{DynamicResource FP.Text.Secondary}"
+                        <TextBlock Text="Rauheit" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                    ToolTip.Tip="Unregelmäßigkeit des Korns: höher = fleckiger (manche Bereiche stärker gekörnt)." />
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
                                            Value="{Binding GrainFrequency}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding GrainFrequency, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Farbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Farbigkeit des Korns: 0 = graues Korn, höher = farbige Speckles wie bei hoch empfindlichem Farbfilm." />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           Value="{Binding GrainColor}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding GrainColor, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
                 </StackPanel>
             </Expander>

@@ -16,25 +16,39 @@ Namespace Models
         Private _isSelected As Boolean
 
         Public Sub New(city As String, country As String, count As Integer, isSelected As Boolean,
-                       Optional countryCode As String = "", Optional isFromImmich As Boolean = False)
+                       Optional countryCode As String = "", Optional serverSource As String = "",
+                       Optional serverId As String = "")
             Me.City = If(city, "")
             Me.Country = If(country, "")
             Me.CountryCode = If(countryCode, "")
             Me.Count = count
-            Me.IsFromImmich = isFromImmich
+            Me.ServerSource = If(serverSource, "")
+            ' Ohne eigene Kennung ist der Ortsname selbst der Schluessel - so filtert Immich.
+            Me.ServerId = If(String.IsNullOrEmpty(serverId), Me.City, serverId)
             _isSelected = isSelected
         End Sub
 
         Public ReadOnly Property City As String
         Public ReadOnly Property Country As String
 
-        ''' <summary>Kommt dieser Ort vom Immich-Server? Gleiche Regel wie bei den Personen (siehe
-        ''' <see cref="PersonFilterOption.IsFromImmich"/>): allein waehlbar, oeffnet die
-        ''' Server-Abfrage.</summary>
-        Public ReadOnly Property IsFromImmich As Boolean
+        ''' <summary>Von welchem Server dieser Ort kommt; leer heisst aus dem lokalen Katalog. Gleiche
+        ''' Regel wie bei den Personen (siehe <see cref="PersonFilterOption.ServerSource"/>): allein
+        ''' waehlbar, oeffnet die Server-Ansicht.</summary>
+        Public ReadOnly Property ServerSource As String
 
-        ''' <summary>Traegt die Zwischenueberschrift "Immich" - beim ERSTEN Eintrag vom Server.</summary>
-        Public Property ShowsImmichHeader As Boolean
+        ''' <summary>Kennung des Orts auf dem Server. Bei Nextcloud ist sie eine eigene Zeichenkette
+        ''' (der Cluster), bei Immich der Stadtname selbst.</summary>
+        Public ReadOnly Property ServerId As String
+
+        Public ReadOnly Property IsFromServer As Boolean
+            Get
+                Return ServerSource.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Traegt die Zwischenueberschrift mit dem Servernamen - beim ERSTEN Eintrag je
+        ''' Server.</summary>
+        Public Property ShowsServerHeader As Boolean
 
         ''' <summary>Das Laenderkuerzel. Der ANGEZEIGTE Landesname kommt daraus in der Sprache der
         ''' Oberflaeche; gefiltert wird weiter ueber den gespeicherten Ortsnamen, der sich nicht mit

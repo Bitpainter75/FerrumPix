@@ -65,6 +65,7 @@ Namespace ViewModels
         Private _selectedFolderNode As FolderNode
         Private _selectedSearchNode As VirtualNavigationNode
         Private _selectedImmichNode As VirtualNavigationNode
+        Private _selectedNextcloudNode As VirtualNavigationNode
         Private _clipboardPaths As New List(Of String)()
         Private _clipboardCut As Boolean
         Private ReadOnly _historyBack As New Stack(Of String)()
@@ -115,6 +116,8 @@ Namespace ViewModels
         ''' getrennt, weil sie im jeweiligen Tab neben ihrem Baum stehen sollen - eine
         ''' Dateisystem-Suche gehoert nicht neben die Immich-Alben und umgekehrt.</summary>
         Public Property ImmichSearchTree As ObservableCollection(Of VirtualNavigationNode)
+        ''' <summary>Suchlisten des Nextcloud-Tabs (Source="Nextcloud").</summary>
+        Public Property NextcloudSearchTree As ObservableCollection(Of VirtualNavigationNode)
         ''' <summary>Favoriten-Tab: frei zusammengestellte Verweise auf Ordner, Immich-Knoten und
         ''' Suchlisten (siehe FavoritesService). Die Knoten sind vollwertige Navigationsknoten -
         ''' ein Klick tut genau dasselbe wie im Herkunfts-Tab.</summary>
@@ -122,6 +125,7 @@ Namespace ViewModels
         ''' <summary>Eigener Immich-Bereich im Navigationsbereich (getrennt von der Suche): der
         ''' „Alle Fotos"-Knoten plus je ein Knoten pro Album.</summary>
         Public Property ImmichTree As ObservableCollection(Of VirtualNavigationNode)
+        Public Property NextcloudTree As ObservableCollection(Of VirtualNavigationNode)
         Public Property Items As BulkObservableCollection(Of ImageItem)
         Public Property DisplayItems As BulkObservableCollection(Of ImageItem)
         Public Property SelectedItems As ObservableCollection(Of ImageItem)
@@ -1337,6 +1341,15 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property SelectedNextcloudNode As VirtualNavigationNode
+            Get
+                Return _selectedNextcloudNode
+            End Get
+            Set(value As VirtualNavigationNode)
+                Me.RaiseAndSetIfChanged(_selectedNextcloudNode, value)
+            End Set
+        End Property
+
         Private _allItems As New List(Of ImageItem)()
         Private _lastWindowFirst As Integer = -1
         Private _lastWindowLast As Integer = -1
@@ -1400,8 +1413,10 @@ Namespace ViewModels
             SetSidebarTabCommand = ReactiveCommand.Create(Of String)(Sub(tab) SidebarTab = tab)
             SearchTree = New ObservableCollection(Of VirtualNavigationNode)()
             ImmichSearchTree = New ObservableCollection(Of VirtualNavigationNode)()
+            NextcloudSearchTree = New ObservableCollection(Of VirtualNavigationNode)()
             FavoritesTree = New ObservableCollection(Of VirtualNavigationNode)()
             ImmichTree = New ObservableCollection(Of VirtualNavigationNode)()
+            NextcloudTree = New ObservableCollection(Of VirtualNavigationNode)()
 
             _collagePreviewTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(350)}
             AddHandler _collagePreviewTimer.Tick, Sub()
@@ -1477,6 +1492,7 @@ Namespace ViewModels
             InitializeFolderTree()
             InitializeVirtualNavigation()
             InitializeImmich()
+            InitializeNextcloud()
             FillMissingPlacesInBackground()
         End Sub
 
@@ -1628,6 +1644,11 @@ Namespace ViewModels
                     Else
                         Dim ignored = ImmichService.RemoveTagFromAssetAsync(item.ImmichAssetId, tag)
                     End If
+                ElseIf item.IsNextcloudAsset Then
+                    ' Auf diesem Server sind Stichwoerter System-Tags des Kerns, dieselben, die
+                    ' Memories liest. Geschrieben wird ueber die Dateikennung - sie steht am Element,
+                    ' anders als der Pfad im Dateibaum braucht sie kein Nachladen.
+                    Dim ignored = WriteNextcloudTagAsync(item, tag, add)
                 Else
                     LibraryService.Instance.SetTags(item.FilePath, If(item.Tags, New List(Of String)()), syncToXmp:=True)
                 End If
@@ -1635,7 +1656,29 @@ Namespace ViewModels
             RefreshTagFilterOptions()
         End Sub
 
-        ''' <summary>Persistiert den Favoriten-Status ans passende Backend (Immich-Server bzw. Katalog).</summary>
+        ''' <summary>Schreibt ein Stichwort an eine Nextcloud-Aufnahme oder loest es.
+        '''
+        ''' Ein Fehlschlag bleibt nicht stumm: die Kachel zeigte das Stichwort sonst als gesetzt an,
+        ''' waehrend der Server es abgelehnt hat.</summary>
+        Private Async Function WriteNextcloudTagAsync(item As ImageItem, tag As String, add As Boolean) As Task
+            Try
+                Dim ok = If(add,
+                            Await NextcloudService.AddTagAsync(item.NextcloudFileId, tag),
+                            Await NextcloudService.RemoveTagAsync(item.NextcloudFileId, tag))
+                If Not ok Then
+                    StatusText = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                    LocalizationService.T("Stichwort konnte nicht geschrieben werden"), NextcloudService.LastError)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Nextcloud.WriteTag", ex)
+            End Try
+        End Function
+
+        ''' <summary>Persistiert den Favoriten-Status ans passende Backend.
+        '''
+        ''' Nextcloud kennt den Favoriten als WebDAV-Eigenschaft an der Datei, also geht er dorthin
+        ''' und nicht in den lokalen Katalog. Sterne und Farbetikett dagegen kennt dieser Server
+        ''' NICHT - die bleiben bewusst lokal (siehe PersistRating und PersistColorLabel).</summary>
         Private Sub PersistFavorite(item As ImageItem, value As Boolean, before As Boolean)
             If item Is Nothing Then Return
             If item.IsImmichAsset Then
@@ -1644,10 +1687,30 @@ Namespace ViewModels
                                        item.IsFavorite = before
                                        Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
                                    End Sub)
+            ElseIf item.IsNextcloudAsset Then
+                WriteToImmich(Function() SetNextcloudFavoriteAsync(item, value),
+                                   Sub()
+                                       item.IsFavorite = before
+                                       Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
+                                   End Sub)
             Else
                 LibraryService.Instance.SetFavorite(item.FilePath, value)
             End If
         End Sub
+
+        ''' <summary>Der Favorit braucht den Pfad im Dateibaum. Steht der am Element noch nicht (die
+        ''' Einzelheiten kommen erst mit der sichtbaren Kachel), wird er hier nachgeholt.</summary>
+        Private Async Function SetNextcloudFavoriteAsync(item As ImageItem, value As Boolean) As Task(Of Boolean)
+            Dim pathInTree = item.NextcloudPath
+            If String.IsNullOrEmpty(pathInTree) Then
+                Dim info = Await NextcloudService.GetInfoAsync(item.NextcloudFileId)
+                If info Is Nothing Then Return False
+                item.ApplyNextcloudMetadata(info)
+                pathInTree = item.NextcloudPath
+            End If
+            If String.IsNullOrEmpty(pathInTree) Then Return False
+            Return Await NextcloudService.SetFavoriteAsync(pathInTree, value)
+        End Function
 
         ''' <summary>
         ''' Schreibt eine Änderung an Immich und macht sie in der Anzeige RÜCKGÄNGIG, wenn der Server
@@ -1828,22 +1891,28 @@ Namespace ViewModels
         Private Sub InitializeVirtualNavigation()
             SearchTree.Clear()
             ImmichSearchTree.Clear()
-            ' "Neue Suche" steht in BEIDEN Tabs: der Suchdialog fragt die Quelle ohnehin ab, und so
-            ' ist der Einstieg dort, wo der Nutzer gerade arbeitet.
-            SearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch"))
-            ImmichSearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch"))
+            NextcloudSearchTree.Clear()
+            ' "Neue Suche" steht in JEDEM Tab, und der Knoten traegt die Quelle: der Dialog fragt sie
+            ' nicht mehr ab, sondern uebernimmt den Bereich, in dem geklickt wurde.
+            SearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch") With {.Source = "Local"})
+            ImmichSearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch") With {.Source = "Immich"})
+            NextcloudSearchTree.Add(New VirtualNavigationNode(LocalizationService.T("Neue Suche"), "NewSearch") With {.Source = "Nextcloud"})
             _savedSearches.Clear()
             _savedSearches.AddRange(SearchListService.Load())
             For Each search In _savedSearches
-                Dim node = CreateSavedSearchNode(search)
-                If String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase) Then
-                    ImmichSearchTree.Add(node)
-                Else
-                    SearchTree.Add(node)
-                End If
+                SearchTreeForSource(search.Source).Add(CreateSavedSearchNode(search))
             Next
             RefreshFavorites()
         End Sub
+
+        ''' <summary>Der Suchbaum, in den eine Suche dieser Quelle gehoert.</summary>
+        Private Function SearchTreeForSource(source As String) As ObservableCollection(Of VirtualNavigationNode)
+            Select Case SearchListService.NormalizeSource(source)
+                Case "Immich" : Return ImmichSearchTree
+                Case "Nextcloud" : Return NextcloudSearchTree
+                Case Else : Return SearchTree
+            End Select
+        End Function
 
         ' ── Favoriten ────────────────────────────────────────────────────────────
 
@@ -1885,10 +1954,12 @@ Namespace ViewModels
                 Dim normalized = If(value, "Folders").Trim()
                 Select Case normalized.ToLowerInvariant()
                     Case "immich" : normalized = "Immich"
+                    Case "nextcloud" : normalized = "Nextcloud"
                     Case "favorites" : normalized = "Favorites"
                     Case Else : normalized = "Folders"
                 End Select
                 If normalized = "Immich" AndAlso Not HasImmich Then normalized = "Folders"
+                If normalized = "Nextcloud" AndAlso Not HasNextcloud Then normalized = "Folders"
                 If String.Equals(_sidebarTab, normalized, StringComparison.Ordinal) Then Return
                 _sidebarTab = normalized
                 RaiseSidebarTabProperties()
@@ -1907,6 +1978,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsNextcloudTab As Boolean
+            Get
+                Return String.Equals(_sidebarTab, "Nextcloud", StringComparison.Ordinal) AndAlso HasNextcloud
+            End Get
+        End Property
+
         Public ReadOnly Property IsFavoritesTab As Boolean
             Get
                 Return String.Equals(_sidebarTab, "Favorites", StringComparison.Ordinal)
@@ -1919,6 +1996,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SidebarTab))
             Me.RaisePropertyChanged(NameOf(IsFoldersTab))
             Me.RaisePropertyChanged(NameOf(IsImmichTab))
+            Me.RaisePropertyChanged(NameOf(IsNextcloudTab))
             Me.RaisePropertyChanged(NameOf(IsFavoritesTab))
         End Sub
 
@@ -1956,10 +2034,19 @@ Namespace ViewModels
             If node Is Nothing Then Return SidebarTab
             If node.IsFavoriteNode Then Return "Favorites"
             Select Case node.Kind
-                Case "ImmichAll", "ImmichAlbum", "ImmichPerson", "ImmichPlace", "ImmichPeopleRoot", "ImmichPlacesRoot"
+                Case "ImmichAll", "ImmichAlbum", "ImmichPerson", "ImmichPlace", "ImmichPeopleRoot", "ImmichPlacesRoot",
+                     "ImmichTrash"
                     Return "Immich"
-                Case "SavedSearch"
-                    Return If(String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Folders")
+                Case "NextcloudAll", "NextcloudAlbum", "NextcloudPerson", "NextcloudPlace",
+                     "NextcloudPeopleRoot", "NextcloudPlacesRoot", "NextcloudTag", "NextcloudTagsRoot",
+                     "NextcloudTrash"
+                    Return "Nextcloud"
+                Case "SavedSearch", "NewSearch"
+                    Select Case SearchListService.NormalizeSource(node.Source)
+                        Case "Immich" : Return "Immich"
+                        Case "Nextcloud" : Return "Nextcloud"
+                        Case Else : Return "Folders"
+                    End Select
                 Case Else
                     Return SidebarTab
             End Select
@@ -1977,9 +2064,13 @@ Namespace ViewModels
             Get
                 If SelectedFavoriteNode IsNot Nothing AndAlso IsFavoritesTab Then Return "FavoritesTreeView"
                 If SelectedImmichNode IsNot Nothing Then Return "ImmichTreeView"
+                If SelectedNextcloudNode IsNot Nothing Then Return "NextcloudTreeView"
                 If SelectedSearchNode IsNot Nothing Then
-                    Return If(String.Equals(SelectedSearchNode.Source, "Immich", StringComparison.OrdinalIgnoreCase),
-                              "ImmichSearchTreeView", "SearchTreeView")
+                    Select Case SearchListService.NormalizeSource(SelectedSearchNode.Source)
+                        Case "Immich" : Return "ImmichSearchTreeView"
+                        Case "Nextcloud" : Return "NextcloudSearchTreeView"
+                        Case Else : Return "SearchTreeView"
+                    End Select
                 End If
                 Return Nothing
             End Get
@@ -1989,7 +2080,7 @@ Namespace ViewModels
         Public ReadOnly Property NavigationRestoreNode As VirtualNavigationNode
             Get
                 If SelectedFavoriteNode IsNot Nothing AndAlso IsFavoritesTab Then Return SelectedFavoriteNode
-                Return If(SelectedImmichNode, SelectedSearchNode)
+                Return If(SelectedImmichNode, If(SelectedNextcloudNode, SelectedSearchNode))
             End Get
         End Property
 
@@ -2007,9 +2098,18 @@ Namespace ViewModels
                     Return node
                 Case "Immich"
                     If Not ImmichService.IsConfigured Then Return Nothing
-                    Return New VirtualNavigationNode(fav.Name, fav.ImmichKind) With {
-                        .Id = fav.ImmichId,
-                        .Query = fav.ImmichId,
+                    Return New VirtualNavigationNode(fav.Name, fav.NodeKind) With {
+                        .Id = fav.NodeId,
+                        .Query = fav.NodeId,
+                        .FavoriteKey = fav.Key
+                    }
+                Case "Nextcloud"
+                    ' Ohne eingerichteten Server bleibt der Favorit unsichtbar statt als tote Zeile
+                    ' stehen - genau wie bei Immich.
+                    If Not NextcloudService.IsConfigured Then Return Nothing
+                    Return New VirtualNavigationNode(fav.Name, fav.NodeKind) With {
+                        .Id = fav.NodeId,
+                        .Query = fav.NodeId,
                         .FavoriteKey = fav.Key
                     }
                 Case Else
@@ -2043,8 +2143,15 @@ Namespace ViewModels
                     entry = New FavoriteEntry With {.Kind = "Search", .Name = node.Name, .SearchId = node.Id}
                 Case "ImmichAll", "ImmichAlbum", "ImmichPerson", "ImmichPlace"
                     entry = New FavoriteEntry With {
-                        .Kind = "Immich", .Name = node.Name, .ImmichKind = node.Kind,
-                        .ImmichId = If(String.IsNullOrWhiteSpace(node.Id), If(node.Query, ""), node.Id)}
+                        .Kind = "Immich", .Name = node.Name, .NodeKind = node.Kind,
+                        .NodeId = If(String.IsNullOrWhiteSpace(node.Id), If(node.Query, ""), node.Id)}
+                Case "NextcloudAll", "NextcloudAlbum", "NextcloudPerson", "NextcloudPlace", "NextcloudTag"
+                    ' Ohne diesen Zweig blieb "Zu Favoriten hinzufügen" auf einem Nextcloud-Knoten
+                    ' WIRKUNGSLOS: der Eintrag war sichtbar, es entstand nur kein Favorit
+                    ' (Nutzerbefund 2026-08-10).
+                    entry = New FavoriteEntry With {
+                        .Kind = "Nextcloud", .Name = node.Name, .NodeKind = node.Kind,
+                        .NodeId = If(String.IsNullOrWhiteSpace(node.Id), If(node.Query, ""), node.Id)}
                 Case "FavoriteFolder"
                     AddFolderFavorite(node.RootFolder)
                     Return
@@ -2083,7 +2190,7 @@ Namespace ViewModels
             SelectedFavoriteNode = If(node.IsFavoriteNode, node, Nothing)
             Select Case node.Kind
                 Case "NewSearch"
-                    Return Await OpenSearchDialog()
+                    Return Await OpenSearchDialog(node.Source)
                 Case "SavedSearch"
                     OpenSavedSearch(node)
                 Case "ImmichAlbum"
@@ -2096,6 +2203,23 @@ Namespace ViewModels
                     Await OpenImmichPlaceAsync(node)
                 Case "ImmichPeopleRoot", "ImmichPlacesRoot"
                     ' Elternknoten: nur auf-/zuklappen, keine Ansicht öffnen.
+                    node.IsExpanded = Not node.IsExpanded
+                Case "ImmichTrash"
+                    Await OpenImmichTrashAsync(node)
+                Case "NextcloudAll"
+                    Await OpenNextcloudAllAsync(node)
+                Case "NextcloudAlbum"
+                    Await OpenNextcloudAlbumAsync(node)
+                Case "NextcloudPerson"
+                    Await OpenNextcloudClusterAsync(node, "recognize")
+                Case "NextcloudPlace"
+                    Await OpenNextcloudClusterAsync(node, "places")
+                Case "NextcloudTag"
+                    Await OpenNextcloudClusterAsync(node, "tags")
+                Case "NextcloudTrash"
+                    Await OpenNextcloudTrashAsync(node)
+                Case "NextcloudPeopleRoot", "NextcloudPlacesRoot", "NextcloudTagsRoot"
+                    ' Klappknoten wie im Immich-Baum: nur auf- und zuklappen.
                     node.IsExpanded = Not node.IsExpanded
                 Case "FavoriteFolder"
                     ' Favorit auf einen Ordner: exakt derselbe Weg wie ein Klick im Ordnerbaum.
@@ -2111,6 +2235,427 @@ Namespace ViewModels
                 Return ImmichTree IsNot Nothing AndAlso ImmichTree.Count > 0
             End Get
         End Property
+
+        Public ReadOnly Property HasNextcloud As Boolean
+            Get
+                Return NextcloudTree IsNot Nothing AndAlso NextcloudTree.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Baut den Nextcloud-Bereich auf: die Zeitachse und die Alben. Die Alben kommen
+        ''' im Hintergrund nach, damit der Baum nicht auf den Server wartet.</summary>
+        Private Sub InitializeNextcloud()
+            NextcloudTree.Clear()
+            SyncSidebarTabWithNextcloud()
+            If Not NextcloudService.IsConfigured Then
+                ' Wie bei Immich: mit der Quelle verschwinden auch ihre Einträge aus den
+                ' Filterknöpfen.
+                _nextcloudPeople = New List(Of NextcloudService.NextcloudCluster)()
+                _nextcloudPlaces = New List(Of NextcloudService.NextcloudCluster)()
+                _nextcloudTags = New List(Of NextcloudService.NextcloudCluster)()
+                RefreshPersonFilterOptions()
+                RefreshPlaceFilterOptions()
+                RefreshTagFilterOptions()
+                Return
+            End If
+            NextcloudTree.Add(New VirtualNavigationNode(LocalizationService.T("Alle Fotos"), "NextcloudAll"))
+            SyncSidebarTabWithNextcloud()
+            RefreshNextcloudAlbumsAsync()
+        End Sub
+
+        ''' <summary>Nach einer Änderung in den Einstellungen neu aufbauen.</summary>
+        Public Sub ReinitializeNextcloud()
+            InitializeNextcloud()
+        End Sub
+
+        ''' <summary>Wie <see cref="SyncSidebarTabWithImmich"/>, nur für den Nextcloud-Reiter:
+        ''' verschwindet die Quelle, während ihr Reiter offen ist, fällt die Auswahl auf Ordner
+        ''' zurück - sonst zeigt die Seitenleiste einen Reiter, den es nicht mehr gibt.</summary>
+        Private Sub SyncSidebarTabWithNextcloud()
+            Me.RaisePropertyChanged(NameOf(HasNextcloud))
+            If Not HasNextcloud AndAlso String.Equals(_sidebarTab, "Nextcloud", StringComparison.Ordinal) Then
+                _sidebarTab = "Folders"
+            End If
+            RaiseSidebarTabProperties()
+        End Sub
+
+        ''' <summary>Holt die Alben und hängt sie unter die Zeitachse. Ein Fehlschlag bleibt still im
+        ''' Baum (die Zeitachse steht ja), meldet sich aber in der Statuszeile - ein leerer Baum ohne
+        ''' Begründung sähe aus wie "keine Alben vorhanden".</summary>
+        Private Sub RefreshNextcloudAlbumsAsync()
+            Dim ignored = Task.Run(Async Function()
+                                       Try
+                                           Dim alben = Await NextcloudService.GetClustersAsync("albums").ConfigureAwait(False)
+                                           Dim albumError = NextcloudService.LastError
+                                           ' Personen kommen je nach Installation aus "recognize" ODER
+                                           ' "facerecognition"; welche da ist, steht nicht fest. Das
+                                           ' NICHT eingeschaltete Backend antwortet mit einer
+                                           ' Begruendung, nicht mit einer Liste - deshalb einfach
+                                           ' beide fragen und nehmen, was etwas liefert.
+                                           Dim personen = Await NextcloudService.GetClustersAsync("recognize").ConfigureAwait(False)
+                                           If personen.Count = 0 Then personen = Await NextcloudService.GetClustersAsync("facerecognition").ConfigureAwait(False)
+                                           Dim orte = Await NextcloudService.GetClustersAsync("places").ConfigureAwait(False)
+                                           ' Stichwoerter sind auf diesem Server ein Cluster wie Alben und Orte - anders
+                                           ' als bei Immich, wo die Suche keinen Stichwortfilter kennt. Sie koennen
+                                           ' deshalb sowohl in den Baum als auch in den Filterknopf.
+                                           Dim stichworte = Await NextcloudService.GetClustersAsync("tags").ConfigureAwait(False)
+                                           Await Dispatcher.UIThread.InvokeAsync(
+                                               Sub()
+                                                   For i = NextcloudTree.Count - 1 To 0 Step -1
+                                                       Select Case NextcloudTree(i).Kind
+                                                           Case "NextcloudAlbum", "NextcloudPeopleRoot", "NextcloudPlacesRoot",
+                                                                "NextcloudTagsRoot", "NextcloudTrash"
+                                                               NextcloudTree.RemoveAt(i)
+                                                       End Select
+                                                   Next
+                                                   For Each album In alben
+                                                       If String.IsNullOrEmpty(album.Id) Then Continue For
+                                                       NextcloudTree.Add(New VirtualNavigationNode(album.Name, "NextcloudAlbum") With {.Id = album.Id})
+                                                   Next
+                                                   AddNextcloudClusterBranch(LocalizationService.T("Personen"), "NextcloudPeopleRoot", "NextcloudPerson", personen)
+                                                   AddNextcloudClusterBranch(LocalizationService.T("Orte"), "NextcloudPlacesRoot", "NextcloudPlace", orte)
+                                                   AddNextcloudClusterBranch(LocalizationService.T("Stichwörter"), "NextcloudTagsRoot", "NextcloudTag", stichworte)
+                                                   ' Der Papierkorb steht ganz unten, wie in jedem Dateiverwalter.
+                                                   NextcloudTree.Add(New VirtualNavigationNode(LocalizationService.T("Papierkorb"), "NextcloudTrash"))
+                                                   ' Dieselben Listen speisen die FILTERKNOEPFE. Sie werden beim Oeffnen
+                                                   ' des Menues synchron gelesen und koennen deshalb nicht selbst auf den
+                                                   ' Server warten - der Abruf hier ist ohnehin faellig.
+                                                   _nextcloudPeople = personen
+                                                   _nextcloudPlaces = orte
+                                                   _nextcloudTags = stichworte
+                                                   RefreshPersonFilterOptions()
+                                                   RefreshPlaceFilterOptions()
+                                                   RefreshTagFilterOptions()
+                                                   If alben.Count = 0 AndAlso Not String.IsNullOrEmpty(albumError) Then StatusText = albumError
+                                                   SyncSidebarTabWithNextcloud()
+                                               End Sub)
+                                       Catch
+                                       End Try
+                                   End Function)
+        End Sub
+
+        ''' <summary>Haengt einen Klappzweig mit Personen bzw. Orten an. Ist nichts da - Zusatz-App
+        ''' nicht eingeschaltet oder noch nichts erkannt -, entsteht auch KEIN leerer Zweig: ein
+        ''' Knoten, unter dem nie etwas auftaucht, sieht aus wie ein Fehler.</summary>
+        Private Sub AddNextcloudClusterBranch(name As String, rootKind As String, childKind As String,
+                                              cluster As List(Of NextcloudService.NextcloudCluster))
+            If cluster Is Nothing OrElse cluster.Count = 0 Then Return
+            Dim root = New VirtualNavigationNode(name, rootKind)
+            For Each entry In cluster
+                If String.IsNullOrEmpty(entry.Id) Then Continue For
+                ' NUR BENANNTE PERSONEN. Eine frisch erkannte Gruppe hat keinen Namen, und ihre
+                ' Kennung ist eine Zahl - "4" und "12" untereinander im Baum sind kein Angebot,
+                ' sondern Rauschen. Benannt wird auf dem Server; dieselbe Regel gilt bei Immich.
+                If String.Equals(childKind, "NextcloudPerson", StringComparison.Ordinal) AndAlso Not entry.IsNamed Then Continue For
+                Dim displayName = If(String.IsNullOrWhiteSpace(entry.Name), entry.Id, entry.Name)
+                root.Children.Add(New VirtualNavigationNode(displayName, childKind) With {.Id = entry.Id})
+            Next
+            If root.Children.Count = 0 Then Return
+            NextcloudTree.Add(root)
+        End Sub
+
+        ''' <summary>Oeffnet eine Personengruppe oder einen Ort. Beide laufen ueber denselben
+        ''' Cluster-Filter der Zeitachse, nur mit anderem Backend-Namen.</summary>
+        Private Async Function OpenNextcloudClusterAsync(node As VirtualNavigationNode, backend As String) As Task
+            If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+            SelectedNextcloudNode = node
+            Await LoadNextcloudVirtualFolderAsync(node.Name, Nothing, backend, node.Id)
+        End Function
+
+        ''' <summary>Legt ein Nextcloud-Album an. Die Alben gehören der Photos-App und liegen als
+        ''' WebDAV-Sammlungen; Memories liest sie nur mit (siehe `NextcloudService`).</summary>
+        Public Async Sub CreateNextcloudAlbum()
+            Try
+                If Not NextcloudService.IsConfigured Then Return
+                Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Input, LocalizationService.T("Neues Album…"),
+                                                        LocalizationService.T("Name des Albums:"), "")
+                If String.IsNullOrWhiteSpace(name) Then Return
+                If Not Await NextcloudService.CreateAlbumAsync(name.Trim()) Then
+                    StatusText = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                    LocalizationService.T("Album konnte nicht angelegt werden"), NextcloudService.LastError)
+                    Return
+                End If
+                RefreshNextcloudAlbumsAsync()
+                StatusText = String.Format(LocalizationService.T("Album {0} angelegt"), name.Trim())
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryViewModel.CreateNextcloudAlbum", ex)
+            End Try
+        End Sub
+
+        Public Async Sub RenameNextcloudAlbum(node As VirtualNavigationNode)
+            Try
+                If node Is Nothing OrElse Not node.IsNextcloudAlbumNode Then Return
+                Dim name = Await _mainVm.ShowInputAsync(AppDialogKind.Input, LocalizationService.T("Album umbenennen"),
+                                                        LocalizationService.T("Name des Albums:"), node.Name)
+                If String.IsNullOrWhiteSpace(name) OrElse String.Equals(name.Trim(), node.Name, StringComparison.Ordinal) Then Return
+                If Not Await NextcloudService.RenameAlbumAsync(node.Id, name.Trim()) Then
+                    StatusText = NextcloudService.LastError
+                    Return
+                End If
+                RefreshNextcloudAlbumsAsync()
+                StatusText = String.Format(LocalizationService.T("Album umbenannt: {0}"), name.Trim())
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryViewModel.RenameNextcloudAlbum", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Löscht das Album. Die FOTOS bleiben - es verschwinden nur die Verweise, das ist
+        ''' am Server gemessen. Deshalb genügt hier eine schlichte Rückfrage.</summary>
+        Public Async Sub DeleteNextcloudAlbum(node As VirtualNavigationNode)
+            Try
+                If node Is Nothing OrElse Not node.IsNextcloudAlbumNode Then Return
+                Dim ok = Await _mainVm.ShowConfirmAsync(LocalizationService.T("Album löschen"),
+                            String.Format(LocalizationService.T("Album {0} löschen? Die Fotos bleiben erhalten."), node.Name))
+                If Not ok Then Return
+                If Not Await NextcloudService.DeleteAlbumAsync(node.Id) Then
+                    StatusText = NextcloudService.LastError
+                    Return
+                End If
+                Dim warOffen = SelectedNextcloudNode IsNot Nothing AndAlso String.Equals(SelectedNextcloudNode.Id, node.Id, StringComparison.Ordinal)
+                RefreshNextcloudAlbumsAsync()
+                If warOffen Then
+                    Dim alle = NextcloudTree.FirstOrDefault(Function(n) String.Equals(n.Kind, "NextcloudAll", StringComparison.Ordinal))
+                    If alle IsNot Nothing Then Await OpenNextcloudAllAsync(alle)
+                End If
+                StatusText = LocalizationService.T("Album gelöscht")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryViewModel.DeleteNextcloudAlbum", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Hängt die ausgewählten Nextcloud-Bilder in ein Album. Braucht den Pfad im
+        ''' Dateibaum; steht der am Element noch nicht (die Einzelheiten kommen erst mit der
+        ''' sichtbaren Kachel), wird er hier nachgeholt.</summary>
+        Public Async Function AddSelectedToNextcloudAlbumAsync(node As VirtualNavigationNode) As Task
+            If node Is Nothing OrElse Not node.IsNextcloudAlbumNode Then Return
+            Dim items = GetSelectedImageItems().Where(Function(i) i.IsNextcloudAsset).ToList()
+            If items.Count = 0 Then Return
+            Dim assigned = 0
+            For Each item In items
+                Dim pathInTree = item.NextcloudPath
+                If String.IsNullOrEmpty(pathInTree) Then
+                    Dim info = Await NextcloudService.GetInfoAsync(item.NextcloudFileId)
+                    If info Is Nothing Then Continue For
+                    item.ApplyNextcloudMetadata(info)
+                    pathInTree = item.NextcloudPath
+                End If
+                If String.IsNullOrEmpty(pathInTree) Then Continue For
+                If Await NextcloudService.AddToAlbumAsync(node.Id, pathInTree) Then assigned += 1
+            Next
+            StatusText = If(assigned = 0,
+                            If(String.IsNullOrEmpty(NextcloudService.LastError), LocalizationService.T("Kein Element ausgewählt"), NextcloudService.LastError),
+                            String.Format(LocalizationService.T("{0} von {1} zugewiesen"), assigned, items.Count))
+        End Function
+
+        ''' <summary>Hängt Serverbilder in ein Album ihrer EIGENEN Quelle - aus dem Ablegen auf einem
+        ''' Albumknoten oder aus dem Einfügen. Die Bilder werden dabei nicht kopiert, es entsteht nur
+        ''' eine Zuordnung.
+        '''
+        ''' Quellenfremdes bleibt draußen: ein Immich-Bild in ein Nextcloud-Album zu hängen hieße,
+        ''' es erst herunter- und wieder hochzuladen. Das ist ein Umzug und keine Zuordnung, und er
+        ''' gehört nicht hinter eine Ablegegeste.</summary>
+        Public Async Function AddRemotePathsToAlbumAsync(node As VirtualNavigationNode, paths As List(Of String)) As Task
+            If node Is Nothing OrElse paths Is Nothing OrElse paths.Count = 0 Then Return
+            ' Anfang und Ende im Protokoll: laeuft die Zuordnung noch, waehrend jemand den naechsten
+            ' Zug beginnt, steht es damit im Log statt in der Vermutung.
+            DiagnosticLogService.LogAlways("Drag", $"zuordnen beginnt ziel={node.Kind} pfade={paths.Count}")
+            Dim assigned = 0
+
+            If node.IsImmichAlbumNode Then
+                Dim ids As New List(Of String)()
+                For Each path In paths
+                    Dim assetId As String = Nothing, fileName As String = Nothing
+                    If ImmichService.TryParsePseudoPath(path, assetId, fileName) Then ids.Add(assetId)
+                Next
+                If ids.Count = 0 Then Return
+                If Await ImmichService.AddAssetsToAlbumAsync(node.Id, ids) Then assigned = ids.Count
+
+            ElseIf node.IsNextcloudAlbumNode Then
+                For Each path In paths
+                    Dim fileId As String = Nothing, fileName As String = Nothing
+                    If Not NextcloudService.TryParsePseudoPath(path, fileId, fileName) Then Continue For
+                    ' Das Zuweisen braucht den Pfad im Dateibaum; der steht am Element erst nach den
+                    ' Einzelheiten, und beim Ablegen haben wir nur den Pseudo-Pfad.
+                    Dim info = Await NextcloudService.GetInfoAsync(fileId)
+                    If info Is Nothing OrElse String.IsNullOrEmpty(info.FileName) Then Continue For
+                    If Await NextcloudService.AddToAlbumAsync(node.Id, info.FileName) Then assigned += 1
+                Next
+            Else
+                Return
+            End If
+
+            StatusText = If(assigned = 0,
+                            If(String.IsNullOrEmpty(NextcloudService.LastError), LocalizationService.T("Kein Element ausgewählt"), NextcloudService.LastError),
+                            String.Format(LocalizationService.T("{0} von {1} zugewiesen"), assigned, paths.Count))
+            DiagnosticLogService.LogAlways("Drag", $"zuordnen fertig {assigned} von {paths.Count}")
+        End Function
+
+        ''' <summary>Lädt lokale Dateien in den Nextcloud-Dateibaum und ordnet sie - auf einem
+        ''' Albumknoten - zusätzlich dem Album zu.
+        '''
+        ''' WOHIN, war hier die einzige offene Frage; bei Immich stellt sie sich nicht, weil es dort
+        ''' keine Ordner gibt. Sie beantwortet die Einstellung „Zielordner für Uploads" (Vorgabe
+        ''' /Photos). Ein vorhandener Name wird NICHT überschrieben, sondern nummeriert: DSC_0001.JPG
+        ''' gibt es in jedem Bestand mehrfach, und ein Upload darf nichts wegnehmen.</summary>
+        Public Async Sub UploadToNextcloud(node As VirtualNavigationNode, filePaths As IEnumerable(Of String))
+            If Not NextcloudService.IsConfigured Then Return
+            Dim albumId = If(node IsNot Nothing AndAlso node.IsNextcloudAlbumNode, node.Id, Nothing)
+            Dim localPaths = If(filePaths, Enumerable.Empty(Of String)()).
+                             Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso File.Exists(p)).ToList()
+            If localPaths.Count = 0 Then Return
+
+            IsLoading = True
+            Dim uploadedPaths As New List(Of String)()
+            Try
+                Dim done = 0
+                For Each localPath In localPaths
+                    done += 1
+                    StatusText = String.Format(LocalizationService.T("Lade nach Nextcloud hoch… ({0}/{1})"), done, localPaths.Count)
+                    Dim target = Await NextcloudService.UploadNewFileAsync(localPath, NextcloudService.UploadFolder)
+                    If Not String.IsNullOrEmpty(target) Then uploadedPaths.Add(target)
+                Next
+                If Not String.IsNullOrEmpty(albumId) Then
+                    For Each target In uploadedPaths
+                        Await NextcloudService.AddToAlbumAsync(albumId, target)
+                    Next
+                End If
+                StatusText = If(uploadedPaths.Count = 0 AndAlso Not String.IsNullOrEmpty(NextcloudService.LastError),
+                                NextcloudService.LastError,
+                                String.Format(LocalizationService.T("{0} von {1} nach Nextcloud hochgeladen"), uploadedPaths.Count, localPaths.Count))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Nextcloud.UploadFlow", ex)
+                StatusText = LocalizationService.T("Upload fehlgeschlagen")
+            Finally
+                IsLoading = False
+            End Try
+
+            If uploadedPaths.Count = 0 Then Return
+            RefreshNextcloudAlbumsAsync()
+            ' Die offene Ansicht neu laden, damit die neuen Bilder erscheinen. Der Server braucht
+            ' einen Augenblick, bis eine frisch abgelegte Datei in der Zeitachse steht - anders als
+            ' bei Immich gibt es dafuer keine Bereitschaftsmeldung, also wird schlicht neu geladen.
+            If _isVirtualFolder AndAlso SelectedNextcloudNode IsNot Nothing Then
+                Await OpenVirtualNavigationNode(SelectedNextcloudNode)
+            End If
+        End Sub
+
+        ''' <summary>Öffnet die gesamte Zeitachse als virtuellen Ordner.</summary>
+        Private Async Function OpenNextcloudAllAsync(node As VirtualNavigationNode) As Task
+            SelectedNextcloudNode = node
+            AppSettingsService.RememberLastGalleryFolder("nextcloud://all")
+            Await LoadNextcloudVirtualFolderAsync(If(node?.Name, LocalizationService.T("Alle Fotos")), Nothing)
+        End Function
+
+        ''' <summary>Öffnet ein Nextcloud-Album als virtuellen Ordner.</summary>
+        Private Async Function OpenNextcloudAlbumAsync(node As VirtualNavigationNode) As Task
+            If node Is Nothing OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
+            SelectedNextcloudNode = node
+            AppSettingsService.RememberLastGalleryFolder($"nextcloud://album/{node.Id}/{node.Name}")
+            Await LoadNextcloudVirtualFolderAsync(node.Name, node.Id)
+        End Function
+
+        ''' <summary>Startziel „zuletzt: Nextcloud": öffnet Zeitachse oder Album wieder. Ist die
+        ''' Quelle aus oder nicht erreichbar, bleibt still der schon geladene Ordner stehen.</summary>
+        Public Async Function OpenNextcloudStartupTargetAsync(token As String) As Task
+            Try
+                If Not NextcloudService.IsConfigured OrElse String.IsNullOrWhiteSpace(token) Then Return
+                Dim rest = token.Substring("nextcloud://".Length)
+                Dim node As VirtualNavigationNode = Nothing
+                If String.Equals(rest, "all", StringComparison.OrdinalIgnoreCase) Then
+                    node = New VirtualNavigationNode(LocalizationService.T("Alle Fotos"), "NextcloudAll")
+                ElseIf rest.StartsWith("album/", StringComparison.OrdinalIgnoreCase) Then
+                    Dim parts = rest.Substring(6).Split("/"c, 2)
+                    node = New VirtualNavigationNode(If(parts.Length > 1, parts(1), "Album"), "NextcloudAlbum") With {.Id = parts(0)}
+                End If
+                If node Is Nothing Then Return
+                SidebarTab = "Nextcloud"
+                Await OpenVirtualNavigationNode(node)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryViewModel.OpenNextcloudStartupTarget", ex)
+            End Try
+        End Function
+
+        ''' <summary>Lädt die Aufnahmen der Zeitachse oder eines Albums in den virtuellen Ordner.
+        '''
+        ''' DIE TAGESLISTE BRINGT DIE AUFNAHMEN NICHT MIT: gemessen trägt nur der erste Tag ein
+        ''' `detail`, die übrigen nur ihre Anzahl. Deshalb wird je Tag nachgefragt, und zwar von der
+        ''' jüngsten Aufnahme rückwärts - so steht das Neueste sofort da, statt dass der Nutzer auf
+        ''' den ganzen Bestand wartet.</summary>
+        Private Async Function LoadNextcloudVirtualFolderAsync(name As String, albumId As String,
+                                                               Optional backend As String = "albums",
+                                                               Optional clusterId As String = Nothing) As Task
+            Dim filterId = If(String.IsNullOrEmpty(clusterId), albumId, clusterId)
+            Dim thumbnailToken = StartEmptyVirtualFolder(name)
+            SelectedSearchNode = Nothing
+            SelectedImmichNode = Nothing
+            IsLoading = True
+            StatusText = LocalizationService.T("Lade Nextcloud-Fotos…")
+            Dim total As Integer = 0
+            Try
+                Dim days = Await NextcloudService.GetDaysAsync(thumbnailToken, filterId, backend)
+                If thumbnailToken.IsCancellationRequested Then Return
+                If days.Count = 0 Then
+                    ' Leer ist nicht gleich kaputt: liegt eine Begruendung vor, gehoert SIE dorthin,
+                    ' sonst sieht ein Serverfehler aus wie ein leeres Album.
+                    Dim serverError = NextcloudService.LastError
+                    StatusText = If(String.IsNullOrEmpty(serverError), $"0 {LocalizationService.T("Bilder")}  •  {name}", serverError)
+                    Return
+                End If
+                ' Die Gesamtzahl steht schon in der Tagesliste - damit kann der Fortschritt sagen,
+                ' wie weit es ist, statt nur hochzuzaehlen.
+                Dim expectedTotal = days.Sum(Function(t) t.Count)
+
+                ' ERST SAMMELN, DANN EINMAL ZEIGEN - und das ist eine Nutzerbeobachtung, keine
+                ' Vorliebe: geladen wird nach Tagen von neu nach alt, sortiert aber nach der
+                ' EINSTELLUNG der Galerie. Steht die auf "Name aufsteigend", hat die erste Ladung
+                ' mit dem, was am Ende oben steht, nichts zu tun. Wer klickte, sah erst fremde
+                ' Bilder und kurz darauf die richtigen. Ein Zwischenstand, der gleich wieder
+                ' umspringt, ist schlechter als ein Augenblick Geduld.
+                '
+                ' Der Preis: bei einem sehr grossen Bestand dauert es, bis die erste Kachel steht.
+                ' Faellt das auf, ist die Antwort ein sortierungsbewusstes Nachladen (nur zeigen,
+                ' solange die Ladereihenfolge der Sortierung entspricht), nicht das Zurueckdrehen
+                ' auf den flackernden Zustand.
+                Dim collected As New List(Of ImageItem)()
+                ' NICHT "day" als Schleifenvariable: Day ist eine VB-Funktion.
+                For Each dayEntry In days.OrderByDescending(Function(t) t.DayId)
+                    If thumbnailToken.IsCancellationRequested Then Return
+                    ' Die Aufnahmen des ersten Tages liegen schon bei; nur fuer die uebrigen fragen.
+                    Dim photos = If(dayEntry.Detail IsNot Nothing AndAlso dayEntry.Detail.Count > 0,
+                                    dayEntry.Detail,
+                                    Await NextcloudService.GetDayAsync(dayEntry.DayId, thumbnailToken, filterId, backend))
+                    If thumbnailToken.IsCancellationRequested Then Return
+                    If photos Is Nothing OrElse photos.Count = 0 Then Continue For
+
+                    collected.AddRange(photos.Select(Function(p) ImageItem.CreateNextcloudItem(p, thumbnailToken)))
+                    total = collected.Count
+                    StatusText = String.Format(LocalizationService.T("{0} von {1} geladen…"), total, expectedTotal)
+                Next
+                If thumbnailToken.IsCancellationRequested Then Return
+                AddPrebuiltItemsToVirtualFolder(collected, sortNow:=False)
+
+                ' Die Favoriten EINMAL fuer die ganze Ansicht holen, nicht je Kachel. Ohne diesen
+                ' Schritt waere der Favorit nur schreibbar: auf dem Server markierte Fotos zeigten
+                ' ein leeres Herz.
+                Dim favoriteIds = Await NextcloudService.GetFavoriteFileIdsAsync(thumbnailToken)
+                If thumbnailToken.IsCancellationRequested Then Return
+                If favoriteIds.Count > 0 Then
+                    For Each item In _allItems
+                        If item Is Nothing OrElse Not item.IsNextcloudAsset Then Continue For
+                        ' Direkt die Eigenschaft: der Setter meldet nur die Anzeige. Zurueck auf den
+                        ' Server schreibt allein PersistFavorite, ausgeloest vom Herz-Klick.
+                        If favoriteIds.Contains(item.NextcloudFileId) Then item.IsFavorite = True
+                    Next
+                End If
+
+                FilterAndSort()
+                StatusText = $"{total} {LocalizationService.T("Bilder")}  •  {name}"
+            Catch ex As Exception
+                StatusText = ex.Message
+            Finally
+                IsLoading = False
+            End Try
+        End Function
 
         ''' <summary>Nach jeder Aenderung an HasImmich aufrufen: verschwindet Immich, waehrend sein
         ''' Tab offen ist, faellt die Auswahl auf Ordner zurueck (sonst zeigt die Seitenleiste einen
@@ -2128,7 +2673,16 @@ Namespace ViewModels
         Private Sub InitializeImmich()
             ImmichTree.Clear()
             SyncSidebarTabWithImmich()
-            If Not ImmichService.IsConfigured Then Return
+            If Not ImmichService.IsConfigured Then
+                ' Auch die FILTERLISTEN leeren. Ohne das zeigten die Knöpfe weiter Server-Einträge,
+                ' und ein Klick öffnete eine Server-Ansicht gegen einen Server, den es nicht mehr
+                ' gibt.
+                _immichPeople = New List(Of ImmichPerson)()
+                _immichPlaces = New List(Of String)()
+                RefreshPersonFilterOptions()
+                RefreshPlaceFilterOptions()
+                Return
+            End If
             ImmichTree.Add(New VirtualNavigationNode(LocalizationService.T("Alle Fotos"), "ImmichAll"))
             SyncSidebarTabWithImmich()
             RefreshImmichAlbumsAsync()
@@ -2278,7 +2832,7 @@ Namespace ViewModels
                                                ' Nur die eigenen Knoten ersetzen, „Alle Fotos" bleibt stehen.
                                                For i = ImmichTree.Count - 1 To 0 Step -1
                                                    Select Case ImmichTree(i).Kind
-                                                       Case "ImmichAlbum", "ImmichPeopleRoot", "ImmichPlacesRoot"
+                                                       Case "ImmichAlbum", "ImmichPeopleRoot", "ImmichPlacesRoot", "ImmichTrash"
                                                            ImmichTree.RemoveAt(i)
                                                    End Select
                                                Next
@@ -2314,6 +2868,9 @@ Namespace ViewModels
                                                    Next
                                                    ImmichTree.Add(placesRoot)
                                                End If
+                                               ' Der Papierkorb steht ganz unten, wie in jedem
+                                               ' Dateiverwalter - und auf beiden Serverquellen gleich.
+                                               ImmichTree.Add(New VirtualNavigationNode(LocalizationService.T("Papierkorb"), "ImmichTrash"))
                                                ' Dieselben Listen speisen die FILTERKNOEPFE. Sie
                                                ' werden synchron beim Oeffnen des Menues gelesen,
                                                ' koennen also nicht selbst auf den Server warten -
@@ -2333,6 +2890,18 @@ Namespace ViewModels
         ''' Listen sehen aus wie bisher.</summary>
         Private _immichPeople As New List(Of ImmichPerson)()
         Private _immichPlaces As New List(Of String)()
+
+        ''' <summary>Dasselbe fuer die zweite Serverquelle, beim Aufbau des Nextcloud-Baums geholt.
+        ''' Sie kommen als CLUSTER (dieselbe Sorte Eintrag wie ein Album), Stichwoerter eingeschlossen -
+        ''' anders als bei Immich, wo die Suche keinen Stichwortfilter kennt.</summary>
+        Private _nextcloudPeople As New List(Of NextcloudService.NextcloudCluster)()
+        Private _nextcloudPlaces As New List(Of NextcloudService.NextcloudCluster)()
+        Private _nextcloudTags As New List(Of NextcloudService.NextcloudCluster)()
+
+        ''' <summary>Name der Quelle in den Zwischenueberschriften der Filterlisten. Servernamen
+        ''' werden NICHT uebersetzt - sie sind Eigennamen.</summary>
+        Private Const ImmichSourceName As String = "Immich"
+        Private Const NextcloudSourceName As String = "Nextcloud"
 
         ''' <summary>Öffnet „Alle Fotos" (Timeline ohne Album) als virtuellen Ordner.</summary>
         Private Async Function OpenImmichAllAsync(node As VirtualNavigationNode) As Task
@@ -2498,12 +3067,194 @@ Namespace ViewModels
             End Try
         End Function
 
+        ' ── Papierkorb beider Serverquellen ─────────────────────────────────────
+        '
+        ' Geloescht wird auf beiden Servern in den Papierkorb (ohne "endgueltig loeschen" bei Immich,
+        ' bei Nextcloud grundsaetzlich). Ohne diese Ansicht waere der Rueckweg allein die
+        ' Weboberflaeche des Servers - und wer versehentlich Entf gedrueckt hat, sucht ihn hier.
+        '
+        ' Die Ansicht ist eine EINBAHNSTRASSE: es gibt genau eine Geste, das Wiederherstellen.
+        ' Endgueltiges Loeschen gehoert nicht hinter dieselbe Taste wie das Loeschen in der Galerie.
+
+        Private _isTrashView As Boolean
+
+        ''' <summary>Steht gerade ein Papierkorb offen? Daran haengt der Menueeintrag zum
+        ''' Wiederherstellen - er soll nirgends sonst auftauchen.</summary>
+        Public ReadOnly Property IsTrashView As Boolean
+            Get
+                Return _isTrashView
+            End Get
+        End Property
+
+        Private Sub SetTrashView(value As Boolean)
+            If _isTrashView = value Then Return
+            _isTrashView = value
+            Me.RaisePropertyChanged(NameOf(IsTrashView))
+        End Sub
+
+        ''' <summary>Oeffnet den Immich-Papierkorb. Die Assets kommen ueber dieselbe Metadaten-Suche
+        ''' wie alles andere, nur mit dem Zeitfilter - die Kacheln, Vorschauen und Einzelheiten
+        ''' funktionieren deshalb unveraendert.</summary>
+        Private Async Function OpenImmichTrashAsync(node As VirtualNavigationNode) As Task
+            SelectedImmichNode = node
+            SelectedNextcloudNode = Nothing
+            Dim name = If(node?.Name, LocalizationService.T("Papierkorb"))
+            Dim thumbnailToken = StartEmptyVirtualFolder(name)
+            SetTrashView(True)
+            SelectedSearchNode = Nothing
+            IsLoading = True
+            StatusText = LocalizationService.T("Lade Papierkorb…")
+            Dim total = 0
+            Try
+                Dim expectedTotal = Await ImmichService.GetTrashedCountAsync(thumbnailToken)
+                Dim page = 1
+                Do
+                    Dim result = Await ImmichService.GetTrashedAssetsPageAsync(page, thumbnailToken)
+                    If thumbnailToken.IsCancellationRequested Then Return
+                    If result.Items.Count > 0 Then
+                        Dim items = result.Items.Select(Function(a)
+                                                            Dim item = ImageItem.CreateImmichItem(a, thumbnailToken)
+                                                            item.IsTrashed = True
+                                                            Return item
+                                                        End Function).ToList()
+                        AddPrebuiltItemsToVirtualFolder(items, sortNow:=False)
+                        total += items.Count
+                        StatusText = If(expectedTotal > 0,
+                                        String.Format(LocalizationService.T("{0} von {1} geladen…"), total, expectedTotal),
+                                        String.Format(LocalizationService.T("{0} geladen…"), total))
+                    End If
+                    If result.NextPage <= 0 Then Exit Do
+                    page = result.NextPage
+                Loop
+                FilterAndSort()
+                StatusText = TrashStatusText(total)
+            Catch ex As OperationCanceledException
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ImmichTrash", ex)
+                StatusText = LocalizationService.T("Der Papierkorb konnte nicht geladen werden")
+            Finally
+                If Not thumbnailToken.IsCancellationRequested Then IsLoading = False
+            End Try
+        End Function
+
+        ''' <summary>Oeffnet den Nextcloud-Papierkorb. Er ist ein EIGENER WebDAV-Baum: die Aufnahmen
+        ''' stehen nicht mehr in der Zeitachse, und Memories kennt sie nicht - Vorschau und Original
+        ''' laufen deshalb ueber eigene Wege (siehe NextcloudService).</summary>
+        Private Async Function OpenNextcloudTrashAsync(node As VirtualNavigationNode) As Task
+            SelectedNextcloudNode = node
+            SelectedImmichNode = Nothing
+            Dim name = If(node?.Name, LocalizationService.T("Papierkorb"))
+            Dim thumbnailToken = StartEmptyVirtualFolder(name)
+            SetTrashView(True)
+            SelectedSearchNode = Nothing
+            IsLoading = True
+            StatusText = LocalizationService.T("Lade Papierkorb…")
+            Try
+                Dim entries = Await NextcloudService.GetTrashAsync(thumbnailToken)
+                If thumbnailToken.IsCancellationRequested Then Return
+                ' Im Papierkorb liegt alles, was der Nutzer je geloescht hat - Textdateien wie Fotos.
+                ' Gefiltert wird nach der Endungsliste der Galerie, damit hier keine Kachel steht,
+                ' die nie ein Bild zeigen kann.
+                Dim images = entries.Where(Function(e) e IsNot Nothing AndAlso
+                                               _imageExtensions.Contains(IO.Path.GetExtension(If(e.DisplayName, "")).ToLowerInvariant())).ToList()
+                If images.Count = 0 Then
+                    Dim serverError = NextcloudService.LastError
+                    StatusText = If(String.IsNullOrEmpty(serverError), TrashStatusText(0), serverError)
+                    Return
+                End If
+                AddPrebuiltItemsToVirtualFolder(images.Select(Function(e) ImageItem.CreateNextcloudTrashItem(e, thumbnailToken)).ToList(),
+                                                sortNow:=False)
+                FilterAndSort()
+                StatusText = TrashStatusText(images.Count)
+            Catch ex As OperationCanceledException
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.NextcloudTrash", ex)
+                StatusText = LocalizationService.T("Der Papierkorb konnte nicht geladen werden")
+            Finally
+                If Not thumbnailToken.IsCancellationRequested Then IsLoading = False
+            End Try
+        End Function
+
+        ''' <summary>Leert den Papierkorb der Quelle, zu der der Knoten gehoert.
+        '''
+        ''' MIT RUECKFRAGE, und zwar unabhaengig von "Nachfrage beim Loeschen ueberspringen": das
+        ''' hier trifft nicht die Auswahl, sondern ALLES, was der Nutzer je geloescht hat - auch das
+        ''' von vor Wochen, an das er gerade nicht denkt. Danach gibt es keinen Rueckweg mehr.</summary>
+        Public Async Function EmptyTrashAsync(node As VirtualNavigationNode) As Task
+            If node Is Nothing OrElse Not node.IsTrashNode Then Return
+            Dim istNextcloud = String.Equals(node.Kind, "NextcloudTrash", StringComparison.Ordinal)
+            Try
+                Dim ok = Await _mainVm.ShowConfirmAsync(LocalizationService.T("Papierkorb leeren"),
+                            LocalizationService.T("Alles im Papierkorb des Servers endgültig löschen? Das lässt sich nicht rückgängig machen."),
+                            LocalizationService.T("Papierkorb leeren"),
+                            LocalizationService.T("Abbrechen"))
+                If Not ok Then Return
+
+                IsLoading = True
+                Dim geleert = If(istNextcloud,
+                                 Await NextcloudService.EmptyTrashAsync(),
+                                 Await ImmichService.EmptyTrashAsync())
+                If Not geleert Then
+                    Dim serverError = If(istNextcloud, NextcloudService.LastError, ImmichService.LastError)
+                    StatusText = If(String.IsNullOrEmpty(serverError), LocalizationService.T("Löschen fehlgeschlagen"), serverError)
+                    Return
+                End If
+                StatusText = LocalizationService.T("Der Papierkorb ist leer")
+                ' Steht der Papierkorb gerade offen, zeigt er jetzt etwas, das es nicht mehr gibt.
+                Dim openNode = If(SelectedImmichNode, SelectedNextcloudNode)
+                If _isTrashView AndAlso openNode IsNot Nothing Then Await OpenVirtualNavigationNode(openNode)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.EmptyTrash", ex)
+                StatusText = LocalizationService.T("Löschen fehlgeschlagen")
+            Finally
+                IsLoading = False
+            End Try
+        End Function
+
+        Private Shared Function TrashStatusText(count As Integer) As String
+            If count = 0 Then Return LocalizationService.T("Der Papierkorb ist leer")
+            Return String.Format(LocalizationService.T("{0} im Papierkorb"), count)
+        End Function
+
+        ''' <summary>Holt die markierten Aufnahmen aus dem Papierkorb zurueck. Der Server legt sie
+        ''' dorthin, wo sie herkamen; ein Zielordner wird nicht gefragt und waere auch nicht
+        ''' vorgesehen. Danach ist die Ansicht nicht mehr aktuell - sie wird neu geladen, denn eine
+        ''' Kachel, die es hier nicht mehr gibt, waere ein Klick ins Leere.</summary>
+        Public Async Function RestoreSelectedFromTrashAsync() As Task
+            Dim items = GetSelectedImageItems().Where(Function(i) i IsNot Nothing AndAlso i.IsTrashed).ToList()
+            If items.Count = 0 Then
+                StatusText = LocalizationService.T("Kein Element ausgewählt")
+                Return
+            End If
+            Dim restored = 0
+            Try
+                Dim immichIds = items.Where(Function(i) i.IsImmichAsset).Select(Function(i) i.ImmichAssetId).ToList()
+                If immichIds.Count > 0 AndAlso Await ImmichService.RestoreAssetsAsync(immichIds) Then restored += immichIds.Count
+                For Each item In items.Where(Function(i) i.IsNextcloudAsset AndAlso Not String.IsNullOrEmpty(i.NextcloudTrashUrl))
+                    If Await NextcloudService.RestoreFromTrashAsync(item.NextcloudTrashUrl) Then restored += 1
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RestoreFromTrash", ex)
+            End Try
+
+            If restored = 0 Then
+                StatusText = LocalizationService.T("Wiederherstellen fehlgeschlagen")
+                Return
+            End If
+            StatusText = String.Format(LocalizationService.T("{0} von {1} wiederhergestellt"), restored, items.Count)
+            Dim openNode = If(SelectedImmichNode, SelectedNextcloudNode)
+            If openNode IsNot Nothing Then Await OpenVirtualNavigationNode(openNode)
+        End Function
+
         Public Sub RemoveVirtualSearchNode(node As VirtualNavigationNode)
             If node Is Nothing OrElse Not node.IsRemovable OrElse String.IsNullOrWhiteSpace(node.Id) Then Return
             Dim existing = _savedSearches.FirstOrDefault(Function(s) String.Equals(s.Id, node.Id, StringComparison.OrdinalIgnoreCase))
             If existing IsNot Nothing Then _savedSearches.Remove(existing)
-            Dim treeNode = SearchTree.FirstOrDefault(Function(n) String.Equals(n.Id, node.Id, StringComparison.OrdinalIgnoreCase))
-            If treeNode IsNot Nothing Then SearchTree.Remove(treeNode)
+            ' Aus dem Baum der eigenen Quelle - vorher wurde nur der Ordner-Tab durchsucht, eine
+            ' Immich-Suche blieb nach dem Entfernen sichtbar stehen.
+            Dim tree = SearchTreeForSource(If(existing?.Source, node.Source))
+            Dim treeNode = tree.FirstOrDefault(Function(n) String.Equals(n.Id, node.Id, StringComparison.OrdinalIgnoreCase))
+            If treeNode IsNot Nothing Then tree.Remove(treeNode)
             SaveSearches()
             ThumbnailCacheService.DeleteSearchListCache(node.Id)
             If _isVirtualFolder AndAlso String.Equals(_virtualFolderName, node.Name, StringComparison.OrdinalIgnoreCase) Then
@@ -2664,14 +3415,16 @@ Namespace ViewModels
             NavigateToFolder(picturesPath)
         End Sub
 
-        Private Async Function OpenSearchDialog() As Task(Of Boolean)
-            Dim result = Await _mainVm.ShowSearchDialogAsync(_searchText)
+        ''' <param name="source">Bereich, aus dem "Neue Suche" angeklickt wurde. Er bestimmt die
+        ''' Quelle der Suche und den Baum, in dem sie landet.</param>
+        Private Async Function OpenSearchDialog(source As String) As Task(Of Boolean)
+            Dim result = Await _mainVm.ShowSearchDialogAsync(_searchText, Nothing, SearchListService.NormalizeSource(source))
             If result Is Nothing Then Return False
 
             Dim saved = New SearchListEntry With {
                 .Id = Guid.NewGuid().ToString("N"),
                 .Name = result.Name,
-                .Source = If(String.Equals(result.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local"),
+                .Source = SearchListService.NormalizeSource(result.Source),
                 .TextQuery = result.TextQuery,
                 .RootFolder = result.RootFolder,
                 .IncludeSubfolders = result.IncludeSubfolders,
@@ -2683,7 +3436,9 @@ Namespace ViewModels
             }
             Dim treeNode = CreateSavedSearchNode(saved)
             _savedSearches.Add(saved)
-            SearchTree.Add(treeNode)
+            ' In den Baum der eigenen Quelle - vorher landete auch eine Immich-Suche im Ordner-Tab
+            ' und tauchte erst nach einem Neustart an ihrem Platz auf.
+            SearchTreeForSource(saved.Source).Add(treeNode)
             SaveSearches()
             OpenSavedSearch(treeNode)
             Return True
@@ -2702,7 +3457,7 @@ Namespace ViewModels
                 If result Is Nothing Then Return
 
                 existing.Name = result.Name
-                existing.Source = If(String.Equals(result.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local")
+                existing.Source = SearchListService.NormalizeSource(result.Source)
                 existing.TextQuery = result.TextQuery
                 existing.RootFolder = result.RootFolder
                 existing.IncludeSubfolders = result.IncludeSubfolders
@@ -2719,11 +3474,12 @@ Namespace ViewModels
                 ' VirtualNavigationNode hat kein INotifyPropertyChanged - den Baumknoten daher ersetzen,
                 ' damit u.a. der geänderte Name in der Sidebar erscheint.
                 Dim newNode = CreateSavedSearchNode(existing)
-                Dim index = SearchTree.IndexOf(node)
+                Dim tree = SearchTreeForSource(existing.Source)
+                Dim index = tree.IndexOf(node)
                 If index >= 0 Then
-                    SearchTree(index) = newNode
+                    tree(index) = newNode
                 Else
-                    SearchTree.Add(newNode)
+                    tree.Add(newNode)
                 End If
                 OpenSavedSearch(newNode)
             Catch ex As Exception
@@ -2861,6 +3617,25 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Ein Stichwort aus der Liste dazunehmen, abwaehlen - oder, wenn es vom Server
+        ''' kommt, dessen Ansicht oeffnen.
+        '''
+        ''' Die Herkunft kommt vom ANGEKLICKTEN Eintrag, nicht aus einer Namenssuche: dasselbe
+        ''' Stichwort kann lokal UND auf dem Server stehen, und eine Suche ueber alle Optionen liefe
+        ''' beim lokalen Eintrag faelschlich auf den Server (derselbe Befund wie bei den Orten).</summary>
+        Public Sub ToggleTagFilter(entry As TagFilterOption)
+            If entry Is Nothing Then Return
+            If entry.IsFromServer Then
+                ClearButtonFiltersSilently()
+                Dim ignored = OpenNextcloudClusterAsync(New VirtualNavigationNode(entry.Tag, "NextcloudTag") With {
+                    .Id = entry.ServerId,
+                    .IsRemovable = False
+                }, "tags")
+                Return
+            End If
+            ToggleTagFilter(entry.Tag)
+        End Sub
+
         ''' <summary>Ein Stichwort dazunehmen oder abwaehlen.</summary>
         Public Sub ToggleTagFilter(tag As String)
             Dim wanted = If(tag, "").Trim()
@@ -2911,6 +3686,22 @@ Namespace ViewModels
                     TagFilterOptions.Add(New TagFilterOption(entry.Tag, entry.Count,
                                                              IsTagFilterSelected(entry.Tag)))
                 Next
+                ' Und die Stichwoerter des Nextcloud-Servers, hinter den lokalen und unter eigener
+                ' Ueberschrift. NUR diese Serverquelle steht hier: Nextcloud fuehrt Stichwoerter als
+                ' Cluster und kann danach filtern, Immichs Suche kennt keinen Stichwortfilter - ein
+                ' Eintrag dafuer waere ein Knopf, der nichts findet.
+                Dim firstNextcloudTag = True
+                For Each stichwort In _nextcloudTags
+                    If stichwort Is Nothing OrElse String.IsNullOrEmpty(stichwort.Id) Then Continue For
+                    Dim anzeige = If(String.IsNullOrWhiteSpace(stichwort.Name), stichwort.Id, stichwort.Name)
+                    If search.Length > 0 AndAlso anzeige.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
+                    TagFilterOptions.Add(New TagFilterOption(anzeige, stichwort.Count, False,
+                                                             serverSource:=NextcloudSourceName,
+                                                             serverId:=stichwort.Id) With {
+                        .ShowsServerHeader = firstNextcloudTag
+                    })
+                    firstNextcloudTag = False
+                Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshTagFilterOptions", ex)
             End Try
@@ -2942,7 +3733,10 @@ Namespace ViewModels
         ''' keiner.</summary>
         Public ReadOnly Property HasPersonFeature As Boolean
             Get
-                Return FaceDetectionService.Enabled
+                ' ODER die Personen eines Servers: wer die serverseitige Erkennung nutzt und die
+                ' lokale abgeschaltet laesst, sah den Knopf sonst gar nicht - also genau die
+                ' Nutzergruppe nicht, fuer die die Servereintraege gedacht sind.
+                Return FaceDetectionService.Enabled OrElse _immichPeople.Count > 0 OrElse _nextcloudPeople.Count > 0
             End Get
         End Property
 
@@ -3004,25 +3798,33 @@ Namespace ViewModels
                                         person.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                     If Not matchesImmich Then Continue For
                     PersonFilterOptions.Add(New PersonFilterOption(person.Id, person.Name, 0, False,
-                                                                   isFromImmich:=True) With {
-                        .ShowsImmichHeader = firstImmichPerson
+                                                                   serverSource:=ImmichSourceName) With {
+                        .ShowsServerHeader = firstImmichPerson
                     })
                     firstImmichPerson = False
+                Next
+                ' Und dieselbe Reihe fuer die zweite Serverquelle. Der Knopf baute seine Suche bisher
+                ' allein aus dem lokalen Katalog - und zu einem Nextcloud-Element steht dort nichts,
+                ' der Knopf lief also ins Leere, waehrend dieselben Personen als Zweig in der
+                ' Seitenleiste standen.
+                Dim firstNextcloudPerson = True
+                For Each person In _nextcloudPeople
+                    If person Is Nothing OrElse String.IsNullOrEmpty(person.Id) Then Continue For
+                    ' Nur benannte Gruppen, wie im Baum und wie bei Immich.
+                    If Not person.IsNamed Then Continue For
+                    Dim anzeige = If(String.IsNullOrWhiteSpace(person.Name), person.Id, person.Name)
+                    If search.Length > 0 AndAlso anzeige.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
+                    PersonFilterOptions.Add(New PersonFilterOption(person.Id, anzeige, person.Count, False,
+                                                                   serverSource:=NextcloudSourceName) With {
+                        .ShowsServerHeader = firstNextcloudPerson
+                    })
+                    firstNextcloudPerson = False
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshPersonFilterOptions", ex)
             End Try
             Me.RaisePropertyChanged(NameOf(HasPersonFeature))
-            Me.RaisePropertyChanged(NameOf(HasImmichPersonOptions))
         End Sub
-
-        ''' <summary>Steht in der Personenliste ueberhaupt etwas aus Immich? Die Zwischenueberschrift
-        ''' haengt daran - ohne Server waere sie eine leere Zeile.</summary>
-        Public ReadOnly Property HasImmichPersonOptions As Boolean
-            Get
-                Return PersonFilterOptions.Any(Function(o) o IsNot Nothing AndAlso o.IsFromImmich)
-            End Get
-        End Property
 
         Public Function IsPersonFilterSelected(personId As String) As Boolean
             Return _activePersonFilters.Any(Function(p) String.Equals(p, If(personId, ""), StringComparison.Ordinal))
@@ -3075,14 +3877,21 @@ Namespace ViewModels
             ' ein Immich-Element steht in keiner lokalen Tabelle - eine Verundung mit lokalen
             ' Stichworten oder Orten gaebe es nirgends zu rechnen. Der Klick oeffnet deshalb direkt
             ' die Server-Ansicht, wie der gleichnamige Knoten in der Seitenleiste.
-            Dim immich = PersonFilterOptions.FirstOrDefault(Function(o) o IsNot Nothing AndAlso o.IsFromImmich AndAlso
-                                                                String.Equals(o.Id, wanted, StringComparison.Ordinal))
-            If immich IsNot Nothing Then
+            Dim vomServer = PersonFilterOptions.FirstOrDefault(Function(o) o IsNot Nothing AndAlso o.IsFromServer AndAlso
+                                                                  String.Equals(o.Id, wanted, StringComparison.Ordinal))
+            If vomServer IsNot Nothing Then
                 ClearButtonFiltersSilently()
-                Dim ignored = OpenImmichPersonAsync(New VirtualNavigationNode(immich.Name, "ImmichPerson") With {
-                    .Id = immich.Id,
-                    .IsRemovable = False
-                })
+                If String.Equals(vomServer.ServerSource, NextcloudSourceName, StringComparison.Ordinal) Then
+                    Dim ignoredNextcloud = OpenNextcloudClusterAsync(New VirtualNavigationNode(vomServer.Name, "NextcloudPerson") With {
+                        .Id = vomServer.Id,
+                        .IsRemovable = False
+                    }, "recognize")
+                Else
+                    Dim ignored = OpenImmichPersonAsync(New VirtualNavigationNode(vomServer.Name, "ImmichPerson") With {
+                        .Id = vomServer.Id,
+                        .IsRemovable = False
+                    })
+                End If
                 Return
             End If
             Dim next_ = _activePersonFilters.ToList()
@@ -3110,7 +3919,9 @@ Namespace ViewModels
         ''' ganz weg statt ausgegraut.</summary>
         Public ReadOnly Property HasPlaceFeature As Boolean
             Get
-                Return PlaceLookupService.Enabled
+                ' Wie beim Personenknopf: die Orte eines Servers halten ihn offen, auch wenn die
+                ' lokale Ortstabelle aus ist.
+                Return PlaceLookupService.Enabled OrElse _immichPlaces.Count > 0 OrElse _nextcloudPlaces.Count > 0
             End Get
         End Property
 
@@ -3169,24 +3980,30 @@ Namespace ViewModels
                     Dim matchesImmich = search.Length = 0 OrElse
                                         city.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                     If Not matchesImmich Then Continue For
-                    PlaceFilterOptions.Add(New PlaceFilterOption(city, "", 0, False, "", isFromImmich:=True) With {
-                        .ShowsImmichHeader = firstImmichPlace
+                    PlaceFilterOptions.Add(New PlaceFilterOption(city, "", 0, False, "", serverSource:=ImmichSourceName) With {
+                        .ShowsServerHeader = firstImmichPlace
                     })
                     firstImmichPlace = False
+                Next
+                ' Die Orte der zweiten Serverquelle. Sie kommen als Cluster und tragen - anders als
+                ' die Staedte von Immich - eine Anzahl.
+                Dim firstNextcloudPlace = True
+                For Each ort In _nextcloudPlaces
+                    If ort Is Nothing OrElse String.IsNullOrEmpty(ort.Id) Then Continue For
+                    Dim anzeige = If(String.IsNullOrWhiteSpace(ort.Name), ort.Id, ort.Name)
+                    If search.Length > 0 AndAlso anzeige.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
+                    PlaceFilterOptions.Add(New PlaceFilterOption(anzeige, "", ort.Count, False, "",
+                                                                 serverSource:=NextcloudSourceName,
+                                                                 serverId:=ort.Id) With {
+                        .ShowsServerHeader = firstNextcloudPlace
+                    })
+                    firstNextcloudPlace = False
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshPlaceFilterOptions", ex)
             End Try
             Me.RaisePropertyChanged(NameOf(HasPlaceFeature))
-            Me.RaisePropertyChanged(NameOf(HasImmichPlaceOptions))
         End Sub
-
-        ''' <summary>Steht in der Ortsliste etwas aus Immich? Traegt die Zwischenueberschrift.</summary>
-        Public ReadOnly Property HasImmichPlaceOptions As Boolean
-            Get
-                Return PlaceFilterOptions.Any(Function(o) o IsNot Nothing AndAlso o.IsFromImmich)
-            End Get
-        End Property
 
         Public Function IsPlaceFilterSelected(city As String) As Boolean
             Return _activePlaceFilters.Any(Function(p) String.Equals(p, If(city, ""), StringComparison.OrdinalIgnoreCase))
@@ -3228,12 +4045,19 @@ Namespace ViewModels
             ' Herkunft kommt vom ANGEKLICKTEN Eintrag selbst: dieselbe Stadt kann lokal UND auf dem
             ' Server stehen, und eine Namenssuche ueber alle Optionen liefe beim lokalen Eintrag
             ' faelschlich auf den Server.
-            If entry.IsFromImmich Then
+            If entry.IsFromServer Then
                 ClearButtonFiltersSilently()
-                Dim ignored = OpenImmichPlaceAsync(New VirtualNavigationNode(entry.City, "ImmichPlace") With {
-                    .Id = entry.City,
-                    .IsRemovable = False
-                })
+                If String.Equals(entry.ServerSource, NextcloudSourceName, StringComparison.Ordinal) Then
+                    Dim ignoredNextcloud = OpenNextcloudClusterAsync(New VirtualNavigationNode(entry.City, "NextcloudPlace") With {
+                        .Id = entry.ServerId,
+                        .IsRemovable = False
+                    }, "places")
+                Else
+                    Dim ignored = OpenImmichPlaceAsync(New VirtualNavigationNode(entry.City, "ImmichPlace") With {
+                        .Id = entry.ServerId,
+                        .IsRemovable = False
+                    })
+                End If
                 Return
             End If
             Dim next_ = _activePlaceFilters.ToList()
@@ -3390,9 +4214,12 @@ Namespace ViewModels
 
         Private Sub OpenSavedSearch(node As VirtualNavigationNode)
             If node Is Nothing Then Return
-            If String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase) Then
+            ' Beide Server laufen denselben Weg: Kandidaten vom Server, gefiltert und ergaenzt
+            ' ueber den eigenen Katalog.
+            If String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(node.Source, "Nextcloud", StringComparison.OrdinalIgnoreCase) Then
                 SelectedSearchNode = node
-                StartImmichSearch(node)
+                StartServerSearch(node)
                 Return
             End If
             If Not String.IsNullOrWhiteSpace(node.RootFolder) AndAlso Not Directory.Exists(node.RootFolder) Then
@@ -3403,63 +4230,434 @@ Namespace ViewModels
             StartIncrementalSavedSearch(node)
         End Sub
 
-        ''' <summary>Führt eine Immich-Suchliste aus: fragt Immichs Such-API (semantisch bei Suchtext, sonst
-        ''' Metadaten) mit Favorit-/Bewertungsfilter ab und spielt die Treffer als virtuellen Ordner ein.
-        ''' Strukturbedingungen (Breite/ISO/…) gelten hier nicht - Immich kennt diese Felder in der Suche nicht.</summary>
-        Private Async Sub StartImmichSearch(node As VirtualNavigationNode)
+        ''' <summary>Führt eine Suchliste auf einem der beiden Server aus - Immich und Nextcloud
+        ''' laufen denselben Weg.
+        '''
+        ''' ZWEI QUELLEN, ein Ergebnis. Der Server liefert Kandidaten, so weit seine Suche reicht:
+        ''' Immich sucht semantisch und filtert Favorit und Bewertung gleich mit, Nextcloud sucht im
+        ''' Dateinamen und kann sonst nichts. Alles Weitere beantwortet der eigene Katalog - er hält
+        ''' Bewertung, Favorit, Stichwörter, Personen und Orte zu jedem Bild, das schon einmal
+        ''' geöffnet oder bewertet wurde, auch zu Serverbildern (sie stehen dort unter ihrem
+        ''' Pseudo-Pfad). Deshalb kommt der Katalog zusätzlich als eigene Trefferquelle dazu: ein
+        ''' Bild, dessen STICHWORT passt, fände der Server nie.
+        '''
+        ''' Was weder Server noch Katalog wissen, bleibt offen. Eine Bedingung wie „Bildhöhe > 500"
+        ''' kann bei einem nie geöffneten Serverbild niemand beantworten, ohne es zu holen - solche
+        ''' Bilder fallen heraus, und die Statuszeile sagt, wie viele es waren. Bei einer Ordnersuche
+        ''' ist das anders: dort liest der Suchlauf notfalls die Datei selbst.</summary>
+        Private Async Sub StartServerSearch(node As VirtualNavigationNode)
+            Dim isImmich = String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase)
+            Dim pathPrefix = If(isImmich, "immich://", "nextcloud://")
+            Dim textQuery = If(node.TextQuery, "").Trim()
+            Dim favoriteMode = AppSettingsService.NormalizeSearchFavoriteMode(node.FavoriteMode)
+            Dim ratings = NormalizeRatings(node.Ratings)
+            Dim conditions = If(node.Conditions, New List(Of SearchCondition)())
+            ' Immich filtert auf genau eine Bewertung - bei mehreren nehmen wir die höchste.
+            Dim rating = If(ratings.Count > 0, ratings.Max(), 0)
+            Dim favoriteOnly = String.Equals(favoriteMode, "Only", StringComparison.OrdinalIgnoreCase)
+
+            ' DER SERVER ZUERST. Personen, Orte und Stichwörter kennen beide Server selbst; was hier
+            ' herausgezogen wird, beantwortet die API und NICHT der Katalog. Übrig bleiben die
+            ' Bedingungen, die kein Server führt (Kamera, ISO, Maße, Datum).
+            Dim personNames = WantedNames(node, "Person", node.PersonQueries)
+            Dim placeNames = WantedNames(node, "Place", node.PlaceQueries)
+            Dim tagNames = If(node.TagQueries, New List(Of String)()).
+                           Where(Function(t) Not String.IsNullOrWhiteSpace(t)).ToList()
+            Dim catalogConditions = conditions.Where(
+                Function(c) Not String.Equals(c.Field, "Person", StringComparison.OrdinalIgnoreCase) AndAlso
+                            Not String.Equals(c.Field, "Place", StringComparison.OrdinalIgnoreCase)).ToList()
+            ' Fragt überhaupt etwas den Server? Wenn nicht (also nur Bewertung, Etikett oder
+            ' Aufnahmedaten), trägt der Katalog die Treffer - er ist dann die einzige Quelle, die
+            ' diese Angaben hat, und damit vollständig.
+            Dim hasServerCriterion = textQuery.Length > 0 OrElse personNames.Count > 0 OrElse
+                                     placeNames.Count > 0 OrElse tagNames.Count > 0 OrElse
+                                     Not String.Equals(favoriteMode, "Any", StringComparison.OrdinalIgnoreCase) OrElse
+                                     ratings.Count > 0
+
             Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
             _activeSearchCts = New CancellationTokenSource()
             Dim token = _activeSearchCts.Token
             SelectedImmichNode = Nothing
-            Dim favoriteOnly = String.Equals(AppSettingsService.NormalizeSearchFavoriteMode(node.FavoriteMode), "Only", StringComparison.OrdinalIgnoreCase)
-            Dim ratings = NormalizeRatings(node.Ratings)
-            ' Immich filtert auf genau eine Bewertung - bei mehreren nehmen wir die höchste, bei keiner keine.
-            Dim rating = If(ratings.Count > 0, ratings.Max(), 0)
-            Dim query = If(node.TextQuery, "").Trim()
+            SelectedNextcloudNode = Nothing
             IsLoading = True
-            StatusText = LocalizationService.T("Immich-Suche läuft…")
+            StatusText = LocalizationService.T("Suche auf dem Server…")
+
             Const SafetyCap As Integer = 5000
-            Dim total As Integer = 0
-            Try
-                Dim page As Integer = 1
-                Dim lastSortTick = Environment.TickCount64
-                Do
-                    Dim result = Await ImmichService.SearchAsync(query, favoriteOnly, rating, page, thumbnailToken)
-                    If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
-                    If result.Items.Count > 0 Then
-                        Dim isFirstBatch = (total = 0)
-                        Dim items = result.Items.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList()
-                        AddPrebuiltItemsToVirtualFolder(items, sortNow:=False)
-                        total += items.Count
-                        ' Zwischensortierungen bewusst selten (das Neuaufbauen der Liste läuft auf dem
-                        ' UI-Thread und konkurriert sonst mit den Viewport-Thumbnail-Benachrichtigungen).
-                        If isFirstBatch OrElse Environment.TickCount64 - lastSortTick > 1500 Then
-                            FilterAndSort()
-                            lastSortTick = Environment.TickCount64
+            Dim seenPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim totalPublished As Integer = 0
+            Dim skippedUnanswerable As Integer = 0
+            Dim lastSortTick = Environment.TickCount64
+
+            ' Spielt eine Portion Kandidaten ein: erst durch den Katalogfilter, dann in die Ansicht.
+            Dim publishBatch =
+                Async Function(candidates As List(Of ImageItem), serverMeta As Dictionary(Of String, LibraryImageMeta)) As Task
+                    Dim fresh = candidates.Where(Function(i) i IsNot Nothing AndAlso
+                                                     Not String.IsNullOrEmpty(i.FilePath) AndAlso
+                                                     seenPaths.Add(i.FilePath)).ToList()
+                    If fresh.Count = 0 Then Return
+                    Dim catalogMeta = LibraryService.Instance.GetMetaForPaths(fresh.Select(Function(i) i.FilePath))
+                    Dim kept As New List(Of ImageItem)()
+                    For Each item In fresh
+                        Dim fromServer As LibraryImageMeta = Nothing
+                        serverMeta.TryGetValue(item.FilePath, fromServer)
+                        Dim fromCatalog As LibraryImageMeta = Nothing
+                        catalogMeta.TryGetValue(item.FilePath, fromCatalog)
+                        Dim meta = MergeServerMeta(item.FilePath, fromServer, fromCatalog)
+                        If ServerConditionUnanswerable(meta, catalogConditions) Then
+                            skippedUnanswerable += 1
+                            Continue For
                         End If
+                        ' Suchtext, Personen, Orte, Stichwörter und Favoriten hat der Server schon
+                        ' beantwortet (bei Immich der Text sogar semantisch, also OHNE Namensbezug).
+                        ' Hier bleibt, was nur der Katalog weiß.
+                        If Not Await MatchesServerCriteriaAsync(meta, catalogConditions, node.ConditionCombinator,
+                                                                "", "Any", ratings) Then Continue For
+                        kept.Add(item)
+                    Next
+                    If kept.Count = 0 Then Return
+                    Dim isFirstBatch = (totalPublished = 0)
+                    AddPrebuiltItemsToVirtualFolder(kept, sortNow:=False)
+                    totalPublished += kept.Count
+                    ' Zwischensortierungen bewusst selten (das Neuaufbauen der Liste läuft auf dem
+                    ' UI-Thread und konkurriert sonst mit den Viewport-Benachrichtigungen).
+                    If isFirstBatch OrElse Environment.TickCount64 - lastSortTick > 1500 Then
+                        FilterAndSort()
+                        lastSortTick = Environment.TickCount64
                     End If
-                    If result.NextPage <= 0 OrElse total >= SafetyCap Then Exit Do
-                    page = result.NextPage
-                Loop
+                End Function
+
+            Try
+                ' ── 1. Kandidaten vom Server ─────────────────────────────────────────────
+                If isImmich Then
+                    Dim serverKey = ImmichService.ServerKey
+                    ' Personen kennt NUR der Server: die Assetliste im Index traegt keine Gesichter.
+                    ' Ohne diesen Abruf blieb eine Suche nach einer Person bei Immich wirkungslos.
+                    Dim allowedAssetIds = Await ResolveImmichPersonAssetIdsAsync(personNames, thumbnailToken)
+                    Dim page As Integer = 1
+                    Do
+                        Dim result = Await ImmichService.SearchAsync(textQuery, favoriteOnly, rating, page, thumbnailToken)
+                        If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
+                        If result.Items.Count > 0 Then
+                            Dim serverMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
+                            Dim items As New List(Of ImageItem)()
+                            For Each asset In result.Items
+                                If allowedAssetIds IsNot Nothing AndAlso Not allowedAssetIds.Contains(asset.Id) Then Continue For
+                                Dim item = ImageItem.CreateImmichItem(asset, thumbnailToken)
+                                items.Add(item)
+                                ' Immichs eigener Index trägt Kamera, ISO, Blende, Ort und
+                                ' Stichwörter - dieselbe Quelle wie in der Ordnersuche.
+                                serverMeta(item.FilePath) = If(BuildSearchMetaFromImmichAsset(serverKey, asset),
+                                                               MetaFromImmichAsset(item.FilePath, asset))
+                            Next
+                            Await publishBatch(items, serverMeta)
+                        End If
+                        If result.NextPage <= 0 OrElse totalPublished >= SafetyCap Then Exit Do
+                        page = result.NextPage
+                    Loop
+
+                    ' Der lokale Immich-Index als zweiter Durchgang. Er liegt ohnehin auf der Platte,
+                    ' kostet keine Anfrage und traegt Stichwoerter, Ort, Kamera und Bewertung zu
+                    ' JEDEM Asset - auch zu denen, die Immichs Suche nicht ausgeworfen hat. Ohne ihn
+                    ' fand eine Suche nach einem STICHWORT nichts: die semantische Suche sucht im
+                    ' Bildinhalt, nicht in den eigenen Stichwoertern.
+                    If totalPublished < SafetyCap Then
+                        Dim indexedAssets = Await Task.Run(Of List(Of ImmichAsset))(
+                            Function() ImmichIndexService.Instance.GetAssetList(serverKey))
+                        If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
+                        Dim indexMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
+                        Dim indexItems As New List(Of ImageItem)()
+                        For Each asset In If(indexedAssets, New List(Of ImmichAsset)())
+                            token.ThrowIfCancellationRequested()
+                            Dim meta = BuildSearchMetaFromImmichAsset(serverKey, asset)
+                            If meta Is Nothing Then Continue For
+                            If seenPaths.Contains(meta.FilePath) Then Continue For
+                            ' Hier gilt der Suchtext wieder: dieser Durchgang sucht in Name und
+                            ' Stichwoertern, waehrend die Serversuche den Bildinhalt abgedeckt hat.
+                            If allowedAssetIds IsNot Nothing AndAlso Not allowedAssetIds.Contains(asset.Id) Then Continue For
+                            If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Continue For
+                            If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
+                            If Not MatchesPlaceQuery(meta, placeNames) Then Continue For
+                            ' In diesem Durchgang hat KEIN Server vorgefiltert - Favorit und
+                            ' Bewertung gelten deshalb hier.
+                            If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
+                            If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
+                            If ratings.Count > 0 AndAlso Not ratings.Contains(meta.Rating) Then Continue For
+                            Dim item = ImageItem.CreateImmichItem(asset, thumbnailToken)
+                            If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) Then Continue For
+                            indexItems.Add(item)
+                            indexMeta(item.FilePath) = meta
+                        Next
+                        If indexItems.Count > 0 Then Await publishBatch(indexItems, indexMeta)
+                    End If
+                Else
+                    ' NEXTCLOUD. Der Server beantwortet, was er kann, und zwar ALLES davon: den
+                    ' Dateinamen über seine Suche, Personen, Orte und Stichwörter über ihre Cluster,
+                    ' Favoriten über die WebDAV-Eigenschaft. Mehrere Kriterien wirken als UND,
+                    ' deshalb werden die Kennungsmengen geschnitten. Der Katalog kommt erst danach
+                    ' und nur für das, was der Server nicht führt: Bewertung, Farbetikett und die
+                    ' Aufnahmedaten.
+                    Dim allowedFileIds As HashSet(Of String) = Nothing
+                    Dim intersectWith = Sub(more As HashSet(Of String))
+                                            If more Is Nothing Then Return
+                                            If allowedFileIds Is Nothing Then
+                                                allowedFileIds = more
+                                            Else
+                                                allowedFileIds.IntersectWith(more)
+                                            End If
+                                        End Sub
+
+                    Dim hits As List(Of NextcloudService.NextcloudSearchHit) = Nothing
+                    If textQuery.Length > 0 Then
+                        ' Der Suchtext meint Dateiname ODER Stichwort - genau wie bei einer
+                        ' Ordnersuche, wo beides im selben Feld gesucht wird. Die Dateisuche des
+                        ' Servers kennt nur den Namen, die Stichwoerter stehen in seinen System-Tags:
+                        ' beide Mengen werden VEREINIGT, nicht geschnitten.
+                        hits = Await NextcloudService.SearchFilesAsync(textQuery, cancellationToken:=thumbnailToken)
+                        Dim byName As New HashSet(Of String)(hits.Select(Function(h) h.FileId), StringComparer.OrdinalIgnoreCase)
+                        Dim byTag = Await NextcloudClusterFileIdsAsync("tags", {textQuery}, thumbnailToken)
+                        If byTag IsNot Nothing Then byName.UnionWith(byTag)
+                        intersectWith(byName)
+                    End If
+                    intersectWith(Await NextcloudClusterFileIdsAsync("recognize", personNames, thumbnailToken))
+                    intersectWith(Await NextcloudClusterFileIdsAsync("places", placeNames, thumbnailToken))
+                    intersectWith(Await NextcloudClusterFileIdsAsync("tags", tagNames, thumbnailToken))
+                    If String.Equals(favoriteMode, "Only", StringComparison.OrdinalIgnoreCase) Then
+                        intersectWith(Await NextcloudService.GetFavoriteFileIdsAsync(thumbnailToken))
+                    End If
+                    If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
+
+                    If allowedFileIds IsNot Nothing Then
+                        ' Der Suchtreffer trägt Name und Pfad gleich mit; kam die Kennung aus einem
+                        ' Cluster, reicht sie allein - das Übrige kommt mit den Einzelheiten nach.
+                        Dim hitById = If(hits, New List(Of NextcloudService.NextcloudSearchHit)()).
+                                      Where(Function(h) h IsNot Nothing AndAlso Not String.IsNullOrEmpty(h.FileId)).
+                                      GroupBy(Function(h) h.FileId, StringComparer.OrdinalIgnoreCase).
+                                      ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.OrdinalIgnoreCase)
+                        Dim serverMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
+                        Dim items As New List(Of ImageItem)()
+                        For Each id In allowedFileIds
+                            Dim hit As NextcloudService.NextcloudSearchHit = Nothing
+                            If Not hitById.TryGetValue(id, hit) Then
+                                hit = New NextcloudService.NextcloudSearchHit With {.FileId = id}
+                            End If
+                            ' Die Suche kennt alle Dateien, nicht nur Bilder. Ein Name ohne
+                            ' Bildendung fliegt raus; eine Kennung ohne Namen bleibt drin, denn
+                            ' aus einem Cluster kommen ohnehin nur Aufnahmen.
+                            If Not String.IsNullOrEmpty(hit.FileName) AndAlso
+                               Not _imageExtensions.Contains(IO.Path.GetExtension(hit.FileName).ToLowerInvariant()) Then Continue For
+                            Dim item = ImageItem.CreateNextcloudSearchItem(hit, thumbnailToken)
+                            If String.IsNullOrEmpty(item.FilePath) Then Continue For
+                            items.Add(item)
+                            serverMeta(item.FilePath) = New LibraryImageMeta With {.FilePath = item.FilePath}
+                        Next
+                        Await publishBatch(items, serverMeta)
+                    End If
+                End If
+
+                ' ── 2. Der Katalog als RÜCKFALL ─────────────────────────────────────────
+                ' Nur wenn den Server nichts gefragt hat. Eine Suche allein nach Bewertung oder
+                ' Farbetikett kann er nicht beantworten - diese Angaben stehen ausschliesslich im
+                ' Katalog, und dort ist die Menge dann auch vollstaendig: was keine Bewertung hat,
+                ' steht auch in keiner Suche danach.
+                If Not hasServerCriterion Then
+                    Dim catalogHits = Await Task.Run(Of List(Of LibraryImageMeta))(
+                        Function() LibraryService.Instance.GetImagesWithPathPrefix(pathPrefix))
+                    If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
+                    Dim catalogItems As New List(Of ImageItem)()
+                    Dim catalogItemMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
+                    For Each meta In catalogHits
+                        If meta Is Nothing OrElse String.IsNullOrEmpty(meta.FilePath) Then Continue For
+                        If seenPaths.Contains(meta.FilePath) Then Continue For
+                        If ServerConditionUnanswerable(meta, catalogConditions) Then
+                            skippedUnanswerable += 1
+                            Continue For
+                        End If
+                        If Not Await MatchesServerCriteriaAsync(meta, catalogConditions, node.ConditionCombinator,
+                                                                textQuery, favoriteMode, ratings) Then Continue For
+                        Dim item = CreateServerItemFromPseudoPath(meta.FilePath, isImmich, thumbnailToken)
+                        If item Is Nothing Then Continue For
+                        catalogItems.Add(item)
+                        catalogItemMeta(item.FilePath) = meta
+                    Next
+                    If catalogItems.Count > 0 Then Await publishBatch(catalogItems, catalogItemMeta)
+                End If
+
                 FilterAndSort()
-                If total = 0 Then
-                    StatusText = If(Not String.IsNullOrEmpty(ImmichService.LastError),
-                                    LocalizationService.T("Immich-Fehler: ") & ImmichService.LastError,
-                                    LocalizationService.T("Keine Treffer"))
+                If totalPublished = 0 Then
+                    Dim serverError = If(isImmich, ImmichService.LastError, NextcloudService.LastError)
+                    StatusText = If(Not String.IsNullOrEmpty(serverError), serverError, LocalizationService.T("Keine Treffer"))
+                ElseIf skippedUnanswerable > 0 Then
+                    ' Ehrlich sagen, was nicht geprüft werden konnte - sonst sieht die Liste
+                    ' vollständig aus, obwohl Bilder ohne Katalogeintrag herausgefallen sind.
+                    StatusText = String.Format(LocalizationService.T("{0} Treffer, {1} ohne Angaben im Katalog übergangen"),
+                                               totalPublished, skippedUnanswerable)
+                Else
+                    StatusText = String.Format(LocalizationService.T("{0} Treffer"), totalPublished)
                 End If
             Catch ex As OperationCanceledException
             Catch ex As Exception
-                DiagnosticLogService.LogException("Immich.Search", ex)
-                StatusText = LocalizationService.T("Immich-Suche fehlgeschlagen")
+                DiagnosticLogService.LogException(If(isImmich, "Immich.Search", "Nextcloud.Search"), ex)
+                StatusText = LocalizationService.T("Die Suche ist fehlgeschlagen")
             Finally
                 If Not thumbnailToken.IsCancellationRequested Then IsLoading = False
             End Try
         End Sub
 
+        ''' <summary>Prüft die Kriterien gegen die Metadaten EINES Serverbildes. Übergeben wird nur,
+        ''' was der Server nicht schon beantwortet hat - Personen, Orte und Stichwörter kennt er
+        ''' selbst, sie kommen hier nicht mehr an.</summary>
+        Private Shared Function MatchesServerCriteriaAsync(meta As LibraryImageMeta,
+                                                           conditions As List(Of SearchCondition),
+                                                           combinator As String,
+                                                           textQuery As String,
+                                                           favoriteMode As String,
+                                                           selectedRatings As HashSet(Of Integer)) As Task(Of Boolean)
+            If meta Is Nothing Then Return Task.FromResult(False)
+            If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Return Task.FromResult(False)
+            If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Return Task.FromResult(False)
+            If favoriteMode = "Not" AndAlso meta.IsFavorite Then Return Task.FromResult(False)
+            ' Die Bewertung führt KEIN Server: Immich kennt zwar Sterne, aber das Etikett und die
+            ' Feinheiten kommen aus dem Katalog, und Nextcloud hat gar keine. Deshalb wird sie hier
+            ' geprüft, auch wenn die Immich-Suche schon vorgefiltert hat.
+            If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
+                If Not selectedRatings.Contains(meta.Rating) Then Return Task.FromResult(False)
+            End If
+            If conditions Is Nothing OrElse conditions.Count = 0 Then Return Task.FromResult(True)
+            Dim isAnd = Not String.Equals(combinator, "OR", StringComparison.OrdinalIgnoreCase)
+            For Each condition In conditions
+                Dim isMatch = EvaluateSingleCondition(meta, condition)
+                If isAnd AndAlso Not isMatch Then Return Task.FromResult(False)
+                If Not isAnd AndAlso isMatch Then Return Task.FromResult(True)
+            Next
+            Return Task.FromResult(isAnd)
+        End Function
+
+        ''' <summary>Die Namen, die eine Suchliste für ein Bedingungsfeld verlangt - aus den
+        ''' Bedingungen und (beim Sprung aus dem Infopanel) aus den Direktabfragen des Knotens.</summary>
+        Private Shared Function WantedNames(node As VirtualNavigationNode, field As String,
+                                            directQueries As IList(Of String)) As List(Of String)
+            Dim names As New List(Of String)()
+            names.AddRange(If(directQueries, New List(Of String)()).Where(Function(n) Not String.IsNullOrWhiteSpace(n)))
+            For Each c In If(node.Conditions, New List(Of SearchCondition)())
+                If String.Equals(c.Field, field, StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.IsNullOrWhiteSpace(c.Value) Then names.Add(c.Value.Trim())
+            Next
+            Return names.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        ''' <summary>Die Dateikennungen aller Aufnahmen eines Nextcloud-Clusters (Person, Ort,
+        ''' Stichwort). Der Weg führt über die Zeitachse mit Clusterfilter - Memories hat keinen
+        ''' Endpunkt, der die Dateien eines Clusters in einem Zug liefert.</summary>
+        Private Shared Async Function NextcloudClusterFileIdsAsync(backend As String,
+                                                                   names As IList(Of String),
+                                                                   token As CancellationToken) As Task(Of HashSet(Of String))
+            If names Is Nothing OrElse names.Count = 0 Then Return Nothing
+            Dim cluster = Await NextcloudService.GetClustersAsync(backend, token)
+            Dim matched As HashSet(Of String) = Nothing
+            ' Mehrere Namen wirken als UND - wer zwei Personen sucht, meint beide auf einem Bild.
+            For Each name In names
+                token.ThrowIfCancellationRequested()
+                Dim matching = cluster.Where(Function(c) c IsNot Nothing AndAlso
+                                                (String.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) OrElse
+                                                 c.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0)).ToList()
+                Dim forThisName As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                For Each c In matching
+                    ' NICHT "day" als Schleifenvariable: Day ist eine VB-Funktion (Day(DateValue)).
+                    For Each dayEntry In Await NextcloudService.GetDaysAsync(token, c.Id, backend)
+                        token.ThrowIfCancellationRequested()
+                        For Each photo In Await NextcloudService.GetDayAsync(dayEntry.DayId, token, c.Id, backend)
+                            forThisName.Add(photo.FileId.ToString(Globalization.CultureInfo.InvariantCulture))
+                        Next
+                    Next
+                Next
+                If matched Is Nothing Then
+                    matched = forThisName
+                Else
+                    matched.IntersectWith(forThisName)
+                End If
+                If matched.Count = 0 Then Exit For
+            Next
+            Return matched
+        End Function
+
+        ''' <summary>True, wenn eine der Bedingungen ein Feld braucht, das zu diesem Serverbild
+        ''' niemand kennt. Bei der Ordnersuche wird die Datei dann gelesen; hier läge sie auf dem
+        ''' Server, und ein Download je Kandidat wäre nicht vertretbar.</summary>
+        Private Shared Function ServerConditionUnanswerable(meta As LibraryImageMeta,
+                                                            conditions As List(Of SearchCondition)) As Boolean
+            If conditions Is Nothing OrElse conditions.Count = 0 Then Return False
+            Return conditions.Any(Function(c) Not MetaHasField(meta, c.Field))
+        End Function
+
+        ''' <summary>Legt die Angaben des Servers und die des Katalogs übereinander. Der KATALOG hat
+        ''' Vorrang: was dort steht, hat jemand bewusst gesetzt.</summary>
+        Private Shared Function MergeServerMeta(filePath As String,
+                                                vomServer As LibraryImageMeta,
+                                                ausKatalog As LibraryImageMeta) As LibraryImageMeta
+            If ausKatalog Is Nothing Then
+                Return If(vomServer, New LibraryImageMeta With {.FilePath = filePath})
+            End If
+            If vomServer Is Nothing Then Return ausKatalog
+            If Not ausKatalog.ImageWidth.HasValue Then ausKatalog.ImageWidth = vomServer.ImageWidth
+            If Not ausKatalog.ImageHeight.HasValue Then ausKatalog.ImageHeight = vomServer.ImageHeight
+            If Not ausKatalog.Iso.HasValue Then ausKatalog.Iso = vomServer.Iso
+            If Not ausKatalog.Aperture.HasValue Then ausKatalog.Aperture = vomServer.Aperture
+            If String.IsNullOrWhiteSpace(ausKatalog.Camera) Then ausKatalog.Camera = vomServer.Camera
+            If String.IsNullOrWhiteSpace(ausKatalog.DateTaken) Then ausKatalog.DateTaken = vomServer.DateTaken
+            If String.IsNullOrWhiteSpace(ausKatalog.City) Then ausKatalog.City = vomServer.City
+            If String.IsNullOrWhiteSpace(ausKatalog.Country) Then ausKatalog.Country = vomServer.Country
+            If (ausKatalog.Tags Is Nothing OrElse ausKatalog.Tags.Count = 0) AndAlso vomServer.Tags IsNot Nothing Then
+                ausKatalog.Tags = vomServer.Tags
+            End If
+            Return ausKatalog
+        End Function
+
+        ''' <summary>Was Immich selbst über ein Bild weiß, in der Form des Katalogs. Immich führt
+        ''' einen eigenen EXIF-Index; damit lassen sich Bedingungen wie Kamera, ISO oder Bildgröße
+        ''' auch für Bilder beantworten, die FerrumPix noch nie geöffnet hat.</summary>
+        Private Shared Function MetaFromImmichAsset(filePath As String, asset As ImmichAsset) As LibraryImageMeta
+            Dim meta As New LibraryImageMeta With {.FilePath = filePath}
+            If asset Is Nothing Then Return meta
+            If asset.Width > 0 Then meta.ImageWidth = asset.Width
+            If asset.Height > 0 Then meta.ImageHeight = asset.Height
+            meta.Camera = If(asset.Camera, "")
+            meta.Iso = asset.Iso
+            meta.Aperture = asset.Aperture
+            meta.IsFavorite = asset.IsFavorite
+            meta.Rating = asset.Rating
+            meta.City = If(asset.City, "")
+            meta.Country = If(asset.Country, "")
+            If asset.Tags IsNot Nothing Then meta.Tags = asset.Tags
+            If asset.ExifDateTaken.HasValue Then
+                meta.DateTaken = asset.ExifDateTaken.Value.ToString("yyyy-MM-dd HH:mm:ss", Globalization.CultureInfo.InvariantCulture)
+            ElseIf asset.FileCreatedAt.HasValue Then
+                meta.DateTaken = asset.FileCreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss", Globalization.CultureInfo.InvariantCulture)
+            End If
+            Return meta
+        End Function
+
+        ''' <summary>Baut aus dem Pseudo-Pfad eines Katalogeintrags wieder ein Serverelement. Kennung
+        ''' und Name stecken im Pfad; Größe, Aufnahmezeit und - bei Nextcloud - der Pfad im
+        ''' Dateibaum kommen nach, sobald die Kachel sichtbar wird.</summary>
+        Private Shared Function CreateServerItemFromPseudoPath(pseudoPath As String,
+                                                               istImmich As Boolean,
+                                                               thumbnailToken As CancellationToken) As ImageItem
+            Dim id As String = Nothing
+            Dim name As String = Nothing
+            If istImmich Then
+                If Not ImmichService.TryParsePseudoPath(pseudoPath, id, name) Then Return Nothing
+                Return ImageItem.CreateImmichItem(New ImmichAsset With {.Id = id, .FileName = name},
+                                                  thumbnailToken)
+            End If
+            If Not NextcloudService.TryParsePseudoPath(pseudoPath, id, name) Then Return Nothing
+            Return ImageItem.CreateNextcloudSearchItem(New NextcloudService.NextcloudSearchHit With {
+                                                           .FileId = id, .FileName = name}, thumbnailToken)
+        End Function
+
         Private Shared Function CreateSavedSearchNode(search As SearchListEntry) As VirtualNavigationNode
             Return New VirtualNavigationNode(search.Name, "SavedSearch") With {
                 .Id = search.Id,
-                .Source = If(String.Equals(search.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local"),
+                .Source = SearchListService.NormalizeSource(search.Source),
                 .TextQuery = search.TextQuery,
                 .RootFolder = search.RootFolder,
                 .IncludeSubfolders = search.IncludeSubfolders,
@@ -4293,6 +5491,17 @@ Namespace ViewModels
                     Catch ex As IOException
                     End Try
                     For Each child In children
+                        ' VERSTECKTE ORDNER wie im Ordnerbaum und in der Ordneransicht: sie zeigt
+                        ' nur, wer sie eingeschaltet hat. Der Suchlauf war die einzige Stelle ohne
+                        ' diese Bedingung - und stieg damit in den Systempapierkorb (".Trash-1000").
+                        ' Geloeschte Bilder standen in der Trefferliste, liessen sich aber nicht
+                        ' loeschen: die Regel weist versteckte Pfade ab, und es passierte wortlos
+                        ' nichts (Nutzerbefund 2026-08-10).
+                        ' DER PAPIERKORB IMMER NICHT - auch mit eingeschalteten versteckten
+                        ' Ordnern. Was dort liegt, ist weggeworfen.
+                        If FileOperationPolicy.IsTrashFolder(child) Then Continue For
+                        If Not FolderNode.ShowHiddenFolders AndAlso
+                           IO.Path.GetFileName(child).StartsWith(".", StringComparison.Ordinal) Then Continue For
                         pendingFolders.Push(child)
                     Next
                 End If
@@ -4456,6 +5665,9 @@ Namespace ViewModels
             SetupWatcher(Nothing)
 
             _isVirtualFolder = True
+            ' Jede neue Ansicht faengt als gewoehnliche an; die beiden Papierkorb-Wege setzen das
+            ' Kennzeichen gleich danach selbst. So kann es nirgends stehenbleiben.
+            SetTrashView(False)
             _virtualFolderName = If(String.IsNullOrWhiteSpace(name), "Virtueller Ordner", name)
             CurrentFolder = "virtual://" & _virtualFolderName
             _historyBack.Clear()
@@ -4624,6 +5836,7 @@ Namespace ViewModels
             CancelActiveSearch()
             If Not _isVirtualFolder Then Return
             _isVirtualFolder = False
+            SetTrashView(False)
             _virtualFolderName = ""
             _virtualPathSet.Clear()
             Me.RaisePropertyChanged(NameOf(IsVirtualFolder))
@@ -5649,7 +6862,10 @@ Namespace ViewModels
                 Dim gewaehlt = Items.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso
                                                        i.IsSelected AndAlso Not String.IsNullOrEmpty(i.FilePath)).ToList()
                 If gewaehlt.Count <> 2 Then Return
-                If gewaehlt.Any(Function(i) i.IsImmichAsset) Then Return
+                ' Der Vergleich laeuft ueber DATEIPFADE; ein Pseudo-Pfad gleich welcher Serverquelle
+                ' scheitert dort. Das Menue blendet den Eintrag entsprechend aus, hier steht dieselbe
+                ' Bedingung noch einmal - der Weg wird auch ueber Tastenkuerzel erreicht.
+                If gewaehlt.Any(Function(i) i.IsRemoteAsset) Then Return
                 _mainVm.OpenCompareInViewer(gewaehlt(0).FilePath, gewaehlt(1).FilePath,
                                             Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
                                             cacheScopeId:=CurrentThumbnailCacheScopeId,
@@ -5664,8 +6880,10 @@ Namespace ViewModels
                 Dim selectedMedia = Items.Where(Function(i) i IsNot Nothing AndAlso (i.IsImage OrElse i.IsVideoFile) AndAlso i.IsSelected).ToList()
                 If selectedMedia.Count > 0 Then
                     Dim first = selectedMedia(0)
-                    If first.IsImmichAsset Then
-                        Await OpenImmichItemInViewerAsync(first)
+                    ' Jedes Serverbild geht ueber die Sitzung, nicht nur ein Immich-Asset: ein
+                    ' Pseudo-Pfad im lokalen Weg wuerde zu "Datei nicht gefunden" fuehren.
+                    If first.IsRemoteAsset Then
+                        Await OpenRemoteItemInViewerAsync(first)
                         Return
                     End If
                     _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
@@ -5688,8 +6906,8 @@ Namespace ViewModels
             Try
                 Dim image = GetSelectedImageItems().FirstOrDefault(Function(i) i.CanEditFile)
                 If image Is Nothing Then Return
-                If image.IsImmichAsset Then
-                    Await OpenImmichItemInEditorAsync(image)
+                If image.IsRemoteAsset Then
+                    Await OpenRemoteItemInEditorAsync(image)
                     Return
                 End If
                 Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
@@ -5705,32 +6923,50 @@ Namespace ViewModels
             End Try
         End Sub
 
-        ''' <summary>Lädt das Immich-Original in eine Temp-Kopie und öffnet es im Editor mit
-        ''' Speichern-unter-Zwang - die Temp-Kopie wird nie in-place überschrieben, das Ergebnis landet
-        ''' als neue Datei im Bilder-Ordner. (Rückschreiben nach Immich als Upload wäre ein späterer Schritt.)</summary>
-        Private Async Function OpenImmichItemInEditorAsync(item As ImageItem) As Task
+        ''' <summary>Lädt das Original einer Serverquelle in eine Temp-Kopie und öffnet es im Editor
+        ''' mit Speichern-unter-Zwang - die Temp-Kopie wird nie in-place überschrieben, das Ergebnis
+        ''' landet als neue Datei.
+        '''
+        ''' Für Immich ist das ein Upload als neues Asset, sofern die Einstellung es erlaubt. Für
+        ''' Nextcloud gibt es noch keinen Rückweg; dort bleibt es beim Speichern auf die Platte,
+        ''' obwohl der Server ein Ersetzen erlauben würde (siehe `OFFENE_PUNKTE.md`).</summary>
+        Private Async Function OpenRemoteItemInEditorAsync(item As ImageItem) As Task
             IsLoading = True
             StatusText = LocalizationService.T("Lade Bild aus Immich…")
             Try
-                Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId, item.ImmichOriginalFileName)
+                Dim localPath = Await item.EnsureLocalOriginalAsync()
                 If String.IsNullOrEmpty(localPath) Then
                     StatusText = LocalizationService.T("Bild konnte nicht aus Immich geladen werden")
                     Return
                 End If
-                item.ImmichLocalPath = localPath
+                ' Bei Nextcloud die Herkunft mitgeben: daran haengt, wohin die Begleitdatei kommt.
+                ' Steht der Pfad noch nicht am Element, jetzt holen - ohne ihn gaebe es keinen
+                ' Rueckweg und der Editor bliebe stumm bei "Speichern unter".
+                If item.IsNextcloudAsset AndAlso String.IsNullOrEmpty(item.NextcloudPath) Then
+                    Dim info = Await NextcloudService.GetInfoAsync(item.NextcloudFileId)
+                    If info IsNot Nothing Then item.ApplyNextcloudMetadata(info)
+                End If
+                ' NICHT "nextcloudOrigin": VB unterscheidet keine Gross-/Kleinschreibung, der Name
+                ' verdeckte damit den TYP NextcloudOrigin.
+                Dim itemOrigin = NextcloudOrigin.FromItem(item)
                 ' Stammt das Bild aus einem geöffneten Immich-Album, den bearbeiteten Upload gleich dorthin.
                 Dim sourceAlbumId = If(SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Kind, "ImmichAlbum", StringComparison.Ordinal), SelectedImmichNode.Id, Nothing)
-                Await _mainVm.OpenImageInEditor(localPath, New List(Of String) From {localPath}, forceSaveAsOnly:=True, immichAlbumId:=sourceAlbumId)
+                ' forceSaveAsOnly bleibt fuer Immich; bei Nextcloud entscheidet der Editor selbst,
+                ' denn dort ist die Begleitdatei ein echter Speicherweg.
+                Await _mainVm.OpenImageInEditor(localPath, New List(Of String) From {localPath},
+                                                forceSaveAsOnly:=(itemOrigin Is Nothing OrElse Not itemOrigin.IsKnown),
+                                                immichAlbumId:=sourceAlbumId,
+                                                nextcloudSource:=itemOrigin)
                 StatusText = ""
             Finally
                 IsLoading = False
             End Try
         End Function
 
-        ''' <summary>Öffnet ein Immich-Bild im Betrachter als Album-Sitzung: der Filmstreifen zeigt alle
-        ''' Immich-Bilder der aktuellen Ansicht (Pseudo-Pfade), das Original wird im Viewer on-demand geladen.</summary>
-        Private Function OpenImmichItemInViewerAsync(item As ImageItem) As Task
-            Dim sessionItems = Items.Where(Function(i) i.IsImage AndAlso i.IsImmichAsset).ToList()
+        ''' <summary>Öffnet ein Serverbild im Betrachter als Sitzung: der Filmstreifen zeigt alle
+        ''' Serverbilder der aktuellen Ansicht (Pseudo-Pfade), das Original wird on-demand geladen.</summary>
+        Private Function OpenRemoteItemInViewerAsync(item As ImageItem) As Task
+            Dim sessionItems = Items.Where(Function(i) i.IsImage AndAlso i.IsRemoteAsset).ToList()
             Dim sourceAlbumId = If(SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Kind, "ImmichAlbum", StringComparison.Ordinal), SelectedImmichNode.Id, Nothing)
             _mainVm.OpenImmichViewer(item.FilePath, sessionItems, sourceAlbumId)
             Return Task.CompletedTask
@@ -5744,6 +6980,10 @@ Namespace ViewModels
                 If immichItems.Count > 0 Then
                     Dim ignored = DeleteImmichAssetsAsync(immichItems)
                 End If
+                Dim nextcloudItems = GetSelectedImageItems().Where(Function(i) i.IsNextcloudAsset).ToList()
+                If nextcloudItems.Count > 0 Then
+                    Dim ignored2 = DeleteNextcloudFilesAsync(nextcloudItems)
+                End If
                 Dim virtualTargets = GetSelectedPaths().Where(Function(p) File.Exists(p)).ToList()
                 DeletePaths(virtualTargets)
                 Return
@@ -5754,6 +6994,50 @@ Namespace ViewModels
             End If
             DeletePaths(targets)
         End Sub
+
+        ''' <summary>Löscht Dateien auf dem Nextcloud-Server. Ohne die Einstellung „Löschen in
+        ''' Nextcloud erlauben" wirkungslos - niemand soll aus Versehen Bilder vom Server werfen.
+        ''' Gelöscht wird in den Nextcloud-Papierkorb, es braucht also keinen zweiten Schalter für
+        ''' „endgültig". Die Rückfrage folgt derselben Einstellung wie beim lokalen Löschen.</summary>
+        Private Async Function DeleteNextcloudFilesAsync(items As List(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            If Not AppSettingsService.Load().NextcloudAllowDelete Then
+                StatusText = LocalizationService.T("Löschen in Nextcloud ist nicht erlaubt")
+                Return
+            End If
+            ' Endgueltig heisst endgueltig: dann steht es AUCH in der Rueckfrage, sonst klickt
+            ' jemand denselben Knopf wie sonst und wundert sich, dass der Papierkorb leer bleibt.
+            Dim permanent = AppSettingsService.Load().NextcloudDeletePermanently
+            If Not AppSettingsService.Load().DeleteSkipConfirmation Then
+                Dim question = If(permanent,
+                                  String.Format(LocalizationService.T("{0} Bild(er) endgültig vom Server löschen? Der Papierkorb hilft danach nicht mehr."), items.Count),
+                                  String.Format(LocalizationService.T("{0} Bild(er) auf dem Server löschen?"), items.Count))
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Löschen"), question) Then Return
+            End If
+
+            Dim deletedCount = 0
+            For Each item In items
+                Dim pathInTree = item.NextcloudPath
+                If String.IsNullOrEmpty(pathInTree) Then
+                    Dim info = Await NextcloudService.GetInfoAsync(item.NextcloudFileId)
+                    If info Is Nothing Then Continue For
+                    item.ApplyNextcloudMetadata(info)
+                    pathInTree = item.NextcloudPath
+                End If
+                If String.IsNullOrEmpty(pathInTree) Then Continue For
+                Dim ok = If(permanent,
+                            Await NextcloudService.DeleteFilePermanentlyAsync(pathInTree),
+                            Await NextcloudService.DeleteFileAsync(pathInTree))
+                If ok Then
+                    deletedCount += 1
+                    RemovePathsFromVirtualFolder({item.FilePath})
+                End If
+            Next
+            FilterAndSort()
+            StatusText = If(deletedCount = 0,
+                            If(String.IsNullOrEmpty(NextcloudService.LastError), LocalizationService.T("Kein Element ausgewählt"), NextcloudService.LastError),
+                            String.Format(LocalizationService.T("{0} Bild(er) gelöscht"), deletedCount))
+        End Function
 
         ''' <summary>Löscht Assets auf dem Immich-Server. Standardmäßig abgeschaltet: ohne die Einstellung
         ''' "Löschen in Immich erlauben" bleibt ein Entf in der Galerie bei Immich-Bildern wirkungslos -
@@ -6123,15 +7407,19 @@ Namespace ViewModels
             Dim skipped = 0
             Try
                 For Each item In items
-                    If item.IsImmichAsset Then
-                        Dim localPath = item.ImmichLocalPath
+                    ' JEDE Serverquelle, nicht nur Immich: ein Nextcloud-Element fiel hier auf
+                    ' File.Exists("nextcloud://…") und wurde uebersprungen - beim Drucken fehlte es,
+                    ' und eine reine Nextcloud-Auswahl brachte gar keine Collage zustande.
+                    ' EnsureLocalOriginalAsync ist der EINE Weg dafuer: es weiss selbst, von welchem
+                    ' Server es holt, und benutzt eine schon geholte Kopie wieder.
+                    If item.IsRemoteAsset Then
+                        Dim localPath = item.RemoteLocalPath
                         If String.IsNullOrEmpty(localPath) OrElse Not File.Exists(localPath) Then
                             StatusText = LocalizationService.T(If(items.Count > 1,
-                                                                  "Lade Bilder aus Immich…",
-                                                                  "Lade Bild aus Immich…"))
+                                                                  "Lade Bilder vom Server…",
+                                                                  "Lade Bild vom Server…"))
                             IsLoading = True
-                            localPath = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId, item.ImmichOriginalFileName)
-                            If Not String.IsNullOrEmpty(localPath) Then item.ImmichLocalPath = localPath
+                            localPath = Await item.EnsureLocalOriginalAsync()
                         End If
                         If Not String.IsNullOrEmpty(localPath) AndAlso File.Exists(localPath) Then
                             paths.Add(localPath)
@@ -6326,14 +7614,14 @@ Namespace ViewModels
         ''' zusätzlich drin, weil der Renderer es lesen kann und die Collage es bisher annahm.</summary>
         ''' <summary>Die Quellpfade der Collage aus der Auswahl, OHNE zu laden.
         '''
-        ''' Fuer ein Immich-Asset steht hier die Kopie, die beim Oeffnen des Dialogs in den
-        ''' Temp-Ordner geholt wurde. Vorschau und Speichern laufen nach dem Oeffnen, das Laden ist
+        ''' Fuer ein Serverelement steht hier die Kopie, die beim Oeffnen des Dialogs in den
+        ''' Temp-Ordner geholt wurde - gleich von welchem Server. Vorschau und Speichern laufen nach dem Oeffnen, das Laden ist
         ''' also schon passiert - sie duerfen es nur nicht erneut anstossen, sonst laedt jede
         ''' Vorschau-Aktualisierung von vorn.</summary>
         Private Function CollageSourcePaths() As List(Of String)
             Return If(SelectedItems, Enumerable.Empty(Of ImageItem)()).
                    Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsVideoFile).
-                   Select(Function(i) If(i.IsImmichAsset, If(i.ImmichLocalPath, ""), If(i.FilePath, ""))).
+                   Select(Function(i) If(i.IsRemoteAsset, If(i.RemoteLocalPath, ""), If(i.FilePath, ""))).
                    Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso File.Exists(p) AndAlso IsCollageSourcePath(p)).
                    ToList()
         End Function
@@ -6647,8 +7935,13 @@ Namespace ViewModels
                                                              applyPendingBaked:=applyPendingBaked)
                          End Function
 
-            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
-            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
+            ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
+            ' Datei behandelt.
+            Dim localItems = targetItems.Where(Function(i) Not i.IsRemoteAsset).ToList()
+            ' Alle Serverelemente. Der Export in einen ORDNER kann sie alle (die Quelle wird geholt);
+            ' das Zurueckschreiben nach Immich ueberspringt fremde Quellen von selbst.
+            Dim immichItems = targetItems.Where(Function(i) i.IsRemoteAsset).ToList()
             Dim uploadedAssetIds As New List(Of String)()
             Dim changedCount = 0
             Dim uploadedCount = 0
@@ -6725,7 +8018,9 @@ Namespace ViewModels
             Dim gemeinsam As String = Nothing
             For Each item In If(targetItems, Enumerable.Empty(Of ImageItem)())
                 If item Is Nothing OrElse String.IsNullOrWhiteSpace(item.FilePath) Then Continue For
-                If item.IsImmichAsset OrElse ImmichService.IsImmichTempPath(item.FilePath) Then
+                ' Serverelemente haben keinen sinnvollen Ordner, und ihre Temp-Kopie erst recht
+                ' nicht - dann greift die Vorgabe des Dialogs statt eines Temp-Pfads.
+                If item.IsRemoteAsset OrElse ImmichService.IsImmichTempPath(item.FilePath) Then
                     gemeinsam = Nothing
                     Exit For
                 End If
@@ -6793,8 +8088,13 @@ Namespace ViewModels
                                                              applyPendingBaked:=applyPendingBaked)
                          End Function
 
-            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
-            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
+            ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
+            ' Datei behandelt.
+            Dim localItems = targetItems.Where(Function(i) Not i.IsRemoteAsset).ToList()
+            ' Alle Serverelemente. Der Export in einen ORDNER kann sie alle (die Quelle wird geholt);
+            ' das Zurueckschreiben nach Immich ueberspringt fremde Quellen von selbst.
+            Dim immichItems = targetItems.Where(Function(i) i.IsRemoteAsset).ToList()
             Dim uploadedAssetIds As New List(Of String)()
             Dim changedCount = 0
             Dim uploadedCount = 0
@@ -6949,8 +8249,13 @@ Namespace ViewModels
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked)
                          End Function
-            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
-            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
+            ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
+            ' Datei behandelt.
+            Dim localItems = targetItems.Where(Function(i) Not i.IsRemoteAsset).ToList()
+            ' Alle Serverelemente. Der Export in einen ORDNER kann sie alle (die Quelle wird geholt);
+            ' das Zurueckschreiben nach Immich ueberspringt fremde Quellen von selbst.
+            Dim immichItems = targetItems.Where(Function(i) i.IsRemoteAsset).ToList()
             Dim uploadedAssetIds As New List(Of String)()
             Dim changedCount = 0
             Dim uploadedCount = 0
@@ -7087,12 +8392,12 @@ Namespace ViewModels
             Return changedCount
         End Function
 
+        ''' <summary>Die Quelldatei eines Elements für den Stapel: lokal der eigene Pfad, bei einem
+        ''' Serverelement eine Temp-Kopie des Originals. Welcher Server, entscheidet das Element
+        ''' selbst - hier steht bewusst kein Zweig je Quelle mehr.</summary>
         Private Async Function EnsureLocalPathForBatchAsync(item As ImageItem) As Task(Of String)
             If item Is Nothing Then Return Nothing
-            If Not item.IsImmichAsset Then Return item.FilePath
-            Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId, item.ImmichOriginalFileName)
-            If Not String.IsNullOrEmpty(localPath) Then item.ImmichLocalPath = localPath
-            Return localPath
+            Return Await item.EnsureLocalOriginalAsync()
         End Function
 
         Private Function CurrentImmichAlbumIdForUpload() As String
@@ -7245,6 +8550,12 @@ Namespace ViewModels
             ' Original eine bearbeitete Kopie zu legen (siehe Einstellung "Vorhandene Assets aktualisieren").
             Dim updateExisting = AppSettingsService.Load().ImmichUpdateExistingAssets
 
+            ' Elemente einer ANDEREN Serverquelle koennen hier nicht landen - dieser Weg laedt nach
+            ' Immich hoch. Sie werden uebersprungen, aber NICHT stillschweigend: ein Stapel, der
+            ' die Haelfte der Auswahl wortlos auslaesst, sieht aus wie ein Fehlschlag ohne Grund.
+            Dim skipped = If(items, Enumerable.Empty(Of ImageItem)()).
+                          Count(Function(i) i IsNot Nothing AndAlso i.IsRemoteAsset AndAlso Not i.IsImmichAsset)
+
             Try
                 For Each item In If(items, Enumerable.Empty(Of ImageItem)())
                     If item Is Nothing OrElse Not item.IsImmichAsset Then Continue For
@@ -7285,6 +8596,11 @@ Namespace ViewModels
             End Try
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Immich-Upload fehlgeschlagen"), errorMessage)
+            If skipped > 0 Then
+                Await _mainVm.ShowMessageAsync(
+                    LocalizationService.T("Immich-Upload fehlgeschlagen"),
+                    String.Format(LocalizationService.T("{0} Bild(er) liegen auf einer anderen Serverquelle und wurden ausgelassen. Dorthin zurückschreiben kann die Anwendung noch nicht; wähle als Ziel einen Ordner."), skipped))
+            End If
             Return uploadedCount
         End Function
 
@@ -7302,7 +8618,10 @@ Namespace ViewModels
                 ' dieselbe Ordnung wie beim lokalen Stapel, damit die Fragen am Stück kommen.
                 Dim sources As New List(Of String)()
                 For Each item In If(items, Enumerable.Empty(Of ImageItem)())
-                    If item Is Nothing OrElse Not item.IsImmichAsset Then Continue For
+                    ' Gilt fuer JEDE Serverquelle: das Ziel ist ein lokaler Ordner, die Quelle wird
+                    ' dafuer geholt. Nur das Zurueckschreiben ist quellenabhaengig, und das
+                    ' passiert hier nicht.
+                    If item Is Nothing OrElse Not item.IsRemoteAsset Then Continue For
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
                     sources.Add(source)
@@ -7432,6 +8751,15 @@ Namespace ViewModels
         Public Async Function RefreshImmichViewAsync() As Task
             If Not _isVirtualFolder OrElse SelectedImmichNode Is Nothing Then Return
             Await RefreshAfterImmichBatchUploadAsync()
+        End Function
+
+        ''' <summary>Die offene Nextcloud-Ansicht neu laden - nach einem Upload oder nachdem ein
+        ''' Original auf dem Server ersetzt wurde. Sonst zeigte die Kachel weiter das alte
+        ''' Vorschaubild; dass sie es tut, entscheidet der Etag im Namen des Zwischenspeichers, und
+        ''' der aendert sich mit dem neuen Inhalt ohnehin.</summary>
+        Public Async Function RefreshNextcloudViewAsync() As Task
+            If Not _isVirtualFolder OrElse SelectedNextcloudNode Is Nothing Then Return
+            Await OpenVirtualNavigationNode(SelectedNextcloudNode)
         End Function
 
         Private Async Function RefreshAfterImmichBatchUploadAsync(Optional uploadedAssetIds As IEnumerable(Of String) = Nothing) As Task
@@ -7626,8 +8954,13 @@ Namespace ViewModels
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
-            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
-            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
+            ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
+            ' Datei behandelt.
+            Dim localItems = targetItems.Where(Function(i) Not i.IsRemoteAsset).ToList()
+            ' Alle Serverelemente. Der Export in einen ORDNER kann sie alle (die Quelle wird geholt);
+            ' das Zurueckschreiben nach Immich ueberspringt fremde Quellen von selbst.
+            Dim immichItems = targetItems.Where(Function(i) i.IsRemoteAsset).ToList()
             Dim exportedCount = 0
             Dim uploadedCount = 0
             Dim uploadedAssetIds As New List(Of String)()
@@ -7694,8 +9027,13 @@ Namespace ViewModels
             ' Einstellung ist nur noch die Vorbelegung.
             Dim preserveMetadata = result.PreserveMetadata
             Dim uploadedCount = 0
-            Dim localItems = targetItems.Where(Function(i) Not i.IsImmichAsset).ToList()
-            Dim immichItems = targetItems.Where(Function(i) i.IsImmichAsset).ToList()
+            ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
+            ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
+            ' Datei behandelt.
+            Dim localItems = targetItems.Where(Function(i) Not i.IsRemoteAsset).ToList()
+            ' Alle Serverelemente. Der Export in einen ORDNER kann sie alle (die Quelle wird geholt);
+            ' das Zurueckschreiben nach Immich ueberspringt fremde Quellen von selbst.
+            Dim immichItems = targetItems.Where(Function(i) i.IsRemoteAsset).ToList()
             Dim saveToImmich = String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured
             Dim uploadedAssetIds As New List(Of String)()
 
@@ -7817,6 +9155,16 @@ Namespace ViewModels
             If paths Is Nothing Then Return
             Dim moved = paths.ToHashSet(PathIdentity.Comparer)
             _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso moved.Contains(i.FilePath))
+        End Sub
+
+        ''' <summary>Nimmt Elemente aus der offenen Ansicht, ohne den Server zu fragen - für den
+        ''' Betrachter, der auf dem Server bereits gelöscht hat. Gegenstück zu
+        ''' <see cref="RemoveImmichItems"/>, nur über den Pfad statt über die Asset-Kennung: ein
+        ''' Nextcloud-Element hat keine.</summary>
+        Public Sub RemovePathsFromCurrentView(paths As IEnumerable(Of String))
+            If paths Is Nothing Then Return
+            RemovePathsFromVirtualFolder(paths)
+            FilterAndSort()
         End Sub
 
         Private Shared Function IsVirtualFolderPath(path As String) As Boolean

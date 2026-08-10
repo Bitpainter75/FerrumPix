@@ -128,6 +128,133 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>True, wenn dieses Element auf einem Nextcloud-Server liegt.</summary>
+        Public ReadOnly Property IsNextcloudAsset As Boolean
+            Get
+                Return _nextcloudFileId IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property NextcloudFileId As String
+            Get
+                Return _nextcloudFileId
+            End Get
+        End Property
+
+        Public ReadOnly Property NextcloudPath As String
+            Get
+                Return _nextcloudPath
+            End Get
+        End Property
+
+        ''' <summary>Der Stand der Datei auf dem Server, wie er beim Laden der Kachel galt. Er
+        ''' entwertet nicht nur die zwischengespeicherte Kachel: wer das Original ersetzt, schickt ihn
+        ''' als Bedingung mit, damit eine zwischenzeitliche Aenderung von woanders nicht lautlos
+        ''' ueberschrieben wird.</summary>
+        Public ReadOnly Property NextcloudETag As String
+            Get
+                Return _nextcloudETag
+            End Get
+        End Property
+
+        Private _nextcloudLocalPath As String = ""
+
+        ''' <summary>Der lokale Temp-Pfad des zuletzt geholten Originals, gleich von welchem Server.
+        ''' EINE Eigenschaft fuer beide Quellen, damit Infopanel, Stapel und Betrachter nicht je
+        ''' Quelle einen eigenen Zweig brauchen.</summary>
+        Public Property RemoteLocalPath As String
+            Get
+                Return If(IsNextcloudAsset, _nextcloudLocalPath, ImmichLocalPath)
+            End Get
+            Set(value As String)
+                If IsNextcloudAsset Then
+                    _nextcloudLocalPath = If(value, "")
+                Else
+                    ImmichLocalPath = value
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Stellt sicher, dass das Original als lokale Datei vorliegt, und liefert deren
+        ''' Pfad. Fuer lokale Elemente ist das der eigene Pfad, fuer Serverelemente eine Temp-Kopie.
+        '''
+        ''' Der EINE Weg fuer alle Aufrufer, die eine Datei brauchen (Aufnahmedaten, Histogramm,
+        ''' Stapelverarbeitung): eine schon geholte Kopie wird wiederverwendet, statt sie ein
+        ''' zweites Mal ueber die Leitung zu ziehen.</summary>
+        Public Async Function EnsureLocalOriginalAsync() As Task(Of String)
+            If Not IsRemoteAsset Then Return FilePath
+            Dim vorhanden = RemoteLocalPath
+            If Not String.IsNullOrEmpty(vorhanden) AndAlso IO.File.Exists(vorhanden) Then Return vorhanden
+
+            ' ConfigureAwait(False) ist hier PFLICHT: ohne es haengt die Fortsetzung am aufrufenden
+            ' Kontext. Wer die Funktion von einem Faden mit Avalonia-Kontext aus abwartet, statt sie
+            ' durchzureichen, steht dann fuer immer - beobachtet im Pruefstand, der einen solchen
+            ' Kontext hat, aber keine laufende Schleife. Es gibt hier nichts, was auf den UI-Faden
+            ' gehoert; die Aufrufer melden ihre Anzeige selbst.
+            Dim geholt As String = Nothing
+            If IsNextcloudAsset Then
+                ' Im Papierkorb kennt Memories die Datei nicht mehr - der Weg ueber api/stream liefe
+                ' ins Leere. Geholt wird sie dort direkt vom Eintrag im Papierkorb-Baum.
+                geholt = If(IsTrashed AndAlso Not String.IsNullOrEmpty(NextcloudTrashUrl),
+                            Await NextcloudService.DownloadTrashOriginalToTempAsync(NextcloudTrashUrl, FileName).ConfigureAwait(False),
+                            Await NextcloudService.DownloadOriginalToTempAsync(_nextcloudFileId, FileName).ConfigureAwait(False))
+            Else
+                geholt = Await ImmichService.DownloadOriginalToTempAsync(_immichAssetId, _immichOriginalFileName).ConfigureAwait(False)
+            End If
+            If Not String.IsNullOrEmpty(geholt) Then RemoteLocalPath = geholt
+
+            ' Die Begleitdatei gleich mitnehmen und NEBEN die Temp-Kopie legen. Damit findet die
+            ' vorhandene Kette sie von selbst - es braucht keinen eigenen Zweig fuer "Rezept vom
+            ' Server". Ohne das waere ein gespeichertes Rezept beim naechsten Oeffnen unsichtbar,
+            ' und Speichern haette keinen Sinn.
+            If IsNextcloudAsset AndAlso Not String.IsNullOrEmpty(geholt) AndAlso RawSidecarService.IsSidecarFormat(geholt) Then
+                Try
+                    ' Der Pfad im Dateibaum kommt erst mit den Einzelheiten; hier wird er gebraucht,
+                    ' also notfalls jetzt geholt.
+                    If String.IsNullOrEmpty(_nextcloudPath) Then
+                        Dim info = Await NextcloudService.GetInfoAsync(_nextcloudFileId).ConfigureAwait(False)
+                        If info IsNot Nothing AndAlso Not String.IsNullOrEmpty(info.FileName) Then _nextcloudPath = info.FileName
+                    End If
+                    If Not String.IsNullOrEmpty(_nextcloudPath) Then
+                        Await NextcloudService.TryDownloadSidecarAsync(_nextcloudPath,
+                                                                       RawSidecarService.SidecarPathFor(geholt)).ConfigureAwait(False)
+                    End If
+                Catch
+                End Try
+            End If
+            Return geholt
+        End Function
+
+        ''' <summary>True, wenn dieses Element im Papierkorb seines Servers liegt. Es ist damit KEIN
+        ''' gewoehnliches Element mehr: gelesen wird es ueber eigene Wege (bei Nextcloud liegt es in
+        ''' einem anderen WebDAV-Baum), und alles Schreibende ist zu.</summary>
+        Public Property IsTrashed As Boolean
+
+        ''' <summary>Adresse des Eintrags im Nextcloud-Papierkorb. Sie ist dort die Identitaet -
+        ''' Wiederherstellen und Holen der Datei laufen ueber sie, nicht ueber die Dateikennung.</summary>
+        Public Property NextcloudTrashUrl As String = ""
+
+        ''' <summary>Wo die Datei vor dem Loeschen lag. Steht im Papierkorb unter dem Namen, sonst
+        ''' wuesste niemand, welches der drei DSC_0001.JPG das ist.</summary>
+        Public Property TrashOriginalLocation As String = ""
+
+        ''' <summary>Ob das Original auf dem Server ersetzt werden darf. Vor dem Nachladen der
+        ''' Einzelheiten steht hier False - im Zweifel also NICHT ersetzen.</summary>
+        Public ReadOnly Property NextcloudCanReplaceOriginal As Boolean
+            Get
+                Return IsNextcloudAsset AndAlso _nextcloudPermissions.Contains("U"c)
+            End Get
+        End Property
+
+        ''' <summary>True, wenn dieses Element ueberhaupt auf einem Server liegt, gleich welchem.
+        ''' Gemeint ist damit immer "es gibt keinen lokalen Dateipfad" - genau daran haengen die
+        ''' Dateioperationen und das Entfernen von Metadaten.</summary>
+        Public ReadOnly Property IsRemoteAsset As Boolean
+            Get
+                Return IsImmichAsset OrElse IsNextcloudAsset
+            End Get
+        End Property
+
         Public ReadOnly Property ImmichOriginalFileName As String
             Get
                 Return _immichOriginalFileName
@@ -169,7 +296,10 @@ Namespace Models
 
         Public ReadOnly Property CanRemoveMetadata As Boolean
             Get
-                Return Not IsImmichAsset AndAlso CanEditFile
+                ' Gefragt ist hier "gibt es eine lokale Datei", nicht "ist das Immich" - deshalb
+                ' ueber IsRemoteAsset. Vorher stand hier IsImmichAsset, und ein Serverbild einer
+                ' zweiten Quelle waere durchgerutscht.
+                Return Not IsRemoteAsset AndAlso CanEditFile
             End Get
         End Property
 
@@ -190,13 +320,24 @@ Namespace Models
         ''' AppSettingsService.Load dafür zu teuer wäre.</summary>
         Public Shared Property ImmichDeleteAllowed As Boolean = False
 
+        ''' <summary>Spiegel der Einstellung „Löschen in Nextcloud erlauben", aus demselben Grund
+        ''' statisch wie bei Immich: die Kachel-Bindung wird je Element ausgewertet.</summary>
+        Public Shared Property NextcloudDeleteAllowed As Boolean = False
+
         ''' <summary>Immich-Assets haben keinen Dateipfad, für sie greift die Pfad-Policy nicht: über sie
         ''' entscheidet die Einstellung „Löschen in Immich erlauben" - gelöscht wird dann auf dem Server
         ''' (GalleryViewModel.DeleteImmichAssetsAsync), nicht im Dateisystem.</summary>
         Public ReadOnly Property CanFileOperationDelete As Boolean
             Get
                 If IsParentFolderEntry Then Return False
+                ' Was schon im Papierkorb liegt, wird hier nicht noch einmal geloescht: das waere das
+                ' endgueltige Loeschen, und dafuer gibt es keine Geste - der Papierkorb kennt genau
+                ' eine Richtung, zurueck.
+                If IsTrashed Then Return False
                 If IsImmichAsset Then Return ImmichDeleteAllowed
+                ' Nextcloud: wie bei Immich entscheidet ein eigener Schalter. Die Pfad-Policy greift
+                ' hier nicht, es gibt ja keinen lokalen Pfad.
+                If IsNextcloudAsset Then Return NextcloudDeleteAllowed
                 Return FileOperationPolicy.CanDelete(FilePath)
             End Get
         End Property
@@ -654,9 +795,24 @@ Namespace Models
         ' (ImmichService, eigener Netz-/Diskcache) statt über den dateipfad-basierten
         ' ThumbnailCacheService - die gesamte übrige Warteschlangen-/LRU-/Dispose-Logik gilt unverändert.
         Private _immichAssetId As String = Nothing
+        ''' <summary>Dateikennung auf einem Nextcloud-Server; Nothing bei allem anderen. Getrennt vom
+        ''' Immich-Feld gehalten und NICHT zu einer gemeinsamen "Serverkennung" zusammengelegt: an
+        ''' der Kennung haengt, WELCHER Dienst gefragt wird, und die beiden koennen Verschiedenes.</summary>
+        Private _nextcloudFileId As String = Nothing
+        ''' <summary>Pfad der Datei im Dateibaum des Nextcloud-Benutzers (z.B. /Photos/Bild.jpg).
+        ''' Kommt erst mit den Einzelheiten und wird fuer das Ersetzen des Originals und fuer eine
+        ''' Begleitdatei gebraucht.</summary>
+        Private _nextcloudPath As String = ""
         Private _immichOriginalFileName As String = Nothing
         Private _immichUpdatedAt As String = ""      ' Immichs updatedAt - Invalidierung des Metadaten-Index
         Private _immichDetailState As Integer = 0   ' 0=noch nicht, 1=läuft/erledigt (je Item einmal)
+        Private _nextcloudDetailState As Integer = 0
+        ''' <summary>Etag der Datei auf dem Server. Er steckt im Namen der zwischengespeicherten
+        ''' Kachel und entwertet sie damit von selbst, sobald sich das Foto aendert.</summary>
+        Private _nextcloudETag As String = ""
+        ''' <summary>Rechte des Servers als Buchstaben (C/R/U/D/S). Das U entscheidet, ob das
+        ''' Original ersetzt werden darf, und wird je Element gelesen statt angenommen.</summary>
+        Private _nextcloudPermissions As String = ""
         Private _fileInfoLoaded As Boolean = False
         Private _residentLruNode As LinkedListNode(Of ImageItem)
         Private _isPinnedVisible As Boolean = False
@@ -878,6 +1034,91 @@ Namespace Models
             Dim created = If(asset.FileCreatedAt.HasValue, asset.FileCreatedAt.Value, DateTime.MinValue)
             item.FileCreatedAt = created
             item.DateModified = If(asset.FileModifiedAt.HasValue, asset.FileModifiedAt.Value, created)
+            Return item
+        End Function
+
+        ''' <summary>Baut ein Element aus einer Nextcloud-Aufnahme. Gegenstueck zu
+        ''' <see cref="CreateImmichItem"/>: der Pseudo-Pfad traegt die Dateikennung, damit zwei
+        ''' gleichnamige Bilder aus verschiedenen Ordnern unterscheidbar bleiben, waehrend Endung und
+        ''' Anzeigename weiter aus dem Namen kommen.</summary>
+        Public Shared Function CreateNextcloudItem(photo As NextcloudService.NextcloudPhoto,
+                                                   Optional thumbnailCancellationToken As CancellationToken = Nothing) As ImageItem
+            Dim item = New ImageItem()
+            If photo Is Nothing Then Return item
+            Dim id = photo.FileId.ToString(Globalization.CultureInfo.InvariantCulture)
+            Dim displayName = photo.DisplayName
+            item.InitializePath(NextcloudService.MakePseudoPath(id, displayName), False)
+            item.FileName = displayName
+            item._nextcloudFileId = id
+            item._nextcloudPath = If(photo.FileName, "")
+            item._nextcloudETag = If(photo.ETag, "")
+            item._thumbnailCancellationToken = thumbnailCancellationToken
+            item._fileInfoLoaded = True
+            item.IsFolder = False
+            item.ImageWidth = photo.Width
+            item.ImageHeight = photo.Height
+            item.FileSize = photo.Size
+            ' Die Aufnahmezeit kommt als Sekunden seit 1970. TakenEpoch waehlt zwischen den beiden
+            ' Feldnamen, die der Server je nach Endpunkt benutzt.
+            If photo.TakenEpoch > 0 Then
+                Dim taken = DateTimeOffset.FromUnixTimeSeconds(photo.TakenEpoch).LocalDateTime
+                item.ExifDateTaken = taken
+                item.FileCreatedAt = taken
+                item.DateModified = If(photo.Mtime > 0, DateTimeOffset.FromUnixTimeSeconds(photo.Mtime).LocalDateTime, taken)
+            End If
+            Return item
+        End Function
+
+        ''' <summary>Baut ein Element aus einem Suchtreffer.
+        '''
+        ''' Der Treffer bringt Dateikennung UND Pfad im Dateibaum mit - beides zusammen ist alles,
+        ''' was ein Element braucht: die Kennung traegt Vorschaubild und Original, der Pfad den
+        ''' Rueckweg (Begleitdatei, Ersetzen, Album). Groesse und Aufnahmezeit fehlen und kommen mit
+        ''' den Einzelheiten nach, sobald die Kachel sichtbar wird - genau wie in der Zeitachse.</summary>
+        Public Shared Function CreateNextcloudSearchItem(hit As NextcloudService.NextcloudSearchHit,
+                                                         Optional thumbnailCancellationToken As CancellationToken = Nothing) As ImageItem
+            Dim item = New ImageItem()
+            If hit Is Nothing OrElse String.IsNullOrEmpty(hit.FileId) Then Return item
+            Dim displayName = If(String.IsNullOrWhiteSpace(hit.FileName), hit.FileId, hit.FileName)
+            item.InitializePath(NextcloudService.MakePseudoPath(hit.FileId, displayName), False)
+            item.FileName = displayName
+            item._nextcloudFileId = hit.FileId
+            item._nextcloudPath = If(hit.PathInTree, "")
+            item._thumbnailCancellationToken = thumbnailCancellationToken
+            item._fileInfoLoaded = True
+            item.IsFolder = False
+            Return item
+        End Function
+
+        ''' <summary>Baut ein Element aus einem Eintrag im Nextcloud-Papierkorb.
+        '''
+        ''' Der Pseudo-Pfad traegt weiterhin die Dateikennung - sie bleibt beim Loeschen erhalten und
+        ''' ist der Schluessel fuer das Vorschaubild. Die ADRESSE des Eintrags kommt zusaetzlich mit:
+        ''' im Papierkorb heisst die Datei "Bild.jpg.d1754812345", und nur ueber diese Adresse laesst
+        ''' sie sich zurueckholen oder herunterladen.</summary>
+        Public Shared Function CreateNextcloudTrashItem(entry As NextcloudService.NextcloudTrashEntry,
+                                                        Optional thumbnailCancellationToken As CancellationToken = Nothing) As ImageItem
+            Dim item = New ImageItem()
+            If entry Is Nothing Then Return item
+            Dim id = If(entry.FileId, "")
+            Dim displayName = If(String.IsNullOrWhiteSpace(entry.DisplayName), id, entry.DisplayName)
+            item.InitializePath(NextcloudService.MakePseudoPath(id, displayName), False)
+            item.FileName = displayName
+            item._nextcloudFileId = id
+            item._thumbnailCancellationToken = thumbnailCancellationToken
+            item._fileInfoLoaded = True
+            item.IsFolder = False
+            item.IsTrashed = True
+            item.NextcloudTrashUrl = If(entry.Url, "")
+            item.TrashOriginalLocation = If(entry.OriginalLocation, "")
+            item.FileSize = entry.Size
+            If entry.DeletedEpoch > 0 Then
+                ' Als Aenderungsdatum steht der Zeitpunkt des Loeschens da - danach sortiert die
+                ' Galerie, und im Papierkorb ist genau das die interessante Reihenfolge.
+                Dim deletedAt = DateTimeOffset.FromUnixTimeSeconds(entry.DeletedEpoch).LocalDateTime
+                item.DateModified = deletedAt
+                item.FileCreatedAt = deletedAt
+            End If
             Return item
         End Function
 
@@ -1231,6 +1472,10 @@ Namespace Models
                 Await LoadImmichThumbnailAsync(token, generation)
                 Return
             End If
+            If _nextcloudFileId IsNot Nothing Then
+                Await LoadNextcloudThumbnailAsync(token, generation)
+                Return
+            End If
 
             Try
                 Dim bmp As Bitmap = Nothing
@@ -1319,6 +1564,81 @@ Namespace Models
             ' Detaildaten (Dateigröße/Rating/Kamera/Tags) zuerst, statt eager 25.000 Assets auf einmal.
             RequestImmichDetailOnce()
         End Function
+
+        ''' <summary>Laedt das Vorschaubild einer Nextcloud-Aufnahme. Derselbe Zustands- und
+        ''' Benachrichtigungsablauf wie beim lokalen und beim Immich-Zweig, damit das Ergebnis
+        ''' genauso verdraengbar ist. Kein Bild zaehlt bewusst als "fertig" (Zustand 2), sonst
+        ''' liefe gegen einen ausgefallenen Server ein Wiederholsturm.</summary>
+        Private Async Function LoadNextcloudThumbnailAsync(token As CancellationToken, generation As Integer) As Task
+            Try
+                ' Im Papierkorb hat Memories kein Vorschaubild mehr; die Papierkorb-App des Kerns
+                ' schon. Ohne diesen Zweig waere die Papierkorbansicht eine Wand grauer Kacheln.
+                Dim bmp = If(IsTrashed,
+                             Await NextcloudService.LoadTrashThumbnailBitmapAsync(_nextcloudFileId, NextcloudService.ThumbnailSize, token),
+                             Await NextcloudService.LoadThumbnailBitmapAsync(_nextcloudFileId, NextcloudService.ThumbnailSize, token, _nextcloudETag))
+                If token.IsCancellationRequested Then
+                    bmp?.Dispose()
+                    SetThumbStateAfterLoad(0, generation)
+                    Return
+                End If
+                Dim abgeloest As Bitmap = Nothing
+                If Not CommitThumbnail(bmp, generation, abgeloest) Then
+                    bmp?.Dispose()
+                    Return
+                End If
+                Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+                If Not Object.ReferenceEquals(abgeloest, bmp) Then abgeloest?.Dispose()
+            Catch ex As OperationCanceledException
+                SetThumbStateAfterLoad(0, generation)
+            Catch
+                SetThumbStateAfterLoad(2, generation)
+            End Try
+            ' Wie beim Immich-Zweig an den sichtbaren Bereich gekoppelt: erst die Kacheln, die man
+            ' sieht, holen ihre Groesse und Stichwoerter nach.
+            RequestNextcloudDetailOnce()
+        End Function
+
+        ''' <summary>Holt einmalig die Einzelheiten der Nextcloud-Aufnahme nach. Je Element nur
+        ''' einmal (dasselbe Tor wie beim Immich-Weg) und in einem eigenen Task, damit der
+        ''' Thumbnail-Arbeiter frei bleibt.</summary>
+        Private Sub RequestNextcloudDetailOnce()
+            If _nextcloudFileId Is Nothing Then Return
+            ' Zu einem geloeschten Foto gibt es keine Einzelheiten mehr - jede Anfrage waere ein 404
+            ' je Kachel. Was der Papierkorb weiss, steht bereits am Element.
+            If IsTrashed Then Return
+            If Interlocked.CompareExchange(_nextcloudDetailState, 1, 0) <> 0 Then Return
+            Dim token = _thumbnailCancellationToken
+            Dim fileId = _nextcloudFileId
+            Dim ignored = Task.Run(Async Function()
+                                       Try
+                                           If token.IsCancellationRequested Then Return
+                                           Dim detail = Await NextcloudService.GetInfoAsync(fileId, token).ConfigureAwait(False)
+                                           If detail Is Nothing OrElse token.IsCancellationRequested Then Return
+                                           Await Dispatcher.UIThread.InvokeAsync(Sub() ApplyNextcloudMetadata(detail))
+                                       Catch
+                                       End Try
+                                   End Function)
+        End Sub
+
+        ''' <summary>Übernimmt die Einzelheiten einer Nextcloud-Aufnahme.
+        '''
+        ''' Kamera, ISO und Blende stehen hier BEWUSST NICHT: der EXIF-Index des Servers ist je nach
+        ''' Einrichtung fast leer, und die Aufnahmedaten liest das Infopanel ohnehin aus der geholten
+        ''' Originaldatei. Was hier ankommt, ist das, was der Server sicher weiss.</summary>
+        Public Sub ApplyNextcloudMetadata(photo As NextcloudService.NextcloudPhoto)
+            If Not IsNextcloudAsset OrElse photo Is Nothing Then Return
+            If photo.Size > 0 Then
+                FileSize = photo.Size
+                RaisePropertyChanged(NameOf(FileSizeText))
+            End If
+            If Not String.IsNullOrEmpty(photo.FileName) Then _nextcloudPath = photo.FileName
+            _nextcloudPermissions = If(photo.Permissions, "")
+            Dim stichworte = photo.Tags
+            If stichworte.Count > 0 Then Me.Tags = stichworte
+            If photo.TakenEpoch > 0 AndAlso ExifDateTaken = DateTime.MinValue Then
+                ExifDateTaken = DateTimeOffset.FromUnixTimeSeconds(photo.TakenEpoch).LocalDateTime
+            End If
+        End Sub
 
         ''' <summary>Holt einmalig die Detail-Metadaten des Immich-Assets nach (GET /api/assets/{id}) und
         ''' überträgt sie auf das Item. Nicht blockierend (eigener Task, damit der Thumbnail-Worker frei

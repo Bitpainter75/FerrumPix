@@ -888,6 +888,32 @@ Namespace Services
             Return QueryImageMeta("")
         End Function
 
+        ''' <summary>True fuer den Pseudo-Pfad eines Serverbildes ("nextcloud://…", "immich://…").
+        ''' Solche Eintraege haben keine Datei auf der Platte; jede Pruefung mit File.Exists muss sie
+        ''' ausnehmen.</summary>
+        Public Shared Function IsServerPseudoPath(filePath As String) As Boolean
+            Return NextcloudService.IsNextcloudPseudoPath(filePath) OrElse ImmichService.IsImmichPseudoPath(filePath)
+        End Function
+
+        ''' <summary>Alle Katalogeintraege, deren Pfad mit diesem Anfang beginnt.
+        '''
+        ''' Gedacht fuer die Pseudo-Pfade der beiden Server ("nextcloud://", "immich://"): sie sind
+        ''' der einzige Weg, ein Serverbild im Katalog zu finden, ohne den ganzen Bestand zu lesen.
+        ''' Der Anfang wird als LIKE-Muster benutzt, deshalb werden seine Platzhalter entschaerft -
+        ''' ein Unterstrich im Praefix wuerde sonst auf jedes Zeichen passen.</summary>
+        Public Function GetImagesWithPathPrefix(pathPrefix As String) As List(Of LibraryImageMeta)
+            If String.IsNullOrWhiteSpace(pathPrefix) Then Return New List(Of LibraryImageMeta)()
+            Dim likePattern = pathPrefix.Replace("\", "\\").Replace("%", "\%").Replace("_", "\_") & "%"
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath LIKE @p ESCAPE '\'"
+                    cmd.Parameters.AddWithValue("@p", likePattern)
+                    Return ReadImageMeta(cmd)
+                End Using
+            End Using
+        End Function
+
         Public Function SearchImages(query As String) As List(Of LibraryImageMeta)
             query = If(query, "").Trim()
             If String.IsNullOrWhiteSpace(query) Then Return New List(Of LibraryImageMeta)()
@@ -1159,6 +1185,11 @@ Namespace Services
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
                             Dim p = reader.GetString(0)
+                            ' Serverbilder stehen unter einem Pseudo-Pfad und liegen auf KEINER
+                            ' Platte - File.Exists ist fuer sie immer False. Ohne diese Ausnahme
+                            ' raeumt "Verwaiste Eintraege entfernen" jede Bewertung, jedes Stichwort
+                            ' und jede Personenzuordnung zu einem Nextcloud- oder Immich-Bild weg.
+                            If IsServerPseudoPath(p) Then Continue While
                             If Not File.Exists(p) Then orphans.Add(p)
                         End While
                     End Using

@@ -36,6 +36,15 @@ Public Class App
 
     Public Overrides Sub Initialize()
         AvaloniaXamlLoader.Load(Me)
+
+        ' ERST HIER, nicht vor dem Aufbau: LogToTrace setzt den Empfaenger der Oberflaechenschicht
+        ' beim Bauen und wuerde einen frueher gesetzten ersetzen. Mit eingeschaltetem Diagnoselog
+        ' schreibt sie danach mit, was sie beim Ziehen und Ablegen tut - die einzige Stelle, die
+        ' ueber ihr eigenes Warten Auskunft gibt.
+        Try
+            If AppSettingsService.Load().EnableDiagnosticLogging Then AvaloniaLogBridge.Install()
+        Catch
+        End Try
         AppIcon = New WindowIcon(AssetLoader.Open(New Uri("avares://FerrumPix/Assets/FerrumPix_Icon.ico")))
 
         ' Globales Sicherheitsnetz für Ausnahmen, die NICHT bereits lokal per Try/Catch abgefangen

@@ -168,6 +168,25 @@ Namespace Services
             Return folders.Where(Function(p) Not String.IsNullOrEmpty(p)).Distinct(StringComparer.OrdinalIgnoreCase)
         End Function
 
+        ''' <summary>True fuer einen Papierkorb des Systems - den je Datentraeger (".Trash-1000",
+        ''' ".Trash") ebenso wie den des Benutzers (~/.local/share/Trash).
+        '''
+        ''' Was dort liegt, hat jemand bewusst weggeworfen. Es gehoert in keine Trefferliste, und
+        ''' anfassen laesst es sich ohnehin nicht: Loeschen und Verschieben sind fuer versteckte
+        ''' Pfade gesperrt.</summary>
+        Public Shared Function IsTrashFolder(path As String) As Boolean
+            If String.IsNullOrEmpty(path) Then Return False
+            Try
+                Dim segments = NormalizePath(path).Split(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+                For Each segment In segments
+                    If String.Equals(segment, "Trash", StringComparison.OrdinalIgnoreCase) Then Return True
+                    If segment.StartsWith(".Trash", StringComparison.OrdinalIgnoreCase) Then Return True
+                Next
+            Catch
+            End Try
+            Return False
+        End Function
+
         Public Shared Function IsHiddenPath(path As String) As Boolean
             If String.IsNullOrEmpty(path) Then Return False
             Try

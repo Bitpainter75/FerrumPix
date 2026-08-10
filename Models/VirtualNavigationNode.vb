@@ -94,6 +94,7 @@ Namespace Models
                     Case "ImmichPeopleRoot" : Return "avares://FerrumPix/Assets/Icons/outline/users.svg"
                     Case "ImmichPerson" : Return "avares://FerrumPix/Assets/Icons/outline/user.svg"
                     Case "ImmichPlacesRoot", "ImmichPlace" : Return "avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                    Case "ImmichTrash" : Return "avares://FerrumPix/Assets/Icons/outline/trash.svg"
                     Case Else : Return "avares://FerrumPix/Assets/Icons/outline/cloud.svg"
                 End Select
             End Get
@@ -107,6 +108,7 @@ Namespace Models
                     Case "FavoriteFolder" : Return "avares://FerrumPix/Assets/Icons/outline/folder.svg"
                     Case "SavedSearch" : Return "avares://FerrumPix/Assets/Icons/outline/search.svg"
                     Case "FavoriteMissing" : Return "avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
+                    Case "NextcloudAll", "NextcloudAlbum", "NextcloudPerson", "NextcloudPlace", "NextcloudTag" : Return NextcloudIconSource
                     Case Else : Return ImmichIconSource
                 End Select
             End Get
@@ -143,6 +145,7 @@ Namespace Models
                 If IsFavoriteNode Then Return False
                 Select Case Kind
                     Case "SavedSearch", "ImmichAll", "ImmichAlbum", "ImmichPerson", "ImmichPlace" : Return True
+                    Case "NextcloudAll", "NextcloudAlbum", "NextcloudPerson", "NextcloudPlace", "NextcloudTag" : Return True
                     Case Else : Return False
                 End Select
             End Get
@@ -152,6 +155,47 @@ Namespace Models
         Public ReadOnly Property IsImmichNode As Boolean
             Get
                 Return String.Equals(Kind, "ImmichAlbum", StringComparison.Ordinal) OrElse String.Equals(Kind, "ImmichAll", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>True für einen konkreten Nextcloud-Album-Knoten (umbenennbar, löschbar,
+        ''' Ablegeziel). Die Zeitachse ist keins.</summary>
+        Public ReadOnly Property IsNextcloudAlbumNode As Boolean
+            Get
+                Return String.Equals(Kind, "NextcloudAlbum", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Der Papierkorb einer Serverquelle. Er traegt genau EINEN eigenen Menueeintrag:
+        ''' das Leeren. Alles andere (Hochladen, Einfuegen, Album umbenennen) hat dort keinen
+        ''' Sinn.</summary>
+        Public ReadOnly Property IsTrashNode As Boolean
+            Get
+                Return String.Equals(Kind, "ImmichTrash", StringComparison.Ordinal) OrElse
+                       String.Equals(Kind, "NextcloudTrash", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>True für jeden Nextcloud-Knoten - zeigt das Nextcloud-Kontextmenü.</summary>
+        Public ReadOnly Property IsNextcloudNode As Boolean
+            Get
+                Return IsNextcloudAlbumNode OrElse String.Equals(Kind, "NextcloudAll", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Symbol im Nextcloud-Baum. Ein Album bekommt das Albumsymbol, die Zeitachse die
+        ''' Wolke - damit die beiden Zeilen ohne Lesen unterscheidbar sind.</summary>
+        Public ReadOnly Property NextcloudIconSource As String
+            Get
+                Select Case Kind
+                    Case "NextcloudAlbum" : Return "avares://FerrumPix/Assets/Icons/outline/album.svg"
+                    Case "NextcloudPeopleRoot" : Return "avares://FerrumPix/Assets/Icons/outline/users.svg"
+                    Case "NextcloudPerson" : Return "avares://FerrumPix/Assets/Icons/outline/user.svg"
+                    Case "NextcloudPlacesRoot", "NextcloudPlace" : Return "avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                    Case "NextcloudTagsRoot", "NextcloudTag" : Return "avares://FerrumPix/Assets/Icons/outline/tag.svg"
+                    Case "NextcloudTrash" : Return "avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                    Case Else : Return "avares://FerrumPix/Assets/Icons/outline/cloud.svg"
+                End Select
             End Get
         End Property
 

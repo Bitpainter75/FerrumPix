@@ -490,7 +490,7 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task Implements IViewerHost.OpenImageInEditor
+        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing) As Task Implements IViewerHost.OpenImageInEditor
             ' EIN Oeffnen zur Zeit. Der zweite Klick auf dasselbe Bild - der, mit dem man nachhilft,
             ' weil scheinbar nichts passiert - startete sonst einen zweiten Decode neben dem ersten.
             ' Die Rueckfragen unten stehen bewusst INNERHALB der Sperre: sie gehoeren zum Oeffnen,
@@ -507,7 +507,7 @@ Namespace ViewModels
                 ' Erst NACH den Rueckfragen: solange ein Dialog offen steht, wird nichts geoeffnet,
                 ' und eine Warteanzeige hinter der Frage waere schlicht falsch.
                 BeginDocumentOpenIndicator()
-                Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId)
+                Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId, nextcloudSource)
                 If Not opened Then Return
                 CurrentMode = AppMode.Editor
             Finally
@@ -759,6 +759,8 @@ Namespace ViewModels
                     ' erreichbarem Immich bleibt so der Bilder-Ordner als Fallback stehen.
                     If If(settings.LastGalleryFolder, "").StartsWith("immich://", StringComparison.OrdinalIgnoreCase) Then
                         If ImmichService.IsConfigured Then Return (pictures, settings.LastGalleryFolder)
+                    ElseIf If(settings.LastGalleryFolder, "").StartsWith("nextcloud://", StringComparison.OrdinalIgnoreCase) Then
+                        If NextcloudService.IsConfigured Then Return (pictures, settings.LastGalleryFolder)
                     ElseIf Directory.Exists(settings.LastGalleryFolder) Then
                         targetFolder = settings.LastGalleryFolder
                     End If
@@ -770,6 +772,8 @@ Namespace ViewModels
                     ' Fester Start in Immich „Alle Fotos" (Einstellungsdialog)
                     ' - gleiche Mechanik wie der Letzter-Ordner-Fall.
                     If ImmichService.IsConfigured Then Return (pictures, "immich://all")
+                Case "Nextcloud"
+                    If NextcloudService.IsConfigured Then Return (pictures, "nextcloud://all")
             End Select
 
             If String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then
@@ -786,7 +790,12 @@ Namespace ViewModels
                 Gallery.NavigateToFolder(resolved.LocalFolder)
             End If
 
-            If Not String.IsNullOrEmpty(resolved.ImmichTarget) Then
+            ' Das Startziel kann von JEDER Serverquelle kommen - unterschieden wird am Schema.
+            ' Der Normalfall ist KEIN Serverziel, das Feld ist dann Nothing: erst absichern, dann
+            ' fragen.
+            If If(resolved.ImmichTarget, "").StartsWith("nextcloud://", StringComparison.OrdinalIgnoreCase) Then
+                Dim ignored = Gallery.OpenNextcloudStartupTargetAsync(resolved.ImmichTarget)
+            ElseIf Not String.IsNullOrEmpty(resolved.ImmichTarget) Then
                 Dim ignored = Gallery.OpenImmichStartupTargetAsync(resolved.ImmichTarget)
             End If
         End Sub
@@ -884,11 +893,14 @@ Namespace ViewModels
                 Return _dialogSaveAsTarget
             End Get
             Set(value As String)
-                Dim v = If(String.Equals(value, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso IsSaveAsImmichAvailable, "Immich", "Local")
+                Dim v = "Local"
+                If String.Equals(value, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso IsSaveAsImmichAvailable Then v = "Immich"
+                If String.Equals(value, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso IsSaveAsNextcloudAvailable Then v = "Nextcloud"
                 If _dialogSaveAsTarget = v Then Return
                 Me.RaiseAndSetIfChanged(_dialogSaveAsTarget, v)
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetLocal))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetImmich))
+                Me.RaisePropertyChanged(NameOf(IsSaveAsTargetNextcloud))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetFolderVisible))
                 Me.RaisePropertyChanged(NameOf(IsSaveAsTargetRowVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
@@ -1022,9 +1034,25 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Nextcloud als Ziel. ANDERS ALS BEI IMMICH ist .fpx hier ausdruecklich erlaubt:
+        ''' Nextcloud fuehrt Dateien, keine Bild-Assets. Es zeigt ein Projektbuendel zwar nicht an,
+        ''' aber wer seine Bearbeitung dort ablegen will, soll das koennen. PDF und PSD ebenso - es
+        ''' sind schlicht Dateien.</summary>
+        Public ReadOnly Property IsSaveAsNextcloudAvailable As Boolean
+            Get
+                Return NextcloudService.IsConfigured
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSaveAsTargetNextcloud As Boolean
+            Get
+                Return String.Equals(_dialogSaveAsTarget, "Nextcloud", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
         Public ReadOnly Property IsSaveAsTargetLocal As Boolean
             Get
-                Return Not String.Equals(_dialogSaveAsTarget, "Immich", StringComparison.OrdinalIgnoreCase)
+                Return Not IsSaveAsTargetImmich AndAlso Not IsSaveAsTargetNextcloud
             End Get
         End Property
 
@@ -1746,36 +1774,46 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Suchquelle im Dialog: "Local" (Dateisystem) oder "Immich" (nur wählbar, wenn Immich
-        ''' konfiguriert ist). Bei Immich gelten Struktur-/Ordnerbedingungen nicht.</summary>
+        ''' <summary>Suchquelle des Dialogs: "Local", "Immich" oder "Nextcloud".
+        '''
+        ''' Der Dialog FRAGT sie nicht mehr ab. Sie kommt aus dem Bereich, in dem "Neue Suche"
+        ''' angeklickt wurde, und beim Bearbeiten aus der gespeicherten Liste - eine Suche im
+        ''' Nextcloud-Bereich ist eine Nextcloud-Suche, da gibt es nichts zu wählen. Sichtbar wird
+        ''' die Quelle nur daran, welche Felder der Dialog zeigt.</summary>
         Public Property DialogSearchSource As String
             Get
                 Return _dialogSearchSource
             End Get
             Set(value As String)
-                Dim v = If(String.Equals(value, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso IsDialogImmichAvailable, "Immich", "Local")
+                Dim v = SearchListService.NormalizeSource(value)
                 If _dialogSearchSource = v Then Return
                 Me.RaiseAndSetIfChanged(_dialogSearchSource, v)
                 Me.RaisePropertyChanged(NameOf(IsDialogSourceLocal))
-                Me.RaisePropertyChanged(NameOf(IsDialogSourceImmich))
+                Me.RaisePropertyChanged(NameOf(IsDialogSourceNextcloud))
+                Me.RaisePropertyChanged(NameOf(IsDialogSourceServer))
             End Set
         End Property
 
-        Public ReadOnly Property IsDialogImmichAvailable As Boolean
-            Get
-                Return ImmichService.IsConfigured
-            End Get
-        End Property
-
+        ''' <summary>Startordner und Umfang gelten nur beim Durchsuchen des Dateisystems. Alles
+        ''' Übrige - Suchtext, Favorit, Bewertung, Bedingungen - steht bei JEDER Quelle zur
+        ''' Verfügung: was der Server nicht filtern kann, beantwortet der Katalog.</summary>
         Public ReadOnly Property IsDialogSourceLocal As Boolean
             Get
-                Return Not String.Equals(_dialogSearchSource, "Immich", StringComparison.OrdinalIgnoreCase)
+                Return String.Equals(_dialogSearchSource, "Local", StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
-        Public ReadOnly Property IsDialogSourceImmich As Boolean
+        Public ReadOnly Property IsDialogSourceNextcloud As Boolean
             Get
-                Return String.Equals(_dialogSearchSource, "Immich", StringComparison.OrdinalIgnoreCase)
+                Return String.Equals(_dialogSearchSource, "Nextcloud", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>True für jede Server-Quelle. Der Dialog sieht überall gleich aus; unterschiedlich
+        ''' ist nur der Hinweis darunter, wie weit die Kriterien am Server reichen.</summary>
+        Public ReadOnly Property IsDialogSourceServer As Boolean
+            Get
+                Return Not IsDialogSourceLocal
             End Get
         End Property
 
@@ -3051,14 +3089,17 @@ Namespace ViewModels
 
         ''' prefill: Ist eine bestehende Suchliste angegeben, wird der Dialog mit deren Parametern
         ''' vorbelegt (Bearbeiten-Modus) statt mit den Standardwerten (Neuanlage).
-        Public Async Function ShowSearchDialogAsync(initialText As String, Optional prefill As SearchListEntry = Nothing) As Task(Of SearchDialogResult)
+        ''' source: Bereich, aus dem "Neue Suche" aufgerufen wurde ("Local", "Immich", "Nextcloud").
+        ''' Beim Bearbeiten bleibt die Quelle der gespeicherten Liste maßgeblich.
+        Public Async Function ShowSearchDialogAsync(initialText As String,
+                                                   Optional prefill As SearchListEntry = Nothing,
+                                                   Optional source As String = "Local") As Task(Of SearchDialogResult)
             Dim isEdit = prefill IsNot Nothing
             _dialogSearchRatings.Clear()
             DialogSearchConditions.Clear()
-            Me.RaisePropertyChanged(NameOf(IsDialogImmichAvailable))
             If isEdit Then
                 DialogSearchName = If(prefill.Name, "")
-                DialogSearchSource = If(prefill.Source, "Local")
+                DialogSearchSource = prefill.Source
                 DialogSearchText = If(prefill.TextQuery, "").Trim()
                 DialogSearchRootFolder = If(prefill.RootFolder, "")
                 DialogSearchIncludeSubfolders = prefill.IncludeSubfolders
@@ -3073,7 +3114,7 @@ Namespace ViewModels
                 DialogSearchConditionCombinator = If(prefill.ConditionCombinator, "AND")
             Else
                 DialogSearchName = ""
-                DialogSearchSource = "Local"
+                DialogSearchSource = source
                 DialogSearchText = If(initialText, "").Trim()
                 DialogSearchRootFolder = ""
                 DialogSearchIncludeSubfolders = True
@@ -3086,8 +3127,8 @@ Namespace ViewModels
             Dim result = Await ShowDialogAsync(AppDialogKind.Search,
                                                If(isEdit, "Suche bearbeiten", "Suchen"),
                                                If(isEdit,
-                                                  "Passe die Suchparameter an. Die Änderungen werden im Bereich Suchen gespeichert.",
-                                                  "Lege Suchparameter fest. Die Suche wird im Bereich Suchen gespeichert."),
+                                                  "Die geänderte Suche ersetzt die bisherige im Bereich Suchen.",
+                                                  "Die Suche wird gespeichert und steht danach im Bereich Suchen."),
                                                "",
                                                If(isEdit, "Speichern", "Suchen"),
                                                "Abbrechen")
@@ -3105,11 +3146,13 @@ Namespace ViewModels
             End If
             If String.IsNullOrWhiteSpace(name) Then Return Nothing
 
+            ' Startordner und Umfang sind das Einzige, was eine Server-Suche nicht speichert - dort
+            ' gibt es keinen Ordner zum Starten. Alle uebrigen Kriterien gelten ueberall.
             Return New SearchDialogResult With {
                 .Name = name,
                 .Source = DialogSearchSource,
                 .TextQuery = textQuery,
-                .RootFolder = rootFolder,
+                .RootFolder = If(IsDialogSourceLocal, rootFolder, ""),
                 .IncludeSubfolders = DialogSearchIncludeSubfolders,
                 .FavoriteMode = DialogSearchFavoriteMode,
                 .RatingMin = -1,
@@ -3676,12 +3719,31 @@ Namespace ViewModels
         ''' fehlgeschlagenes Löschen holt sie über den Abgleich in <paramref name="afterDelete"/> zurück.</param>
         Public Async Sub RequestDeletePaths(paths As IEnumerable(Of String), Optional afterDelete As Action = Nothing,
                                             Optional beforeDelete As Action = Nothing) Implements IViewerHost.RequestDeletePaths, IEditorHost.RequestDeletePaths
-            Dim pathList = paths.
+            Dim angefragt = If(paths, Enumerable.Empty(Of String)()).ToList()
+            Dim pathList = angefragt.
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
                 Where(Function(p) FileOperationPolicy.CanDelete(p)).
                 Distinct(StringComparer.OrdinalIgnoreCase).
                 ToList()
-            If pathList.Count = 0 Then Return
+            If pathList.Count = 0 Then
+                ' Ein wortloser Abbruch ist die schlimmste Sorte: der Nutzer bestaetigt nichts, es
+                ' passiert nichts, und niemand erfaehrt warum. Der Grund steht im Log UND in der
+                ' Meldung - beim Nutzerbefund am 2026-08-10 lagen die Bilder im Systempapierkorb,
+                ' und dort ist Loeschen zu Recht gesperrt.
+                Dim gesperrt = 0
+                For Each p In angefragt
+                    Dim fehlt = Not (IO.File.Exists(p) OrElse IO.Directory.Exists(p))
+                    Dim grund = If(String.IsNullOrEmpty(p), "leerer Pfad",
+                                If(fehlt, "gibt es nicht (mehr)", "Loeschen nicht erlaubt (FileOperationPolicy)"))
+                    If Not fehlt AndAlso Not String.IsNullOrEmpty(p) Then gesperrt += 1
+                    DiagnosticLogService.LogAlways("Delete", $"uebergangen: {p} - {grund}")
+                Next
+                If gesperrt > 0 Then
+                    Await ShowMessageAsync(LocalizationService.T("Löschen nicht möglich"),
+                                           LocalizationService.T("Diese Dateien liegen außerhalb des persönlichen Ordners oder in einem versteckten Ordner. FerrumPix löscht dort nichts."))
+                End If
+                Return
+            End If
 
             Dim settings = AppSettingsService.Load()
             Dim useTrash = Not settings.DeleteSkipTrash
@@ -3717,6 +3779,7 @@ Namespace ViewModels
                                               Next
                                               Return errors
                                           End Function)
+            DiagnosticLogService.LogAlways("Delete", $"{pathList.Count} Element(e), Papierkorb={useTrash}, Fehler={failures.Count}")
             afterDelete?.Invoke()
 
             If failures.Count > 0 Then

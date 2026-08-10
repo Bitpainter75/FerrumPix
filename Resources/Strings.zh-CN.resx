@@ -2436,12 +2436,6 @@
   <data name="Immich_Fotos_konnten_nicht_geladen_werden_8e9fb949" xml:space="preserve">
     <value>无法加载 Immich 照片</value>
   </data>
-  <data name="Immich_Suche_fehlgeschlagen_c6b3357f" xml:space="preserve">
-    <value>Immich 搜索失败</value>
-  </data>
-  <data name="Immich_Suche_l_uft_9c206054" xml:space="preserve">
-    <value>正在搜索 Immich…</value>
-  </data>
   <data name="Immich_Upload_fehlgeschlagen_340c2c36" xml:space="preserve">
     <value>Immich 上传失败</value>
   </data>
@@ -3528,9 +3522,6 @@
   <data name="Liste_4231be17" xml:space="preserve">
     <value>列表</value>
   </data>
-  <data name="Lokale_Ordner_a6b71fce" xml:space="preserve">
-    <value>本地文件夹</value>
-  </data>
   <data name="Nur_wenn_gr_er_2eb9c8b9" xml:space="preserve">
     <value>仅在较大时</value>
   </data>
@@ -3917,6 +3908,15 @@
   </data>
   <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
     <value>颗粒大小：0 表示细颗粒，值越高越粗。</value>
+  </data>
+  <data name="Rauheit_c485b850" xml:space="preserve">
+    <value>粗糙度</value>
+  </data>
+  <data name="Wie_stark_das_Korn_im_Bild_liegt_cb85b2e4" xml:space="preserve">
+    <value>颗粒在画面中的强度。</value>
+  </data>
+  <data name="Farbigkeit_des_Korns_0_graues_Korn_h_her_farbige_ab14ccc7" xml:space="preserve">
+    <value>颗粒的色彩：0 表示灰色颗粒，值越高越接近高感彩色胶片的彩色斑点。</value>
   </data>
   <data name="Mischt_eine_feine_Lage_ein_h_her_unruhigeres_Kor_d5155e92" xml:space="preserve">
     <value>混入细颗粒层：值越高，颗粒越活跃。</value>
@@ -5370,12 +5370,6 @@
   <data name="W_hle_ein_gespeichertes_Wasserzeichen_f_r_die_au_55d324b4" xml:space="preserve">
     <value>为所选照片选择一个已保存的水印。</value>
   </data>
-  <data name="Passe_die_Suchparameter_an_Die_nderungen_werden__469e3433" xml:space="preserve">
-    <value>调整搜索条件。更改会保存在“搜索”中。</value>
-  </data>
-  <data name="Lege_Suchparameter_fest_Die_Suche_wird_im_Bereic_1fcba83c" xml:space="preserve">
-    <value>设置搜索条件。搜索会保存在“搜索”中。</value>
-  </data>
   <data name="Lege_eine_Namensvorlage_fest_und_pr_fe_die_Vorsc_98de95d2" xml:space="preserve">
     <value>设置命名模板，并在重命名前查看预览。</value>
   </data>
@@ -6749,5 +6743,239 @@
   </data>
   <data name="ArcFace_ResNet100_wird_optional_aus_dem_ONNX_Mod_37dec9c8" xml:space="preserve">
     <value>ArcFace ResNet100 可选择性地从 ONNX Model Zoo 下载。据 InsightFace 说明，其预训练权重来自仅供非商业研究使用的数据。将 FerrumPix 用于商业用途时，不得下载或使用该模型；其余功能仍然可用。</value>
+  </data>
+  <data name="Nextcloud_aab73a3d" xml:space="preserve">
+    <value>Nextcloud</value>
+  </data>
+  <data name="Lade_Nextcloud_Fotos_f8b674f4" xml:space="preserve">
+    <value>正在加载 Nextcloud 照片…</value>
+  </data>
+  <data name="Bindet_eine_Nextcloud_mit_der_Memories_App_ein_Z_d2e09fa4" xml:space="preserve">
+    <value>接入安装了 Memories 应用的 Nextcloud。时间轴和相册会显示在图库的导航栏中。</value>
+  </data>
+  <data name="Nextcloud_aktivieren_7780e11d" xml:space="preserve">
+    <value>启用 Nextcloud</value>
+  </data>
+  <data name="Zeigt_den_Nextcloud_Zweig_mit_deiner_Zeitachse_u_276081ce" xml:space="preserve">
+    <value>在图库树中显示 Nextcloud 分支，包含你的时间轴和相册。</value>
+  </data>
+  <data name="Adresse_deiner_Nextcloud_z_B_https_wolke_example_083761fb" xml:space="preserve">
+    <value>你的 Nextcloud 地址，例如 https://cloud.example.com</value>
+  </data>
+  <data name="Benutzername_99636bf8" xml:space="preserve">
+    <value>用户名</value>
+  </data>
+  <data name="Der_Anmeldename_deines_Nextcloud_Kontos_13744a59" xml:space="preserve">
+    <value>你的 Nextcloud 账号登录名。</value>
+  </data>
+  <data name="App_Passwort_e57bcb59" xml:space="preserve">
+    <value>应用密码</value>
+  </data>
+  <data name="In_Nextcloud_unter_Einstellungen_Sicherheit_App__528fa23c" xml:space="preserve">
+    <value>在 Nextcloud 的设置、安全中创建应用密码。启用两步验证后，账号密码无法使用。</value>
+  </data>
+  <data name="Kein_Benutzername_angegeben_a4597735" xml:space="preserve">
+    <value>未填写用户名</value>
+  </data>
+  <data name="Kein_App_Passwort_angegeben_033a25a0" xml:space="preserve">
+    <value>未填写应用密码</value>
+  </data>
+  <data name="Die_Memories_App_antwortet_unter_dieser_Adresse__d4501132" xml:space="preserve">
+    <value>该地址上的 Memories 应用没有响应（{0}）</value>
+  </data>
+  <data name="Memories_erreichbar_5b396e0b" xml:space="preserve">
+    <value>Memories 可访问</value>
+  </data>
+  <data name="Server_erreichbar_Anmeldung_abgelehnt_451708e6" xml:space="preserve">
+    <value>服务器可访问，但登录被拒绝</value>
+  </data>
+  <data name="Angemeldet_aber_der_Server_verlangt_einen_Sitzun_b1ff93ad" xml:space="preserve">
+    <value>已登录，但服务器要求会话凭证</value>
+  </data>
+  <data name="Zeitachse_antwortet_mit_0_aab149e3" xml:space="preserve">
+    <value>时间轴返回 {0}</value>
+  </data>
+  <data name="Zeitachse_ist_anders_aufgebaut_als_erwartet_922dc379" xml:space="preserve">
+    <value>时间轴的结构与预期不同</value>
+  </data>
+  <data name="0_Tage_1_Aufnahmen_d8df9e73" xml:space="preserve">
+    <value>{0} 天，{1} 张照片</value>
+  </data>
+  <data name="WebDAV_tr_gt_Originale_ersetzbar_Begleitdatei_ab_9b7620de" xml:space="preserve">
+    <value>WebDAV 可用：可替换原图，可存放伴随文件</value>
+  </data>
+  <data name="WebDAV_antwortet_mit_0_d917ab75" xml:space="preserve">
+    <value>WebDAV 返回 {0}</value>
+  </data>
+  <data name="Nextcloud_ist_nicht_eingerichtet_4d8fdb9a" xml:space="preserve">
+    <value>尚未配置 Nextcloud</value>
+  </data>
+  <data name="Nextcloud_antwortet_mit_0_01e2c3fb" xml:space="preserve">
+    <value>Nextcloud 返回 {0}</value>
+  </data>
+  <data name="0_Bild_er_liegen_auf_einer_anderen_Serverquelle__06727cbe" xml:space="preserve">
+    <value>{0} 张图片位于另一个服务器来源，已被略过。目前还无法写回该来源，请选择一个文件夹作为目标。</value>
+  </data>
+  <data name="Album_gel_scht_05d41ab2" xml:space="preserve">
+    <value>相册已删除</value>
+  </data>
+  <data name="Album_0_l_schen_Die_Fotos_bleiben_erhalten_4ed8b6fa" xml:space="preserve">
+    <value>删除相册 {0}？照片会保留。</value>
+  </data>
+  <data name="0_von_1_zugewiesen_44f87143" xml:space="preserve">
+    <value>已分配 {1} 张中的 {0} 张</value>
+  </data>
+  <data name="Nextcloud_Alle_Fotos_381e8e58" xml:space="preserve">
+    <value>Nextcloud（全部照片）</value>
+  </data>
+  <data name="Startet_in_Nextcloud_mit_der_Zeitachse_ohne_Verb_e29422b4" xml:space="preserve">
+    <value>在 Nextcloud 的时间轴中启动；无连接时使用图片文件夹</value>
+  </data>
+  <data name="Nach_Nextcloud_gespeichert_0_858a432a" xml:space="preserve">
+    <value>已保存到 Nextcloud：{0}</value>
+  </data>
+  <data name="L_schen_in_Nextcloud_erlauben_59415966" xml:space="preserve">
+    <value>允许在 Nextcloud 中删除</value>
+  </data>
+  <data name="Erlaubt_es_Bilder_vom_Server_zu_l_schen_Sie_land_acc74d79" xml:space="preserve">
+    <value>允许从服务器删除图片。它们会进入 Nextcloud 回收站，可从那里恢复。关闭时，删除对服务器图片无效。</value>
+  </data>
+  <data name="Zwischenspeicher_5d74f4b5" xml:space="preserve">
+    <value>缓存</value>
+  </data>
+  <data name="Vorschaubilder_vom_Server_liegen_auf_der_Platte__864eba56" xml:space="preserve">
+    <value>服务器的缩略图会保存在磁盘上，避免每次重新下载。图片一旦改变，它们会自行更新。</value>
+  </data>
+  <data name="L_schen_in_Nextcloud_ist_nicht_erlaubt_c14b211a" xml:space="preserve">
+    <value>不允许在 Nextcloud 中删除</value>
+  </data>
+  <data name="0_Bild_er_auf_dem_Server_l_schen_731fee54" xml:space="preserve">
+    <value>要删除服务器上的 {0} 张图片吗？</value>
+  </data>
+  <data name="0_Bild_er_gel_scht_b8786915" xml:space="preserve">
+    <value>已删除 {0} 张图片</value>
+  </data>
+  <data name="0_Datei_en_entfernt_ed3a7a34" xml:space="preserve">
+    <value>已移除 {0} 个文件</value>
+  </data>
+  <data name="0_von_1_geladen_bda18508" xml:space="preserve">
+    <value>已加载 {1} 张中的 {0} 张…</value>
+  </data>
+  <data name="Papierkorb_a95e6de6" xml:space="preserve">
+    <value>回收站</value>
+  </data>
+  <data name="Wiederherstellen_98f492b5" xml:space="preserve">
+    <value>恢复</value>
+  </data>
+  <data name="Lade_Papierkorb_a4e1987d" xml:space="preserve">
+    <value>正在加载回收站…</value>
+  </data>
+  <data name="0_geladen_df22f6c9" xml:space="preserve">
+    <value>已加载 {0}…</value>
+  </data>
+  <data name="Der_Papierkorb_ist_leer_c3b6f8c3" xml:space="preserve">
+    <value>回收站是空的</value>
+  </data>
+  <data name="0_im_Papierkorb_1411f116" xml:space="preserve">
+    <value>回收站中有 {0} 项</value>
+  </data>
+  <data name="Der_Papierkorb_konnte_nicht_geladen_werden_2c847376" xml:space="preserve">
+    <value>无法加载回收站</value>
+  </data>
+  <data name="Wiederherstellen_fehlgeschlagen_1a094998" xml:space="preserve">
+    <value>恢复失败</value>
+  </data>
+  <data name="0_von_1_wiederhergestellt_fe4f2dea" xml:space="preserve">
+    <value>已恢复 {1} 项中的 {0} 项</value>
+  </data>
+  <data name="Lade_nach_Nextcloud_hoch_0_1_f37082b8" xml:space="preserve">
+    <value>正在上传到 Nextcloud…({0}/{1})</value>
+  </data>
+  <data name="0_von_1_nach_Nextcloud_hochgeladen_18ccf372" xml:space="preserve">
+    <value>已将 {1} 个中的 {0} 个上传到 Nextcloud</value>
+  </data>
+  <data name="Der_Zielordner_enth_lt_zu_viele_gleichnamige_Dat_26796c59" xml:space="preserve">
+    <value>目标文件夹中同名文件过多</value>
+  </data>
+  <data name="Stichwort_konnte_nicht_geschrieben_werden_ba1ef775" xml:space="preserve">
+    <value>无法写入关键词</value>
+  </data>
+  <data name="Original_auf_dem_Server_wird_ersetzt_df8428c6" xml:space="preserve">
+    <value>正在替换服务器上的原始文件…</value>
+  </data>
+  <data name="Original_auf_dem_Server_ersetzt_0_71138faa" xml:space="preserve">
+    <value>已替换服务器上的原始文件：{0}</value>
+  </data>
+  <data name="Originale_auf_dem_Server_ersetzen_c5cc8375" xml:space="preserve">
+    <value>替换服务器上的原始文件</value>
+  </data>
+  <data name="Speichern_schreibt_die_Bearbeitung_an_die_Stelle_26c0db99" xml:space="preserve">
+    <value>保存会把编辑结果写到原文件的位置。文件本身不变，相册和共享都保留。关闭时：只在原文件旁生成一个包含编辑内容的附属文件。RAW 和 PSD 始终不会被改动。</value>
+  </data>
+  <data name="Zielordner_f_r_Uploads_8fda6a65" xml:space="preserve">
+    <value>上传目标文件夹</value>
+  </data>
+  <data name="Dorthin_kommen_hochgeladene_Bilder_Ein_vorhanden_93c3ce9e" xml:space="preserve">
+    <value>上传的图片会放到这里。已存在的文件名不会被覆盖，而是加上编号。</value>
+  </data>
+  <data name="Photos_958eefad" xml:space="preserve">
+    <value>/Photos</value>
+  </data>
+  <data name="Gel_schte_Bilder_gehen_am_Papierkorb_von_Nextclo_5cf5a7b9" xml:space="preserve">
+    <value>删除的图片会绕过 Nextcloud 回收站，立即消失。关闭时：它们会进入回收站，可以从那里恢复。</value>
+  </data>
+  <data name="0_Bild_er_endg_ltig_vom_Server_l_schen_Der_Papie_e4339c16" xml:space="preserve">
+    <value>要从服务器彻底删除 {0} 张图片吗？之后回收站也帮不上忙。</value>
+  </data>
+  <data name="Das_Foto_wurde_auf_dem_Server_ge_ndert_Speichern_7648581e" xml:space="preserve">
+    <value>服务器上的照片已经改变。另存为会把你的编辑放在它旁边。</value>
+  </data>
+  <data name="Favorit_konnte_nicht_gespeichert_werden_cf0264ff" xml:space="preserve">
+    <value>无法保存收藏</value>
+  </data>
+  <data name="Lade_Bilder_vom_Server_a5b713a8" xml:space="preserve">
+    <value>正在从服务器加载图片…</value>
+  </data>
+  <data name="Lade_Bild_vom_Server_9ba8a7ef" xml:space="preserve">
+    <value>正在从服务器加载图片…</value>
+  </data>
+  <data name="Papierkorb_leeren_b33f9bb6" xml:space="preserve">
+    <value>清空回收站</value>
+  </data>
+  <data name="Alles_im_Papierkorb_des_Servers_endg_ltig_l_sche_bfcb0af3" xml:space="preserve">
+    <value>要彻底删除服务器回收站里的所有内容吗？此操作无法撤销。</value>
+  </data>
+  <data name="eingeschaltet_noch_nichts_erkannt_eb0402fa" xml:space="preserve">
+    <value>已启用，尚未发现内容</value>
+  </data>
+  <data name="Suche_auf_dem_Server_5a2ff88f" xml:space="preserve">
+    <value>正在服务器上搜索…</value>
+  </data>
+  <data name="Die_Suche_ist_fehlgeschlagen_d733dd1d" xml:space="preserve">
+    <value>搜索失败</value>
+  </data>
+  <data name="Katalog_788fce56" xml:space="preserve">
+    <value>目录</value>
+  </data>
+  <data name="0_Treffer_9bcfdb2a" xml:space="preserve">
+    <value>{0} 个结果</value>
+  </data>
+  <data name="0_Treffer_1_ohne_Angaben_im_Katalog_bergangen_e4ea4386" xml:space="preserve">
+    <value>{0} 个结果，{1} 个因目录中无数据被跳过</value>
+  </data>
+  <data name="Diese_Angaben_kommen_aus_dem_Katalog_Er_kennt_Bi_f34ccf66" xml:space="preserve">
+    <value>这些信息来自目录。目录记录已打开或已评分的图片。</value>
+  </data>
+  <data name="Die_Suche_wird_gespeichert_und_steht_danach_im_B_bedf2396" xml:space="preserve">
+    <value>搜索会被保存，随后出现在搜索区域中。</value>
+  </data>
+  <data name="Die_ge_nderte_Suche_ersetzt_die_bisherige_im_Ber_bb92504c" xml:space="preserve">
+    <value>修改后的搜索将替换搜索区域中原有的搜索。</value>
+  </data>
+  <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
+    <value>无法删除</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
+    <value>这些文件位于个人文件夹之外或隐藏文件夹中。FerrumPix 不会在那里删除任何内容。</value>
   </data>
 </root>

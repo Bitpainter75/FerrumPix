@@ -3,18 +3,20 @@ Imports System.Collections.Generic
 Imports System.IO
 Imports System.Linq
 Imports System.Text.Json
+Imports System.Text.Json.Serialization
 
 Namespace Services
 
     ''' <summary>
     ''' Ein Favorit in der Galerie-Seitenleiste. Alles Navigierbare kann Favorit werden: ein
-    ''' Ordner, ein Immich-Knoten (Alle Fotos, Album, Person, Ort) oder eine gespeicherte Suche.
+    ''' Ordner, ein Knoten einer Serverquelle (Alle Fotos, Album, Person, Ort, Stichwort) oder eine
+    ''' gespeicherte Suche.
     ''' Der Eintrag traegt nur die IDENTITAET des Ziels - der Favoriten-Tab baut daraus beim
     ''' Anzeigen wieder einen echten Navigationsknoten, damit ein Klick genau dasselbe tut wie im
     ''' Herkunfts-Tab (und eine inzwischen geloeschte Suche/ein fehlender Ordner auffaellt).
     ''' </summary>
     Public Class FavoriteEntry
-        ''' "Folder", "Immich" oder "Search".
+        ''' "Folder", "Immich", "Nextcloud" oder "Search".
         Public Property Kind As String = "Folder"
         ''' Anzeigename in der Liste (frei umbenennbar, Standard = Name des Ziels).
         Public Property Name As String = ""
@@ -22,11 +24,17 @@ Namespace Services
         Public Property Path As String = ""
         ''' Nur bei Kind="Search": Id des SearchListEntry.
         Public Property SearchId As String = ""
-        ''' Nur bei Kind="Immich": Knotenart (ImmichAll/ImmichAlbum/ImmichPerson/ImmichPlace) und
-        ''' die Ziel-Id des Servers (Album-/Personen-Id bzw. Ortsname). Beides zusammen macht den
-        ''' Knoten eindeutig - eine Album-Id kann dieselbe Zeichenfolge sein wie ein Ortsname.
-        Public Property ImmichKind As String = ""
-        Public Property ImmichId As String = ""
+        ''' Nur bei einer SERVERQUELLE: Knotenart (ImmichAlbum, NextcloudPerson, …) und die Ziel-Id
+        ''' des Servers (Album-/Personen-Id, Ortsname, Cluster). Beides zusammen macht den Knoten
+        ''' eindeutig - eine Album-Id kann dieselbe Zeichenfolge sein wie ein Ortsname.
+        '''
+        ''' Der NAME IN DER DATEI heisst weiter ImmichKind/ImmichId: er stammt aus der Zeit, als es
+        ''' nur eine Serverquelle gab, und ein Wechsel wuerde die Favoriten aller bestehenden
+        ''' Installationen verlieren. Im Code steht der richtige Name.
+        <JsonPropertyName("ImmichKind")>
+        Public Property NodeKind As String = ""
+        <JsonPropertyName("ImmichId")>
+        Public Property NodeId As String = ""
 
         ''' <summary>Stabiler Schluessel eines Favoriten - damit derselbe Ordner/Knoten nicht
         ''' doppelt in der Liste landet und "Zu Favoriten hinzufuegen" beim zweiten Mal nichts tut
@@ -35,7 +43,8 @@ Namespace Services
             Get
                 Select Case NormalizeKind(Kind)
                     Case "Search" : Return "search|" & If(SearchId, "").ToLowerInvariant()
-                    Case "Immich" : Return "immich|" & If(ImmichKind, "").ToLowerInvariant() & "|" & If(ImmichId, "").ToLowerInvariant()
+                    Case "Immich" : Return "immich|" & If(NodeKind, "").ToLowerInvariant() & "|" & If(NodeId, "").ToLowerInvariant()
+                    Case "Nextcloud" : Return "nextcloud|" & If(NodeKind, "").ToLowerInvariant() & "|" & If(NodeId, "").ToLowerInvariant()
                     Case Else : Return "folder|" & NormalizePath(Path)
                 End Select
             End Get
@@ -57,6 +66,7 @@ Namespace Services
             Select Case If(value, "").Trim().ToLowerInvariant()
                 Case "search" : Return "Search"
                 Case "immich" : Return "Immich"
+                Case "nextcloud" : Return "Nextcloud"
                 Case Else : Return "Folder"
             End Select
         End Function
@@ -155,14 +165,14 @@ Namespace Services
                 item.Name = If(item.Name, "").Trim()
                 item.Path = If(item.Path, "").Trim()
                 item.SearchId = If(item.SearchId, "").Trim()
-                item.ImmichKind = If(item.ImmichKind, "").Trim()
-                item.ImmichId = If(item.ImmichId, "").Trim()
+                item.NodeKind = If(item.NodeKind, "").Trim()
+                item.NodeId = If(item.NodeId, "").Trim()
 
                 ' Ein Favorit ohne Ziel waere eine tote Zeile - er faellt beim Laden still weg.
                 Select Case item.Kind
                     Case "Folder" : If String.IsNullOrWhiteSpace(item.Path) Then Continue For
                     Case "Search" : If String.IsNullOrWhiteSpace(item.SearchId) Then Continue For
-                    Case "Immich" : If String.IsNullOrWhiteSpace(item.ImmichKind) Then Continue For
+                    Case "Immich", "Nextcloud" : If String.IsNullOrWhiteSpace(item.NodeKind) Then Continue For
                 End Select
                 If String.IsNullOrWhiteSpace(item.Name) Then
                     item.Name = If(item.Kind = "Folder", Path.GetFileName(item.Path.TrimEnd(IO.Path.DirectorySeparatorChar)), item.Kind)

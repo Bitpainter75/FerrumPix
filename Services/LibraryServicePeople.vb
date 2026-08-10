@@ -1232,8 +1232,8 @@ Namespace Services
         End Function
 
         Private Sub WriteFaceRegionsForImage(imagePath As String, createIfMissing As Boolean)
-            ' Ein Immich-Asset hat keine Datei, neben die etwas gelegt werden könnte.
-            If ImmichService.IsImmichPseudoPath(imagePath) OrElse Not IO.File.Exists(imagePath) Then Return
+            ' Ein Serverbild hat keine Datei, neben die etwas gelegt werden könnte.
+            If LibraryService.IsServerPseudoPath(imagePath) OrElse Not IO.File.Exists(imagePath) Then Return
 
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then

@@ -133,7 +133,9 @@ Namespace Views
         Private Sub OnTagFilterItemClick(sender As Object, e As RoutedEventArgs)
             Dim entry = TryCast(TryCast(sender, Button)?.DataContext, TagFilterOption)
             If entry Is Nothing Then Return
-            GetVm()?.ToggleTagFilter(entry.Tag)
+            ' Den EINTRAG durchreichen, nicht nur seinen Namen: nur er weiss, ob das Stichwort vom
+            ' Server kommt und welche Kennung es dort hat.
+            GetVm()?.ToggleTagFilter(entry)
         End Sub
 
         Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
@@ -483,18 +485,12 @@ Namespace Views
             scrubber.IsVisible = segments IsNot Nothing
         End Sub
 
-        ''' Einstellung "Zeitleiste am rechten Rand": All / Immich (nur Immich-Ansichten) /
-        ''' Folders (nur Ordner-/Suchansichten) / Off. Immich-Ansicht = ein Immich-Knoten ist
-        ''' ausgewählt (Album oder "Alle Fotos").
+        ''' Einstellung "Zeitleiste am rechten Rand": nur noch an oder aus. Die frueheren Werte nach
+        ''' Bildherkunft sind entfallen (siehe AppSettingsService.NormalizeGalleryTimelineMode).
         Private Function TimelineAllowedForCurrentView(vm As GalleryViewModel) As Boolean
-            Dim mode = AppSettingsService.NormalizeGalleryTimelineMode(AppSettingsService.Load().GalleryTimelineMode)
-            Dim isImmichView = vm.SelectedImmichNode IsNot Nothing
-            Select Case mode
-                Case "Off" : Return False
-                Case "Immich" : Return isImmichView
-                Case "Folders" : Return Not isImmichView
-                Case Else : Return True
-            End Select
+            Return Not String.Equals(
+                AppSettingsService.NormalizeGalleryTimelineMode(AppSettingsService.Load().GalleryTimelineMode),
+                "Off", StringComparison.Ordinal)
         End Function
 
         Private Sub OnTimelineScrubRequested(sender As Object, offsetFraction As Double)
@@ -768,6 +764,14 @@ Namespace Views
                 Dim vm = GetVm()
                 If vm Is Nothing OrElse e.AddedItems Is Nothing OrElse e.AddedItems.Count = 0 Then Return
                 If _clearingNavigationSelection Then Return
+                ' EIN UNSICHTBARER BAUM KANN NICHT ANGEKLICKT WORDEN SEIN. Die Baeume der nicht
+                ' offenen Tabs stehen weiter im Visual Tree; werden ihre Knoten nachtraeglich
+                ' gefuellt (die Alben kommen aus dem Netz), meldet Avalonia dafuer ein
+                ' SelectionChanged. Ohne diese Sperre navigierte die Galerie beim Start von selbst
+                ' in das zuletzt eingehaengte Album - beobachtet am Nextcloud-Baum, der seine Alben
+                ' im Hintergrund nachlaedt, und es haette jede weitere Quelle genauso getroffen.
+                Dim sourceTree = TryCast(sender, TreeView)
+                If sourceTree IsNot Nothing AndAlso Not sourceTree.IsEffectivelyVisible Then Return
                 Dim node = TryCast(e.AddedItems.Item(0), VirtualNavigationNode)
                 If node Is Nothing Then Return
                 ClearOtherNavigationSelections(TryCast(sender, TreeView))
@@ -787,10 +791,16 @@ Namespace Views
                 ' "Neue Suche" per Dialog abgebrochen: der Ordner-/Suchbaum blieb oben bereits ohne
                 ' Auswahl (ClearOtherNavigationSelections) - sichtbare Baumauswahl wieder auf den
                 ' tatsächlich aktiven Ordner zurücksetzen, statt sie auf "Neue Suche" hängen zu lassen.
-                If Not opened AndAlso String.Equals(node.Kind, "NewSearch", StringComparison.Ordinal) Then
-                    ClearVirtualTreeSelections()
-                    Dim folderTree = Me.FindControl(Of TreeView)("FolderTreeView")
-                    RestoreFolderTreeSelection(folderTree, vm)
+                If String.Equals(node.Kind, "NewSearch", StringComparison.Ordinal) Then
+                    If Not opened Then
+                        ClearVirtualTreeSelections()
+                        Dim folderTree = Me.FindControl(Of TreeView)("FolderTreeView")
+                        RestoreFolderTreeSelection(folderTree, vm)
+                    Else
+                        ' Angelegt: die Markierung gehoert auf die NEUE Suche, nicht auf den Eintrag
+                        ' "Neue Suche" - sonst sieht es aus, als sei nichts entstanden.
+                        SelectNavigationNode(vm.NavigationRestoreTreeName, vm.NavigationRestoreNode)
+                    End If
                 End If
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -821,11 +831,28 @@ Namespace Views
             End Try
         End Sub
 
-        ''' Namen aller virtuellen Baeume - seit dem Tab-Umbau vier Stueck (je Tab eigene
-        ''' Suchliste plus Immich-Baum und Favoriten). Wer hier einen vergisst, bekommt zwei
-        ''' gleichzeitig markierte Baeume.
+        ''' Namen aller virtuellen Baeume - je Tab eigene Suchliste plus Immich-, Nextcloud- und
+        ''' Favoritenbaum. Wer hier einen vergisst, bekommt zwei gleichzeitig markierte Baeume.
         Private Shared ReadOnly VirtualTreeNames As String() =
-            {"SearchTreeView", "ImmichSearchTreeView", "ImmichTreeView", "FavoritesTreeView"}
+            {"SearchTreeView", "ImmichSearchTreeView", "NextcloudSearchTreeView",
+             "ImmichTreeView", "NextcloudTreeView", "FavoritesTreeView"}
+
+        ''' <summary>Setzt die sichtbare Baumauswahl auf einen bestimmten Knoten. Nachgelagert, weil
+        ''' ein gerade erst eingehaengter Knoten seinen TreeViewItem noch nicht hat.</summary>
+        Private Sub SelectNavigationNode(treeName As String, targetNode As VirtualNavigationNode)
+            If String.IsNullOrEmpty(treeName) OrElse targetNode Is Nothing Then Return
+            Dispatcher.UIThread.Post(Sub()
+                                         Dim tree = Me.FindControl(Of TreeView)(treeName)
+                                         If tree Is Nothing Then Return
+                                         _clearingNavigationSelection = True
+                                         Try
+                                             tree.SelectedItem = targetNode
+                                             BringTreeItemIntoView(tree, targetNode)
+                                         Finally
+                                             _clearingNavigationSelection = False
+                                         End Try
+                                     End Sub, DispatcherPriority.Loaded)
+        End Sub
 
         Private Sub ClearVirtualTreeSelections()
             _clearingNavigationSelection = True
@@ -878,21 +905,103 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Papierkorb leeren - fuer beide Serverquellen derselbe Eintrag, die Quelle sagt
+        ''' der Knoten. Die Rueckfrage stellt das ViewModel, damit sie an EINER Stelle steht.</summary>
+        Public Sub OnEmptyTrashClick(sender As Object, e As RoutedEventArgs)
+            e.Handled = True
+            Dim node = GetVirtualNodeFromSender(sender)
+            If node Is Nothing Then Return
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Dim ignored = vm.EmptyTrashAsync(node)
+        End Sub
+
+        Public Sub OnNextcloudNewAlbumClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.CreateNextcloudAlbum()
+            e.Handled = True
+        End Sub
+
+        Public Sub OnNextcloudRenameAlbumClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.RenameNextcloudAlbum(GetVirtualNodeFromSender(sender))
+            e.Handled = True
+        End Sub
+
+        Public Sub OnNextcloudDeleteAlbumClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.DeleteNextcloudAlbum(GetVirtualNodeFromSender(sender))
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Rechtsklick auf einen Nextcloud-Knoten: dasselbe wie im Immich-Baum - die Zeile
+        ''' unter dem Zeiger wird markiert, damit das Menue sich auf SIE bezieht und nicht auf die
+        ''' zuletzt geoeffnete.</summary>
+        Public Sub OnNextcloudNodePointerPressed(sender As Object, e As PointerPressedEventArgs)
+            Try
+                OnImmichNodePointerPressed(sender, e)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryView.OnNextcloudNodePointerPressed", ex)
+            End Try
+        End Sub
+
         ' --- Drag&Drop lokal → Immich (Datei-Payload auf einen Immich-Knoten ablegen = Upload) ---
 
         ''' <summary>Knoten unter dem Zeiger. Laeuft erst den LOGISCHEN, dann den VISUELLEN Elternpfad
         ''' hoch: bei Inhalten aus einem ItemTemplate reisst die logische Kette ab, der Knoten waere sonst
         ''' je nach getroffenem Element mal auffindbar und mal nicht - genau daraus entstand die
         ''' Abweichung zwischen Mauszeiger und tatsaechlichem Ablegen.</summary>
-        Private Function GetImmichDropNode(e As DragEventArgs) As VirtualNavigationNode
-            Dim current = TryCast(e.Source, Control)
+        ''' <summary>Das Ergebnis der letzten Elternsuche, samt Element, für das es galt.
+        '''
+        ''' WARUM GEMERKT: Ein Zug erzeugt hunderte Zeigerberichte je Sekunde, und der Zeiger steht
+        ''' dabei fast immer über DEMSELBEN Element. Die Suche selbst ist teuer - sie liest je Stufe
+        ''' <c>DataContext</c>, und der wird VERERBT, geht also seinerseits die Kette hoch. Gemessen
+        ''' an einer hängenden Anwendung (2026-08-10, dotnet-trace): GetImmichDropNode war mit
+        ''' Abstand die teuerste aktive Arbeit im Prozess, alles andere waren Wartezustände. Bei
+        ''' zwei Suchen je Bericht (Knoten und Zeile) kam der UI-Faden nicht mehr hinterher.</summary>
+        Private _lastDropSource As Control = Nothing
+        Private _lastDropNode As VirtualNavigationNode = Nothing
+        Private _lastDropRow As Control = Nothing
+
+        Private Sub ResolveDropSource(e As DragEventArgs)
+            Dim source = TryCast(e.Source, Control)
+            If Object.ReferenceEquals(source, _lastDropSource) Then Return
+
+            _lastDropSource = source
+            _lastDropNode = Nothing
+            _lastDropRow = Nothing
+            ' EIN Durchlauf für beides: der Knoten (wohin abgelegt wird) und die Zeile (was
+            ' hervorgehoben wird) liegen auf demselben Elternpfad. Zwei Durchläufe waren doppelte
+            ' Arbeit an derselben Kette.
+            Dim current = source
+            Dim depth = 0
             While current IsNot Nothing
-                Dim node = TryCast(current.DataContext, VirtualNavigationNode)
-                If node IsNot Nothing Then Return node
+                If _lastDropNode Is Nothing Then
+                    Dim node = TryCast(current.DataContext, VirtualNavigationNode)
+                    If node IsNot Nothing Then _lastDropNode = node
+                End If
+                If _lastDropRow Is Nothing AndAlso TypeOf current Is TreeViewItem Then _lastDropRow = current
+                If _lastDropNode IsNot Nothing AndAlso _lastDropRow IsNot Nothing Then Exit While
+                ' DIE HARTE GRENZE, und sie ist der eigentliche Fix (gemessen 2026-08-10 an einer
+                ' hängenden Anwendung, dotnet-trace: der UI-Faden stand die ganze Messung in dieser
+                ' Schleife). Ein Elternpfad wird ueber die LOGISCHE Kette gegangen und faellt auf
+                ' die VISUELLE zurueck - und diese Mischung kann einen RING bilden: A zeigt logisch
+                ' auf B, B visuell wieder auf A. Ein Schutz gegen den direkten Selbstbezug faengt
+                ' das nicht, die Schleife laeuft ewig, der Faden kommt nie zurueck, und weil auch
+                ' die Zeitgeber auf ihm laufen, meldet sich nicht einmal ein Zeitablauf.
+                ' Ein echter Elternpfad ist nie so tief; tiefer heisst: hier stimmt etwas nicht.
+                depth += 1
+                If depth > 64 Then
+                    DiagnosticLogService.LogAlways("Drag", "Elternpfad tiefer als 64 Stufen - abgebrochen (Ring?)")
+                    Exit While
+                End If
                 Dim logicalParent = TryCast(current.Parent, Control)
-                current = If(logicalParent, current.GetVisualParent(Of Control)())
+                Dim nextParent = If(logicalParent, current.GetVisualParent(Of Control)())
+                If Object.ReferenceEquals(nextParent, current) Then Exit While
+                current = nextParent
             End While
-            Return Nothing
+        End Sub
+
+        Private Function GetImmichDropNode(e As DragEventArgs) As VirtualNavigationNode
+            ResolveDropSource(e)
+            Return _lastDropNode
         End Function
 
         ''' <summary>Ziel und Nutzlast eines Immich-Drops - EINE Quelle fuer Mauszeiger und Ablegen, damit
@@ -901,36 +1010,139 @@ Namespace Views
         ''' beim Ueberfliegen nicht - unter X11 reicht ein fremder Ziehvorgang die Dateiliste erst BEIM
         ''' Ablegen heraus, waehrend DragOver liest sie sich leer. Der Zeiger zeigte deshalb "geht nicht",
         ''' obwohl der Upload danach lief.</summary>
+        ''' <summary>Was auf einem Serverknoten abgelegt wird, zerfaellt in ZWEI Sorten: lokale
+        ''' Dateien werden hochgeladen, Bilder DERSELBEN Serverquelle nur zugeordnet. Frueher fielen
+        ''' die Serverpfade hier ganz heraus, und ein Ziehen aus "Alle Fotos" in ein Album tat
+        ''' schlicht nichts.</summary>
         Private Function ResolveImmichDrop(e As DragEventArgs, requireExistingFiles As Boolean) _
-            As (Node As VirtualNavigationNode, LocalPaths As List(Of String), PayloadUnreadable As Boolean)
+            As (Node As VirtualNavigationNode, LocalPaths As List(Of String), RemotePaths As List(Of String), PayloadUnreadable As Boolean)
             Dim node = GetImmichDropNode(e)
-            If node Is Nothing OrElse Not node.IsImmichNode Then Return (Nothing, New List(Of String)(), False)
+            Dim leer = New List(Of String)()
+            If node Is Nothing OrElse Not (node.IsImmichNode OrElse node.IsNextcloudNode) Then Return (Nothing, leer, leer, False)
             Dim payload = GetDragPayload(e)
-            ' Nur echte lokale Dateien auf einen Immich-Knoten - keine Immich-Pseudo-Pfade (Immich→Immich hier nicht).
             Dim localPaths = payload.Paths.
                 Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso
+                                  Not NextcloudService.IsNextcloudPseudoPath(p) AndAlso
                                   (Not requireExistingFiles OrElse IO.File.Exists(p))).ToList()
-            Return (node, localPaths, payload.Paths.Count = 0)
+            ' Nur Pfade der EIGENEN Quelle: ein Immich-Bild in ein Nextcloud-Album zu ziehen waere
+            ' ein Umzug ueber die Leitung, keine Zuordnung.
+            Dim remotePaths = payload.Paths.
+                Where(Function(p) If(node.IsImmichAlbumNode,
+                                     ImmichService.IsImmichPseudoPath(p),
+                                     node.IsNextcloudAlbumNode AndAlso NextcloudService.IsNextcloudPseudoPath(p))).ToList()
+            Return (node, localPaths, remotePaths, payload.Paths.Count = 0)
         End Function
 
+        ''' <summary>Waehrend des Ziehens entscheidet der ZIELKNOTEN, nicht die Nutzlast.
+        '''
+        ''' Unter X11 laeuft auch ein anwendungsinterner Zug ueber das Fenstersystem, und die Daten
+        ''' kommen dort erst beim Ablegen heraus - waehrend der Bewegung liest sich die Last leer.
+        ''' Wer daran den Mauszeiger festmacht, zeigt "geht nicht" ueber einem Ziel, auf dem der Drop
+        ''' anschliessend laeuft (Nutzerbefund 2026-08-10: Verbotszeichen an allen Baumzielen).
+        ''' Angeboten wird deshalb, sobald der Knoten ueberhaupt etwas annehmen KANN; was wirklich
+        ''' ankommt, entscheidet der Drop.</summary>
         Public Sub OnImmichTreeDragOver(sender As Object, e As DragEventArgs)
-            Dim drop = ResolveImmichDrop(e, requireExistingFiles:=False)
-            If drop.Node IsNot Nothing AndAlso (drop.LocalPaths.Count > 0 OrElse drop.PayloadUnreadable) Then
-                e.DragEffects = DragDropEffects.Copy
-            Else
-                e.DragEffects = DragDropEffects.None
-            End If
-            HighlightDropRow(e, e.DragEffects <> DragDropEffects.None)
+            Dim node = GetImmichDropNode(e)
+            DragTrace.Over(If(node?.Kind, "kein Knoten"))
+            Dim nimmtAn = node IsNot Nothing AndAlso Not node.IsTrashNode AndAlso
+                          (node.IsImmichNode OrElse node.IsNextcloudNode)
+            e.DragEffects = If(nimmtAn, DragDropEffects.Copy, DragDropEffects.None)
+            HighlightDropRow(e, nimmtAn)
             e.Handled = True
         End Sub
 
         Public Sub OnImmichTreeDrop(sender As Object, e As DragEventArgs)
             ClearDropHighlight()
             Dim drop = ResolveImmichDrop(e, requireExistingFiles:=True)
+            DiagnosticLogService.LogAlways("Drag", $"drop ziel={If(drop.Node?.Kind, "-")} lokal={drop.LocalPaths.Count} server={drop.RemotePaths.Count}")
             If drop.Node Is Nothing Then Return
             e.Handled = True
-            If drop.LocalPaths.Count = 0 Then Return
-            GetVm()?.UploadToImmich(drop.Node, drop.LocalPaths)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            ' Bilder derselben Quelle werden ZUGEORDNET, lokale Dateien hochgeladen. Beides kann in
+            ' einer Ablage stecken, wenn jemand gemischt ausgewaehlt hat.
+            '
+            ' ERST NACH DEM EREIGNIS, nicht darin: die Ziehgeste laeuft noch, solange dieser Handler
+            ' arbeitet, und alles, was hier beginnt, haengt an ihr. Serverarbeit gehoert dahinter.
+            If drop.RemotePaths.Count > 0 Then
+                Dim targetNode = drop.Node
+                Dim remotePaths = drop.RemotePaths
+                Dispatcher.UIThread.Post(Sub()
+                                             Dim ignored = vm.AddRemotePathsToAlbumAsync(targetNode, remotePaths)
+                                         End Sub, DispatcherPriority.Background)
+            End If
+            If drop.LocalPaths.Count > 0 Then
+                ' Jede Quelle bekommt ihre eigenen Dateien: der Knoten sagt, wohin hochgeladen wird.
+                If drop.Node.IsImmichNode Then
+                    vm.UploadToImmich(drop.Node, drop.LocalPaths)
+                ElseIf drop.Node.IsNextcloudNode Then
+                    vm.UploadToNextcloud(drop.Node, drop.LocalPaths)
+                End If
+            End If
+        End Sub
+
+        Public Sub OnNextcloudTreeDragOver(sender As Object, e As DragEventArgs)
+            OnImmichTreeDragOver(sender, e)
+        End Sub
+
+        Public Sub OnNextcloudTreeDrop(sender As Object, e As DragEventArgs)
+            OnImmichTreeDrop(sender, e)
+        End Sub
+
+        ''' <summary>Einfuegen auf einem Nextcloud-Knoten: Bilder DERSELBEN Quelle werden dem Album
+        ''' zugeordnet, lokale Dateien in den Dateibaum hochgeladen.
+        '''
+        ''' Ein Immich-Bild bleibt draussen - es einzufuegen hiesse, es erst herunter- und wieder
+        ''' hochzuladen. Das ist ein Umzug und keine Zuordnung.</summary>
+        Public Async Sub OnNextcloudPasteClick(sender As Object, e As RoutedEventArgs)
+            Try
+                e.Handled = True
+                Dim vm = GetVm()
+                If vm Is Nothing Then Return
+                Dim node = GetVirtualNodeFromSender(sender)
+                If node Is Nothing OrElse Not node.IsNextcloudNode Then Return
+                Dim clipboardData = Await ClipboardPathService.ReadPathDataAsync(TopLevel.GetTopLevel(Me)?.Clipboard)
+                Dim remotePaths = clipboardData.Paths.Where(AddressOf NextcloudService.IsNextcloudPseudoPath).ToList()
+                If remotePaths.Count > 0 AndAlso node.IsNextcloudAlbumNode Then
+                    Await vm.AddRemotePathsToAlbumAsync(node, remotePaths)
+                End If
+                Dim localPaths = clipboardData.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso
+                                                                       Not NextcloudService.IsNextcloudPseudoPath(p) AndAlso
+                                                                       IO.File.Exists(p)).ToList()
+                If localPaths.Count = 0 Then Return
+                vm.UploadToNextcloud(node, localPaths)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryView.OnNextcloudPasteClick", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Bilder ueber den Dateiwaehler nach Nextcloud hochladen (Kontextmenue im
+        ''' Nextcloud-Baum). Gegenstueck zu <see cref="OnImmichUploadClick"/>.</summary>
+        Public Async Sub OnNextcloudUploadClick(sender As Object, e As RoutedEventArgs)
+            Try
+                Dim vm = GetVm()
+                If vm Is Nothing Then Return
+                Dim node = GetVirtualNodeFromSender(sender)
+                Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
+                If storageProvider Is Nothing Then Return
+                e.Handled = True
+                Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType(LocalizationService.T("Bilder & Videos")) With {
+                    .Patterns = New List(Of String) From {
+                        "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
+                        "*.heic", "*.heif", "*.avif", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
+                }
+                Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
+                    .Title = LocalizationService.T("Bilder/Videos zum Hochladen wählen"),
+                    .AllowMultiple = True,
+                    .FileTypeFilter = New List(Of Avalonia.Platform.Storage.FilePickerFileType) From {mediaType}
+                })
+                If files Is Nothing Then Return
+                Dim paths = files.Select(Function(f) f.Path.LocalPath).Where(Function(p) Not String.IsNullOrEmpty(p)).ToList()
+                If paths.Count = 0 Then Return
+                vm.UploadToNextcloud(node, paths)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryView.OnNextcloudUploadClick", ex)
+            End Try
         End Sub
 
         Public Async Sub OnImmichPasteClick(sender As Object, e As RoutedEventArgs)
@@ -941,7 +1153,15 @@ Namespace Views
                 Dim node = GetVirtualNodeFromSender(sender)
                 If node Is Nothing OrElse Not node.IsImmichNode Then Return
                 Dim clipboardData = Await ClipboardPathService.ReadPathDataAsync(TopLevel.GetTopLevel(Me)?.Clipboard)
-                Dim localPaths = clipboardData.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso IO.File.Exists(p)).ToList()
+                ' Immich-Bilder in der Zwischenablage gehoeren dem Album ZUGEORDNET, nicht erneut
+                ' hochgeladen - sonst entstuende von jedem eine zweite Fassung.
+                Dim immichPaths = clipboardData.Paths.Where(AddressOf ImmichService.IsImmichPseudoPath).ToList()
+                If immichPaths.Count > 0 AndAlso node.IsImmichAlbumNode Then
+                    Await vm.AddRemotePathsToAlbumAsync(node, immichPaths)
+                End If
+                Dim localPaths = clipboardData.Paths.Where(Function(p) Not ImmichService.IsImmichPseudoPath(p) AndAlso
+                                                                       Not NextcloudService.IsNextcloudPseudoPath(p) AndAlso
+                                                                       IO.File.Exists(p)).ToList()
                 If localPaths.Count = 0 Then Return
                 vm.UploadToImmich(node, localPaths)
             Catch ex As Exception
@@ -1267,6 +1487,11 @@ Namespace Views
         End Sub
 
         Public Async Sub OnThumbnailPointerMoved(sender As Object, e As PointerEventArgs)
+            ' Kein zweiter Zug, solange einer laeuft. Die Ziehquelle des Fenstersystems ist ein
+            ' EINZELNER Haken am Ereignisverteiler und ein einzelner Zeigergriff; ein zweiter Zug
+            ' daneben nimmt dem ersten die Ereignisse weg, und beide warten dann auf etwas, das
+            ' nicht mehr kommt.
+            If _isDragging Then Return
             If _dragStartItem Is Nothing OrElse Not e.GetCurrentPoint(Nothing).Properties.IsLeftButtonPressed Then Return
             Dim delta = e.GetPosition(Me) - _dragStartPoint
             If Math.Abs(delta.X) < 6 AndAlso Math.Abs(delta.Y) < 6 Then Return
@@ -1283,30 +1508,43 @@ Namespace Views
             _dragStartItem = Nothing
             _dragStartArgs = Nothing
 
-            ' Immich-Assets sind Pseudo-Pfade (immich://…) und damit für ein fremdes Ziel wie Dolphin
-            ' keine echten Dateien. Vor dem Ziehen die Originale in temporäre Dateien holen, damit der
-            ' Export nach außen (und ein interner Drop) tatsächlich eine Datei liefert.
+            ' SERVERBILDER ZIEHEN IHREN PSEUDO-PFAD, keine Datei.
+            '
+            ' Vorher holte diese Stelle für jedes Immich-Asset das ORIGINAL in eine Temp-Datei und
+            ' legte deren Pfad in die Ziehlast. Zwei Schäden auf einmal (Nutzerbefund 2026-08-10:
+            ' "CPU geht hoch, App nicht mehr bedienbar"):
+            '
+            ' 1. Der Zug begann erst NACH dem Herunterladen. Bei mehreren markierten Bildern zieht
+            '    man damit den ganzen Bestand über die Leitung, bevor sich überhaupt etwas bewegt -
+            '    und weiß beim Loslassen noch gar nicht, ob das Ziel eine Datei braucht.
+            ' 2. Beim Ablegen auf einem Album kam ein DATEIPFAD an, kein Pseudo-Pfad. Der Drop hielt
+            '    das für "lokale Datei" und LUD SIE ERNEUT HOCH, statt das vorhandene Asset dem
+            '    Album zuzuordnen: aus einem Zuordnen wurde ein Download samt Upload samt Warten auf
+            '    das Vorschaubild, je Bild.
+            '
+            ' Was für ein fremdes Ziel wie Dolphin fehlt, ist die Datei. Dafür gibt es "Exportieren
+            ' nach" und Kopieren; ein Zug aus der Galerie meint innerhalb der Anwendung fast immer
+            ' die Zuordnung, und dafür ist der Pseudo-Pfad genau das Richtige.
             Dim paths As New List(Of String)()
+            Dim hatServerbilder = False
             For Each it In dragItems
-                If it Is Nothing Then Continue For
-                If it.IsImmichAsset Then
-                    Dim assetId As String = Nothing, fileName As String = Nothing
-                    If Not ImmichService.TryParsePseudoPath(it.FilePath, assetId, fileName) Then Continue For
-                    Dim tmp = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
-                    If Not String.IsNullOrEmpty(tmp) Then paths.Add(tmp)
-                ElseIf Not String.IsNullOrEmpty(it.FilePath) Then
-                    paths.Add(it.FilePath)
-                End If
+                If it Is Nothing OrElse String.IsNullOrEmpty(it.FilePath) Then Continue For
+                If it.IsRemoteAsset Then hatServerbilder = True
+                paths.Add(it.FilePath)
             Next
             If paths.Count = 0 Then Return
 
-            ' Die Ziehlast trägt beides: das anwendungseigene Format, an dem der interne Drop das
-            ' Verschieben erkennt, und die Dateien selbst - ohne die sieht ein fremdes Ziel wie Dolphin
-            ' gar nichts und lehnt den Drop ab.
-            Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
-            Dim data = Await ClipboardPathService.BuildFileTransferAsync(storageProvider, paths,
-                Sub(firstItem) firstItem.Set(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
-            If data.Items.Count = 0 Then
+            ' Die Ziehlast trägt das anwendungseigene Format, an dem der interne Drop erkennt, was
+            ' gemeint ist. Die Dateien selbst kommen nur dazu, wenn es welche GIBT - ein fremdes Ziel
+            ' sieht sonst nichts und lehnt den Drop ab, aber einen Pseudo-Pfad als Datei anzubieten
+            ' wäre ein Versprechen, das niemand einlösen kann.
+            Dim data As DataTransfer = Nothing
+            If Not hatServerbilder Then
+                Dim storageProvider = TopLevel.GetTopLevel(Me)?.StorageProvider
+                data = Await ClipboardPathService.BuildFileTransferAsync(storageProvider, paths,
+                    Sub(firstItem) firstItem.Set(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
+            End If
+            If data Is Nothing OrElse data.Items.Count = 0 Then
                 data = New DataTransfer()
                 data.Add(DataTransferItem.Create(FerrumPixPathsFormat, String.Join(ControlChars.Lf, paths)))
             End If
@@ -1321,6 +1559,10 @@ Namespace Views
             pressedArgs.Source = Me
 
             _isDragging = True
+            ' Die Pfade IM PROZESS merken, bevor der Zug beginnt: alles, was waehrend des Ziehens
+            ' wissen will, was gezogen wird, liest sie von dort statt ueber das Fenstersystem.
+            DragPayloadCache.BeginDrag(paths)
+            DragTrace.Begin(If(hatServerbilder, "Server", "lokal"), paths.Count, data.Items.Count > 1)
             Try
                 Await DragDrop.DoDragDropAsync(pressedArgs, data, DragDropEffects.Move Or DragDropEffects.Copy)
             Catch ex As ArgumentOutOfRangeException When String.Equals(ex.ParamName, "triggerEvent", StringComparison.Ordinal)
@@ -1330,6 +1572,10 @@ Namespace Views
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.DragDrop", ex)
             Finally
+                ' IMMER zuruecknehmen: bliebe der Stand liegen, hielte die Anwendung einen fremden
+                ' Zug spaeter fuer den eigenen und zoege die falschen Pfade heran.
+                DragTrace.Finish("Geste beendet")
+                DragPayloadCache.EndDrag()
                 _isDragging = False
             End Try
         End Sub
@@ -1758,7 +2004,10 @@ Namespace Views
                 .ColorLabel = New DelegateCommand(Sub(color) ApplyColorLabel(vm, color)),
                 .CopyPath = vm.CopyPathCommand,
                 .ShowInFileManager = vm.OpenFileManagerCommand,
-                .Delete = vm.DeleteSelectedCommand}
+                .Delete = vm.DeleteSelectedCommand,
+                .RestoreFromTrash = New DelegateCommand(Sub()
+                                                            Dim ignored = vm.RestoreSelectedFromTrashAsync()
+                                                        End Sub)}
         End Function
 
         ''' <summary>Farbetikett aus dem Kontextmenue setzen.
@@ -1979,7 +2228,16 @@ Namespace Views
 
         Public Sub OnFolderTreeDragOver(sender As Object, e As DragEventArgs)
             Dim target = GetDropFolder(e)
-            e.DragEffects = GetDropEffects(GetDragPayload(e), target?.FullPath)
+            DragTrace.Over(If(target?.Name, "kein Ordner"))
+            Dim payload = GetDragPayload(e)
+            ' Wie im Serverbaum: liest sich die Last waehrend der Bewegung leer (X11 reicht sie erst
+            ' beim Ablegen heraus), entscheidet der ZIELORDNER. Sonst stuende ueber jedem Ordner das
+            ' Verbotszeichen, obwohl der Drop danach laeuft.
+            If payload.Paths.Count = 0 AndAlso target IsNot Nothing Then
+                e.DragEffects = If(GetVm()?.CanPasteIntoFolder(target.FullPath), DragDropEffects.Copy, DragDropEffects.None)
+            Else
+                e.DragEffects = GetDropEffects(payload, target?.FullPath)
+            End If
             HighlightDropRow(e, e.DragEffects <> DragDropEffects.None)
             e.Handled = True
         End Sub
@@ -1992,18 +2250,11 @@ Namespace Views
         Private _dropHighlightRow As Control
 
         Private Sub HighlightDropRow(e As DragEventArgs, erlaubt As Boolean)
-            Dim row As Control = Nothing
-            If erlaubt Then
-                Dim current = TryCast(e.Source, Control)
-                While current IsNot Nothing
-                    If TypeOf current Is TreeViewItem Then
-                        row = current
-                        Exit While
-                    End If
-                    Dim logicalParent = TryCast(current.Parent, Control)
-                    current = If(logicalParent, current.GetVisualParent(Of Control)())
-                End While
-            End If
+            ' Die Zeile kommt aus DERSELBEN Suche wie der Knoten (siehe ResolveDropSource) und wird
+            ' für dasselbe Quellelement wiederverwendet. Vorher lief hier eine zweite Elternsuche je
+            ' Zeigerbericht - bei hunderten Berichten je Sekunde die halbe Last umsonst.
+            ResolveDropSource(e)
+            Dim row As Control = If(erlaubt, _lastDropRow, Nothing)
             If Object.ReferenceEquals(row, _dropHighlightRow) Then Return
             _dropHighlightRow?.Classes.Remove("drop-target")
             _dropHighlightRow = row
@@ -2035,6 +2286,7 @@ Namespace Views
 
         Public Sub OnItemDragOver(sender As Object, e As DragEventArgs)
             Dim item = TryCast(TryCast(sender, Border)?.DataContext, ImageItem)
+            DragTrace.Over("Kachel")
             Dim targetFolder = If(item IsNot Nothing AndAlso item.IsFolder, item.FilePath, Nothing)
             e.DragEffects = GetDropEffects(GetDragPayload(e), targetFolder)
             e.Handled = True
@@ -2056,6 +2308,7 @@ Namespace Views
         ''' Ablegen auf der freien Fläche der Galerie: fremde Dateien landen im gerade angezeigten Ordner.
         ''' Für eine Ziehgeste aus der Galerie selbst ergibt das nichts - die Dateien liegen schon dort.
         Public Sub OnGalleryAreaDragOver(sender As Object, e As DragEventArgs)
+            DragTrace.Over("Galeriefläche")
             Dim payload = GetDragPayload(e)
             Dim vm = GetVm()
             ' Steht gerade eine Immich-Ansicht (Album oder „Alle Fotos") offen, landen fremde Dateien
@@ -2104,11 +2357,21 @@ Namespace Views
         ''' beschriebe also einen anderen Ordner als den, auf dem man steht.</summary>
         Private Function GetDropFolder(e As DragEventArgs) As FolderNode
             Dim current = TryCast(e.Source, Control)
+            Dim depth = 0
             While current IsNot Nothing
                 Dim node = TryCast(current.DataContext, FolderNode)
                 If node IsNot Nothing Then Return node
+                ' Dieselbe harte Grenze wie in ResolveDropSource: die Mischung aus logischer und
+                ' visueller Kette kann einen Ring bilden, und der haelt den UI-Faden fuer immer.
+                depth += 1
+                If depth > 64 Then
+                    DiagnosticLogService.LogAlways("Drag", "Ordner-Elternpfad tiefer als 64 Stufen - abgebrochen (Ring?)")
+                    Exit While
+                End If
                 Dim logicalParent = TryCast(current.Parent, Control)
-                current = If(logicalParent, current.GetVisualParent(Of Control)())
+                Dim nextParent = If(logicalParent, current.GetVisualParent(Of Control)())
+                If Object.ReferenceEquals(nextParent, current) Then Exit While
+                current = nextParent
             End While
             Return GetVm()?.SelectedFolderNode
         End Function
@@ -2116,8 +2379,20 @@ Namespace Views
         ''' Die Ziehlast kommt entweder aus der Galerie selbst (dann verschieben wir) oder aus einem fremden
         ''' Dateimanager (dann kopieren wir - dessen Dateien liegen woanders und sollen dort bleiben).
         Private Function GetDragPayload(e As DragEventArgs) As (Paths As List(Of String), IsInternal As Boolean)
+            ' ZIEHT DIE ANWENDUNG SELBST, kommt die Antwort aus dem eigenen Gedaechtnis. Das Lesen
+            ' ueber das Fenstersystem blockiert unter X11 den Faden, auf dem die QUELLE antworten
+            ' muesste - bei jedem Zeigerbericht neu (siehe DragPayloadCache).
+            If DragPayloadCache.IsDragging Then
+                Dim eigene = DragPayloadCache.Paths()
+                If eigene.Count > 0 Then Return (eigene, True)
+            End If
+
+            ' Ab hier geht es über das FENSTERSYSTEM, und genau das ist der Schritt, der stehen
+            ' bleiben kann. Beide Aufrufe stehen deshalb zwischen zwei Protokollzeilen: fehlt die
+            ' zweite, war hier Schluss (siehe DragTrace).
             Try
-                Dim internal = e.DataTransfer.TryGetValue(FerrumPixPathsFormat)
+                Dim internal = DragTrace.Measure("eigenes Format", Function() e.DataTransfer.TryGetValue(FerrumPixPathsFormat),
+                                                 Function(wert) If(String.IsNullOrEmpty(wert), 0, 1))
                 If Not String.IsNullOrWhiteSpace(internal) Then
                     Dim internalPaths = internal.
                         Split({ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries).
@@ -2130,7 +2405,8 @@ Namespace Views
             End Try
 
             Try
-                Dim files = e.DataTransfer.TryGetFiles()
+                Dim files = DragTrace.Measure("Dateiliste", Function() e.DataTransfer.TryGetFiles(),
+                                              Function(liste) If(liste Is Nothing, 0, liste.Count))
                 If files IsNot Nothing Then
                     Dim externalPaths = ClipboardPathService.ToLocalPaths(files)
                     If externalPaths.Count > 0 Then Return (externalPaths, False)

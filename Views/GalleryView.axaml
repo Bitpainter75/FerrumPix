@@ -254,12 +254,13 @@
                                                          Stichwörtern: der Inhalt eines Aufklappfensters hängt
                                                          nicht im Baum der Ansicht. -->
                                                     <StackPanel>
-                                                        <!-- Zwischenüberschrift vor dem ersten Eintrag vom
-                                                             Server. Die beiden Bestände lassen sich nicht
+                                                        <!-- Zwischenüberschrift vor dem ersten Eintrag je
+                                                             Serverquelle. Die Bestände lassen sich nicht
                                                              verunden - ohne die Trennung sähe die Liste aus,
-                                                             als ginge das. -->
-                                                        <TextBlock Text="Immich" Classes="no-translate"
-                                                                   IsVisible="{Binding ShowsImmichHeader}"
+                                                             als ginge das. Der Servername ist ein Eigenname
+                                                             und wird nicht übersetzt. -->
+                                                        <TextBlock Text="{Binding ServerSource}" Classes="no-translate"
+                                                                   IsVisible="{Binding ShowsServerHeader}"
                                                                    Foreground="{DynamicResource FP.Text.Muted}"
                                                                    FontSize="{DynamicResource FP.Font.Small}"
                                                                    Margin="10,8,10,2"/>
@@ -373,8 +374,8 @@
                                                          Stichwörtern und Personen: der Inhalt eines
                                                          Aufklappfensters hängt nicht im Baum der Ansicht. -->
                                                     <StackPanel>
-                                                        <TextBlock Text="Immich" Classes="no-translate"
-                                                                   IsVisible="{Binding ShowsImmichHeader}"
+                                                        <TextBlock Text="{Binding ServerSource}" Classes="no-translate"
+                                                                   IsVisible="{Binding ShowsServerHeader}"
                                                                    Foreground="{DynamicResource FP.Text.Muted}"
                                                                    FontSize="{DynamicResource FP.Font.Small}"
                                                                    Margin="10,8,10,2"/>
@@ -484,16 +485,26 @@
                                                     <!-- Click statt Command: der Inhalt eines Aufklappfensters haengt
                                                          NICHT im Baum der Ansicht, eine Bindung ueber den Vorfahren
                                                          findet dort nichts und die Schaltflaeche bleibt tot. -->
-                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                            HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                            Click="OnTagFilterItemClick">
-                                                        <Grid ColumnDefinitions="*,20">
-                                                            <TextBlock Text="{Binding Label}" Classes="no-translate"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
-                                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                                        </Grid>
-                                                    </Button>
+                                                    <StackPanel>
+                                                        <!-- Zwischenüberschrift vor dem ersten Eintrag einer
+                                                             Serverquelle. Der Servername ist ein Eigenname und
+                                                             wird nicht übersetzt. -->
+                                                        <TextBlock Text="{Binding ServerSource}" Classes="no-translate"
+                                                                   IsVisible="{Binding ShowsServerHeader}"
+                                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                                   Margin="10,8,10,2"/>
+                                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                                Click="OnTagFilterItemClick">
+                                                            <Grid ColumnDefinitions="*,20">
+                                                                <TextBlock Text="{Binding Label}" Classes="no-translate"
+                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                            </Grid>
+                                                        </Button>
+                                                    </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -1031,24 +1042,34 @@
                      wenn Immich hinterlegt ist (HasImmich); faellt die Konfiguration weg, springt die
                      Auswahl im ViewModel auf Ordner zurueck (SyncSidebarTabWithImmich). Jeder Tab traegt
                      seine EIGENEN Suchlisten - eine Dateisystem-Suche gehoert nicht neben Immich-Alben. -->
-                <Grid Grid.Row="0" Margin="24,22,24,4" ColumnDefinitions="*,*,*">
-                    <Button Grid.Column="0" Classes="sidebar-tab"
+                <!-- Reiter LINKSBUENDIG in einer Reihe statt in gleich breiten Spalten. Mit Spalten
+                     hielt eine ausgeblendete Quelle ihren Platz: fehlte Immich oder Nextcloud, klaffte
+                     eine Luecke und "Favoriten" stand weit rechts. Die Reihe schiebt zusammen. -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="14"
+                            HorizontalAlignment="Left" Margin="24,22,24,4">
+                    <Button Classes="sidebar-tab"
+                            Command="{Binding SetSidebarTabCommand}" CommandParameter="Favorites"
+                            Classes.active="{Binding IsFavoritesTab}">
+                        <TextBlock Text="Favoriten" FontSize="{DynamicResource FP.Font.Body}"/>
+                    </Button>
+                    <Button Classes="sidebar-tab"
                             Command="{Binding SetSidebarTabCommand}" CommandParameter="Folders"
                             Classes.active="{Binding IsFoldersTab}">
                         <TextBlock Text="Ordner" FontSize="{DynamicResource FP.Font.Body}"/>
                     </Button>
-                    <Button Grid.Column="1" Classes="sidebar-tab"
+                    <Button Classes="sidebar-tab"
                             IsVisible="{Binding HasImmich}"
                             Command="{Binding SetSidebarTabCommand}" CommandParameter="Immich"
                             Classes.active="{Binding IsImmichTab}">
                         <TextBlock Text="Immich" FontSize="{DynamicResource FP.Font.Body}"/>
                     </Button>
-                    <Button Grid.Column="2" Classes="sidebar-tab"
-                            Command="{Binding SetSidebarTabCommand}" CommandParameter="Favorites"
-                            Classes.active="{Binding IsFavoritesTab}">
-                        <TextBlock Text="Favoriten" FontSize="{DynamicResource FP.Font.Body}"/>
+                    <Button Classes="sidebar-tab"
+                            IsVisible="{Binding HasNextcloud}"
+                            Command="{Binding SetSidebarTabCommand}" CommandParameter="Nextcloud"
+                            Classes.active="{Binding IsNextcloudTab}">
+                        <TextBlock Text="Nextcloud" FontSize="{DynamicResource FP.Font.Body}"/>
                     </Button>
-                </Grid>
+                </StackPanel>
 
                 <!-- ORDNER-TAB: eigene Suchlisten oben, Ordnerbaum darunter. Die Suchliste waechst
                      mit ihren Eintraegen, aber nur bis 260 px und scrollt danach intern - der Baum
@@ -1067,7 +1088,8 @@
                                         SelectionChanged="OnVirtualTreeSelectionChanged">
                                   <TreeView.ItemTemplate>
                                       <TreeDataTemplate ItemsSource="{Binding Children}">
-                                          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
+                                          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                                Classes="baumzeile"
                                                 ContextRequested="OnSearchNodeContextRequested">
                                               <Grid.ContextMenu>
                                                   <ContextMenu Opened="OnLocalizedMenuOpened">
@@ -1093,6 +1115,7 @@
                                                       Height="18"
                                                       Padding="0"
                                                       Margin="4,0,4,0"
+                                                      HorizontalAlignment="Right"
                                                       IsVisible="{Binding IsRemovable}"
                                                       Click="OnRemoveVirtualSearchClick"
                                                       ToolTip.Tip="Suche entfernen">
@@ -1134,10 +1157,12 @@
                                       <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
                                            keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
                                       <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
+                                          <!-- NUR Farbe, KEINE Randstaerke: eine geaenderte BorderThickness
+                                               vermisst die Zeile neu, das Element unter dem Zeiger wechselt,
+                                               die Hervorhebung wandert - und der naechste Zeigerbericht
+                                               beginnt von vorn. Farbe allein loest keinen Layoutlauf aus. -->
                                           <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
                                           <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
-                                          <Setter Property="BorderThickness" Value="1"/>
-                                          <Setter Property="CornerRadius" Value="8"/>
                                       </Style>
                                   </TreeView.Styles>
                                   <TreeView.ContextMenu>
@@ -1196,7 +1221,8 @@
                                         SelectionChanged="OnVirtualTreeSelectionChanged">
                                   <TreeView.ItemTemplate>
                                       <TreeDataTemplate ItemsSource="{Binding Children}">
-                                          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
+                                          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                                Classes="baumzeile"
                                                 ContextRequested="OnSearchNodeContextRequested">
                                               <Grid.ContextMenu>
                                                   <ContextMenu Opened="OnLocalizedMenuOpened">
@@ -1222,6 +1248,7 @@
                                                       Height="18"
                                                       Padding="0"
                                                       Margin="4,0,4,0"
+                                                      HorizontalAlignment="Right"
                                                       IsVisible="{Binding IsRemovable}"
                                                       Click="OnRemoveVirtualSearchClick"
                                                       ToolTip.Tip="Suche entfernen">
@@ -1260,11 +1287,26 @@
                                       </Style>
                                       <!-- Eigene Ablege-Rueckmeldung: Avalonia stellt unter X11 bei internem Ziehen
                                            keine effektabhaengigen Mauszeiger dar (siehe HighlightDropRow). -->
+                                      <Style Selector="TreeViewItem /template/ ToggleButton">
+                                          <!-- KEIN Aufklapp-Pfeil in diesem Baum: seine Flaeche liegt genau
+                                               dort, wo die Zeilenvorlage ihren Inhalt hinzieht, und er stand
+                                               deshalb mitten im Symbol. Aufgeklappt wird hier per Klick auf
+                                               die Zeile (siehe OpenVirtualNavigationNode). Im ORDNERBAUM
+                                               bleibt er - dort navigiert ein Klick, und ohne Pfeil kaeme man
+                                               an die Unterordner nicht heran.
+                                               UNSICHTBAR, ABER MIT PLATZ: IsVisible nimmt dem Pfeil auch
+                                               seine Flaeche, und dann ruecken genau die Zeilen MIT Kindern
+                                               um diese Breite nach links - sie stuenden aus der Reihe. -->
+                                          <Setter Property="Opacity" Value="0"/>
+                                          <Setter Property="IsHitTestVisible" Value="False"/>
+                                      </Style>
                                       <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
+                                          <!-- NUR Farbe, KEINE Randstaerke: eine geaenderte BorderThickness
+                                               vermisst die Zeile neu, das Element unter dem Zeiger wechselt,
+                                               die Hervorhebung wandert - und der naechste Zeigerbericht
+                                               beginnt von vorn. Farbe allein loest keinen Layoutlauf aus. -->
                                           <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
                                           <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
-                                          <Setter Property="BorderThickness" Value="1"/>
-                                          <Setter Property="CornerRadius" Value="8"/>
                                       </Style>
                                   </TreeView.Styles>
                                   <TreeView.ItemTemplate>
@@ -1275,7 +1317,8 @@
                                                Verbotszeichen, obwohl der Drop laeuft (Messung). Die Kacheln in
                                                der Galerie machen es genauso. -->
                                           <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
-                                                HorizontalAlignment="Stretch" Background="Transparent" Margin="-34,3,0,3"
+                                                HorizontalAlignment="Stretch" Background="Transparent"
+                                              Classes="baumzeile"
                                                 DragDrop.AllowDrop="True"
                                                 PointerPressed="OnImmichNodePointerPressed">
                                               <Grid.ContextMenu>
@@ -1283,13 +1326,16 @@
                                                       <MenuItem Header="Zu Favoriten hinzufügen"
                                                                 IsVisible="{Binding CanBecomeFavorite}"
                                                                 Click="OnAddNodeFavoriteClick"/>
-                                                      <Separator/>
-                                                      <MenuItem Header="Bilder hochladen…" Click="OnImmichUploadClick"/>
-                                                      <MenuItem Header="Einfügen (nach Immich)" Click="OnImmichPasteClick"/>
+                                                      <Separator IsVisible="{Binding !IsTrashNode}"/>
+                                                      <!-- Am PAPIERKORB gibt es nichts hochzuladen und nichts umzubenennen;
+                                                           er trägt genau einen eigenen Eintrag. -->
+                                                      <MenuItem Header="Bilder hochladen…" IsVisible="{Binding IsImmichNode}" Click="OnImmichUploadClick"/>
+                                                      <MenuItem Header="Einfügen (nach Immich)" IsVisible="{Binding IsImmichNode}" Click="OnImmichPasteClick"/>
                                                       <MenuItem Header="Album umbenennen" IsVisible="{Binding IsImmichAlbumNode}" Click="OnImmichRenameAlbumClick"/>
                                                       <MenuItem Header="Album löschen" IsVisible="{Binding CanDeleteImmichAlbum}" Click="OnImmichDeleteAlbumClick"/>
-                                                      <Separator/>
-                                                      <MenuItem Header="Neues Album…" Click="OnImmichNewAlbumClick"/>
+                                                      <MenuItem Header="Papierkorb leeren" IsVisible="{Binding IsTrashNode}" Click="OnEmptyTrashClick"/>
+                                                      <Separator IsVisible="{Binding !IsTrashNode}"/>
+                                                      <MenuItem Header="Neues Album…" IsVisible="{Binding !IsTrashNode}" Click="OnImmichNewAlbumClick"/>
                                                   </ContextMenu>
                                               </Grid.ContextMenu>
                                               <icons:SvgIcon Source="{Binding ImmichIconSource}"
@@ -1301,6 +1347,131 @@
                                       </TreeDataTemplate>
                                   </TreeView.ItemTemplate>
                               </TreeView>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- NEXTCLOUD-TAB: Suchlisten oben, darunter Zeitachse, Alben, Personen, Orte,
+                     Stichwörter und Papierkorb. Aufbau wie im Immich-Tab. Eine Suchliste fragt NICHT
+                     Memories (das kennt keine Textsuche), sondern die gemeinsame Suche von Nextcloud
+                     selbst - siehe NextcloudService. -->
+                <Grid Grid.Row="1" Margin="24,8,12,0" RowDefinitions="Auto,Auto,Auto,*"
+                      ClipToBounds="True" IsVisible="{Binding IsNextcloudTab}">
+                    <TextBlock Grid.Row="0" Text="Suchen" Margin="0,0,14,8"
+                               FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto" MaxHeight="260">
+                        <TreeView Name="NextcloudSearchTreeView"
+                                  ItemsSource="{Binding NextcloudSearchTree}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  SelectionChanged="OnVirtualTreeSelectionChanged">
+                            <TreeView.ItemTemplate>
+                                <TreeDataTemplate ItemsSource="{Binding Children}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                          Classes="baumzeile"
+                                          ContextRequested="OnSearchNodeContextRequested">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu Opened="OnLocalizedMenuOpened">
+                                                <MenuItem Header="Zu Favoriten hinzufügen"
+                                                          IsVisible="{Binding CanBecomeFavorite}"
+                                                          Click="OnAddNodeFavoriteClick"/>
+                                                <MenuItem Header="Bearbeiten"
+                                                          IsVisible="{Binding IsRemovable}"
+                                                          Click="OnEditVirtualSearchClick"/>
+                                                <MenuItem Header="Entfernen"
+                                                          IsVisible="{Binding IsRemovable}"
+                                                          Click="OnRemoveVirtualSearchClick"/>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                                       Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
+                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <Button Grid.Column="2"
+                                                Classes="ghost"
+                                                Width="18"
+                                                Height="18"
+                                                Padding="0"
+                                                Margin="4,0,4,0"
+                                                HorizontalAlignment="Right"
+                                                IsVisible="{Binding IsRemovable}"
+                                                Click="OnRemoveVirtualSearchClick"
+                                                ToolTip.Tip="Suche entfernen">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                                           Width="12" Height="12"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Opacity="0.75"/>
+                                        </Button>
+                                    </Grid>
+                                </TreeDataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+                    </ScrollViewer>
+                    <TextBlock Grid.Row="2" Text="Nextcloud" Margin="0,26,14,8"
+                               FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+
+                    <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TreeView Name="NextcloudTreeView"
+                                  ItemsSource="{Binding NextcloudTree}"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  DragDrop.AllowDrop="True"
+                                  DragDrop.DragOver="OnNextcloudTreeDragOver"
+                                  DragDrop.Drop="OnNextcloudTreeDrop"
+                                  DragDrop.DragLeave="OnTreeDragLeave"
+                                  SelectionChanged="OnVirtualTreeSelectionChanged">
+                            <TreeView.Styles>
+                                <!-- Wie im Immich-Baum: das Element unter dem Zeiger ist der Border des
+                                     TreeViewItem-Templates, dort muss AllowDrop sitzen. -->
+                                <Style Selector="TreeViewItem">
+                                    <Setter Property="DragDrop.AllowDrop" Value="True"/>
+                                </Style>
+                                <Style Selector="TreeViewItem /template/ ToggleButton">
+                                    <!-- Kein Aufklapp-Pfeil, aber seine Flaeche bleibt - siehe Immich-Baum. -->
+                                    <Setter Property="Opacity" Value="0"/>
+                                    <Setter Property="IsHitTestVisible" Value="False"/>
+                                </Style>
+                                <Style Selector="TreeViewItem.drop-target /template/ Border#PART_LayoutRoot">
+                                    <!-- Nur Farbe, keine Randstaerke - siehe Ordnerbaum. -->
+                                    <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+                                </Style>
+                            </TreeView.Styles>
+                            <TreeView.ItemTemplate>
+                                <TreeDataTemplate ItemsSource="{Binding Children}">
+                                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center"
+                                          HorizontalAlignment="Stretch" Background="Transparent"
+                                              Classes="baumzeile"
+                                          DragDrop.AllowDrop="True"
+                                          PointerPressed="OnNextcloudNodePointerPressed">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu Opened="OnLocalizedMenuOpened">
+                                                <MenuItem Header="Zu Favoriten hinzufügen"
+                                                          IsVisible="{Binding CanBecomeFavorite}"
+                                                          Click="OnAddNodeFavoriteClick"/>
+                                                <Separator IsVisible="{Binding !IsTrashNode}"/>
+                                                <MenuItem Header="Bilder hochladen…" IsVisible="{Binding IsNextcloudNode}" Click="OnNextcloudUploadClick"/>
+                                                <MenuItem Header="Einfügen" IsVisible="{Binding IsNextcloudNode}" Click="OnNextcloudPasteClick"/>
+                                                <MenuItem Header="Album umbenennen" IsVisible="{Binding IsNextcloudAlbumNode}" Click="OnNextcloudRenameAlbumClick"/>
+                                                <MenuItem Header="Album löschen" IsVisible="{Binding IsNextcloudAlbumNode}" Click="OnNextcloudDeleteAlbumClick"/>
+                                                <MenuItem Header="Papierkorb leeren" IsVisible="{Binding IsTrashNode}" Click="OnEmptyTrashClick"/>
+                                                <Separator IsVisible="{Binding !IsTrashNode}"/>
+                                                <MenuItem Header="Neues Album…" IsVisible="{Binding !IsTrashNode}" Click="OnNextcloudNewAlbumClick"/>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
+                                        <icons:SvgIcon Source="{Binding NextcloudIconSource}"
+                                                       Margin="0" Width="17" Height="17" VerticalAlignment="Center" Opacity="0.85"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"
+                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Body}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </TreeDataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
                     </ScrollViewer>
                 </Grid>
 
@@ -1326,7 +1497,8 @@
                                   SelectionChanged="OnVirtualTreeSelectionChanged">
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" Margin="-34,3,0,3"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                                Classes="baumzeile"
                                           Background="Transparent">
                                         <!-- Die Favoriten fuehren die Kontextmenues ihrer Ziele mit: je nach
                                              Art des Favoriten erscheinen die Ordner-, Immich- oder Such-Eintraege
@@ -1364,6 +1536,18 @@
                                                 <MenuItem Header="Album löschen" IsVisible="{Binding CanDeleteImmichAlbum}"
                                                           Click="OnImmichDeleteAlbumClick"/>
 
+                                                <!-- Dieselben Einträge für die zweite Serverquelle. Sie hängen
+                                                     an ihren eigenen Bedingungen, ein Favorit zeigt also immer
+                                                     nur das Menü SEINER Herkunft. -->
+                                                <MenuItem Header="Bilder hochladen…" IsVisible="{Binding IsNextcloudNode}"
+                                                          Click="OnNextcloudUploadClick"/>
+                                                <MenuItem Header="Einfügen" IsVisible="{Binding IsNextcloudNode}"
+                                                          Click="OnNextcloudPasteClick"/>
+                                                <MenuItem Header="Album umbenennen" IsVisible="{Binding IsNextcloudAlbumNode}"
+                                                          Click="OnNextcloudRenameAlbumClick"/>
+                                                <MenuItem Header="Album löschen" IsVisible="{Binding IsNextcloudAlbumNode}"
+                                                          Click="OnNextcloudDeleteAlbumClick"/>
+
                                                 <Separator/>
                                                 <MenuItem Header="Aus Favoriten entfernen" Click="OnRemoveFavoriteClick"/>
                                             </ContextMenu>
@@ -1376,6 +1560,7 @@
                                                    ToolTip.Tip="{Binding RootFolder}"/>
                                         <Button Grid.Column="2"
                                                 Classes="ghost"
+                                                HorizontalAlignment="Right"
                                                 Width="18" Height="18" Padding="0" Margin="4,0,4,0"
                                                 Click="OnRemoveFavoriteClick"
                                                 ToolTip.Tip="Aus Favoriten entfernen">

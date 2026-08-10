@@ -2438,12 +2438,6 @@
   <data name="Immich_Fotos_konnten_nicht_geladen_werden_8e9fb949" xml:space="preserve">
     <value>Impossibile caricare le foto di Immich</value>
   </data>
-  <data name="Immich_Suche_fehlgeschlagen_c6b3357f" xml:space="preserve">
-    <value>Ricerca Immich non riuscita</value>
-  </data>
-  <data name="Immich_Suche_l_uft_9c206054" xml:space="preserve">
-    <value>Ricerca in Immich…</value>
-  </data>
   <data name="Immich_Upload_fehlgeschlagen_340c2c36" xml:space="preserve">
     <value>Caricamento su Immich non riuscito</value>
   </data>
@@ -3530,9 +3524,6 @@
   <data name="Liste_4231be17" xml:space="preserve">
     <value>Elenco</value>
   </data>
-  <data name="Lokale_Ordner_a6b71fce" xml:space="preserve">
-    <value>Cartelle locali</value>
-  </data>
   <data name="Nur_wenn_gr_er_2eb9c8b9" xml:space="preserve">
     <value>Solo se più grande</value>
   </data>
@@ -3919,6 +3910,15 @@
   </data>
   <data name="Korngr_e_0_feines_Korn_h_her_gr_ber_bae6e47b" xml:space="preserve">
     <value>Dimensione della grana: 0 = grana fine, più alto = più grossa.</value>
+  </data>
+  <data name="Rauheit_c485b850" xml:space="preserve">
+    <value>Ruvidità</value>
+  </data>
+  <data name="Wie_stark_das_Korn_im_Bild_liegt_cb85b2e4" xml:space="preserve">
+    <value>Quanto intensamente la grana si posa sull'immagine.</value>
+  </data>
+  <data name="Farbigkeit_des_Korns_0_graues_Korn_h_her_farbige_ab14ccc7" xml:space="preserve">
+    <value>Colore della grana: 0 = grana grigia, più alto = macchioline colorate come nella pellicola a colori ad alta sensibilità.</value>
   </data>
   <data name="Mischt_eine_feine_Lage_ein_h_her_unruhigeres_Kor_d5155e92" xml:space="preserve">
     <value>Aggiunge uno strato fine: più alto = grana più irregolare.</value>
@@ -5372,12 +5372,6 @@
   <data name="W_hle_ein_gespeichertes_Wasserzeichen_f_r_die_au_55d324b4" xml:space="preserve">
     <value>Scegli una filigrana salvata per le foto selezionate.</value>
   </data>
-  <data name="Passe_die_Suchparameter_an_Die_nderungen_werden__469e3433" xml:space="preserve">
-    <value>Modifica i parametri di ricerca. Le modifiche vengono salvate in Cerca.</value>
-  </data>
-  <data name="Lege_Suchparameter_fest_Die_Suche_wird_im_Bereic_1fcba83c" xml:space="preserve">
-    <value>Imposta i parametri di ricerca. La ricerca viene salvata in Cerca.</value>
-  </data>
   <data name="Lege_eine_Namensvorlage_fest_und_pr_fe_die_Vorsc_98de95d2" xml:space="preserve">
     <value>Imposta un modello di nome e controlla l'anteprima prima di rinominare.</value>
   </data>
@@ -6751,5 +6745,239 @@
   </data>
   <data name="ArcFace_ResNet100_wird_optional_aus_dem_ONNX_Mod_37dec9c8" xml:space="preserve">
     <value>ArcFace ResNet100 viene scaricato facoltativamente dall'ONNX Model Zoo. Secondo InsightFace i pesi preaddestrati provengono da dati rilasciati solo per la ricerca non commerciale. In caso di uso commerciale di FerrumPix il modello non può essere scaricato né utilizzato; le altre funzioni restano disponibili.</value>
+  </data>
+  <data name="Nextcloud_aab73a3d" xml:space="preserve">
+    <value>Nextcloud</value>
+  </data>
+  <data name="Lade_Nextcloud_Fotos_f8b674f4" xml:space="preserve">
+    <value>Caricamento foto di Nextcloud…</value>
+  </data>
+  <data name="Bindet_eine_Nextcloud_mit_der_Memories_App_ein_Z_d2e09fa4" xml:space="preserve">
+    <value>Collega una Nextcloud con l'app Memories. La linea del tempo e gli album compaiono nel pannello di navigazione della galleria.</value>
+  </data>
+  <data name="Nextcloud_aktivieren_7780e11d" xml:space="preserve">
+    <value>Attiva Nextcloud</value>
+  </data>
+  <data name="Zeigt_den_Nextcloud_Zweig_mit_deiner_Zeitachse_u_276081ce" xml:space="preserve">
+    <value>Mostra il ramo Nextcloud con la tua linea del tempo e i tuoi album nell'albero della galleria.</value>
+  </data>
+  <data name="Adresse_deiner_Nextcloud_z_B_https_wolke_example_083761fb" xml:space="preserve">
+    <value>Indirizzo della tua Nextcloud, per es. https://nuvola.example.com</value>
+  </data>
+  <data name="Benutzername_99636bf8" xml:space="preserve">
+    <value>Nome utente</value>
+  </data>
+  <data name="Der_Anmeldename_deines_Nextcloud_Kontos_13744a59" xml:space="preserve">
+    <value>Il nome di accesso del tuo account Nextcloud.</value>
+  </data>
+  <data name="App_Passwort_e57bcb59" xml:space="preserve">
+    <value>Password per app</value>
+  </data>
+  <data name="In_Nextcloud_unter_Einstellungen_Sicherheit_App__528fa23c" xml:space="preserve">
+    <value>Da creare in Nextcloud sotto Impostazioni, Sicurezza, password per app. La password dell'account non funziona con l'accesso a due fattori.</value>
+  </data>
+  <data name="Kein_Benutzername_angegeben_a4597735" xml:space="preserve">
+    <value>Nessun nome utente indicato</value>
+  </data>
+  <data name="Kein_App_Passwort_angegeben_033a25a0" xml:space="preserve">
+    <value>Nessuna password per app indicata</value>
+  </data>
+  <data name="Die_Memories_App_antwortet_unter_dieser_Adresse__d4501132" xml:space="preserve">
+    <value>L'app Memories non risponde a questo indirizzo ({0})</value>
+  </data>
+  <data name="Memories_erreichbar_5b396e0b" xml:space="preserve">
+    <value>Memories raggiungibile</value>
+  </data>
+  <data name="Server_erreichbar_Anmeldung_abgelehnt_451708e6" xml:space="preserve">
+    <value>Server raggiungibile, accesso rifiutato</value>
+  </data>
+  <data name="Angemeldet_aber_der_Server_verlangt_einen_Sitzun_b1ff93ad" xml:space="preserve">
+    <value>Accesso riuscito, ma il server richiede una prova di sessione</value>
+  </data>
+  <data name="Zeitachse_antwortet_mit_0_aab149e3" xml:space="preserve">
+    <value>La linea del tempo risponde con {0}</value>
+  </data>
+  <data name="Zeitachse_ist_anders_aufgebaut_als_erwartet_922dc379" xml:space="preserve">
+    <value>La linea del tempo è strutturata diversamente dal previsto</value>
+  </data>
+  <data name="0_Tage_1_Aufnahmen_d8df9e73" xml:space="preserve">
+    <value>{0} giorni, {1} foto</value>
+  </data>
+  <data name="WebDAV_tr_gt_Originale_ersetzbar_Begleitdatei_ab_9b7620de" xml:space="preserve">
+    <value>WebDAV funziona: originali sostituibili, file di corredo possibile</value>
+  </data>
+  <data name="WebDAV_antwortet_mit_0_d917ab75" xml:space="preserve">
+    <value>WebDAV risponde con {0}</value>
+  </data>
+  <data name="Nextcloud_ist_nicht_eingerichtet_4d8fdb9a" xml:space="preserve">
+    <value>Nextcloud non è configurato</value>
+  </data>
+  <data name="Nextcloud_antwortet_mit_0_01e2c3fb" xml:space="preserve">
+    <value>Nextcloud risponde con {0}</value>
+  </data>
+  <data name="0_Bild_er_liegen_auf_einer_anderen_Serverquelle__06727cbe" xml:space="preserve">
+    <value>{0} immagine/i si trovano su un'altra sorgente server e sono state tralasciate. Riscrivere là non è ancora possibile; scegli una cartella come destinazione.</value>
+  </data>
+  <data name="Album_gel_scht_05d41ab2" xml:space="preserve">
+    <value>Album eliminato</value>
+  </data>
+  <data name="Album_0_l_schen_Die_Fotos_bleiben_erhalten_4ed8b6fa" xml:space="preserve">
+    <value>Eliminare l'album {0}? Le foto restano.</value>
+  </data>
+  <data name="0_von_1_zugewiesen_44f87143" xml:space="preserve">
+    <value>{0} di {1} assegnate</value>
+  </data>
+  <data name="Nextcloud_Alle_Fotos_381e8e58" xml:space="preserve">
+    <value>Nextcloud (tutte le foto)</value>
+  </data>
+  <data name="Startet_in_Nextcloud_mit_der_Zeitachse_ohne_Verb_e29422b4" xml:space="preserve">
+    <value>Avvia in Nextcloud sulla linea del tempo; senza connessione si usa la cartella immagini</value>
+  </data>
+  <data name="Nach_Nextcloud_gespeichert_0_858a432a" xml:space="preserve">
+    <value>Salvato su Nextcloud: {0}</value>
+  </data>
+  <data name="L_schen_in_Nextcloud_erlauben_59415966" xml:space="preserve">
+    <value>Consenti l'eliminazione in Nextcloud</value>
+  </data>
+  <data name="Erlaubt_es_Bilder_vom_Server_zu_l_schen_Sie_land_acc74d79" xml:space="preserve">
+    <value>Consente di eliminare immagini dal server. Finiscono nel cestino di Nextcloud e possono essere ripristinate. Disattivato: l'eliminazione non ha effetto sulle immagini del server.</value>
+  </data>
+  <data name="Zwischenspeicher_5d74f4b5" xml:space="preserve">
+    <value>Cache</value>
+  </data>
+  <data name="Vorschaubilder_vom_Server_liegen_auf_der_Platte__864eba56" xml:space="preserve">
+    <value>Le anteprime dal server restano su disco per non ricaricarle ogni volta. Si rinnovano da sole appena un'immagine cambia.</value>
+  </data>
+  <data name="L_schen_in_Nextcloud_ist_nicht_erlaubt_c14b211a" xml:space="preserve">
+    <value>L'eliminazione in Nextcloud non è consentita</value>
+  </data>
+  <data name="0_Bild_er_auf_dem_Server_l_schen_731fee54" xml:space="preserve">
+    <value>Eliminare {0} immagine/i sul server?</value>
+  </data>
+  <data name="0_Bild_er_gel_scht_b8786915" xml:space="preserve">
+    <value>{0} immagine/i eliminate</value>
+  </data>
+  <data name="0_Datei_en_entfernt_ed3a7a34" xml:space="preserve">
+    <value>{0} file rimossi</value>
+  </data>
+  <data name="0_von_1_geladen_bda18508" xml:space="preserve">
+    <value>{0} di {1} caricate…</value>
+  </data>
+  <data name="Papierkorb_a95e6de6" xml:space="preserve">
+    <value>Cestino</value>
+  </data>
+  <data name="Wiederherstellen_98f492b5" xml:space="preserve">
+    <value>Ripristina</value>
+  </data>
+  <data name="Lade_Papierkorb_a4e1987d" xml:space="preserve">
+    <value>Carico il cestino…</value>
+  </data>
+  <data name="0_geladen_df22f6c9" xml:space="preserve">
+    <value>{0} caricati…</value>
+  </data>
+  <data name="Der_Papierkorb_ist_leer_c3b6f8c3" xml:space="preserve">
+    <value>Il cestino è vuoto</value>
+  </data>
+  <data name="0_im_Papierkorb_1411f116" xml:space="preserve">
+    <value>{0} nel cestino</value>
+  </data>
+  <data name="Der_Papierkorb_konnte_nicht_geladen_werden_2c847376" xml:space="preserve">
+    <value>Non è stato possibile caricare il cestino</value>
+  </data>
+  <data name="Wiederherstellen_fehlgeschlagen_1a094998" xml:space="preserve">
+    <value>Ripristino non riuscito</value>
+  </data>
+  <data name="0_von_1_wiederhergestellt_fe4f2dea" xml:space="preserve">
+    <value>{0} di {1} ripristinati</value>
+  </data>
+  <data name="Lade_nach_Nextcloud_hoch_0_1_f37082b8" xml:space="preserve">
+    <value>Caricamento su Nextcloud… ({0}/{1})</value>
+  </data>
+  <data name="0_von_1_nach_Nextcloud_hochgeladen_18ccf372" xml:space="preserve">
+    <value>{0} di {1} caricati su Nextcloud</value>
+  </data>
+  <data name="Der_Zielordner_enth_lt_zu_viele_gleichnamige_Dat_26796c59" xml:space="preserve">
+    <value>La cartella di destinazione contiene troppi file con lo stesso nome</value>
+  </data>
+  <data name="Stichwort_konnte_nicht_geschrieben_werden_ba1ef775" xml:space="preserve">
+    <value>Non è stato possibile salvare la parola chiave</value>
+  </data>
+  <data name="Original_auf_dem_Server_wird_ersetzt_df8428c6" xml:space="preserve">
+    <value>Sostituzione dell'originale sul server…</value>
+  </data>
+  <data name="Original_auf_dem_Server_ersetzt_0_71138faa" xml:space="preserve">
+    <value>Originale sostituito sul server: {0}</value>
+  </data>
+  <data name="Originale_auf_dem_Server_ersetzen_c5cc8375" xml:space="preserve">
+    <value>Sostituire gli originali sul server</value>
+  </data>
+  <data name="Speichern_schreibt_die_Bearbeitung_an_die_Stelle_26c0db99" xml:space="preserve">
+    <value>Salvare scrive la modifica al posto dell'originale. Il file resta lo stesso e mantiene album e condivisioni. Disattivato: accanto all'originale nasce solo un file di accompagnamento con la modifica. RAW e PSD restano sempre intatti.</value>
+  </data>
+  <data name="Zielordner_f_r_Uploads_8fda6a65" xml:space="preserve">
+    <value>Cartella di destinazione per i caricamenti</value>
+  </data>
+  <data name="Dorthin_kommen_hochgeladene_Bilder_Ein_vorhanden_93c3ce9e" xml:space="preserve">
+    <value>Le immagini caricate finiscono lì. Un nome già presente non viene sovrascritto, ma numerato.</value>
+  </data>
+  <data name="Photos_958eefad" xml:space="preserve">
+    <value>/Photos</value>
+  </data>
+  <data name="Gel_schte_Bilder_gehen_am_Papierkorb_von_Nextclo_5cf5a7b9" xml:space="preserve">
+    <value>Le immagini eliminate saltano il cestino di Nextcloud e spariscono subito. Disattivato: finiscono nel cestino e da lì si possono ripristinare.</value>
+  </data>
+  <data name="0_Bild_er_endg_ltig_vom_Server_l_schen_Der_Papie_e4339c16" xml:space="preserve">
+    <value>Eliminare definitivamente {0} immagine/i dal server? Dopo il cestino non aiuta più.</value>
+  </data>
+  <data name="Das_Foto_wurde_auf_dem_Server_ge_ndert_Speichern_7648581e" xml:space="preserve">
+    <value>La foto è cambiata sul server. Salva con nome mette la modifica accanto.</value>
+  </data>
+  <data name="Favorit_konnte_nicht_gespeichert_werden_cf0264ff" xml:space="preserve">
+    <value>Non è stato possibile salvare il preferito</value>
+  </data>
+  <data name="Lade_Bilder_vom_Server_a5b713a8" xml:space="preserve">
+    <value>Carico le immagini dal server…</value>
+  </data>
+  <data name="Lade_Bild_vom_Server_9ba8a7ef" xml:space="preserve">
+    <value>Carico l'immagine dal server…</value>
+  </data>
+  <data name="Papierkorb_leeren_b33f9bb6" xml:space="preserve">
+    <value>Svuota il cestino</value>
+  </data>
+  <data name="Alles_im_Papierkorb_des_Servers_endg_ltig_l_sche_bfcb0af3" xml:space="preserve">
+    <value>Eliminare definitivamente tutto ciò che si trova nel cestino del server? Non è reversibile.</value>
+  </data>
+  <data name="eingeschaltet_noch_nichts_erkannt_eb0402fa" xml:space="preserve">
+    <value>attivo, ancora nulla trovato</value>
+  </data>
+  <data name="Suche_auf_dem_Server_5a2ff88f" xml:space="preserve">
+    <value>Ricerca sul server…</value>
+  </data>
+  <data name="Die_Suche_ist_fehlgeschlagen_d733dd1d" xml:space="preserve">
+    <value>La ricerca non è riuscita</value>
+  </data>
+  <data name="Katalog_788fce56" xml:space="preserve">
+    <value>Catalogo</value>
+  </data>
+  <data name="0_Treffer_9bcfdb2a" xml:space="preserve">
+    <value>{0} risultati</value>
+  </data>
+  <data name="0_Treffer_1_ohne_Angaben_im_Katalog_bergangen_e4ea4386" xml:space="preserve">
+    <value>{0} risultati, {1} ignorati senza dati nel catalogo</value>
+  </data>
+  <data name="Diese_Angaben_kommen_aus_dem_Katalog_Er_kennt_Bi_f34ccf66" xml:space="preserve">
+    <value>Questi dati vengono dal catalogo. Conosce le immagini già aperte o valutate.</value>
+  </data>
+  <data name="Die_Suche_wird_gespeichert_und_steht_danach_im_B_bedf2396" xml:space="preserve">
+    <value>La ricerca viene salvata e compare poi nell'area Cerca.</value>
+  </data>
+  <data name="Die_ge_nderte_Suche_ersetzt_die_bisherige_im_Ber_bb92504c" xml:space="preserve">
+    <value>La ricerca modificata sostituisce quella precedente nell'area Cerca.</value>
+  </data>
+  <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
+    <value>Eliminazione non possibile</value>
+  </data>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
+    <value>Questi file sono fuori dalla cartella personale o in una cartella nascosta. FerrumPix non elimina nulla lì.</value>
   </data>
 </root>

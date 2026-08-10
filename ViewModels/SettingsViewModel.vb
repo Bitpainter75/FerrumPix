@@ -99,6 +99,25 @@ Namespace ViewModels
         Private _immichConnectionMessage As String = ""
         Private _immichCacheMessage As String = ""
         Private _immichIsTesting As Boolean = False
+        Private _nextcloudEnabled As Boolean = False
+        Private _nextcloudServerUrl As String = ""
+        Private _nextcloudUserName As String = ""
+        Private _nextcloudAppPassword As String = ""
+        Private _nextcloudAllowDelete As Boolean = False
+        Private _nextcloudCacheMessage As String = ""
+        Private _nextcloudConnectionMessage As String = ""
+        Private _nextcloudIsTesting As Boolean = False
+        Private _savedNextcloudEnabled As Boolean = False
+        Private _savedNextcloudServerUrl As String = ""
+        Private _savedNextcloudUserName As String = ""
+        Private _savedNextcloudAppPassword As String = ""
+        Private _savedNextcloudAllowDelete As Boolean = False
+        Private _nextcloudUploadFolder As String = "/Photos"
+        Private _nextcloudReplaceOriginal As Boolean = False
+        Private _savedNextcloudUploadFolder As String = "/Photos"
+        Private _savedNextcloudReplaceOriginal As Boolean = False
+        Private _nextcloudDeletePermanently As Boolean = False
+        Private _savedNextcloudDeletePermanently As Boolean = False
         Private _savedImmichEnabled As Boolean = False
         Private _savedImmichServerUrl As String = ""
         Private _savedImmichApiKey As String = ""
@@ -948,8 +967,8 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' Wo die Zeitleiste am rechten Galerierand erscheint: "All" (Immich und Ordner),
-        ''' "Immich", "Folders" (nur Ordner-/Suchansichten), "Off" (ausgeblendet).
+        ''' Ob die Zeitleiste am rechten Galerierand erscheint: "All" (an) oder "Off" (aus). Die
+        ''' frueheren Werte nach Bildherkunft sind entfallen.
         Public Property GalleryTimelineMode As String
             Get
                 Return _galleryTimelineMode
@@ -963,28 +982,15 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public ReadOnly Property IsGalleryTimelineAll As Boolean
+        ''' <summary>Der Schalter selbst. Setzen schreibt den Modus, damit der bestehende Weg samt
+        ''' Speichern und Zuruecknehmen unveraendert bleibt.</summary>
+        Public Property GalleryTimelineEnabled As Boolean
             Get
-                Return _galleryTimelineMode = "All"
+                Return Not String.Equals(_galleryTimelineMode, "Off", StringComparison.Ordinal)
             End Get
-        End Property
-
-        Public ReadOnly Property IsGalleryTimelineImmich As Boolean
-            Get
-                Return _galleryTimelineMode = "Immich"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsGalleryTimelineFolders As Boolean
-            Get
-                Return _galleryTimelineMode = "Folders"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsGalleryTimelineOff As Boolean
-            Get
-                Return _galleryTimelineMode = "Off"
-            End Get
+            Set(value As Boolean)
+                GalleryTimelineMode = If(value, "All", "Off")
+            End Set
         End Property
 
         Public ReadOnly Property IsGalleryStartupPicturesFolder As Boolean
@@ -1016,6 +1022,19 @@ Namespace ViewModels
         Public ReadOnly Property IsGalleryStartupImmichAvailable As Boolean
             Get
                 Return ImmichService.IsConfigured
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGalleryStartupNextcloud As Boolean
+            Get
+                Return _galleryStartupFolderMode = "Nextcloud"
+            End Get
+        End Property
+
+        ''' Wie bei Immich: die Option ergibt nur mit eingerichteter Verbindung Sinn.
+        Public ReadOnly Property IsGalleryStartupNextcloudAvailable As Boolean
+            Get
+                Return NextcloudService.IsConfigured
             End Get
         End Property
 
@@ -1973,6 +1992,141 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property NextcloudEnabled As Boolean
+            Get
+                Return _nextcloudEnabled
+            End Get
+            Set(value As Boolean)
+                If _nextcloudEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudEnabled, value)
+                PersistNextcloudSettings()
+                _mainVm?.Gallery?.ReinitializeNextcloud()
+            End Set
+        End Property
+
+        ''' <summary>Adresse der Nextcloud (z.B. https://wolke.example.de). Wird beim Speichern
+        ''' normalisiert; kein Netzabruf beim Tippen.</summary>
+        Public Property NextcloudServerUrl As String
+            Get
+                Return _nextcloudServerUrl
+            End Get
+            Set(value As String)
+                If String.Equals(_nextcloudServerUrl, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudServerUrl, If(value, ""))
+                PersistNextcloudSettings()
+            End Set
+        End Property
+
+        Public Property NextcloudUserName As String
+            Get
+                Return _nextcloudUserName
+            End Get
+            Set(value As String)
+                If String.Equals(_nextcloudUserName, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudUserName, If(value, ""))
+                PersistNextcloudSettings()
+            End Set
+        End Property
+
+        ''' <summary>App-Passwort, nicht das Kontopasswort (Einstellungen, Sicherheit in
+        ''' Nextcloud).</summary>
+        Public Property NextcloudAppPassword As String
+            Get
+                Return _nextcloudAppPassword
+            End Get
+            Set(value As String)
+                If String.Equals(_nextcloudAppPassword, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudAppPassword, If(value, ""))
+                PersistNextcloudSettings()
+            End Set
+        End Property
+
+        Public Property NextcloudAllowDelete As Boolean
+            Get
+                Return _nextcloudAllowDelete
+            End Get
+            Set(value As Boolean)
+                If _nextcloudAllowDelete = value Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudAllowDelete, value)
+                ' Der Spiegel am Element muss sofort mitziehen: die Kachel fragt ihn je Element ab.
+                ImageItem.NextcloudDeleteAllowed = value
+                PersistNextcloudSettings()
+            End Set
+        End Property
+
+        ''' <summary>Löschen umgeht den Nextcloud-Papierkorb. Wirkt nur zusammen mit „Löschen in
+        ''' Nextcloud erlauben" - erst das Erlauben, dann die Frage, wie endgültig.</summary>
+        Public Property NextcloudDeletePermanently As Boolean
+            Get
+                Return _nextcloudDeletePermanently
+            End Get
+            Set(value As Boolean)
+                If _nextcloudDeletePermanently = value Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudDeletePermanently, value)
+                PersistNextcloudSettings()
+            End Set
+        End Property
+
+        ''' <summary>Zielordner im Dateibaum für hochgeladene Bilder. Bei Immich gibt es die Frage
+        ''' nicht, hier braucht ein Upload ein Ziel - die Wurzel des Benutzerordners wäre ein Griff in
+        ''' fremde Ordnung. Leer heißt Vorgabe (/Photos).</summary>
+        Public Property NextcloudUploadFolder As String
+            Get
+                Return _nextcloudUploadFolder
+            End Get
+            Set(value As String)
+                If String.Equals(_nextcloudUploadFolder, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudUploadFolder, If(value, ""))
+                PersistNextcloudSettings()
+            End Set
+        End Property
+
+        ''' <summary>„Speichern" ersetzt das Original auf dem Server, statt nur ein Rezept
+        ''' danebenzulegen. Wird sie bei offenem Bild umgelegt, muss der Editor seinen
+        ''' Speichern-Knopf neu bewerten - genau wie bei der gleichnamigen Immich-Einstellung.</summary>
+        Public Property NextcloudReplaceOriginal As Boolean
+            Get
+                Return _nextcloudReplaceOriginal
+            End Get
+            Set(value As Boolean)
+                If _nextcloudReplaceOriginal = value Then Return
+                Me.RaiseAndSetIfChanged(_nextcloudReplaceOriginal, value)
+                PersistNextcloudSettings()
+                _mainVm?.Editor?.RefreshImmichSaveState()
+            End Set
+        End Property
+
+        Public Property NextcloudCacheMessage As String
+            Get
+                Return _nextcloudCacheMessage
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_nextcloudCacheMessage, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property ClearNextcloudCacheCommand As ICommand
+
+        Public Property NextcloudConnectionMessage As String
+            Get
+                Return _nextcloudConnectionMessage
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_nextcloudConnectionMessage, value)
+            End Set
+        End Property
+
+        Public Property NextcloudIsTesting As Boolean
+            Get
+                Return _nextcloudIsTesting
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_nextcloudIsTesting, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property TestNextcloudConnectionCommand As ICommand
+
         Public Property ImmichCacheMessage As String
             Get
                 Return _immichCacheMessage
@@ -2134,6 +2288,15 @@ Namespace ViewModels
             _immichAllowDelete = _appSettings.ImmichAllowDelete
             _immichDeletePermanently = _appSettings.ImmichDeletePermanently
             _immichWritePeopleTags = _appSettings.ImmichWritePeopleTags
+            _nextcloudEnabled = _appSettings.NextcloudEnabled
+            _nextcloudServerUrl = _appSettings.NextcloudServerUrl
+            _nextcloudUserName = _appSettings.NextcloudUserName
+            _nextcloudAppPassword = _appSettings.NextcloudAppPassword
+            _nextcloudAllowDelete = _appSettings.NextcloudAllowDelete
+            _nextcloudUploadFolder = _appSettings.NextcloudUploadFolder
+            _nextcloudReplaceOriginal = _appSettings.NextcloudReplaceOriginal
+            _nextcloudDeletePermanently = _appSettings.NextcloudDeletePermanently
+            ImageItem.NextcloudDeleteAllowed = _nextcloudAllowDelete
             FolderNode.ShowHiddenFolders = _showHiddenFolders
             FileOperationPolicy.FollowLinkedFolders = _followLinkedFolders
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
@@ -2198,6 +2361,12 @@ Namespace ViewModels
             DeleteAllThumbnailCacheCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=False, thumbnails:=True))
             DeleteAllBothCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=True, thumbnails:=True))
             TestImmichConnectionCommand = ReactiveCommand.CreateFromTask(Function() TestImmichConnectionAsync())
+            TestNextcloudConnectionCommand = ReactiveCommand.CreateFromTask(Function() TestNextcloudConnectionAsync())
+            ClearNextcloudCacheCommand = ReactiveCommand.Create(
+                Sub()
+                    Dim n = NextcloudService.ClearCache()
+                    NextcloudCacheMessage = String.Format(LocalizationService.T("{0} Datei(en) entfernt"), n)
+                End Sub)
             ClearImmichCacheCommand = ReactiveCommand.CreateFromTask(Function() ClearImmichCacheAsync())
             ApplyTheme(_themeMode, _accentColor)
             FontScaleService.Apply(_fontSizeOffset)
@@ -2227,6 +2396,48 @@ Namespace ViewModels
                                           s.ImmichWritePeopleTags = _immichWritePeopleTags
                                       End Sub)
         End Sub
+
+        Private Sub PersistNextcloudSettings()
+            AppSettingsService.Update(Sub(s)
+                                          s.NextcloudEnabled = _nextcloudEnabled
+                                          s.NextcloudServerUrl = NextcloudService.NormalizeServerUrl(_nextcloudServerUrl)
+                                          s.NextcloudUserName = If(_nextcloudUserName, "").Trim()
+                                          s.NextcloudAppPassword = If(_nextcloudAppPassword, "").Trim()
+                                          s.NextcloudAllowDelete = _nextcloudAllowDelete
+                                          s.NextcloudUploadFolder = If(_nextcloudUploadFolder, "").Trim()
+                                          s.NextcloudReplaceOriginal = _nextcloudReplaceOriginal
+                                          s.NextcloudDeletePermanently = _nextcloudDeletePermanently
+                                      End Sub)
+        End Sub
+
+        ''' <summary>Prüft die Zugangsdaten. Die Meldung ist bewusst ausführlich: der Test beantwortet
+        ''' zugleich, ob die Anmeldung die Routen trägt und ob WebDAV steht - beides entscheidet über
+        ''' den weiteren Ausbau und lässt sich ohne echten Server nicht klären.</summary>
+        Private Async Function TestNextcloudConnectionAsync() As Task
+            If NextcloudIsTesting Then Return
+            PersistNextcloudSettings()
+            NextcloudIsTesting = True
+            NextcloudConnectionMessage = LocalizationService.T("Teste Verbindung…")
+            Try
+                Dim result = Await NextcloudService.TestConnectionAsync(_nextcloudServerUrl, _nextcloudUserName, _nextcloudAppPassword)
+                NextcloudConnectionMessage = result.Message
+                ' Ein geglückter Test ist die klare Absicht, die Quelle zu nutzen - wie bei Immich.
+                ' Das Setzen von NextcloudEnabled baut den Galeriebaum selbst neu auf; steht der
+                ' Schalter schon, muss der Neuaufbau hier angestoßen werden, sonst bleibt der Baum
+                ' auf dem Stand der alten Zugangsdaten.
+                If result.Ok Then
+                    If Not _nextcloudEnabled Then
+                        NextcloudEnabled = True
+                    Else
+                        _mainVm?.Gallery?.ReinitializeNextcloud()
+                    End If
+                End If
+            Catch ex As Exception
+                NextcloudConnectionMessage = ex.Message
+            Finally
+                NextcloudIsTesting = False
+            End Try
+        End Function
 
         ''' <summary>Prüft URL + API-Key gegen den Server. Bei Erfolg wird der Galerie-Immich-Zweig neu
         ''' aufgebaut, damit die Alben mit den bestätigten Zugangsdaten erscheinen.</summary>
@@ -2297,6 +2508,14 @@ Namespace ViewModels
             _savedImmichAllowDelete = _immichAllowDelete
             _savedImmichDeletePermanently = _immichDeletePermanently
             _savedImmichWritePeopleTags = _immichWritePeopleTags
+            _savedNextcloudEnabled = _nextcloudEnabled
+            _savedNextcloudServerUrl = _nextcloudServerUrl
+            _savedNextcloudUserName = _nextcloudUserName
+            _savedNextcloudAppPassword = _nextcloudAppPassword
+            _savedNextcloudAllowDelete = _nextcloudAllowDelete
+            _savedNextcloudUploadFolder = _nextcloudUploadFolder
+            _savedNextcloudReplaceOriginal = _nextcloudReplaceOriginal
+            _savedNextcloudDeletePermanently = _nextcloudDeletePermanently
             _savedShowHiddenFolders = _showHiddenFolders
             _savedFollowLinkedFolders = _followLinkedFolders
             _savedDeleteSkipTrash = _deleteSkipTrash
@@ -2359,6 +2578,16 @@ Namespace ViewModels
             ImmichDeletePermanently = _savedImmichDeletePermanently
             ImmichWritePeopleTags = _savedImmichWritePeopleTags
             ImmichEnabled = _savedImmichEnabled
+            ' Wie bei Immich zuletzt der Schalter: die Adressfelder sollen beim Zurückspielen schon
+            ' stehen, bevor das Einschalten wirkt.
+            NextcloudServerUrl = _savedNextcloudServerUrl
+            NextcloudUserName = _savedNextcloudUserName
+            NextcloudAppPassword = _savedNextcloudAppPassword
+            NextcloudAllowDelete = _savedNextcloudAllowDelete
+            NextcloudUploadFolder = _savedNextcloudUploadFolder
+            NextcloudReplaceOriginal = _savedNextcloudReplaceOriginal
+            NextcloudDeletePermanently = _savedNextcloudDeletePermanently
+            NextcloudEnabled = _savedNextcloudEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
             FollowLinkedFolders = _savedFollowLinkedFolders
             DeleteSkipTrash = _savedDeleteSkipTrash
@@ -2905,13 +3134,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupLastFolder))
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupCustomFolder))
             Me.RaisePropertyChanged(NameOf(IsGalleryStartupImmich))
+            Me.RaisePropertyChanged(NameOf(IsGalleryStartupNextcloud))
         End Sub
 
         Private Sub RaiseGalleryTimelineModeProperties()
-            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineAll))
-            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineImmich))
-            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineFolders))
-            Me.RaisePropertyChanged(NameOf(IsGalleryTimelineOff))
+            Me.RaisePropertyChanged(NameOf(GalleryTimelineEnabled))
         End Sub
 
         Private Sub RaiseThemeModeProperties()

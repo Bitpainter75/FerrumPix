@@ -667,8 +667,16 @@ Namespace Views
         End Sub
 
         Private Shared Function GetDroppedImagePaths(e As DragEventArgs) As List(Of String)
+            ' Zieht die Anwendung SELBST, kommt die Antwort aus dem eigenen Gedaechtnis: das Lesen
+            ' ueber das Fenstersystem blockiert unter X11 genau den Faden, auf dem die Quelle
+            ' antworten muesste (siehe DragPayloadCache). Fuer einen fremden Zug bleibt der Weg
+            ' darunter - dort antwortet ein anderer Prozess.
+            If DragPayloadCache.IsDragging Then
+                Return DragPayloadCache.Paths().Where(AddressOf IsInsertableImagePath).ToList()
+            End If
             Try
-                Dim files = e.DataTransfer?.TryGetFiles()
+                Dim files = DragTrace.Measure("Dateiliste (Editor)", Function() e.DataTransfer?.TryGetFiles(),
+                                              Function(liste) If(liste Is Nothing, 0, liste.Count))
                 If files Is Nothing Then Return New List(Of String)()
                 Return ClipboardPathService.ToLocalPaths(files).Where(AddressOf IsInsertableImagePath).ToList()
             Catch

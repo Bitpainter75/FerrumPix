@@ -22,11 +22,11 @@ Namespace Models
         Private _isSelected As Boolean
 
         Public Sub New(id As String, name As String, count As Integer, isSelected As Boolean,
-                       Optional isFromImmich As Boolean = False)
+                       Optional serverSource As String = "")
             Me.Id = If(id, "")
             Me.Name = If(name, "")
             Me.Count = count
-            Me.IsFromImmich = isFromImmich
+            Me.ServerSource = If(serverSource, "")
             _isSelected = isSelected
         End Sub
 
@@ -34,19 +34,28 @@ Namespace Models
         Public ReadOnly Property Name As String
         Public ReadOnly Property Count As Integer
 
-        ''' <summary>Kommt dieser Eintrag vom Immich-Server statt aus dem lokalen Katalog?
+        ''' <summary>Von welchem Server dieser Eintrag kommt ("Immich", "Nextcloud"); leer heisst aus
+        ''' dem lokalen Katalog.
         '''
-        ''' Die beiden Bestaende lassen sich NICHT verunden: der Server filtert nach genau einer
-        ''' Person oder einer Stadt, und ein Immich-Element steht in keiner lokalen Tabelle. Ein
-        ''' Immich-Eintrag wird deshalb allein gewaehlt und oeffnet die Server-Abfrage; die Liste
-        ''' zeigt ihn unter einer eigenen Ueberschrift, damit man nicht auf eine Verundung
-        ''' hofft, die es nicht gibt.</summary>
-        Public ReadOnly Property IsFromImmich As Boolean
+        ''' Die Bestaende lassen sich NICHT verunden: ein Server filtert nach genau einer Person oder
+        ''' einer Stadt, und ein Serverelement steht in keiner lokalen Tabelle. Ein Servereintrag wird
+        ''' deshalb allein gewaehlt und oeffnet die Server-Ansicht; die Liste zeigt ihn unter einer
+        ''' eigenen Ueberschrift, damit niemand auf eine Verundung hofft, die es nicht gibt.
+        '''
+        ''' Der NAME des Servers steht hier, kein Ja/Nein: mit einer zweiten Quelle waere "kommt von
+        ''' Immich" sonst zu "kommt von irgendwoher" geworden, und die Ueberschrift haette gelogen.</summary>
+        Public ReadOnly Property ServerSource As String
 
-        ''' <summary>Traegt dieser Eintrag die Zwischenueberschrift "Immich"? Gesetzt wird sie beim
-        ''' ERSTEN Eintrag vom Server. Eine eigene Gruppierung der Liste waere dafuer zu viel
+        Public ReadOnly Property IsFromServer As Boolean
+            Get
+                Return ServerSource.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Traegt dieser Eintrag die Zwischenueberschrift mit dem Servernamen? Gesetzt wird
+        ''' sie beim ERSTEN Eintrag je Server. Eine eigene Gruppierung der Liste waere dafuer zu viel
         ''' Maschinerie - die Ueberschrift gehoert zu genau einer Zeile.</summary>
-        Public Property ShowsImmichHeader As Boolean
+        Public Property ShowsServerHeader As Boolean
 
         ''' <summary>Hat die Gruppe schon einen Namen? Direkt nach der Erkennung hat sie keinen -
         ''' die Gruppierung entsteht von selbst, der Name kommt vom Benutzer. In die Filterliste

@@ -1297,12 +1297,27 @@ Namespace Services
         ''' Korn bei jedem Lauf anders fallen - wiederholte Laeufe muessen bitgleich sein, und
         ''' ein Bild, das sich beim zweiten Rendern aendert, waere auch fuer den Nutzer falsch.
         ''' Der Gewinn kommt allein aus dem Wegfall des P/Invoke je Pixel.</summary>
-        ''' <summary>Körnung. Ohne Größe/Frequenz (beide 0) das bisherige feine 1-px-Korn, bitgenau
-        ''' unverändert; sonst zellenweise gröber (Größe) und optional mit eingemischter feiner Lage
-        ''' (Frequenz).</summary>
-        Private Shared Function ApplyGrain(source As SKBitmap, amount As Single, Optional sizeAmount As Single = 0, Optional freqAmount As Single = 0) As SKBitmap
-            If sizeAmount <= 0 AndAlso freqAmount <= 0 Then Return ApplyGrainFine(source, amount)
-            Return ApplyGrainTextured(source, amount, sizeAmount, freqAmount)
+        ''' <summary>Körnung. Ohne Größe, Rauheit und Farbe (alle 0) das bisherige feine 1-px-Korn,
+        ''' bitgenau unverändert; sonst zellenweise gröber (Größe), optional fleckig (Rauheit) und
+        ''' optional farbig (Farbe).</summary>
+        Private Shared Function ApplyGrain(source As SKBitmap, amount As Single, Optional sizeAmount As Single = 0,
+                                           Optional freqAmount As Single = 0, Optional colorAmount As Single = 0) As SKBitmap
+            If sizeAmount <= 0 AndAlso freqAmount <= 0 AndAlso colorAmount <= 0 Then Return ApplyGrainFine(source, amount)
+            Return ApplyGrainTextured(source, amount, sizeAmount, freqAmount, colorAmount)
+        End Function
+
+        ''' <summary>Streuwert einer Zelle je Kanal, -1..1. Bewusst KEIN Zug aus dem Zufallsstrom der
+        ''' Körnung: der bleibt damit Bit für Bit unberührt, das Aufziehen des Farbreglers lässt das
+        ''' Kornmuster also stehen und ändert nur die Kanaldrift. Zweiter Grund ist der Speicher, ein
+        ''' zweites Feld in Bildgröße wären bei 45 Megapixeln drei Puffer zu je 360 MB.
+        ''' Gerechnet wird in ULong und nach jedem Schritt auf 32 Bit maskiert: VB prüft Überläufe,
+        ''' und die Zwischenwerte bleiben so unter ULong.MaxValue.</summary>
+        Private Shared Function CellChannelNoise(cellIndex As Integer, channel As Integer) As Double
+            Dim h As ULong = (CULng(cellIndex) * 2654435761UL + CULng(channel) * 2246822519UL) And &HFFFFFFFFUL
+            h = ((h Xor (h >> 15)) * 2246822519UL) And &HFFFFFFFFUL
+            h = ((h Xor (h >> 13)) * 3266489917UL) And &HFFFFFFFFUL
+            h = h Xor (h >> 16)
+            Return CDbl(h) / 2147483647.5 - 1.0
         End Function
 
         Private Shared Function ApplyGrainFine(source As SKBitmap, amount As Single) As SKBitmap
@@ -1339,8 +1354,14 @@ Namespace Services
         ''' Amplituden-Modulation, die das Korn fleckig macht (manche Bereiche stärker, manche schwächer)
         ''' - sichtbar bei JEDER Größe, auch 0, und unabhängig von der Korn-Skala. BEWUSST SERIELL wie
         ''' <see cref="ApplyGrainFine"/>: erst das Zellraster, dann das grobe Modulationsraster - der
-        ''' Zufallsstrom hängt an der Reihenfolge, damit Vorschau und Backen bitgleich bleiben.</summary>
-        Private Shared Function ApplyGrainTextured(source As SKBitmap, amount As Single, sizeAmount As Single, freqAmount As Single) As SKBitmap
+        ''' Zufallsstrom hängt an der Reihenfolge, damit Vorschau und Backen bitgleich bleiben.
+        ''' Farbe = wie weit die drei Kanäle auseinanderdriften: 0 legt denselben Wert auf R, G und B
+        ''' (monochromes Korn), höher mischt je Zelle eine eigene Kanalabweichung dazu und erzeugt
+        ''' farbige Speckles. Bei Größe 0 und Rauheit 0 rechnet diese Fassung bitgleich mit
+        ''' <see cref="ApplyGrainFine"/> (Zellkante 1, dieselbe Zugreihenfolge) - deshalb darf allein
+        ''' die Farbe hierher umlenken, ohne dass sich das Kornmuster ändert.</summary>
+        Private Shared Function ApplyGrainTextured(source As SKBitmap, amount As Single, sizeAmount As Single,
+                                                   freqAmount As Single, colorAmount As Single) As SKBitmap
             Dim strength = Clamp(amount, 0, 1)
             If strength <= 0 Then Return source
 
@@ -1353,6 +1374,12 @@ Namespace Services
             Dim w = source.Width, h = source.Height
             Dim cell = 1 + CInt(Math.Round(Clamp(sizeAmount, 0, 1) * 5))   ' 1..6 px
             Dim freq = Clamp(freqAmount, 0, 1)
+            Dim colorMix = CDbl(Clamp(colorAmount, 0, 1))
+            ' Mischen zweier unabhaengiger Gleichverteilungen mit (1-k) und k ergibt die Varianz
+            ' (1-k)^2 + k^2: ohne Gegenrechnung waere das Korn in der Reglermitte um rund 30 Prozent
+            ' schwaecher als an beiden Enden. Der Kehrwert der Wurzel haelt die Staerke konstant.
+            Dim colorNorm = If(colorMix <= 0, 1.0,
+                               1.0 / Math.Sqrt((1.0 - colorMix) * (1.0 - colorMix) + colorMix * colorMix))
             Dim amplitude = 8.0 + strength * 34.0
             Dim random = New Random(w * 397 Xor h * 151)
 
@@ -1377,6 +1404,12 @@ Namespace Services
                 Next
             End If
 
+            ' Die drei Kanalabweichungen gelten je ZELLE, nicht je Bildpunkt - sonst zerfiele ein
+            ' grobes Korn farblich wieder in Einzelpunkte. Gerechnet werden sie nur beim Wechsel der
+            ' Zelle, der Zaehler laeuft bewusst ueber die Zeilen hinweg.
+            Dim lastCellIndex As Integer = -1
+            Dim devR As Double = 0, devG As Double = 0, devB As Double = 0
+
             For y As Integer = 0 To h - 1
                 Dim rowOffset = y * stride
                 Dim gy = y \ cell
@@ -1385,16 +1418,32 @@ Namespace Services
                     Dim o = rowOffset + x * 4
                     Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
                     ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                    Dim n = cellNoise(gy * gridW + (x \ cell))
+                    Dim cellIndex = gy * gridW + (x \ cell)
+                    Dim n = cellNoise(cellIndex)
                     Dim amp = amplitude
                     If freq > 0 Then
                         ' 0..1 -> -1..1, mit K=0.9 skaliert: Faktor in [1-0.9*freq, 1+0.9*freq], nie <= 0.
                         Dim m = modNoise(my * modW + (x \ ModCell)) * 2.0 - 1.0
                         amp = amplitude * (1.0 + freq * m * 0.9)
                     End If
-                    Dim noise = n * amp
-                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                                       ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
+                    If colorMix <= 0 Then
+                        Dim noise = n * amp
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                           ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
+                    Else
+                        If cellIndex <> lastCellIndex Then
+                            devR = CellChannelNoise(cellIndex, 1)
+                            devG = CellChannelNoise(cellIndex, 2)
+                            devB = CellChannelNoise(cellIndex, 3)
+                            lastCellIndex = cellIndex
+                        End If
+                        Dim mono = (1.0 - colorMix) * n
+                        Dim scale = amp * colorNorm
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                           ClampToByte(cr + (mono + colorMix * devR) * scale),
+                                           ClampToByte(cg + (mono + colorMix * devG) * scale),
+                                           ClampToByte(cb + (mono + colorMix * devB) * scale), a)
+                    End If
                 Next
             Next
 

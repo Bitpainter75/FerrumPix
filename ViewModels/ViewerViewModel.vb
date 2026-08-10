@@ -678,11 +678,7 @@ Namespace ViewModels
                                                            IsFitToWindow = False
                                                            ZoomLevel = 1.0
                                                        End Sub)
-            EditCommand = ReactiveCommand.CreateFromTask(Async Function()
-                                                             If Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                                 Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
-                                                             End If
-                                                         End Function)
+            EditCommand = ReactiveCommand.CreateFromTask(Function() OpenCurrentInEditorAsync())
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
                                                                    _mainVm.Settings.ViewerInfoSidebarExpanded = Not _mainVm.Settings.ViewerInfoSidebarExpanded
@@ -763,6 +759,14 @@ Namespace ViewModels
                                                _immichSessionItems(_currentIndex).IsFavorite = value
                                            End If
                                            Dim ignored = ImmichService.SetFavoriteAsync(_currentImmichAssetId, value)
+                                       ElseIf CurrentNextcloudItem() IsNot Nothing Then
+                                           ' Nextcloud kennt den Favoriten als Eigenschaft AN DER DATEI.
+                                           ' Ohne diesen Zweig landete er im lokalen Katalog unter dem
+                                           ' Temp-Pfad der geholten Kopie - und war beim nächsten
+                                           ' Öffnen weg.
+                                           Dim item = CurrentNextcloudItem()
+                                           item.IsFavorite = value
+                                           Dim ignored = SetNextcloudFavoriteAsync(item, value)
                                        ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                            LibraryService.Instance.SetFavorite(_currentImagePath, value)
                                        End If
@@ -789,11 +793,89 @@ Namespace ViewModels
                                       Dim ignored = If(gesetzt,
                                                        ImmichService.AddTagToAssetAsync(_currentImmichAssetId, tag),
                                                        ImmichService.RemoveTagFromAssetAsync(_currentImmichAssetId, tag))
+                                  ElseIf CurrentNextcloudFileId() IsNot Nothing Then
+                                      ' Auf diesem Server sind Stichwoerter System-Tags des Kerns.
+                                      ' Ohne diesen Zweig liefe das Schreiben in den lokalen Katalog
+                                      ' unter dem TEMP-Pfad der geholten Kopie - also ins Leere.
+                                      Dim ignored = If(gesetzt,
+                                                       NextcloudService.AddTagAsync(CurrentNextcloudFileId(), tag),
+                                                       NextcloudService.RemoveTagAsync(CurrentNextcloudFileId(), tag))
                                   ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                       LibraryService.Instance.SetTags(_currentImagePath, InfoPanel.Tags, syncToXmp:=True)
                                   End If
                               End Sub
         End Sub
+
+        ''' <summary>Die Dateikennung des gerade gezeigten Bildes, wenn es von Nextcloud stammt -
+        ''' sonst Nothing. In einer Serversitzung traegt das Element seine Herkunft selbst; ohne diese
+        ''' Frage liefe jeder Schreibweg in den Immich-Zweig oder in den lokalen Katalog.</summary>
+        Private Function CurrentNextcloudFileId() As String
+            Return CurrentNextcloudItem()?.NextcloudFileId
+        End Function
+
+        ''' <summary>Setzt den Favoriten auf dem Nextcloud-Server. Der Weg braucht den Pfad im
+        ''' Dateibaum; steht er am Element noch nicht, wird er hier nachgeholt. Schlägt es fehl,
+        ''' bleibt die Anzeige nicht auf einem Stand stehen, den der Server nicht kennt.</summary>
+        Private Async Function SetNextcloudFavoriteAsync(item As ImageItem, value As Boolean) As Task
+            Try
+                Dim pathInTree = item.NextcloudPath
+                If String.IsNullOrEmpty(pathInTree) Then
+                    Dim info = Await NextcloudService.GetInfoAsync(item.NextcloudFileId)
+                    If info IsNot Nothing Then
+                        item.ApplyNextcloudMetadata(info)
+                        pathInTree = item.NextcloudPath
+                    End If
+                End If
+                If String.IsNullOrEmpty(pathInTree) OrElse Not Await NextcloudService.SetFavoriteAsync(pathInTree, value) Then
+                    ' ZURUECKNEHMEN, OHNE ZU SCHREIBEN. Der Setter des Panels ruft IMMER den
+                    ' Speicherweg - eine Ruecknahme ueber ihn loeste sofort die Gegenanfrage aus,
+                    ' und schluege auch die fehl, pendelte der Wert endlos zwischen den beiden hin
+                    ' und her. Schlimmer noch bei einer Zeitueberschreitung: die zweite Anfrage
+                    ' naehme eine Aenderung zurueck, die der Server doch angenommen hat.
+                    item.IsFavorite = Not value
+                    InfoPanel.ApplyOwnedState(InfoPanel.Rating, Not value, InfoPanel.ColorLabel)
+                    StatusInfo = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                    LocalizationService.T("Favorit konnte nicht gespeichert werden"), NextcloudService.LastError)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.NextcloudFavorite", ex)
+            End Try
+        End Function
+
+        ''' <summary>Das gerade gezeigte Element, wenn es von Nextcloud stammt - sonst Nothing.
+        '''
+        ''' EINE Frage für alle Wege, die die Quelle unterscheiden müssen. Ohne sie liefen Favorit,
+        ''' Löschen und der Weg in den Editor allesamt in den Immich-Zweig: dort ist die Asset-Kennung
+        ''' leer, und die Aktion endete wortlos.</summary>
+        Private Function CurrentNextcloudItem() As ImageItem
+            If Not _isImmichSession Then Return Nothing
+            If _currentIndex < 0 OrElse _currentIndex >= _immichSessionItems.Count Then Return Nothing
+            Dim item = _immichSessionItems(_currentIndex)
+            If item Is Nothing OrElse Not item.IsNextcloudAsset Then Return Nothing
+            Return item
+        End Function
+
+        ''' <summary>Öffnet das angezeigte Bild im Editor - mit der HERKUNFT, wenn es von Nextcloud
+        ''' kommt. Ohne den Pfad im Dateibaum kennt der Editor keinen Rückweg und behandelt das Bild
+        ''' wie ein Immich-Bild: kein Rezept neben dem Original, kein Ersetzen, nur „Speichern
+        ''' unter". Der Etag kommt mit, damit das Ersetzen eine fremde Änderung bemerkt.</summary>
+        Private Async Function OpenCurrentInEditorAsync() As Task
+            If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
+            Dim nextcloudItem = CurrentNextcloudItem()
+            If nextcloudItem IsNot Nothing AndAlso String.IsNullOrEmpty(nextcloudItem.NextcloudPath) Then
+                ' Der Pfad steht am Element erst mit den Einzelheiten; hier wird er gebraucht.
+                Dim info = Await NextcloudService.GetInfoAsync(nextcloudItem.NextcloudFileId)
+                If info IsNot Nothing Then nextcloudItem.ApplyNextcloudMetadata(info)
+            End If
+            Dim origin = NextcloudOrigin.FromItem(nextcloudItem)
+            ' Der Zwang zu "Speichern unter" gilt für Immich - und für Nextcloud nur so lange, wie
+            ' die Herkunft unbekannt ist.
+            Dim saveAsOnly = _isImmichSession AndAlso (origin Is Nothing OrElse Not origin.IsKnown)
+            Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName,
+                                            forceSaveAsOnly:=saveAsOnly,
+                                            immichAlbumId:=_immichSourceAlbumId,
+                                            nextcloudSource:=origin)
+        End Function
 
         ''' <summary>Öffnet eine Immich-Sitzung: der Filmstreifen zeigt das ganze Album (Pseudo-Pfade),
         ''' das jeweils angezeigte Original wird on-demand heruntergeladen. Reibt sich nicht mit dem
@@ -805,7 +887,9 @@ Namespace ViewModels
             _thumbCacheScopeId = Nothing
             _thumbCacheScopeName = Nothing
             StopVideoPlayback()
-            _immichSessionItems = sessionItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImmichAsset).ToList()
+            ' Gilt fuer JEDE Serverquelle: der Filmstreifen zeigt Pseudo-Pfade, das angezeigte
+            ' Original wird bei Bedarf geholt. Welcher Server, entscheidet das Element selbst.
+            _immichSessionItems = sessionItems.Where(Function(i) i IsNot Nothing AndAlso i.IsRemoteAsset).ToList()
             _folderPaths = _immichSessionItems.Select(Function(i) i.FilePath).ToList()
             _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, startPseudoPath, StringComparison.OrdinalIgnoreCase))
             If _currentIndex < 0 Then _currentIndex = 0
@@ -820,8 +904,13 @@ Namespace ViewModels
             Try
                 If idx < 0 OrElse idx >= _folderPaths.Count Then Return
                 Dim pseudo = _folderPaths(idx)
-                Dim assetId As String = Nothing, fileName As String = Nothing
-                If Not ImmichService.TryParsePseudoPath(pseudo, assetId, fileName) Then Return
+                Dim sessionItem = If(idx < _immichSessionItems.Count, _immichSessionItems(idx), Nothing)
+                If sessionItem Is Nothing OrElse Not sessionItem.IsRemoteAsset Then Return
+                ' Die Asset-Kennung gilt nur fuer Immich - an ihr haengen die Rueckschreibwege
+                ' (Bewertung, Favorit, Stichwoerter). Bei einer anderen Quelle bleibt sie leer,
+                ' und damit bleiben diese Wege von selbst zu.
+                Dim assetId As String = sessionItem.ImmichAssetId
+                Dim fileName As String = sessionItem.FileName
 
                 Dim token = System.Threading.Interlocked.Increment(_immichNavToken)
                 _currentIndex = idx
@@ -851,7 +940,7 @@ Namespace ViewModels
                     RaiseFooterColorLabelState()
                 End If
 
-                Dim localPath = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
+                Dim localPath = Await sessionItem.EnsureLocalOriginalAsync()
                 ' Zwischenzeitlich weitergeblättert oder Sitzung verlassen? Dann Ergebnis verwerfen.
                 If token <> System.Threading.Volatile.Read(_immichNavToken) OrElse Not _isImmichSession Then Return
                 If String.IsNullOrEmpty(localPath) Then
@@ -1560,7 +1649,7 @@ Namespace ViewModels
         Public Async Sub OpenCropInEditor(cropLeft As Double, cropTop As Double, cropRight As Double, cropBottom As Double)
             Try
                 If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
-                Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName, forceSaveAsOnly:=_isImmichSession, immichAlbumId:=_immichSourceAlbumId)
+                Await OpenCurrentInEditorAsync()
                 If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
                 _mainVm.Editor.CurrentTool = EditorTool.Crop
                 _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
@@ -2417,8 +2506,14 @@ Namespace ViewModels
 
         Private Sub DeleteCurrent()
             If Not CanDeleteCurrent Then Return
-            ' In einer Immich-Sitzung ist _currentImagePath nur die heruntergeladene Temp-Kopie - die zu
-            ' löschen wäre wirkungslos (sie wäre beim nächsten Blättern wieder da). Gemeint ist das Asset.
+            ' In einer Serversitzung ist _currentImagePath nur die heruntergeladene Temp-Kopie - die zu
+            ' löschen wäre wirkungslos (sie wäre beim nächsten Blättern wieder da). Gemeint ist das
+            ' Element auf dem Server, und WELCHER Server sagt das Element selbst: bei Nextcloud ist
+            ' die Immich-Kennung leer, und der Weg endete dort wortlos.
+            If CurrentNextcloudItem() IsNot Nothing Then
+                Dim ignoredNextcloud = DeleteCurrentNextcloudFileAsync()
+                Return
+            End If
             If _isImmichSession Then
                 Dim ignored = DeleteCurrentImmichAssetAsync()
                 Return
@@ -2439,6 +2534,68 @@ Namespace ViewModels
                                                            End If
                                                        End Sub)
         End Sub
+
+        ''' <summary>Löscht die gerade gezeigte Nextcloud-Datei auf dem Server. Gegenstück zum
+        ''' Immich-Weg darunter, mit denselben zwei Schaltern: erlaubt sein muss es, und „endgültig"
+        ''' geht am Papierkorb vorbei. Danach rückt der Betrachter weiter.</summary>
+        Private Async Function DeleteCurrentNextcloudFileAsync() As Task
+            Dim item = CurrentNextcloudItem()
+            If item Is Nothing OrElse _currentIndex < 0 OrElse _currentIndex >= _folderPaths.Count Then Return
+
+            Dim settings = AppSettingsService.Load()
+            If Not settings.NextcloudAllowDelete Then
+                StatusInfo = LocalizationService.T("Löschen in Nextcloud ist nicht erlaubt")
+                Return
+            End If
+
+            Dim pathInTree = item.NextcloudPath
+            If String.IsNullOrEmpty(pathInTree) Then
+                Dim info = Await NextcloudService.GetInfoAsync(item.NextcloudFileId)
+                If info IsNot Nothing Then
+                    item.ApplyNextcloudMetadata(info)
+                    pathInTree = item.NextcloudPath
+                End If
+            End If
+            If String.IsNullOrEmpty(pathInTree) Then
+                StatusInfo = LocalizationService.T("Löschen fehlgeschlagen")
+                Return
+            End If
+
+            Dim permanent = settings.NextcloudDeletePermanently
+            If Not settings.DeleteSkipConfirmation Then
+                Dim question = If(permanent,
+                                  String.Format(LocalizationService.T("{0} Bild(er) endgültig vom Server löschen? Der Papierkorb hilft danach nicht mehr."), 1),
+                                  String.Format(LocalizationService.T("{0} Bild(er) auf dem Server löschen?"), 1))
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Löschen"), question) Then Return
+            End If
+
+            Dim ok = If(permanent,
+                        Await NextcloudService.DeleteFilePermanentlyAsync(pathInTree),
+                        Await NextcloudService.DeleteFileAsync(pathInTree))
+            If Not ok Then
+                StatusInfo = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                LocalizationService.T("Löschen fehlgeschlagen"), NextcloudService.LastError)
+                Return
+            End If
+
+            Dim idx = _currentIndex
+            Dim removedPath = _folderPaths(idx)
+            _folderPaths.RemoveAt(idx)
+            If idx < _immichSessionItems.Count Then _immichSessionItems.RemoveAt(idx)
+            _mainVm.Gallery?.RemovePathsFromCurrentView({removedPath})
+
+            If _folderPaths.Count = 0 Then
+                InvalidatePendingBitmapLoad() : CurrentImage = Nothing
+                CurrentImagePath = ""
+                CurrentFileName = ""
+                _mainVm.CurrentMode = AppMode.Gallery
+                Return
+            End If
+
+            If idx >= _folderPaths.Count Then idx = _folderPaths.Count - 1
+            LoadFilmstrip()
+            LoadImmichAt(idx)
+        End Function
 
         ''' <summary>Löscht das gerade gezeigte Immich-Asset auf dem Server. Erfordert die Einstellung
         ''' "Löschen in Immich erlauben"; "Endgültig löschen" umgeht den Immich-Papierkorb. Danach rückt der

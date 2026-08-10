@@ -62,7 +62,9 @@ Namespace Services
     Public Class SearchListEntry
         Public Property Id As String = Guid.NewGuid().ToString("N")
         Public Property Name As String = ""
-        ''' "Local" (Dateisystem-Scan) oder "Immich" (Server-Suche). Immich nur nutzbar, wenn konfiguriert.
+        ''' "Local" (Dateisystem-Scan), "Immich" oder "Nextcloud" (jeweils Server-Suche). Die Quelle
+        ''' wird NICHT im Dialog gewaehlt, sondern ergibt sich aus dem Bereich, in dem "Neue Suche"
+        ''' angeklickt wurde - siehe NormalizeSource.
         Public Property Source As String = "Local"
         Public Property TextQuery As String = ""
         Public Property RootFolder As String = ""
@@ -78,6 +80,14 @@ Namespace Services
     Public NotInheritable Class SearchListService
         Private Sub New()
         End Sub
+
+        ''' <summary>Bringt eine Quellenangabe auf einen der drei bekannten Werte. Alles Unbekannte
+        ''' wird zu "Local": eine Suche, deren Quelle keiner kennt, waere sonst nicht ausfuehrbar.</summary>
+        Public Shared Function NormalizeSource(value As String) As String
+            If String.Equals(value, "Immich", StringComparison.OrdinalIgnoreCase) Then Return "Immich"
+            If String.Equals(value, "Nextcloud", StringComparison.OrdinalIgnoreCase) Then Return "Nextcloud"
+            Return "Local"
+        End Function
 
         Private Shared ReadOnly SearchListsDirectory As String =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
@@ -144,7 +154,7 @@ Namespace Services
                 result.Add(New SearchListEntry With {
                     .Id = If(String.IsNullOrWhiteSpace(item.Id), Guid.NewGuid().ToString("N"), item.Id),
                     .Name = name,
-                    .Source = If(String.Equals(item.Source, "Immich", StringComparison.OrdinalIgnoreCase), "Immich", "Local"),
+                    .Source = NormalizeSource(item.Source),
                     .TextQuery = If(item.TextQuery, "").Trim(),
                     .RootFolder = If(item.RootFolder, "").Trim(),
                     .IncludeSubfolders = item.IncludeSubfolders,

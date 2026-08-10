@@ -235,6 +235,15 @@
     <Style Selector="Button.filter-btn.active icons|SvgIcon.filter-glyph">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+
+    <!-- ZEILE IN EINEM NAVIGATIONSBAUM (Suchlisten, Immich, Nextcloud, Favoriten).
+         Holt die Einrueckung zurueck, die der Baum fuer seinen Aufklapp-Pfeil freihaelt. In den
+         Serverbaeumen ist der Pfeil ausgeblendet (dort klappt ein Klick auf die Zeile auf), im
+         Ordnerbaum bleibt er - deshalb traegt dessen Zeile diese Klasse nicht. -->
+    <Style Selector="Grid.baumzeile">
+        <Setter Property="Margin" Value="-34,3,0,3"/>
+    </Style>
+
     <Style Selector="Button.ghost">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>

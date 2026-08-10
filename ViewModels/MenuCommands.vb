@@ -36,6 +36,10 @@ Namespace ViewModels
         Public Property Duplicate As ICommand
         Public Property Delete As ICommand
 
+        ''' <summary>Zurueck aus dem Papierkorb einer Serverquelle. Nur die Galerie bietet es an, und
+        ''' auch dort nur in der Papierkorbansicht.</summary>
+        Public Property RestoreFromTrash As ICommand
+
         ' Stapelarbeit am Bild
         Public Property ResizeImage As ICommand
         Public Property ApplyWatermark As ICommand

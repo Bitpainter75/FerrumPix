@@ -114,7 +114,9 @@ Namespace ViewModels
             ' Sofort ein Stand des RICHTIGEN Bildes, damit nie die Angaben des vorherigen stehen
             ' bleiben. Ein Immich-Asset steht in keinem lokalen Katalog - dort kommt das, was das
             ' Element selbst weiss, und der Rest nach dem Holen der Datei.
-            ExifInfo = If(item IsNot Nothing AndAlso item.IsImmichAsset,
+            ' Gilt fuer JEDE Serverquelle, nicht nur fuer Immich: ein Serverbild steht in keinem
+            ' lokalen Katalog, ein Katalogblick liefert dort nichts.
+            ExifInfo = If(item IsNot Nothing AndAlso item.IsRemoteAsset,
                           BuildFromItem(item),
                           ImageInfoService.BuildProvisionalFromCatalog(_path))
             Me.RaisePropertyChanged(NameOf(Name))
@@ -636,24 +638,21 @@ Namespace ViewModels
         Private Sub LoadInBackground(token As Integer, path As String, item As ImageItem)
             If Not _isVisible Then Return
 
-            Dim istImmich = item IsNot Nothing AndAlso item.IsImmichAsset
+            Dim istServerbild = item IsNot Nothing AndAlso item.IsRemoteAsset
             Task.Run(Async Function()
-                         ' Ein Immich-Asset hat keine lokale Datei. Aufnahmedaten und Histogramm
+                         ' Ein Serverbild hat keine lokale Datei. Aufnahmedaten und Histogramm
                          ' brauchen eine - der Betrachter holt sie sich deshalb in den Temp-Ordner,
                          ' und hier geschieht dasselbe. ABER erst nach der Wartezeit und nur bei
                          ' offenem Panel: sonst laedt jeder Klick im Filmstreifen ein Original vom
                          ' Server, und das Blaettern durch ein Album zieht die halbe Mediathek.
-                         If istImmich Then
+                         ' Welcher Server, entscheidet das Element selbst (EnsureLocalOriginalAsync);
+                         ' hier steht bewusst kein Zweig je Quelle mehr.
+                         If istServerbild Then
                              If Not _isVisible Then Return
                              Thread.Sleep(HistogramDelayMs)
                              If token <> _loadToken OrElse _isSummary OrElse Not _isVisible Then Return
 
-                             path = If(item.ImmichLocalPath, "")
-                             If String.IsNullOrEmpty(path) OrElse Not IO.File.Exists(path) Then
-                                 path = Await ImmichService.DownloadOriginalToTempAsync(item.ImmichAssetId,
-                                                                                        item.ImmichOriginalFileName)
-                                 If Not String.IsNullOrEmpty(path) Then item.ImmichLocalPath = path
-                             End If
+                             path = Await item.EnsureLocalOriginalAsync()
                              If token <> _loadToken OrElse String.IsNullOrEmpty(path) OrElse Not IO.File.Exists(path) Then Return
                          End If
 

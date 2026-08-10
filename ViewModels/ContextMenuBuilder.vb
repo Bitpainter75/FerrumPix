@@ -54,8 +54,12 @@ Namespace ViewModels
             ' Immich ist hier erlaubt: die Collage holt sich die Originale vorher in den
             ' Temp-Ordner, genau wie das Drucken. Vorher war der Eintrag sichtbar und tat nichts.
             Dim showCollage = entries.Count >= 2 AndAlso images.Count >= 2
+            ' Vergleichen geht ueber den lokalen Weg des Betrachters, und der bekommt DATEIPFADE.
+            ' Ein Pseudo-Pfad scheitert dort - geprueft wird deshalb auf JEDE Serverquelle und
+            ' nicht nur auf Immich. Vorher boten zwei markierte Nextcloud-Bilder den Eintrag an,
+            ' und der Klick lief ins Leere.
             Dim showCompare = entries.Count = 2 AndAlso
-                                 entries.All(Function(i) i.IsImage AndAlso Not i.IsImmichAsset AndAlso
+                                 entries.All(Function(i) i.IsImage AndAlso Not i.IsRemoteAsset AndAlso
                                                         Not String.IsNullOrEmpty(i.FilePath))
             ' Umbenennen: bei Mehrfachauswahl muessen ALLE koennen, bei Einzelauswahl nur das eine.
             Dim showRename = Not isVirtual AndAlso Not isParentEntry AndAlso entries.Count > 0 AndAlso
@@ -68,6 +72,19 @@ Namespace ViewModels
             ' haben mit dem Ordner nichts zu tun, und wer einen Ordner anklickt, meint den Ordner.
             ' Bei LEERER Auswahl bleiben sie: dort ist das Menue das der Ansicht.
             Dim folderOnly = entries.Count > 0 AndAlso entries.All(Function(i) i.IsFolder OrElse i.IsParentFolderEntry)
+
+            ' --- Papierkorb: eine Ansicht, eine Geste -------------------------------------------
+            ' Was im Papierkorb einer Serverquelle liegt, ist keine gewoehnliche Aufnahme mehr:
+            ' bearbeiten, umbenennen, exportieren und erst recht loeschen ergeben dort nichts.
+            ' Angeboten wird deshalb genau das Zurueckholen - und das Ansehen, damit man vorher
+            ' erkennt, was man zurueckholt.
+            Dim trashed = entries.Count > 0 AndAlso entries.All(Function(i) i.IsTrashed)
+            If trashed Then
+                If singleItemActions Then AddIfOffered(list, commands.ShowImage, FooterMenuCatalog.ShowImage(commands.ShowImage))
+                AddIfOffered(list, commands.RestoreFromTrash, FooterMenuCatalog.RestoreFromTrash(commands.RestoreFromTrash))
+                TidySeparators(list)
+                Return list
+            End If
 
             ' --- ohne Bild ---------------------------------------------------------------------
             ' "Neues Bild" braucht keins - es legt ja erst eines an. "Vollbild" dagegen zeigt ein
@@ -155,15 +172,16 @@ Namespace ViewModels
             End If
 
             ' --- Wege nach draussen ------------------------------------------------------------
-            ' Beides zeigt auf einen Ort im Dateisystem. Ein Immich-Asset hat keinen, und in einer
-            ' Suchliste stehen die Treffer quer ueber den Bestand verstreut - der Sprung dorthin
-            ' fuehrt aus der Trefferliste heraus und ist nicht das, was man beim Klick erwartet.
+            ' Beides zeigt auf einen Ort im Dateisystem. Ein SERVERELEMENT hat keinen - gleich von
+            ' welchem Server -, und in einer Suchliste stehen die Treffer quer ueber den Bestand
+            ' verstreut; der Sprung dorthin fuehrt aus der Trefferliste heraus und ist nicht das,
+            ' was man beim Klick erwartet.
             '
             ' OHNE Auswahl bleiben beide: dann meinen sie den offenen Ordner. Ein Menue, in dem
             ' nichts steht, weil gerade nichts markiert ist, hilft niemandem - es gibt genug, was
             ' auch ohne Bild geht.
             If (singleItemActions OrElse entries.Count = 0) AndAlso Not isVirtual AndAlso
-               (first Is Nothing OrElse Not first.IsImmichAsset) Then
+               (first Is Nothing OrElse Not first.IsRemoteAsset) Then
                 AddIfOffered(list, commands.CopyPath, FooterMenuCatalog.CopyPath(commands.CopyPath))
                 AddIfOffered(list, commands.ShowInFileManager, FooterMenuCatalog.ShowInFileManager(commands.ShowInFileManager))
                 Divider(list)

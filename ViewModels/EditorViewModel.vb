@@ -73,6 +73,20 @@ Namespace ViewModels
         ' Immich-Album, aus dem das aktuelle Bild stammt - ein Upload des bearbeiteten Bildes nach Immich
         ' landet dann gleich in diesem Album (leer = nur in die Bibliothek).
         Private _immichSourceAlbumId As String = Nothing
+        ''' <summary>Pfad des Originals im Nextcloud-Dateibaum, wenn das offene Bild von dort stammt.
+        ''' Daran haengt der Rueckweg: die Begleitdatei wird NEBEN diesen Pfad gelegt.</summary>
+        Private _nextcloudSourcePath As String = ""
+
+        ''' <summary>Der Serverstand, den dieses Bild beim Oeffnen hatte. Er geht als Bedingung an
+        ''' das Ersetzen des Originals: hat inzwischen jemand anderes dieselbe Datei geaendert, weist
+        ''' der Server ab, statt die fremde Aenderung lautlos zu ueberschreiben.</summary>
+        Private _nextcloudSourceETag As String = ""
+
+        ''' <summary>Die Identitaet des Bildes im lokalen Katalog: der Pseudo-Pfad, unter dem auch die
+        ''' Galerie es fuehrt. Bewertung und Farbetikett kennt der Server nicht und bleiben lokal -
+        ''' aber unter DIESEM Schluessel, nicht unter dem Pfad der Temp-Kopie, den das naechste
+        ''' Aufraeumen wegnimmt.</summary>
+        Private _nextcloudSourcePseudoPath As String = ""
         ''' Originaldateiname des Immich-Assets - die Temp-Kopie heißt nach der Asset-ID, beim
         ''' Zurückschreiben soll der Name aber erhalten bleiben (siehe SaveBackToImmichAsync).
         Private _immichSourceFileName As String = Nothing
@@ -134,6 +148,7 @@ Namespace ViewModels
         Private _grain As Double = 0
         Private _grainSize As Double = 0
         Private _grainFrequency As Double = 0
+        Private _grainColor As Double = 0
         Private _clarity As Double = 0
         Private _negativeEnabled As Boolean = False
         Private _negativeMonochrome As Boolean = False
@@ -3529,10 +3544,15 @@ Namespace ViewModels
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
 
+            ' Sterne kennt Nextcloud NICHT, sie bleiben lokal - aber unter dem PSEUDO-PFAD, unter dem
+            ' auch die Galerie das Bild fuehrt. Unter dem Pfad der Temp-Kopie waeren sie beim
+            ' naechsten Aufraeumen weg, und die Kachel saehe sie nie.
             InfoPanel.PersistRating = Sub(items, value)
                                           Dim immichAssetId = CurrentImmichAssetId()
                                           If immichAssetId IsNot Nothing Then
                                               Dim ignored = ImmichService.SetRatingAsync(immichAssetId, value)
+                                          ElseIf Not String.IsNullOrEmpty(_nextcloudSourcePseudoPath) Then
+                                              LibraryService.Instance.SetRating(_nextcloudSourcePseudoPath, value, syncToXmp:=False)
                                           ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                               LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
                                           End If
@@ -3542,12 +3562,15 @@ Namespace ViewModels
                                             Dim immichAssetId = CurrentImmichAssetId()
                                             If immichAssetId IsNot Nothing Then
                                                 Dim ignored = ImmichService.SetFavoriteAsync(immichAssetId, value)
+                                            ElseIf Not String.IsNullOrEmpty(_nextcloudSourcePath) Then
+                                                ' Den Favoriten kennt dieser Server als Eigenschaft AN DER DATEI.
+                                                Dim ignored = NextcloudService.SetFavoriteAsync(_nextcloudSourcePath, value)
                                             ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                                 LibraryService.Instance.SetFavorite(_currentImagePath, value)
                                             End If
                                         End Sub
 
-            ' Das Etikett bleibt auch bei Immich lokal - unter dem Pseudo-Pfad, damit die
+            ' Das Etikett bleibt bei JEDER Serverquelle lokal - unter dem Pseudo-Pfad, damit die
             ' Galerie-Kachel denselben Eintrag sieht.
             InfoPanel.PersistColorLabel = Sub(items, value)
                                               RaiseFooterColorLabelState()
@@ -3555,6 +3578,8 @@ Namespace ViewModels
                                               If immichAssetId IsNot Nothing Then
                                                   LibraryService.Instance.SetColorLabelForMany(
                                                       {ImmichService.MakePseudoPath(immichAssetId, _immichSourceFileName)}, value)
+                                              ElseIf Not String.IsNullOrEmpty(_nextcloudSourcePseudoPath) Then
+                                                  LibraryService.Instance.SetColorLabelForMany({_nextcloudSourcePseudoPath}, value)
                                               ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                                   LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, value, syncToXmp:=True)
                                               End If
@@ -3569,6 +3594,12 @@ Namespace ViewModels
                                            Dim ignored = If(gesetzt,
                                                             ImmichService.AddTagToAssetAsync(immichAssetId, tag),
                                                             ImmichService.RemoveTagFromAssetAsync(immichAssetId, tag))
+                                       ElseIf Not String.IsNullOrEmpty(_nextcloudSourcePath) Then
+                                           ' Stammt das offene Bild von Nextcloud, gehoert das
+                                           ' Stichwort an die DATEI AUF DEM SERVER. Der lokale Weg
+                                           ' schriebe es unter dem Temp-Pfad der geholten Kopie in
+                                           ' den Katalog, wo es niemand wiederfindet.
+                                           Dim ignored = NextcloudService.SetTagByPathAsync(_nextcloudSourcePath, tag, gesetzt)
                                        ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                            LibraryService.Instance.SetTags(_currentImagePath, InfoPanel.Tags, syncToXmp:=True)
                                        End If
@@ -5369,6 +5400,17 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableDouble(_grainFrequency, Math.Max(0, Math.Min(100, value)), NameOf(GrainFrequency))
+            End Set
+        End Property
+
+        ''' <summary>Farbigkeit des Korns, 0 = monochrom wie bisher. Ohne Adobe-Gegenstueck, ein
+        ''' XMP-Preset kann den Wert also nicht mitbringen.</summary>
+        Public Property GrainColor As Double
+            Get
+                Return _grainColor
+            End Get
+            Set(value As Double)
+                SetUndoableDouble(_grainColor, Math.Max(0, Math.Min(100, value)), NameOf(GrainColor))
             End Set
         End Property
 
@@ -11059,6 +11101,12 @@ Namespace ViewModels
                 ' "Speichern unter" (SaveImageAsync(Not CanSaveInPlace) macht das automatisch).
                 ' Ausnahmen: Sidecar-Formate (Rezept-Weg), .fpx-Projekte (FpxService) und
                 ' Immich-Ersetzen (rendert seit dem Audit immer in eine schreibbare Endung).
+                ' Eine Nextcloud-Temp-Kopie ist KEIN Speicherziel: was dort landet, ist beim naechsten
+                ' Aufraeumen weg. Es bleiben genau zwei echte Wege - die Begleitdatei (RAW und PSD,
+                ' eine Zeile darunter) und das Ersetzen des Originals mit der eigenen Einstellung.
+                ' Ohne diese Pruefung war der Knopf aktiv und schrieb in den Temp-Ordner.
+                If NextcloudService.IsNextcloudTempPath(_currentImagePath) AndAlso
+                   Not IsCurrentImageSidecarFormat AndAlso Not SavesBackToNextcloud Then Return False
                 Dim formatWritableInPlace = IsCurrentImageSidecarFormat OrElse SavesBackToImmich OrElse
                     Not String.IsNullOrEmpty(_currentFpxPath) OrElse FpxService.IsFpx(_currentImagePath) OrElse
                     ImageProcessor.CanEncodeToTargetExtension(_currentImagePath)
@@ -11077,8 +11125,31 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>True, wenn "Speichern" das Original AUF DEM NEXTCLOUD-SERVER ersetzt.
+        '''
+        ''' Das ist der Weg, den Immich nicht hat: die Datei bleibt dieselbe, es ändert sich nur ihr
+        ''' Inhalt - Dateikennung, Alben und Freigaben überleben. Er hängt an einer eigenen
+        ''' Einstellung, denn die Vorgabe dieser Anwendung bleibt die Begleitdatei neben dem Original.
+        '''
+        ''' Ausgenommen bleiben drei Fälle, und jeder aus eigenem Grund:
+        ''' - RAW und PSD: dort IST die Begleitdatei der Speicherweg. Ein Render an die Stelle der
+        '''   Rohdatei wäre kein Speichern, sondern ein Verlust.
+        ''' - ein geöffnetes .fpx-Projekt: es hat sein eigenes Ziel, das Bündel selbst.
+        ''' - Formate, die wir nicht schreiben können (.tiff, .gif, .heic): sonst lägen JPEG-Bytes
+        '''   unter fremder Endung auf dem Server. Dieselbe Regel wie beim Immich-Ersetzen.</summary>
+        Private ReadOnly Property SavesBackToNextcloud As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_nextcloudSourcePath) AndAlso
+                       Not IsCurrentImageSidecarFormat AndAlso
+                       String.IsNullOrEmpty(_currentFpxPath) AndAlso
+                       ImageProcessor.CanEncodeToTargetExtension(_nextcloudSourcePath) AndAlso
+                       AppSettingsService.Load().NextcloudReplaceOriginal
+            End Get
+        End Property
+
         ''' <summary>Die Einstellung "Vorhandene Assets aktualisieren" gibt den Speichern-Knopf für
-        ''' Immich-Bilder frei; wird sie bei offenem Bild umgelegt, muss der Editor das mitbekommen.</summary>
+        ''' Immich-Bilder frei; wird sie bei offenem Bild umgelegt, muss der Editor das mitbekommen.
+        ''' Dasselbe gilt für "Originale auf dem Server ersetzen" bei Nextcloud.</summary>
         Public Sub RefreshImmichSaveState()
             Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
         End Sub
@@ -12590,7 +12661,9 @@ Namespace ViewModels
             Dim newFpxPath = ""
             Dim newRenderSourcePathOverride = ""
             Dim newFpxTempDir = ""
-            Dim newForceSaveAsOnly = ImmichService.IsImmichTempPath(path)
+            ' Die Kopie EINER Serverquelle ist immer nur "Speichern unter" - in eine Temp-Kopie zu
+            ' speichern hiesse, die Bearbeitung beim naechsten Aufraeumen zu verlieren.
+            Dim newForceSaveAsOnly = ImmichService.IsImmichTempPath(path) OrElse NextcloudService.IsNextcloudTempPath(path)
             Dim fpxAdjustments As ImageAdjustments = Nothing
             Dim newWorkingOverridePath = ""
             Dim newWorkingOverrideHasAlpha = False
@@ -12743,15 +12816,28 @@ Namespace ViewModels
             If ImmichService.IsImmichPseudoPath(pfad) Then Return
             If Not File.Exists(pfad) Then Return
             Dim pfade = _folderPaths.ToList()
+            ' DIE HERKUNFT MITNEHMEN. Der Weg setzt sie sonst zurueck, und danach kennt der Editor
+            ' fuer ein Nextcloud-Bild keinen Rueckweg mehr: keine Begleitdatei neben dem Original,
+            ' kein Ersetzen, kein Schutz gegen eine fremde Aenderung und Bewertung samt Etikett
+            ' wieder unter dem Pfad der Temp-Kopie. Nur "Speichern unter" bliebe - nach einem Besuch
+            ' der Einstellungen, den niemand mit dem Bild in Verbindung bringt.
+            Dim herkunft As Models.NextcloudOrigin = Nothing
+            If Not String.IsNullOrEmpty(_nextcloudSourcePath) Then
+                herkunft = New Models.NextcloudOrigin With {
+                    .PathInTree = _nextcloudSourcePath,
+                    .ETag = _nextcloudSourceETag,
+                    .PseudoPath = _nextcloudSourcePseudoPath}
+            End If
             Dim ignoriert = Await OpenImageAsync(pfad, If(pfade.Count > 0, pfade, Nothing),
-                                                 _thumbCacheScopeId, _thumbCacheScopeName, _forceSaveAsOnly)
+                                                 _thumbCacheScopeId, _thumbCacheScopeName, _forceSaveAsOnly,
+                                                 nextcloudSource:=herkunft)
         End Function
 
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing)
             Dim ignored = OpenImageAsync(imagePath, allPaths)
         End Sub
 
-        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing) As Task(Of Boolean)
+        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing) As Task(Of Boolean)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
             If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
@@ -12858,9 +12944,19 @@ Namespace ViewModels
             ' Vor dem Setzen von CurrentImagePath, damit dessen PropertyChanged CanSaveInPlace korrekt neu bewertet.
             ' Pfadbasierte Erkennung ergänzt das Flag: eine Immich-Temp-Kopie ist IMMER nur „Speichern
             ' unter", egal ob aus Galerie (Flag gesetzt) oder aus dem Viewer (Flag nicht durchgereicht).
-            _forceSaveAsOnly = forceSaveAsOnly OrElse ImmichService.IsImmichTempPath(imagePath)
+            ' Bei Nextcloud gilt die Temp-Sperre NUR ohne bekannte Herkunft. Ist sie bekannt, gibt es
+            ' einen echten Speicherweg: die Begleitdatei neben das Original auf dem Server. Das
+            ' Original selbst wird auch dann nicht angefasst.
+            _forceSaveAsOnly = forceSaveAsOnly OrElse ImmichService.IsImmichTempPath(imagePath) OrElse
+                               (NextcloudService.IsNextcloudTempPath(imagePath) AndAlso (nextcloudSource Is Nothing OrElse Not nextcloudSource.IsKnown))
             _immichSourceAlbumId = immichAlbumId
             _immichSourceFileName = Nothing
+            ' Die Herkunft gilt NUR fuer dieses Bild. Ohne das Zuruecksetzen klebte der Pfad des
+            ' vorherigen am naechsten, und ein Speichern legte die Begleitdatei neben ein fremdes
+            ' Foto - derselbe Fehler, den es beim Immich-Album schon einmal gab.
+            _nextcloudSourcePath = If(nextcloudSource?.PathInTree, "")
+            _nextcloudSourceETag = If(nextcloudSource?.ETag, "")
+            _nextcloudSourcePseudoPath = If(nextcloudSource?.PseudoPath, "")
             CurrentImagePath = imagePath
             _currentImagePath = imagePath
             ' Wie oben: der gewaehlte Reiter ueberlebt den Bildwechsel.
@@ -14673,10 +14769,21 @@ Namespace ViewModels
             If Not saveAs AndAlso SavesBackToImmich Then Return Await SaveBackToImmichAsync()
             ' "Speichern" bei RAW oder PSD = Rezept in die Begleitdatei (.fpxmp) schreiben -
             ' keines dieser Formate ist je ein Schreibziel.
-            If Not saveAs AndAlso IsCurrentImageSidecarFormat Then Return TrySaveSidecar()
+            If Not saveAs AndAlso IsCurrentImageSidecarFormat Then
+                ' Stammt das Bild aus Nextcloud, gehoert die Begleitdatei NEBEN DAS ORIGINAL AUF DEM
+                ' SERVER. Sie entsteht zuerst neben der Temp-Kopie (derselbe Weg wie lokal) und wird
+                ' dann hochgeladen - das Original wird dabei nicht angefasst. Das gilt AUCH mit
+                ' eingeschaltetem Ersetzen: eine RAW durch einen Render zu ersetzen waere Verlust.
+                If Not String.IsNullOrEmpty(_nextcloudSourcePath) Then Return Await SaveSidecarToNextcloudAsync()
+                Return TrySaveSidecar()
+            End If
+            ' "Speichern" bei einem Nextcloud-Bild mit der Einstellung "Originale ersetzen": die
+            ' Bearbeitung geht an die Stelle des Originals auf dem Server.
+            If Not saveAs AndAlso SavesBackToNextcloud Then Return Await ReplaceNextcloudOriginalAsync()
             Dim targetPath = _currentImagePath
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
+            Dim saveToNextcloud As Boolean = False
             Dim isFpxSave As Boolean = FpxService.IsFpx(targetPath)
             Dim isPsdSave As Boolean = False
             ' Außerhalb des If-Blocks: die Einzeloptionen (Metadaten-Übernahme) werden erst nach
@@ -14720,8 +14827,12 @@ Namespace ViewModels
                 ' Ein .fpx-Projekt geht immer lokal (Immich speichert Bilder, keine Projektdateien).
                 ' Ein PDF ebenso - Immich führt Bild-Assets, keine Dokumente.
                 saveToImmich = String.Equals(saveAsResult.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured AndAlso Not isFpxSave AndAlso Not isPsdSave AndAlso Not saveAsResult.IsPdf
-                If saveToImmich Then
-                    ' Für den Immich-Upload zunächst in eine Temp-Datei rendern (nicht in den Bilder-Ordner).
+                ' Nextcloud fuehrt DATEIEN, keine Bild-Assets: hier ist auch ein .fpx, ein PSD oder
+                ' ein PDF ein zulaessiges Ziel. Angezeigt wird ein Projektbuendel dort nicht, aber
+                ' wer seine Bearbeitung ablegen will, soll das koennen.
+                saveToNextcloud = String.Equals(saveAsResult.Target, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso NextcloudService.IsConfigured
+                If saveToImmich OrElse saveToNextcloud Then
+                    ' Für den Upload zunächst in eine Temp-Datei rendern (nicht in den Bilder-Ordner).
                     Dim uploadTempDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichUpload")
                     IO.Directory.CreateDirectory(uploadTempDir)
                     targetPath = IO.Path.Combine(uploadTempDir, cleanBaseName & saveAsResult.Extension)
@@ -14859,6 +14970,33 @@ Namespace ViewModels
                     ' wartet automatisch auf einen laufenden Region-Commit.
                     ok = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adj, targetQuality, preserveMetadata,
                                                                             workingFull:=CloneWorkingFullForRender()))
+                End If
+                If ok AndAlso saveToNextcloud Then
+                    ' Ziel Nextcloud: die gerenderte Datei in den Dateibaum legen. Wohin, ist NICHT
+                    ' erfragt, sondern abgeleitet: neben das Original, wenn das Bild von dort kommt,
+                    ' sonst in den Fotoordner. Ein zusaetzlicher Ordnerdialog fuer den Server waere
+                    ' eine zweite Ordnerauswahl im selben Dialog gewesen.
+                    Dim targetFolder = "/Photos"
+                    If Not String.IsNullOrEmpty(_nextcloudSourcePath) Then
+                        Dim separator = _nextcloudSourcePath.LastIndexOf("/"c)
+                        If separator > 0 Then targetFolder = _nextcloudSourcePath.Substring(0, separator)
+                    End If
+                    StatusText = LocalizationService.T("Wird gespeichert…")
+                    ' NICHT ueberschreiben, sondern nummerieren: lokal fragt der Dialog bei einem
+                    ' belegten Namen nach, fuer das Serverziel gibt es diese Frage nicht - und ein
+                    ' getippter Name trifft dort schnell eine fremde Datei.
+                    Dim uploadedPath = Await NextcloudService.UploadNewFileAsync(targetPath, targetFolder)
+                    Dim uploaded = Not String.IsNullOrEmpty(uploadedPath)
+                    Try : IO.File.Delete(targetPath) : Catch : End Try
+                    If Not uploaded Then
+                        StatusText = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                        LocalizationService.T("Speichern fehlgeschlagen"), NextcloudService.LastError)
+                        Return False
+                    End If
+                    _hasChanges = False
+                    Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                    StatusText = String.Format(LocalizationService.T("Nach Nextcloud gespeichert: {0}"), uploadedPath)
+                    Return True
                 End If
                 If ok AndAlso saveToImmich Then
                     ' Ziel Immich: Mit "Vorhandene Assets aktualisieren" UND einer Immich-Quelle wird
@@ -15086,6 +15224,134 @@ Namespace ViewModels
 
         ''' <summary>"Speichern" fuer RAW/PSD: schreibt das Rezept in die Begleitdatei
         ''' (die Quelldatei selbst wird nie angefasst).</summary>
+        ''' <summary>Schreibt das Rezept neben das Original AUF DEM SERVER.
+        '''
+        ''' Zwei Schritte, und der zweite darf nicht stillschweigend fehlschlagen: erst entsteht die
+        ''' Begleitdatei neben der Temp-Kopie (genau wie lokal, damit es nur EINEN Schreibweg für das
+        ''' Format gibt), dann wandert sie per WebDAV neben das Original. Bleibt der zweite Schritt
+        ''' aus, gilt NICHT als gespeichert - sonst hielte der Nutzer eine Bearbeitung für gesichert,
+        ''' die nur in einem Temp-Ordner steht und beim nächsten Aufräumen verschwindet.</summary>
+        ''' <summary>"Speichern" bei einem Nextcloud-Bild mit eingeschaltetem Ersetzen: die
+        ''' Bearbeitung wird gerendert und tritt AN DIE STELLE DES ORIGINALS.
+        '''
+        ''' Anders als bei Immich bleibt dabei alles bestehen, was am Original hing - dieselbe
+        ''' Dateikennung, dieselben Alben, dieselben Freigaben. Es ist ein gewoehnlicher PUT auf
+        ''' denselben Pfad.
+        '''
+        ''' DIE RECHTE ENTSCHEIDET DER SERVER, nicht wir: in einem geteilten Ordner fehlt das
+        ''' Schreibrecht, und der PUT antwortet dann mit einer Absage, die hier im Wortlaut ankommt.
+        ''' Eine eigene Vorabpruefung waere eine zweite Anfrage, die dieselbe Frage stellt und deren
+        ''' Antwort bis zum Schreiben schon wieder veraltet sein kann.
+        '''
+        ''' Danach arbeitet der Editor auf dem ERGEBNIS weiter: die Temp-Kopie traegt jetzt den
+        ''' gerenderten Stand, und das Bild wird neu geoeffnet. Ohne das legte ein zweites Speichern
+        ''' Zuschnitt und Regler ein zweites Mal auf ein Bild, das sie schon enthaelt - derselbe
+        ''' Fehler, den es beim lokalen Speichern schon einmal gab.</summary>
+        Private Async Function ReplaceNextcloudOriginalAsync() As Task(Of Boolean)
+            Dim targetPathInTree = _nextcloudSourcePath
+            If String.IsNullOrEmpty(targetPathInTree) Then Return False
+            Dim sourcePath = RenderSourcePath
+            Dim uploadDir = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "NextcloudUpload")
+            IO.Directory.CreateDirectory(uploadDir)
+            ' Der Name des Originals bleibt - es ist dieselbe Datei, sie bekommt nur neuen Inhalt.
+            Dim renderPath = IO.Path.Combine(uploadDir, IO.Path.GetFileName(targetPathInTree))
+
+            Dim errorMessage As String = Nothing
+            Try
+                StatusText = LocalizationService.T("Wird gespeichert…")
+                If _retouchStrokeActive Then CommitRetouchStroke()
+                If HasSelectedAnnotation Then SyncSelectedAnnotation()
+                CommitObjectAdjustModeToModel()
+                Dim adj = GetCurrentAdjustments()
+                Dim preserveMetadata = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
+                Dim ok = Await Task.Run(Function() ImageProcessor.SaveImage(sourcePath, renderPath, adj, SaveQuality, preserveMetadata,
+                                                                            workingFull:=CloneWorkingFullForRender()))
+                If Not ok Then
+                    StatusText = LocalizationService.T("Speichern fehlgeschlagen")
+                    Return False
+                End If
+
+                StatusText = LocalizationService.T("Original auf dem Server wird ersetzt…")
+                ' MIT DEM STAND, den dieses Bild beim Oeffnen hatte. Hat inzwischen jemand anderes
+                ' dieselbe Datei geaendert - Weboberflaeche, Handy, Sync-Client -, weist der Server
+                ' ab, statt die fremde Aenderung lautlos zu ueberschreiben.
+                Dim result = Await NextcloudService.ReplaceOriginalAsync(renderPath, targetPathInTree,
+                                                                        ifMatchETag:=_nextcloudSourceETag)
+                If result.Conflict Then
+                    ' Kein stilles Ueberschreiben und kein stilles Aufgeben: die Bearbeitung bleibt
+                    ' offen, und "Speichern unter" ist der Weg, sie trotzdem abzulegen.
+                    StatusText = LocalizationService.T("Das Foto wurde auf dem Server geändert. Speichern unter legt die Bearbeitung daneben.")
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
+                                                   LocalizationService.T("Das Foto wurde auf dem Server geändert. Speichern unter legt die Bearbeitung daneben."))
+                    Return False
+                End If
+                If Not result.Ok Then
+                    StatusText = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                    LocalizationService.T("Speichern fehlgeschlagen"), NextcloudService.LastError)
+                    Return False
+                End If
+                ' Der Stand von JETZT gilt fuer das naechste Speichern - sonst wiese die eigene
+                ' Bedingung beim zweiten Mal die eigene Aenderung ab.
+                _nextcloudSourceETag = result.ETag
+
+                _hasChanges = False
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                ClearPreviewSource()
+                ' Die geholte Kopie traegt jetzt den alten Stand. Sie durch das Ergebnis zu ersetzen
+                ' spart den zweiten Weg ueber die Leitung; anschliessend wird das Bild von dort neu
+                ' geoeffnet, damit die Regler auf einem gebackenen Bild neutral anfangen.
+                Try
+                    IO.File.Copy(renderPath, _currentImagePath, overwrite:=True)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Editor.ReplaceNextcloudOriginal", ex)
+                End Try
+                Dim filmstripPaths = If(_folderPaths IsNot Nothing AndAlso _folderPaths.Count > 0,
+                                        New List(Of String)(_folderPaths), Nothing)
+                ' Mit dem Stand VON JETZT weiterarbeiten, sonst wiese die eigene Bedingung beim
+                ' zweiten Speichern die eigene Aenderung ab.
+                Dim herkunftDanach = New Models.NextcloudOrigin With {
+                    .PathInTree = targetPathInTree,
+                    .ETag = _nextcloudSourceETag,
+                    .PseudoPath = _nextcloudSourcePseudoPath}
+                Await OpenImageAsync(_currentImagePath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
+                                     nextcloudSource:=herkunftDanach)
+                Dim galerieAktualisiert = _mainVm?.Gallery?.RefreshNextcloudViewAsync()
+                If galerieAktualisiert IsNot Nothing Then Await galerieAktualisiert
+                StatusText = String.Format(LocalizationService.T("Original auf dem Server ersetzt: {0}"), targetPathInTree)
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ReplaceNextcloudOriginal", ex)
+                StatusText = LocalizationService.T("Fehler: ") & ex.Message
+                errorMessage = ex.Message
+            Finally
+                Try
+                    If IO.File.Exists(renderPath) Then IO.File.Delete(renderPath)
+                Catch
+                End Try
+            End Try
+
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), errorMessage)
+            Return False
+        End Function
+
+        Private Async Function SaveSidecarToNextcloudAsync() As Task(Of Boolean)
+            If Not TrySaveSidecar() Then Return False
+            Dim lokal = RawSidecarService.SidecarPathFor(RenderSourcePath)
+            If Not File.Exists(lokal) Then
+                StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")
+                Return False
+            End If
+            If Not Await NextcloudService.UploadSidecarAsync(lokal, _nextcloudSourcePath) Then
+                _hasChanges = True
+                Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                StatusText = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"), NextcloudService.LastError)
+                Return False
+            End If
+            StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
+            Return True
+        End Function
+
         Private Function TrySaveSidecar() As Boolean
             If Not CanSaveSidecar Then Return False
             If Not RawSidecarService.TryWrite(RenderSourcePath, GetCurrentAdjustments()) Then
@@ -15237,6 +15503,7 @@ Namespace ViewModels
                 .Grain = CSng(_grain),
                 .GrainSize = CSng(_grainSize),
                 .GrainFrequency = CSng(_grainFrequency),
+                .GrainColor = CSng(_grainColor),
                 .Clarity = CSng(_clarity),
                 .NegativeEnabled = _negativeEnabled AndAlso Not (forPreview AndAlso _suppressNegativeForPick),
                 .NegativeMonochrome = _negativeMonochrome,
@@ -15535,7 +15802,7 @@ Namespace ViewModels
                     Return "Details"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
                      NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
-                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency)
+                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(GrainColor)
                     Return "Effekte"
                 Case NameOf(FilterPreset)
                     Return "Filter"
@@ -15707,6 +15974,7 @@ Namespace ViewModels
             _grain = adj.Grain
             _grainSize = adj.GrainSize
             _grainFrequency = adj.GrainFrequency
+            _grainColor = adj.GrainColor
             _clarity = adj.Clarity
             _negativeEnabled = adj.NegativeEnabled
             _negativeMonochrome = adj.NegativeMonochrome
@@ -16115,6 +16383,7 @@ Namespace ViewModels
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
+            _grainColor = 0
             _clarity = 0
             ' VOLLSTAENDIGKEIT: diese Felder fehlten hier und ueberlebten damit
             ' den Bildwechsel - Bild B erbte Dunst/Staub/Kalibrierung/Vignettenform/Weissabgleich
@@ -19678,6 +19947,7 @@ Namespace ViewModels
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
+            _grainColor = 0
             RaiseEffectsPropertiesChanged()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -19761,14 +20031,16 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Nur die Körnung-Gruppe (Körnung, Größe, Frequenz).</summary>
+        ''' <summary>Nur die Körnung-Gruppe (Stärke, Größe, Rauheit, Farbe).</summary>
         Private Sub ResetGrainGroupInternal()
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
+            _grainColor = 0
             Me.RaisePropertyChanged(NameOf(Grain))
             Me.RaisePropertyChanged(NameOf(GrainSize))
             Me.RaisePropertyChanged(NameOf(GrainFrequency))
+            Me.RaisePropertyChanged(NameOf(GrainColor))
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -19900,6 +20172,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(Grain))
             Me.RaisePropertyChanged(NameOf(GrainSize))
             Me.RaisePropertyChanged(NameOf(GrainFrequency))
+            Me.RaisePropertyChanged(NameOf(GrainColor))
             Me.RaisePropertyChanged(NameOf(BorderSize))
             Me.RaisePropertyChanged(NameOf(BorderCornerRadius))
             Me.RaisePropertyChanged(NameOf(BorderEffect))
@@ -20435,6 +20708,10 @@ Namespace ViewModels
             Grain = look.Grain
             GrainSize = look.GrainSize
             GrainFrequency = look.GrainFrequency
+            ' Ohne Adobe-Gegenstueck bringt ein Preset hier immer 0 mit. Zugewiesen wird trotzdem,
+            ' aus demselben Grund wie beim eingefaerbten Rauschen darueber: sonst bliebe ein farbiges
+            ' Korn unter einem frisch geladenen Look stehen.
+            GrainColor = look.GrainColor
             Vignette = look.Vignette
             VignetteTransition = look.VignetteTransition
             VignetteFeather = look.VignetteFeather

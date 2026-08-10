@@ -365,10 +365,12 @@ Namespace Services
         Public Property LutPresets As New List(Of LutPresetSettings)()
 
         ' Immich-Anbindung (self-hosted Foto-Server). Der Baum blendet den Immich-Zweig nur ein,
-        ' wenn Enabled=True und eine Server-URL hinterlegt ist. Der API-Key wird - wie bei den meisten
-        ' self-hosted-Tools üblich - im Klartext in settings.json gehalten; die Datei liegt im
-        ' Benutzerprofil (AppData/.config). Wer strengere Geheimnisverwaltung braucht, kann später auf
-        ' einen plattformspezifischen Tresor umstellen (siehe ImmichService).
+        ' wenn Enabled=True und eine Server-URL hinterlegt ist. Der API-Key steht in settings.json im
+        ' Benutzerprofil, dort aber VERSCHLUESSELT (SecretProtectionService) - das ist eine Huerde
+        ' gegen versehentliches Mitlesen beim Sichern oder in einem Bildschirmfoto, keine Sicherheit
+        ' gegen jemanden mit Zugriff auf das Konto. Im SPEICHER steht der Wert im Klartext, sonst
+        ' muesste jede der dutzenden Abfragen entschluesseln. Die Entscheidung dazu steht in
+        ' Audits/FALLEN_UND_ENTSCHEIDUNGEN.md.
         Public Property ImmichEnabled As Boolean = False
         Public Property ImmichServerUrl As String = ""
         Public Property ImmichApiKey As String = ""
@@ -393,6 +395,45 @@ Namespace Services
         ''' Foto erkannt hat, ist ausserdem eine Angabe fuer sich - sie soll nicht als Nebenwirkung
         ''' eines Suchlaufs den Rechner verlassen. Geschrieben werden nur BENANNTE Gruppen.</summary>
         Public Property ImmichWritePeopleTags As Boolean = False
+
+        ' Nextcloud mit der Memories-App als zweite Serverquelle.
+        '
+        ' Angemeldet wird mit einem APP-PASSWORT, nicht mit dem Kontopasswort: Nextcloud vergibt
+        ' dafuer eigene Zeichenketten, die einzeln zurueckgezogen werden koennen, und bei aktiver
+        ' Zwei-Faktor-Anmeldung ist es ohnehin der einzige Weg. Es liegt wie der Immich-Schluessel
+        ' verschluesselt in dieser Datei und nicht in einem Tresor des Systems - dieselbe bewusste
+        ' Entscheidung wie dort und dieselbe offene Baustelle.
+        Public Property NextcloudEnabled As Boolean = False
+        Public Property NextcloudServerUrl As String = ""
+        Public Property NextcloudUserName As String = ""
+        Public Property NextcloudAppPassword As String = ""
+        ''' <summary>Ab Werk AUS, aus demselben Grund wie bei Immich: ohne bewussten Schalter wirft
+        ''' ein Entf in der Galerie nichts vom Server. Geloescht wird in den Nextcloud-Papierkorb.</summary>
+        Public Property NextcloudAllowDelete As Boolean = False
+
+        ''' <summary>Löschen umgeht den Nextcloud-Papierkorb.
+        '''
+        ''' Zwei Schalter statt einem, genau wie bei Immich: erst muss das Löschen auf dem Server
+        ''' überhaupt erlaubt sein, und DANN erst entscheidet dieser, ob die Datei noch im Papierkorb
+        ''' landet. Anders als bei Immich ist es dabei ein zweiter Schritt: WebDAV löscht immer in den
+        ''' Papierkorb, endgültig wird es erst, wenn dort auch der Eintrag entfernt wird.</summary>
+        Public Property NextcloudDeletePermanently As Boolean = False
+
+        ''' <summary>Ordner im Dateibaum, in den hochgeladene Bilder gehen. Bei Immich stellt sich die
+        ''' Frage nicht, weil es dort keine Ordner gibt; hier braucht ein Upload ein Ziel, und die
+        ''' Wurzel des Benutzerordners waere ein Griff in fremde Ordnung. /Photos ist der Ordner, den
+        ''' Nextcloud fuer die Fotos seiner eigenen Anwendungen anlegt.</summary>
+        Public Property NextcloudUploadFolder As String = "/Photos"
+
+        ''' <summary>Speichern ersetzt das Original auf dem Server, statt nur ein Rezept danebenzulegen.
+        '''
+        ''' AB WERK AUS, und anders als bei Immich ist das hier eine echte Wahl: Nextcloud kann das
+        ''' Original an Ort und Stelle ersetzen (dieselbe Dateikennung, dieselben Alben und Freigaben).
+        ''' Es ist aber ein Schreibvorgang in den Fotobestand des Benutzers, und die Vorgabe dieser
+        ''' Anwendung bleibt die Begleitdatei: das Original bleibt Byte fuer Byte liegen. RAW und PSD
+        ''' sind vom Ersetzen ausgenommen - ein Render statt der Rohdatei waere kein Speichern,
+        ''' sondern ein Verlust.</summary>
+        Public Property NextcloudReplaceOriginal As Boolean = False
 
         ' Zuletzt im Druckdialog gewählte Optionen. Sie gelten auch für das Zielformat PDF in
         ' „Speichern unter"/„Konvertieren nach", damit Drucken und PDF-Export dasselbe Seitenlayout
@@ -541,10 +582,58 @@ Namespace Services
         Private Shared Function ReadSettingsJson(ByRef readError As Exception) As String
             Try
                 If Not File.Exists(SettingsPath) Then Return ""
-                Return File.ReadAllText(SettingsPath)
+                Return UnprotectSecrets(File.ReadAllText(SettingsPath))
             Catch ex As Exception
                 readError = ex
                 Return ""
+            End Try
+        End Function
+
+        ' ── Zugangsdaten in der Datei ───────────────────────────────────────────
+        '
+        ' Die Felder, die ein Geheimnis tragen. Verschluesselt wird GENAU AN DER DATEI: der Stand im
+        ' Speicher bleibt Klartext, sonst muesste jede der dutzenden Abfragen entschluesseln. Beim
+        ' Lesen einmal auf, beim Schreiben einmal zu.
+        '
+        ' Was das ist und was nicht, steht im SecretProtectionService: eine Huerde, keine Sicherheit
+        ' gegen jemanden mit Zugriff auf das Benutzerkonto.
+
+        Private Shared ReadOnly SecretFieldNames As String() = {"ImmichApiKey", "NextcloudAppPassword"}
+
+        ''' <summary>Die Geheimnisse im JSON verschluesseln. Ueber den Knotenbaum und nicht ueber
+        ''' Textersetzung: ein Wert kann Anfuehrungszeichen und Zeilenumbrueche enthalten, und eine
+        ''' Ersetzung am Text traefe frueher oder spaeter das Falsche.</summary>
+        Private Shared Function ProtectSecrets(json As String) As String
+            Return MapSecretFields(json, AddressOf SecretProtectionService.Protect)
+        End Function
+
+        Private Shared Function UnprotectSecrets(json As String) As String
+            Return MapSecretFields(json, AddressOf SecretProtectionService.Unprotect)
+        End Function
+
+        Private Shared Function MapSecretFields(json As String, convert As Func(Of String, String)) As String
+            If String.IsNullOrWhiteSpace(json) Then Return json
+            Try
+                Dim root = TryCast(Nodes.JsonNode.Parse(json), Nodes.JsonObject)
+                If root Is Nothing Then Return json
+                Dim changed = False
+                For Each fieldName In SecretFieldNames
+                    Dim node As Nodes.JsonNode = Nothing
+                    If Not root.TryGetPropertyValue(fieldName, node) Then Continue For
+                    Dim oldValue = TryCast(node, Nodes.JsonValue)?.GetValue(Of String)()
+                    If String.IsNullOrEmpty(oldValue) Then Continue For
+                    Dim newValue = convert(oldValue)
+                    If String.Equals(newValue, oldValue, StringComparison.Ordinal) Then Continue For
+                    root(fieldName) = newValue
+                    changed = True
+                Next
+                If Not changed Then Return json
+                Return root.ToJsonString(New JsonSerializerOptions With {.WriteIndented = True})
+            Catch ex As Exception
+                ' Eine Datei, die wir nicht als Objekt lesen koennen, wird nicht angefasst - der
+                ' Leseweg darueber meldet sie ohnehin als unbrauchbar.
+                DiagnosticLogService.LogException("Settings.Secrets", ex)
+                Return json
             End Try
         End Function
 
@@ -656,7 +745,9 @@ Namespace Services
                 ' Wasserzeichen-Presets, gespeicherten Suchen und Theme. Erst vollständig danebenschreiben,
                 ' dann ersetzen.
                 Dim tempPath = SettingsPath & ".tmp"
-                File.WriteAllText(tempPath, json)
+                ' Erst hier werden die Zugangsdaten verschluesselt: im Speicher stehen sie im
+                ' Klartext (sonst muesste jede Abfrage entschluesseln), in der DATEI nicht.
+                File.WriteAllText(tempPath, ProtectSecrets(json))
                 File.Move(tempPath, SettingsPath, overwrite:=True)
             Catch ex As Exception
                 ' Volle Platte, fehlende Rechte: früher fiel das lautlos unter den Tisch und der Nutzer
@@ -907,10 +998,17 @@ Namespace Services
             Environment.SetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS", $"{screen}={scaleText}")
         End Sub
 
+        ''' <summary>Zeitleiste am rechten Rand: nur noch AN oder AUS.
+        '''
+        ''' Die frueheren Werte "Immich" und "Folders" trennten nach HERKUNFT der Bilder. Das war
+        ''' schon mit einer Serverquelle eine Feinheit ohne Nutzen und mit zweien vollends schief -
+        ''' die Zeitleiste zeigt Zeit, nicht Herkunft. Beide wandern deshalb auf "An"; wer sie nicht
+        ''' will, hat weiterhin "Off". Die Umsetzung passiert beim Laden UND beim Speichern, alte
+        ''' Konfigurationen ziehen also von selbst nach.</summary>
         Public Shared Function NormalizeGalleryTimelineMode(value As String) As String
             Select Case If(value, "").Trim()
-                Case "Immich", "Folders", "Off"
-                    Return If(value, "").Trim()
+                Case "Off"
+                    Return "Off"
                 Case Else
                     Return "All"
             End Select
@@ -1016,7 +1114,7 @@ Namespace Services
 
         Public Shared Function NormalizeGalleryStartupFolderMode(value As String) As String
             Select Case If(value, "").Trim()
-                Case "Pictures", "Last", "Custom", "Immich"
+                Case "Pictures", "Last", "Custom", "Immich", "Nextcloud"
                     Return value.Trim()
                 Case Else
                     Return "Pictures"

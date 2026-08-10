@@ -225,6 +225,12 @@ Namespace Services
         ''' <summary>Körnungsfrequenz/Unregelmäßigkeit, 0-100. 0 = gleichmäßiges Korn; höher = eine
         ''' feine zweite Lage wird eingemischt, das Korn wirkt unruhiger.</summary>
         Public Property GrainFrequency As Single = 0
+        ''' <summary>Farbigkeit des Korns, 0-100. 0 = monochromes Korn (derselbe Rauschwert auf R, G
+        ''' und B, bisheriges Verhalten und bitgenau unveraendert); hoeher = die drei Kanaele driften
+        ''' auseinander, das Korn bekommt farbige Speckles wie ein hoch empfindlicher Farbfilm.
+        ''' KEIN Adobe-Gegenstueck: crs:Grain* kennt nur Staerke, Groesse und Frequenz. Der Wert
+        ''' steht deshalb nur in .fpxmp und .fpx, ein XMP-Import kann ihn nicht setzen.</summary>
+        Public Property GrainColor As Single = 0
         Public Property Clarity As Single = 0
 
         ''' <summary>Gescanntes Filmnegativ in ein Positiv umkehren.</summary>

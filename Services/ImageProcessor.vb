@@ -1886,7 +1886,7 @@ Namespace Services
             End If
 
             If adj.Grain > 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F), owned)
             End If
             If adj.AddNoise > 0 Then
                 processed = ReplaceBitmapOwned(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F), owned)
@@ -2808,7 +2808,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CalibrationBlueHue, adj.CalibrationBlueSaturation, adj.CalibrationShadowTint,
                                 adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle,
-                adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.Clarity,
+                adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
                 adj.RedHue, adj.RedSaturation, adj.RedLuminance, adj.OrangeHue, adj.OrangeSaturation, adj.OrangeLuminance,

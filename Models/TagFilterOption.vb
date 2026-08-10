@@ -15,19 +15,44 @@ Namespace Models
 
         Private _isSelected As Boolean
 
-        Public Sub New(tag As String, count As Integer, isSelected As Boolean)
+        Public Sub New(tag As String, count As Integer, isSelected As Boolean,
+                       Optional serverSource As String = "", Optional serverId As String = "")
             Me.Tag = If(tag, "")
             Me.Count = count
+            Me.ServerSource = If(serverSource, "")
+            Me.ServerId = If(serverId, "")
             _isSelected = isSelected
         End Sub
 
         Public ReadOnly Property Tag As String
         Public ReadOnly Property Count As Integer
 
-        ''' <summary>Beschriftung mit der Anzahl in Klammern, etwa "urlaub (42)".</summary>
+        ''' <summary>Von welchem Server dieses Stichwort kommt; leer heisst aus dem lokalen Katalog.
+        ''' Gleiche Regel wie bei Personen und Orten: allein waehlbar, oeffnet die Server-Ansicht.
+        '''
+        ''' Nur EIN Server kann hier stehen, und das ist kein Zufall: Nextcloud fuehrt Stichwoerter
+        ''' als Cluster und kann danach filtern, Immichs Suche kennt keinen Stichwortfilter.</summary>
+        Public ReadOnly Property ServerSource As String
+
+        ''' <summary>Kennung des Stichworts auf dem Server - der Filter laeuft ueber sie, nicht ueber
+        ''' den Namen.</summary>
+        Public ReadOnly Property ServerId As String
+
+        Public ReadOnly Property IsFromServer As Boolean
+            Get
+                Return ServerSource.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Traegt die Zwischenueberschrift mit dem Servernamen - beim ERSTEN Eintrag je
+        ''' Server.</summary>
+        Public Property ShowsServerHeader As Boolean
+
+        ''' <summary>Beschriftung mit der Anzahl in Klammern, etwa "urlaub (42)". OHNE Anzahl, wo es
+        ''' keine gibt - "(0)" hinter einem Stichwort liest sich wie "keine Bilder".</summary>
         Public ReadOnly Property Label As String
             Get
-                Return $"{Tag} ({Count})"
+                Return If(Count > 0, $"{Tag} ({Count})", Tag)
             End Get
         End Property
 

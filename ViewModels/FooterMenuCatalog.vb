@@ -145,6 +145,12 @@ Namespace ViewModels
             Return Build("Löschen", "trash", c)
         End Function
 
+        ''' <summary>Die einzige Geste im Papierkorb einer Serverquelle. Der Server legt die Datei
+        ''' dorthin zurueck, wo sie herkam.</summary>
+        Public Shared Function RestoreFromTrash(c As ICommand) As AppAction
+            Return Build("Wiederherstellen", "restore", c)
+        End Function
+
     End Class
 
 End Namespace

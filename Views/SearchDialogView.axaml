@@ -3,48 +3,41 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.SearchDialogView">
 
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
           RowSpacing="14">
-        <Grid ColumnDefinitions="200,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
+        <!-- ZWEI ABSCHNITTE. Oben, wonach sich immer suchen laesst - der Name der Datei. Unten alles,
+             was aus dem KATALOG kommt: Favorit, Bewertung und die Bedingungen. Der Katalog kennt nur
+             Bilder, die schon geoeffnet oder bewertet wurden, und das gilt fuer Ordner genauso wie
+             fuer die beiden Server.
+             KEINE Quellenauswahl: ob lokal, Immich oder Nextcloud gesucht wird, ergibt sich aus dem
+             Bereich, in dem "Neue Suche" angeklickt wurde. Nur Startordner und Umfang bleiben dem
+             Dateisystem vorbehalten: auf einem Server gibt es keinen. -->
+        <TextBlock Text="Allgemein" FontWeight="SemiBold"/>
+        <Grid Grid.Row="1" ColumnDefinitions="200,*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
             <TextBlock Text="Name" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <TextBox Grid.Column="1"
                      Grid.ColumnSpan="2"
                      Text="{Binding DialogSearchName, Mode=TwoWay}"
                      MinHeight="36"/>
 
-            <TextBlock Grid.Row="1" Text="Quelle" VerticalAlignment="Center"
-                       IsVisible="{Binding IsDialogImmichAvailable}"
-                       Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8"
-                        IsVisible="{Binding IsDialogImmichAvailable}">
-                <Button Classes="segmented"
-                        Classes.active="{Binding IsDialogSourceLocal}"
-                        Click="OnSourceClick"
-                        Tag="Local">Lokale Ordner</Button>
-                <Button Classes="segmented"
-                        Classes.active="{Binding IsDialogSourceImmich}"
-                        Click="OnSourceClick"
-                        Tag="Immich">Immich</Button>
-            </StackPanel>
-
             <!-- Umbruch als Sicherheitsnetz: "Dateimuster oder Stichwörter" ist die längste
                  Beschriftung im Dialog und wächst mit der eingestellten Schriftgröße. -->
-            <TextBlock Grid.Row="2" Text="Dateimuster oder Stichwörter" VerticalAlignment="Center"
+            <TextBlock Grid.Row="1" Text="Dateimuster oder Stichwörter" VerticalAlignment="Center"
                        TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <TextBox Grid.Row="2"
+            <TextBox Grid.Row="1"
                      Grid.Column="1"
                      Grid.ColumnSpan="2"
                      Text="{Binding DialogSearchText, Mode=TwoWay}"
                      MinHeight="36"/>
-            <TextBlock Grid.Row="3" Text="Startordner (optional)" VerticalAlignment="Center"
+            <TextBlock Grid.Row="2" Text="Startordner (optional)" VerticalAlignment="Center"
                        IsVisible="{Binding IsDialogSourceLocal}"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <TextBox Grid.Row="3"
+            <TextBox Grid.Row="2"
                      Grid.Column="1"
                      IsVisible="{Binding IsDialogSourceLocal}"
                      Text="{Binding DialogSearchRootFolder, Mode=TwoWay}"
                      MinHeight="36"/>
-            <Button Grid.Row="3"
+            <Button Grid.Row="2"
                     Grid.Column="2"
                     Width="38"
                     Height="36"
@@ -54,15 +47,23 @@
                     ToolTip.Tip="Ordner wählen">...</Button>
         </Grid>
 
-        <Grid Grid.Row="1" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0"
+        <!-- Ohne Beschriftung: "Unterordner durchsuchen" sagt selbst, worum es geht. -->
+        <Grid Grid.Row="2" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0"
               IsVisible="{Binding IsDialogSourceLocal}">
-            <TextBlock Text="Umfang" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <CheckBox Grid.Column="1"
                       IsChecked="{Binding DialogSearchIncludeSubfolders, Mode=TwoWay}"
                       Content="Unterordner durchsuchen"/>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
+        <StackPanel Grid.Row="3" Spacing="4" Margin="0,6,0,0">
+            <TextBlock Text="Katalog" FontWeight="SemiBold"/>
+            <TextBlock Text="Diese Angaben kommen aus dem Katalog. Er kennt Bilder, die schon geöffnet oder bewertet wurden."
+                       TextWrapping="Wrap"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+        </StackPanel>
+
+        <Grid Grid.Row="4" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
             <TextBlock Text="Favoriten" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                 <Button Classes="segmented"
@@ -76,7 +77,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
+        <Grid Grid.Row="5" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
             <TextBlock Text="Bewertung" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <Button Grid.Column="1"
                     x:Name="SearchRatingDropDownButton"
@@ -136,8 +137,7 @@
             </Button>
         </Grid>
 
-        <Grid Grid.Row="4" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0"
-              IsVisible="{Binding IsDialogSourceLocal}">
+        <Grid Grid.Row="6" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
             <TextBlock Text="Bedingungen" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <StackPanel Grid.Column="1" Spacing="8">
                 <ItemsControl ItemsSource="{Binding DialogSearchConditions}">
