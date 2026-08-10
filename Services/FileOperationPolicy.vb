@@ -187,6 +187,30 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>True, wenn irgendein ORDNER im Pfad mit einem Punkt beginnt.
+        '''
+        ''' Der sparsame Bruder von <see cref="IsHiddenPath"/>: reine Zeichenkettenarbeit, kein
+        ''' Griff auf die Platte, und der Dateiname selbst bleibt aussen vor. Gedacht fuer
+        ''' Durchlaeufe ueber tausende Katalogeintraege, wo ein zusaetzliches File.GetAttributes je
+        ''' Eintrag spuerbar waere.</summary>
+        Public Shared Function IsInHiddenFolder(path As String) As Boolean
+            If String.IsNullOrEmpty(path) Then Return False
+            Try
+                Dim normalized = NormalizePath(path)
+                Dim home = NormalizePath(PersonalFolder)
+                Dim relative = If(IsAncestorOrSelf(home, normalized),
+                                  normalized.Substring(home.Length).TrimStart(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar),
+                                  normalized)
+                Dim segments = relative.Split(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+                ' Das letzte Stueck ist der Dateiname - eine Datei ".xmp" macht keinen Ordner versteckt.
+                For i = 0 To segments.Length - 2
+                    If segments(i).StartsWith(".", StringComparison.Ordinal) Then Return True
+                Next
+            Catch
+            End Try
+            Return False
+        End Function
+
         Public Shared Function IsHiddenPath(path As String) As Boolean
             If String.IsNullOrEmpty(path) Then Return False
             Try

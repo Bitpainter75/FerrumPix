@@ -377,11 +377,15 @@ Namespace Views
                 ' "BatchResizeWidthTextBox" liegt in der eigenen NameScope von BatchResizeDialogView -
                 ' FindControl auf dem Overlay findet es nicht, deshalb über die UserControl selbst fokussieren.
                 Dim batchResizeView = overlay?.FindControl(Of BatchResizeDialogView)("BatchResizeDialog")
+                ' Der Ortsdialog hat genau EIN Feld, und wer ihn oeffnet, will tippen oder einfuegen.
+                Dim setPlaceView = overlay?.FindControl(Of SetPlaceDialogView)("SetPlaceDialog")
                 If input IsNot Nothing AndAlso vm.DialogShowsInput Then
                     input.Focus()
                     input.SelectAll()
                 ElseIf batchResizeView IsNot Nothing AndAlso vm.DialogShowsBatchResize Then
                     batchResizeView.FocusWidthField()
+                ElseIf setPlaceView IsNot Nothing AndAlso vm.DialogShowsSetPlace Then
+                    setPlaceView.FocusQueryField()
                 Else
                     Focus()
                 End If

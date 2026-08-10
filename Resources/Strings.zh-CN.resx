@@ -6978,4 +6978,67 @@
   <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
     <value>这些文件位于个人文件夹之外或隐藏文件夹中。FerrumPix 不会在那里删除任何内容。</value>
   </data>
+  <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
+    <value>复制拍摄地点</value>
+  </data>
+  <data name="Aufnahmeort_einf_gen_930e387b" xml:space="preserve">
+    <value>粘贴拍摄地点</value>
+  </data>
+  <data name="Aufnahmeort_setzen_6e4dc374" xml:space="preserve">
+    <value>设置拍摄地点</value>
+  </data>
+  <data name="Dieses_Bild_hat_keinen_Aufnahmeort_c1f51ba0" xml:space="preserve">
+    <value>这张照片没有拍摄地点</value>
+  </data>
+  <data name="Aufnahmeort_gemerkt_03515dc8" xml:space="preserve">
+    <value>已复制拍摄地点</value>
+  </data>
+  <data name="Aufnahmeort_gesetzt_f_r_0_Bilder_1_400e5da9" xml:space="preserve">
+    <value>已为 {0} 张照片设置拍摄地点：{1}</value>
+  </data>
+  <data name="Aufnahmeort_gesetzt_f_r_0_von_1_Bildern_f03cf27a" xml:space="preserve">
+    <value>已为 {1} 张照片中的 {0} 张设置拍摄地点</value>
+  </data>
+  <data name="Koordinate_oder_Ortsname_auch_aus_einer_Karte_ko_f73a1d50" xml:space="preserve">
+    <value>坐标或地名，也可从地图复制</value>
+  </data>
+  <data name="Koordinate_auch_aus_einer_Karte_kopiert_f_r_die__8f2787b1" xml:space="preserve">
+    <value>坐标，也可从地图复制 - 缺少用于地名搜索的地点表</value>
+  </data>
+  <data name="0_JPEG_bekommen_den_Ort_in_die_Datei_f82fe97e" xml:space="preserve">
+    <value>{0} 个 JPEG 文件将地点写入文件内</value>
+  </data>
+  <data name="0_Dateien_bekommen_eine_Beistelldatei_daneben_765f7807" xml:space="preserve">
+    <value>{0} 个文件将在旁边生成附属文件</value>
+  </data>
+  <data name="Tippe_eine_Koordinate_oder_einen_Ortsnamen_Die_O_5316b938" xml:space="preserve">
+    <value>输入坐标或地名。地点搜索在本设备上进行。</value>
+  </data>
+  <data name="Setzen_a7f2eb38" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Zum_Beispiel_48_137154_11_576124_oder_Marburg_d38e0892" xml:space="preserve">
+    <value>例如：48.137154, 11.576124 或 Marburg</value>
+  </data>
+  <data name="Zum_Beispiel_48_137154_11_576124_19d18121" xml:space="preserve">
+    <value>例如：48.137154, 11.576124</value>
+  </data>
+  <data name="Kein_Ort_dieses_Namens_in_der_Ortstabelle_a67f0d60" xml:space="preserve">
+    <value>地点表中没有这个名称的地点</value>
+  </data>
+  <data name="Koordinate_oder_Ortsname_6b3af480" xml:space="preserve">
+    <value>坐标或地名</value>
+  </data>
+  <data name="Orte_auf_diesem_Ger_t_8defa6ac" xml:space="preserve">
+    <value>本设备上的地点</value>
+  </data>
+  <data name="Aufnahmeort_l_schen_dc98650c" xml:space="preserve">
+    <value>删除拍摄地点</value>
+  </data>
+  <data name="Der_Aufnahmeort_wird_aus_0_Bildern_entfernt_aus__ea91f077" xml:space="preserve">
+    <value>拍摄地点将从 {0} 张照片中删除：从图像文件、旁边的附属文件以及目录中。此操作无法撤销。</value>
+  </data>
+  <data name="Aufnahmeort_aus_0_Bildern_entfernt_29b3d998" xml:space="preserve">
+    <value>已从 {0} 张照片中删除拍摄地点</value>
+  </data>
 </root>

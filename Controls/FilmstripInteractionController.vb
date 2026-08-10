@@ -135,9 +135,17 @@ Namespace Controls
             ' Thumbnail (Standbild) sichtbar.
             If item.IsVideoFile Then Return
             Try
+                ' Ein Serverbild liegt auf KEINER Platte - sein Pfad ist eine Kennung. Ohne diesen
+                ' Schritt bekam der Dekoder "nextcloud://123/Bild.jpg" bzw. "immich://..." zu sehen
+                ' und lieferte still nichts; sichtbar blieb das Vorschaubild. Geholt wird nur auf
+                ' die ausdrueckliche Geste hin, und eine schon geholte Kopie wird wiederverwendet.
+                Dim path = If(item.IsRemoteAsset, Await item.EnsureLocalOriginalAsync(), item.FilePath)
+                If String.IsNullOrEmpty(path) Then Return
+                If Not overlay.IsVisible Then Return
+
                 ' Auto-Variante: erkennt Buendel (Komposit), RAW und PSD, die SkiaSharp nicht
                 ' direkt dekodiert.
-                Dim bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(item.FilePath))
+                Dim bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(path))
                 If overlay.IsVisible Then img.Source = bmp
             Catch
             End Try

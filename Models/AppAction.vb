@@ -37,6 +37,16 @@ Namespace Models
         ''' bzw. zehn Werte - flach nebeneinander sprengten sie das Menue.
         Public ReadOnly Property Children As IReadOnlyList(Of Object)
 
+        ''' <summary>Fuer die Vorlage des Menueeintrags: nur ein Eintrag mit Untereintraegen bekommt
+        ''' das Zeichen dafuer. Das Zeichen der Vorlage von Avalonia sitzt am rechten Rand des
+        ''' Menues, also weit weg von seiner Beschriftung; unseres steht direkt hinter dem Wort,
+        ''' wohin es gehoert (siehe FerrumPixTheme, PART_ChevronPath).</summary>
+        Public ReadOnly Property HasChildren As Boolean
+            Get
+                Return Children IsNot Nothing AndAlso Children.Count > 0
+            End Get
+        End Property
+
         ''' Bereits UEBERSETZT. Die Liste wird bei jedem Oeffnen neu gebaut, damit ein
         ''' Sprachwechsel ohne Umweg ankommt.
         Public ReadOnly Property Label As String

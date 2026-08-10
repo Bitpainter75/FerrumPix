@@ -6981,4 +6981,67 @@
   <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
     <value>These files are outside your personal folder or in a hidden folder. FerrumPix does not delete anything there.</value>
   </data>
+  <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
+    <value>Copy location</value>
+  </data>
+  <data name="Aufnahmeort_einf_gen_930e387b" xml:space="preserve">
+    <value>Paste location</value>
+  </data>
+  <data name="Aufnahmeort_setzen_6e4dc374" xml:space="preserve">
+    <value>Set location</value>
+  </data>
+  <data name="Dieses_Bild_hat_keinen_Aufnahmeort_c1f51ba0" xml:space="preserve">
+    <value>This picture has no location</value>
+  </data>
+  <data name="Aufnahmeort_gemerkt_03515dc8" xml:space="preserve">
+    <value>Location copied</value>
+  </data>
+  <data name="Aufnahmeort_gesetzt_f_r_0_Bilder_1_400e5da9" xml:space="preserve">
+    <value>Location set for {0} pictures: {1}</value>
+  </data>
+  <data name="Aufnahmeort_gesetzt_f_r_0_von_1_Bildern_f03cf27a" xml:space="preserve">
+    <value>Location set for {0} of {1} pictures</value>
+  </data>
+  <data name="Koordinate_oder_Ortsname_auch_aus_einer_Karte_ko_f73a1d50" xml:space="preserve">
+    <value>Coordinates or place name, also copied from a map</value>
+  </data>
+  <data name="Koordinate_auch_aus_einer_Karte_kopiert_f_r_die__8f2787b1" xml:space="preserve">
+    <value>Coordinates, also copied from a map - the place table for name search is missing</value>
+  </data>
+  <data name="0_JPEG_bekommen_den_Ort_in_die_Datei_f82fe97e" xml:space="preserve">
+    <value>{0} JPEG files get the location written into the file</value>
+  </data>
+  <data name="0_Dateien_bekommen_eine_Beistelldatei_daneben_765f7807" xml:space="preserve">
+    <value>{0} files get a sidecar file next to them</value>
+  </data>
+  <data name="Tippe_eine_Koordinate_oder_einen_Ortsnamen_Die_O_5316b938" xml:space="preserve">
+    <value>Type coordinates or a place name. The place search runs on this device.</value>
+  </data>
+  <data name="Setzen_a7f2eb38" xml:space="preserve">
+    <value>Set</value>
+  </data>
+  <data name="Zum_Beispiel_48_137154_11_576124_oder_Marburg_d38e0892" xml:space="preserve">
+    <value>For example: 48.137154, 11.576124 or Marburg</value>
+  </data>
+  <data name="Zum_Beispiel_48_137154_11_576124_19d18121" xml:space="preserve">
+    <value>For example: 48.137154, 11.576124</value>
+  </data>
+  <data name="Kein_Ort_dieses_Namens_in_der_Ortstabelle_a67f0d60" xml:space="preserve">
+    <value>No place of that name in the place table</value>
+  </data>
+  <data name="Koordinate_oder_Ortsname_6b3af480" xml:space="preserve">
+    <value>Coordinates or place name</value>
+  </data>
+  <data name="Orte_auf_diesem_Ger_t_8defa6ac" xml:space="preserve">
+    <value>Places on this device</value>
+  </data>
+  <data name="Aufnahmeort_l_schen_dc98650c" xml:space="preserve">
+    <value>Remove location</value>
+  </data>
+  <data name="Der_Aufnahmeort_wird_aus_0_Bildern_entfernt_aus__ea91f077" xml:space="preserve">
+    <value>The location will be removed from {0} pictures - from the image file, from a sidecar file next to it, and from the catalogue. This cannot be undone.</value>
+  </data>
+  <data name="Aufnahmeort_aus_0_Bildern_entfernt_29b3d998" xml:space="preserve">
+    <value>Location removed from {0} pictures</value>
+  </data>
 </root>

@@ -31,18 +31,25 @@
             <Style Selector="MenuItem:not(.widget)">
             <!-- Schmaler als die Vorgabe des Erscheinungsbilds (208): die Eintraege sind kurz,
                  und ein Menue, das breiter ist als sein laengster Text, wirkt leer. -->
-            <Setter Property="MinWidth" Value="178"/>
+            <Setter Property="MinWidth" Value="150"/>
             <Setter Property="Command" Value="{Binding Command}"/>
             <Setter Property="CommandParameter" Value="{Binding Parameter}"/>
             <Setter Property="ItemsSource" Value="{Binding Children}"/>
             <Setter Property="Header">
             <Template>
-            <StackPanel Orientation="Horizontal" Spacing="10">
-            <icons:SvgIcon Source="{Binding IconSource}"
+            <!-- Untermenue-Zeichen aus dem eigenen Symbolsatz, rechts mit 20 Punkten Abstand
+                 (siehe GalleryView und FerrumPixTheme, PART_ChevronPath). -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+            <icons:SvgIcon Grid.Column="0" Source="{Binding IconSource}"
             Width="16" Height="16"
             VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
-            </StackPanel>
+            <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+            <icons:SvgIcon Grid.Column="2"
+            Source="avares://FerrumPix/Assets/Icons/outline/caret-right.svg"
+            Width="18" Height="18" VerticalAlignment="Center"
+            Margin="12,0,6,0"
+            IsVisible="{Binding HasChildren}"/>
+            </Grid>
             </Template>
             </Setter>
             </Style>

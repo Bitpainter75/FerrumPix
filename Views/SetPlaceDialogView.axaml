@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.SetPlaceDialogView">
+
+    <StackPanel Spacing="10">
+
+        <!-- WAS PASSIERT, steht ganz oben und von Anfang an - nicht erst, wenn schon etwas
+             erkannt ist. Wer den Dialog aufmacht, soll zuerst lesen, welche Bilder gemeint sind
+             und wohin der Ort geschrieben wird. -->
+        <Border Background="{DynamicResource FP.Bg.Input}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8">
+            <TextBlock Text="{Binding DialogPlaceTargetSummary}"
+                       Classes="no-translate"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- EIN Feld für beides: Koordinate oder Ortsname. Was drinsteht, erkennt die Auswertung
+             selbst (MainWindowViewModel.EvaluatePlaceQuery) - der Nutzer soll nicht erst eine
+             Betriebsart wählen müssen. Die Beschriftung darüber sagt genau das; ohne sie stand da
+             nur ein leeres Feld, dem man nicht ansieht, wofür es ist. -->
+        <TextBlock Text="Koordinate oder Ortsname"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+
+        <Grid ColumnDefinitions="Auto,*">
+            <icons:SvgIcon Grid.Column="0"
+                           Source="avares://FerrumPix/Assets/Icons/outline/map-pin-search.svg"
+                           Width="18" Height="18"
+                           VerticalAlignment="Center"
+                           Margin="2,0,10,0"/>
+            <TextBox Grid.Column="1"
+                     x:Name="SetPlaceQueryTextBox"
+                     Text="{Binding DialogPlaceQuery, Mode=TwoWay}"
+                     PlaceholderText="{Binding DialogPlaceHint}"
+                     Classes="no-translate"/>
+        </Grid>
+
+        <!-- Ein Beispiel sagt mehr als die Beschreibung darüber. -->
+        <TextBlock Text="{Binding DialogPlaceExample}"
+                   Classes="no-translate"
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
+
+        <!-- Die Treffer der Ortssuche, MIT Überschrift: sonst taucht unter dem Feld eine Liste
+             auf, von der man nicht weiß, woher sie kommt. -->
+        <TextBlock Text="Orte auf diesem Gerät"
+                   IsVisible="{Binding HasDialogPlaceMatches}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+
+        <ListBox x:Name="SetPlaceMatchesList"
+                 ItemsSource="{Binding DialogPlaceMatches}"
+                 SelectedItem="{Binding DialogSelectedPlaceMatch, Mode=TwoWay}"
+                 IsVisible="{Binding HasDialogPlaceMatches}"
+                 MaxHeight="180"
+                 Classes="no-translate">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
+                                       Width="14" Height="14"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding DisplayText}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Gesucht, nichts gefunden: das gehört gesagt. Sonst wartet man auf eine Liste, die
+             nicht mehr kommt. -->
+        <TextBlock Text="{Binding DialogPlaceNoMatchText}"
+                   IsVisible="{Binding HasDialogPlaceNoMatch}"
+                   Classes="no-translate"
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
+
+        <!-- Was tatsächlich geschrieben wird, sobald es feststeht. -->
+        <Border IsVisible="{Binding HasDialogPlace}"
+                Background="{DynamicResource FP.Bg.Input}"
+                BorderBrush="{DynamicResource FP.Accent}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin-check.svg"
+                               Width="16" Height="16"
+                               VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding DialogPlacePreview}"
+                           Classes="no-translate"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+</UserControl>

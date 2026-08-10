@@ -16,7 +16,17 @@ Namespace ViewModels
         BatchFilter
         WatermarkPreset
         ExportTo
+        SetPlace
     End Enum
+
+    ''' <summary>Was der Dialog "Aufnahmeort setzen" herausgibt: die Koordinate und, wenn bekannt,
+    ''' der Ortsname dazu. Der Name dient nur der Rueckmeldung an den Nutzer - geschrieben wird die
+    ''' Koordinate, und den Ortsnamen bestimmt der Katalog danach selbst neu.</summary>
+    Public Class SetPlaceDialogResult
+        Public Property Latitude As Double
+        Public Property Longitude As Double
+        Public Property Label As String = ""
+    End Class
 
     ''' <summary>Auswahl aus dem Dialog "Exportieren nach" (Galerie): ein Sammel-Export, der
     ''' Namensmuster, Look/Auto-Verbesserung, Wasserzeichen, Bildgröße, Metadaten und Format in

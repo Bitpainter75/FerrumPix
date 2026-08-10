@@ -21,15 +21,20 @@ Namespace Services
         Private Shared ReadOnly XmpNs As XNamespace = "http://ns.adobe.com/xap/1.0/"
         Private Shared ReadOnly DcNs As XNamespace = "http://purl.org/dc/elements/1.1/"
         Private Shared ReadOnly LrNs As XNamespace = "http://ns.adobe.com/lightroom/1.0/"
+        Private Shared ReadOnly ExifNs As XNamespace = "http://ns.adobe.com/exif/1.0/"
 
         Public Class XmpSidecarData
             Public Property Rating As Integer?
             Public Property ColorLabel As String = ""
             Public Property Keywords As New List(Of String)()
+            ''' Nur gefuellt, wenn beide Werte dastehen - eine halbe Koordinate ist keine.
+            Public Property GpsLatitude As Double?
+            Public Property GpsLongitude As Double?
 
             Public ReadOnly Property IsEmpty As Boolean
                 Get
-                    Return Not Rating.HasValue AndAlso String.IsNullOrEmpty(ColorLabel) AndAlso Keywords.Count = 0
+                    Return Not Rating.HasValue AndAlso String.IsNullOrEmpty(ColorLabel) AndAlso
+                           Keywords.Count = 0 AndAlso Not GpsLatitude.HasValue
                 End Get
             End Property
         End Class
@@ -108,6 +113,19 @@ Namespace Services
 
                     CollectKeywords(description, DcNs + "subject", result.Keywords)
                     CollectKeywords(description, LrNs + "hierarchicalSubject", result.Keywords)
+
+                    ' Koordinaten: fuer RAW, PSD und alles andere, was wir nicht selbst beschreiben,
+                    ' ist die Beistelldatei der einzige Ort, an dem sie ueberdauern. Ohne diesen
+                    ' Rueckweg wuerde das naechste Einlesen die selbst gesetzte Koordinate wieder
+                    ' mit dem leeren Stand aus der Bilddatei ueberschreiben.
+                    If Not result.GpsLatitude.HasValue Then
+                        Dim latitude = ParseCoordinate(ReadValue(description, ExifNs + "GPSLatitude"))
+                        Dim longitude = ParseCoordinate(ReadValue(description, ExifNs + "GPSLongitude"))
+                        If latitude.HasValue AndAlso longitude.HasValue Then
+                            result.GpsLatitude = latitude
+                            result.GpsLongitude = longitude
+                        End If
+                    End If
                 Next
             Catch
                 Return Nothing
@@ -124,6 +142,43 @@ Namespace Services
             ' Auch ein Einzelwert kann in eine rdf:Alt/rdf:Seq verpackt sein (Sprachvarianten).
             Dim li = child.Descendants(RdfNs + "li").FirstOrDefault()
             Return If(li IsNot Nothing, li.Value.Trim(), child.Value.Trim())
+        End Function
+
+        ''' <summary>Eine Koordinate aus dem exif-Schema als Dezimalgrad.
+        '''
+        ''' Zwei Schreibweisen sind zugelassen und beide kommen vor: "51,30.1234N" mit
+        ''' Dezimalminuten und "51,30,7N" mit Sekunden. Ein Vorzeichen kennt das Schema nicht, die
+        ''' Richtung steckt im Buchstaben am Ende. Nothing bei allem, was nicht sicher zu lesen ist -
+        ''' eine falsch verstandene Koordinate zeigt auf einen anderen Erdteil.</summary>
+        Public Shared Function ParseCoordinate(value As String) As Double?
+            If String.IsNullOrWhiteSpace(value) Then Return Nothing
+            Dim text = value.Trim()
+
+            Dim sign = 1.0
+            Dim last = Char.ToUpperInvariant(text(text.Length - 1))
+            If last = "N"c OrElse last = "S"c OrElse last = "E"c OrElse last = "W"c Then
+                If last = "S"c OrElse last = "W"c Then sign = -1.0
+                text = text.Substring(0, text.Length - 1).Trim()
+            ElseIf Not Char.IsDigit(last) Then
+                Return Nothing
+            End If
+
+            Dim parts = text.Split(","c)
+            If parts.Length < 2 OrElse parts.Length > 3 Then Return Nothing
+
+            Dim total = 0.0
+            Dim scale = 1.0
+            For Each part In parts
+                Dim number As Double
+                If Not Double.TryParse(part.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, number) Then Return Nothing
+                If number < 0 Then Return Nothing
+                total += number * scale
+                scale /= 60.0
+            Next
+
+            Dim result = sign * total
+            If Double.IsNaN(result) OrElse Math.Abs(result) > 180.0 Then Return Nothing
+            Return result
         End Function
 
         ''' Stichworte liegen als rdf:Bag/rdf:Seq aus rdf:li vor, nie als einfacher Text.

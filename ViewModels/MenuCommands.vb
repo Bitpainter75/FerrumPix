@@ -59,6 +59,14 @@ Namespace ViewModels
         Public Property Rating As ICommand
         Public Property ColorLabel As ICommand
 
+        ''' <summary>Aufnahmeort: den eines Bildes merken, den gemerkten auf eine Auswahl anwenden,
+        ''' oder einen im Dialog bestimmen. Kopieren gilt fuer EIN Bild, Einfuegen und Setzen fuer
+        ''' die ganze Auswahl - der Regelfall ist eine Reihe Aufnahmen vom selben Ort.</summary>
+        Public Property CopyPlace As ICommand
+        Public Property PastePlace As ICommand
+        Public Property SetPlace As ICommand
+        Public Property RemovePlace As ICommand
+
         ' Wege nach draussen
         Public Property CopyPath As ICommand
         Public Property ShowInFileManager As ICommand

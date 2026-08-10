@@ -6980,4 +6980,67 @@
   <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
     <value>Estos archivos están fuera de la carpeta personal o en una carpeta oculta. FerrumPix no borra nada ahí.</value>
   </data>
+  <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
+    <value>Copiar ubicación</value>
+  </data>
+  <data name="Aufnahmeort_einf_gen_930e387b" xml:space="preserve">
+    <value>Pegar ubicación</value>
+  </data>
+  <data name="Aufnahmeort_setzen_6e4dc374" xml:space="preserve">
+    <value>Establecer ubicación</value>
+  </data>
+  <data name="Dieses_Bild_hat_keinen_Aufnahmeort_c1f51ba0" xml:space="preserve">
+    <value>Esta imagen no tiene ubicación</value>
+  </data>
+  <data name="Aufnahmeort_gemerkt_03515dc8" xml:space="preserve">
+    <value>Ubicación copiada</value>
+  </data>
+  <data name="Aufnahmeort_gesetzt_f_r_0_Bilder_1_400e5da9" xml:space="preserve">
+    <value>Ubicación establecida para {0} imágenes: {1}</value>
+  </data>
+  <data name="Aufnahmeort_gesetzt_f_r_0_von_1_Bildern_f03cf27a" xml:space="preserve">
+    <value>Ubicación establecida para {0} de {1} imágenes</value>
+  </data>
+  <data name="Koordinate_oder_Ortsname_auch_aus_einer_Karte_ko_f73a1d50" xml:space="preserve">
+    <value>Coordenadas o nombre de lugar, también copiado de un mapa</value>
+  </data>
+  <data name="Koordinate_auch_aus_einer_Karte_kopiert_f_r_die__8f2787b1" xml:space="preserve">
+    <value>Coordenadas, también copiadas de un mapa: falta la tabla de lugares para la búsqueda</value>
+  </data>
+  <data name="0_JPEG_bekommen_den_Ort_in_die_Datei_f82fe97e" xml:space="preserve">
+    <value>{0} archivos JPEG reciben la ubicación dentro del archivo</value>
+  </data>
+  <data name="0_Dateien_bekommen_eine_Beistelldatei_daneben_765f7807" xml:space="preserve">
+    <value>{0} archivos reciben un archivo adjunto al lado</value>
+  </data>
+  <data name="Tippe_eine_Koordinate_oder_einen_Ortsnamen_Die_O_5316b938" xml:space="preserve">
+    <value>Escribe unas coordenadas o un nombre de lugar. La búsqueda se realiza en este dispositivo.</value>
+  </data>
+  <data name="Setzen_a7f2eb38" xml:space="preserve">
+    <value>Establecer</value>
+  </data>
+  <data name="Zum_Beispiel_48_137154_11_576124_oder_Marburg_d38e0892" xml:space="preserve">
+    <value>Por ejemplo: 48.137154, 11.576124 o Marburg</value>
+  </data>
+  <data name="Zum_Beispiel_48_137154_11_576124_19d18121" xml:space="preserve">
+    <value>Por ejemplo: 48.137154, 11.576124</value>
+  </data>
+  <data name="Kein_Ort_dieses_Namens_in_der_Ortstabelle_a67f0d60" xml:space="preserve">
+    <value>No hay ningún lugar con ese nombre en la tabla de lugares</value>
+  </data>
+  <data name="Koordinate_oder_Ortsname_6b3af480" xml:space="preserve">
+    <value>Coordenadas o nombre de lugar</value>
+  </data>
+  <data name="Orte_auf_diesem_Ger_t_8defa6ac" xml:space="preserve">
+    <value>Lugares en este dispositivo</value>
+  </data>
+  <data name="Aufnahmeort_l_schen_dc98650c" xml:space="preserve">
+    <value>Borrar ubicación</value>
+  </data>
+  <data name="Der_Aufnahmeort_wird_aus_0_Bildern_entfernt_aus__ea91f077" xml:space="preserve">
+    <value>La ubicación se borrará de {0} imágenes: del archivo de imagen, del archivo adjunto al lado y del catálogo. Esto no se puede deshacer.</value>
+  </data>
+  <data name="Aufnahmeort_aus_0_Bildern_entfernt_29b3d998" xml:space="preserve">
+    <value>Ubicación borrada de {0} imágenes</value>
+  </data>
 </root>

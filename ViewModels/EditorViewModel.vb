@@ -12713,6 +12713,17 @@ Namespace ViewModels
             ' geoeffneten Bildes einsortiert worden.
             _immichSourceFileName = Nothing
             If Not ImmichService.IsImmichTempPath(path) Then _immichSourceAlbumId = Nothing
+
+            ' DASSELBE gilt fuer die andere Serverquelle. Der Nextcloud-Kontext (Pfad im Dateibaum,
+            ' Etag, Pseudo-Pfad) beschreibt EINE Datei auf dem Server; bliebe er stehen, schriebe
+            ' "Original ersetzen" die Bearbeitung auf das vorher geoeffnete Bild. Heute kann das
+            ' nicht passieren, weil der Editor fuer Serverbilder nur eine einelementige Liste
+            ' bekommt (siehe ViewerViewModel.EditorFilmstripPaths) - genau deshalb steht es hier,
+            ' bevor jemand den Streifen dort erweitert. Gesetzt wird der Kontext allein beim
+            ' Oeffnen, und LoadImageContent laeuft nur bei der Navigation IM Streifen.
+            _nextcloudSourcePath = ""
+            _nextcloudSourceETag = ""
+            _nextcloudSourcePseudoPath = ""
             CurrentImagePath = path
             _currentImagePath = path
             ' Der Reiter der Infoleiste bleibt stehen - wer sich EXIF ansieht und das naechste Bild

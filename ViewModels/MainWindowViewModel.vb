@@ -1981,6 +1981,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchFilter))
                 Me.RaisePropertyChanged(NameOf(DialogShowsWatermarkPreset))
                 Me.RaisePropertyChanged(NameOf(DialogShowsExportTo))
+                Me.RaisePropertyChanged(NameOf(DialogShowsSetPlace))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
@@ -2002,6 +2004,13 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das allgemeine Eingabefeld des Dialograhmens.
+        '''
+        ''' ACHTUNG, AUSSCHLUSSLISTE: hier steht, wer es NICHT bekommt. Eine neue Dialogart, die
+        ''' hier fehlt, bekommt es also stillschweigend - und dann steht ueber ihrem eigenen Inhalt
+        ''' ein zweites, leeres Feld, das nichts tut. Genau das ist beim Ortsdialog passiert
+        ''' (Nutzerbefund 2026-08-11: "fuer was ist das obere Eingabefeld"). Jede Dialogart mit
+        ''' eigenem Inhalt gehoert in diese Liste.</summary>
         Public ReadOnly Property DialogShowsInput As Boolean
             Get
                 Return _dialogKind <> AppDialogKind.Message AndAlso
@@ -2012,7 +2021,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.BatchResize AndAlso
                        _dialogKind <> AppDialogKind.BatchFilter AndAlso
                        _dialogKind <> AppDialogKind.WatermarkPreset AndAlso
-                       _dialogKind <> AppDialogKind.ExportTo
+                       _dialogKind <> AppDialogKind.ExportTo AndAlso
+                       _dialogKind <> AppDialogKind.SetPlace
             End Get
         End Property
 
@@ -2199,6 +2209,287 @@ Namespace ViewModels
                 Return _dialogKind = AppDialogKind.ExportTo
             End Get
         End Property
+
+        ' ── Aufnahmeort setzen ──────────────────────────────────────────────────────────────────
+        '
+        ' EIN Eingabefeld statt drei Betriebsarten: was hineingetippt oder hineingeworfen wird, ist
+        ' entweder eine Koordinate (dann wird sie gelesen) oder ein Ortsname (dann wird in der
+        ' Ortstabelle gesucht). Der Nutzer soll nicht erst sagen muessen, was er gleich schreibt.
+        '
+        ' Die Ortssuche laeuft LOKAL ueber dieselbe Tabelle, die den Ortsnamen zu einer Koordinate
+        ' liefert - nur in der Gegenrichtung. Es geht dabei keine Anfrage nach draussen, und genau
+        ' deshalb braucht der Dialog auch keine Karte.
+
+        Public ReadOnly Property DialogShowsSetPlace As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.SetPlace
+            End Get
+        End Property
+
+        ''' <summary>Ob der bestaetigende Knopf ueberhaupt etwas ausloesen kann.
+        '''
+        ''' Nur der Ortsdialog macht davon Gebrauch: solange nichts Lesbares im Feld steht, gibt es
+        ''' auch nichts zu setzen, und ein Knopf, der dann nichts tut, laesst den Nutzer raten, ob
+        ''' seine Eingabe angekommen ist. Alle anderen Dialoge bleiben wie sie waren.</summary>
+        Public ReadOnly Property IsDialogPrimaryEnabled As Boolean
+            Get
+                If _dialogKind = AppDialogKind.SetPlace Then Return HasDialogPlace
+                Return True
+            End Get
+        End Property
+
+        Private _dialogPlaceQuery As String = ""
+        Private _dialogPlaceLatitude As Double?
+        Private _dialogPlaceLongitude As Double?
+        Private _dialogPlaceLabel As String = ""
+        Private _dialogPlaceTargetSummary As String = ""
+        Private _dialogPlaceSearchToken As CancellationTokenSource
+
+        ''' <summary>Das eine Feld. Jede Aenderung stoesst die Auswertung an.</summary>
+        Public Property DialogPlaceQuery As String
+            Get
+                Return _dialogPlaceQuery
+            End Get
+            Set(value As String)
+                Dim wanted = If(value, "")
+                If String.Equals(_dialogPlaceQuery, wanted, StringComparison.Ordinal) Then Return
+                _dialogPlaceQuery = wanted
+                Me.RaisePropertyChanged()
+                EvaluatePlaceQuery()
+            End Set
+        End Property
+
+        ''' <summary>Die Treffer der Ortssuche. Leer, sobald eine Koordinate erkannt wurde - dann
+        ''' gibt es nichts mehr auszuwaehlen.</summary>
+        Public ReadOnly Property DialogPlaceMatches As New ObservableCollection(Of PlaceMatch)()
+
+        Private _dialogSelectedPlaceMatch As PlaceMatch
+
+        Public Property DialogSelectedPlaceMatch As PlaceMatch
+            Get
+                Return _dialogSelectedPlaceMatch
+            End Get
+            Set(value As PlaceMatch)
+                If _dialogSelectedPlaceMatch Is value Then Return
+                _dialogSelectedPlaceMatch = value
+                Me.RaisePropertyChanged()
+                If value IsNot Nothing Then
+                    _dialogPlaceLatitude = value.Latitude
+                    _dialogPlaceLongitude = value.Longitude
+                    _dialogPlaceLabel = value.DisplayText
+                    RaisePlaceDialogProperties()
+                End If
+            End Set
+        End Property
+
+        Public ReadOnly Property HasDialogPlaceMatches As Boolean
+            Get
+                Return DialogPlaceMatches.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Was tatsaechlich geschrieben wird - Koordinate und, wenn bekannt, der Ort dazu.
+        ''' Leer, solange nichts erkannt ist; dann bleibt die Zeile weg statt zu raten.</summary>
+        Public ReadOnly Property DialogPlacePreview As String
+            Get
+                If Not HasDialogPlace Then Return ""
+                Dim text = GeotagService.FormatCoordinates(_dialogPlaceLatitude.Value, _dialogPlaceLongitude.Value)
+                If _dialogPlaceLabel.Length > 0 Then text &= "  -  " & _dialogPlaceLabel
+                Return text
+            End Get
+        End Property
+
+        ''' <summary>Wohin es geht, nach Format getrennt. Vorher hinschreiben ist ehrlicher als ein
+        ''' Ankreuzfeld: an einem JPEG wird die Datei selbst geaendert, bei allem anderen entsteht
+        ''' eine Beistelldatei daneben.</summary>
+        Public ReadOnly Property DialogPlaceTargetSummary As String
+            Get
+                Return _dialogPlaceTargetSummary
+            End Get
+        End Property
+
+        Public ReadOnly Property HasDialogPlace As Boolean
+            Get
+                Return _dialogPlaceLatitude.HasValue AndAlso _dialogPlaceLongitude.HasValue
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweis IM Feld: was das Feld ueberhaupt annimmt. Ohne die
+        ''' Ortstabelle nimmt es nur Koordinaten, und dann muss das auch dastehen.</summary>
+        Public ReadOnly Property DialogPlaceHint As String
+            Get
+                If PlaceLookupService.Enabled Then
+                    Return LocalizationService.T("Koordinate oder Ortsname, auch aus einer Karte kopiert")
+                End If
+                Return LocalizationService.T("Koordinate, auch aus einer Karte kopiert - für die Ortssuche fehlt die Ortstabelle")
+            End Get
+        End Property
+
+        ''' <summary>Ein Beispiel unter dem Feld. Es sagt in einer Zeile mehr als jede Beschreibung
+        ''' darueber - man sieht, dass beides in dasselbe Feld darf.</summary>
+        Public ReadOnly Property DialogPlaceExample As String
+            Get
+                If PlaceLookupService.Enabled Then
+                    Return LocalizationService.T("Zum Beispiel: 48.137154, 11.576124 oder Marburg")
+                End If
+                Return LocalizationService.T("Zum Beispiel: 48.137154, 11.576124")
+            End Get
+        End Property
+
+        ''' <summary>Gesucht und nichts gefunden. Ohne diesen Satz wartet man auf eine Liste, die
+        ''' nicht mehr kommt.</summary>
+        Public ReadOnly Property HasDialogPlaceNoMatch As Boolean
+            Get
+                Return _dialogPlaceSearchedEmpty AndAlso Not HasDialogPlace AndAlso DialogPlaceMatches.Count = 0
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogPlaceNoMatchText As String
+            Get
+                Return LocalizationService.T("Kein Ort dieses Namens in der Ortstabelle")
+            End Get
+        End Property
+
+        Private _dialogPlaceSearchedEmpty As Boolean
+
+        Private Sub RaisePlaceDialogProperties()
+            Me.RaisePropertyChanged(NameOf(DialogPlacePreview))
+            Me.RaisePropertyChanged(NameOf(HasDialogPlace))
+            Me.RaisePropertyChanged(NameOf(HasDialogPlaceMatches))
+            Me.RaisePropertyChanged(NameOf(HasDialogPlaceNoMatch))
+            Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+        End Sub
+
+        ''' <summary>Wertet aus, was im Feld steht: erst Koordinate, sonst Ortsname.
+        '''
+        ''' Die Ortssuche laeuft VERZOEGERT und im Hintergrund. Bei jedem Tastendruck sofort in die
+        ''' Tabelle zu greifen hiesse, den Bedienfaden fuer jeden Buchstaben anzuhalten - gemessen
+        ''' rund sieben Millisekunden je Abfrage ueber 170540 Zeilen, und getippt wird schneller.</summary>
+        Private Sub EvaluatePlaceQuery()
+            _dialogPlaceSearchToken?.Cancel()
+            _dialogPlaceSearchToken = Nothing
+
+            Dim text = If(_dialogPlaceQuery, "").Trim()
+            Dim latitude As Double, longitude As Double
+            If GeotagService.TryParseCoordinates(text, latitude, longitude) Then
+                _dialogPlaceLatitude = latitude
+                _dialogPlaceLongitude = longitude
+                ' Zur Koordinate den Ortsnamen dazu, wenn die Tabelle einen kennt - dann steht in
+                ' der Vorschau nicht nur eine Zahl.
+                Dim hit = If(PlaceLookupService.Enabled, PlaceLookupService.Nearest(latitude, longitude), Nothing)
+                _dialogPlaceLabel = If(hit Is Nothing, "",
+                                       hit.Name & ", " & PlaceLookupService.LocalizedCountry(hit.CountryCode, hit.Country))
+                DialogPlaceMatches.Clear()
+                _dialogSelectedPlaceMatch = Nothing
+                _dialogPlaceSearchedEmpty = False
+                Me.RaisePropertyChanged(NameOf(DialogSelectedPlaceMatch))
+                RaisePlaceDialogProperties()
+                Return
+            End If
+
+            ' Kein Koordinatenpaar: dann ist es ein Ortsname - oder noch gar nichts.
+            _dialogPlaceLatitude = Nothing
+            _dialogPlaceLongitude = Nothing
+            _dialogPlaceLabel = ""
+            _dialogSelectedPlaceMatch = Nothing
+            Me.RaisePropertyChanged(NameOf(DialogSelectedPlaceMatch))
+            If text.Length < 2 OrElse Not PlaceLookupService.Enabled Then
+                DialogPlaceMatches.Clear()
+                _dialogPlaceSearchedEmpty = False
+                RaisePlaceDialogProperties()
+                Return
+            End If
+
+            Dim cts As New CancellationTokenSource()
+            _dialogPlaceSearchToken = cts
+            Dim token = cts.Token
+            Dim ignored = SearchPlacesAsync(text, token)
+            RaisePlaceDialogProperties()
+        End Sub
+
+        Private Async Function SearchPlacesAsync(text As String, token As CancellationToken) As Task
+            Try
+                Await Task.Delay(250, token).ConfigureAwait(False)
+                Dim matches = Await Task.Run(Function() PlaceLookupService.Search(text), token).ConfigureAwait(False)
+                If token.IsCancellationRequested Then Return
+                Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                          If token.IsCancellationRequested Then Return
+                                                          DialogPlaceMatches.Clear()
+                                                          For Each match In matches
+                                                              DialogPlaceMatches.Add(match)
+                                                          Next
+                                                          ' Erst JETZT gilt "gesucht und nichts gefunden" - vorher
+                                                          ' war die Suche nur noch nicht gelaufen.
+                                                          _dialogPlaceSearchedEmpty = matches.Count = 0
+                                                          RaisePlaceDialogProperties()
+                                                      End Sub)
+            Catch ex As OperationCanceledException
+                ' Der naechste Tastendruck hat uebernommen.
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Dialog.Ortssuche", ex)
+            End Try
+        End Function
+
+        ''' <summary>Fragt nach einem Aufnahmeort fuer diese Bilder. Nothing, wenn abgebrochen wurde
+        ''' oder nichts Brauchbares im Feld stand.</summary>
+        ''' <param name="initialQuery">Vorbelegung des Feldes. Bei EINEM Bild, das schon eine
+        ''' Koordinate hat, steht sie beim Oeffnen drin - dann sieht man, was gilt, und kann sie
+        ''' korrigieren statt sie neu zu tippen.</param>
+        Public Async Function ShowSetPlaceAsync(paths As IList(Of String),
+                                                Optional initialQuery As String = "") As Task(Of SetPlaceDialogResult)
+            _dialogPlaceQuery = ""
+            _dialogPlaceLatitude = Nothing
+            _dialogPlaceLongitude = Nothing
+            _dialogPlaceLabel = ""
+            _dialogSelectedPlaceMatch = Nothing
+            _dialogPlaceSearchedEmpty = False
+            DialogPlaceMatches.Clear()
+            _dialogPlaceTargetSummary = BuildPlaceTargetSummary(paths)
+
+            Me.RaisePropertyChanged(NameOf(DialogPlaceQuery))
+            Me.RaisePropertyChanged(NameOf(DialogSelectedPlaceMatch))
+            Me.RaisePropertyChanged(NameOf(DialogPlaceTargetSummary))
+            Me.RaisePropertyChanged(NameOf(DialogPlaceHint))
+            Me.RaisePropertyChanged(NameOf(DialogPlaceExample))
+            RaisePlaceDialogProperties()
+
+            ' Ueber die Eigenschaft setzen, nicht ueber das Feld: so laeuft die Auswertung mit und
+            ' die Vorschau steht sofort da.
+            If Not String.IsNullOrWhiteSpace(initialQuery) Then DialogPlaceQuery = initialQuery
+
+            Dim result = Await ShowDialogAsync(AppDialogKind.SetPlace,
+                                               "Aufnahmeort setzen",
+                                               "Tippe eine Koordinate oder einen Ortsnamen. Die Ortssuche läuft auf diesem Gerät.",
+                                               "",
+                                               "Setzen",
+                                               "Abbrechen")
+            _dialogPlaceSearchToken?.Cancel()
+            _dialogPlaceSearchToken = Nothing
+            If result Is Nothing Then Return Nothing
+            If Not HasDialogPlace Then Return Nothing
+            Return New SetPlaceDialogResult With {
+                .Latitude = _dialogPlaceLatitude.Value,
+                .Longitude = _dialogPlaceLongitude.Value,
+                .Label = _dialogPlaceLabel}
+        End Function
+
+        ''' <summary>"2 JPEG bekommen den Ort in die Datei, 1 weitere Datei eine Beistelldatei" -
+        ''' der Satz, der im Dialog steht, bevor irgendetwas geschrieben wird.</summary>
+        Private Shared Function BuildPlaceTargetSummary(paths As IList(Of String)) As String
+            If paths Is Nothing OrElse paths.Count = 0 Then Return ""
+            ' Enumerable.Count und nicht paths.Count(...): bei einer IList verdeckt die Eigenschaft
+            ' Count die Erweiterungsmethode, und der Ausdruck laesst sich dann nicht uebersetzen.
+            Dim jpegCount = Enumerable.Count(paths, Function(p) GeotagService.IsJpegPath(p))
+            Dim otherCount = paths.Count - jpegCount
+            Dim parts As New List(Of String)()
+            If jpegCount > 0 Then
+                parts.Add(String.Format(LocalizationService.T("{0} JPEG bekommen den Ort in die Datei"), jpegCount))
+            End If
+            If otherCount > 0 Then
+                parts.Add(String.Format(LocalizationService.T("{0} Dateien bekommen eine Beistelldatei daneben"), otherCount))
+            End If
+            Return String.Join(", ", parts)
+        End Function
 
         ''' Das Zieldateinamen-Muster gibt es nur bei Stapel-Zielen mit NEUEN Dateien - der
         ''' Einzel-Speichern-Dialog hat sein eigenes Namensfeld, beim Ueberschreiben behaelt

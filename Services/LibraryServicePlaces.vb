@@ -261,6 +261,235 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Die Koordinate eines Bildes aus dem Katalog, oder zweimal Nothing.
+        '''
+        ''' Fuer das Kontextmenue: "Aufnahmeort kopieren" darf nur dastehen, wo es auch etwas zu
+        ''' kopieren gibt. Ein Eintrag, der sichtbar ist und nichts tut, ist schlechter als keiner.</summary>
+        Public Function GetGpsCoordinates(filePath As String) As (Latitude As Double?, Longitude As Double?)
+            If String.IsNullOrWhiteSpace(filePath) Then Return (Nothing, Nothing)
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT GpsLatitude, GpsLongitude FROM ImageMeta WHERE FilePath=$p"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        Using reader = cmd.ExecuteReader()
+                            If Not reader.Read() Then Return (Nothing, Nothing)
+                            If reader.IsDBNull(0) OrElse reader.IsDBNull(1) Then Return (Nothing, Nothing)
+                            Return (reader.GetDouble(0), reader.GetDouble(1))
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.GetGpsCoordinates", ex)
+                Return (Nothing, Nothing)
+            End Try
+        End Function
+
+        ''' <summary>True, wenn MINDESTENS EINES dieser Bilder eine Koordinate im Katalog hat.
+        '''
+        ''' EINE Abfrage fuer die ganze Auswahl. Fuer das Kontextmenue: "Aufnahmeort löschen" darf
+        ''' nur dastehen, wo es etwas zu loeschen gibt, und ein Rechtsklick auf hundert markierte
+        ''' Bilder darf dafuer nicht hundert Abfragen kosten.</summary>
+        Public Function AnyGpsCoordinates(filePaths As IEnumerable(Of String)) As Boolean
+            If filePaths Is Nothing Then Return False
+            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                                  Distinct(PathIdentity.Comparer).ToList()
+            If paths.Count = 0 Then Return False
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim names As New List(Of String)()
+                        For i = 0 To paths.Count - 1
+                            names.Add("$p" & i)
+                            cmd.Parameters.AddWithValue("$p" & i, paths(i))
+                        Next
+                        cmd.CommandText =
+                            $"SELECT 1 FROM ImageMeta WHERE FilePath IN ({String.Join(",", names)}) " &
+                            "AND GpsLatitude IS NOT NULL AND GpsLongitude IS NOT NULL LIMIT 1"
+                        Return cmd.ExecuteScalar() IsNot Nothing
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.AnyGpsCoordinates", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Setzt die Koordinate eines Bildes - der EINE Weg dafuer.
+        '''
+        ''' Der Katalog wird immer bedient, denn dort steht die Koordinate sofort und unabhaengig
+        ''' davon, ob die Datei selbst beschreibbar ist. Danach geht sie an die Datei: in ein JPEG
+        ''' hinein, sonst in die XMP-Beistelldatei (siehe <see cref="GeotagService"/>).
+        '''
+        ''' Ort, Land und Kuerzel werden neu bestimmt statt stehen gelassen. Sie gehoerten zur ALTEN
+        ''' Koordinate; wer eine neue setzt, sagt damit, dass die alte falsch war. Ein Ortsname, der
+        ''' aus der Datei selbst stammt (IPTC), kommt beim naechsten Einlesen von dort zurueck.</summary>
+        Public Function SetGpsCoordinates(filePath As String, latitude As Double, longitude As Double,
+                                          Optional altitudeMeters As Double? = Nothing,
+                                          Optional writeToFile As Boolean = True,
+                                          Optional createSidecarIfMissing As Boolean = True) As GeotagService.GeotagWriteResult
+            Dim result As New GeotagService.GeotagWriteResult()
+            If String.IsNullOrWhiteSpace(filePath) Then
+                result.FailureReason = "Kein Pfad"
+                Return result
+            End If
+            If Not GeotagService.IsValidCoordinate(latitude, longitude) Then
+                result.FailureReason = "Koordinate ausserhalb des gueltigen Bereichs"
+                Return result
+            End If
+
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    WriteGpsCoordinates(conn, Nothing, filePath, latitude, longitude)
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.SetGpsCoordinates", ex)
+                result.FailureReason = ex.Message
+                Return result
+            End Try
+
+            If Not writeToFile Then
+                ' Nur der Katalog war gewuenscht - das ist kein Fehlschlag.
+                result.Success = True
+                Return result
+            End If
+
+            Return GeotagService.WriteCoordinates(filePath, latitude, longitude, altitudeMeters, createSidecarIfMissing)
+        End Function
+
+        ''' <summary>Dieselbe Koordinate fuer eine ganze Auswahl - fuer den Fall, dass ein Stapel
+        ''' Aufnahmen am selben Ort entstanden ist.
+        '''
+        ''' Der Katalogteil laeuft in EINER Transaktion; die Dateien danach einzeln, weil jede fuer
+        ''' sich gelingen oder scheitern kann. Was scheitert, steht am Ende namentlich im Ergebnis -
+        ''' eine Zahl allein liesse den Nutzer raten, welches Bild ohne Koordinate blieb.</summary>
+        Public Function SetGpsCoordinatesForMany(filePaths As IEnumerable(Of String),
+                                                 latitude As Double, longitude As Double,
+                                                 Optional altitudeMeters As Double? = Nothing,
+                                                 Optional writeToFile As Boolean = True,
+                                                 Optional createSidecarIfMissing As Boolean = True) As GeotagBatchResult
+            Dim batch As New GeotagBatchResult()
+            If filePaths Is Nothing Then Return batch
+            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                                  Distinct(PathIdentity.Comparer).ToList()
+            If paths.Count = 0 Then Return batch
+            batch.Total = paths.Count
+
+            If Not GeotagService.IsValidCoordinate(latitude, longitude) Then
+                batch.Failed.AddRange(paths)
+                Return batch
+            End If
+
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each path In paths
+                            WriteGpsCoordinates(conn, tx, path, latitude, longitude)
+                        Next
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.SetGpsCoordinatesForMany", ex)
+                batch.Failed.AddRange(paths)
+                Return batch
+            End Try
+
+            If Not writeToFile Then
+                batch.CatalogOnly = paths.Count
+                Return batch
+            End If
+
+            For Each path In paths
+                Dim written = GeotagService.WriteCoordinates(path, latitude, longitude, altitudeMeters, createSidecarIfMissing)
+                If Not written.Success Then
+                    batch.Failed.Add(path)
+                ElseIf written.Target = GeotagService.GeotagTarget.EmbeddedExif Then
+                    batch.WrittenToFile += 1
+                Else
+                    batch.WrittenToSidecar += 1
+                End If
+            Next
+            Return batch
+        End Function
+
+        ''' <summary>Nimmt den Aufnahmeort wieder weg: aus Datei und Beistelldatei (siehe
+        ''' <see cref="GeotagService.RemoveCoordinates"/>) und aus dem Katalog, samt Ort, Land und
+        ''' Kuerzel - die gehoerten zur geloeschten Koordinate.</summary>
+        Public Function ClearGpsCoordinatesForMany(filePaths As IEnumerable(Of String)) As GeotagBatchResult
+            Dim batch As New GeotagBatchResult()
+            If filePaths Is Nothing Then Return batch
+            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                                  Distinct(PathIdentity.Comparer).ToList()
+            If paths.Count = 0 Then Return batch
+            batch.Total = paths.Count
+
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each path In paths
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText =
+                                    "UPDATE ImageMeta SET GpsLatitude=NULL, GpsLongitude=NULL, " &
+                                    "City='', Country='', CountryCode='' WHERE FilePath=$p"
+                                cmd.Parameters.AddWithValue("$p", path)
+                                cmd.ExecuteNonQuery()
+                            End Using
+                        Next
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.ClearGpsCoordinatesForMany", ex)
+                batch.Failed.AddRange(paths)
+                Return batch
+            End Try
+
+            For Each path In paths
+                Dim removed = GeotagService.RemoveCoordinates(path)
+                If removed.Target = GeotagService.GeotagTarget.EmbeddedExif Then
+                    batch.WrittenToFile += 1
+                ElseIf removed.Target = GeotagService.GeotagTarget.XmpSidecar Then
+                    batch.WrittenToSidecar += 1
+                Else
+                    ' In der Datei stand gar keiner - der Katalogeintrag ist trotzdem leer. Das ist
+                    ' kein Fehlschlag, sondern der haeufige Fall bei einem RAW ohne Beistelldatei.
+                    batch.CatalogOnly += 1
+                End If
+            Next
+            Return batch
+        End Function
+
+        ''' <summary>Koordinate in die Katalogspalten, danach Ort und Land dazu bestimmen.</summary>
+        Private Shared Sub WriteGpsCoordinates(conn As SqliteConnection, tx As SqliteTransaction,
+                                               filePath As String, latitude As Double, longitude As Double)
+            Using cmd = conn.CreateCommand()
+                cmd.Transaction = tx
+                cmd.CommandText =
+                    "INSERT INTO ImageMeta(FilePath,GpsLatitude,GpsLongitude,City,Country,CountryCode) " &
+                    "VALUES($p,$lat,$lon,'','','') " &
+                    "ON CONFLICT(FilePath) DO UPDATE SET GpsLatitude=$lat, GpsLongitude=$lon, " &
+                    "City='', Country='', CountryCode=''"
+                cmd.Parameters.AddWithValue("$p", filePath)
+                cmd.Parameters.AddWithValue("$lat", latitude)
+                cmd.Parameters.AddWithValue("$lon", longitude)
+                cmd.ExecuteNonQuery()
+            End Using
+
+            If Not PlaceLookupService.Enabled Then Return
+            Dim hit = PlaceLookupService.Nearest(latitude, longitude)
+            ' Kein Ort innerhalb der Grenze: die Felder bleiben leer, statt einen weit entfernten
+            ' Namen anzuheften.
+            If hit Is Nothing Then Return
+            WritePlace(conn, tx, filePath, hit.Name, hit.Country, hit.CountryCode)
+        End Sub
+
         Private Shared Sub WritePlace(conn As SqliteConnection, tx As SqliteTransaction,
                                       filePath As String, city As String, country As String,
                                       countryCode As String)

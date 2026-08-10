@@ -5,6 +5,15 @@
     <Styles.Resources>
         <FontFamily x:Key="FP.Font.Family">Segoe UI, Cantarell, DejaVu Sans, sans-serif</FontFamily>
 
+        <!-- DIE LEERE SPALTE IM MENUE. Ein Menueeintrag hat fuenf Spalten, und eine davon traegt
+             den Tastenkuerzel-Text. Der ist bei uns ueberall leer - die Anwendung setzt weder
+             InputGestureText noch HotKey -, seine Spalte ist aber trotzdem 24 Bildpunkte breit,
+             weil der Abstand am Textfeld haengt und nicht am Text. Diese 24 Punkte stehen genau
+             ZWISCHEN der Beschriftung und dem Pfeil eines Untermenues und schoben ihn nach rechts.
+             Auf null gesetzt gewinnt jedes Menue der Anwendung diese Breite zurueck. -->
+        <Thickness x:Key="MenuInputGestureTextMargin">0</Thickness>
+
+
         <!-- Schriftgrößen für Text. Eine App-weite Vergrößerung ist eine Änderung an diesen neun
              Zahlen - vorher standen sie 418-mal in den AXAML-Dateien. -->
         <x:Double x:Key="FP.Font.Label">9</x:Double>
@@ -54,6 +63,19 @@
 
         <SolidColorBrush x:Key="FP.Sel.Bg" Color="#24303A"/>
         <SolidColorBrush x:Key="FP.Sel.Hover" Color="#2A3742"/>
+
+        <!-- DAS UNTERMENUE IST EIN EIGENES POPUP. Es steckt in der Vorlage des Menueeintrags und
+             ist weder ein ContextMenu noch ein MenuFlyoutPresenter - die Regeln weiter unten
+             greifen also nicht an ihm. Sein Aussehen holt es sich ausschliesslich ueber diese
+             Schluessel, und ohne sie stand es mit Hintergrund und Rahmen des
+             Standarderscheinungsbilds da (Nutzerbefund 2026-08-11). Die Werte sind dieselben wie
+             bei FP.Bg.Elevated und FP.Border.Normal; ausgeschrieben wie bei den ComboBox-Schluesseln
+             darunter, weil ein Verweis auf einen spaeter erklaerten Schluessel ins Leere liefe. -->
+        <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#192128"/>
+        <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#26313B"/>
+        <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">1</Thickness>
+        <Thickness x:Key="MenuFlyoutPresenterThemePadding">6</Thickness>
+        <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
 
         <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#192128"/>
         <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#26313B"/>
@@ -1036,6 +1058,13 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
     </Style>
+    <!-- Das Zeichen fuer ein Untermenue kommt aus UNSEREM Symbolsatz und steht direkt hinter der
+         Beschriftung (siehe die Vorlage der Kontextmenues in Galerie, Betrachter und Editor).
+         Das der Standardvorlage sitzt in der letzten Spalte, also immer am rechten Rand des
+         Menues - je breiter das Menue, desto weiter weg vom Wort. Deshalb bleibt es aus. -->
+    <Style Selector="MenuItem /template/ Path#PART_ChevronPath">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
     <Style Selector="MenuItem:pointerover">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
@@ -1050,6 +1079,10 @@
     <Style Selector="MenuItem /template/ ContentPresenter#PART_HeaderPresenter">
         <Setter Property="Padding" Value="14,9"/>
         <Setter Property="Background" Value="Transparent"/>
+        <!-- Die Beschriftung fuellt ihre Spalte aus. Nur so kann das Zeichen fuer ein Untermenue
+             an den rechten Rand ruecken - sonst waere die Zeile so breit wie ihr Text, und alles
+             darin klebte links zusammen. -->
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="MenuItem:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>

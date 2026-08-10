@@ -37,17 +37,28 @@
             <ContextMenu.Styles>
             <Style Selector="MenuItem:not(.widget)">
             <!-- Schmaler als die Vorgabe des Erscheinungsbilds (208): die Eintraege sind kurz,
-                 und ein Menue, das breiter ist als sein laengster Text, wirkt leer. -->
-            <Setter Property="MinWidth" Value="178"/>
+                 und ein Menue, das breiter ist als sein laengster Text, wirkt leer.
+                 Seit es ein Untermenue gibt, haengt daran noch etwas: der Pfeil sitzt immer am
+                 RECHTEN RAND des Menues, nicht hinter seiner Beschriftung. Je breiter das Menue,
+                 desto weiter steht er vom Wort weg. -->
+            <Setter Property="MinWidth" Value="150"/>
             <Setter Property="Command" Value="{Binding Command}"/>
             <Setter Property="CommandParameter" Value="{Binding Parameter}"/>
             <Setter Property="ItemsSource" Value="{Binding Children}"/>
             <Setter Property="Header">
             <Template>
-            <StackPanel Orientation="Horizontal" Spacing="10">
-            <icons:SvgIcon Source="{Binding IconSource}" Width="16" Height="16" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
-            </StackPanel>
+            <!-- Das Zeichen fuer ein Untermenue kommt aus UNSEREM Symbolsatz (das der
+                 Standardvorlage ist in FerrumPixTheme ausgeblendet) und steht rechts, 20 Punkte
+                 vom Rand des Menues: 14 aus der Polsterung der Zeile, 6 aus dem Abstand hier. -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+            <icons:SvgIcon Grid.Column="0" Source="{Binding IconSource}" Width="16" Height="16" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+            <icons:SvgIcon Grid.Column="2"
+                           Source="avares://FerrumPix/Assets/Icons/outline/caret-right.svg"
+                           Width="18" Height="18" VerticalAlignment="Center"
+                           Margin="12,0,6,0"
+                           IsVisible="{Binding HasChildren}"/>
+            </Grid>
             </Template>
             </Setter>
             </Style>

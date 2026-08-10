@@ -2,6 +2,7 @@ Imports System
 Imports System.Collections.Generic
 Imports System.Linq
 Imports FerrumPix.Models
+Imports FerrumPix.Services
 
 Namespace ViewModels
 
@@ -138,13 +139,6 @@ Namespace ViewModels
                 AddIfOffered(list, commands.ConvertTo, FooterMenuCatalog.ConvertTo(commands.ConvertTo))
                 AddIfOffered(list, commands.ExportTo, FooterMenuCatalog.ExportTo(commands.ExportTo))
             End If
-            ' Metadaten entfernen schreibt die DATEI neu. Ein Immich-Asset hat keine, die wir
-            ' anfassen koennten - dort taete der Eintrag nichts. Genau das fragt CanRemoveMetadata,
-            ' und genau daran hing der Eintrag frueher schon: als Bindung im Menue-XAML. Beim
-            ' Umbau ging sie verloren, weil die Regeln aus der Sichtbarkeits-LOGIK gezogen wurden.
-            If imageBatch AndAlso images.All(Function(i) i.CanRemoveMetadata) Then
-                AddIfOffered(list, commands.RemoveMetadata, FooterMenuCatalog.RemoveMetadata(commands.RemoveMetadata))
-            End If
             If imageBatch Then
                 AddIfOffered(list, commands.Print, FooterMenuCatalog.Print(commands.Print))
             End If
@@ -171,6 +165,16 @@ Namespace ViewModels
                 Divider(list)
             End If
 
+            ' --- Metadaten (Untermenue) --------------------------------------------------------
+            ' Aufnahmeort und "Metadaten entfernen" arbeiten beide an den Angaben ZUR Aufnahme und
+            ' gehoeren zusammen. Einzeln im Hauptmenue waeren es vier weitere Zeilen in einer
+            ' Liste, die ohnehin lang ist.
+            Dim metadataChildren = BuildMetadataChildren(images, isSingle, isParentEntry, imageBatch, commands)
+            If metadataChildren.Count > 0 Then
+                list.Add(FooterMenuCatalog.Metadata(metadataChildren))
+                Divider(list)
+            End If
+
             ' --- Wege nach draussen ------------------------------------------------------------
             ' Beides zeigt auf einen Ort im Dateisystem. Ein SERVERELEMENT hat keinen - gleich von
             ' welchem Server -, und in einer Suchliste stehen die Treffer quer ueber den Bestand
@@ -193,6 +197,61 @@ Namespace ViewModels
 
             TidySeparators(list)
             Return list
+        End Function
+
+        ''' <summary>Die Eintraege des Untermenues "Metadaten". Leer heisst: das Untermenue faellt
+        ''' ganz weg - ein Menuepunkt, der aufklappt und nichts zeigt, ist schlechter als keiner.
+        '''
+        ''' Der Aufnahmeort geht in Datei, Beistelldatei und Katalog (siehe GeotagService). Ein
+        ''' SERVERBILD hat keine Datei, die ihn tragen koennte, und sein Katalogeintrag haengt an
+        ''' einem Pseudo-Pfad - der Ort bliebe dort haengen und erreichte nie das Bild. Deshalb
+        ''' zaehlen hier nur lokale Bilder.</summary>
+        Private Shared Function BuildMetadataChildren(images As IList(Of ImageItem),
+                                                      isSingle As Boolean,
+                                                      isParentEntry As Boolean,
+                                                      imageBatch As Boolean,
+                                                      commands As MenuCommands) As IReadOnlyList(Of Object)
+            Dim children As New List(Of Object)()
+            If isParentEntry Then Return children
+
+            Dim localImages = images.Where(Function(i) Not i.IsRemoteAsset AndAlso
+                                                       Not String.IsNullOrEmpty(i.FilePath)).ToList()
+            If localImages.Count > 0 Then
+                ' KOPIEREN nur, wo es etwas zu kopieren gibt: genau ein Bild, und das mit
+                ' Koordinate. Der Blick in den Katalog kostet eine Abfrage beim Rechtsklick - ein
+                ' sichtbarer Eintrag, der nichts tut, kostet mehr.
+                If isSingle AndAlso localImages.Count = 1 Then
+                    Dim stored = LibraryService.Instance.GetGpsCoordinates(localImages(0).FilePath)
+                    If stored.Latitude.HasValue AndAlso stored.Longitude.HasValue Then
+                        AddIfOffered(children, commands.CopyPlace, FooterMenuCatalog.CopyPlace(commands.CopyPlace))
+                    End If
+                End If
+                ' EINFUEGEN und SETZEN gelten fuer die ganze Auswahl - der Regelfall ist eine Reihe
+                ' Aufnahmen vom selben Ort.
+                If GeotagClipboard.HasCoordinate Then
+                    AddIfOffered(children, commands.PastePlace,
+                                 FooterMenuCatalog.PastePlace(commands.PastePlace, GeotagClipboard.Label))
+                End If
+                AddIfOffered(children, commands.SetPlace, FooterMenuCatalog.SetPlace(commands.SetPlace))
+                ' LOESCHEN nur, wo einer steht - bei einer Auswahl reicht EIN Bild mit Ort. EINE
+                ' Abfrage fuer die ganze Auswahl, nicht eine je Bild: bei einem grossen Stapel
+                ' waere der Rechtsklick sonst spuerbar traege.
+                If LibraryService.Instance.AnyGpsCoordinates(localImages.Select(Function(i) i.FilePath)) Then
+                    AddIfOffered(children, commands.RemovePlace, FooterMenuCatalog.RemovePlace(commands.RemovePlace))
+                End If
+            End If
+
+            ' Metadaten entfernen schreibt die DATEI neu. Ein Serverbild hat keine, die wir
+            ' anfassen koennten - dort taete der Eintrag nichts. Genau das fragt CanRemoveMetadata,
+            ' und genau daran hing der Eintrag frueher schon: als Bindung im Menue-XAML. Beim
+            ' Umbau ging sie verloren, weil die Regeln aus der Sichtbarkeits-LOGIK gezogen wurden.
+            If imageBatch AndAlso images.All(Function(i) i.CanRemoveMetadata) Then
+                If children.Count > 0 Then children.Add(FooterMenuCatalog.Divider())
+                AddIfOffered(children, commands.RemoveMetadata, FooterMenuCatalog.RemoveMetadata(commands.RemoveMetadata))
+            End If
+
+            TidySeparators(children)
+            Return children
         End Function
 
         ''' Nimmt den Eintrag nur auf, wenn der Bereich das Kommando ueberhaupt anbietet.

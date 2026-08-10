@@ -5,6 +5,27 @@ Imports Microsoft.Data.Sqlite
 
 Namespace Services
 
+    ''' <summary>Ein gefundener Ort MIT seiner Koordinate - fuer die Suche nach dem Namen, also die
+    ''' Gegenrichtung zu <see cref="PlaceHit"/>. Wer einen Aufnahmeort von Hand setzt, tippt einen
+    ''' Namen und meint den Punkt.</summary>
+    Public Class PlaceMatch
+        Public Property Name As String = ""
+        Public Property Country As String = ""
+        Public Property CountryCode As String = ""
+        Public Property Latitude As Double
+        Public Property Longitude As Double
+        Public Property Population As Long
+
+        ''' <summary>"Rothenburg ob der Tauber, Deutschland" - der Landesname in der Sprache der
+        ''' Oberflaeche, damit die Trefferliste liest wie der Rest der Anwendung.</summary>
+        Public ReadOnly Property DisplayText As String
+            Get
+                Dim land = PlaceLookupService.LocalizedCountry(CountryCode, Country)
+                Return If(land.Length > 0, Name & ", " & land, Name)
+            End Get
+        End Property
+    End Class
+
     ''' <summary>Ein Ort mit Land und der Entfernung zum gesuchten Punkt.</summary>
     Public Class PlaceHit
         Public Property Name As String = ""
@@ -148,6 +169,61 @@ Namespace Services
                 If _codeByCountryName.TryGetValue(wanted, found) Then Return found
             End SyncLock
             Return ""
+        End Function
+
+        ''' <summary>Orte, deren Name so anfaengt - die GEGENRICHTUNG zu <see cref="Nearest"/>.
+        '''
+        ''' Dieselbe Tabelle, dieselben 170540 Zeilen, nur die andere Frage: nicht "wie heisst es
+        ''' hier", sondern "wo ist das". Damit braucht das Setzen eines Aufnahmeorts von Hand keine
+        ''' Karte und keine einzige Anfrage nach draussen.
+        '''
+        ''' NACH EINWOHNERZAHL, absteigend. "Berlin" gibt es 30 Mal, und gemeint ist fast immer das
+        ''' mit den dreieinhalb Millionen und nicht das mit den 2019 in Pennsylvania. Ohne diese
+        ''' Sortierung waere die Liste eine Zufallsauswahl.
+        '''
+        ''' Gesucht wird am ANFANG des Namens. Wer "burg" tippt, meint kaum "Rothenburg" - eine
+        ''' Suche mitten im Wort kann den Index nicht nutzen und liefert dazu Treffer, die niemand
+        ''' erwartet hat.</summary>
+        Public Shared Function Search(namePrefix As String, Optional maxResults As Integer = 25) As List(Of PlaceMatch)
+            Dim result As New List(Of PlaceMatch)()
+            Dim prefix = If(namePrefix, "").Trim()
+            If prefix.Length < 2 Then Return result
+            Dim cs = ConnectionString()
+            If cs Is Nothing Then Return result
+
+            Try
+                Using conn = New SqliteConnection(cs)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        ' ESCAPE, sonst wuerde ein Prozentzeichen im Suchtext zum Platzhalter und
+                        ' ein Unterstrich zu "irgendein Zeichen" - beides kommt in Ortsnamen vor.
+                        cmd.CommandText =
+                            "SELECT Name, Country, CountryCode, Lat, Lon, Population FROM Place " &
+                            "WHERE Name LIKE $p ESCAPE '\' " &
+                            "ORDER BY Population DESC, Name LIMIT $n"
+                        cmd.Parameters.AddWithValue("$p", EscapeLike(prefix) & "%")
+                        cmd.Parameters.AddWithValue("$n", Math.Max(1, maxResults))
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                result.Add(New PlaceMatch With {
+                                    .Name = reader.GetString(0),
+                                    .Country = reader.GetString(1),
+                                    .CountryCode = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                    .Latitude = reader.GetDouble(3),
+                                    .Longitude = reader.GetDouble(4),
+                                    .Population = reader.GetInt64(5)})
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Orte.Suchen", ex)
+            End Try
+            Return result
+        End Function
+
+        Private Shared Function EscapeLike(value As String) As String
+            Return value.Replace("\", "\\").Replace("%", "\%").Replace("_", "\_")
         End Function
 
         ''' <summary>Der naechstgelegene Ort, oder Nothing, wenn keiner nah genug liegt.</summary>

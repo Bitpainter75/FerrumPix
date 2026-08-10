@@ -1639,8 +1639,10 @@ Namespace ViewModels
 
         ' Öffnet das Bild im Editor mit aktivem Zuschneiden-Werkzeug und übernimmt den im
         ' Viewer per Ziehgeste ausgewählten Bildausschnitt als Vorschlag.
-        ''' <summary>Filmstreifen-Pfade für den Editor: in einer Immich-Sitzung nur das aktuelle
-        ''' (heruntergeladene) Bild, da _folderPaths dort Pseudo-Pfade enthält, die der Editor nicht laden kann.</summary>
+        ''' <summary>Filmstreifen-Pfade für den Editor: in einer Serversitzung nur das aktuelle
+        ''' (heruntergeladene) Bild, da _folderPaths dort Pseudo-Pfade enthält, die der Editor nicht
+        ''' laden kann. Der Merker heißt aus der Entstehungszeit heraus nach Immich, gilt aber für
+        ''' JEDE Serverquelle - Nextcloud eingeschlossen.</summary>
         Private Function EditorFilmstripPaths() As List(Of String)
             If _isImmichSession Then Return New List(Of String) From {_currentImagePath}
             Return _folderPaths.ToList()
@@ -2059,12 +2061,22 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
         End Sub
 
-        ''' <summary>Baut einen Filmstreifen-Eintrag: für Immich-Pseudo-Pfade ein Immich-Item (Thumbnail
-        ''' aus dem Immich-Cache), sonst ein normales lokales Lightweight-Item.</summary>
+        ''' <summary>Baut einen Filmstreifen-Eintrag: für den Pseudo-Pfad einer Serverquelle ein
+        ''' Serverelement (Vorschaubild über die Kennung), sonst ein lokales Lightweight-Item.
+        '''
+        ''' BEIDE Server gehören hierher. Vorher stand hier nur Immich, und eine Nextcloud-Aufnahme
+        ''' fiel in den lokalen Zweig: der Vorschaubild-Cache suchte dann eine Datei namens
+        ''' "nextcloud://123/Bild.jpg", fand keine, und der Streifen blieb wortlos leer. Die Sitzung
+        ''' selbst ist längst quellneutral (siehe OpenImmichSession) - nur diese eine Stelle kannte
+        ''' den Unterschied. Gegenstück zu GalleryViewModel.CreateServerItemFromPseudoPath.</summary>
         Private Function CreateFilmstripItem(pseudoOrPath As String) As ImageItem
-            Dim assetId As String = Nothing, fileName As String = Nothing
-            If ImmichService.TryParsePseudoPath(pseudoOrPath, assetId, fileName) Then
-                Return ImageItem.CreateImmichItem(New ImmichAsset With {.Id = assetId, .FileName = fileName}, Nothing)
+            Dim id As String = Nothing, fileName As String = Nothing
+            If ImmichService.TryParsePseudoPath(pseudoOrPath, id, fileName) Then
+                Return ImageItem.CreateImmichItem(New ImmichAsset With {.Id = id, .FileName = fileName}, Nothing)
+            End If
+            If NextcloudService.TryParsePseudoPath(pseudoOrPath, id, fileName) Then
+                Return ImageItem.CreateNextcloudSearchItem(New NextcloudService.NextcloudSearchHit With {
+                                                               .FileId = id, .FileName = fileName}, Nothing)
             End If
             Return ImageItem.CreateLightweight(pseudoOrPath, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)
         End Function

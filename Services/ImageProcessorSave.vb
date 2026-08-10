@@ -441,8 +441,8 @@ Namespace Services
         ''' </summary>
         Friend Shared Function WriteFileAtomic(targetPath As String, writer As Action(Of Stream)) As Boolean
             If String.IsNullOrWhiteSpace(targetPath) OrElse writer Is Nothing Then Return False
-            Dim verzeichnis = IO.Path.GetDirectoryName(targetPath)
-            If Not String.IsNullOrEmpty(verzeichnis) Then Directory.CreateDirectory(verzeichnis)
+            Dim targetDirectory = IO.Path.GetDirectoryName(targetPath)
+            If Not String.IsNullOrEmpty(targetDirectory) Then Directory.CreateDirectory(targetDirectory)
             ' Prozess-ID im Namen: zwei gleichzeitig laufende FerrumPix-Instanzen (oder der
             ' Prüfstand daneben) dürfen sich nicht dieselbe Zwischendatei teilen.
             Dim tempPath = targetPath & ".fpwrite" & Environment.ProcessId.ToString() & ".tmp"

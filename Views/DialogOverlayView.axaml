@@ -86,6 +86,11 @@
                                                   Margin="0,16,0,0"
                                                   IsVisible="{Binding DialogShowsExportTo}"/>
 
+                        <views:SetPlaceDialogView x:Name="SetPlaceDialog"
+                                                  Grid.Row="3"
+                                                  Margin="0,16,0,0"
+                                                  IsVisible="{Binding DialogShowsSetPlace}"/>
+
                         <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
                              seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
                              beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->
@@ -345,7 +350,8 @@
                         <TextBlock Text="{Binding DialogSecondaryText}"/>
                     </Button>
                     <Button Classes="accent"
-                            Command="{Binding DialogConfirmCommand}">
+                            Command="{Binding DialogConfirmCommand}"
+                            IsEnabled="{Binding IsDialogPrimaryEnabled}">
                         <TextBlock Text="{Binding DialogConfirmText}"/>
                     </Button>
                 </StackPanel>

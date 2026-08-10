@@ -1466,6 +1466,10 @@ Namespace ViewModels
             InfoPanel.PersistFavorite = Sub(items, value) ApplyFavoriteTo(items, value)
             InfoPanel.PersistColorLabel = Sub(items, value) ApplyColorLabelTo(items, value)
             InfoPanel.PersistTag = Sub(items, tag, add) ApplyTagTo(items, tag, add)
+            CopyPlaceCommand = ReactiveCommand.Create(Sub() CopyPlaceFromSelected())
+            PastePlaceCommand = ReactiveCommand.Create(Sub() PastePlaceToSelected())
+            SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceForSelectedAsync())
+            RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
             ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
@@ -1571,6 +1575,127 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasSelection))
             Me.RaisePropertyChanged(NameOf(HasSelectedImage))
             RaiseSelectionMetadataChanged()
+        End Sub
+
+        Public ReadOnly Property CopyPlaceCommand As ICommand
+        Public ReadOnly Property PastePlaceCommand As ICommand
+        Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property RemovePlaceCommand As ICommand
+
+        ''' <summary>Loescht den Aufnahmeort - nach Rueckfrage.
+        '''
+        ''' Die Rueckfrage steht hier, weil der Vorgang die BILDDATEIEN aendert und sich nicht
+        ''' zurueckdrehen laesst: die Koordinate ist danach weg, nicht versteckt. Der Text sagt
+        ''' deshalb beides - wie viele Bilder es trifft und dass es endgueltig ist.</summary>
+        Private Async Function RemovePlaceFromSelectedAsync() As Task
+            Try
+                Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset AndAlso
+                                                                       Not String.IsNullOrEmpty(i.FilePath)).ToList()
+                If images.Count = 0 OrElse _mainVm Is Nothing Then Return
+
+                Dim message = String.Format(
+                    LocalizationService.T("Der Aufnahmeort wird aus {0} Bildern entfernt - aus der Bilddatei, aus einer Beistelldatei daneben und aus dem Katalog. Das lässt sich nicht rückgängig machen."),
+                    images.Count)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Aufnahmeort löschen"), message,
+                                                      LocalizationService.T("Löschen"),
+                                                      LocalizationService.T("Abbrechen")) Then Return
+
+                Dim batch = LibraryService.Instance.ClearGpsCoordinatesForMany(images.Select(Function(i) i.FilePath).ToList())
+                StatusText = String.Format(LocalizationService.T("Aufnahmeort aus {0} Bildern entfernt"), batch.SucceededCount)
+                UpdateInfoPanelTarget()
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RemovePlace", ex)
+            End Try
+        End Function
+
+        ''' <summary>Fragt den Aufnahmeort im Dialog ab und setzt ihn auf die ganze Auswahl.</summary>
+        Private Async Function SetPlaceForSelectedAsync() As Task
+            Try
+                Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset AndAlso
+                                                                       Not String.IsNullOrEmpty(i.FilePath)).ToList()
+                If images.Count = 0 OrElse _mainVm Is Nothing Then Return
+
+                ' Bei EINEM Bild, das schon einen Ort hat, steht der beim Oeffnen im Feld: dann
+                ' sieht man, was gilt, und kann ihn korrigieren statt ihn neu zu tippen. Bei
+                ' mehreren gibt es den einen Stand nicht, dort bleibt das Feld leer.
+                Dim initialQuery = ""
+                If images.Count = 1 Then
+                    Dim stored = LibraryService.Instance.GetGpsCoordinates(images(0).FilePath)
+                    If stored.Latitude.HasValue AndAlso stored.Longitude.HasValue Then
+                        initialQuery = stored.Latitude.Value.ToString("0.000000", Globalization.CultureInfo.InvariantCulture) & ", " &
+                                       stored.Longitude.Value.ToString("0.000000", Globalization.CultureInfo.InvariantCulture)
+                    End If
+                End If
+
+                Dim chosen = Await _mainVm.ShowSetPlaceAsync(images.Select(Function(i) i.FilePath).ToList(), initialQuery)
+                If chosen Is Nothing Then Return
+                ApplyPlaceToSelection(chosen.Latitude, chosen.Longitude, chosen.Label)
+
+                ' Wer einen Ort gesetzt hat, will ihn meist auf mehrere Reihen anwenden. Er landet
+                ' deshalb gleich im Merker und steht beim naechsten Rechtsklick zum Einfuegen bereit.
+                GeotagClipboard.Remember(chosen.Latitude, chosen.Longitude, chosen.Label)
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.SetPlace", ex)
+            End Try
+        End Function
+
+        ''' <summary>Merkt sich den Aufnahmeort des angeklickten Bildes.
+        '''
+        ''' Die Beschriftung des Einfuegen-Eintrags soll den ORT nennen und nicht die Koordinate,
+        ''' solange einer bekannt ist - "Aufnahmeort einfügen: München" sagt mehr als eine Zahl.</summary>
+        Private Sub CopyPlaceFromSelected()
+            Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset).ToList()
+            If images.Count <> 1 Then Return
+            Dim path = images(0).FilePath
+            Dim stored = LibraryService.Instance.GetGpsCoordinates(path)
+            If Not stored.Latitude.HasValue OrElse Not stored.Longitude.HasValue Then
+                StatusText = LocalizationService.T("Dieses Bild hat keinen Aufnahmeort")
+                Return
+            End If
+
+            Dim place = LibraryService.Instance.GetPlace(path)
+            Dim label = place.City
+            If label.Length > 0 AndAlso place.Country.Length > 0 Then
+                label &= ", " & PlaceLookupService.LocalizedCountry(place.CountryCode, place.Country)
+            End If
+            GeotagClipboard.Remember(stored.Latitude.Value, stored.Longitude.Value, label)
+            StatusText = LocalizationService.T("Aufnahmeort gemerkt") & ": " & GeotagClipboard.Label
+            RefreshContextActions()
+        End Sub
+
+        ''' <summary>Setzt den gemerkten Aufnahmeort auf die ganze Auswahl. Serverbilder bleiben
+        ''' aussen vor: sie haben keine Datei, die den Ort tragen koennte.</summary>
+        Private Sub PastePlaceToSelected()
+            Dim latitude As Double, longitude As Double
+            If Not GeotagClipboard.TryGet(latitude, longitude) Then Return
+            ApplyPlaceToSelection(latitude, longitude, GeotagClipboard.Label)
+        End Sub
+
+        ''' <summary>Der gemeinsame Weg von "einfügen" und "setzen": schreiben, melden, Infoleiste
+        ''' nachziehen. Gemeldet wird getrennt nach Ziel - "steht in der Datei" und "steht daneben"
+        ''' ist fuer den Nutzer nicht dasselbe.</summary>
+        Friend Sub ApplyPlaceToSelection(latitude As Double, longitude As Double, label As String)
+            Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset AndAlso
+                                                                   Not String.IsNullOrEmpty(i.FilePath)).ToList()
+            If images.Count = 0 Then Return
+
+            Dim batch = LibraryService.Instance.SetGpsCoordinatesForMany(
+                images.Select(Function(i) i.FilePath).ToList(), latitude, longitude)
+
+            Dim ort = If(String.IsNullOrWhiteSpace(label), GeotagService.FormatCoordinates(latitude, longitude), label.Trim())
+            If batch.Failed.Count = 0 Then
+                StatusText = String.Format(LocalizationService.T("Aufnahmeort gesetzt für {0} Bilder: {1}"),
+                                           batch.SucceededCount, ort)
+            Else
+                StatusText = String.Format(LocalizationService.T("Aufnahmeort gesetzt für {0} von {1} Bildern"),
+                                           batch.SucceededCount, batch.Total)
+            End If
+
+            ' Die Infoleiste zeigt Ort und Land - sie steht sonst beim alten Stand.
+            UpdateInfoPanelTarget()
+            RefreshContextActions()
         End Sub
 
         Private Function GetSelectedImageItems() As List(Of ImageItem)
@@ -4864,9 +4989,21 @@ Namespace ViewModels
             Dim source As IEnumerable(Of LibraryImageMeta) =
                 If(narrowed, DirectCast(LibraryService.Instance.GetAllImages(), IEnumerable(Of LibraryImageMeta)))
 
+            ' DIESELBE REGEL WIE IM ORDNERDURCHLAUF (siehe EnumerateImageFilesForSearch). Der
+            ' Durchlauf ueber die Ordner steigt nicht in Papierkorb und versteckte Ordner - der
+            ' Durchlauf ueber den KATALOG tat es weiterhin, und der Katalog traegt solche Eintraege:
+            ' aus Durchlaeufen von frueher und von jedem Ordner, den jemand mit eingeschalteten
+            ' versteckten Ordnern besucht hat. Ueber Person, Ort, Stichwort oder Bewertung stand ein
+            ' weggeworfenes Bild damit wieder in der Trefferliste, und loeschen liess es sich nicht
+            ' (die Regel weist versteckte Pfade ab, siehe Bildschirmfoto Nutzerbefund 2026-08-11).
+            ' Beide Bedingungen VOR File.Exists: Zeichenkettenarbeit ist billiger als ein Zugriff.
+            Dim showHidden = FolderNode.ShowHiddenFolders
             For Each meta In source
                 token.ThrowIfCancellationRequested()
                 If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
+                ' Der Papierkorb IMMER nicht - auch mit eingeschalteten versteckten Ordnern.
+                If FileOperationPolicy.IsTrashFolder(meta.FilePath) Then Continue For
+                If Not showHidden AndAlso FileOperationPolicy.IsInHiddenFolder(meta.FilePath) Then Continue For
                 If Not File.Exists(meta.FilePath) Then Continue For
                 If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
                 If Not IsPathInSearchRoot(meta.FilePath, root, includeSubfolders) Then Continue For

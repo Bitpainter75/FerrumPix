@@ -446,6 +446,21 @@ Namespace Services
                 End If
             End If
 
+            ' Steht im BILD keine Koordinate, kann eine in der Beistelldatei stehen. Dort landet
+            ' sie bei allem, was wir nicht selbst beschreiben - RAW, PSD, HEIC. Ohne diesen Blick
+            ' waere eine von Hand gesetzte Koordinate nach dem naechsten Einlesen wieder weg, weil
+            ' der Katalogeintrag dann aus der Bilddatei allein neu gebildet wird.
+            If Not result.GpsLatitude.HasValue AndAlso Not String.IsNullOrWhiteSpace(imagePath) Then
+                Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+                If Not String.IsNullOrEmpty(sidecarPath) Then
+                    Dim sidecar = XmpSidecarService.ReadSidecar(sidecarPath)
+                    If sidecar IsNot Nothing AndAlso sidecar.GpsLatitude.HasValue Then
+                        result.GpsLatitude = sidecar.GpsLatitude
+                        result.GpsLongitude = sidecar.GpsLongitude
+                    End If
+                End If
+            End If
+
             Dim dimensions = If(Not String.IsNullOrWhiteSpace(imagePath), ReadImageDimensions(imagePath), (Width:=CType(Nothing, Integer?), Height:=CType(Nothing, Integer?)))
             result.ImageWidth = If(dimensions.Width, ParseLeadingInt(data.ImageWidth))
             result.ImageHeight = If(dimensions.Height, ParseLeadingInt(data.ImageHeight))
@@ -798,38 +813,14 @@ Namespace Services
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
             End If
 
-            Dim xNamespace As XNamespace = "adobe:ns:meta/"
-            Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
             Dim xmpNamespace As XNamespace = "http://ns.adobe.com/xap/1.0/"
             Dim safeRating = Math.Max(0, Math.Min(5, rating)).ToString(CultureInfo.InvariantCulture)
 
             Try
-                Dim doc As XDocument
-                If System.IO.File.Exists(sidecarPath) Then
-                    doc = XDocument.Parse(System.IO.File.ReadAllText(sidecarPath, Encoding.UTF8), LoadOptions.PreserveWhitespace)
-                Else
-                    doc = New XDocument(
-                        New XDeclaration("1.0", "utf-8", "yes"),
-                        New XElement(xNamespace + "xmpmeta",
-                            New XAttribute(XNamespace.Xmlns + "x", xNamespace.NamespaceName),
-                            New XElement(rdfNamespace + "RDF",
-                                New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName),
-                                New XElement(rdfNamespace + "Description",
-                                    New XAttribute(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)))))
-                End If
-
-                Dim description = doc.Descendants(rdfNamespace + "Description").FirstOrDefault()
-                If description Is Nothing Then
-                    Dim rdfRoot = doc.Descendants(rdfNamespace + "RDF").FirstOrDefault()
-                    If rdfRoot Is Nothing Then
-                        Dim root = doc.Root
-                        If root Is Nothing Then Return False
-                        rdfRoot = New XElement(rdfNamespace + "RDF", New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName))
-                        root.Add(rdfRoot)
-                    End If
-                    description = New XElement(rdfNamespace + "Description")
-                    rdfRoot.Add(description)
-                End If
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                If doc Is Nothing Then Return False
+                Dim description = GetOrCreateSidecarDescription(doc)
+                If description Is Nothing Then Return False
 
                 description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
                 description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
@@ -878,39 +869,16 @@ Namespace Services
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
             End If
 
-            Dim xNamespace As XNamespace = "adobe:ns:meta/"
             Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
             Dim xmpNamespace As XNamespace = "http://ns.adobe.com/xap/1.0/"
             Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
             Dim safeRating = Math.Max(0, Math.Min(5, rating)).ToString(CultureInfo.InvariantCulture)
 
             Try
-                Dim doc As XDocument
-                If System.IO.File.Exists(sidecarPath) Then
-                    doc = XDocument.Parse(System.IO.File.ReadAllText(sidecarPath, Encoding.UTF8), LoadOptions.PreserveWhitespace)
-                Else
-                    doc = New XDocument(
-                        New XDeclaration("1.0", "utf-8", "yes"),
-                        New XElement(xNamespace + "xmpmeta",
-                            New XAttribute(XNamespace.Xmlns + "x", xNamespace.NamespaceName),
-                            New XElement(rdfNamespace + "RDF",
-                                New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName),
-                                New XElement(rdfNamespace + "Description",
-                                    New XAttribute(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)))))
-                End If
-
-                Dim description = doc.Descendants(rdfNamespace + "Description").FirstOrDefault()
-                If description Is Nothing Then
-                    Dim rdfRoot = doc.Descendants(rdfNamespace + "RDF").FirstOrDefault()
-                    If rdfRoot Is Nothing Then
-                        Dim root = doc.Root
-                        If root Is Nothing Then Return False
-                        rdfRoot = New XElement(rdfNamespace + "RDF", New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName))
-                        root.Add(rdfRoot)
-                    End If
-                    description = New XElement(rdfNamespace + "Description")
-                    rdfRoot.Add(description)
-                End If
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                If doc Is Nothing Then Return False
+                Dim description = GetOrCreateSidecarDescription(doc)
+                If description Is Nothing Then Return False
 
                 description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
                 description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
@@ -941,6 +909,162 @@ Namespace Services
             Catch
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Koordinaten in eine XMP-Beistelldatei - der Weg fuer alles, was keine JPEG-Datei
+        ''' ist. An eine RAW-Datei gehen wir nicht heran, und ein PSD oder HEIC waere ein eigener
+        ''' Schreiber; die Beistelldatei erreicht dagegen jedes Format und wird von den verbreiteten
+        ''' Verwaltungsprogrammen gelesen.
+        '''
+        ''' Geschrieben wird das exif-Schema, also dieselben Feldnamen wie im Bild, nur in XML-Form.
+        ''' Vorhandene fremde Knoten bleiben unangetastet. Ohne Hoehenangabe werden die beiden
+        ''' Hoehenfelder ENTFERNT statt auf null gesetzt - eine alte Hoehe zu einer neuen Koordinate
+        ''' waere schlechter als keine.</summary>
+        ''' <returns>Der Pfad der geschriebenen Datei, oder "" wenn nichts geschrieben wurde.</returns>
+        Public Shared Function WriteXmpGpsSidecar(imagePath As String, latitude As Double, longitude As Double,
+                                                  altitudeMeters As Double?, createIfMissing As Boolean) As String
+            If String.IsNullOrWhiteSpace(imagePath) Then Return ""
+
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then
+                If Not createIfMissing Then Return ""
+                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                If String.IsNullOrWhiteSpace(sidecarPath) Then Return ""
+            End If
+
+            Dim exifNamespace As XNamespace = "http://ns.adobe.com/exif/1.0/"
+
+            Try
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                If doc Is Nothing Then Return ""
+                Dim description = GetOrCreateSidecarDescription(doc)
+                If description Is Nothing Then Return ""
+
+                description.SetAttributeValue(XNamespace.Xmlns + "exif", exifNamespace.NamespaceName)
+                description.SetAttributeValue(exifNamespace + "GPSVersionID", "2.3.0.0")
+                description.SetAttributeValue(exifNamespace + "GPSLatitude", FormatXmpCoordinate(latitude, "N", "S"))
+                description.SetAttributeValue(exifNamespace + "GPSLongitude", FormatXmpCoordinate(longitude, "E", "W"))
+                description.SetAttributeValue(exifNamespace + "GPSMapDatum", "WGS-84")
+
+                If altitudeMeters.HasValue AndAlso Not Double.IsNaN(altitudeMeters.Value) AndAlso
+                   Not Double.IsInfinity(altitudeMeters.Value) Then
+                    ' Unter dem Meeresspiegel sagt das Vorzeichenfeld, der Betrag bleibt positiv.
+                    Dim centimeters = CLng(Math.Round(Math.Abs(altitudeMeters.Value) * 100.0))
+                    description.SetAttributeValue(exifNamespace + "GPSAltitudeRef", If(altitudeMeters.Value < 0.0, "1", "0"))
+                    description.SetAttributeValue(exifNamespace + "GPSAltitude",
+                                                  centimeters.ToString(CultureInfo.InvariantCulture) & "/100")
+                Else
+                    description.SetAttributeValue(exifNamespace + "GPSAltitudeRef", Nothing)
+                    description.SetAttributeValue(exifNamespace + "GPSAltitude", Nothing)
+                End If
+
+                ' Dieselben Felder koennen als KINDELEMENT dastehen (so schreibt exiftool). Blieben
+                ' sie stehen, laese ein Programm je nach Vorliebe den alten Wert.
+                For Each name In {"GPSVersionID", "GPSLatitude", "GPSLongitude", "GPSMapDatum", "GPSAltitude", "GPSAltitudeRef"}
+                    For Each stale In description.Elements(exifNamespace + name).ToList()
+                        stale.Remove()
+                    Next
+                Next
+
+                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
+                Return sidecarPath
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.WriteXmpGpsSidecar", ex)
+                Return ""
+            End Try
+        End Function
+
+        ''' <summary>Nimmt die Koordinate aus einer vorhandenen Beistelldatei - als Attribut wie als
+        ''' Kindelement. Eine NEUE Datei wird dafuer nie angelegt, und wenn keine da ist oder keine
+        ''' Koordinate darin steht, passiert nichts.</summary>
+        ''' <returns>True, wenn wirklich etwas entfernt wurde.</returns>
+        Public Shared Function RemoveXmpGpsSidecar(imagePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(imagePath) Then Return False
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then Return False
+
+            Dim exifNamespace As XNamespace = "http://ns.adobe.com/exif/1.0/"
+            Dim names = {"GPSVersionID", "GPSLatitude", "GPSLongitude", "GPSMapDatum",
+                         "GPSAltitude", "GPSAltitudeRef", "GPSTimeStamp", "GPSDateStamp"}
+            Try
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                If doc Is Nothing Then Return False
+
+                Dim removed = False
+                For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description").ToList()
+                    For Each name In names
+                        If description.Attribute(exifNamespace + name) IsNot Nothing Then
+                            description.SetAttributeValue(exifNamespace + name, Nothing)
+                            removed = True
+                        End If
+                        For Each child In description.Elements(exifNamespace + name).ToList()
+                            child.Remove()
+                            removed = True
+                        Next
+                    Next
+                Next
+
+                If Not removed Then Return False
+                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.RemoveXmpGpsSidecar", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Eine Koordinate in der Schreibweise des XMP-Schemas: Grad, Komma, Minuten mit
+        ''' Nachkommastellen, dahinter die Himmelsrichtung ("51,30.1234N"). Das Schema kennt kein
+        ''' Vorzeichen - die Richtung steckt allein im Buchstaben.</summary>
+        Public Shared Function FormatXmpCoordinate(value As Double, positiveRef As String, negativeRef As String) As String
+            Dim reference = If(value >= 0.0, positiveRef, negativeRef)
+            ' In Minuten runden, bevor Grad und Minuten getrennt werden: sonst kann aus 59,99999
+            ' Minuten eine 60 werden, und ein Uebertrag auf die Grad traegt niemand nach.
+            Dim totalMinutes = Math.Round(Math.Abs(value) * 60.0, 4)
+            Dim degrees = CInt(Math.Floor(totalMinutes / 60.0))
+            Dim minutes = totalMinutes - degrees * 60.0
+            Return degrees.ToString(CultureInfo.InvariantCulture) & "," &
+                   minutes.ToString("0.0###", CultureInfo.InvariantCulture) & reference
+        End Function
+
+        ''' <summary>Das XMP-Dokument einer Beistelldatei: das vorhandene einlesen, sonst ein leeres
+        ''' Geruest. Nothing, wenn eine vorhandene Datei kein lesbares XML ist - die wird dann NICHT
+        ''' ueberschrieben, sondern in Ruhe gelassen.</summary>
+        Private Shared Function OpenOrCreateSidecarDocument(sidecarPath As String) As XDocument
+            Dim xNamespace As XNamespace = "adobe:ns:meta/"
+            Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+            Dim xmpNamespace As XNamespace = "http://ns.adobe.com/xap/1.0/"
+
+            If System.IO.File.Exists(sidecarPath) Then
+                Return XDocument.Parse(System.IO.File.ReadAllText(sidecarPath, Encoding.UTF8), LoadOptions.PreserveWhitespace)
+            End If
+
+            Return New XDocument(
+                New XDeclaration("1.0", "utf-8", "yes"),
+                New XElement(xNamespace + "xmpmeta",
+                    New XAttribute(XNamespace.Xmlns + "x", xNamespace.NamespaceName),
+                    New XElement(rdfNamespace + "RDF",
+                        New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName),
+                        New XElement(rdfNamespace + "Description",
+                            New XAttribute(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)))))
+        End Function
+
+        ''' <summary>Der rdf:Description-Knoten, in den die Werte gehoeren; fehlende Ebenen werden
+        ''' angelegt. Nothing nur, wenn das Dokument nicht einmal eine Wurzel hat.</summary>
+        Private Shared Function GetOrCreateSidecarDescription(doc As XDocument) As XElement
+            Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+            Dim description = doc.Descendants(rdfNamespace + "Description").FirstOrDefault()
+            If description IsNot Nothing Then Return description
+
+            Dim rdfRoot = doc.Descendants(rdfNamespace + "RDF").FirstOrDefault()
+            If rdfRoot Is Nothing Then
+                Dim root = doc.Root
+                If root Is Nothing Then Return Nothing
+                rdfRoot = New XElement(rdfNamespace + "RDF", New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName))
+                root.Add(rdfRoot)
+            End If
+            description = New XElement(rdfNamespace + "Description")
+            rdfRoot.Add(description)
+            Return description
         End Function
 
         Private Shared Function TryGetMemberValue(item As Object, memberName As String) As Object

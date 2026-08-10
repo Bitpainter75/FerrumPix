@@ -133,6 +133,35 @@ Namespace ViewModels
             Return Build("Nach rechts drehen", "rotate-clockwise-2", c)
         End Function
 
+        ''' <summary>Das Untermenue "Metadaten" mit allem, was an den Angaben ZUR Aufnahme arbeitet:
+        ''' Aufnahmeort setzen und Metadaten entfernen. Sie gehoeren zusammen und waeren einzeln im
+        ''' Hauptmenue vier weitere Zeilen in einer Liste, die schon lang ist.</summary>
+        Public Shared Function Metadata(children As IReadOnlyList(Of Object)) As AppAction
+            Return New AppAction(LocalizationService.T("Metadaten"), "file-info", Nothing, Nothing, children)
+        End Function
+
+        Public Shared Function CopyPlace(c As ICommand) As AppAction
+            Return Build("Aufnahmeort kopieren", "map-pin-share", c)
+        End Function
+
+        ''' <summary>Der gemerkte Ort steht MIT im Text ("Aufnahmeort einfügen: München"). Ohne ihn
+        ''' muesste man sich merken, was man vor drei Klicks kopiert hat.</summary>
+        Public Shared Function PastePlace(c As ICommand, label As String) As AppAction
+            Dim text = LocalizationService.T("Aufnahmeort einfügen")
+            If Not String.IsNullOrWhiteSpace(label) Then text &= ": " & label.Trim()
+            Return New AppAction(text, "map-pin-plus", c)
+        End Function
+
+        Public Shared Function SetPlace(c As ICommand) As AppAction
+            ' Ohne Auslassungspunkte, wie die uebrigen Eintraege, die einen Dialog oeffnen
+            ' ("Größe ändern", "Exportieren nach").
+            Return Build("Aufnahmeort setzen", "map-pin-search", c)
+        End Function
+
+        Public Shared Function RemovePlace(c As ICommand) As AppAction
+            Return Build("Aufnahmeort löschen", "map-pin-x", c)
+        End Function
+
         Public Shared Function CopyPath(c As ICommand) As AppAction
             Return Build("Pfad kopieren", "copy", c)
         End Function
