@@ -6,7 +6,7 @@ FerrumPix is a desktop photo manager and image editor for Linux and Windows, wit
 
 It is built with [Avalonia UI](https://avaloniaui.net/) and .NET 10, in VB.NET, which I still love even though it is rare nowadays. This started as a private project - an application built exactly the way I always wanted one to look and work - and it is free and open source for anyone who finds it useful.
 
-To be transparent: yes, I use AI to support my development workflow. However, anyone who actually codes knows that AI cannot build a complete, production-ready application on its own. It still requires a massive amount of manual work, architecture planning, and debugging. I am currently investing a lot of time, a ton of passion, unique ideas, and genuine hard work went into this project.
+To be transparent: yes, I use AI to support my development workflow. However, it still requires a massive amount of manual work, architecture planning, and debugging. I am currently investing a lot of time. A ton of passion, unique ideas, and genuine hard work went into this project.
 
 FerrumPix is in active development. The gallery, viewer, editor, settings and Immich integration are already usable. Current work focuses on stability, performance, workflow polish and cleanup.
 
@@ -49,11 +49,9 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 ## Editor
 
-<img src="Screenshots/Editor_Edit.png" />
+<img src="Screenshots/Editor_Text.png" />
 
 **Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, and a frame whose edges you bend. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
-
-<img src="Screenshots/Editor_Crop.png" />
 
 **Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. *Auto* sets a sensible starting point, and a set of slider values can be saved and put on any other photo.
 
@@ -69,7 +67,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups.
 
-<img src="Screenshots/Editor_Text.png" />
+<img src="Screenshots/Editor_Edit.png" />
 
 **Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw.
 
@@ -124,8 +122,6 @@ Plus `album.create` and `album.update` if FerrumPix should create and rename alb
 *Update existing assets* replaces the file of an existing asset, and the permission for it is named differently across Immich versions. Left off, FerrumPix always creates a new asset instead.
 
 ## Settings
-
-<img src="Screenshots/Settings.png" />
 
 Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the Immich connection.
 
