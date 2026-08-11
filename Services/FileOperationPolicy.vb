@@ -181,6 +181,9 @@ Namespace Services
                 For Each segment In segments
                     If String.Equals(segment, "Trash", StringComparison.OrdinalIgnoreCase) Then Return True
                     If segment.StartsWith(".Trash", StringComparison.OrdinalIgnoreCase) Then Return True
+                    ' Der Papierkorb von Windows, damit die Regel auf jedem System dasselbe meint.
+                    If String.Equals(segment, "$RECYCLE.BIN", StringComparison.OrdinalIgnoreCase) Then Return True
+                    If String.Equals(segment, "RECYCLER", StringComparison.OrdinalIgnoreCase) Then Return True
                 Next
             Catch
             End Try

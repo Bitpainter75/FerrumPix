@@ -469,6 +469,9 @@ Namespace Services
         ''' <summary>Koordinate in die Katalogspalten, danach Ort und Land dazu bestimmen.</summary>
         Private Shared Sub WriteGpsCoordinates(conn As SqliteConnection, tx As SqliteTransaction,
                                                filePath As String, latitude As Double, longitude As Double)
+            ' Der Papierkorb bleibt draussen, hier wie in jedem anderen Schreibweg (siehe
+            ' IsCatalogWritable). Diese eine Stelle deckt alle drei Wege ab, die Koordinaten setzen.
+            If Not IsCatalogWritable(filePath) Then Return
             Using cmd = conn.CreateCommand()
                 cmd.Transaction = tx
                 cmd.CommandText =

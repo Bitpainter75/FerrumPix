@@ -339,6 +339,10 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_statusText, value)
+                ' Ein Suchlauf schreibt seinen Stand ohnehin hierher ("Suche läuft... 1.234 Bilder").
+                ' Der Balken oben zeigt denselben Satz, statt ihn an einem Dutzend Stellen im
+                ' Suchlauf ein zweites Mal zu setzen.
+                If _searchRunRow IsNot Nothing Then _searchRunRow.Text = value
             End Set
         End Property
 
@@ -1183,7 +1187,6 @@ Namespace ViewModels
         Public ReadOnly Property ClearPersonFilterCommand As ICommand
         Public ReadOnly Property ClearPlaceFilterCommand As ICommand
         Public ReadOnly Property ScanFacesCommand As ICommand
-        Public ReadOnly Property CancelFaceScanCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
@@ -1460,7 +1463,6 @@ Namespace ViewModels
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
             ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
             ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesAsync())
-            CancelFaceScanCommand = ReactiveCommand.Create(Sub() CancelFaceScan())
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
             ' Das Panel kennt nur ImageItem und koennte lokale Bilder nicht von Immich-Assets
             ' trennen. Die Wege stellt deshalb die Galerie - dieselbe Teilung wie im Sternemenue.
@@ -4329,20 +4331,25 @@ Namespace ViewModels
             If paths.Count = 0 Then Return
 
             _faceScanRunning = True
+            _faceScanCancellation = New CancellationTokenSource()
+            ' Der Fortschritt steht im Balken oben, NICHT in der Statuszeile: ein Lauf ueber einen
+            ' grossen Ordner dauert Minuten, und eine Zeile am unteren Rand ist dafuer zu leise -
+            ' man haelt das Programm sonst fuer haengengeblieben.
+            Dim runRow = BeginGalleryRun(AddressOf CancelFaceScan)
             ' EINE Schablone statt zusammengesetzter Bruchstuecke: in anderen Sprachen steht die Zahl
             ' woanders im Satz, und aus aneinandergehaengten Teilen laesst sich das nicht bauen.
-            FaceScanProgressText = String.Format(LocalizationService.T("Gesichter werden gesucht: {0} von {1}"),
-                                                 0, paths.Count)
-            _faceScanCancellation = New CancellationTokenSource()
-            Me.RaisePropertyChanged(NameOf(IsScanningFaces))
+            runRow.Text = String.Format(LocalizationService.T("Gesichter werden gesucht: {0} von {1}"),
+                                        0, paths.Count)
+            runRow.Percent = 0
+            runRow.HasProgress = True
             Try
-                ' Der Fortschritt steht im Balken, NICHT in der Statuszeile: ein Lauf ueber einen
-                ' grossen Ordner dauert Minuten, und eine Zeile am unteren Rand ist dafuer zu leise -
-                ' man haelt das Programm sonst fuer haengengeblieben.
                 Dim reporter = New Progress(Of (Done As Integer, Total As Integer, File As String))(
-                    Sub(p) FaceScanProgressText =
-                               String.Format(LocalizationService.T("Gesichter werden gesucht: {0} von {1}"),
-                                             p.Done, p.Total))
+                    Sub(p)
+                        runRow.Text = String.Format(LocalizationService.T("Gesichter werden gesucht: {0} von {1}"),
+                                                    p.Done, p.Total)
+                        runRow.Percent = If(p.Total > 0, Math.Min(100.0, p.Done * 100.0 / p.Total), 0.0)
+                        runRow.HasProgress = p.Total > 0
+                    End Sub)
                 Dim result = Await FaceScanRunner.RunAsync(paths, reporter, _faceScanCancellation.Token,
                                                            force:=True).ConfigureAwait(True)
                 ' Ein abgebrochener Lauf hat trotzdem etwas gefunden, und das bleibt auch gespeichert -
@@ -4368,7 +4375,7 @@ Namespace ViewModels
                 _faceScanRunning = False
                 _faceScanCancellation?.Dispose()
                 _faceScanCancellation = Nothing
-                Me.RaisePropertyChanged(NameOf(IsScanningFaces))
+                EndGalleryRun(runRow)
             End Try
         End Function
 
@@ -4386,24 +4393,6 @@ Namespace ViewModels
 
         Private _faceScanRunning As Boolean
         Private _faceScanCancellation As CancellationTokenSource
-
-        ''' <summary>Laeuft gerade ein Durchlauf? Zeigt den Balken ueber der Galerie.</summary>
-        Public ReadOnly Property IsScanningFaces As Boolean
-            Get
-                Return _faceScanRunning
-            End Get
-        End Property
-
-        Private _faceScanProgressText As String = ""
-
-        Public Property FaceScanProgressText As String
-            Get
-                Return _faceScanProgressText
-            End Get
-            Set(value As String)
-                Me.RaiseAndSetIfChanged(_faceScanProgressText, value)
-            End Set
-        End Property
 
         Private Sub RefreshPersonFilterState()
             Me.RaisePropertyChanged(NameOf(HasPersonFilter))
@@ -4489,6 +4478,7 @@ Namespace ViewModels
             SelectedImmichNode = Nothing
             SelectedNextcloudNode = Nothing
             IsLoading = True
+            Dim runRow = BeginSearchRun()
             StatusText = LocalizationService.T("Suche auf dem Server…")
 
             Const SafetyCap As Integer = 5000
@@ -4708,6 +4698,7 @@ Namespace ViewModels
                 DiagnosticLogService.LogException(If(isImmich, "Immich.Search", "Nextcloud.Search"), ex)
                 StatusText = LocalizationService.T("Die Suche ist fehlgeschlagen")
             Finally
+                EndSearchRun(runRow)
                 If Not thumbnailToken.IsCancellationRequested Then IsLoading = False
             End Try
         End Sub
@@ -4907,10 +4898,24 @@ Namespace ViewModels
             Dim foundThisRun As New List(Of String)()
 
             IsLoading = True
+            Dim runRow = BeginSearchRun()
             StatusText = $"Suche läuft... 0 {LocalizationService.T("Bilder")}"
 
             Try
                 Await Task.Run(Async Function()
+                                   ' Was Stufe eins bereits abgehandelt hat. Stufe zwei laesst diese
+                                   ' Pfade aus: sie findet beim Gang ueber den Ordnerbaum dieselben
+                                   ' Dateien noch einmal, holte ihre Katalogzeilen ein ZWEITES Mal
+                                   ' und prueste jede Bedingung ein zweites Mal - um sie am Ende als
+                                   ' Dublette wegzuwerfen. Bei 7500 gemerkten Treffern war das je
+                                   ' Oeffnen die doppelte Katalogabfrage und die doppelte Pruefung.
+                                   '
+                                   ' Damit das TRAGFAEHIG ist, prueft Stufe eins jetzt selbst (siehe
+                                   ' unten): sonst bliebe ein gemerkter Treffer, der die Bedingung
+                                   ' laengst nicht mehr erfuellt, ungeprueft stehen. Genau diese
+                                   ' Nachpruefung war bisher die Aufgabe von Stufe zwei.
+                                   Dim restored As New HashSet(Of String)(PathIdentity.Comparer)
+
                                    ' Erste Stufe: die zuletzt gefundenen Pfade wiederherstellen,
                                    ' der Plattenzugriff dazu laeuft im Hintergrund.
                                    If savedPaths.Count > 0 Then
@@ -4918,30 +4923,67 @@ Namespace ViewModels
                                        Dim published = 0
                                        For Each pathBatch In savedPaths.Chunk(180)
                                            token.ThrowIfCancellationRequested()
+                                           ' Gemerkt heisst nicht mehr gueltig: eine Suchliste aus
+                                           ' der Zeit vor dem Riegel traegt noch Pfade aus dem
+                                           ' Papierkorb, und die Datei EXISTIERT ja - sie faellt
+                                           ' also nicht von selbst durch File.Exists.
+                                           '
+                                           ' Ebenso raus, was ausserhalb des Startordners liegt:
+                                           ' Stufe zwei haette es nicht wiedergefunden und die
+                                           ' Bereinigung haette es am Ende weggeworfen. Da Stufe
+                                           ' zwei diese Pfade nun auslaesst, muss die Grenze hier
+                                           ' gezogen werden.
                                            Dim valid = pathBatch.
                                                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
                                                Where(Function(p) seenSaved.Add(p)).
+                                               Where(Function(p) Not IsTrashedLocalPath(p)).
                                                Where(Function(p) _imageExtensions.Contains(IO.Path.GetExtension(p).ToLowerInvariant())).
+                                               Where(Function(p) IsPathInSearchRoot(p, rootFolder, node.IncludeSubfolders)).
                                                Where(Function(p) File.Exists(p)).
                                                ToList()
                                            If valid.Count = 0 Then Continue For
 
                                            Dim metaByPath = LibraryService.Instance.GetMetaForPaths(valid)
-                                           Dim prebuilt = valid.
-                                               Select(Function(path)
-                                                          Dim m As LibraryImageMeta = Nothing
-                                                          metaByPath.TryGetValue(path, m)
-                                                          Dim item = ImageItem.CreateLightweight(path, thumbnailToken, cacheScopeId, cacheScopeName)
-                                                          item.IsFavorite = If(m IsNot Nothing, m.IsFavorite, False)
-                                                          item.Rating = If(m IsNot Nothing, m.Rating, 0)
-                                                          item.ColorLabel = If(m IsNot Nothing, m.ColorLabel, "")
-                                                          item.Tags = If(m IsNot Nothing AndAlso m.Tags IsNot Nothing, m.Tags, New List(Of String)())
-                                                          If m IsNot Nothing Then
-                                                              item.ImageWidth = If(m.ImageWidth, 0)
-                                                              item.ImageHeight = If(m.ImageHeight, 0)
-                                                          End If
+                                           Dim matched As New List(Of LibraryImageMeta)()
+                                           For Each path In valid
+                                               token.ThrowIfCancellationRequested()
+                                               Dim m As LibraryImageMeta = Nothing
+                                               If Not metaByPath.TryGetValue(path, m) OrElse m Is Nothing Then
+                                                   m = New LibraryImageMeta With {
+                                                       .FilePath = path,
+                                                       .IsFavorite = False,
+                                                       .Rating = 0,
+                                                       .Tags = New List(Of String)()
+                                                   }
+                                               End If
+                                               If Not Await MatchesSavedSearchAsync(node, m, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
+                                               matched.Add(m)
+                                           Next
+
+                                           ' ERLEDIGT ist auch, was durchgefallen ist: Stufe zwei kaeme
+                                           ' ueber dieselbe Zeile zum selben Urteil.
+                                           For Each path In valid
+                                               restored.Add(path)
+                                           Next
+                                           If matched.Count = 0 Then Continue For
+
+                                           Dim prebuilt = matched.
+                                               Select(Function(m)
+                                                          Dim item = ImageItem.CreateLightweight(m.FilePath, thumbnailToken, cacheScopeId, cacheScopeName)
+                                                          item.IsFavorite = m.IsFavorite
+                                                          item.Rating = m.Rating
+                                                          item.ColorLabel = m.ColorLabel
+                                                          item.Tags = If(m.Tags, New List(Of String)())
+                                                          item.ImageWidth = If(m.ImageWidth, 0)
+                                                          item.ImageHeight = If(m.ImageHeight, 0)
                                                           Return item
                                                       End Function).ToList()
+
+                                           ' Die Treffer dieser Stufe zaehlen mit: die Bereinigung am
+                                           ' Ende setzt die gemerkte Liste auf das, was DIESER Lauf
+                                           ' gefunden hat, und ohne sie fiele alles wieder heraus.
+                                           foundThisRun.AddRange(matched.Select(Function(m) m.FilePath))
+                                           foundCount += matched.Count
 
                                            Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                If Not SearchMayPublish(node, token) Then Return
@@ -4962,6 +5004,26 @@ Namespace ViewModels
                                        For Each file In EnumerateSearchFilesLazy(rootFolder, node.IncludeSubfolders, textQuery, token)
                                            token.ThrowIfCancellationRequested()
                                            scannedCount += 1
+                                           ' DIE ANZEIGE HAENGT AN DIESER STELLE, NICHT AM BLOCK.
+                                           ' Gemeldet wurde frueher nur, wenn ein Block von 120
+                                           ' zusammenkam - und seit Stufe zwei die gemerkten Treffer
+                                           ' auslaesst, wird der bei einer eingelaufenen Suchliste nie
+                                           ' mehr voll. Der Text blieb auf dem Stand von Stufe eins
+                                           ' stehen, waehrend der Ordnerbaum still weiterlief: es sah
+                                           ' aus, als haenge die Suche (Nutzerbefund).
+                                           If scannedCount Mod 200 = 0 Then
+                                               Dim scannedFound = foundCount
+                                               Dim scannedSoFar = scannedCount
+                                               Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                   If Not SearchMayPublish(node, token) Then Return
+                                                   StatusText = String.Format(
+                                                       LocalizationService.T("Suche läuft... {0} Bilder, {1} geprüft"),
+                                                       scannedFound.ToString("N0"), scannedSoFar.ToString("N0"))
+                                               End Sub, DispatcherPriority.Background)
+                                           End If
+                                           ' Stufe eins hatte ihn schon - weder Katalogzeile noch
+                                           ' Bedingung ein zweites Mal.
+                                           If restored.Contains(file) Then Continue For
                                            pending.Add(file)
                                            If pending.Count >= 120 Then
                                                Dim added = Await PublishSearchBatchAsync(node, pending, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, cacheScopeId, cacheScopeName, token)
@@ -4985,6 +5047,19 @@ Namespace ViewModels
                                        For Each meta In EnumerateCatalogSearchMetasLazy("", node.IncludeSubfolders, token, node)
                                            token.ThrowIfCancellationRequested()
                                            scannedCount += 1
+                                           ' Melden am Fortschritt, nicht am Block - siehe oben.
+                                           If scannedCount Mod 200 = 0 Then
+                                               Dim scannedFound = foundCount
+                                               Dim scannedSoFar = scannedCount
+                                               Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                   If Not SearchMayPublish(node, token) Then Return
+                                                   StatusText = String.Format(
+                                                       LocalizationService.T("Suche läuft... {0} Bilder, {1} geprüft"),
+                                                       scannedFound.ToString("N0"), scannedSoFar.ToString("N0"))
+                                               End Sub, DispatcherPriority.Background)
+                                           End If
+                                           ' Siehe oben: was Stufe eins abgehandelt hat, bleibt aus.
+                                           If restored.Contains(meta.FilePath) Then Continue For
                                            pending.Add(meta)
                                            If pending.Count >= 120 Then
                                                Dim added = Await PublishSearchMetaBatchAsync(node, pending, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, cacheScopeId, cacheScopeName, token)
@@ -5053,6 +5128,9 @@ Namespace ViewModels
             Catch ex As Exception
                 If Not token.IsCancellationRequested Then StatusText = LocalizationService.T("Suche fehlgeschlagen")
             Finally
+                ' Die eigene Zeile immer abraeumen, auch nach einem Abbruch: sie gehoert diesem Lauf
+                ' allein, ein zweiter Aufruf laeuft ins Leere.
+                EndSearchRun(runRow)
                 If Object.ReferenceEquals(_activeSearchCts, searchCts) Then
                     _activeSearchCts.Dispose()
                     _activeSearchCts = Nothing
@@ -5668,6 +5746,9 @@ Namespace ViewModels
 
         Private Iterator Function EnumerateSearchFilesLazy(rootFolder As String, includeSubfolders As Boolean, textQuery As String, token As CancellationToken) As IEnumerable(Of String)
             If String.IsNullOrWhiteSpace(rootFolder) OrElse Not Directory.Exists(rootFolder) Then Return
+            ' Der Startordner SELBST, nicht nur die Unterordner: gefiltert wurde bisher erst beim
+            ' Absteigen, ein Startpunkt im Papierkorb lieferte seinen ganzen Inhalt aus.
+            If FileOperationPolicy.IsTrashFolder(rootFolder) Then Return
             Dim filePatterns = GetFileEnumerationPatterns(textQuery)
             Dim pendingFolders As New Stack(Of String)()
             pendingFolders.Push(rootFolder)
@@ -5934,6 +6015,23 @@ Namespace ViewModels
             Return thumbnailToken
         End Function
 
+        ''' <summary>Ein weggeworfenes Bild - gehoert in keine Trefferliste.
+        '''
+        ''' Geprueft wird an den beiden Stellen, an denen ein Pfad in eine SUCHANSICHT eintritt, und
+        ''' nicht in den einzelnen Suchlaeufen: die Wege dorthin sind vier (Ordnerdurchlauf,
+        ''' Katalogdurchlauf, gemerkte Treffer einer Suchliste, Immich-Index), und die Regel an jedem
+        ''' einzeln haette bei der naechsten Quelle wieder gefehlt. Genau so ist es gekommen - der
+        ''' Ordner- und der Katalogdurchlauf hatten den Riegel bereits, die gemerkten Treffer einer
+        ''' Suchliste nicht, und weggeworfene Bilder standen beim Oeffnen wieder da (Nutzerbefund).
+        '''
+        ''' SERVERBILDER BLEIBEN AUSSEN VOR: ihr Pseudo-Pfad ist kein Ordnerpfad, und die Ansichten
+        ''' "Papierkorb" von Immich und Nextcloud sollen ihren Inhalt gerade zeigen.</summary>
+        Private Shared Function IsTrashedLocalPath(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            If LibraryService.IsServerPseudoPath(filePath) Then Return False
+            Return FileOperationPolicy.IsTrashFolder(filePath)
+        End Function
+
         Private Sub AddMetasToVirtualFolder(metas As IEnumerable(Of LibraryImageMeta),
                                             thumbnailToken As CancellationToken,
                                             Optional cacheScopeId As String = Nothing,
@@ -5944,6 +6042,8 @@ Namespace ViewModels
             Dim added = False
             For Each meta In If(metas, Enumerable.Empty(Of LibraryImageMeta)())
                 If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
+                ' Vor File.Exists: Zeichenkettenarbeit ist billiger als ein Plattenzugriff.
+                If IsTrashedLocalPath(meta.FilePath) Then Continue For
                 If Not File.Exists(meta.FilePath) Then Continue For
                 If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
                 If Not _virtualPathSet.Add(meta.FilePath) Then Continue For
@@ -5971,6 +6071,7 @@ Namespace ViewModels
             Dim added = False
             For Each item In If(items, New List(Of ImageItem)())
                 If item Is Nothing Then Continue For
+                If IsTrashedLocalPath(item.FilePath) Then Continue For
                 If Not _virtualPathSet.Add(item.FilePath) Then Continue For
                 _allItems.Add(item)
                 added = True
@@ -6025,8 +6126,13 @@ Namespace ViewModels
             Dim target = _savedSearches.FirstOrDefault(Function(s) String.Equals(s.Id, node.Id, StringComparison.OrdinalIgnoreCase))
             If target Is Nothing OrElse target.Results Is Nothing Then Return
             Dim source = If(currentRunResults, target.Results)
+            ' Der Papierkorb faellt hier ENDGUELTIG heraus und nicht nur aus der Anzeige: die
+            ' gemerkten Treffer stehen auf der Platte (searchlists.json), und was dort bleibt, kommt
+            ' bei jedem Oeffnen wieder. File.Exists allein raeumt es nicht weg - ein weggeworfenes
+            ' Bild ist ja noch da.
             Dim cleaned = source.
-                Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso File.Exists(p)).
+                Where(Function(p) Not String.IsNullOrWhiteSpace(p) AndAlso
+                                  Not IsTrashedLocalPath(p) AndAlso File.Exists(p)).
                 Distinct(PathIdentity.Comparer).
                 ToList()
             Dim changed = cleaned.Count <> target.Results.Count
@@ -6072,6 +6178,10 @@ Namespace ViewModels
         End Function
 
         Private Sub CancelActiveSearch()
+            ' Die Anzeige zuerst: der Suchlauf merkt den Abbruch erst an seiner naechsten Pruefstelle,
+            ' bei einer Serverabfrage kann das eine Sekunde dauern. Solange bliebe der Balken stehen,
+            ' obwohl der Knopf schon gedrueckt wurde.
+            EndSearchRun(_searchRunRow)
             If _activeSearchCts Is Nothing Then Return
             Try
                 _activeSearchCts.Cancel()
@@ -6080,6 +6190,28 @@ Namespace ViewModels
             _activeSearchCts.Dispose()
             _activeSearchCts = Nothing
             IsLoading = False
+        End Sub
+
+        ''' <summary>Die Zeile des laufenden Suchlaufs in der Werkzeugleiste. Nothing, wenn gerade
+        ''' keine Suchliste laeuft.</summary>
+        Private _searchRunRow As BackgroundRunRow
+
+        ''' <summary>Zeigt den Suchlauf oben an, mit Balken und Abbruchknopf. Eine Suchliste ueber
+        ''' einen grossen Bestand laeuft Minuten - die Statuszeile allein ist dafuer zu leise, und
+        ''' ohne Knopf bliebe nur, den Baum zu wechseln.</summary>
+        Private Function BeginSearchRun() As BackgroundRunRow
+            Dim row = BeginGalleryRun(Sub() CancelActiveSearch())
+            ' Unbestimmter Balken: wie viele Bilder zu pruefen sind, weiss der Lauf erst, wenn er
+            ' durch ist.
+            row.Text = StatusText
+            _searchRunRow = row
+            Return row
+        End Function
+
+        Private Sub EndSearchRun(row As BackgroundRunRow)
+            If row Is Nothing Then Return
+            If Object.ReferenceEquals(_searchRunRow, row) Then _searchRunRow = Nothing
+            EndGalleryRun(row)
         End Sub
 
         Private Sub ClearVirtualFolderState()
@@ -6116,73 +6248,107 @@ Namespace ViewModels
             End Get
         End Property
 
-        ' --- Der Hintergrundlauf in der Werkzeugleiste -----------------------------------------
+        ' --- Laufende Vorgaenge in der Werkzeugleiste -------------------------------------------
         '
-        ' EINE Anzeige fuer BEIDE Laeufe, an der Stelle des Suchfelds. Zwei getrennte Anzeigen
-        ' waeren zwei Flaechen, die sich denselben Platz teilen muessten; und laufen beide
-        ' gleichzeitig, gehoert die Flaeche dem, der laenger dauert - die Gesichtssuche braucht
-        ' Stunden, der Index Minuten. Deshalb hat sie hier Vorrang.
+        ' EINE Stelle fuer ALLE Laeufe, an der Stelle des Suchfelds: der Katalogindex, die
+        ' Gesichtssuche ueber die ueberwachten Ordner, die Gesichtssuche ueber die angezeigten
+        ' Bilder und eine laufende Suchliste. Vorher zeigten die ersten beiden hier und die dritte
+        ' unten in der Fusszeile, die Suchliste gar nicht - drei Orte fuer dieselbe Aussage, und der
+        ' leiseste davon war ausgerechnet der fuer den laengsten Lauf.
+        '
+        ' Laufen mehrere gleichzeitig, stehen sie NEBENEINANDER und teilen sich die Breite; keiner
+        ' verdeckt den anderen, und jeder behaelt seinen eigenen Knopf zum Anhalten. Die Anzeige
+        ' selbst ist eine Liste von <see cref="BackgroundRunRow"/> - jede Zeile weiss nur, was sie
+        ' zeigt, nicht wer sie fuellt.
 
-        ''' <summary>Laeuft einer der beiden Hintergrundlaeufe? Traegt die Anzeige und blendet
-        ''' solange das Suchfeld aus.</summary>
-        Public ReadOnly Property IsBackgroundRunVisible As Boolean
+        Private ReadOnly _backgroundRuns As New ObservableCollection(Of BackgroundRunRow)()
+
+        ''' <summary>Die Zeilen der Anzeige, in der Reihenfolge ihres Starts.</summary>
+        Public ReadOnly Property BackgroundRuns As ObservableCollection(Of BackgroundRunRow)
             Get
-                Return If(FaceIndex?.IsRunning, False) OrElse If(CatalogIndex?.IsRunning, False)
+                Return _backgroundRuns
             End Get
         End Property
 
-        ''' <summary>Der Lauf, der gerade die Anzeige traegt. Nothing, wenn keiner laeuft.</summary>
-        Private ReadOnly Property ActiveBackgroundRun As BackgroundRunViewModel
+        ''' <summary>Laeuft ueberhaupt etwas? Traegt die Anzeige und blendet solange das Suchfeld
+        ''' aus.</summary>
+        Public ReadOnly Property HasBackgroundRuns As Boolean
             Get
-                If If(FaceIndex?.IsRunning, False) Then Return FaceIndex
-                If If(CatalogIndex?.IsRunning, False) Then Return CatalogIndex
-                Return Nothing
+                Return _backgroundRuns.Count > 0
             End Get
         End Property
 
-        Public ReadOnly Property BackgroundRunText As String
-            Get
-                Return If(ActiveBackgroundRun?.StatusText, "")
-            End Get
-        End Property
+        ''' <summary>Die Zeile zu einem der beiden Hintergrundlaeufe, solange er laeuft.</summary>
+        Private ReadOnly _backgroundRunRows As New Dictionary(Of BackgroundRunViewModel, BackgroundRunRow)()
 
-        Public ReadOnly Property BackgroundRunPercent As Double
-            Get
-                Return If(ActiveBackgroundRun?.ProgressPercent, 0.0)
-            End Get
-        End Property
+        Private Sub AddBackgroundRun(row As BackgroundRunRow)
+            If row Is Nothing OrElse _backgroundRuns.Contains(row) Then Return
+            _backgroundRuns.Add(row)
+            Me.RaisePropertyChanged(NameOf(HasBackgroundRuns))
+        End Sub
 
-        Public ReadOnly Property BackgroundRunHasProgress As Boolean
-            Get
-                Return If(ActiveBackgroundRun?.HasProgress, False)
-            End Get
-        End Property
+        Private Sub RemoveBackgroundRun(row As BackgroundRunRow)
+            If row Is Nothing OrElse Not _backgroundRuns.Remove(row) Then Return
+            Me.RaisePropertyChanged(NameOf(HasBackgroundRuns))
+        End Sub
 
-        Public ReadOnly Property StopBackgroundRunCommand As ICommand
-            Get
-                Return ActiveBackgroundRun?.StopCommand
-            End Get
-        End Property
+        ''' <summary>Meldet einen Lauf an, den die GALERIE selbst fuehrt (die Gesichtssuche ueber die
+        ''' Ansicht, eine Suchliste). Die Zeile gehoert dem Aufrufer: er schreibt seinen Fortschritt
+        ''' hinein und gibt sie mit <see cref="EndGalleryRun"/> wieder ab.
+        '''
+        ''' Je Lauf eine EIGENE Zeile, kein gemeinsamer Platz: so kann ein zweiter Lauf dem ersten
+        ''' seine Anzeige nicht wegnehmen, und ein spaet eintreffendes Ende raeumt nur die eigene
+        ''' Zeile ab.</summary>
+        Private Function BeginGalleryRun(stopAction As Action) As BackgroundRunRow
+            Dim row As New BackgroundRunRow(New DelegateCommand(stopAction))
+            AddBackgroundRun(row)
+            Return row
+        End Function
 
-        ''' <summary>Haengt die Anzeige an BEIDE Laeufe. Ohne das bliebe sie stehen, wo sie beim
-        ''' Aufbau der Galerie zufaellig stand: die Werte gehoeren fremden Objekten, und eine Bindung
-        ''' darauf erfaehrt von deren Aenderungen nichts.</summary>
+        Private Sub EndGalleryRun(row As BackgroundRunRow)
+            RemoveBackgroundRun(row)
+        End Sub
+
+        ''' <summary>Haengt die Anzeige an BEIDE Hintergrundlaeufe. Ohne das bliebe sie stehen, wo
+        ''' sie beim Aufbau der Galerie zufaellig stand: die Werte gehoeren fremden Objekten, und
+        ''' eine Bindung darauf erfaehrt von deren Aenderungen nichts.</summary>
         Private Sub WatchBackgroundRuns()
             For Each run In New BackgroundRunViewModel() {CatalogIndex, FaceIndex}
                 If run Is Nothing Then Continue For
                 AddHandler run.PropertyChanged, AddressOf OnBackgroundRunChanged
+                SyncBackgroundRunRow(run)
             Next
         End Sub
 
         Private Sub OnBackgroundRunChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
-            ' Alle vier auf einmal melden statt je Eigenschaft zuzuordnen: welcher der beiden Laeufe
-            ' die Anzeige traegt, kann sich mit demselben Ereignis aendern - dann stimmt auch der
-            ' Text nicht mehr, obwohl nur IsRunning gemeldet wurde.
-            Me.RaisePropertyChanged(NameOf(IsBackgroundRunVisible))
-            Me.RaisePropertyChanged(NameOf(BackgroundRunText))
-            Me.RaisePropertyChanged(NameOf(BackgroundRunPercent))
-            Me.RaisePropertyChanged(NameOf(BackgroundRunHasProgress))
-            Me.RaisePropertyChanged(NameOf(StopBackgroundRunCommand))
+            SyncBackgroundRunRow(TryCast(sender, BackgroundRunViewModel))
+        End Sub
+
+        ''' <summary>Bringt die Zeile eines Hintergrundlaufs auf seinen Stand: legt sie an, wenn er
+        ''' anlaeuft, raeumt sie ab, wenn er fertig ist, und schreibt sonst Text und Balken nach.
+        '''
+        ''' Alles auf einmal statt je gemeldeter Eigenschaft: mit demselben Ereignis kann sich der
+        ''' Text aendern, obwohl nur IsRunning gemeldet wurde.</summary>
+        Private Sub SyncBackgroundRunRow(run As BackgroundRunViewModel)
+            If run Is Nothing Then Return
+            Dim row As BackgroundRunRow = Nothing
+            _backgroundRunRows.TryGetValue(run, row)
+
+            If Not run.IsRunning Then
+                If row Is Nothing Then Return
+                _backgroundRunRows.Remove(run)
+                RemoveBackgroundRun(row)
+                Return
+            End If
+
+            If row Is Nothing Then
+                row = New BackgroundRunRow(run.StopCommand)
+                _backgroundRunRows(run) = row
+                AddBackgroundRun(row)
+            End If
+            row.Text = run.StatusText
+            row.Percent = run.ProgressPercent
+            row.HasProgress = run.HasProgress
         End Sub
 
         ''' <summary>

@@ -289,7 +289,25 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Darf zu diesem Pfad ueberhaupt eine Katalogzeile entstehen?
+        '''
+        ''' WAS IM PAPIERKORB LIEGT, KOMMT NICHT IN DEN KATALOG. Der Riegel stand zuerst nur in
+        ''' SetExifData, weil das der Schreibweg des Katalogindex ist. Er ist aber nicht der
+        ''' einzige: Bewertung, Favorit, Farbetikett, Stichwoerter, der Import einer .fpxmp und die
+        ''' Ortsangaben legen genauso eine Zeile an ("INSERT INTO ImageMeta ... ON CONFLICT"). Ein
+        ''' weggeworfenes Bild, das ueber eine Suchliste noch einmal in der Galerie stand, kam auf
+        ''' diesem Weg in den Katalog zurueck - und von dort in Trefferliste, Ortsfilter und
+        ''' Personengruppe (Nutzerbefund).
+        '''
+        ''' Eine Stelle fuer die Regel, nicht acht: die naechste Spalte bekommt ihren eigenen
+        ''' Schreibweg, und der soll nicht daran haengen, dass jemand an den Riegel denkt.</summary>
+        Private Shared Function IsCatalogWritable(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Return Not FileOperationPolicy.IsTrashFolder(filePath)
+        End Function
+
         Public Sub SetFavorite(filePath As String, isFavorite As Boolean)
+            If Not IsCatalogWritable(filePath) Then Return
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
@@ -331,6 +349,7 @@ Namespace Services
         End Function
 
         Public Sub SetRating(filePath As String, rating As Integer, Optional syncToXmp As Boolean = False)
+            If Not IsCatalogWritable(filePath) Then Return
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
@@ -414,7 +433,7 @@ Namespace Services
         ''' <summary>Setzt das Farbetikett für mehrere Dateien in einer Transaktion (Mehrfachauswahl).
         ''' Leerstring = Etikett entfernen.</summary>
         Public Sub SetColorLabelForMany(filePaths As IEnumerable(Of String), colorLabel As String, Optional syncToXmp As Boolean = False)
-            Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(Function(p) Not String.IsNullOrWhiteSpace(p)).ToList()
+            Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(AddressOf IsCatalogWritable).ToList()
             If list.Count = 0 Then Return
             Dim value = If(colorLabel, "")
 
@@ -451,7 +470,7 @@ Namespace Services
         ''' <summary>Setzt die Bewertung für mehrere Dateien in einer einzigen Transaktion/Verbindung
         ''' (statt einer eigenen Verbindung + eigenem Commit pro Datei) - wichtig bei Mehrfachauswahl.</summary>
         Public Sub SetRatingForMany(filePaths As IEnumerable(Of String), rating As Integer, Optional syncToXmp As Boolean = False)
-            Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(Function(p) Not String.IsNullOrWhiteSpace(p)).ToList()
+            Dim list = If(filePaths, Enumerable.Empty(Of String)()).Where(AddressOf IsCatalogWritable).ToList()
             If list.Count = 0 Then Return
 
             Using conn = New SqliteConnection(_connectionString)
@@ -547,6 +566,7 @@ Namespace Services
         End Function
 
         Public Sub SetTags(filePath As String, tags As IEnumerable(Of String), Optional syncToXmp As Boolean = False)
+            If Not IsCatalogWritable(filePath) Then Return
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
@@ -568,7 +588,7 @@ Namespace Services
         ''' lassen den jeweiligen Katalogwert unangetastet. Es wird absichtlich direkt geschrieben,
         ''' damit der Import nicht dieselbe Sidecar erneut speichert und ihren Frische-Stempel bewegt.</summary>
         Public Function ImportFpxmpCatalogData(filePath As String) As RawSidecarService.RawSidecarCatalogData
-            If String.IsNullOrWhiteSpace(filePath) OrElse Not RawSidecarService.IsSidecarFormat(filePath) Then Return Nothing
+            If Not IsCatalogWritable(filePath) OrElse Not RawSidecarService.IsSidecarFormat(filePath) Then Return Nothing
             Dim data = RawSidecarService.TryReadCatalog(filePath)
             If data Is Nothing Then Return Nothing
 
@@ -729,14 +749,10 @@ Namespace Services
 
         ''' nächsten Ordner-Scan entscheidet, ob diese EXIF-Daten noch aktuell sind.</summary>
         Public Sub SetExifData(filePath As String, exif As ExifSearchFields, summary As ExifCatalogSummary)
-            If String.IsNullOrWhiteSpace(filePath) OrElse exif Is Nothing OrElse summary Is Nothing Then Return
-            ' WAS IM PAPIERKORB LIEGT, KOMMT NICHT IN DEN KATALOG. Hier und nicht bei den Aufrufern:
-            ' das ist der EINE Schreibweg fuer Aufnahmedaten, und eine Regel, die an jedem Aufrufer
-            ' einzeln haengt, ist beim naechsten neuen Weg schon wieder luecken haft. Ein
-            ' weggeworfenes Bild gehoert in keine Trefferliste, in keinen Ortsfilter und in keine
-            ' Personengruppe - und die Ordner des Systempapierkorbs standen dadurch in der
-            ' Ordnerliste der Einstellungen (Nutzerbefund).
-            If FileOperationPolicy.IsTrashFolder(filePath) Then Return
+            If exif Is Nothing OrElse summary Is Nothing Then Return
+            ' Der Papierkorb bleibt draussen - dieselbe Regel wie in jedem anderen Schreibweg,
+            ' siehe IsCatalogWritable.
+            If Not IsCatalogWritable(filePath) Then Return
 
             Dim fileCreatedAt = ""
             Dim scannedSourceModifiedAt = ""

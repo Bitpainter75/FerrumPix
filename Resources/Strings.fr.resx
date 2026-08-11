@@ -6467,6 +6467,9 @@
   <data name="Markierte_Ebenen_l_schen_ENTF_d59915b7" xml:space="preserve">
     <value>Supprimer les calques sélectionnés (SUPPR)</value>
   </data>
+  <data name="Suche_l_uft_0_Bilder_1_gepr_ft_115866cf" xml:space="preserve">
+    <value>Recherche... {0} images, {1} vérifiées</value>
+  </data>
   <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
     <value>Recherche de visages : {0} sur {1}</value>
   </data>

@@ -4143,6 +4143,19 @@ Namespace ViewModels
                                               Return errors
                                           End Function)
             DiagnosticLogService.LogAlways("Delete", $"{pathList.Count} Element(e), Papierkorb={useTrash}, Fehler={failures.Count}")
+
+            ' AUS DER GALERIE NEHMEN, WER AUCH IMMER GELOESCHT HAT. Hier und nicht bei den drei
+            ' Aufrufern: die Galerie raeumte bisher nur ihre EIGENE Loeschung ab, und der Betrachter
+            ' kannte nur seinen Filmstreifen. In einer Ordneransicht fiel das nicht auf, weil der
+            ' Ruecksprung den Ordner neu einliest; in einer Suchansicht gibt es weder Neueinlesen
+            ' noch Ordnerbeobachter - dort stand das geloeschte Bild danach weiter in der Galerie
+            ' (Nutzerbefund).
+            '
+            ' Nur, was WIRKLICH weg ist: was sich nicht loeschen liess, bleibt stehen, statt aus der
+            ' Ansicht zu verschwinden und beim naechsten Einlesen wieder aufzutauchen.
+            Dim reallyGone = pathList.Where(Function(p) Not IO.File.Exists(p) AndAlso Not IO.Directory.Exists(p)).ToList()
+            If reallyGone.Count > 0 Then Gallery?.RemovePathsFromCurrentView(reallyGone)
+
             afterDelete?.Invoke()
 
             If failures.Count > 0 Then

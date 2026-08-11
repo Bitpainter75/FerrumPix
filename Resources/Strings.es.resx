@@ -6467,6 +6467,9 @@
   <data name="Markierte_Ebenen_l_schen_ENTF_d59915b7" xml:space="preserve">
     <value>Eliminar las capas seleccionadas (SUPR)</value>
   </data>
+  <data name="Suche_l_uft_0_Bilder_1_gepr_ft_115866cf" xml:space="preserve">
+    <value>Buscando... {0} imágenes, {1} comprobadas</value>
+  </data>
   <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
     <value>Buscando caras: {0} de {1}</value>
   </data>

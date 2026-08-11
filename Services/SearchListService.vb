@@ -165,15 +165,28 @@ Namespace Services
                         Distinct().
                         OrderBy(Function(r) r).
                         ToList(),
-                    .Results = If(item.Results, New List(Of String)()).
-                        Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
-                        Distinct(StringComparer.OrdinalIgnoreCase).
-                        ToList(),
+                    .Results = NormalizeResults(item.Results),
                     .Conditions = NormalizeConditions(item.Conditions),
                     .ConditionCombinator = If(String.Equals(item.ConditionCombinator, "OR", StringComparison.OrdinalIgnoreCase), "OR", "AND")
                 })
             Next
             Return result
+        End Function
+
+        ''' <summary>Die gemerkten Treffer einer Suchliste.
+        '''
+        ''' WAS IM PAPIERKORB LIEGT, BLEIBT AUCH NICHT GEMERKT. Die Trefferliste steht auf der
+        ''' Platte, und was dort einmal steht, kommt bei jedem Oeffnen wieder - der Suchlauf selbst
+        ''' findet es laengst nicht mehr, und die Datei EXISTIERT ja, faellt also durch keine
+        ''' Pruefung auf verwaiste Eintraege. Hier und nicht erst beim Anzeigen: Normalize ist der
+        ''' Weg, den Laden UND Speichern nehmen, also raeumt ein einziges Speichern die Altlast
+        ''' dauerhaft weg.</summary>
+        Private Shared Function NormalizeResults(value As List(Of String)) As List(Of String)
+            Return If(value, New List(Of String)()).
+                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                Where(Function(p) Not FileOperationPolicy.IsTrashFolder(p)).
+                Distinct(StringComparer.OrdinalIgnoreCase).
+                ToList()
         End Function
 
         Private Shared Function NormalizeConditions(value As List(Of SearchCondition)) As List(Of SearchCondition)

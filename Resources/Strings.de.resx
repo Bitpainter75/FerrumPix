@@ -6467,6 +6467,9 @@
   <data name="Markierte_Ebenen_l_schen_ENTF_d59915b7" xml:space="preserve">
     <value>Markierte Ebenen löschen (ENTF)</value>
   </data>
+  <data name="Suche_l_uft_0_Bilder_1_gepr_ft_115866cf" xml:space="preserve">
+    <value>Suche läuft... {0} Bilder, {1} geprüft</value>
+  </data>
   <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
     <value>Gesichter werden gesucht: {0} von {1}</value>
   </data>

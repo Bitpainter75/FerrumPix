@@ -6466,6 +6466,9 @@
   <data name="Markierte_Ebenen_l_schen_ENTF_d59915b7" xml:space="preserve">
     <value>Eliminar as camadas selecionadas (DEL)</value>
   </data>
+  <data name="Suche_l_uft_0_Bilder_1_gepr_ft_115866cf" xml:space="preserve">
+    <value>A procurar... {0} imagens, {1} verificadas</value>
+  </data>
   <data name="Gesichter_werden_gesucht_0_von_1_e08dd0f7" xml:space="preserve">
     <value>A procurar rostos: {0} de {1}</value>
   </data>
