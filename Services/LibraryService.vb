@@ -895,6 +895,18 @@ Namespace Services
             Return NextcloudService.IsNextcloudPseudoPath(filePath) OrElse ImmichService.IsImmichPseudoPath(filePath)
         End Function
 
+        ''' <summary>True fuer die TEMP-KOPIE eines Serverbildes, gleich von welchem Server.
+        '''
+        ''' Das Gegenstueck zu IsServerPseudoPath, und aus demselben Grund an EINER Stelle: ein
+        ''' Element, das aus einem Betrachter- oder Editor-Pfad gebaut wurde, traegt nicht mehr den
+        ''' Pseudo-Pfad, sondern den der Kopie - IsRemoteAsset ist daran False. Wer nur den einen
+        ''' Server fragt, laesst den anderen durch, und der Temp-Ordner sieht dann aus wie ein
+        ''' gewoehnlicher Ordner des Nutzers: als Exportziel vorgeschlagen, als Ordner geoeffnet,
+        ''' beim naechsten Aufraeumen geleert.</summary>
+        Public Shared Function IsServerTempPath(filePath As String) As Boolean
+            Return NextcloudService.IsNextcloudTempPath(filePath) OrElse ImmichService.IsImmichTempPath(filePath)
+        End Function
+
         ''' <summary>Alle Katalogeintraege, deren Pfad mit diesem Anfang beginnt.
         '''
         ''' Gedacht fuer die Pseudo-Pfade der beiden Server ("nextcloud://", "immich://"): sie sind

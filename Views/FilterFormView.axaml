@@ -22,6 +22,11 @@
                         Click="OnFilterSourceClick"
                         Tag="Filter">Filter</Button>
                 <Button Classes="segmented" Margin="0,0,8,6"
+                        Classes.active="{Binding IsDialogFilterSourceAdjustmentPreset}"
+                        Click="OnFilterSourceClick"
+                        ToolTip.Tip="Eine im Anpassen-Werkzeug gespeicherte Anpassungsvorlage auf alle Bilder anwenden"
+                        Tag="AdjustmentPreset">Anpassungsvorlage</Button>
+                <Button Classes="segmented" Margin="0,0,8,6"
                         Classes.active="{Binding IsDialogFilterSourceXmpPreset}"
                         Click="OnFilterSourceClick"
                         Tag="XmpPreset">XMP-Preset (.xmp)</Button>

@@ -12172,7 +12172,10 @@ Namespace ViewModels
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyPathToClipboard?.Invoke(TargetPath()))
             ApplyWatermarkCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.ApplyWatermarkToImageItems(i2)))
             NewDocumentCommand = ReactiveCommand.Create(Sub() _mainVm?.ShowNewDocumentDialog())
-            ResizeCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.ResizeImageItemsAsync(i2).ConfigureAwait(False)))
+            ' CreateFromTask, nicht Create: der Befehl bleibt damit bis zum Ende des Ablaufs
+            ' gesperrt. Ein zweiter Klick würde sonst mitten im Schreiblauf einen zweiten Dialog
+            ' öffnen und ein zweites Mal über dieselbe Datei schreiben.
+            ResizeCurrentCommand = ReactiveCommand.CreateFromTask(Function() WithCurrentImageAsync(Function(g, i2) g.ResizeImageItemsAsync(i2)))
             ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.ApplyFilterToImageItems(i2)))
             ConvertCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.ConvertImageItems(i2)))
             ExportCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.ExportImageItems(i2)))
@@ -12274,6 +12277,29 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("Editor.StapelAblauf", ex)
             End Try
         End Sub
+
+        ''' <summary>Dasselbe für einen Ablauf, der einen Task liefert - und der Task wird ERWARTET.
+        '''
+        ''' Das Try/Catch der Fassung darüber endet am ersten Await des Ablaufs: alles danach läuft
+        ''' im Task weiter, und wer den wegwirft, wirft die Ausnahme gleich mit weg. Sie beendet die
+        ''' Anwendung nicht (eine unbeobachtete Task-Ausnahme ist stumm), aber sie steht in keinem
+        ''' Protokoll und in keiner Statuszeile - der Nutzer klickt, und nichts geschieht. Galerie und
+        ''' Betrachter warten an ihren eigenen Einstiegen längst ab; das hier ist derselbe Umgang für
+        ''' den Editor.</summary>
+        Private Async Function WithCurrentImageAsync(ablauf As Func(Of GalleryViewModel, IList(Of ImageItem), Task)) As Task
+            Try
+                Dim path = TargetPath()
+                If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return
+                Dim gallery = _mainVm?.Gallery
+                If gallery Is Nothing Then Return
+                Dim item = New ImageItem(path)
+                If Not item.IsImage Then Return
+                Await ablauf(gallery, New List(Of ImageItem) From {item})
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.StapelAblauf", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
+        End Function
 
         ''' <summary>Die Zwischenablage haengt am TopLevel und ist nur von der View aus
         ''' erreichbar. Die View setzt den Haken beim Anhaengen.</summary>

@@ -2,7 +2,7 @@
 
 # FerrumPix
 
-FerrumPix is a desktop photo manager and image editor for Linux and Windows, with experimental ARM64 and macOS builds. Browse your folders, sort and rate what is in them, look at photos properly, and edit them - all in one application, all on your own machine. It can also connect to a self-hosted [Immich](https://immich.app/) server.
+FerrumPix is a desktop photo manager and image editor for Linux and Windows, with experimental ARM64 and macOS builds. Browse your folders, sort and rate what is in them, look at photos properly, and edit them - all in one application, all on your own machine. It can also connect to a self-hosted [Immich](https://immich.app/) or [Nextcloud](https://nextcloud.com/) server.
 
 It is built with [Avalonia UI](https://avaloniaui.net/) and .NET 10, in VB.NET, which I still love even though it is rare nowadays. This started as a private project - an application built exactly the way I always wanted one to look and work - and it is free and open source for anyone who finds it useful.
 
@@ -21,7 +21,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
 - Open JPEG, PNG, WEBP, BMP, GIF and RAW, plus HEIC/HEIF/AVIF and TIFF read-only, and Photoshop files with their layers.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
-- Connect to your own Immich server for browsing, upload, download, editing and metadata sync.
+- Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
 
 Your originals are never changed behind your back: edits to RAW and Photoshop files live in a small sidecar next to the file, and everything else is only written when you save.
 
@@ -36,6 +36,8 @@ Ratings, colour labels and keywords are read from the sidecars Lightroom, darkta
 An info panel shows the selected picture with its shot data, histogram, rating, label and keywords; with several selected it shows what they have in common and lets you set them all at once.
 
 Photos can be filtered by keyword, by person and by where they were taken, alone or in combination. FerrumPix finds the people in your photos, groups them, and you give each group its name; the names are stored beside the picture, so they stay with the photos. A people area of its own shows a wall of faces for sorting out a library that grew over years.
+
+Photos without a location can be given one: type a coordinate or just a town name, or copy the place from a picture that already has it and paste it onto the rest. JPEG files carry it inside the file, everything else in a sidecar next to the original. The town search runs on your own machine.
 
 Batch work runs over a whole selection: rename, convert, resize, watermark, filters, metadata removal, and *Export to* for putting a name pattern, a look, a size and a target format into one run, locally or straight to Immich. Photos can also be printed, laid out as contact sheets or combined into a collage, each showing your edits.
 
@@ -55,7 +57,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Light and colour.** Exposure, contrast, highlights, shadows, black and white point, white balance, tone curves, HSL, vibrance and saturation, colour grading with four colour wheels, and camera calibration. *Auto* sets a sensible starting point, and a set of slider values can be saved and put on any other photo.
 
-**Details and effects.** Clarity, structure, dust and scratches, sharpening, softening and three kinds of noise reduction. *Depth blur* takes its strength from how far away each point is, so lights in the background open into bright discs. Vignette, grain and frame sit in a separate *Effects* tool.
+**Details and effects.** Clarity, structure, dust and scratches, sharpening, softening and three kinds of noise reduction. *Depth blur* takes its strength from how far away each point is, so lights in the background open into bright discs. Vignette, grain and frame sit in a separate *Effects* tool, where the grain can also be coloured: a slider lets the three colour channels drift apart, from plain grey grain to the coloured speckles of a fast film.
 
 **Masks and selections.** Rectangle, ellipse, lasso and magic wand selections, a soft-edged mask brush, and graduated and radial masks you drag onto the picture. One mask can be built from several parts, each added, subtracted or intersected and changeable afterwards, and any of them becomes a layer whose adjustment applies only inside it. A mask can be looked at on its own, switched off, or copied onto another layer.
 
@@ -69,7 +71,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 <img src="Screenshots/Editor_Edit.png" />
 
-**Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw.
+**Filters and presets.** Filters, LUT files (`.cube`) and XMP presets as written by Lightroom and Camera Raw. All of them, and the slider sets you saved yourself, can also be applied to a whole selection at once.
 
 **Saving.** Save as JPEG, PNG, WEBP, TIFF or PDF, as a Photoshop file with the layer stack intact, or as an `.fpx` project that keeps adjustments and layers editable when you open it again. `CTRL+P` prints what you see, edits included.
 
@@ -95,7 +97,7 @@ Everything runs on your own machine - nothing is sent anywhere. The files come f
 
 FerrumPix can connect directly to a self-hosted Immich server: browse all photos and albums, upload local files, download originals, sync ratings, favourites and keywords, search from saved search lists, and edit an Immich photo and save the result as a new asset. Updating or deleting existing assets is possible too, but has to be enabled in Settings.
 
-The people your server recognised and the cities it knows appear in the same filter buttons as the local ones, under a heading of their own.
+The people your server recognised and the cities it knows appear in the same filter buttons as the local ones, under a heading of their own. Deleted photos are listed under Trash and can be put back from there.
 
 FerrumPix authenticates with an API key. A key with `all` works; if you prefer a restricted one, build it up in layers - each missing permission disables exactly one function instead of breaking the integration:
 
@@ -121,9 +123,19 @@ Plus `album.create` and `album.update` if FerrumPix should create and rename alb
 
 *Update existing assets* replaces the file of an existing asset, and the permission for it is named differently across Immich versions. Left off, FerrumPix always creates a new asset instead.
 
+## Nextcloud
+
+A Nextcloud with the Memories app can be used as a second server: your timeline, albums, people, places and keywords appear as folders in the gallery, photos open in the viewer and the editor, and deleted ones are listed under Trash and can be put back from there.
+
+Because Nextcloud keeps your photos as files, more is possible here than on an Immich server. A RAW on the server can be edited without touching it: saving puts the recipe in a sidecar file next to the original, and it is picked up again the next time you open the photo. If you would rather have the edit written into the file itself, *Replace originals on the server* does that - the file keeps its identity, its albums and its shares. RAW and PSD files are never overwritten either way.
+
+Local pictures can be uploaded by dragging them onto a Nextcloud entry, by pasting, or from the right-click menu; they go to the folder set in Settings and an existing name is numbered rather than overwritten. Keywords, favourites and album assignments are written back to the server; stars and colour labels stay local, as Nextcloud does not know them.
+
+FerrumPix signs in with your user name and an app password, which you create in Nextcloud under Settings, Security. Deleting on the server has to be enabled in Settings; deleted photos go to the Nextcloud trash, unless you also switch on *Delete for good*.
+
 ## Settings
 
-Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the Immich connection.
+Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
 
 Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
 

@@ -134,6 +134,10 @@ Namespace Services
         ''' nie die Kopien der anderen erwischt.</summary>
         Private Shared ReadOnly TempFolderName As String = "ferrumpix-nextcloud"
 
+        ''' <summary>Vorsatz der Kopien aus dem Papierkorb. Sie tragen im Namen KEINE Dateikennung -
+        ''' siehe FileIdFromTempPath, das ihn deshalb ausnimmt.</summary>
+        Private Const TrashCopyPrefix As String = "trash"
+
         ''' <summary>Liegt dieser Pfad in unserem Temp-Ordner, ist es also die Kopie eines Originals
         ''' und NICHT die Datei des Nutzers? Der Editor haengt daran seinen Speichern-unter-Zwang:
         ''' in eine Temp-Kopie zu speichern hiesse, die Bearbeitung beim naechsten Aufraeumen zu
@@ -144,6 +148,25 @@ Namespace Services
             If String.IsNullOrEmpty(ordner) Then Return False
             Return String.Equals(IO.Path.GetFileName(ordner.TrimEnd(IO.Path.DirectorySeparatorChar)),
                                  TempFolderName, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Die Dateikennung aus dem Namen einer geholten Temp-Kopie. DownloadOriginalToTempAsync
+        ''' setzt sie als "{fileid}_{name}" davor - sie ist damit der Rueckweg vom lokalen Pfad zum
+        ''' Element in der Galerie, so wie bei Immich der Dateiname-Stamm die Asset-Kennung ist.
+        '''
+        ''' Leer, wenn der Pfad keine solche Kopie ist. Auch die Kopie aus dem Papierkorb faellt
+        ''' heraus: sie heisst "trash_{name}" (DownloadTrashOriginalToTempAsync), und "trash" ist
+        ''' keine Kennung. Ohne diese Ausnahme kaeme der Name als Kennung zurueck - er traefe zwar
+        ''' kein Element, weil eine Kennung aus Ziffern besteht, aber die Funktion behauptete etwas,
+        ''' das sie nicht weiss. Fuer den Papierkorb fuehrt der am Element gemerkte Pfad zurueck.</summary>
+        Public Shared Function FileIdFromTempPath(path As String) As String
+            If Not IsNextcloudTempPath(path) Then Return ""
+            Dim name = IO.Path.GetFileName(path)
+            Dim separator = name.IndexOf("_"c)
+            If separator <= 0 Then Return ""
+            Dim fileId = name.Substring(0, separator)
+            If String.Equals(fileId, TrashCopyPrefix, StringComparison.OrdinalIgnoreCase) Then Return ""
+            Return fileId
         End Function
 
         Public Shared Function IsNextcloudPseudoPath(path As String) As Boolean
@@ -1578,7 +1601,7 @@ Namespace Services
                 For Each bad In Path.GetInvalidFileNameChars()
                     safeName = safeName.Replace(bad, "_"c)
                 Next
-                Dim target = Path.Combine(folder, "trash_" & safeName)
+                Dim target = Path.Combine(folder, TrashCopyPrefix & "_" & safeName)
                 Using stream = Await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(False)
                     Using file = New FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None)
                         Await stream.CopyToAsync(file, cancellationToken).ConfigureAwait(False)

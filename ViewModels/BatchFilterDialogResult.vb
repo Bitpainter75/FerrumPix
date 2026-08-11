@@ -11,21 +11,28 @@ Namespace ViewModels
         Public Const SourceFilter As String = "Filter"
         Public Const SourceXmpPreset As String = "XmpPreset"
         Public Const SourceLut As String = "Lut"
+        ''' <summary>Eine im Anpassen-Werkzeug gespeicherte Regler-Zusammenstellung. Sie steckt nicht
+        ''' in einer Datei, sondern unter ihrem NAMEN in den Einstellungen - PresetPath bleibt leer,
+        ''' gefunden wird sie über DisplayName.</summary>
+        Public Const SourceAdjustmentPreset As String = "AdjustmentPreset"
         ''' <summary>Automatische Bildverbesserung: keine Vorgabe-Datei, sondern die Messung des
         ''' Editors ("Auto") - die Reglerwerte werden PRO BILD gemessen, nicht aus einer Vorlage.</summary>
         Public Const SourceAuto As String = "Auto"
 
-        ''' <summary>Woher der Look kommt: eingebauter Filter, XMP-Preset (.xmp) oder LUT (.cube).</summary>
+        ''' <summary>Woher der Look kommt: eingebauter Filter, Anpassungsvorlage, XMP-Preset (.xmp)
+        ''' oder LUT (.cube).</summary>
         Public Property SourceKind As String = SourceFilter
 
         ''' <summary>Name des Filters bzw. des Presets - landet bei "Neue Dateien" auch im Dateinamen.</summary>
         Public Property DisplayName As String = ""
 
-        ''' <summary>Pfad der .xmp-/.cube-Datei; leer bei eingebauten Filtern.</summary>
+        ''' <summary>Pfad der .xmp-/.cube-Datei; leer bei eingebauten Filtern und bei
+        ''' Anpassungsvorlagen (die stehen in den Einstellungen, nicht in einer Datei).</summary>
         Public Property PresetPath As String = ""
 
-        ''' <summary>Wirkung in Prozent. Nur für Filter und LUT - ein XMP-Preset ist eine Sammlung
-        ''' einzelner Regler und kennt keinen gemeinsamen Mischregler.</summary>
+        ''' <summary>Wirkung in Prozent. Nur für Filter und LUT - ein XMP-Preset und eine
+        ''' Anpassungsvorlage sind Sammlungen einzelner Regler und kennen keinen gemeinsamen
+        ''' Mischregler.</summary>
         Public Property Strength As Integer = 100
 
         ''' <summary>True: Originale werden überschrieben (Format, Ziel und Namenszusatz entfallen).</summary>

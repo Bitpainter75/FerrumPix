@@ -3488,14 +3488,22 @@ Namespace ViewModels
 
         Public Function SelectImageInCurrentView(imagePath As String) As Boolean
             If String.IsNullOrEmpty(imagePath) Then Return False
-            ' Aus dem Viewer/Editor kommt bei Immich der Temp-Pfad zurück; dessen Dateiname-Stamm ist die
-            ' Asset-UUID (siehe DownloadOriginalToTempAsync), womit sich das Album-Item wiederfinden lässt -
-            ' unabhängig davon, ob ImmichLocalPath am Item gesetzt wurde (Filmstreifen-Navigation setzt es nicht).
+            ' Aus dem Viewer/Editor kommt bei BEIDEN Servern der Temp-Pfad der geholten Kopie zurück,
+            ' nie der Pseudo-Pfad. Der Name der Kopie trägt die Kennung des Elements: bei Immich als
+            ' Dateiname-Stamm (die Asset-UUID), bei Nextcloud als Teil vor dem ersten Unterstrich.
+            ' Damit lässt sich das Element wiederfinden, auch wenn RemoteLocalPath nicht gesetzt wurde -
+            ' die Navigation im Filmstreifen setzt es nicht.
+            '
+            ' NUTZERBEFUND: fehlte der Nextcloud-Zweig, fand BackToGallery hier nichts und öffnete
+            ' statt dessen den ORDNER der Temp-Datei - der Nutzer stand plötzlich im Temp-Ordner der
+            ' geholten Originale statt wieder in seiner Zeitachse.
             Dim immichStem = If(ImmichService.IsImmichTempPath(imagePath), IO.Path.GetFileNameWithoutExtension(imagePath), Nothing)
+            Dim nextcloudId = NextcloudService.FileIdFromTempPath(imagePath)
             Dim item = Items.FirstOrDefault(Function(i) i.IsImage AndAlso (
                 String.Equals(i.FilePath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
-                (i.IsImmichAsset AndAlso Not String.IsNullOrEmpty(i.ImmichLocalPath) AndAlso String.Equals(i.ImmichLocalPath, imagePath, StringComparison.OrdinalIgnoreCase)) OrElse
-                (i.IsImmichAsset AndAlso immichStem IsNot Nothing AndAlso String.Equals(i.ImmichAssetId, immichStem, StringComparison.OrdinalIgnoreCase))))
+                (i.IsRemoteAsset AndAlso Not String.IsNullOrEmpty(i.RemoteLocalPath) AndAlso String.Equals(i.RemoteLocalPath, imagePath, StringComparison.OrdinalIgnoreCase)) OrElse
+                (i.IsImmichAsset AndAlso immichStem IsNot Nothing AndAlso String.Equals(i.ImmichAssetId, immichStem, StringComparison.OrdinalIgnoreCase)) OrElse
+                (i.IsNextcloudAsset AndAlso nextcloudId.Length > 0 AndAlso String.Equals(i.NextcloudFileId, nextcloudId, StringComparison.OrdinalIgnoreCase))))
             If item Is Nothing Then Return False
             SelectOnly(item)
             RaiseEvent RequestScrollToItem(Me, EventArgs.Empty)
@@ -5786,6 +5794,33 @@ Namespace ViewModels
             SearchListService.Save(_savedSearches)
         End Sub
 
+        ''' Die Schreibvorgaenge der Suchlisten laufen NACHEINANDER. Waehrend einer Suche kommen die
+        ''' Treffer schubweise, und jeder Schub stiess bisher einen eigenen Hintergrundlauf an. Zwei
+        ''' davon haben ohne diese Kette keine Reihenfolge: der aeltere kann nach dem juengeren
+        ''' fertig werden und dessen Treffer wieder wegschreiben.
+        Private _searchListSaveChain As Task = Task.CompletedTask
+        Private ReadOnly _searchListSaveLock As New Object()
+
+        ''' <summary>Schreibt eine MOMENTAUFNAHME der Suchlisten im Hintergrund weg.
+        '''
+        ''' Die Aufnahme muss der Aufrufer machen, und zwar tief (SearchListService.Normalize baut
+        ''' neue Eintraege samt neuer Trefferliste). Eine flache Kopie teilt die Trefferlisten mit
+        ''' der Oberflaeche, die waehrend der Suche weiter anhaengt - der Serialisierer laeuft dann
+        ''' ueber eine Liste, die sich unter ihm aendert, und wirft.</summary>
+        Private Sub QueueSearchListSave(snapshot As List(Of SearchListEntry))
+            SyncLock _searchListSaveLock
+                _searchListSaveChain = _searchListSaveChain.ContinueWith(
+                    Sub()
+                        Try
+                            SearchListService.Save(snapshot)
+                        Catch ex As Exception
+                            ' Ein verworfener Task verschluckt seine Ausnahme sonst spurlos.
+                            DiagnosticLogService.LogException("Gallery.SearchListSave", ex)
+                        End Try
+                    End Sub, TaskScheduler.Default)
+            End SyncLock
+        End Sub
+
         ''' <summary>Leert die Ansicht fuer einen virtuellen Ordner (Suchliste, Immich-Album, ...). Bricht
         ''' dabei einen noch laufenden Suchlauf ab: JEDER Ansichtswechsel geht hier durch, deshalb ist das
         ''' die Stelle, an der eine Suche stirbt - sonst schuettet ein Wechsel im Baum (Album, Person, Ort)
@@ -5901,9 +5936,11 @@ Namespace ViewModels
             If changed Then
                 node.Results = target.Results.ToList()
                 ' Abseits des UI-Threads schreiben, damit der Plattenzugriff die Oberflaeche
-                ' waehrend der Suche nicht anhaelt.
-                Dim snapshot = _savedSearches.ToList()
-                Task.Run(Sub() SearchListService.Save(snapshot))
+                ' waehrend der Suche nicht anhaelt. Die Momentaufnahme entsteht dafuer HIER, auf
+                ' diesem Faden, und TIEF: _savedSearches.ToList() allein kopiert nur die aeussere
+                ' Liste, die Trefferlisten darin blieben dieselben Objekte, an die der naechste
+                ' Fund gleich wieder anhaengt.
+                QueueSearchListSave(SearchListService.Normalize(_savedSearches.ToList()))
             End If
         End Sub
 
@@ -7816,10 +7853,11 @@ Namespace ViewModels
             If IsVirtualFolderPath(targetFolder) Then Return
             If paths Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse Not Directory.Exists(targetFolder) Then Return
             If Not FileOperationPolicy.CanPasteInto(targetFolder) Then Return
-            ' Immich-Items (Pseudo-Pfade) werden nicht dateikopiert, sondern als Originale in den Zielordner
-            ' heruntergeladen. Die restliche (lokale) Kopierlogik ignoriert Pseudo-Pfade ohnehin (File.Exists).
-            Dim immichPseudo = paths.Where(Function(p) ImmichService.IsImmichPseudoPath(p)).ToList()
-            If immichPseudo.Count > 0 Then Await DownloadImmichToFolderAsync(immichPseudo, targetFolder)
+            ' Serverelemente (Pseudo-Pfade) werden nicht dateikopiert, sondern als Originale in den
+            ' Zielordner heruntergeladen - beide Server. Die restliche (lokale) Kopierlogik ignoriert
+            ' Pseudo-Pfade ohnehin (File.Exists).
+            Dim serverPseudo = paths.Where(Function(p) LibraryService.IsServerPseudoPath(p)).ToList()
+            If serverPseudo.Count > 0 Then Await DownloadServerAssetsToFolderAsync(serverPseudo, targetFolder)
             _conflictBatchDecision = Nothing
             Dim errorMessage As String = Nothing
             Dim sourcePaths As List(Of String) = Nothing
@@ -7851,32 +7889,38 @@ Namespace ViewModels
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Einfügen fehlgeschlagen"), errorMessage)
         End Function
 
-        ''' <summary>Lädt Immich-Originale (Pseudo-Pfade) in einen lokalen Zielordner herunter - der
-        ''' Immich→lokal-Zweig von Einfügen/Drag&Drop. Kollidierende Namen werden nummeriert.</summary>
-        Private Async Function DownloadImmichToFolderAsync(pseudoPaths As List(Of String), targetFolder As String) As Task
+        ''' <summary>Lädt Serveroriginale (Pseudo-Pfade) in einen lokalen Zielordner herunter - der
+        ''' Server→lokal-Zweig von Einfügen und Ziehen. Kollidierende Namen werden nummeriert.
+        '''
+        ''' Beide Server, EIN Weg: das Element weiß über <c>EnsureLocalOriginalAsync</c> selbst, wo
+        ''' es herholt (Zeitachse wie Papierkorb). Vorher stand hier der Immich-Abruf fest verdrahtet,
+        ''' und ein Nextcloud-Bild ließ sich gar nicht erst in einen Ordner ziehen.</summary>
+        Private Async Function DownloadServerAssetsToFolderAsync(pseudoPaths As List(Of String), targetFolder As String) As Task
             Dim total = pseudoPaths.Count
             Dim done = 0
             Dim saved = 0
             For Each pseudo In pseudoPaths
-                Dim assetId As String = Nothing, fileName As String = Nothing
-                If Not ImmichService.TryParsePseudoPath(pseudo, assetId, fileName) Then Continue For
+                Dim istImmich = ImmichService.IsImmichPseudoPath(pseudo)
+                Dim item = CreateServerItemFromPseudoPath(pseudo, istImmich, CancellationToken.None)
+                If item Is Nothing Then Continue For
                 done += 1
-                StatusText = String.Format(LocalizationService.T("Lade aus Immich… ({0}/{1})"), done, total)
-                Dim temp = Await ImmichService.DownloadOriginalToTempAsync(assetId, fileName)
+                StatusText = String.Format(LocalizationService.T("Lade vom Server… ({0}/{1})"), done, total)
+                Dim temp = Await item.EnsureLocalOriginalAsync()
                 If String.IsNullOrEmpty(temp) OrElse Not File.Exists(temp) Then Continue For
                 Try
-                    Dim dest = MakeUniqueFilePath(IO.Path.Combine(targetFolder, If(String.IsNullOrEmpty(fileName), assetId, fileName)))
+                    Dim fileName = If(String.IsNullOrEmpty(item.FileName), IO.Path.GetFileName(temp), item.FileName)
+                    Dim dest = MakeUniqueFilePath(IO.Path.Combine(targetFolder, fileName))
                     File.Copy(temp, dest, False)
                     saved += 1
                 Catch ex As Exception
-                    DiagnosticLogService.LogException("Immich.DownloadToFolder", ex)
+                    DiagnosticLogService.LogException("Server.DownloadToFolder", ex)
                 End Try
             Next
             If Not _isVirtualFolder AndAlso String.Equals(NormalizePath(targetFolder), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then
                 SyncFolderItems()
             End If
             RefreshTree()
-            StatusText = String.Format(LocalizationService.T("{0} Bilder aus Immich gespeichert"), saved)
+            StatusText = String.Format(LocalizationService.T("{0} Bilder vom Server gespeichert"), saved)
         End Function
 
         Private Shared Function MakeUniqueFilePath(path As String) As String
@@ -8156,8 +8200,10 @@ Namespace ViewModels
             For Each item In If(targetItems, Enumerable.Empty(Of ImageItem)())
                 If item Is Nothing OrElse String.IsNullOrWhiteSpace(item.FilePath) Then Continue For
                 ' Serverelemente haben keinen sinnvollen Ordner, und ihre Temp-Kopie erst recht
-                ' nicht - dann greift die Vorgabe des Dialogs statt eines Temp-Pfads.
-                If item.IsRemoteAsset OrElse ImmichService.IsImmichTempPath(item.FilePath) Then
+                ' nicht - dann greift die Vorgabe des Dialogs statt eines Temp-Pfads. Die Frage geht
+                ' an BEIDE Server: aus Betrachter und Editor kommen die Elemente mit dem Pfad ihrer
+                ' Kopie, IsRemoteAsset ist daran False.
+                If item.IsRemoteAsset OrElse LibraryService.IsServerTempPath(item.FilePath) Then
                     gemeinsam = Nothing
                     Exit For
                 End If
@@ -8301,6 +8347,9 @@ Namespace ViewModels
                 Case BatchFilterDialogResult.SourceXmpPreset
                     Return XmpPresetService.LoadLook(result.PresetPath)
 
+                Case BatchFilterDialogResult.SourceAdjustmentPreset
+                    Return LoadAdjustmentPresetLook(result.DisplayName)
+
                 Case BatchFilterDialogResult.SourceLut
                     If String.IsNullOrWhiteSpace(result.PresetPath) OrElse Not File.Exists(result.PresetPath) Then Return Nothing
                     Return New ImageAdjustments With {
@@ -8320,6 +8369,23 @@ Namespace ViewModels
                         .FilterStrength = result.Strength
                     }
             End Select
+        End Function
+
+        ''' <summary>Holt eine im Anpassen-Werkzeug gespeicherte Vorlage über ihren Namen aus den
+        ''' Einstellungen. Das Rezept enthält nur die Pixel-Anpassungen - genau das, was der Stapel
+        ''' über die vorhandene Bearbeitung legt. Nothing, wenn es die Vorlage nicht mehr gibt oder
+        ''' ihr Rezept unlesbar ist (von Hand bearbeitete Einstellungsdatei).</summary>
+        Private Shared Function LoadAdjustmentPresetLook(name As String) As ImageAdjustments
+            Dim trimmedName = If(name, "").Trim()
+            If trimmedName.Length = 0 Then Return Nothing
+            Dim preset = AppSettingsService.Load().AdjustmentPresets.
+                FirstOrDefault(Function(p) String.Equals(p.Name, trimmedName, StringComparison.OrdinalIgnoreCase))
+            If preset Is Nothing Then Return Nothing
+            Try
+                Return FpxService.DeserializeAdjustments(preset.RecipeJson)
+            Catch
+                Return Nothing
+            End Try
         End Function
 
         Private Async Sub RemoveMetadataSelected()
@@ -8990,6 +9056,9 @@ Namespace ViewModels
             Select Case result.LookKind
                 Case BatchFilterDialogResult.SourceXmpPreset
                     template = XmpPresetService.LoadLook(result.LookPath)
+                Case BatchFilterDialogResult.SourceAdjustmentPreset
+                    ' Kein Pfad: die Vorlage steht unter ihrem Namen in den Einstellungen.
+                    template = LoadAdjustmentPresetLook(result.LookName)
                 Case BatchFilterDialogResult.SourceLut
                     template = If(File.Exists(result.LookPath),
                                  New ImageAdjustments With {.LutPath = result.LookPath, .LutStrength = result.LookStrength},

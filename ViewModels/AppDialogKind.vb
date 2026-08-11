@@ -35,7 +35,9 @@ Namespace ViewModels
     Public Class ExportToDialogResult
         ''' <summary>Automatische Bildverbesserung: pro Bild messen und die Grundregler setzen.</summary>
         Public Property AutoEnhance As Boolean
-        ''' <summary>"" = kein Look; sonst BatchFilterDialogResult.SourceFilter/SourceXmpPreset/SourceLut.</summary>
+        ''' <summary>"" = kein Look; sonst BatchFilterDialogResult.SourceFilter/SourceAdjustmentPreset/
+        ''' SourceXmpPreset/SourceLut. Bei einer Anpassungsvorlage bleibt LookPath leer - sie wird
+        ''' über LookName in den Einstellungen gefunden.</summary>
         Public Property LookKind As String = ""
         Public Property LookName As String = ""
         Public Property LookPath As String = ""

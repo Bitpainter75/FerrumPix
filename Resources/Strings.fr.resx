@@ -7043,4 +7043,22 @@
   <data name="Aufnahmeort_aus_0_Bildern_entfernt_29b3d998" xml:space="preserve">
     <value>Lieu supprimé de {0} images</value>
   </data>
+  <data name="Anpassungsvorlage_b79fc5bf" xml:space="preserve">
+    <value>Modèle de réglages</value>
+  </data>
+  <data name="Eine_im_Anpassen_Werkzeug_gespeicherte_Anpassung_8d873e8a" xml:space="preserve">
+    <value>Appliquer à toutes les images un modèle de réglages enregistré dans l'outil Ajuster</value>
+  </data>
+  <data name="Lade_vom_Server_0_1_7aa0b189" xml:space="preserve">
+    <value>Chargement depuis le serveur… ({0}/{1})</value>
+  </data>
+  <data name="0_Bilder_vom_Server_gespeichert_2d80995e" xml:space="preserve">
+    <value>{0} images enregistrées depuis le serveur</value>
+  </data>
+  <data name="Nextcloud_Cache_leeren_7275ac01" xml:space="preserve">
+    <value>Vider le cache Nextcloud</value>
+  </data>
+  <data name="L_scht_die_lokal_zwischengespeicherten_Nextcloud_a850c924" xml:space="preserve">
+    <value>Supprime les miniatures Nextcloud enregistrées localement. Elles sont rechargées au besoin.</value>
+  </data>
 </root>

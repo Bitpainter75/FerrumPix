@@ -1290,6 +1290,9 @@
                             <TextBlock Text="{Binding ImmichConnectionMessage}"
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        FontSize="{DynamicResource FP.Font.Body}"
+                                       HorizontalAlignment="Left"
+                                       MaxWidth="660"
+                                       Margin="0,0,40,0"
                                        VerticalAlignment="Center"
                                        TextWrapping="Wrap"/>
                             <Button Grid.Column="1" Classes="ghost" Padding="12,7"
@@ -1417,9 +1420,16 @@
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <!-- Dieselbe Breite und derselbe Abstand wie bei jeder Beschreibung auf
+                                 dieser Seite. Ohne den Rand stiess die Meldung an den Knopf: sie ist
+                                 die laengste der Oberflaeche und wird in anderen Sprachen und bei
+                                 groesserer Schrift noch laenger. -->
                             <TextBlock Text="{Binding NextcloudConnectionMessage}"
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        FontSize="{DynamicResource FP.Font.Body}"
+                                       HorizontalAlignment="Left"
+                                       MaxWidth="660"
+                                       Margin="0,0,40,0"
                                        VerticalAlignment="Center"
                                        TextWrapping="Wrap"/>
                             <Button Grid.Column="1" Classes="ghost" Padding="12,7"
@@ -1466,8 +1476,8 @@
 
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Zwischenspeicher" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Vorschaubilder vom Server liegen auf der Platte, damit sie nicht bei jedem Öffnen neu geladen werden. Sie erneuern sich von selbst, sobald sich ein Bild ändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Nextcloud-Cache leeren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löscht die lokal zwischengespeicherten Nextcloud-Vorschaubilder. Sie werden bei Bedarf neu geladen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding NextcloudCacheMessage}"

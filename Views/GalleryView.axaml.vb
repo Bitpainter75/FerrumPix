@@ -1916,13 +1916,10 @@ Namespace Views
             End Try
         End Sub
 
-        Public Sub OnFavoriteCopyFolderPathClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnFavoriteCopyFolderPathClick(sender As Object, e As RoutedEventArgs)
             Dim path = GetFavoriteFolderPath(sender)
             If path Is Nothing Then Return
-            Task.Run(Async Function()
-                         Dim clip = TopLevel.GetTopLevel(Me)?.Clipboard
-                         If clip IsNot Nothing Then Await clip.SetTextAsync(path)
-                     End Function)
+            Await CopyTextToClipboardAsync(path, "GalleryView.OnFavoriteCopyFolderPathClick")
         End Sub
 
         ''' <summary>Loescht den ORDNER (nicht nur den Favoriten) - wie im Ordnerbaum. Der Favorit
@@ -2156,14 +2153,10 @@ Namespace Views
             GetVm()?.DeletePaths({node.FullPath})
         End Sub
 
-        Public Sub OnContextCopyFolderPath(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnContextCopyFolderPath(sender As Object, e As RoutedEventArgs)
             Dim node = GetFolderTreeContextNode()
             If node Is Nothing Then Return
-            Dim path = node.FullPath
-            Task.Run(Async Function()
-                         Dim clip = TopLevel.GetTopLevel(Me)?.Clipboard
-                         If clip IsNot Nothing Then Await clip.SetValueAsync(DataFormat.Text, path)
-                     End Function)
+            Await CopyTextToClipboardAsync(node.FullPath, "GalleryView.OnContextCopyFolderPath")
         End Sub
 
         Public Sub OnContextCopyFolder(sender As Object, e As RoutedEventArgs)
@@ -2194,22 +2187,26 @@ Namespace Views
             End Try
         End Sub
 
-        ''' <summary>Stammt die Ziehlast aus Immich? Der Pseudo-Pfad allein reicht NICHT: eine Ziehgeste
-        ''' aus der Galerie laedt Immich-Assets vorher in TEMPORAERE Dateien (siehe OnItemsDragStart) und
-        ''' traegt danach nur noch deren echte Pfade. Ohne die Temp-Pruefung fiel so ein Drop in den
-        ''' "intern = verschieben"-Zweig, und Verschieben ist auf Temp-Dateien nicht erlaubt
-        ''' (FileOperationPolicy.CanMove verlangt einen Pfad im persoenlichen Ordner). Ergebnis:
-        ''' Mauszeiger "geht nicht" und Immich→Ordner ging gar nicht.</summary>
-        Private Shared Function PayloadHasImmich(payload As (Paths As List(Of String), IsInternal As Boolean)) As Boolean
-            Return payload.Paths.Any(Function(p) ImmichService.IsImmichPseudoPath(p) OrElse
-                                                 ImmichService.IsImmichTempPath(p))
+        ''' <summary>Stammt die Ziehlast von einem Server? Der Pseudo-Pfad allein reicht NICHT: eine
+        ''' Ziehgeste aus der Galerie laedt Serverelemente vorher in TEMPORAERE Dateien (siehe
+        ''' OnItemsDragStart) und traegt danach nur noch deren echte Pfade. Ohne die Temp-Pruefung
+        ''' fiel so ein Drop in den "intern = verschieben"-Zweig, und Verschieben ist auf Temp-Dateien
+        ''' nicht erlaubt (FileOperationPolicy.CanMove verlangt einen Pfad im persoenlichen Ordner).
+        ''' Ergebnis: Mauszeiger "geht nicht", und Server→Ordner ging gar nicht.
+        '''
+        ''' Die Frage gilt BEIDEN Servern. Sie stand einmal nur fuer Immich hier, und ein
+        ''' Nextcloud-Bild liess sich deshalb nicht in einen Ordner ziehen - obwohl der Weg dahinter
+        ''' (PastePathsIntoFolderAsync) ihn laengst haette bedienen koennen.</summary>
+        Private Shared Function PayloadHasServerAsset(payload As (Paths As List(Of String), IsInternal As Boolean)) As Boolean
+            Return payload.Paths.Any(Function(p) LibraryService.IsServerPseudoPath(p) OrElse
+                                                 LibraryService.IsServerTempPath(p))
         End Function
 
         Private Function GetDropEffects(payload As (Paths As List(Of String), IsInternal As Boolean), targetFolder As String) As DragDropEffects
             Dim vm = GetVm()
             If vm Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse payload.Paths.Count = 0 Then Return DragDropEffects.None
-            ' Immich-Items in einen lokalen Ordner ziehen = herunterladen (Kopie), nie "verschieben".
-            If PayloadHasImmich(payload) Then
+            ' Serverelemente in einen lokalen Ordner ziehen = herunterladen (Kopie), nie "verschieben".
+            If PayloadHasServerAsset(payload) Then
                 Return If(vm.CanPasteIntoFolder(targetFolder), DragDropEffects.Copy, DragDropEffects.None)
             End If
             If payload.IsInternal Then
@@ -2221,7 +2218,7 @@ Namespace Views
         Private Async Function ApplyDropAsync(payload As (Paths As List(Of String), IsInternal As Boolean), targetFolder As String) As Task
             Dim vm = GetVm()
             If vm Is Nothing OrElse String.IsNullOrEmpty(targetFolder) OrElse payload.Paths.Count = 0 Then Return
-            If PayloadHasImmich(payload) Then
+            If PayloadHasServerAsset(payload) Then
                 Await vm.PastePathsIntoFolderAsync(payload.Paths, targetFolder, cut:=False)
             ElseIf payload.IsInternal Then
                 Await vm.MovePathsToFolderAsync(payload.Paths, targetFolder)
@@ -2592,6 +2589,26 @@ Namespace Views
             If paths.Count = 0 Then Return
             CopyPathsToClipboard(paths, cut)
         End Sub
+
+        ''' <summary>Legt einen Text in die Zwischenablage - auf dem UI-Faden, wie es sich fuer
+        ''' Avalonia gehoert.
+        '''
+        ''' Die beiden "Ordnerpfad kopieren" liefen einmal in einem Task.Run: darin holten sie sich
+        ''' das TopLevel aus dem Sichtbaum und riefen die Zwischenablage auf - beides gehoert dem
+        ''' UI-Faden. Je nach Unterbau ging das gut oder gar nicht, und weil niemand den Task
+        ''' abwartete, blieb ein Fehlschlag unsichtbar: der Nutzer klickte, und die Ablage blieb
+        ''' leer. Die Ablage ist ohnehin nichts, worauf man wartet - sie ist in Sekundenbruchteilen
+        ''' beschrieben.</summary>
+        Private Async Function CopyTextToClipboardAsync(text As String, quelle As String) As Task
+            Try
+                If String.IsNullOrEmpty(text) Then Return
+                Dim clip = TopLevel.GetTopLevel(Me)?.Clipboard
+                If clip Is Nothing Then Return
+                Await clip.SetTextAsync(text)
+            Catch ex As Exception
+                DiagnosticLogService.LogException(quelle, ex)
+            End Try
+        End Function
 
         Private Async Sub CopyPathsToClipboard(paths As List(Of String), cut As Boolean)
             Try

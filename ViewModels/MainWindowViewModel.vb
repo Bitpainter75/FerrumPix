@@ -627,6 +627,14 @@ Namespace ViewModels
                         CurrentMode = AppMode.Gallery
                         Return
                     End If
+                    ' Der Betrachter gibt bei einem Serverbild den Pfad der geholten KOPIE zurück. Ist
+                    ' das Element in der Ansicht nicht (mehr) zu finden, darf daraus kein Ordnerwechsel
+                    ' werden: der Nutzer stünde im Temp-Ordner der Kopien, den er nie geöffnet hat.
+                    ' Dann lieber bleiben, wo die Galerie steht.
+                    If LibraryService.IsServerTempPath(sourcePath) Then
+                        CurrentMode = AppMode.Gallery
+                        Return
+                    End If
                     If IO.File.Exists(sourcePath) Then
                         Await Gallery.OpenFolderForImage(sourcePath)
                     ElseIf IO.Directory.Exists(sourcePath) Then
@@ -1105,12 +1113,15 @@ Namespace ViewModels
                 RebuildDialogFilterChoices()
                 Me.RaisePropertyChanged(NameOf(DialogFilterSourceKind))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceFilter))
+                Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceAdjustmentPreset))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceXmpPreset))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceLut))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterSourceAuto))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterFileVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterStrengthVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterChoiceVisible))
+                ' Die neue Quelle bringt ihre eigene Liste mit - und die kann leer sein.
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
             End Set
         End Property
 
@@ -1121,6 +1132,14 @@ Namespace ViewModels
         Public ReadOnly Property IsDialogFilterSourceFilter As Boolean
             Get
                 Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceFilter, StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' Die im Anpassen-Werkzeug gespeicherten Regler-Zusammenstellungen. Sie stehen unter ihrem
+        ''' Namen in den Einstellungen, nicht in einer Datei - deshalb kein Datei-Knopf.
+        Public ReadOnly Property IsDialogFilterSourceAdjustmentPreset As Boolean
+            Get
+                Return String.Equals(_dialogFilterSourceKind, BatchFilterDialogResult.SourceAdjustmentPreset, StringComparison.OrdinalIgnoreCase)
             End Get
         End Property
 
@@ -1142,20 +1161,22 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Nur Presets aus Dateien lassen sich hinzuladen - die eingebauten Filter sind fest,
-        ''' die automatische Bildverbesserung misst jedes Bild selbst.
+        ''' Nur Presets aus Dateien lassen sich hinzuladen - die eingebauten Filter sind fest, die
+        ''' Anpassungsvorlagen stehen in den Einstellungen, und die automatische Bildverbesserung
+        ''' misst jedes Bild selbst.
         Public ReadOnly Property IsDialogFilterFileVisible As Boolean
             Get
-                Return Not IsDialogFilterSourceFilter AndAlso Not IsDialogFilterSourceAuto
+                Return IsDialogFilterSourceXmpPreset OrElse IsDialogFilterSourceLut
             End Get
         End Property
 
         ''' Ein XMP-Preset ist eine Sammlung einzelner Regler, kein Effekt mit einem Mischregler -
-        ''' eine "Stärke" gäbe es dort nur als willkürliche Skalierung aller Werte. Die automatische
+        ''' eine "Stärke" gäbe es dort nur als willkürliche Skalierung aller Werte. Für eine
+        ''' Anpassungsvorlage gilt dasselbe: sie ist derselbe Satz Reglerwerte. Die automatische
         ''' Bildverbesserung setzt gemessene Absolutwerte - auch dort wäre eine Stärke willkürlich.
         Public ReadOnly Property IsDialogFilterStrengthVisible As Boolean
             Get
-                Return Not IsDialogFilterSourceXmpPreset AndAlso Not IsDialogFilterSourceAuto
+                Return IsDialogFilterSourceFilter OrElse IsDialogFilterSourceLut
             End Get
         End Property
 
@@ -1181,6 +1202,7 @@ Namespace ViewModels
                     DialogFilterStrength = CInt(ImageAdjustments.DefaultFilterStrength(normalized))
                 End If
                 Me.RaisePropertyChanged(NameOf(DialogSelectedFilterChoice))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
             End Set
         End Property
 
@@ -1321,9 +1343,18 @@ Namespace ViewModels
                     DialogFilterChoices.Add(name)
                 Next
             ElseIf IsDialogFilterSourceAuto Then
-                ' Genau ein fester Eintrag: er hält die Auswahl nicht-leer (der Bestätigen-Wächter
-                ' prüft darauf), sichtbar ist die Zeile in diesem Modus ohnehin nicht.
+                ' Genau ein fester Eintrag: er hält die Auswahl nicht-leer, damit
+                ' IsDialogPrimaryEnabled den Knopf freigibt. Sichtbar ist die Zeile hier ohnehin
+                ' nicht - gemessen wird an der Auswahl, nicht an der Anzeige.
                 DialogFilterChoices.Add(LocalizationService.T("Automatische Bildverbesserung"))
+            ElseIf IsDialogFilterSourceAdjustmentPreset Then
+                ' Anpassungsvorlagen stehen unter ihrem Namen in den Einstellungen - kein Pfad, also
+                ' bleibt _dialogFilterChoicePaths leer und der Name ist der Schlüssel.
+                For Each preset In AppSettingsService.Load().AdjustmentPresets
+                    Dim label = If(preset.Name, "").Trim()
+                    If label.Length = 0 OrElse DialogFilterChoices.Contains(label) Then Continue For
+                    DialogFilterChoices.Add(label)
+                Next
             Else
                 Dim settings = AppSettingsService.Load()
                 Dim entries = If(IsDialogFilterSourceXmpPreset,
@@ -1341,6 +1372,11 @@ Namespace ViewModels
             ' Eine LUT ist ein fertiger Look, kein Effekt mit halber Grundstärke: sie startet voll.
             If Not IsDialogFilterSourceFilter Then DialogFilterStrength = 100
             DialogSelectedFilterChoice = If(DialogFilterChoices.Count > 0, DialogFilterChoices(0), "")
+            ' HIER und nicht nur im Setter darüber: der steigt aus, wenn sich der Wert nicht ändert -
+            ' und von "keine Auswahl" auf "keine Auswahl" ändert sich nichts, während die LISTE
+            ' darunter gewechselt hat. Ohne diese Meldung bliebe der Knopf aus einer früheren Quelle
+            ' bedienbar, obwohl jetzt nichts mehr zu wählen ist.
+            Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
         End Sub
 
         ' ── „Exportieren nach" (Galerie): Sammel-Export ─────────────────────────
@@ -1363,6 +1399,9 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_dialogExportUseFilter, value)
+                ' Abgeschaltet wirkt die Vorgabe nicht, dann darf eine leere Liste den Export auch
+                ' nicht aufhalten.
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
             End Set
         End Property
 
@@ -1455,6 +1494,7 @@ Namespace ViewModels
             RaiseDialogBatchResizeProperties()
 
             For Each name In {NameOf(DialogFilterSourceKind), NameOf(IsDialogFilterSourceFilter),
+                              NameOf(IsDialogFilterSourceAdjustmentPreset),
                               NameOf(IsDialogFilterSourceXmpPreset), NameOf(IsDialogFilterSourceLut),
                               NameOf(IsDialogFilterSourceAuto),
                               NameOf(IsDialogFilterFileVisible), NameOf(IsDialogFilterStrengthVisible),
@@ -1621,6 +1661,7 @@ Namespace ViewModels
             ' Auto-Auswahl die Vorgabenliste unsichtbar und der Auto-Knopf aktiv - der Dialog war
             ' fuer Filter unbedienbar.
             For Each name In {NameOf(DialogFilterSourceKind), NameOf(IsDialogFilterSourceFilter),
+                              NameOf(IsDialogFilterSourceAdjustmentPreset),
                               NameOf(IsDialogFilterSourceXmpPreset), NameOf(IsDialogFilterSourceLut),
                               NameOf(IsDialogFilterSourceAuto), NameOf(IsDialogFilterChoiceVisible),
                               NameOf(IsDialogFilterFileVisible), NameOf(IsDialogFilterStrengthVisible),
@@ -2228,15 +2269,33 @@ Namespace ViewModels
 
         ''' <summary>Ob der bestaetigende Knopf ueberhaupt etwas ausloesen kann.
         '''
-        ''' Nur der Ortsdialog macht davon Gebrauch: solange nichts Lesbares im Feld steht, gibt es
-        ''' auch nichts zu setzen, und ein Knopf, der dann nichts tut, laesst den Nutzer raten, ob
-        ''' seine Eingabe angekommen ist. Alle anderen Dialoge bleiben wie sie waren.</summary>
+        ''' Zwei Dialoge machen davon Gebrauch, beide aus demselben Grund: ein Knopf, der nichts tut,
+        ''' laesst den Nutzer raten, ob seine Eingabe angekommen ist.
+        '''
+        ''' Der ORTSDIALOG braucht etwas Lesbares im Feld.
+        '''
+        ''' "Filter anwenden" und "Exportieren nach" brauchen eine gewaehlte Vorgabe. Ist die Liste
+        ''' leer - noch keine Anpassungsvorlage gespeichert, keine XMP-Vorgabe hinterlegt -, gab es
+        ''' bisher keinen Hinweis: beim Stapel brach der Lauf wortlos ab, beim Export entstanden
+        ''' Dateien ganz OHNE Look. Die Liste selbst sagt "Keine Vorgabe gespeichert"; ab hier sagt
+        ''' es auch der Knopf.</summary>
         Public ReadOnly Property IsDialogPrimaryEnabled As Boolean
             Get
                 If _dialogKind = AppDialogKind.SetPlace Then Return HasDialogPlace
+                If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
             End Get
         End Property
+
+        ''' <summary>Zeigt dieser Dialog gerade eine Vorgabenliste, aus der etwas gewaehlt sein MUSS?
+        ''' Beim Export nur, solange die Filter-Sektion eingeschaltet ist - ist sie aus, wirkt die
+        ''' Auswahl ohnehin nicht. Die automatische Bildverbesserung braucht keine: sie misst jedes
+        ''' Bild selbst und stellt sich einen festen Eintrag in die Liste.</summary>
+        Private Function NeedsFilterChoice() As Boolean
+            If _dialogKind <> AppDialogKind.BatchFilter AndAlso _dialogKind <> AppDialogKind.ExportTo Then Return False
+            If _dialogKind = AppDialogKind.ExportTo AndAlso Not _dialogExportUseFilter Then Return False
+            Return IsDialogFilterChoiceVisible
+        End Function
 
         Private _dialogPlaceQuery As String = ""
         Private _dialogPlaceLatitude As Double?
