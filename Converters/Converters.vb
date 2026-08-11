@@ -317,5 +317,30 @@ Namespace Converters
         End Function
     End Class
 
+    ''' <summary>Die Einrueckung einer Zeile der Ordnerliste aus ihrer Tiefe.
+    '''
+    ''' Als Konverter und nicht als Wert im Zeilenobjekt: die Einrueckung ist eine Frage der
+    ''' DARSTELLUNG, und die Tiefe ist die Angabe, die dahintersteht. Ein fertiger Rand im ViewModel
+    ''' hiesse, dort ueber Bildpunkte zu entscheiden.</summary>
+    Public Class FolderDepthToMarginConverter
+        Implements IValueConverter
+
+        ''' <summary>Wie weit eine Stufe einrueckt. 22 Punkte: so breit ist der Aufklapp-Knopf samt
+        ''' seinem Abstand, damit ein Kind buendig unter dem Titel seiner Gruppe beginnt.</summary>
+        Private Const StepWidth As Double = 22
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Dim depth = 0
+            If value IsNot Nothing AndAlso Integer.TryParse(value.ToString(), depth) Then
+                depth = Math.Max(0, Math.Min(4, depth))
+            End If
+            Return New Avalonia.Thickness(depth * StepWidth, 0, 0, 0)
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Return BindingOperations.DoNothing
+        End Function
+    End Class
+
 
 End Namespace

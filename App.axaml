@@ -21,6 +21,7 @@
         <conv:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
         <conv:SearchFieldLabelConverter x:Key="SearchFieldLabelConverter"/>
         <conv:SearchOperatorLabelConverter x:Key="SearchOperatorLabelConverter"/>
+        <conv:FolderDepthToMarginConverter x:Key="FolderDepthToMarginConverter"/>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme>

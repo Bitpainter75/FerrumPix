@@ -7,6 +7,19 @@ Imports Microsoft.Data.Sqlite
 
 Namespace Services
 
+    ''' <summary>Woran der Katalogindex erkennt, ob eine Datei seit dem letzten Lauf gelesen werden
+    ''' muss. Genau die drei Angaben, die auch <see cref="LibraryService.SyncExifData"/> vergleicht -
+    ''' nur eben VOR dem teuren Lesen der Aufnahmedaten.</summary>
+    Public Structure CatalogIndexStamp
+        ''' <summary>Aenderungszeit der Bilddatei beim letzten Lauf.</summary>
+        Public Property SourceModifiedAt As String
+        ''' <summary>Zustand der Beistelldateien beim letzten Lauf (siehe LibraryService.SidecarStamp).</summary>
+        Public Property SidecarModifiedAt As String
+        ''' <summary>Format und Sprache der gespeicherten Zusammenfassungen. Weicht es ab, stammt der
+        ''' Eintrag aus einer aelteren Fassung oder einer anderen Anzeigesprache.</summary>
+        Public Property SummaryFormat As String
+    End Structure
+
     Public Class LibraryImageMeta
         Public Property FilePath As String
         Public Property IsFavorite As Boolean
@@ -717,6 +730,13 @@ Namespace Services
         ''' nächsten Ordner-Scan entscheidet, ob diese EXIF-Daten noch aktuell sind.</summary>
         Public Sub SetExifData(filePath As String, exif As ExifSearchFields, summary As ExifCatalogSummary)
             If String.IsNullOrWhiteSpace(filePath) OrElse exif Is Nothing OrElse summary Is Nothing Then Return
+            ' WAS IM PAPIERKORB LIEGT, KOMMT NICHT IN DEN KATALOG. Hier und nicht bei den Aufrufern:
+            ' das ist der EINE Schreibweg fuer Aufnahmedaten, und eine Regel, die an jedem Aufrufer
+            ' einzeln haengt, ist beim naechsten neuen Weg schon wieder luecken haft. Ein
+            ' weggeworfenes Bild gehoert in keine Trefferliste, in keinen Ortsfilter und in keine
+            ' Personengruppe - und die Ordner des Systempapierkorbs standen dadurch in der
+            ' Ordnerliste der Einstellungen (Nutzerbefund).
+            If FileOperationPolicy.IsTrashFolder(filePath) Then Return
 
             Dim fileCreatedAt = ""
             Dim scannedSourceModifiedAt = ""
@@ -821,6 +841,39 @@ Namespace Services
                 .Country = If(reader.IsDBNull(30), "", reader.GetString(30)),
                 .CountryCode = If(reader.IsDBNull(31), "", reader.GetString(31))
             }
+        End Function
+
+        ''' <summary>Nur die drei Stempel, an denen der Katalogindex erkennt, ob eine Datei erneut
+        ''' gelesen werden muss - fuer den Ordner UND alles darunter, in EINER Abfrage.
+        '''
+        ''' Warum nicht <see cref="GetFolderMeta"/>: das holt zweiunddreissig Spalten je Zeile, samt
+        ''' der vorformatierten Zusammenfassungen. Ueber einen Fotobestand mit sechsstelliger
+        ''' Bilderzahl ist das ein Vielfaches an Speicher fuer eine Frage, die drei Zeichenketten
+        ''' beantworten. Der Index vergleicht nur und zeigt nichts an.</summary>
+        Public Function GetIndexStamps(folderPath As String) As Dictionary(Of String, CatalogIndexStamp)
+            Dim result As New Dictionary(Of String, CatalogIndexStamp)(PathIdentity.Comparer)
+            If String.IsNullOrWhiteSpace(folderPath) Then Return result
+            Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    ' Maskiert wie ueberall sonst: ein Unterstrich im Ordnernamen holte sonst auch
+                    ' die Nachbarordner herein - siehe EscapeLikeValue.
+                    cmd.CommandText = "SELECT FilePath, ScannedSourceModifiedAt, ScannedSidecarModifiedAt, SummaryFormat " &
+                                      "FROM ImageMeta WHERE FilePath LIKE $prefix" & LikeEscapeClause
+                    cmd.Parameters.AddWithValue("$prefix", EscapeLikeValue(prefix) & "%")
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result(reader.GetString(0)) = New CatalogIndexStamp With {
+                                .SourceModifiedAt = If(reader.IsDBNull(1), "", reader.GetString(1)),
+                                .SidecarModifiedAt = If(reader.IsDBNull(2), "", reader.GetString(2)),
+                                .SummaryFormat = If(reader.IsDBNull(3), "", reader.GetString(3))
+                            }
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
         End Function
 
         ''' <summary>Lädt alle Metadaten (inkl. EXIF) für alle Dateien im angegebenen Ordner in einem einzigen Query.</summary>
@@ -1073,7 +1126,19 @@ Namespace Services
                         cmd.CommandText = "SELECT FilePath FROM ImageMeta"
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
-                                Dim ordner = Path.GetDirectoryName(reader.GetString(0))
+                                Dim pfad = reader.GetString(0)
+                                ' SERVERBILDER HABEN KEINEN ORDNER. Sie stehen unter einem
+                                ' Pseudo-Pfad ("immich://...", "nextcloud://..."), und
+                                ' Path.GetDirectoryName macht daraus etwas, das wie ein Ordner
+                                ' AUSSIEHT - in der Ordnerliste der Einstellungen standen dadurch
+                                ' Zeilen fuer Immich und Nextcloud (Nutzerbefund). Ueberwachen
+                                ' laesst sich so ein Ordner nicht, und "Aufraeumen" haette die
+                                ' Bewertungen und Stichwoerter der Serverbilder mitgenommen.
+                                If IsServerPseudoPath(pfad) Then Continue While
+                                ' Und was im Papierkorb liegt, ebenso wenig - dieselbe Regel wie
+                                ' beim Schreiben (siehe SetExifData).
+                                If FileOperationPolicy.IsTrashFolder(pfad) Then Continue While
+                                Dim ordner = Path.GetDirectoryName(pfad)
                                 If String.IsNullOrEmpty(ordner) Then Continue While
                                 Dim anzahl = 0
                                 result.TryGetValue(ordner, anzahl)
@@ -1121,6 +1186,12 @@ Namespace Services
         ''' <returns>Wie viele Katalogzeilen entfernt wurden.</returns>
         Public Function DeleteFolderCatalogData(folderPath As String) As Integer
             If String.IsNullOrWhiteSpace(folderPath) Then Return 0
+            ' Wie beim Leeren des ganzen Katalogs: ein laufender Index schriebe sonst weiter, und
+            ' gerade der Ordner, den jemand aufraeumt, kann der sein, in dem der Lauf gerade steckt.
+            If Not CatalogIndexRunner.RequestStopAndWait() Then
+                DiagnosticLogService.LogAlways("Library.DeleteFolderCatalogData",
+                                               "Der Katalogindex steht noch - es wird trotzdem geleert")
+            End If
             ' Maskiert, sonst raeumt "100_Fotos" auch bei "100aFotos" auf - siehe EscapeLikeValue.
             Dim prefix = EscapeLikeValue(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
                                          Path.DirectorySeparatorChar) & "%"
@@ -1165,9 +1236,19 @@ Namespace Services
         ''' heraus - seine Zeilen blieben sonst zurueck. "Alles" soll auch alles heissen.
         '''
         ''' Personen fallen hier vollstaendig weg, auch benannte: ohne Gesichter zaehlt jede Gruppe
-        ''' null Bilder, und leere Gruppen sollen nirgends auftauchen.</summary>
+        ''' null Bilder, und leere Gruppen sollen nirgends auftauchen.
+        '''
+        ''' HAELT ZUERST EINEN LAUFENDEN KATALOGINDEX AN - genau wie ClearAllFaces den
+        ''' Gesichtsdurchlauf. Faellt das Leeren mitten in einen Lauf, schreibt der danach weiter,
+        ''' und der Katalog waere hinterher nicht leer, sondern halb gefuellt. Anders als dort wird
+        ''' trotzdem geloescht, wenn er sich nicht anhalten laesst: eine halb gefuellte Zeilenmenge
+        ''' taeuscht hier nichts vor, sie entsteht beim naechsten Ansehen ohnehin neu.</summary>
         ''' <returns>Wie viele Katalogzeilen entfernt wurden.</returns>
         Public Function DeleteAllCatalogData() As Integer
+            If Not CatalogIndexRunner.RequestStopAndWait() Then
+                DiagnosticLogService.LogAlways("Library.DeleteAllCatalogData",
+                                               "Der Katalogindex steht noch - es wird trotzdem geleert")
+            End If
             Dim removed = 0
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
@@ -1202,6 +1283,15 @@ Namespace Services
                             ' raeumt "Verwaiste Eintraege entfernen" jede Bewertung, jedes Stichwort
                             ' und jede Personenzuordnung zu einem Nextcloud- oder Immich-Bild weg.
                             If IsServerPseudoPath(p) Then Continue While
+                            ' Was im Papierkorb liegt, kommt seit dem Riegel in SetExifData nicht
+                            ' mehr herein - aus der Zeit davor stehen aber noch Zeilen da, und die
+                            ' Datei EXISTIERT ja, faellt also nicht unter "verwaist". Hier ist der
+                            ' benannte Ort zum Aufraeumen: der Nutzer hat ihn angeklickt, es
+                            ' geschieht nichts still nebenbei.
+                            If FileOperationPolicy.IsTrashFolder(p) Then
+                                orphans.Add(p)
+                                Continue While
+                            End If
                             If Not File.Exists(p) Then orphans.Add(p)
                         End While
                     End Using

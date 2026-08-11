@@ -18,6 +18,17 @@ Namespace Services
         Public Property Cancelled As Boolean
         ''' <summary>Wie viele Personen-Stichworte nach Immich zurueckgeschrieben wurden.</summary>
         Public Property TagsWritten As Integer
+
+        ''' <summary>Der Durchlauf hat gar nicht erst begonnen, weil schon einer laeuft.
+        '''
+        ''' Muss vom leeren Ergebnis unterscheidbar sein: der Anrufer haelt sonst seinen
+        ''' Anzeigezustand fuer beendet und setzt ihn zurueck, waehrend der ERSTE Lauf
+        ''' weiterarbeitet - Stopp-Knopf und Fortschritt verschwinden dann mitten im Lauf.</summary>
+        Public Property NotStarted As Boolean
+
+        ''' <summary>Nicht begonnen, weil ein ANDERES FENSTER gerade schreibt (siehe
+        ''' BackgroundRunLock). Getrennt gemeldet, weil im eigenen Fenster warten nicht hilft.</summary>
+        Public Property BlockedByOtherWindow As Boolean
     End Class
 
     ''' <summary>Sucht Gesichter in einer Liste von Bildern und schreibt sie in die Bibliothek.
@@ -144,11 +155,30 @@ Namespace Services
             ' dieselbe unbekannte Person zweimal an.
             Dim stopSource As CancellationTokenSource = Nothing
             SyncLock _runLock
-                If _running Then Return result
+                If _running Then
+                    ' Abgewiesen, und das wird GEMELDET - siehe FaceScanResult.NotStarted.
+                    result.NotStarted = True
+                    Return result
+                End If
                 stopSource = New CancellationTokenSource()
                 _stopSource = stopSource
                 _running = True
             End SyncLock
+
+            ' NUR EIN FENSTER SCHREIBT - dieselbe Sperre wie beim Katalogindex. Beide schreiben in
+            ' den Katalog und in das Ordnerverzeichnis des Vorschau-Zwischenspeichers; zwei Fenster
+            ' nebeneinander sind erlaubt, zwei Schreiblaeufe nicht (siehe BackgroundRunLock).
+            Dim crossProcess = BackgroundRunLock.TryAcquire()
+            If crossProcess Is Nothing Then
+                SyncLock _runLock
+                    _running = False
+                    _stopSource = Nothing
+                    stopSource.Dispose()
+                End SyncLock
+                result.NotStarted = True
+                result.BlockedByOtherWindow = True
+                Return result
+            End If
 
             Try
                 ' Der eigene Abbruchweg (RequestCancel) und der des Aufrufers zusammengefuehrt:
@@ -170,6 +200,7 @@ Namespace Services
                 ' gespeichert wurde, bleibt stehen - genau das ist mit Abbruch gemeint.
                 result.Cancelled = True
             Finally
+                crossProcess.Dispose()
                 SyncLock _runLock
                     _running = False
                     _stopSource = Nothing

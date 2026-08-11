@@ -388,7 +388,20 @@ Namespace ViewModels
             Else
                 OpenStartupWithoutImage()
             End If
+
+            ' GANZ ZUM SCHLUSS und selbst nochmal verzoegert (siehe StartupDelayMilliseconds): der
+            ' Lauf soll dem Start nicht die Platte wegnehmen, waehrend Ordnerbaum und erste Kacheln
+            ' entstehen. Ohne eingetragene Ordner oder mit abgeschaltetem Schalter tut er nichts.
+            CatalogIndex.StartAfterStartupIfConfigured()
         End Sub
+
+        ''' <summary>Der Katalogindex - EIN Zustand fuer beide Anzeigeorte, Einstellungen und
+        ''' Fusszeile der Galerie.</summary>
+        Public ReadOnly Property CatalogIndex As New CatalogIndexViewModel()
+
+        ''' <summary>Die Gesichtssuche ueber dieselben ueberwachten Ordner. Eigener Lauf, eigener
+        ''' Zustand: er dauert ein Vielfaches und wird getrennt gestartet und angehalten.</summary>
+        Public ReadOnly Property FaceIndex As New FaceIndexViewModel()
 
         ''' <summary>Start ohne Bildparameter - Einstellung „Start ohne Bilddatei".
         ''' Die Galerie wird IMMER aufgebaut, auch wenn Betrachter oder Editor nach vorn kommen:

@@ -154,6 +154,20 @@ Namespace Services
         Public Property LanguageMode As String = "System"
         Public Property ThumbnailCacheEnabled As Boolean = True
         Public Property ThumbnailQuality As Integer = 82
+
+        ''' <summary>Ordner, die der Katalogindex durchgeht - samt Unterordnern.
+        '''
+        ''' Leer ab Werk. Wer nichts eintraegt, bekommt den Katalog wie bisher beim Ansehen eines
+        ''' Ordners; wer seinen Fotobestand eintraegt, hat Suche und Filter darauf, ohne jeden
+        ''' Ordner einmal besucht zu haben.</summary>
+        Public Property CatalogWatchFolders As New List(Of String)()
+
+        ''' <summary>Den Katalogindex kurz nach dem Start von selbst laufen lassen (ab Werk AUS).
+        '''
+        ''' Aus, weil er ueber einen grossen Bestand Minuten laeuft und Platte und einen Kern
+        ''' belegt. Wer ihn will, schaltet ihn ein; wer ihn einmalig will, nimmt "Jetzt indizieren".
+        ''' Ohne eingetragene Ordner tut der Schalter ohnehin nichts.</summary>
+        Public Property CatalogIndexOnStartup As Boolean = False
         Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 250
         Public Property JpgSaveQuality As Integer = 90
         ''' Vorgewähltes Zielformat in „Speichern unter", „Konvertieren nach" und „Exportieren nach".
@@ -550,6 +564,7 @@ Namespace Services
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
                 settings.ApplicationScaleScreen = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen)
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
+                settings.CatalogWatchFolders = NormalizeCatalogWatchFolders(settings.CatalogWatchFolders)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
                 settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
@@ -684,6 +699,7 @@ Namespace Services
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
                 settings.ApplicationScaleScreen = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen)
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
+                settings.CatalogWatchFolders = NormalizeCatalogWatchFolders(settings.CatalogWatchFolders)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
                 settings.TransparencyBackgroundColor = NormalizeHexColor(settings.TransparencyBackgroundColor, "#FFFFFFFF")
                 settings.LastBatchRenamePattern = NormalizeBatchRenamePattern(settings.LastBatchRenamePattern)
@@ -1123,6 +1139,30 @@ Namespace Services
 
         Public Shared Function NormalizeFolderPath(value As String) As String
             Return If(value, "").Trim()
+        End Function
+
+        ''' <summary>Die Ordner des Katalogindex aufraeumen: leere raus, Doppelte raus, und ein
+        ''' Ordner, der bereits UNTER einem anderen der Liste liegt, ebenfalls.
+        '''
+        ''' Der letzte Punkt ist der wichtige: der Lauf geht rekursiv, ein enthaltener Ordner waere
+        ''' also ein zweites Mal dran. Bei einem grossen Bestand ist das kein Schoenheitsfehler,
+        ''' sondern die doppelte Laufzeit - und der Fortschritt zaehlte Dateien zweimal.
+        '''
+        ''' Verglichen wird ueber PathIdentity, nicht ueber Zeichenketten: Gross- und Kleinschreibung,
+        ''' Schlusstrenner und "/home/x/./Fotos" meinen denselben Ordner.</summary>
+        Public Shared Function NormalizeCatalogWatchFolders(value As List(Of String)) As List(Of String)
+            Dim result As New List(Of String)()
+            For Each entry In If(value, New List(Of String)())
+                Dim folder = NormalizeFolderPath(entry)
+                If folder.Length = 0 Then Continue For
+                ' Gegen die BEREITS aufgenommenen pruefen, in beide Richtungen: der neue kann unter
+                ' einem alten liegen, und ein alter unter dem neuen. Im zweiten Fall ersetzt der
+                ' neue, weitere Ordner den engeren.
+                If result.Any(Function(k) PathIdentity.IsAncestorOrSelf(k, folder)) Then Continue For
+                result.RemoveAll(Function(k) PathIdentity.IsAncestorOrSelf(folder, k))
+                result.Add(folder)
+            Next
+            Return result
         End Function
 
         Public Shared Function NormalizeWindowDimension(value As Double, fallback As Double) As Double

@@ -7067,4 +7067,151 @@
   <data name="Die_Karte_konnte_nicht_ge_ffnet_werden_e314c4b9" xml:space="preserve">
     <value>La carte n'a pas pu être ouverte</value>
   </data>
+  <data name="Ordner_berwachen_19304c89" xml:space="preserve">
+    <value>Dossiers surveillés</value>
+  </data>
+  <data name="FerrumPix_liest_die_Aufnahmedaten_dieser_Ordner__276cc24f" xml:space="preserve">
+    <value>FerrumPix lit les données de prise de vue de ces dossiers et de leurs sous-dossiers dans le catalogue et crée les vignettes. La fois suivante, il ne lit que ce qui a changé. Rien n'est créé à côté de vos photos.</value>
+  </data>
+  <data name="Kurz_nach_dem_Start_indizieren_f22bd18d" xml:space="preserve">
+    <value>Indexer peu après le démarrage</value>
+  </data>
+  <data name="Der_Lauf_beginnt_einige_Sekunden_nach_dem_Start__3ea7c02d" xml:space="preserve">
+    <value>Le passage démarre quelques secondes après le lancement et travaille en arrière-plan. Vous pouvez l'arrêter à tout moment.</value>
+  </data>
+  <data name="Jetzt_indizieren_6c045901" xml:space="preserve">
+    <value>Indexer maintenant</value>
+  </data>
+  <data name="Ordner_hinzuf_gen_366e3f6c" xml:space="preserve">
+    <value>Ajouter un dossier</value>
+  </data>
+  <data name="Starten_2beb7350" xml:space="preserve">
+    <value>Démarrer</value>
+  </data>
+  <data name="Stoppen_e24261dc" xml:space="preserve">
+    <value>Arrêter</value>
+  </data>
+  <data name="Indizierung_anhalten_Gelesenes_bleibt_im_Katalog_80bce138" xml:space="preserve">
+    <value>Arrêter l'indexation, ce qui a été lu reste dans le catalogue</value>
+  </data>
+  <data name="Bilder_werden_gesucht_b2965478" xml:space="preserve">
+    <value>Recherche des images...</value>
+  </data>
+  <data name="Die_Indizierung_ist_fehlgeschlagen_097c72b6" xml:space="preserve">
+    <value>L'indexation a échoué</value>
+  </data>
+  <data name="Abgebrochen_nach_0_Bildern_6982b8e1" xml:space="preserve">
+    <value>Interrompu après {0} images</value>
+  </data>
+  <data name="Keine_Bilder_gefunden_0949249e" xml:space="preserve">
+    <value>Aucune image trouvée</value>
+  </data>
+  <data name="0_Bilder_indiziert_1_unver_ndert_0d54832f" xml:space="preserve">
+    <value>{0} images indexées, {1} inchangées</value>
+  </data>
+  <data name="0_Aufnahmeorte_a5d03b99" xml:space="preserve">
+    <value>{0} lieux de prise de vue</value>
+  </data>
+  <data name="Indiziere_0_von_1_959bda1d" xml:space="preserve">
+    <value>Indexation de {0} sur {1}</value>
+  </data>
+  <data name="Ordner_zum_Indizieren_w_hlen_66384024" xml:space="preserve">
+    <value>Choisir le dossier à indexer</value>
+  </data>
+  <data name="Gesichter_in_diesen_Ordnern_suchen_3a324698" xml:space="preserve">
+    <value>Rechercher les visages dans ces dossiers</value>
+  </data>
+  <data name="Sucht_die_Gesichter_im_ganzen_eingetragenen_Best_77ff88a8" xml:space="preserve">
+    <value>Recherche les visages dans l'ensemble des dossiers indiqués et regroupe la même personne. Sur une grande bibliothèque, cela prend des heures et peut être arrêté à tout moment. Les images déjà analysées sont ignorées.</value>
+  </data>
+  <data name="Die_Personenerkennung_steht_auf_diesem_Ger_t_nic_59e30842" xml:space="preserve">
+    <value>La reconnaissance des personnes n'est pas disponible sur cet appareil</value>
+  </data>
+  <data name="Die_Personenerkennung_ist_ausgeschaltet_1509edc3" xml:space="preserve">
+    <value>La reconnaissance des personnes est désactivée</value>
+  </data>
+  <data name="Trage_zuerst_einen_Ordner_ein_821d0daa" xml:space="preserve">
+    <value>Ajoutez d'abord un dossier</value>
+  </data>
+  <data name="Alle_Bilder_waren_schon_durchsucht_02c5e3ea" xml:space="preserve">
+    <value>Toutes les images avaient déjà été analysées</value>
+  </data>
+  <data name="0_schon_durchsucht_3f0aed9a" xml:space="preserve">
+    <value>{0} déjà analysées</value>
+  </data>
+  <data name="Lauf_anhalten_das_Gefundene_bleibt_gespeichert_d6150cd2" xml:space="preserve">
+    <value>Arrêter le passage, ce qui a été trouvé reste enregistré</value>
+  </data>
+  <data name="Ordner_suchen_792b3be1" xml:space="preserve">
+    <value>Rechercher des dossiers</value>
+  </data>
+  <data name="Aufr_umen_6879acbc" xml:space="preserve">
+    <value>Nettoyer</value>
+  </data>
+  <data name="berwacht_2a0f375f" xml:space="preserve">
+    <value>surveillé</value>
+  </data>
+  <data name="Diesen_Ordner_samt_Unterordnern_berwachen_47ff12ef" xml:space="preserve">
+    <value>Surveiller ce dossier et ses sous-dossiers</value>
+  </data>
+  <data name="Nicht_mehr_berwachen_Abgelegte_Daten_bleiben_erh_da8bd1b2" xml:space="preserve">
+    <value>Ne plus surveiller. Les données enregistrées sont conservées.</value>
+  </data>
+  <data name="Nicht_berwachen_0491d6bd" xml:space="preserve">
+    <value>Ne plus surveiller</value>
+  </data>
+  <data name="Ordner_werden_ermittelt_2acb2d9b" xml:space="preserve">
+    <value>Collecte des dossiers...</value>
+  </data>
+  <data name="Kein_Ordner_passt_zur_Suche_02948094" xml:space="preserve">
+    <value>Aucun dossier ne correspond à la recherche</value>
+  </data>
+  <data name="Katalogdaten_und_Vorschaubilder_dieser_Ordner_en_8831d204" xml:space="preserve">
+    <value>Supprimer les données du catalogue et les vignettes de ces dossiers ?</value>
+  </data>
+  <data name="Katalogdaten_entfernen_7d333295" xml:space="preserve">
+    <value>Supprimer les données du catalogue</value>
+  </data>
+  <data name="Katalogdaten_dieser_Ordner_entfernen_66905cc1" xml:space="preserve">
+    <value>Supprimer les données du catalogue de ces dossiers ?</value>
+  </data>
+  <data name="Vorschaubilder_l_schen_f88ba4bc" xml:space="preserve">
+    <value>Supprimer les vignettes</value>
+  </data>
+  <data name="Vorschaubilder_dieser_Ordner_l_schen_ebc65463" xml:space="preserve">
+    <value>Supprimer les vignettes de ces dossiers ?</value>
+  </data>
+  <data name="Betroffen_sind_0_Ordner_20d57ea3" xml:space="preserve">
+    <value>{0} dossiers sont concernés.</value>
+  </data>
+  <data name="Darin_stehen_0_Katalogeintr_ge_mit_Bewertung_Eti_67861eb6" xml:space="preserve">
+    <value>Ils contiennent {0} entrées de catalogue avec notes, libellés, mots-clés et les personnes trouvées. Les fichiers image eux-mêmes restent inchangés.</value>
+  </data>
+  <data name="Weitere_Ordner_0_f1007766" xml:space="preserve">
+    <value>Autres dossiers ({0})</value>
+  </data>
+  <data name="0_Vorschaubilder_1_2_Katalogeintr_ge_49e23afd" xml:space="preserve">
+    <value>{0} vignettes · {1} · {2} entrées de catalogue</value>
+  </data>
+  <data name="Aktionen_445e0c4c" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="Gesichter_suchen_eb3d4de3" xml:space="preserve">
+    <value>Rechercher les visages</value>
+  </data>
+  <data name="Beides_entfernen_742b9edf" xml:space="preserve">
+    <value>Supprimer les deux</value>
+  </data>
+  <data name="Welche_Ordner_FerrumPix_kennt_und_was_es_ber_sie_2df18443" xml:space="preserve">
+    <value>Les dossiers que FerrumPix connaît et ce qu'il a enregistré à leur sujet.</value>
+  </data>
+  <data name="Wie_schnell_FerrumPix_arbeitet_Gr_e_und_Qualit_t_1385c457" xml:space="preserve">
+    <value>La rapidité de FerrumPix : taille et qualité des caches.</value>
+  </data>
+  <data name="Es_l_uft_bereits_eine_Suche_a4140fa6" xml:space="preserve">
+    <value>Une recherche est déjà en cours</value>
+  </data>
+  <data name="Ein_anderes_Fenster_arbeitet_gerade_am_Katalog_02482451" xml:space="preserve">
+    <value>Une autre fenêtre travaille actuellement sur le catalogue</value>
+  </data>
 </root>

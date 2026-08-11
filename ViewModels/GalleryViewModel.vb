@@ -1409,6 +1409,7 @@ Namespace ViewModels
             _filterFileType = settings.GalleryFilterFileType
             Items = New BulkObservableCollection(Of ImageItem)()
             DisplayItems = New BulkObservableCollection(Of ImageItem)()
+            WatchBackgroundRuns()
             SelectedItems = New ObservableCollection(Of ImageItem)()
             FolderTree = New ObservableCollection(Of FolderNode)()
             SetSidebarTabCommand = ReactiveCommand.Create(Of String)(Sub(tab) SidebarTab = tab)
@@ -4346,10 +4347,20 @@ Namespace ViewModels
                                                            force:=True).ConfigureAwait(True)
                 ' Ein abgebrochener Lauf hat trotzdem etwas gefunden, und das bleibt auch gespeichert -
                 ' die Zahl unter den Tisch fallen zu lassen saehe aus, als waere alles umsonst gewesen.
-                StatusText = If(result.Cancelled,
-                                String.Format(LocalizationService.T("Suche abgebrochen, {0} Gesichter gefunden"),
-                                              result.FacesFound),
-                                String.Format(LocalizationService.T("{0} Gesichter gefunden"), result.FacesFound))
+                '
+                ' Gar nicht erst gelaufen ist etwas anderes als "nichts gefunden": ohne diesen Zweig
+                ' stuende hier "0 Gesichter gefunden", und der Nutzer haette den Eindruck, auf seinen
+                ' Bildern sei niemand zu sehen.
+                If result.BlockedByOtherWindow Then
+                    StatusText = LocalizationService.T("Ein anderes Fenster arbeitet gerade am Katalog")
+                ElseIf result.NotStarted Then
+                    StatusText = LocalizationService.T("Es läuft bereits eine Suche")
+                Else
+                    StatusText = If(result.Cancelled,
+                                    String.Format(LocalizationService.T("Suche abgebrochen, {0} Gesichter gefunden"),
+                                                  result.FacesFound),
+                                    String.Format(LocalizationService.T("{0} Gesichter gefunden"), result.FacesFound))
+                End If
                 RefreshPersonFilterOptions()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.ScanFaces", ex)
@@ -6084,14 +6095,95 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))
         End Sub
 
-        ' ".fpx" gehört dazu: FerrumPix-Projekte erscheinen wie Bilder in Galerie und Filmstreifen
-        ' (Thumbnail aus dem eingebetteten Composite, siehe ThumbnailCacheService).
-        ' Anzeigbare Medien: feste Formate plus die kanonischen RAW-Endungen.
-        Private ReadOnly _imageExtensions As String() = {
-            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp", ".heic", ".avif",
-            ".ico", ".svg", ".fpx", ".psd", ".psb",
-            ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
-        }.Concat(RawPreviewService.SupportedExtensions).ToArray()
+        ' Anzeigbare Medien. Die Liste steht in MediaFileTypes, weil der Katalogindex dieselben
+        ' Ordner durchgeht und dieselbe Definition braucht.
+        Private ReadOnly _imageExtensions As String() = MediaFileTypes.Displayable
+
+        ''' <summary>Der Katalogindex. Die Fusszeile zeigt seinen Fortschritt und laesst ihn
+        ''' anhalten; der Zustand gehoert dem Fenster, damit Einstellungen und Galerie dasselbe
+        ''' sehen.</summary>
+        Public ReadOnly Property CatalogIndex As CatalogIndexViewModel
+            Get
+                Return _mainVm?.CatalogIndex
+            End Get
+        End Property
+
+        ''' <summary>Die Gesichtssuche ueber die ueberwachten Ordner. Sie laeuft Stunden und muss
+        ''' deshalb auch dann sichtbar sein, wenn die Einstellungen zu sind.</summary>
+        Public ReadOnly Property FaceIndex As FaceIndexViewModel
+            Get
+                Return _mainVm?.FaceIndex
+            End Get
+        End Property
+
+        ' --- Der Hintergrundlauf in der Werkzeugleiste -----------------------------------------
+        '
+        ' EINE Anzeige fuer BEIDE Laeufe, an der Stelle des Suchfelds. Zwei getrennte Anzeigen
+        ' waeren zwei Flaechen, die sich denselben Platz teilen muessten; und laufen beide
+        ' gleichzeitig, gehoert die Flaeche dem, der laenger dauert - die Gesichtssuche braucht
+        ' Stunden, der Index Minuten. Deshalb hat sie hier Vorrang.
+
+        ''' <summary>Laeuft einer der beiden Hintergrundlaeufe? Traegt die Anzeige und blendet
+        ''' solange das Suchfeld aus.</summary>
+        Public ReadOnly Property IsBackgroundRunVisible As Boolean
+            Get
+                Return If(FaceIndex?.IsRunning, False) OrElse If(CatalogIndex?.IsRunning, False)
+            End Get
+        End Property
+
+        ''' <summary>Der Lauf, der gerade die Anzeige traegt. Nothing, wenn keiner laeuft.</summary>
+        Private ReadOnly Property ActiveBackgroundRun As BackgroundRunViewModel
+            Get
+                If If(FaceIndex?.IsRunning, False) Then Return FaceIndex
+                If If(CatalogIndex?.IsRunning, False) Then Return CatalogIndex
+                Return Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property BackgroundRunText As String
+            Get
+                Return If(ActiveBackgroundRun?.StatusText, "")
+            End Get
+        End Property
+
+        Public ReadOnly Property BackgroundRunPercent As Double
+            Get
+                Return If(ActiveBackgroundRun?.ProgressPercent, 0.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property BackgroundRunHasProgress As Boolean
+            Get
+                Return If(ActiveBackgroundRun?.HasProgress, False)
+            End Get
+        End Property
+
+        Public ReadOnly Property StopBackgroundRunCommand As ICommand
+            Get
+                Return ActiveBackgroundRun?.StopCommand
+            End Get
+        End Property
+
+        ''' <summary>Haengt die Anzeige an BEIDE Laeufe. Ohne das bliebe sie stehen, wo sie beim
+        ''' Aufbau der Galerie zufaellig stand: die Werte gehoeren fremden Objekten, und eine Bindung
+        ''' darauf erfaehrt von deren Aenderungen nichts.</summary>
+        Private Sub WatchBackgroundRuns()
+            For Each run In New BackgroundRunViewModel() {CatalogIndex, FaceIndex}
+                If run Is Nothing Then Continue For
+                AddHandler run.PropertyChanged, AddressOf OnBackgroundRunChanged
+            Next
+        End Sub
+
+        Private Sub OnBackgroundRunChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
+            ' Alle vier auf einmal melden statt je Eigenschaft zuzuordnen: welcher der beiden Laeufe
+            ' die Anzeige traegt, kann sich mit demselben Ereignis aendern - dann stimmt auch der
+            ' Text nicht mehr, obwohl nur IsRunning gemeldet wurde.
+            Me.RaisePropertyChanged(NameOf(IsBackgroundRunVisible))
+            Me.RaisePropertyChanged(NameOf(BackgroundRunText))
+            Me.RaisePropertyChanged(NameOf(BackgroundRunPercent))
+            Me.RaisePropertyChanged(NameOf(BackgroundRunHasProgress))
+            Me.RaisePropertyChanged(NameOf(StopBackgroundRunCommand))
+        End Sub
 
         ''' <summary>
         ''' Freier Speicherplatz des Laufwerks, auf dem der aktuelle Ordner liegt. Läuft im Hintergrund:

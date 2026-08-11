@@ -144,7 +144,56 @@
                 </StackPanel>
 
                 <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                    <!-- HINTERGRUNDLAUF STATT SUCHFELD. Katalogindex und Gesichtssuche melden sich
+                         hier, und zwar an der Stelle des Suchfelds statt in der Fußzeile: dort
+                         standen Balken, Text und Abbrechen neben Statuszeile, Sternen und
+                         Farbkreisen und drängten den Rest aus dem Bild. Das Suchfeld ist die einzige
+                         Fläche der Leiste, die von sich aus mitwächst (Spalte "*"), und der Text
+                         wird lang - "Indiziere 12345 von 67890".
+
+                         Das Feld ist solange WEG und nicht nur überlagert: ein Eingabefeld, das
+                         zwar da ist, aber unter etwas anderem liegt, nimmt trotzdem den Fokus und
+                         die Tastatur an. Der Lauf lässt sich hier direkt anhalten, wer also
+                         zwischendurch suchen will, kommt in einem Klick an sein Feld. -->
                     <Border Grid.Column="0"
+                            IsVisible="{Binding IsBackgroundRunVisible}"
+                            Background="{DynamicResource FP.Bg.Input}"
+                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,0"
+                            MinWidth="120"
+                            Height="34"
+                            Margin="0,0,8,0">
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center">
+                                <TextBlock Classes="no-translate"
+                                           Text="{Binding BackgroundRunText}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Label}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"/>
+                                <ProgressBar Height="3" Minimum="0" Maximum="100"
+                                             Value="{Binding BackgroundRunPercent}"
+                                             IsIndeterminate="{Binding !BackgroundRunHasProgress}"/>
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="ghost"
+                                    Width="18" Height="18" Padding="0"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding StopBackgroundRunCommand}"
+                                    ToolTip.Tip="Lauf anhalten, das Gefundene bleibt gespeichert">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                               Width="12" Height="12"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Opacity="0.75"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="0"
+                            IsVisible="{Binding !IsBackgroundRunVisible}"
                             Background="{DynamicResource FP.Bg.Input}"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
                             BorderThickness="1"

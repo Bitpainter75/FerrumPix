@@ -114,6 +114,15 @@
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
+                        Tag="CatalogSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/database.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Katalog"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
                         Tag="PerformanceSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -1474,6 +1483,10 @@
                                      VerticalAlignment="Center"/>
                         </Grid>
 
+                        <!-- Trenner wie über "Immich-Cache leeren": darunter geht es nicht mehr um
+                             die Verbindung, sondern ums Aufräumen. -->
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Nextcloud-Cache leeren" FontSize="{DynamicResource FP.Font.Body}"/>
@@ -1687,11 +1700,343 @@
                     </StackPanel>
                 </Border>
 
+                <!-- KATALOG. Steht als eigener Bereich über der Leistung: hier geht es darum,
+                     WAS FerrumPix über den Fotobestand weiß - überwachte Ordner, Aufnahmedaten,
+                     abgelegte Vorschaubilder. Die Leistung darunter regelt, WIE schnell es das
+                     tut (Cachegrößen, Qualität). Beides stand einmal beieinander, und der
+                     Abschnitt war dadurch weder das eine noch das andere. -->
+                <Border x:Name="CatalogSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Katalog" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Welche Ordner FerrumPix kennt und was es über sie gespeichert hat." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Katalogindex. Bisher entstanden Katalogeintrag und Vorschaubild erst
+                             beim Ansehen eines Ordners; wer seinen Fotobestand hier einträgt, hat
+                             Suche und Filter darauf, ohne jeden Ordner einmal besucht zu haben. -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Ordner überwachen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="FerrumPix liest die Aufnahmedaten dieser Ordner samt Unterordner in den Katalog und legt die Vorschaubilder an. Beim nächsten Mal wird nur gelesen, was sich geändert hat. Neben den Fotos wird dabei nichts angelegt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Click="OnAddCatalogWatchFolderClick">Ordner hinzufügen</Button>
+                            </Grid>
+
+                            <!-- SUCHE UND SAMMELAKTION. Ein Fotobestand hat vierstellig viele Ordner
+                                 (gemessen 1800). Ohne Filter ist die Liste nicht zu bedienen, und
+                                 ohne eine Aktion auf die Treffer müsste man tausendmal einzeln
+                                 klicken. Das Aufräumen-Menü wirkt deshalb auf GENAU DAS, was der
+                                 Filter gerade übrig lässt - die Zahl steht im Knopf und noch einmal
+                                 in der Rückfrage. -->
+                            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
+                                <Border Grid.Column="0"
+                                        Background="{DynamicResource FP.Bg.Input}"
+                                        BorderBrush="{DynamicResource FP.Border.Normal}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12,0"
+                                        Height="34"
+                                        Margin="0,0,8,0">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
+                                                       Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
+                                        <TextBox Grid.Column="1"
+                                                 Classes="search-input"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 Padding="0"
+                                                 Height="20"
+                                                 Margin="10,0,0,2"
+                                                 Text="{Binding FolderFilter}"
+                                                 PlaceholderText="Ordner suchen"
+                                                 VerticalContentAlignment="Center"/>
+                                        <Button Grid.Column="2" Classes="ghost"
+                                                Width="18" Height="18" Padding="0" Margin="4,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Command="{Binding ClearFolderFilterCommand}"
+                                                IsVisible="{Binding HasFolderFilter}"
+                                                ToolTip.Tip="Suche zurücksetzen">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                                           Width="12" Height="12"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Opacity="0.75"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" Margin="0,0,8,0"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding RefreshThumbnailCacheCommand}">Aktualisieren</Button>
+                                <!-- EIN Knopf statt drei: die Zeilen wurden sonst so breit, dass für
+                                     den Pfad nichts übrig blieb. Alle drei Wege fragen vorher nach -
+                                     auch der harmlose, denn eine Reihe, in der nur zwei von drei
+                                     nachfragen, erzieht dazu, die Frage wegzuklicken. -->
+                                <Button Grid.Column="2" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="{Binding CanRunFolderActions}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="Aktionen" VerticalAlignment="Center"/>
+                                        <TextBlock Classes="no-translate" Text="{Binding FilteredFolderCount, StringFormat=({0})}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button.Flyout>
+                                        <MenuFlyout>
+                                            <!-- Das Suchen steht ÜBER dem Trenner, das Entfernen
+                                                 darunter: das eine legt etwas an, das andere wirft
+                                                 etwas weg, und die beiden sollen nicht so dicht
+                                                 beieinander liegen, dass man sich verklickt. -->
+                                            <MenuItem Header="Gesichter suchen"
+                                                      Command="{Binding ScanFacesFilteredCommand}"
+                                                      IsEnabled="{Binding FaceIndex.CanStart}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Katalogdaten entfernen"
+                                                      Command="{Binding CleanFilteredCatalogCommand}"/>
+                                            <MenuItem Header="Vorschaubilder löschen"
+                                                      Command="{Binding CleanFilteredThumbnailsCommand}"/>
+                                            <MenuItem Header="Beides entfernen"
+                                                      Command="{Binding CleanFilteredBothCommand}"/>
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+
+                            <!-- Der Fortschritt der Gesichtssuche. Sie wird aus der Liste heraus
+                                 gestartet und läuft über eine große Sammlung Stunden - der Stand
+                                 gehört deshalb sichtbar hierher und nicht nur in die Galerie. -->
+                            <StackPanel Spacing="2"
+                                        IsVisible="{Binding FaceIndex.HasStatus}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding FaceIndex.StatusText}"
+                                               Classes="no-translate"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Body}"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="10,5"
+                                            VerticalAlignment="Center"
+                                            IsVisible="{Binding FaceIndex.IsRunning}"
+                                            Command="{Binding FaceIndex.StopCommand}">Stoppen</Button>
+                                </Grid>
+                                <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                             Value="{Binding FaceIndex.ProgressPercent}"
+                                             IsVisible="{Binding FaceIndex.HasProgress}"/>
+                                <TextBlock Text="{Binding FaceIndex.DisabledHint}"
+                                           IsVisible="{Binding FaceIndex.HasDisabledHint}"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding FolderSummaryText}"
+                                       Classes="no-translate"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"/>
+
+                            <!-- EIGENE HÖHE UND EIGENER SCROLL, und darin eine ListBox statt einer
+                                 ItemsControl: nur so virtualisiert Avalonia. In der scrollenden
+                                 Einstellungsseite entstünden sonst alle Zeilen auf einmal - bei 1800
+                                 Ordnern hängt die Seite beim Öffnen sekundenlang.
+                                 Auswahl ist abgeschaltet: die Zeilen sind zum Lesen und Bedienen da,
+                                 eine markierte Zeile hätte keine Bedeutung. -->
+                            <ListBox ItemsSource="{Binding FolderRows}"
+                                     IsVisible="{Binding HasFolderRows}"
+                                     MaxHeight="420"
+                                     SelectionMode="Single"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerTheme>
+                                    <ControlTheme TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,0,0,4"/>
+                                    </ControlTheme>
+                                </ListBox.ItemContainerTheme>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,8"
+                                                Margin="{Binding Depth, Converter={StaticResource FolderDepthToMarginConverter}}">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <!-- Das Aufklapp-Zeichen ist ein Knopf und kein
+                                                     bloßes Zeichen: eine Gruppe klappt man an
+                                                     genau dieser Stelle auf, und ein Zeichen ohne
+                                                     Trefferfläche lässt danebenklicken. -->
+                                                <!-- Ein SYMBOL und kein Buchstabe: ein "v" sitzt auf
+                                                     der Grundlinie und damit sichtbar zu tief im
+                                                     runden Knopf (Nutzerbefund). Ein SvgIcon füllt
+                                                     seinen Kasten und zentriert sich darin.
+                                                     Zwei Symbole statt eines gedrehten: die Drehung
+                                                     bräuchte einen RenderTransform samt Ursprung,
+                                                     und der Satz hat beide Richtungen ohnehin. -->
+                                                <Button Grid.Column="0" Classes="ghost"
+                                                        Width="20" Height="20" Padding="0"
+                                                        Margin="0,0,8,0"
+                                                        VerticalAlignment="Center"
+                                                        VerticalContentAlignment="Center"
+                                                        HorizontalContentAlignment="Center"
+                                                        IsVisible="{Binding CanExpand}"
+                                                        Command="{Binding Actions.ToggleFolderRowCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Panel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-right.svg"
+                                                                       Width="14" Height="14"
+                                                                       IsVisible="{Binding !IsExpanded}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
+                                                                       Width="14" Height="14"
+                                                                       IsVisible="{Binding IsExpanded}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Panel>
+                                                </Button>
+                                                <StackPanel Grid.Column="1" Spacing="2" Margin="0,0,12,0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Classes="no-translate"
+                                                                   Text="{Binding Title}"
+                                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"/>
+                                                        <Border IsVisible="{Binding IsWatched}"
+                                                                Background="{DynamicResource FP.Accent}"
+                                                                CornerRadius="4" Padding="6,1"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="überwacht"
+                                                                       FontSize="{DynamicResource FP.Font.Label}"
+                                                                       Foreground="{DynamicResource FP.Bg.Base}"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Classes="no-translate"
+                                                               Text="{Binding DetailText}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                                                            VerticalAlignment="Center">
+                                                    <Button Classes="ghost" Padding="10,5"
+                                                            IsVisible="{Binding CanWatch}"
+                                                            Command="{Binding Actions.WatchFolderRowCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Diesen Ordner samt Unterordnern überwachen">Überwachen</Button>
+                                                    <Button Classes="ghost" Padding="10,5"
+                                                            IsVisible="{Binding IsWatched}"
+                                                            Command="{Binding Actions.UnwatchFolderRowCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Nicht mehr überwachen. Abgelegte Daten bleiben erhalten.">Nicht überwachen</Button>
+                                                    <!-- EIN Menü für alles, was diese Zeile kann.
+                                                         Drei Knöpfe nebeneinander ließen für den
+                                                         Pfad nichts übrig, und die Zeile ist bei
+                                                         eingerückten Unterordnern ohnehin schmaler. -->
+                                                    <Button Classes="ghost" Padding="10,5"
+                                                            IsEnabled="{Binding Actions.CanRunFolderActions}">
+                                                        <TextBlock Text="Aktionen"/>
+                                                        <Button.Flyout>
+                                                            <MenuFlyout>
+                                                                <MenuItem Header="Gesichter suchen"
+                                                                          Command="{Binding Actions.ScanFacesRowCommand}"
+                                                                          CommandParameter="{Binding}"
+                                                                          IsEnabled="{Binding Actions.FaceIndex.CanStart}"/>
+                                                                <Separator/>
+                                                                <MenuItem Header="Katalogdaten entfernen"
+                                                                          IsEnabled="{Binding HasAnything}"
+                                                                          Command="{Binding Actions.CleanRowCatalogCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                                <MenuItem Header="Vorschaubilder löschen"
+                                                                          IsEnabled="{Binding HasAnything}"
+                                                                          Command="{Binding Actions.CleanRowThumbnailsCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                                <MenuItem Header="Beides entfernen"
+                                                                          IsEnabled="{Binding HasAnything}"
+                                                                          Command="{Binding Actions.CleanRowBothCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                            </MenuFlyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="{Binding ThumbnailCacheResultMessage}"
+                                       IsVisible="{Binding ThumbnailCacheResultMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Kurz nach dem Start indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Der Lauf beginnt einige Sekunden nach dem Start und arbeitet im Hintergrund. Er lässt sich jederzeit anhalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding CatalogIndexOnStartup}"
+                                              OnContent=""
+                                              OffContent=""
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Jetzt indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="{Binding CatalogIndex.StatusText}"
+                                               IsVisible="{Binding CatalogIndex.HasStatus}"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                                 Value="{Binding CatalogIndex.ProgressPercent}"
+                                                 IsVisible="{Binding CatalogIndex.HasProgress}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <!-- Starten und Stoppen tauschen die Plätze, statt einer davon
+                                         ausgegraut danebenzustehen: zwei Knöpfe, von denen immer
+                                         einer tot ist, sagen weniger als einer, der das Richtige tut. -->
+                                    <Button Classes="ghost" Padding="12,7"
+                                            IsVisible="{Binding !CatalogIndex.IsRunning}"
+                                            IsEnabled="{Binding CatalogIndex.CanStart}"
+                                            Command="{Binding CatalogIndex.StartCommand}">Starten</Button>
+                                    <Button Classes="ghost" Padding="12,7"
+                                            IsVisible="{Binding CatalogIndex.IsRunning}"
+                                            Command="{Binding CatalogIndex.StopCommand}">Stoppen</Button>
+                                </StackPanel>
+                            </Grid>
+
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Datenbank bereinigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Entfernt Metadaten (Bewertungen, Favoriten, Stichwörter) von Bildern, die nicht mehr existieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CleanupResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanupDatabaseCommand}">Bereinigen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                    </StackPanel>
+                </Border>
+
+
                 <Border x:Name="PerformanceSection" Classes="section">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Leistung" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Cache und Verarbeitung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Wie schnell FerrumPix arbeitet: Größe und Qualität der Zwischenspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -1744,16 +2089,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Datenbank bereinigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Entfernt Metadaten (Bewertungen, Favoriten, Stichwörter) von Bildern, die nicht mehr existieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding CleanupResultMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
-                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanupDatabaseCommand}">Bereinigen</Button>
-                            </StackPanel>
-                        </Grid>
+
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
@@ -1767,103 +2103,6 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
-                        <StackPanel Spacing="8">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Ordner aufräumen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="{Binding ThumbnailCacheSummaryText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                    <Button Classes="ghost" Padding="12,7" Command="{Binding RefreshThumbnailCacheCommand}">Aktualisieren</Button>
-                                    <!-- Dieselben drei Wege wie in jeder Zeile, nur für alle Ordner.
-                                         "Alle löschen" stand hier, solange der Abschnitt nur der
-                                         Vorschaubild-Cache war; seit die Katalogdaten daneben stehen,
-                                         sagte die Beschriftung nicht mehr, was passiert.
-                                         Alle drei fragen vorher nach - auch der harmlose: eine Reihe,
-                                         in der nur zwei von drei Knöpfen nachfragen, erzieht dazu,
-                                         die Frage wegzuklicken. -->
-                                    <Button Classes="ghost" Padding="12,7"
-                                            Command="{Binding DeleteAllCatalogCommand}"
-                                            ToolTip.Tip="Entfernt Aufnahmedaten, Bewertung, Etikett, Stichwörter und gefundene Personen aller Ordner aus dem Katalog. Die Bilddateien bleiben unangetastet.">Alle Katalogdaten</Button>
-                                    <Button Classes="ghost" Padding="12,7"
-                                            Command="{Binding DeleteAllThumbnailCacheCommand}"
-                                            ToolTip.Tip="Löscht die zwischengespeicherten Vorschaubilder aller Ordner. Sie entstehen beim nächsten Ansehen von selbst wieder.">Alle Vorschaubilder</Button>
-                                    <Button Classes="ghost" Padding="12,7"
-                                            Command="{Binding DeleteAllBothCommand}"
-                                            ToolTip.Tip="Beides für alle Ordner entfernen. Danach ist die Liste leer und FerrumPix fängt beim nächsten Ansehen von vorne an.">Alles</Button>
-                                </StackPanel>
-                            </Grid>
-
-                            <!-- Die Rückmeldung steht UNTER der Knopfreihe, nicht daneben. Neben den
-                                 vier Knöpfen nahm sie so viel Breite, dass die Überschrift links
-                                 umbrach, sobald etwas gemeldet wurde - der Abschnitt sprang bei
-                                 jedem Aufräumen in der Höhe. Solange nichts gemeldet ist, ist die
-                                 Zeile nicht da und kostet auch keinen Platz. -->
-                            <TextBlock Text="{Binding ThumbnailCacheResultMessage}"
-                                       IsVisible="{Binding ThumbnailCacheResultMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"
-                                       FontSize="{DynamicResource FP.Font.Body}"
-                                       TextWrapping="Wrap"
-                                       Classes="no-translate"/>
-
-                            <!-- AUFKLAPPBAR: die Liste kann Dutzende Ordner lang sein und schob
-                                 alles darunter aus dem Blick. Zugeklappt steht in der Kopfzeile, wie
-                                 viele es sind - wer aufraeumen will, klappt auf. -->
-                            <Expander>
-                                <Expander.Header>
-                                    <TextBlock Text="{Binding ThumbnailCacheFolderCountText}"
-                                               Classes="no-translate"
-                                               FontSize="{DynamicResource FP.Font.Body}"/>
-                                </Expander.Header>
-                                <StackPanel Margin="0,8,0,0">
-                                <ItemsControl ItemsSource="{Binding ThumbnailCacheFolders}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{DynamicResource FP.Bg.Input}"
-                                                    BorderBrush="{DynamicResource FP.Border.Normal}"
-                                                    BorderThickness="1"
-                                                    CornerRadius="6"
-                                                    Padding="10,8"
-                                                    Margin="0,0,0,6">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                                        <TextBlock Text="{Binding DisplayName}"
-                                                                   FontSize="{DynamicResource FP.Font.Body}"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding DetailText}"
-                                                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                                                   FontSize="{DynamicResource FP.Font.Small}"
-                                                                   TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
-                                                    <!-- DREI Wege, weil es zwei verschiedene Dinge
-                                                         sind: Vorschaubilder entstehen von selbst
-                                                         wieder, Katalogdaten tragen Bewertung,
-                                                         Stichwörter und die gefundenen Gesichter.
-                                                         Aus der Liste verschwindet ein Ordner erst,
-                                                         wenn nichts mehr da ist. -->
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
-                                                                VerticalAlignment="Center">
-                                                        <Button Classes="ghost" Padding="10,6"
-                                                                Command="{Binding DataContext.DeleteFolderCatalogCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                CommandParameter="{Binding}"
-                                                                ToolTip.Tip="Entfernt Aufnahmedaten, Bewertung, Etikett, Stichwörter und gefundene Gesichter dieses Ordners aus dem Katalog. Die Bilddateien bleiben unangetastet.">Katalogdaten</Button>
-                                                        <Button Classes="ghost" Padding="10,6"
-                                                                Command="{Binding DataContext.DeleteFolderThumbnailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                CommandParameter="{Binding}"
-                                                                ToolTip.Tip="Löscht nur die zwischengespeicherten Vorschaubilder. Sie entstehen beim nächsten Ansehen von selbst wieder.">Vorschaubilder</Button>
-                                                        <Button Classes="ghost" Padding="10,6"
-                                                                Command="{Binding DataContext.DeleteFolderBothCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                CommandParameter="{Binding}"
-                                                                ToolTip.Tip="Beides entfernen. Danach weiß FerrumPix nichts mehr über diesen Ordner, und er verschwindet aus der Liste.">Beides</Button>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                </StackPanel>
-                            </Expander>
-                        </StackPanel>
                     </StackPanel>
                 </Border>
 

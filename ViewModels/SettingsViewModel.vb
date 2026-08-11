@@ -158,6 +158,7 @@ Namespace ViewModels
         Private _savedGalleryStartupFolderMode As String = "Pictures"
         Private _savedGalleryTimelineMode As String = "All"
         Private _savedGalleryStartupCustomFolder As String = ""
+        Private _catalogIndexOnStartup As Boolean = False
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedViewerSlideshowIntervalSeconds As Integer = 3
         Private _savedEditorShowFilmstrip As Boolean = True
@@ -1724,6 +1725,10 @@ Namespace ViewModels
                 If _faceRecognitionEnabled = value Then Return
                 Me.RaiseAndSetIfChanged(_faceRecognitionEnabled, value)
                 SaveFeatureSettings()
+                ' Der Knopf "Gesichter suchen" bei den überwachten Ordnern hängt daran. Ohne diese
+                ' Meldung bliebe er grau, bis die Einstellungen einmal neu aufgebaut werden - und
+                ' der Satz daneben nennte weiter den Grund, den es nicht mehr gibt.
+                FaceIndex?.RefreshCanStart()
             End Set
         End Property
 
@@ -2173,45 +2178,333 @@ Namespace ViewModels
         Public ReadOnly Property CheckGpuAccelerationCommand As ICommand
         Public ReadOnly Property CleanupDatabaseCommand As ICommand
         Public ReadOnly Property RefreshThumbnailCacheCommand As ICommand
-        Public ReadOnly Property DeleteThumbnailCacheFolderCommand As ICommand
-        Public ReadOnly Property DeleteFolderCatalogCommand As ICommand
-        Public ReadOnly Property DeleteFolderThumbnailsCommand As ICommand
-        Public ReadOnly Property DeleteFolderBothCommand As ICommand
-        Public ReadOnly Property DeleteAllCatalogCommand As ICommand
-        Public ReadOnly Property DeleteAllThumbnailCacheCommand As ICommand
-        Public ReadOnly Property DeleteAllBothCommand As ICommand
+
+        ''' <summary>Die Wege der gruppierten Ordnerliste: je Zeile aufraeumen, ueberwachen an und
+        ''' aus, aufklappen, und dieselben drei Aufraeum-Wege ueber die ganze gefilterte Menge.</summary>
+        Public ReadOnly Property CleanRowCatalogCommand As ICommand
+        Public ReadOnly Property CleanRowThumbnailsCommand As ICommand
+        Public ReadOnly Property CleanRowBothCommand As ICommand
+        Public ReadOnly Property ToggleFolderRowCommand As ICommand
+        Public ReadOnly Property WatchFolderRowCommand As ICommand
+        Public ReadOnly Property UnwatchFolderRowCommand As ICommand
+        Public ReadOnly Property CleanFilteredCatalogCommand As ICommand
+        Public ReadOnly Property CleanFilteredThumbnailsCommand As ICommand
+        Public ReadOnly Property CleanFilteredBothCommand As ICommand
+        Public ReadOnly Property ClearFolderFilterCommand As ICommand
+
+        ''' <summary>Gesichter suchen - fuer eine Zeile und fuer die gefilterte Menge.</summary>
+        Public ReadOnly Property ScanFacesRowCommand As ICommand
+        Public ReadOnly Property ScanFacesFilteredCommand As ICommand
+
         Public Property ThumbnailCacheFolders As ObservableCollection(Of ThumbnailCacheFolderInfo)
 
-        ''' <summary>Was zugeklappt in der Kopfzeile steht. Ohne diese Zahl waere die zugeklappte
-        ''' Liste eine Leerstelle - man wuesste nicht, ob sich das Aufklappen lohnt.</summary>
-        Public ReadOnly Property ThumbnailCacheFolderCountText As String
+        ' --- Die Ordnerliste ---------------------------------------------------------------------
+        '
+        ' EINE Liste fuer beides: die ueberwachten Ordner und die, zu denen Daten abgelegt sind.
+        ' Vorher standen sie in zwei Abschnitten, und dieselbe Frage - "was weiss FerrumPix ueber
+        ' diesen Ordner" - war an zwei Stellen zu beantworten.
+        '
+        ' GRUPPIERT nach ueberwachter Wurzel, weil ein Fotobestand vierstellig viele Ordner hat
+        ' (gemessen 1800 bei einem Nutzer). Flach waeren das 1800 Zeilen, in denen die paar Wurzeln
+        ' untergehen. Die Wurzel traegt die Summe, aufklappen zeigt die einzelnen.
+
+        ''' <summary>Die Zeilen, die gerade zu sehen sind - gefiltert und mit den aufgeklappten
+        ''' Gruppen. Die Liste in der Ansicht virtualisiert; hier steht trotzdem nur, was sichtbar
+        ''' sein soll, denn eine zugeklappte Gruppe hat keine sichtbaren Kinder.</summary>
+        Public ReadOnly Property FolderRows As New ObservableCollection(Of CatalogFolderRow)()
+
+        Private _folderFilter As String = ""
+        Private _folderRowsAreStale As Boolean
+
+        ''' <summary>Der Filter ueber die Ordnerliste. Verglichen wird der GANZE Pfad, ohne Gross-
+        ''' und Kleinschreibung: "nas" soll /mnt/nas/Fotos finden, und der Ordnername allein steht
+        ''' bei einem Jahresordner ohnehin nur als Zahl da.</summary>
+        Public Property FolderFilter As String
             Get
-                Dim n = ThumbnailCacheFolders.Count
-                If n = 0 Then Return LocalizationService.T("Keine Ordner mit abgelegten Daten")
-                If n = 1 Then Return LocalizationService.T("1 Ordner")
-                Return String.Format(LocalizationService.T("{0} Ordner"), n)
+                Return _folderFilter
+            End Get
+            Set(value As String)
+                Dim wanted = If(value, "")
+                If String.Equals(_folderFilter, wanted, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_folderFilter, wanted)
+                RebuildFolderRows()
+            End Set
+        End Property
+
+        Public ReadOnly Property HasFolderFilter As Boolean
+            Get
+                Return _folderFilter.Trim().Length > 0
             End Get
         End Property
 
-        Public ReadOnly Property ThumbnailCacheSummaryText As String
+        ''' <summary>Die ECHTEN Ordner hinter den gerade sichtbaren Zeilen - ohne Ueberschriften und
+        ''' ohne Doppelte. Auf genau diese Menge wirken die Sammelaktionen.
+        '''
+        ''' Ueber die MITGLIEDER und nicht ueber die sichtbaren Zeilen: eine zugeklappte Wurzel ist
+        ''' EINE Zeile und meint trotzdem alle Ordner darunter. Wer nach "2024" filtert und dann
+        ''' aufraeumt, meint alle Treffer und nicht die drei, die er gerade sieht.</summary>
+        Private Function FilteredFolderTargets() As List(Of ThumbnailCacheFolderInfo)
+            Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim result As New List(Of ThumbnailCacheFolderInfo)()
+            For Each row In FolderRows
+                For Each member In row.Members
+                    If member Is Nothing OrElse String.IsNullOrEmpty(member.FolderPath) Then Continue For
+                    If seen.Add(member.FolderPath) Then result.Add(member)
+                Next
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Wie viele Ordner eine Sammelaktion gerade traefe. Steht im Knopf und in der
+        ''' Rueckfrage - "alles" ist keine Zahl, mit der man abwaegen kann.</summary>
+        Public ReadOnly Property FilteredFolderCount As Integer
             Get
-                If _isThumbnailCacheRefreshing Then Return LocalizationService.T("Cache wird ermittelt…")
-                If ThumbnailCacheFolders Is Nothing OrElse ThumbnailCacheFolders.Count = 0 Then Return LocalizationService.T("FerrumPix hat zu keinem Ordner Daten abgelegt.")
-                Dim count = ThumbnailCacheFolders.Sum(Function(i) i.ThumbnailCount)
-                Dim size = ThumbnailCacheFolders.Sum(Function(i) i.SizeBytes)
-                Dim katalog = ThumbnailCacheFolders.Sum(Function(i) i.CatalogCount)
-                ' Als EINE Zeichenkette mit Platzhaltern und nicht zusammengesetzt: die Reihenfolge
-                ' von Zahl und Wort ist nicht in jeder Sprache dieselbe.
-                Return String.Format(LocalizationService.T("{0} Ordner · {1} Vorschaubilder · {2} · {3} Katalogeinträge"),
-                                     ThumbnailCacheFolders.Count.ToString("N0"),
-                                     count.ToString("N0"), FormatBytes(size), katalog.ToString("N0"))
+                Return FilteredFolderTargets().Count
             End Get
         End Property
+
+        ''' <summary>Was ueber der Liste steht: wie viele Ordner sie zeigt und was sie belegen.</summary>
+        Public ReadOnly Property FolderSummaryText As String
+            Get
+                If _isThumbnailCacheRefreshing Then Return LocalizationService.T("Ordner werden ermittelt...")
+                Dim targets = FilteredFolderTargets()
+                If targets.Count = 0 Then
+                    Return If(HasFolderFilter,
+                              LocalizationService.T("Kein Ordner passt zur Suche"),
+                              LocalizationService.T("FerrumPix hat zu keinem Ordner Daten abgelegt."))
+                End If
+                Return String.Format(LocalizationService.T("{0} Ordner · {1} Vorschaubilder · {2} · {3} Katalogeinträge"),
+                                     targets.Count.ToString("N0"),
+                                     targets.Sum(Function(t) t.ThumbnailCount).ToString("N0"),
+                                     FormatBytes(targets.Sum(Function(t) CLng(t.SizeBytes))),
+                                     targets.Sum(Function(t) t.CatalogCount).ToString("N0"))
+            End Get
+        End Property
+
+        ''' <summary>Baut die sichtbaren Zeilen neu.
+        '''
+        ''' Der Aufklappzustand ueberlebt das: er haengt am PFAD und nicht am Zeilenobjekt, denn nach
+        ''' jedem Aufraeumen entstehen die Zeilen neu, und eine Gruppe, die sich dabei von selbst
+        ''' wieder zuklappt, waere beim Durchsehen einer langen Liste unbrauchbar.</summary>
+        Private _expandedPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        Private Sub RebuildFolderRows()
+            Dim filter = _folderFilter.Trim()
+            Dim passt = Function(path As String) filter.Length = 0 OrElse
+                                                 If(path, "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
+
+            ' Die ueberwachten Wurzeln, laengste zuerst: liegt eine Wurzel unter einer anderen,
+            ' gehoert ein Ordner der ENGEREN. Normalisiert kommt das zwar nicht vor, aber die Liste
+            ' der Einstellungen kann von Hand bearbeitet worden sein.
+            Dim roots = CatalogWatchFolders.
+                        Where(Function(f) Not String.IsNullOrWhiteSpace(f)).
+                        OrderByDescending(Function(f) f.Length).ToList()
+
+            Dim byRoot As New Dictionary(Of String, List(Of ThumbnailCacheFolderInfo))(StringComparer.OrdinalIgnoreCase)
+            For Each root In roots
+                byRoot(root) = New List(Of ThumbnailCacheFolderInfo)()
+            Next
+            Dim others As New List(Of ThumbnailCacheFolderInfo)()
+
+            For Each info In ThumbnailCacheFolders
+                If info Is Nothing Then Continue For
+                ' Der Papierkorb gehoert nicht in diese Liste. Neu kommt seit dem Riegel in
+                ' SetExifData nichts mehr hinein; was aus der Zeit davor noch im Katalog steht,
+                ' raeumt "Datenbank bereinigen" weg (siehe PurgeOrphanedRecords).
+                If FileOperationPolicy.IsTrashFolder(info.FolderPath) Then Continue For
+                Dim root = roots.FirstOrDefault(Function(r) PathIdentity.IsAncestorOrSelf(r, info.FolderPath))
+                If root Is Nothing Then others.Add(info) Else byRoot(root).Add(info)
+            Next
+
+            FolderRows.Clear()
+
+            ' Die Wurzeln in der Reihenfolge, in der sie eingetragen sind - nicht nach Laenge, das
+            ' war nur die Zuordnung oben.
+            For Each root In CatalogWatchFolders.Where(Function(f) Not String.IsNullOrWhiteSpace(f))
+                Dim members = If(byRoot.ContainsKey(root), byRoot(root), New List(Of ThumbnailCacheFolderInfo)())
+                Dim treffer = members.Where(Function(m) passt(m.FolderPath)).ToList()
+                ' Eine Wurzel bleibt stehen, wenn SIE passt - auch ohne passende Unterordner. Sonst
+                ' verschwaende ein eingetragener Ordner aus der Liste, sobald man nach ihm sucht.
+                Dim rootPasst = passt(root)
+                If Not rootPasst AndAlso treffer.Count = 0 Then Continue For
+                If rootPasst Then treffer = members
+
+                Dim row As New CatalogFolderRow With {
+                    .Actions = Me,
+                    .Kind = CatalogFolderRowKind.WatchedRoot,
+                    .Path = root,
+                    .Depth = 0,
+                    .ThumbnailCount = treffer.Sum(Function(m) m.ThumbnailCount),
+                    .SizeBytes = treffer.Sum(Function(m) CLng(m.SizeBytes)),
+                    .CatalogCount = treffer.Sum(Function(m) m.CatalogCount),
+                    .ChildCount = treffer.Count,
+                    .Exists = IO.Directory.Exists(root),
+                    .Members = treffer}
+                ' Wer gefiltert hat, will die Treffer SEHEN und nicht erst aufklappen.
+                row.IsExpanded = _expandedPaths.Contains(root) OrElse (filter.Length > 0 AndAlso treffer.Count > 0)
+                FolderRows.Add(row)
+                If row.IsExpanded Then AddChildRows(treffer)
+            Next
+
+            Dim othersTreffer = others.Where(Function(m) passt(m.FolderPath)).ToList()
+            If othersTreffer.Count > 0 Then
+                Dim header As New CatalogFolderRow With {
+                    .Actions = Me,
+                    .Kind = CatalogFolderRowKind.OtherHeader,
+                    .Depth = 0,
+                    .ThumbnailCount = othersTreffer.Sum(Function(m) m.ThumbnailCount),
+                    .SizeBytes = othersTreffer.Sum(Function(m) CLng(m.SizeBytes)),
+                    .CatalogCount = othersTreffer.Sum(Function(m) m.CatalogCount),
+                    .ChildCount = othersTreffer.Count,
+                    .Members = othersTreffer}
+                header.IsExpanded = _expandedPaths.Contains(OtherHeaderKey) OrElse filter.Length > 0
+                FolderRows.Add(header)
+                If header.IsExpanded Then AddChildRows(othersTreffer)
+            End If
+
+            RaiseFolderListChanged()
+        End Sub
+
+        ''' <summary>Der Platzhalter-Schluessel der Ueberschrift im Aufklapp-Gedaechtnis. Sie hat
+        ''' keinen Pfad, braucht aber denselben Merker wie die Wurzeln.</summary>
+        Private Const OtherHeaderKey As String = ":weitere:"
+
+        Private Sub AddChildRows(members As IEnumerable(Of ThumbnailCacheFolderInfo))
+            For Each member In members.OrderBy(Function(m) m.FolderPath, StringComparer.OrdinalIgnoreCase)
+                FolderRows.Add(New CatalogFolderRow With {
+                    .Actions = Me,
+                    .Kind = CatalogFolderRowKind.Folder,
+                    .Path = member.FolderPath,
+                    .Depth = 1,
+                    .ThumbnailCount = member.ThumbnailCount,
+                    .SizeBytes = member.SizeBytes,
+                    .CatalogCount = member.CatalogCount,
+                    .Exists = member.Exists,
+                    .Members = New List(Of ThumbnailCacheFolderInfo) From {member}})
+            Next
+        End Sub
+
+        Private Sub RaiseFolderListChanged()
+            Me.RaisePropertyChanged(NameOf(FolderSummaryText))
+            Me.RaisePropertyChanged(NameOf(FilteredFolderCount))
+            Me.RaisePropertyChanged(NameOf(HasFolderFilter))
+            Me.RaisePropertyChanged(NameOf(HasFolderRows))
+            Me.RaisePropertyChanged(NameOf(IsFolderSurveyRunning))
+            Me.RaisePropertyChanged(NameOf(CanRunFolderActions))
+        End Sub
+
+        Public ReadOnly Property HasFolderRows As Boolean
+            Get
+                Return FolderRows.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Wird gerade erhoben, was FerrumPix ueber die Ordner weiss?
+        '''
+        ''' NUTZERBEFUND: bei 1800 Ordnern dauert die Erhebung spuerbar, und bis dahin zeigt die
+        ''' Liste den Stand von davor - beim ersten Oeffnen also fast nichts. Die Aktionen waren
+        ''' trotzdem bedienbar, und ein Klick auf "Beides" raeumte damit auf einer HALBEN Liste auf;
+        ''' danach tauchten die uebrigen Ordner auf, als waeren sie neu dazugekommen.
+        '''
+        ''' Gesperrt statt nur beschriftet: der Text darueber sagt zwar "Ordner werden ermittelt",
+        ''' aber wer auf einen Knopf zielt, liest ihn nicht.</summary>
+        Public ReadOnly Property IsFolderSurveyRunning As Boolean
+            Get
+                Return _isThumbnailCacheRefreshing
+            End Get
+        End Property
+
+        ''' <summary>Sind die Aktionen bedienbar? Nur mit fertiger Erhebung und mit Zeilen.</summary>
+        Public ReadOnly Property CanRunFolderActions As Boolean
+            Get
+                Return Not _isThumbnailCacheRefreshing AndAlso FolderRows.Count > 0
+            End Get
+        End Property
+
+        ''' <summary>Eine Gruppe auf- oder zuklappen. Der Zustand liegt am PFAD, damit er den
+        ''' Neuaufbau nach einem Aufraeumen ueberlebt.</summary>
+        Public Sub ToggleFolderRow(row As CatalogFolderRow)
+            If row Is Nothing OrElse Not row.CanExpand Then Return
+            Dim key = If(row.Kind = CatalogFolderRowKind.OtherHeader, OtherHeaderKey, row.Path)
+            If _expandedPaths.Contains(key) Then _expandedPaths.Remove(key) Else _expandedPaths.Add(key)
+            RebuildFolderRows()
+        End Sub
+
+        ''' <summary>Der Katalogindex - dasselbe Objekt, das auch die Fusszeile der Galerie zeigt.
+        ''' Fortschritt und Knoepfe haengen daran.</summary>
+        Public ReadOnly Property CatalogIndex As CatalogIndexViewModel
+            Get
+                Return _mainVm?.CatalogIndex
+            End Get
+        End Property
+
+        ''' <summary>Die Gesichtssuche ueber dieselben Ordner - eigener Lauf, eigene Knoepfe.</summary>
+        Public ReadOnly Property FaceIndex As FaceIndexViewModel
+            Get
+                Return _mainVm?.FaceIndex
+            End Get
+        End Property
+
+        ''' <summary>Die Ordner, die der Katalogindex durchgeht - samt Unterordnern.</summary>
+        Public ReadOnly Property CatalogWatchFolders As ObservableCollection(Of String)
+
+        ''' <summary>Kurz nach dem Start von selbst indizieren.</summary>
+        Public Property CatalogIndexOnStartup As Boolean
+            Get
+                Return _catalogIndexOnStartup
+            End Get
+            Set(value As Boolean)
+                If _catalogIndexOnStartup = value Then Return
+                Me.RaiseAndSetIfChanged(_catalogIndexOnStartup, value)
+                SaveCatalogIndexSettings()
+            End Set
+        End Property
+
+        ''' <summary>Nimmt einen Ordner in die Liste. Doppelte und solche, die bereits unter einem
+        ''' eingetragenen liegen, fallen dabei weg - der Lauf geht ohnehin rekursiv, ein enthaltener
+        ''' Ordner waere schlicht die doppelte Laufzeit (siehe NormalizeCatalogWatchFolders).</summary>
+        Public Sub AddCatalogWatchFolder(folderPath As String)
+            Dim wanted = AppSettingsService.NormalizeCatalogWatchFolders(
+                CatalogWatchFolders.Concat({folderPath}).ToList())
+            ReplaceCatalogWatchFolders(wanted)
+        End Sub
+
+        Public Sub RemoveCatalogWatchFolder(folderPath As String)
+            If String.IsNullOrEmpty(folderPath) Then Return
+            ReplaceCatalogWatchFolders(CatalogWatchFolders.
+                                       Where(Function(f) Not PathIdentity.AreSame(f, folderPath)).ToList())
+        End Sub
+
+        ''' <summary>Setzt die Liste neu und meldet alles, was daran haengt - auch den Knopf "Jetzt
+        ''' indizieren", der ohne Ordner nichts zu tun haette.</summary>
+        Private Sub ReplaceCatalogWatchFolders(folders As IList(Of String))
+            CatalogWatchFolders.Clear()
+            For Each folder In folders
+                CatalogWatchFolders.Add(folder)
+            Next
+            SaveCatalogIndexSettings()
+            CatalogIndex?.RefreshCanStart()
+            ' Die Gesichtssuche haengt an derselben Liste - ohne Ordner hat auch sie nichts zu tun.
+            FaceIndex?.RefreshCanStart()
+            ' Und die Gruppierung der Ordnerliste ebenso: aus einer neuen Wurzel wird eine Gruppe,
+            ' aus einer entfernten fallen ihre Ordner nach "Weitere Ordner" zurueck.
+            RebuildFolderRows()
+        End Sub
+
+        Private Sub SaveCatalogIndexSettings()
+            Dim settings = AppSettingsService.Load()
+            settings.CatalogWatchFolders = CatalogWatchFolders.ToList()
+            settings.CatalogIndexOnStartup = _catalogIndexOnStartup
+            AppSettingsService.Save(settings)
+        End Sub
 
         Public Sub New(mainVm As MainWindowViewModel)
             _mainVm = mainVm
             _appSettings = AppSettingsService.Load()
             ThumbnailCacheFolders = New ObservableCollection(Of ThumbnailCacheFolderInfo)()
+            CatalogWatchFolders = New ObservableCollection(Of String)(
+                AppSettingsService.NormalizeCatalogWatchFolders(_appSettings.CatalogWatchFolders))
+            _catalogIndexOnStartup = _appSettings.CatalogIndexOnStartup
             _themeMode = _appSettings.ThemeMode
             _accentColor = _appSettings.AccentColor
             _startupImageMode = _appSettings.StartupImageMode
@@ -2345,21 +2638,26 @@ Namespace ViewModels
                                                                     String.Format(LocalizationService.T("{0} verwaiste Einträge entfernt."), removed))
                                                             End Sub)
             RefreshThumbnailCacheCommand = ReactiveCommand.Create(Sub() RefreshThumbnailCacheFolders())
-            DeleteFolderCatalogCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item) CleanFolder(item, catalog:=True, thumbnails:=False))
-            DeleteFolderThumbnailsCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item) CleanFolder(item, catalog:=False, thumbnails:=True))
-            DeleteFolderBothCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item) CleanFolder(item, catalog:=True, thumbnails:=True))
-            DeleteThumbnailCacheFolderCommand = ReactiveCommand.Create(Of ThumbnailCacheFolderInfo)(Sub(item)
-                                                                                                       If item Is Nothing Then Return
-                                                                                                       Dim removed = Services.ThumbnailCacheService.DeleteFolderCacheById(item.CacheId)
-                                                                                                       ThumbnailCacheResultMessage = If(removed = 0,
-                                                                                                           "Kein Cache für diesen Ordner gefunden.",
-                                                                                                           $"{removed} Vorschaubilder aus dem Cache entfernt.")
-                                                                                                       RefreshThumbnailCacheFolders()
-                                                                                                       _mainVm?.Gallery?.LoadCurrentFolder()
-                                                                                                   End Sub)
-            DeleteAllCatalogCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=True, thumbnails:=False))
-            DeleteAllThumbnailCacheCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=False, thumbnails:=True))
-            DeleteAllBothCommand = ReactiveCommand.CreateFromTask(Function() CleanEverythingAsync(catalog:=True, thumbnails:=True))
+
+            ' Die gruppierte Ordnerliste: je Zeile und ueber die ganze gefilterte Menge.
+            CleanRowCatalogCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) CleanFolderRow(r, catalog:=True, thumbnails:=False))
+            CleanRowThumbnailsCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) CleanFolderRow(r, catalog:=False, thumbnails:=True))
+            CleanRowBothCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) CleanFolderRow(r, catalog:=True, thumbnails:=True))
+            ToggleFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) ToggleFolderRow(r))
+            WatchFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) AddCatalogWatchFolder(If(r?.Path, "")))
+            UnwatchFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) RemoveCatalogWatchFolder(If(r?.Path, "")))
+            CleanFilteredCatalogCommand = ReactiveCommand.CreateFromTask(Function() CleanFilteredAsync(catalog:=True, thumbnails:=False))
+            CleanFilteredThumbnailsCommand = ReactiveCommand.CreateFromTask(Function() CleanFilteredAsync(catalog:=False, thumbnails:=True))
+            CleanFilteredBothCommand = ReactiveCommand.CreateFromTask(Function() CleanFilteredAsync(catalog:=True, thumbnails:=True))
+            ClearFolderFilterCommand = ReactiveCommand.Create(Sub() FolderFilter = "")
+            ' Gesichter GEZIELT: fuer eine Zeile oder fuer die gefilterte Menge. Ueber den ganzen
+            ' Bestand laeuft die Suche Stunden - wer nur wissen will, wer auf den Bildern einer
+            ' Reise ist, soll nicht alles anwerfen muessen.
+            ScanFacesRowCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(
+                Function(r) ScanFacesForFoldersAsync(FolderPathsOf(r)))
+            ScanFacesFilteredCommand = ReactiveCommand.CreateFromTask(
+                Function() ScanFacesForFoldersAsync(FilteredFolderTargets().
+                                                    Select(Function(t) t.FolderPath).ToList()))
             TestImmichConnectionCommand = ReactiveCommand.CreateFromTask(Function() TestImmichConnectionAsync())
             TestNextcloudConnectionCommand = ReactiveCommand.CreateFromTask(Function() TestNextcloudConnectionAsync())
             ClearNextcloudCacheCommand = ReactiveCommand.Create(
@@ -2928,111 +3226,7 @@ Namespace ViewModels
             AppSettingsService.Save(settings)
         End Sub
 
-        ''' Ermittelt die Cache-Kennzahlen im Hintergrund. Beim ersten Mal - und immer, wenn seither
-        ''' Vorschaubilder dazugekommen sind - muss ThumbnailCacheService dafür Dateien zählen; das darf
-        ''' den Dialog nicht am Öffnen hindern.
-        ''' <summary>Raeumt einen Ordner auf - Katalogdaten, Vorschaubilder oder beides.
-        '''
-        ''' DREI WEGE, weil es zwei verschiedene Dinge sind. Vorschaubilder sind nur Rechenzeit: sie
-        ''' entstehen beim naechsten Ansehen von selbst wieder. Die Katalogdaten dagegen tragen
-        ''' Bewertung, Etikett, Stichworte und die gefundenen Gesichter - was davon nicht in einer
-        ''' Beistelldatei steht, ist danach weg. Beides unter einem Knopf zusammenzufassen hiesse,
-        ''' den teuren Fall im billigen zu verstecken.
-        '''
-        ''' Aus der Liste verschwindet ein Ordner erst, wenn NICHTS mehr da ist.</summary>
-        Private Sub CleanFolder(item As ThumbnailCacheFolderInfo, catalog As Boolean, thumbnails As Boolean)
-            If item Is Nothing Then Return
-            Dim teile As New List(Of String)()
-            Try
-                If thumbnails AndAlso Not String.IsNullOrEmpty(item.CacheId) Then
-                    Dim weg = Services.ThumbnailCacheService.DeleteFolderCacheById(item.CacheId)
-                    teile.Add(String.Format(LocalizationService.T("{0} Vorschaubilder"), weg))
-                End If
-                If catalog AndAlso Not String.IsNullOrEmpty(item.FolderPath) Then
-                    Dim weg = Services.LibraryService.Instance.DeleteFolderCatalogData(item.FolderPath)
-                    teile.Add(String.Format(LocalizationService.T("{0} Katalogeinträge"), weg))
-                End If
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Settings.CleanFolder", ex)
-            End Try
 
-            ThumbnailCacheResultMessage = If(teile.Count = 0,
-                                             LocalizationService.T("Nichts zu entfernen."),
-                                             String.Join(", ", teile) & " " & LocalizationService.T("entfernt."))
-            RefreshThumbnailCacheFolders()
-            ' Die Personenwand liegt jetzt woanders: mit den Katalogdaten gehen auch Gesichter, und
-            ' eine Gruppe, deren Bilder es nicht mehr gibt, darf dort nicht stehenbleiben.
-            _mainVm?.People?.RefreshPeople()
-            _mainVm?.Gallery?.LoadCurrentFolder()
-        End Sub
-
-        ''' <summary>Dasselbe fuer alle Ordner auf einmal - mit Rueckfrage davor.
-        '''
-        ''' Die Rueckfrage steht hier und nicht bei der einzelnen Zeile, weil der Unterschied nicht
-        ''' im Wie liegt, sondern im Umfang: eine Zeile trifft einen Ordner, den man vor sich sieht,
-        ''' dieser Knopf den ganzen Bestand. Beim Verlust von Katalogdaten steht in der Frage, wie
-        ''' viele Zeilen betroffen sind - "alles" ist keine Zahl, mit der man abwaegen kann.
-        '''
-        ''' Der Fall "nur Vorschaubilder" wird ebenfalls gefragt, obwohl er harmlos ist: der Knopf
-        ''' liegt neben den beiden anderen, und eine Reihe, in der nur zwei von drei Knoepfen
-        ''' nachfragen, erzieht dazu, die Frage wegzuklicken.</summary>
-        Private Async Function CleanEverythingAsync(catalog As Boolean, thumbnails As Boolean) As Task
-            Dim titleText As String
-            Dim question As String
-            If catalog AndAlso thumbnails Then
-                titleText = "Alles entfernen"
-                question = "Katalogdaten und Vorschaubilder aller Ordner entfernen?"
-            ElseIf catalog Then
-                titleText = "Alle Katalogdaten entfernen"
-                question = "Katalogdaten aller Ordner entfernen?"
-            Else
-                titleText = "Alle Vorschaubilder löschen"
-                question = "Vorschaubilder aller Ordner löschen?"
-            End If
-
-            Dim detail As String
-            If catalog Then
-                Dim rows = 0
-                Try
-                    rows = Await Task.Run(Function() Services.LibraryService.Instance.GetCatalogFolderCounts().Values.Sum())
-                Catch ex As Exception
-                    DiagnosticLogService.LogException("Settings.CleanEverything.Count", ex)
-                End Try
-                detail = String.Format(LocalizationService.T("Betroffen sind {0} Katalogeinträge mit Bewertung, Etikett, Stichwörtern und gefundenen Personen. Die Bilddateien selbst bleiben unverändert. Was in einer Beistelldatei steht, kommt beim nächsten Einlesen zurück, alles andere ist weg."), rows)
-            Else
-                detail = LocalizationService.T("Die Vorschaubilder entstehen beim nächsten Ansehen von selbst wieder. Katalogdaten bleiben unberührt.")
-            End If
-
-            If _mainVm IsNot Nothing Then
-                Dim goAhead = Await _mainVm.ShowConfirmAsync(titleText,
-                                                             LocalizationService.T(question) & vbLf & vbLf & detail,
-                                                             "Entfernen", "Abbrechen")
-                If Not goAhead Then Return
-            End If
-
-            Dim teile As New List(Of String)()
-            Try
-                If thumbnails Then
-                    Dim weg = Await Task.Run(Function() Services.ThumbnailCacheService.DeleteAllCaches())
-                    teile.Add(String.Format(LocalizationService.T("{0} Vorschaubilder"), weg))
-                End If
-                If catalog Then
-                    Dim weg = Await Task.Run(Function() Services.LibraryService.Instance.DeleteAllCatalogData())
-                    teile.Add(String.Format(LocalizationService.T("{0} Katalogeinträge"), weg))
-                End If
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Settings.CleanEverything", ex)
-            End Try
-
-            ThumbnailCacheResultMessage = If(teile.Count = 0,
-                                             LocalizationService.T("Nichts zu entfernen."),
-                                             String.Join(", ", teile) & " " & LocalizationService.T("entfernt."))
-            RefreshThumbnailCacheFolders()
-            ' Die Personenwand liegt jetzt woanders: mit den Katalogdaten gehen auch Gesichter, und
-            ' eine Gruppe, deren Bilder es nicht mehr gibt, darf dort nicht stehenbleiben.
-            _mainVm?.People?.RefreshPeople()
-            _mainVm?.Gallery?.LoadCurrentFolder()
-        End Function
 
         Public Async Sub RefreshThumbnailCacheFolders()
             ' Läuft schon eine Erhebung, wird die neue Anforderung vorgemerkt statt verworfen: sonst
@@ -3043,8 +3237,7 @@ Namespace ViewModels
             End If
 
             _isThumbnailCacheRefreshing = True
-            Me.RaisePropertyChanged(NameOf(ThumbnailCacheSummaryText))
-            Me.RaisePropertyChanged(NameOf(ThumbnailCacheFolderCountText))
+            RaiseFolderListChanged()
             Try
                 Do
                     _isThumbnailCacheRefreshQueued = False
@@ -3076,16 +3269,139 @@ Namespace ViewModels
                                              OrderBy(Function(f) f.DisplayName, StringComparer.OrdinalIgnoreCase)
                         ThumbnailCacheFolders.Add(item)
                     Next
+                    ' Die gruppierte Anzeige haengt daran und muss mit - sonst zeigt sie nach dem
+                    ' Aufraeumen weiter die Zahlen von davor.
+                    RebuildFolderRows()
                 Loop While _isThumbnailCacheRefreshQueued
             Catch
                 ' Ein Async Sub reicht Ausnahmen an niemanden weiter - unbehandelt beendet das die App.
                 ThumbnailCacheFolders.Clear()
+                RebuildFolderRows()
             Finally
                 _isThumbnailCacheRefreshing = False
-                Me.RaisePropertyChanged(NameOf(ThumbnailCacheSummaryText))
-            Me.RaisePropertyChanged(NameOf(ThumbnailCacheFolderCountText))
+                RaiseFolderListChanged()
             End Try
         End Sub
+
+        ''' <summary>Die Ordner, die eine Zeile als STARTPUNKTE fuer einen rekursiven Lauf meint.
+        '''
+        ''' Bei einer WURZEL ist das die Wurzel ALLEIN und nicht zusaetzlich ihre bekannten
+        ''' Unterordner: der Lauf steigt ohnehin rekursiv, und jeder mitgegebene Unterordner liefe
+        ''' ein zweites Mal durch dieselben Dateien. Bei einem grossen Baum steht dann ein
+        ''' Vielfaches in der Zielliste, der Fortschritt zaehlt zu hoch, und jede Datei wird
+        ''' mehrfach geprueft. Die Wurzel deckt auch den Fall ab, dass zu ihr noch gar nichts
+        ''' abgelegt ist - dann hat sie keine Mitglieder und waere sonst leer ausgegangen.
+        '''
+        ''' Bei der UEBERSCHRIFT die Mitglieder, aber aufgeraeumt: sie liegen unter keiner Wurzel,
+        ''' koennen aber untereinander verschachtelt sein.</summary>
+        Private Shared Function FolderPathsOf(row As CatalogFolderRow) As List(Of String)
+            If row Is Nothing Then Return New List(Of String)()
+            If row.Kind = CatalogFolderRowKind.WatchedRoot Then
+                Return If(row.Path.Length > 0, New List(Of String) From {row.Path}, New List(Of String)())
+            End If
+            Dim paths = row.Members.Where(Function(m) m IsNot Nothing AndAlso Not String.IsNullOrEmpty(m.FolderPath)).
+                                    Select(Function(m) m.FolderPath).ToList()
+            Return AppSettingsService.NormalizeCatalogWatchFolders(paths)
+        End Function
+
+        ''' <summary>Startet die Gesichtssuche fuer eine Ordnermenge. Ohne Ordner geschieht nichts;
+        ''' die Meldung dazu steht am Lauf selbst.</summary>
+        Private Function ScanFacesForFoldersAsync(folders As IList(Of String)) As Task
+            Dim list = If(folders, New List(Of String)()).Where(Function(f) Not String.IsNullOrWhiteSpace(f)).ToList()
+            If list.Count = 0 OrElse FaceIndex Is Nothing Then Return Task.CompletedTask
+            Return FaceIndex.StartForFoldersAsync(list)
+        End Function
+
+        ''' <summary>Raeumt eine Zeile auf - bei einer Wurzel samt allem, was sie zusammenfasst.
+        '''
+        ''' Ohne Rueckfrage bei EINER Zeile, mit Rueckfrage ueber die gefilterte Menge: der
+        ''' Unterschied liegt nicht im Wie, sondern im Umfang. Eine Zeile trifft, was man vor sich
+        ''' sieht; die Sammelaktion kann vierstellig viele Ordner treffen.</summary>
+        Private Sub CleanFolderRow(row As CatalogFolderRow, catalog As Boolean, thumbnails As Boolean)
+            If row Is Nothing Then Return
+            CleanFolderSet(row.Members, catalog, thumbnails)
+        End Sub
+
+        ''' <summary>Der gemeinsame Weg fuer eine Zeile und fuer die ganze gefilterte Menge.
+        '''
+        ''' EIN Neuaufbau am Ende und nicht je Ordner: bei tausend Ordnern waeren das tausend
+        ''' Erhebungen ueber Cache und Katalog, und die Liste flackerte dabei durch.</summary>
+        Private Sub CleanFolderSet(targets As IEnumerable(Of ThumbnailCacheFolderInfo),
+                                   catalog As Boolean, thumbnails As Boolean)
+            Dim list = If(targets, Enumerable.Empty(Of ThumbnailCacheFolderInfo)()).
+                       Where(Function(t) t IsNot Nothing).ToList()
+            If list.Count = 0 Then
+                ThumbnailCacheResultMessage = LocalizationService.T("Nichts zu entfernen.")
+                Return
+            End If
+
+            Dim thumbsRemoved = 0
+            Dim catalogRemoved = 0
+            Try
+                For Each item In list
+                    If thumbnails AndAlso Not String.IsNullOrEmpty(item.CacheId) Then
+                        thumbsRemoved += Services.ThumbnailCacheService.DeleteFolderCacheById(item.CacheId)
+                    End If
+                    If catalog AndAlso Not String.IsNullOrEmpty(item.FolderPath) Then
+                        catalogRemoved += Services.LibraryService.Instance.DeleteFolderCatalogData(item.FolderPath)
+                    End If
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.CleanFolderSet", ex)
+            End Try
+
+            Dim teile As New List(Of String)()
+            If thumbnails Then teile.Add(String.Format(LocalizationService.T("{0} Vorschaubilder"), thumbsRemoved))
+            If catalog Then teile.Add(String.Format(LocalizationService.T("{0} Katalogeinträge"), catalogRemoved))
+            ThumbnailCacheResultMessage = If(teile.Count = 0,
+                                             LocalizationService.T("Nichts zu entfernen."),
+                                             String.Join(", ", teile) & " " & LocalizationService.T("entfernt."))
+
+            RefreshThumbnailCacheFolders()
+            ' Die Personenwand liegt woanders: mit den Katalogdaten gehen auch Gesichter, und eine
+            ' Gruppe, deren Bilder es nicht mehr gibt, darf dort nicht stehenbleiben.
+            _mainVm?.People?.RefreshPeople()
+            _mainVm?.Gallery?.LoadCurrentFolder()
+        End Sub
+
+        ''' <summary>Dieselben drei Wege ueber ALLE gerade gefilterten Ordner. Die Rueckfrage nennt
+        ''' die Anzahl - bei 1800 Ordnern ist der Unterschied zwischen "die drei Treffer" und "der
+        ''' ganze Bestand" genau das, was man vorher wissen will.</summary>
+        Private Async Function CleanFilteredAsync(catalog As Boolean, thumbnails As Boolean) As Task
+            Dim targets = FilteredFolderTargets()
+            If targets.Count = 0 Then
+                ThumbnailCacheResultMessage = LocalizationService.T("Nichts zu entfernen.")
+                Return
+            End If
+
+            Dim titleText As String, question As String
+            If catalog AndAlso thumbnails Then
+                titleText = LocalizationService.T("Alles entfernen")
+                question = LocalizationService.T("Katalogdaten und Vorschaubilder dieser Ordner entfernen?")
+            ElseIf catalog Then
+                titleText = LocalizationService.T("Katalogdaten entfernen")
+                question = LocalizationService.T("Katalogdaten dieser Ordner entfernen?")
+            Else
+                titleText = LocalizationService.T("Vorschaubilder löschen")
+                question = LocalizationService.T("Vorschaubilder dieser Ordner löschen?")
+            End If
+
+            Dim detail = String.Format(LocalizationService.T("Betroffen sind {0} Ordner."), targets.Count.ToString("N0"))
+            If catalog Then
+                detail &= " " & String.Format(
+                    LocalizationService.T("Darin stehen {0} Katalogeinträge mit Bewertung, Etikett, Stichwörtern und gefundenen Personen. Die Bilddateien selbst bleiben unverändert."),
+                    targets.Sum(Function(t) t.CatalogCount).ToString("N0"))
+            Else
+                detail &= " " & LocalizationService.T("Die Vorschaubilder entstehen beim nächsten Ansehen von selbst wieder. Katalogdaten bleiben unberührt.")
+            End If
+
+            If _mainVm IsNot Nothing Then
+                If Not Await _mainVm.ShowConfirmAsync(titleText, question & " " & detail,
+                                                      LocalizationService.T("Entfernen"),
+                                                      LocalizationService.T("Abbrechen")) Then Return
+            End If
+            CleanFolderSet(targets, catalog, thumbnails)
+        End Function
 
         Private Shared Function FormatBytes(bytes As Long) As String
             If bytes < 1024 Then Return $"{bytes:N0} B"
@@ -3185,11 +3501,14 @@ Namespace ViewModels
             ' Die Kartennamen tragen ihre Bauart als übersetztes Wort in sich - sie stünden nach
             ' einem Sprachwechsel sonst in der alten Sprache da.
             BuildGpuDeviceOptions()
-            For Each n In {NameOf(ThumbnailCacheSummaryText), NameOf(ThumbnailCacheFolderCountText),
+            For Each n In {NameOf(FolderSummaryText),
                            NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
                            NameOf(ModelGroups), NameOf(GpuAccelerationStatusText)}
                 Me.RaisePropertyChanged(n)
             Next
+            ' Die Zeilen tragen ihre Texte selbst (Titel, Zahlen, "Ordner fehlt") und lesen sie beim
+            ' Bauen - nach einem Sprachwechsel muessen sie deshalb neu entstehen.
+            RebuildFolderRows()
         End Sub
 
         Private Shared Sub ApplyTheme(themeMode As String, accentColor As String)

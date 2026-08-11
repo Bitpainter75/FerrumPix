@@ -315,6 +315,88 @@ Namespace Services
             Return IsTemporaryPath(filePath)
         End Function
 
+        ''' <summary>Der Dateiname einer zwischengespeicherten Kachel.
+        '''
+        ''' EINE Stelle fuer alle drei Wege - Lesen, Schreiben und das Vorabsichern des Index. Der
+        ''' Name IST der Gueltigkeitsvergleich: Aenderungszeit, Groesse, Qualitaet, Breite, Drehung
+        ''' aus der Beistelldatei, entwickelte RAW-Fassung und die Fassung des Cache-Formats stecken
+        ''' alle darin. Zwei Fassungen davon haetten Kacheln erzeugt, die der Leser nie findet -
+        ''' der Index haette dann bei jedem Lauf alles neu geschrieben, und die Galerie haette
+        ''' trotzdem nichts davon gehabt.</summary>
+        Private Shared Function BuildCacheFileName(filePath As String, imageHash As String,
+                                                   lastWriteTime As DateTime, fileSize As Long,
+                                                   quality As Integer) As String
+            Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
+            Return $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}" &
+                   $"{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+        End Function
+
+        ''' <summary>Was ein Lauf von <see cref="EnsureCached"/> ergeben hat.</summary>
+        Public Enum ThumbnailCacheOutcome
+            ''' <summary>Hier gibt es nichts zwischenzuspeichern: Cache abgeschaltet, fluechtiger
+            ''' Pfad, oder ein Format, das ohnehin nicht gecacht wird.</summary>
+            Skipped
+            ''' <summary>Lag schon da und war aktuell.</summary>
+            AlreadyThere
+            ''' <summary>Neu geschrieben.</summary>
+            Written
+            ''' <summary>Nicht lesbar.</summary>
+            Failed
+        End Enum
+
+        ''' <summary>Sorgt dafuer, dass die Kachel auf der Platte liegt - OHNE sie zu laden.
+        '''
+        ''' Fuer den Katalogindex: er geht ueber Tausende Dateien und braucht das Bild nicht, er
+        ''' will es nur bereitgelegt haben. <see cref="CreateOrUpdate"/> gibt am Ende ein
+        ''' Avalonia-Bitmap zurueck, das hier sofort wieder wegzuwerfen waere - ueber einen grossen
+        ''' Bestand ist das Dekodieren der gerade geschriebenen JPEG-Datei reine Arbeit fuer nichts.
+        '''
+        ''' Es wird auch NICHT auf DecodeDirect ausgewichen, wenn kein Cache entsteht: ein Bild
+        ''' vollstaendig zu dekodieren und dann wegzuwerfen ist genau das, was der Index nicht tun
+        ''' soll.</summary>
+        Public Shared Function EnsureCached(filePath As String,
+                                            lastWriteTime As DateTime,
+                                            fileSize As Long,
+                                            Optional cancellationToken As CancellationToken = Nothing) As ThumbnailCacheOutcome
+            cancellationToken.ThrowIfCancellationRequested()
+            If String.IsNullOrEmpty(filePath) OrElse Not File.Exists(filePath) Then Return ThumbnailCacheOutcome.Skipped
+            If ShouldSkipCache(filePath) Then Return ThumbnailCacheOutcome.Skipped
+
+            Dim enabled As Boolean
+            Dim quality As Integer
+            GetCachedSettings(enabled, quality)
+            If Not enabled Then Return ThumbnailCacheOutcome.Skipped
+
+            Dim folderDisplayPath = ResolveCacheDisplayPath(filePath, Nothing, Nothing)
+            Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
+            Dim folderCachePath = GetFolderCachePathById(folderId)
+            Dim imageHash = HashText(NormalizePath(filePath))
+            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality)
+            Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
+
+            Try
+                ' Zuerst nachsehen. Der Index laeuft ueber Ordner, die der Benutzer laengst besucht
+                ' hat - dort liegt fast alles schon da, und ein Dateisystem-Blick kostet nichts
+                ' gegen einen Decode.
+                If File.Exists(cachePath) Then Return ThumbnailCacheOutcome.AlreadyThere
+
+                Directory.CreateDirectory(folderCachePath)
+                EnsureFolderRegistered(folderId, folderDisplayPath)
+                DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
+                cancellationToken.ThrowIfCancellationRequested()
+
+                If TryWriteCacheFile(filePath, cachePath, quality) AndAlso File.Exists(cachePath) Then
+                    GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
+                    Return ThumbnailCacheOutcome.Written
+                End If
+            Catch ex As OperationCanceledException
+                Throw
+            Catch
+            End Try
+
+            Return ThumbnailCacheOutcome.Failed
+        End Function
+
         Public Shared Function LoadCached(filePath As String,
                                           lastWriteTime As DateTime,
                                           fileSize As Long,
@@ -338,8 +420,7 @@ Namespace Services
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
-            Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
-            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -385,8 +466,7 @@ Namespace Services
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
-            Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
-            Dim cacheFileName = $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try

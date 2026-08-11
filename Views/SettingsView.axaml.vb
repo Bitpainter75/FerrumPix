@@ -91,6 +91,30 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Einen Ordner in die Liste des Katalogindex aufnehmen. Der Auswahldialog haengt
+        ''' am TopLevel und ist nur von der View aus erreichbar - deshalb hier und nicht im
+        ''' ViewModel, genau wie beim Startordner der Galerie darueber.</summary>
+        Private Async Sub OnAddCatalogWatchFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If vm Is Nothing Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                    .Title = LocalizationService.T("Ordner zum Indizieren wählen"),
+                    .AllowMultiple = True
+                })
+                If folders Is Nothing Then Return
+                For Each folder In folders
+                    Dim path = folder?.Path?.LocalPath
+                    If Not String.IsNullOrWhiteSpace(path) Then vm.AddCatalogWatchFolder(path)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.AddCatalogWatchFolder", ex)
+            End Try
+            e.Handled = True
+        End Sub
+
         Public Sub OnSectionNavClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             Dim targetName = TryCast(button?.Tag, String)

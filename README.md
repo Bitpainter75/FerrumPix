@@ -33,6 +33,10 @@ Folder tree, grid and list view, fast thumbnails, file operations, ratings, favo
 
 Ratings, colour labels and keywords are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact.
 
+Name the folders your photos live in and FerrumPix reads them in the background, subfolders included, so search and filters cover your whole collection instead of only the folders you happened to open. It runs shortly after startup if you want it to, and it can be stopped at any time. Later runs only look at what has changed, and nothing is ever written next to your photos.
+
+One list in the settings shows every folder FerrumPix knows, grouped under the ones you watch. Search it, then clean up the catalogue data or the thumbnails of whatever the search leaves, or send the people search over them - on a whole tree or on a single folder.
+
 An info panel shows the selected picture with its shot data, histogram, rating, label and keywords; with several selected it shows what they have in common and lets you set them all at once.
 
 Photos can be filtered by keyword, by person and by where they were taken, alone or in combination. FerrumPix finds the people in your photos, groups them, and you give each group its name; the names are stored beside the picture, so they stay with the photos. A people area of its own shows a wall of faces for sorting out a library that grew over years.

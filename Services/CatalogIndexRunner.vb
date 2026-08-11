@@ -1,0 +1,426 @@
+Imports System
+Imports System.Collections.Generic
+Imports System.IO
+Imports System.Linq
+Imports System.Threading
+Imports System.Threading.Tasks
+
+Namespace Services
+
+    ''' <summary>Was ein Durchlauf des Katalogindex gebracht hat.</summary>
+    Public Class CatalogIndexResult
+        ''' <summary>Wie viele Dateien gelesen wurden.</summary>
+        Public Property Indexed As Integer
+        ''' <summary>Wie viele uebersprungen wurden, weil sie sich seit dem letzten Lauf nicht
+        ''' geaendert haben.</summary>
+        Public Property Unchanged As Integer
+        ''' <summary>Wie viele Vorschaubilder neu entstanden sind.</summary>
+        Public Property ThumbnailsCreated As Integer
+        ''' <summary>Wie viele Dateien sich nicht lesen liessen.</summary>
+        Public Property Failed As Integer
+        ''' <summary>Wie viele Katalogeintraege einen Ortsnamen bekommen haben.</summary>
+        Public Property PlacesResolved As Integer
+        Public Property Cancelled As Boolean
+
+        ''' <summary>Der Lauf hat gar nicht erst begonnen, weil schon einer laeuft.
+        '''
+        ''' Muss vom leeren Ergebnis unterscheidbar sein: der Anrufer haelt sonst seinen
+        ''' Anzeigezustand fuer beendet und setzt ihn zurueck, waehrend der ERSTE Lauf weiterarbeitet
+        ''' - Stopp-Knopf und Fortschritt verschwinden dann mitten im Lauf. Der Fall tritt auf, wenn
+        ''' der Start nach dem Programmstart und ein Klick auf "Starten" sich ueberholen.</summary>
+        Public Property NotStarted As Boolean
+
+        ''' <summary>Nicht begonnen, weil ein ANDERES FENSTER gerade schreibt (siehe
+        ''' BackgroundRunLock). Getrennt von <see cref="NotStarted"/> gemeldet, weil der Nutzer
+        ''' etwas anderes tun muss: im eigenen Fenster warten hilft nicht, wenn die Arbeit anderswo
+        ''' laeuft.</summary>
+        Public Property BlockedByOtherWindow As Boolean
+    End Class
+
+    ''' <summary>Wie weit der Lauf ist. Der Gesamtstand steht erst, wenn die Ordner durchgezaehlt
+    ''' sind - bis dahin ist <see cref="Total"/> null und die Anzeige sagt "wird gesucht".</summary>
+    Public Structure CatalogIndexProgress
+        Public Property Done As Integer
+        Public Property Total As Integer
+        ''' <summary>Der Ordner, in dem der Lauf gerade steckt. Fuer die Anzeige - ein Dateiname je
+        ''' Bild flackerte bei tausend Dateien nur.</summary>
+        Public Property CurrentFolder As String
+    End Structure
+
+    ''' <summary>
+    ''' Geht die eingetragenen Ordner durch und legt fuer jedes Bild einen Katalogeintrag und ein
+    ''' Vorschaubild an. Damit sind Suche, Filter und Galerie sofort schnell, ohne dass jemand jeden
+    ''' Ordner einmal besucht haben muss - bisher entstand beides erst beim Ansehen (siehe
+    ''' GalleryViewModel.QueueBackgroundMetaRefresh).
+    '''
+    ''' <para>NUR EIN LAUF, und er ist abbrechbar. Wie beim Personenlauf (siehe FaceScanRunner):
+    ''' zwei Laeufe waeren nicht nur doppelte Arbeit, sie schrieben auch gleichzeitig in denselben
+    ''' Katalog und denselben Vorschau-Ordner.</para>
+    '''
+    ''' <para>EINFAEDIG, mit Absicht. Der Ordnerlauf der Galerie nimmt die halbe Kernzahl, weil dort
+    ''' jemand auf seine Kacheln wartet. Hier wartet niemand: der Lauf soll im Hintergrund
+    ''' durchsickern und nicht die Maschine belegen, waehrend nebenher gearbeitet wird. Das
+    ''' Dekodieren geht ohnehin durch die Schleuse, in der immer nur EINER laeuft
+    ''' (siehe <see cref="DecodeGate"/>).</para>
+    '''
+    ''' <para>ER LEGT KEINE DATEIEN NEBEN DEN FOTOS AN. Beistelldateien werden gelesen, nicht
+    ''' geschrieben - im Gegensatz zum Ordnerlauf der Galerie, der eine XMP-Beistelldatei mit
+    ''' Entwicklungseinstellungen einmalig in eine .fpxmp uebersetzt. Beim Ansehen EINES Ordners ist
+    ''' das eine bewusste Handlung; ueber den ganzen Bestand hinweg entstuenden auf einen Schlag
+    ''' Tausende neuer Dateien im Fotobestand, ohne dass jemand danach gefragt hat.</para>
+    '''
+    ''' <para>GESICHTER SUCHT ER NICHT. Das ist ein eigener Lauf mit eigenem Schalter und eigener
+    ''' Bedienung, und er kostet ein Vielfaches - gemessen rund 135 ms je Gesicht gegen wenige
+    ''' Millisekunden fuer einen Katalogeintrag.</para>
+    ''' </summary>
+    Public NotInheritable Class CatalogIndexRunner
+
+        Private Sub New()
+        End Sub
+
+        ' LAUFZUSTAND. Wie beim Personenlauf oeffentlich anhaltbar: der Benutzer kann in den
+        ' Einstellungen und in der Galerie stoppen, und wer die Katalogdaten wegwirft, darf keinen
+        ' Lauf danebenlaufen lassen, der sie gleich wieder hineinschreibt.
+        Private Shared ReadOnly _runLock As New Object()
+        Private Shared _stopSource As CancellationTokenSource
+        Private Shared _running As Boolean
+
+        ''' <summary>Laeuft gerade einer?</summary>
+        Public Shared ReadOnly Property IsRunning As Boolean
+            Get
+                SyncLock _runLock
+                    Return _running
+                End SyncLock
+            End Get
+        End Property
+
+        ''' <summary>Bittet einen laufenden Durchlauf aufzuhoeren. Kehrt sofort zurueck; was bis
+        ''' dahin im Katalog steht, bleibt stehen - der naechste Lauf macht dort weiter, weil er
+        ''' ohnehin nur Geaendertes anfasst.</summary>
+        Public Shared Sub RequestCancel()
+            SyncLock _runLock
+                ' Innerhalb der Sperre: draussen koennte die Quelle zwischen Lesen und Cancel
+                ' bereits freigegeben sein.
+                If _stopSource IsNot Nothing Then
+                    Try
+                        _stopSource.Cancel()
+                    Catch ex As ObjectDisposedException
+                        ' Der Lauf war in derselben Sekunde von selbst fertig.
+                    End Try
+                End If
+            End SyncLock
+        End Sub
+
+        ''' <summary>Bittet um Abbruch und wartet, bis der Durchlauf wirklich steht. Fuer jeden, der
+        ''' die Katalogdaten leeren will - geschieht das mitten im Lauf, sind sie hinterher nicht
+        ''' leer, sondern halb gefuellt.</summary>
+        ''' <returns>True, wenn nichts mehr laeuft.</returns>
+        Public Shared Function RequestStopAndWait(Optional timeoutMilliseconds As Integer = 10000) As Boolean
+            RequestCancel()
+            Dim waited = 0
+            While IsRunning AndAlso waited < timeoutMilliseconds
+                Thread.Sleep(50)
+                waited += 50
+            End While
+            Return Not IsRunning
+        End Function
+
+        ''' <summary>Die eingetragenen Ordner aus den Einstellungen, aufgeraeumt und ohne die, die
+        ''' es nicht mehr gibt. Ein geloeschter oder ausgehaengter Ordner ist kein Fehler - er soll
+        ''' nur nicht mitgezaehlt werden.</summary>
+        Public Shared Function ConfiguredFolders() As List(Of String)
+            Return AppSettingsService.NormalizeCatalogWatchFolders(AppSettingsService.Load().CatalogWatchFolders).
+                Where(AddressOf Directory.Exists).
+                ToList()
+        End Function
+
+        ''' <summary>Die Bilddateien der uebergebenen Ordner, samt Unterordnern.
+        '''
+        ''' Oeffentlich, weil die Gesichtssuche ueber DIESELBEN ueberwachten Ordner laeuft und
+        ''' dieselbe Liste braucht (siehe FaceIndexViewModel). Zwei Fassungen davon liefen
+        ''' auseinander, sobald eine von beiden eine Endung oder eine ausgelassene Ordnerart anders
+        ''' behandelt.</summary>
+        ''' <param name="folders">Nothing heisst: die aus den Einstellungen.</param>
+        Public Shared Function CollectImageFiles(Optional folders As IReadOnlyList(Of String) = Nothing,
+                                                 Optional token As CancellationToken = Nothing) As List(Of String)
+            ' AUFGERAEUMT, und zwar HIER: jeder Aufrufer koennte sonst eine Wurzel samt ihrer
+            ' Unterordner uebergeben, und weil rekursiv gesammelt wird, liefe der Baum dann mehrfach
+            ' durch. In der Zielliste stuende ein Vielfaches, der Fortschritt zaehlte zu hoch, und
+            ' jede Datei wuerde mehrfach geprueft. NormalizeCatalogWatchFolders wirft enthaltene
+            ' Ordner und Doppelte weg - dieselbe Regel wie fuer die eingetragenen Ordner.
+            Dim wanted = If(folders Is Nothing, ConfiguredFolders(),
+                            AppSettingsService.NormalizeCatalogWatchFolders(folders.ToList()))
+            Dim roots = wanted.Where(AddressOf Directory.Exists).ToList()
+            Dim files As New List(Of String)()
+            For Each root In roots
+                If token.IsCancellationRequested Then Exit For
+                CollectFiles(root, files, token)
+            Next
+            Return files
+        End Function
+
+        ''' <summary>Laeuft ueber die Ordner und meldet nach jeder Datei, wie weit er ist.</summary>
+        ''' <param name="folders">Die Wurzeln, jede samt Unterordnern. Nothing heisst: die aus den
+        ''' Einstellungen.</param>
+        ''' <param name="force">Auch Dateien lesen, die sich seit dem letzten Lauf nicht geaendert
+        ''' haben. Sonst wird nur Geaendertes angefasst.</param>
+        Public Shared Async Function RunAsync(Optional folders As IReadOnlyList(Of String) = Nothing,
+                                              Optional progress As IProgress(Of CatalogIndexProgress) = Nothing,
+                                              Optional token As CancellationToken = Nothing,
+                                              Optional force As Boolean = False) As Task(Of CatalogIndexResult)
+            Dim result As New CatalogIndexResult()
+            Dim roots = If(folders Is Nothing, ConfiguredFolders(),
+                           folders.Where(Function(f) Not String.IsNullOrWhiteSpace(f) AndAlso Directory.Exists(f)).ToList())
+            If roots.Count = 0 Then Return result
+
+            ' HOECHSTENS EIN DURCHLAUF. Wer abgewiesen wird, bekommt das GEMELDET und nicht nur ein
+            ' leeres Ergebnis - sonst haelt er seinen Anzeigezustand fuer beendet und setzt ihn
+            ' zurueck, waehrend der erste Lauf weiterarbeitet.
+            Dim stopSource As CancellationTokenSource = Nothing
+            SyncLock _runLock
+                If _running Then
+                    result.NotStarted = True
+                    Return result
+                End If
+                stopSource = New CancellationTokenSource()
+                _stopSource = stopSource
+                _running = True
+            End SyncLock
+
+            ' NUR EIN FENSTER SCHREIBT. Zwei Anwendungen nebeneinander sind erlaubt und sinnvoll,
+            ' zwei Schreiblaeufe nicht: sie ueberschreiben sich das Ordnerverzeichnis des
+            ' Vorschau-Zwischenspeichers (siehe BackgroundRunLock).
+            Dim crossProcess = BackgroundRunLock.TryAcquire()
+            If crossProcess Is Nothing Then
+                SyncLock _runLock
+                    _running = False
+                    _stopSource = Nothing
+                    stopSource.Dispose()
+                End SyncLock
+                result.NotStarted = True
+                result.BlockedByOtherWindow = True
+                Return result
+            End If
+
+            Try
+                ' Der eigene Abbruchweg und der des Aufrufers zusammengefuehrt: aufgehoert wird,
+                ' sobald EINER von beiden es verlangt.
+                Using linked = CancellationTokenSource.CreateLinkedTokenSource(token, stopSource.Token)
+                    Dim runToken = linked.Token
+                    Await Task.Run(Sub() IndexLoop(roots, result, progress, runToken, force), runToken).ConfigureAwait(False)
+
+                    ' Die Ortsnamen NACH dem Lauf und in einem Rutsch: FillMissingPlaces liest die
+                    ' offenen Koordinaten in einer Abfrage und schreibt sie in einer Transaktion
+                    ' zurueck. Je Bild einzeln waeren das zwei Plattenzugriffe pro Foto.
+                    If Not result.Cancelled Then
+                        result.PlacesResolved = Await Task.Run(Function() LibraryService.Instance.FillMissingPlaces(),
+                                                               runToken).ConfigureAwait(False)
+                    End If
+                End Using
+            Catch ex As OperationCanceledException
+                result.Cancelled = True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Katalogindex.Durchlauf", ex)
+            Finally
+                crossProcess.Dispose()
+                SyncLock _runLock
+                    _running = False
+                    _stopSource = Nothing
+                    stopSource.Dispose()
+                End SyncLock
+            End Try
+
+            DiagnosticLogService.LogAlways("Katalogindex.Durchlauf",
+                $"{result.Indexed} indiziert, {result.Unchanged} unveraendert, " &
+                $"{result.ThumbnailsCreated} Vorschaubilder, {result.Failed} fehlgeschlagen, " &
+                $"{result.PlacesResolved} Orte" & If(result.Cancelled, ", abgebrochen", ""))
+            Return result
+        End Function
+
+        ''' <summary>Der Gang ueber die Ordner. Eigene Methode und keine lange Lambda, damit der
+        ''' Rahmen darueber - ein Lauf, Abbruch, Orte nachtragen - auf einen Blick lesbar bleibt.</summary>
+        Private Shared Sub IndexLoop(roots As IReadOnlyList(Of String),
+                                     result As CatalogIndexResult,
+                                     progress As IProgress(Of CatalogIndexProgress),
+                                     token As CancellationToken,
+                                     force As Boolean)
+            ' ZUERST ZAEHLEN, dann arbeiten. Ohne Gesamtzahl gaebe es keinen Fortschritt, sondern nur
+            ' eine Zahl, die hochlaeuft - und bei einem grossen Bestand weiss dann niemand, ob noch
+            ' zehn Bilder kommen oder zehntausend. Das Aufzaehlen selbst ist billig gegen das Lesen.
+            Dim files As New List(Of String)()
+            For Each root In roots
+                If token.IsCancellationRequested Then
+                    result.Cancelled = True
+                    Return
+                End If
+                CollectFiles(root, files, token)
+            Next
+            If files.Count = 0 Then Return
+
+            ' Die Stempel je WURZEL in einer Abfrage, nicht je Datei. Eine Abfrage pro Bild waere
+            ' bei zehntausend Fotos zehntausend Plattenzugriffe, bevor ueberhaupt etwas geschieht.
+            Dim stamps As New Dictionary(Of String, CatalogIndexStamp)(PathIdentity.Comparer)
+            If Not force Then
+                For Each root In roots
+                    For Each entry In LibraryService.Instance.GetIndexStamps(root)
+                        stamps(entry.Key) = entry.Value
+                    Next
+                Next
+            End If
+
+            Dim summaryFormat = ExifService.CurrentSummaryFormat
+            Dim lastFolder = ""
+            Dim done = 0
+            For Each filePath In files
+                If token.IsCancellationRequested Then
+                    result.Cancelled = True
+                    Return
+                End If
+                done += 1
+
+                Try
+                    Dim info As FileInfo
+                    Try
+                        info = New FileInfo(filePath)
+                        If Not info.Exists Then
+                            result.Failed += 1
+                            Continue For
+                        End If
+                    Catch ex As Exception
+                        ' Zwischen Aufzaehlen und Bearbeiten kann die Datei weg sein, und ein Pfad
+                        ' kann fuer das Dateisystem zu lang oder gesperrt sein.
+                        result.Failed += 1
+                        Continue For
+                    End Try
+
+                    lastFolder = If(Path.GetDirectoryName(filePath), "")
+
+                    ' UNVERAENDERT? Dann gar nicht erst lesen. Genau die drei Angaben, die auch
+                    ' SyncExifData vergleicht - nur eben VOR dem teuren Teil. Ohne das liefe ein
+                    ' zweiter Lauf ueber denselben Bestand genauso lange wie der erste.
+                    If Not force AndAlso IsUnchanged(stamps, filePath, info, summaryFormat) Then
+                        result.Unchanged += 1
+                        ' Das Vorschaubild trotzdem sicherstellen: der Katalogeintrag kann von einem
+                        ' frueheren Lauf stammen, waehrend die Kachel nie gebraucht wurde.
+                        If EnsureThumbnail(filePath, info, token) Then result.ThumbnailsCreated += 1
+                        Continue For
+                    End If
+
+                    IndexOne(filePath, result, token)
+                Catch ex As OperationCanceledException
+                    result.Cancelled = True
+                    Return
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Katalogindex.Datei", ex)
+                    result.Failed += 1
+                Finally
+                    progress?.Report(New CatalogIndexProgress With {
+                        .Done = done, .Total = files.Count, .CurrentFolder = lastFolder})
+                End Try
+            Next
+        End Sub
+
+        ''' <summary>Eine Datei in den Katalog und ihre Kachel in den Zwischenspeicher.</summary>
+        Private Shared Sub IndexOne(filePath As String, result As CatalogIndexResult, token As CancellationToken)
+            Dim info = New FileInfo(filePath)
+
+            ' Aufnahmedaten lesen und in den Katalog. Genau der Weg, den auch der Ordnerlauf der
+            ' Galerie nimmt - dieselben Felder, dieselbe Zusammenfassung, derselbe Stempel.
+            Dim data = ExifService.ReadExif(filePath)
+            Dim fields = ExifService.ExtractSearchFields(data, filePath)
+            Dim summary = ExifService.BuildCatalogSummary(data, fields)
+            LibraryService.Instance.SyncExifData(filePath, fields, summary)
+
+            ' Was in einer .fpxmp neben dem Bild steht, gehoert in den Katalog - das ist die
+            ' portable Quelle fuer Bewertung, Etikett und Stichwoerter bei RAW und PSD. NUR LESEN:
+            ' ImportFpxmpCatalogData legt keine an, im Unterschied zum Weg der Galerie, der eine
+            ' XMP-Beistelldatei zusaetzlich in eine .fpxmp uebersetzt.
+            LibraryService.Instance.ImportFpxmpCatalogData(filePath)
+
+            Dim rating = ExifService.GetXmpRating(data)
+            If rating.HasValue AndAlso rating.Value > 0 AndAlso
+               LibraryService.Instance.GetRating(filePath) = 0 Then
+                LibraryService.Instance.SetRating(filePath, rating.Value)
+            End If
+
+            result.Indexed += 1
+            If EnsureThumbnail(filePath, info, token) Then result.ThumbnailsCreated += 1
+        End Sub
+
+        ''' <summary>Die Kachel bereitlegen. DURCH DIE DECODE-SCHLEUSE: es laeuft immer nur einer in
+        ''' der ganzen Anwendung, sonst stuende hier ein Decode neben dem Bild im Betrachter und
+        ''' neben den Kacheln der Galerie (siehe <see cref="DecodeGate"/>).</summary>
+        ''' <returns>True, wenn eine neue Kachel entstanden ist.</returns>
+        Private Shared Function EnsureThumbnail(filePath As String, info As FileInfo, token As CancellationToken) As Boolean
+            Try
+                Dim outcome = DecodeGate.Run(Function() ThumbnailCacheService.EnsureCached(
+                                                 filePath, info.LastWriteTime, info.Length, token))
+                Return outcome = ThumbnailCacheService.ThumbnailCacheOutcome.Written
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Katalogindex.Vorschaubild", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Hat sich seit dem letzten Lauf nichts geaendert? Verglichen werden Bilddatei,
+        ''' Beistelldateien und das Format der gespeicherten Zusammenfassungen - Letzteres, weil ein
+        ''' Eintrag aus einer aelteren Fassung oder einer anderen Anzeigesprache stammen kann.</summary>
+        Private Shared Function IsUnchanged(stamps As Dictionary(Of String, CatalogIndexStamp),
+                                            filePath As String, info As FileInfo,
+                                            summaryFormat As String) As Boolean
+            Dim stamp As CatalogIndexStamp = Nothing
+            If Not stamps.TryGetValue(filePath, stamp) Then Return False
+            If Not String.Equals(stamp.SummaryFormat, If(summaryFormat, ""), StringComparison.Ordinal) Then Return False
+            If Not String.Equals(stamp.SourceModifiedAt, info.LastWriteTime.ToString("o"), StringComparison.Ordinal) Then Return False
+            Return String.Equals(stamp.SidecarModifiedAt, LibraryService.SidecarStamp(filePath), StringComparison.Ordinal)
+        End Function
+
+        ''' <summary>Sammelt die Bilddateien eines Ordners und aller Unterordner.
+        '''
+        ''' SELBST GESTIEGEN und nicht ueber EnumerateFiles mit AllDirectories: das bricht den
+        ''' ganzen Lauf mit einer Ausnahme ab, sobald EIN Unterordner nicht lesbar ist - und in einem
+        ''' Fotobestand steht so einer schnell, etwa ein fremder Einhaengepunkt. So bleibt der
+        ''' Ausfall auf den einen Ordner beschraenkt.
+        '''
+        ''' Versteckte Ordner bleiben draussen, wie in der Galerie. Der Vorschau-Zwischenspeicher
+        ''' liegt in einem davon, und ein Index, der seine eigenen Kacheln indiziert, waere ein
+        ''' schoener Kreis.
+        '''
+        ''' Der PAPIERKORB ebenfalls, und zwar ueber FileOperationPolicy.IsTrashFolder statt ueber
+        ''' den fuehrenden Punkt: der Papierkorb je Datentraeger heisst ".Trash-1000" und faellt
+        ''' damit schon unter die versteckten, der des Benutzers liegt aber unter
+        ''' "~/.local/share/Trash" - ein Ordner OHNE Punkt, der sonst mitgelaufen waere.</summary>
+        Private Shared Sub CollectFiles(folder As String, target As List(Of String), token As CancellationToken)
+            If token.IsCancellationRequested Then Return
+            If FileOperationPolicy.IsTrashFolder(folder) Then Return
+            Try
+                For Each file In Directory.EnumerateFiles(folder)
+                    If token.IsCancellationRequested Then Return
+                    If MediaFileTypes.IsDisplayable(file) Then target.Add(file)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Katalogindex.Ordner", ex)
+                Return
+            End Try
+
+            Dim subFolders As String()
+            Try
+                subFolders = Directory.GetDirectories(folder)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Katalogindex.Ordner", ex)
+                Return
+            End Try
+
+            For Each sub_ In subFolders
+                If token.IsCancellationRequested Then Return
+                Dim name = Path.GetFileName(sub_)
+                If Not String.IsNullOrEmpty(name) AndAlso name.StartsWith(".", StringComparison.Ordinal) Then Continue For
+                CollectFiles(sub_, target, token)
+            Next
+        End Sub
+
+    End Class
+
+End Namespace
