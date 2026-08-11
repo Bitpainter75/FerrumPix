@@ -2640,9 +2640,9 @@ Namespace ViewModels
             RefreshThumbnailCacheCommand = ReactiveCommand.Create(Sub() RefreshThumbnailCacheFolders())
 
             ' Die gruppierte Ordnerliste: je Zeile und ueber die ganze gefilterte Menge.
-            CleanRowCatalogCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) CleanFolderRow(r, catalog:=True, thumbnails:=False))
-            CleanRowThumbnailsCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) CleanFolderRow(r, catalog:=False, thumbnails:=True))
-            CleanRowBothCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) CleanFolderRow(r, catalog:=True, thumbnails:=True))
+            CleanRowCatalogCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(Function(r) CleanFolderRowAsync(r, catalog:=True, thumbnails:=False))
+            CleanRowThumbnailsCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(Function(r) CleanFolderRowAsync(r, catalog:=False, thumbnails:=True))
+            CleanRowBothCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(Function(r) CleanFolderRowAsync(r, catalog:=True, thumbnails:=True))
             ToggleFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) ToggleFolderRow(r))
             WatchFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) AddCatalogWatchFolder(If(r?.Path, "")))
             UnwatchFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) RemoveCatalogWatchFolder(If(r?.Path, "")))
@@ -3314,13 +3314,14 @@ Namespace ViewModels
 
         ''' <summary>Raeumt eine Zeile auf - bei einer Wurzel samt allem, was sie zusammenfasst.
         '''
-        ''' Ohne Rueckfrage bei EINER Zeile, mit Rueckfrage ueber die gefilterte Menge: der
-        ''' Unterschied liegt nicht im Wie, sondern im Umfang. Eine Zeile trifft, was man vor sich
-        ''' sieht; die Sammelaktion kann vierstellig viele Ordner treffen.</summary>
-        Private Sub CleanFolderRow(row As CatalogFolderRow, catalog As Boolean, thumbnails As Boolean)
-            If row Is Nothing Then Return
-            CleanFolderSet(row.Members, catalog, thumbnails)
-        End Sub
+        ''' MIT RUECKFRAGE, genau wie die Sammelaktion. Eine Zeile sieht nach "diesem einen Ordner"
+        ''' aus, ist bei einer Wurzel aber der ganze Baum darunter - hunderte Ordner hinter einem
+        ''' Klick. Und eine Reihe, in der nur manche Wege nachfragen, erzieht dazu, die Frage
+        ''' wegzuklicken.</summary>
+        Private Function CleanFolderRowAsync(row As CatalogFolderRow, catalog As Boolean, thumbnails As Boolean) As Task
+            If row Is Nothing Then Return Task.CompletedTask
+            Return ConfirmAndCleanAsync(row.Members, catalog, thumbnails)
+        End Function
 
         ''' <summary>Der gemeinsame Weg fuer eine Zeile und fuer die ganze gefilterte Menge.
         '''
@@ -3364,11 +3365,21 @@ Namespace ViewModels
             _mainVm?.Gallery?.LoadCurrentFolder()
         End Sub
 
-        ''' <summary>Dieselben drei Wege ueber ALLE gerade gefilterten Ordner. Die Rueckfrage nennt
-        ''' die Anzahl - bei 1800 Ordnern ist der Unterschied zwischen "die drei Treffer" und "der
-        ''' ganze Bestand" genau das, was man vorher wissen will.</summary>
-        Private Async Function CleanFilteredAsync(catalog As Boolean, thumbnails As Boolean) As Task
-            Dim targets = FilteredFolderTargets()
+        ''' <summary>Dieselben drei Wege ueber ALLE gerade gefilterten Ordner.</summary>
+        Private Function CleanFilteredAsync(catalog As Boolean, thumbnails As Boolean) As Task
+            Return ConfirmAndCleanAsync(FilteredFolderTargets(), catalog, thumbnails)
+        End Function
+
+        ''' <summary>Fragt nach und raeumt dann auf - DER EINE Weg fuer jede Aufraeum-Aktion.
+        '''
+        ''' Die Rueckfrage nennt die Anzahl: bei 1800 Ordnern ist der Unterschied zwischen "die drei
+        ''' Treffer" und "der ganze Bestand" genau das, was man vorher wissen will. Auch der
+        ''' harmlose Fall - nur Vorschaubilder - wird gefragt: eine Reihe, in der nur zwei von drei
+        ''' Wegen nachfragen, erzieht dazu, die Frage wegzuklicken.</summary>
+        Private Async Function ConfirmAndCleanAsync(folders As IEnumerable(Of ThumbnailCacheFolderInfo),
+                                                    catalog As Boolean, thumbnails As Boolean) As Task
+            Dim targets = If(folders, Enumerable.Empty(Of ThumbnailCacheFolderInfo)()).
+                          Where(Function(t) t IsNot Nothing).ToList()
             If targets.Count = 0 Then
                 ThumbnailCacheResultMessage = LocalizationService.T("Nichts zu entfernen.")
                 Return
