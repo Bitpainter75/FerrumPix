@@ -1,0 +1,281 @@
+# Vorlage. Gehoert ins OEFFENTLICHE Repo nach .github/workflows/release.yml
+#
+# Warum dort und nicht ins private packaging-Repo: Actions-Minuten sind fuer oeffentliche Repos
+# frei, fuer private werden sie gegen das Monatskontingent gerechnet. Ein voller Lauf ueber alle
+# Plattformen samt Flatpak ist nicht kurz.
+#
+# SICHERHEIT: Ein oeffentliches Repo kann jeder per Pull Request anstossen. GitHub gibt
+# Fork-Pull-Requests keine Secrets - das ist die schuetzende Regel, und sie faellt, sobald
+# irgendwo `pull_request_target` steht. Das kommt hier deshalb nicht vor, und der Ausloeser
+# bleibt auf Tag-Push und Handstart beschraenkt.
+#
+# Benoetigte Secrets im oeffentlichen Repo - ZWEI, nicht drei:
+#   PACKAGING_DEPLOY_KEY  privater SSH-Schluessel, oeffentlicher Teil als Deploy-Key im
+#                         privaten packaging-Repo. Schreibrechte nur, wenn Schritt
+#                         "Merkposten zurueckschreiben" genutzt wird.
+#   AUR_SSH_KEY           privater SSH-Schluessel fuer aur.archlinux.org.
+#
+# KEIN eigener Release-Token noetig. Der Lauf schreibt nur in DIESES Repo, und dafuer stellt
+# GitHub jedem Job automatisch einen bereit (secrets.GITHUB_TOKEN). Er ist auf dieses Repo
+# begrenzt, verfaellt am Ende des Jobs und muss von niemandem verwaltet oder erneuert werden -
+# anders als ein persoenlicher Token, der nach spaetestens einem Jahr ablaeuft und die Pipeline
+# dann ohne erkennbaren Grund stehen laesst.
+#
+# Dafuer muss die Berechtigung ausdruecklich erteilt werden, siehe "permissions" unten:
+# Voreingestellt ist der Token nur lesend.
+#
+# NICHT GETESTET. Die Paketlisten und die Einrichtung der SSH-Schluessel sind der Teil, der beim
+# ersten Lauf am ehesten nachgezogen werden muss.
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Nur bauen, nichts veroeffentlichen"
+        type: boolean
+        default: true
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+*']
+
+# Releases anlegen und Assets hochladen faellt unter "contents". Ohne diese Zeile darf der
+# eingebaute Token nur lesen, und der erste Upload scheitert mit 403.
+permissions:
+  contents: write
+
+# DER TROCKENLAUF IST DIE VOREINSTELLUNG, und zwar aus einem handfesten Grund: ein echter Lauf
+# ersetzt das AUR-ZIP im Versionsrelease. Der PKGBUILD in der AUR nagelt eine Pruefsumme auf
+# genau diese Adresse, und ein neu gebautes ZIP hat andere Bytes - zwischen dem Ersetzen und dem
+# Nachziehen durch publish-aur.sh waere das AUR-Paket kaputt. Dazu laufen die festen
+# Downloadadressen des Latest-Release beim Ersetzen kurz ins Leere.
+#
+# Gebaut wird im Trockenlauf trotzdem vollstaendig - das ist der Teil, der schiefgehen kann.
+# Ein Tag-Push veroeffentlicht dagegen immer echt: dort gibt es keine Eingabe, und der Ausdruck
+# faellt auf den leeren Wert zurueck.
+env:
+  DRY: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+
+jobs:
+
+  # ---------------------------------------------------------------------------------------
+  # DIE AUR ZUERST. Sie haengt allein am AUR-ZIP, und das ist in Minuten gebaut. Alles andere
+  # braucht sie nicht und sie nichts davon. Frueher lief der ganze Bau und der ganze Upload
+  # zuerst, und die AUR stand solange auf der alten Version, obwohl das noetige Paket laengst
+  # fertig war.
+  # ---------------------------------------------------------------------------------------
+  aur:
+    name: AUR zuerst
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+
+    steps:
+      - name: Werkzeuge
+        run: pacman -Sy --noconfirm --needed git openssh xz zip unzip jq curl python dotnet-sdk
+
+      # Das oeffentliche Repo in die Wurzel, das private nach packaging/. Genau diese Anordnung
+      # erwarten die Skripte: sie rechnen mit SCRIPT_DIR/.. als Repo-Wurzel. Deshalb ist an
+      # ihnen nichts zu aendern.
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      # libmpv-2.dll liegt im Repo nur komprimiert (112 MB roh, ueber GitHubs Grenze).
+      # Auspacken und gegen die Sollwerte pruefen, BEVOR package.sh laeuft - das Handskript
+      # bleibt dadurch unveraendert und findet die DLL einfach vor.
+      - name: Fremdbinaerdateien bereitlegen
+        run: packaging/ci/ensure-binaries.sh
+
+      - name: AUR-ZIP bauen
+        run: packaging/package.sh zip
+        env:
+          FERRUMPIX_BUILD_BOX: ""     # kein Distrobox-Wechsel, wir SIND schon im Container
+
+      # Der Text des Versionsreleases kommt aus CHANGELOG.md, und die liegt im OEFFENTLICHEN Repo,
+      # kommt also mit dessen Auscheck. Kein Nebenschauplatz: publish-aur.sh uebernimmt genau
+      # diesen Text als AUR-Commit-Nachricht. Fehlt die Datei, faellt beides stillschweigend auf
+      # einen nackten Titel zurueck.
+      - name: AUR-ZIP ins Versionsrelease
+        run: packaging/publish-github-release.sh --only-version $DRY
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Das AUR-Repo ist ein EIGENES Repo und nicht Teil des privaten packaging-Repos - dort
+      # steht es in der .gitignore. Hier wird es frisch geklont.
+      # BEFUND ERSTER LAUF: "Host key verification failed". Nicht der Schluessel war das Problem,
+      # sondern dass der Runner aur.archlinux.org nicht kennt - ein frischer Runner hat eine leere
+      # known_hosts, und ssh-keyscan hatte still nichts geliefert (kein -H mehr, damit sich das
+      # Ergebnis auch nachlesen laesst).
+      #
+      # accept-new statt no: der Host wird beim ersten Kontakt uebernommen, ein WECHSEL des
+      # Schluessels waehrend des Laufs faellt aber weiter auf. Strenger ginge nur mit einem fest
+      # eingetragenen Fingerabdruck - der muesste dann bei jedem Schluesselwechsel der AUR von
+      # Hand nachgezogen werden, und ein Release, das daran scheitert, faellt niemandem rechtzeitig auf.
+      - name: AUR-Repo klonen
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null || true
+          if grep -q aur.archlinux.org ~/.ssh/known_hosts 2>/dev/null; then
+            echo "Hostschluessel der AUR uebernommen"
+          else
+            echo "ssh-keyscan lieferte nichts - es gilt accept-new"
+          fi
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new"
+          git clone ssh://aur@aur.archlinux.org/ferrumpix-bin.git packaging/AUR
+
+      # makepkg laeuft nicht als root. Deshalb ein eigener Benutzer, der auch pushen darf.
+      - name: AUR veroeffentlichen
+        run: |
+          useradd -m builder
+          chown -R builder:builder .
+          cp -r ~/.ssh /home/builder/.ssh
+          chown -R builder:builder /home/builder/.ssh
+          su builder -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new' packaging/publish-aur.sh $DRY"
+
+  # ---------------------------------------------------------------------------------------
+  # Ab hier ist die AUR aktuell. Was jetzt noch dauert, laesst niemanden mehr auf einer alten
+  # Version sitzen.
+  # ---------------------------------------------------------------------------------------
+  rest:
+    name: Alles Uebrige
+    runs-on: ubuntu-latest
+    needs: aur
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      # NICHT auf das vorinstallierte .NET des Runners verlassen: das Projekt steht auf net10.0,
+      # und welche SDKs ein Runner-Abbild mitbringt, aendert sich ohne Vorwarnung. Ein fehlendes
+      # SDK faellt sonst erst im dritten Bauschritt auf, nach zwanzig Minuten Laufzeit.
+      # Im Arch-Container oben braucht es das nicht - dort kommt dotnet-sdk aus pacman.
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Werkzeuge
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nsis xz-utils jq rpm zsync desktop-file-utils \
+                                  flatpak flatpak-builder
+
+      # BEFUND ZWEITER LAUF: "flatpak-builder ist nicht installiert" - AppImage, deb und rpm
+      # liefen da schon durch.
+      #
+      # Die Laufzeitumgebung muss dazu, sonst hat flatpak-builder nichts zum Bauen. Version und
+      # Name stehen im Manifest (runtime-version 24.08) und muessen mit ihm uebereinstimmen.
+      #
+      # WARUM NICHT EINFACH WEGLASSEN: package.sh erzeugt dann keine FerrumPix.flatpak, und der
+      # Upload ersetzt nur, was da ist - die ALTE Datei bliebe im Latest-Release stehen und ginge
+      # stillschweigend als aktuell durch. Ein fehlendes Paket faellt auf, ein veraltetes nicht.
+      - name: Flatpak-Laufzeitumgebung
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub \
+            org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+
+      - name: Fremdbinaerdateien bereitlegen
+        run: packaging/ci/ensure-binaries.sh
+
+      # EIN SCHRITT JE PAKET statt einem einzigen "all". Faellt eines aus, steht es in der
+      # Uebersicht des Laufs mit Namen da, statt dass man ein Protokoll ueber tausende Zeilen
+      # durchsucht - und man sieht auf einen Blick, welches Paket wie lange braucht.
+      #
+      # DER PREIS, und er ist bezahlbar: package.sh ruft `publish` einmal VOR der Modus-Auswahl
+      # auf, und AppImage, Flatpak, ZIP, deb und rpm teilen sich dieses eine Ergebnis. Getrennte
+      # Aufrufe bauen es je neu - gemessen rund 27 Sekunden je Durchgang, macht ein paar Minuten
+      # ueber den ganzen Lauf. Windows, macOS und ARM bauen ohnehin schon jeweils eigene.
+      #
+      # DIE REIHENFOLGE IST NACH WICHTIGKEIT, nicht nach Bequemlichkeit: Linux-ZIP, AUR und
+      # AppImage zuerst, dann deb und rpm, dann Windows, dann macOS, und ganz zuletzt ARM und
+      # Flatpak. Bricht es spaet ab, weiss man dadurch trotzdem, dass die wichtigen Pakete bauen.
+      #
+      # Flatpak steht bewusst am Ende: sein Bau legt unter packaging/work/flatpak-build einen Baum
+      # mit Symlinks an (var/run auf /run), und im Lauf zuvor scheiterte der WINDOWS-Bau direkt
+      # danach daran, dass MSBuild `**/*.axaml` nicht mehr aufloesen konnte und den Platzhalter
+      # woertlich weiterreichte. Mit einem Schritt je Paket raeumt cleanup_after_run diesen Baum
+      # nach JEDEM Aufruf weg - der Fehler sollte damit ohnehin verschwinden. Die Reihenfolge ist
+      # der zweite Riegel.
+      #
+      # Nicht trennbar sind macOS (x64 und arm64 in einem Modus) und ARM (linux-arm64 und
+      # win-arm64 in einem) - das ginge nur, indem man package.sh aendert.
+      #
+      # Bricht ein Schritt ab, endet der Job VOR dem Hochladen - ein halber Satz Pakete darf nie
+      # ins Release, sonst steht Neues neben Altem und niemand sieht es.
+      - name: Paket - Linux-ZIP (mit AUR-ZIP)
+        run: packaging/package.sh zip
+        env:
+          FERRUMPIX_BUILD_BOX: ""     # der Runner ist bereits Ubuntu
+
+      - name: Paket - AppImage
+        run: packaging/package.sh appimage
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Paket - deb
+        run: packaging/package.sh deb
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Paket - rpm
+        run: packaging/package.sh rpm
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Paket - Windows-ZIP
+        run: packaging/package.sh winzip
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Paket - Windows-Setup
+        run: packaging/package.sh winsetup
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Paket - macOS-ZIPs (x64 + arm64)
+        run: packaging/package.sh maczip
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Paket - ARM64-ZIPs (linux + win)
+        run: packaging/package.sh armzip
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Paket - Flatpak
+        run: packaging/package.sh flatpak
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      - name: Ins Latest-Release
+        run: packaging/publish-github-release.sh --only-latest $DRY
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # PUBLISHED-VERSION und DOWNLOADS.md sind ZUSTAND: die Skripte lesen und schreiben sie.
+      # Ohne Zurueckschreiben faengt jeder Lauf beim Stand aus dem Repo an. Bei DOWNLOADS.md
+      # ginge die Historie verloren; bei PUBLISHED-VERSION ist es heikler - leer heisst fuer das
+      # Skript "unbekannt", und bei pkgrel 1 loescht es dann das Latest-Release und legt es neu
+      # an. Bei einer echten neuen Version ist das richtig, bei einem WIEDERHOLTEN Lauf reisst
+      # es die festen Downloadadressen ohne Not ab.
+      #
+      # Setzt einen Deploy-Key mit SCHREIBrechten voraus.
+      - name: Merkposten zurueckschreiben
+        run: |
+          cd packaging
+          git config user.name  "FerrumPix CI"
+          git config user.email "ci@bitpainter.de"
+          git add PUBLISHED-VERSION DOWNLOADS.md
+          git diff --cached --quiet || git commit -m "Stand nach $(cat ../VERSION)"
+          git push
