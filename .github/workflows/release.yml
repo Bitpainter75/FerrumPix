@@ -24,8 +24,9 @@
 # Dafuer muss die Berechtigung ausdruecklich erteilt werden, siehe "permissions" unten:
 # Voreingestellt ist der Token nur lesend.
 #
-# NICHT GETESTET. Die Paketlisten und die Einrichtung der SSH-Schluessel sind der Teil, der beim
-# ersten Lauf am ehesten nachgezogen werden muss.
+# Die Fassungen der Actions gehoeren aktuell gehalten: laeuft eine auf einer abgekuendigten
+# Node-Fassung, warnt GitHub erst und zwingt sie spaeter auf eine neue - was dann bricht, faellt
+# mitten in einem Release auf.
 
 name: Release
 
