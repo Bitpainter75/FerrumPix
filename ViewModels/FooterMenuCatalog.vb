@@ -162,6 +162,10 @@ Namespace ViewModels
             Return Build("Aufnahmeort löschen", "map-pin-x", c)
         End Function
 
+        Public Shared Function OpenPlaceInOsm(c As ICommand) As AppAction
+            Return Build("Aufnahmeort in OpenStreetMap öffnen", "map", c)
+        End Function
+
         Public Shared Function CopyPath(c As ICommand) As AppAction
             Return Build("Pfad kopieren", "copy", c)
         End Function

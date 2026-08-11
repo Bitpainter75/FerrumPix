@@ -224,6 +224,10 @@ Namespace ViewModels
                     Dim stored = LibraryService.Instance.GetGpsCoordinates(localImages(0).FilePath)
                     If stored.Latitude.HasValue AndAlso stored.Longitude.HasValue Then
                         AddIfOffered(children, commands.CopyPlace, FooterMenuCatalog.CopyPlace(commands.CopyPlace))
+                        ' Die Karte lohnt nur fuer EIN Bild mit Ort - bei einer Auswahl waere
+                        ' unklar, wessen Ort sie zeigt. Dieselbe Bedingung wie beim Kopieren.
+                        AddIfOffered(children, commands.OpenPlaceInOsm,
+                                     FooterMenuCatalog.OpenPlaceInOsm(commands.OpenPlaceInOsm))
                     End If
                 End If
                 ' EINFUEGEN und SETZEN gelten fuer die ganze Auswahl - der Regelfall ist eine Reihe

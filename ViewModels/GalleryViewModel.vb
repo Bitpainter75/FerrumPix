@@ -1,5 +1,6 @@
 Imports System
 Imports System.Collections.Generic
+Imports System.Diagnostics
 Imports System.Collections.ObjectModel
 Imports System.IO
 Imports System.Linq
@@ -1467,12 +1468,14 @@ Namespace ViewModels
             InfoPanel.PersistColorLabel = Sub(items, value) ApplyColorLabelTo(items, value)
             InfoPanel.PersistTag = Sub(items, tag, add) ApplyTagTo(items, tag, add)
             CopyPlaceCommand = ReactiveCommand.Create(Sub() CopyPlaceFromSelected())
+            OpenPlaceInOsmCommand = ReactiveCommand.Create(Sub() OpenPlaceInOsmFromSelected())
             PastePlaceCommand = ReactiveCommand.Create(Sub() PastePlaceToSelected())
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceForSelectedAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
-            ResizeSelectedCommand = ReactiveCommand.Create(Sub() ResizeSelected())
+            ' CreateFromTask: der Befehl bleibt bis zum Ende des Laufs gesperrt (siehe ResizeSelectedAsync).
+            ResizeSelectedCommand = ReactiveCommand.CreateFromTask(Function() ResizeSelectedAsync())
             ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
             BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
             ToggleFullscreenCommand = ReactiveCommand.Create(Sub() _mainVm?.ToggleFullscreen())
@@ -1581,6 +1584,7 @@ Namespace ViewModels
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
+        Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
 
         ''' <summary>Loescht den Aufnahmeort - nach Rueckfrage.
         '''
@@ -1663,6 +1667,28 @@ Namespace ViewModels
             GeotagClipboard.Remember(stored.Latitude.Value, stored.Longitude.Value, label)
             StatusText = LocalizationService.T("Aufnahmeort gemerkt") & ": " & GeotagClipboard.Label
             RefreshContextActions()
+        End Sub
+
+        ''' <summary>Zeigt den Aufnahmeort des markierten Bildes auf der Karte von OpenStreetMap.
+        ''' Der Ort steht im Katalog, gebraucht wird nur die Adresse - es geht nichts an einen
+        ''' Dienst, ausser dem Aufruf, den der Nutzer mit dem Klick selbst auslöst.</summary>
+        Private Sub OpenPlaceInOsmFromSelected()
+            Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset).ToList()
+            If images.Count <> 1 Then Return
+            Dim stored = LibraryService.Instance.GetGpsCoordinates(images(0).FilePath)
+            If Not stored.Latitude.HasValue OrElse Not stored.Longitude.HasValue Then
+                StatusText = LocalizationService.T("Dieses Bild hat keinen Aufnahmeort")
+                Return
+            End If
+            Try
+                Process.Start(New ProcessStartInfo() With {
+                    .FileName = GeotagService.BuildOpenStreetMapUrl(stored.Latitude.Value, stored.Longitude.Value),
+                    .UseShellExecute = True
+                })
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.OpenPlaceInOsm", ex)
+                StatusText = LocalizationService.T("Die Karte konnte nicht geöffnet werden")
+            End Try
         End Sub
 
         ''' <summary>Setzt den gemerkten Aufnahmeort auf die ganze Auswahl. Serverbilder bleiben
@@ -8028,16 +8054,18 @@ Namespace ViewModels
         ''' Auswahlen gesperrt statt still wirkungslos.</summary>
         Private Shared ReadOnly BatchImageEditWritableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp"}
 
-        Private Async Sub ResizeSelected()
+        ''' <summary>Function statt Sub, damit der Befehl als CreateFromTask darauf warten kann: er
+        ''' bleibt dadurch bis zum Ende gesperrt. Vorher war er nach dem Klick sofort wieder
+        ''' bedienbar, und ein zweiter Aufruf mitten im Schreiblauf öffnete einen zweiten Dialog und
+        ''' schrieb ein zweites Mal über dieselben Dateien.</summary>
+        Private Async Function ResizeSelectedAsync() As Task
             Try
                 Await ResizeImageItemsAsync(GetSelectedBatchEditableImageItems())
             Catch ex As Exception
-                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.ResizeSelected", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
-        End Sub
+        End Function
 
         ''' <summary>Der komplette "Bildgröße ändern"-Ablauf für eine Liste von Bildern - Dialog,
         ''' Überschreiben oder Kopie, lokal oder nach Immich. Öffentlich, weil der Betrachter mit

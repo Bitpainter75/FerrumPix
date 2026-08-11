@@ -695,7 +695,8 @@ Namespace ViewModels
             FlipHorizontalCommand = ReactiveCommand.Create(Sub() ScaleX = ScaleX * -1)
             BackToGalleryCommand = ReactiveCommand.Create(Sub() _mainVm.BackToGallery(_currentImagePath))
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
-            ResizeCurrentCommand = ReactiveCommand.Create(Sub() ResizeCurrent())
+            ' CreateFromTask: der Befehl bleibt bis zum Ende des Laufs gesperrt (siehe ResizeCurrentAsync).
+            ResizeCurrentCommand = ReactiveCommand.CreateFromTask(Function() ResizeCurrentAsync())
             ToggleFullscreenCommand = ReactiveCommand.Create(Sub() _mainVm?.ToggleFullscreen())
             TogglePinCommand = ReactiveCommand.Create(Sub() TogglePin())
             ApplyWatermarkCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ApplyWatermarkToImageItems(i)))
@@ -2705,7 +2706,10 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Async Sub ResizeCurrent()
+        ''' <summary>Function statt Sub, damit der Befehl als CreateFromTask darauf warten kann und
+        ''' bis zum Ende gesperrt bleibt - sonst startet ein zweites STRG+R mitten im Schreiblauf
+        ''' einen zweiten Durchgang über dieselbe Datei.</summary>
+        Private Async Function ResizeCurrentAsync() As Task
             Try
                 If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
                 Dim gallery = _mainVm?.Gallery
@@ -2726,11 +2730,10 @@ Namespace ViewModels
                     OpenImage(_currentImagePath, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
                 End If
             Catch ex As Exception
-                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerViewModel.ResizeCurrent", ex)
+                StatusInfo = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
-        End Sub
+        End Function
 
         Private Sub RenameCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return

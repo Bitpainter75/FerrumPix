@@ -230,6 +230,16 @@ Namespace Services
 
         ''' <summary>Die Koordinate so, wie die Anwendung sie sonst auch zeigt (siehe ExifService) -
         ''' damit die Vorschau im Dialog und die Zeile in der Infoleiste dieselbe Sprache sprechen.</summary>
+        ''' <summary>Die Adresse, unter der OpenStreetMap diesen Punkt zeigt: Marke gesetzt, Karte
+        ''' herangezoomt. Die Zahlen gehen mit dem PUNKT als Trenner hinaus - eine deutsche
+        ''' Ländereinstellung schriebe sonst "50,809", und die Karte landete im Nirgendwo.</summary>
+        Public Shared Function BuildOpenStreetMapUrl(latitude As Double, longitude As Double,
+                                                     Optional zoom As Integer = 15) As String
+            Dim lat = latitude.ToString("0.######", Globalization.CultureInfo.InvariantCulture)
+            Dim lon = longitude.ToString("0.######", Globalization.CultureInfo.InvariantCulture)
+            Return $"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map={zoom}/{lat}/{lon}"
+        End Function
+
         Public Shared Function FormatCoordinates(latitude As Double, longitude As Double) As String
             Return $"{latitude:F5}°, {longitude:F5}°"
         End Function
@@ -556,6 +566,19 @@ Namespace Services
             If exifStart >= 0 Then
                 Dim existing(exifLength - 10 - 1) As Byte
                 Buffer.BlockCopy(bytes, exifStart + 10, existing, 0, existing.Length)
+
+                ' ERST den vorhandenen Aufnahmeort ausloeschen, dann den neuen anhaengen.
+                '
+                ' BEFUND an einem echten Bild: ohne diesen Schritt standen danach ZWEI Orte in der
+                ' Datei. Das Anhaengen laesst den alten Block naemlich unberuehrt liegen und biegt
+                ' nur den Verweis der KOPIE von IFD0 um - der urspruengliche IFD0 bleibt samt seinem
+                ' alten Verweis im Block stehen. Wer ihm folgt, findet weiterhin den alten Ort, und
+                ' selbst wer nur die Bytes durchsucht, liest die alte Koordinate im Klartext. Genau
+                ' das soll beim Loeschen ausdruecklich nicht passieren (siehe RemoveCoordinates) -
+                ' beim Setzen gilt dasselbe Versprechen.
+                Dim ohneAltenOrt = RemoveGpsFromTiff(existing)
+                If ohneAltenOrt IsNot Nothing Then existing = ohneAltenOrt
+
                 tiff = AppendGpsToTiff(existing, latitude, longitude, altitudeMeters)
                 If tiff Is Nothing Then
                     SetReason(result, "EXIF-Block nicht lesbar")

@@ -2000,6 +2000,7 @@ Namespace Views
                 .Rating = vm.SetSelectedRatingCommand,
                 .ColorLabel = New DelegateCommand(Sub(color) ApplyColorLabel(vm, color)),
                 .CopyPlace = vm.CopyPlaceCommand,
+                .OpenPlaceInOsm = vm.OpenPlaceInOsmCommand,
                 .PastePlace = vm.PastePlaceCommand,
                 .SetPlace = vm.SetPlaceCommand,
                 .RemovePlace = vm.RemovePlaceCommand,

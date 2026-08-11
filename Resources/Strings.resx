@@ -7062,4 +7062,10 @@
   <data name="L_scht_die_lokal_zwischengespeicherten_Nextcloud_a850c924" xml:space="preserve">
     <value>Deletes the locally cached Nextcloud thumbnails. They are fetched again when needed.</value>
   </data>
+  <data name="Aufnahmeort_in_OpenStreetMap_ffnen_7f47e55f" xml:space="preserve">
+    <value>Show location in OpenStreetMap</value>
+  </data>
+  <data name="Die_Karte_konnte_nicht_ge_ffnet_werden_e314c4b9" xml:space="preserve">
+    <value>The map could not be opened</value>
+  </data>
 </root>
