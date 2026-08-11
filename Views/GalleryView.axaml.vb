@@ -1917,9 +1917,15 @@ Namespace Views
         End Sub
 
         Public Async Sub OnFavoriteCopyFolderPathClick(sender As Object, e As RoutedEventArgs)
-            Dim path = GetFavoriteFolderPath(sender)
-            If path Is Nothing Then Return
-            Await CopyTextToClipboardAsync(path, "GalleryView.OnFavoriteCopyFolderPathClick")
+            Try
+                Dim path = GetFavoriteFolderPath(sender)
+                If path Is Nothing Then Return
+                Await CopyTextToClipboardAsync(path, "GalleryView.OnFavoriteCopyFolderPathClick")
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("GalleryView.OnFavoriteCopyFolderPathClick", ex)
+            End Try
         End Sub
 
         ''' <summary>Loescht den ORDNER (nicht nur den Favoriten) - wie im Ordnerbaum. Der Favorit
@@ -2155,9 +2161,15 @@ Namespace Views
         End Sub
 
         Public Async Sub OnContextCopyFolderPath(sender As Object, e As RoutedEventArgs)
-            Dim node = GetFolderTreeContextNode()
-            If node Is Nothing Then Return
-            Await CopyTextToClipboardAsync(node.FullPath, "GalleryView.OnContextCopyFolderPath")
+            Try
+                Dim node = GetFolderTreeContextNode()
+                If node Is Nothing Then Return
+                Await CopyTextToClipboardAsync(node.FullPath, "GalleryView.OnContextCopyFolderPath")
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("GalleryView.OnContextCopyFolderPath", ex)
+            End Try
         End Sub
 
         Public Sub OnContextCopyFolder(sender As Object, e As RoutedEventArgs)
