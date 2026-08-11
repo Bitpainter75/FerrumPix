@@ -152,13 +152,7 @@ Namespace Views
         End Sub
 
         Private Shared Sub OpenExternalUrl(url As String)
-            Try
-                Process.Start(New ProcessStartInfo With {
-                    .FileName = url,
-                    .UseShellExecute = True
-                })
-            Catch
-            End Try
+            ShellOpenService.Open(url, "Settings.OpenExternalUrl")
         End Sub
 
         Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)

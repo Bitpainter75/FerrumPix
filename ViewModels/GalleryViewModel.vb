@@ -1680,15 +1680,10 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Dieses Bild hat keinen Aufnahmeort")
                 Return
             End If
-            Try
-                Process.Start(New ProcessStartInfo() With {
-                    .FileName = GeotagService.BuildOpenStreetMapUrl(stored.Latitude.Value, stored.Longitude.Value),
-                    .UseShellExecute = True
-                })
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Gallery.OpenPlaceInOsm", ex)
+            Dim url = GeotagService.BuildOpenStreetMapUrl(stored.Latitude.Value, stored.Longitude.Value)
+            If Not ShellOpenService.Open(url, "Gallery.OpenPlaceInOsm") Then
                 StatusText = LocalizationService.T("Die Karte konnte nicht geöffnet werden")
-            End Try
+            End If
         End Sub
 
         ''' <summary>Setzt den gemerkten Aufnahmeort auf die ganze Auswahl. Serverbilder bleiben
@@ -7407,25 +7402,13 @@ Namespace ViewModels
             If _isVirtualFolder Then
                 Dim selectedPath = GetSelectedPaths().FirstOrDefault()
                 If String.IsNullOrEmpty(selectedPath) Then Return
-                Try
-                    Dim folder = IO.Path.GetDirectoryName(selectedPath)
-                    If String.IsNullOrEmpty(folder) Then Return
-                    Diagnostics.Process.Start(New Diagnostics.ProcessStartInfo() With {
-                        .FileName = folder,
-                        .UseShellExecute = True
-                    })
-                Catch
-                End Try
+                Dim folder = IO.Path.GetDirectoryName(selectedPath)
+                If String.IsNullOrEmpty(folder) Then Return
+                ShellOpenService.Open(folder, "Gallery.OpenInFileManager")
                 Return
             End If
             If String.IsNullOrEmpty(_currentFolder) Then Return
-            Try
-                Diagnostics.Process.Start(New Diagnostics.ProcessStartInfo() With {
-                    .FileName = _currentFolder,
-                    .UseShellExecute = True
-                })
-            Catch
-            End Try
+            ShellOpenService.Open(_currentFolder, "Gallery.OpenInFileManager")
         End Sub
 
         Private Sub CopySelectedPath()

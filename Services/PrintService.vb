@@ -526,9 +526,8 @@ Namespace Services
             End Try
         End Sub
 
-        ''' <summary>Erzeugt das PDF und übergibt es dem Betriebssystem. UseShellExecute löst .NET
-        ''' auf Linux nach xdg-open, auf macOS nach open und auf Windows nach ShellExecute auf -
-        ''' ein Codepfad für alle drei Plattformen (wie OpenInFileManager in der Galerie). Der
+        ''' <summary>Erzeugt das PDF und übergibt es dem Betriebssystem - über ShellOpenService, wie
+        ''' alles, was FerrumPix nach draußen gibt. Ein Codepfad für alle drei Plattformen. Der
         ''' Nutzer druckt dann aus dem Systemviewer mit dem gewohnten Druckdialog.</summary>
         Public Shared Async Function PrintAsync(imagePaths As IEnumerable(Of String), options As PrintOptions) As Task(Of Boolean)
             If options Is Nothing Then Return False
@@ -559,15 +558,10 @@ Namespace Services
             End If
 
             Dim renderMs = watch.ElapsedMilliseconds
-            Try
-                Process.Start(New ProcessStartInfo() With {
-                    .FileName = pdfPath,
-                    .UseShellExecute = True
-                })
-            Catch ex As Exception
-                DiagnosticLogService.LogAlways("Print", $"Öffnen fehlgeschlagen: {ex.Message} ({pdfPath})")
+            If Not ShellOpenService.Open(pdfPath, "Print") Then
+                DiagnosticLogService.LogAlways("Print", $"Öffnen fehlgeschlagen ({pdfPath})")
                 Return False
-            End Try
+            End If
 
             DiagnosticLogService.LogAlways("Print",
                 $"{Path.GetFileName(pdfPath)} images={paths.Count} pages={GetPageCount(paths, opt)} " &

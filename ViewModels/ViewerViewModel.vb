@@ -2777,14 +2777,8 @@ Namespace ViewModels
         Private Sub OpenInFileManager()
             Dim path = TargetPath()
             If String.IsNullOrEmpty(path) Then Return
-            Try
-                Dim folder = IO.Path.GetDirectoryName(path)
-                Diagnostics.Process.Start(New Diagnostics.ProcessStartInfo() With {
-                    .FileName = folder,
-                    .UseShellExecute = True
-                })
-            Catch
-            End Try
+            Dim folder = IO.Path.GetDirectoryName(path)
+            ShellOpenService.Open(folder, "Viewer.OpenInFileManager")
         End Sub
 
         Public Sub ZoomIn()

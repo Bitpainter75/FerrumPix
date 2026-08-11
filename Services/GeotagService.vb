@@ -576,8 +576,8 @@ Namespace Services
                 ' selbst wer nur die Bytes durchsucht, liest die alte Koordinate im Klartext. Genau
                 ' das soll beim Loeschen ausdruecklich nicht passieren (siehe RemoveCoordinates) -
                 ' beim Setzen gilt dasselbe Versprechen.
-                Dim ohneAltenOrt = RemoveGpsFromTiff(existing)
-                If ohneAltenOrt IsNot Nothing Then existing = ohneAltenOrt
+                Dim withoutOldPlace = RemoveGpsFromTiff(existing)
+                If withoutOldPlace IsNot Nothing Then existing = withoutOldPlace
 
                 tiff = AppendGpsToTiff(existing, latitude, longitude, altitudeMeters)
                 If tiff Is Nothing Then
