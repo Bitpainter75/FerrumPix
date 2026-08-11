@@ -628,6 +628,12 @@ Namespace ViewModels
                                                     .Favorite = ToggleFavoriteCommand,
                                                     .Rating = SetRatingCommand,
                                                     .ColorLabel = SetColorLabelCommand,
+                                                    .CopyPlace = CopyPlaceCommand,
+                                                    .OpenPlaceInOsm = OpenPlaceInOsmCommand,
+                                                    .PastePlace = PastePlaceCommand,
+                                                    .SetPlace = SetPlaceCommand,
+                                                    .RemovePlace = RemovePlaceCommand,
+                                                    .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
                                                     .ShowInFileManager = OpenFileManagerCommand,
                                                     .Delete = DeleteCurrentCommand})
@@ -644,6 +650,15 @@ Namespace ViewModels
         Public ReadOnly Property RenameCurrentCommand As ICommand
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
+
+        ''' <summary>Das Untermenue "Metadaten" fuer das angezeigte Bild. Dieselben Ablaeufe wie in
+        ''' der Galerie, nur auf einem Bild statt auf einer Auswahl.</summary>
+        Public ReadOnly Property CopyPlaceCommand As ICommand
+        Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
+        Public ReadOnly Property PastePlaceCommand As ICommand
+        Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property RemovePlaceCommand As ICommand
+        Public ReadOnly Property RemoveMetadataCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property SetColorLabelCommand As ICommand
@@ -705,6 +720,17 @@ Namespace ViewModels
             ExportCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ExportImageItems(i)))
             ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ApplyFilterToImageItems(i)))
             RenameCurrentCommand = ReactiveCommand.Create(Sub() RenameCurrent())
+            ' Metadaten: dieselben Ablaeufe wie in der Galerie, angewandt auf das angezeigte Bild.
+            ' Die schreibenden bleiben als CreateFromTask bis zum Ende gesperrt.
+            CopyPlaceCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.CopyPlaceFromImageItems(i)))
+            OpenPlaceInOsmCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.OpenPlaceInOsmForImageItems(i)))
+            PastePlaceCommand = ReactiveCommand.Create(Sub()
+                                                           WithCurrentImage(Sub(g, i) g.PastePlaceToImageItems(i))
+                                                           AfterPlaceChanged()
+                                                       End Sub)
+            SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
+            RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
+            RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
             OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
             ' Dieselben drei Befehle bedienen das Kontextmenue und die Fusszeile. Sie wirken auf das
@@ -2705,6 +2731,72 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("Viewer.StapelAblauf", ex)
             End Try
         End Sub
+
+        ''' <summary>Dasselbe fuer einen Ablauf, der einen Task liefert - und der Task wird ERWARTET.
+        ''' Das Try/Catch der Fassung darueber endet sonst am ersten Await, und was danach schief
+        ''' geht, steht in keinem Protokoll: der Nutzer klickt, und nichts geschieht.</summary>
+        Private Async Function WithCurrentImageAsync(ablauf As Func(Of GalleryViewModel, IList(Of ImageItem), Task)) As Task
+            Try
+                Dim path = TargetPath()
+                If String.IsNullOrWhiteSpace(path) Then Return
+                Dim gallery = _mainVm?.Gallery
+                If gallery Is Nothing Then Return
+
+                Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                             PathIdentity.AreSame(i.FilePath, path))
+                If item Is Nothing Then
+                    If Not File.Exists(path) Then Return
+                    item = New ImageItem(path)
+                End If
+                If Not item.IsImage Then Return
+
+                Await ablauf(gallery, New List(Of ImageItem) From {item})
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.StapelAblauf", ex)
+                StatusInfo = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
+        End Function
+
+        ''' <summary>Nach einer Ortsaenderung: die Ortszeile der Infoleiste zeigt sonst weiter den
+        ''' alten Stand, und "Aufnahmeort einfügen" nennt im Menue noch den vorherigen Ort.</summary>
+        Private Sub AfterPlaceChanged()
+            InfoPanel.RefreshPlace()
+            RefreshContextActions()
+        End Sub
+
+        Private Async Function SetPlaceCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetPlaceForImageItemsAsync(i)
+                                        End Function)
+            AfterPlaceChanged()
+        End Function
+
+        Private Async Function RemovePlaceCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.RemovePlaceFromImageItemsAsync(i)
+                                        End Function)
+            AfterPlaceChanged()
+        End Function
+
+        ''' <summary>"Metadaten entfernen" fuer das angezeigte Bild. Die Datei wird AN ORT UND STELLE
+        ''' neu geschrieben; mit den Aufnahmedaten faellt auch die EXIF-Drehung weg, deshalb wird
+        ''' danach neu geladen - sonst laege auf der Buehne weiter das Bild von vorher.
+        '''
+        ''' Nur, wenn tatsaechlich geschrieben wurde: nach einem Abbruch in der Rueckfrage waere der
+        ''' Neuaufbau ein sichtbares Flackern ohne Grund.</summary>
+        Private Async Function RemoveMetadataCurrentAsync() As Task
+            Dim path = TargetPath()
+            Dim changedCount = 0
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            changedCount = Await g.RemoveMetadataForImageItemsAsync(i)
+                                        End Function)
+            If changedCount = 0 OrElse String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+
+            Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                         PathIdentity.AreSame(i.FilePath, path))
+            item?.EvictThumbnail()
+            OpenImage(path, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+        End Function
 
         ''' <summary>Function statt Sub, damit der Befehl als CreateFromTask darauf warten kann und
         ''' bis zum Ende gesperrt bleibt - sonst startet ein zweites STRG+R mitten im Schreiblauf

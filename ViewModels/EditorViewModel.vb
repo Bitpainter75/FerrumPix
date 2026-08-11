@@ -11687,6 +11687,15 @@ Namespace ViewModels
         Public ReadOnly Property ExportCurrentCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
 
+        ''' <summary>Das Untermenue "Metadaten" fuer das geladene Bild. Dieselben Ablaeufe wie in der
+        ''' Galerie, nur auf einem Bild statt auf einer Auswahl.</summary>
+        Public ReadOnly Property CopyPlaceCommand As ICommand
+        Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
+        Public ReadOnly Property PastePlaceCommand As ICommand
+        Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property RemovePlaceCommand As ICommand
+        Public ReadOnly Property RemoveMetadataCommand As ICommand
+
         Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
@@ -12180,6 +12189,20 @@ Namespace ViewModels
             ConvertCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.ConvertImageItems(i2)))
             ExportCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.ExportImageItems(i2)))
             OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
+            ' Metadaten: dieselben Ablaeufe wie in der Galerie, angewandt auf das geladene Bild.
+            ' Die schreibenden bleiben als CreateFromTask bis zum Ende gesperrt.
+            CopyPlaceCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.CopyPlaceFromImageItems(i2)))
+            OpenPlaceInOsmCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i2) g.OpenPlaceInOsmForImageItems(i2)))
+            PastePlaceCommand = ReactiveCommand.Create(Sub()
+                                                           WithCurrentImage(Sub(g, i2) g.PastePlaceToImageItems(i2))
+                                                           AfterPlaceChanged()
+                                                       End Sub)
+            SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
+            RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
+            RemoveMetadataCommand = ReactiveCommand.CreateFromTask(
+                Function() WithCurrentImageAsync(Async Function(g, i2)
+                                                     Await g.RemoveMetadataForImageItemsAsync(i2)
+                                                 End Function))
             PrintCommand = ReactiveCommand.CreateFromTask(Function() PrintCurrentAsync())
 
             ShowNewDocumentDialogCommand = ReactiveCommand.Create(Sub() ShowNewDocumentDialog())
@@ -12301,6 +12324,27 @@ Namespace ViewModels
             End Try
         End Function
 
+        ''' <summary>Nach einer Ortsaenderung: die Ortszeile der Infoleiste zeigt sonst weiter den
+        ''' alten Stand, und "Aufnahmeort einfügen" nennt im Menue noch den vorherigen Ort.</summary>
+        Private Sub AfterPlaceChanged()
+            InfoPanel.RefreshPlace()
+            RefreshContextActions()
+        End Sub
+
+        Private Async Function SetPlaceCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetPlaceForImageItemsAsync(i)
+                                        End Function)
+            AfterPlaceChanged()
+        End Function
+
+        Private Async Function RemovePlaceCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.RemovePlaceFromImageItemsAsync(i)
+                                        End Function)
+            AfterPlaceChanged()
+        End Function
+
         ''' <summary>Die Zwischenablage haengt am TopLevel und ist nur von der View aus
         ''' erreichbar. Die View setzt den Haken beim Anhaengen.</summary>
         Public Property CopyPathToClipboard As Action(Of String)
@@ -12329,6 +12373,12 @@ Namespace ViewModels
                                                     .Favorite = ToggleFavoriteCommand,
                                                     .Rating = SetRatingCommand,
                                                     .ColorLabel = SetColorLabelCommand,
+                                                    .CopyPlace = CopyPlaceCommand,
+                                                    .OpenPlaceInOsm = OpenPlaceInOsmCommand,
+                                                    .PastePlace = PastePlaceCommand,
+                                                    .SetPlace = SetPlaceCommand,
+                                                    .RemovePlace = RemovePlaceCommand,
+                                                    .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
                                                     .ShowInFileManager = OpenFileManagerCommand,
                                                     .Delete = DeleteCurrentCommand})

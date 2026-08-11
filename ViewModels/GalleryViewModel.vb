@@ -1483,7 +1483,7 @@ Namespace ViewModels
             ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
             PrintSelectedCommand = ReactiveCommand.CreateFromTask(Function() PrintSelectedAsync())
             ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() ApplyFilterSelected())
-            RemoveMetadataSelectedCommand = ReactiveCommand.Create(Sub() RemoveMetadataSelected())
+            RemoveMetadataSelectedCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataSelectedAsync())
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
             DecreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize -= 24)
             SetSelectedRatingCommand = ReactiveCommand.Create(Of String)(Sub(r) SetSelectedRating(r))
@@ -1591,10 +1591,9 @@ Namespace ViewModels
         ''' Die Rueckfrage steht hier, weil der Vorgang die BILDDATEIEN aendert und sich nicht
         ''' zurueckdrehen laesst: die Koordinate ist danach weg, nicht versteckt. Der Text sagt
         ''' deshalb beides - wie viele Bilder es trifft und dass es endgueltig ist.</summary>
-        Private Async Function RemovePlaceFromSelectedAsync() As Task
+        Private Async Function RemovePlaceFromSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task
             Try
-                Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset AndAlso
-                                                                       Not String.IsNullOrEmpty(i.FilePath)).ToList()
+                Dim images = GetPlaceTargets(preset)
                 If images.Count = 0 OrElse _mainVm Is Nothing Then Return
 
                 Dim message = String.Format(
@@ -1607,6 +1606,7 @@ Namespace ViewModels
                 Dim batch = LibraryService.Instance.ClearGpsCoordinatesForMany(images.Select(Function(i) i.FilePath).ToList())
                 StatusText = String.Format(LocalizationService.T("Aufnahmeort aus {0} Bildern entfernt"), batch.SucceededCount)
                 UpdateInfoPanelTarget()
+                InfoPanel.RefreshPlace()
                 RefreshContextActions()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RemovePlace", ex)
@@ -1614,10 +1614,9 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Fragt den Aufnahmeort im Dialog ab und setzt ihn auf die ganze Auswahl.</summary>
-        Private Async Function SetPlaceForSelectedAsync() As Task
+        Private Async Function SetPlaceForSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task
             Try
-                Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset AndAlso
-                                                                       Not String.IsNullOrEmpty(i.FilePath)).ToList()
+                Dim images = GetPlaceTargets(preset)
                 If images.Count = 0 OrElse _mainVm Is Nothing Then Return
 
                 ' Bei EINEM Bild, das schon einen Ort hat, steht der beim Oeffnen im Feld: dann
@@ -1634,7 +1633,7 @@ Namespace ViewModels
 
                 Dim chosen = Await _mainVm.ShowSetPlaceAsync(images.Select(Function(i) i.FilePath).ToList(), initialQuery)
                 If chosen Is Nothing Then Return
-                ApplyPlaceToSelection(chosen.Latitude, chosen.Longitude, chosen.Label)
+                ApplyPlaceToSelection(chosen.Latitude, chosen.Longitude, chosen.Label, images)
 
                 ' Wer einen Ort gesetzt hat, will ihn meist auf mehrere Reihen anwenden. Er landet
                 ' deshalb gleich im Merker und steht beim naechsten Rechtsklick zum Einfuegen bereit.
@@ -1649,8 +1648,8 @@ Namespace ViewModels
         '''
         ''' Die Beschriftung des Einfuegen-Eintrags soll den ORT nennen und nicht die Koordinate,
         ''' solange einer bekannt ist - "Aufnahmeort einfügen: München" sagt mehr als eine Zahl.</summary>
-        Private Sub CopyPlaceFromSelected()
-            Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset).ToList()
+        Private Sub CopyPlaceFromSelected(Optional preset As IList(Of ImageItem) = Nothing)
+            Dim images = GetPlaceTargets(preset)
             If images.Count <> 1 Then Return
             Dim path = images(0).FilePath
             Dim stored = LibraryService.Instance.GetGpsCoordinates(path)
@@ -1672,8 +1671,8 @@ Namespace ViewModels
         ''' <summary>Zeigt den Aufnahmeort des markierten Bildes auf der Karte von OpenStreetMap.
         ''' Der Ort steht im Katalog, gebraucht wird nur die Adresse - es geht nichts an einen
         ''' Dienst, ausser dem Aufruf, den der Nutzer mit dem Klick selbst auslöst.</summary>
-        Private Sub OpenPlaceInOsmFromSelected()
-            Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset).ToList()
+        Private Sub OpenPlaceInOsmFromSelected(Optional preset As IList(Of ImageItem) = Nothing)
+            Dim images = GetPlaceTargets(preset)
             If images.Count <> 1 Then Return
             Dim stored = LibraryService.Instance.GetGpsCoordinates(images(0).FilePath)
             If Not stored.Latitude.HasValue OrElse Not stored.Longitude.HasValue Then
@@ -1688,18 +1687,33 @@ Namespace ViewModels
 
         ''' <summary>Setzt den gemerkten Aufnahmeort auf die ganze Auswahl. Serverbilder bleiben
         ''' aussen vor: sie haben keine Datei, die den Ort tragen koennte.</summary>
-        Private Sub PastePlaceToSelected()
+        Private Sub PastePlaceToSelected(Optional preset As IList(Of ImageItem) = Nothing)
             Dim latitude As Double, longitude As Double
             If Not GeotagClipboard.TryGet(latitude, longitude) Then Return
-            ApplyPlaceToSelection(latitude, longitude, GeotagClipboard.Label)
+            ApplyPlaceToSelection(latitude, longitude, GeotagClipboard.Label, preset)
         End Sub
+
+        ''' <summary>Die Bilder, auf die eine Ortsaktion wirkt: die VORGEGEBENE Liste, sonst die
+        ''' Auswahl der Galerie. Betrachter und Editor geben ihr angezeigtes Bild vor - dieselbe
+        ''' Umsetzung, nur ein anderer Ausgangspunkt (wie bei ResizeImageItemsAsync).
+        '''
+        ''' Serverbilder fallen in beiden Faellen weg: sie haben keine Datei, die den Ort tragen
+        ''' koennte, und ihr Katalogeintrag haengt an einem Pseudo-Pfad.</summary>
+        Private Function GetPlaceTargets(preset As IList(Of ImageItem)) As List(Of ImageItem)
+            Dim source = If(preset IsNot Nothing AndAlso preset.Count > 0,
+                            preset.AsEnumerable(),
+                            GetSelectedImageItems().AsEnumerable())
+            Return source.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso
+                                            Not i.IsRemoteAsset AndAlso
+                                            Not String.IsNullOrEmpty(i.FilePath)).ToList()
+        End Function
 
         ''' <summary>Der gemeinsame Weg von "einfügen" und "setzen": schreiben, melden, Infoleiste
         ''' nachziehen. Gemeldet wird getrennt nach Ziel - "steht in der Datei" und "steht daneben"
         ''' ist fuer den Nutzer nicht dasselbe.</summary>
-        Friend Sub ApplyPlaceToSelection(latitude As Double, longitude As Double, label As String)
-            Dim images = GetSelectedImageItems().Where(Function(i) Not i.IsRemoteAsset AndAlso
-                                                                   Not String.IsNullOrEmpty(i.FilePath)).ToList()
+        Friend Sub ApplyPlaceToSelection(latitude As Double, longitude As Double, label As String,
+                                         Optional preset As IList(Of ImageItem) = Nothing)
+            Dim images = GetPlaceTargets(preset)
             If images.Count = 0 Then Return
 
             Dim batch = LibraryService.Instance.SetGpsCoordinatesForMany(
@@ -1714,10 +1728,40 @@ Namespace ViewModels
                                            batch.SucceededCount, batch.Total)
             End If
 
-            ' Die Infoleiste zeigt Ort und Land - sie steht sonst beim alten Stand.
+            ' Die Infoleiste zeigt Ort und Land - sie steht sonst beim alten Stand. RefreshPlace
+            ' gehoert dazu: UpdateInfoPanelTarget reicht dieselbe Auswahl noch einmal ein, und das
+            ' Panel steigt bei unveraendertem Pfad sofort wieder aus.
             UpdateInfoPanelTarget()
+            InfoPanel.RefreshPlace()
             RefreshContextActions()
         End Sub
+
+        ''' <summary>Die Ortsaktionen fuer eine VORGEGEBENE Liste. Betrachter und Editor loesen damit
+        ''' fuer ihr angezeigtes Bild dasselbe aus, was die Galerie fuer ihre Auswahl tut.</summary>
+        Public Sub CopyPlaceFromImageItems(items As IList(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            CopyPlaceFromSelected(items)
+        End Sub
+
+        Public Sub OpenPlaceInOsmForImageItems(items As IList(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            OpenPlaceInOsmFromSelected(items)
+        End Sub
+
+        Public Sub PastePlaceToImageItems(items As IList(Of ImageItem))
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            PastePlaceToSelected(items)
+        End Sub
+
+        Public Async Function SetPlaceForImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await SetPlaceForSelectedAsync(items)
+        End Function
+
+        Public Async Function RemovePlaceFromImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await RemovePlaceFromSelectedAsync(items)
+        End Function
 
         Private Function GetSelectedImageItems() As List(Of ImageItem)
             Dim selected = If(SelectedItems IsNot Nothing AndAlso SelectedItems.Count > 0,
@@ -8399,12 +8443,17 @@ Namespace ViewModels
             End Try
         End Function
 
-        Private Async Sub RemoveMetadataSelected()
+        ''' <summary>Function statt Sub, damit der Befehl als CreateFromTask darauf warten kann und
+        ''' bis zum Ende gesperrt bleibt - sonst startet ein zweiter Klick mitten im Schreiblauf
+        ''' einen zweiten Durchgang ueber dieselben Dateien (siehe ResizeSelectedAsync).</summary>
+        ''' <returns>Wie viele Dateien tatsaechlich neu geschrieben wurden. Null heisst auch:
+        ''' abgebrochen - der Betrachter laedt sein Bild dann nicht ohne Grund neu.</returns>
+        Private Async Function RemoveMetadataSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task(Of Integer)
             Try
-                Dim targets = GetSelectedEditableImagePaths()
+                Dim targets = GetMetadataTargetPaths(preset)
                 If targets.Count = 0 Then
                     StatusText = LocalizationService.T("Für diese Dateien lassen sich keine Metadaten entfernen.")
-                    Return
+                    Return 0
                 End If
 
                 ' Rueckfrage: die Dateien werden AN ORT UND STELLE neu geschrieben, EXIF, XMP und
@@ -8414,7 +8463,7 @@ Namespace ViewModels
                     targets.Count)
                 If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Metadaten entfernen"), frage,
                                                       LocalizationService.T("Entfernen"),
-                                                      LocalizationService.T("Abbrechen")) Then Return
+                                                      LocalizationService.T("Abbrechen")) Then Return 0
 
                 StatusText = LocalizationService.T("Entferne Metadaten...")
                 Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
@@ -8422,13 +8471,34 @@ Namespace ViewModels
 
                 StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) bereinigt"), changedCount, targets.Count)
                 RefreshAfterBatchFileRewrite(targets)
+                Return changedCount
             Catch ex As Exception
-                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
-                ' und beendet den Prozess.
                 DiagnosticLogService.LogException("GalleryViewModel.RemoveMetadataSelected", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+                Return 0
             End Try
-        End Sub
+        End Function
+
+        ''' <summary>"Metadaten entfernen" fuer eine VORGEGEBENE Liste. Betrachter und Editor loesen
+        ''' damit fuer ihr angezeigtes Bild dasselbe aus, was die Galerie fuer ihre Auswahl tut.</summary>
+        Public Async Function RemoveMetadataForImageItemsAsync(items As IList(Of ImageItem)) As Task(Of Integer)
+            If items Is Nothing OrElse items.Count = 0 Then Return 0
+            Return Await RemoveMetadataSelectedAsync(items)
+        End Function
+
+        ''' <summary>Die Dateien, aus denen Metadaten entfernt werden: die VORGEGEBENE Liste, sonst
+        ''' die Auswahl.
+        '''
+        ''' Massgeblich ist IsBatchImageEditWritable, nicht ...Readable: lesen koennen wir auch TIFF,
+        ''' HEIC, BMP und GIF, schreiben nicht. Mit der Lese-Pruefung landete eine solche Datei in
+        ''' der Liste und wurde im falschen Format zurueckgeschrieben.</summary>
+        Private Function GetMetadataTargetPaths(preset As IList(Of ImageItem)) As List(Of String)
+            Dim paths = If(preset IsNot Nothing AndAlso preset.Count > 0,
+                           preset.Where(Function(i) i IsNot Nothing).Select(Function(i) i.FilePath),
+                           GetSelectedPaths().AsEnumerable())
+            Return paths.Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso File.Exists(p) AndAlso
+                                           IsBatchImageEditWritable(p)).ToList()
+        End Function
 
         ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
         Private Async Sub ApplyWatermarkSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
@@ -8557,17 +8627,6 @@ Namespace ViewModels
                 .FillKind = "Solid",
                 .FillColor2 = AppSettingsService.NormalizeHexColor(preset.FillColor, "#FFFFFFFF")
             }
-        End Function
-
-        ''' <summary>Bilder, die AN ORT UND STELLE neu geschrieben werden duerfen.
-        '''
-        ''' Massgeblich ist IsBatchImageEditWritable, nicht ...Readable: lesen koennen wir auch TIFF,
-        ''' HEIC, BMP und GIF, schreiben nicht. Mit der Lese-Pruefung landete eine solche Datei in
-        ''' der Liste und wurde im falschen Format zurueckgeschrieben.</summary>
-        Private Function GetSelectedEditableImagePaths() As List(Of String)
-            Return GetSelectedPaths().
-                Where(Function(p) File.Exists(p) AndAlso IsBatchImageEditWritable(p)).
-                ToList()
         End Function
 
         Private Function GetSelectedBatchEditableImageItems() As List(Of ImageItem)

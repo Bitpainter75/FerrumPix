@@ -467,6 +467,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Den Ort noch einmal lesen, waehrend dasselbe Bild angezeigt bleibt.
+        '''
+        ''' Gebraucht, sobald der Aufnahmeort geaendert wurde: ShowItem steigt bei unveraendertem
+        ''' Pfad sofort wieder aus, die Ortszeile stuende sonst weiter auf dem alten Stand - in der
+        ''' Galerie genauso wie in Betrachter und Editor.</summary>
+        Public Sub RefreshPlace()
+            LoadPlace()
+        End Sub
+
         Private Sub LoadPlace()
             ' Ueber das ELEMENT, nicht ueber den Pfad: ein Immich-Asset traegt seinen Ort selbst,
             ' ein lokales Bild holt ihn aus dem Katalog. Der Pfad allein reichte nur fuer das eine
