@@ -7217,4 +7217,34 @@
   <data name="Ein_anderes_Fenster_arbeitet_gerade_am_Katalog_02482451" xml:space="preserve">
     <value>Un'altra finestra sta lavorando sul catalogo</value>
   </data>
+  <data name="Gruppenansicht_c3247db4" xml:space="preserve">
+    <value>Vista gruppi</value>
+  </data>
+  <data name="GRUPPEN_986d3fa3" xml:space="preserve">
+    <value>GRUPPI</value>
+  </data>
+  <data name="Nach_Tag_36556488" xml:space="preserve">
+    <value>Per giorno</value>
+  </data>
+  <data name="Nach_Monat_525f58b2" xml:space="preserve">
+    <value>Per mese</value>
+  </data>
+  <data name="Nach_Jahr_bf06a89a" xml:space="preserve">
+    <value>Per anno</value>
+  </data>
+  <data name="Ohne_Kameraangabe_ec23059c" xml:space="preserve">
+    <value>Senza fotocamera</value>
+  </data>
+  <data name="Ohne_Dateiendung_8f95141a" xml:space="preserve">
+    <value>Senza estensione</value>
+  </data>
+  <data name="Ohne_Bewertung_3a9322de" xml:space="preserve">
+    <value>Senza valutazione</value>
+  </data>
+  <data name="Kein_Favorit_67705ccf" xml:space="preserve">
+    <value>Non preferito</value>
+  </data>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
+    <value>Stabilisce se la galleria viene mostrata come griglia, come elenco o a gruppi.</value>
+  </data>
 </root>

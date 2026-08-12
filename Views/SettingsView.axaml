@@ -674,7 +674,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Ansicht" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Legt fest, ob die Galerie als Raster oder als Liste angezeigt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Legt fest, ob die Galerie als Raster, als Liste oder in Gruppen angezeigt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -687,6 +687,11 @@
                                         Padding="10,6"
                                         Command="{Binding SetGalleryViewModeCommand}"
                                         CommandParameter="List">Liste</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsGalleryViewModeGroup}"
+                                        Padding="10,6"
+                                        Command="{Binding SetGalleryViewModeCommand}"
+                                        CommandParameter="Group">Gruppen</Button>
                             </StackPanel>
                         </Grid>
 

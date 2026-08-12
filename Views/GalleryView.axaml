@@ -1066,6 +1066,42 @@
                                                        Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                         </Grid>
                                     </Button>
+
+                                    <!-- Nur in der Gruppenansicht und nur bei einer Datumssortierung:
+                                         sonst gibt es keinen Tag, den man vergroebern koennte. -->
+                                    <StackPanel IsVisible="{Binding IsGroupDateStepVisible}">
+                                        <Separator Margin="4,6"/>
+                                        <TextBlock Text="GRUPPEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetGroupDateStepCommand}" CommandParameter="Day">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nach Tag" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsGroupStepDay}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetGroupDateStepCommand}" CommandParameter="Month">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nach Monat" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsGroupStepMonth}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetGroupDateStepCommand}" CommandParameter="Year">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nach Jahr" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsGroupStepYear}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                    </StackPanel>
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
@@ -1090,6 +1126,13 @@
                                 Command="{Binding SetViewModeCommand}" CommandParameter="Grid"
                                 ToolTip.Tip="Rasteransicht">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-grid.svg"
+                                   Width="20" Height="20"/>
+                        </Button>
+                        <Button Classes="icon-btn" Width="34" Height="34"
+                                Classes.active="{Binding IsGroupView}"
+                                Command="{Binding SetViewModeCommand}" CommandParameter="Group"
+                                ToolTip.Tip="Gruppenansicht">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-rows.svg"
                                    Width="20" Height="20"/>
                         </Button>
                         <Button Classes="icon-btn" Width="34" Height="34"
@@ -1729,11 +1772,15 @@
                     <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
+                <!-- Raster UND Gruppenansicht laufen ueber dieselbe Flaeche: es ist dasselbe
+                     Kachelraster, die Gruppenansicht schiebt nur Kopfzeilen dazwischen. Eine zweite
+                     Kopie der Kachelvorlage wuerde nach drei Aenderungen auseinanderlaufen. Was sich
+                     unterscheidet, ist allein die Scrollrechnung im Code dahinter. -->
                 <ScrollViewer x:Name="GalleryGridScrollViewer"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
                               PointerPressed="OnGalleryAreaPointerPressed"
-                              IsVisible="{Binding IsGridView}"
+                              IsVisible="{Binding IsTileView}"
                               DragDrop.AllowDrop="True"
                               DragDrop.DragOver="OnGalleryAreaDragOver"
                               DragDrop.Drop="OnGalleryAreaDrop"
@@ -1753,7 +1800,46 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:ImageItem}">
+                              <!-- Zwei Gestalten in EINER Vorlage: eine Kachel oder, in der
+                                   Gruppenansicht, die Kopfzeile einer Gruppe. Immer genau eine davon
+                                   ist sichtbar; die unsichtbare wird nicht vermessen, das Panel ist
+                                   damit so breit wie die sichtbare. Im Raster kommt eine Kopfzeile
+                                   nie vor - dort stehen im Anzeigefenster nur echte Elemente. -->
+                              <Panel>
+                                <!-- Kopfzeile einer Gruppe. Die Hoehe ist fest und muss mit
+                                     GalleryViewModel.GroupHeaderRowHeight uebereinstimmen, sonst
+                                     driftet die Scrollrechnung mit der Scrolltiefe. Die Breite ist
+                                     genau eine volle Kachelzeile, damit das WrapPanel die Kopfzeile
+                                     immer allein in eine Zeile setzt.
+                                     no-translate ist Pflicht: der Uebersetzungsdurchlauf schreibt
+                                     sonst Text zu und bricht die Bindung. -->
+                                <Border IsVisible="{Binding IsGroupHeader}"
+                                        Height="48"
+                                        Width="{Binding DataContext.GroupHeaderWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Padding="5,0,5,0">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,6" VerticalAlignment="Bottom">
+                                        <TextBlock Grid.Column="0"
+                                                   Classes="no-translate"
+                                                   Text="{Binding GroupTitle}"
+                                                   FontSize="{DynamicResource FP.Font.Subtitle}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Primary}"
+                                                   VerticalAlignment="Bottom"/>
+                                        <Border Grid.Column="1"
+                                                Height="1"
+                                                Margin="12,0,12,5"
+                                                VerticalAlignment="Bottom"
+                                                Background="{DynamicResource FP.Border.Normal}"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Classes="no-translate"
+                                                   Text="{Binding GroupCountText}"
+                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   VerticalAlignment="Bottom"/>
+                                    </Grid>
+                                </Border>
                                 <Border Name="ThumbBorder"
+                                        IsVisible="{Binding IsContentEntry}"
                                         Classes="thumb-card"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
@@ -2080,6 +2166,7 @@
                                         </Border>
                                     </Grid>
                                 </Border>
+                              </Panel>
                             </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

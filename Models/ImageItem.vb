@@ -102,15 +102,34 @@ Namespace Models
             End Set
         End Property
 
+        ''' <summary>Kopfzeile einer Gruppe in der Gruppenansicht. Ein solcher Eintrag steht NUR im
+        ''' Anzeigefenster der Ansicht, nie in Items oder im Gesamtbestand - er hat keine Datei, keine
+        ''' Auswahl und kein Vorschaubild. Aufgebaut wird er ueber CreateGroupHeader.</summary>
+        Public Property IsGroupHeader As Boolean
+
+        ''' <summary>Beschriftung der Gruppenkopfzeile, etwa "Dienstag, 12. August 2026".</summary>
+        Public Property GroupTitle As String
+
+        ''' <summary>Zweite Zeile der Gruppenkopfzeile, etwa "24 Bilder".</summary>
+        Public Property GroupCountText As String
+
+        ''' <summary>True fuer alles, was eine Kachel bekommt - also alles ausser einer Gruppenkopfzeile.
+        ''' Die Gruppenansicht schaltet damit zwischen Kachel und Kopfzeile um.</summary>
+        Public ReadOnly Property IsContentEntry As Boolean
+            Get
+                Return Not IsGroupHeader
+            End Get
+        End Property
+
         Public ReadOnly Property IsSelectableEntry As Boolean
             Get
-                Return Not IsParentFolderEntry
+                Return Not IsParentFolderEntry AndAlso Not IsGroupHeader
             End Get
         End Property
 
         Public ReadOnly Property IsImage As Boolean
             Get
-                Return Not IsFolder
+                Return Not IsFolder AndAlso Not IsGroupHeader
             End Get
         End Property
 
@@ -1179,6 +1198,17 @@ Namespace Models
             Dim item = FromFolder(folderPath)
             item.IsParentFolderEntry = True
             item.FileName = ".."
+            Return item
+        End Function
+
+        ''' <summary>Kopfzeile einer Gruppe fuer die Gruppenansicht. Bewusst OHNE Dateipfad: der
+        ''' Eintrag darf nie in einen Weg geraten, der eine Datei erwartet.</summary>
+        Public Shared Function CreateGroupHeader(title As String, countText As String) As ImageItem
+            Dim item As New ImageItem()
+            item.IsGroupHeader = True
+            item.GroupTitle = If(title, "")
+            item.GroupCountText = If(countText, "")
+            item.FileName = If(title, "")
             Return item
         End Function
 

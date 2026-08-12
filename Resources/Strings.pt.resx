@@ -7216,4 +7216,34 @@
   <data name="Ein_anderes_Fenster_arbeitet_gerade_am_Katalog_02482451" xml:space="preserve">
     <value>Outra janela está a trabalhar no catálogo</value>
   </data>
+  <data name="Gruppenansicht_c3247db4" xml:space="preserve">
+    <value>Visualização em grupos</value>
+  </data>
+  <data name="GRUPPEN_986d3fa3" xml:space="preserve">
+    <value>GRUPOS</value>
+  </data>
+  <data name="Nach_Tag_36556488" xml:space="preserve">
+    <value>Por dia</value>
+  </data>
+  <data name="Nach_Monat_525f58b2" xml:space="preserve">
+    <value>Por mês</value>
+  </data>
+  <data name="Nach_Jahr_bf06a89a" xml:space="preserve">
+    <value>Por ano</value>
+  </data>
+  <data name="Ohne_Kameraangabe_ec23059c" xml:space="preserve">
+    <value>Sem câmera</value>
+  </data>
+  <data name="Ohne_Dateiendung_8f95141a" xml:space="preserve">
+    <value>Sem extensão</value>
+  </data>
+  <data name="Ohne_Bewertung_3a9322de" xml:space="preserve">
+    <value>Sem avaliação</value>
+  </data>
+  <data name="Kein_Favorit_67705ccf" xml:space="preserve">
+    <value>Não favorito</value>
+  </data>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
+    <value>Define se a galeria é apresentada como grelha, como lista ou em grupos.</value>
+  </data>
 </root>

@@ -7218,4 +7218,34 @@
   <data name="Ein_anderes_Fenster_arbeitet_gerade_am_Katalog_02482451" xml:space="preserve">
     <value>Another window is working on the catalogue</value>
   </data>
+  <data name="Gruppenansicht_c3247db4" xml:space="preserve">
+    <value>Group view</value>
+  </data>
+  <data name="GRUPPEN_986d3fa3" xml:space="preserve">
+    <value>GROUPS</value>
+  </data>
+  <data name="Nach_Tag_36556488" xml:space="preserve">
+    <value>By day</value>
+  </data>
+  <data name="Nach_Monat_525f58b2" xml:space="preserve">
+    <value>By month</value>
+  </data>
+  <data name="Nach_Jahr_bf06a89a" xml:space="preserve">
+    <value>By year</value>
+  </data>
+  <data name="Ohne_Kameraangabe_ec23059c" xml:space="preserve">
+    <value>No camera</value>
+  </data>
+  <data name="Ohne_Dateiendung_8f95141a" xml:space="preserve">
+    <value>No file extension</value>
+  </data>
+  <data name="Ohne_Bewertung_3a9322de" xml:space="preserve">
+    <value>No rating</value>
+  </data>
+  <data name="Kein_Favorit_67705ccf" xml:space="preserve">
+    <value>Not a favorite</value>
+  </data>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
+    <value>Sets whether the gallery is shown as a grid, as a list or in groups.</value>
+  </data>
 </root>

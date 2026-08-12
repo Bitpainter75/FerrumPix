@@ -496,7 +496,7 @@ Namespace Views
         Private Sub OnTimelineScrubRequested(sender As Object, offsetFraction As Double)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
-            Dim scrollViewer = Me.FindControl(Of ScrollViewer)(If(vm.IsGridView, "GalleryGridScrollViewer", "GalleryListScrollViewer"))
+            Dim scrollViewer = Me.FindControl(Of ScrollViewer)(If(vm.IsListView, "GalleryListScrollViewer", "GalleryGridScrollViewer"))
             If scrollViewer Is Nothing Then Return
             Dim range = Math.Max(0.0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height)
             scrollViewer.Offset = New Avalonia.Vector(scrollViewer.Offset.X, offsetFraction * range)
@@ -561,6 +561,32 @@ Namespace Views
         Private Sub RequestViewportThumbnails()
             Dim vm = GetVm()
             If vm Is Nothing OrElse vm.Items Is Nothing OrElse vm.Items.Count = 0 Then Return
+
+            If vm.IsGroupView Then
+                ' Die Gruppenansicht teilt sich die Flaeche mit dem Raster, rechnet aber anders: die
+                ' Zeilen sind unterschiedlich hoch, deshalb bekommt das ViewModel den Scrollversatz und
+                ' schlaegt in seiner Zeilentabelle nach, was dort steht.
+                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
+
+                Dim cols = 1
+                Dim itemSlotHeight = 0.0
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
+                Dim contentOffset = Math.Max(0.0, scrollViewer.Offset.Y - 12.0)
+                Dim viewHeight = scrollViewer.Bounds.Height
+                vm.SetGroupDisplayWindow(contentOffset, viewHeight, itemSlotHeight, cols)
+
+                Dim firstIndex = -1
+                Dim lastIndex = -1
+                vm.GetGroupVisibleItemRange(contentOffset, viewHeight, firstIndex, lastIndex)
+                ' An den Raendern die exakte Grenze nehmen - dieselbe Begruendung wie im Raster: sonst
+                ' bleiben die letzten Kacheln im Vorhaltepuffer stehen und fragen nie ein Vorschaubild an.
+                If scrollViewer.Offset.Y + viewHeight >= scrollViewer.Extent.Height - 1.0 Then lastIndex = vm.Items.Count - 1
+                If scrollViewer.Offset.Y <= 1.0 Then firstIndex = 0
+                If firstIndex >= 0 AndAlso lastIndex >= firstIndex Then RequestThumbnailRange(vm, firstIndex, lastIndex)
+                UpdateTimelineScrollState(scrollViewer)
+                Return
+            End If
 
             If vm.IsGridView Then
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
@@ -635,6 +661,33 @@ Namespace Views
 
             Dim idx = vm.Items.IndexOf(vm.SelectedItem)
             If idx < 0 Then Return
+
+            If vm.IsGroupView Then
+                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
+
+                Dim cols = 1
+                Dim itemSlotHeight = 0.0
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
+
+                Dim rowTop = 0.0
+                Dim rowHeight = itemSlotHeight
+                If Not vm.TryGetGroupItemPosition(idx, cols, itemSlotHeight, rowTop, rowHeight) Then Return
+
+                Dim itemTop = 12.0 + rowTop
+                Dim itemBottom = itemTop + rowHeight
+                Dim viewHeight = scrollViewer.Bounds.Height
+                If itemTop >= scrollViewer.Offset.Y AndAlso itemBottom <= scrollViewer.Offset.Y + viewHeight Then Return
+
+                Dim targetOffset = Math.Max(0.0, itemTop + rowHeight / 2 - viewHeight / 2)
+                ' Erst das Fenster um die Zielzeile aufziehen, dann den Versatz setzen - sonst klemmt
+                ' der ScrollViewer ihn gegen seine noch veraltete Gesamthoehe.
+                vm.SetGroupDisplayWindowAround(rowTop, viewHeight, itemSlotHeight, cols)
+                scrollViewer.UpdateLayout()
+                Dim maxOffset = Math.Max(0.0, scrollViewer.Extent.Height - viewHeight)
+                scrollViewer.Offset = New Avalonia.Vector(0, Math.Min(targetOffset, maxOffset))
+                Return
+            End If
 
             If vm.IsGridView Then
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
@@ -2520,10 +2573,10 @@ Namespace Views
                     HandleKeyboardNavigation(vm, GetNavigationOffset(e.Key), e.KeyModifiers)
                     e.Handled = True
                 Case Key.PageDown
-                    HandleKeyboardNavigation(vm, ClampNavigationOffset(vm, GetPageOffset()), e.KeyModifiers)
+                    HandleKeyboardNavigation(vm, ClampNavigationOffset(vm, GetPageOffset(1)), e.KeyModifiers)
                     e.Handled = True
                 Case Key.PageUp
-                    HandleKeyboardNavigation(vm, ClampNavigationOffset(vm, -GetPageOffset()), e.KeyModifiers)
+                    HandleKeyboardNavigation(vm, ClampNavigationOffset(vm, GetPageOffset(-1)), e.KeyModifiers)
                     e.Handled = True
                 Case Key.Home
                     HandleHomeEndNavigation(vm, toLast:=False, modifiers:=e.KeyModifiers)
@@ -2681,32 +2734,50 @@ Namespace Views
                 Case Key.Left
                     Return -1
                 Case Key.Down
-                    Return If(GetVm()?.IsGridView, GetGridColumnCount(), 1)
+                    Return If(GetVm()?.IsGroupView, GetGroupRowOffset(1), If(GetVm()?.IsGridView, GetGridColumnCount(), 1))
                 Case Key.Up
-                    Return If(GetVm()?.IsGridView, -GetGridColumnCount(), -1)
+                    Return If(GetVm()?.IsGroupView, GetGroupRowOffset(-1), If(GetVm()?.IsGridView, -GetGridColumnCount(), -1))
                 Case Else
                     Return 0
             End Select
         End Function
 
-        Private Function GetGridColumnCount() As Integer
+        ''' <summary>Eine Zeile auf oder ab in der Gruppenansicht. Die Spaltenzahl taugt dort nicht als
+        ''' Versatz: die letzte Zeile einer Gruppe ist meist nur teilweise gefuellt, und die naechste
+        ''' Zeile gehoert schon zur naechsten Gruppe.</summary>
+        Private Function GetGroupRowOffset(rowDelta As Integer) As Integer
             Dim vm = GetVm()
-            If vm Is Nothing OrElse Not vm.IsGridView Then Return 1
+            If vm Is Nothing OrElse vm.SelectedItem Is Nothing Then Return rowDelta
+            Dim idx = vm.Items.IndexOf(vm.SelectedItem)
+            If idx < 0 Then Return rowDelta
+
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
             Dim cols = 1
             Dim itemSlotHeight = 0.0
-            GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight)
+            GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
+            Return vm.GroupRowNavigationOffset(idx, rowDelta, cols, itemSlotHeight)
+        End Function
+
+        Private Function GetGridColumnCount() As Integer
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsTileView Then Return 1
+            Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+            Dim cols = 1
+            Dim itemSlotHeight = 0.0
+            GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=vm.IsGroupView)
             Return cols
         End Function
 
-        Private Sub GetGridLayoutMetrics(scrollViewer As ScrollViewer, vm As GalleryViewModel, ByRef columns As Integer, ByRef itemSlotHeight As Double)
+        Private Sub GetGridLayoutMetrics(scrollViewer As ScrollViewer, vm As GalleryViewModel, ByRef columns As Integer, ByRef itemSlotHeight As Double,
+                                         Optional forGroupView As Boolean = False)
             columns = 1
             itemSlotHeight = If(vm IsNot Nothing, Math.Max(1, vm.GridItemSlotHeight), 1)
             If vm Is Nothing Then Return
 
             Dim measuredColumns = 0
             Dim measuredSlotHeight = 0.0
-            If TryGetRenderedGridMetrics(scrollViewer, measuredColumns, measuredSlotHeight) Then
+            Dim measured = TryGetRenderedGridMetrics(scrollViewer, measuredColumns, measuredSlotHeight, forGroupView)
+            If measured AndAlso Not forGroupView Then
                 columns = Math.Max(1, measuredColumns)
                 itemSlotHeight = Math.Max(1, measuredSlotHeight)
                 Return
@@ -2721,9 +2792,23 @@ Namespace Views
             availableWidth = Math.Max(1, availableWidth)
             Dim itemWidth = Math.Max(1, vm.GridColumnPitch)
             columns = Math.Max(1, CInt(Math.Floor(availableWidth / itemWidth)))
+
+            ' In der Gruppenansicht kommt die Spaltenzahl IMMER aus der Breite, nie aus dem Gezeichneten:
+            ' dort kann jede sichtbare Zeile eine teilweise gefuellte letzte Zeile einer Gruppe sein, und
+            ' eine zu klein gemessene Spaltenzahl braecht die Zeilentabelle. Die Rechnung ist dieselbe,
+            ' die auch das WrapPanel anstellt (ganze Kachelbreiten in die Zeilenbreite), also exakt.
+            ' Die Zeilenhoehe dagegen wird gemessen, wenn es etwas zu messen gab - der Wert aus dem
+            ' ViewModel ist nur eine Schaetzung.
+            If forGroupView AndAlso measured AndAlso measuredSlotHeight > 0 Then itemSlotHeight = Math.Max(1, measuredSlotHeight)
         End Sub
 
-        Private Function TryGetRenderedGridMetrics(scrollViewer As ScrollViewer, ByRef columns As Integer, ByRef itemSlotHeight As Double) As Boolean
+        ''' <summary>Spaltenzahl und Zeilenhoehe aus dem, was wirklich gezeichnet ist.
+        ''' In der Gruppenansicht darf dabei NICHT die erste Zeile allein zaehlen: die letzte Zeile einer
+        ''' Gruppe ist meist nur teilweise gefuellt (zu wenige Spalten), und zwischen zwei Kachelzeilen
+        ''' kann eine Kopfzeile stehen (zu grosser Zeilenabstand). Dort gilt deshalb die BREITESTE Zeile
+        ''' und der KLEINSTE Zeilenabstand.</summary>
+        Private Function TryGetRenderedGridMetrics(scrollViewer As ScrollViewer, ByRef columns As Integer, ByRef itemSlotHeight As Double,
+                                                   Optional forGroupView As Boolean = False) As Boolean
             columns = 0
             itemSlotHeight = 0
             If scrollViewer Is Nothing Then Return False
@@ -2748,6 +2833,32 @@ Namespace Views
 
             Const tolerance As Double = 2.0
             Dim firstRowY = thumbBorders(0).Y
+
+            If forGroupView Then
+                Dim rowCounts As New Dictionary(Of Integer, Integer)()
+                Dim rowTops As New List(Of Double)()
+                For Each entry In thumbBorders
+                    Dim bucket = CInt(Math.Round(entry.Y / tolerance))
+                    Dim seen = 0
+                    If rowCounts.TryGetValue(bucket, seen) Then
+                        rowCounts(bucket) = seen + 1
+                    Else
+                        rowCounts(bucket) = 1
+                        rowTops.Add(entry.Y)
+                    End If
+                Next
+                columns = Math.Max(1, rowCounts.Values.Max())
+
+                itemSlotHeight = 0
+                For i = 1 To rowTops.Count - 1
+                    Dim distance = rowTops(i) - rowTops(i - 1)
+                    If distance <= tolerance Then Continue For
+                    If itemSlotHeight <= 0 OrElse distance < itemSlotHeight Then itemSlotHeight = distance
+                Next
+                If itemSlotHeight <= 0 Then itemSlotHeight = thumbBorders(0).Border.Bounds.Height + 10.0
+                Return itemSlotHeight > 0
+            End If
+
             Dim firstRow = thumbBorders.Where(Function(x) Math.Abs(x.Y - firstRowY) <= tolerance).ToList()
             columns = Math.Max(1, firstRow.Count)
 
@@ -2764,24 +2875,28 @@ Namespace Views
         Private Function GetVisibleRowCount() As Integer
             Dim vm = GetVm()
             If vm Is Nothing Then Return 1
-            Dim scrollViewerName = If(vm.IsGridView, "GalleryGridScrollViewer", "GalleryListScrollViewer")
+            Dim scrollViewerName = If(vm.IsListView, "GalleryListScrollViewer", "GalleryGridScrollViewer")
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)(scrollViewerName)
             Dim viewportHeight = If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Height > 0,
                                     scrollViewer.Viewport.Height,
                                     Bounds.Height)
             Dim itemHeight = 78.0
-            If vm.IsGridView Then
+            If vm.IsTileView Then
                 Dim cols = 1
-                GetGridLayoutMetrics(scrollViewer, vm, cols, itemHeight)
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemHeight, forGroupView:=vm.IsGroupView)
             End If
             Return Math.Max(1, CInt(Math.Floor(viewportHeight / itemHeight)))
         End Function
 
-        Private Function GetPageOffset() As Integer
+        ''' <summary>Versatz fuer eine ganze Seite. Die Richtung geht mit hinein, weil sie in der
+        ''' Gruppenansicht nicht einfach umgedreht werden kann: nach oben liegen andere Gruppengrenzen
+        ''' als nach unten.</summary>
+        Private Function GetPageOffset(direction As Integer) As Integer
             Dim vm = GetVm()
-            If vm Is Nothing Then Return 1
+            If vm Is Nothing Then Return direction
             Dim rows = GetVisibleRowCount()
-            Return If(vm.IsGridView, rows * GetGridColumnCount(), rows)
+            If vm.IsGroupView Then Return GetGroupRowOffset(rows * Math.Sign(direction))
+            Return If(vm.IsGridView, rows * GetGridColumnCount(), rows) * Math.Sign(direction)
         End Function
 
         Private Function ClampNavigationOffset(vm As GalleryViewModel, offset As Integer) As Integer
@@ -2816,6 +2931,24 @@ Namespace Views
         Private Sub ScrollToExtreme(toEnd As Boolean)
             Dim vm = GetVm()
             If vm Is Nothing OrElse vm.Items Is Nothing OrElse vm.Items.Count = 0 Then Return
+
+            If vm.IsGroupView Then
+                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
+
+                Dim cols = 1
+                Dim itemSlotHeight = 0.0
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
+                Dim viewHeight = scrollViewer.Bounds.Height
+                ' Erst die Zeilentabelle bauen lassen, dann die Gesamthoehe lesen: vor dem ersten
+                ' Aufbau steht sie auf 0, und der Sprung ans Ende landete im Nichts.
+                vm.SetGroupDisplayWindow(0.0, viewHeight, itemSlotHeight, cols)
+                If toEnd Then vm.SetGroupDisplayWindow(Math.Max(0.0, vm.ContentHeight - viewHeight), viewHeight, itemSlotHeight, cols)
+                scrollViewer.UpdateLayout()
+                Dim targetY = If(toEnd, Math.Max(0.0, scrollViewer.Extent.Height - viewHeight), 0.0)
+                scrollViewer.Offset = New Avalonia.Vector(0, targetY)
+                Return
+            End If
 
             If vm.IsGridView Then
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")

@@ -54,6 +54,7 @@ Namespace ViewModels
         Private _searchText As String = ""
         Private _sortMode As String = AppSettingsService.DefaultGallerySortMode
         Private _sortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
+        Private _groupDateStep As String = AppSettingsService.DefaultGalleryGroupDateStep
         Private _showFolders As Boolean = True
         Private _showParentFolder As Boolean = True
         Private _ratingBadgesAlwaysVisible As Boolean = False
@@ -275,6 +276,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ThumbnailImageHeight))
                 Me.RaisePropertyChanged(NameOf(GridItemSlotHeight))
                 Me.RaisePropertyChanged(NameOf(GridColumnPitch))
+                ' Die Kopfzeile der Gruppenansicht ist genau eine Kachelzeile breit. Bleibt die
+                ' Spaltenzahl gleich und aendert sich nur die Kachelgroesse, meldet das sonst niemand.
+                Me.RaisePropertyChanged(NameOf(GroupHeaderWidth))
                 Me.RaisePropertyChanged(NameOf(TileHasRoomForDetails))
                 AppSettingsService.SaveGalleryThumbnailSize(value)
             End Set
@@ -393,7 +397,11 @@ Namespace ViewModels
                 If _sortMode = value Then Return
                 Me.RaiseAndSetIfChanged(_sortMode, value)
                 Me.RaisePropertyChanged(NameOf(SortLabel))
+                Me.RaisePropertyChanged(NameOf(IsGroupDateStepVisible))
                 RaiseSortStateChanged()
+                ' Die Gruppen entstehen aus der Sortierung; eine andere Sortierung heisst andere Gruppen,
+                ' auch wenn dieselben Bilder in derselben Reihenfolge stehen bleiben.
+                InvalidateGroupLayout()
                 FilterAndSort()
                 AppSettingsService.SaveGallerySort(_sortMode, _sortAscending)
             End Set
@@ -1121,8 +1129,18 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_viewMode, value)
                 Me.RaisePropertyChanged(NameOf(IsGridView))
                 Me.RaisePropertyChanged(NameOf(IsListView))
+                Me.RaisePropertyChanged(NameOf(IsGroupView))
+                Me.RaisePropertyChanged(NameOf(IsTileView))
+                Me.RaisePropertyChanged(NameOf(IsGroupDateStepVisible))
                 AppSettingsService.SaveGalleryViewMode(value)
                 _mainVm?.Settings?.SyncGalleryViewMode(value)
+                ' Das Anzeigefenster zaehlt in der Gruppenansicht Layout-Eintraege (Kopfzeilen
+                ' eingerechnet), in den anderen beiden Bilder. Ohne diesen Neuaufbau stuenden nach dem
+                ' Umschalten die Grenzen der alten Zaehlung im Fenster.
+                InvalidateGroupLayout()
+                _displayWindowFirst = -1
+                _displayWindowLast = -1
+                RefreshDisplayWindow()
             End Set
         End Property
 
@@ -1135,6 +1153,74 @@ Namespace ViewModels
         Public ReadOnly Property IsListView As Boolean
             Get
                 Return _viewMode = "List"
+            End Get
+        End Property
+
+        ''' <summary>Dritte Ansicht neben Raster und Liste: dasselbe Kachelraster, aber mit einer
+        ''' Kopfzeile je Gruppe. Woraus die Gruppen entstehen, sagt die aktuelle Sortierung.</summary>
+        Public ReadOnly Property IsGroupView As Boolean
+            Get
+                Return _viewMode = "Group"
+            End Get
+        End Property
+
+        ''' <summary>Raster oder Gruppenansicht - beide zeigen Kacheln und teilen sich dieselbe
+        ''' Flaeche in der Ansicht.</summary>
+        Public ReadOnly Property IsTileView As Boolean
+            Get
+                Return IsGridView OrElse IsGroupView
+            End Get
+        End Property
+
+        ''' <summary>Feinheit der Datumsgruppen: "Day", "Month" oder "Year". Wirkt nur, solange nach
+        ''' einem Datum sortiert wird.</summary>
+        Public Property GroupDateStep As String
+            Get
+                Return _groupDateStep
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeGalleryGroupDateStep(value)
+                If _groupDateStep = value Then Return
+                Me.RaiseAndSetIfChanged(_groupDateStep, value)
+                Me.RaisePropertyChanged(NameOf(IsGroupStepDay))
+                Me.RaisePropertyChanged(NameOf(IsGroupStepMonth))
+                Me.RaisePropertyChanged(NameOf(IsGroupStepYear))
+                AppSettingsService.SaveGalleryGroupDateStep(value)
+                InvalidateGroupLayout()
+                RefreshDisplayWindow()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsGroupStepDay As Boolean
+            Get
+                Return _groupDateStep = "Day"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGroupStepMonth As Boolean
+            Get
+                Return _groupDateStep = "Month"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsGroupStepYear As Boolean
+            Get
+                Return _groupDateStep = "Year"
+            End Get
+        End Property
+
+        ''' <summary>Ob die Wahl der Feinheit gerade etwas bewirkt: nur in der Gruppenansicht und nur bei
+        ''' einer Datumssortierung. Bei Name, Kamera oder Bewertung gibt es keinen Tag, den man
+        ''' vergroebern koennte.</summary>
+        Public ReadOnly Property IsGroupDateStepVisible As Boolean
+            Get
+                If Not IsGroupView Then Return False
+                Select Case _sortMode
+                    Case "FileModifiedAt", "FileCreatedAt", "ExifDateTaken", "ExifDateModified"
+                        Return True
+                    Case Else
+                        Return False
+                End Select
             End Get
         End Property
 
@@ -1174,6 +1260,7 @@ Namespace ViewModels
         Public ReadOnly Property SetSortCommand As ICommand
         Public ReadOnly Property SetSortDirectionCommand As ICommand
         Public ReadOnly Property SetViewModeCommand As ICommand
+        Public ReadOnly Property SetGroupDateStepCommand As ICommand
         Public ReadOnly Property DeleteSelectedCommand As ICommand
         Public ReadOnly Property SelectAllCommand As ICommand
         Public ReadOnly Property ClearSelectionCommand As ICommand
@@ -1361,6 +1448,22 @@ Namespace ViewModels
         Private _lastWindowColumns As Integer = 0
         Private _displayWindowFirst As Integer = -1
         Private _displayWindowLast As Integer = -1
+
+        ' Gruppenansicht: die Anzeigereihenfolge einschliesslich der Kopfzeilen, je Eintrag der Index in
+        ' Items (-1 bei einer Kopfzeile), der Rueckweg von Items in diese Liste und die Zeilentabelle.
+        ' In der Gruppenansicht zaehlen _displayWindowFirst/-Last Eintraege dieser Liste, in Raster und
+        ' Liste Elemente aus Items - die Ansichten laufen nie gleichzeitig.
+        Private ReadOnly _groupLayout As New List(Of ImageItem)()
+        Private ReadOnly _groupLayoutItemIndex As New List(Of Integer)()
+        Private ReadOnly _groupRows As New List(Of GroupLayoutRow)()
+        Private _itemToGroupEntry As Integer() = Array.Empty(Of Integer)()
+        Private _groupLayoutColumns As Integer = 0
+        Private _groupLayoutSlotHeight As Double = 0
+        Private _groupContentHeight As Double = 0
+        Private _groupEntriesDirty As Boolean = True
+        Private _lastGroupOffsetY As Double = 0
+        Private _lastGroupViewportHeight As Double = 0
+
         Private _topSpacerHeight As Double
         Private _bottomSpacerHeight As Double
         Private _contentHeight As Double
@@ -1402,6 +1505,7 @@ Namespace ViewModels
             _viewMode = AppSettingsService.NormalizeGalleryViewMode(settings.GalleryViewMode)
             _sortMode = settings.GallerySortMode
             _sortAscending = settings.GallerySortAscending
+            _groupDateStep = AppSettingsService.NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
             _showFolders = settings.GalleryShowFolders
             _showParentFolder = settings.GalleryShowParentFolder
             _ratingBadgesAlwaysVisible = settings.GalleryRatingBadgesAlwaysVisible
@@ -1411,6 +1515,10 @@ Namespace ViewModels
             _filterRatings.UnionWith(settings.GalleryFilterRatings)
             _filterFileType = settings.GalleryFilterFileType
             Items = New BulkObservableCollection(Of ImageItem)()
+            ' Die Gruppen haengen an Items. Statt an jedem der vielen Wege, die die Liste anfassen, einen
+            ' Aufruf nachzutragen (einer wird immer vergessen), horcht die Gruppenansicht an der Sammlung
+            ' selbst. Der Neuaufbau passiert erst beim naechsten Zeichnen, das Ereignis kostet nichts.
+            AddHandler Items.CollectionChanged, Sub(sender As Object, e As Specialized.NotifyCollectionChangedEventArgs) InvalidateGroupLayout()
             DisplayItems = New BulkObservableCollection(Of ImageItem)()
             WatchBackgroundRuns()
             SelectedItems = New ObservableCollection(Of ImageItem)()
@@ -1450,6 +1558,7 @@ Namespace ViewModels
                                                                             SortAscending = Not String.Equals(direction, "Descending", StringComparison.OrdinalIgnoreCase)
                                                                         End Sub)
             SetViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewMode = m)
+            SetGroupDateStepCommand = ReactiveCommand.Create(Of String)(Sub(dateStep) GroupDateStep = dateStep)
             DeleteSelectedCommand = ReactiveCommand.Create(Sub() DeleteSelected())
             SelectAllCommand = ReactiveCommand.Create(Sub() SelectAllVisible())
             ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
@@ -7118,6 +7227,12 @@ Namespace ViewModels
             BottomSpacerHeight = bottomRows * itemSlotHeight
             ContentHeight = totalRows * itemSlotHeight
 
+            ApplyDisplayWindow(Items, firstIndex, lastIndex)
+        End Sub
+
+        ''' <summary>Das Anzeigefenster auf einen Ausschnitt der Quelle stellen. Quelle ist in Raster und
+        ''' Liste die Elementliste, in der Gruppenansicht die Anzeigereihenfolge mit den Kopfzeilen.</summary>
+        Private Sub ApplyDisplayWindow(source As IList(Of ImageItem), firstIndex As Integer, lastIndex As Integer)
             If _displayWindowFirst = firstIndex AndAlso _displayWindowLast = lastIndex Then Return
 
             ' Delta-Update statt vollem Reset: bei überlappenden Fenstern (normales Scrollen um
@@ -7139,18 +7254,18 @@ Namespace ViewModels
                 End While
                 Dim insertAt = 0
                 For i = firstIndex To _displayWindowFirst - 1
-                    DisplayItems.Insert(insertAt, Items(i))
+                    DisplayItems.Insert(insertAt, source(i))
                     insertAt += 1
                 Next
                 For i = _displayWindowLast + 1 To lastIndex
-                    DisplayItems.Add(Items(i))
+                    DisplayItems.Add(source(i))
                 Next
                 _displayWindowFirst = firstIndex
                 _displayWindowLast = lastIndex
             Else
                 _displayWindowFirst = firstIndex
                 _displayWindowLast = lastIndex
-                Dim slice = Items.Skip(firstIndex).Take(lastIndex - firstIndex + 1).ToList()
+                Dim slice = source.Skip(firstIndex).Take(lastIndex - firstIndex + 1).ToList()
                 If Not DisplayItems.SequenceEqual(slice) Then DisplayItems.ReplaceAll(slice)
             End If
         End Sub
@@ -7162,6 +7277,17 @@ Namespace ViewModels
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
             If Items.Count = 0 Then
                 If DisplayItems.Count > 0 Then DisplayItems.Clear()
+                Return
+            End If
+
+            If IsGroupView Then
+                ' Vor der ersten Messung steht keine Fenstergeometrie zur Verfuegung; dann gilt dasselbe
+                ' wie im Raster - das Anfangsfenster stellen und auf die erste Meldung der Ansicht warten.
+                If _lastGroupViewportHeight <= 0 OrElse _groupLayoutColumns <= 0 Then
+                    ResetDisplayWindow()
+                Else
+                    SetGroupDisplayWindow(_lastGroupOffsetY, _lastGroupViewportHeight, _groupLayoutSlotHeight, _groupLayoutColumns)
+                End If
                 Return
             End If
             ' Vor dem ersten Layout gibt es keine Fenstergeometrie - dann steht im Anzeigefenster das
@@ -7182,6 +7308,17 @@ Namespace ViewModels
             BottomSpacerHeight = 0
             ContentHeight = 0
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
+
+            If IsGroupView Then
+                EnsureGroupEntries()
+                DisplayItems.ReplaceAll(_groupLayout.Take(Math.Min(120, _groupLayout.Count)))
+                If DisplayItems.Count > 0 Then
+                    _displayWindowFirst = 0
+                    _displayWindowLast = DisplayItems.Count - 1
+                End If
+                Return
+            End If
+
             DisplayItems.ReplaceAll(Items.Take(Math.Min(120, Items.Count)))
 
             ' Das gefüllte Fenster mitführen. Sonst hält der nächste SetDisplayWindow-Aufruf (er kommt
@@ -7331,6 +7468,421 @@ Namespace ViewModels
                                     contentItems.OrderByDescending(Function(i) i.FileName))
                     Return parent.Concat(folders).Concat(sorted)
             End Select
+        End Function
+
+        ' ---------------------------------------------------------------------------------------------
+        ' Gruppenansicht
+        '
+        ' Raster und Liste rechnen mit EINER festen Zeilenhoehe: Zeile = Index geteilt durch Spaltenzahl,
+        ' Gesamthoehe = Zeilen mal Slothoehe. Mit Kopfzeilen dazwischen stimmt diese Formel nicht mehr,
+        ' deshalb fuehrt die Gruppenansicht eine Zeilentabelle: je Zeile ihre Lage und ihre Hoehe. Die
+        ' Ansicht meldet nur noch Scrollversatz und Sichthoehe, das Uebersetzen in ein Anzeigefenster
+        ' passiert hier.
+        '
+        ' Items bleibt dabei unberuehrt und enthaelt weiterhin ausschliesslich echte Eintraege. Die
+        ' Kopfzeilen stehen nur in _groupLayout und damit im Anzeigefenster; alles, was mit Auswahl,
+        ' Loeschen oder dem Betrachter zu tun hat, sieht sie nie.
+        ' ---------------------------------------------------------------------------------------------
+
+        ''' <summary>Eine Zeile der Gruppenansicht: entweder eine Kopfzeile oder eine Zeile Kacheln.
+        ''' First und Count zeigen in _groupLayout, Top und Height sind Bildpunkte im Inhalt.</summary>
+        Private Structure GroupLayoutRow
+            Public First As Integer
+            Public Count As Integer
+            Public Top As Double
+            Public Height As Double
+        End Structure
+
+        ''' <summary>Hoehe einer Kopfzeile. Muss mit der Hoehe im XAML uebereinstimmen (Height am Border
+        ''' der Kopfzeile, ohne senkrechten Rand) - sonst driftet die Scrollrechnung mit der Scrolltiefe,
+        ''' genau wie es bei der Slothoehe der Kacheln schon einmal passiert ist.</summary>
+        Public Const GroupHeaderRowHeight As Double = 48
+
+        ''' <summary>Breite einer Kopfzeile: genau eine volle Kachelzeile. Damit belegt sie im WrapPanel
+        ''' immer eine eigene Zeile, ohne dass die Ansicht ihre Breite zurueckmelden muss.</summary>
+        Public ReadOnly Property GroupHeaderWidth As Double
+            Get
+                Return Math.Max(1, _groupLayoutColumns) * GridColumnPitch
+            End Get
+        End Property
+
+        ''' <summary>Merkt vor, dass Gruppen und Zeilentabelle neu gebaut werden muessen. Wird bei jeder
+        ''' Aenderung an Items gerufen (ueber das Ereignis der Sammlung), bei einem Sortierwechsel und
+        ''' beim Umstellen der Feinheit.</summary>
+        Public Sub InvalidateGroupLayout()
+            _groupEntriesDirty = True
+            _groupRows.Clear()
+            ' Das Anzeigefenster zeigt mit Zahlen in die Layoutliste. Wird die neu gebaut, stehen an
+            ' denselben Stellen ANDERE Eintraege - das naechste Fenster darf dann nicht ueber die
+            ' Delta-Fassung entstehen, die nur Raender abschneidet und anfuegt. Sonst blieben
+            ' Kopfzeilen von vorhin stehen (gemessen beim Umstellen von Tag auf Monat: die Ansicht
+            ' zeigte weiter zwei Kopfzeilen statt einer). Raster und Liste bleiben aussen vor: dort
+            ' haelt FilterAndSort dieselbe Regel schon selbst, und ein Ruecksetzen bei JEDER Aenderung
+            ' an Items wuerde beim Einlesen eines Ordners jeden Stapel zu einem vollen Neuaufbau der
+            ' sichtbaren Kacheln machen.
+            If IsGroupView Then
+                _displayWindowFirst = -1
+                _displayWindowLast = -1
+            End If
+        End Sub
+
+        ''' <summary>True, wenn die aktuelle Sortierung sinnvolle Gruppen hergibt. Bei Groesse, ISO,
+        ''' Blende und den Abmessungen zeigt die Gruppenansicht ein durchgehendes Raster ohne
+        ''' Kopfzeilen - Gruppen ueber Zahlenwerte waeren Rauschen.</summary>
+        Public Function GroupingIsAvailable() As Boolean
+            Select Case _sortMode
+                Case "FileModifiedAt", "FileCreatedAt", "ExifDateTaken", "ExifDateModified",
+                     "Name", "Camera", "Type", "Rating", "Favorite"
+                    Return True
+                Case Else
+                    Return False
+            End Select
+        End Function
+
+        ''' <summary>Der Gruppenschluessel eines Eintrags. Ordner bilden immer eine eigene erste Gruppe:
+        ''' sie stehen in jeder Sortierung vorn und haben mit dem Sortierkriterium der Bilder nichts zu
+        ''' tun.</summary>
+        Private Function GroupKeyFor(item As ImageItem) As String
+            If item Is Nothing Then Return "?"
+            If item.IsFolder Then Return "folders"
+
+            Select Case _sortMode
+                Case "FileModifiedAt" : Return DateGroupKey(item.DateModified)
+                Case "FileCreatedAt" : Return DateGroupKey(item.FileCreatedAt)
+                Case "ExifDateTaken" : Return DateGroupKey(item.ExifDateTaken)
+                Case "ExifDateModified" : Return DateGroupKey(item.ExifDateModified)
+                Case "Name"
+                    Dim name = If(item.FileName, "")
+                    If name.Length = 0 OrElse Not Char.IsLetter(name(0)) Then Return "name:#"
+                    Return "name:" & name.Substring(0, 1).ToUpperInvariant()
+                Case "Camera"
+                    Return "cam:" & If(item.ExifCamera, "").Trim().ToUpperInvariant()
+                Case "Type"
+                    Return "type:" & If(item.ExtensionLower, "")
+                Case "Rating"
+                    Return "rating:" & item.Rating.ToString(Globalization.CultureInfo.InvariantCulture)
+                Case "Favorite"
+                    Return If(item.IsFavorite, "fav:1", "fav:0")
+                Case Else
+                    Return "all"
+            End Select
+        End Function
+
+        Private Function DateGroupKey(value As DateTime?) As String
+            If Not value.HasValue OrElse value.Value = DateTime.MinValue Then Return "date:none"
+            Select Case _groupDateStep
+                Case "Month" : Return "date:" & value.Value.ToString("yyyyMM", Globalization.CultureInfo.InvariantCulture)
+                Case "Year" : Return "date:" & value.Value.ToString("yyyy", Globalization.CultureInfo.InvariantCulture)
+                Case Else : Return "date:" & value.Value.ToString("yyyyMMdd", Globalization.CultureInfo.InvariantCulture)
+            End Select
+        End Function
+
+        ''' <summary>Die Beschriftung einer Gruppe, gebildet aus ihrem ersten Eintrag. Sie wird nur
+        ''' einmal je Gruppe gebraucht, deshalb steht sie nicht im Schluessel.</summary>
+        Private Function GroupTitleFor(item As ImageItem) As String
+            If item Is Nothing Then Return ""
+            If item.IsFolder Then Return LocalizationService.T("Ordner")
+
+            Select Case _sortMode
+                Case "FileModifiedAt" : Return DateGroupTitle(item.DateModified)
+                Case "FileCreatedAt" : Return DateGroupTitle(item.FileCreatedAt)
+                Case "ExifDateTaken" : Return DateGroupTitle(item.ExifDateTaken)
+                Case "ExifDateModified" : Return DateGroupTitle(item.ExifDateModified)
+                Case "Name"
+                    Dim name = If(item.FileName, "")
+                    If name.Length = 0 OrElse Not Char.IsLetter(name(0)) Then Return "#"
+                    Return name.Substring(0, 1).ToUpperInvariant()
+                Case "Camera"
+                    Dim camera = If(item.ExifCamera, "").Trim()
+                    Return If(camera.Length > 0, camera, LocalizationService.T("Ohne Kameraangabe"))
+                Case "Type"
+                    Dim ext = If(item.ExtensionLower, "").TrimStart("."c)
+                    Return If(ext.Length > 0, ext.ToUpperInvariant(), LocalizationService.T("Ohne Dateiendung"))
+                Case "Rating"
+                    If item.Rating <= 0 Then Return LocalizationService.T("Ohne Bewertung")
+                    If item.Rating = 1 Then Return "1 " & LocalizationService.T("Stern")
+                    Return item.Rating.ToString(Globalization.CultureInfo.CurrentUICulture) & " " & LocalizationService.T("Sterne")
+                Case "Favorite"
+                    Return If(item.IsFavorite, LocalizationService.T("Favoriten"), LocalizationService.T("Kein Favorit"))
+                Case Else
+                    Return ""
+            End Select
+        End Function
+
+        Private Function DateGroupTitle(value As DateTime?) As String
+            If Not value.HasValue OrElse value.Value = DateTime.MinValue Then Return LocalizationService.T("Ohne Datum")
+            Dim culture = Globalization.CultureInfo.CurrentUICulture
+            Select Case _groupDateStep
+                Case "Month" : Return value.Value.ToString("MMMM yyyy", culture)
+                Case "Year" : Return value.Value.ToString("yyyy", culture)
+                Case Else : Return value.Value.ToString("D", culture)
+            End Select
+        End Function
+
+        ''' <summary>Baut Kopfzeilen und Elemente in Anzeigereihenfolge auf. Ein Durchlauf ueber Items;
+        ''' die Gruppen sind zusammenhaengend, weil sie aus derselben Sortierung stammen, nach der die
+        ''' Liste bereits geordnet ist.</summary>
+        Private Sub EnsureGroupEntries()
+            If Not _groupEntriesDirty Then Return
+            _groupEntriesDirty = False
+            _groupLayout.Clear()
+            _groupLayoutItemIndex.Clear()
+            _itemToGroupEntry = Array.Empty(Of Integer)()
+            If Items Is Nothing OrElse Items.Count = 0 Then Return
+
+            Dim entryOfItem(Items.Count - 1) As Integer
+
+            If Not GroupingIsAvailable() Then
+                For i = 0 To Items.Count - 1
+                    entryOfItem(i) = _groupLayout.Count
+                    _groupLayout.Add(Items(i))
+                    _groupLayoutItemIndex.Add(i)
+                Next
+                _itemToGroupEntry = entryOfItem
+                Return
+            End If
+
+            Dim keys(Items.Count - 1) As String
+            For i = 0 To Items.Count - 1
+                keys(i) = GroupKeyFor(Items(i))
+            Next
+
+            Dim groupStart = 0
+            While groupStart < Items.Count
+                Dim groupEnd = groupStart
+                While groupEnd + 1 < Items.Count AndAlso String.Equals(keys(groupEnd + 1), keys(groupStart), StringComparison.Ordinal)
+                    groupEnd += 1
+                End While
+
+                ' Der Eintrag zum uebergeordneten Ordner zaehlt nicht mit: er ist ein Weg nach oben,
+                ' kein Ordner dieser Ansicht.
+                Dim countable = 0
+                For i = groupStart To groupEnd
+                    If Items(i).IsSelectableEntry Then countable += 1
+                Next
+
+                _groupLayout.Add(ImageItem.CreateGroupHeader(GroupTitleFor(Items(groupStart)),
+                                                             GroupCountText(Items(groupStart).IsFolder, countable)))
+                _groupLayoutItemIndex.Add(-1)
+                For i = groupStart To groupEnd
+                    entryOfItem(i) = _groupLayout.Count
+                    _groupLayout.Add(Items(i))
+                    _groupLayoutItemIndex.Add(i)
+                Next
+                groupStart = groupEnd + 1
+            End While
+            _itemToGroupEntry = entryOfItem
+        End Sub
+
+        Private Function GroupCountText(isFolderGroup As Boolean, count As Integer) As String
+            ' Kein "0 Ordner": in einer Gruppe, die nur den Weg nach oben enthaelt, saehe das nach einem
+            ' Fehler aus. Dann bleibt die Zeile rechts einfach leer.
+            If count <= 0 Then Return ""
+            If isFolderGroup Then Return count & " " & LocalizationService.T("Ordner")
+            If count = 1 Then Return "1 " & LocalizationService.T("Bild")
+            Return count & " " & LocalizationService.T("Bilder")
+        End Function
+
+        ''' <summary>Baut die Zeilentabelle zur gemeldeten Spaltenzahl und Slothoehe. Die Spaltenzahl
+        ''' aendert sich mit der Fensterbreite und mit der Kachelgroesse, deshalb haengt die Tabelle an
+        ''' beiden und wird bei einer Aenderung neu aufgebaut.</summary>
+        Private Sub EnsureGroupRows(columns As Integer, itemSlotHeight As Double)
+            columns = Math.Max(1, columns)
+            itemSlotHeight = Math.Max(1, itemSlotHeight)
+            EnsureGroupEntries()
+
+            If _groupRows.Count > 0 AndAlso _groupLayoutColumns = columns AndAlso
+               Math.Abs(_groupLayoutSlotHeight - itemSlotHeight) < 0.01 Then
+                ' Die Gesamthoehe gehoert zur Tabelle und wird hier mitgefuehrt. Sie steht sonst noch
+                ' auf dem Wert, den das Anfangsfenster gesetzt hat (0) - der untere Platzhalter
+                ' rechnete damit gegen eine leere Flaeche.
+                ContentHeight = _groupContentHeight
+                Return
+            End If
+
+            Dim columnsChanged = _groupLayoutColumns <> columns
+            _groupLayoutColumns = columns
+            _groupLayoutSlotHeight = itemSlotHeight
+            _groupRows.Clear()
+            If columnsChanged Then Me.RaisePropertyChanged(NameOf(GroupHeaderWidth))
+            If _groupLayout.Count = 0 Then
+                _groupContentHeight = 0
+                ContentHeight = 0
+                Return
+            End If
+
+            Dim top = 0.0
+            Dim i = 0
+            While i < _groupLayout.Count
+                If _groupLayout(i).IsGroupHeader Then
+                    _groupRows.Add(New GroupLayoutRow With {.First = i, .Count = 1, .Top = top, .Height = GroupHeaderRowHeight})
+                    top += GroupHeaderRowHeight
+                    i += 1
+                Else
+                    Dim runEnd = i
+                    While runEnd < _groupLayout.Count AndAlso Not _groupLayout(runEnd).IsGroupHeader
+                        runEnd += 1
+                    End While
+                    While i < runEnd
+                        Dim count = Math.Min(columns, runEnd - i)
+                        _groupRows.Add(New GroupLayoutRow With {.First = i, .Count = count, .Top = top, .Height = itemSlotHeight})
+                        top += itemSlotHeight
+                        i += count
+                    End While
+                End If
+            End While
+            _groupContentHeight = top
+            ContentHeight = top
+        End Sub
+
+        ''' <summary>Die Zeile, in der ein Bildpunkt des Inhalts liegt. Binaersuche, damit auch 30000
+        ''' Elemente je Scroll-Tick nichts kosten.</summary>
+        Private Function FindGroupRowAt(contentY As Double) As Integer
+            If _groupRows.Count = 0 Then Return 0
+            If contentY <= 0 Then Return 0
+            Dim low = 0
+            Dim high = _groupRows.Count - 1
+            While low < high
+                Dim middle = (low + high + 1) \ 2
+                If _groupRows(middle).Top <= contentY Then
+                    low = middle
+                Else
+                    high = middle - 1
+                End If
+            End While
+            Return low
+        End Function
+
+        ''' <summary>Anzeigefenster der Gruppenansicht setzen. Anders als <see cref="SetDisplayWindow"/>
+        ''' bekommt es den Scrollversatz statt fertiger Grenzen: welche Zeilen dort stehen, weiss nur die
+        ''' Zeilentabelle.</summary>
+        Public Sub SetGroupDisplayWindow(contentOffsetY As Double, viewportHeight As Double, itemSlotHeight As Double, columns As Integer)
+            EnsureGroupRows(columns, itemSlotHeight)
+            _lastGroupOffsetY = contentOffsetY
+            _lastGroupViewportHeight = viewportHeight
+
+            If _groupRows.Count = 0 Then
+                If DisplayItems.Count > 0 Then DisplayItems.Clear()
+                _displayWindowFirst = -1
+                _displayWindowLast = -1
+                TopSpacerHeight = 0
+                BottomSpacerHeight = 0
+                ContentHeight = 0
+                Return
+            End If
+
+            Dim firstRow = FindGroupRowAt(contentOffsetY)
+            Dim lastRow = FindGroupRowAt(contentOffsetY + Math.Max(1.0, viewportHeight))
+            ' Vorhaltepuffer wie im Raster: das Doppelte des Sichtbereichs nach oben und unten, damit
+            ' gewoehnliches Scrollen keine Kachel erst im Moment des Erscheinens bauen muss.
+            Dim visibleRows = Math.Max(1, lastRow - firstRow + 1)
+            firstRow = Math.Max(0, firstRow - visibleRows * 2)
+            lastRow = Math.Min(_groupRows.Count - 1, lastRow + visibleRows * 2)
+
+            TopSpacerHeight = _groupRows(firstRow).Top
+            BottomSpacerHeight = Math.Max(0.0, ContentHeight - (_groupRows(lastRow).Top + _groupRows(lastRow).Height))
+            ApplyDisplayWindow(_groupLayout, _groupRows(firstRow).First,
+                               _groupRows(lastRow).First + _groupRows(lastRow).Count - 1)
+        End Sub
+
+        ''' <summary>Der Bereich in ITEMS, der im Sichtbereich steht - die Ansicht fordert damit ihre
+        ''' Vorschaubilder an. Die Gruppen sind zusammenhaengend, der Bereich ist es damit auch.</summary>
+        Public Sub GetGroupVisibleItemRange(contentOffsetY As Double, viewportHeight As Double,
+                                            ByRef firstItem As Integer, ByRef lastItem As Integer)
+            firstItem = -1
+            lastItem = -1
+            If _groupRows.Count = 0 Then Return
+
+            Dim firstRow = FindGroupRowAt(contentOffsetY)
+            Dim lastRow = FindGroupRowAt(contentOffsetY + Math.Max(1.0, viewportHeight))
+            Dim firstEntry = _groupRows(firstRow).First
+            Dim lastEntry = Math.Min(_groupLayout.Count - 1, _groupRows(lastRow).First + _groupRows(lastRow).Count - 1)
+            For i = firstEntry To lastEntry
+                Dim itemIndex = _groupLayoutItemIndex(i)
+                If itemIndex < 0 Then Continue For
+                If firstItem < 0 Then firstItem = itemIndex
+                lastItem = itemIndex
+            Next
+        End Sub
+
+        ''' <summary>Die Lage eines Elements in der Gruppenansicht: Oberkante seiner Zeile und deren
+        ''' Hoehe. Damit holt die Ansicht ein Element in den Blick, ohne selbst zu rechnen.</summary>
+        Public Function TryGetGroupItemPosition(itemIndex As Integer, columns As Integer, itemSlotHeight As Double,
+                                                ByRef rowTop As Double, ByRef rowHeight As Double) As Boolean
+            rowTop = 0
+            rowHeight = itemSlotHeight
+            EnsureGroupRows(columns, itemSlotHeight)
+            Dim entry = GroupEntryForItem(itemIndex)
+            If entry < 0 Then Return False
+            Dim row = FindGroupRowForEntry(entry)
+            If row < 0 Then Return False
+            rowTop = _groupRows(row).Top
+            rowHeight = _groupRows(row).Height
+            Return True
+        End Function
+
+        ''' <summary>Fenster um eine Zeile herum aufziehen, bevor der Scrollversatz gesetzt wird - sonst
+        ''' klemmt der ScrollViewer den Versatz gegen seine noch veraltete Gesamthoehe. Dieselbe Regel
+        ''' gilt im Raster, nur mit einer Formel statt der Tabelle.</summary>
+        Public Sub SetGroupDisplayWindowAround(contentTop As Double, viewportHeight As Double,
+                                               itemSlotHeight As Double, columns As Integer)
+            SetGroupDisplayWindow(Math.Max(0.0, contentTop - viewportHeight), viewportHeight * 3, itemSlotHeight, columns)
+        End Sub
+
+        Private Function GroupEntryForItem(itemIndex As Integer) As Integer
+            If itemIndex < 0 OrElse itemIndex >= _itemToGroupEntry.Length Then Return -1
+            Return _itemToGroupEntry(itemIndex)
+        End Function
+
+        Private Function FindGroupRowForEntry(entry As Integer) As Integer
+            If _groupRows.Count = 0 Then Return -1
+            Dim low = 0
+            Dim high = _groupRows.Count - 1
+            While low < high
+                Dim middle = (low + high + 1) \ 2
+                If _groupRows(middle).First <= entry Then
+                    low = middle
+                Else
+                    high = middle - 1
+                End If
+            End While
+            Return low
+        End Function
+
+        ''' <summary>Versatz in ITEMS-Indizes fuer eine Bewegung um ganze Zeilen. Am Gruppenende ist das
+        ''' NICHT die Spaltenzahl: die letzte Zeile einer Gruppe ist meist nur teilweise gefuellt, und
+        ''' dazwischen liegt eine Kopfzeile, auf der nichts stehen kann.</summary>
+        Public Function GroupRowNavigationOffset(currentItemIndex As Integer, rowDelta As Integer,
+                                                 columns As Integer, itemSlotHeight As Double) As Integer
+            If rowDelta = 0 Then Return 0
+            EnsureGroupRows(columns, itemSlotHeight)
+            Dim entry = GroupEntryForItem(currentItemIndex)
+            If entry < 0 Then Return rowDelta
+            Dim row = FindGroupRowForEntry(entry)
+            If row < 0 Then Return rowDelta
+            Dim column = entry - _groupRows(row).First
+
+            Dim direction = Math.Sign(rowDelta)
+            Dim remaining = Math.Abs(rowDelta)
+            Dim targetRow = row
+            While remaining > 0
+                Dim nextRow = targetRow + direction
+                If nextRow < 0 OrElse nextRow > _groupRows.Count - 1 Then Exit While
+                targetRow = nextRow
+                ' Eine Kopfzeile ueberspringen, ohne sie als Zeile zu zaehlen: die Bewegung soll von
+                ' Bild zu Bild gehen, nicht auf einer Beschriftung landen.
+                If Not _groupLayout(_groupRows(targetRow).First).IsGroupHeader Then remaining -= 1
+            End While
+            While targetRow >= 0 AndAlso targetRow <= _groupRows.Count - 1 AndAlso
+                  _groupLayout(_groupRows(targetRow).First).IsGroupHeader
+                targetRow += direction
+            End While
+            If targetRow < 0 OrElse targetRow > _groupRows.Count - 1 Then Return rowDelta
+
+            Dim targetEntry = _groupRows(targetRow).First + Math.Min(column, _groupRows(targetRow).Count - 1)
+            Dim targetItem = _groupLayoutItemIndex(targetEntry)
+            If targetItem < 0 Then Return rowDelta
+            Return targetItem - currentItemIndex
         End Function
 
         ''' Cache-Scope der aktuell angezeigten Ansicht - bei Suchlisten die Suchlisten-Scope, damit

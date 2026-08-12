@@ -7215,4 +7215,34 @@
   <data name="Ein_anderes_Fenster_arbeitet_gerade_am_Katalog_02482451" xml:space="preserve">
     <value>另一个窗口正在处理目录</value>
   </data>
+  <data name="Gruppenansicht_c3247db4" xml:space="preserve">
+    <value>分组视图</value>
+  </data>
+  <data name="GRUPPEN_986d3fa3" xml:space="preserve">
+    <value>分组</value>
+  </data>
+  <data name="Nach_Tag_36556488" xml:space="preserve">
+    <value>按天</value>
+  </data>
+  <data name="Nach_Monat_525f58b2" xml:space="preserve">
+    <value>按月</value>
+  </data>
+  <data name="Nach_Jahr_bf06a89a" xml:space="preserve">
+    <value>按年</value>
+  </data>
+  <data name="Ohne_Kameraangabe_ec23059c" xml:space="preserve">
+    <value>无相机信息</value>
+  </data>
+  <data name="Ohne_Dateiendung_8f95141a" xml:space="preserve">
+    <value>无扩展名</value>
+  </data>
+  <data name="Ohne_Bewertung_3a9322de" xml:space="preserve">
+    <value>无星级</value>
+  </data>
+  <data name="Kein_Favorit_67705ccf" xml:space="preserve">
+    <value>非收藏</value>
+  </data>
+  <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
+    <value>设置图库以网格、列表还是分组方式显示。</value>
+  </data>
 </root>

@@ -1196,6 +1196,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property IsGalleryViewModeGroup As Boolean
+            Get
+                Return _galleryViewMode = "Group"
+            End Get
+        End Property
+
         ' Wird von der Galerie gerufen, wenn die Ansichtsart ueber ihre eigene Werkzeugleiste
         ' gewechselt wird - so zeigt der Einstellungsdialog denselben Stand, ohne dass der Wert
         ' zwischen beiden hin und her geschoben wird.
@@ -1209,6 +1215,7 @@ Namespace ViewModels
         Private Sub RaiseGalleryViewModeProperties()
             Me.RaisePropertyChanged(NameOf(IsGalleryViewModeGrid))
             Me.RaisePropertyChanged(NameOf(IsGalleryViewModeList))
+            Me.RaisePropertyChanged(NameOf(IsGalleryViewModeGroup))
         End Sub
 
         Public Property ViewerShowFilmstrip As Boolean

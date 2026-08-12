@@ -104,6 +104,9 @@ Namespace Services
         Public Property GalleryViewMode As String = "Grid"
         Public Property GallerySortMode As String = AppSettingsService.DefaultGallerySortMode
         Public Property GallerySortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
+        ''' <summary>Feinheit der Gruppen in der Gruppenansicht, solange nach einem Datum sortiert wird:
+        ''' "Day", "Month" oder "Year".</summary>
+        Public Property GalleryGroupDateStep As String = AppSettingsService.DefaultGalleryGroupDateStep
         Public Property GalleryShowFolders As Boolean = True
         Public Property GalleryShowParentFolder As Boolean = True
         ' Galerie-Kachel-Badges: True = immer sichtbar, False = erst beim Mouseover. Standard spiegelt
@@ -531,6 +534,7 @@ Namespace Services
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
+                settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
@@ -666,6 +670,7 @@ Namespace Services
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
+                settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
                 settings.GalleryStartupFolderMode = NormalizeGalleryStartupFolderMode(settings.GalleryStartupFolderMode)
                 settings.GalleryStartupCustomFolder = NormalizeFolderPath(settings.GalleryStartupCustomFolder)
@@ -1034,10 +1039,31 @@ Namespace Services
             Select Case If(value, "").Trim()
                 Case "List"
                     Return "List"
+                Case "Group"
+                    Return "Group"
                 Case Else
                     Return "Grid"
             End Select
         End Function
+
+        ''' <summary>Bei Datumssortierung ist der Tag der Normalfall (Vorgabe Patrick, 2026-08-12);
+        ''' Monat und Jahr sind fuer grosse Bestaende umschaltbar.</summary>
+        Public Const DefaultGalleryGroupDateStep As String = "Day"
+
+        Public Shared Function NormalizeGalleryGroupDateStep(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Month"
+                    Return "Month"
+                Case "Year"
+                    Return "Year"
+                Case Else
+                    Return DefaultGalleryGroupDateStep
+            End Select
+        End Function
+
+        Public Shared Sub SaveGalleryGroupDateStep(value As String)
+            Update(Sub(s) s.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(value))
+        End Sub
 
         ''' <summary>Der Standard der Galerie-Sortierung, an EINER Stelle. Er ist der Anfangswert der
         ''' Einstellung und zugleich das Ziel des Zuruecksetzens ueber den Mausradklick - stuenden
