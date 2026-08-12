@@ -1817,20 +1817,38 @@
                                         Height="48"
                                         Width="{Binding DataContext.GroupHeaderWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Padding="5,0,5,0">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,6" VerticalAlignment="Bottom">
-                                        <TextBlock Grid.Column="0"
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,6" VerticalAlignment="Bottom">
+                                        <!-- Derselbe Kreis wie auf der Kachel, nur eine Ebene hoeher:
+                                             er markiert die ganze Gruppe und hebt sie wieder auf.
+                                             Gefuellt steht er, wenn JEDES Bild der Gruppe markiert
+                                             ist. -->
+                                        <Button Grid.Column="0"
+                                                Classes="selection-badge"
+                                                Classes.active="{Binding IsSelected}"
+                                                Width="16" Height="16"
+                                                Margin="0,0,8,2"
+                                                VerticalAlignment="Bottom"
+                                                Click="OnGroupSelectionBadgeClick"
+                                                ToolTip.Tip="Gruppe auswählen">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                                           Classes="badge-glyph"
+                                                           Width="14" Height="14"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                        </Button>
+                                        <TextBlock Grid.Column="1"
                                                    Classes="no-translate"
                                                    Text="{Binding GroupTitle}"
                                                    FontSize="{DynamicResource FP.Font.Subtitle}"
                                                    FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Primary}"
                                                    VerticalAlignment="Bottom"/>
-                                        <Border Grid.Column="1"
+                                        <Border Grid.Column="2"
                                                 Height="1"
                                                 Margin="12,0,12,5"
                                                 VerticalAlignment="Bottom"
                                                 Background="{DynamicResource FP.Border.Normal}"/>
-                                        <TextBlock Grid.Column="2"
+                                        <TextBlock Grid.Column="3"
                                                    Classes="no-translate"
                                                    Text="{Binding GroupCountText}"
                                                    FontSize="{DynamicResource FP.Font.Small}"

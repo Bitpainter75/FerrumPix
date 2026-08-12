@@ -1410,6 +1410,19 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' Der Kreis an der Kopfzeile einer Gruppe. Er wirkt wie der auf der Kachel, nur auf alle
+        ''' Bilder der Gruppe zugleich, und laesst eine Auswahl ausserhalb der Gruppe stehen.
+        Public Sub OnGroupSelectionBadgeClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim header = TryCast(button?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse header Is Nothing Then Return
+            vm.ToggleGroupSelection(header)
+            _selectionAnchor = vm.SelectedItem
+            Me.Focus()
+            e.Handled = True
+        End Sub
+
         ''' Ein einzelner Klick auf das Play-Badge öffnet das Video direkt im Viewer, statt wie
         ''' bei normalen Kacheln einen Doppelklick zu verlangen - Videos will man in der Regel
         ''' sofort ansehen, nicht erst auswählen.

@@ -7247,4 +7247,7 @@
   <data name="Legt_fest_ob_die_Galerie_als_Raster_als_Liste_od_e70127c6" xml:space="preserve">
     <value>Définit si la galerie s'affiche en grille, en liste ou par groupes.</value>
   </data>
+  <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
+    <value>Sélectionner le groupe</value>
+  </data>
 </root>

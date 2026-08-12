@@ -47,13 +47,18 @@ Namespace Controls
 
         ''' <summary>Vom getroffenen Element aus nach oben, bis eines einen <see cref="ImageItem"/>
         ''' als Datenkontext traegt. Getroffen wird immer ein Bild oder ein Rahmen INNERHALB der
-        ''' Kachel, nie die Kachel selbst.</summary>
+        ''' Kachel, nie die Kachel selbst.
+        '''
+        ''' Die Kopfzeile einer Gruppe zaehlt NICHT als Treffer, obwohl sie denselben Datentyp traegt:
+        ''' sie hat keine Datei. Ein Rechtsklick auf sie haette sie sonst zur Auswahl gemacht und das
+        ''' Bild-Kontextmenue geoeffnet - Umbenennen und Loeschen auf einem Eintrag ohne Pfad. Ein
+        ''' Klick auf die Kopfzeile meint dieselbe Flaeche wie ein Klick daneben.</summary>
         Private Shared Function FromVisualTree(target As Visual) As ImageItem
             While target IsNot Nothing
                 Dim ctrl = TryCast(target, Control)
                 If ctrl IsNot Nothing Then
                     Dim item = TryCast(ctrl.DataContext, ImageItem)
-                    If item IsNot Nothing Then Return item
+                    If item IsNot Nothing Then Return If(item.IsGroupHeader, Nothing, item)
                 End If
                 target = TryCast(target.GetVisualParent(), Visual)
             End While

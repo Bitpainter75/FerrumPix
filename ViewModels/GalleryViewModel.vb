@@ -1359,6 +1359,7 @@ Namespace ViewModels
             ' laufen ueber diese Meldung. Der Setter von SelectedItem allein genuegt nicht - beim
             ' Abwaehlen auf ein einzelnes Bild bleibt er unveraendert.
             UpdateInfoPanelTarget()
+            RefreshGroupHeaderSelection()
         End Sub
 
         Public ReadOnly Property HasSelection As Boolean
@@ -1621,7 +1622,9 @@ Namespace ViewModels
                 existing.IsNavigationSelected = False
             Next
             SelectedItems.Clear()
-            For Each item In selected.Where(Function(i) i IsNot Nothing)
+            ' Die Kopfzeile einer Gruppe kann nicht ausgewaehlt werden - sie hat keine Datei, und jede
+            ' Stapelaktion liefe auf ihr ins Leere. Die Sperre steht hier, wo alle Wege durchkommen.
+            For Each item In selected.Where(Function(i) i IsNot Nothing AndAlso Not i.IsGroupHeader)
                 item.IsSelected = True
                 item.IsNavigationSelected = False
                 SelectedItems.Add(item)
@@ -1673,7 +1676,7 @@ Namespace ViewModels
         End Sub
 
         Public Sub ToggleSelection(item As ImageItem)
-            If item Is Nothing OrElse item.IsParentFolderEntry Then Return
+            If item Is Nothing OrElse item.IsParentFolderEntry OrElse item.IsGroupHeader Then Return
             If SelectedItems.Contains(item) Then
                 item.IsSelected = False
                 item.IsNavigationSelected = False
@@ -7672,6 +7675,9 @@ Namespace ViewModels
                 groupStart = groupEnd + 1
             End While
             _itemToGroupEntry = entryOfItem
+            ' Die Kopfzeilen sind frisch und wissen nichts von der bestehenden Auswahl - sie ueberlebt
+            ' zum Beispiel einen Filterwechsel.
+            RefreshGroupHeaderSelection()
         End Sub
 
         Private Function GroupCountText(isFolderGroup As Boolean, count As Integer) As String
@@ -7848,6 +7854,76 @@ Namespace ViewModels
             End While
             Return low
         End Function
+
+        ''' <summary>Die Elemente einer Gruppe, gefunden ueber die Kopfzeile selbst. Bewusst ueber den
+        ''' Verweis und nicht ueber gemerkte Indizes: die Layoutliste wird bei jeder Aenderung an Items
+        ''' neu gebaut, gemerkte Zahlen waeren danach still veraltet.</summary>
+        Private Function GroupItemsFor(header As ImageItem) As List(Of ImageItem)
+            Dim result As New List(Of ImageItem)()
+            If header Is Nothing OrElse Not header.IsGroupHeader Then Return result
+            Dim start = _groupLayout.IndexOf(header)
+            If start < 0 Then Return result
+            For i = start + 1 To _groupLayout.Count - 1
+                If _groupLayout(i).IsGroupHeader Then Exit For
+                If _groupLayout(i).IsSelectableEntry Then result.Add(_groupLayout(i))
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Der Kreis an der Kopfzeile: ist die ganze Gruppe markiert, hebt der Klick sie auf,
+        ''' sonst nimmt er sie dazu. Er ERSETZT die Auswahl nicht - genau wie der Kreis auf der Kachel
+        ''' laesst er stehen, was anderswo markiert ist.</summary>
+        Public Sub ToggleGroupSelection(header As ImageItem)
+            Dim members = GroupItemsFor(header)
+            If members.Count = 0 Then Return
+
+            Dim allSelected = members.All(Function(i) SelectedItems.Contains(i))
+            For Each item In members
+                If allSelected Then
+                    If SelectedItems.Remove(item) Then
+                        item.IsSelected = False
+                        item.IsNavigationSelected = False
+                    End If
+                ElseIf Not SelectedItems.Contains(item) Then
+                    item.IsSelected = True
+                    item.IsNavigationSelected = False
+                    SelectedItems.Add(item)
+                End If
+            Next
+
+            SelectedItem = If(allSelected, SelectedItems.LastOrDefault(), members(members.Count - 1))
+            Me.RaisePropertyChanged(NameOf(SelectionText))
+            Me.RaisePropertyChanged(NameOf(FooterStatusText))
+            Me.RaisePropertyChanged(NameOf(HasSelection))
+            Me.RaisePropertyChanged(NameOf(HasSelectedImage))
+            RaiseSelectionMetadataChanged()
+        End Sub
+
+        ''' <summary>Zeichnet die Kreise der Kopfzeilen nach: eine Kopfzeile gilt als markiert, wenn
+        ''' JEDES Element ihrer Gruppe markiert ist. Haengt an <see cref="RaiseSelectionMetadataChanged"/>
+        ''' und damit an jedem Weg, der die Auswahl aendert - auch an kuenftigen. Eine Liste einzelner
+        ''' Anstoss-Stellen vergisst erfahrungsgemaess einen davon.</summary>
+        Private Sub RefreshGroupHeaderSelection()
+            ' Ausserhalb der Gruppenansicht gibt es keine Kopfzeilen zu zeichnen, und solange die
+            ' Layoutliste als veraltet vermerkt ist, stuenden dort ohnehin die Eintraege von vorhin.
+            ' Nach einem Neuaufbau holt EnsureGroupEntries den Durchlauf selbst nach.
+            If Not IsGroupView OrElse _groupEntriesDirty OrElse _groupLayout.Count = 0 Then Return
+            Dim header As ImageItem = Nothing
+            Dim members = 0
+            Dim selected = 0
+            For i = 0 To _groupLayout.Count
+                Dim entry = If(i < _groupLayout.Count, _groupLayout(i), Nothing)
+                If entry Is Nothing OrElse entry.IsGroupHeader Then
+                    If header IsNot Nothing Then header.IsSelected = members > 0 AndAlso selected = members
+                    header = entry
+                    members = 0
+                    selected = 0
+                ElseIf entry.IsSelectableEntry Then
+                    members += 1
+                    If entry.IsSelected Then selected += 1
+                End If
+            Next
+        End Sub
 
         ''' <summary>Versatz in ITEMS-Indizes fuer eine Bewegung um ganze Zeilen. Am Gruppenende ist das
         ''' NICHT die Spaltenzahl: die letzte Zeile einer Gruppe ist meist nur teilweise gefuellt, und
