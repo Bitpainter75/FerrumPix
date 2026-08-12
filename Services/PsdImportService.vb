@@ -69,7 +69,19 @@ Namespace Services
         ''' Grad stehen in der Datei an einer Stelle, die nicht verlässlich zu lesen ist.</param>
         Public Shared Function Import(psdPath As String, Optional textAsText As Boolean = False) As PsdImportResult
             If String.IsNullOrWhiteSpace(psdPath) OrElse Not File.Exists(psdPath) Then Return Nothing
+            ' DURCH DIE SCHLEUSE, wie jeder teure Bildweg (siehe DecodeGate). Hier hing sie bisher
+            ' nicht, obwohl gerade dieser Weg sie braucht: gelesen werden ALLE Ebenen der Datei -
+            ' der Deckel liegt bei 400 Megapixeln Gesamtflaeche - und jede wird danach noch als PNG
+            ' geschrieben. Faellt das mit einem RAW-Decode oder einem Gesichtsscan zusammen, teilen
+            ' sich zwei Laeufe Kerne, Speicherbandbreite und Platte, und keiner wird schneller.
+            ' CountTextLayers bleibt bewusst DRAUSSEN: es liest nur das Verzeichnis, keine
+            ' Bildpunkte - dieselbe Abwaegung wie bei TryGetSize.
+            Return DecodeGate.Run(Function() ImportIntern(psdPath, textAsText))
+        End Function
 
+        ''' <summary>Die eigentliche Arbeit. Getrennt, damit die Schleuse EINE Klammer um alles legt
+        ''' und nicht um jeden Abschnitt einzeln.</summary>
+        Private Shared Function ImportIntern(psdPath As String, textAsText As Boolean) As PsdImportResult
             Dim doc = PsdLayerReader.ReadDocument(psdPath)
             If doc Is Nothing OrElse doc.Layers.Count = 0 Then Return Nothing
             If doc.Width < 1 OrElse doc.Height < 1 Then Return Nothing

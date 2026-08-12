@@ -4052,8 +4052,8 @@
   <data name="Maskierung_964c3806" xml:space="preserve">
     <value>Masquage</value>
   </data>
-  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
-    <value>Limite l’accentuation aux contours : 0 accentue toute la surface, des valeurs plus élevées laissent tranquilles les zones lisses comme le ciel et la peau.</value>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_fa9f26e8" xml:space="preserve">
+    <value>Limite l’accentuation aux contours : 0 accentue toute la surface, des valeurs plus élevées laissent tranquilles les zones lisses comme le ciel et la peau. Avec le pointeur dessus, appuyer une fois sur ALT affiche la pondération : le clair est accentué, le sombre reste tranquille. Appuyer de nouveau sur ALT la retire.</value>
   </data>
   <data name="Kontur_mitmischen_f0d70cba" xml:space="preserve">
     <value>Fondre aussi le contour</value>
@@ -7249,5 +7249,8 @@
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Sélectionner le groupe</value>
+  </data>
+  <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
+    <value>Un traitement en arrière-plan est en cours dans une autre fenêtre. Veuillez réessayer ensuite.</value>
   </data>
 </root>

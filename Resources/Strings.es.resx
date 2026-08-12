@@ -4052,8 +4052,8 @@
   <data name="Maskierung_964c3806" xml:space="preserve">
     <value>Enmascarar</value>
   </data>
-  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
-    <value>Limita el enfoque a los bordes: 0 enfoca toda la superficie, valores altos dejan tranquilas las zonas lisas como el cielo y la piel.</value>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_fa9f26e8" xml:space="preserve">
+    <value>Limita el enfoque a los bordes: 0 enfoca toda la superficie, valores altos dejan tranquilas las zonas lisas como el cielo y la piel. Con el puntero encima, pulsa ALT una vez para ver la ponderación: lo claro se enfoca, lo oscuro queda tranquilo. Pulsa ALT de nuevo para quitarla.</value>
   </data>
   <data name="Kontur_mitmischen_f0d70cba" xml:space="preserve">
     <value>Mezclar también el contorno</value>
@@ -7249,5 +7249,8 @@
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Seleccionar grupo</value>
+  </data>
+  <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
+    <value>En otra ventana se está ejecutando un proceso en segundo plano. Inténtalo de nuevo después.</value>
   </data>
 </root>

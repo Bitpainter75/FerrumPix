@@ -32,6 +32,16 @@ Namespace Services
         Private Sub New()
         End Sub
 
+        ''' <summary>Der Bestand hat sich geaendert - ein Modell ist dazugekommen oder verschwunden.
+        '''
+        ''' Ohne diese Meldung war das Herunterladen im laufenden Programm folgenlos: der Bestand
+        ''' wurde zwar neu erhoben, aber die Oberflaeche fragt eine Verfuegbarkeit nur dann erneut
+        ''' ab, wenn ihr jemand sagt, dass sie sich geaendert hat. Die Tiefen-Unschaerfe blieb
+        ''' deshalb bis zum naechsten Start grau, obwohl die Datei schon dalag - gemeldet aus dem
+        ''' Nutzerkreis. Kommt aus dem HINTERGRUND (der Download laeuft dort); wer die Oberflaeche
+        ''' anfasst, muss selbst auf den UI-Faden wechseln.</summary>
+        Public Shared Event InventoryChanged As EventHandler
+
         Private Shared ReadOnly _lock As New Object()
         Private Shared ReadOnly _sessions As New Dictionary(Of String, LoadedSession)(StringComparer.OrdinalIgnoreCase)
         ''' <summary>Ein Schloss JE MODELLDATEI - siehe <see cref="BuildLockFor"/>.</summary>
@@ -441,13 +451,31 @@ Namespace Services
                     End If
                 Next
             Next
+            Dim changed As Boolean
             SyncLock _lock
+                changed = _inventory Is Nothing OrElse Not SameFiles(_inventory, found)
                 _inventory = found
             End SyncLock
             DiagnosticLogService.LogAlways("KiModell",
                 $"Modelle: {found.Count} von {KnownEntries.Count} gefunden" &
                 If(found.Count = 0, "", " (" & String.Join(", ", found.Keys) & ")"))
+            ' Erst NACH dem Ablegen melden, damit jeder Zuhoerer den neuen Bestand sieht, und nur bei
+            ' echter Aenderung - der Aufruf beim Start soll keine Runde durch die Oberflaeche treten.
+            If changed Then RaiseEvent InventoryChanged(Nothing, EventArgs.Empty)
         End Sub
+
+        ''' <summary>Zwei Bestandslisten mit demselben Inhalt? Verglichen werden Name UND Ort: eine
+        ''' Datei, die vom Nutzerordner in den Programmordner wandert, ist eine Aenderung.</summary>
+        Private Shared Function SameFiles(a As Dictionary(Of String, String),
+                                          b As Dictionary(Of String, String)) As Boolean
+            If a.Count <> b.Count Then Return False
+            For Each pair In a
+                Dim other As String = Nothing
+                If Not b.TryGetValue(pair.Key, other) Then Return False
+                If Not String.Equals(pair.Value, other, StringComparison.Ordinal) Then Return False
+            Next
+            Return True
+        End Function
 
         ''' <summary>Noch einmal nachsehen - fuer den Fall, dass jemand waehrend der Sitzung ein
         ''' Modell abgelegt hat. Bereits offene Sitzungen bleiben, sie sind ja gueltig.</summary>

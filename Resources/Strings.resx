@@ -4053,8 +4053,8 @@
   <data name="Maskierung_964c3806" xml:space="preserve">
     <value>Masking</value>
   </data>
-  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
-    <value>Limits sharpening to edges: 0 sharpens the whole surface, higher values leave smooth areas such as sky and skin alone.</value>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_fa9f26e8" xml:space="preserve">
+    <value>Limits sharpening to edges: 0 sharpens the whole surface, higher values leave smooth areas such as sky and skin alone. With the pointer on it, tapping ALT once shows the weighting: bright is sharpened, dark stays calm. Tapping ALT again takes it away.</value>
   </data>
   <data name="Kontur_mitmischen_f0d70cba" xml:space="preserve">
     <value>Blend the outline too</value>
@@ -7250,5 +7250,8 @@
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Select group</value>
+  </data>
+  <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
+    <value>A background run is going on in another window. Please try again afterwards.</value>
   </data>
 </root>

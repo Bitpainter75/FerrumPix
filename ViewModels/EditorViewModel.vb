@@ -4746,6 +4746,9 @@ Namespace ViewModels
             End Get
             Set(value As Double)
                 SetUndoableDouble(_sharpenMasking, Math.Max(0, Math.Min(100, value)), NameOf(SharpenMasking))
+                ' Laeuft gerade die ALT-Vorschau, folgt sie dem Regler sofort - sie IST der Grund,
+                ' warum jemand den Regler bewegt. Ausserhalb der Vorschau tut der Aufruf nichts.
+                PublishSharpenMaskPreview()
             End Set
         End Property
 
@@ -11706,6 +11709,10 @@ Namespace ViewModels
             ' JEDE einzelne Aenderung das ganze Panel neu auf.
             AddHandler _annotations.CollectionChanged, Sub(s, e) RebuildLayerRows()
             RebuildLayerRows()
+            ' Wird waehrend der Sitzung ein Modell geladen, sollen die Werkzeuge dazu ohne Neustart
+            ' bedienbar werden - siehe RefreshModelAvailability. Ohne Abmelden: dieses ViewModel
+            ' lebt so lange wie das Fenster.
+            AddHandler AiModelService.InventoryChanged, Sub(s, e) RefreshModelAvailability()
             LoadFixedShapeItems()
             LoadAllShapeIcons()
             LoadWatermarkPresets()

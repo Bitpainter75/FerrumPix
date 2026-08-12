@@ -31,10 +31,50 @@ Namespace Services
         Implements IDisposable
 
         Private _stream As FileStream
+        ''' <summary>Eine ZAEHLHUELLE aus <see cref="TryEnterCleanup"/>: sie haelt keine Datei,
+        ''' sondern nur einen Platz in der Schachtelung.</summary>
+        Private ReadOnly _nested As Boolean
 
         Private Sub New(stream As FileStream)
             _stream = stream
         End Sub
+
+        Private Sub New(nested As Boolean)
+            _nested = nested
+        End Sub
+
+        ' ── Die LOESCHWEGE teilen sich eine Klammer ─────────────────────────────
+        '
+        ' Ein Loeschweg braucht dieselbe Sperre wie ein Lauf: was hier geloescht wird, legt ein Lauf
+        ' im anderen Fenster sonst gleich wieder an. Er darf sie aber SCHACHTELN - "Ordner
+        ' aufraeumen" holt sie einmal und ruft darin drei Wege, die jeder fuer sich abgesichert sind.
+        ' Ein zweiter echter Erwerb im selben Prozess wuerde an der eigenen Datei scheitern
+        ' (FileShare.None gilt auch fuer den, der sie haelt), und der Weg saehe aus wie von einem
+        ' fremden Fenster blockiert.
+        '
+        ' Die LAEUFE nehmen weiterhin TryAcquire und schachteln NICHT: Katalogindex und
+        ' Gesichtssuche schreiben in dieselben Dateien, zwei davon nebeneinander sind genau der Fall,
+        ' den die Sperre verhindern soll - auch im selben Fenster.
+
+        Private Shared ReadOnly _cleanupGate As New Object()
+        Private Shared _cleanupDepth As Integer
+        Private Shared _cleanupHolder As BackgroundRunLock
+
+        ''' <summary>Betritt die Klammer fuer einen LOESCHENDEN Weg. Nothing heisst: es laeuft
+        ''' gerade ein Hintergrundlauf - hier oder in einem anderen Fenster.</summary>
+        Public Shared Function TryEnterCleanup() As BackgroundRunLock
+            SyncLock _cleanupGate
+                If _cleanupDepth > 0 Then
+                    _cleanupDepth += 1
+                    Return New BackgroundRunLock(nested:=True)
+                End If
+                Dim erworben = TryAcquire()
+                If erworben Is Nothing Then Return Nothing
+                _cleanupHolder = erworben
+                _cleanupDepth = 1
+                Return New BackgroundRunLock(nested:=True)
+            End SyncLock
+        End Function
 
         ''' <summary>Wo die Sperrdatei liegt: neben der Bibliothek, damit sie denselben Bestand
         ''' meint. Zwei Anwendungen mit verschiedenen Datenordnern sperren sich damit auch nicht
@@ -73,11 +113,29 @@ Namespace Services
                 ' schreibgeschuetzter Datenordner -, soll der Lauf trotzdem laufen. Sie ist ein
                 ' Schutz gegen einen seltenen Fall und kein Grund, die Funktion abzuschalten.
                 DiagnosticLogService.LogException("Hintergrundlauf.Sperre", ex)
-                Return New BackgroundRunLock(Nothing)
+                ' Der Typ MUSS dastehen: es gibt einen zweiten Konstruktor fuer die Zaehlhuelle, und
+                ' ein blankes Nothing passte auf beide.
+                Return New BackgroundRunLock(CType(Nothing, FileStream))
             End Try
         End Function
 
         Public Sub Dispose() Implements IDisposable.Dispose
+            If _nested Then
+                SyncLock _cleanupGate
+                    _cleanupDepth -= 1
+                    If _cleanupDepth > 0 Then Return
+                    ' Die aeusserste Klammer gibt die Datei frei.
+                    _cleanupDepth = 0
+                    Dim halter = _cleanupHolder
+                    _cleanupHolder = Nothing
+                    halter?.DisposeStream()
+                End SyncLock
+                Return
+            End If
+            DisposeStream()
+        End Sub
+
+        Private Sub DisposeStream()
             Try
                 _stream?.Dispose()
             Catch

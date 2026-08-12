@@ -97,7 +97,7 @@
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding CanDenoiseWithModel}"
                         Command="{Binding DenoiseWithModelCommand}"
-                        ToolTip.Tip="{Binding DenoiseWithModelHint}">
+                        ToolTip.Tip="{Binding DenoiseWithModelHint}" ToolTip.ShowOnDisabled="True">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
                                        Width="16" Height="16" />
@@ -107,7 +107,7 @@
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding CanDenoiseFast}"
                         Command="{Binding DenoiseFastCommand}"
-                        ToolTip.Tip="{Binding DenoiseFastHint}">
+                        ToolTip.Tip="{Binding DenoiseFastHint}" ToolTip.ShowOnDisabled="True">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
                                        Width="16" Height="16" />

@@ -4052,8 +4052,8 @@
   <data name="Maskierung_964c3806" xml:space="preserve">
     <value>Maskierung</value>
   </data>
-  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
-    <value>Beschränkt die Schärfung auf Kanten: 0 schärft die ganze Fläche, höher lässt glatte Flächen wie Himmel und Haut ruhig.</value>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_fa9f26e8" xml:space="preserve">
+    <value>Beschränkt die Schärfung auf Kanten: 0 schärft die ganze Fläche, höher lässt glatte Flächen wie Himmel und Haut ruhig. Mit dem Zeiger darauf einmal ALT antippen zeigt die Gewichtung: hell wird geschärft, dunkel bleibt ruhig. Noch einmal ALT nimmt sie weg.</value>
   </data>
   <data name="Kontur_mitmischen_f0d70cba" xml:space="preserve">
     <value>Kontur mitmischen</value>
@@ -7249,5 +7249,8 @@
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Gruppe auswählen</value>
+  </data>
+  <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
+    <value>In einem anderen Fenster läuft gerade ein Hintergrundlauf. Bitte danach noch einmal versuchen.</value>
   </data>
 </root>

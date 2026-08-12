@@ -3529,6 +3529,29 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return 0.299F * r + 0.587F * g + 0.114F * b
         End Function
 
+        ''' <summary>Wie sehr ein Bildpunkt als KANTE gilt: 0 auf glatter Flaeche, 1 auf einer vollen
+        ''' Motivkante. Gemessen als Summe der beiden Helligkeitsgefaelle (waagerecht, senkrecht),
+        ''' bezogen auf <see cref="SharpenEdgeFullScale"/> und mit Smoothstep geglaettet.
+        '''
+        ''' Steht als EIGENE Funktion da, weil zwei Stellen genau dieselbe Antwort brauchen: die
+        ''' Schaerfung, die damit gewichtet, und die Vorschau bei gedrueckter ALT-Taste, die genau
+        ''' diese Gewichtung als Bild zeigt. Zwei Abschriften derselben Formel liefen frueher oder
+        ''' spaeter auseinander - und dann zeigte die Vorschau etwas anderes, als die Schaerfung
+        ''' tut. Eine Vorschau, die luegt, ist schlimmer als keine.</summary>
+        Private Shared Function SharpenEdgeFactor(buf As Byte(), rowOffset As Integer, upRow As Integer,
+                                                  downRow As Integer, x As Integer, w As Integer,
+                                                  ri As Integer, gi As Integer, bi As Integer, ai As Integer) As Single
+            ' Am Bildrand auf den Rand geklemmt, wie die restliche Randbehandlung dieser Datei.
+            Dim leftOff = rowOffset + If(x > 0, (x - 1) * 4, 0)
+            Dim rightOff = rowOffset + If(x < w - 1, (x + 1) * 4, (w - 1) * 4)
+            Dim edge = Clamp((Math.Abs(LumaAt(buf, leftOff, ri, gi, bi, ai) - LumaAt(buf, rightOff, ri, gi, bi, ai)) +
+                              Math.Abs(LumaAt(buf, upRow + x * 4, ri, gi, bi, ai) - LumaAt(buf, downRow + x * 4, ri, gi, bi, ai))) /
+                             SharpenEdgeFullScale, 0, 1)
+            ' Smoothstep: an beiden Enden Ableitung null, der Übergang von "glatt" nach "Kante" zieht
+            ' deshalb keine sichtbare Linie ins Bild.
+            Return edge * edge * (3.0F - 2.0F * edge)
+        End Function
+
         ''' <summary>Unschärfemaske: Bild − Gaußunschärfe ergibt die Hochfrequenzanteile, die verstärkt
         ''' aufaddiert werden. Radius steuert das Gauß-Sigma (Wirkgröße), Detail die Verstärkung.
         '''
@@ -3584,14 +3607,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
                         Dim pixelGain = gain
                         If masking > 0 Then
-                            Dim leftOff = rowOffset + If(x > 0, (x - 1) * 4, 0)
-                            Dim rightOff = rowOffset + If(x < w - 1, (x + 1) * 4, (w - 1) * 4)
-                            Dim edge = Clamp((Math.Abs(LumaAt(srcBuf, leftOff, ri, gi, bi, ai) - LumaAt(srcBuf, rightOff, ri, gi, bi, ai)) +
-                                              Math.Abs(LumaAt(srcBuf, upRow + x * 4, ri, gi, bi, ai) - LumaAt(srcBuf, downRow + x * 4, ri, gi, bi, ai))) /
-                                             SharpenEdgeFullScale, 0, 1)
-                            ' Smoothstep: an beiden Enden Ableitung null, der Übergang von "glatt" nach
-                            ' "Kante" zieht deshalb keine sichtbare Linie ins Bild.
-                            edge = edge * edge * (3.0F - 2.0F * edge)
+                            Dim edge = SharpenEdgeFactor(srcBuf, rowOffset, upRow, downRow, x, w, ri, gi, bi, ai)
                             pixelGain = gain * ((1.0F - masking) + masking * edge)
                         End If
 
@@ -3605,6 +3621,120 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
             blurred.Dispose()
             Return result
+        End Function
+
+        ' ── Vorschau der Maskierung ─────────────────────────────────────────────
+        '
+        ' Wie in Lightroom: ALT gedrueckt halten und den Maskierungsregler ziehen zeigt statt des
+        ' Bildes die GEWICHTUNG - weiss heisst "hier wird voll geschaerft", schwarz "hier bleibt es,
+        ' wie es ist". Ohne sie stellt man den Regler blind ein: an einer glatten Flaeche sieht man
+        ' bei 40 und bei 70 dasselbe, und erst beim spaeteren Blick auf den Himmel faellt auf, dass
+        ' das Rauschen mitgeschaerft wurde.
+        '
+        ' Zweigeteilt, und zwar aus einem Messgrund: die KANTENKARTE haengt nur vom Bild ab, die
+        ' Gewichtung nur vom Reglerwert. Waehrend des Zuges bleibt die Karte also stehen, und jede
+        ' Reglerbewegung kostet nur noch eine Punktrechnung statt eines Kettendurchlaufs. Sonst
+        ' haenge die Anzeige dem Regler hinterher - bei einer Vorschau, die man zum EINSTELLEN
+        ' benutzt, waere das der Sinn der Sache.
+
+        ''' <summary>Die Kantenkarte eines Bildes: ein Byte je Bildpunkt, zeilenweise, 0 = glatte
+        ''' Flaeche, 255 = volle Kante. Dieselbe Rechnung, mit der die Schaerfung gewichtet - siehe
+        ''' <see cref="SharpenEdgeFactor"/>.
+        '''
+        ''' Das Bild muss der Zustand VOR der Schaerfung sein, sonst misst die Karte die eigene
+        ''' Wirkung mit: ein geschaerftes Bild hat staerkere Kanten, die Karte zeigte mehr Weiss als
+        ''' die Gewichtung wirklich hergibt, und man stellte den Regler zu hoch ein.</summary>
+        Public Shared Function ComputeSharpenEdgeMap(source As SKBitmap) As Byte()
+            If source Is Nothing OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return Nothing
+            Dim srcBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return Nothing
+
+            Dim w = source.Width, h = source.Height
+            Dim map = New Byte(w * h - 1) {}
+            ForEachRow(w, h,
+                Sub(y)
+                    Dim rowOffset = y * stride
+                    Dim upRow = If(y > 0, (y - 1) * stride, rowOffset)
+                    Dim downRow = If(y < h - 1, (y + 1) * stride, rowOffset)
+                    Dim mapRow = y * w
+                    For x = 0 To w - 1
+                        Dim edge = SharpenEdgeFactor(srcBuf, rowOffset, upRow, downRow, x, w, ri, gi, bi, ai)
+                        map(mapRow + x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(edge * 255.0F)))))
+                    Next
+                End Sub)
+            Return map
+        End Function
+
+        ''' <summary>Das Anzeigebild zur Kantenkarte bei einem bestimmten Maskierungswert: genau die
+        ''' Gewichtung, die die Schaerfung an dieser Stelle anlegt, als Graustufe.
+        '''
+        ''' Bei 0 ist alles weiss - die Schaerfung wirkt ueberall gleich, und das ist ehrlich so
+        ''' anzuzeigen, statt die Vorschau erst ab einem Wert "interessant" werden zu lassen.</summary>
+        Public Shared Function RenderSharpenMaskPreview(edgeMap As Byte(), width As Integer, height As Integer,
+                                                        maskingPercent As Double) As SKBitmap
+            If edgeMap Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return Nothing
+            If edgeMap.Length < width * height Then Return Nothing
+
+            Dim masking = Clamp(CSng(maskingPercent / 100.0), 0, 1)
+            Dim result = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Dim buffer = New Byte(width * height * 4 - 1) {}
+            ForEachRow(width, height,
+                Sub(y)
+                    Dim mapRow = y * width
+                    Dim rowOffset = mapRow * 4
+                    For x = 0 To width - 1
+                        Dim edge = edgeMap(mapRow + x) / 255.0F
+                        Dim weight = (1.0F - masking) + masking * edge
+                        Dim v = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(weight * 255.0F)))))
+                        Dim o = rowOffset + x * 4
+                        ' Deckend grau: Bgra8888 premultipliziert, Alpha voll - ein Grauwert ist bei
+                        ' vollem Alpha in beiden Formen derselbe.
+                        buffer(o) = v
+                        buffer(o + 1) = v
+                        buffer(o + 2) = v
+                        buffer(o + 3) = 255
+                    Next
+                End Sub)
+            Runtime.InteropServices.Marshal.Copy(buffer, 0, result.GetPixels(), buffer.Length)
+            Return result
+        End Function
+
+        ''' <summary>Das Bild an genau der Stelle der Kette, an der die Schaerfung ansetzt: alles
+        ''' davor gerechnet, die Schaerfung selbst und die Stufen danach neutral.
+        '''
+        ''' Korn und Rauschen MUESSEN mit heraus. Sie kommen nach der Schaerfung und sind fuer eine
+        ''' Kantenmessung genau das, was sie ueberall sind: Kanten. Mit Korn im Bild waere die halbe
+        ''' Flaeche weiss, und die Vorschau zeigte etwas, das mit der Gewichtung nichts zu tun hat.
+        ''' Die Vignette faellt aus demselben Grund weg, wenn auch schwaecher: sie zieht die
+        ''' Helligkeit in den Ecken zusammen und daempft dort die Gefaelle.</summary>
+        Public Shared Function RenderPreSharpenBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            If adj Is Nothing Then Return CloneBitmap(source)
+            Return ProcessBitmapBase(source, WithoutSharpening(adj))
+        End Function
+
+        ''' <summary>Der Gueltigkeitsstempel der Kantenkarte: derselbe Schluessel, den auch der
+        ''' Rendercache benutzt, aber vom Stand OHNE Schaerfung. Er aendert sich bei jeder Einstellung,
+        ''' die das Bild vor der Schaerfung anfasst, und ausdruecklich NICHT bei den Schaerfe-Reglern
+        ''' selbst - sonst waere die Karte genau dann hinfaellig, wenn man sie benutzt.</summary>
+        Public Shared Function PreSharpenKey(adj As ImageAdjustments) As String
+            If adj Is Nothing Then Return ""
+            Return ComputeBaseKey(WithoutSharpening(adj))
+        End Function
+
+        ''' <summary>Ein Klon ohne Schaerfung und ohne die Stufen danach. EINE Stelle, damit Stempel
+        ''' und Bild nicht auseinanderlaufen koennen.</summary>
+        Private Shared Function WithoutSharpening(adj As ImageAdjustments) As ImageAdjustments
+            Dim unsharpened = adj.Clone()
+            unsharpened.Sharpness = 0
+            unsharpened.SharpenRadius = 0
+            unsharpened.SharpenDetail = 0
+            unsharpened.SharpenMasking = 0
+            unsharpened.Vignette = 0
+            unsharpened.Grain = 0
+            unsharpened.AddNoise = 0
+            Return unsharpened
         End Function
 
         Private Shared Function ApplySharpness3x3(source As SKBitmap, amount As Single) As SKBitmap

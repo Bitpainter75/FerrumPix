@@ -2639,7 +2639,19 @@ Namespace ViewModels
             SetLanguageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) LanguageMode = m)
             SetTransparencyBackgroundModeCommand = ReactiveCommand.Create(Of String)(Sub(m) TransparencyBackgroundMode = m)
             CleanupDatabaseCommand = ReactiveCommand.Create(Sub()
-                                                                Dim removed = Services.LibraryService.Instance.PurgeOrphanedRecords()
+                                                                ' Wie beim Aufraeumen der Ordner: nur EIN Fenster
+                                                                ' darf am Bestand schreiben.
+                                                                Dim crossProcess = Services.BackgroundRunLock.TryAcquire()
+                                                                If crossProcess Is Nothing Then
+                                                                    CleanupResultMessage = OtherWindowBusyMessage
+                                                                    Return
+                                                                End If
+                                                                Dim removed As Integer
+                                                                Try
+                                                                    removed = Services.LibraryService.Instance.PurgeOrphanedRecords()
+                                                                Finally
+                                                                    crossProcess.Dispose()
+                                                                End Try
                                                                 CleanupResultMessage = If(removed = 0,
                                                                     "Keine verwaisten Einträge gefunden.",
                                                                     String.Format(LocalizationService.T("{0} verwaiste Einträge entfernt."), removed))
@@ -3330,16 +3342,42 @@ Namespace ViewModels
             Return ConfirmAndCleanAsync(row.Members, catalog, thumbnails)
         End Function
 
+        ''' <summary>Der Satz, wenn die Sperre der Hintergrundlaeufe belegt ist. An EINER Stelle,
+        ''' weil ihn mehrere Aufraeumwege brauchen und zwei Fassungen desselben Satzes zwei
+        ''' Uebersetzungen waeren.</summary>
+        Private Shared ReadOnly Property OtherWindowBusyMessage As String
+            Get
+                Return LocalizationService.T("In einem anderen Fenster läuft gerade ein Hintergrundlauf. Bitte danach noch einmal versuchen.")
+            End Get
+        End Property
+
         ''' <summary>Der gemeinsame Weg fuer eine Zeile und fuer die ganze gefilterte Menge.
         '''
         ''' EIN Neuaufbau am Ende und nicht je Ordner: bei tausend Ordnern waeren das tausend
-        ''' Erhebungen ueber Cache und Katalog, und die Liste flackerte dabei durch.</summary>
+        ''' Erhebungen ueber Cache und Katalog, und die Liste flackerte dabei durch.
+        '''
+        ''' HAELT DIE SPERRE DER HINTERGRUNDLAEUFE, solange geraeumt wird. Das Aufraeumen ist ein
+        ''' SCHREIBLAUF wie der Katalogindex: es loescht Katalogzeilen und schreibt das
+        ''' Ordnerverzeichnis des Vorschau-Zwischenspeichers neu. Ohne die Sperre konnte im zweiten
+        ''' Fenster ein Indexlauf genau daran arbeiten, waehrend hier geloescht wird - der eine
+        ''' schreibt seine Fassung der index.json zurueck, und die Eintraege des anderen sind weg
+        ''' oder tauchen wieder auf. Die Laeufe IM EIGENEN Fenster halten die beiden Loeschwege
+        ''' selbst an (siehe LibraryService.StopBackgroundWriters); diese Sperre ist die zweite
+        ''' Haelfte davon, gegen das andere Fenster.</summary>
         Private Sub CleanFolderSet(targets As IEnumerable(Of ThumbnailCacheFolderInfo),
                                    catalog As Boolean, thumbnails As Boolean)
             Dim list = If(targets, Enumerable.Empty(Of ThumbnailCacheFolderInfo)()).
                        Where(Function(t) t IsNot Nothing).ToList()
             If list.Count = 0 Then
                 ThumbnailCacheResultMessage = LocalizationService.T("Nichts zu entfernen.")
+                Return
+            End If
+
+            Dim crossProcess = Services.BackgroundRunLock.TryAcquire()
+            If crossProcess Is Nothing Then
+                ' SAUBER ABBRECHEN statt danebenzuschreiben: was hier geloescht wuerde, legte der
+                ' Lauf im anderen Fenster gleich wieder an.
+                ThumbnailCacheResultMessage = OtherWindowBusyMessage
                 Return
             End If
 
@@ -3356,6 +3394,8 @@ Namespace ViewModels
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Settings.CleanFolderSet", ex)
+            Finally
+                crossProcess.Dispose()
             End Try
 
             Dim teile As New List(Of String)()

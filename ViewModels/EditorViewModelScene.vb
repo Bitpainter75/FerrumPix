@@ -977,6 +977,163 @@ Namespace ViewModels
             RequestSceneRegionRender(rect)
             Return True
         End Function
+
+        ' ── Vorschau der Maskierung beim Schaerfen ──────────────────────────────
+        '
+        ' ALT gedrueckt halten und den Maskierungsregler ziehen zeigt statt des Bildes die
+        ' GEWICHTUNG der Schaerfung: weiss = hier wird voll geschaerft, schwarz = hier bleibt es,
+        ' wie es ist. Aus dem Nutzerkreis gewuenscht, und aus einem nachvollziehbaren Grund - ohne
+        ' sie stellt man den Regler blind ein.
+        '
+        ' Sie laeuft ueber den vorhandenen WERKZEUG-KANAL (ToolPreviewImage), denselben, den die
+        ' Gitterverzerrung und die Tiefen-Unschaerfe benutzen. Der Kanal bringt zwei Dinge mit, die
+        ' eine eigene Weiche vor der Anzeige erst haette nachbauen muessen: das Bild darunter wird
+        ' ausgeblendet, und das Zoom-Detail bleibt AUS - sonst laege beim Hineinzoomen der scharfe
+        ' Ausschnitt des Bildes ueber der Maske, und man saehe die Vorschau ausgerechnet dort nicht,
+        ' wo man sie braucht. Wer den Kanal haelt, steht in _vorschauQuelle; geraeumt wird nur der
+        ' eigene Halter.
+        '
+        ' Die KANTENKARTE wird einmal gerechnet und traegt ihren Bildstand als Stempel: sie haengt nur
+        ' vom Bild vor der Schaerfung ab, nicht vom Reglerwert. Jede Reglerbewegung kostet deshalb nur
+        ' eine Punktrechnung und keinen Kettendurchlauf, und ein zweiter Zug am selben Bild gar nichts.
+
+        ''' <summary>Der Name dieses Halters im Vorschaukanal.</summary>
+        Private Const SharpenMaskPreviewHolder As String = "SchaerfeMaske"
+
+        Private _sharpenEdgeMap As Byte() = Nothing
+        Private _sharpenEdgeMapWidth As Integer = 0
+        Private _sharpenEdgeMapHeight As Integer = 0
+        ''' <summary>Der Bildstand, zu dem die Kantenkarte gehoert - siehe ImageProcessor.PreSharpenKey.</summary>
+        Private _sharpenEdgeMapKey As String = ""
+        ''' <summary>Ob die Vorschau gewuenscht ist - unabhaengig davon, ob ihr Bild schon steht. Die
+        ''' Kantenkarte braucht einen Kettendurchlauf; wer ALT nur kurz antippt, hat den Regler
+        ''' laengst losgelassen, wenn sie fertig ist. Ohne diese Absicht bliebe das Ergebnis dann
+        ''' als Standbild auf der Buehne stehen.</summary>
+        Private _sharpenMaskPreviewWanted As Boolean = False
+        Private _sharpenMaskPreviewRunning As Boolean = False
+
+        Public ReadOnly Property IsSharpenMaskPreviewActive As Boolean
+            Get
+                Return _sharpenMaskPreviewWanted AndAlso
+                       String.Equals(_vorschauQuelle, SharpenMaskPreviewHolder, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Beginnt die Vorschau: rechnet die Kantenkarte im Hintergrund und zeigt sie an.
+        ''' Mehrfach aufzurufen ist harmlos - eine laufende Rechnung wird nicht verdoppelt.</summary>
+        Public Sub BeginSharpenMaskPreview()
+            If Not Dispatcher.UIThread.CheckAccess() Then
+                Dispatcher.UIThread.Post(AddressOf BeginSharpenMaskPreview)
+                Return
+            End If
+            ' EINE SPUR IM PROTOKOLL an jeder Stelle, an der die Vorschau aussteigt. Sie ist ein
+            ' Zusammenspiel aus Geste, Werkzeugkanal und Kettendurchlauf; faellt eines davon aus,
+            ' sieht der Nutzer nur "es passiert nichts" - und ohne Spur ist nicht zu sagen, welches.
+            If _isDocumentLoading OrElse String.IsNullOrEmpty(_currentImagePath) Then
+                DiagnosticLogService.LogAlways("Editor.SchaerfeMaske", "nicht gestartet: kein Dokument")
+                Return
+            End If
+            _sharpenMaskPreviewWanted = True
+
+            Dim previewSource = GetPreviewSource()
+            If previewSource Is Nothing Then
+                DiagnosticLogService.LogAlways("Editor.SchaerfeMaske", "nicht gestartet: keine Vorschauquelle")
+                Return
+            End If
+            Dim adj = GetSceneAdjustments()
+            Dim key = ImageProcessor.PreSharpenKey(adj)
+
+            ' Karte schon da und noch gueltig? Dann sofort zeigen. Der Stempel steht auf dem Bild OHNE
+            ' Schaerfung: die Schaerfe-Regler selbst entwerten die Karte also nicht, jede andere
+            ' Aenderung schon - eine Karte vom Bildstand von vorhin zeigte sonst Kanten, die es
+            ' inzwischen nicht mehr gibt.
+            If _sharpenEdgeMap IsNot Nothing AndAlso String.Equals(_sharpenEdgeMapKey, key, StringComparison.Ordinal) Then
+                PublishSharpenMaskPreview()
+                Return
+            End If
+            If _sharpenMaskPreviewRunning Then Return
+            _sharpenMaskPreviewRunning = True
+            Dim work = Task.Run(Function()
+                                    Dim unsharpened = ImageProcessor.RenderPreSharpenBase(previewSource, adj)
+                                    If unsharpened Is Nothing Then Return New SharpenEdgeMapResult(Nothing, 0, 0)
+                                    Try
+                                        Return New SharpenEdgeMapResult(ImageProcessor.ComputeSharpenEdgeMap(unsharpened),
+                                                                        unsharpened.Width, unsharpened.Height)
+                                    Finally
+                                        unsharpened.Dispose()
+                                    End Try
+                                End Function)
+            work.ContinueWith(Sub(finished)
+                                  _sharpenMaskPreviewRunning = False
+                                  If finished.IsFaulted OrElse finished.Result.Map Is Nothing Then Return
+                                  ' Zwischenzeitlich losgelassen: das Ergebnis ist dann nicht mehr
+                                  ' gewollt und darf die Buehne nicht anfassen.
+                                  If Not _sharpenMaskPreviewWanted Then Return
+                                  _sharpenEdgeMap = finished.Result.Map
+                                  _sharpenEdgeMapWidth = finished.Result.Width
+                                  _sharpenEdgeMapHeight = finished.Result.Height
+                                  _sharpenEdgeMapKey = key
+                                  PublishSharpenMaskPreview()
+                              End Sub, CancellationToken.None, TaskContinuationOptions.None,
+                              TaskScheduler.FromCurrentSynchronizationContext())
+        End Sub
+
+        ''' <summary>Rechnet das Anzeigebild zum aktuellen Reglerwert neu. Ohne Karte oder ohne
+        ''' Absicht passiert nichts - so darf der Regler-Setter sie bedenkenlos rufen.</summary>
+        Public Sub PublishSharpenMaskPreview()
+            If Not _sharpenMaskPreviewWanted OrElse _sharpenEdgeMap Is Nothing Then Return
+            ' Der Kanal ist einer: haelt ihn ein anderes Werkzeug (Gitterverzerrung,
+            ' Tiefen-Unschaerfe), gehoert er ihm. Zwei Vorschauen uebereinander waeren nur eine
+            ' Gelegenheit, dass eine haengen bleibt.
+            If Not String.IsNullOrEmpty(_vorschauQuelle) AndAlso
+               Not String.Equals(_vorschauQuelle, SharpenMaskPreviewHolder, StringComparison.Ordinal) Then
+                DiagnosticLogService.LogAlways("Editor.SchaerfeMaske",
+                                               $"nicht gezeigt: den Vorschaukanal haelt gerade {_vorschauQuelle}")
+                Return
+            End If
+
+            Dim maskSk = ImageProcessor.RenderSharpenMaskPreview(_sharpenEdgeMap, _sharpenEdgeMapWidth,
+                                                                 _sharpenEdgeMapHeight, SharpenMasking)
+            If maskSk Is Nothing Then Return
+            Dim image As Bitmap
+            Using maskSk
+                image = ImageOrientationService.ToAvaloniaBitmapFast(maskSk)
+            End Using
+            If image Is Nothing Then Return
+            ToolPreviewImage = image
+            _vorschauQuelle = SharpenMaskPreviewHolder
+            Me.RaisePropertyChanged(NameOf(IsSharpenMaskPreviewActive))
+            DiagnosticLogService.LogAlways("Editor.SchaerfeMaske",
+                                           $"gezeigt: {image.PixelSize.Width}x{image.PixelSize.Height}, Maskierung {SharpenMasking:0}")
+        End Sub
+
+        ''' <summary>Beendet die Vorschau und gibt die Buehne wieder frei. Die Kantenkarte BLEIBT
+        ''' liegen - sie traegt ihren Bildstand als Stempel und wird beim naechsten Mal entweder
+        ''' wiederverwendet oder verworfen. Dasselbe Vorgehen wie bei der Tiefenkarte; ohne es kostete
+        ''' jedes erneute Druecken der ALT-Taste einen vollen Kettendurchlauf.</summary>
+        Public Sub EndSharpenMaskPreview()
+            If Not Dispatcher.UIThread.CheckAccess() Then
+                Dispatcher.UIThread.Post(AddressOf EndSharpenMaskPreview)
+                Return
+            End If
+            _sharpenMaskPreviewWanted = False
+            If Not String.Equals(_vorschauQuelle, SharpenMaskPreviewHolder, StringComparison.Ordinal) Then Return
+            ToolPreviewImage = Nothing
+            _vorschauQuelle = ""
+            Me.RaisePropertyChanged(NameOf(IsSharpenMaskPreviewActive))
+        End Sub
+
+        Private Structure SharpenEdgeMapResult
+            Public ReadOnly Map As Byte()
+            Public ReadOnly Width As Integer
+            Public ReadOnly Height As Integer
+
+            Public Sub New(map As Byte(), width As Integer, height As Integer)
+                Me.Map = map
+                Me.Width = width
+                Me.Height = height
+            End Sub
+        End Structure
     End Class
 
 End Namespace

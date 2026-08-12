@@ -4050,8 +4050,8 @@
   <data name="Maskierung_964c3806" xml:space="preserve">
     <value>蒙版</value>
   </data>
-  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
-    <value>将锐化限制在边缘：0 锐化整个表面，值越高越能保护天空和皮肤等平滑区域。</value>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_fa9f26e8" xml:space="preserve">
+    <value>将锐化限制在边缘：0 锐化整个表面，值越高越能保护天空和皮肤等平滑区域。将指针放在其上，按一次 ALT 可显示权重：亮处会被锐化，暗处保持不变。再按一次 ALT 即可关闭。</value>
   </data>
   <data name="Kontur_mitmischen_f0d70cba" xml:space="preserve">
     <value>同时混合描边</value>
@@ -7247,5 +7247,8 @@
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>选择分组</value>
+  </data>
+  <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
+    <value>另一个窗口正在进行后台任务。请稍后再试。</value>
   </data>
 </root>

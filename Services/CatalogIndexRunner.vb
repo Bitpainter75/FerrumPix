@@ -151,10 +151,24 @@ Namespace Services
             Dim wanted = If(folders Is Nothing, ConfiguredFolders(),
                             AppSettingsService.NormalizeCatalogWatchFolders(folders.ToList()))
             Dim roots = wanted.Where(AddressOf Directory.Exists).ToList()
+            Return CollectFromRoots(roots, token)
+        End Function
+
+        ''' <summary>Sammelt ueber ALLE Wurzeln, mit EINER Besuchsliste.
+        '''
+        ''' Die Liste gehoert dem ganzen Durchlauf und nicht der einzelnen Wurzel: zwei eingetragene
+        ''' Ordner koennen ueber Verweise auf denselben Bestand zeigen, und
+        ''' NormalizeCatalogWatchFolders sieht das nicht - sie vergleicht die PFADE, und zwei
+        ''' verschiedene Pfade auf dasselbe Ziel sind fuer sie zwei Ordner. Je Wurzel eine eigene
+        ''' Liste haette den Ring innerhalb einer Wurzel gebrochen und den Bestand trotzdem doppelt
+        ''' eingelesen.</summary>
+        Private Shared Function CollectFromRoots(roots As IEnumerable(Of String),
+                                                 token As CancellationToken) As List(Of String)
             Dim files As New List(Of String)()
-            For Each root In roots
+            Dim visited As New HashSet(Of String)(PathIdentity.Comparer)
+            For Each root In If(roots, Enumerable.Empty(Of String)())
                 If token.IsCancellationRequested Then Exit For
-                CollectFiles(root, files, token)
+                CollectFiles(root, files, token, visited, 0)
             Next
             Return files
         End Function
@@ -247,14 +261,15 @@ Namespace Services
             ' ZUERST ZAEHLEN, dann arbeiten. Ohne Gesamtzahl gaebe es keinen Fortschritt, sondern nur
             ' eine Zahl, die hochlaeuft - und bei einem grossen Bestand weiss dann niemand, ob noch
             ' zehn Bilder kommen oder zehntausend. Das Aufzaehlen selbst ist billig gegen das Lesen.
-            Dim files As New List(Of String)()
-            For Each root In roots
-                If token.IsCancellationRequested Then
-                    result.Cancelled = True
-                    Return
-                End If
-                CollectFiles(root, files, token)
-            Next
+            If token.IsCancellationRequested Then
+                result.Cancelled = True
+                Return
+            End If
+            Dim files = CollectFromRoots(roots, token)
+            If token.IsCancellationRequested Then
+                result.Cancelled = True
+                Return
+            End If
             If files.Count = 0 Then Return
 
             ' Die Stempel je WURZEL in einer Abfrage, nicht je Datei. Eine Abfrage pro Bild waere
@@ -391,10 +406,43 @@ Namespace Services
         ''' Der PAPIERKORB ebenfalls, und zwar ueber FileOperationPolicy.IsTrashFolder statt ueber
         ''' den fuehrenden Punkt: der Papierkorb je Datentraeger heisst ".Trash-1000" und faellt
         ''' damit schon unter die versteckten, der des Benutzers liegt aber unter
-        ''' "~/.local/share/Trash" - ein Ordner OHNE Punkt, der sonst mitgelaufen waere.</summary>
+        ''' "~/.local/share/Trash" - ein Ordner OHNE Punkt, der sonst mitgelaufen waere.
+        '''
+        ''' VERWEISE werden verfolgt, aber jedes Ziel nur EINMAL. Ein Verweis auf einen Ordner ist
+        ''' eine gaengige Art, einen Fotobestand einzuhaengen, und ihn zu ueberspringen naehme dem
+        ''' Lauf genau diese Bestaende. Ein Verweis auf einen Ordner WEITER OBEN ist dagegen ein
+        ''' Ring: der Abstieg laeuft dann bis zur Pfadlaenge des Dateisystems und liest denselben
+        ''' Bestand hundertfach ein. Beides zusammen geht nur ueber das kanonische Ziel und eine
+        ''' Liste des schon Besuchten.</summary>
+        ''' <summary>Eine EINZELNE Wurzel. Nur fuer Aufrufer, die wirklich nur einen Ordner meinen -
+        ''' wer mehrere hat, nimmt <see cref="CollectFromRoots"/> mit der gemeinsamen
+        ''' Besuchsliste.</summary>
         Private Shared Sub CollectFiles(folder As String, target As List(Of String), token As CancellationToken)
+            CollectFiles(folder, target, token, New HashSet(Of String)(PathIdentity.Comparer), 0)
+        End Sub
+
+        ''' <summary>Wie tief der Abstieg hoechstens geht. ZWEITER Riegel neben der Besuchsliste:
+        ''' laesst sich ein Verweis nicht aufloesen (Netzpfad, Ring, fehlendes Recht), traegt die
+        ''' Liste nicht - und ein Lauf, der nie zurueckkommt, ist schlimmer als einer, der einen
+        ''' sehr tief verschachtelten Ordner auslaesst. Sechzig Ebenen hat kein gewachsener
+        ''' Fotobestand.</summary>
+        Private Const MaxFolderDepth As Integer = 60
+
+        Private Shared Sub CollectFiles(folder As String, target As List(Of String), token As CancellationToken,
+                                        visited As HashSet(Of String), depth As Integer)
             If token.IsCancellationRequested Then Return
             If FileOperationPolicy.IsTrashFolder(folder) Then Return
+            If depth > MaxFolderDepth Then
+                DiagnosticLogService.LogAlways("Katalogindex.Ordner",
+                                               $"Abstieg bei {MaxFolderDepth} Ebenen abgebrochen: {folder}")
+                Return
+            End If
+            ' Das kanonische Ziel entscheidet, nicht der Weg dorthin: zwei Verweise auf denselben
+            ' Ordner sind derselbe Bestand.
+            Dim canonical = CanonicalFolder(folder)
+            If canonical.Length = 0 Then Return
+            If Not visited.Add(canonical) Then Return
+
             Try
                 For Each file In Directory.EnumerateFiles(folder)
                     If token.IsCancellationRequested Then Return
@@ -417,9 +465,27 @@ Namespace Services
                 If token.IsCancellationRequested Then Return
                 Dim name = Path.GetFileName(sub_)
                 If Not String.IsNullOrEmpty(name) AndAlso name.StartsWith(".", StringComparison.Ordinal) Then Continue For
-                CollectFiles(sub_, target, token)
+                CollectFiles(sub_, target, token, visited, depth + 1)
             Next
         End Sub
+
+        ''' <summary>Wohin ein Ordner WIRKLICH zeigt: der aufgeloeste Verweis, sonst der volle Pfad.
+        '''
+        ''' Leer heisst "nicht anfassen". Wirft das Aufloesen - genau das tut es bei einem Ring aus
+        ''' Verweisen -, wird der Ordner ausgelassen: ohne kanonisches Ziel traegt die Besuchsliste
+        ''' nicht, und der Ring liefe weiter.</summary>
+        Private Shared Function CanonicalFolder(folder As String) As String
+            Try
+                Dim info = New DirectoryInfo(folder)
+                Dim ziel = info.ResolveLinkTarget(returnFinalTarget:=True)
+                Dim voll = If(ziel Is Nothing, info.FullName, ziel.FullName)
+                Return Path.TrimEndingDirectorySeparator(Path.GetFullPath(voll))
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("Katalogindex.Ordner",
+                                               $"Verweis nicht aufloesbar, Ordner ausgelassen: {folder} ({ex.GetType().Name})")
+                Return ""
+            End Try
+        End Function
 
     End Class
 

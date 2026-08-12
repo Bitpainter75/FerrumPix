@@ -374,6 +374,18 @@ Namespace ViewModels
             Viewer = New ViewerViewModel(Me)
             Editor = New EditorViewModel(Me)
 
+            ' Ein waehrend der Sitzung geladenes Modell soll auch hier ankommen: die Auswahl zum
+            ' Hochskalieren liest den Bestand und haette ihn sonst bis zum Neustart als leer in
+            ' Erinnerung. Der Editor meldet sich selbst an, siehe dort.
+            AddHandler AiModelService.InventoryChanged,
+                Sub(s, e)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            Me.RaisePropertyChanged(NameOf(IsDialogUpscaleAvailable))
+                            Me.RaisePropertyChanged(NameOf(DialogUpscaleModelOptions))
+                        End Sub)
+                End Sub
+
             DialogConfirmCommand = ReactiveCommand.Create(Sub() ConfirmDialog())
             DialogCancelCommand = ReactiveCommand.Create(Sub() CancelDialog())
             DialogSecondaryCommand = ReactiveCommand.Create(Sub() CompleteDialog("Secondary"))

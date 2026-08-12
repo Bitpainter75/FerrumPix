@@ -28,6 +28,38 @@ Namespace ViewModels
     ''' EINRUECKUNG der Klassenebene, nicht aus dem ersten passenden End.</summary>
     Partial Public Class EditorViewModel
 
+        ' ── Bestand der Modelle ─────────────────────────────────────────────────
+
+        ''' <summary>Meldet ALLE Eigenschaften neu, die davon abhaengen, ob eine Modelldatei
+        ''' vorliegt. Angemeldet am Bestandsereignis des Modelldienstes, siehe dort.
+        '''
+        ''' Der Grund fuer die Sammelmethode: die Verfuegbarkeiten sind reine Nur-Lese-Sichten auf
+        ''' den Dateibestand und haben kein eigenes Feld, das sich beim Setzen meldet. Wird ein
+        ''' Modell im laufenden Programm geladen, aendert sich ihr Wert also, ohne dass es jemand
+        ''' erfaehrt - die Regler blieben grau, bis das Programm neu startete. Sie stehen ALLE hier,
+        ''' und nicht je Werkzeug verstreut: wer ein Modell hinzufuegt, uebersieht sonst genau die
+        ''' eine Zeile, die den Knopf wieder aufweckt.
+        '''
+        ''' Die Hinweise gehoeren mit dazu. Sie kippen am selben Bestand von "dafuer fehlt eine
+        ''' Modelldatei" auf die Beschreibung der Funktion; ohne Meldung stuende am nun bedienbaren
+        ''' Regler weiter der Satz, die Datei fehle.</summary>
+        Public Sub RefreshModelAvailability()
+            ' Das Ereignis kommt aus dem Hintergrund - der Download laeuft dort.
+            If Not Dispatcher.UIThread.CheckAccess() Then
+                Dispatcher.UIThread.Post(Sub() RefreshModelAvailability())
+                Return
+            End If
+            For Each name In {NameOf(IsBokehAvailable), NameOf(BokehHint),
+                              NameOf(IsDepthMaskAvailable), NameOf(DepthMaskHint),
+                              NameOf(IsSubjectMaskAvailable), NameOf(SubjectMaskHint),
+                              NameOf(IsObjectRemovalAvailable), NameOf(CanRemoveObject), NameOf(RemoveObjectHint),
+                              NameOf(CanDenoiseWithModel), NameOf(DenoiseWithModelHint),
+                              NameOf(CanDenoiseFast), NameOf(DenoiseFastHint),
+                              NameOf(CanDenoiseWithAnyModel)}
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
+
         ' ── Tiefen-Unschaerfe ───────────────────────────────────────────────────
         '
         ' Wird GEBACKEN, wie die Gitterverzerrung und aus demselben Grund: sie braucht die

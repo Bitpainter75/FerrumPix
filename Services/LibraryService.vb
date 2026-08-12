@@ -1188,6 +1188,51 @@ Namespace Services
                 Replace("_", "\_")
         End Function
 
+        ''' <summary>Haelt JEDEN schreibenden Hintergrundlauf an, bevor am Katalog geloescht wird.
+        '''
+        ''' ZWEI Laeufe schreiben hinein, und beide muessen stehen: der Katalogindex fuellt
+        ''' ImageMeta, die Gesichtssuche Face und ScannedImage. Angehalten wurde bisher nur der
+        ''' erste - ein nebenher laufender Gesichtsdurchlauf legte nach dem Loeschen seine Zeilen
+        ''' wieder an, und der Katalog war hinterher nicht leer, sondern halb gefuellt.
+        '''
+        ''' BEIDE werden angehalten, auch wenn der erste schon scheitert: ein Lauf, der weiterlaeuft,
+        ''' weil ein anderer nicht anhielt, ist genau der Zustand, den diese Funktion verhindern
+        ''' soll. Deshalb kein AndAlso ueber die beiden Aufrufe.
+        '''
+        ''' Steht einer danach immer noch, wird NICHT geloescht - dieselbe Entscheidung wie bei
+        ''' <c>ClearAllFaces</c>. Ein halb geleerter Katalog sieht aus wie ein voller, und was die
+        ''' Gesichtssuche wieder hineinschreibt, kostete Stunden; lieber gar nicht als halb.</summary>
+        ''' <param name="quelle">Woher der Aufruf kommt - steht so im Protokoll.</param>
+        ''' <returns>True, wenn nichts mehr laeuft und geloescht werden darf.</returns>
+        Friend Shared Function StopBackgroundWriters(quelle As String) As Boolean
+            Dim indexSteht = CatalogIndexRunner.RequestStopAndWait()
+            Dim gesichterStehen = FaceScanRunner.RequestStopAndWait()
+            If indexSteht AndAlso gesichterStehen Then Return True
+            DiagnosticLogService.LogAlways(quelle,
+                "Nicht geleert: " &
+                If(indexSteht, "", "der Katalogindex steht noch") &
+                If(Not indexSteht AndAlso Not gesichterStehen, " und ", "") &
+                If(gesichterStehen, "", "der Gesichtsdurchlauf steht noch"))
+            Return False
+        End Function
+
+        ''' <summary>Die volle Klammer fuer einen loeschenden Weg: erst die Sperre gegen das ANDERE
+        ''' Fenster, dann der Halt der Laeufe im EIGENEN. Beides ist noetig - der Halt sieht einen
+        ''' fremden Prozess nicht, und die Sperre haelt einen Lauf im eigenen Fenster nicht an.
+        '''
+        ''' Nothing heisst: nicht loeschen. Der Aufrufer gibt die Klammer frei, sobald er fertig ist;
+        ''' geschachtelte Aufrufe zaehlen nur mit (siehe BackgroundRunLock.TryEnterCleanup).</summary>
+        Friend Shared Function TryBeginCleanup(quelle As String) As BackgroundRunLock
+            Dim klammer = BackgroundRunLock.TryEnterCleanup()
+            If klammer Is Nothing Then
+                DiagnosticLogService.LogAlways(quelle, "Nicht geleert: ein Hintergrundlauf haelt die Sperre")
+                Return Nothing
+            End If
+            If StopBackgroundWriters(quelle) Then Return klammer
+            klammer.Dispose()
+            Return Nothing
+        End Function
+
         ''' <summary>Vergisst alles, was der Katalog ueber einen Ordner weiss: Aufnahmedaten,
         ''' Ortsnamen, gefundene Gesichter und den Vermerk, dass er durchsucht wurde.
         '''
@@ -1202,12 +1247,18 @@ Namespace Services
         ''' <returns>Wie viele Katalogzeilen entfernt wurden.</returns>
         Public Function DeleteFolderCatalogData(folderPath As String) As Integer
             If String.IsNullOrWhiteSpace(folderPath) Then Return 0
-            ' Wie beim Leeren des ganzen Katalogs: ein laufender Index schriebe sonst weiter, und
-            ' gerade der Ordner, den jemand aufraeumt, kann der sein, in dem der Lauf gerade steckt.
-            If Not CatalogIndexRunner.RequestStopAndWait() Then
-                DiagnosticLogService.LogAlways("Library.DeleteFolderCatalogData",
-                                               "Der Katalogindex steht noch - es wird trotzdem geleert")
-            End If
+            ' Wie beim Leeren des ganzen Katalogs: ein laufender Schreiblauf schriebe sonst weiter,
+            ' und gerade der Ordner, den jemand aufraeumt, kann der sein, in dem er gerade steckt.
+            Dim klammer = TryBeginCleanup("Library.DeleteFolderCatalogData")
+            If klammer Is Nothing Then Return 0
+            Using klammer
+                Return DeleteFolderCatalogDataLocked(folderPath)
+            End Using
+        End Function
+
+        ''' <summary>Die Loeschungen selbst. Getrennt, damit die Klammer EINE Zeile bleibt und der
+        ''' Rumpf nicht um eine Ebene einrueckt - dieselbe Bauform wie bei PsdImportService.</summary>
+        Private Function DeleteFolderCatalogDataLocked(folderPath As String) As Integer
             ' Maskiert, sonst raeumt "100_Fotos" auch bei "100aFotos" auf - siehe EscapeLikeValue.
             Dim prefix = EscapeLikeValue(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
                                          Path.DirectorySeparatorChar) & "%"
@@ -1254,17 +1305,20 @@ Namespace Services
         ''' Personen fallen hier vollstaendig weg, auch benannte: ohne Gesichter zaehlt jede Gruppe
         ''' null Bilder, und leere Gruppen sollen nirgends auftauchen.
         '''
-        ''' HAELT ZUERST EINEN LAUFENDEN KATALOGINDEX AN - genau wie ClearAllFaces den
-        ''' Gesichtsdurchlauf. Faellt das Leeren mitten in einen Lauf, schreibt der danach weiter,
-        ''' und der Katalog waere hinterher nicht leer, sondern halb gefuellt. Anders als dort wird
-        ''' trotzdem geloescht, wenn er sich nicht anhalten laesst: eine halb gefuellte Zeilenmenge
-        ''' taeuscht hier nichts vor, sie entsteht beim naechsten Ansehen ohnehin neu.</summary>
-        ''' <returns>Wie viele Katalogzeilen entfernt wurden.</returns>
+        ''' HAELT ZUERST JEDEN SCHREIBENDEN LAUF AN - Katalogindex UND Gesichtssuche, siehe
+        ''' <see cref="StopBackgroundWriters"/>. Faellt das Leeren mitten in einen Lauf, schreibt der
+        ''' danach weiter, und der Katalog waere hinterher nicht leer, sondern halb gefuellt.</summary>
+        ''' <returns>Wie viele Katalogzeilen entfernt wurden. Null auch dann, wenn nicht geloescht
+        ''' wurde, weil ein Lauf nicht anzuhalten war - der Grund steht im Protokoll.</returns>
         Public Function DeleteAllCatalogData() As Integer
-            If Not CatalogIndexRunner.RequestStopAndWait() Then
-                DiagnosticLogService.LogAlways("Library.DeleteAllCatalogData",
-                                               "Der Katalogindex steht noch - es wird trotzdem geleert")
-            End If
+            Dim klammer = TryBeginCleanup("Library.DeleteAllCatalogData")
+            If klammer Is Nothing Then Return 0
+            Using klammer
+                Return DeleteAllCatalogDataLocked()
+            End Using
+        End Function
+
+        Private Function DeleteAllCatalogDataLocked() As Integer
             Dim removed = 0
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
@@ -1286,6 +1340,17 @@ Namespace Services
         End Function
 
         Public Function PurgeOrphanedRecords() As Integer
+            ' Auch hier gilt: erst die Schreiblaeufe anhalten. Er sammelt die verwaisten Pfade in
+            ' einem Durchgang und loescht sie danach - was ein Lauf dazwischen anlegt, faellt sonst
+            ' entweder mit weg oder erscheint gleich wieder.
+            Dim klammer = TryBeginCleanup("Library.PurgeOrphanedRecords")
+            If klammer Is Nothing Then Return 0
+            Using klammer
+                Return PurgeOrphanedRecordsLocked()
+            End Using
+        End Function
+
+        Private Function PurgeOrphanedRecordsLocked() As Integer
             Dim orphans As New List(Of String)()
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()

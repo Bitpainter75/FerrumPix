@@ -1381,11 +1381,120 @@ Namespace ViewModels
         Private _envelopeDragStartX As Double
         Private _envelopeDragStartY As Double
 
+        ''' <summary>Das Rechteck im QUELLRAUM, auf dem die aktuelle Huellkurve neutral aufgesetzt
+        ''' wurde. Ohne Zuschnitt ist das der ganze Quellraum; nach einem Zuschnitt der SICHTBARE
+        ''' Bereich - sonst laegen alle zwoelf Anfasser auf weggeschnittenen Punkten.</summary>
+        Private _envelopeRect As (X As Double, Y As Double, Width As Double, Height As Double) = (0.0, 0.0, 100.0, 100.0)
+        ''' Der beiseitegelegte Bildstand braucht sein Rechteck mit - sonst kaeme er nach einem
+        ''' Abstecher zum Objekt mit dem Bezug des Objekts zurueck.
+        Private _envelopeImageRect As (X As Double, Y As Double, Width As Double, Height As Double) = (0.0, 0.0, 100.0, 100.0)
+
+        ''' <summary>Der sichtbare Bildbereich als achsenparalleles Rechteck in QUELLRAUM-Prozent.
+        '''
+        ''' NOETIG, WEIL DIE ZWOELF PUNKTE AUF DEM RAND SITZEN. Sie lagen fest auf 0 und 100, also auf
+        ''' dem Rand des UNBESCHNITTENEN Bildes. Nach einem Zuschnitt hat kein einziger davon einen
+        ''' Anzeigeort - das Overlay zeigte dann nur noch sein inneres Hilfsnetz, und greifbar war
+        ''' nichts. Beim Stuetzpunktraster fiel dasselbe nie auf, weil dessen Punkte ueber die FLAECHE
+        ''' verteilt sind und die inneren sichtbar bleiben.
+        '''
+        ''' Die Werte bleiben Quellraum-Prozent, und die Regel "kein Anzeigeort heisst ueberspringen,
+        ''' nicht klemmen" bleibt unangetastet: geaendert wird allein, WO die neutrale Lage liegt.
+        '''
+        ''' Achsenparallel, und das ist kein Schoenheitsfehler, sondern Bedingung: nur dann ist die
+        ''' neutrale Huellkurve die IDENTITAET, auch ausserhalb des Rechtecks (die Coons-Flaeche ist
+        ''' dort linear und setzt sich glatt fort). Ein gedrehtes Viereck als Bezug wuerde das Bild
+        ''' schon beim blossen Oeffnen des Werkzeugs verziehen.
+        '''
+        ''' Bei einer BEGRADIGUNG ist der sichtbare Bereich gedreht; das umschliessende Rechteck ragt
+        ''' dann mit seinen Ecken hinaus. Es wird deshalb zur Mitte hin geschrumpft, bis alle vier
+        ''' Ecken einen Anzeigeort haben.</summary>
+        Private Function VisibleSourceRect() As (X As Double, Y As Double, Width As Double, Height As Double)
+            Dim voll = (X:=0.0, Y:=0.0, Width:=100.0, Height:=100.0)
+            ' Knapp innerhalb der Anzeigekanten fragen: genau auf 100 liegt der Punkt auf der ersten
+            ' Stelle AUSSERHALB des halboffenen Bereichs, und die Kette weist ihn ab.
+            Const rand As Double = 0.05
+            Dim ecken = New (X As Double, Y As Double)() {
+                (rand, rand), (100.0 - rand, rand), (100.0 - rand, 100.0 - rand), (rand, 100.0 - rand)}
+            Dim minX = Double.MaxValue, maxX = Double.MinValue
+            Dim minY = Double.MaxValue, maxY = Double.MinValue
+            For Each ecke In ecken
+                Dim quelle = DisplayPercentToSourcePercent(ecke.X, ecke.Y)
+                If Not quelle.HasValue Then Return voll
+                minX = Math.Min(minX, quelle.Value.X)
+                maxX = Math.Max(maxX, quelle.Value.X)
+                minY = Math.Min(minY, quelle.Value.Y)
+                maxY = Math.Max(maxY, quelle.Value.Y)
+            Next
+            If maxX - minX < 1.0 OrElse maxY - minY < 1.0 Then Return voll
+
+            ' Den Sicherheitsrand wieder herausrechnen: gefragt wurde bei 0,05 statt 0 Prozent, das
+            ' gemessene Rechteck ist also um genau diesen Anteil zu klein. Ohne die Korrektur laege
+            ' die neutrale Lage ohne jeden Zuschnitt bei 0,05 statt 0 - und die neutrale Verformung
+            ' waere nicht mehr die Identitaet.
+            Dim aufblasen = 100.0 / (100.0 - 2.0 * rand)
+            Dim mx = (minX + maxX) / 2.0, my = (minY + maxY) / 2.0
+            minX = Math.Max(0.0, mx - (mx - minX) * aufblasen)
+            maxX = Math.Min(100.0, mx + (maxX - mx) * aufblasen)
+            minY = Math.Max(0.0, my - (my - minY) * aufblasen)
+            maxY = Math.Min(100.0, my + (maxY - my) * aufblasen)
+
+            ' Bei Zuschnitt, Drehung um Vielfache von 90 Grad und Spiegelung ist dieses Rechteck schon
+            ' der sichtbare Bereich selbst. Bei einer Begradigung nicht - dann schrumpfen, bis die
+            ' Ecken tragen. Zwoelf Halbierungsschritte reichen auf ein Viertelprozent genau.
+            Dim mitteX = (minX + maxX) / 2.0, mitteY = (minY + maxY) / 2.0
+            Dim halbeBreite = (maxX - minX) / 2.0, halbeHoehe = (maxY - minY) / 2.0
+            Dim untenGut = 0.0, obenOffen = 1.0
+            If EnvelopeRectCornersVisible(mitteX, mitteY, halbeBreite, halbeHoehe, 1.0) Then
+                untenGut = 1.0
+            Else
+                For schritt = 1 To 12
+                    Dim mitte = (untenGut + obenOffen) / 2.0
+                    If EnvelopeRectCornersVisible(mitteX, mitteY, halbeBreite, halbeHoehe, mitte) Then
+                        untenGut = mitte
+                    Else
+                        obenOffen = mitte
+                    End If
+                Next
+            End If
+            ' Kein tragfaehiges Rechteck gefunden: dann lieber der ganze Quellraum wie bisher, statt
+            ' eines Bezugs, den niemand nachvollziehen kann.
+            If untenGut < 0.05 Then Return voll
+            Return (mitteX - halbeBreite * untenGut, mitteY - halbeHoehe * untenGut,
+                    halbeBreite * 2.0 * untenGut, halbeHoehe * 2.0 * untenGut)
+        End Function
+
+        ''' <summary>Haben alle vier Ecken des um <paramref name="faktor"/> geschrumpften Rechtecks
+        ''' einen Anzeigeort?</summary>
+        Private Function EnvelopeRectCornersVisible(centerX As Double, centerY As Double,
+                                                    halfWidth As Double, halfHeight As Double,
+                                                    faktor As Double) As Boolean
+            Dim hw = halfWidth * faktor, hh = halfHeight * faktor
+            If hw <= 0.001 OrElse hh <= 0.001 Then Return False
+            For Each ecke In New (X As Double, Y As Double)() {
+                (centerX - hw, centerY - hh), (centerX + hw, centerY - hh),
+                (centerX + hw, centerY + hh), (centerX - hw, centerY + hh)}
+                If Not SourcePercentToDisplayPercent(ecke.X, ecke.Y).HasValue Then Return False
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Das Rechteck, auf dem die Huellkurve GERADE aufgesetzt ist. Am OBJEKT ist der
+        ''' Bezug immer dessen eigenes Rechteck, also die vollen 0 bis 100 - ein Zuschnitt des Bildes
+        ''' geht es nichts an.</summary>
+        Private Function CurrentEnvelopeRect() As (X As Double, Y As Double, Width As Double, Height As Double)
+            If WarpsTheObject Then Return (0.0, 0.0, 100.0, 100.0)
+            Return _envelopeRect
+        End Function
+
         ''' <summary>Das unverformte Viereck: die vier Ecken auf dem Rechteck, die Griffe auf den
         ''' Dritteln ihrer Kante. Genau diese Lage ist die Identitaet.</summary>
-        Private Shared Function NeutralEnvelope() As Double()
+        Private Shared Function NeutralEnvelope(rect As (X As Double, Y As Double, Width As Double, Height As Double)) As Double()
             Dim p(23) As Double
-            Dim corners = New Double() {0, 0, 100, 0, 100, 100, 0, 100}
+            ' Ausgeschriebene Namen, weil l/t/r/b weiter unten die Schleifenvariablen verdecken
+            ' wuerden - VB meldet das als Fehler, und der Name waere ohnehin missverstaendlich.
+            Dim left = rect.X, top = rect.Y
+            Dim right = rect.X + rect.Width, bottom = rect.Y + rect.Height
+            Dim corners = New Double() {left, top, right, top, right, bottom, left, bottom}
             Array.Copy(corners, p, 8)
             For edge = 0 To 3
                 Dim a = edge, b = (edge + 1) Mod 4
@@ -1399,12 +1508,38 @@ Namespace ViewModels
         End Function
 
         Private Sub PrepareEnvelope()
-            If _envelope IsNot Nothing AndAlso _envelope.Length = 24 Then Return
+            If _envelope Is Nothing OrElse _envelope.Length <> 24 Then
+                ResetEnvelopePoints()
+                Return
+            End If
+            ' Der Zuschnitt kann sich geaendert haben, seit die Huellkurve aufgesetzt wurde. Solange
+            ' sie noch NEUTRAL ist, gehoert sie auf den neuen sichtbaren Bereich - sonst laege sie
+            ' wieder dort, wo man sie nicht sieht. Ist schon gezogen worden, bleibt sie stehen: die
+            ' Punkte sind Quellraum und meinen weiterhin dieselben Stellen im Bild.
+            If WarpsTheObject OrElse _envelopeDragIndex >= 0 Then Return
+            ' NICHT ueber HasEnvelopeChanges: die Eigenschaft ruft ihrerseits hierher, das waere eine
+            ' Schleife ohne Boden.
+            If EnvelopeDiffersFromNeutral() Then Return
+            Dim aktuell = VisibleSourceRect()
+            If EnvelopeRectsMatch(aktuell, _envelopeRect) Then Return
             ResetEnvelopePoints()
         End Sub
 
+        ''' <summary>Haelt einen Wert innerhalb des Bezugsrechtecks.</summary>
+        Private Shared Function ClampToEnvelopeRect(value As Double, start As Double, length As Double) As Double
+            If length <= 0 Then Return start
+            Return Math.Max(start, Math.Min(start + length, value))
+        End Function
+
+        Private Shared Function EnvelopeRectsMatch(a As (X As Double, Y As Double, Width As Double, Height As Double),
+                                                   b As (X As Double, Y As Double, Width As Double, Height As Double)) As Boolean
+            Return Math.Abs(a.X - b.X) < 0.01 AndAlso Math.Abs(a.Y - b.Y) < 0.01 AndAlso
+                   Math.Abs(a.Width - b.Width) < 0.01 AndAlso Math.Abs(a.Height - b.Height) < 0.01
+        End Function
+
         Private Sub ResetEnvelopePoints()
-            _envelope = NeutralEnvelope()
+            If Not WarpsTheObject Then _envelopeRect = VisibleSourceRect()
+            _envelope = NeutralEnvelope(CurrentEnvelopeRect())
             _envelopeDragIndex = -1
         End Sub
 
@@ -1451,13 +1586,24 @@ Namespace ViewModels
         ''' Verzerrraum-Prozent - die Form, in der sie der gemeinsame Renderweg erwartet.</summary>
         Private Sub EnvelopeNodes(steps As Integer, ByRef xs As Double(), ByRef ys As Double())
             PrepareEnvelope()
+            Dim rect = CurrentEnvelopeRect()
             Dim n = (steps + 1) * (steps + 1)
             ReDim xs(n - 1)
             ReDim ys(n - 1)
+            ' Das Knotenraster deckt den GANZEN Quellraum ab, auch wenn die Huellkurve nur auf dem
+            ' sichtbaren Ausschnitt sitzt - der gemeinsame Renderweg erwartet genau das (siehe
+            ' ApplyNodeWarp: "Prozent des unbeschnittenen Bildes"). Fuer Knoten ausserhalb laufen u
+            ' und v ueber 0 bis 1 hinaus; die Coons-Flaeche setzt sich dort glatt fort, statt an der
+            ' Schnittkante abzubrechen. Bei neutraler Lage ist diese Fortsetzung exakt die
+            ' Identitaet - sonst verzoege schon das Oeffnen des Werkzeugs das Bild.
             For rowIdx = 0 To steps
+                Dim sourceY = rowIdx / CDbl(steps) * 100.0
+                Dim v = (sourceY - rect.Y) / rect.Height
                 For colIdx = 0 To steps
                     Dim i = rowIdx * (steps + 1) + colIdx
-                    Dim z = EnvelopePoint(_envelope, colIdx / CDbl(steps), rowIdx / CDbl(steps))
+                    Dim sourceX = colIdx / CDbl(steps) * 100.0
+                    Dim u = (sourceX - rect.X) / rect.Width
+                    Dim z = EnvelopePoint(_envelope, u, v)
                     xs(i) = z.X
                     ys(i) = z.Y
                 Next
@@ -1517,13 +1663,21 @@ Namespace ViewModels
         Public ReadOnly Property HasEnvelopeChanges As Boolean
             Get
                 PrepareEnvelope()
-                Dim neutral = NeutralEnvelope()
-                For i = 0 To 23
-                    If Math.Abs(_envelope(i) - neutral(i)) > 0.01 Then Return True
-                Next
-                Return False
+                Return EnvelopeDiffersFromNeutral()
             End Get
         End Property
+
+        ''' <summary>Weicht die Huellkurve von ihrer neutralen Lage ab? Verglichen wird gegen das
+        ''' Rechteck, auf dem sie AUFGESETZT wurde, nicht gegen den gerade sichtbaren Bereich - sonst
+        ''' galte eine unangetastete Kurve nach einem Zuschnitt als verzogen.</summary>
+        Private Function EnvelopeDiffersFromNeutral() As Boolean
+            If _envelope Is Nothing OrElse _envelope.Length <> 24 Then Return False
+            Dim neutral = NeutralEnvelope(CurrentEnvelopeRect())
+            For i = 0 To 23
+                If Math.Abs(_envelope(i) - neutral(i)) > 0.01 Then Return True
+            Next
+            Return False
+        End Function
 
         Private Sub RaiseEnvelopeChanged()
             Me.RaisePropertyChanged(NameOf(EnvelopeValues))
@@ -1588,10 +1742,14 @@ Namespace ViewModels
                     nx = _envelopeDragStartX
                 End If
             End If
+            ' Geklemmt wird auf den SICHTBAREN Bereich, nicht mehr auf den ganzen Quellraum: nach
+            ' einem Zuschnitt liegt zwischen beiden der weggeschnittene Rand, und ein dorthin
+            ' gezogener Griff waere weder anzuzeigen noch je wieder zu fassen.
             Dim limit = Not WarpsTheObject
+            Dim rect = CurrentEnvelopeRect()
             If limit Then
-                nx = ClampPercent(nx)
-                ny = ClampPercent(ny)
+                nx = ClampToEnvelopeRect(nx, rect.X, rect.Width)
+                ny = ClampToEnvelopeRect(ny, rect.Y, rect.Height)
             End If
             ' Eine Ecke nimmt ihre beiden Griffe mit. Sonst bliebe die Kante an ihren alten Griffen
             ' haengen und beulte aus, waehrend die Ecke davonlaeuft. Mit Alt bleibt genau das aus.
@@ -1601,8 +1759,8 @@ Namespace ViewModels
                 For Each h In EnvelopeCornerHandles(_envelopeDragIndex)
                     Dim hx = _envelope(h * 2) + dx
                     Dim hy = _envelope(h * 2 + 1) + dy
-                    _envelope(h * 2) = If(limit, ClampPercent(hx), hx)
-                    _envelope(h * 2 + 1) = If(limit, ClampPercent(hy), hy)
+                    _envelope(h * 2) = If(limit, ClampToEnvelopeRect(hx, rect.X, rect.Width), hx)
+                    _envelope(h * 2 + 1) = If(limit, ClampToEnvelopeRect(hy, rect.Y, rect.Height), hy)
                 Next
             End If
             _envelope(_envelopeDragIndex * 2) = nx
@@ -2050,6 +2208,7 @@ Namespace ViewModels
                 _gridImageRows = _warpRows
                 PrepareEnvelope()
                 _envelopeImage = CType(_envelope.Clone(), Double())
+                _envelopeImageRect = _envelopeRect
                 _linienBild.Clear()
                 _linienBild.AddRange(_linien)
             End If
@@ -2081,6 +2240,9 @@ Namespace ViewModels
                 End If
                 If _envelopeImage IsNot Nothing AndAlso _envelopeImage.Length = 24 Then
                     _envelope = CType(_envelopeImage.Clone(), Double())
+                    ' Mit dem Stand kommt sein Bezugsrechteck zurueck - sonst laege der Bildstand
+                    ' danach auf dem Bezug des Objekts.
+                    _envelopeRect = _envelopeImageRect
                 Else
                     ResetEnvelopePoints()
                 End If
@@ -2137,7 +2299,9 @@ Namespace ViewModels
                warp.Columns Mod 3 <> 0 OrElse warp.Rows Mod 3 <> 0 OrElse
                warp.Nodes Is Nothing OrElse warp.Nodes.Length <> (warp.Columns + 1) * (warp.Rows + 1) * 2 Then Return False
 
-            Dim p = NeutralEnvelope()
+            ' Der Weg gilt einem OBJEKT: dessen Bezug ist immer sein eigenes Rechteck, ein Zuschnitt
+            ' des Bildes geht ihn nichts an.
+            Dim p = NeutralEnvelope((0.0, 0.0, 100.0, 100.0))
             Dim thirdColumn = warp.Columns \ 3, thirdRow = warp.Rows \ 3
             RestoreEnvelopeEdgeFromGrid(warp, p, 0, 0, 0, thirdColumn, 0, thirdColumn * 2, 0, warp.Columns, 0)
             RestoreEnvelopeEdgeFromGrid(warp, p, 1, warp.Columns, 0, warp.Columns, thirdRow, warp.Columns, thirdRow * 2, warp.Columns, warp.Rows)

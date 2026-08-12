@@ -1329,12 +1329,18 @@ Namespace Services
         ''' ein Neu-Scan liefe nie wieder an.</summary>
         ''' <returns>False, wenn nichts geleert wurde, weil der Suchlauf nicht anzuhalten war.</returns>
         Public Function ClearAllFaces() As Boolean
-            If Not FaceScanRunner.RequestStopAndWait() Then
-                DiagnosticLogService.LogAlways("Library.ClearAllFaces",
-                                               "Nicht geleert: der Gesichtsdurchlauf steht noch")
-                Return False
-            End If
+            ' DIESELBE Klammer wie die Katalog-Loeschwege: der Halt allein sieht nur das EIGENE
+            ' Fenster. Lief die Gesichtssuche in einem zweiten Prozess, legte sie ihre Zeilen nach
+            ' dem Loeschen wieder an - und in der Personenwand standen die eben entfernten Gruppen
+            ' wieder da.
+            Dim klammer = TryBeginCleanup("Library.ClearAllFaces")
+            If klammer Is Nothing Then Return False
+            Using klammer
+                Return ClearAllFacesLocked()
+            End Using
+        End Function
 
+        Private Function ClearAllFacesLocked() As Boolean
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using tx = conn.BeginTransaction()

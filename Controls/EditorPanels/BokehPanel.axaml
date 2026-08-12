@@ -33,8 +33,15 @@
                     </Grid>
                 </DataTemplate>
             </Expander.HeaderTemplate>
+            <!-- ShowOnDisabled ist hier PFLICHT und keine Feinheit: Avalonias ToolTipService zeigt
+                 einen Hinweis nur an, wenn das Element IsEffectivelyEnabled ist ODER genau dieses
+                 Merkmal traegt. Ohne es blieb der Hinweis "dafuer fehlt eine Modelldatei"
+                 unsichtbar - und sichtbar war nur eine Reihe grauer Regler ohne Begruendung. Genau
+                 so kam es aus dem Nutzerkreis zurueck: "kann manche Regler nicht anfassen, Fehler
+                 oder noch nicht gebaut?". Der Hinweis am gesperrten Element ist der einzige Ort,
+                 an dem die Antwort steht. -->
             <StackPanel Spacing="2" Margin="0,8,0,0" IsEnabled="{Binding IsBokehAvailable}"
-                        ToolTip.Tip="{Binding BokehHint}">
+                        ToolTip.Tip="{Binding BokehHint}" ToolTip.ShowOnDisabled="True">
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
                       ToolTip.Tip="Untere Grenze des scharfen Bereichs. 0 ist am weitesten weg">
                     <TextBlock Text="Scharf von" Foreground="{DynamicResource FP.Text.Secondary}"

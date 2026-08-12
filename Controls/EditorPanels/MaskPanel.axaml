@@ -45,12 +45,14 @@
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg" Width="16" Height="16" />
                 </Button>
                 <!-- Ohne Modelldatei GRAU statt weg, mit dem Weg zur Datei im Hinweis. Ein
-                     verschwundener Knopf verschweigt, dass es die Funktion gibt. -->
+                     verschwundener Knopf verschweigt, dass es die Funktion gibt.
+                     ShowOnDisabled, weil Avalonia den Hinweis am gesperrten Knopf sonst
+                     unterdrueckt - Begruendung bei BokehPanel.axaml. -->
                 <Button Classes="ghost" Padding="8,6"
                         IsEnabled="{Binding IsDepthMaskAvailable}"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Tiefe"
                         Classes.active="{Binding IsMaskDepthMode}"
-                        ToolTip.Tip="{Binding DepthMaskHint}">
+                        ToolTip.Tip="{Binding DepthMaskHint}" ToolTip.ShowOnDisabled="True">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-3.svg" Width="16" Height="16" />
                 </Button>
                 <!-- Objektauswahl: der Bestand wird beim Programmstart einmal erhoben - siehe
@@ -59,7 +61,7 @@
                         IsEnabled="{Binding IsSubjectMaskAvailable}"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Objekt"
                         Classes.active="{Binding IsMaskObjectMode}"
-                        ToolTip.Tip="{Binding SubjectMaskHint}">
+                        ToolTip.Tip="{Binding SubjectMaskHint}" ToolTip.ShowOnDisabled="True">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
                 </Button>
             </StackPanel>
@@ -554,7 +556,7 @@
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding CanRemoveObject}"
                         Command="{Binding RemoveObjectCommand}"
-                        ToolTip.Tip="{Binding RemoveObjectHint}">
+                        ToolTip.Tip="{Binding RemoveObjectHint}" ToolTip.ShowOnDisabled="True">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
                                        Width="16" Height="16" />

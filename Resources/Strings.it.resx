@@ -4052,8 +4052,8 @@
   <data name="Maskierung_964c3806" xml:space="preserve">
     <value>Mascheratura</value>
   </data>
-  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_8935f8c2" xml:space="preserve">
-    <value>Limita la nitidezza ai bordi: 0 aumenta la nitidezza dell’intera superficie, valori più alti lasciano tranquille le aree lisce come cielo e pelle.</value>
+  <data name="Beschr_nkt_die_Sch_rfung_auf_Kanten_0_sch_rft_di_fa9f26e8" xml:space="preserve">
+    <value>Limita la nitidezza ai bordi: 0 aumenta la nitidezza dell’intera superficie, valori più alti lasciano tranquille le aree lisce come cielo e pelle. Con il puntatore sopra, premere ALT una volta mostra la ponderazione: il chiaro viene reso più nitido, lo scuro resta tranquillo. Premere ALT di nuovo la toglie.</value>
   </data>
   <data name="Kontur_mitmischen_f0d70cba" xml:space="preserve">
     <value>Fondi anche il contorno</value>
@@ -7249,5 +7249,8 @@
   </data>
   <data name="Gruppe_ausw_hlen_e7c82c9a" xml:space="preserve">
     <value>Seleziona gruppo</value>
+  </data>
+  <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
+    <value>In un’altra finestra è in corso un’elaborazione in secondo piano. Riprovare al termine.</value>
   </data>
 </root>
