@@ -48,6 +48,12 @@ Namespace Views
         Private _suppressNextGalleryContextMenu As Boolean = False
         Private ReadOnly _thumbnailTracker As New ViewportThumbnailTracker()
 
+        ' Die gemessene Zeilenhoehe wird festgehalten, statt sie bei jedem Scroll-Tick neu zu
+        ' uebernehmen. Sie ist eine Eigenschaft der Kachelvorlage und aendert sich nur mit der
+        ' Kachelgroesse oder der Schrift, nicht mit der Scrollposition.
+        Private _latchedSlotHeight As Double = 0
+        Private _latchedSlotThumbnailSize As Double = -1
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             AddHandler DataContextChanged, AddressOf OnViewDataContextChanged
@@ -2790,9 +2796,9 @@ Namespace Views
             Dim measuredColumns = 0
             Dim measuredSlotHeight = 0.0
             Dim measured = TryGetRenderedGridMetrics(scrollViewer, measuredColumns, measuredSlotHeight, forGroupView)
+            itemSlotHeight = LatchSlotHeight(vm, If(measured, measuredSlotHeight, 0.0))
             If measured AndAlso Not forGroupView Then
                 columns = Math.Max(1, measuredColumns)
-                itemSlotHeight = Math.Max(1, measuredSlotHeight)
                 Return
             End If
 
@@ -2810,16 +2816,42 @@ Namespace Views
             ' dort kann jede sichtbare Zeile eine teilweise gefuellte letzte Zeile einer Gruppe sein, und
             ' eine zu klein gemessene Spaltenzahl braecht die Zeilentabelle. Die Rechnung ist dieselbe,
             ' die auch das WrapPanel anstellt (ganze Kachelbreiten in die Zeilenbreite), also exakt.
-            ' Die Zeilenhoehe dagegen wird gemessen, wenn es etwas zu messen gab - der Wert aus dem
-            ' ViewModel ist nur eine Schaetzung.
-            If forGroupView AndAlso measured AndAlso measuredSlotHeight > 0 Then itemSlotHeight = Math.Max(1, measuredSlotHeight)
+            ' Die Zeilenhoehe steht bereits fest (LatchSlotHeight).
         End Sub
+
+        ''' <summary>Die gemessene Zeilenhoehe halten und nur bei einer echten Aenderung uebernehmen.
+        ''' Aus der Zeilenhoehe folgt die Gesamthoehe des Inhalts und damit der Scrollbereich. Wechselt
+        ''' sie zwischen zwei Werten, springt am UNTEREN Ende der Scrollversatz mit: dort klemmt ihn der
+        ''' ScrollViewer gegen die Gesamthoehe. Der veraenderte Versatz fuehrt zu einem anderen
+        ''' Anzeigefenster, dessen Neuaufbau die naechste Messung wieder ins Leere laufen laesst (noch
+        ''' keine Kachel vermessen, Rueckfall auf den Schaetzwert des ViewModels) - die Ansicht flackert
+        ''' dann dauerhaft zwischen zwei Staenden. Deshalb gilt: einmal gemessen, bleibt der Wert stehen,
+        ''' bis sich die Kachelgroesse aendert oder wirklich anders gemessen wird (Schriftgroesse). Ein
+        ''' fehlgeschlagener Messversuch meldet 0 und aendert nichts.</summary>
+        Private Function LatchSlotHeight(vm As GalleryViewModel, measuredSlotHeight As Double) As Double
+            Dim estimate = Math.Max(1, vm.GridItemSlotHeight)
+            If _latchedSlotThumbnailSize <> vm.ThumbnailSize Then
+                _latchedSlotThumbnailSize = vm.ThumbnailSize
+                _latchedSlotHeight = 0
+            End If
+
+            ' Ein Messwert weit ab vom Schaetzwert stammt aus einem halb fertigen Layout und wird
+            ' verworfen; ein kleiner Unterschied zum gehaltenen Wert ist Rundung im Layout.
+            If measuredSlotHeight > 0 AndAlso
+               measuredSlotHeight >= estimate * 0.5 AndAlso measuredSlotHeight <= estimate * 2.0 Then
+                If _latchedSlotHeight <= 0 OrElse Math.Abs(_latchedSlotHeight - measuredSlotHeight) >= 4.0 Then
+                    _latchedSlotHeight = measuredSlotHeight
+                End If
+            End If
+
+            Return If(_latchedSlotHeight > 0, Math.Max(1, _latchedSlotHeight), estimate)
+        End Function
 
         ''' <summary>Spaltenzahl und Zeilenhoehe aus dem, was wirklich gezeichnet ist.
         ''' In der Gruppenansicht darf dabei NICHT die erste Zeile allein zaehlen: die letzte Zeile einer
-        ''' Gruppe ist meist nur teilweise gefuellt (zu wenige Spalten), und zwischen zwei Kachelzeilen
-        ''' kann eine Kopfzeile stehen (zu grosser Zeilenabstand). Dort gilt deshalb die BREITESTE Zeile
-        ''' und der KLEINSTE Zeilenabstand.</summary>
+        ''' Gruppe ist meist nur teilweise gefuellt (zu wenige Spalten). Dort gilt deshalb die BREITESTE
+        ''' Zeile, und die Zeilenhoehe kommt aus der Kachel selbst statt aus einem Zeilenabstand - der
+        ''' fuehrt dort in die Irre, sobald eine Kopfzeile dazwischen steht.</summary>
         Private Function TryGetRenderedGridMetrics(scrollViewer As ScrollViewer, ByRef columns As Integer, ByRef itemSlotHeight As Double,
                                                    Optional forGroupView As Boolean = False) As Boolean
             columns = 0
@@ -2849,26 +2881,25 @@ Namespace Views
 
             If forGroupView Then
                 Dim rowCounts As New Dictionary(Of Integer, Integer)()
-                Dim rowTops As New List(Of Double)()
                 For Each entry In thumbBorders
                     Dim bucket = CInt(Math.Round(entry.Y / tolerance))
                     Dim seen = 0
-                    If rowCounts.TryGetValue(bucket, seen) Then
-                        rowCounts(bucket) = seen + 1
-                    Else
-                        rowCounts(bucket) = 1
-                        rowTops.Add(entry.Y)
-                    End If
+                    rowCounts(bucket) = If(rowCounts.TryGetValue(bucket, seen), seen + 1, 1)
                 Next
                 columns = Math.Max(1, rowCounts.Values.Max())
 
-                itemSlotHeight = 0
-                For i = 1 To rowTops.Count - 1
-                    Dim distance = rowTops(i) - rowTops(i - 1)
-                    If distance <= tolerance Then Continue For
-                    If itemSlotHeight <= 0 OrElse distance < itemSlotHeight Then itemSlotHeight = distance
-                Next
-                If itemSlotHeight <= 0 Then itemSlotHeight = thumbBorders(0).Border.Bounds.Height + 10.0
+                ' Die Zeilenhoehe kommt aus der KACHEL selbst - Hoehe des Rahmens plus sein
+                ' Aussenabstand -, nicht aus dem Abstand zwischen zwei gezeichneten Zeilen. Der
+                ' Abstand taeuscht: stehen im Anzeigefenster keine zwei Kachelzeilen DERSELBEN Gruppe
+                ' untereinander (kleine Gruppen, oder ganz unten ein kurzes Fenster), liegt zwischen
+                ' je zwei Kachelzeilen eine Kopfzeile, und jeder Abstand ist um deren 48 px zu gross.
+                ' Die Gesamthoehe des Inhalts sprang dadurch je nach Fensterinhalt hin und her, der
+                ' Scrollbereich mit ihr, und die Ansicht flackerte unten dauerhaft zwischen zwei
+                ' Staenden (Mitschrift 2026-08-12: 227,98 gegen 276,19 px - genau eine Kopfzeile).
+                Dim slotFromTile = thumbBorders.
+                    Select(Function(x) x.Border.Bounds.Height + x.Border.Margin.Top + x.Border.Margin.Bottom).
+                    Min()
+                itemSlotHeight = slotFromTile
                 Return itemSlotHeight > 0
             End If
 
