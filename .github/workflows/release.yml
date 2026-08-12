@@ -131,12 +131,24 @@ jobs:
           git clone ssh://aur@aur.archlinux.org/ferrumpix-bin.git packaging/AUR
 
       # makepkg laeuft nicht als root. Deshalb ein eigener Benutzer, der auch pushen darf.
+      #
+      # BEFUND: "Author identity unknown ... fatal: unable to auto-detect email address (got
+      # 'builder@<container>.(none)')", Abbruch mit 128 beim Commit ins AUR-Repo. Der Benutzer wird
+      # hier frisch angelegt und hat keine Git-Identitaet; die geraten Werte aus Benutzername und
+      # Rechnername weist Git zurueck. Die Identitaet gehoert dem BENUTZER, nicht dem Auscheck -
+      # deshalb --global fuer builder und nicht im Skript, das lokal Patricks eigene Einstellung
+      # ueberschreiben wuerde.
+      #
+      # Es ist dieselbe Kennung, mit der auch von Hand veroeffentlicht wird. Eine eigene CI-Kennung
+      # daneben liesse das Paket aussehen, als haette es den Betreuer gewechselt.
       - name: AUR veroeffentlichen
         run: |
           useradd -m builder
           chown -R builder:builder .
           cp -r ~/.ssh /home/builder/.ssh
           chown -R builder:builder /home/builder/.ssh
+          su builder -c "git config --global user.name 'Bitpainter75'"
+          su builder -c "git config --global user.email 'patrick@bitpainter.de'"
           su builder -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new' packaging/publish-aur.sh $DRY"
 
   # ---------------------------------------------------------------------------------------
