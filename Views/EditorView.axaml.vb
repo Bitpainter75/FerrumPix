@@ -974,6 +974,7 @@ Namespace Views
                 UpdateSliderLayout()
                 UpdateInfoSidebarLayoutState()
                 UpdateLayersPanelLayout()
+                UpdateAdjustmentsPanelSide()
                 Dim filmstrip = Me.FindControl(Of ListBox)("FilmstripListBox")
                 _filmstripController.AttachTo(filmstrip)
                 If filmstrip IsNot Nothing Then
@@ -1304,6 +1305,8 @@ Namespace Views
                     UpdateInfoSidebarLayoutState()
                 Case NameOf(EditorViewModel.IsLayersPanelVisible)
                     UpdateLayersPanelLayout()
+                Case NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft)
+                    UpdateAdjustmentsPanelSide()
                 Case NameOf(EditorViewModel.EditorGridSize)
                     UpdateGridOverlay()
                 Case NameOf(EditorViewModel.AnnotationText),
@@ -3129,6 +3132,50 @@ Namespace Views
             If root.ColumnDefinitions.Count >= 5 Then
                 root.ColumnDefinitions(4).Width = If(vm IsNot Nothing AndAlso vm.IsLayersPanelVisible, New GridLength(300), New GridLength(0))
             End If
+        End Sub
+
+        ' Breite des Anpassungspanels. Steht hier statt im XAML, weil sie beim Seitenwechsel von
+        ' Spalte 2 auf Spalte 1 umzieht und an beiden Orten dieselbe sein muss.
+        Private Const AdjustmentsPanelWidth As Double = 330.0
+
+        ''' <summary>Tauscht Bühne und Anpassungspanel zwischen Spalte 1 und 2, je nach Einstellung
+        ''' (EditorAdjustmentsPanelOnLeft). Links steht das Panel dann direkt neben der
+        ''' Werkzeugleiste, und die Hand wandert beim Werkzeugwechsel nicht mehr quer über den
+        ''' Schirm.
+        '''
+        ''' Die beiden Knopfgruppen in Kopf- und Fußleiste stehen mittig zur BÜHNE, nicht zum
+        ''' Fenster - sie wandern deshalb mit ihr, sonst säßen sie über dem Panel.</summary>
+        Private Sub UpdateAdjustmentsPanelSide()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
+            If root Is Nothing OrElse root.ColumnDefinitions.Count < 3 Then Return
+
+            Dim onLeft = vm IsNot Nothing AndAlso vm.IsAdjustmentsPanelOnLeft
+            Dim panelColumn = If(onLeft, 1, 2)
+            Dim stageColumn = If(onLeft, 2, 1)
+
+            root.ColumnDefinitions(panelColumn).Width = New GridLength(AdjustmentsPanelWidth)
+            root.ColumnDefinitions(stageColumn).Width = GridLength.Star
+
+            Dim panel = Me.FindControl(Of Border)("AdjustmentsPanelBorder")
+            If panel IsNot Nothing Then
+                Grid.SetColumn(panel, panelColumn)
+                ' Die Trennlinie zeigt immer zur Bühne, also links stehend nach rechts.
+                Dim wanted = If(onLeft, "panel-left", "panel-right")
+                Dim unwanted = If(onLeft, "panel-right", "panel-left")
+                panel.Classes.Remove(unwanted)
+                If Not panel.Classes.Contains(wanted) Then panel.Classes.Add(wanted)
+            End If
+
+            SetGridColumn(Me.FindControl(Of Border)("EditorStageBorder"), stageColumn)
+            SetGridColumn(Me.FindControl(Of StackPanel)("StageHeaderButtons"), stageColumn)
+            SetGridColumn(Me.FindControl(Of StackPanel)("StageFooterButtons"), stageColumn)
+        End Sub
+
+        ' Grid.SetColumn wirft bei Nothing; gefunden wird hier aber ueber Namen.
+        Private Shared Sub SetGridColumn(target As Control, column As Integer)
+            If target Is Nothing Then Return
+            Grid.SetColumn(target, column)
         End Sub
 
         Public Sub OnAdjustmentExpanderExpanded(sender As Object, e As RoutedEventArgs)

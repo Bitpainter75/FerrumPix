@@ -7253,4 +7253,10 @@
   <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
     <value>In einem anderen Fenster läuft gerade ein Hintergrundlauf. Bitte danach noch einmal versuchen.</value>
   </data>
+  <data name="Seite_des_Anpassungspanels_621de062" xml:space="preserve">
+    <value>Seite des Anpassungspanels</value>
+  </data>
+  <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
+    <value>Wo die Einstellungen des gewählten Werkzeugs stehen: rechts neben der Bearbeitungsfläche oder links direkt neben der Werkzeugleiste. Links liegen Werkzeug und Einstellungen beieinander, was auf breiten Bildschirmen kürzere Wege bedeutet.</value>
+  </data>
 </root>

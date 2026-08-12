@@ -7254,4 +7254,10 @@
   <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
     <value>A background run is going on in another window. Please try again afterwards.</value>
   </data>
+  <data name="Seite_des_Anpassungspanels_621de062" xml:space="preserve">
+    <value>Side of the adjustments panel</value>
+  </data>
+  <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
+    <value>Where the settings of the selected tool are shown: on the right next to the editing area, or on the left directly next to the toolbar. On the left, tool and settings sit side by side, which means shorter distances on wide screens.</value>
+  </data>
 </root>

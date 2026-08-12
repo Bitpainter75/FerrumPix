@@ -901,6 +901,27 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Seite des Anpassungspanels" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wo die Einstellungen des gewählten Werkzeugs stehen: rechts neben der Bearbeitungsfläche oder links direkt neben der Werkzeugleiste. Links liegen Werkzeug und Einstellungen beieinander, was auf breiten Bildschirmen kürzere Wege bedeutet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Links steht links, Rechts steht rechts: die Knopfreihe zeigt damit
+                                 dasselbe, was sie einstellt. Umgekehrt liest sie sich verdreht. -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorAdjustmentsPanelLeft}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsPanelSideCommand}"
+                                        CommandParameter="Left">Links</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorAdjustmentsPanelRight}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsPanelSideCommand}"
+                                        CommandParameter="Right">Rechts</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Textebenen aus Photoshop-Dateien" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Beim Öffnen einer Photoshop-Datei mit Textebenen: als Text übernehmen (der Wortlaut bleibt tippbar, das Aussehen kann abweichen), als Bild übernehmen (jeder Bildpunkt stimmt, der Text ist fest) oder jedes Mal nachfragen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>

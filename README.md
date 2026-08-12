@@ -143,7 +143,7 @@ FerrumPix signs in with your user name and an app password, which you create in 
 
 Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
 
-Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
+Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
 
 Your version is at the top, with a link to the download page when a different one has been published. The last two sections are reference: all keyboard and mouse shortcuts, and everything FerrumPix is built on with a link to each licence.
 

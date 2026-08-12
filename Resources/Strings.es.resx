@@ -7253,4 +7253,10 @@
   <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
     <value>En otra ventana se está ejecutando un proceso en segundo plano. Inténtalo de nuevo después.</value>
   </data>
+  <data name="Seite_des_Anpassungspanels_621de062" xml:space="preserve">
+    <value>Lado del panel de ajustes</value>
+  </data>
+  <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
+    <value>Dónde se muestran los ajustes de la herramienta seleccionada: a la derecha del área de edición o a la izquierda, junto a la barra de herramientas. A la izquierda, la herramienta y sus ajustes quedan juntos, lo que acorta los recorridos en pantallas anchas.</value>
+  </data>
 </root>

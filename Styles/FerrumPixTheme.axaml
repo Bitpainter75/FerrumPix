@@ -1161,6 +1161,13 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
         <Setter Property="BorderThickness" Value="1,0,0,0"/>
     </Style>
+    <!-- Dasselbe Panel auf der linken Seite: die Trennlinie gehoert dann nach rechts, zur Buehne
+         hin. Mit der rechten Fassung stuende sie zur Werkzeugleiste hin und dort doppelt. -->
+    <Style Selector="Border.panel-left">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+    </Style>
     <Style Selector="Border.thumb-card">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>

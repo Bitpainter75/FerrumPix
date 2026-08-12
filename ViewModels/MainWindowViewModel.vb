@@ -846,6 +846,7 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsToolSidebarCollapsed))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolSidebarLabelsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorGridSize))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowRulers))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowGrid))

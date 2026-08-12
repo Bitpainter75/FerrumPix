@@ -17,7 +17,11 @@
              PointerReleased="OnGlobalPointerReleased">
 
     <!-- Erste Spalte Auto statt fest 190: die Breite kommt aus ToolSidebarWidth, damit die
-         Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen). -->
+         Werkzeugleiste auf Symbolbreite einklappen kann (Zustand in den Einstellungen).
+
+         Die 330 der dritten Spalte ist die Breite des Anpassungspanels und muss dieselbe Zahl sein
+         wie AdjustmentsPanelWidth im Codebehind: liegt das Panel links, setzt UpdateAdjustmentsPanelSide
+         sie auf die zweite Spalte um. -->
     <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="Auto,*,330,320,300">
 
         <!-- EIN Kontextmenue fuer Filmstreifen und Fusszeile. Sonst nirgends im Editor: weder auf
@@ -217,8 +221,12 @@
              dadurch von selbst mit, ohne dass hier etwas gerechnet wird.
 
              NACH der Leiste im Baum, liegt also darueber. Das IsEnabled der Leiste muss sie selbst
-             mitbringen, sonst bliebe sie bedienbar, waehrend der Rest gesperrt ist. -->
-        <StackPanel Grid.Row="0" Grid.Column="1"
+             mitbringen, sonst bliebe sie bedienbar, waehrend der Rest gesperrt ist.
+
+             Wandert die Buehne auf die andere Spalte (Anpassungspanel links), wandert diese Gruppe
+             mit - UpdateAdjustmentsPanelSide setzt beide zusammen um. -->
+        <StackPanel x:Name="StageHeaderButtons"
+                    Grid.Row="0" Grid.Column="1"
                     Orientation="Horizontal" Spacing="8"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     IsEnabled="{Binding IsInteractionAllowed}">
@@ -571,7 +579,10 @@
             </ScrollViewer>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource FP.Bg.Root}" Padding="2">
+        <!-- Spalte 1 ist die Vorgabe. Steht das Anpassungspanel links, tauschen Buehne und Panel
+             ihre Spalten (UpdateAdjustmentsPanelSide) - deshalb der Name. -->
+        <Border x:Name="EditorStageBorder"
+                Grid.Row="1" Grid.Column="1" Background="{DynamicResource FP.Bg.Root}" Padding="2">
             <Grid>
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12"
                             IsVisible="{Binding IsDocumentLoading}">
@@ -1070,7 +1081,10 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" Grid.Column="2" Classes="panel-right">
+        <!-- Klasse und Spalte gelten fuer die Vorgabe (rechts neben der Buehne). Auf der linken
+             Seite setzt UpdateAdjustmentsPanelSide beides um, samt Trennlinie. -->
+        <Border x:Name="AdjustmentsPanelBorder"
+                Grid.Row="1" Grid.Column="2" Classes="panel-right">
             <Grid RowDefinitions="*">
                 <Grid Grid.Row="0">
                     <ScrollViewer x:Name="AdjustmentsScrollViewer"
@@ -1668,8 +1682,11 @@
              Wurzelrasters. Die senkrechte Lage kommt von unten: die Fussleiste traegt 6 Punkt
              Innenrand, darueber liegt ihre 28 Punkt hohe Bedienzeile (RowDefinitions="Auto,28").
              Aendert sich eines von beiden, gehoert es hier mit geaendert - deshalb stehen beide
-             Zahlen nebeneinander im Rand. -->
-        <StackPanel Grid.Row="2" Grid.Column="1"
+             Zahlen nebeneinander im Rand.
+
+             Die Spalte wandert mit der Buehne, genau wie bei der Gruppe in der Kopfleiste. -->
+        <StackPanel x:Name="StageFooterButtons"
+                    Grid.Row="2" Grid.Column="1"
                     Orientation="Horizontal" Spacing="4"
                     Height="28" Margin="0,0,0,6"
                     VerticalAlignment="Bottom" HorizontalAlignment="Center"

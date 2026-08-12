@@ -3628,6 +3628,17 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Steht das Anpassungspanel links neben der Werkzeugleiste statt rechts neben der
+        ''' Bühne? Aus den Einstellungen (EditorAdjustmentsPanelOnLeft), ab Werk aus.
+        '''
+        ''' Die Ansicht setzt daraufhin die Spalten des Wurzelrasters um, siehe
+        ''' UpdateAdjustmentsPanelSide in EditorView.</summary>
+        Public ReadOnly Property IsAdjustmentsPanelOnLeft As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorAdjustmentsPanelOnLeft
+            End Get
+        End Property
+
         ''' <summary>Breite der linken Werkzeugleiste: eingeklappt bleibt genau Platz für die Symbole
         ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18).</summary>
         ''' <summary>Breite der Werkzeugleiste. Ausgeklappt waechst sie mit der Schriftgroesse mit:

@@ -7253,4 +7253,10 @@
   <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
     <value>In un’altra finestra è in corso un’elaborazione in secondo piano. Riprovare al termine.</value>
   </data>
+  <data name="Seite_des_Anpassungspanels_621de062" xml:space="preserve">
+    <value>Lato del pannello delle regolazioni</value>
+  </data>
+  <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
+    <value>Dove compaiono le impostazioni dello strumento selezionato: a destra dell’area di modifica oppure a sinistra, subito accanto alla barra degli strumenti. A sinistra strumento e impostazioni stanno vicini, il che accorcia i percorsi sugli schermi larghi.</value>
+  </data>
 </root>

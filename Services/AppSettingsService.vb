@@ -215,6 +215,13 @@ Namespace Services
         ''' Linke Werkzeugleiste des Editors eingeklappt (nur Symbole, keine Beschriftungen) -
         ''' gemerkter Bedienzustand wie die Info-Leiste, der Umschalter sitzt in der Leiste selbst.
         Public Property EditorToolSidebarCollapsed As Boolean = False
+        ''' <summary>Steht das Anpassungspanel links neben der Werkzeugleiste statt rechts neben der
+        ''' Buehne? Ab Werk rechts, also wie bisher.
+        '''
+        ''' Der Grund fuer die Wahl: auf einem breiten Schirm liegt zwischen der Werkzeugauswahl
+        ''' links und ihren Einstellungen rechts der halbe Monitor, und die Hand wandert bei jedem
+        ''' Wechsel einmal quer. Links stehen beide beieinander.</summary>
+        Public Property EditorAdjustmentsPanelOnLeft As Boolean = False
         ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl, bisheriges
         ''' Verhalten) oder "Adjust" (Anpassen).
         Public Property EditorStartupTool As String = "Selection"

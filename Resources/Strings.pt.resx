@@ -7252,4 +7252,10 @@
   <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
     <value>Há um processamento em segundo plano noutra janela. Tente novamente depois.</value>
   </data>
+  <data name="Seite_des_Anpassungspanels_621de062" xml:space="preserve">
+    <value>Lado do painel de ajustes</value>
+  </data>
+  <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
+    <value>Onde ficam as definições da ferramenta selecionada: à direita da área de edição ou à esquerda, mesmo ao lado da barra de ferramentas. À esquerda, a ferramenta e as definições ficam juntas, o que encurta os percursos em ecrãs largos.</value>
+  </data>
 </root>

@@ -7253,4 +7253,10 @@
   <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
     <value>Un traitement en arrière-plan est en cours dans une autre fenêtre. Veuillez réessayer ensuite.</value>
   </data>
+  <data name="Seite_des_Anpassungspanels_621de062" xml:space="preserve">
+    <value>Côté du panneau de réglages</value>
+  </data>
+  <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
+    <value>Où figurent les réglages de l'outil sélectionné : à droite de la zone de retouche ou à gauche, juste à côté de la barre d'outils. À gauche, l'outil et ses réglages sont côte à côte, ce qui raccourcit les déplacements sur les écrans larges.</value>
+  </data>
 </root>

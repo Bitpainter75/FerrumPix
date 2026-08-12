@@ -7251,4 +7251,10 @@
   <data name="In_einem_anderen_Fenster_l_uft_gerade_ein_Hinter_ecbdd215" xml:space="preserve">
     <value>另一个窗口正在进行后台任务。请稍后再试。</value>
   </data>
+  <data name="Seite_des_Anpassungspanels_621de062" xml:space="preserve">
+    <value>调整面板的位置</value>
+  </data>
+  <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
+    <value>所选工具的设置显示在哪一侧：编辑区右侧，或左侧紧邻工具栏。放在左侧时，工具与设置相邻，在宽屏上移动距离更短。</value>
+  </data>
 </root>

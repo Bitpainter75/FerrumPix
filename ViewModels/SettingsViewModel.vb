@@ -58,6 +58,7 @@ Namespace ViewModels
         Private _editorLayersPanelExpanded As Boolean = False
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
+        Private _editorAdjustmentsPanelOnLeft As Boolean = False
         Private _editorStartupTool As String = "Selection"
         Private _psdTextImport As String = "Ask"
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
@@ -134,6 +135,7 @@ Namespace ViewModels
         Private _savedViewerFitBehavior As String = "Always"
         Private _savedEditorFitBehavior As String = "Always"
         Private _savedEditorStartupTool As String = "Selection"
+        Private _savedEditorAdjustmentsPanelOnLeft As Boolean = False
         Private _savedEditorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedThumbnailQuality As Integer = 82
@@ -1344,6 +1346,34 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Seite des Anpassungspanels im Editor: links neben der Werkzeugleiste oder rechts
+        ''' neben der Bühne. Ab Werk rechts.</summary>
+        Public Property EditorAdjustmentsPanelOnLeft As Boolean
+            Get
+                Return _editorAdjustmentsPanelOnLeft
+            End Get
+            Set(value As Boolean)
+                If _editorAdjustmentsPanelOnLeft = value Then Return
+                Me.RaiseAndSetIfChanged(_editorAdjustmentsPanelOnLeft, value)
+                Me.RaisePropertyChanged(NameOf(IsEditorAdjustmentsPanelRight))
+                Me.RaisePropertyChanged(NameOf(IsEditorAdjustmentsPanelLeft))
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsEditorAdjustmentsPanelRight As Boolean
+            Get
+                Return Not _editorAdjustmentsPanelOnLeft
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditorAdjustmentsPanelLeft As Boolean
+            Get
+                Return _editorAdjustmentsPanelOnLeft
+            End Get
+        End Property
+
         ''' <summary>Werkzeug, das beim Betreten des Editors aktiv ist. Zur Wahl stehen die beiden
         ''' Einstiege, mit denen man tatsächlich anfängt: „Auswahl" (bisheriges Verhalten) und
         ''' „Anpassen".</summary>
@@ -2177,6 +2207,7 @@ Namespace ViewModels
         Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
+        Public ReadOnly Property SetEditorAdjustmentsPanelSideCommand As ICommand
         Public ReadOnly Property SetPsdTextImportCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupUpCommand As ICommand
         Public ReadOnly Property MoveEditorToolGroupDownCommand As ICommand
@@ -2562,6 +2593,7 @@ Namespace ViewModels
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
             _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed
+            _editorAdjustmentsPanelOnLeft = _appSettings.EditorAdjustmentsPanelOnLeft
             _editorStartupTool = AppSettingsService.NormalizeEditorStartupTool(_appSettings.EditorStartupTool)
             _psdTextImport = AppSettingsService.NormalizePsdTextImport(_appSettings.PsdTextImport)
             _editorToolGroupOrder = AppSettingsService.NormalizeEditorToolGroupOrder(_appSettings.EditorToolGroupOrder)
@@ -2633,6 +2665,10 @@ Namespace ViewModels
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
             SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
+            ' Zwei Knoepfe wie sonst auch, der Wert selbst ist aber ein Ja/Nein: alles ausser "Left"
+            ' bedeutet rechts, damit ein unbekannter Parameter nicht auf der linken Seite landet.
+            SetEditorAdjustmentsPanelSideCommand = ReactiveCommand.Create(Of String)(
+                Sub(m) EditorAdjustmentsPanelOnLeft = String.Equals(m, "Left", StringComparison.OrdinalIgnoreCase))
             SetPsdTextImportCommand = ReactiveCommand.Create(Of String)(Sub(m) PsdTextImport = m)
             MoveEditorToolGroupUpCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, -1))
             MoveEditorToolGroupDownCommand = ReactiveCommand.Create(Of String)(Sub(k) MoveEditorToolGroup(k, 1))
@@ -2805,6 +2841,7 @@ Namespace ViewModels
             _savedViewerFitBehavior = _viewerFitBehavior
             _savedEditorFitBehavior = _editorFitBehavior
             _savedEditorStartupTool = _editorStartupTool
+            _savedEditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             _savedEditorToolGroupOrder = _editorToolGroupOrder
             _savedDefaultSaveFormat = _defaultSaveFormat
             _savedThumbnailQuality = _thumbnailQuality
@@ -2875,6 +2912,7 @@ Namespace ViewModels
             ViewerFitBehavior = _savedViewerFitBehavior
             EditorFitBehavior = _savedEditorFitBehavior
             EditorStartupTool = _savedEditorStartupTool
+            EditorAdjustmentsPanelOnLeft = _savedEditorAdjustmentsPanelOnLeft
             EditorToolGroupOrder = _savedEditorToolGroupOrder
             DefaultSaveFormat = _savedDefaultSaveFormat
             ThumbnailQuality = _savedThumbnailQuality
@@ -2973,6 +3011,7 @@ Namespace ViewModels
             ViewerFitBehavior = "Always"
             EditorFitBehavior = "Always"
             EditorStartupTool = "Selection"
+            EditorAdjustmentsPanelOnLeft = False
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             StartupImageMode = "Viewer"
@@ -3221,6 +3260,7 @@ Namespace ViewModels
             settings.EditorLayersPanelExpanded = _editorLayersPanelExpanded
             settings.EditorLayerThumbnails = _editorLayerThumbnails
             settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
+            settings.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
             settings.EditorStartupTool = _editorStartupTool
             settings.PsdTextImport = _psdTextImport
             settings.EditorToolGroupOrder = _editorToolGroupOrder
