@@ -1413,17 +1413,17 @@ Namespace ViewModels
             ' Knapp innerhalb der Anzeigekanten fragen: genau auf 100 liegt der Punkt auf der ersten
             ' Stelle AUSSERHALB des halboffenen Bereichs, und die Kette weist ihn ab.
             Const rand As Double = 0.05
-            Dim ecken = New (X As Double, Y As Double)() {
+            Dim corners = New (X As Double, Y As Double)() {
                 (rand, rand), (100.0 - rand, rand), (100.0 - rand, 100.0 - rand), (rand, 100.0 - rand)}
             Dim minX = Double.MaxValue, maxX = Double.MinValue
             Dim minY = Double.MaxValue, maxY = Double.MinValue
-            For Each ecke In ecken
-                Dim quelle = DisplayPercentToSourcePercent(ecke.X, ecke.Y)
-                If Not quelle.HasValue Then Return voll
-                minX = Math.Min(minX, quelle.Value.X)
-                maxX = Math.Max(maxX, quelle.Value.X)
-                minY = Math.Min(minY, quelle.Value.Y)
-                maxY = Math.Max(maxY, quelle.Value.Y)
+            For Each corner In corners
+                Dim source = DisplayPercentToSourcePercent(corner.X, corner.Y)
+                If Not source.HasValue Then Return voll
+                minX = Math.Min(minX, source.Value.X)
+                maxX = Math.Max(maxX, source.Value.X)
+                minY = Math.Min(minY, source.Value.Y)
+                maxY = Math.Max(maxY, source.Value.Y)
             Next
             If maxX - minX < 1.0 OrElse maxY - minY < 1.0 Then Return voll
 
@@ -1442,14 +1442,14 @@ Namespace ViewModels
             ' der sichtbare Bereich selbst. Bei einer Begradigung nicht - dann schrumpfen, bis die
             ' Ecken tragen. Zwoelf Halbierungsschritte reichen auf ein Viertelprozent genau.
             Dim mitteX = (minX + maxX) / 2.0, mitteY = (minY + maxY) / 2.0
-            Dim halbeBreite = (maxX - minX) / 2.0, halbeHoehe = (maxY - minY) / 2.0
+            Dim halfW = (maxX - minX) / 2.0, halfH = (maxY - minY) / 2.0
             Dim untenGut = 0.0, obenOffen = 1.0
-            If EnvelopeRectCornersVisible(mitteX, mitteY, halbeBreite, halbeHoehe, 1.0) Then
+            If EnvelopeRectCornersVisible(mitteX, mitteY, halfW, halfH, 1.0) Then
                 untenGut = 1.0
             Else
                 For schritt = 1 To 12
                     Dim mitte = (untenGut + obenOffen) / 2.0
-                    If EnvelopeRectCornersVisible(mitteX, mitteY, halbeBreite, halbeHoehe, mitte) Then
+                    If EnvelopeRectCornersVisible(mitteX, mitteY, halfW, halfH, mitte) Then
                         untenGut = mitte
                     Else
                         obenOffen = mitte
@@ -1459,21 +1459,21 @@ Namespace ViewModels
             ' Kein tragfaehiges Rechteck gefunden: dann lieber der ganze Quellraum wie bisher, statt
             ' eines Bezugs, den niemand nachvollziehen kann.
             If untenGut < 0.05 Then Return voll
-            Return (mitteX - halbeBreite * untenGut, mitteY - halbeHoehe * untenGut,
-                    halbeBreite * 2.0 * untenGut, halbeHoehe * 2.0 * untenGut)
+            Return (mitteX - halfW * untenGut, mitteY - halfH * untenGut,
+                    halfW * 2.0 * untenGut, halfH * 2.0 * untenGut)
         End Function
 
-        ''' <summary>Haben alle vier Ecken des um <paramref name="faktor"/> geschrumpften Rechtecks
+        ''' <summary>Haben alle vier Ecken des um <paramref name="factor"/> geschrumpften Rechtecks
         ''' einen Anzeigeort?</summary>
         Private Function EnvelopeRectCornersVisible(centerX As Double, centerY As Double,
                                                     halfWidth As Double, halfHeight As Double,
-                                                    faktor As Double) As Boolean
-            Dim hw = halfWidth * faktor, hh = halfHeight * faktor
+                                                    factor As Double) As Boolean
+            Dim hw = halfWidth * factor, hh = halfHeight * factor
             If hw <= 0.001 OrElse hh <= 0.001 Then Return False
-            For Each ecke In New (X As Double, Y As Double)() {
+            For Each corner In New (X As Double, Y As Double)() {
                 (centerX - hw, centerY - hh), (centerX + hw, centerY - hh),
                 (centerX + hw, centerY + hh), (centerX - hw, centerY + hh)}
-                If Not SourcePercentToDisplayPercent(ecke.X, ecke.Y).HasValue Then Return False
+                If Not SourcePercentToDisplayPercent(corner.X, corner.Y).HasValue Then Return False
             Next
             Return True
         End Function
