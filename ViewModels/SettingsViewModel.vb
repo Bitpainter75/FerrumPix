@@ -711,7 +711,6 @@ Namespace ViewModels
                 value = LocalizationService.NormalizeLanguageMode(value)
                 If _languageMode = value Then Return
                 Me.RaiseAndSetIfChanged(_languageMode, value)
-                RaiseLanguageModeProperties()
                 Me.RaisePropertyChanged(NameOf(SelectedLanguage))
                 LocalizationService.LanguageMode = value
                 SaveLanguageSettings()
@@ -835,53 +834,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property IsLanguageSystem As Boolean
-            Get
-                Return _languageMode = "System"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsLanguageGerman As Boolean
-            Get
-                Return _languageMode = "German"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsLanguageEnglish As Boolean
-            Get
-                Return _languageMode = "English"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsLanguageSpanish As Boolean
-            Get
-                Return _languageMode = "Spanish"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsLanguageFrench As Boolean
-            Get
-                Return _languageMode = "French"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsLanguageItalian As Boolean
-            Get
-                Return _languageMode = "Italian"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsLanguagePortuguese As Boolean
-            Get
-                Return _languageMode = "Portuguese"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsLanguageChinese As Boolean
-            Get
-                Return _languageMode = "Chinese"
-            End Get
-        End Property
+        ' Fuer die Sprache gibt es KEINE Eigenschaft je Sprache mehr. Die Auswahl haengt an
+        ' LanguageOptions; eine solche Liste haette bei jeder neuen Sprache ergaenzt werden
+        ' muessen und waere still unvollstaendig geblieben.
 
         Public ReadOnly Property IsStartupGalleryMode As Boolean
             Get
@@ -3576,23 +3531,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsYellowAccent))
         End Sub
 
-        Private Sub RaiseLanguageModeProperties()
-            Me.RaisePropertyChanged(NameOf(IsLanguageSystem))
-            Me.RaisePropertyChanged(NameOf(IsLanguageGerman))
-            Me.RaisePropertyChanged(NameOf(IsLanguageEnglish))
-            Me.RaisePropertyChanged(NameOf(IsLanguageSpanish))
-            Me.RaisePropertyChanged(NameOf(IsLanguageFrench))
-            Me.RaisePropertyChanged(NameOf(IsLanguageItalian))
-            Me.RaisePropertyChanged(NameOf(IsLanguagePortuguese))
-            Me.RaisePropertyChanged(NameOf(IsLanguageChinese))
-        End Sub
-
         ''' <summary>Nach einem Sprachwechsel. Der Baumdurchlauf ueber das Fenster erreicht nur
         ''' LITERALE in der Anzeige - alles, was aus DATEN kommt, muss hier nachgezogen werden:
         ''' Sammlungen, die ihren Text in sich tragen, werden neu gebaut, berechnete Texte neu
         ''' gemeldet. Ohne das stand die halbe Einstellungsseite weiter in der alten Sprache.</summary>
         Public Sub RefreshLocalization()
-            RaiseLanguageModeProperties()
             BuildAdjustmentGroupItems()
             BuildModelGroups()
             BuildLanguageOptions()

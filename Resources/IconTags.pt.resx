@@ -12,7 +12,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  
   <data name="a_b_2" xml:space="preserve">
     <value>A B 2</value>
   </data>
@@ -122,16 +121,16 @@
     <value>Afiliado</value>
   </data>
   <data name="ai_agent" xml:space="preserve">
-    <value>AI Agente</value>
+    <value>IA Agente</value>
   </data>
   <data name="ai_agents" xml:space="preserve">
-    <value>AI Agentes</value>
+    <value>IA Agentes</value>
   </data>
   <data name="ai_gateway" xml:space="preserve">
-    <value>AI Gateway</value>
+    <value>IA Gateway</value>
   </data>
   <data name="ai" xml:space="preserve">
-    <value>AI</value>
+    <value>IA</value>
   </data>
   <data name="air_balloon" xml:space="preserve">
     <value>Ar Balão</value>
@@ -326,7 +325,7 @@
     <value>App Janela</value>
   </data>
   <data name="apple" xml:space="preserve">
-    <value>Apple</value>
+    <value>Maçã</value>
   </data>
   <data name="apps" xml:space="preserve">
     <value>Apps</value>
@@ -344,25 +343,25 @@
     <value>Poltrona</value>
   </data>
   <data name="arrow_autofit_content" xml:space="preserve">
-    <value>Seta Autofit Conteúdo</value>
+    <value>Seta Ajuste Automático Conteúdo</value>
   </data>
   <data name="arrow_autofit_down" xml:space="preserve">
-    <value>Seta Autofit Baixo</value>
+    <value>Seta Ajuste Automático Baixo</value>
   </data>
   <data name="arrow_autofit_height" xml:space="preserve">
-    <value>Seta Autofit Altura</value>
+    <value>Seta Ajuste Automático Altura</value>
   </data>
   <data name="arrow_autofit_left" xml:space="preserve">
-    <value>Seta Autofit Esquerda</value>
+    <value>Seta Ajuste Automático Esquerda</value>
   </data>
   <data name="arrow_autofit_right" xml:space="preserve">
-    <value>Seta Autofit Direita</value>
+    <value>Seta Ajuste Automático Direita</value>
   </data>
   <data name="arrow_autofit_up" xml:space="preserve">
-    <value>Seta Autofit Cima</value>
+    <value>Seta Ajuste Automático Cima</value>
   </data>
   <data name="arrow_autofit_width" xml:space="preserve">
-    <value>Seta Autofit Largura</value>
+    <value>Seta Ajuste Automático Largura</value>
   </data>
   <data name="arrow_back_up_double" xml:space="preserve">
     <value>Seta Voltar Cima Duplo</value>
@@ -791,19 +790,19 @@
     <value>Setas Diagonal</value>
   </data>
   <data name="arrows_diff" xml:space="preserve">
-    <value>Setas Diff</value>
+    <value>Setas Diferença</value>
   </data>
   <data name="arrows_double_ne_sw" xml:space="preserve">
-    <value>Setas Duplo Ne Sw</value>
+    <value>Setas Duplo Ne So</value>
   </data>
   <data name="arrows_double_nw_se" xml:space="preserve">
-    <value>Setas Duplo Nw Se</value>
+    <value>Setas Duplo No Se</value>
   </data>
   <data name="arrows_double_se_nw" xml:space="preserve">
-    <value>Setas Duplo Se Nw</value>
+    <value>Setas Duplo Se No</value>
   </data>
   <data name="arrows_double_sw_ne" xml:space="preserve">
-    <value>Setas Duplo Sw Ne</value>
+    <value>Setas Duplo So Ne</value>
   </data>
   <data name="arrows_down_up" xml:space="preserve">
     <value>Setas Baixo Cima</value>
@@ -908,22 +907,22 @@
     <value>Artigo</value>
   </data>
   <data name="aspect_ratio" xml:space="preserve">
-    <value>Aspect Ratio</value>
+    <value>Proporção Rácio</value>
   </data>
   <data name="assembly" xml:space="preserve">
-    <value>Assembly</value>
+    <value>Conjunto</value>
   </data>
   <data name="asset" xml:space="preserve">
-    <value>Asset</value>
+    <value>Elemento</value>
   </data>
   <data name="asterisk_simple" xml:space="preserve">
-    <value>Asterisco Simple</value>
+    <value>Asterisco Simples</value>
   </data>
   <data name="asterisk" xml:space="preserve">
     <value>Asterisco</value>
   </data>
   <data name="at" xml:space="preserve">
-    <value>At</value>
+    <value>Arroba</value>
   </data>
   <data name="atom_2" xml:space="preserve">
     <value>Átomo 2</value>
@@ -938,22 +937,22 @@
     <value>Aumentada Realidade</value>
   </data>
   <data name="auth_2fa" xml:space="preserve">
-    <value>Auth 2FA</value>
+    <value>Autenticação 2FA</value>
   </data>
   <data name="automatic_gearbox" xml:space="preserve">
-    <value>Automatic Câmbio</value>
+    <value>Automático Câmbio</value>
   </data>
   <data name="automation" xml:space="preserve">
     <value>Automação</value>
   </data>
   <data name="avocado" xml:space="preserve">
-    <value>Avocado</value>
+    <value>Abacate</value>
   </data>
   <data name="award" xml:space="preserve">
     <value>Prêmio</value>
   </data>
   <data name="axe" xml:space="preserve">
-    <value>Axe</value>
+    <value>Machado</value>
   </data>
   <data name="axis_x" xml:space="preserve">
     <value>Eixo X</value>
@@ -965,22 +964,22 @@
     <value>Bebê Garrafa</value>
   </data>
   <data name="baby_carriage" xml:space="preserve">
-    <value>Bebê Carriage</value>
+    <value>Bebê Carrinho</value>
   </data>
   <data name="background" xml:space="preserve">
-    <value>Background</value>
+    <value>Fundo</value>
   </data>
   <data name="backhoe" xml:space="preserve">
-    <value>Backhoe</value>
+    <value>Escavadora</value>
   </data>
   <data name="backpack" xml:space="preserve">
-    <value>Backpack</value>
+    <value>Mochila</value>
   </data>
   <data name="backslash" xml:space="preserve">
-    <value>Backslash</value>
+    <value>Barra Invertida</value>
   </data>
   <data name="backspace" xml:space="preserve">
-    <value>Backspace</value>
+    <value>Retrocesso</value>
   </data>
   <data name="badge_vr" xml:space="preserve">
     <value>Distintivo VR</value>
@@ -992,16 +991,16 @@
     <value>Distintivo</value>
   </data>
   <data name="badges" xml:space="preserve">
-    <value>Badges</value>
+    <value>Emblemas</value>
   </data>
   <data name="baguette" xml:space="preserve">
-    <value>Baguette</value>
+    <value>Baguete</value>
   </data>
   <data name="ball_american_football" xml:space="preserve">
-    <value>Bola American Futebol</value>
+    <value>Bola Americano Futebol</value>
   </data>
   <data name="ball_baseball" xml:space="preserve">
-    <value>Bola Baseball</value>
+    <value>Bola Basebol</value>
   </data>
   <data name="ball_basketball" xml:space="preserve">
     <value>Bola Basquete</value>
@@ -1013,7 +1012,7 @@
     <value>Bola Futebol</value>
   </data>
   <data name="ball_tennis" xml:space="preserve">
-    <value>Bola Tennis</value>
+    <value>Bola Ténis</value>
   </data>
   <data name="ball_volleyball" xml:space="preserve">
     <value>Bola Vôlei</value>
@@ -1022,28 +1021,28 @@
     <value>Balão</value>
   </data>
   <data name="ballpen" xml:space="preserve">
-    <value>Ballpen</value>
+    <value>Esferográfica</value>
   </data>
   <data name="ban" xml:space="preserve">
-    <value>Ban</value>
+    <value>Proibição</value>
   </data>
   <data name="banana" xml:space="preserve">
     <value>Banana</value>
   </data>
   <data name="bandage" xml:space="preserve">
-    <value>Bandage</value>
+    <value>Ligadura</value>
   </data>
   <data name="barbell" xml:space="preserve">
-    <value>Barbell</value>
+    <value>Barra De Pesos</value>
   </data>
   <data name="barcode" xml:space="preserve">
     <value>Código de barras</value>
   </data>
   <data name="barrel" xml:space="preserve">
-    <value>Barrel</value>
+    <value>Barril</value>
   </data>
   <data name="barrier_block" xml:space="preserve">
-    <value>Barrier Block</value>
+    <value>Cancela Bloco</value>
   </data>
   <data name="baseline_density_large" xml:space="preserve">
     <value>Linha de base Densidade Large</value>
@@ -1121,10 +1120,10 @@
     <value>Cesta</value>
   </data>
   <data name="bat" xml:space="preserve">
-    <value>Bat</value>
+    <value>Morcego</value>
   </data>
   <data name="bath" xml:space="preserve">
-    <value>Bath</value>
+    <value>Banheira</value>
   </data>
   <data name="battery_1" xml:space="preserve">
     <value>Bateria 1</value>
@@ -1139,7 +1138,7 @@
     <value>Bateria 4</value>
   </data>
   <data name="battery_automotive" xml:space="preserve">
-    <value>Bateria Automotive</value>
+    <value>Bateria Veículo</value>
   </data>
   <data name="battery_charging_2" xml:space="preserve">
     <value>Bateria Carregando 2</value>
@@ -1187,7 +1186,7 @@
     <value>Bateria</value>
   </data>
   <data name="beach" xml:space="preserve">
-    <value>Beach</value>
+    <value>Praia</value>
   </data>
   <data name="bed_flat" xml:space="preserve">
     <value>Cama Plano</value>
@@ -1196,7 +1195,7 @@
     <value>Cama</value>
   </data>
   <data name="beer" xml:space="preserve">
-    <value>Beer</value>
+    <value>Cerveja</value>
   </data>
   <data name="bell_bolt" xml:space="preserve">
     <value>Sino Relâmpago</value>
@@ -1274,10 +1273,10 @@
     <value>Beta</value>
   </data>
   <data name="bible" xml:space="preserve">
-    <value>Bible</value>
+    <value>Bíblia</value>
   </data>
   <data name="bike" xml:space="preserve">
-    <value>Bike</value>
+    <value>Bicicleta</value>
   </data>
   <data name="binary_tree_2" xml:space="preserve">
     <value>Binário Árvore 2</value>
@@ -1289,13 +1288,13 @@
     <value>Binário</value>
   </data>
   <data name="binoculars" xml:space="preserve">
-    <value>Binoculars</value>
+    <value>Binóculos</value>
   </data>
   <data name="biohazard" xml:space="preserve">
-    <value>Biohazard</value>
+    <value>Risco Biológico</value>
   </data>
   <data name="blade" xml:space="preserve">
-    <value>Blade</value>
+    <value>Lâmina</value>
   </data>
   <data name="bleach_chlorine" xml:space="preserve">
     <value>Alvejante Cloro</value>
@@ -1307,22 +1306,22 @@
     <value>Alvejante</value>
   </data>
   <data name="blend_mode" xml:space="preserve">
-    <value>Blend Mode</value>
+    <value>Mistura Modo</value>
   </data>
   <data name="blender" xml:space="preserve">
     <value>Liquidificador</value>
   </data>
   <data name="blind" xml:space="preserve">
-    <value>Blind</value>
+    <value>Cego</value>
   </data>
   <data name="blob" xml:space="preserve">
-    <value>Blob</value>
+    <value>Mancha</value>
   </data>
   <data name="blockquote" xml:space="preserve">
-    <value>Blockquote</value>
+    <value>Bloco De Citação</value>
   </data>
   <data name="blocks" xml:space="preserve">
-    <value>Blocks</value>
+    <value>Blocos</value>
   </data>
   <data name="bluetooth_connected" xml:space="preserve">
     <value>Bluetooth Conectado</value>
@@ -1334,19 +1333,19 @@
     <value>Bluetooth</value>
   </data>
   <data name="blur" xml:space="preserve">
-    <value>Blur</value>
+    <value>Desfoque</value>
   </data>
   <data name="body_scan" xml:space="preserve">
-    <value>Body Escanear</value>
+    <value>Corpo Escanear</value>
   </data>
   <data name="bold" xml:space="preserve">
-    <value>Bold</value>
+    <value>Negrito</value>
   </data>
   <data name="bolt" xml:space="preserve">
     <value>Relâmpago</value>
   </data>
   <data name="bomb" xml:space="preserve">
-    <value>Bomb</value>
+    <value>Bomba</value>
   </data>
   <data name="bone" xml:space="preserve">
     <value>Osso</value>
@@ -1367,7 +1366,7 @@
     <value>Livro</value>
   </data>
   <data name="bookmark_ai" xml:space="preserve">
-    <value>Marcador AI</value>
+    <value>Marcador IA</value>
   </data>
   <data name="bookmark_edit" xml:space="preserve">
     <value>Marcador Editar</value>
@@ -1385,13 +1384,13 @@
     <value>Marcador</value>
   </data>
   <data name="bookmarks" xml:space="preserve">
-    <value>Bookmarks</value>
+    <value>Marcadores</value>
   </data>
   <data name="books" xml:space="preserve">
-    <value>Books</value>
+    <value>Livros</value>
   </data>
   <data name="boom" xml:space="preserve">
-    <value>Boom</value>
+    <value>Lança</value>
   </data>
   <data name="border_all" xml:space="preserve">
     <value>Borda Tudo</value>
@@ -1415,7 +1414,7 @@
     <value>Borda Canto Quadrado</value>
   </data>
   <data name="border_corners" xml:space="preserve">
-    <value>Borda Corners</value>
+    <value>Borda Cantos</value>
   </data>
   <data name="border_horizontal" xml:space="preserve">
     <value>Borda Horizontal</value>
@@ -1433,7 +1432,7 @@
     <value>Borda Nenhum</value>
   </data>
   <data name="border_outer" xml:space="preserve">
-    <value>Borda Outer</value>
+    <value>Borda Exterior</value>
   </data>
   <data name="border_radius" xml:space="preserve">
     <value>Borda Raio</value>
@@ -1445,7 +1444,7 @@
     <value>Borda Direita</value>
   </data>
   <data name="border_sides" xml:space="preserve">
-    <value>Borda Sides</value>
+    <value>Borda Lados</value>
   </data>
   <data name="border_style_2" xml:space="preserve">
     <value>Borda Estilo 2</value>
@@ -1475,13 +1474,13 @@
     <value>Salto Direita</value>
   </data>
   <data name="bow" xml:space="preserve">
-    <value>Bow</value>
+    <value>Arco</value>
   </data>
   <data name="bowl_chopsticks" xml:space="preserve">
-    <value>Tigela Chopsticks</value>
+    <value>Tigela Pauzinhos</value>
   </data>
   <data name="bowl_spoon" xml:space="preserve">
-    <value>Tigela Spoon</value>
+    <value>Tigela Colher</value>
   </data>
   <data name="bowl" xml:space="preserve">
     <value>Tigela</value>
@@ -1514,7 +1513,7 @@
     <value>Caixa Alinhar Topo</value>
   </data>
   <data name="box_margin" xml:space="preserve">
-    <value>Caixa Margin</value>
+    <value>Caixa Margem</value>
   </data>
   <data name="box_model_2" xml:space="preserve">
     <value>Caixa Modelo 2</value>
@@ -1556,13 +1555,13 @@
     <value>Caixa Múltiplo</value>
   </data>
   <data name="box_padding" xml:space="preserve">
-    <value>Caixa Padding</value>
+    <value>Caixa Espaçamento Interno</value>
   </data>
   <data name="box" xml:space="preserve">
     <value>Caixa</value>
   </data>
   <data name="braces" xml:space="preserve">
-    <value>Braces</value>
+    <value>Chavetas</value>
   </data>
   <data name="brackets_angle" xml:space="preserve">
     <value>Colchetes Ângulo</value>
@@ -1571,7 +1570,7 @@
     <value>Colchetes Conter Fim</value>
   </data>
   <data name="brackets_contain_start" xml:space="preserve">
-    <value>Colchetes Conter Start</value>
+    <value>Colchetes Conter Início</value>
   </data>
   <data name="brackets_contain" xml:space="preserve">
     <value>Colchetes Conter</value>
@@ -1583,7 +1582,7 @@
     <value>Braille</value>
   </data>
   <data name="brain" xml:space="preserve">
-    <value>Brain</value>
+    <value>Cérebro</value>
   </data>
   <data name="brand_4chan" xml:space="preserve">
     <value>Marca 4chan</value>
@@ -1661,16 +1660,16 @@
     <value>Marca Appgallery</value>
   </data>
   <data name="brand_apple_arcade" xml:space="preserve">
-    <value>Marca Apple Arcade</value>
+    <value>Marca Maçã Arcade</value>
   </data>
   <data name="brand_apple_news" xml:space="preserve">
-    <value>Marca Apple Notícias</value>
+    <value>Marca Maçã Notícias</value>
   </data>
   <data name="brand_apple_podcast" xml:space="preserve">
-    <value>Marca Apple Podcast</value>
+    <value>Marca Maçã Podcast</value>
   </data>
   <data name="brand_apple" xml:space="preserve">
-    <value>Marca Apple</value>
+    <value>Marca Maçã</value>
   </data>
   <data name="brand_appstore" xml:space="preserve">
     <value>Marca Appstore</value>
@@ -2702,7 +2701,7 @@
     <value>Marca Zwift</value>
   </data>
   <data name="bread" xml:space="preserve">
-    <value>Bread</value>
+    <value>Pão</value>
   </data>
   <data name="briefcase_2" xml:space="preserve">
     <value>Maleta 2</value>
@@ -2753,7 +2752,7 @@
     <value>Navegador</value>
   </data>
   <data name="brush" xml:space="preserve">
-    <value>Brush</value>
+    <value>Pincel</value>
   </data>
   <data name="bubble_minus" xml:space="preserve">
     <value>Bolha Menos</value>
@@ -2783,16 +2782,16 @@
     <value>Balde</value>
   </data>
   <data name="bug" xml:space="preserve">
-    <value>Bug</value>
+    <value>Escaravelho</value>
   </data>
   <data name="building_airport" xml:space="preserve">
-    <value>Prédio Airport</value>
+    <value>Prédio Aeroporto</value>
   </data>
   <data name="building_arch" xml:space="preserve">
-    <value>Prédio Arch</value>
+    <value>Prédio Arco</value>
   </data>
   <data name="building_bank" xml:space="preserve">
-    <value>Prédio Bank</value>
+    <value>Prédio Banco</value>
   </data>
   <data name="building_bridge_2" xml:space="preserve">
     <value>Prédio Ponte 2</value>
@@ -2810,28 +2809,28 @@
     <value>Prédio Carrossel</value>
   </data>
   <data name="building_castle" xml:space="preserve">
-    <value>Prédio Castle</value>
+    <value>Prédio Castelo</value>
   </data>
   <data name="building_church" xml:space="preserve">
-    <value>Prédio Church</value>
+    <value>Prédio Igreja</value>
   </data>
   <data name="building_circus" xml:space="preserve">
-    <value>Prédio Circus</value>
+    <value>Prédio Circo</value>
   </data>
   <data name="building_cog" xml:space="preserve">
     <value>Prédio Engrenagem</value>
   </data>
   <data name="building_community" xml:space="preserve">
-    <value>Prédio Community</value>
+    <value>Prédio Comunidade</value>
   </data>
   <data name="building_cottage" xml:space="preserve">
-    <value>Prédio Cottage</value>
+    <value>Prédio Casinha</value>
   </data>
   <data name="building_eiffel_tower" xml:space="preserve">
     <value>Prédio Eiffel Torre</value>
   </data>
   <data name="building_estate" xml:space="preserve">
-    <value>Prédio Estate</value>
+    <value>Prédio Herdade</value>
   </data>
   <data name="building_factory_2" xml:space="preserve">
     <value>Prédio Fábrica 2</value>
@@ -2840,43 +2839,43 @@
     <value>Prédio Fábrica</value>
   </data>
   <data name="building_fortress" xml:space="preserve">
-    <value>Prédio Fortress</value>
+    <value>Prédio Fortaleza</value>
   </data>
   <data name="building_hospital" xml:space="preserve">
     <value>Prédio Hospital</value>
   </data>
   <data name="building_lighthouse" xml:space="preserve">
-    <value>Prédio Lighthouse</value>
+    <value>Prédio Farol</value>
   </data>
   <data name="building_minus" xml:space="preserve">
     <value>Prédio Menos</value>
   </data>
   <data name="building_monument" xml:space="preserve">
-    <value>Prédio Monument</value>
+    <value>Prédio Monumento</value>
   </data>
   <data name="building_mosque" xml:space="preserve">
     <value>Prédio Mesquita</value>
   </data>
   <data name="building_pavilion" xml:space="preserve">
-    <value>Prédio Pavilion</value>
+    <value>Prédio Pavilhão</value>
   </data>
   <data name="building_plus" xml:space="preserve">
     <value>Prédio Mais</value>
   </data>
   <data name="building_skyscraper" xml:space="preserve">
-    <value>Prédio Skyscraper</value>
+    <value>Prédio Arranha-Céus</value>
   </data>
   <data name="building_stadium" xml:space="preserve">
-    <value>Prédio Stadium</value>
+    <value>Prédio Estádio</value>
   </data>
   <data name="building_store" xml:space="preserve">
-    <value>Prédio Store</value>
+    <value>Prédio Loja</value>
   </data>
   <data name="building_tunnel" xml:space="preserve">
-    <value>Prédio Tunnel</value>
+    <value>Prédio Túnel</value>
   </data>
   <data name="building_warehouse" xml:space="preserve">
-    <value>Prédio Warehouse</value>
+    <value>Prédio Armazém</value>
   </data>
   <data name="building_wind_turbine" xml:space="preserve">
     <value>Prédio Vento Turbina</value>
@@ -2885,7 +2884,7 @@
     <value>Prédio</value>
   </data>
   <data name="buildings" xml:space="preserve">
-    <value>Buildings</value>
+    <value>Edifícios</value>
   </data>
   <data name="bulb" xml:space="preserve">
     <value>Lâmpada</value>
@@ -2894,7 +2893,7 @@
     <value>Bulldozer</value>
   </data>
   <data name="burger" xml:space="preserve">
-    <value>Burger</value>
+    <value>Hambúrguer</value>
   </data>
   <data name="bus_stop" xml:space="preserve">
     <value>Ônibus Parar</value>
@@ -2903,22 +2902,22 @@
     <value>Ônibus</value>
   </data>
   <data name="businessplan" xml:space="preserve">
-    <value>Businessplan</value>
+    <value>Plano De Negócio</value>
   </data>
   <data name="butterfly" xml:space="preserve">
-    <value>Butterfly</value>
+    <value>Borboleta</value>
   </data>
   <data name="cactus" xml:space="preserve">
-    <value>Cactus</value>
+    <value>Cato</value>
   </data>
   <data name="cake_roll" xml:space="preserve">
-    <value>Bolo Roll</value>
+    <value>Bolo Rolo</value>
   </data>
   <data name="cake" xml:space="preserve">
     <value>Bolo</value>
   </data>
   <data name="calculator" xml:space="preserve">
-    <value>Calculator</value>
+    <value>Calculadora</value>
   </data>
   <data name="calendar_bolt" xml:space="preserve">
     <value>Calendário Relâmpago</value>
@@ -2948,7 +2947,7 @@
     <value>Calendário Baixo</value>
   </data>
   <data name="calendar_due" xml:space="preserve">
-    <value>Calendário Due</value>
+    <value>Calendário Prazo</value>
   </data>
   <data name="calendar_event" xml:space="preserve">
     <value>Calendário Evento</value>
@@ -2963,7 +2962,7 @@
     <value>Calendário Menos</value>
   </data>
   <data name="calendar_month" xml:space="preserve">
-    <value>Calendário Month</value>
+    <value>Calendário Mês</value>
   </data>
   <data name="calendar_pause" xml:space="preserve">
     <value>Calendário Pausar</value>
@@ -3008,7 +3007,7 @@
     <value>Calendário Usuário</value>
   </data>
   <data name="calendar_week" xml:space="preserve">
-    <value>Calendário Week</value>
+    <value>Calendário Semana</value>
   </data>
   <data name="calendar_x" xml:space="preserve">
     <value>Calendário X</value>
@@ -3017,7 +3016,7 @@
     <value>Calendário</value>
   </data>
   <data name="camera_ai" xml:space="preserve">
-    <value>Câmera AI</value>
+    <value>Câmera IA</value>
   </data>
   <data name="camera_bitcoin" xml:space="preserve">
     <value>Câmera Bitcoin</value>
@@ -3095,13 +3094,13 @@
     <value>Câmera</value>
   </data>
   <data name="camper" xml:space="preserve">
-    <value>Camper</value>
+    <value>Autocaravana</value>
   </data>
   <data name="campfire" xml:space="preserve">
-    <value>Campfire</value>
+    <value>Fogueira</value>
   </data>
   <data name="canary" xml:space="preserve">
-    <value>Canary</value>
+    <value>Canário</value>
   </data>
   <data name="cancel" xml:space="preserve">
     <value>Cancelar</value>
@@ -3110,16 +3109,16 @@
     <value>Vela</value>
   </data>
   <data name="candy" xml:space="preserve">
-    <value>Candy</value>
+    <value>Rebuçado</value>
   </data>
   <data name="cane" xml:space="preserve">
-    <value>Cane</value>
+    <value>Bengala</value>
   </data>
   <data name="cannabis" xml:space="preserve">
-    <value>Cannabis</value>
+    <value>Canábis</value>
   </data>
   <data name="cap_projecting" xml:space="preserve">
-    <value>Boné Projecting</value>
+    <value>Boné Saliente</value>
   </data>
   <data name="cap_rounded" xml:space="preserve">
     <value>Boné Arredondado</value>
@@ -3134,7 +3133,7 @@
     <value>Cápsula</value>
   </data>
   <data name="capture" xml:space="preserve">
-    <value>Capture</value>
+    <value>Capturar</value>
   </data>
   <data name="car_4wd" xml:space="preserve">
     <value>Carro 4wd</value>
@@ -3143,7 +3142,7 @@
     <value>Carro Guindaste</value>
   </data>
   <data name="car_crash" xml:space="preserve">
-    <value>Carro Crash</value>
+    <value>Carro Colisão</value>
   </data>
   <data name="car_door" xml:space="preserve">
     <value>Carro Porta</value>
@@ -3164,16 +3163,16 @@
     <value>Carro Ventilador</value>
   </data>
   <data name="car_garage" xml:space="preserve">
-    <value>Carro Garage</value>
+    <value>Carro Garagem</value>
   </data>
   <data name="car_lifter" xml:space="preserve">
-    <value>Carro Lifter</value>
+    <value>Carro Elevador</value>
   </data>
   <data name="car_off_road" xml:space="preserve">
-    <value>Carro Off Estrada</value>
+    <value>Carro Desligado Estrada</value>
   </data>
   <data name="car_suspension" xml:space="preserve">
-    <value>Carro Suspension</value>
+    <value>Carro Suspensão</value>
   </data>
   <data name="car_suv" xml:space="preserve">
     <value>Carro Suv</value>
@@ -3188,10 +3187,10 @@
     <value>Carambola</value>
   </data>
   <data name="caravan" xml:space="preserve">
-    <value>Caravan</value>
+    <value>Caravana</value>
   </data>
   <data name="cardboards" xml:space="preserve">
-    <value>Cardboards</value>
+    <value>Cartão</value>
   </data>
   <data name="cards" xml:space="preserve">
     <value>Cartas</value>
@@ -3221,7 +3220,7 @@
     <value>Carrossel Vertical</value>
   </data>
   <data name="carrot" xml:space="preserve">
-    <value>Carrot</value>
+    <value>Cenoura</value>
   </data>
   <data name="cash_banknote_edit" xml:space="preserve">
     <value>Dinheiro Cédula Editar</value>
@@ -3263,16 +3262,16 @@
     <value>Dinheiro Mais</value>
   </data>
   <data name="cash_register" xml:space="preserve">
-    <value>Dinheiro Register</value>
+    <value>Dinheiro Caixa</value>
   </data>
   <data name="cash" xml:space="preserve">
     <value>Dinheiro</value>
   </data>
   <data name="cast" xml:space="preserve">
-    <value>Cast</value>
+    <value>Transmitir</value>
   </data>
   <data name="cat" xml:space="preserve">
-    <value>Cat</value>
+    <value>Gato</value>
   </data>
   <data name="category_2" xml:space="preserve">
     <value>Categoria 2</value>
@@ -3314,16 +3313,16 @@
     <value>Certificado</value>
   </data>
   <data name="chair_director" xml:space="preserve">
-    <value>Chair Director</value>
+    <value>Cadeira Realizador</value>
   </data>
   <data name="chalkboard_teacher" xml:space="preserve">
-    <value>Quadro-negro Teacher</value>
+    <value>Quadro-negro Professor</value>
   </data>
   <data name="chalkboard" xml:space="preserve">
     <value>Quadro-negro</value>
   </data>
   <data name="charging_pile" xml:space="preserve">
-    <value>Carregando Pile</value>
+    <value>Carregando Pilha</value>
   </data>
   <data name="chart_arcs_3" xml:space="preserve">
     <value>Gráfico Arcos 3</value>
@@ -3359,13 +3358,13 @@
     <value>Gráfico Círculos</value>
   </data>
   <data name="chart_cohort" xml:space="preserve">
-    <value>Gráfico Cohort</value>
+    <value>Gráfico Coorte</value>
   </data>
   <data name="chart_column" xml:space="preserve">
     <value>Gráfico Coluna</value>
   </data>
   <data name="chart_covariate" xml:space="preserve">
-    <value>Gráfico Covariate</value>
+    <value>Gráfico Covariável</value>
   </data>
   <data name="chart_donut_2" xml:space="preserve">
     <value>Gráfico Rosca 2</value>
@@ -3389,16 +3388,16 @@
     <value>Gráfico Pontos</value>
   </data>
   <data name="chart_funnel" xml:space="preserve">
-    <value>Gráfico Funnel</value>
+    <value>Gráfico Funil</value>
   </data>
   <data name="chart_grid_dots" xml:space="preserve">
     <value>Gráfico Grade Pontos</value>
   </data>
   <data name="chart_histogram" xml:space="preserve">
-    <value>Gráfico Histogram</value>
+    <value>Gráfico Histograma</value>
   </data>
   <data name="chart_infographic" xml:space="preserve">
-    <value>Gráfico Infographic</value>
+    <value>Gráfico Infografia</value>
   </data>
   <data name="chart_line" xml:space="preserve">
     <value>Gráfico Linha</value>
@@ -3431,46 +3430,46 @@
     <value>Gráfico Dispersão</value>
   </data>
   <data name="chart_treemap" xml:space="preserve">
-    <value>Gráfico Treemap</value>
+    <value>Gráfico Mapa De Árvore</value>
   </data>
   <data name="check" xml:space="preserve">
     <value>Visto</value>
   </data>
   <data name="checkbox" xml:space="preserve">
-    <value>Checkbox</value>
+    <value>Caixa De Verificação</value>
   </data>
   <data name="checklist" xml:space="preserve">
-    <value>Checklist</value>
+    <value>Lista De Verificação</value>
   </data>
   <data name="checks" xml:space="preserve">
-    <value>Checks</value>
+    <value>Vistos</value>
   </data>
   <data name="checkup_list" xml:space="preserve">
-    <value>Checkup Lista</value>
+    <value>Exame Lista</value>
   </data>
   <data name="cheese" xml:space="preserve">
-    <value>Cheese</value>
+    <value>Queijo</value>
   </data>
   <data name="chef_hat" xml:space="preserve">
-    <value>Chef Hat</value>
+    <value>Chef Chapéu</value>
   </data>
   <data name="cherry" xml:space="preserve">
     <value>Cereja</value>
   </data>
   <data name="chess_bishop" xml:space="preserve">
-    <value>Xadrez Bishop</value>
+    <value>Xadrez Bispo</value>
   </data>
   <data name="chess_king" xml:space="preserve">
-    <value>Xadrez King</value>
+    <value>Xadrez Rei</value>
   </data>
   <data name="chess_knight" xml:space="preserve">
-    <value>Xadrez Knight</value>
+    <value>Xadrez Cavalo</value>
   </data>
   <data name="chess_queen" xml:space="preserve">
-    <value>Xadrez Queen</value>
+    <value>Xadrez Dama</value>
   </data>
   <data name="chess_rook" xml:space="preserve">
-    <value>Xadrez Rook</value>
+    <value>Xadrez Torre</value>
   </data>
   <data name="chess" xml:space="preserve">
     <value>Xadrez</value>
@@ -3542,7 +3541,7 @@
     <value>Chevrons Cima</value>
   </data>
   <data name="chisel" xml:space="preserve">
-    <value>Chisel</value>
+    <value>Cinzel</value>
   </data>
   <data name="chocolate" xml:space="preserve">
     <value>Chocolate</value>
@@ -4001,7 +4000,7 @@
     <value>Círculos</value>
   </data>
   <data name="circuit_ammeter" xml:space="preserve">
-    <value>Circuito Ammeter</value>
+    <value>Circuito Amperímetro</value>
   </data>
   <data name="circuit_battery" xml:space="preserve">
     <value>Circuito Bateria</value>
@@ -4010,10 +4009,10 @@
     <value>Circuito Lâmpada</value>
   </data>
   <data name="circuit_capacitor_polarized" xml:space="preserve">
-    <value>Circuito Capacitor Polarized</value>
+    <value>Circuito Condensador Polarizado</value>
   </data>
   <data name="circuit_capacitor" xml:space="preserve">
-    <value>Circuito Capacitor</value>
+    <value>Circuito Condensador</value>
   </data>
   <data name="circuit_cell_plus" xml:space="preserve">
     <value>Circuito Célula Mais</value>
@@ -4022,7 +4021,7 @@
     <value>Circuito Célula</value>
   </data>
   <data name="circuit_changeover" xml:space="preserve">
-    <value>Circuito Changeover</value>
+    <value>Circuito Comutador</value>
   </data>
   <data name="circuit_diode_zener" xml:space="preserve">
     <value>Circuito Diodo Zener</value>
@@ -4037,16 +4036,16 @@
     <value>Circuito Terra</value>
   </data>
   <data name="circuit_inductor" xml:space="preserve">
-    <value>Circuito Inductor</value>
+    <value>Circuito Bobina</value>
   </data>
   <data name="circuit_motor" xml:space="preserve">
     <value>Circuito Motor</value>
   </data>
   <data name="circuit_pushbutton" xml:space="preserve">
-    <value>Circuito Pushbutton</value>
+    <value>Circuito Botão De Pressão</value>
   </data>
   <data name="circuit_resistor" xml:space="preserve">
-    <value>Circuito Resistor</value>
+    <value>Circuito Resistência</value>
   </data>
   <data name="circuit_switch_closed" xml:space="preserve">
     <value>Circuito Interruptor Fechado</value>
@@ -4055,16 +4054,16 @@
     <value>Circuito Interruptor Abrir</value>
   </data>
   <data name="circuit_voltmeter" xml:space="preserve">
-    <value>Circuito Voltmeter</value>
+    <value>Circuito Voltímetro</value>
   </data>
   <data name="clear_all" xml:space="preserve">
     <value>Limpar Tudo</value>
   </data>
   <data name="clear_formatting" xml:space="preserve">
-    <value>Limpar Formatting</value>
+    <value>Limpar Formatação</value>
   </data>
   <data name="clef_staff" xml:space="preserve">
-    <value>Clave Staff</value>
+    <value>Clave Pauta</value>
   </data>
   <data name="clef" xml:space="preserve">
     <value>Clave</value>
@@ -4073,7 +4072,7 @@
     <value>Clique</value>
   </data>
   <data name="cliff_jumping" xml:space="preserve">
-    <value>Cliff Saltando</value>
+    <value>Falésia Saltando</value>
   </data>
   <data name="clipboard_check" xml:space="preserve">
     <value>Prancheta Visto</value>
@@ -4235,7 +4234,7 @@
     <value>Relógio</value>
   </data>
   <data name="clothes_rack" xml:space="preserve">
-    <value>Clothes Rack</value>
+    <value>Roupa Cabide</value>
   </data>
   <data name="cloud_bitcoin" xml:space="preserve">
     <value>Nuvem Bitcoin</value>
@@ -4256,7 +4255,7 @@
     <value>Nuvem Engrenagem</value>
   </data>
   <data name="cloud_computing" xml:space="preserve">
-    <value>Nuvem Computing</value>
+    <value>Nuvem Computação</value>
   </data>
   <data name="cloud_data_connection" xml:space="preserve">
     <value>Nuvem Dados Conexão</value>
@@ -4274,7 +4273,7 @@
     <value>Nuvem Exclamação</value>
   </data>
   <data name="cloud_fog" xml:space="preserve">
-    <value>Nuvem Fog</value>
+    <value>Nuvem Nevoeiro</value>
   </data>
   <data name="cloud_heart" xml:space="preserve">
     <value>Nuvem Coração</value>
@@ -4304,7 +4303,7 @@
     <value>Nuvem Interrogação</value>
   </data>
   <data name="cloud_rain" xml:space="preserve">
-    <value>Nuvem Rain</value>
+    <value>Nuvem Chuva</value>
   </data>
   <data name="cloud_search" xml:space="preserve">
     <value>Nuvem Buscar</value>
@@ -4340,10 +4339,10 @@
     <value>Trevo</value>
   </data>
   <data name="clubs" xml:space="preserve">
-    <value>Clubs</value>
+    <value>Paus</value>
   </data>
   <data name="code_ai" xml:space="preserve">
-    <value>Código AI</value>
+    <value>Código IA</value>
   </data>
   <data name="code_asterisk" xml:space="preserve">
     <value>Código Asterisco</value>
@@ -4376,13 +4375,13 @@
     <value>Código</value>
   </data>
   <data name="codeblock" xml:space="preserve">
-    <value>Codeblock</value>
+    <value>Bloco De Código</value>
   </data>
   <data name="coffee" xml:space="preserve">
-    <value>Coffee</value>
+    <value>Café</value>
   </data>
   <data name="coffin" xml:space="preserve">
-    <value>Coffin</value>
+    <value>Caixão</value>
   </data>
   <data name="coin_bitcoin" xml:space="preserve">
     <value>Moeda Bitcoin</value>
@@ -4397,16 +4396,16 @@
     <value>Moeda</value>
   </data>
   <data name="coins" xml:space="preserve">
-    <value>Coins</value>
+    <value>Moedas</value>
   </data>
   <data name="color_filter" xml:space="preserve">
     <value>Cor Filtro</value>
   </data>
   <data name="color_picker" xml:space="preserve">
-    <value>Cor Picker</value>
+    <value>Cor Conta-Gotas</value>
   </data>
   <data name="color_swatch" xml:space="preserve">
-    <value>Cor Swatch</value>
+    <value>Cor Amostra</value>
   </data>
   <data name="column_insert_left" xml:space="preserve">
     <value>Coluna Inserir Esquerda</value>
@@ -4430,16 +4429,16 @@
     <value>Colunas</value>
   </data>
   <data name="comet" xml:space="preserve">
-    <value>Comet</value>
+    <value>Cometa</value>
   </data>
   <data name="command" xml:space="preserve">
-    <value>Command</value>
+    <value>Comando</value>
   </data>
   <data name="compass" xml:space="preserve">
-    <value>Compass</value>
+    <value>Bússola</value>
   </data>
   <data name="components" xml:space="preserve">
-    <value>Components</value>
+    <value>Componentes</value>
   </data>
   <data name="cone_2" xml:space="preserve">
     <value>Cone 2</value>
@@ -4451,22 +4450,22 @@
     <value>Cone</value>
   </data>
   <data name="confetti" xml:space="preserve">
-    <value>Confetti</value>
+    <value>Confetes</value>
   </data>
   <data name="confucius" xml:space="preserve">
-    <value>Confucius</value>
+    <value>Confúcio</value>
   </data>
   <data name="congruent_to" xml:space="preserve">
-    <value>Congruent Para</value>
+    <value>Congruente Para</value>
   </data>
   <data name="connection" xml:space="preserve">
     <value>Conexão</value>
   </data>
   <data name="container" xml:space="preserve">
-    <value>Container</value>
+    <value>Contentor</value>
   </data>
   <data name="contract" xml:space="preserve">
-    <value>Contract</value>
+    <value>Contrato</value>
   </data>
   <data name="contrast_2" xml:space="preserve">
     <value>Contraste 2</value>
@@ -4475,7 +4474,7 @@
     <value>Contraste</value>
   </data>
   <data name="cooker" xml:space="preserve">
-    <value>Cooker</value>
+    <value>Fogão</value>
   </data>
   <data name="cookie_man" xml:space="preserve">
     <value>Biscoito Homem</value>
@@ -4553,10 +4552,10 @@
     <value>Canto Cima Direita</value>
   </data>
   <data name="cpu_2" xml:space="preserve">
-    <value>Cpu 2</value>
+    <value>Processador 2</value>
   </data>
   <data name="cpu" xml:space="preserve">
-    <value>Cpu</value>
+    <value>Processador</value>
   </data>
   <data name="crane" xml:space="preserve">
     <value>Guindaste</value>
@@ -4583,7 +4582,7 @@
     <value>Crédito Cartão Mão</value>
   </data>
   <data name="credit_card_pay" xml:space="preserve">
-    <value>Crédito Cartão Pay</value>
+    <value>Crédito Cartão Pagar</value>
   </data>
   <data name="credit_card_refund" xml:space="preserve">
     <value>Crédito Cartão Reembolso</value>
@@ -4592,10 +4591,10 @@
     <value>Crédito Cartão</value>
   </data>
   <data name="credits" xml:space="preserve">
-    <value>Credits</value>
+    <value>Saldo</value>
   </data>
   <data name="cricket" xml:space="preserve">
-    <value>Cricket</value>
+    <value>Críquete</value>
   </data>
   <data name="crop_1_1" xml:space="preserve">
     <value>Cortar 1 1</value>
@@ -4613,10 +4612,10 @@
     <value>Cortar 7 5</value>
   </data>
   <data name="crop_landscape" xml:space="preserve">
-    <value>Cortar Landscape</value>
+    <value>Cortar Horizontal</value>
   </data>
   <data name="crop_portrait" xml:space="preserve">
-    <value>Cortar Portrait</value>
+    <value>Cortar Vertical</value>
   </data>
   <data name="crop" xml:space="preserve">
     <value>Cortar</value>
@@ -4625,16 +4624,16 @@
     <value>Cruz</value>
   </data>
   <data name="crosshair" xml:space="preserve">
-    <value>Crosshair</value>
+    <value>Retículo</value>
   </data>
   <data name="crown" xml:space="preserve">
-    <value>Crown</value>
+    <value>Coroa</value>
   </data>
   <data name="crutches" xml:space="preserve">
-    <value>Crutches</value>
+    <value>Muletas</value>
   </data>
   <data name="crystal_ball" xml:space="preserve">
-    <value>Crystal Bola</value>
+    <value>Cristal Bola</value>
   </data>
   <data name="cube_3d_sphere" xml:space="preserve">
     <value>Cubo 3D Esfera</value>
@@ -4649,25 +4648,25 @@
     <value>Cubo Faísca</value>
   </data>
   <data name="cube_unfolded" xml:space="preserve">
-    <value>Cubo Unfolded</value>
+    <value>Cubo Planificado</value>
   </data>
   <data name="cube" xml:space="preserve">
     <value>Cubo</value>
   </data>
   <data name="cup" xml:space="preserve">
-    <value>Cup</value>
+    <value>Chávena</value>
   </data>
   <data name="curling" xml:space="preserve">
     <value>Curling</value>
   </data>
   <data name="curly_loop" xml:space="preserve">
-    <value>Curly Repetição</value>
+    <value>Chaveta Repetição</value>
   </data>
   <data name="currency_bitcoin" xml:space="preserve">
     <value>Divisa Bitcoin</value>
   </data>
   <data name="currency_cent" xml:space="preserve">
-    <value>Divisa Cent</value>
+    <value>Divisa Cêntimo</value>
   </data>
   <data name="currency_dollar" xml:space="preserve">
     <value>Divisa Dólar</value>
@@ -4679,7 +4678,7 @@
     <value>Divisa Euro</value>
   </data>
   <data name="currency_florin" xml:space="preserve">
-    <value>Divisa Florin</value>
+    <value>Divisa Florim</value>
   </data>
   <data name="currency_pound" xml:space="preserve">
     <value>Divisa Libra</value>
@@ -4688,13 +4687,13 @@
     <value>Divisa</value>
   </data>
   <data name="current_location" xml:space="preserve">
-    <value>Current Local</value>
+    <value>Corrente Local</value>
   </data>
   <data name="cursor_text" xml:space="preserve">
     <value>Cursor Texto</value>
   </data>
   <data name="cut" xml:space="preserve">
-    <value>Cut</value>
+    <value>Cortar</value>
   </data>
   <data name="cylinder_plus" xml:space="preserve">
     <value>Cilindro Mais</value>
@@ -4754,13 +4753,13 @@
     <value>Banco de dados</value>
   </data>
   <data name="deaf" xml:space="preserve">
-    <value>Deaf</value>
+    <value>Surdo</value>
   </data>
   <data name="decimal" xml:space="preserve">
     <value>Decimal</value>
   </data>
   <data name="deer" xml:space="preserve">
-    <value>Deer</value>
+    <value>Veado</value>
   </data>
   <data name="delta" xml:space="preserve">
     <value>Delta</value>
@@ -4772,10 +4771,10 @@
     <value>Dentário</value>
   </data>
   <data name="deselect" xml:space="preserve">
-    <value>Deselect</value>
+    <value>Desmarcar</value>
   </data>
   <data name="desk" xml:space="preserve">
-    <value>Desk</value>
+    <value>Secretária</value>
   </data>
   <data name="details" xml:space="preserve">
     <value>Detalhes</value>
@@ -4784,10 +4783,10 @@
     <value>Dispositivo 3D Câmera</value>
   </data>
   <data name="device_3d_lens" xml:space="preserve">
-    <value>Dispositivo 3D Lens</value>
+    <value>Dispositivo 3D Objetiva</value>
   </data>
   <data name="device_airpods_case" xml:space="preserve">
-    <value>Dispositivo Airpods Case</value>
+    <value>Dispositivo Airpods Estojo</value>
   </data>
   <data name="device_airpods" xml:space="preserve">
     <value>Dispositivo Airpods</value>
@@ -4799,13 +4798,13 @@
     <value>Dispositivo Análise</value>
   </data>
   <data name="device_audio_tape" xml:space="preserve">
-    <value>Dispositivo Audio Tape</value>
+    <value>Dispositivo Áudio Fita</value>
   </data>
   <data name="device_camera_phone" xml:space="preserve">
     <value>Dispositivo Câmera Telefone</value>
   </data>
   <data name="device_cctv" xml:space="preserve">
-    <value>Dispositivo Cctv</value>
+    <value>Dispositivo Videovigilância</value>
   </data>
   <data name="device_computer_camera_2" xml:space="preserve">
     <value>Dispositivo Computador Câmera 2</value>
@@ -4877,7 +4876,7 @@
     <value>Dispositivo Área de trabalho</value>
   </data>
   <data name="device_floppy" xml:space="preserve">
-    <value>Dispositivo Floppy</value>
+    <value>Dispositivo Disquete</value>
   </data>
   <data name="device_gamepad_2" xml:space="preserve">
     <value>Dispositivo Controle de jogo 2</value>
@@ -5072,10 +5071,10 @@
     <value>Dispositivo IPad</value>
   </data>
   <data name="device_landline_phone" xml:space="preserve">
-    <value>Dispositivo Landline Telefone</value>
+    <value>Dispositivo Fixo Telefone</value>
   </data>
   <data name="device_laptop" xml:space="preserve">
-    <value>Dispositivo Laptop</value>
+    <value>Dispositivo Portátil</value>
   </data>
   <data name="device_mobile_bolt" xml:space="preserve">
     <value>Dispositivo Celular Relâmpago</value>
@@ -5141,7 +5140,7 @@
     <value>Dispositivo Celular Cima</value>
   </data>
   <data name="device_mobile_vibration" xml:space="preserve">
-    <value>Dispositivo Celular Vibration</value>
+    <value>Dispositivo Celular Vibração</value>
   </data>
   <data name="device_mobile_x" xml:space="preserve">
     <value>Dispositivo Celular X</value>
@@ -5153,10 +5152,10 @@
     <value>Dispositivo Nintendo</value>
   </data>
   <data name="device_projector" xml:space="preserve">
-    <value>Dispositivo Projector</value>
+    <value>Dispositivo Projetor</value>
   </data>
   <data name="device_remote" xml:space="preserve">
-    <value>Dispositivo Remote</value>
+    <value>Dispositivo Telecomando</value>
   </data>
   <data name="device_screen" xml:space="preserve">
     <value>Dispositivo Tela</value>
@@ -5177,7 +5176,7 @@
     <value>Dispositivo Sim</value>
   </data>
   <data name="device_speaker" xml:space="preserve">
-    <value>Dispositivo Speaker</value>
+    <value>Dispositivo Altifalante</value>
   </data>
   <data name="device_tablet_bolt" xml:space="preserve">
     <value>Dispositivo Tablet Relâmpago</value>
@@ -5393,16 +5392,16 @@
     <value>Diabolô</value>
   </data>
   <data name="dialpad" xml:space="preserve">
-    <value>Dialpad</value>
+    <value>Teclado Numérico</value>
   </data>
   <data name="diamond" xml:space="preserve">
-    <value>Diamond</value>
+    <value>Losango</value>
   </data>
   <data name="diamonds" xml:space="preserve">
-    <value>Diamonds</value>
+    <value>Ouros</value>
   </data>
   <data name="diaper" xml:space="preserve">
-    <value>Diaper</value>
+    <value>Fralda</value>
   </data>
   <data name="dice_1" xml:space="preserve">
     <value>Dado 1</value>
@@ -5426,7 +5425,7 @@
     <value>Dado</value>
   </data>
   <data name="dimensions" xml:space="preserve">
-    <value>Dimensions</value>
+    <value>Dimensões</value>
   </data>
   <data name="direction_arrows" xml:space="preserve">
     <value>Direção Setas</value>
@@ -5441,7 +5440,7 @@
     <value>Direção</value>
   </data>
   <data name="directions" xml:space="preserve">
-    <value>Directions</value>
+    <value>Indicações</value>
   </data>
   <data name="disabled_2" xml:space="preserve">
     <value>Desativado 2</value>
@@ -5462,10 +5461,10 @@
     <value>Dividir</value>
   </data>
   <data name="dna_2" xml:space="preserve">
-    <value>Dna 2</value>
+    <value>Adn 2</value>
   </data>
   <data name="dna" xml:space="preserve">
-    <value>Dna</value>
+    <value>Adn</value>
   </data>
   <data name="dog_bowl" xml:space="preserve">
     <value>Cachorro Tigela</value>
@@ -5474,10 +5473,10 @@
     <value>Cachorro</value>
   </data>
   <data name="door_enter" xml:space="preserve">
-    <value>Porta Enter</value>
+    <value>Porta Entrada</value>
   </data>
   <data name="door_exit" xml:space="preserve">
-    <value>Porta Exit</value>
+    <value>Porta Saída</value>
   </data>
   <data name="door_hanger" xml:space="preserve">
     <value>Porta Cabide</value>
@@ -5582,19 +5581,19 @@
     <value>Gota</value>
   </data>
   <data name="droplets" xml:space="preserve">
-    <value>Droplets</value>
+    <value>Gotas</value>
   </data>
   <data name="dual_screen" xml:space="preserve">
-    <value>Dual Tela</value>
+    <value>Duplo Tela</value>
   </data>
   <data name="dumbbell" xml:space="preserve">
-    <value>Dumbbell</value>
+    <value>Haltere</value>
   </data>
   <data name="dumpling" xml:space="preserve">
-    <value>Dumpling</value>
+    <value>Bolinho</value>
   </data>
   <data name="e_passport" xml:space="preserve">
-    <value>E Passport</value>
+    <value>E Passaporte</value>
   </data>
   <data name="ear_scan" xml:space="preserve">
     <value>Orelha Escanear</value>
@@ -5603,13 +5602,13 @@
     <value>Orelha</value>
   </data>
   <data name="earphone_bluetooth" xml:space="preserve">
-    <value>Earphone Bluetooth</value>
+    <value>Auricular Bluetooth</value>
   </data>
   <data name="ease_in_control_point" xml:space="preserve">
     <value>Suavização Dentro Controle Ponto</value>
   </data>
   <data name="ease_in_out_control_points" xml:space="preserve">
-    <value>Suavização Dentro Fora Controle Points</value>
+    <value>Suavização Dentro Fora Controle Pontos</value>
   </data>
   <data name="ease_in_out" xml:space="preserve">
     <value>Suavização Dentro Fora</value>
@@ -5630,34 +5629,34 @@
     <value>Editar</value>
   </data>
   <data name="egg_cracked" xml:space="preserve">
-    <value>Ovo Cracked</value>
+    <value>Ovo Rachado</value>
   </data>
   <data name="egg_fried" xml:space="preserve">
-    <value>Ovo Fried</value>
+    <value>Ovo Estrelado</value>
   </data>
   <data name="egg" xml:space="preserve">
     <value>Ovo</value>
   </data>
   <data name="eggs" xml:space="preserve">
-    <value>Eggs</value>
+    <value>Ovos</value>
   </data>
   <data name="elevator" xml:space="preserve">
-    <value>Elevator</value>
+    <value>Elevador</value>
   </data>
   <data name="email_stamp" xml:space="preserve">
     <value>Email Carimbo</value>
   </data>
   <data name="emergency_bed" xml:space="preserve">
-    <value>Emergency Cama</value>
+    <value>Emergência Cama</value>
   </data>
   <data name="empathize" xml:space="preserve">
-    <value>Empathize</value>
+    <value>Empatia</value>
   </data>
   <data name="emphasis" xml:space="preserve">
-    <value>Emphasis</value>
+    <value>Ênfase</value>
   </data>
   <data name="engine" xml:space="preserve">
-    <value>Engine</value>
+    <value>Motor</value>
   </data>
   <data name="equal_double" xml:space="preserve">
     <value>Igual Duplo</value>
@@ -5669,7 +5668,7 @@
     <value>Igual</value>
   </data>
   <data name="eraser" xml:space="preserve">
-    <value>Eraser</value>
+    <value>Borracha</value>
   </data>
   <data name="error_404" xml:space="preserve">
     <value>Erro 404</value>
@@ -5693,10 +5692,10 @@
     <value>Exclamação Marca</value>
   </data>
   <data name="exercise_ball" xml:space="preserve">
-    <value>Exercise Bola</value>
+    <value>Exercício Bola</value>
   </data>
   <data name="explicit" xml:space="preserve">
-    <value>Explicit</value>
+    <value>Explícito</value>
   </data>
   <data name="exposure_0" xml:space="preserve">
     <value>Exposição 0</value>
@@ -5717,7 +5716,7 @@
     <value>Exposição</value>
   </data>
   <data name="external_link" xml:space="preserve">
-    <value>External Link</value>
+    <value>Externo Ligação</value>
   </data>
   <data name="eye_bitcoin" xml:space="preserve">
     <value>Olho Bitcoin</value>
@@ -5816,16 +5815,16 @@
     <value>Rosto Máscara</value>
   </data>
   <data name="fall" xml:space="preserve">
-    <value>Fall</value>
+    <value>Queda</value>
   </data>
   <data name="favicon" xml:space="preserve">
     <value>Favicon</value>
   </data>
   <data name="feather" xml:space="preserve">
-    <value>Feather</value>
+    <value>Pena</value>
   </data>
   <data name="fence" xml:space="preserve">
-    <value>Fence</value>
+    <value>Cerca</value>
   </data>
   <data name="ferry" xml:space="preserve">
     <value>Ferry</value>
@@ -5837,7 +5836,7 @@
     <value>Arquivo 3D</value>
   </data>
   <data name="file_ai" xml:space="preserve">
-    <value>Arquivo AI</value>
+    <value>Arquivo IA</value>
   </data>
   <data name="file_alert" xml:space="preserve">
     <value>Arquivo Alerta</value>
@@ -5885,16 +5884,16 @@
     <value>Arquivo Delta</value>
   </data>
   <data name="file_description" xml:space="preserve">
-    <value>Arquivo Description</value>
+    <value>Arquivo Descrição</value>
   </data>
   <data name="file_diff" xml:space="preserve">
-    <value>Arquivo Diff</value>
+    <value>Arquivo Diferença</value>
   </data>
   <data name="file_digit" xml:space="preserve">
-    <value>Arquivo Digit</value>
+    <value>Arquivo Dígito</value>
   </data>
   <data name="file_dislike" xml:space="preserve">
-    <value>Arquivo Dislike</value>
+    <value>Arquivo Polegar Para Baixo</value>
   </data>
   <data name="file_dollar" xml:space="preserve">
     <value>Arquivo Dólar</value>
@@ -5939,7 +5938,7 @@
     <value>Arquivo Lambda</value>
   </data>
   <data name="file_like" xml:space="preserve">
-    <value>Arquivo Like</value>
+    <value>Arquivo Polegar Para Cima</value>
   </data>
   <data name="file_minus" xml:space="preserve">
     <value>Arquivo Menos</value>
@@ -5957,7 +5956,7 @@
     <value>Arquivo Lápis</value>
   </data>
   <data name="file_percent" xml:space="preserve">
-    <value>Arquivo Percent</value>
+    <value>Arquivo Percentagem</value>
   </data>
   <data name="file_phone" xml:space="preserve">
     <value>Arquivo Telefone</value>
@@ -5999,7 +5998,7 @@
     <value>Arquivo Faísca</value>
   </data>
   <data name="file_spreadsheet" xml:space="preserve">
-    <value>Arquivo Spreadsheet</value>
+    <value>Arquivo Folha De Cálculo</value>
   </data>
   <data name="file_stack" xml:space="preserve">
     <value>Arquivo Pilha</value>
@@ -6011,7 +6010,7 @@
     <value>Arquivo Link simbólico</value>
   </data>
   <data name="file_text_ai" xml:space="preserve">
-    <value>Arquivo Texto AI</value>
+    <value>Arquivo Texto IA</value>
   </data>
   <data name="file_text_shield" xml:space="preserve">
     <value>Arquivo Texto Escudo</value>
@@ -6110,7 +6109,7 @@
     <value>Arquivo</value>
   </data>
   <data name="files" xml:space="preserve">
-    <value>Files</value>
+    <value>Ficheiros</value>
   </data>
   <data name="filter_2_bolt" xml:space="preserve">
     <value>Filtro 2 Relâmpago</value>
@@ -6245,7 +6244,7 @@
     <value>Filtro</value>
   </data>
   <data name="filters" xml:space="preserve">
-    <value>Filters</value>
+    <value>Filtros</value>
   </data>
   <data name="fingerprint_scan" xml:space="preserve">
     <value>Impressão digital Escanear</value>
@@ -6254,13 +6253,13 @@
     <value>Impressão digital</value>
   </data>
   <data name="fire_extinguisher" xml:space="preserve">
-    <value>Fogo Extinguisher</value>
+    <value>Fogo Extintor</value>
   </data>
   <data name="fire_hydrant" xml:space="preserve">
-    <value>Fogo Hydrant</value>
+    <value>Fogo Marco De Água</value>
   </data>
   <data name="firetruck" xml:space="preserve">
-    <value>Firetruck</value>
+    <value>Carro De Bombeiros</value>
   </data>
   <data name="firewall_check" xml:space="preserve">
     <value>Firewall Visto</value>
@@ -6269,16 +6268,16 @@
     <value>Firewall Chama</value>
   </data>
   <data name="first_aid_kit" xml:space="preserve">
-    <value>Primeiro Aid Kit</value>
+    <value>Primeiro Socorros Estojo</value>
   </data>
   <data name="fish_bone" xml:space="preserve">
     <value>Peixe Osso</value>
   </data>
   <data name="fish_christianity" xml:space="preserve">
-    <value>Peixe Christianity</value>
+    <value>Peixe Cristianismo</value>
   </data>
   <data name="fish_hook" xml:space="preserve">
-    <value>Peixe Hook</value>
+    <value>Peixe Anzol</value>
   </data>
   <data name="fish" xml:space="preserve">
     <value>Peixe</value>
@@ -6362,7 +6361,7 @@
     <value>Chama</value>
   </data>
   <data name="flare" xml:space="preserve">
-    <value>Flare</value>
+    <value>Clarão</value>
   </data>
   <data name="flask_2" xml:space="preserve">
     <value>Frasco 2</value>
@@ -6392,10 +6391,10 @@
     <value>Flutuante Direita</value>
   </data>
   <data name="flood" xml:space="preserve">
-    <value>Flood</value>
+    <value>Inundação</value>
   </data>
   <data name="flower" xml:space="preserve">
-    <value>Flower</value>
+    <value>Flor</value>
   </data>
   <data name="focus_2" xml:space="preserve">
     <value>Foco 2</value>
@@ -6404,7 +6403,7 @@
     <value>Foco Auto</value>
   </data>
   <data name="focus_centered" xml:space="preserve">
-    <value>Foco Centered</value>
+    <value>Foco Centrado</value>
   </data>
   <data name="focus" xml:space="preserve">
     <value>Foco</value>
@@ -6488,10 +6487,10 @@
     <value>Pasta</value>
   </data>
   <data name="folders" xml:space="preserve">
-    <value>Folders</value>
+    <value>Pastas</value>
   </data>
   <data name="foodsteps" xml:space="preserve">
-    <value>Foodsteps</value>
+    <value>Pegadas</value>
   </data>
   <data name="forbid_2" xml:space="preserve">
     <value>Proibir 2</value>
@@ -6500,19 +6499,19 @@
     <value>Proibir</value>
   </data>
   <data name="forklift" xml:space="preserve">
-    <value>Forklift</value>
+    <value>Empilhadora</value>
   </data>
   <data name="forms" xml:space="preserve">
-    <value>Forms</value>
+    <value>Formulários</value>
   </data>
   <data name="fountain" xml:space="preserve">
-    <value>Fountain</value>
+    <value>Fonte</value>
   </data>
   <data name="frame" xml:space="preserve">
-    <value>Frame</value>
+    <value>Moldura</value>
   </data>
   <data name="free_rights" xml:space="preserve">
-    <value>Free Direitos</value>
+    <value>Livre Direitos</value>
   </data>
   <data name="freeze_column" xml:space="preserve">
     <value>Congelar Coluna</value>
@@ -6524,10 +6523,10 @@
     <value>Congelar Fileira</value>
   </data>
   <data name="fridge" xml:space="preserve">
-    <value>Fridge</value>
+    <value>Frigorífico</value>
   </data>
   <data name="friends" xml:space="preserve">
-    <value>Friends</value>
+    <value>Amigos</value>
   </data>
   <data name="frustum_plus" xml:space="preserve">
     <value>Tronco Mais</value>
@@ -6539,76 +6538,76 @@
     <value>Função</value>
   </data>
   <data name="galaxy" xml:space="preserve">
-    <value>Galaxy</value>
+    <value>Galáxia</value>
   </data>
   <data name="garden_cart" xml:space="preserve">
-    <value>Garden Carrinho</value>
+    <value>Jardim Carrinho</value>
   </data>
   <data name="gas_station" xml:space="preserve">
-    <value>Gas Station</value>
+    <value>Combustível Estação</value>
   </data>
   <data name="gauge" xml:space="preserve">
-    <value>Gauge</value>
+    <value>Indicador</value>
   </data>
   <data name="gavel" xml:space="preserve">
-    <value>Gavel</value>
+    <value>Martelo</value>
   </data>
   <data name="gender_agender" xml:space="preserve">
-    <value>Gênero Agender</value>
+    <value>Gênero Agénero</value>
   </data>
   <data name="gender_androgyne" xml:space="preserve">
-    <value>Gênero Androgyne</value>
+    <value>Gênero Andrógino</value>
   </data>
   <data name="gender_bigender" xml:space="preserve">
-    <value>Gênero Bigender</value>
+    <value>Gênero Bigénero</value>
   </data>
   <data name="gender_demiboy" xml:space="preserve">
-    <value>Gênero Demiboy</value>
+    <value>Gênero Demirapaz</value>
   </data>
   <data name="gender_demigirl" xml:space="preserve">
-    <value>Gênero Demigirl</value>
+    <value>Gênero Demirapariga</value>
   </data>
   <data name="gender_epicene" xml:space="preserve">
-    <value>Gênero Epicene</value>
+    <value>Gênero Epiceno</value>
   </data>
   <data name="gender_female" xml:space="preserve">
-    <value>Gênero Female</value>
+    <value>Gênero Feminino</value>
   </data>
   <data name="gender_femme" xml:space="preserve">
     <value>Gênero Femme</value>
   </data>
   <data name="gender_genderfluid" xml:space="preserve">
-    <value>Gênero Genderfluid</value>
+    <value>Gênero Género Fluido</value>
   </data>
   <data name="gender_genderless" xml:space="preserve">
-    <value>Gênero Genderless</value>
+    <value>Gênero Sem Género</value>
   </data>
   <data name="gender_genderqueer" xml:space="preserve">
-    <value>Gênero Genderqueer</value>
+    <value>Gênero Género Queer</value>
   </data>
   <data name="gender_hermaphrodite" xml:space="preserve">
-    <value>Gênero Hermaphrodite</value>
+    <value>Gênero Hermafrodita</value>
   </data>
   <data name="gender_intergender" xml:space="preserve">
-    <value>Gênero Intergender</value>
+    <value>Gênero Intergénero</value>
   </data>
   <data name="gender_male" xml:space="preserve">
-    <value>Gênero Male</value>
+    <value>Gênero Masculino</value>
   </data>
   <data name="gender_neutrois" xml:space="preserve">
     <value>Gênero Neutrois</value>
   </data>
   <data name="gender_third" xml:space="preserve">
-    <value>Gênero Third</value>
+    <value>Gênero Terceiro</value>
   </data>
   <data name="gender_transgender" xml:space="preserve">
-    <value>Gênero Transgender</value>
+    <value>Gênero Transgénero</value>
   </data>
   <data name="gender_trasvesti" xml:space="preserve">
-    <value>Gênero Trasvesti</value>
+    <value>Gênero Travesti</value>
   </data>
   <data name="geometry" xml:space="preserve">
-    <value>Geometry</value>
+    <value>Geometria</value>
   </data>
   <data name="ghost_2" xml:space="preserve">
     <value>Fantasma 2</value>
@@ -6629,7 +6628,7 @@
     <value>Presente</value>
   </data>
   <data name="git_branch_deleted" xml:space="preserve">
-    <value>Git Ramo Deleted</value>
+    <value>Git Ramo Eliminado</value>
   </data>
   <data name="git_branch" xml:space="preserve">
     <value>Git Ramo</value>
@@ -6641,7 +6640,7 @@
     <value>Git Commit</value>
   </data>
   <data name="git_compare" xml:space="preserve">
-    <value>Git Compare</value>
+    <value>Git Comparar</value>
   </data>
   <data name="git_fork" xml:space="preserve">
     <value>Git Bifurcação</value>
@@ -6653,10 +6652,10 @@
     <value>Git Puxar Solicitação Fechado</value>
   </data>
   <data name="git_pull_request_conflict" xml:space="preserve">
-    <value>Git Puxar Solicitação Conflict</value>
+    <value>Git Puxar Solicitação Conflito</value>
   </data>
   <data name="git_pull_request_draft" xml:space="preserve">
-    <value>Git Puxar Solicitação Draft</value>
+    <value>Git Puxar Solicitação Rascunho</value>
   </data>
   <data name="git_pull_request" xml:space="preserve">
     <value>Git Puxar Solicitação</value>
@@ -6665,7 +6664,7 @@
     <value>Gizmo</value>
   </data>
   <data name="glass_champagne" xml:space="preserve">
-    <value>Vidro Champagne</value>
+    <value>Vidro Champanhe</value>
   </data>
   <data name="glass_cocktail" xml:space="preserve">
     <value>Vidro Cocktail</value>
@@ -6680,10 +6679,10 @@
     <value>Vidro</value>
   </data>
   <data name="globe" xml:space="preserve">
-    <value>Globe</value>
+    <value>Globo</value>
   </data>
   <data name="go_game" xml:space="preserve">
-    <value>Go Game</value>
+    <value>Go Jogo</value>
   </data>
   <data name="golf" xml:space="preserve">
     <value>Golfe</value>
@@ -6692,16 +6691,16 @@
     <value>GPS</value>
   </data>
   <data name="gradienter" xml:space="preserve">
-    <value>Gradienter</value>
+    <value>Nível</value>
   </data>
   <data name="grain" xml:space="preserve">
-    <value>Grain</value>
+    <value>Grão</value>
   </data>
   <data name="grape" xml:space="preserve">
-    <value>Grape</value>
+    <value>Uva</value>
   </data>
   <data name="graph" xml:space="preserve">
-    <value>Graph</value>
+    <value>Grafo</value>
   </data>
   <data name="grave_2" xml:space="preserve">
     <value>Túmulo 2</value>
@@ -6719,10 +6718,10 @@
     <value>Grade Pontos</value>
   </data>
   <data name="grid_goldenratio" xml:space="preserve">
-    <value>Grade Goldenratio</value>
+    <value>Grade Proporção Áurea</value>
   </data>
   <data name="grid_pattern" xml:space="preserve">
-    <value>Grade Pattern</value>
+    <value>Grade Padrão</value>
   </data>
   <data name="grid_scan" xml:space="preserve">
     <value>Grade Escanear</value>
@@ -6731,7 +6730,7 @@
     <value>Grelha Bifurcação</value>
   </data>
   <data name="grill_spatula" xml:space="preserve">
-    <value>Grelha Spatula</value>
+    <value>Grelha Espátula</value>
   </data>
   <data name="grill" xml:space="preserve">
     <value>Grelha</value>
@@ -6743,13 +6742,13 @@
     <value>Punho Vertical</value>
   </data>
   <data name="growth" xml:space="preserve">
-    <value>Growth</value>
+    <value>Crescimento</value>
   </data>
   <data name="guitar_pick" xml:space="preserve">
-    <value>Guitar Escolher</value>
+    <value>Guitarra Escolher</value>
   </data>
   <data name="gymnastics" xml:space="preserve">
-    <value>Gymnastics</value>
+    <value>Ginástica</value>
   </data>
   <data name="h_1" xml:space="preserve">
     <value>H 1</value>
@@ -6770,7 +6769,7 @@
     <value>H 6</value>
   </data>
   <data name="hammer_drill" xml:space="preserve">
-    <value>Martelo Drill</value>
+    <value>Martelo Berbequim</value>
   </data>
   <data name="hammer" xml:space="preserve">
     <value>Martelo</value>
@@ -6791,13 +6790,13 @@
     <value>Mão Dedo</value>
   </data>
   <data name="hand_grab" xml:space="preserve">
-    <value>Mão Grab</value>
+    <value>Mão Agarrar</value>
   </data>
   <data name="hand_little_finger" xml:space="preserve">
-    <value>Mão Little Dedo</value>
+    <value>Mão Mindinho Dedo</value>
   </data>
   <data name="hand_love_you" xml:space="preserve">
-    <value>Mão Love You</value>
+    <value>Mão Amor Ti</value>
   </data>
   <data name="hand_middle_finger" xml:space="preserve">
     <value>Mão Meio Dedo</value>
@@ -6809,16 +6808,16 @@
     <value>Mão Anel Dedo</value>
   </data>
   <data name="hand_sanitizer" xml:space="preserve">
-    <value>Mão Sanitizer</value>
+    <value>Mão Desinfetante</value>
   </data>
   <data name="hand_stop" xml:space="preserve">
     <value>Mão Parar</value>
   </data>
   <data name="hand_three_fingers" xml:space="preserve">
-    <value>Mão Three Dedos</value>
+    <value>Mão Três Dedos</value>
   </data>
   <data name="hand_two_fingers" xml:space="preserve">
-    <value>Mão Two Dedos</value>
+    <value>Mão Dois Dedos</value>
   </data>
   <data name="hanger_2" xml:space="preserve">
     <value>Cabide 2</value>
@@ -6827,7 +6826,7 @@
     <value>Cabide</value>
   </data>
   <data name="hash" xml:space="preserve">
-    <value>Hash</value>
+    <value>Cardinal</value>
   </data>
   <data name="haze_moon" xml:space="preserve">
     <value>Névoa Lua</value>
@@ -6839,13 +6838,13 @@
     <value>Hdr</value>
   </data>
   <data name="heading" xml:space="preserve">
-    <value>Heading</value>
+    <value>Cabeçalho</value>
   </data>
   <data name="headphones" xml:space="preserve">
-    <value>Headphones</value>
+    <value>Auscultadores</value>
   </data>
   <data name="headset" xml:space="preserve">
-    <value>Headset</value>
+    <value>Auscultadores Com Microfone</value>
   </data>
   <data name="health_recognition" xml:space="preserve">
     <value>Saúde Reconhecimento</value>
@@ -6884,7 +6883,7 @@
     <value>Coração Exclamação</value>
   </data>
   <data name="heart_handshake" xml:space="preserve">
-    <value>Coração Handshake</value>
+    <value>Coração Aperto De Mão</value>
   </data>
   <data name="heart_minus" xml:space="preserve">
     <value>Coração Menos</value>
@@ -6902,7 +6901,7 @@
     <value>Coração Interrogação</value>
   </data>
   <data name="heart_rate_monitor" xml:space="preserve">
-    <value>Coração Rate Monitor</value>
+    <value>Coração Classificação Monitor</value>
   </data>
   <data name="heart_search" xml:space="preserve">
     <value>Coração Buscar</value>
@@ -6929,16 +6928,16 @@
     <value>Batimento</value>
   </data>
   <data name="hearts" xml:space="preserve">
-    <value>Hearts</value>
+    <value>Copas</value>
   </data>
   <data name="helicopter_landing" xml:space="preserve">
-    <value>Helicóptero Landing</value>
+    <value>Helicóptero Aterragem</value>
   </data>
   <data name="helicopter" xml:space="preserve">
     <value>Helicóptero</value>
   </data>
   <data name="helmet" xml:space="preserve">
-    <value>Helmet</value>
+    <value>Capacete</value>
   </data>
   <data name="help_circle" xml:space="preserve">
     <value>Ajuda Círculo</value>
@@ -7112,7 +7111,7 @@
     <value>Hexagonal Pirâmide</value>
   </data>
   <data name="hexagons" xml:space="preserve">
-    <value>Hexagons</value>
+    <value>Hexágonos</value>
   </data>
   <data name="hierarchy_2" xml:space="preserve">
     <value>Hierarquia 2</value>
@@ -7178,7 +7177,7 @@
     <value>Casa Infinito</value>
   </data>
   <data name="home_link" xml:space="preserve">
-    <value>Casa Link</value>
+    <value>Casa Ligação</value>
   </data>
   <data name="home_lock" xml:space="preserve">
     <value>Casa Cadeado</value>
@@ -7229,13 +7228,13 @@
     <value>Casa</value>
   </data>
   <data name="horse_toy" xml:space="preserve">
-    <value>Cavalo Toy</value>
+    <value>Cavalo Brinquedo</value>
   </data>
   <data name="horse" xml:space="preserve">
     <value>Cavalo</value>
   </data>
   <data name="horseshoe" xml:space="preserve">
-    <value>Horseshoe</value>
+    <value>Ferradura</value>
   </data>
   <data name="hospital_circle" xml:space="preserve">
     <value>Hospital Círculo</value>
@@ -7244,7 +7243,7 @@
     <value>Hospital</value>
   </data>
   <data name="hotel_service" xml:space="preserve">
-    <value>Hotel Service</value>
+    <value>Hotel Serviço</value>
   </data>
   <data name="hourglass_empty" xml:space="preserve">
     <value>Ampulheta Vazio</value>
@@ -7265,7 +7264,7 @@
     <value>Horas 24</value>
   </data>
   <data name="hula_hoop" xml:space="preserve">
-    <value>Hula Hoop</value>
+    <value>Hula Arco</value>
   </data>
   <data name="ice_cream_2" xml:space="preserve">
     <value>Gelo Creme 2</value>
@@ -7277,10 +7276,10 @@
     <value>Gelo Patinação</value>
   </data>
   <data name="iceberg" xml:space="preserve">
-    <value>Iceberg</value>
+    <value>Icebergue</value>
   </data>
   <data name="icons" xml:space="preserve">
-    <value>Icons</value>
+    <value>Ícones</value>
   </data>
   <data name="id_badge_2" xml:space="preserve">
     <value>ID Distintivo 2</value>
@@ -7292,16 +7291,16 @@
     <value>ID</value>
   </data>
   <data name="ikosaedr" xml:space="preserve">
-    <value>Ikosaedr</value>
+    <value>Icosaedro</value>
   </data>
   <data name="image_generation" xml:space="preserve">
-    <value>Imagem Generation</value>
+    <value>Imagem Geração</value>
   </data>
   <data name="image_in_picture" xml:space="preserve">
     <value>Imagem Dentro Imagem</value>
   </data>
   <data name="inbox" xml:space="preserve">
-    <value>Inbox</value>
+    <value>Caixa De Entrada</value>
   </data>
   <data name="indent_decrease" xml:space="preserve">
     <value>Recuo Diminuir</value>
@@ -7361,7 +7360,7 @@
     <value>Interno Sombra Topo</value>
   </data>
   <data name="input_ai" xml:space="preserve">
-    <value>Entrada AI</value>
+    <value>Entrada IA</value>
   </data>
   <data name="input_check" xml:space="preserve">
     <value>Entrada Visto</value>
@@ -7400,25 +7399,25 @@
     <value>Irregular Poliedro</value>
   </data>
   <data name="italic" xml:space="preserve">
-    <value>Italic</value>
+    <value>Itálico</value>
   </data>
   <data name="jacket" xml:space="preserve">
-    <value>Jacket</value>
+    <value>Casaco</value>
   </data>
   <data name="jetpack" xml:space="preserve">
-    <value>Jetpack</value>
+    <value>Mochila A Jato</value>
   </data>
   <data name="jetski" xml:space="preserve">
-    <value>Jetski</value>
+    <value>Mota De Água</value>
   </data>
   <data name="jewish_star" xml:space="preserve">
-    <value>Jewish Estrela</value>
+    <value>Judaico Estrela</value>
   </data>
   <data name="join_bevel" xml:space="preserve">
-    <value>Unir Bevel</value>
+    <value>Unir Chanfrado</value>
   </data>
   <data name="join_round" xml:space="preserve">
-    <value>Unir Round</value>
+    <value>Unir Redondo</value>
   </data>
   <data name="join_straight" xml:space="preserve">
     <value>Unir Reto</value>
@@ -7427,13 +7426,13 @@
     <value>Joker</value>
   </data>
   <data name="jump_rope" xml:space="preserve">
-    <value>Jump Rope</value>
+    <value>Salto Corda</value>
   </data>
   <data name="karate" xml:space="preserve">
-    <value>Karate</value>
+    <value>Karaté</value>
   </data>
   <data name="kayak" xml:space="preserve">
-    <value>Kayak</value>
+    <value>Caiaque</value>
   </data>
   <data name="kerning" xml:space="preserve">
     <value>Kerning</value>
@@ -7442,10 +7441,10 @@
     <value>Chave</value>
   </data>
   <data name="keyboard_hide" xml:space="preserve">
-    <value>Teclado Hide</value>
+    <value>Teclado Ocultar</value>
   </data>
   <data name="keyboard_show" xml:space="preserve">
-    <value>Teclado Show</value>
+    <value>Teclado Mostrar</value>
   </data>
   <data name="keyboard" xml:space="preserve">
     <value>Teclado</value>
@@ -7463,19 +7462,19 @@
     <value>Quadro-chave</value>
   </data>
   <data name="keyframes" xml:space="preserve">
-    <value>Keyframes</value>
+    <value>Fotogramas-Chave</value>
   </data>
   <data name="label_important" xml:space="preserve">
-    <value>Rótulo Important</value>
+    <value>Rótulo Importante</value>
   </data>
   <data name="label" xml:space="preserve">
     <value>Rótulo</value>
   </data>
   <data name="ladder" xml:space="preserve">
-    <value>Ladder</value>
+    <value>Escada</value>
   </data>
   <data name="ladle" xml:space="preserve">
-    <value>Ladle</value>
+    <value>Concha</value>
   </data>
   <data name="lambda" xml:space="preserve">
     <value>Lambda</value>
@@ -7487,7 +7486,7 @@
     <value>Luminária</value>
   </data>
   <data name="lane" xml:space="preserve">
-    <value>Lane</value>
+    <value>Faixa</value>
   </data>
   <data name="language_hiragana" xml:space="preserve">
     <value>Idioma Hiragana</value>
@@ -7517,10 +7516,10 @@
     <value>Louro Coroa</value>
   </data>
   <data name="lawn_mower" xml:space="preserve">
-    <value>Lawn Mower</value>
+    <value>Relva Corta-Relva</value>
   </data>
   <data name="layers_difference" xml:space="preserve">
-    <value>Camadas Difference</value>
+    <value>Camadas Diferença</value>
   </data>
   <data name="layers_intersect_2" xml:space="preserve">
     <value>Camadas Interseccionar 2</value>
@@ -7529,7 +7528,7 @@
     <value>Camadas Interseccionar</value>
   </data>
   <data name="layers_linked" xml:space="preserve">
-    <value>Camadas Linked</value>
+    <value>Camadas Ligado</value>
   </data>
   <data name="layers_selected_bottom" xml:space="preserve">
     <value>Camadas Selecionado Base</value>
@@ -7538,37 +7537,37 @@
     <value>Camadas Selecionado</value>
   </data>
   <data name="layers_subtract" xml:space="preserve">
-    <value>Camadas Subtract</value>
+    <value>Camadas Subtrair</value>
   </data>
   <data name="layers_union" xml:space="preserve">
-    <value>Camadas Union</value>
+    <value>Camadas União</value>
   </data>
   <data name="layout_2" xml:space="preserve">
-    <value>Layout 2</value>
+    <value>Disposição 2</value>
   </data>
   <data name="layout_align_bottom" xml:space="preserve">
-    <value>Layout Alinhar Base</value>
+    <value>Disposição Alinhar Base</value>
   </data>
   <data name="layout_align_center" xml:space="preserve">
-    <value>Layout Alinhar Centro</value>
+    <value>Disposição Alinhar Centro</value>
   </data>
   <data name="layout_align_left" xml:space="preserve">
-    <value>Layout Alinhar Esquerda</value>
+    <value>Disposição Alinhar Esquerda</value>
   </data>
   <data name="layout_align_middle" xml:space="preserve">
-    <value>Layout Alinhar Meio</value>
+    <value>Disposição Alinhar Meio</value>
   </data>
   <data name="layout_align_right" xml:space="preserve">
-    <value>Layout Alinhar Direita</value>
+    <value>Disposição Alinhar Direita</value>
   </data>
   <data name="layout_align_top" xml:space="preserve">
-    <value>Layout Alinhar Topo</value>
+    <value>Disposição Alinhar Topo</value>
   </data>
   <data name="layout_board_split" xml:space="preserve">
-    <value>Layout Quadro Separar</value>
+    <value>Disposição Quadro Separar</value>
   </data>
   <data name="layout_board" xml:space="preserve">
-    <value>Layout Quadro</value>
+    <value>Disposição Quadro</value>
   </data>
   <data name="layout_bottombar_collapse" xml:space="preserve">
     <value>Layout Barra inferior Recolher</value>
@@ -7583,37 +7582,37 @@
     <value>Layout Barra inferior</value>
   </data>
   <data name="layout_cards" xml:space="preserve">
-    <value>Layout Cartas</value>
+    <value>Disposição Cartas</value>
   </data>
   <data name="layout_collage" xml:space="preserve">
-    <value>Layout Collage</value>
+    <value>Disposição Colagem</value>
   </data>
   <data name="layout_columns" xml:space="preserve">
-    <value>Layout Colunas</value>
+    <value>Disposição Colunas</value>
   </data>
   <data name="layout_dashboard" xml:space="preserve">
-    <value>Layout Painel</value>
+    <value>Disposição Painel</value>
   </data>
   <data name="layout_distribute_horizontal" xml:space="preserve">
-    <value>Layout Distribuir Horizontal</value>
+    <value>Disposição Distribuir Horizontal</value>
   </data>
   <data name="layout_distribute_vertical" xml:space="preserve">
-    <value>Layout Distribuir Vertical</value>
+    <value>Disposição Distribuir Vertical</value>
   </data>
   <data name="layout_grid_add" xml:space="preserve">
-    <value>Layout Grade Adicionar</value>
+    <value>Disposição Grade Adicionar</value>
   </data>
   <data name="layout_grid_remove" xml:space="preserve">
-    <value>Layout Grade Remover</value>
+    <value>Disposição Grade Remover</value>
   </data>
   <data name="layout_grid" xml:space="preserve">
-    <value>Layout Grade</value>
+    <value>Disposição Grade</value>
   </data>
   <data name="layout_kanban" xml:space="preserve">
-    <value>Layout Kanban</value>
+    <value>Disposição Kanban</value>
   </data>
   <data name="layout_list" xml:space="preserve">
-    <value>Layout Lista</value>
+    <value>Disposição Lista</value>
   </data>
   <data name="layout_navbar_collapse" xml:space="preserve">
     <value>Layout Barra de navegação Recolher</value>
@@ -7628,7 +7627,7 @@
     <value>Layout Barra de navegação</value>
   </data>
   <data name="layout_rows" xml:space="preserve">
-    <value>Layout Rows</value>
+    <value>Disposição Linhas</value>
   </data>
   <data name="layout_sidebar_inactive" xml:space="preserve">
     <value>Layout Barra lateral Inativo</value>
@@ -7655,13 +7654,13 @@
     <value>Layout Barra lateral</value>
   </data>
   <data name="layout" xml:space="preserve">
-    <value>Layout</value>
+    <value>Disposição</value>
   </data>
   <data name="leaf_2" xml:space="preserve">
     <value>Folha 2</value>
   </data>
   <data name="leaf_maple" xml:space="preserve">
-    <value>Folha Maple</value>
+    <value>Folha Ácer</value>
   </data>
   <data name="leaf" xml:space="preserve">
     <value>Folha</value>
@@ -7688,13 +7687,13 @@
     <value>Biblioteca</value>
   </data>
   <data name="license" xml:space="preserve">
-    <value>License</value>
+    <value>Licença</value>
   </data>
   <data name="lifebuoy" xml:space="preserve">
-    <value>Lifebuoy</value>
+    <value>Boia</value>
   </data>
   <data name="lighter" xml:space="preserve">
-    <value>Lighter</value>
+    <value>Isqueiro</value>
   </data>
   <data name="line_dashed" xml:space="preserve">
     <value>Linha Tracejado</value>
@@ -7712,13 +7711,13 @@
     <value>Linha</value>
   </data>
   <data name="link_minus" xml:space="preserve">
-    <value>Link Menos</value>
+    <value>Ligação Menos</value>
   </data>
   <data name="link_plus" xml:space="preserve">
-    <value>Link Mais</value>
+    <value>Ligação Mais</value>
   </data>
   <data name="link" xml:space="preserve">
-    <value>Link</value>
+    <value>Ligação</value>
   </data>
   <data name="list_check" xml:space="preserve">
     <value>Lista Visto</value>
@@ -7748,7 +7747,7 @@
     <value>Ao vivo Ver</value>
   </data>
   <data name="load_balancer" xml:space="preserve">
-    <value>Load Balancer</value>
+    <value>Carga Equilibrador</value>
   </data>
   <data name="loader_2" xml:space="preserve">
     <value>Carregador 2</value>
@@ -7760,7 +7759,7 @@
     <value>Carregador 4</value>
   </data>
   <data name="loader_quarter" xml:space="preserve">
-    <value>Carregador Quarter</value>
+    <value>Carregador Quarto</value>
   </data>
   <data name="loader" xml:space="preserve">
     <value>Carregador</value>
@@ -7913,7 +7912,7 @@
     <value>Cadeado</value>
   </data>
   <data name="logic_and" xml:space="preserve">
-    <value>Lógica And</value>
+    <value>Lógica E</value>
   </data>
   <data name="logic_buffer" xml:space="preserve">
     <value>Lógica Buffer</value>
@@ -7928,7 +7927,7 @@
     <value>Lógica Não</value>
   </data>
   <data name="logic_or" xml:space="preserve">
-    <value>Lógica Or</value>
+    <value>Lógica Ou</value>
   </data>
   <data name="logic_xnor" xml:space="preserve">
     <value>Lógica Xnor</value>
@@ -7949,28 +7948,28 @@
     <value>Sair</value>
   </data>
   <data name="logs" xml:space="preserve">
-    <value>Logs</value>
+    <value>Registos</value>
   </data>
   <data name="lollipop" xml:space="preserve">
-    <value>Lollipop</value>
+    <value>Chupa-Chupa</value>
   </data>
   <data name="luggage" xml:space="preserve">
-    <value>Luggage</value>
+    <value>Bagagem</value>
   </data>
   <data name="lungs" xml:space="preserve">
-    <value>Lungs</value>
+    <value>Pulmões</value>
   </data>
   <data name="macro" xml:space="preserve">
     <value>Macro</value>
   </data>
   <data name="magnet" xml:space="preserve">
-    <value>Magnet</value>
+    <value>Íman</value>
   </data>
   <data name="magnetic" xml:space="preserve">
-    <value>Magnetic</value>
+    <value>Magnético</value>
   </data>
   <data name="mail_ai" xml:space="preserve">
-    <value>Correio AI</value>
+    <value>Correio IA</value>
   </data>
   <data name="mail_bitcoin" xml:space="preserve">
     <value>Correio Bitcoin</value>
@@ -8000,7 +7999,7 @@
     <value>Correio Exclamação</value>
   </data>
   <data name="mail_fast" xml:space="preserve">
-    <value>Correio Fast</value>
+    <value>Correio Rápido</value>
   </data>
   <data name="mail_forward" xml:space="preserve">
     <value>Correio Avançar</value>
@@ -8012,7 +8011,7 @@
     <value>Correio Menos</value>
   </data>
   <data name="mail_opened" xml:space="preserve">
-    <value>Correio Opened</value>
+    <value>Correio Aberto</value>
   </data>
   <data name="mail_pause" xml:space="preserve">
     <value>Correio Pausar</value>
@@ -8048,7 +8047,7 @@
     <value>Correio</value>
   </data>
   <data name="mailbox" xml:space="preserve">
-    <value>Mailbox</value>
+    <value>Caixa De Correio</value>
   </data>
   <data name="man" xml:space="preserve">
     <value>Homem</value>
@@ -8168,7 +8167,7 @@
     <value>Mapa Alfinete</value>
   </data>
   <data name="map_pins" xml:space="preserve">
-    <value>Mapa Pins</value>
+    <value>Mapa Alfinetes</value>
   </data>
   <data name="map_plus" xml:space="preserve">
     <value>Mapa Mais</value>
@@ -8216,19 +8215,19 @@
     <value>Marquise</value>
   </data>
   <data name="mars" xml:space="preserve">
-    <value>Mars</value>
+    <value>Marte</value>
   </data>
   <data name="mask" xml:space="preserve">
     <value>Máscara</value>
   </data>
   <data name="masks_theater" xml:space="preserve">
-    <value>Masks Teatro</value>
+    <value>Máscaras Teatro</value>
   </data>
   <data name="massage" xml:space="preserve">
-    <value>Massage</value>
+    <value>Massagem</value>
   </data>
   <data name="matchstick" xml:space="preserve">
-    <value>Matchstick</value>
+    <value>Fósforo</value>
   </data>
   <data name="math_1_divide_2" xml:space="preserve">
     <value>Matemática 1 Dividir 2</value>
@@ -8237,7 +8236,7 @@
     <value>Matemática 1 Dividir 3</value>
   </data>
   <data name="math_avg" xml:space="preserve">
-    <value>Matemática Avg</value>
+    <value>Matemática Média</value>
   </data>
   <data name="math_equal_greater" xml:space="preserve">
     <value>Matemática Igual Maior</value>
@@ -8261,7 +8260,7 @@
     <value>Matemática Integral</value>
   </data>
   <data name="math_integrals" xml:space="preserve">
-    <value>Matemática Integrals</value>
+    <value>Matemática Integrais</value>
   </data>
   <data name="math_lower" xml:space="preserve">
     <value>Matemática Menor</value>
@@ -8285,7 +8284,7 @@
     <value>Matemática Pi</value>
   </data>
   <data name="math_symbols" xml:space="preserve">
-    <value>Matemática Symbols</value>
+    <value>Matemática Símbolos</value>
   </data>
   <data name="math_x_divide_2" xml:space="preserve">
     <value>Matemática X Dividir 2</value>
@@ -8297,7 +8296,7 @@
     <value>Matemática X Dividir Y</value>
   </data>
   <data name="math_x_floor_divide_y" xml:space="preserve">
-    <value>Matemática X Floor Dividir Y</value>
+    <value>Matemática X Arredondar Para Baixo Dividir Y</value>
   </data>
   <data name="math_x_minus_x" xml:space="preserve">
     <value>Matemática X Menos X</value>
@@ -8330,7 +8329,7 @@
     <value>Maximizar</value>
   </data>
   <data name="meat" xml:space="preserve">
-    <value>Meat</value>
+    <value>Carne</value>
   </data>
   <data name="medal_2" xml:space="preserve">
     <value>Medalha 2</value>
@@ -8345,16 +8344,16 @@
     <value>Médico Cruz</value>
   </data>
   <data name="medicine_syrup" xml:space="preserve">
-    <value>Medicine Syrup</value>
+    <value>Medicamento Xarope</value>
   </data>
   <data name="meeple" xml:space="preserve">
-    <value>Meeple</value>
+    <value>Peça</value>
   </data>
   <data name="melon" xml:space="preserve">
-    <value>Melon</value>
+    <value>Melão</value>
   </data>
   <data name="menorah" xml:space="preserve">
-    <value>Menorah</value>
+    <value>Menorá</value>
   </data>
   <data name="menu_2" xml:space="preserve">
     <value>Menu 2</value>
@@ -8366,16 +8365,16 @@
     <value>Menu 4</value>
   </data>
   <data name="menu_deep" xml:space="preserve">
-    <value>Menu Deep</value>
+    <value>Menu Profundo</value>
   </data>
   <data name="menu_order" xml:space="preserve">
-    <value>Menu Order</value>
+    <value>Menu Ordem</value>
   </data>
   <data name="menu" xml:space="preserve">
     <value>Menu</value>
   </data>
   <data name="mesh" xml:space="preserve">
-    <value>Mesh</value>
+    <value>Malha</value>
   </data>
   <data name="message_2_bolt" xml:space="preserve">
     <value>Mensagem 2 Relâmpago</value>
@@ -8555,7 +8554,7 @@
     <value>Mensagem Interrogação</value>
   </data>
   <data name="message_reply" xml:space="preserve">
-    <value>Mensagem Reply</value>
+    <value>Mensagem Responder</value>
   </data>
   <data name="message_report" xml:space="preserve">
     <value>Mensagem Relatório</value>
@@ -8582,10 +8581,10 @@
     <value>Mensagem</value>
   </data>
   <data name="messages" xml:space="preserve">
-    <value>Messages</value>
+    <value>Mensagens</value>
   </data>
   <data name="meteor" xml:space="preserve">
-    <value>Meteor</value>
+    <value>Meteoro</value>
   </data>
   <data name="meter_cube" xml:space="preserve">
     <value>Medidor Cubo</value>
@@ -8594,13 +8593,13 @@
     <value>Medidor Quadrado</value>
   </data>
   <data name="metronome" xml:space="preserve">
-    <value>Metronome</value>
+    <value>Metrónomo</value>
   </data>
   <data name="michelin_bib_gourmand" xml:space="preserve">
     <value>Michelin Bib Gourmand</value>
   </data>
   <data name="michelin_star_green" xml:space="preserve">
-    <value>Michelin Estrela Green</value>
+    <value>Michelin Estrela Verde</value>
   </data>
   <data name="michelin_star" xml:space="preserve">
     <value>Michelin Estrela</value>
@@ -8618,10 +8617,10 @@
     <value>Microfone</value>
   </data>
   <data name="microscope" xml:space="preserve">
-    <value>Microscope</value>
+    <value>Microscópio</value>
   </data>
   <data name="microwave" xml:space="preserve">
-    <value>Microwave</value>
+    <value>Micro-Ondas</value>
   </data>
   <data name="middleware" xml:space="preserve">
     <value>Middleware</value>
@@ -8630,13 +8629,13 @@
     <value>Militar Prêmio</value>
   </data>
   <data name="military_rank" xml:space="preserve">
-    <value>Militar Rank</value>
+    <value>Militar Patente</value>
   </data>
   <data name="milk" xml:space="preserve">
-    <value>Milk</value>
+    <value>Leite</value>
   </data>
   <data name="milkshake" xml:space="preserve">
-    <value>Milkshake</value>
+    <value>Batido</value>
   </data>
   <data name="minimize" xml:space="preserve">
     <value>Minimizar</value>
@@ -8648,10 +8647,10 @@
     <value>Menos</value>
   </data>
   <data name="mist" xml:space="preserve">
-    <value>Mist</value>
+    <value>Bruma</value>
   </data>
   <data name="mobiledata" xml:space="preserve">
-    <value>Mobiledata</value>
+    <value>Dados Móveis</value>
   </data>
   <data name="moneybag_edit" xml:space="preserve">
     <value>Saco de dinheiro Editar</value>
@@ -8675,10 +8674,10 @@
     <value>Saco de dinheiro</value>
   </data>
   <data name="monkeybar" xml:space="preserve">
-    <value>Monkeybar</value>
+    <value>Barras</value>
   </data>
   <data name="mood_angry" xml:space="preserve">
-    <value>Humor Angry</value>
+    <value>Humor Zangado</value>
   </data>
   <data name="mood_annoyed_2" xml:space="preserve">
     <value>Humor Irritado 2</value>
@@ -8690,7 +8689,7 @@
     <value>Humor Bitcoin</value>
   </data>
   <data name="mood_boy" xml:space="preserve">
-    <value>Humor Boy</value>
+    <value>Humor Rapaz</value>
   </data>
   <data name="mood_check" xml:space="preserve">
     <value>Humor Visto</value>
@@ -8699,13 +8698,13 @@
     <value>Humor Engrenagem</value>
   </data>
   <data name="mood_confuzed" xml:space="preserve">
-    <value>Humor Confuzed</value>
+    <value>Humor Confuso</value>
   </data>
   <data name="mood_crazy_happy" xml:space="preserve">
-    <value>Humor Crazy Feliz</value>
+    <value>Humor Maluco Feliz</value>
   </data>
   <data name="mood_cry" xml:space="preserve">
-    <value>Humor Cry</value>
+    <value>Humor Chorar</value>
   </data>
   <data name="mood_dollar" xml:space="preserve">
     <value>Humor Dólar</value>
@@ -8723,7 +8722,7 @@
     <value>Humor Coração</value>
   </data>
   <data name="mood_kid" xml:space="preserve">
-    <value>Humor Kid</value>
+    <value>Humor Criança</value>
   </data>
   <data name="mood_look_down" xml:space="preserve">
     <value>Humor Olhar Baixo</value>
@@ -8744,7 +8743,7 @@
     <value>Humor Nerd</value>
   </data>
   <data name="mood_nervous" xml:space="preserve">
-    <value>Humor Nervous</value>
+    <value>Humor Nervoso</value>
   </data>
   <data name="mood_neutral" xml:space="preserve">
     <value>Humor Neutro</value>
@@ -8756,7 +8755,7 @@
     <value>Humor Mais</value>
   </data>
   <data name="mood_puzzled" xml:space="preserve">
-    <value>Humor Puzzled</value>
+    <value>Humor Indeciso</value>
   </data>
   <data name="mood_sad_2" xml:space="preserve">
     <value>Humor Triste 2</value>
@@ -8765,7 +8764,7 @@
     <value>Humor Triste Tonto</value>
   </data>
   <data name="mood_sad_squint" xml:space="preserve">
-    <value>Humor Triste Squint</value>
+    <value>Humor Triste Semicerrar</value>
   </data>
   <data name="mood_sad" xml:space="preserve">
     <value>Humor Triste</value>
@@ -8777,16 +8776,16 @@
     <value>Humor Compartilhar</value>
   </data>
   <data name="mood_sick" xml:space="preserve">
-    <value>Humor Sick</value>
+    <value>Humor Doente</value>
   </data>
   <data name="mood_silence" xml:space="preserve">
-    <value>Humor Silence</value>
+    <value>Humor Silêncio</value>
   </data>
   <data name="mood_sing" xml:space="preserve">
-    <value>Humor Sing</value>
+    <value>Humor Cantar</value>
   </data>
   <data name="mood_smile_beam" xml:space="preserve">
-    <value>Humor Sorriso Beam</value>
+    <value>Humor Sorriso Radiante</value>
   </data>
   <data name="mood_smile_dizzy" xml:space="preserve">
     <value>Humor Sorriso Tonto</value>
@@ -8798,7 +8797,7 @@
     <value>Humor Faísca</value>
   </data>
   <data name="mood_surprised" xml:space="preserve">
-    <value>Humor Surprised</value>
+    <value>Humor Surpreendido</value>
   </data>
   <data name="mood_tongue_wink_2" xml:space="preserve">
     <value>Humor Língua Piscadela 2</value>
@@ -8810,7 +8809,7 @@
     <value>Humor Língua</value>
   </data>
   <data name="mood_unamused" xml:space="preserve">
-    <value>Humor Unamused</value>
+    <value>Humor Impassível</value>
   </data>
   <data name="mood_up" xml:space="preserve">
     <value>Humor Cima</value>
@@ -8840,31 +8839,31 @@
     <value>Lua</value>
   </data>
   <data name="moped" xml:space="preserve">
-    <value>Moped</value>
+    <value>Ciclomotor</value>
   </data>
   <data name="mosque" xml:space="preserve">
     <value>Mesquita</value>
   </data>
   <data name="motorbike" xml:space="preserve">
-    <value>Motorbike</value>
+    <value>Mota</value>
   </data>
   <data name="mountain" xml:space="preserve">
-    <value>Mountain</value>
+    <value>Montanha</value>
   </data>
   <data name="mouse_2" xml:space="preserve">
-    <value>Mouse 2</value>
+    <value>Rato 2</value>
   </data>
   <data name="mouse" xml:space="preserve">
-    <value>Mouse</value>
+    <value>Rato</value>
   </data>
   <data name="moustache" xml:space="preserve">
-    <value>Moustache</value>
+    <value>Bigode</value>
   </data>
   <data name="movie" xml:space="preserve">
-    <value>Movie</value>
+    <value>Filme</value>
   </data>
   <data name="mug" xml:space="preserve">
-    <value>Mug</value>
+    <value>Caneca</value>
   </data>
   <data name="multiplier_0_5x" xml:space="preserve">
     <value>Multiplicador 0 5x</value>
@@ -8879,7 +8878,7 @@
     <value>Multiplicador 2x</value>
   </data>
   <data name="mushroom" xml:space="preserve">
-    <value>Mushroom</value>
+    <value>Cogumelo</value>
   </data>
   <data name="music_bolt" xml:space="preserve">
     <value>Música Relâmpago</value>
@@ -9023,7 +9022,7 @@
     <value>Navegação</value>
   </data>
   <data name="needle_thread" xml:space="preserve">
-    <value>Agulha Thread</value>
+    <value>Agulha Linha</value>
   </data>
   <data name="needle" xml:space="preserve">
     <value>Agulha</value>
@@ -9032,7 +9031,7 @@
     <value>Rede</value>
   </data>
   <data name="new_section" xml:space="preserve">
-    <value>New Seção</value>
+    <value>Novo Seção</value>
   </data>
   <data name="news" xml:space="preserve">
     <value>Notícias</value>
@@ -9047,10 +9046,10 @@
     <value>Não Creative Commons</value>
   </data>
   <data name="no_derivatives" xml:space="preserve">
-    <value>Não Derivatives</value>
+    <value>Não Edições</value>
   </data>
   <data name="noise_reduction" xml:space="preserve">
-    <value>Noise Reduction</value>
+    <value>Ruído Redução</value>
   </data>
   <data name="north_star" xml:space="preserve">
     <value>Norte Estrela</value>
@@ -9059,16 +9058,16 @@
     <value>Notdef</value>
   </data>
   <data name="note" xml:space="preserve">
-    <value>Note</value>
+    <value>Nota</value>
   </data>
   <data name="notebook" xml:space="preserve">
-    <value>Notebook</value>
+    <value>Caderno</value>
   </data>
   <data name="notes" xml:space="preserve">
-    <value>Notes</value>
+    <value>Notas</value>
   </data>
   <data name="notification" xml:space="preserve">
-    <value>Notification</value>
+    <value>Notificação</value>
   </data>
   <data name="number" xml:space="preserve">
     <value>Número</value>
@@ -9077,13 +9076,13 @@
     <value>Números</value>
   </data>
   <data name="nurse" xml:space="preserve">
-    <value>Nurse</value>
+    <value>Enfermeira</value>
   </data>
   <data name="nut" xml:space="preserve">
-    <value>Nut</value>
+    <value>Noz</value>
   </data>
   <data name="object_scan" xml:space="preserve">
-    <value>Object Escanear</value>
+    <value>Objeto Escanear</value>
   </data>
   <data name="octagon_minus_2" xml:space="preserve">
     <value>Octógono Menos 2</value>
@@ -9110,25 +9109,25 @@
     <value>Antigo</value>
   </data>
   <data name="olympic_torch" xml:space="preserve">
-    <value>Olympic Torch</value>
+    <value>Olímpica Tocha</value>
   </data>
   <data name="olympics" xml:space="preserve">
-    <value>Olympics</value>
+    <value>Olimpíadas</value>
   </data>
   <data name="om" xml:space="preserve">
     <value>Om</value>
   </data>
   <data name="omega" xml:space="preserve">
-    <value>Omega</value>
+    <value>Ómega</value>
   </data>
   <data name="option" xml:space="preserve">
-    <value>Option</value>
+    <value>Opção</value>
   </data>
   <data name="outbound" xml:space="preserve">
-    <value>Outbound</value>
+    <value>A Sair</value>
   </data>
   <data name="outlet" xml:space="preserve">
-    <value>Outlet</value>
+    <value>Tomada</value>
   </data>
   <data name="oval_vertical" xml:space="preserve">
     <value>Oval Vertical</value>
@@ -9137,7 +9136,7 @@
     <value>Oval</value>
   </data>
   <data name="overline" xml:space="preserve">
-    <value>Overline</value>
+    <value>Sobrelinha</value>
   </data>
   <data name="package_export" xml:space="preserve">
     <value>Pacote Exportar</value>
@@ -9149,19 +9148,19 @@
     <value>Pacote</value>
   </data>
   <data name="packages" xml:space="preserve">
-    <value>Packages</value>
+    <value>Pacotes</value>
   </data>
   <data name="pacman" xml:space="preserve">
     <value>Pacman</value>
   </data>
   <data name="page_break" xml:space="preserve">
-    <value>Page Break</value>
+    <value>Página Quebra</value>
   </data>
   <data name="paint" xml:space="preserve">
-    <value>Paint</value>
+    <value>Tinta</value>
   </data>
   <data name="palette" xml:space="preserve">
-    <value>Palette</value>
+    <value>Paleta</value>
   </data>
   <data name="panorama_horizontal" xml:space="preserve">
     <value>Panorama Horizontal</value>
@@ -9173,13 +9172,13 @@
     <value>Papel Bolsa</value>
   </data>
   <data name="paperclip" xml:space="preserve">
-    <value>Paperclip</value>
+    <value>Clipe</value>
   </data>
   <data name="parachute" xml:space="preserve">
-    <value>Parachute</value>
+    <value>Paraquedas</value>
   </data>
   <data name="parentheses" xml:space="preserve">
-    <value>Parentheses</value>
+    <value>Parênteses</value>
   </data>
   <data name="parking_circle" xml:space="preserve">
     <value>Estacionamento Círculo</value>
@@ -9203,16 +9202,16 @@
     <value>Senha</value>
   </data>
   <data name="paw" xml:space="preserve">
-    <value>Paw</value>
+    <value>Pata</value>
   </data>
   <data name="paywall" xml:space="preserve">
-    <value>Paywall</value>
+    <value>Barreira Paga</value>
   </data>
   <data name="pdf" xml:space="preserve">
     <value>Pdf</value>
   </data>
   <data name="peace" xml:space="preserve">
-    <value>Peace</value>
+    <value>Paz</value>
   </data>
   <data name="pencil_bolt" xml:space="preserve">
     <value>Lápis Relâmpago</value>
@@ -9278,7 +9277,7 @@
     <value>Lápis</value>
   </data>
   <data name="pendulum" xml:space="preserve">
-    <value>Pendulum</value>
+    <value>Pêndulo</value>
   </data>
   <data name="pennant_2" xml:space="preserve">
     <value>Flâmula 2</value>
@@ -9329,10 +9328,10 @@
     <value>Pentágono</value>
   </data>
   <data name="pentagram" xml:space="preserve">
-    <value>Pentagram</value>
+    <value>Pentagrama</value>
   </data>
   <data name="pepper" xml:space="preserve">
-    <value>Pepper</value>
+    <value>Pimenta</value>
   </data>
   <data name="percentage_0" xml:space="preserve">
     <value>Porcentagem 0</value>
@@ -9386,28 +9385,28 @@
     <value>Perfume</value>
   </data>
   <data name="perspective" xml:space="preserve">
-    <value>Perspective</value>
+    <value>Perspetiva</value>
   </data>
   <data name="phone_call" xml:space="preserve">
-    <value>Telefone Call</value>
+    <value>Telefone Chamada</value>
   </data>
   <data name="phone_calling" xml:space="preserve">
-    <value>Telefone Calling</value>
+    <value>Telefone A Ligar</value>
   </data>
   <data name="phone_check" xml:space="preserve">
     <value>Telefone Visto</value>
   </data>
   <data name="phone_done" xml:space="preserve">
-    <value>Telefone Done</value>
+    <value>Telefone Terminada</value>
   </data>
   <data name="phone_end" xml:space="preserve">
     <value>Telefone Fim</value>
   </data>
   <data name="phone_incoming" xml:space="preserve">
-    <value>Telefone Incoming</value>
+    <value>Telefone Recebida</value>
   </data>
   <data name="phone_outgoing" xml:space="preserve">
-    <value>Telefone Outgoing</value>
+    <value>Telefone Efetuada</value>
   </data>
   <data name="phone_pause" xml:space="preserve">
     <value>Telefone Pausar</value>
@@ -9428,7 +9427,7 @@
     <value>Telefone</value>
   </data>
   <data name="photo_ai" xml:space="preserve">
-    <value>Foto AI</value>
+    <value>Foto IA</value>
   </data>
   <data name="photo_alt" xml:space="preserve">
     <value>Foto Alt</value>
@@ -9539,7 +9538,7 @@
     <value>Foto</value>
   </data>
   <data name="physotherapist" xml:space="preserve">
-    <value>Physotherapist</value>
+    <value>Fisioterapeuta</value>
   </data>
   <data name="piano" xml:space="preserve">
     <value>Piano</value>
@@ -9548,10 +9547,10 @@
     <value>Escolher</value>
   </data>
   <data name="picnic_table" xml:space="preserve">
-    <value>Picnic Tabela</value>
+    <value>Piquenique Tabela</value>
   </data>
   <data name="picture_in_picture_on" xml:space="preserve">
-    <value>Imagem Dentro Imagem On</value>
+    <value>Imagem Dentro Imagem Ligado</value>
   </data>
   <data name="picture_in_picture_top" xml:space="preserve">
     <value>Imagem Dentro Imagem Topo</value>
@@ -9578,16 +9577,16 @@
     <value>Pílula</value>
   </data>
   <data name="pillow" xml:space="preserve">
-    <value>Pillow</value>
+    <value>Almofada</value>
   </data>
   <data name="pills" xml:space="preserve">
-    <value>Pills</value>
+    <value>Comprimidos</value>
   </data>
   <data name="pin_end" xml:space="preserve">
     <value>Alfinete Fim</value>
   </data>
   <data name="pin_invoke" xml:space="preserve">
-    <value>Alfinete Invoke</value>
+    <value>Alfinete Invocar</value>
   </data>
   <data name="pin" xml:space="preserve">
     <value>Alfinete</value>
@@ -9596,7 +9595,7 @@
     <value>Ping Pong</value>
   </data>
   <data name="pinned" xml:space="preserve">
-    <value>Pinned</value>
+    <value>Afixado</value>
   </data>
   <data name="pipeline" xml:space="preserve">
     <value>Pipeline</value>
@@ -9605,16 +9604,16 @@
     <value>Pizza</value>
   </data>
   <data name="placeholder" xml:space="preserve">
-    <value>Placeholder</value>
+    <value>Marcador De Posição</value>
   </data>
   <data name="plane_arrival" xml:space="preserve">
-    <value>Avião Arrival</value>
+    <value>Avião Chegada</value>
   </data>
   <data name="plane_departure" xml:space="preserve">
-    <value>Avião Departure</value>
+    <value>Avião Partida</value>
   </data>
   <data name="plane_inflight" xml:space="preserve">
-    <value>Avião Inflight</value>
+    <value>Avião Em Voo</value>
   </data>
   <data name="plane_tilt" xml:space="preserve">
     <value>Avião Inclinar</value>
@@ -9623,7 +9622,7 @@
     <value>Avião</value>
   </data>
   <data name="planet" xml:space="preserve">
-    <value>Planet</value>
+    <value>Planeta</value>
   </data>
   <data name="plant_2" xml:space="preserve">
     <value>Planta 2</value>
@@ -9638,13 +9637,13 @@
     <value>Reproduzir Futebol</value>
   </data>
   <data name="play_handball" xml:space="preserve">
-    <value>Reproduzir Handball</value>
+    <value>Reproduzir Andebol</value>
   </data>
   <data name="play_volleyball" xml:space="preserve">
     <value>Reproduzir Vôlei</value>
   </data>
   <data name="player_eject" xml:space="preserve">
-    <value>Reprodutor Eject</value>
+    <value>Reprodutor Ejetar</value>
   </data>
   <data name="player_pause" xml:space="preserve">
     <value>Reprodutor Pausar</value>
@@ -9665,10 +9664,10 @@
     <value>Reprodutor Parar</value>
   </data>
   <data name="player_track_next" xml:space="preserve">
-    <value>Reprodutor Trilha Next</value>
+    <value>Reprodutor Trilha Seguinte</value>
   </data>
   <data name="player_track_prev" xml:space="preserve">
-    <value>Reprodutor Trilha Prev</value>
+    <value>Reprodutor Trilha Anterior</value>
   </data>
   <data name="playlist_add" xml:space="preserve">
     <value>Lista de reprodução Adicionar</value>
@@ -9704,7 +9703,7 @@
     <value>Tomada</value>
   </data>
   <data name="plunger" xml:space="preserve">
-    <value>Plunger</value>
+    <value>Desentupidor</value>
   </data>
   <data name="plus_equal" xml:space="preserve">
     <value>Mais Igual</value>
@@ -9716,7 +9715,7 @@
     <value>Mais</value>
   </data>
   <data name="podium" xml:space="preserve">
-    <value>Podium</value>
+    <value>Pódio</value>
   </data>
   <data name="point" xml:space="preserve">
     <value>Ponto</value>
@@ -9794,7 +9793,7 @@
     <value>Pokeball</value>
   </data>
   <data name="poker_chip" xml:space="preserve">
-    <value>Poker Chip</value>
+    <value>Póquer Ficha</value>
   </data>
   <data name="polaroid" xml:space="preserve">
     <value>Polaroid</value>
@@ -9803,22 +9802,22 @@
     <value>Polígono</value>
   </data>
   <data name="poo" xml:space="preserve">
-    <value>Poo</value>
+    <value>Cocó</value>
   </data>
   <data name="pool" xml:space="preserve">
-    <value>Pool</value>
+    <value>Piscina</value>
   </data>
   <data name="power" xml:space="preserve">
     <value>Energia</value>
   </data>
   <data name="pray" xml:space="preserve">
-    <value>Pray</value>
+    <value>Rezar</value>
   </data>
   <data name="premium_rights" xml:space="preserve">
     <value>Premium Direitos</value>
   </data>
   <data name="prescription" xml:space="preserve">
-    <value>Prescription</value>
+    <value>Receita</value>
   </data>
   <data name="presentation_analytics" xml:space="preserve">
     <value>Apresentação Análise</value>
@@ -9827,10 +9826,10 @@
     <value>Apresentação</value>
   </data>
   <data name="printer" xml:space="preserve">
-    <value>Printer</value>
+    <value>Impressora</value>
   </data>
   <data name="prism_light" xml:space="preserve">
-    <value>Prisma Light</value>
+    <value>Prisma Luz</value>
   </data>
   <data name="prism_plus" xml:space="preserve">
     <value>Prisma Mais</value>
@@ -9839,7 +9838,7 @@
     <value>Prisma</value>
   </data>
   <data name="prison" xml:space="preserve">
-    <value>Prison</value>
+    <value>Prisão</value>
   </data>
   <data name="progress_alert" xml:space="preserve">
     <value>Progresso Alerta</value>
@@ -9863,19 +9862,19 @@
     <value>Progresso</value>
   </data>
   <data name="prompt" xml:space="preserve">
-    <value>Prompt</value>
+    <value>Linha De Comandos</value>
   </data>
   <data name="prong" xml:space="preserve">
-    <value>Prong</value>
+    <value>Dente</value>
   </data>
   <data name="propeller" xml:space="preserve">
-    <value>Propeller</value>
+    <value>Hélice</value>
   </data>
   <data name="protocol" xml:space="preserve">
-    <value>Protocol</value>
+    <value>Protocolo</value>
   </data>
   <data name="pumpkin_scary" xml:space="preserve">
-    <value>Pumpkin Scary</value>
+    <value>Abóbora Assustadora</value>
   </data>
   <data name="puzzle_2" xml:space="preserve">
     <value>Quebra-cabeça 2</value>
@@ -9890,7 +9889,7 @@
     <value>Pirâmide</value>
   </data>
   <data name="qrcode" xml:space="preserve">
-    <value>Qrcode</value>
+    <value>Código Qr</value>
   </data>
   <data name="question_mark" xml:space="preserve">
     <value>Interrogação Marca</value>
@@ -9908,7 +9907,7 @@
     <value>Citação</value>
   </data>
   <data name="quotes" xml:space="preserve">
-    <value>Quotes</value>
+    <value>Aspas</value>
   </data>
   <data name="radar_2" xml:space="preserve">
     <value>Radar 2</value>
@@ -9917,10 +9916,10 @@
     <value>Radar</value>
   </data>
   <data name="radio" xml:space="preserve">
-    <value>Radio</value>
+    <value>Rádio</value>
   </data>
   <data name="radioactive" xml:space="preserve">
-    <value>Radioactive</value>
+    <value>Radioativo</value>
   </data>
   <data name="radius_bottom_left" xml:space="preserve">
     <value>Raio Base Esquerda</value>
@@ -9935,7 +9934,7 @@
     <value>Raio Topo Direita</value>
   </data>
   <data name="rainbow" xml:space="preserve">
-    <value>Rainbow</value>
+    <value>Arco-Íris</value>
   </data>
   <data name="rating_12_plus" xml:space="preserve">
     <value>Avaliação 12 Mais</value>
@@ -9983,7 +9982,7 @@
     <value>Recibo</value>
   </data>
   <data name="recharging" xml:space="preserve">
-    <value>Recharging</value>
+    <value>A Carregar</value>
   </data>
   <data name="record_mail" xml:space="preserve">
     <value>Gravar Correio</value>
@@ -10007,7 +10006,7 @@
     <value>Retangular Prisma</value>
   </data>
   <data name="recycle" xml:space="preserve">
-    <value>Recycle</value>
+    <value>Reciclagem</value>
   </data>
   <data name="refresh_alert" xml:space="preserve">
     <value>Atualizar Alerta</value>
@@ -10022,7 +10021,7 @@
     <value>Regex</value>
   </data>
   <data name="registered" xml:space="preserve">
-    <value>Registered</value>
+    <value>Registado</value>
   </data>
   <data name="relation_many_to_many" xml:space="preserve">
     <value>Relação Muitos Para Muitos</value>
@@ -10034,13 +10033,13 @@
     <value>Relação Um Para Um</value>
   </data>
   <data name="reload" xml:space="preserve">
-    <value>Reload</value>
+    <value>Recarregar</value>
   </data>
   <data name="reorder" xml:space="preserve">
-    <value>Reorder</value>
+    <value>Reordenar</value>
   </data>
   <data name="repeat_once" xml:space="preserve">
-    <value>Repetir Once</value>
+    <value>Repetir Uma Vez</value>
   </data>
   <data name="repeat" xml:space="preserve">
     <value>Repetir</value>
@@ -10067,13 +10066,13 @@
     <value>Relatório</value>
   </data>
   <data name="reserved_line" xml:space="preserve">
-    <value>Reserved Linha</value>
+    <value>Reservado Linha</value>
   </data>
   <data name="resize" xml:space="preserve">
     <value>Redimensionar</value>
   </data>
   <data name="restore" xml:space="preserve">
-    <value>Restore</value>
+    <value>Restaurar</value>
   </data>
   <data name="rewind_backward_10" xml:space="preserve">
     <value>Retroceder Para trás 10</value>
@@ -10127,7 +10126,7 @@
     <value>Fita Saúde</value>
   </data>
   <data name="rings" xml:space="preserve">
-    <value>Rings</value>
+    <value>Anéis</value>
   </data>
   <data name="ripple_down" xml:space="preserve">
     <value>Ondulação Baixo</value>
@@ -10151,13 +10150,13 @@
     <value>Robô</value>
   </data>
   <data name="rocket" xml:space="preserve">
-    <value>Rocket</value>
+    <value>Foguetão</value>
   </data>
   <data name="roller_skating" xml:space="preserve">
-    <value>Roller Patinação</value>
+    <value>Rolo Patinação</value>
   </data>
   <data name="rollercoaster" xml:space="preserve">
-    <value>Rollercoaster</value>
+    <value>Montanha-Russa</value>
   </data>
   <data name="rosette_asterisk" xml:space="preserve">
     <value>Roseta Asterisco</value>
@@ -10226,7 +10225,7 @@
     <value>Girar</value>
   </data>
   <data name="roulette" xml:space="preserve">
-    <value>Roulette</value>
+    <value>Roleta</value>
   </data>
   <data name="route_2" xml:space="preserve">
     <value>Rota 2</value>
@@ -10271,10 +10270,10 @@
     <value>Rss</value>
   </data>
   <data name="rubber_stamp" xml:space="preserve">
-    <value>Rubber Carimbo</value>
+    <value>Borracha Carimbo</value>
   </data>
   <data name="rugby" xml:space="preserve">
-    <value>Rugby</value>
+    <value>Râguebi</value>
   </data>
   <data name="ruler_2" xml:space="preserve">
     <value>Régua 2</value>
@@ -10292,10 +10291,10 @@
     <value>Régua</value>
   </data>
   <data name="run" xml:space="preserve">
-    <value>Run</value>
+    <value>Correr</value>
   </data>
   <data name="rv_truck" xml:space="preserve">
-    <value>Rv Caminhão</value>
+    <value>Autocaravana Caminhão</value>
   </data>
   <data name="s_turn_down" xml:space="preserve">
     <value>S Virar Baixo</value>
@@ -10316,22 +10315,22 @@
     <value>Veleiro</value>
   </data>
   <data name="salad" xml:space="preserve">
-    <value>Salad</value>
+    <value>Salada</value>
   </data>
   <data name="salt" xml:space="preserve">
-    <value>Salt</value>
+    <value>Sal</value>
   </data>
   <data name="sandbox" xml:space="preserve">
-    <value>Sandbox</value>
+    <value>Caixa De Areia</value>
   </data>
   <data name="satellite" xml:space="preserve">
-    <value>Satellite</value>
+    <value>Satélite</value>
   </data>
   <data name="sausage" xml:space="preserve">
-    <value>Sausage</value>
+    <value>Salsicha</value>
   </data>
   <data name="scale_outline" xml:space="preserve">
-    <value>Escala Outline</value>
+    <value>Escala Contorno</value>
   </data>
   <data name="scale" xml:space="preserve">
     <value>Escala</value>
@@ -10349,16 +10348,16 @@
     <value>Escanear Letra T</value>
   </data>
   <data name="scan_position" xml:space="preserve">
-    <value>Escanear Position</value>
+    <value>Escanear Posição</value>
   </data>
   <data name="scan_traces" xml:space="preserve">
-    <value>Escanear Traces</value>
+    <value>Escanear Rastos</value>
   </data>
   <data name="scan" xml:space="preserve">
     <value>Escanear</value>
   </data>
   <data name="schema" xml:space="preserve">
-    <value>Schema</value>
+    <value>Esquema</value>
   </data>
   <data name="school_bell" xml:space="preserve">
     <value>Escola Sino</value>
@@ -10376,16 +10375,16 @@
     <value>Patinete</value>
   </data>
   <data name="scoreboard" xml:space="preserve">
-    <value>Scoreboard</value>
+    <value>Marcador</value>
   </data>
   <data name="screen_share" xml:space="preserve">
     <value>Tela Compartilhar</value>
   </data>
   <data name="screenshot" xml:space="preserve">
-    <value>Screenshot</value>
+    <value>Captura De Ecrã</value>
   </data>
   <data name="scribble" xml:space="preserve">
-    <value>Scribble</value>
+    <value>Rabisco</value>
   </data>
   <data name="script_minus" xml:space="preserve">
     <value>Script Menos</value>
@@ -10418,7 +10417,7 @@
     <value>Seção</value>
   </data>
   <data name="seedling" xml:space="preserve">
-    <value>Seedling</value>
+    <value>Rebento</value>
   </data>
   <data name="segway" xml:space="preserve">
     <value>Segway</value>
@@ -10430,7 +10429,7 @@
     <value>Selecionar</value>
   </data>
   <data name="selector" xml:space="preserve">
-    <value>Selector</value>
+    <value>Seletor</value>
   </data>
   <data name="send_2" xml:space="preserve">
     <value>Enviar 2</value>
@@ -10466,16 +10465,16 @@
     <value>Servidor</value>
   </data>
   <data name="serverless" xml:space="preserve">
-    <value>Serverless</value>
+    <value>Sem Servidor</value>
   </data>
   <data name="servicemark" xml:space="preserve">
-    <value>Servicemark</value>
+    <value>Marca De Serviço</value>
   </data>
   <data name="settings_2" xml:space="preserve">
     <value>Configurações 2</value>
   </data>
   <data name="settings_ai" xml:space="preserve">
-    <value>Configurações AI</value>
+    <value>Configurações IA</value>
   </data>
   <data name="settings_automation" xml:space="preserve">
     <value>Configurações Automação</value>
@@ -10577,7 +10576,7 @@
     <value>Escudo Visto</value>
   </data>
   <data name="shield_checkered" xml:space="preserve">
-    <value>Escudo Checkered</value>
+    <value>Escudo Axadrezado</value>
   </data>
   <data name="shield_chevron" xml:space="preserve">
     <value>Escudo Chevron</value>
@@ -10640,7 +10639,7 @@
     <value>Escudo</value>
   </data>
   <data name="ship" xml:space="preserve">
-    <value>Ship</value>
+    <value>Navio</value>
   </data>
   <data name="shirt_sport" xml:space="preserve">
     <value>Camisa Esporte</value>
@@ -10649,7 +10648,7 @@
     <value>Camisa</value>
   </data>
   <data name="shoe" xml:space="preserve">
-    <value>Shoe</value>
+    <value>Sapato</value>
   </data>
   <data name="shopping_bag_check" xml:space="preserve">
     <value>Compras Bolsa Visto</value>
@@ -10748,7 +10747,7 @@
     <value>Compras Carrinho</value>
   </data>
   <data name="shovel_pitchforks" xml:space="preserve">
-    <value>Pá Pitchforks</value>
+    <value>Pá Forquilhas</value>
   </data>
   <data name="shovel" xml:space="preserve">
     <value>Pá</value>
@@ -10763,19 +10762,19 @@
     <value>Placa Direita</value>
   </data>
   <data name="signature" xml:space="preserve">
-    <value>Signature</value>
+    <value>Assinatura</value>
   </data>
   <data name="sitemap" xml:space="preserve">
-    <value>Sitemap</value>
+    <value>Mapa Do Site</value>
   </data>
   <data name="skateboard" xml:space="preserve">
-    <value>Skateboard</value>
+    <value>Skate</value>
   </data>
   <data name="skateboarding" xml:space="preserve">
-    <value>Skateboarding</value>
+    <value>Skate</value>
   </data>
   <data name="sketching" xml:space="preserve">
-    <value>Sketching</value>
+    <value>Esboço</value>
   </data>
   <data name="skew_x" xml:space="preserve">
     <value>Distorcer X</value>
@@ -10784,28 +10783,28 @@
     <value>Distorcer Y</value>
   </data>
   <data name="ski_jumping" xml:space="preserve">
-    <value>Ski Saltando</value>
+    <value>Esqui Saltando</value>
   </data>
   <data name="skull" xml:space="preserve">
-    <value>Skull</value>
+    <value>Caveira</value>
   </data>
   <data name="slash" xml:space="preserve">
-    <value>Slash</value>
+    <value>Barra</value>
   </data>
   <data name="slashes" xml:space="preserve">
-    <value>Slashes</value>
+    <value>Barras</value>
   </data>
   <data name="sleigh" xml:space="preserve">
-    <value>Sleigh</value>
+    <value>Trenó</value>
   </data>
   <data name="slice" xml:space="preserve">
-    <value>Slice</value>
+    <value>Fatia</value>
   </data>
   <data name="slideshow" xml:space="preserve">
-    <value>Slideshow</value>
+    <value>Apresentação De Diapositivos</value>
   </data>
   <data name="smart_home" xml:space="preserve">
-    <value>Smart Casa</value>
+    <value>Inteligente Casa</value>
   </data>
   <data name="smoking_no" xml:space="preserve">
     <value>Fumar Não</value>
@@ -10814,25 +10813,25 @@
     <value>Fumar</value>
   </data>
   <data name="snowboarding" xml:space="preserve">
-    <value>Snowboarding</value>
+    <value>Snowboard</value>
   </data>
   <data name="snowflake" xml:space="preserve">
     <value>Floco de neve</value>
   </data>
   <data name="snowman" xml:space="preserve">
-    <value>Snowman</value>
+    <value>Boneco De Neve</value>
   </data>
   <data name="soccer_field" xml:space="preserve">
-    <value>Soccer Field</value>
+    <value>Futebol Campo</value>
   </data>
   <data name="social" xml:space="preserve">
     <value>Social</value>
   </data>
   <data name="sock" xml:space="preserve">
-    <value>Sock</value>
+    <value>Meia</value>
   </data>
   <data name="sofa" xml:space="preserve">
-    <value>Sofa</value>
+    <value>Sofá</value>
   </data>
   <data name="solar_electricity" xml:space="preserve">
     <value>Solar Eletricidade</value>
@@ -10892,16 +10891,16 @@
     <value>Ordenar Z A</value>
   </data>
   <data name="soup" xml:space="preserve">
-    <value>Soup</value>
+    <value>Sopa</value>
   </data>
   <data name="source_code" xml:space="preserve">
     <value>Fonte Código</value>
   </data>
   <data name="space" xml:space="preserve">
-    <value>Space</value>
+    <value>Espaço</value>
   </data>
   <data name="spaces" xml:space="preserve">
-    <value>Spaces</value>
+    <value>Espaços</value>
   </data>
   <data name="spacing_horizontal" xml:space="preserve">
     <value>Espaçamento Horizontal</value>
@@ -10910,7 +10909,7 @@
     <value>Espaçamento Vertical</value>
   </data>
   <data name="spade" xml:space="preserve">
-    <value>Spade</value>
+    <value>Espadas</value>
   </data>
   <data name="sparkle_2" xml:space="preserve">
     <value>Cintilação 2</value>
@@ -10928,10 +10927,10 @@
     <value>Cintilações</value>
   </data>
   <data name="speakerphone" xml:space="preserve">
-    <value>Speakerphone</value>
+    <value>Alta-Voz</value>
   </data>
   <data name="speedboat" xml:space="preserve">
-    <value>Speedboat</value>
+    <value>Lancha</value>
   </data>
   <data name="sphere_2" xml:space="preserve">
     <value>Esfera 2</value>
@@ -10943,19 +10942,19 @@
     <value>Esfera</value>
   </data>
   <data name="spider" xml:space="preserve">
-    <value>Spider</value>
+    <value>Aranha</value>
   </data>
   <data name="spiral" xml:space="preserve">
-    <value>Spiral</value>
+    <value>Espiral</value>
   </data>
   <data name="sport_billard" xml:space="preserve">
-    <value>Esporte Billard</value>
+    <value>Esporte Bilhar</value>
   </data>
   <data name="spray" xml:space="preserve">
     <value>Spray</value>
   </data>
   <data name="spy" xml:space="preserve">
-    <value>Spy</value>
+    <value>Espião</value>
   </data>
   <data name="square_arrow_down" xml:space="preserve">
     <value>Quadrado Seta Baixo</value>
@@ -11363,7 +11362,7 @@
     <value>Pilha Avançar</value>
   </data>
   <data name="stack_front" xml:space="preserve">
-    <value>Pilha Front</value>
+    <value>Pilha Frente</value>
   </data>
   <data name="stack_middle" xml:space="preserve">
     <value>Pilha Meio</value>
@@ -11372,7 +11371,7 @@
     <value>Pilha Pop</value>
   </data>
   <data name="stack_push" xml:space="preserve">
-    <value>Pilha Push</value>
+    <value>Pilha Empurrar</value>
   </data>
   <data name="stack" xml:space="preserve">
     <value>Pilha</value>
@@ -11396,25 +11395,25 @@
     <value>Estrelas</value>
   </data>
   <data name="status_change" xml:space="preserve">
-    <value>Status Change</value>
+    <value>Estado Alterar</value>
   </data>
   <data name="steam" xml:space="preserve">
     <value>Steam</value>
   </data>
   <data name="steering_wheel" xml:space="preserve">
-    <value>Steering Roda</value>
+    <value>Volante Roda</value>
   </data>
   <data name="step_into" xml:space="preserve">
-    <value>Passo Into</value>
+    <value>Passo Dentro</value>
   </data>
   <data name="step_out" xml:space="preserve">
     <value>Passo Fora</value>
   </data>
   <data name="stereo_glasses" xml:space="preserve">
-    <value>Stereo Glasses</value>
+    <value>Estéreo Óculos</value>
   </data>
   <data name="stethoscope" xml:space="preserve">
-    <value>Stethoscope</value>
+    <value>Estetoscópio</value>
   </data>
   <data name="sticker_2" xml:space="preserve">
     <value>Adesivo 2</value>
@@ -11423,7 +11422,7 @@
     <value>Adesivo</value>
   </data>
   <data name="stopwatch" xml:space="preserve">
-    <value>Stopwatch</value>
+    <value>Cronómetro</value>
   </data>
   <data name="storm" xml:space="preserve">
     <value>Tempestade</value>
@@ -11435,28 +11434,28 @@
     <value>Alongamento</value>
   </data>
   <data name="strikethrough" xml:space="preserve">
-    <value>Strikethrough</value>
+    <value>Rasurado</value>
   </data>
   <data name="stroke_curved" xml:space="preserve">
-    <value>Traço Curved</value>
+    <value>Traço Curvo</value>
   </data>
   <data name="stroke_dynamic" xml:space="preserve">
-    <value>Traço Dynamic</value>
+    <value>Traço Dinâmico</value>
   </data>
   <data name="stroke_straight" xml:space="preserve">
     <value>Traço Reto</value>
   </data>
   <data name="submarine" xml:space="preserve">
-    <value>Submarine</value>
+    <value>Submarino</value>
   </data>
   <data name="subscript" xml:space="preserve">
-    <value>Subscript</value>
+    <value>Índice Inferior</value>
   </data>
   <data name="subtask" xml:space="preserve">
-    <value>Subtask</value>
+    <value>Subtarefa</value>
   </data>
   <data name="subtitles_ai" xml:space="preserve">
-    <value>Legendas AI</value>
+    <value>Legendas IA</value>
   </data>
   <data name="subtitles_edit" xml:space="preserve">
     <value>Legendas Editar</value>
@@ -11465,7 +11464,7 @@
     <value>Legendas</value>
   </data>
   <data name="sum" xml:space="preserve">
-    <value>Sum</value>
+    <value>Soma</value>
   </data>
   <data name="sun_electricity" xml:space="preserve">
     <value>Sol Eletricidade</value>
@@ -11483,10 +11482,10 @@
     <value>Sol</value>
   </data>
   <data name="sunglasses" xml:space="preserve">
-    <value>Sunglasses</value>
+    <value>Óculos De Sol</value>
   </data>
   <data name="sunrise" xml:space="preserve">
-    <value>Sunrise</value>
+    <value>Nascer Do Sol</value>
   </data>
   <data name="sunset_2" xml:space="preserve">
     <value>Pôr do sol 2</value>
@@ -11495,10 +11494,10 @@
     <value>Pôr do sol</value>
   </data>
   <data name="superscript" xml:space="preserve">
-    <value>Superscript</value>
+    <value>Índice Superior</value>
   </data>
   <data name="swimming" xml:space="preserve">
-    <value>Swimming</value>
+    <value>Natação</value>
   </data>
   <data name="swipe_down" xml:space="preserve">
     <value>Deslizar Baixo</value>
@@ -11531,10 +11530,10 @@
     <value>Interruptor</value>
   </data>
   <data name="sword" xml:space="preserve">
-    <value>Sword</value>
+    <value>Espada</value>
   </data>
   <data name="swords" xml:space="preserve">
-    <value>Swords</value>
+    <value>Espadas</value>
   </data>
   <data name="table_alias" xml:space="preserve">
     <value>Tabela Alias</value>
@@ -11561,7 +11560,7 @@
     <value>Tabela Menos</value>
   </data>
   <data name="table_options" xml:space="preserve">
-    <value>Tabela Options</value>
+    <value>Tabela Opções</value>
   </data>
   <data name="table_plus" xml:space="preserve">
     <value>Tabela Mais</value>
@@ -11573,7 +11572,7 @@
     <value>Tabela Compartilhar</value>
   </data>
   <data name="table_shortcut" xml:space="preserve">
-    <value>Tabela Shortcut</value>
+    <value>Tabela Atalho</value>
   </data>
   <data name="table_spark" xml:space="preserve">
     <value>Tabela Faísca</value>
@@ -11588,13 +11587,13 @@
     <value>Etiqueta Mais</value>
   </data>
   <data name="tag_starred" xml:space="preserve">
-    <value>Etiqueta Starred</value>
+    <value>Etiqueta Com Estrela</value>
   </data>
   <data name="tag" xml:space="preserve">
     <value>Etiqueta</value>
   </data>
   <data name="tags" xml:space="preserve">
-    <value>Tags</value>
+    <value>Palavras-Chave</value>
   </data>
   <data name="taiwan_dollar" xml:space="preserve">
     <value>Taiwan Dólar</value>
@@ -11612,7 +11611,7 @@
     <value>Marca de contagem 4</value>
   </data>
   <data name="tallymarks" xml:space="preserve">
-    <value>Tallymarks</value>
+    <value>Marcas De Contagem</value>
   </data>
   <data name="tank" xml:space="preserve">
     <value>Tanque</value>
@@ -11636,10 +11635,10 @@
     <value>Imposto</value>
   </data>
   <data name="teapot" xml:space="preserve">
-    <value>Teapot</value>
+    <value>Bule</value>
   </data>
   <data name="telescope" xml:space="preserve">
-    <value>Telescope</value>
+    <value>Telescópio</value>
   </data>
   <data name="temperature_celsius" xml:space="preserve">
     <value>Temperatura Celsius</value>
@@ -11663,10 +11662,10 @@
     <value>Temperatura</value>
   </data>
   <data name="template" xml:space="preserve">
-    <value>Template</value>
+    <value>Modelo</value>
   </data>
   <data name="tent" xml:space="preserve">
-    <value>Tent</value>
+    <value>Tenda</value>
   </data>
   <data name="terminal_2" xml:space="preserve">
     <value>Terminal 2</value>
@@ -11684,7 +11683,7 @@
     <value>Tex</value>
   </data>
   <data name="text_caption" xml:space="preserve">
-    <value>Texto Caption</value>
+    <value>Texto Legenda</value>
   </data>
   <data name="text_color" xml:space="preserve">
     <value>Texto Cor</value>
@@ -11699,7 +11698,7 @@
     <value>Texto Direção Rtl</value>
   </data>
   <data name="text_grammar" xml:space="preserve">
-    <value>Texto Grammar</value>
+    <value>Texto Gramática</value>
   </data>
   <data name="text_increase" xml:space="preserve">
     <value>Texto Aumentar</value>
@@ -11720,13 +11719,13 @@
     <value>Texto Escanear 2</value>
   </data>
   <data name="text_scan_ai" xml:space="preserve">
-    <value>Texto Escanear AI</value>
+    <value>Texto Escanear IA</value>
   </data>
   <data name="text_size" xml:space="preserve">
-    <value>Texto Size</value>
+    <value>Texto Tamanho</value>
   </data>
   <data name="text_spellcheck" xml:space="preserve">
-    <value>Texto Spellcheck</value>
+    <value>Texto Ortografia</value>
   </data>
   <data name="text_wrap_column" xml:space="preserve">
     <value>Texto Quebra Coluna</value>
@@ -11738,13 +11737,13 @@
     <value>Texto Quebra</value>
   </data>
   <data name="texture" xml:space="preserve">
-    <value>Texture</value>
+    <value>Textura</value>
   </data>
   <data name="theater" xml:space="preserve">
     <value>Teatro</value>
   </data>
   <data name="thermometer" xml:space="preserve">
-    <value>Thermometer</value>
+    <value>Termómetro</value>
   </data>
   <data name="thumb_down" xml:space="preserve">
     <value>Polegar Baixo</value>
@@ -11756,13 +11755,13 @@
     <value>Tic Tac</value>
   </data>
   <data name="ticket" xml:space="preserve">
-    <value>Ticket</value>
+    <value>Bilhete</value>
   </data>
   <data name="tie" xml:space="preserve">
-    <value>Tie</value>
+    <value>Gravata</value>
   </data>
   <data name="tilde" xml:space="preserve">
-    <value>Tilde</value>
+    <value>Til</value>
   </data>
   <data name="tilt_shift" xml:space="preserve">
     <value>Inclinar Shift</value>
@@ -11813,7 +11812,7 @@
     <value>Linha do tempo</value>
   </data>
   <data name="timezone" xml:space="preserve">
-    <value>Timezone</value>
+    <value>Fuso Horário</value>
   </data>
   <data name="tip_jar_euro" xml:space="preserve">
     <value>Ponta Pote Euro</value>
@@ -11825,7 +11824,7 @@
     <value>Ponta Pote</value>
   </data>
   <data name="tir" xml:space="preserve">
-    <value>Tir</value>
+    <value>Camião</value>
   </data>
   <data name="toggle_left" xml:space="preserve">
     <value>Alternar Esquerda</value>
@@ -11834,7 +11833,7 @@
     <value>Alternar Direita</value>
   </data>
   <data name="toilet_paper" xml:space="preserve">
-    <value>Toilet Papel</value>
+    <value>Sanita Papel</value>
   </data>
   <data name="tool" xml:space="preserve">
     <value>Ferramenta</value>
@@ -11852,13 +11851,13 @@
     <value>Ferramentas</value>
   </data>
   <data name="tooltip" xml:space="preserve">
-    <value>Tooltip</value>
+    <value>Dica</value>
   </data>
   <data name="topology_bus" xml:space="preserve">
     <value>Topologia Ônibus</value>
   </data>
   <data name="topology_complex" xml:space="preserve">
-    <value>Topologia Complex</value>
+    <value>Topologia Complexo</value>
   </data>
   <data name="topology_full_hierarchy" xml:space="preserve">
     <value>Topologia Cheio Hierarquia</value>
@@ -11900,7 +11899,7 @@
     <value>Tornado</value>
   </data>
   <data name="tournament" xml:space="preserve">
-    <value>Tournament</value>
+    <value>Torneio</value>
   </data>
   <data name="tower" xml:space="preserve">
     <value>Torre</value>
@@ -11909,16 +11908,16 @@
     <value>Trilha</value>
   </data>
   <data name="tractor" xml:space="preserve">
-    <value>Tractor</value>
+    <value>Trator</value>
   </data>
   <data name="traffic_cone" xml:space="preserve">
     <value>Trânsito Cone</value>
   </data>
   <data name="traffic_lights" xml:space="preserve">
-    <value>Trânsito Lights</value>
+    <value>Trânsito Luzes</value>
   </data>
   <data name="train" xml:space="preserve">
-    <value>Train</value>
+    <value>Comboio</value>
   </data>
   <data name="transfer_in" xml:space="preserve">
     <value>Transferir Dentro</value>
@@ -11969,16 +11968,16 @@
     <value>Lixeira</value>
   </data>
   <data name="treadmill" xml:space="preserve">
-    <value>Treadmill</value>
+    <value>Passadeira</value>
   </data>
   <data name="tree" xml:space="preserve">
     <value>Árvore</value>
   </data>
   <data name="trees" xml:space="preserve">
-    <value>Trees</value>
+    <value>Árvores</value>
   </data>
   <data name="trekking" xml:space="preserve">
-    <value>Trekking</value>
+    <value>Caminhada</value>
   </data>
   <data name="trending_down_2" xml:space="preserve">
     <value>Tendência Baixo 2</value>
@@ -12002,7 +12001,7 @@
     <value>Tendência Cima</value>
   </data>
   <data name="triangle_inverted" xml:space="preserve">
-    <value>Triângulo Inverted</value>
+    <value>Triângulo Invertido</value>
   </data>
   <data name="triangle_minus_2" xml:space="preserve">
     <value>Triângulo Menos 2</value>
@@ -12023,34 +12022,34 @@
     <value>Triângulo</value>
   </data>
   <data name="triangles" xml:space="preserve">
-    <value>Triangles</value>
+    <value>Triângulos</value>
   </data>
   <data name="trident" xml:space="preserve">
-    <value>Trident</value>
+    <value>Tridente</value>
   </data>
   <data name="trolley" xml:space="preserve">
-    <value>Trolley</value>
+    <value>Carrinho</value>
   </data>
   <data name="trophy" xml:space="preserve">
-    <value>Trophy</value>
+    <value>Troféu</value>
   </data>
   <data name="trowel" xml:space="preserve">
-    <value>Trowel</value>
+    <value>Colher De Pedreiro</value>
   </data>
   <data name="truck_delivery" xml:space="preserve">
-    <value>Caminhão Delivery</value>
+    <value>Caminhão Entrega</value>
   </data>
   <data name="truck_loading" xml:space="preserve">
-    <value>Caminhão Loading</value>
+    <value>Caminhão Carga</value>
   </data>
   <data name="truck_return" xml:space="preserve">
-    <value>Caminhão Return</value>
+    <value>Caminhão Devolução</value>
   </data>
   <data name="truck" xml:space="preserve">
     <value>Caminhão</value>
   </data>
   <data name="typeface" xml:space="preserve">
-    <value>Typeface</value>
+    <value>Tipo De Letra</value>
   </data>
   <data name="typography" xml:space="preserve">
     <value>Tipografia</value>
@@ -12062,7 +12061,7 @@
     <value>U Virar Direita</value>
   </data>
   <data name="ufo" xml:space="preserve">
-    <value>Ufo</value>
+    <value>Óvni</value>
   </data>
   <data name="umbrella_2" xml:space="preserve">
     <value>Guarda-chuva 2</value>
@@ -12077,22 +12076,22 @@
     <value>Guarda-chuva</value>
   </data>
   <data name="underline" xml:space="preserve">
-    <value>Underline</value>
+    <value>Sublinhado</value>
   </data>
   <data name="unicycle" xml:space="preserve">
-    <value>Unicycle</value>
+    <value>Monociclo</value>
   </data>
   <data name="universe" xml:space="preserve">
-    <value>Universe</value>
+    <value>Universo</value>
   </data>
   <data name="unlink" xml:space="preserve">
-    <value>Unlink</value>
+    <value>Desligar</value>
   </data>
   <data name="upload" xml:space="preserve">
     <value>Enviar</value>
   </data>
   <data name="urgent" xml:space="preserve">
-    <value>Urgent</value>
+    <value>Urgente</value>
   </data>
   <data name="usb" xml:space="preserve">
     <value>Usb</value>
@@ -12191,7 +12190,7 @@
     <value>Usuário</value>
   </data>
   <data name="users_group" xml:space="preserve">
-    <value>Usuários Group</value>
+    <value>Usuários Grupo</value>
   </data>
   <data name="users_minus" xml:space="preserve">
     <value>Usuários Menos</value>
@@ -12203,7 +12202,7 @@
     <value>Usuários</value>
   </data>
   <data name="uv_index" xml:space="preserve">
-    <value>UV Index</value>
+    <value>UV Índice</value>
   </data>
   <data name="ux_circle" xml:space="preserve">
     <value>UX Círculo</value>
@@ -12215,7 +12214,7 @@
     <value>Vacina</value>
   </data>
   <data name="vacuum_cleaner" xml:space="preserve">
-    <value>Vacuum Cleaner</value>
+    <value>Pó Aspirador</value>
   </data>
   <data name="variable_minus" xml:space="preserve">
     <value>Variável Menos</value>
@@ -12227,16 +12226,16 @@
     <value>Variável</value>
   </data>
   <data name="vector_bezier_2" xml:space="preserve">
-    <value>Vetor Bezier 2</value>
+    <value>Vetor Bézier 2</value>
   </data>
   <data name="vector_bezier_arc" xml:space="preserve">
-    <value>Vetor Bezier Arco</value>
+    <value>Vetor Bézier Arco</value>
   </data>
   <data name="vector_bezier_circle" xml:space="preserve">
-    <value>Vetor Bezier Círculo</value>
+    <value>Vetor Bézier Círculo</value>
   </data>
   <data name="vector_bezier" xml:space="preserve">
-    <value>Vetor Bezier</value>
+    <value>Vetor Bézier</value>
   </data>
   <data name="vector_spline" xml:space="preserve">
     <value>Vetor Spline</value>
@@ -12248,10 +12247,10 @@
     <value>Vetor</value>
   </data>
   <data name="venus" xml:space="preserve">
-    <value>Venus</value>
+    <value>Vénus</value>
   </data>
   <data name="versions" xml:space="preserve">
-    <value>Versions</value>
+    <value>Versões</value>
   </data>
   <data name="video_minus" xml:space="preserve">
     <value>Vídeo Menos</value>
@@ -12272,7 +12271,7 @@
     <value>Ver 360</value>
   </data>
   <data name="viewfinder" xml:space="preserve">
-    <value>Viewfinder</value>
+    <value>Visor</value>
   </data>
   <data name="viewport_narrow" xml:space="preserve">
     <value>Área de exibição Estreito</value>
@@ -12287,10 +12286,10 @@
     <value>Área de exibição Wide</value>
   </data>
   <data name="vignette" xml:space="preserve">
-    <value>Vignette</value>
+    <value>Vinhetagem</value>
   </data>
   <data name="vinyl" xml:space="preserve">
-    <value>Vinyl</value>
+    <value>Vinil</value>
   </data>
   <data name="vip_2" xml:space="preserve">
     <value>Vip 2</value>
@@ -12305,10 +12304,10 @@
     <value>Vírus</value>
   </data>
   <data name="vocabulary" xml:space="preserve">
-    <value>Vocabulary</value>
+    <value>Vocabulário</value>
   </data>
   <data name="volcano" xml:space="preserve">
-    <value>Volcano</value>
+    <value>Vulcão</value>
   </data>
   <data name="volume_2" xml:space="preserve">
     <value>Volume 2</value>
@@ -12323,19 +12322,19 @@
     <value>Volume</value>
   </data>
   <data name="walk" xml:space="preserve">
-    <value>Walk</value>
+    <value>Andar</value>
   </data>
   <data name="wall" xml:space="preserve">
-    <value>Wall</value>
+    <value>Parede</value>
   </data>
   <data name="wallet" xml:space="preserve">
-    <value>Wallet</value>
+    <value>Carteira</value>
   </data>
   <data name="wallpaper" xml:space="preserve">
-    <value>Wallpaper</value>
+    <value>Fundo De Ecrã</value>
   </data>
   <data name="wand" xml:space="preserve">
-    <value>Wand</value>
+    <value>Varinha</value>
   </data>
   <data name="wash_dry_1" xml:space="preserve">
     <value>Lavar Secar 1</value>
@@ -12347,37 +12346,37 @@
     <value>Lavar Secar 3</value>
   </data>
   <data name="wash_dry_dip" xml:space="preserve">
-    <value>Lavar Secar Dip</value>
+    <value>Lavar Secar Mergulhar</value>
   </data>
   <data name="wash_dry_flat" xml:space="preserve">
     <value>Lavar Secar Plano</value>
   </data>
   <data name="wash_dry_hang" xml:space="preserve">
-    <value>Lavar Secar Hang</value>
+    <value>Lavar Secar Pendurar</value>
   </data>
   <data name="wash_dry_shade" xml:space="preserve">
-    <value>Lavar Secar Shade</value>
+    <value>Lavar Secar Sombra</value>
   </data>
   <data name="wash_dry" xml:space="preserve">
     <value>Lavar Secar</value>
   </data>
   <data name="wash_dryclean" xml:space="preserve">
-    <value>Lavar Dryclean</value>
+    <value>Lavar Limpeza A Seco</value>
   </data>
   <data name="wash_eco" xml:space="preserve">
     <value>Lavar Eco</value>
   </data>
   <data name="wash_gentle" xml:space="preserve">
-    <value>Lavar Gentle</value>
+    <value>Lavar Delicado</value>
   </data>
   <data name="wash_hand" xml:space="preserve">
     <value>Lavar Mão</value>
   </data>
   <data name="wash_machine" xml:space="preserve">
-    <value>Lavar Machine</value>
+    <value>Lavar Máquina</value>
   </data>
   <data name="wash_press" xml:space="preserve">
-    <value>Lavar Press</value>
+    <value>Lavar Engomar</value>
   </data>
   <data name="wash_temperature_1" xml:space="preserve">
     <value>Lavar Temperatura 1</value>
@@ -12398,46 +12397,46 @@
     <value>Lavar Temperatura 6</value>
   </data>
   <data name="wash_tumble_dry" xml:space="preserve">
-    <value>Lavar Tumble Secar</value>
+    <value>Lavar Secador Secar</value>
   </data>
   <data name="wash" xml:space="preserve">
     <value>Lavar</value>
   </data>
   <data name="waterpolo" xml:space="preserve">
-    <value>Waterpolo</value>
+    <value>Polo Aquático</value>
   </data>
   <data name="wave_saw_tool" xml:space="preserve">
-    <value>Onda Saw Ferramenta</value>
+    <value>Onda Serra Ferramenta</value>
   </data>
   <data name="wave_sine" xml:space="preserve">
-    <value>Onda Sine</value>
+    <value>Onda Seno</value>
   </data>
   <data name="wave_square" xml:space="preserve">
     <value>Onda Quadrado</value>
   </data>
   <data name="waves_electricity" xml:space="preserve">
-    <value>Waves Eletricidade</value>
+    <value>Ondas Eletricidade</value>
   </data>
   <data name="webhook" xml:space="preserve">
     <value>Webhook</value>
   </data>
   <data name="weight" xml:space="preserve">
-    <value>Weight</value>
+    <value>Peso</value>
   </data>
   <data name="wheat" xml:space="preserve">
-    <value>Wheat</value>
+    <value>Trigo</value>
   </data>
   <data name="wheel" xml:space="preserve">
     <value>Roda</value>
   </data>
   <data name="wheelchair" xml:space="preserve">
-    <value>Wheelchair</value>
+    <value>Cadeira De Rodas</value>
   </data>
   <data name="whirl" xml:space="preserve">
-    <value>Whirl</value>
+    <value>Remoinho</value>
   </data>
   <data name="whisk" xml:space="preserve">
-    <value>Whisk</value>
+    <value>Batedor</value>
   </data>
   <data name="wifi_0" xml:space="preserve">
     <value>Wifi 0</value>
@@ -12458,7 +12457,7 @@
     <value>Vento</value>
   </data>
   <data name="windmill" xml:space="preserve">
-    <value>Windmill</value>
+    <value>Moinho</value>
   </data>
   <data name="window_maximize" xml:space="preserve">
     <value>Janela Maximizar</value>
@@ -12470,7 +12469,7 @@
     <value>Janela</value>
   </data>
   <data name="windsock" xml:space="preserve">
-    <value>Windsock</value>
+    <value>Manga De Vento</value>
   </data>
   <data name="wiper_wash" xml:space="preserve">
     <value>Limpador Lavar</value>
@@ -12479,10 +12478,10 @@
     <value>Limpador</value>
   </data>
   <data name="woman" xml:space="preserve">
-    <value>Woman</value>
+    <value>Mulher</value>
   </data>
   <data name="wood" xml:space="preserve">
-    <value>Wood</value>
+    <value>Madeira</value>
   </data>
   <data name="world_bolt" xml:space="preserve">
     <value>Mundo Relâmpago</value>
@@ -12563,7 +12562,7 @@
     <value>Mundo</value>
   </data>
   <data name="wrecking_ball" xml:space="preserve">
-    <value>Wrecking Bola</value>
+    <value>Demolição Bola</value>
   </data>
   <data name="x_mark" xml:space="preserve">
     <value>X Marca</value>
@@ -12578,49 +12577,49 @@
     <value>Yin Yang</value>
   </data>
   <data name="yoga" xml:space="preserve">
-    <value>Yoga</value>
+    <value>Ioga</value>
   </data>
   <data name="zeppelin" xml:space="preserve">
-    <value>Zeppelin</value>
+    <value>Zepelim</value>
   </data>
   <data name="zero_config" xml:space="preserve">
-    <value>Zero Config</value>
+    <value>Zero Configuração</value>
   </data>
   <data name="zodiac_aquarius" xml:space="preserve">
-    <value>Zodíaco Aquarius</value>
+    <value>Zodíaco Aquário</value>
   </data>
   <data name="zodiac_aries" xml:space="preserve">
-    <value>Zodíaco Aries</value>
+    <value>Zodíaco Carneiro</value>
   </data>
   <data name="zodiac_cancer" xml:space="preserve">
-    <value>Zodíaco Cancer</value>
+    <value>Zodíaco Caranguejo</value>
   </data>
   <data name="zodiac_capricorn" xml:space="preserve">
-    <value>Zodíaco Capricorn</value>
+    <value>Zodíaco Capricórnio</value>
   </data>
   <data name="zodiac_gemini" xml:space="preserve">
-    <value>Zodíaco Gemini</value>
+    <value>Zodíaco Gémeos</value>
   </data>
   <data name="zodiac_leo" xml:space="preserve">
-    <value>Zodíaco Leo</value>
+    <value>Zodíaco Leão</value>
   </data>
   <data name="zodiac_libra" xml:space="preserve">
-    <value>Zodíaco Libra</value>
+    <value>Zodíaco Balança</value>
   </data>
   <data name="zodiac_pisces" xml:space="preserve">
-    <value>Zodíaco Pisces</value>
+    <value>Zodíaco Peixes</value>
   </data>
   <data name="zodiac_sagittarius" xml:space="preserve">
-    <value>Zodíaco Sagittarius</value>
+    <value>Zodíaco Sagitário</value>
   </data>
   <data name="zodiac_scorpio" xml:space="preserve">
-    <value>Zodíaco Scorpio</value>
+    <value>Zodíaco Escorpião</value>
   </data>
   <data name="zodiac_taurus" xml:space="preserve">
-    <value>Zodíaco Taurus</value>
+    <value>Zodíaco Touro</value>
   </data>
   <data name="zodiac_virgo" xml:space="preserve">
-    <value>Zodíaco Virgo</value>
+    <value>Zodíaco Virgem</value>
   </data>
   <data name="zoom_cancel" xml:space="preserve">
     <value>Zoom Cancelar</value>
@@ -12650,7 +12649,7 @@
     <value>Zoom Fora</value>
   </data>
   <data name="zoom_pan" xml:space="preserve">
-    <value>Zoom Pan</value>
+    <value>Zoom Deslocar</value>
   </data>
   <data name="zoom_question" xml:space="preserve">
     <value>Zoom Interrogação</value>
@@ -12659,7 +12658,7 @@
     <value>Zoom Substituir</value>
   </data>
   <data name="zoom_reset" xml:space="preserve">
-    <value>Zoom Reset</value>
+    <value>Zoom Repor</value>
   </data>
   <data name="zoom_scan" xml:space="preserve">
     <value>Zoom Escanear</value>

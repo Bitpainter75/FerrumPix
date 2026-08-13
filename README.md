@@ -22,6 +22,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Open JPEG, PNG, WEBP, BMP, GIF and RAW, plus HEIC/HEIF/AVIF and TIFF read-only, and Photoshop files with their layers.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
+- Work in your own language: sixteen are built in, and the symbol search finds shapes by their name in each of them.
 
 Your originals are never changed behind your back: edits to RAW and Photoshop files live in a small sidecar next to the file, and everything else is only written when you save.
 
@@ -142,6 +143,8 @@ FerrumPix signs in with your user name and an app password, which you create in 
 ## Settings
 
 Theme, accent colour, language, interface and font scale, thumbnail and export quality, metadata handling, video support, cache cleanup and the connection to an Immich or Nextcloud server.
+
+The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
 
 Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
 

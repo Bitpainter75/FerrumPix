@@ -55,11 +55,22 @@ Namespace Services
             Get
                 Select Case EffectiveCulture.TwoLetterISOLanguageName
                     Case "de" : Return "German"
+                    Case "nl" : Return "Dutch"
+                    Case "sv" : Return "Swedish"
+                    Case "da" : Return "Danish"
+                    ' Auch Nynorsk ("nn") und die Makrosprache ("no") landen hier: die Ressourcen
+                    ' liegen als Bokmaal, und ohne diese Faelle bliebe die Anwendung dort englisch.
+                    Case "nb", "nn", "no" : Return "Norwegian"
+                    Case "fi" : Return "Finnish"
                     Case "es" : Return "Spanish"
                     Case "fr" : Return "French"
                     Case "it" : Return "Italian"
                     Case "pt" : Return "Portuguese"
+                    Case "pl" : Return "Polish"
+                    Case "cs" : Return "Czech"
+                    Case "ru" : Return "Russian"
                     Case "zh" : Return "Chinese"
+                    Case "ja" : Return "Japanese"
                     Case Else : Return "English"
                 End Select
             End Get
@@ -80,11 +91,20 @@ Namespace Services
                     ("System", ""),
                     ("German", "Deutsch"),
                     ("English", "English"),
+                    ("Dutch", "Nederlands"),
+                    ("Swedish", "Svenska"),
+                    ("Danish", "Dansk"),
+                    ("Norwegian", "Norsk bokmål"),
+                    ("Finnish", "Suomi"),
                     ("Spanish", "Español"),
                     ("French", "Français"),
                     ("Italian", "Italiano"),
                     ("Portuguese", "Português"),
-                    ("Chinese", "简体中文")}
+                    ("Polish", "Polski"),
+                    ("Czech", "Čeština"),
+                    ("Russian", "Русский"),
+                    ("Chinese", "简体中文"),
+                    ("Japanese", "日本語")}
             End Get
         End Property
 
@@ -161,13 +181,22 @@ Namespace Services
         Private Shared Function ResolveCultureCode(mode As String) As String
             Select Case NormalizeLanguageMode(mode)
                 Case "German" : Return "de"
+                Case "Dutch" : Return "nl"
+                Case "Swedish" : Return "sv"
+                Case "Danish" : Return "da"
+                Case "Norwegian" : Return "nb"
+                Case "Finnish" : Return "fi"
                 Case "Spanish" : Return "es"
                 Case "French" : Return "fr"
                 Case "Italian" : Return "it"
                 Case "Portuguese" : Return "pt"
+                Case "Polish" : Return "pl"
+                Case "Czech" : Return "cs"
+                Case "Russian" : Return "ru"
                 ' Chinesisch braucht die REGION: die Ressourcen liegen als zh-CN (vereinfacht), und
                 ' ein blosses "zh" wuerde sie nicht finden.
                 Case "Chinese" : Return "zh-CN"
+                Case "Japanese" : Return "ja"
                 Case "English" : Return ""
                 Case Else
                     Return ResolveSystemCultureCode()
@@ -176,11 +205,11 @@ Namespace Services
 
         Private Shared Function ResolveSystemCultureCode() As String
             Dim systemCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant()
-            If IsSupportedCultureCode(systemCode) Then Return MitRegion(systemCode)
+            If IsSupportedCultureCode(systemCode) Then Return ResourceCultureFor(systemCode)
 
             For Each variableName In {"LANGUAGE", "LC_MESSAGES", "LANG"}
                 Dim code = ExtractCultureCode(Environment.GetEnvironmentVariable(variableName))
-                If IsSupportedCultureCode(code) Then Return MitRegion(code)
+                If IsSupportedCultureCode(code) Then Return ResourceCultureFor(code)
             Next
 
             Return ""
@@ -202,18 +231,27 @@ Namespace Services
 
         Private Shared Function IsSupportedCultureCode(code As String) As Boolean
             Select Case If(code, "").ToLowerInvariant()
-                Case "de", "es", "fr", "it", "pt", "zh"
+                Case "de", "nl", "sv", "da", "nb", "nn", "no", "fi",
+                     "es", "fr", "it", "pt", "pl", "cs", "ru", "zh", "ja"
                     Return True
                 Case Else
                     Return False
             End Select
         End Function
 
-        ''' <summary>Der Ressourcenname zu einem Zweibuchstaben-Code. Nur Chinesisch braucht eine
-        ''' Region: die Dateien heissen zh-CN, ein blosses "zh" findet sie nicht.</summary>
-        Private Shared Function MitRegion(code As String) As String
-            If String.Equals(code, "zh", StringComparison.OrdinalIgnoreCase) Then Return "zh-CN"
-            Return code
+        ''' <summary>Der Ressourcenname zu einem Sprachcode des Systems. Zwei Faelle weichen ab:
+        '''
+        ''' Chinesisch braucht eine REGION - die Dateien heissen zh-CN, ein blosses "zh" findet sie
+        ''' nicht. Und Norwegisch fuehrt .NET als DREI unverwandte Kulturen: "no" (Makrosprache),
+        ''' "nb" (Bokmaal) und "nn" (Nynorsk) haben untereinander keine Eltern-Beziehung. Die
+        ''' Ressourcen liegen als Bokmaal; ohne diese Abbildung bliebe ein System mit LANG=no_NO
+        ''' oder nn_NO englisch, obwohl die Sprache vorhanden ist.</summary>
+        Private Shared Function ResourceCultureFor(code As String) As String
+            Select Case If(code, "").ToLowerInvariant()
+                Case "zh" : Return "zh-CN"
+                Case "no", "nn" : Return "nb"
+                Case Else : Return code
+            End Select
         End Function
 
         Private Shared Function MakeKey(text As String) As String
