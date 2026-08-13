@@ -2631,8 +2631,16 @@ Namespace ViewModels
             SetTransparencyBackgroundModeCommand = ReactiveCommand.Create(Of String)(Sub(m) TransparencyBackgroundMode = m)
             CleanupDatabaseCommand = ReactiveCommand.Create(Sub()
                                                                 ' Wie beim Aufraeumen der Ordner: nur EIN Fenster
-                                                                ' darf am Bestand schreiben.
-                                                                Dim crossProcess = Services.BackgroundRunLock.TryAcquire()
+                                                                ' darf am Bestand schreiben. Ueber die
+                                                                ' AUFRAEUMKLAMMER und nicht ueber TryAcquire:
+                                                                ' PurgeOrphanedRecords holt sich dieselbe Sperre
+                                                                ' gleich noch einmal, und ein zweiter echter
+                                                                ' Erwerb scheitert an der eigenen Datei
+                                                                ' (FileShare.None gilt auch fuer den, der sie
+                                                                ' haelt). Der Loeschweg saehe dann aus wie von
+                                                                ' einem fremden Fenster blockiert und gaebe
+                                                                ' wortlos 0 zurueck.
+                                                                Dim crossProcess = Services.BackgroundRunLock.TryEnterCleanup()
                                                                 If crossProcess Is Nothing Then
                                                                     CleanupResultMessage = OtherWindowBusyMessage
                                                                     Return
@@ -3358,7 +3366,12 @@ Namespace ViewModels
         ''' schreibt seine Fassung der index.json zurueck, und die Eintraege des anderen sind weg
         ''' oder tauchen wieder auf. Die Laeufe IM EIGENEN Fenster halten die beiden Loeschwege
         ''' selbst an (siehe LibraryService.StopBackgroundWriters); diese Sperre ist die zweite
-        ''' Haelfte davon, gegen das andere Fenster.</summary>
+        ''' Haelfte davon, gegen das andere Fenster.
+        '''
+        ''' GEHOLT WIRD SIE ueber die Aufraeumklammer, nicht ueber TryAcquire: DeleteFolderCatalogData
+        ''' nimmt je Ordner dieselbe Sperre, und ein zweiter echter Erwerb scheitert an der eigenen
+        ''' Datei. Mit der Rohsperre flogen die Vorschaubilder, die Katalogzeilen aber blieben stehen
+        ''' und die Meldung zaehlte wortlos null.</summary>
         Private Sub CleanFolderSet(targets As IEnumerable(Of ThumbnailCacheFolderInfo),
                                    catalog As Boolean, thumbnails As Boolean)
             Dim list = If(targets, Enumerable.Empty(Of ThumbnailCacheFolderInfo)()).
@@ -3368,7 +3381,7 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim crossProcess = Services.BackgroundRunLock.TryAcquire()
+            Dim crossProcess = Services.BackgroundRunLock.TryEnterCleanup()
             If crossProcess Is Nothing Then
                 ' SAUBER ABBRECHEN statt danebenzuschreiben: was hier geloescht wuerde, legte der
                 ' Lauf im anderen Fenster gleich wieder an.
