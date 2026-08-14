@@ -475,8 +475,26 @@ Namespace Views
         Private Sub TitleBarPointerPressed(sender As Object, e As PointerPressedEventArgs)
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
             Dim source = TryCast(e.Source, Control)
-            If _usesNativeMacWindowChrome AndAlso IsInTopWindowDragArea(source) Then Return
+            Dim inTopBar = IsInTopWindowDragArea(source)
+            If _usesNativeMacWindowChrome AndAlso inTopBar Then Return
             If Not IsInWindowDragArea(source) Then Return
+
+            ' DOPPELKLICK AUF DIE OBERE FENSTERLEISTE schaltet zwischen maximiert und
+            ' Normalgroesse - dieselbe Geste wie bei den Fenstern des Systems, mit derselben
+            ' Wirkung wie der Maximieren-Knopf rechts in der Leiste. Nur dort und nicht in den
+            ' Fusszeilen: die sind zwar ebenfalls Ziehbereiche, tragen aber Bedienelemente, und
+            ' ein danebengegangener Doppelklick soll nicht das Fenster umschalten.
+            ' Die Pruefung steht VOR BeginMoveDrag, sonst begaenne der zweite Klick nur eine
+            ' weitere Fensterbewegung. Der Klickzaehler kommt aus Avalonias Zeigergeraet und
+            ' zaehlt allein nach Zeit und Abstand - der Zug des ersten Klicks setzt ihn nicht
+            ' zurueck. Wie bei Avalonias eigener Doppelklick-Erkennung zaehlt jeder zweite Klick,
+            ' damit vier Klicks zweimal umschalten statt gar nicht.
+            If inTopBar AndAlso e.ClickCount > 0 AndAlso e.ClickCount Mod 2 = 0 Then
+                ToggleMaximized()
+                e.Handled = True
+                Return
+            End If
+
             BeginMoveDrag(e)
         End Sub
 
@@ -511,6 +529,15 @@ Namespace Views
         End Sub
 
         Private Sub OnMaximizeClick(sender As Object, e As RoutedEventArgs)
+            ToggleMaximized()
+        End Sub
+
+        ''' <summary>Zwischen maximiert und Normalgroesse wechseln - vom Maximieren-Knopf und vom
+        ''' Doppelklick auf die obere Fensterleiste. Im Viewer-Vollbild bleibt der Zustand
+        ''' unangetastet: dort gehoert er dem Vollbildmodus, und ein Wechsel von hier aus liesse
+        ''' Fenster und Ansichtsmodus auseinanderlaufen.</summary>
+        Private Sub ToggleMaximized()
+            If WindowState = WindowState.FullScreen Then Return
             WindowState = If(WindowState = WindowState.Maximized, WindowState.Normal, WindowState.Maximized)
             UpdateMaximizeGlyph()
         End Sub
