@@ -245,6 +245,16 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ob die Fusszeile sichtbar ist. Aus den Einstellungen, je Bereich getrennt.
+        ''' Ausgeblendet gewinnt die Galerie deren Hoehe fuer die Kacheln; die Aktionen der Zeile
+        ''' stehen ohnehin auch im Kontextmenue eines Bildes.</summary>
+        Public ReadOnly Property ShowFooter As Boolean
+            Get
+                Return _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing OrElse
+                       _mainVm.Settings.GalleryShowFooter
+            End Get
+        End Property
+
         Public Sub ToggleInfoSidebar()
             If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
             _mainVm.Settings.GalleryInfoSidebarExpanded = Not _mainVm.Settings.GalleryInfoSidebarExpanded

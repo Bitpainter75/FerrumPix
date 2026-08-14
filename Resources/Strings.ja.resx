@@ -7320,4 +7320,22 @@
   <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
     <value>Nextcloud を接続します。タイムラインとアルバムがギャラリーのナビゲーションに表示されます。Memories アプリは必要ありません。</value>
   </data>
+  <data name="Fu_zeile_in_der_Galerie_92555007" xml:space="preserve">
+    <value>ギャラリーのフッターバー</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Men_Auswahl_und_Anzah_720cc02b" xml:space="preserve">
+    <value>下部にメニュー、選択、件数のバーを表示します。オフにすると画像の表示領域が広がります。バーの操作は右クリックメニューから引き続き利用できます。</value>
+  </data>
+  <data name="Fu_zeile_im_Viewer_da805e0e" xml:space="preserve">
+    <value>ビューアーのフッターバー</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__c60f14e1" xml:space="preserve">
+    <value>下部に画像情報、ズーム、評価のバーを表示します。オフにすると画像の表示領域が広がります。送りとズームはキーボード、マウスホイール、右クリックメニューで操作します。フィルムストリップには独自の切り替えがあり、そのまま表示されます。</value>
+  </data>
+  <data name="Fu_zeile_im_Editor_c4dbedfc" xml:space="preserve">
+    <value>エディターのフッターバー</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
+    <value>下部に画像情報とズームのバーを表示します。オフにすると作業領域の高さが広がります。フィルムストリップには独自の切り替えがあり、そのまま表示されます。</value>
+  </data>
 </root>

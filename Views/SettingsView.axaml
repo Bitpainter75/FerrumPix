@@ -625,6 +625,14 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Fußzeile in der Galerie" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt unten die Leiste mit Menü, Auswahl und Anzahl. Ausgeschaltet bleibt mehr Platz für die Bilder; die Aktionen der Leiste stehen weiterhin im Menü mit der rechten Maustaste." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryShowFooter}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Verweisen aus dem persönlichen Ordner folgen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Erlaubt Kopieren, Verschieben, Umbenennen und Löschen auch dann, wenn ein Ordner nur ein Verweis auf einen Ort außerhalb des persönlichen Ordners ist, etwa auf eine zweite Festplatte. Ausgeschaltet bleibt die Dateiarbeit auf den persönlichen Ordner beschränkt. Ansehen und Bearbeiten sind nie eingeschränkt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -800,6 +808,18 @@
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding ViewerShowFilmstrip}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Fußzeile im Viewer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben, Zoom und Bewertung. Ausgeschaltet bleibt mehr Platz für das Bild; geblättert und gezoomt wird dann über Tastatur, Mausrad und das Menü mit der rechten Maustaste. Der Filmstrip hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerShowFooter}"
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>
@@ -1021,6 +1041,18 @@
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorShowFilmstrip}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Fußzeile im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben und Zoom. Ausgeschaltet bleibt mehr Höhe für die Arbeitsfläche. Der Filmstrip hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorShowFooter}"
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>

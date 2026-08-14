@@ -67,6 +67,10 @@ Namespace ViewModels
         Private _slideshowTimer As Timer
         Private _slideshowIntervalMs As Double = 3000
         Private _folderPaths As New List(Of String)()
+        ''' <summary>Bindet einen NACHGEREICHTEN Ordnerkontext an das Bild, für das er gesucht wurde.
+        ''' Der Zähler steigt bei jedem Öffnen; trifft ein Suchergebnis mit altem Stand ein, wird es
+        ''' verworfen, statt die inzwischen gültige Liste zu überschreiben.</summary>
+        Private _folderContextToken As Integer = 0
         ' Cache-Scope für die Filmstreifen-Thumbnails (bei Suchlisten die Suchlisten-Scope, sonst Nothing),
         ' damit nicht je Ursprungsordner der Treffer ein eigener Cache-Ordner entsteht.
         Private _thumbCacheScopeId As String = Nothing
@@ -579,6 +583,26 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ob die Fusszeile sichtbar ist: die Leiste mit Bildangaben, Zoom und Bewertung.
+        ''' NICHT der Filmstreifen darueber - der hat seinen eigenen Schalter und bleibt stehen.
+        ''' Ausgeblendet bleiben Blaettern, Zoomen und Bewerten ueber Tastatur, Mausrad und
+        ''' Kontextmenue erreichbar.</summary>
+        Public ReadOnly Property ShowFooter As Boolean
+            Get
+                Return _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing OrElse
+                       _mainVm.Settings.ViewerShowFooter
+            End Get
+        End Property
+
+        ''' <summary>Ob der untere Rand ueberhaupt noch etwas zu zeigen hat. Der Rahmen traegt Linie
+        ''' und Polsterung; blieben beide stehen, waere ein leerer Streifen zu sehen, obwohl nichts
+        ''' mehr darin ist.</summary>
+        Public ReadOnly Property IsBottomBarVisible As Boolean
+            Get
+                Return ShowFilmstrip OrElse ShowFooter
+            End Get
+        End Property
+
         ' Commands
         Public ReadOnly Property PreviousCommand As ICommand
         Public ReadOnly Property NextCommand As ICommand
@@ -909,6 +933,9 @@ Namespace ViewModels
         ''' lokalen Pfad-Fluss (alles Immich-spezifische ist über _isImmichSession gekapselt).</summary>
         Public Sub OpenImmichSession(startPseudoPath As String, sessionItems As List(Of ImageItem), Optional immichAlbumId As String = Nothing)
             If sessionItems Is Nothing OrElse sessionItems.Count = 0 Then Return
+            ' Wie beim lokalen Öffnen: ein noch laufender, nachgereichter Ordnerkontext darf die
+            ' Sitzungsliste nicht nachträglich überschreiben.
+            _folderContextToken += 1
             _isImmichSession = True
             _immichSourceAlbumId = immichAlbumId
             _thumbCacheScopeId = Nothing
@@ -1595,10 +1622,16 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
+        ''' <summary>Zeigt ein Bild an. <paramref name="deferFolderContext"/> reicht die Nachbarbilder
+        ''' und den Filmstreifen NACH, statt das Bild darauf warten zu lassen - gedacht für den
+        ''' Programmstart mit einer Bilddatei, siehe LoadFolderContextDeferred. Wirkt nur ohne
+        ''' übergebene Pfadliste: eine mitgelieferte Liste kostet ohnehin keinen Ordnerzugriff.</summary>
+        Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional deferFolderContext As Boolean = False)
             _isImmichSession = False
             _immichSourceAlbumId = Nothing
             If Not File.Exists(imagePath) Then Return
+            ' Jedes Öffnen entwertet einen noch laufenden, nachgereichten Ordnerkontext.
+            _folderContextToken += 1
             ' Ein normales Oeffnen beendet einen laufenden Vergleich - sonst zeigt der Betrachter
             ' beim naechsten Bild aus der Galerie weiter die alten zwei Flaechen. OpenCompare ruft
             ' diese Methode zuerst und setzt den Modus danach wieder.
@@ -1623,6 +1656,12 @@ Namespace ViewModels
                     ToList()
                 _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
                 LoadFilmstrip()
+            ElseIf deferFolderContext Then
+                ' Leer starten, damit das Bild sofort kommt - die Liste trifft gleich ein.
+                _folderPaths = New List(Of String)()
+                _currentIndex = 0
+                LoadFilmstrip()
+                LoadFolderContextDeferred(IO.Path.GetDirectoryName(imagePath), imagePath, _folderContextToken)
             Else
                 Dim folder = IO.Path.GetDirectoryName(imagePath)
                 LoadFolderContext(folder, imagePath)
@@ -2054,7 +2093,9 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Sub LoadFolderContext(folder As String, currentPath As String)
+        ''' <summary>Liest die blätterbaren Dateien eines Ordners. Reines Lesen ohne Zustand, damit
+        ''' derselbe Aufruf sowohl sofort als auch auf einem Hintergrund-Thread laufen kann.</summary>
+        Private Shared Function ScanFolderImagePaths(folder As String) As List(Of String)
             ' ".fpx" gehört dazu: Projekte blättern im Viewer/Vollbild mit (Anzeige aus dem Composite).
             ' Feste Formate plus die kanonischen RAW-Endungen (RawPreviewService.SupportedExtensions).
             Dim exts = {
@@ -2062,17 +2103,54 @@ Namespace ViewModels
                 ".ico", ".svg", ".fpx", ".psd", ".psb",
                 ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
             }.Concat(RawPreviewService.SupportedExtensions).ToArray()
+            Return Directory.GetFiles(folder).
+                Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
+                OrderBy(Function(f) IO.Path.GetFileName(f)).
+                ToList()
+        End Function
+
+        Private Sub LoadFolderContext(folder As String, currentPath As String)
             Try
-                _folderPaths = Directory.GetFiles(folder).
-                    Where(Function(f) exts.Contains(IO.Path.GetExtension(f).ToLowerInvariant())).
-                    OrderBy(Function(f) IO.Path.GetFileName(f)).
-                    ToList()
+                _folderPaths = ScanFolderImagePaths(folder)
                 _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, StringComparison.OrdinalIgnoreCase))
                 If _currentIndex < 0 Then _currentIndex = 0
                 LoadFilmstrip()
             Catch
                 _folderPaths = New List(Of String)()
                 _currentIndex = 0
+            End Try
+        End Sub
+
+        ''' <summary>Denselben Ordnerkontext NACHREICHEN, statt ihn vor dem Bild zu bilden.
+        '''
+        ''' Gebraucht beim Programmstart mit einer Bilddatei: Ordner lesen und Filmstreifen bauen
+        ''' kostet in einem grossen Fotoordner spürbar Zeit, und diese Zeit lag bisher VOR dem
+        ''' Anzeigen des Bildes, um das es dem Nutzer geht. Das Verzeichnis wird deshalb auf einem
+        ''' Hintergrund-Thread gelesen; die Liste und der Filmstreifen erscheinen, sobald sie da sind.
+        '''
+        ''' Bis dahin ist die Liste leer: die Positionsangabe der Fusszeile bleibt leer und Blättern
+        ''' bewirkt nichts. Beides holt sich hier von selbst nach. Der Zähler verwirft ein Ergebnis,
+        ''' das ein inzwischen anderes Bild beträfe.</summary>
+        Private Async Sub LoadFolderContextDeferred(folder As String, currentPath As String, token As Integer)
+            Try
+                If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then Return
+                Dim paths = Await Task.Run(Function() ScanFolderImagePaths(folder))
+                If token <> _folderContextToken Then Return
+
+                _folderPaths = paths
+                Dim index = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, StringComparison.OrdinalIgnoreCase))
+                If index < 0 Then index = 0
+                _currentIndex = index
+                LoadFilmstrip()
+                ' Von Hand melden statt über CurrentIndex: der Wert kann derselbe sein wie vorher,
+                ' und RaiseAndSetIfChanged schwiege dann - die Fusszeile bliebe ohne Position.
+                Me.RaisePropertyChanged(NameOf(CurrentIndex))
+                Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
+                Me.RaisePropertyChanged(NameOf(PositionText))
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("ViewerViewModel.LoadFolderContextDeferred", ex)
             End Try
         End Sub
 

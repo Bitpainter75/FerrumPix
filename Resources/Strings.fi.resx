@@ -7320,4 +7320,22 @@
   <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
     <value>Yhdistää Nextcloudin. Aikajana ja albumit näkyvät gallerian navigoinnissa. Memories-sovellusta ei tarvita.</value>
   </data>
+  <data name="Fu_zeile_in_der_Galerie_92555007" xml:space="preserve">
+    <value>Alapalkki galleriassa</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Men_Auswahl_und_Anzah_720cc02b" xml:space="preserve">
+    <value>Näyttää alareunan palkin, jossa ovat valikko, valinta ja määrä. Pois päältä kuville jää enemmän tilaa; palkin toiminnot löytyvät edelleen hiiren oikean painikkeen valikosta.</value>
+  </data>
+  <data name="Fu_zeile_im_Viewer_da805e0e" xml:space="preserve">
+    <value>Alapalkki katselimessa</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__c60f14e1" xml:space="preserve">
+    <value>Näyttää alareunan palkin, jossa ovat kuvan tiedot, zoomaus ja arvio. Pois päältä kuvalle jää enemmän tilaa; selaus ja zoomaus tapahtuvat silloin näppäimistöllä, hiiren rullalla ja hiiren oikean painikkeen valikosta. Filminauhalla on oma valintansa, ja se jää näkyviin.</value>
+  </data>
+  <data name="Fu_zeile_im_Editor_c4dbedfc" xml:space="preserve">
+    <value>Alapalkki muokkaimessa</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
+    <value>Näyttää alareunan palkin, jossa ovat kuvan tiedot ja zoomaus. Pois päältä työalueelle jää enemmän korkeutta. Filminauhalla on oma valintansa, ja se jää näkyviin.</value>
+  </data>
 </root>

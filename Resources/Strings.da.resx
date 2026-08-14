@@ -7320,4 +7320,22 @@
   <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
     <value>Forbinder en Nextcloud. Tidslinje og album vises i galleriets navigation. Memories-appen er ikke påkrævet.</value>
   </data>
+  <data name="Fu_zeile_in_der_Galerie_92555007" xml:space="preserve">
+    <value>Bundlinje i galleriet</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Men_Auswahl_und_Anzah_720cc02b" xml:space="preserve">
+    <value>Viser linjen nederst med menu, markering og antal. Slået fra er der mere plads til billederne; linjens handlinger findes fortsat i menuen med højre museknap.</value>
+  </data>
+  <data name="Fu_zeile_im_Viewer_da805e0e" xml:space="preserve">
+    <value>Bundlinje i fremviseren</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__c60f14e1" xml:space="preserve">
+    <value>Viser linjen nederst med billedoplysninger, zoom og bedømmelse. Slået fra er der mere plads til billedet; der bladres og zoomes så med tastaturet, musehjulet og menuen med højre museknap. Filmstrimlen har sin egen indstilling og bliver stående.</value>
+  </data>
+  <data name="Fu_zeile_im_Editor_c4dbedfc" xml:space="preserve">
+    <value>Bundlinje i redigeringen</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
+    <value>Viser linjen nederst med billedoplysninger og zoom. Slået fra er der mere højde til arbejdsfladen. Filmstrimlen har sin egen indstilling og bliver stående.</value>
+  </data>
 </root>

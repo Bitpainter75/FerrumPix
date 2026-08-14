@@ -734,6 +734,11 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Der Start MIT einer Bilddatei (aus dem Dateimanager, von der Kommandozeile).
+        '''
+        ''' Betrachter und Editor zeigen EIN Bild - die Nachbarbilder werden dort nachgereicht, damit
+        ''' das gewünschte Bild nicht auf das Lesen eines womöglich riesigen Ordners wartet. In der
+        ''' Galerie geht das nicht: dort IST die Liste der Inhalt, ohne sie bliebe die Ansicht leer.</summary>
         Private Sub OpenInitialImage(imagePath As String)
             Select Case AppSettingsService.Load().StartupImageMode
                 Case "Gallery"
@@ -742,19 +747,19 @@ Namespace ViewModels
                     CurrentMode = AppMode.Gallery
                 Case "Editor"
                     If SvgPreviewService.IsSupportedSvg(imagePath) Then
-                        Viewer.OpenImage(imagePath)
+                        Viewer.OpenImage(imagePath, deferFolderContext:=True)
                         CurrentMode = AppMode.Viewer
                     Else
-                        Editor.OpenImage(imagePath)
+                        Editor.OpenImage(imagePath, deferFolderContext:=True)
                         CurrentMode = AppMode.Editor
                     End If
                 Case "Fullscreen"
                     _previousModeBeforeFullscreen = AppMode.Viewer
-                    Viewer.OpenImage(imagePath)
+                    Viewer.OpenImage(imagePath, deferFolderContext:=True)
                     CurrentMode = AppMode.Viewer
                     IsFullscreen = True
                 Case Else
-                    Viewer.OpenImage(imagePath)
+                    Viewer.OpenImage(imagePath, deferFolderContext:=True)
                     CurrentMode = AppMode.Viewer
             End Select
         End Sub
@@ -840,6 +845,13 @@ Namespace ViewModels
 
         Public Sub RefreshLayoutBindings()
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstrip))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFooter))
+            ' Haengt an BEIDEN Schaltern darueber - jeder von ihnen kann den unteren Rand als
+            ' Ganzes kommen oder gehen lassen.
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.IsBottomBarVisible))
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.ShowFooter))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFooter))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsBottomBarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstrip))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsLayersPanelVisible))

@@ -7280,4 +7280,22 @@
   <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
     <value>Conecta una Nextcloud. La línea de tiempo y los álbumes aparecen en la navegación de la galería. La aplicación Memories no es necesaria.</value>
   </data>
+  <data name="Fu_zeile_in_der_Galerie_92555007" xml:space="preserve">
+    <value>Barra inferior en la galería</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Men_Auswahl_und_Anzah_720cc02b" xml:space="preserve">
+    <value>Muestra abajo la barra con el menú, la selección y el número. Desactivada queda más espacio para las imágenes; las acciones de la barra siguen estando en el menú del botón derecho.</value>
+  </data>
+  <data name="Fu_zeile_im_Viewer_da805e0e" xml:space="preserve">
+    <value>Barra inferior en el visor</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__c60f14e1" xml:space="preserve">
+    <value>Muestra abajo la barra con los datos de la imagen, el zoom y la valoración. Desactivada queda más espacio para la imagen; para pasar de imagen y ampliar se usan entonces el teclado, la rueda del ratón y el menú del botón derecho. La tira de imágenes tiene su propio interruptor y permanece.</value>
+  </data>
+  <data name="Fu_zeile_im_Editor_c4dbedfc" xml:space="preserve">
+    <value>Barra inferior en el editor</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
+    <value>Muestra abajo la barra con los datos de la imagen y el zoom. Desactivada queda más altura para el área de trabajo. La tira de imágenes tiene su propio interruptor y permanece.</value>
+  </data>
 </root>

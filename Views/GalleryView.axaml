@@ -26,7 +26,10 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="GalleryRootGrid" RowDefinitions="52,*,40">
+    <!-- Die Fusszeile steht in einer Auto-Zeile statt in einer festen 40er: ausgeblendet faellt die
+         Zeile damit ganz weg, statt einen leeren Streifen zu hinterlassen. Ihre Hoehe bringt die
+         Leiste selbst mit. -->
+    <Grid x:Name="GalleryRootGrid" RowDefinitions="52,*,Auto">
 
         <!-- EIN Kontextmenue fuer Kachel, Zeile und Fusszeile. -->
         <Grid.ContextMenu>
@@ -2535,7 +2538,8 @@
         <!-- Höhe wie die Fußzeilen von Editor und Betrachter: dort ergibt sich 40 aus 6 Rand,
              28 Knopfhöhe, 6 Rand. Eine Fußzeile, die je nach Ansicht anders hoch ist, springt beim
              Umschalten. -->
-        <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Classes="statusbar window-drag" Height="40" Padding="20,6">
+        <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Classes="statusbar window-drag" Height="40" Padding="20,6"
+                IsVisible="{Binding ShowFooter}">
             <!-- EINE SPALTE, drei Ausrichtungen. Mit "*,Auto,*" sass die Mitte NICHT in der Mitte:
                  eine Sternspalte wird nie schmaler als ihr Inhalt, und die breitere Seite schob die
                  mittlere Gruppe weg. Mittig heisst hier mittig zur LEISTE - die beginnt rechts der

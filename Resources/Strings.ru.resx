@@ -7320,4 +7320,22 @@
   <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
     <value>Подключает Nextcloud. Лента и альбомы появляются в навигации галереи. Приложение Memories не требуется.</value>
   </data>
+  <data name="Fu_zeile_in_der_Galerie_92555007" xml:space="preserve">
+    <value>Нижняя панель в галерее</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Men_Auswahl_und_Anzah_720cc02b" xml:space="preserve">
+    <value>Показывает внизу панель с меню, выбором и количеством. При отключении остаётся больше места для снимков; действия панели по-прежнему доступны в меню правой кнопки мыши.</value>
+  </data>
+  <data name="Fu_zeile_im_Viewer_da805e0e" xml:space="preserve">
+    <value>Нижняя панель в просмотрщике</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__c60f14e1" xml:space="preserve">
+    <value>Показывает внизу панель со сведениями о снимке, масштабом и оценкой. При отключении остаётся больше места для снимка; листание и масштаб доступны тогда с клавиатуры, колесом мыши и через меню правой кнопки мыши. У ленты кадров свой выключатель, она остаётся.</value>
+  </data>
+  <data name="Fu_zeile_im_Editor_c4dbedfc" xml:space="preserve">
+    <value>Нижняя панель в редакторе</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
+    <value>Показывает внизу панель со сведениями о снимке и масштабом. При отключении остаётся больше высоты для рабочей области. У ленты кадров свой выключатель, она остаётся.</value>
+  </data>
 </root>

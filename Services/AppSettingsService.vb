@@ -122,6 +122,13 @@ Namespace Services
         Public Property LastGalleryFolder As String = ""
         Public Property LastSaveAsTargetFolder As String = ""
         Public Property ViewerShowFilmstrip As Boolean = True
+        ''' Fusszeile am unteren Rand, je Bereich getrennt. AB WERK AN: sie traegt nicht nur Angaben
+        ''' zum Bild, sondern auch Bedienelemente (Menue, Zoom, Bewertung, im Betrachter und im Editor
+        ''' zusaetzlich den Filmstreifen). Wer die Bildflaeche maximal will, schaltet sie dort ab, wo
+        ''' sie stoert - deshalb drei Schalter statt einem.
+        Public Property GalleryShowFooter As Boolean = True
+        Public Property ViewerShowFooter As Boolean = True
+        Public Property EditorShowFooter As Boolean = True
         Public Property ViewerSlideshowIntervalSeconds As Integer = 3
         Public Property ViewerOpenFitToWindow As Boolean = True
         ''' "Always" (immer einpassen, auch kleinere Bilder hochskalieren) oder "OnlyWhenLarger"

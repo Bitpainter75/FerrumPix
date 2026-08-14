@@ -948,6 +948,9 @@ Namespace ViewModels
         ' Umschalten wieder hinterlegt (SetComparisonVisibleFromUser).
         Private _comparisonAutoEnabled As Boolean = AppSettingsService.Load().EditorShowComparison
         Private _folderPaths As New List(Of String)()
+        ''' <summary>Bindet einen NACHGEREICHTEN Filmstreifen an das Bild, für das er gesucht wurde -
+        ''' siehe LoadFilmstripContext. Gleiche Bauart wie im Betrachter.</summary>
+        Private _filmstripContextToken As Integer = 0
         ' Cache-Scope für die Filmstreifen-Thumbnails (Suchlisten-Scope statt je Ursprungsordner) - siehe ViewerViewModel.
         Private _thumbCacheScopeId As String = Nothing
         Private _thumbCacheScopeName As String = Nothing
@@ -3485,6 +3488,23 @@ Namespace ViewModels
             Get
                 If _isNewDocument Then Return False
                 Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.EditorShowFilmstrip
+            End Get
+        End Property
+
+        ''' <summary>Ob die Fusszeile sichtbar ist: die Leiste mit Bildangaben und Zoom. NICHT der
+        ''' Filmstreifen darueber - der hat seinen eigenen Schalter und bleibt stehen.</summary>
+        Public ReadOnly Property ShowFooter As Boolean
+            Get
+                Return _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing OrElse
+                       _mainVm.Settings.EditorShowFooter
+            End Get
+        End Property
+
+        ''' <summary>Ob der untere Rand ueberhaupt noch etwas zu zeigen hat - siehe die
+        ''' gleichnamige Eigenschaft im Betrachter.</summary>
+        Public ReadOnly Property IsBottomBarVisible As Boolean
+            Get
+                Return ShowFilmstrip OrElse ShowFooter
             End Get
         End Property
 
@@ -12932,11 +12952,14 @@ Namespace ViewModels
                                                  nextcloudSource:=herkunft)
         End Function
 
-        Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing)
-            Dim ignored = OpenImageAsync(imagePath, allPaths)
+        ''' <summary><paramref name="deferFolderContext"/> reicht den Filmstreifen nach, statt ihn vor
+        ''' der Anzeige zu bauen - siehe LoadFilmstripContext. Gedacht für den Programmstart mit einer
+        ''' Bilddatei.</summary>
+        Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional deferFolderContext As Boolean = False)
+            Dim ignored = OpenImageAsync(imagePath, allPaths, deferFolderContext:=deferFolderContext)
         End Sub
 
-        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing) As Task(Of Boolean)
+        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False) As Task(Of Boolean)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
             If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
@@ -13104,7 +13127,7 @@ Namespace ViewModels
             If allPaths IsNot Nothing Then
                 LoadFilmstripContext(imagePath, allPaths)
             Else
-                LoadFilmstripContext(imagePath)
+                LoadFilmstripContext(imagePath, deferFolderScan:=deferFolderContext)
             End If
             LoadLibraryMeta(imagePath)
             Dim immichAssetId = CurrentImmichAssetId()
@@ -13279,8 +13302,14 @@ Namespace ViewModels
             _currentIndex = -1
         End Sub
 
-        Private Sub LoadFilmstripContext(imagePath As String, Optional allPaths As List(Of String) = Nothing)
+        ''' <summary>Baut den Filmstreifen. <paramref name="deferFolderScan"/> liest das Verzeichnis
+        ''' auf einem Hintergrund-Thread und reicht den Streifen nach, statt die Oberfläche warten zu
+        ''' lassen - gedacht für den Programmstart mit einer Bilddatei. Bis das Ergebnis da ist, ist
+        ''' der Streifen leer und Blättern bewirkt nichts; das Bild selbst steht da bereits.</summary>
+        Private Sub LoadFilmstripContext(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional deferFolderScan As Boolean = False)
             ClearFilmstrip()
+            ' Jeder Neuaufbau entwertet einen noch laufenden, nachgereichten Streifen.
+            _filmstripContextToken += 1
 
             Try
                 If allPaths IsNot Nothing Then
@@ -13304,20 +13333,48 @@ Namespace ViewModels
                 Dim folder = IO.Path.GetDirectoryName(imagePath)
                 If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then Return
 
-                _folderPaths = Directory.GetFiles(folder).
-                    Where(Function(f) CanParticipateInEditorFilmstrip(f)).
-                    OrderBy(Function(f) IO.Path.GetFileName(f)).
-                    ToList()
+                If deferFolderScan Then
+                    LoadFilmstripContextDeferred(folder, imagePath, _filmstripContextToken)
+                    Return
+                End If
 
-                FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path)))
-
-                _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
-                If _currentIndex < 0 Then _currentIndex = 0
-                Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
-                MarkCurrentFilmstripItem()
-                Dim itemsSnapshot = FilmstripItems.ToList()
-                Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
+                ApplyFilmstripFolderPaths(ScanEditorFolderPaths(folder), imagePath)
             Catch
+            End Try
+        End Sub
+
+        ''' <summary>Liest die im Editor bearbeitbaren Dateien eines Ordners. Reines Lesen ohne
+        ''' Zustand, damit derselbe Aufruf auch auf einem Hintergrund-Thread laufen kann.</summary>
+        Private Shared Function ScanEditorFolderPaths(folder As String) As List(Of String)
+            Return Directory.GetFiles(folder).
+                Where(Function(f) CanParticipateInEditorFilmstrip(f)).
+                OrderBy(Function(f) IO.Path.GetFileName(f)).
+                ToList()
+        End Function
+
+        ''' <summary>Übernimmt eine fertige Ordnerliste in den Filmstreifen. Aus LoadFilmstripContext
+        ''' herausgezogen, damit der sofortige und der nachgereichte Weg dieselben Schritte gehen.</summary>
+        Private Sub ApplyFilmstripFolderPaths(paths As List(Of String), imagePath As String)
+            _folderPaths = paths
+            FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path)))
+
+            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
+            If _currentIndex < 0 Then _currentIndex = 0
+            Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
+            MarkCurrentFilmstripItem()
+            Dim itemsSnapshot = FilmstripItems.ToList()
+            Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
+        End Sub
+
+        Private Async Sub LoadFilmstripContextDeferred(folder As String, imagePath As String, token As Integer)
+            Try
+                Dim paths = Await Task.Run(Function() ScanEditorFolderPaths(folder))
+                If token <> _filmstripContextToken Then Return
+                ApplyFilmstripFolderPaths(paths, imagePath)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("EditorViewModel.LoadFilmstripContextDeferred", ex)
             End Try
         End Sub
 
@@ -14290,6 +14347,9 @@ Namespace ViewModels
         Private Sub RaiseNewDocumentStateChanged()
             Me.RaisePropertyChanged(NameOf(IsNewDocument))
             Me.RaisePropertyChanged(NameOf(ShowFilmstrip))
+            ' Haengt am Filmstreifen mit: bei ausgeblendeter Fusszeile entscheidet allein er, ob der
+            ' untere Rand ueberhaupt noch etwas zu zeigen hat.
+            Me.RaisePropertyChanged(NameOf(IsBottomBarVisible))
             Me.RaisePropertyChanged(NameOf(CanToggleFilmstrip))
         End Sub
 

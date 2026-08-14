@@ -1120,7 +1120,7 @@ Namespace Views
         End Sub
 
         ''' Positioniert das einzige VideoOverlay-Grid je nach Vollbild-Status: im Fenstermodus
-        ''' auf die Content-Zelle (Grid.Row=1/Column=0) mit demselben 88/0/80/0-Rand wie das
+        ''' auf die Content-Zelle (Grid.Row=1/Column=0) mit demselben 88/0/88/0-Rand wie das
         ''' Bild, im Vollbildmodus über das gesamte Fenster (RowSpan=3/ColumnSpan=2, randlos) -
         ''' rein per Layout, ohne das VideoView selbst je ab- und wieder anzuhängen. Dadurch
         ''' bleibt sein natives Fenster-Handle über Vollbild-Wechsel hinweg unangetastet.
@@ -1140,7 +1140,7 @@ Namespace Views
                 Grid.SetColumn(overlay, 0)
                 Grid.SetRowSpan(overlay, 1)
                 Grid.SetColumnSpan(overlay, 1)
-                overlay.Margin = New Thickness(88, 0, 80, 0)
+                overlay.Margin = New Thickness(88, 0, 88, 0)
             End If
         End Sub
 

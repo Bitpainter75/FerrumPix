@@ -7279,4 +7279,22 @@
   <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
     <value>Liga uma Nextcloud. A cronologia e os álbuns aparecem na navegação da galeria. A aplicação Memories não é necessária.</value>
   </data>
+  <data name="Fu_zeile_in_der_Galerie_92555007" xml:space="preserve">
+    <value>Barra inferior na galeria</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Men_Auswahl_und_Anzah_720cc02b" xml:space="preserve">
+    <value>Mostra em baixo a barra com menu, seleção e número. Desativada fica mais espaço para as imagens; as ações da barra continuam no menu do botão direito.</value>
+  </data>
+  <data name="Fu_zeile_im_Viewer_da805e0e" xml:space="preserve">
+    <value>Barra inferior no visualizador</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_Zoom_und__c60f14e1" xml:space="preserve">
+    <value>Mostra em baixo a barra com os dados da imagem, o zoom e a avaliação. Desativada fica mais espaço para a imagem; para avançar e ampliar usam-se então o teclado, a roda do rato e o menu do botão direito. A tira de filme tem o seu próprio interruptor e permanece.</value>
+  </data>
+  <data name="Fu_zeile_im_Editor_c4dbedfc" xml:space="preserve">
+    <value>Barra inferior no editor</value>
+  </data>
+  <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
+    <value>Mostra em baixo a barra com os dados da imagem e o zoom. Desativada fica mais altura para a área de trabalho. A tira de filme tem o seu próprio interruptor e permanece.</value>
+  </data>
 </root>

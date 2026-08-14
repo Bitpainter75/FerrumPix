@@ -1509,9 +1509,13 @@
              zu blaettern hiesse, dass der Commit auf ein Bild trifft, das gar nicht mehr offen ist.
              Der Commit selbst faengt das ab (er verfaellt), aber der Nutzer stuende dann vor einem
              Ergebnis, das er nirgends sieht. -->
+        <!-- Der ganze untere Rand mit ZWEI Schaltern: einer fuer den Filmstreifen, einer fuer die
+             Fusszeile. Der Rahmen geht erst, wenn beide aus sind - sonst blieben Rand und
+             Polsterung als leerer Streifen stehen. -->
         <Border Grid.Row="2"
                 Grid.ColumnSpan="5"
                 Classes="window-drag"
+                IsVisible="{Binding IsBottomBarVisible}"
                 Background="{DynamicResource FP.Bg.Dark}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="0,1,0,0"
@@ -1520,7 +1524,9 @@
             <!-- Dasselbe Menue wie hinter der Schaltflaeche, hier als Rechtsklick auf die
                  Fussleiste. Bewusst NICHT auf der Bildflaeche: dort ist die rechte Taste
                  bereits belegt (im Editor hebt sie die Auswahl auf, im Betrachter zoomt sie). -->
-            <Grid RowDefinitions="Auto,28">
+            <!-- Zweite Zeile auf Auto statt fest 28: die Hoehe bringt die Leiste selbst mit, damit
+                 die Zeile beim Ausblenden ganz wegfaellt und der Filmstreifen nach unten aufrueckt. -->
+            <Grid RowDefinitions="Auto,Auto">
                 <ListBox Name="FilmstripListBox"
                          Classes="filmstrip-list"
                          Height="110"
@@ -1552,7 +1558,11 @@
                 </ListBox>
 
                 <!-- Eine Spalte, drei Ausrichtungen - Begruendung an der Kopfleiste oben. -->
-                <Grid Grid.Row="1" VerticalAlignment="Center">
+                <!-- Nur DIESE Zeile haengt am Fusszeilen-Schalter, nicht der Filmstreifen darueber.
+                     Die Zoom-Gruppe steht als eigenes Kind des Wurzelrasters daneben und traegt
+                     denselben Schalter - sonst bliebe sie allein ueber dem Filmstreifen stehen. -->
+                <Grid Grid.Row="1" Height="28" VerticalAlignment="Center"
+                      IsVisible="{Binding ShowFooter}">
                     <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" HorizontalAlignment="Left">
                         <!-- Fussmenue wie in Galerie und Betrachter, hier bewusst KURZ: die
                              Stapelfunktionen der Galerie arbeiten auf der Datei, waehrend im Editor
@@ -1680,16 +1690,21 @@
 
         <!-- MITTIG ZUR BUEHNE wie die Gruppe in der Kopfleiste, deshalb ebenfalls in Spalte 1 des
              Wurzelrasters. Die senkrechte Lage kommt von unten: die Fussleiste traegt 6 Punkt
-             Innenrand, darueber liegt ihre 28 Punkt hohe Bedienzeile (RowDefinitions="Auto,28").
+             Innenrand, darueber liegt ihre 28 Punkt hohe Bedienzeile.
              Aendert sich eines von beiden, gehoert es hier mit geaendert - deshalb stehen beide
              Zahlen nebeneinander im Rand.
 
-             Die Spalte wandert mit der Buehne, genau wie bei der Gruppe in der Kopfleiste. -->
+             Die Spalte wandert mit der Buehne, genau wie bei der Gruppe in der Kopfleiste.
+
+             SIE GEHOERT ZUR FUSSZEILE, liegt aber ausserhalb von deren Rahmen - der Schalter muss
+             sie deshalb ausdruecklich mitnehmen. Ohne das blieb die Zoom-Gruppe beim Ausblenden
+             stehen, und die Fusszeile sah aus, als liesse sie sich gar nicht abschalten. -->
         <StackPanel x:Name="StageFooterButtons"
                     Grid.Row="2" Grid.Column="1"
                     Orientation="Horizontal" Spacing="4"
                     Height="28" Margin="0,0,0,6"
                     VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                    IsVisible="{Binding ShowFooter}"
                     IsEnabled="{Binding IsInteractionAllowed}">
             <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                     Focusable="False"

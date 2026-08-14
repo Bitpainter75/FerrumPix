@@ -49,6 +49,9 @@ Namespace ViewModels
         Private _galleryTimelineMode As String = "All"
         Private _galleryStartupCustomFolder As String = ""
         Private _viewerShowFilmstrip As Boolean = True
+        Private _galleryShowFooter As Boolean = True
+        Private _viewerShowFooter As Boolean = True
+        Private _editorShowFooter As Boolean = True
         Private _viewerSlideshowIntervalSeconds As Integer = 3
         Private _editorShowFilmstrip As Boolean = True
         Private _editorGridSize As Integer = 50
@@ -162,6 +165,9 @@ Namespace ViewModels
         Private _savedGalleryStartupCustomFolder As String = ""
         Private _catalogIndexOnStartup As Boolean = False
         Private _savedViewerShowFilmstrip As Boolean = True
+        Private _savedGalleryShowFooter As Boolean = True
+        Private _savedViewerShowFooter As Boolean = True
+        Private _savedEditorShowFooter As Boolean = True
         Private _savedViewerSlideshowIntervalSeconds As Integer = 3
         Private _savedEditorShowFilmstrip As Boolean = True
         Private _savedEditorGridSize As Integer = 50
@@ -1182,6 +1188,46 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _viewerShowFilmstrip = value Then Return
                 Me.RaiseAndSetIfChanged(_viewerShowFilmstrip, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Fusszeile je Bereich. Getrennt, weil sie in jedem Bereich etwas anderes traegt:
+        ''' in der Galerie Auswahl und Zaehler, im Betrachter zusaetzlich Filmstreifen und Zoom, im
+        ''' Editor die Werkzeugangaben. Wer sie im Betrachter loswerden will, braucht sie in der
+        ''' Galerie womoeglich weiter.</summary>
+        Public Property GalleryShowFooter As Boolean
+            Get
+                Return _galleryShowFooter
+            End Get
+            Set(value As Boolean)
+                If _galleryShowFooter = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryShowFooter, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property ViewerShowFooter As Boolean
+            Get
+                Return _viewerShowFooter
+            End Get
+            Set(value As Boolean)
+                If _viewerShowFooter = value Then Return
+                Me.RaiseAndSetIfChanged(_viewerShowFooter, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property EditorShowFooter As Boolean
+            Get
+                Return _editorShowFooter
+            End Get
+            Set(value As Boolean)
+                If _editorShowFooter = value Then Return
+                Me.RaiseAndSetIfChanged(_editorShowFooter, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -2535,6 +2581,9 @@ Namespace ViewModels
             _galleryTimelineMode = AppSettingsService.NormalizeGalleryTimelineMode(_appSettings.GalleryTimelineMode)
             _galleryStartupCustomFolder = AppSettingsService.NormalizeFolderPath(_appSettings.GalleryStartupCustomFolder)
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
+            _galleryShowFooter = _appSettings.GalleryShowFooter
+            _viewerShowFooter = _appSettings.ViewerShowFooter
+            _editorShowFooter = _appSettings.EditorShowFooter
             _viewerSlideshowIntervalSeconds = _appSettings.ViewerSlideshowIntervalSeconds
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
@@ -2847,6 +2896,9 @@ Namespace ViewModels
             _savedGalleryTimelineMode = _galleryTimelineMode
             _savedGalleryStartupCustomFolder = _galleryStartupCustomFolder
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
+            _savedGalleryShowFooter = _galleryShowFooter
+            _savedViewerShowFooter = _viewerShowFooter
+            _savedEditorShowFooter = _editorShowFooter
             _savedViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
             _savedEditorShowFilmstrip = _editorShowFilmstrip
             _savedEditorGridSize = _editorGridSize
@@ -2920,6 +2972,9 @@ Namespace ViewModels
             GalleryTimelineMode = _savedGalleryTimelineMode
             GalleryStartupCustomFolder = _savedGalleryStartupCustomFolder
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
+            GalleryShowFooter = _savedGalleryShowFooter
+            ViewerShowFooter = _savedViewerShowFooter
+            EditorShowFooter = _savedEditorShowFooter
             ViewerSlideshowIntervalSeconds = _savedViewerSlideshowIntervalSeconds
             EditorShowFilmstrip = _savedEditorShowFilmstrip
             EditorGridSize = _savedEditorGridSize
@@ -3008,6 +3063,9 @@ Namespace ViewModels
             GalleryStartupFolderMode = "Pictures"
             GalleryStartupCustomFolder = ""
             ViewerShowFilmstrip = True
+            GalleryShowFooter = True
+            ViewerShowFooter = True
+            EditorShowFooter = True
             ViewerSlideshowIntervalSeconds = 3
             EditorShowFilmstrip = True
             EditorGridSize = 50
@@ -3015,6 +3073,13 @@ Namespace ViewModels
             EditorShowGrid = False
             EditorInfoSidebarExpanded = True
             EditorLayersPanelExpanded = False
+            EditorLayerThumbnails = True
+            PsdTextImport = "Ask"
+            ' Der Setzer allein genuegt hier NICHT: die Ankreuzliste im Dialog entsteht einmal aus
+            ' diesem Wert (BuildAdjustmentGroupItems) und wird sonst nur von sich aus geaendert. Ohne
+            ' den Neuaufbau staenden die Haken weiter auf dem alten Stand, waehrend der Wert leer ist.
+            HiddenAdjustmentGroups = ""
+            BuildAdjustmentGroupItems()
             ViewerInfoSidebarExpanded = True
             GalleryInfoSidebarExpanded = False
             LanguageMode = "System"
@@ -3211,6 +3276,9 @@ Namespace ViewModels
         Private Sub SaveLayoutSettings()
             Dim settings = AppSettingsService.Load()
             settings.ViewerShowFilmstrip = _viewerShowFilmstrip
+            settings.GalleryShowFooter = _galleryShowFooter
+            settings.ViewerShowFooter = _viewerShowFooter
+            settings.EditorShowFooter = _editorShowFooter
             settings.ViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
             settings.ViewerOpenFitToWindow = _viewerOpenFitToWindow
             settings.ViewerFitBehavior = _viewerFitBehavior
