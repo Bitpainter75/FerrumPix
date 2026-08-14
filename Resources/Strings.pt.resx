@@ -7258,4 +7258,25 @@
   <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
     <value>Onde ficam as definições da ferramenta selecionada: à direita da área de edição ou à esquerda, mesmo ao lado da barra de ferramentas. À esquerda, a ferramenta e as definições ficam juntas, o que encurta os percursos em ecrãs largos.</value>
   </data>
+  <data name="Ohne_die_Memories_App_kennt_dieser_Server_keine__d51d12e3" xml:space="preserve">
+    <value>Sem a aplicação Memories este servidor não conhece pessoas</value>
+  </data>
+  <data name="Es_werden_die_neuesten_0_Aufnahmen_gezeigt_c51401ee" xml:space="preserve">
+    <value>São mostradas as {0} fotos mais recentes</value>
+  </data>
+  <data name="Die_Datei_ist_auf_dem_Server_nicht_auffindbar_22a09f6a" xml:space="preserve">
+    <value>O ficheiro não foi encontrado no servidor</value>
+  </data>
+  <data name="Ohne_Memories_Fotos_kommen_aus_der_Photos_App_8e5d80fc" xml:space="preserve">
+    <value>Sem o Memories: as fotos vêm da aplicação Photos</value>
+  </data>
+  <data name="0_Aufnahmen_gefunden_6bf9015f" xml:space="preserve">
+    <value>{0} fotos encontradas</value>
+  </data>
+  <data name="Die_Suche_nach_Fotos_antwortet_mit_0_2d3056ac" xml:space="preserve">
+    <value>A pesquisa de fotos responde com {0}</value>
+  </data>
+  <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
+    <value>Liga uma Nextcloud. A cronologia e os álbuns aparecem na navegação da galeria. A aplicação Memories não é necessária.</value>
+  </data>
 </root>

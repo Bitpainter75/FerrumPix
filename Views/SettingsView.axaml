@@ -1411,7 +1411,7 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Nextcloud" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Bindet eine Nextcloud mit der Memories-App ein. Zeitachse und Alben erscheinen im Navigationsbereich der Galerie." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Bindet eine Nextcloud ein. Zeitachse und Alben erscheinen im Navigationsbereich der Galerie. Die Memories-App wird nicht vorausgesetzt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">

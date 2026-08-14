@@ -7299,4 +7299,25 @@
   <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
     <value>Hvor det valgte værktøjs indstillinger står: til højre ved siden af redigeringsfladen eller til venstre lige ved siden af værktøjslinjen. Til venstre ligger værktøj og indstillinger tæt på hinanden, hvilket på brede skærme betyder kortere veje.</value>
   </data>
+  <data name="Ohne_die_Memories_App_kennt_dieser_Server_keine__d51d12e3" xml:space="preserve">
+    <value>Uden Memories-appen kender denne server ikke personer</value>
+  </data>
+  <data name="Es_werden_die_neuesten_0_Aufnahmen_gezeigt_c51401ee" xml:space="preserve">
+    <value>Viser de {0} nyeste billeder</value>
+  </data>
+  <data name="Die_Datei_ist_auf_dem_Server_nicht_auffindbar_22a09f6a" xml:space="preserve">
+    <value>Filen kan ikke findes på serveren</value>
+  </data>
+  <data name="Ohne_Memories_Fotos_kommen_aus_der_Photos_App_8e5d80fc" xml:space="preserve">
+    <value>Uden Memories: billederne kommer fra Photos-appen</value>
+  </data>
+  <data name="0_Aufnahmen_gefunden_6bf9015f" xml:space="preserve">
+    <value>{0} billeder fundet</value>
+  </data>
+  <data name="Die_Suche_nach_Fotos_antwortet_mit_0_2d3056ac" xml:space="preserve">
+    <value>Søgningen efter billeder svarer med {0}</value>
+  </data>
+  <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
+    <value>Forbinder en Nextcloud. Tidslinje og album vises i galleriets navigation. Memories-appen er ikke påkrævet.</value>
+  </data>
 </root>

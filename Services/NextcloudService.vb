@@ -25,8 +25,13 @@ Namespace Services
     ''' <see cref="TestConnectionAsync"/> - der Verbindungstest ist bewusst mehr als ein Ja/Nein und
     ''' beantwortet sie beim ersten Lauf gegen eine echte Instanz. Erst danach werden aus den
     ''' Datentypen unten belastbare Typen; bis dahin sind sie nachsichtig gebaut
-    ''' (siehe <see cref="FlexibleNumberConverter"/>).</summary>
-    Public Class NextcloudService
+    ''' (siehe <see cref="FlexibleNumberConverter"/>).
+    '''
+    ''' OHNE MEMORIES traegt der Kern allein: Zeitachse, Alben, Stichwoerter und Vorschau kommen
+    ''' dann aus der Photos-App und den WebDAV-Wegen des Kerns. Der Rueckfall steht in
+    ''' NextcloudPhotosFallback.vb, dieselbe Klasse, und die oeffentlichen Funktionen hier waehlen
+    ''' den Weg selbst aus - kein Aufrufer muss wissen, welche Apps auf dem Server liegen.</summary>
+    Partial Public Class NextcloudService
 
         ''' <summary>Pfad-Schema der Elemente dieser Quelle, Gegenstueck zu immich://.
         ''' Die Dateikennung ist die Identitaet, der Name traegt nur die Endung fuer die
@@ -233,10 +238,9 @@ Namespace Services
                     ' 1. Ist die App da?
                     Dim describe = Await client.GetAsync(memoriesBase & "describe", cancellationToken).ConfigureAwait(False)
                     If Not describe.IsSuccessStatusCode Then
-                        result.Message = String.Format(
-                            LocalizationService.T("Die Memories-App antwortet unter dieser Adresse nicht ({0})"),
-                            CInt(describe.StatusCode))
-                        Return result
+                        ' KEIN FEHLER, SONDERN DER ANDERE WEG. Ohne Memories tragen Photos-App und
+                        ' Kern die Anbindung ebenfalls; geprueft wird das hier und nicht behauptet.
+                        Return Await TestFallbackConnectionAsync(client, baseUrl, userName, result, cancellationToken).ConfigureAwait(False)
                     End If
                     Dim version = ""
                     Try
@@ -603,10 +607,23 @@ Namespace Services
             Return "?" & Uri.EscapeDataString(backend) & "=" & Uri.EscapeDataString(clusterId)
         End Function
 
-        ''' <summary>Die Zeitachse: je Tag eine Kennung und die Anzahl.</summary>
+        ''' <summary>Die Zeitachse: je Tag eine Kennung und die Anzahl.
+        '''
+        ''' OHNE MEMORIES baut sie der Rueckfall aus einer WebDAV-Suche selbst zusammen; der Aufrufer
+        ''' merkt davon nichts. Dort haengen die Aufnahmen gleich an JEDEM Tag, waehrend Memories sie
+        ''' nur beim ersten mitschickt - die vorhandene Schleife fragt dann von selbst nicht mehr
+        ''' nach.</summary>
         Public Shared Async Function GetDaysAsync(Optional cancellationToken As CancellationToken = Nothing,
                                                   Optional albumId As String = Nothing,
                                                   Optional backend As String = "albums") As Task(Of List(Of NextcloudDay))
+            LastError = ""
+            If Not IsConfigured Then
+                LastError = LocalizationService.T("Nextcloud ist nicht eingerichtet")
+                Return New List(Of NextcloudDay)()
+            End If
+            If Await EnsureModeAsync(cancellationToken).ConfigureAwait(False) = ServerMode.Photos Then
+                Return Await FallbackDaysAsync(backend, albumId, cancellationToken).ConfigureAwait(False)
+            End If
             Return If(Await GetJsonAsync(Of List(Of NextcloudDay))("days" & ClusterFilter(backend, albumId), cancellationToken).ConfigureAwait(False),
                       New List(Of NextcloudDay)())
         End Function
@@ -615,6 +632,14 @@ Namespace Services
         Public Shared Async Function GetDayAsync(dayId As Long, Optional cancellationToken As CancellationToken = Nothing,
                                                  Optional albumId As String = Nothing,
                                                  Optional backend As String = "albums") As Task(Of List(Of NextcloudPhoto))
+            LastError = ""
+            If Not IsConfigured Then
+                LastError = LocalizationService.T("Nextcloud ist nicht eingerichtet")
+                Return New List(Of NextcloudPhoto)()
+            End If
+            If Await EnsureModeAsync(cancellationToken).ConfigureAwait(False) = ServerMode.Photos Then
+                Return Await FallbackDayAsync(dayId, backend, albumId, cancellationToken).ConfigureAwait(False)
+            End If
             Return If(Await GetJsonAsync(Of List(Of NextcloudPhoto))(
                           "days/" & dayId.ToString(Globalization.CultureInfo.InvariantCulture) & ClusterFilter(backend, albumId),
                           cancellationToken).ConfigureAwait(False),
@@ -640,6 +665,20 @@ Namespace Services
             If Not IsConfigured Then
                 LastError = LocalizationService.T("Nextcloud ist nicht eingerichtet")
                 Return leer
+            End If
+            ' OHNE MEMORIES gibt es zwei der vier Backends trotzdem: die Alben liegen in der
+            ' Photos-App, die Stichwoerter im Kern. Personen und Orte gibt es NICHT, und die leere
+            ' Liste ist dort die richtige Antwort - der Zweig bleibt dann ganz weg, statt leer im
+            ' Baum zu stehen.
+            If Await EnsureModeAsync(cancellationToken).ConfigureAwait(False) = ServerMode.Photos Then
+                Select Case If(backend, "").ToLowerInvariant()
+                    Case "albums" : Return Await FallbackAlbumsAsync(cancellationToken).ConfigureAwait(False)
+                    Case "tags" : Return Await FallbackTagClustersAsync(cancellationToken).ConfigureAwait(False)
+                    Case "places" : Return Await FallbackPlacesAsync(cancellationToken).ConfigureAwait(False)
+                    Case Else
+                        LastError = LocalizationService.T("Ohne die Memories-App kennt dieser Server keine Personen")
+                        Return leer
+                End Select
             End If
             Try
                 Dim response = Await GetClient().GetAsync(ApiUrl("clusters/" & Uri.EscapeDataString(backend)), cancellationToken).ConfigureAwait(False)
@@ -684,7 +723,20 @@ Namespace Services
             End If
 
             Try
-                Dim url = ApiUrl($"image/preview/{Uri.EscapeDataString(fileId)}?x={size}&y={size}")
+                ' OHNE MEMORIES rechnet der KERN die Vorschau vor. Beide Wege liefern ein fertiges
+                ' Bild in der angefragten Groesse; nur die Adresse unterscheidet sich, der
+                ' Zwischenspeicher darueber gilt fuer beide.
+                Dim url As String
+                If Await EnsureModeAsync(cancellationToken).ConfigureAwait(False) = ServerMode.Photos Then
+                    ' Sagt der Server selbst, dass es keine Vorschau gibt (ab Werk gilt das fuer
+                    ' Videos: der Kern rechnet sie nur mit eingeschaltetem Movie-Anbieter vor), wird
+                    ' gar nicht erst gefragt. Sonst liefe je Video bei jedem Laden eine Anfrage, die
+                    ' nur eine Absage holt.
+                    If IsKnownWithoutPreview(fileId) Then Return Nothing
+                    url = CorePreviewUrl(fileId, size)
+                Else
+                    url = ApiUrl($"image/preview/{Uri.EscapeDataString(fileId)}?x={size}&y={size}")
+                End If
                 Dim response = Await GetClient().GetAsync(url, cancellationToken).ConfigureAwait(False)
                 If Not response.IsSuccessStatusCode Then
                     Await SetErrorFromResponse(response, cancellationToken).ConfigureAwait(False)
@@ -785,6 +837,7 @@ Namespace Services
                     End If
                     result.Ok = True
                     result.ETag = If(response.Headers.ETag?.Tag, "").Trim(""""c)
+                    DropTimelineCache()
                     Return result
                 End Using
             Catch ex As OperationCanceledException
@@ -1149,6 +1202,53 @@ Namespace Services
         Private Shared Function DavRootUrl(relativePath As String) As String
             Return NormalizeServerUrl(AppSettingsService.Load().NextcloudServerUrl) &
                    "/remote.php/dav/" & If(relativePath, "").TrimStart("/"c)
+        End Function
+
+        ''' <summary>Ein Stichwort des Servers.</summary>
+        Public Class NextcloudSystemTag
+            Public Property Id As String = ""
+            Public Property Name As String = ""
+            ''' <summary>Ob der Nutzer es selbst vergeben darf. NEIN heisst: eine Zusatz-App hat es
+            ''' gesetzt (gemessen: "Tagged by recognize v3.0.0"). Solche Marken gehoeren nicht in
+            ''' eine Stichwortliste - sie sind Buchhaltung des Servers, kein Stichwort des Nutzers.</summary>
+            Public Property IsAssignable As Boolean = True
+        End Class
+
+        ''' <summary>Alle Stichwoerter des Servers, samt Kennung und Zuweisbarkeit.</summary>
+        Public Shared Async Function GetSystemTagListAsync(Optional cancellationToken As CancellationToken = Nothing) As Task(Of List(Of NextcloudSystemTag))
+            Dim result = New List(Of NextcloudSystemTag)()
+            LastError = ""
+            If Not IsConfigured Then Return result
+            Try
+                Dim rumpf = "<?xml version=""1.0""?>" &
+                            "<d:propfind xmlns:d=""DAV:"" xmlns:oc=""http://owncloud.org/ns"">" &
+                            "<d:prop><oc:id/><oc:display-name/><oc:user-assignable/></d:prop></d:propfind>"
+                Using request = New HttpRequestMessage(New HttpMethod("PROPFIND"), DavRootUrl("systemtags/"))
+                    request.Headers.Add("Depth", "1")
+                    request.Content = New StringContent(rumpf, Encoding.UTF8, "application/xml")
+                    Dim response = Await GetClient().SendAsync(request, cancellationToken).ConfigureAwait(False)
+                    If Not response.IsSuccessStatusCode Then
+                        Await SetErrorFromResponse(response, cancellationToken).ConfigureAwait(False)
+                        Return result
+                    End If
+                    Dim body = Await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                    For Each eintrag In XDocument.Parse(body).Descendants(DavNs + "response")
+                        Dim id = eintrag.Descendants(OcNs + "id").Select(Function(e) e.Value).FirstOrDefault()
+                        Dim name = eintrag.Descendants(OcNs + "display-name").Select(Function(e) e.Value).FirstOrDefault()
+                        If String.IsNullOrWhiteSpace(id) OrElse String.IsNullOrWhiteSpace(name) Then Continue For
+                        Dim assignable = eintrag.Descendants(OcNs + "user-assignable").Select(Function(e) e.Value).FirstOrDefault()
+                        result.Add(New NextcloudSystemTag With {
+                            .Id = id, .Name = name,
+                            .IsAssignable = Not String.Equals(If(assignable, ""), "false", StringComparison.OrdinalIgnoreCase)})
+                    Next
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Nextcloud", ex)
+            End Try
+            Return result
         End Function
 
         ''' <summary>Alle zuweisbaren Stichwoerter des Servers als Name-zu-Kennung. Gross- und
@@ -1659,7 +1759,13 @@ Namespace Services
                 Using request = New HttpRequestMessage(New HttpMethod(method), url)
                     If Not String.IsNullOrEmpty(destination) Then request.Headers.Add("Destination", destination)
                     Dim response = Await GetClient().SendAsync(request, cancellationToken).ConfigureAwait(False)
-                    If response.IsSuccessStatusCode Then Return True
+                    If response.IsSuccessStatusCode Then
+                        ' Hier laufen ALLE schreibenden Wege durch (loeschen, verschieben, Album
+                        ' bestuecken). Der Rueckfall haelt die Zeitachse kurz fest, damit der Abruf
+                        ' je Tag nicht jedes Mal sucht - nach einer Aenderung waere sie von gestern.
+                        DropTimelineCache()
+                        Return True
+                    End If
                     Await SetErrorFromResponse(response, cancellationToken).ConfigureAwait(False)
                     Return False
                 End Using
@@ -1716,6 +1822,13 @@ Namespace Services
         ''' Originaldatei gelesen - das ist unabhaengig davon, wie gut der Server indiziert ist.</summary>
         Public Shared Async Function GetInfoAsync(fileId As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of NextcloudPhoto)
             If String.IsNullOrWhiteSpace(fileId) Then Return Nothing
+            If Not IsConfigured Then
+                LastError = LocalizationService.T("Nextcloud ist nicht eingerichtet")
+                Return Nothing
+            End If
+            If Await EnsureModeAsync(cancellationToken).ConfigureAwait(False) = ServerMode.Photos Then
+                Return Await FallbackInfoAsync(fileId, cancellationToken).ConfigureAwait(False)
+            End If
             Return Await GetJsonAsync(Of NextcloudPhoto)("image/info/" & Uri.EscapeDataString(fileId) & "?tags=1",
                                                           cancellationToken).ConfigureAwait(False)
         End Function
@@ -1817,6 +1930,11 @@ Namespace Services
                                                                  Optional cancellationToken As CancellationToken = Nothing) As Task(Of String)
             LastError = ""
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(fileId) Then Return Nothing
+            ' OHNE MEMORIES gibt es api/stream nicht - dann fuehrt der Pfad im Dateibaum zum
+            ' Original, und der Weg dorthin ist ein gewoehnliches GET.
+            If Await EnsureModeAsync(cancellationToken).ConfigureAwait(False) = ServerMode.Photos Then
+                Return Await FallbackDownloadOriginalAsync(fileId, fileName, cancellationToken).ConfigureAwait(False)
+            End If
             Try
                 ' Ueber den Uebertragungs-Client: ein RAW oder ein Video ist in einer halben
                 ' Minute nicht geholt, und der Abbruch kam bisher mitten im Laden.

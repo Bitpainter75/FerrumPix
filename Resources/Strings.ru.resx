@@ -7299,4 +7299,25 @@
   <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
     <value>Где стоят настройки выбранного инструмента: справа рядом с областью обработки или слева непосредственно рядом с панелью инструментов. Слева инструмент и настройки лежат рядом, что на широких экранах означает более короткие расстояния.</value>
   </data>
+  <data name="Ohne_die_Memories_App_kennt_dieser_Server_keine__d51d12e3" xml:space="preserve">
+    <value>Без приложения Memories этот сервер не знает людей</value>
+  </data>
+  <data name="Es_werden_die_neuesten_0_Aufnahmen_gezeigt_c51401ee" xml:space="preserve">
+    <value>Показаны {0} последних снимков</value>
+  </data>
+  <data name="Die_Datei_ist_auf_dem_Server_nicht_auffindbar_22a09f6a" xml:space="preserve">
+    <value>Файл не найден на сервере</value>
+  </data>
+  <data name="Ohne_Memories_Fotos_kommen_aus_der_Photos_App_8e5d80fc" xml:space="preserve">
+    <value>Без Memories: фотографии берутся из приложения Photos</value>
+  </data>
+  <data name="0_Aufnahmen_gefunden_6bf9015f" xml:space="preserve">
+    <value>Найдено снимков: {0}</value>
+  </data>
+  <data name="Die_Suche_nach_Fotos_antwortet_mit_0_2d3056ac" xml:space="preserve">
+    <value>Поиск фотографий отвечает {0}</value>
+  </data>
+  <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
+    <value>Подключает Nextcloud. Лента и альбомы появляются в навигации галереи. Приложение Memories не требуется.</value>
+  </data>
 </root>

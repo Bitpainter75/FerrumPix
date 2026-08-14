@@ -7257,4 +7257,25 @@
   <data name="Wo_die_Einstellungen_des_gew_hlten_Werkzeugs_ste_ba9a0c59" xml:space="preserve">
     <value>所选工具的设置显示在哪一侧：编辑区右侧，或左侧紧邻工具栏。放在左侧时，工具与设置相邻，在宽屏上移动距离更短。</value>
   </data>
+  <data name="Ohne_die_Memories_App_kennt_dieser_Server_keine__d51d12e3" xml:space="preserve">
+    <value>没有 Memories 应用，此服务器不识别人物</value>
+  </data>
+  <data name="Es_werden_die_neuesten_0_Aufnahmen_gezeigt_c51401ee" xml:space="preserve">
+    <value>显示最新的 {0} 张照片</value>
+  </data>
+  <data name="Die_Datei_ist_auf_dem_Server_nicht_auffindbar_22a09f6a" xml:space="preserve">
+    <value>在服务器上找不到该文件</value>
+  </data>
+  <data name="Ohne_Memories_Fotos_kommen_aus_der_Photos_App_8e5d80fc" xml:space="preserve">
+    <value>没有 Memories：照片来自 Photos 应用</value>
+  </data>
+  <data name="0_Aufnahmen_gefunden_6bf9015f" xml:space="preserve">
+    <value>找到 {0} 张照片</value>
+  </data>
+  <data name="Die_Suche_nach_Fotos_antwortet_mit_0_2d3056ac" xml:space="preserve">
+    <value>照片搜索返回 {0}</value>
+  </data>
+  <data name="Bindet_eine_Nextcloud_ein_Zeitachse_und_Alben_er_3dfb6403" xml:space="preserve">
+    <value>接入 Nextcloud。时间线和相册会出现在图库导航中。不需要 Memories 应用。</value>
+  </data>
 </root>

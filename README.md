@@ -132,7 +132,9 @@ Plus `album.create` and `album.update` if FerrumPix should create and rename alb
 
 ## Nextcloud
 
-A Nextcloud with the Memories app can be used as a second server: your timeline, albums, people, places and keywords appear as folders in the gallery, photos open in the viewer and the editor, and deleted ones are listed under Trash and can be put back from there.
+A Nextcloud can be used as a second server: your timeline, albums, people, places and keywords appear as folders in the gallery, photos open in the viewer and the editor, and deleted ones are listed under Trash and can be put back from there.
+
+The Memories app is not required. Without it FerrumPix builds the timeline from the server itself, and albums, keywords, favourites, the trash and the search work just the same; people are the one thing Memories brings along, and that branch simply stays away.
 
 Because Nextcloud keeps your photos as files, more is possible here than on an Immich server. A RAW on the server can be edited without touching it: saving puts the recipe in a sidecar file next to the original, and it is picked up again the next time you open the photo. If you would rather have the edit written into the file itself, *Replace originals on the server* does that - the file keeps its identity, its albums and its shares. RAW and PSD files are never overwritten either way.
 
