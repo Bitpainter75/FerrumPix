@@ -90,7 +90,7 @@ Lens defects are corrected from measured data covering some 1300 lenses: distort
 
 Edits to a RAW go into a small sidecar next to it; the RAW itself is never modified. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
-HEIC/HEIF/AVIF and TIFF open read-only. A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture and can be written back out, so it goes on to Photoshop, Affinity or GIMP; text can come in as text you keep typing on or as a picture. Layer masks, groups, 16-bit files and colour modes other than RGB are not covered.
+HEIC/HEIF/AVIF and TIFF open read-only. A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture and can be written back out, so it goes on to Photoshop, Affinity or GIMP; text can come in as text you keep typing on or as a picture. Layer masks and groups travel in both directions and stay editable, and files in 16 bit or greyscale open with their layers too. CMYK files and 32 bit open as one flat picture.
 
 ### Model files
 
@@ -148,7 +148,7 @@ Theme, accent colour, language, interface and font scale, thumbnail and export q
 
 The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
 
-Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
+Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
 
 Your version is at the top, with a link to the download page when a different one has been published. The last two sections are reference: all keyboard and mouse shortcuts, and everything FerrumPix is built on with a link to each licence.
 
