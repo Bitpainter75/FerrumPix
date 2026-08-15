@@ -905,6 +905,10 @@ Namespace ViewModels
         ''' Regler gezogen wird, laufen Dutzende Renderschritte; gerechnet wird erst, wenn die Hand
         ''' einen Moment stillsteht.</summary>
         Private ReadOnly _scopeTimer As DispatcherTimer
+        ''' <summary>Steht ein Analysebild aus? Wird gesetzt, wenn eine Aenderung anfiel, waehrend
+        ''' die Leiste eingeklappt war oder der Editor im Hintergrund stand - und beim naechsten
+        ''' Hinsehen abgearbeitet (siehe EnsureScopeUpToDate).</summary>
+        Private _scopeDirty As Boolean = True
         Private ReadOnly _filmstripNavDebouncer As FilmstripNavigationDebouncer
         Private ReadOnly _previewSync As New Object()
         Private ReadOnly _stalePreviewSources As New List(Of SKBitmap)()
@@ -3563,6 +3567,30 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ob das Analysebild ueberhaupt jemand sieht: die Leiste ist ausgeklappt UND der
+        ''' Editor ist die Ansicht auf dem Schirm. Der Editor besteht die ganze Sitzung ueber und
+        ''' merkt sich seinen Ausklappzustand - ohne die zweite Bedingung rechnete er auch dann,
+        ''' wenn Galerie oder Betrachter vorne stehen.</summary>
+        Private ReadOnly Property IsScopeLive As Boolean
+            Get
+                Return IsInfoSidebarVisible AndAlso _mainVm IsNot Nothing AndAlso _mainVm.CurrentMode = AppMode.Editor
+            End Get
+        End Property
+
+        ''' <summary>Meldet den Wechsel der Ansicht. Beim Betreten holt der Editor nach, was in der
+        ''' Zwischenzeit ausgefallen ist.</summary>
+        Friend Sub SetViewActive(active As Boolean)
+            InfoPanel.IsOwnerViewActive = active
+            If active Then EnsureScopeUpToDate()
+        End Sub
+
+        ''' <summary>Nach einer Aenderung in den Einstellungen den Stand der Leiste nachziehen -
+        ''' der Knopf im Editor ist nicht der einzige Weg, sie zu oeffnen.</summary>
+        Friend Sub RefreshInfoSidebarState()
+            InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
+            EnsureScopeUpToDate()
+        End Sub
+
         ''' <summary>Haengt das Panel an den Editor.
         '''
         ''' Zwei Dinge gehoeren dem Besitzer, nicht dem Panel: WIE eine Aenderung dauerhaft wird
@@ -3574,8 +3602,12 @@ Namespace ViewModels
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
             ' Wechselt die Darstellung (Histogramm, Waveform, Parade), rechnet der Editor sie aus
-            ' dem BEARBEITETEN Bild neu - derselbe Weg wie nach einem Reglerzug.
-            InfoPanel.ScopeRefresh = AddressOf RefreshHistogram
+            ' dem BEARBEITETEN Bild neu - derselbe Weg wie nach einem Reglerzug. Ohne Szene bleibt
+            ' der Weg ueber die Datei.
+            InfoPanel.ScopeRefresh = Sub()
+                                         _scopeDirty = True
+                                         EnsureScopeUpToDate()
+                                     End Sub
 
             ' Sterne kennt Nextcloud NICHT, sie bleiben lokal - aber unter dem PSEUDO-PFAD, unter dem
             ' auch die Galerie das Bild fuehrt. Unter dem Pfad der Temp-Kopie waeren sie beim
@@ -12206,6 +12238,8 @@ Namespace ViewModels
                                                                    ' Das Panel muss es auch wissen: die Leiste bindet ihre
                                                                    ' Innenteile an SEINEN Zustand, nicht an den des Editors.
                                                                    InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
+                                                                   ' Solange sie zu war, ist kein Analysebild entstanden.
+                                                                   EnsureScopeUpToDate()
                                                                End Sub)
             ToggleLayersPanelCommand = ReactiveCommand.Create(Sub()
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
@@ -21118,9 +21152,25 @@ Namespace ViewModels
         ''' <summary>Merkt vor, dass sich die Szene geaendert hat. Gerechnet wird erst, wenn eine
         ''' Weile nichts mehr passiert (siehe <see cref="ScopeDebounceMs"/>).</summary>
         Friend Sub ScheduleScopeUpdate()
-            If Not IsInfoSidebarVisible Then Return
+            ' Der Merker faellt auch dann, wenn gerade niemand hinsieht: sonst stuende beim
+            ' Aufklappen der Leiste das Analysebild eines laengst ueberholten Standes da.
+            _scopeDirty = True
+            If Not IsScopeLive Then Return
             _scopeTimer.Stop()
             _scopeTimer.Start()
+        End Sub
+
+        ''' <summary>Holt das Analysebild nach, wenn es waehrend eingeklappter Leiste oder im
+        ''' Hintergrund ausgefallen ist. Aus der Szene, wenn eine dasteht - der Weg ueber die Datei
+        ''' kostet einen vollen Decode.</summary>
+        Private Sub EnsureScopeUpToDate()
+            If Not IsScopeLive OrElse Not _scopeDirty Then Return
+            Dim scene = _sceneSk
+            If scene IsNot Nothing AndAlso scene.Width > 0 AndAlso scene.Height > 0 Then
+                UpdateScopeFromScene()
+            Else
+                RefreshHistogram()
+            End If
         End Sub
 
         ''' <summary>Das Analysebild aus der FERTIGEN SZENE rechnen, also mit allen Reglern, Filtern,
@@ -21135,7 +21185,7 @@ Namespace ViewModels
         ''' faellt hier nicht an. Steht noch keine (kalter Start, Ladeweg), greift der Weg ueber die
         ''' Datei.</summary>
         Private Sub UpdateScopeFromScene()
-            If Not IsInfoSidebarVisible Then Return
+            If Not IsScopeLive Then Return
             Try
                 ' Der Kompositor arbeitet auf dem UI-Thread, und dieser Zeitgeber ebenfalls - die
                 ' Szene kann hier also nicht unter der Hand ausgetauscht werden.
@@ -21146,37 +21196,57 @@ Namespace ViewModels
                 Dim scene = _sceneSk
                 If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return
                 InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(scene, 600, 300)
+                _scopeDirty = False
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.UpdateScopeFromScene", ex)
             End Try
         End Sub
 
+        ''' <summary>Analysebild und Kurvenzahlen zum geladenen Bild.
+        '''
+        ''' Zwei verschiedene Dinge aus einer Quelle: das Analysebild gehoert der Info-Leiste und
+        ''' entsteht nur, wenn die auch jemand vor sich hat; die Zahlen unter der Tonwertkurve
+        ''' gehoeren dem Anpassen-Werkzeug und werden immer gebraucht - sie sind der Untergrund,
+        ''' gegen den man die Kurve zieht.</summary>
         Private Sub RefreshHistogram()
             If String.IsNullOrEmpty(_currentImagePath) Then
                 ClearHistogramData()
                 Return
             End If
+            Dim buildScope = IsScopeLive
+            If Not buildScope Then
+                ' Nichts rechnen, aber auch nichts Altes stehen lassen: sonst zeigte die Leiste beim
+                ' Aufklappen fuer einen Augenblick das Analysebild des vorherigen Bildes.
+                _scopeDirty = True
+                InfoPanel.ScopeImage = Nothing
+            End If
             If FpxService.IsFpx(_currentImagePath) Then
                 ' Eine geoeffnete FPX zeigt im Infopanel den gespeicherten Projektstand, nicht das
                 ' unveraenderte base.* und auch keinen spaeter neu berechneten Zwischen-Preview.
-                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(_currentImagePath, 600, 300)
+                If buildScope Then
+                    InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(_currentImagePath, 600, 300)
+                    _scopeDirty = False
+                End If
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
                 Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
                 Return
             End If
             Dim previewSource = GetPreviewSource()
             If previewSource IsNot Nothing Then
-                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(previewSource, 600, 300)
+                If buildScope Then InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(previewSource, 600, 300)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(previewSource)
             Else
-                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(RenderSourcePath, 600, 300)
+                If buildScope Then InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(RenderSourcePath, 600, 300)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(RenderSourcePath)
             End If
+            If buildScope Then _scopeDirty = False
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub
 
         Private Sub ClearHistogramData()
             InfoPanel.ScopeImage = Nothing
+            ' Ohne Bild gibt es nichts nachzuholen.
+            _scopeDirty = False
             _curveHistogramCounts = (New Integer(255) {}, New Integer(255) {}, New Integer(255) {}, New Integer(255) {})
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub

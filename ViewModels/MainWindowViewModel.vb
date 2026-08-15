@@ -236,8 +236,22 @@ Namespace ViewModels
                 If previousMode = AppMode.Settings AndAlso value = AppMode.Editor Then
                     ReloadEditorDocumentAfterSettings()
                 End If
+
+                UpdateInfoPanelActivation()
             End Set
         End Property
+
+        ''' <summary>Sagt den drei Info-Leisten, welche von ihnen gerade jemand vor sich hat.
+        '''
+        ''' Galerie, Betrachter und Editor bestehen die ganze Sitzung ueber, und jeder merkt sich
+        ''' seinen eigenen Ausklappzustand. Ohne diese Meldung rechneten alle drei ihr Analysebild -
+        ''' zwei davon fuer eine Leiste, die niemand sieht, und jeder Lauf kostet einen vollen
+        ''' Decode. Die dann aktive holt beim Betreten nach, was in der Zwischenzeit ausfiel.</summary>
+        Private Sub UpdateInfoPanelActivation()
+            Gallery?.SetViewActive(_currentMode = AppMode.Gallery)
+            Viewer?.SetViewActive(_currentMode = AppMode.Viewer)
+            Editor?.SetViewActive(_currentMode = AppMode.Editor)
+        End Sub
 
         ''' <summary>Dateiname und Farbetikett des gerade offenen Bildes, fuer die Mitte der
         ''' Fensterleiste. Der Rahmen liest sie aus dem AKTIVEN Modus - Betrachter und Editor
@@ -373,6 +387,10 @@ Namespace ViewModels
             Gallery = New GalleryViewModel(Me)
             Viewer = New ViewerViewModel(Me)
             Editor = New EditorViewModel(Me)
+
+            ' Gleich zu Anfang klarstellen, wer vorne steht: der Setter von CurrentMode meldet es
+            ' danach bei jedem Wechsel, aber ein Start in der Galerie wechselt nichts.
+            UpdateInfoPanelActivation()
 
             ' Ein waehrend der Sitzung geladenes Modell soll auch hier ankommen: die Auswahl zum
             ' Hochskalieren liest den Bestand und haette ihn sonst bis zum Neustart als leer in
@@ -863,6 +881,7 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowRulers))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowGrid))
             Gallery?.RefreshInfoSidebarState()
+            Editor?.RefreshInfoSidebarState()
         End Sub
 
         Public Sub RefreshDisplayBindings()

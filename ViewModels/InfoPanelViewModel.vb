@@ -47,6 +47,7 @@ Namespace ViewModels
         Private _newTagText As String = ""
         Private _selectedTab As InfoSidebarTab = InfoSidebarTab.General
         Private _isVisible As Boolean
+        Private _isOwnerViewActive As Boolean = True
         Private _placeholderText As String = ""
 
         ''' <summary>Wartezeit vor dem Histogramm. Lang genug, dass Durchblaettern und das Aufbauen
@@ -152,8 +153,12 @@ Namespace ViewModels
 
         Private Sub OnScopeModeChanged()
             ' Das alte Bild sofort weg: es zeigt die vorherige Darstellung und waere bis zum
-            ' Eintreffen des neuen eine Falschaussage.
+            ' Eintreffen des neuen eine Falschaussage. Das gilt auch fuer die Ansichten, die gerade
+            ' nicht auf dem Schirm stehen - dort bleibt es dann leer, bis sie wieder dran sind.
             ScopeImage = Nothing
+            ' Die Wahl gilt anwendungsweit, das Ereignis erreicht also alle drei Ansichten. Rechnen
+            ' darf nur die, die jemand vor sich hat; die anderen holen es beim Wechsel nach.
+            If Not IsPanelLive Then Return
             If OwnerLoadsDetails Then
                 ScopeRefresh?.Invoke()
             Else
@@ -242,7 +247,7 @@ Namespace ViewModels
             ' Der teure Teil - Stichwoerter und Uebersicht - nur bei offener Leiste. Zugeklappt
             ' sieht das niemand, und ShowItems laeuft bei JEDEM Auswahlwechsel der Galerie.
             ' Beim Aufklappen holt Refresh es nach.
-            If _isVisible Then
+            If IsPanelLive Then
                 LoadSummaryTags()
                 BuildSummary()
             End If
@@ -626,9 +631,10 @@ Namespace ViewModels
             Return size.ToString(If(step_ = 0, "0", "0.#"), CultureInfo.InvariantCulture) & " " & units(step_)
         End Function
 
-        ''' <summary>Nach dem Einblenden nachladen: solange das Panel aus war, ist kein Histogramm
-        ''' berechnet worden.</summary>
+        ''' <summary>Nach dem Einblenden nachladen: solange das Panel aus war oder seine Ansicht im
+        ''' Hintergrund stand, ist kein Analysebild berechnet worden.</summary>
         Public Sub Refresh()
+            If Not IsPanelLive Then Return
             If _isSummary Then
                 LoadSummaryTags()
                 BuildSummary()
@@ -662,13 +668,14 @@ Namespace ViewModels
             RefreshTagSuggestions()
         End Sub
 
-        ''' <summary>Alles, was Arbeit kostet, laeuft NUR bei offener Info-Leiste.
+        ''' <summary>Alles, was Arbeit kostet, laeuft NUR bei offener Info-Leiste in der Ansicht, die
+        ''' gerade auf dem Schirm steht.
         '''
-        ''' Ist sie zu, sieht niemand das Ergebnis: kein Lesen der Aufnahmedaten, kein Herunterladen
-        ''' eines Immich-Originals in den Temp-Ordner, kein Histogramm. Beim Aufklappen holt
-        ''' <see cref="Refresh"/> alles nach.</summary>
+        ''' Sonst sieht niemand das Ergebnis: kein Lesen der Aufnahmedaten, kein Herunterladen
+        ''' eines Immich-Originals in den Temp-Ordner, kein Analysebild. Beim Aufklappen und beim
+        ''' Wechsel in die Ansicht holt <see cref="Refresh"/> alles nach.</summary>
         Private Sub LoadInBackground(token As Integer, path As String, item As ImageItem)
-            If Not _isVisible Then Return
+            If Not IsPanelLive Then Return
 
             Dim istServerbild = item IsNot Nothing AndAlso item.IsRemoteAsset
             Task.Run(Async Function()
@@ -680,9 +687,14 @@ Namespace ViewModels
                          ' Welcher Server, entscheidet das Element selbst (EnsureLocalOriginalAsync);
                          ' hier steht bewusst kein Zweig je Quelle mehr.
                          If istServerbild Then
-                             If Not _isVisible Then Return
-                             Thread.Sleep(HistogramDelayMs)
-                             If token <> _loadToken OrElse _isSummary OrElse Not _isVisible Then Return
+                             If Not IsPanelLive Then Return
+                             ' Warten, ohne einen Faden des Vorrats festzuhalten. Thread.Sleep tat
+                             ' genau das: bei jedem Auswahlwechsel startet hier ein Lauf, und beim
+                             ' Blaettern durch einen Ordner lagen sofort dutzende davon schlafend im
+                             ' Vorrat. Der Vorrat legt neue Faeden nur zoegernd nach - Kacheln,
+                             ' Katalog und Gesichter warteten dann auf einen freien.
+                             Await Task.Delay(HistogramDelayMs)
+                             If token <> _loadToken OrElse _isSummary OrElse Not IsPanelLive Then Return
 
                              path = Await item.EnsureLocalOriginalAsync()
                              If token <> _loadToken OrElse String.IsNullOrEmpty(path) OrElse Not IO.File.Exists(path) Then Return
@@ -696,7 +708,7 @@ Namespace ViewModels
                                                       Me.RaisePropertyChanged(NameOf(Name))
                                                   End Sub)
 
-                         If Not _isVisible Then Return
+                         If Not IsPanelLive Then Return
 
                          ' Erst warten, dann pruefen, DANN rechnen - in genau dieser Reihenfolge.
                          '
@@ -709,8 +721,8 @@ Namespace ViewModels
                          ' Ein Video bekommt gar kein Histogramm - weder gerechnet noch gezeigt.
                          If VideoPreviewService.IsSupportedVideo(path) Then Return
 
-                         Thread.Sleep(HistogramDelayMs)
-                         If token <> _loadToken OrElse _isSummary OrElse Not _isVisible Then Return
+                         Await Task.Delay(HistogramDelayMs)
+                         If token <> _loadToken OrElse _isSummary OrElse Not IsPanelLive Then Return
 
                          Dim histogram = ImageProcessor.BuildScopeImage(path, 600, 300)
                          Dispatcher.UIThread.Post(Sub()
@@ -732,8 +744,8 @@ Namespace ViewModels
             RaiseColorLabelChanged()
         End Sub
 
-        ''' <summary>Ob das Panel sichtbar ist. Das Histogramm entsteht nur dann - es kostet einen
-        ''' vollen Decode und niemand sieht es, solange das Panel eingeklappt ist.</summary>
+        ''' <summary>Ob die Leiste ausgeklappt ist. Das Analysebild entsteht nur dann - es kostet
+        ''' einen vollen Decode und niemand sieht es, solange die Leiste eingeklappt ist.</summary>
         Public Property IsInfoSidebarVisible As Boolean
             Get
                 Return _isVisible
@@ -743,6 +755,32 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_isVisible, value)
                 If value Then Refresh()
             End Set
+        End Property
+
+        ''' <summary>Ob die Ansicht, zu der dieses Panel gehoert, gerade auf dem Schirm ist.
+        '''
+        ''' Die Leiste kann ausgeklappt sein, ohne dass jemand sie sieht: Galerie, Betrachter und
+        ''' Editor bestehen alle drei die ganze Sitzung ueber, und jeder merkt sich seinen eigenen
+        ''' Ausklappzustand. Wer in der Galerie die Darstellung umschaltet, loeste damit auch im
+        ''' Betrachter und im Editor einen Lauf aus - fuer eine Leiste, die niemand vor sich hat.
+        ''' Der Ansichtswechsel holt nach, was in der Zwischenzeit ausgefallen ist.</summary>
+        Public Property IsOwnerViewActive As Boolean
+            Get
+                Return _isOwnerViewActive
+            End Get
+            Set(value As Boolean)
+                If _isOwnerViewActive = value Then Return
+                _isOwnerViewActive = value
+                If value Then Refresh()
+            End Set
+        End Property
+
+        ''' <summary>Ob teure Arbeit ueberhaupt jemand zu sehen bekommt: die Leiste ist ausgeklappt
+        ''' UND ihre Ansicht steht auf dem Schirm.</summary>
+        Private ReadOnly Property IsPanelLive As Boolean
+            Get
+                Return _isVisible AndAlso _isOwnerViewActive
+            End Get
         End Property
 
         Public ReadOnly Property Name As String

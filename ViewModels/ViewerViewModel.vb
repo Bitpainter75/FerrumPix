@@ -109,6 +109,23 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ob das Analysebild ueberhaupt jemand sieht: die Leiste ist ausgeklappt UND der
+        ''' Betrachter ist die Ansicht auf dem Schirm. Der Betrachter besteht die ganze Sitzung ueber
+        ''' und merkt sich seinen Ausklappzustand - ohne die zweite Bedingung rechnete er auch dann,
+        ''' wenn Galerie oder Editor vorne stehen.</summary>
+        Private ReadOnly Property IsScopeLive As Boolean
+            Get
+                Return IsInfoSidebarVisible AndAlso _mainVm IsNot Nothing AndAlso _mainVm.CurrentMode = AppMode.Viewer
+            End Get
+        End Property
+
+        ''' <summary>Meldet den Wechsel der Ansicht. Beim Betreten holt der Betrachter nach, was in
+        ''' der Zwischenzeit ausgefallen ist.</summary>
+        Friend Sub SetViewActive(active As Boolean)
+            InfoPanel.IsOwnerViewActive = active
+            If active Then EnsureHistogramLoaded()
+        End Sub
+
         Public ReadOnly Property IsFullscreenMode As Boolean
             Get
                 Return _mainVm IsNot Nothing AndAlso _mainVm.IsFullscreen
@@ -2232,7 +2249,7 @@ Namespace ViewModels
             Dim capturedHeight = _imageHeight
             ' Videos bleiben aussen vor: der Histogramm-Lauf dekodiert die Datei komplett neu, und
             ' fuer ein Video gibt es dabei nichts zu holen.
-            Dim loadHistogram = IsInfoSidebarVisible AndAlso Not VideoPreviewService.IsSupportedVideo(imagePath)
+            Dim loadHistogram = IsScopeLive AndAlso Not VideoPreviewService.IsSupportedVideo(imagePath)
 
             ' Eine vorhandene .fpxmp ist fuer RAW/PSD die portable Katalogquelle. Vor dem Laden der
             ' UI-Felder importieren, damit auch ein direkt im Viewer geoeffnetes Bild (ohne vorherigen
@@ -2347,10 +2364,14 @@ Namespace ViewModels
             InfoPanel.ScopeImage = Nothing
         End Sub
 
-        ''' Lädt das Histogramm für das aktuell offene Bild nach, falls es (weil die Info-Leiste
-        ''' beim letzten LoadInfoPanelData-Aufruf ausgeblendet war) noch nicht berechnet wurde -
-        ''' aufgerufen von ToggleInfoSidebarCommand beim Einblenden.
+        ''' Lädt das Analysebild für das aktuell offene Bild nach, falls es (weil die Info-Leiste
+        ''' beim letzten LoadInfoPanelData-Aufruf ausgeblendet oder der Betrachter im Hintergrund
+        ''' war) noch nicht berechnet wurde - aufgerufen beim Einblenden der Leiste, beim Wechsel in
+        ''' den Betrachter und nach einem Wechsel der Darstellung.
         Private Sub EnsureHistogramLoaded()
+            ' Sieht es niemand, wird auch nichts gerechnet: der Weg kostet einen vollen Decode, und
+            ' der belegt die Decode-Schleuse, auf die Kacheln und Anzeige ebenfalls warten.
+            If Not IsScopeLive Then Return
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             ' Fuer ein Video gibt es keines - auch nicht beim nachtraeglichen Einblenden der Leiste.
             If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then Return

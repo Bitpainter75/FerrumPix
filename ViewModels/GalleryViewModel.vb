@@ -267,6 +267,13 @@ Namespace ViewModels
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
         End Sub
 
+        ''' <summary>Meldet den Wechsel der Ansicht. Steht die Galerie im Hintergrund, weil
+        ''' Betrachter oder Editor vorne sind, faellt jede teure Arbeit der Leiste aus; das Panel
+        ''' holt sie beim Zurueckkommen selbst nach.</summary>
+        Friend Sub SetViewActive(active As Boolean)
+            InfoPanel.IsOwnerViewActive = active
+        End Sub
+
         Private Sub OnSelectedItemPropertyChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
             If e.PropertyName = NameOf(ImageItem.Rating) Then
                 Me.RaisePropertyChanged(NameOf(SelectedRating))
