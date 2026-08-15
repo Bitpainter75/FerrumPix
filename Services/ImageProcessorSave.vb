@@ -659,8 +659,13 @@ Namespace Services
                 If IsJpegMetadataMarker(marker) Then
                     Dim segment(totalLength - 1) As Byte
                     Buffer.BlockCopy(bytes, offset, segment, 0, totalLength)
-                    If marker = &HE1 AndAlso IsExifSegment(segment) Then PatchExifOrientationToNormal(segment)
-                    result.Add(segment)
+                    If marker = &HE1 AndAlso IsExifSegment(segment) Then
+                        PatchExifOrientationToNormal(segment)
+                        PatchExifColorSpaceToSrgb(segment, 10)
+                    End If
+                    segment = WithoutXmpColorFields(segment)
+                    ' Das Farbprofil der Quelle bleibt draussen, siehe IsJpegIccSegment.
+                    If Not IsJpegIccSegment(segment) Then result.Add(segment)
                 End If
 
                 offset += totalLength
@@ -744,6 +749,21 @@ Namespace Services
             Return marker = &HE1 OrElse marker = &HED OrElse marker = &HE2
         End Function
 
+        ''' <summary>Ein APP2-Segment, das das ICC-Farbprofil der QUELLE traegt.
+        '''
+        ''' Es darf NICHT in die Zieldatei: seit dem Farbmanagement (siehe ColorManagementService)
+        ''' sind die geschriebenen Bildpunkte immer sRGB. Ein mitgereistes Adobe-RGB-Profil wuerde
+        ''' sie ein zweites Mal umdeuten - das Ergebnis waere staerker verschoben als vor dem ganzen
+        ''' Umbau. APP2 traegt auch anderes (etwa die Bildreihen mancher Kameras), deshalb wird an
+        ''' der Kennung erkannt und nicht am Marker.</summary>
+        Private Shared Function IsJpegIccSegment(segment As Byte()) As Boolean
+            If segment.Length < 6 + 12 Then Return False
+            If segment(1) <> &HE2 Then Return False
+            ' Die Kennung steht direkt hinter Marker und Laenge, null-terminiert.
+            If segment(4 + 11) <> 0 Then Return False
+            Return Text.Encoding.ASCII.GetString(segment, 4, 11) = "ICC_PROFILE"
+        End Function
+
         Private Shared Function IsExifSegment(segment As Byte()) As Boolean
             Return segment.Length >= 12 AndAlso
                    segment(4) = AscW("E"c) AndAlso segment(5) = AscW("x"c) AndAlso
@@ -781,6 +801,196 @@ Namespace Services
             Catch
             End Try
         End Sub
+
+        ''' <summary>Setzt die FARBRAUM-Angabe der uebernommenen Aufnahmedaten auf sRGB.
+        '''
+        ''' Notwendig geworden mit dem Farbmanagement: die geschriebenen Bildpunkte sind seit dem
+        ''' Umbau immer sRGB, und das ICC-Profil der Quelle bleibt beim Kopieren draussen (siehe
+        ''' IsJpegIccSegment). Die Aufnahmedaten reisen aber sonst bytegenau mit - stand dort
+        ''' "Uncalibrated", behauptete die Zieldatei weiterhin einen anderen Farbraum, als sie hat.
+        ''' Ein Bildprogramm, das diese Angabe auswertet, rechnete daraufhin ein zweites Mal um.
+        '''
+        ''' Zwei Angaben tragen die Aussage, und beide werden gesetzt:
+        ''' 0xA001 (ColorSpace) im Exif-Unterverzeichnis auf 1, und 0x0001 (InteropIndex) im
+        ''' Kompatibilitaets-Unterverzeichnis von "R03" (Adobe RGB) auf "R98" (sRGB). Beide Werte
+        ''' passen in die vier Byte des Eintrags selbst, die Laenge des Blocks aendert sich also
+        ''' nicht - genau wie beim Patch der Ausrichtung daneben.
+        '''
+        ''' GRENZE: XMP bleibt unangetastet. Ein Feld wie photoshop:ICCProfile stuende dort als
+        ''' Text, und ein Ersetzen aenderte die Laenge des Blocks. Steht in OFFENE_PUNKTE.md.</summary>
+        ''' <param name="tiffStart">Wo der TIFF-Kopf im Puffer beginnt: 10 in einem JPEG-Segment
+        ''' (hinter Marker, Laenge und "Exif\0\0"), 0 in einem nackten Block aus PNG oder WebP.</param>
+        Private Shared Sub PatchExifColorSpaceToSrgb(buffer As Byte(), tiffStart As Integer)
+            Try
+                If buffer Is Nothing OrElse buffer.Length < tiffStart + 8 Then Return
+                Dim littleEndian = buffer(tiffStart) = AscW("I"c) AndAlso buffer(tiffStart + 1) = AscW("I"c)
+                Dim bigEndian = buffer(tiffStart) = AscW("M"c) AndAlso buffer(tiffStart + 1) = AscW("M"c)
+                If Not littleEndian AndAlso Not bigEndian Then Return
+
+                Dim ifd0 = tiffStart + CInt(ReadUInt32Endian(buffer, tiffStart + 4, littleEndian))
+                Dim exifIfd = FindIfdPointer(buffer, tiffStart, ifd0, &H8769, littleEndian)
+                If exifIfd <= 0 Then Return
+
+                ' Der Farbraum selbst.
+                Dim colorSpaceEntry = FindIfdEntry(buffer, exifIfd, &HA001, littleEndian)
+                If colorSpaceEntry > 0 Then
+                    Dim type = ReadUInt16Endian(buffer, colorSpaceEntry + 2, littleEndian)
+                    If type = 3 Then WriteUInt16Endian(buffer, colorSpaceEntry + 8, 1, littleEndian)
+                End If
+
+                ' Die zweite Angabe liegt ein Verzeichnis tiefer.
+                Dim interopIfd = FindIfdPointer(buffer, tiffStart, exifIfd, &HA005, littleEndian)
+                If interopIfd <= 0 Then Return
+                Dim indexEntry = FindIfdEntry(buffer, interopIfd, &H1, littleEndian)
+                If indexEntry <= 0 Then Return
+
+                Dim indexType = ReadUInt16Endian(buffer, indexEntry + 2, littleEndian)
+                Dim indexCount = ReadUInt32Endian(buffer, indexEntry + 4, littleEndian)
+                ' Nur der Fall, der inline liegt: vier Zeichen wie "R03" samt Abschluss.
+                If indexType <> 2 OrElse indexCount <> 4 OrElse indexEntry + 12 > buffer.Length Then Return
+                buffer(indexEntry + 8) = AscW("R"c)
+                buffer(indexEntry + 9) = AscW("9"c)
+                buffer(indexEntry + 10) = AscW("8"c)
+                buffer(indexEntry + 11) = 0
+            Catch
+                ' Die Aufnahmedaten sind Beiwerk: lieber unveraendert weitergeben als den Export
+                ' an einem unerwarteten Aufbau scheitern lassen.
+            End Try
+        End Sub
+
+        ''' <summary>Entfernt die FARBRAUM-Felder aus einem XMP-Block.
+        '''
+        ''' Derselbe Grund wie bei PatchExifColorSpaceToSrgb: die Bildpunkte sind sRGB, das
+        ''' ICC-Profil der Quelle bleibt draussen, und ein XMP, das weiterhin "Adobe RGB (1998)"
+        ''' behauptet, brachte ein Programm, das diese Felder auswertet, erneut auf den falschen
+        ''' Wert. Entfernt statt umgeschrieben: ein fehlendes Feld heisst schlicht "keine Angabe",
+        ''' und ohne Profil gilt sRGB. Ein Wert waere eine zweite Wahrheit, die gepflegt werden
+        ''' muesste.
+        '''
+        ''' Rueckgabe: der neue Block, oder Nothing, wenn nichts zu tun war. Der Aufrufer erkennt
+        ''' daran, ob er den umgebenden Block neu bauen muss - die Laenge aendert sich ja.
+        '''
+        ''' GRENZE: ein KOMPRIMIERT abgelegtes XMP (PNG kann das) bleibt unangetastet. Die Felder
+        ''' stehen dort nicht im Klartext, also findet der Ausdruck nichts und die Datei geht
+        ''' unveraendert weiter - schlechter als vorher ist sie damit nicht.</summary>
+        Private Shared Function StripXmpColorFields(xmp As Byte()) As Byte()
+            If xmp Is Nothing OrElse xmp.Length = 0 Then Return Nothing
+            Try
+                ' NICHT "text" nennen: der Name verdeckt den Namensraum Text, und die Zeile
+                ' darunter kaeme dann nicht mehr an Text.Encoding heran.
+                Dim xmpText = Text.Encoding.UTF8.GetString(xmp)
+                If xmpText.IndexOf("ICCProfile", StringComparison.OrdinalIgnoreCase) < 0 AndAlso
+                   xmpText.IndexOf("ColorSpace", StringComparison.OrdinalIgnoreCase) < 0 Then Return Nothing
+
+                Dim cleaned = xmpText
+                For Each field In {"photoshop:ICCProfile", "exif:ColorSpace"}
+                    ' Als Attribut, in beiden Anfuehrungsarten, und als eigenes Element.
+                    cleaned = Regex.Replace(cleaned, "\s*" & Regex.Escape(field) & "\s*=\s*""[^""]*""", "")
+                    cleaned = Regex.Replace(cleaned, "\s*" & Regex.Escape(field) & "\s*=\s*'[^']*'", "")
+                    cleaned = Regex.Replace(cleaned, "\s*<" & Regex.Escape(field) & "(\s[^>]*)?/>", "")
+                    cleaned = Regex.Replace(cleaned, "\s*<" & Regex.Escape(field) & "(\s[^>]*)?>.*?</" & Regex.Escape(field) & ">", "",
+                                            RegexOptions.Singleline)
+                Next
+
+                If String.Equals(cleaned, xmpText, StringComparison.Ordinal) Then Return Nothing
+                Return Text.Encoding.UTF8.GetBytes(cleaned)
+            Catch
+                ' Ein unerwarteter Aufbau darf den Export nicht kosten.
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Ein PNG-Textblock ohne die XMP-Farbfelder. Traegt er kein XMP oder liegt es
+        ''' komprimiert vor, kommt er UNVERAENDERT zurueck.
+        '''
+        ''' Der Kopf des Blocks (Schluesselwort, die beiden Kompressionsbytes, Sprache und
+        ''' uebersetztes Schluesselwort) bleibt Byte fuer Byte stehen; ersetzt wird allein der Text
+        ''' dahinter.</summary>
+        Private Shared Function WithoutXmpColorFieldsInPngText(chunk As Byte(), length As Integer) As Byte()
+            Try
+                Dim data(length - 1) As Byte
+                Buffer.BlockCopy(chunk, 8, data, 0, length)
+
+                Dim textOffset = XmpTextOffsetInPngItxt(data)
+                If textOffset <= 0 Then Return chunk
+
+                Dim xmp(data.Length - textOffset - 1) As Byte
+                Buffer.BlockCopy(data, textOffset, xmp, 0, xmp.Length)
+
+                Dim cleaned = StripXmpColorFields(xmp)
+                If cleaned Is Nothing Then Return chunk
+
+                Dim header(textOffset - 1) As Byte
+                Buffer.BlockCopy(data, 0, header, 0, textOffset)
+                Return CreatePngChunk("iTXt", CombineBytes(header, cleaned))
+            Catch
+                Return chunk
+            End Try
+        End Function
+
+        ''' <summary>Wo im Inhalt eines iTXt-Blocks der eigentliche Text beginnt, wenn es sich um
+        ''' UNKOMPRIMIERTES XMP handelt. 0 heisst: Finger weg von diesem Block.
+        '''
+        ''' Der Aufbau ist Schluesselwort, Null, Kompressionskennzeichen, Kompressionsverfahren,
+        ''' Sprachangabe, Null, uebersetztes Schluesselwort, Null, Text. Die beiden mittleren Felder
+        ''' DUERFEN leer sein, muessen es aber nicht - ihre Nullzeichen werden deshalb gesucht und
+        ''' nicht gezaehlt. Ein fester Versatz stimmte nur fuer den leeren Fall und schnitt sonst
+        ''' mitten in die Sprachangabe; beim Neubau des Blocks entstuende daraus eine kaputte
+        ''' Datei.</summary>
+        Private Shared Function XmpTextOffsetInPngItxt(data As Byte()) As Integer
+            Dim keywordEnd = Array.IndexOf(data, CByte(0))
+            If keywordEnd <= 0 OrElse keywordEnd + 2 >= data.Length Then Return 0
+            If Text.Encoding.ASCII.GetString(data, 0, keywordEnd) <> "XML:com.adobe.xmp" Then Return 0
+            ' Nur unkomprimiert: sonst stehen die Felder nicht im Klartext.
+            If data(keywordEnd + 1) <> 0 Then Return 0
+
+            Dim languageEnd = Array.IndexOf(data, CByte(0), keywordEnd + 3)
+            If languageEnd < 0 Then Return 0
+            Dim translatedEnd = Array.IndexOf(data, CByte(0), languageEnd + 1)
+            If translatedEnd < 0 OrElse translatedEnd + 1 >= data.Length Then Return 0
+            Return translatedEnd + 1
+        End Function
+
+        ''' <summary>Ein JPEG-Segment ohne die XMP-Farbfelder. Ist es keines oder war nichts zu
+        ''' entfernen, kommt es UNVERAENDERT zurueck. Das Segment wird neu gebaut, weil sich seine
+        ''' Laengenangabe mitaendert.</summary>
+        Private Shared Function WithoutXmpColorFields(segment As Byte()) As Byte()
+            Dim identifier = Text.Encoding.ASCII.GetBytes("http://ns.adobe.com/xap/1.0/" & ChrW(0))
+            If segment.Length <= 4 + identifier.Length Then Return segment
+            If segment(1) <> &HE1 OrElse Not StartsWithBytes(segment, 4, identifier) Then Return segment
+
+            Dim xmpLength = segment.Length - 4 - identifier.Length
+            Dim xmp(xmpLength - 1) As Byte
+            Buffer.BlockCopy(segment, 4 + identifier.Length, xmp, 0, xmpLength)
+
+            Dim cleaned = StripXmpColorFields(xmp)
+            If cleaned Is Nothing Then Return segment
+            Return CreateJpegAppSegment(&HE1, CombineBytes(identifier, cleaned))
+        End Function
+
+        ''' <summary>Position eines Eintrags in einem Verzeichnis, oder 0.</summary>
+        Private Shared Function FindIfdEntry(buffer As Byte(), ifd As Integer, tag As Integer, littleEndian As Boolean) As Integer
+            If ifd <= 0 OrElse ifd + 2 > buffer.Length Then Return 0
+            Dim count = ReadUInt16Endian(buffer, ifd, littleEndian)
+            For i = 0 To count - 1
+                Dim entry = ifd + 2 + i * 12
+                If entry + 12 > buffer.Length Then Return 0
+                If ReadUInt16Endian(buffer, entry, littleEndian) = tag Then Return entry
+            Next
+            Return 0
+        End Function
+
+        ''' <summary>Folgt einem Verweis auf ein Unterverzeichnis und liefert dessen Position im
+        ''' Puffer, oder 0. Der Wert im Eintrag zaehlt ab dem TIFF-Kopf, nicht ab dem Puffer.</summary>
+        Private Shared Function FindIfdPointer(buffer As Byte(), tiffStart As Integer, ifd As Integer,
+                                               tag As Integer, littleEndian As Boolean) As Integer
+            Dim entry = FindIfdEntry(buffer, ifd, tag, littleEndian)
+            If entry <= 0 Then Return 0
+            If ReadUInt16Endian(buffer, entry + 2, littleEndian) <> 4 Then Return 0
+            Dim target = tiffStart + CInt(ReadUInt32Endian(buffer, entry + 8, littleEndian))
+            If target <= tiffStart OrElse target + 2 > buffer.Length Then Return 0
+            Return target
+        End Function
 
         Private Shared Sub CopyPngMetadata(sourcePath As String, targetPath As String)
             Dim metadataChunks = If(IO.Path.GetExtension(sourcePath).ToLowerInvariant() = ".png",
@@ -834,6 +1044,18 @@ Namespace Services
                 If IsPngMetadataChunk(chunkType) Then
                     Dim chunk(12 + length - 1) As Byte
                     Buffer.BlockCopy(bytes, offset, chunk, 0, chunk.Length)
+                    If chunkType = "eXIf" AndAlso length > 0 Then
+                        ' Farbraum-Angabe auf sRGB stellen, siehe PatchExifColorSpaceToSrgb. Der
+                        ' Block wird dafuer NEU gebaut und nicht an Ort und Stelle geaendert: ein
+                        ' PNG-Block traegt eine Pruefsumme ueber seinen Inhalt, und die waere danach
+                        ' falsch. CreatePngChunk rechnet sie mit.
+                        Dim data(length - 1) As Byte
+                        Buffer.BlockCopy(chunk, 8, data, 0, length)
+                        PatchExifColorSpaceToSrgb(data, 0)
+                        chunk = CreatePngChunk("eXIf", data)
+                    ElseIf chunkType = "iTXt" AndAlso length > 0 Then
+                        chunk = WithoutXmpColorFieldsInPngText(chunk, length)
+                    End If
                     result.Add(chunk)
                 End If
 
@@ -870,9 +1092,14 @@ Namespace Services
                    bytes(4) = &HD AndAlso bytes(5) = &HA AndAlso bytes(6) = &H1A AndAlso bytes(7) = &HA
         End Function
 
+        ''' <summary>Welche PNG-Bloecke aus der Quelle in die Zieldatei uebernommen werden.
+        '''
+        ''' OHNE "iCCP": das Farbprofil der Quelle passt nach dem Farbmanagement nicht mehr zu den
+        ''' geschriebenen Bildpunkten, die immer sRGB sind. Dieselbe Begruendung wie bei
+        ''' IsJpegIccSegment.</summary>
         Private Shared Function IsPngMetadataChunk(chunkType As String) As Boolean
             Select Case chunkType
-                Case "eXIf", "iTXt", "tEXt", "zTXt", "iCCP"
+                Case "eXIf", "iTXt", "tEXt", "zTXt"
                     Return True
                 Case Else
                     Return False
@@ -880,11 +1107,24 @@ Namespace Services
         End Function
 
         Private Shared Sub CopyWebpMetadata(sourcePath As String, targetPath As String)
+            ' "ICCP" fehlt hier bewusst: das Farbprofil der Quelle gehoert nach dem Farbmanagement
+            ' nicht mehr zu den geschriebenen Bildpunkten, siehe IsJpegIccSegment.
             Dim sourceChunks = If(IO.Path.GetExtension(sourcePath).ToLowerInvariant() = ".webp",
                                   ReadWebpChunks(File.ReadAllBytes(sourcePath)).
-                                      Where(Function(c) c.Type = "EXIF" OrElse c.Type = "XMP " OrElse c.Type = "ICCP").
+                                      Where(Function(c) c.Type = "EXIF" OrElse c.Type = "XMP ").
                                       ToList(),
                                   BuildWebpMetadataChunksFromSource(sourcePath))
+
+            ' Farbraum-Angabe auf sRGB stellen (siehe PatchExifColorSpaceToSrgb). Ein WebP-Block
+            ' traegt keine Pruefsumme, er laesst sich also an Ort und Stelle aendern; die Laenge
+            ' steht am Block selbst und wird beim Schreiben aus den Daten genommen.
+            For Each chunk In sourceChunks.Where(Function(c) c.Type = "EXIF")
+                PatchExifColorSpaceToSrgb(chunk.Data, 0)
+            Next
+            For Each chunk In sourceChunks.Where(Function(c) c.Type = "XMP ")
+                Dim cleaned = StripXmpColorFields(chunk.Data)
+                If cleaned IsNot Nothing Then chunk.Data = cleaned
+            Next
             If sourceChunks.Count = 0 Then Return
 
             Dim targetBytes = File.ReadAllBytes(targetPath)
@@ -910,16 +1150,17 @@ Namespace Services
             End If
             If width <= 0 OrElse height <= 0 Then Return
 
-            If sourceChunks.Any(Function(c) c.Type = "ICCP") Then flags = CByte(flags Or &H20)
+            ' Das Profil-Flag wird GELOESCHT, weil unten kein ICCP-Block mehr geschrieben wird -
+            ' weder aus der Quelle noch aus dem Ziel. Ein gesetztes Flag ohne zugehoerigen Block
+            ' waere eine kaputte Datei: die Kopfzeile verspricht etwas, das nicht da ist. Das Flag
+            ' kommt aus dem ZIEL und kann dort gesetzt sein, wenn Skia beim Kodieren eines
+            ' angehaengt hat.
+            flags = CByte(flags And &HDF)
             If sourceChunks.Any(Function(c) c.Type = "EXIF") Then flags = CByte(flags Or &H8)
             If sourceChunks.Any(Function(c) c.Type = "XMP ") Then flags = CByte(flags Or &H4)
 
             Dim outputChunks As New List(Of WebpChunk)()
             outputChunks.Add(CreateWebpVp8xChunk(flags, width, height))
-
-            For Each chunk In sourceChunks.Where(Function(c) c.Type = "ICCP")
-                outputChunks.Add(chunk)
-            Next
             For Each chunk In targetChunks
                 If chunk.Type = "VP8X" OrElse chunk.Type = "EXIF" OrElse chunk.Type = "XMP " OrElse chunk.Type = "ICCP" Then Continue For
                 outputChunks.Add(chunk)
@@ -1020,6 +1261,12 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Der TIFF-Block der Aufnahmedaten aus einer Quelldatei.
+        '''
+        ''' Die Farbraum-Angabe ist hier schon auf sRGB gestellt: das geschieht bei den LESERN der
+        ''' Quelle (ReadJpegMetadataSegments und ReadPngMetadataChunks), damit jeder Weg sie
+        ''' mitbekommt und nicht nur dieser. Allein WebP wird unten selbst nachgezogen - dort liest
+        ''' diese Funktion die Bloecke direkt.</summary>
         Private Shared Function ExtractExifTiffBytes(path As String) As Byte()
             Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
             Try
@@ -1046,7 +1293,10 @@ Namespace Services
                         Next
                     Case ".webp"
                         Dim chunk = ReadWebpChunks(File.ReadAllBytes(path)).FirstOrDefault(Function(c) c.Type = "EXIF")
-                        If chunk IsNot Nothing Then Return chunk.Data
+                        If chunk IsNot Nothing Then
+                            PatchExifColorSpaceToSrgb(chunk.Data, 0)
+                            Return chunk.Data
+                        End If
                 End Select
             Catch
             End Try
@@ -1075,19 +1325,20 @@ Namespace Services
                             If chunkType <> "iTXt" OrElse length <= 0 Then Continue For
                             Dim data(length - 1) As Byte
                             Buffer.BlockCopy(chunk, 8, data, 0, length)
-                            Dim zero = Array.IndexOf(data, CByte(0))
-                            If zero <= 0 Then Continue For
-                            Dim keyword = Text.Encoding.ASCII.GetString(data, 0, zero)
-                            If keyword <> "XML:com.adobe.xmp" OrElse zero + 5 >= data.Length Then Continue For
-                            If data(zero + 1) <> 0 Then Continue For
-                            Dim textOffset = zero + 5
+                            ' Anfang des Textes suchen statt zaehlen, siehe XmpTextOffsetInPngItxt:
+                            ' ein fester Versatz stimmt nur, wenn Sprachangabe und uebersetztes
+                            ' Schluesselwort beide leer sind.
+                            Dim textOffset = XmpTextOffsetInPngItxt(data)
+                            If textOffset <= 0 Then Continue For
                             Dim xmp(data.Length - textOffset - 1) As Byte
                             Buffer.BlockCopy(data, textOffset, xmp, 0, xmp.Length)
                             Return xmp
                         Next
                     Case ".webp"
+                        ' Anders als bei JPEG und PNG kommen die Bloecke hier ungereinigt herein -
+                        ' die beiden anderen Wege laufen ueber ihre Leser, die das schon erledigen.
                         Dim chunk = ReadWebpChunks(File.ReadAllBytes(path)).FirstOrDefault(Function(c) c.Type = "XMP ")
-                        If chunk IsNot Nothing Then Return chunk.Data
+                        If chunk IsNot Nothing Then Return If(StripXmpColorFields(chunk.Data), chunk.Data)
                 End Select
             Catch
             End Try

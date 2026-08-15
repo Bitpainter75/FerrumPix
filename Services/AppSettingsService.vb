@@ -102,6 +102,9 @@ Namespace Services
     Public Class AppSettings
         Public Property GalleryThumbnailSize As Double = 260
         Public Property GalleryViewMode As String = "Grid"
+        ''' <summary>Das Analysebild im Infopanel: "Histogram", "Waveform" oder "Parade".
+        ''' Gilt fuer Galerie, Betrachter und Editor gemeinsam - es ist dasselbe Panel.</summary>
+        Public Property ScopeMode As String = "Histogram"
         Public Property GallerySortMode As String = AppSettingsService.DefaultGallerySortMode
         Public Property GallerySortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
         ''' <summary>Feinheit der Gruppen in der Gruppenansicht, solange nach einem Datum sortiert wird:
@@ -547,6 +550,7 @@ Namespace Services
 
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
+                settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
@@ -683,6 +687,7 @@ Namespace Services
                 Directory.CreateDirectory(SettingsDirectory)
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
+                settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
@@ -1059,6 +1064,23 @@ Namespace Services
                     Return "Grid"
             End Select
         End Function
+
+        ''' <summary>Welches Analysebild im Infopanel steht: Histogramm, Waveform oder Parade.
+        ''' Unbekanntes faellt auf das Histogramm zurueck, das es immer schon gab.</summary>
+        Public Shared Function NormalizeScopeMode(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Waveform"
+                    Return "Waveform"
+                Case "Parade"
+                    Return "Parade"
+                Case Else
+                    Return "Histogram"
+            End Select
+        End Function
+
+        Public Shared Sub SaveScopeMode(value As String)
+            Update(Sub(s) s.ScopeMode = NormalizeScopeMode(value))
+        End Sub
 
         ''' <summary>Bei Datumssortierung ist der Tag der Normalfall (Vorgabe Patrick, 2026-08-12);
         ''' Monat und Jahr sind fuer grosse Bestaende umschaltbar.</summary>

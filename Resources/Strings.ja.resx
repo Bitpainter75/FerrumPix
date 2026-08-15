@@ -7338,4 +7338,10 @@
   <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
     <value>下部に画像情報とズームのバーを表示します。オフにすると作業領域の高さが広がります。フィルムストリップには独自の切り替えがあり、そのまま表示されます。</value>
   </data>
+  <data name="Waveform_200f14b1" xml:space="preserve">
+    <value>波形</value>
+  </data>
+  <data name="RGB_Parade_90aac96f" xml:space="preserve">
+    <value>RGBパレード</value>
+  </data>
 </root>

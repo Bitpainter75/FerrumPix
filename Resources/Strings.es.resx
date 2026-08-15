@@ -7298,4 +7298,10 @@
   <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
     <value>Muestra abajo la barra con los datos de la imagen y el zoom. Desactivada queda más altura para el área de trabajo. La tira de imágenes tiene su propio interruptor y permanece.</value>
   </data>
+  <data name="Waveform_200f14b1" xml:space="preserve">
+    <value>Forma de onda</value>
+  </data>
+  <data name="RGB_Parade_90aac96f" xml:space="preserve">
+    <value>Parade RGB</value>
+  </data>
 </root>

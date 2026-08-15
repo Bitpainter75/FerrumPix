@@ -116,13 +116,45 @@ Namespace Services
                             ' Integer. Die Schranke ist hier MaxPixels (300 Millionen).
                             Marshal.Copy(row, 0, target + y * targetStride, rowBytes)
                         Next
-                        Return bitmap
+
+                        ' Farbmanagement muss HIER geschehen und nicht spaeter: der Weg nach draussen
+                        ' fuehrt ueber einen PNG-Strom (ExtractPreview), und dabei ginge ein Profil
+                        ' verloren, bevor ColorManagementService es sehen koennte. Ein TIFF in Adobe
+                        ' RGB waere sonst der eine Dateityp, der weiterhin unverwaltet ankaeme.
+                        '
+                        ' Das Profil wird FREIGEGEBEN: es ist ein eigens erzeugtes natives Objekt,
+                        ' und ueber einen Kachellauf mit tausend Bildern summiert sich das, bis der
+                        ' Aufraeumer von selbst vorbeikommt.
+                        Using profile = ReadIccProfile(tif)
+                            Dim managed = ColorManagementService.ToSrgb(bitmap, profile)
+                            If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
+                            Return managed
+                        End Using
                     Catch
                         bitmap.Dispose()
                         Return Nothing
                     End Try
                 End Using
             Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Das eingebettete ICC-Profil (TIFF-Tag 34675), oder Nothing.
+        '''
+        ''' libtiff gibt den Tag als zwei Felder zurueck: Laenge und Datenblock. Fehlt er, kommt
+        ''' Nothing zurueck - dann ist die Datei unverwaltet und bleibt es, genau wie bisher.</summary>
+        Private Shared Function ReadIccProfile(tif As Tiff) As SKColorSpace
+            Try
+                Dim field = tif.GetField(TiffTag.ICCPROFILE)
+                If field Is Nothing OrElse field.Length < 2 Then Return Nothing
+                Dim length = field(0).ToInt()
+                If length <= 0 OrElse length > 16 * 1024 * 1024 Then Return Nothing
+                Dim bytes = field(1).ToByteArray()
+                If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
+                Return SKColorSpace.CreateIcc(bytes)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Tiff.ReadIccProfile", ex)
                 Return Nothing
             End Try
         End Function

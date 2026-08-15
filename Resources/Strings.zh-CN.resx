@@ -7296,4 +7296,10 @@
   <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
     <value>在底部显示带有图片信息和缩放的栏。关闭后工作区高度更大。胶片显示窗格有单独的开关，会继续显示。</value>
   </data>
+  <data name="Waveform_200f14b1" xml:space="preserve">
+    <value>波形</value>
+  </data>
+  <data name="RGB_Parade_90aac96f" xml:space="preserve">
+    <value>RGB 分量图</value>
+  </data>
 </root>

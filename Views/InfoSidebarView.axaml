@@ -5,12 +5,25 @@
              x:Class="FerrumPix.Views.InfoSidebarView">
 
     <!-- Gemeinsame Info-Seitenleiste (Allgemein/EXIF/IPTC/XMP) für Viewer, Editor und Galerie -
-         alle drei stellen dieselben Property-/Command-Namen bereit (ExifInfo, Tags, HistogramImage,
+         alle drei stellen dieselben Property-/Command-Namen bereit (ExifInfo, Tags, ScopeImage,
          IsInfoTab*, ToggleFavoriteCommand, SetRatingCommand, SetColorLabelCommand, AddTagCommand,
          RemoveTagCommand, Rating, IsFavorite, ColorLabel/IsColorLabel*, IsInfoSidebarVisible),
          daher genügt ein einziges, DataContext-loses UserControl statt der zuvor doppelt
          gepflegten Markup-Kopie in ViewerView/EditorView. Viewer und Editor tragen den Zustand
          selbst, die Galerie reicht ihn über InfoPanelViewModel herein. -->
+    <UserControl.Styles>
+        <!-- Der Rahmen eines Flyouts ist ab Werk auf gut 450 Punkte gedeckelt und bringt eigenes
+             Innenmass mit; das 600 Punkte breite Analysebild wurde dadurch rechts abgeschnitten.
+             Hier bekommt genau dieses eine Flyout seinen eigenen Rahmen: Deckel hoch, kein
+             Mindestmass, schmales Innenmass. -->
+        <Style Selector="FlyoutPresenter.scope-flyout">
+            <Setter Property="MaxWidth" Value="720"/>
+            <Setter Property="MaxHeight" Value="420"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+        </Style>
+    </UserControl.Styles>
+
     <Border x:Name="InfoSidebarBorder" Classes="panel-right" Padding="14,14"
             IsVisible="{Binding IsInfoSidebarVisible}">
         <!-- Ohne Bild zeigt die Leiste NUR einen Hinweis in der Mitte. Reiter und Felder
@@ -88,11 +101,13 @@
 
                     <StackPanel Spacing="18" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
                         <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
-                            <TextBlock Text="Bild" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <!-- Dateiname ohne Beschriftung über die volle Breite: er ist die
                                  Überschrift des Blocks, keine Wertzeile - und lange Namen haben so
                                  die ganze Spaltenbreite zum Umbrechen statt der halben. Darunter
-                                 eine Leerzeile Abstand zu den Wertzeilen. -->
+                                 eine Leerzeile Abstand zu den Wertzeilen.
+                                 Eine Ueberschrift "Bild" stand hier frueher darueber; sie sagte
+                                 nichts, was der Dateiname nicht schon zeigt, und kostete eine
+                                 Zeile Hoehe. -->
                             <TextBlock Text="{Binding ExifInfo.FileName}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
                                 <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
@@ -141,28 +156,81 @@
                         <!-- Die Trennlinien gehoeren zu den Bloecken, die sie abgrenzen: sonst
                              stehen bei ausgeblendetem Histogramm zwei uebereinander. -->
                         <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
-                                IsVisible="{Binding HasHistogram}"/>
+                                IsVisible="{Binding HasScope}"/>
 
-                        <StackPanel Spacing="10" IsVisible="{Binding HasHistogram}">
-                            <TextBlock Text="Histogramm" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                        <StackPanel Spacing="10" IsVisible="{Binding HasScope}">
+                            <!-- Ueberschrift und Umschalter in einer Zeile: die drei Darstellungen
+                                 beantworten verschiedene Fragen (Verteilung, Lage im Bild, Stich je
+                                 Kanal), und der Wechsel soll dort sitzen, wo man hinsieht. Die
+                                 Ueberschrift wandert mit, sonst stuende ueber einer Waveform
+                                 "Histogramm". -->
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="4">
+                                <!-- Der aktive Knopf traegt die Akzentklasse und bleibt klickbar.
+                                     Ihn stattdessen abzuschalten sah aus, als sei die Darstellung
+                                     nicht verfuegbar. -->
+                                <Button Grid.Column="0" Classes="ghost" Classes.accent="{Binding Scope.IsHistogram}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        Padding="4,3" FontSize="{DynamicResource FP.Font.Small}"
+                                        Content="Histogramm"
+                                        Command="{Binding Scope.SetModeCommand}" CommandParameter="Histogram"/>
+                                <Button Grid.Column="1" Classes="ghost" Classes.accent="{Binding Scope.IsWaveform}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        Padding="4,3" FontSize="{DynamicResource FP.Font.Small}"
+                                        Content="Waveform"
+                                        Command="{Binding Scope.SetModeCommand}" CommandParameter="Waveform"/>
+                                <Button Grid.Column="2" Classes="ghost" Classes.accent="{Binding Scope.IsParade}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        Padding="4,3" FontSize="{DynamicResource FP.Font.Small}"
+                                        Content="RGB-Parade"
+                                        Command="{Binding Scope.SetModeCommand}" CommandParameter="Parade"/>
+                            </Grid>
                             <!-- Solange nichts da ist, steht der Hinweis im leeren Kasten: bei einem
                                  RAW dauert der Volldecode spuerbar, und ein leerer Rahmen sieht in der
                                  Zeit aus wie ein Fehler statt wie Arbeit. -->
-                            <Panel Height="92">
-                                <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
-                                    <Image Source="{Binding HistogramImage}"
-                                           Stretch="Fill"
-                                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
-                                </Border>
+                            <!-- 150 statt der frueheren 92: senkrecht liegen 256 Helligkeitsstufen,
+                                 und bei Waveform und Parade ist genau das die tragende Achse. Auf
+                                 92 Punkten fielen je drei Stufen auf einen Bildpunkt.
+                                 Gerechnet wird 600 mal 300, also doppelt so fein wie der Kasten -
+                                 aus genau diesem Vorrat lebt die grosse Ansicht unten, die dadurch
+                                 scharf ist statt hochskaliert. -->
+                            <Panel Height="150">
+                                <!-- Ein Klick auf das Diagramm klappt es gross auf. Der Knopf
+                                     traegt keine eigene Optik: er ist nur die Klickflaeche um das
+                                     Bild, das schon vorher da war. -->
+                                <Button Padding="0" BorderThickness="0" Background="Transparent"
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                        Cursor="Hand"
+                                        IsEnabled="{Binding ScopeImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Button.Flyout>
+                                        <Flyout Placement="Left" ShowMode="Standard"
+                                                FlyoutPresenterClasses="scope-flyout">
+                                            <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6"
+                                                    ClipToBounds="True">
+                                                <!-- Native Groesse des gerechneten Bildes: kein
+                                                     Strecken, keine Interpolation, jede Spur so
+                                                     duenn wie sie ist. -->
+                                                <Image Source="{Binding ScopeImage}" Width="600" Height="300"/>
+                                            </Border>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                    <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                                        <Image Source="{Binding ScopeImage}"
+                                               Stretch="Fill"
+                                               RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                                    </Border>
+                                </Button>
                                 <TextBlock Text="wird berechnet"
-                                           IsVisible="{Binding HistogramImage, Converter={x:Static ObjectConverters.IsNull}}"
+                                           IsVisible="{Binding ScopeImage, Converter={x:Static ObjectConverters.IsNull}}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            Foreground="{DynamicResource FP.Text.Muted}"
                                            FontSize="{DynamicResource FP.Font.Small}"/>
                             </Panel>
                         </StackPanel>
 
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+                        <!-- Unter dem Analysebild steht keine Trennlinie: der dunkle Kasten des
+                             Diagramms grenzt sich selbst deutlich genug ab, und eine Linie dicht
+                             darunter wirkte wie ein zweiter Rahmen. -->
 
                         <!-- Bewertung, Favorit und Farbetikett direkt am Bild pflegen - dieselben
                              Sterne wie in der Werkzeugleiste, dieselben Akzentfarben-Punkte wie im
@@ -283,10 +351,14 @@
                                                    FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Grid>
                                 </Button>
+                                <!-- Aufbau wie der gleichnamige Knopf im Kontextmenue
+                                     (MenuWidgets.ClearButton): dasselbe Zeichen, dieselbe
+                                     Schriftgroesse und AUSDRUECKLICH keine eigene Vordergrundfarbe.
+                                     Die stand hier vorher auf der gedaempften Textfarbe, wodurch
+                                     dasselbe Kreuz an zwei Stellen verschieden aussah. -->
                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="" ToolTip.Tip="Kein Etikett">
-                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
                             </StackPanel>
                         </StackPanel>

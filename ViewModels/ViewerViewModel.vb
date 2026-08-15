@@ -789,6 +789,12 @@ Namespace ViewModels
             InfoPanel.OwnerLoadsDetails = True
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
+            ' Wechselt die Darstellung (Histogramm, Waveform, Parade), muss das Bild neu entstehen.
+            ' Der Merker wird zurueckgesetzt, weil der Nachladeweg sonst meint, er sei fertig.
+            InfoPanel.ScopeRefresh = Sub()
+                                         _histogramLoadedForPath = ""
+                                         EnsureHistogramLoaded()
+                                     End Sub
 
             InfoPanel.PersistRating = Sub(items, value)
                                      Me.RaisePropertyChanged(NameOf(RatingText))
@@ -2207,13 +2213,13 @@ Namespace ViewModels
         ' provisorischen Katalog-Stand.
         Private _infoPanelShownForPath As String = ""
 
-        ' Pfad, für den HistogramImage zuletzt tatsächlich berechnet wurde - erlaubt
+        ' Pfad, für den ScopeImage zuletzt tatsächlich berechnet wurde - erlaubt
         ' EnsureHistogramLoaded, beim Einblenden der Info-Leiste zu erkennen, ob für das aktuelle
         ' Bild noch nachgeladen werden muss (siehe unten).
         Private _histogramLoadedForPath As String = ""
 
         ' EXIF-Lesen und v.a. die Histogramm-Berechnung (kompletter Re-Decode des Bildes von der
-        ' Platte, siehe ImageProcessor.BuildHistogramImage) sind zu teuer, um sie wie zuvor
+        ' Platte, siehe ImageProcessor.BuildScopeImage) sind zu teuer, um sie wie zuvor
         ' synchron im UI-Thread bei jedem Bildwechsel auszuführen - das ließ den Viewer bei jeder
         ' Navigation kurz einfrieren. Läuft jetzt komplett im Hintergrund; nur die Zuweisung der
         ' fertigen Ergebnisse an die gebundenen Properties passiert per Dispatcher wieder im UI-Thread.
@@ -2244,7 +2250,7 @@ Namespace ViewModels
 
             If Not loadHistogram Then
                 _histogramLoadedForPath = ""
-                InfoPanel.HistogramImage = Nothing
+                InfoPanel.ScopeImage = Nothing
             End If
 
             ' NUTZER-BEFUND (2. Runde): Beim schnellen Blättern blieb das KOMPLETTE Panel
@@ -2283,13 +2289,18 @@ Namespace ViewModels
                          LibraryService.Instance.SyncExifData(imagePath, exifForSearch, ExifService.BuildCatalogSummary(info, exifForSearch))
 
                          If loadHistogram Then
-                             Dim histogram = ImageProcessor.BuildHistogramImage(imagePath, 240, 120)
+                             ' Die Darstellung kann sich waehrend des Laufs geaendert haben; der
+                             ' Bildwechsel-Merker allein faengt das nicht (siehe
+                             ' ScopeSelectionViewModel.Generation).
+                             Dim scopeGeneration = ScopeSelectionViewModel.Generation
+                             Dim histogram = ImageProcessor.BuildScopeImage(imagePath, 600, 300)
                              Dispatcher.UIThread.Post(Sub()
-                                                           If token <> _infoPanelLoadToken Then
+                                                           If token <> _infoPanelLoadToken OrElse
+                                                              scopeGeneration <> ScopeSelectionViewModel.Generation Then
                                                                histogram?.Dispose()
                                                                Return
                                                            End If
-                                                           InfoPanel.HistogramImage = histogram
+                                                           InfoPanel.ScopeImage = histogram
                                                            _histogramLoadedForPath = imagePath
                                                        End Sub)
                          End If
@@ -2333,7 +2344,7 @@ Namespace ViewModels
             ' Das Histogramm des alten Bildes ebenfalls sofort raus - es käme sonst als letztes
             ' Relikt des vorherigen Bildes erst mit dem Nachschub-Post weg.
             _histogramLoadedForPath = ""
-            InfoPanel.HistogramImage = Nothing
+            InfoPanel.ScopeImage = Nothing
         End Sub
 
         ''' Lädt das Histogramm für das aktuell offene Bild nach, falls es (weil die Info-Leiste
@@ -2350,15 +2361,20 @@ Namespace ViewModels
             If String.Equals(_histogramLoadedForPath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
 
             Dim imagePath = _currentImagePath
+            ' Auch hier gilt der Stand der Darstellung beim START: wer zweimal schnell umschaltet,
+            ' bekommt sonst das Ergebnis des ersten Laufs zu sehen, und der Merker unten sperrt
+            ' jeden weiteren Versuch (siehe ScopeSelectionViewModel.Generation).
+            Dim scopeGeneration = ScopeSelectionViewModel.Generation
             Task.Run(Sub()
-                         Dim histogram = ImageProcessor.BuildHistogramImage(imagePath, 240, 120)
+                         Dim histogram = ImageProcessor.BuildScopeImage(imagePath, 600, 300)
                          Dispatcher.UIThread.Post(Sub()
                                                        If Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
-                                                          Not String.Equals(_infoPanelShownForPath, imagePath, StringComparison.OrdinalIgnoreCase) Then
+                                                          Not String.Equals(_infoPanelShownForPath, imagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                                                          scopeGeneration <> ScopeSelectionViewModel.Generation Then
                                                            histogram?.Dispose()
                                                            Return
                                                        End If
-                                                       InfoPanel.HistogramImage = histogram
+                                                       InfoPanel.ScopeImage = histogram
                                                        _histogramLoadedForPath = imagePath
                                                    End Sub)
                      End Sub)

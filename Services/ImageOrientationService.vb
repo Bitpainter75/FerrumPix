@@ -118,7 +118,14 @@ Namespace Services
                     If Not String.IsNullOrWhiteSpace(rawContainerPath) Then
                         origin = RawPreviewOrigin(rawContainerPath, origin, codec.Info.Width, codec.Info.Height)
                     End If
-                    If origin = SKEncodedOrigin.TopLeft AndAlso NormalizeQuarterTurn(extraRotationDegrees) = 0 Then
+                    ' Ein abweichendes Farbprofil zwingt auf den Skia-Weg: Avalonias Decoder
+                    ' (BitmapFromData) kennt kein Farbmanagement und zeigte ein Adobe-RGB- oder
+                    ' Display-P3-Bild flau und farbverschoben. Der schnelle Weg bleibt fuer alles
+                    ' andere unangetastet, und das ist die weit ueberwiegende Mehrheit.
+                    Dim sourceProfile = codec.Info.ColorSpace
+                    Dim needsColorConversion = ColorManagementService.NeedsConversion(sourceProfile)
+                    If origin = SKEncodedOrigin.TopLeft AndAlso NormalizeQuarterTurn(extraRotationDegrees) = 0 AndAlso
+                       Not needsColorConversion Then
                         Return BitmapFromData(data)
                     End If
 
@@ -134,7 +141,14 @@ Namespace Services
                         Try
                             Dim rotated = ApplyQuarterRotation(corrected, extraRotationDegrees)
                             Try
-                                Return ToAvaloniaBitmapFast(rotated)
+                                ' Nach der Geometrie, nicht davor: die Wandlung ist eine reine
+                                ' Punktoperation, und nach dem Drehen liegt genau ein Puffer an.
+                                Dim managed = ColorManagementService.ToSrgb(rotated, sourceProfile)
+                                Try
+                                    Return ToAvaloniaBitmapFast(managed)
+                                Finally
+                                    If Not Object.ReferenceEquals(managed, rotated) Then managed.Dispose()
+                                End Try
                             Finally
                                 If Not Object.ReferenceEquals(rotated, corrected) Then rotated.Dispose()
                             End Try

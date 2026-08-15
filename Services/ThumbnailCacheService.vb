@@ -673,14 +673,23 @@ Namespace Services
 
                             Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
                                 If resized Is Nothing Then Return False
-                                Using image = SKImage.FromBitmap(resized)
-                                    Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
-                                        If data Is Nothing Then Return False
-                                        Using output = File.Open(cachePath, FileMode.Create, FileAccess.Write, FileShare.None)
-                                            data.SaveTo(output)
+                                ' Die Kachel wird auf die Platte geschrieben und dort wiedergefunden.
+                                ' Bliebe sie unverwaltet, waere der Farbfehler nicht nur sichtbar,
+                                ' sondern haltbar: er ueberlebte jeden Neustart, bis jemand den
+                                ' Kachelspeicher von Hand leert.
+                                Dim managed = ColorManagementService.ToSrgb(resized, codec.Info.ColorSpace)
+                                Try
+                                    Using image = SKImage.FromBitmap(managed)
+                                        Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
+                                            If data Is Nothing Then Return False
+                                            Using output = File.Open(cachePath, FileMode.Create, FileAccess.Write, FileShare.None)
+                                                data.SaveTo(output)
+                                            End Using
                                         End Using
                                     End Using
-                                End Using
+                                Finally
+                                    If Not Object.ReferenceEquals(managed, resized) Then managed.Dispose()
+                                End Try
                             End Using
                         Finally
                             If Not Object.ReferenceEquals(oriented, corrected) Then oriented.Dispose()
@@ -826,7 +835,11 @@ Namespace Services
                     Return Bitmap.DecodeToWidth(stream, maxWidth)
                 End If
                 Dim origin = PreviewOriginFor(rawContainerPath, codec.EncodedOrigin, codec.Info.Width, codec.Info.Height)
-                If origin = SKEncodedOrigin.TopLeft AndAlso rotation = 0 Then
+                ' Wie im Anzeigeweg: ein abweichendes Farbprofil schliesst den schnellen
+                ' Avalonia-Decoder aus, sonst steht die Kachel anders da als das geoeffnete Bild.
+                Dim sourceProfile = codec.Info.ColorSpace
+                Dim needsColorConversion = ColorManagementService.NeedsConversion(sourceProfile)
+                If origin = SKEncodedOrigin.TopLeft AndAlso rotation = 0 AndAlso Not needsColorConversion Then
                     stream.Seek(0, SeekOrigin.Begin)
                     Return Bitmap.DecodeToWidth(stream, maxWidth)
                 End If
@@ -844,7 +857,15 @@ Namespace Services
                         Dim scale = targetWidth / CDbl(oriented.Width)
                         Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
                         Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, oriented.ColorType, oriented.AlphaType), SamplingMedium)
-                            Return ImageOrientationService.ToAvaloniaBitmapFast(If(resized, oriented))
+                            ' Erst verkleinern, dann wandeln: die Wandlung laeuft damit ueber die
+                            ' Kachelgroesse statt ueber das volle Bild.
+                            Dim scaled = If(resized, oriented)
+                            Dim managed = ColorManagementService.ToSrgb(scaled, sourceProfile)
+                            Try
+                                Return ImageOrientationService.ToAvaloniaBitmapFast(managed)
+                            Finally
+                                If Not Object.ReferenceEquals(managed, scaled) Then managed.Dispose()
+                            End Try
                         End Using
                     Finally
                         If Not Object.ReferenceEquals(oriented, corrected) Then oriented.Dispose()

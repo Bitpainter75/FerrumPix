@@ -107,9 +107,10 @@ Namespace Services
                header.ColorMode <> PsdColorMode.Rgb AndAlso
                header.ColorMode <> PsdColorMode.Cmyk Then Return Nothing
 
-            ' Farbmodus-Daten, Bildressourcen und Ebenen-Sektion überspringen.
+            ' Farbmodus-Daten überspringen; die Bildressourcen werden GELESEN, weil dort das
+            ' Farbprofil liegt (siehe ReadIccFromResources). Danach die Ebenen-Sektion überspringen.
             If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing
-            If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing
+            Dim iccProfile = ReadIccFromResources(fs, ReadU32(fs))
             Dim layerLen = If(header.IsPsb, ReadU64(fs), CLng(ReadU32(fs)))
             If Not SkipBlock(fs, layerLen) Then Return Nothing
 
@@ -207,7 +208,25 @@ Namespace Services
                 zip?.Dispose()
             End Try
 
-            Return ComposePlanes(header, planes, hasAlpha)
+            Dim composed = ComposePlanes(header, planes, hasAlpha)
+            If composed Is Nothing Then Return Nothing
+
+            ' Photoshop legt seine Bilder oft in Adobe RGB ab. Ohne diese Wandlung kaeme das
+            ' Gesamtbild als sRGB an - der Weg nach draussen fuehrt wie bei TIFF ueber einen
+            ' PNG-Strom, und ein Profil ginge dabei verloren, bevor es jemand sehen koennte.
+            ' CMYK bleibt aussen vor: der Weg dorthin ist in ComposePlanes ohnehin eine grobe
+            ' Naeherung, und ein RGB-Profil passt nicht auf vier Kanaele.
+            If header.ColorMode = PsdColorMode.Cmyk Then
+                iccProfile?.Dispose()
+                Return composed
+            End If
+            ' Das Profil ist ein eigens erzeugtes natives Objekt und wird nach der Wandlung wieder
+            ' freigegeben - sonst haengt es bis zum naechsten Aufraeumlauf am Speicher.
+            Using iccProfile
+                Dim managed = ColorManagementService.ToSrgb(composed, iccProfile)
+                If Not Object.ReferenceEquals(managed, composed) Then composed.Dispose()
+                Return managed
+            End Using
         End Function
 
         ''' <summary>Öffnet den Entpacker über der aktuellen Stelle der Datei. Der Aufrufer behält
@@ -283,6 +302,57 @@ Namespace Services
                 bitmap.Dispose()
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Liest die Bildressourcen und liefert daraus das ICC-Profil (Ressource 1039),
+        ''' oder Nothing. Der Strom steht danach IMMER hinter der Sektion - auch wenn nichts
+        ''' gefunden wurde, sonst verruecken alle folgenden Angaben.
+        '''
+        ''' Aufbau eines Blocks: die Kennung "8BIM", zwei Byte Nummer, ein Pascal-Text als Name
+        ''' (auf gerade Laenge aufgefuellt), vier Byte Groesse, dann die Daten (ebenfalls auf gerade
+        ''' Laenge aufgefuellt).</summary>
+        Private Shared Function ReadIccFromResources(fs As FileStream, length As Long) As SKColorSpace
+            If length <= 0 OrElse fs.Position + length > fs.Length Then
+                If length > 0 Then SkipBlock(fs, length)
+                Return Nothing
+            End If
+
+            Dim section(CInt(Math.Min(length, Integer.MaxValue)) - 1) As Byte
+            If Not ReadExactly(fs, section, section.Length) Then Return Nothing
+
+            Try
+                Dim offset = 0
+                While offset + 12 <= section.Length
+                    If Text.Encoding.ASCII.GetString(section, offset, 4) <> "8BIM" Then Exit While
+                    Dim id = CInt(section(offset + 4)) * 256 + section(offset + 5)
+
+                    Dim nameLength = CInt(section(offset + 6))
+                    ' Der Name zaehlt sein Laengenbyte mit und wird auf gerade Laenge aufgefuellt.
+                    Dim nameBlock = nameLength + 1
+                    If nameBlock Mod 2 <> 0 Then nameBlock += 1
+                    Dim sizeOffset = offset + 6 + nameBlock
+                    If sizeOffset + 4 > section.Length Then Exit While
+
+                    Dim size = (CInt(section(sizeOffset)) << 24) Or (CInt(section(sizeOffset + 1)) << 16) Or
+                               (CInt(section(sizeOffset + 2)) << 8) Or CInt(section(sizeOffset + 3))
+                    Dim dataOffset = sizeOffset + 4
+                    If size < 0 OrElse dataOffset + size > section.Length Then Exit While
+
+                    ' 1039 (0x040F) ist das ICC-Profil.
+                    If id = 1039 AndAlso size > 0 Then
+                        Dim profile(size - 1) As Byte
+                        Buffer.BlockCopy(section, dataOffset, profile, 0, size)
+                        Return SKColorSpace.CreateIcc(profile)
+                    End If
+
+                    Dim padded = size
+                    If padded Mod 2 <> 0 Then padded += 1
+                    offset = dataOffset + padded
+                End While
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Psd.ReadIccFromResources", ex)
+            End Try
+            Return Nothing
         End Function
 
         ''' PackBits: n >= 0 → n+1 Bytes wörtlich; n = -1..-127 → nächstes Byte (-n)+1-mal; -128 → nichts.

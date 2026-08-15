@@ -56,6 +56,27 @@ Namespace Services
         Private Delegate Function GetIntFn(obj As IntPtr, channel As Integer) As Integer
         Private Delegate Function HandleIntFn(handle As IntPtr) As Integer
         Private Delegate Sub ReleaseFn(obj As IntPtr)
+        ''' size_t, deshalb IntPtr und nicht Integer: auf 64 Bit ist der Rueckgabewert acht Byte
+        ''' breit, und ein Integer laese die obere Haelfte des Registers stehen.
+        Private Delegate Function GetProfileSizeFn(handle As IntPtr) As IntPtr
+        Private Delegate Function GetRawProfileFn(handle As IntPtr, outData As IntPtr) As HeifError
+        Private Delegate Function GetNclxProfileFn(handle As IntPtr, ByRef outProfile As IntPtr) As HeifError
+        Private Delegate Sub FreeNclxProfileFn(profile As IntPtr)
+
+        ''' <summary>Die Farbangabe eines HEIF als ZAHLEN statt als Profildatei.
+        '''
+        ''' Die drei Kennungen sind in C Aufzaehlungen, also je vier Byte; das Byte davor und das
+        ''' danach werden von .NET genauso aufgefuellt wie vom C-Uebersetzer. Die Gleitkommafelder
+        ''' ab Fassung 2 stehen dahinter und werden nicht gebraucht - sie muessen deshalb auch nicht
+        ''' aufgefuehrt werden, gelesen wird ja nur der Anfang.</summary>
+        <StructLayout(LayoutKind.Sequential)>
+        Private Structure HeifNclx
+            Public Version As Byte
+            Public ColorPrimaries As Integer
+            Public TransferCharacteristics As Integer
+            Public MatrixCoefficients As Integer
+            Public FullRangeFlag As Byte
+        End Structure
 
         ''' <summary>libheifs Fehlerstruktur: code, subcode, message. Wird BY VALUE zurückgegeben,
         ''' deshalb als Struct und nicht als Zeiger.</summary>
@@ -108,6 +129,14 @@ Namespace Services
         Private Shared _handleGetHeight As HandleIntFn
         Private Shared _handleRelease As ReleaseFn
         Private Shared _imageRelease As ReleaseFn
+        ''' Die beiden fuer das Farbprofil sind OPTIONAL: fehlen sie in einer aelteren libheif,
+        ''' bleibt HEIF vollstaendig nutzbar und nur das Farbmanagement entfaellt. Sie duerfen
+        ''' deshalb nicht im selben Block geladen werden wie die Pflichtexporte, wo ein Fehlgriff
+        ''' die ganze Bibliothek verwirft.
+        Private Shared _profileSize As GetProfileSizeFn
+        Private Shared _rawProfile As GetRawProfileFn
+        Private Shared _nclxProfile As GetNclxProfileFn
+        Private Shared _freeNclx As FreeNclxProfileFn
 
         Private Shared Sub NoteFallbackToLibheif(what As String)
             If Threading.Interlocked.Exchange(_fallbackLogged, 1) = 0 Then
@@ -197,6 +226,24 @@ Namespace Services
                     _handleRelease = GetExport(Of ReleaseFn)(handle, "heif_image_handle_release")
                     _imageRelease = GetExport(Of ReleaseFn)(handle, "heif_image_release")
                     _library = handle
+                    Try
+                        _profileSize = GetExport(Of GetProfileSizeFn)(handle, "heif_image_handle_get_raw_color_profile_size")
+                        _rawProfile = GetExport(Of GetRawProfileFn)(handle, "heif_image_handle_get_raw_color_profile")
+                    Catch
+                        ' Aeltere libheif ohne diese Exporte: HEIF bleibt nutzbar, nur unverwaltet.
+                        _profileSize = Nothing
+                        _rawProfile = Nothing
+                        DiagnosticLogService.LogAlways("HEIF",
+                            "libheif kennt die Profilabfrage nicht - HEIC wird ohne Farbmanagement gelesen")
+                    End Try
+                    Try
+                        _nclxProfile = GetExport(Of GetNclxProfileFn)(handle, "heif_image_handle_get_nclx_color_profile")
+                        _freeNclx = GetExport(Of FreeNclxProfileFn)(handle, "heif_nclx_color_profile_free")
+                    Catch
+                        ' Ebenfalls optional: ohne sie bleibt nur der Weg ueber ein ICC-Profil.
+                        _nclxProfile = Nothing
+                        _freeNclx = Nothing
+                    End Try
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
                     _contextAlloc = Nothing : _contextFree = Nothing : _readFromFile = Nothing
@@ -204,6 +251,8 @@ Namespace Services
                     _imageGetWidth = Nothing : _imageGetHeight = Nothing
                     _handleGetWidth = Nothing : _handleGetHeight = Nothing
                     _handleRelease = Nothing : _imageRelease = Nothing
+                    _profileSize = Nothing : _rawProfile = Nothing
+                    _nclxProfile = Nothing : _freeNclx = Nothing
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
                     _loadedLibrary = Nothing
@@ -260,7 +309,11 @@ Namespace Services
                         bitmap.Dispose()
                         Return Nothing
                     End If
-                    Return bitmap
+                    ' HEIC vom Telefon traegt haeufig Display P3. Ohne diese Wandlung kaeme es als
+                    ' sRGB an und saehe zu blass aus (siehe ColorManagementService).
+                    Dim managed = ColorManagementService.ToSrgb(bitmap, codec.Info.ColorSpace)
+                    If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
+                    Return managed
                 End Using
             End Using
         End Function
@@ -313,7 +366,17 @@ Namespace Services
                         Next
                         Marshal.Copy(row, 0, target + y * targetStride, rowBytes)
                     Next
-                    Return bitmap
+
+                    ' Farbmanagement: eine HEIC vom Telefon traegt haeufig ein weiteres Profil als
+                    ' sRGB. Ohne die Wandlung kaemen die Zahlen als sRGB an und das Bild saehe zu
+                    ' blass aus (siehe ColorManagementService). Das Profil wird danach freigegeben:
+                    ' es ist ein eigens erzeugtes natives Objekt, und ein Kachellauf ueber einen
+                    ' Ordner voller HEIC erzeugt eines je Datei.
+                    Using profile = ReadColorProfile(handle)
+                        Dim managed = ColorManagementService.ToSrgb(bitmap, profile)
+                        If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
+                        Return managed
+                    End Using
                 Catch
                     bitmap.Dispose()
                     Return Nothing
@@ -325,6 +388,100 @@ Namespace Services
                 If handle <> IntPtr.Zero Then _handleRelease(handle)
                 If ctx <> IntPtr.Zero Then _contextFree(ctx)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
+
+        ''' <summary>Der Farbraum der Aufnahme, oder Nothing.
+        '''
+        ''' Zwei Wege, in dieser Reihenfolge: ein eingebettetes ICC-Profil, sonst die nclx-Angabe.
+        ''' Das ICC hat Vorrang, weil es die genauere Auskunft ist - nclx nennt nur Kennzahlen aus
+        ''' einer Tabelle, ein Profil beschreibt die Kurve selbst.</summary>
+        Private Shared Function ReadColorProfile(handle As IntPtr) As SKColorSpace
+            Dim icc = ReadIccProfile(handle)
+            If icc IsNot Nothing Then Return icc
+            Return ReadNclxProfile(handle)
+        End Function
+
+        ''' <summary>Die nclx-Angabe als Farbraum, oder Nothing.
+        '''
+        ''' Ein HEIF kann seinen Farbraum als Zahlenschluessel angeben statt als Profildatei, und
+        ''' Apple tut genau das fuer Display P3. Die Schluessel stammen aus H.273; abgebildet werden
+        ''' die Faelle, die in Fotos vorkommen. Alles andere liefert Nothing und die Datei bleibt
+        ''' unverwaltet - lieber unverwaltet als nach einer geratenen Kurve verbogen.
+        '''
+        ''' sRGB (Primaerfarben 1 mit Kurve 13) kommt ebenfalls als Nothing zurueck: da ist nichts
+        ''' zu wandeln, und der Aufrufer spart sich die Kopie.</summary>
+        Private Shared Function ReadNclxProfile(handle As IntPtr) As SKColorSpace
+            If handle = IntPtr.Zero OrElse _nclxProfile Is Nothing Then Return Nothing
+            Dim raw As IntPtr = IntPtr.Zero
+            Try
+                If _nclxProfile(handle, raw).Code <> 0 OrElse raw = IntPtr.Zero Then Return Nothing
+                Dim nclx = Marshal.PtrToStructure(Of HeifNclx)(raw)
+
+                ' Grobe Plausibilitaet: die Schluessel von H.273 liegen in diesem Bereich. Kommt
+                ' etwas anderes an, stimmt die Annahme ueber den Aufbau der Struktur nicht - dann
+                ' lieber gar nichts tun als nach Zufallszahlen zu rechnen.
+                If nclx.ColorPrimaries < 0 OrElse nclx.ColorPrimaries > 22 Then Return Nothing
+                If nclx.TransferCharacteristics < 0 OrElse nclx.TransferCharacteristics > 18 Then Return Nothing
+
+                Dim primaries As SKColorSpaceXyz
+                Select Case nclx.ColorPrimaries
+                    Case 1, 2, 0 : primaries = SKColorSpaceXyz.Srgb   ' 2 und 0 heissen "unbekannt"
+                    Case 12 : primaries = SKColorSpaceXyz.DisplayP3
+                    Case 9 : primaries = SKColorSpaceXyz.Rec2020
+                    Case Else : Return Nothing
+                End Select
+
+                Dim transfer As SKColorSpaceTransferFn
+                Select Case nclx.TransferCharacteristics
+                    Case 13, 1, 6, 14, 15, 2, 0 : transfer = SKColorSpaceTransferFn.Srgb
+                    Case 8 : transfer = SKColorSpaceTransferFn.Linear
+                    Case Else : Return Nothing
+                End Select
+
+                ' Ist beides sRGB, gibt es nichts zu tun.
+                If nclx.ColorPrimaries <= 2 AndAlso nclx.TransferCharacteristics <= 15 AndAlso
+                   nclx.TransferCharacteristics <> 8 Then Return Nothing
+
+                Dim space = SKColorSpace.CreateRgb(transfer, primaries)
+                If space Is Nothing Then Return Nothing
+                DiagnosticLogService.LogAlways("HEIF",
+                    $"nclx gelesen: Primaerfarben {nclx.ColorPrimaries}, Kurve {nclx.TransferCharacteristics}" &
+                    $" - {ColorManagementService.DescribeProfile(space)}")
+                Return space
+            Catch ex As Exception
+                DiagnosticLogService.LogException("HEIF.ReadNclxProfile", ex)
+                Return Nothing
+            Finally
+                If raw <> IntPtr.Zero Then _freeNclx?.Invoke(raw)
+            End Try
+        End Function
+
+        ''' <summary>Das eingebettete ICC-Profil der Aufnahme, oder Nothing.</summary>
+        Private Shared Function ReadIccProfile(handle As IntPtr) As SKColorSpace
+            If handle = IntPtr.Zero OrElse _profileSize Is Nothing OrElse _rawProfile Is Nothing Then Return Nothing
+            Dim buffer As IntPtr = IntPtr.Zero
+            Try
+                Dim size = _profileSize(handle).ToInt64()
+                ' Null heisst schlicht "kein ICC an dieser Datei". Die obere Schranke faengt einen
+                ' unsinnigen Wert ab, bevor daraus eine Speicheranforderung wird.
+                If size <= 0 OrElse size > 16 * 1024 * 1024 Then Return Nothing
+
+                Dim length = CInt(size)
+                buffer = Marshal.AllocCoTaskMem(length)
+                If _rawProfile(handle, buffer).Code <> 0 Then Return Nothing
+
+                Dim bytes(length - 1) As Byte
+                Marshal.Copy(buffer, bytes, 0, length)
+                Dim profile = SKColorSpace.CreateIcc(bytes)
+                If profile Is Nothing Then Return Nothing
+                DiagnosticLogService.LogAlways("HEIF", $"ICC-Profil gelesen: {ColorManagementService.DescribeProfile(profile)}")
+                Return profile
+            Catch ex As Exception
+                DiagnosticLogService.LogException("HEIF.ReadIccProfile", ex)
+                Return Nothing
+            Finally
+                If buffer <> IntPtr.Zero Then Marshal.FreeCoTaskMem(buffer)
             End Try
         End Function
 

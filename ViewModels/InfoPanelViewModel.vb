@@ -138,6 +138,29 @@ Namespace ViewModels
         ''' der Zustand von Bewertung, Herz und Stichwoertern.</summary>
         Public Property OwnerLoadsDetails As Boolean
 
+        ''' <summary>Die Wahl zwischen Histogramm, Waveform und RGB-Parade. Liegt hier, weil die
+        ''' Leiste EIN Steuerelement fuer drei Ansichten ist - so lautet die Bindung ueberall
+        ''' gleich (siehe <see cref="ScopeSelectionViewModel"/>).</summary>
+        Public ReadOnly Property Scope As ScopeSelectionViewModel =
+            New ScopeSelectionViewModel(Sub() OnScopeModeChanged())
+
+        ''' <summary>Wie der BESITZER sein Analysebild neu rechnet. Betrachter und Editor tragen
+        ''' das ein, weil ihre Quellen andere sind: der Editor nimmt das bearbeitete Bild, der
+        ''' Betrachter seine Temp-Kopie. Nicht gesetzt heisst: die Galerie, und die laedt selbst
+        ''' nach.</summary>
+        Public Property ScopeRefresh As Action
+
+        Private Sub OnScopeModeChanged()
+            ' Das alte Bild sofort weg: es zeigt die vorherige Darstellung und waere bis zum
+            ' Eintreffen des neuen eine Falschaussage.
+            ScopeImage = Nothing
+            If OwnerLoadsDetails Then
+                ScopeRefresh?.Invoke()
+            Else
+                Refresh()
+            End If
+        End Sub
+
         ''' <summary>Sagt dem Panel, welches Bild gerade gilt, ohne seine Ladewege anzustossen.
         '''
         ''' Der Betrachter wechselt den Pfad frueher, als er das Panel fuettert (erst kommt das Bild
@@ -242,7 +265,7 @@ Namespace ViewModels
             ' die EXIF-Daten des naechsten Bildes sehen - und nicht bei jedem Klick wieder auf
             ' "Allgemein" landen. Zurueck faellt die Auswahl nur, wenn es den Reiter fuer das neue
             ' Bild gar nicht gibt (siehe RaisePeopleTabState).
-            HistogramImage = Nothing
+            ScopeImage = Nothing
             ExifInfo = New ExifData()
             ' Auch der Ort - sonst steht bei einer Mehrfachauswahl der des zuletzt einzeln
             ' markierten Bildes weiter da, und der gilt dann fuer keines der markierten.
@@ -255,7 +278,7 @@ Namespace ViewModels
 
         ''' <summary>Alles melden, was von Auswahl und Betriebsart abhaengt.</summary>
         Private Sub RaiseStateChanged()
-            For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasHistogram), NameOf(HasInfoContent),
+            For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasScope), NameOf(HasInfoContent),
                                       NameOf(Name), NameOf(IsInfoTabGeneral), NameOf(IsInfoTabExif),
                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc),
                                       NameOf(IsInfoTabPeople), NameOf(PlaceText), NameOf(HasPlace)}
@@ -280,7 +303,7 @@ Namespace ViewModels
         ''' <summary>Ein Histogramm gibt es nur zu einem BILD. Ein Video hat keines: es wuerde einen
         ''' Standbild-Decode kosten, und ein leerer Kasten mit Ueberschrift sieht aus wie ein Fehler.
         ''' Deshalb entfaellt fuer Videos beides - das Rechnen und das Anzeigen.</summary>
-        Public ReadOnly Property HasHistogram As Boolean
+        Public ReadOnly Property HasScope As Boolean
             Get
                 Return IsSingleImage AndAlso Not VideoPreviewService.IsSupportedVideo(_path)
             End Get
@@ -689,13 +712,13 @@ Namespace ViewModels
                          Thread.Sleep(HistogramDelayMs)
                          If token <> _loadToken OrElse _isSummary OrElse Not _isVisible Then Return
 
-                         Dim histogram = ImageProcessor.BuildHistogramImage(path, 240, 120)
+                         Dim histogram = ImageProcessor.BuildScopeImage(path, 600, 300)
                          Dispatcher.UIThread.Post(Sub()
                                                       If token <> _loadToken Then
                                                           histogram?.Dispose()
                                                           Return
                                                       End If
-                                                      HistogramImage = histogram
+                                                      ScopeImage = histogram
                                                   End Sub)
                      End Function)
         End Sub
@@ -760,7 +783,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property HistogramImage As Bitmap
+        Public Property ScopeImage As Bitmap
             Get
                 Return _histogramImage
             End Get

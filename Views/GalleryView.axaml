@@ -1109,8 +1109,19 @@
                             </Flyout>
                         </Button.Flyout>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-sort.svg"
-                                   Width="20" Height="20"/>
+                            <!-- Das Symbol links IST die Richtungsangabe: statt des allgemeinen
+                                 Sortierzeichens steht dort der Pfeil der aktuellen Richtung. Der
+                                 Wortlaut "aufsteigend" am Ende der Beschriftung entfaellt dadurch -
+                                 er wurde bei den laengeren Sortierarten ohnehin abgeschnitten.
+                                 Zwei Symbole mit Sichtbarkeit statt eines gebundenen Pfades: so
+                                 bleibt die Quelle eine feste Angabe ohne Umrechner. Genommen sind
+                                 dieselben beiden Pfeile, die die Leiste sonst auch fuehrt. -->
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-up.svg"
+                                   Width="20" Height="20"
+                                   IsVisible="{Binding IsSortAscending}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-down.svg"
+                                   Width="20" Height="20"
+                                   IsVisible="{Binding IsSortDescending}"/>
                             <TextBlock Text="{Binding SortLabel}"
                                        TextTrimming="CharacterEllipsis"/>
                         </StackPanel>

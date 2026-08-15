@@ -7297,4 +7297,10 @@
   <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
     <value>Mostra em baixo a barra com os dados da imagem e o zoom. Desativada fica mais altura para a área de trabalho. A tira de filme tem o seu próprio interruptor e permanece.</value>
   </data>
+  <data name="Waveform_200f14b1" xml:space="preserve">
+    <value>Forma de onda</value>
+  </data>
+  <data name="RGB_Parade_90aac96f" xml:space="preserve">
+    <value>Parade RGB</value>
+  </data>
 </root>

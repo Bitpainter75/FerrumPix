@@ -7298,4 +7298,10 @@
   <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
     <value>Zeigt unten die Leiste mit Bildangaben und Zoom. Ausgeschaltet bleibt mehr Höhe für die Arbeitsfläche. Der Filmstrip hat einen eigenen Schalter und bleibt stehen.</value>
   </data>
+  <data name="Waveform_200f14b1" xml:space="preserve">
+    <value>Waveform</value>
+  </data>
+  <data name="RGB_Parade_90aac96f" xml:space="preserve">
+    <value>RGB-Parade</value>
+  </data>
 </root>

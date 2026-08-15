@@ -54,6 +54,8 @@ Batch work runs over a whole selection: rename, convert, resize, watermark, filt
 
 Fullscreen viewing with zoom, pan, slideshow, filmstrip navigation, rating, tagging and deleting, and an info panel with EXIF, IPTC, XMP, ICC and a live histogram. Videos play inline.
 
+The info panel reads a picture in three ways: the histogram, a waveform that keeps the left-to-right position so you can see whether one side burns out while the other still holds detail, and an RGB parade that puts the three channels side by side to show a colour cast and which channel carries it. A click opens the diagram large, and in the editor it follows your edits.
+
 Two photos can be put side by side for comparison, sharing one zoom so you always see the same part of both. Pin one of them and page through the rest against it, rating and deleting as you go, which is the quick way to cull a series. RAW files are developed here rather than shown as the camera's embedded preview.
 
 ## Editor
@@ -89,6 +91,8 @@ RAW files are developed from the actual sensor data: a photo keeps the exposure 
 Lens defects are corrected from measured data covering some 1300 lenses: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed.
 
 Edits to a RAW go into a small sidecar next to it; the RAW itself is never modified. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
+
+A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files and HEIC. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so.
 
 HEIC/HEIF/AVIF and TIFF open read-only. A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture and can be written back out, so it goes on to Photoshop, Affinity or GIMP; text can come in as text you keep typing on or as a picture. Layer masks and groups travel in both directions and stay editable, and files in 16 bit or greyscale open with their layers too. CMYK files and 32 bit open as one flat picture.
 

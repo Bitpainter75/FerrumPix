@@ -7338,4 +7338,10 @@
   <data name="Zeigt_unten_die_Leiste_mit_Bildangaben_und_Zoom__1b8e8007" xml:space="preserve">
     <value>Visar raden längst ned med bilduppgifter och zoom. Avstängd blir det mer höjd för arbetsytan. Filmremsan har en egen inställning och blir kvar.</value>
   </data>
+  <data name="Waveform_200f14b1" xml:space="preserve">
+    <value>Vågform</value>
+  </data>
+  <data name="RGB_Parade_90aac96f" xml:space="preserve">
+    <value>RGB-parad</value>
+  </data>
 </root>

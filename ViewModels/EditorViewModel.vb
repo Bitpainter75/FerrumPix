@@ -901,6 +901,10 @@ Namespace ViewModels
         ' mehrfach hintereinander auslöst.
         Private _overlayNotifySuppressDepth As Integer = 0
         Private ReadOnly _previewTimer As DispatcherTimer
+        ''' <summary>Entprellt das Analysebild der Infoleiste gegen die Renderfolge. Waehrend ein
+        ''' Regler gezogen wird, laufen Dutzende Renderschritte; gerechnet wird erst, wenn die Hand
+        ''' einen Moment stillsteht.</summary>
+        Private ReadOnly _scopeTimer As DispatcherTimer
         Private ReadOnly _filmstripNavDebouncer As FilmstripNavigationDebouncer
         Private ReadOnly _previewSync As New Object()
         Private ReadOnly _stalePreviewSources As New List(Of SKBitmap)()
@@ -990,6 +994,10 @@ Namespace ViewModels
         ' Deckel des Anzeigebilds im Bündel - EINE Quelle für Editor und Stapel-Export.
         Private Const FpxCompositeMaxDimension As Integer = ImageProcessor.FpxCompositeMaxDimension
         Private Const PreviewDebounceMs As Double = 90.0
+        ''' <summary>Deutlich traeger als die Vorschau: das Analysebild ist eine Begleitanzeige, und
+        ''' es bei jedem der 90-Millisekunden-Schritte mitzurechnen waere verschenkte Arbeit an einer
+        ''' Stelle, die niemand so schnell abliest.</summary>
+        Private Const ScopeDebounceMs As Double = 400.0
         Private Const UndoCaptureWindowMs As Double = 650
         ' Text und Wasserzeichen dürfen kleiner werden als die 5%/4%, die für Formen gelten: ihr Rechteck
         ' wird aus dem Text berechnet und soll ihn eng umschließen. Auf einem 4000-px-Foto wären 5% bereits
@@ -1047,11 +1055,13 @@ Namespace ViewModels
         ''' Ansichten selbst, wortgleich und je rund 250 Zeilen.
         '''
         ''' Der Editor bleibt Besitzer seiner Daten
-        ''' (<see cref="InfoPanelViewModel.OwnerLoadsDetails"/>): Aufnahmedaten und Histogramm setzt
-        ''' er beim LADEN eines Bildes selbst. Das Histogramm laeuft bewusst nicht bei jedem
-        ''' Reglerdreh mit - es zeigt den Stand der Datei, so wie schon vor dem Zusammenlegen
-        ''' (Patrick, 2026-08-06). Die Tonwertkurve im Anpassen-Werkzeug hat davon nichts: sie
-        ''' rechnet mit eigenen Zahlen (<c>_curveHistogramCounts</c>) und bleibt live.</summary>
+        ''' (<see cref="InfoPanelViewModel.OwnerLoadsDetails"/>): Aufnahmedaten und Analysebild setzt
+        ''' er beim LADEN eines Bildes selbst. Das Analysebild laeuft seit dem 2026-08-15 bei jeder
+        ''' Aenderung MIT und zeigt den Stand der Szene, also das, was auf dem Schirm steht (siehe
+        ''' <see cref="UpdateScopeFromScene"/>); vorher zeigte es den Stand der Datei. Die
+        ''' Tonwertkurve im Anpassen-Werkzeug rechnet weiterhin mit eigenen Zahlen
+        ''' (<c>_curveHistogramCounts</c>) und bleibt bewusst am Ausgangsstand: sie ist der
+        ''' Untergrund, gegen den man die Kurve zieht.</summary>
         Public ReadOnly Property InfoPanel As New InfoPanelViewModel()
 
         Public Property HistoryItems As ObservableCollection(Of String)
@@ -3563,6 +3573,9 @@ Namespace ViewModels
             InfoPanel.OwnerLoadsDetails = True
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
+            ' Wechselt die Darstellung (Histogramm, Waveform, Parade), rechnet der Editor sie aus
+            ' dem BEARBEITETEN Bild neu - derselbe Weg wie nach einem Reglerzug.
+            InfoPanel.ScopeRefresh = AddressOf RefreshHistogram
 
             ' Sterne kennt Nextcloud NICHT, sie bleiben lokal - aber unter dem PSEUDO-PFAD, unter dem
             ' auch die Galerie das Bild fuehrt. Unter dem Pfad der Temp-Kopie waeren sie beim
@@ -10506,6 +10519,12 @@ Namespace ViewModels
         ''' Der Ruhezustand ist derselbe, den auch die Mausposition abfragt: leer oder eben diese
         ''' Meldung.</summary>
         Private Sub ReportPreviewReady()
+            ' Hier ist die Szene fertig - egal ob nach einem Vollrender oder einem Regionen-Patch.
+            ' Damit ist es der eine Punkt, an dem das Analysebild der Infoleiste nachziehen muss.
+            ' VOR dem Rueckgabezweig darunter: der haengt nur an der Statuszeile, und ob die gerade
+            ' etwas anderes anzeigt, hat mit dem Bildinhalt nichts zu tun.
+            ScheduleScopeUpdate()
+
             ' Die eigenen Zwischenstände bleiben während der Berechnung bewusst NICHT ruhig: sie
             ' haben Vorrang vor der Mausposition. Sie gehören aber genau dieser Vorschau und dürfen
             ' deshalb durch ihren erfolgreichen Abschluss ersetzt werden. Andere Mitteilungen
@@ -11755,6 +11774,12 @@ Namespace ViewModels
                                                _previewTimer.Stop()
                                                OnPreviewTimerTick()
                                            End Sub
+
+            _scopeTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(ScopeDebounceMs)}
+            AddHandler _scopeTimer.Tick, Sub()
+                                             _scopeTimer.Stop()
+                                             UpdateScopeFromScene()
+                                         End Sub
 
             _filmstripNavDebouncer = New FilmstripNavigationDebouncer(wrapAround:=True,
                                                                         getCurrentIndex:=Function() _currentIndex,
@@ -21090,6 +21115,42 @@ Namespace ViewModels
         End Function
 
 
+        ''' <summary>Merkt vor, dass sich die Szene geaendert hat. Gerechnet wird erst, wenn eine
+        ''' Weile nichts mehr passiert (siehe <see cref="ScopeDebounceMs"/>).</summary>
+        Friend Sub ScheduleScopeUpdate()
+            If Not IsInfoSidebarVisible Then Return
+            _scopeTimer.Stop()
+            _scopeTimer.Start()
+        End Sub
+
+        ''' <summary>Das Analysebild aus der FERTIGEN SZENE rechnen, also mit allen Reglern, Filtern,
+        ''' Masken und Ebenen - mit dem, was auf dem Schirm steht.
+        '''
+        ''' Bis 2026-08-15 zeigte die Leiste bewusst den Stand der DATEI und lief bei einem
+        ''' Reglerdreh nicht mit. Umgestellt auf Patricks Wunsch: wer an Belichtung oder Kontrast
+        ''' zieht, will genau daran ablesen, ob ihm die Lichter ausbrennen - ein Histogramm, das
+        ''' dabei stehen bleibt, beantwortet die Frage nicht.
+        '''
+        ''' Die Szene liegt in Vorschaugroesse vor und ist damit billig auszuwerten; ein Decode
+        ''' faellt hier nicht an. Steht noch keine (kalter Start, Ladeweg), greift der Weg ueber die
+        ''' Datei.</summary>
+        Private Sub UpdateScopeFromScene()
+            If Not IsInfoSidebarVisible Then Return
+            Try
+                ' Der Kompositor arbeitet auf dem UI-Thread, und dieser Zeitgeber ebenfalls - die
+                ' Szene kann hier also nicht unter der Hand ausgetauscht werden.
+                ' Ohne Szene wird hier NICHTS nachgeholt. Der Weg ueber die Datei kostet einen
+                ' vollen Decode, und genau der soll bei einem Reglerdreh nicht anfallen; das
+                ' vorhandene Bild stehen zu lassen, bis der naechste Render kommt, ist billiger und
+                ' fuer den Bruchteil einer Sekunde auch richtig. Beim LADEN setzt RefreshHistogram.
+                Dim scene = _sceneSk
+                If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return
+                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(scene, 600, 300)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.UpdateScopeFromScene", ex)
+            End Try
+        End Sub
+
         Private Sub RefreshHistogram()
             If String.IsNullOrEmpty(_currentImagePath) Then
                 ClearHistogramData()
@@ -21098,24 +21159,24 @@ Namespace ViewModels
             If FpxService.IsFpx(_currentImagePath) Then
                 ' Eine geoeffnete FPX zeigt im Infopanel den gespeicherten Projektstand, nicht das
                 ' unveraenderte base.* und auch keinen spaeter neu berechneten Zwischen-Preview.
-                InfoPanel.HistogramImage = ImageProcessor.BuildHistogramImage(_currentImagePath, 240, 120)
+                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(_currentImagePath, 600, 300)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
                 Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
                 Return
             End If
             Dim previewSource = GetPreviewSource()
             If previewSource IsNot Nothing Then
-                InfoPanel.HistogramImage = ImageProcessor.BuildHistogramImage(previewSource, 240, 120)
+                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(previewSource, 600, 300)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(previewSource)
             Else
-                InfoPanel.HistogramImage = ImageProcessor.BuildHistogramImage(RenderSourcePath, 240, 120)
+                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(RenderSourcePath, 600, 300)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(RenderSourcePath)
             End If
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub
 
         Private Sub ClearHistogramData()
-            InfoPanel.HistogramImage = Nothing
+            InfoPanel.ScopeImage = Nothing
             _curveHistogramCounts = (New Integer(255) {}, New Integer(255) {}, New Integer(255) {}, New Integer(255) {})
             Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
         End Sub

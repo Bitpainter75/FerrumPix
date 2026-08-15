@@ -431,6 +431,9 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Wonach sortiert wird - OHNE die Richtung. Die steht als Pfeil in der
+        ''' Akzentfarbe daneben im Knopf: sie ist damit auf einen Blick da statt am Ende eines
+        ''' Textes, der bei den laengeren Sortierarten ohnehin abgeschnitten wurde.</summary>
         Public ReadOnly Property SortLabel As String
             Get
                 Dim modeLabel As String
@@ -451,7 +454,7 @@ Namespace ViewModels
                     Case Else : modeLabel = LocalizationService.T("Name")
                 End Select
 
-                Return $"{modeLabel} {If(_sortAscending, LocalizationService.T("aufsteigend"), LocalizationService.T("absteigend"))}"
+                Return modeLabel
             End Get
         End Property
 

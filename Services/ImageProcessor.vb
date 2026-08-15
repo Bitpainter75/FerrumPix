@@ -470,23 +470,42 @@ Namespace Services
             Using data
                 Using codec = SKCodec.Create(data)
                     If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
-                        Return SKBitmap.Decode(data)
+                        ' SKBitmap.Decode nimmt das Profil der Datei in die Bitmap mit, ToSrgb liest
+                        ' es dort selbst ab - ein zweiter Parameter waere hier ueberfluessig.
+                        Return ToManagedSrgb(SKBitmap.Decode(data))
                     End If
 
                     Dim info = codec.Info
+                    ' Die Zielangabe bleibt farbraumlos, der Decode also unveraendert: der Codec
+                    ' liefert die Zahlen so, wie sie in der Datei stehen. Gewandelt wird erst ganz
+                    ' am Ende, mit dem Profil aus dem Dateikopf.
+                    Dim sourceProfile = info.ColorSpace
                     Dim decodeInfo = New SKImageInfo(info.Width, info.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Dim original = New SKBitmap(decodeInfo)
                     Dim result = codec.GetPixels(decodeInfo, original.GetPixels())
                     If result <> SKCodecResult.Success AndAlso result <> SKCodecResult.IncompleteInput Then
                         original.Dispose()
-                        Return SKBitmap.Decode(data)
+                        Return ToManagedSrgb(SKBitmap.Decode(data))
                     End If
 
                     Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)
                     If Not Object.ReferenceEquals(corrected, original) Then original.Dispose()
-                    Return corrected
+                    Return ToManagedSrgb(corrected, sourceProfile)
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Farbmanagement am Ausgang des Decodes: ein abweichendes Profil wird nach sRGB
+        ''' gewandelt, alles andere laeuft unveraendert durch (siehe ColorManagementService).
+        '''
+        ''' Die Freigabe der Vorgaengerbitmap gehoert hierher und nicht an jede Aufrufstelle: sie
+        ''' darf NUR erfolgen, wenn tatsaechlich gewandelt wurde.</summary>
+        Private Shared Function ToManagedSrgb(decoded As SKBitmap,
+                                              Optional sourceProfile As SKColorSpace = Nothing) As SKBitmap
+            If decoded Is Nothing Then Return Nothing
+            Dim managed = ColorManagementService.ToSrgb(decoded, sourceProfile)
+            If Not Object.ReferenceEquals(managed, decoded) Then decoded.Dispose()
+            Return managed
         End Function
 
         ''' TEMPORÄR ( Vorher/Nachher dunkler): protokolliert den Farbraum des rohen
@@ -1534,16 +1553,32 @@ Namespace Services
             Return processed
         End Function
 
-        Public Shared Function BuildHistogramImage(sourcePath As String, width As Integer, height As Integer) As Bitmap
+        ''' <summary>Das Analysebild zum Bild: Histogramm, Waveform oder RGB-Parade, je nach
+        ''' Einstellung (siehe AppSettingsService.ScopeMode). Alle drei kosten denselben Decode.</summary>
+        Public Shared Function BuildScopeImage(sourcePath As String, width As Integer, height As Integer) As Bitmap
             Try
                 Using original = DecodeHistogramSource(sourcePath)
                     If original Is Nothing Then Return Nothing
-                    Using histogram = RenderHistogram(original, width, height)
-                        Return ToAvaloniaBitmap(histogram)
+                    Using scopeImage = RenderScope(original, width, height)
+                        Return ToAvaloniaBitmap(scopeImage)
                     End Using
                 End Using
             Catch
                 Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Waehlt die Darstellung. Eine unbekannte Einstellung landet beim Histogramm,
+        ''' und das ist auch der Rueckfall, wenn eine der neuen Darstellungen scheitert: lieber
+        ''' das gewohnte Bild als ein leeres Feld.</summary>
+        Private Shared Function RenderScope(source As SKBitmap, width As Integer, height As Integer) As SKBitmap
+            Dim mode = AppSettingsService.NormalizeScopeMode(AppSettingsService.Load().ScopeMode)
+            If mode = "Histogram" Then Return RenderHistogram(source, width, height)
+            Try
+                Return RenderWaveform(source, width, height, mode = "Parade")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Scope.Render", ex)
+                Return RenderHistogram(source, width, height)
             End Try
         End Function
 
@@ -1560,10 +1595,10 @@ Namespace Services
             Return DecodeOriented(sourcePath)
         End Function
 
-        Public Shared Function BuildHistogramImage(source As SKBitmap, width As Integer, height As Integer) As Bitmap
+        Public Shared Function BuildScopeImage(source As SKBitmap, width As Integer, height As Integer) As Bitmap
             If source Is Nothing Then Return Nothing
-            Using histogram = RenderHistogram(source, width, height)
-                Return ToAvaloniaBitmap(histogram)
+            Using scopeImage = RenderScope(source, width, height)
+                Return ToAvaloniaBitmap(scopeImage)
             End Using
         End Function
 
@@ -4078,6 +4113,153 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 DrawHistogramChannel(canvas, counts.B, maxBin, width, height, New SKColor(70, 130, 255, 165))
             End Using
             Return result
+        End Function
+
+        ''' <summary>Waveform und RGB-Parade: was das Histogramm nicht kann.
+        '''
+        ''' Ein Histogramm zaehlt nur, WIE OFT ein Wert vorkommt, und verliert dabei, WO er steht.
+        ''' Die Waveform behaelt die waagerechte Lage: jede Bildspalte wird zu einer Spalte des
+        ''' Diagramms, senkrecht steht die Helligkeit, die Schwaerzung ist die Haeufigkeit. Damit
+        ''' liest man ab, ob der Himmel links ausfrisst, waehrend rechts noch Zeichnung ist - eine
+        ''' Frage, die das Histogramm nicht beantworten kann.
+        '''
+        ''' Die Parade ist dieselbe Darstellung, aber je Farbkanal nebeneinander. Sie ist das
+        ''' Werkzeug fuer Farbstiche: liegen die drei Bloecke am unteren Rand nicht auf gleicher
+        ''' Hoehe, hat das Bild in den Tiefen einen Stich, und man sieht sofort, in welchem Kanal.
+        '''
+        ''' <para>Beide teilen sich den Zaehlweg unten. Die Kosten haengen an der Abtastung, nicht
+        ''' an der Bildgroesse: gezaehlt wird ein Raster von hoechstens ein paar hunderttausend
+        ''' Punkten, genau wie beim Histogramm.</para></summary>
+        Private Shared Function RenderWaveform(source As SKBitmap, width As Integer, height As Integer,
+                                               parade As Boolean) As SKBitmap
+            width = Math.Max(120, width)
+            height = Math.Max(70, height)
+
+            ' Bei der Parade teilen sich drei Bloecke die Breite; zwei schmale Luecken trennen sie.
+            Const gap As Integer = 4
+            Dim blocks = If(parade, 3, 1)
+            Dim blockWidth = Math.Max(1, (width - gap * (blocks - 1)) \ blocks)
+
+            Dim result = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Dim background = New SKColor(18, 20, 24, 255)
+            ' Die Farben der Parade sind die des Histogramms, damit beide dasselbe meinen.
+            Dim colors = If(parade,
+                            {New SKColor(255, 70, 70), New SKColor(70, 220, 90), New SKColor(70, 130, 255)},
+                            {New SKColor(226, 236, 240)})
+
+            Using canvas = New SKCanvas(result)
+                canvas.Clear(background)
+            End Using
+
+            Dim pixels = result.GetPixels()
+            If pixels = IntPtr.Zero Then Return result
+            Dim rowBytes = result.RowBytes
+            Dim row(rowBytes - 1) As Byte
+
+            ' Je Block ein eigenes Zaehlfeld: Spalte mal Helligkeitsstufe.
+            Dim counts(blocks - 1)() As Integer
+            For b = 0 To blocks - 1
+                counts(b) = New Integer(blockWidth * height - 1) {}
+            Next
+            Dim peak = 0
+
+            ' Waagerecht auf die Blockbreite abtasten, senkrecht auf hoechstens 600 Zeilen: das
+            ' reicht fuer ein ruhiges Bild und deckelt die Kosten bei grossen Aufnahmen.
+            '
+            ' Gelesen wird die Quelle ZEILENWEISE aus ihrem Speicher und nicht Punkt fuer Punkt ueber
+            ' GetPixel. Gemessen an einem 24-Megapixel-Bild kostete der Punktweg 78 Millisekunden je
+            ' Lauf; im Editor faellt der auf dem Anzeigefaden an, und dort ist eine Achtzehntelsekunde
+            ' ein sichtbares Stocken. Die Kanalreihenfolge muss dabei selbst beachtet werden - das ist
+            ' der Dienst, den GetPixel leistet und der ihn so teuer macht.
+            Dim sourcePixels = source.GetPixels()
+            Dim sourceIsBgra = source.ColorType = SKColorType.Bgra8888
+            Dim sourceIsRgba = source.ColorType = SKColorType.Rgba8888
+            Dim fastRead = sourcePixels <> IntPtr.Zero AndAlso (sourceIsBgra OrElse sourceIsRgba)
+            Dim sourceRowBytes = source.RowBytes
+            Dim sourceRow(If(fastRead, sourceRowBytes, 1) - 1) As Byte
+
+            ' Die Spaltenzuordnung ist fuer jede Zeile dieselbe - einmal ausrechnen statt millionenfach.
+            Dim columnOffsets(blockWidth - 1) As Integer
+            For column = 0 To blockWidth - 1
+                Dim sx = CInt(CLng(column) * (source.Width - 1) \ Math.Max(1, blockWidth - 1))
+                If sx >= source.Width Then sx = source.Width - 1
+                columnOffsets(column) = sx * 4
+            Next
+
+            Dim stepY = Math.Max(1, source.Height \ 600)
+            For y As Integer = 0 To source.Height - 1 Step stepY
+                If fastRead Then Marshal.Copy(IntPtr.Add(sourcePixels, y * sourceRowBytes), sourceRow, 0, sourceRowBytes)
+                For column As Integer = 0 To blockWidth - 1
+                    Dim c As SKColor
+                    If fastRead Then
+                        Dim p = columnOffsets(column)
+                        If sourceIsBgra Then
+                            c = New SKColor(sourceRow(p + 2), sourceRow(p + 1), sourceRow(p))
+                        Else
+                            c = New SKColor(sourceRow(p), sourceRow(p + 1), sourceRow(p + 2))
+                        End If
+                    Else
+                        c = source.GetPixel(columnOffsets(column) \ 4, y)
+                    End If
+                    For b = 0 To blocks - 1
+                        Dim value As Integer
+                        If parade Then
+                            value = If(b = 0, CInt(c.Red), If(b = 1, CInt(c.Green), CInt(c.Blue)))
+                        Else
+                            value = CInt(Math.Max(0, Math.Min(255, c.Red * 0.299 + c.Green * 0.587 + c.Blue * 0.114)))
+                        End If
+                        ' Oben ist hell: Wert 255 gehoert in die oberste Zeile.
+                        Dim targetRow = (255 - value) * (height - 1) \ 255
+                        Dim index = targetRow * blockWidth + column
+                        counts(b)(index) += 1
+                        If counts(b)(index) > peak Then peak = counts(b)(index)
+                    Next
+                Next
+            Next
+            If peak <= 0 Then Return result
+
+            ' Zeilenweise ausgeben. Die Wurzelkennlinie hebt duenn besetzte Stellen an: ohne sie
+            ' bliebe alles ausser den Flaechen unsichtbar, und gerade die duennen Spuren sind das
+            ' Interessante an einer Waveform.
+            For y As Integer = 0 To height - 1
+                Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), row, 0, rowBytes)
+                For b = 0 To blocks - 1
+                    Dim offsetX = b * (blockWidth + gap)
+                    For column As Integer = 0 To blockWidth - 1
+                        Dim count = counts(b)(y * blockWidth + column)
+                        If count <= 0 Then Continue For
+                        Dim strength = Math.Pow(count / CDbl(peak), 0.35)
+                        Dim x = offsetX + column
+                        If x >= width Then Exit For
+                        Dim p = x * 4
+                        Dim tint = colors(b)
+                        ' Bgra8888: Blau, Gruen, Rot, Alpha.
+                        row(p) = MixChannel(row(p), tint.Blue, strength)
+                        row(p + 1) = MixChannel(row(p + 1), tint.Green, strength)
+                        row(p + 2) = MixChannel(row(p + 2), tint.Red, strength)
+                        row(p + 3) = 255
+                    Next
+                Next
+                Marshal.Copy(row, 0, IntPtr.Add(pixels, y * rowBytes), rowBytes)
+            Next
+
+            ' Waagerechte Marken bei 0, 25, 50, 75 und 100 Prozent - ohne sie fehlt der Waveform
+            ' der Massstab, und genau der ist ihr Zweck.
+            Using canvas = New SKCanvas(result)
+                Using gridPaint = New SKPaint With {.Color = New SKColor(255, 255, 255, 30), .StrokeWidth = 1}
+                    For i As Integer = 0 To 4
+                        Dim y = CSng((height - 1) * i / 4.0)
+                        canvas.DrawLine(0, y, width, y, gridPaint)
+                    Next
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Eine Farbe in Richtung einer anderen ziehen, mit 0 bis 1 als Staerke.</summary>
+        Private Shared Function MixChannel(background As Byte, tint As Byte, strength As Double) As Byte
+            Dim mixed = background + (CInt(tint) - CInt(background)) * strength
+            Return CByte(Math.Max(0, Math.Min(255, mixed)))
         End Function
 
         Private Shared Sub DrawHistogramChannel(canvas As SKCanvas, bins As Integer(), maxBin As Integer, width As Integer, height As Integer, color As SKColor)
