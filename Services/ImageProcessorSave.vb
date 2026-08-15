@@ -83,20 +83,26 @@ Namespace Services
                     })
                 End If
 
+                ' Die Gruppen, die gerade offen sind - von außen nach innen. Eine Gruppe ist im PSD
+                ' kein Behälter, sondern eine Klammer aus zwei Datensätzen; welche davon fällig
+                ' sind, ergibt sich aus dem Vergleich mit der Gruppenkette der nächsten Ebene.
+                Dim openChain As New List(Of AnnotationGroup)()
+
                 If adj?.Annotations IsNot Nothing Then
                     For Each annotation In adj.Annotations
                         If annotation Is Nothing Then Continue For
 
-                        ' Die Bildpunkte OHNE Deckkraft, Mischmethode und Beschneidung rendern: die
-                        ' drei trägt das PSD selbst. Würde der Renderer sie einbacken und das Format
-                        ' sie noch einmal anwenden, käme alles doppelt heraus - eine halb
-                        ' durchsichtige Ebene wäre plötzlich zu einem Viertel sichtbar.
+                        ' Die Bildpunkte OHNE Deckkraft, Mischmethode, Beschneidung und Maske
+                        ' rendern: die vier trägt das PSD selbst. Würde der Renderer sie einbacken
+                        ' und das Format sie noch einmal anwenden, käme alles doppelt heraus - eine
+                        ' halb durchsichtige Ebene wäre plötzlich zu einem Viertel sichtbar.
                         ' Sichtbarkeit ebenso: eine ausgeblendete Ebene wird trotzdem gezeichnet und
                         ' reist als ausgeblendete Ebene mit, statt unterwegs verloren zu gehen.
                         Dim forRender = annotation.Clone()
                         forRender.Opacity = 100
                         forRender.BlendMode = "Normal"
                         forRender.ClipToLayerBelow = False
+                        forRender.MaskId = ""
                         forRender.IsVisible = True
 
                         Dim layerBitmap = New SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul)
@@ -130,6 +136,25 @@ Namespace Services
                         Dim layerName = If(String.IsNullOrWhiteSpace(annotation.LayerLabel),
                                            If(annotation.Kind, "Layer"), annotation.LayerLabel)
 
+                        ' Die Maske als eigener Kanal statt eingebacken. Sie kommt fertig gerechnet
+                        ' aus dem Renderweg - mit allen Bestandteilen, ihrer Dichte und ihrer
+                        ' Umkehrung -, denn ein Verlauf oder eine mehrteilige Maske hat im PSD kein
+                        ' Gegenstück und muss dort ein Raster werden. Anfassbar bleibt sie trotzdem:
+                        ' in Photoshop lässt sie sich weiter übermalen.
+                        Dim maskBitmap = BuildMaskRaster(adj, annotation.MaskId, width, height,
+                                                         layerLeft, layerTop,
+                                                         layerBitmap.Width, layerBitmap.Height)
+
+                        ' Erst die Klammern nachziehen, dann die Ebene. In dieser Reihenfolge, weil
+                        ' das untere Ende einer Gruppe VOR ihrem ersten Mitglied stehen muss.
+                        SyncGroupMarkers(layers, openChain, adj, adj.GroupChainOf(annotation.GroupId),
+                                         width, height)
+
+                        ' Bei der Sichtbarkeit steht hier NUR das eigene Auge. Die der Gruppe steht
+                        ' an der Gruppe, und beides zugleich hieße, sie zweimal anzuwenden - beim
+                        ' Zurückladen wäre die Ebene dann dauerhaft ausgeblendet. Der Kommentar
+                        ' steht vor der Liste und nicht darin: VB bricht die Zeilenfortsetzung nach
+                        ' einem Komma ab, sobald ein Kommentar dazwischenkommt.
                         layers.Add(New PsdWriterService.PsdLayerInput With {
                             .Name = layerName,
                             .Pixels = layerBitmap,
@@ -138,9 +163,16 @@ Namespace Services
                             .OpacityPercent = annotation.Opacity,
                             .BlendMode = annotation.BlendMode,
                             .ClipToLayerBelow = annotation.ClipToLayerBelow,
-                            .IsVisible = adj.IsAnnotationRenderVisible(annotation)
+                            .IsVisible = annotation.IsVisible,
+                            .MaskPixels = maskBitmap,
+                            .MaskLeft = layerLeft,
+                            .MaskTop = layerTop
                         })
                     Next
+
+                    ' Was am Ende noch offen ist, wird geschlossen - sonst stünde in der Datei eine
+                    ' Gruppe ohne Kopfzeile, und Photoshop meldet das als beschädigt.
+                    SyncGroupMarkers(layers, openChain, adj, New List(Of AnnotationGroup)(), width, height)
                 End If
 
                 ' Das Rezept fuer den Rueckweg mit hineinlegen, damit die eigene Datei spaeter wieder
@@ -157,12 +189,123 @@ Namespace Services
                                              If(roundtrip Is Nothing, Nothing, PsdRecipeService.Build(roundtrip)))
             Finally
                 ' Nur die selbst erzeugten Objektebenen freigeben - Hintergrund und Gesamtbild
-                ' gehören dem Aufrufer und werden hier nur gelesen.
+                ' gehören dem Aufrufer und werden hier nur gelesen. Die Maskenraster entstehen
+                ' immer hier und gehen immer mit.
                 For Each layer In layers
                     If layer.Pixels IsNot Nothing AndAlso Not Object.ReferenceEquals(layer.Pixels, background) Then
                         layer.Pixels.Dispose()
                     End If
+                    layer.MaskPixels?.Dispose()
                 Next
+            End Try
+        End Function
+
+        ''' <summary>Zieht die Gruppenklammern nach, bis die offene Kette der gewünschten entspricht.
+        '''
+        ''' Verglichen wird das gemeinsame Stück von außen her: was darüber hinaus offen ist, wird
+        ''' geschlossen (von innen nach außen), was fehlt, wird geöffnet (von außen nach innen).
+        ''' Damit entstehen genau so viele Klammern wie nötig - eine Reihe von Ebenen derselben
+        ''' Gruppe öffnet sie einmal und schließt sie einmal.
+        '''
+        ''' Die Reihenfolge im Format ist dabei umgekehrt zur Anschauung: die Datei zählt von unten
+        ''' nach oben, also kommt das ENDE einer Gruppe vor ihren Inhalt und ihre Zeile mit Namen und
+        ''' Deckkraft danach.</summary>
+        Private Shared Sub SyncGroupMarkers(layers As List(Of PsdWriterService.PsdLayerInput),
+                                            openChain As List(Of AnnotationGroup),
+                                            adj As ImageAdjustments,
+                                            wanted As List(Of AnnotationGroup),
+                                            sourceWidth As Integer, sourceHeight As Integer)
+            Dim target = If(wanted, New List(Of AnnotationGroup)())
+
+            Dim common = 0
+            While common < openChain.Count AndAlso common < target.Count AndAlso
+                  String.Equals(openChain(common).Id, target(common).Id, StringComparison.Ordinal)
+                common += 1
+            End While
+
+            For k = openChain.Count - 1 To common Step -1
+                Dim group = openChain(k)
+                openChain.RemoveAt(k)
+                ' Die Gruppenmaske gilt für alles, was in der Gruppe liegt. Sie bekommt das ganze
+                ' Dokument als Rechteck, weil die Gruppenzeile selbst keine Fläche hat, an der sich
+                ' ein engeres Rechteck festmachen ließe.
+                Dim groupMask = BuildMaskRaster(adj, group.MaskId, sourceWidth, sourceHeight,
+                                                0, 0, sourceWidth, sourceHeight)
+                layers.Add(New PsdWriterService.PsdLayerInput With {
+                    .Name = group.Name,
+                    .SectionType = If(group.IsCollapsed, 2, 1),
+                    .OpacityPercent = CSng(group.Opacity),
+                    .BlendMode = group.BlendMode,
+                    .IsVisible = group.IsVisible,
+                    .MaskPixels = groupMask,
+                    .MaskLeft = 0,
+                    .MaskTop = 0
+                })
+            Next
+
+            For k = common To target.Count - 1
+                openChain.Add(target(k))
+                ' Der Name des unteren Endes ist Konvention und steht in jeder Photoshop-Datei so
+                ' drin; er wird nie angezeigt, aber ältere Leser suchen genau danach.
+                layers.Add(New PsdWriterService.PsdLayerInput With {
+                    .Name = "</Layer group>",
+                    .SectionType = 3
+                })
+            Next
+        End Sub
+
+        ''' <summary>Eine Maske als Alpha8-Raster im angegebenen Rechteck, oder Nothing, wenn es
+        ''' keine gibt.
+        '''
+        ''' Bei einer Objektebene wird auf GENAU ihr Rechteck zugeschnitten. Außerhalb davon hat die
+        ''' Ebene keine Bildpunkte, dort ist die Maske also gegenstandslos - und eine bildgroße Maske
+        ''' je Ebene bliese die Datei um ein Vielfaches auf.
+        '''
+        ''' Die SCHNITTMASKE bleibt draußen, obwohl sie im Renderweg dieselbe Deckung erzeugt: sie
+        ''' steht im PSD als eigenes Merkmal am Ebenendatensatz und wird dort geschrieben. Beides
+        ''' zugleich hieße, sie zweimal anzuwenden.</summary>
+        Private Shared Function BuildMaskRaster(adj As ImageAdjustments, maskId As String,
+                                                sourceWidth As Integer, sourceHeight As Integer,
+                                                layerLeft As Integer, layerTop As Integer,
+                                                layerWidth As Integer, layerHeight As Integer) As SKBitmap
+            If adj Is Nothing OrElse String.IsNullOrEmpty(maskId) OrElse adj.Masks Is Nothing Then Return Nothing
+            If layerWidth < 1 OrElse layerHeight < 1 Then Return Nothing
+
+            Try
+                Dim maskData = adj.Masks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
+                                                            String.Equals(m.Id, maskId, StringComparison.Ordinal))
+                Dim coverage = GetAnnotationMaskCoverage(maskData, adj, sourceWidth, sourceHeight)
+                If coverage Is Nothing Then Return Nothing
+
+                Dim plane(layerWidth * layerHeight - 1) As Byte
+                For y = 0 To layerHeight - 1
+                    Dim sy = layerTop + y
+                    If sy < 0 OrElse sy >= sourceHeight Then Continue For
+                    For x = 0 To layerWidth - 1
+                        Dim sx = layerLeft + x
+                        If sx < 0 OrElse sx >= sourceWidth Then Continue For
+                        plane(y * layerWidth + x) = coverage(sy * sourceWidth + sx)
+                    Next
+                Next
+
+                Dim bmp = New SKBitmap(New SKImageInfo(layerWidth, layerHeight, SKColorType.Alpha8, SKAlphaType.Premul))
+                Try
+                    ' ZEILENWEISE über RowBytes: Skia darf die Zeilenlänge aufrunden, und ein
+                    ' Kopieren am Stück verschöbe dann jede Zeile gegen die vorige.
+                    Dim target = bmp.GetPixels()
+                    Dim stride = bmp.RowBytes
+                    For y = 0 To layerHeight - 1
+                        Runtime.InteropServices.Marshal.Copy(plane, y * layerWidth,
+                                                             IntPtr.Add(target, y * stride), layerWidth)
+                    Next
+                    Return bmp
+                Catch
+                    bmp.Dispose()
+                    Return Nothing
+                End Try
+            Catch
+                ' Eine Maske, die sich nicht schreiben lässt, kostet die Maske und nicht die Datei.
+                Return Nothing
             End Try
         End Function
 

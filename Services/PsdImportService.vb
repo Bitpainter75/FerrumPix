@@ -132,6 +132,7 @@ Namespace Services
                 If success Then
                     For Each layer In doc.Layers
                         layer.Pixels?.Dispose()
+                        layer.MaskPixels?.Dispose()
                     Next
                 End If
             End Try
@@ -154,14 +155,31 @@ Namespace Services
                 End If
 
                 Dim index = 0
+                ' Die offenen Gruppen, von außen nach innen. Die letzte ist die, in der gerade
+                ' gelesen wird - dorthin gehört jede Ebene, die jetzt kommt.
+                Dim openGroups As New List(Of AnnotationGroup)()
+
                 For i = firstIndex To layers.Count - 1
                     Dim layer = layers(i)
+
+                    If layer.IsGroupMarker Then
+                        ApplyGroupMarker(adjustments, layer, openGroups, doc.Width, doc.Height)
+                        Continue For
+                    End If
+
                     If layer.Pixels Is Nothing Then Continue For
+                    Dim groupId = If(openGroups.Count > 0, openGroups(openGroups.Count - 1).Id, "")
 
                     ' Textebene als Textobjekt, wenn der Nutzer es so wollte. Lage und Größe kommen
                     ' aus dem Ebenenrechteck, die Farbe wird aus den gerasterten Bildpunkten
                     ' gemessen, der Schriftgrad aus der Höhe geschätzt. Die Schrift selbst bleibt die
                     ' Vorgabe - was in der Datei dazu steht, ist nicht verlässlich zu lesen.
+                    ' Die Ebenenmaske wird ein eigener Eintrag im Rezept, auf den die Ebene über ihre
+                    ' MaskId zeigt - genauso, wie eine hier gebaute Maske am Objekt hängt. Damit
+                    ' bleibt sie nach dem Öffnen mit dem Maskenpinsel änderbar, statt in den
+                    ' Bildpunkten festzustecken.
+                    Dim maskId = AddLayerMask(adjustments, layer, doc.Width, doc.Height)
+
                     If textAsText AndAlso Not String.IsNullOrWhiteSpace(layer.TextContent) Then
                         adjustments.Annotations.Add(New ImageAnnotation With {
                             .Kind = "Text",
@@ -177,6 +195,8 @@ Namespace Services
                             .BlendMode = layer.BlendMode,
                             .ClipToLayerBelow = layer.ClipToLayerBelow,
                             .IsVisible = layer.IsVisible,
+                            .MaskId = maskId,
+                            .GroupId = groupId,
                             .LockAspect = False
                         })
                         index += 1
@@ -200,8 +220,18 @@ Namespace Services
                         .BlendMode = layer.BlendMode,
                         .ClipToLayerBelow = layer.ClipToLayerBelow,
                         .IsVisible = layer.IsVisible,
+                        .MaskId = maskId,
+                        .GroupId = groupId,
                         .LockAspect = False
                     })
+                Next
+
+                ' Eine Gruppe ohne ihre Zeile - abgeschnittene Datei, fremder Erzeuger - bliebe sonst
+                ' offen, und ihre Mitglieder zeigten auf eine Gruppe, die es nirgends gibt. Lieber
+                ' eine namenlose Gruppe im Panel als ein Verweis ins Leere.
+                For g = openGroups.Count - 1 To 0 Step -1
+                    openGroups(g).ParentGroupId = If(g > 0, openGroups(g - 1).Id, "")
+                    adjustments.AnnotationGroups.Add(openGroups(g))
                 Next
 
                 success = True
@@ -217,6 +247,7 @@ Namespace Services
             Finally
                 For Each layer In doc.Layers
                     layer.Pixels?.Dispose()
+                    layer.MaskPixels?.Dispose()
                 Next
                 ' Bei erfolgreichem Laden übernimmt der Editor den Temp-Ordner. Bei jedem Fehler wird
                 ' er sofort entfernt, sonst bleiben halbe Entpackungen liegen - dieselbe Regel wie
@@ -230,12 +261,139 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Verarbeitet eine Gruppenmarke und führt dabei den Stapel der offenen Gruppen
+        ''' nach.
+        '''
+        ''' Die Datei zählt von UNTEN nach oben, und eine Gruppe steht darin verkehrt herum: zuerst
+        ''' kommt ihr unteres Ende (Art 3), dann ihr Inhalt, und ganz zuletzt die Zeile mit Namen,
+        ''' Deckkraft und Mischmethode (Art 1 oder 2). Deshalb wird bei Art 3 eine noch leere Gruppe
+        ''' GEOEFFNET - ihre Kennung braucht schon der erste Inhalt - und bei 1 oder 2 mit allem
+        ''' gefüllt, was die Zeile mitbringt.
+        '''
+        ''' EIN Unterschied bleibt: Photoshop kennt bei Gruppen den Durchgriff als eigene
+        ''' Mischmethode, und wer stattdessen ausdrücklich "Normal" wählt, kapselt die Gruppe. Hier
+        ''' sind Deckkraft 100 und Normal immer der Durchgriff (siehe <c>AnnotationGroup</c>), beide
+        ''' Fälle kommen also gleich an. Sichtbar wird das nur, wenn Mitglieder einer gekapselten
+        ''' Gruppe ungewöhnlich gemischt sind.</summary>
+        Private Shared Sub ApplyGroupMarker(adjustments As ImageAdjustments,
+                                            layer As PsdLayerReader.PsdLayerInfo,
+                                            openGroups As List(Of AnnotationGroup),
+                                            docWidth As Integer, docHeight As Integer)
+            If layer.SectionType = 3 Then
+                openGroups.Add(New AnnotationGroup())
+                Return
+            End If
+
+            ' Eine Gruppenzeile ohne zugehöriges Ende: es gibt nichts zu schließen.
+            If openGroups.Count = 0 Then Return
+
+            Dim group = openGroups(openGroups.Count - 1)
+            openGroups.RemoveAt(openGroups.Count - 1)
+
+            group.Name = If(String.IsNullOrWhiteSpace(layer.Name),
+                            LocalizationService.T("Gruppe"), layer.Name)
+            group.IsVisible = layer.IsVisible
+            ' Art 2 heißt zugeklappt. Reiner Panel-Zustand, aber einer, den der Nutzer selbst so
+            ' gesetzt hat - und ein Dokument mit dreißig aufgeklappten Gruppen ist unbenutzbar.
+            group.IsCollapsed = layer.SectionType = 2
+            group.Opacity = Math.Max(0.0, Math.Min(100.0, CDbl(layer.OpacityPercent)))
+            group.BlendMode = layer.BlendMode
+            group.MaskId = AddLayerMask(adjustments, layer, docWidth, docHeight)
+            group.ParentGroupId = If(openGroups.Count > 0, openGroups(openGroups.Count - 1).Id, "")
+            adjustments.AnnotationGroups.Add(group)
+        End Sub
+
+        ''' <summary>Legt die Ebenenmaske als eigenen Maskeneintrag ins Rezept und liefert ihre
+        ''' Kennung, oder "" wenn die Ebene keine trägt.
+        '''
+        ''' Zwei Dinge müssen dabei stimmen, sonst kippt das Bild ins Gegenteil:
+        '''
+        ''' Die POLARITAET. Photoshop meint mit Weiß "hier ist die Ebene zu sehen", und genau so
+        ''' liest der eigene Renderer sein Deckungsraster. Es wird also nichts umgekehrt - was hier
+        ''' nach Fleißarbeit aussieht, ist die Stelle, an der ein Vorzeichenfehler jede maskierte
+        ''' Ebene zum Negativ ihrer selbst machte.
+        '''
+        ''' Der VORGABEWERT AUSSERHALB des Maskenrechtecks. Steht dort 255, ist die Ebene überall
+        ''' sichtbar, wo die Maske gar nichts sagt - der übliche Fall, wenn jemand nur ein Loch in
+        ''' eine Ebene stanzt. Der eigene Maskentyp kennt außerhalb seines Rechtecks nur die Null,
+        ''' deshalb wird die Maske dann auf die Ebenenfläche AUFGEZOGEN und der Zuwachs mit 255
+        ''' gefüllt. Ohne das verschwände die Ebene bis auf das Loch.</summary>
+        Private Shared Function AddLayerMask(adjustments As ImageAdjustments,
+                                             layer As PsdLayerReader.PsdLayerInfo,
+                                             docWidth As Integer, docHeight As Integer) As String
+            If adjustments Is Nothing OrElse layer Is Nothing OrElse Not layer.HasMask Then Return ""
+
+            Try
+                ' Zielrechteck: die Maske selbst, bei Vorgabewert 255 zusätzlich die ganze Ebene -
+                ' weiter reicht die Wirkung nie, denn außerhalb der Ebene gibt es nichts zu zeigen.
+                Dim left = layer.MaskLeft
+                Dim top = layer.MaskTop
+                Dim right = layer.MaskLeft + layer.MaskWidth
+                Dim bottom = layer.MaskTop + layer.MaskHeight
+                If layer.MaskDefaultValue > 0 Then
+                    left = Math.Min(left, layer.Left)
+                    top = Math.Min(top, layer.Top)
+                    right = Math.Max(right, layer.Left + layer.Width)
+                    bottom = Math.Max(bottom, layer.Top + layer.Height)
+                End If
+
+                Dim width = right - left
+                Dim height = bottom - top
+                If width < 1 OrElse height < 1 Then Return ""
+
+                Dim encoded As String
+                Using canvasBitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
+                    Using canvas = New SKCanvas(canvasBitmap)
+                        ' Der Vorgabewert füllt die Fläche, danach setzt sich die Maske darüber. Er
+                        ' geht als Deckung in den Alphakanal - bei 0 ist das Füllen ein Löschen, bei
+                        ' einem Wert dazwischen deckt die Ebene außerhalb der Maske eben halb.
+                        canvas.Clear(New SKColor(0, 0, 0, layer.MaskDefaultValue))
+                        ' ERSETZEN, nicht überlagern. Beim üblichen Darüberzeichnen bliebe der
+                        ' Vorgabewert überall dort stehen, wo die Maske durchsichtig ist - also
+                        ' genau dort, wo sie die Ebene verstecken soll.
+                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                            canvas.DrawBitmap(layer.MaskPixels,
+                                              CSng(layer.MaskLeft - left), CSng(layer.MaskTop - top), paint)
+                        End Using
+                    End Using
+                    Using image = SKImage.FromPixels(canvasBitmap.PeekPixels())
+                        Using data = image.Encode(SKEncodedImageFormat.Png, 100)
+                            If data Is Nothing Then Return ""
+                            encoded = Convert.ToBase64String(data.ToArray())
+                        End Using
+                    End Using
+                End Using
+
+                Dim mask As New ImageMask With {
+                    .Name = If(String.IsNullOrWhiteSpace(layer.Name),
+                               LocalizationService.T("Ebenenmaske"), layer.Name),
+                    .SourceWidthPixels = docWidth,
+                    .SourceHeightPixels = docHeight,
+                    .Left = left,
+                    .Top = top,
+                    .Right = right,
+                    .Bottom = bottom,
+                    .PngBase64 = encoded,
+                    .IsDisabled = layer.MaskDisabled
+                }
+                adjustments.Masks.Add(mask)
+                Return mask.Id
+            Catch
+                ' Eine Maske, die sich nicht übernehmen lässt, kostet die Maske und nicht die Ebene.
+                Return ""
+            End Try
+        End Function
+
         ''' <summary>Die unterste Ebene taugt als Grundbild, wenn sie genau auf dem Dokument liegt,
         ''' sichtbar und voll deckend ist und normal gemischt wird. Sonst ginge beim Übernehmen
         ''' etwas verloren, das nur als Ebene richtig wirkt.</summary>
         Private Shared Function IsUsableAsBackground(layer As PsdLayerReader.PsdLayerInfo,
                                                      docWidth As Integer, docHeight As Integer) As Boolean
             If layer Is Nothing OrElse layer.Pixels Is Nothing Then Return False
+            ' Eine maskierte Ebene taugt NIE als Grundbild: das Grundbild ist eine schlichte
+            ' Bilddatei und hat keinen Platz für eine Maske - sie fiele beim Übernehmen weg, und die
+            ' Ebene wäre plötzlich überall zu sehen.
+            If layer.HasMask Then Return False
             If layer.Left <> 0 OrElse layer.Top <> 0 Then Return False
             If layer.Width <> docWidth OrElse layer.Height <> docHeight Then Return False
             If Not layer.IsVisible Then Return False

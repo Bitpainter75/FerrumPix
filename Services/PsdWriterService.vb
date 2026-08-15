@@ -18,6 +18,11 @@ Namespace Services
     '''   Ebenen-Sektion    - Ebenenverzeichnis und danach die Kanaldaten je Ebene
     '''   Bilddaten         - das fertige Gesamtbild, planar je Kanal
     '''
+    ''' Mitgeschrieben werden EBENENMASKEN (als eigener Kanal, siehe PsdLayerInput.MaskPixels) und
+    ''' GRUPPEN (als Klammer aus zwei Datensaetzen ohne Bildpunkte, siehe
+    ''' PsdLayerInput.SectionType). Beides bleibt damit im Ziel anfassbar, statt in den Bildpunkten
+    ''' festzustecken.
+    '''
     ''' Das Gesamtbild am Ende ist NICHT verzichtbar. Photoshop nennt es "Maximale Kompatibilitaet",
     ''' und praktisch jedes fremde Programm zeigt genau dieses Bild an, statt die Ebenen selbst
     ''' zusammenzurechnen - der eigene Leser eingeschlossen. Ohne den Block bliebe die Datei fuer die
@@ -47,6 +52,41 @@ Namespace Services
             Public Property BlendMode As String = "Normal"
             Public Property ClipToLayerBelow As Boolean = False
             Public Property IsVisible As Boolean = True
+
+            ''' <summary>Die Ebenenmaske als Alpha8-Raster, oder Nothing. 255 zeigt die Ebene, 0
+            ''' versteckt sie - dieselbe Leserichtung wie in Photoshop, es wird nichts umgekehrt.
+            '''
+            ''' Sie geht als eigener Kanal in die Datei und bleibt dort ANFASSBAR. Die Alternative
+            ''' waere, sie in die Bildpunkte zu rechnen: das Bild saehe genauso aus, liesse sich in
+            ''' Photoshop aber nicht mehr zurueckdrehen - und genau das ist der Grund, warum jemand
+            ''' eine Maske benutzt statt zu radieren.</summary>
+            Public Property MaskPixels As SKBitmap
+            ''' Lage der Maske im Dokument. Ihr Rechteck ist ein eigenes, unabhaengig vom Ebenenrechteck.
+            Public Property MaskLeft As Integer
+            Public Property MaskTop As Integer
+            ''' Die Maske liegt bei, wirkt aber nicht - Photoshop zeigt sie dann durchgestrichen.
+            Public Property MaskDisabled As Boolean = False
+
+            Public ReadOnly Property HasMask As Boolean
+                Get
+                    Return MaskPixels IsNot Nothing AndAlso MaskPixels.Width > 0 AndAlso MaskPixels.Height > 0
+                End Get
+            End Property
+
+            ''' <summary>0 für eine gewoehnliche Ebene, 1 fuer die Zeile einer offenen Gruppe, 2 fuer
+            ''' eine zugeklappte, 3 fuer das untere Ende einer Gruppe.
+            '''
+            ''' Eine Gruppe ist im Format kein Behaelter, sondern eine KLAMMER aus zwei Datensaetzen
+            ''' ohne Bildpunkte: unten die 3, oben die 1 oder 2 mit Namen, Deckkraft und
+            ''' Mischmethode. Der Aufrufer legt sie in dieser Reihenfolge in die Liste, hier wird
+            ''' nur geschrieben, was er anordnet.</summary>
+            Public Property SectionType As Integer = 0
+
+            Public ReadOnly Property IsGroupMarker As Boolean
+                Get
+                    Return SectionType <> 0
+                End Get
+            End Property
         End Class
 
         ''' <summary>Schneidet eine Ebene eng um ihren sichtbaren Inhalt zu und liefert den Versatz
@@ -143,8 +183,13 @@ Namespace Services
             Dim usable As New List(Of PsdLayerInput)()
             If layers IsNot Nothing Then
                 For Each layer In layers
-                    If layer Is Nothing OrElse layer.Pixels Is Nothing Then Continue For
-                    If layer.Pixels.Width < 1 OrElse layer.Pixels.Height < 1 Then Continue For
+                    If layer Is Nothing Then Continue For
+                    ' Eine Gruppenmarke hat von sich aus keine Bildpunkte und geht trotzdem mit -
+                    ' ohne sie waere die Gruppe im Ziel nur eine Reihe loser Ebenen.
+                    If Not layer.IsGroupMarker Then
+                        If layer.Pixels Is Nothing Then Continue For
+                        If layer.Pixels.Width < 1 OrElse layer.Pixels.Height < 1 Then Continue For
+                    End If
                     usable.Add(layer)
                 Next
             End If
@@ -220,10 +265,11 @@ Namespace Services
             End If
 
             ' Die Kanaldaten zuerst packen: ihre Laengen gehoeren in das Verzeichnis, das VOR ihnen
-            ' steht. Je Ebene vier Bloecke in der Reihenfolge Transparenz, Rot, Gruen, Blau.
+            ' steht. Je Ebene vier Bloecke in der Reihenfolge Transparenz, Rot, Gruen, Blau - und
+            ' einen fuenften, wenn eine Maske dabei ist.
             Dim packed As New List(Of Byte()())()
             For Each layer In layers
-                packed.Add(PackLayerChannels(layer.Pixels))
+                packed.Add(PackLayerChannels(layer))
             Next
 
             Using info As New MemoryStream()
@@ -232,18 +278,23 @@ Namespace Services
                 For i = 0 To layers.Count - 1
                     Dim layer = layers(i)
                     Dim bmp = layer.Pixels
-                    Dim top = layer.Top
-                    Dim left = layer.Left
+                    ' Eine Gruppenmarke bekommt ein leeres Rechteck. Genau daran erkennt jedes
+                    ' lesende Programm, dass hier keine Bildpunkte zu erwarten sind.
+                    Dim top = If(layer.IsGroupMarker, 0, layer.Top)
+                    Dim left = If(layer.IsGroupMarker, 0, layer.Left)
                     WriteU32(info, top)
                     WriteU32(info, left)
-                    WriteU32(info, top + bmp.Height)
-                    WriteU32(info, left + bmp.Width)
+                    WriteU32(info, If(layer.IsGroupMarker, 0, top + bmp.Height))
+                    WriteU32(info, If(layer.IsGroupMarker, 0, left + bmp.Width))
 
-                    WriteU16(info, 4)
-                    ' Kanalkennungen: -1 ist die Transparenz, danach Rot, Gruen, Blau. Zu jeder Laenge
-                    ' zaehlen die zwei Bytes der Kompressionsmarke, die im Datenblock selbst stehen.
-                    Dim ids = New Integer() {-1, 0, 1, 2}
-                    For c = 0 To 3
+                    ' Kanalkennungen: -1 ist die Transparenz, danach Rot, Gruen, Blau, und -2 waere
+                    ' die Ebenenmaske. Zu jeder Laenge zaehlen die zwei Bytes der Kompressionsmarke,
+                    ' die im Datenblock selbst stehen.
+                    Dim ids = If(packed(i).Length = 5,
+                                 New Integer() {-1, 0, 1, 2, -2},
+                                 New Integer() {-1, 0, 1, 2})
+                    WriteU16(info, ids.Length)
+                    For c = 0 To ids.Length - 1
                         WriteU16(info, ids(c))
                         WriteU32(info, packed(i)(c).Length)
                     Next
@@ -259,12 +310,14 @@ Namespace Services
                     info.WriteByte(If(layer.IsVisible, CByte(0), CByte(2)))
                     info.WriteByte(0)  ' Fuellbyte
 
-                    ' Zusatzdaten: Maske, Mischbereiche, Name. Die Laenge davor.
+                    ' Zusatzdaten: Maske, Mischbereiche, Name, bei einer Gruppe die Abschnittsmarke.
+                    ' Die Laenge davor.
                     Using extra As New MemoryStream()
-                        WriteU32(extra, 0)   ' keine Ebenenmaske
+                        WriteMaskBlock(extra, layer, packed(i).Length = 5)
                         WriteU32(extra, 0)   ' keine Mischbereiche
                         WritePascalName(extra, layer.Name)
                         WriteUnicodeName(extra, layer.Name)
+                        If layer.IsGroupMarker Then WriteSectionBlock(extra, layer)
                         WriteU32(info, CInt(extra.Length))
                         extra.Position = 0
                         extra.CopyTo(info)
@@ -272,7 +325,7 @@ Namespace Services
                 Next
 
                 For i = 0 To layers.Count - 1
-                    For c = 0 To 3
+                    For c = 0 To packed(i).Length - 1
                         info.Write(packed(i)(c), 0, packed(i)(c).Length)
                     Next
                 Next
@@ -290,19 +343,126 @@ Namespace Services
             End Using
         End Sub
 
-        ''' <summary>Packt die vier Kanaele einer Ebene, jeder mit seiner eigenen Kompressionsmarke
-        ''' vorneweg. Reihenfolge wie im Verzeichnis: Transparenz, Rot, Gruen, Blau.</summary>
-        Private Shared Function PackLayerChannels(bmp As SKBitmap) As Byte()()
+        ''' <summary>Die Abschnittsmarke einer Gruppe: der Zusatzblock "lsct" mit ihrer Art und, bei
+        ''' der Gruppenzeile selbst, ihrer Mischmethode.
+        '''
+        ''' Die Mischmethode steht hier NOCH EINMAL, obwohl sie schon im Ebenendatensatz steht, und
+        ''' das ist kein Versehen des Formats: eine Gruppe kann DURCHGREIFEN, und dafuer gibt es den
+        ''' eigenen Schluessel "pass", den ein Ebenendatensatz gar nicht kennt. Ohne diesen Block
+        ''' waere jede exportierte Gruppe gekapselt, und eine Korrektur darin hoerte an der
+        ''' Gruppengrenze auf zu wirken.</summary>
+        Private Shared Sub WriteSectionBlock(extra As Stream, layer As PsdLayerInput)
+            extra.Write(Encoding.ASCII.GetBytes("8BIM"), 0, 4)
+            extra.Write(Encoding.ASCII.GetBytes("lsct"), 0, 4)
+
+            ' Das untere Ende traegt nur seine Art, die Gruppenzeile zusaetzlich die Mischmethode.
+            If layer.SectionType = 3 Then
+                WriteU32(extra, 4)
+                WriteU32(extra, 3)
+                Return
+            End If
+
+            WriteU32(extra, 12)
+            WriteU32(extra, layer.SectionType)
+            extra.Write(Encoding.ASCII.GetBytes("8BIM"), 0, 4)
+            ' Deckkraft 100 und Normal heissen hier wie dort DURCHGRIFF - dieselbe Regel, nach der
+            ' der eigene Renderer entscheidet, ob eine Gruppe ein eigener Schritt ist.
+            Dim passthrough = layer.OpacityPercent >= 99.5F AndAlso
+                              String.Equals(ResolveBlendKey(layer.BlendMode), "norm", StringComparison.Ordinal)
+            extra.Write(Encoding.ASCII.GetBytes(If(passthrough, "pass", ResolveBlendKey(layer.BlendMode))), 0, 4)
+        End Sub
+
+        ''' <summary>Der Maskenteil der Zusatzdaten einer Ebene: Rechteck, Vorgabewert ausserhalb
+        ''' davon, Merkmale. Ohne Maske bleibt er leer, und das ist eine Laenge 0 - kein leerer Block.
+        '''
+        ''' Der Vorgabewert ist hier immer 0 ("ausserhalb versteckt"), weil die geschriebene Maske
+        ''' das ganze Rechteck der Ebene abdeckt. Die Wahlmoeglichkeit gibt es nur beim LESEN, wo
+        ''' fremde Dateien beides mitbringen.</summary>
+        Private Shared Sub WriteMaskBlock(extra As Stream, layer As PsdLayerInput, hasMask As Boolean)
+            If Not hasMask Then
+                WriteU32(extra, 0)
+                Return
+            End If
+
+            Dim bmp = layer.MaskPixels
+            WriteU32(extra, 20)
+            WriteU32(extra, layer.MaskTop)
+            WriteU32(extra, layer.MaskLeft)
+            WriteU32(extra, layer.MaskTop + bmp.Height)
+            WriteU32(extra, layer.MaskLeft + bmp.Width)
+            extra.WriteByte(0)   ' Vorgabewert ausserhalb des Rechtecks
+            ' Merkmale: Bit 1 schaltet die Maske ab. Bit 0 waere "Rechteck relativ zur Ebene" - hier
+            ' stehen absolute Dokumentkoordinaten, also bleibt es aus.
+            extra.WriteByte(If(layer.MaskDisabled, CByte(2), CByte(0)))
+            extra.WriteByte(0)   ' zwei Fuellbytes auf die Blocklaenge 20
+            extra.WriteByte(0)
+        End Sub
+
+        ''' <summary>Packt die Kanaele einer Ebene, jeder mit seiner eigenen Kompressionsmarke
+        ''' vorneweg. Reihenfolge wie im Verzeichnis: Transparenz, Rot, Gruen, Blau, und als
+        ''' fuenften die Maske, wenn eine da ist.</summary>
+        Private Shared Function PackLayerChannels(layer As PsdLayerInput) As Byte()()
+            ' Eine Gruppenmarke hat ein leeres Rechteck und damit vier LEERE Kanaele: nur die
+            ' Kompressionsmarke, keine Bildpunkte. Sie ganz wegzulassen geht nicht - das Verzeichnis
+            ' nennt fuer jede Ebene eine Kanalzahl, und Photoshop erwartet dort dieselben vier wie
+            ' ueberall.
+            '
+            ' Ihre MASKE gehoert trotzdem dazu, wenn sie eine traegt. Sie ist die Maske der ganzen
+            ' Gruppe und hat ihr eigenes Rechteck - das leere Ebenenrechteck der Marke steht dem
+            ' nicht im Weg, der Maskenblock traegt seine Masse selbst.
+            If layer.IsGroupMarker Then
+                Dim groupMask As Byte() = Nothing
+                If layer.HasMask Then groupMask = ExtractMaskPlane(layer.MaskPixels)
+                Dim empty As Byte()() = New Byte(If(groupMask Is Nothing, 3, 4))() {}
+                For c = 0 To 3
+                    empty(c) = New Byte() {0, 0}
+                Next
+                If groupMask IsNot Nothing Then
+                    empty(4) = PackPlaneRle(groupMask, layer.MaskPixels.Width, layer.MaskPixels.Height)
+                End If
+                Return empty
+            End If
+
+            Dim bmp = layer.Pixels
             Dim width = bmp.Width
             Dim height = bmp.Height
             Dim planes = ExtractPlanes(bmp)
-            Dim result As Byte()() = New Byte(3)() {}
+            Dim maskPlane As Byte() = Nothing
+            If layer.HasMask Then maskPlane = ExtractMaskPlane(layer.MaskPixels)
+
+            Dim result As Byte()() = New Byte(If(maskPlane Is Nothing, 3, 4))() {}
             ' ExtractPlanes liefert R, G, B, A - hier wird auf A, R, G, B umsortiert.
             Dim order = New Integer() {3, 0, 1, 2}
             For c = 0 To 3
                 result(c) = PackPlaneRle(planes(order(c)), width, height)
             Next
+            If maskPlane IsNot Nothing Then
+                result(4) = PackPlaneRle(maskPlane, layer.MaskPixels.Width, layer.MaskPixels.Height)
+            End If
             Return result
+        End Function
+
+        ''' <summary>Die Deckungswerte einer Maske als ein Byte je Bildpunkt. Nothing, wenn sich das
+        ''' Raster nicht lesen laesst - dann faellt die Maske weg und die Ebene bleibt vollstaendig,
+        ''' was allemal besser ist als eine Datei, die Photoshop als beschaedigt meldet.</summary>
+        Private Shared Function ExtractMaskPlane(mask As SKBitmap) As Byte()
+            If mask Is Nothing OrElse mask.Width < 1 OrElse mask.Height < 1 Then Return Nothing
+            Dim width = mask.Width
+            Dim height = mask.Height
+            Dim plane(width * height - 1) As Byte
+            Dim info = New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim handle = Runtime.InteropServices.GCHandle.Alloc(plane, Runtime.InteropServices.GCHandleType.Pinned)
+            Try
+                Using pixmap = mask.PeekPixels()
+                    If pixmap Is Nothing Then Return Nothing
+                    ' Ueber eine feste Zielform gehen: die Maske kann als Alpha8 vorliegen oder aus
+                    ' einer anderen Ecke der Pipeline mit vollem Farbtyp kommen.
+                    If Not pixmap.ReadPixels(info, handle.AddrOfPinnedObject(), width) Then Return Nothing
+                End Using
+            Finally
+                handle.Free()
+            End Try
+            Return plane
         End Function
 
         ' ── Gesamtbild ───────────────────────────────────────────────────────────

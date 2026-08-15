@@ -1,6 +1,7 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.IO
+Imports System.IO.Compression
 Imports System.Text
 Imports SkiaSharp
 
@@ -11,21 +12,30 @@ Namespace Services
     ''' sich eine .psd als Ebenenstapel öffnen, statt nur als fertiges Gesamtbild.
     '''
     ''' Was hier herauskommt, sind Bildebenen: Rechteck, Name, Deckkraft, Mischmethode, Beschneidung
-    ''' an der Ebene darunter, Sichtbarkeit und die Bildpunkte selbst. Mehr gibt das Format an dieser
-    ''' Stelle nicht her - und mehr braucht es auch nicht, denn genau darauf bildet der eigene
-    ''' Ebenenstapel ab.
+    ''' an der Ebene darunter, Sichtbarkeit, die Ebenenmaske und die Bildpunkte selbst. Dazu die
+    ''' Gruppen, in denen sie liegen. Mehr gibt das Format an dieser Stelle nicht her - und mehr
+    ''' braucht es auch nicht, denn genau darauf bildet der eigene Ebenenstapel ab.
+    '''
+    ''' Kanäle liegen unkomprimiert, als RLE oder als ZIP vor. Alle drei werden gelesen; beim ZIP
+    ''' gibt es zwei Spielarten, die zweite legt jeden Punkt als Differenz zu seinem linken Nachbarn
+    ''' ab (siehe <see cref="ReadZipPlane"/>).
+    '''
+    ''' Acht und sechzehn Bit je Kanal, RGB und Graustufen. Sechzehn Bit werden auf acht gebracht,
+    ''' wie es der flache Weg seit jeher tut - der Ebenenstapel rechnet in acht Bit.
+    '''
+    ''' Gruppen sind im Format kein Behälter, sondern eine KLAMMER aus zwei Ebenen ohne Bildpunkte.
+    ''' Sie werden als solche weitergereicht (<see cref="PsdLayerInfo.SectionType"/>); wer daraus
+    ''' eine Struktur baut, ist der Import.
     '''
     ''' Bewusst nicht gelesen:
     ''' - Korrekturebenen und Ebeneneffekte. Photoshop legt für sie KEINE gerechneten Bildpunkte ab,
     '''   nur ihre Einstellungen in je eigenen, kaum dokumentierten Datensätzen. Sie kämen als leere
     '''   Ebene heraus und würden ein falsches Bild ergeben, deshalb bleiben sie draußen. Ihr Beitrag
     '''   steckt im Gesamtbild, das der Aufrufer als Grundlage nimmt.
-    ''' - Ebenenmasken. Sie haben ein eigenes Rechteck und einen eigenen Vorgabewert außerhalb davon;
-    '''   ihre Kanäle werden gelesen und verworfen, damit die Reihenfolge nicht verrutscht.
-    ''' - Gruppen. Photoshop schreibt sie als Ebenen mit dem Namen "&lt;/Layer group&gt;" um den Inhalt
-    '''   herum; sie werden übersprungen, der Inhalt bleibt flach nebeneinander.
-    ''' - 16 und 32 Bit je Kanal, sowie alles außer RGB. Dann liefert der Leser Nothing, und der
-    '''   Aufrufer bleibt beim flachen Gesamtbild.
+    ''' - Vektormasken. Nur die gemalte Ebenenmaske kommt mit (Kanal -2); die zusammengerechnete
+    '''   Fassung aus beidem (Kanal -3) bliebe ohne ihren Vektoranteil eine halbe Wahrheit.
+    ''' - 32 Bit je Kanal und CMYK. Dann liefert der Leser Nothing, und der Aufrufer bleibt beim
+    '''   flachen Gesamtbild - das kann beides.
     ''' </summary>
     Public NotInheritable Class PsdLayerReader
 
@@ -53,6 +63,54 @@ Namespace Services
             ''' <summary>Der Wortlaut, wenn es eine Textebene ist, sonst "". Nur der Wortlaut - was
             ''' die Schrift angeht, siehe PsdTextReader.</summary>
             Public Property TextContent As String = ""
+
+            ''' <summary>Die Ebenenmaske als Alpha8-Raster, oder Nothing. Gehört dem Aufrufer.
+            '''
+            ''' Ihr Rechteck ist ein EIGENES und hat mit dem der Ebene nichts zu tun: eine Maske darf
+            ''' kleiner sein, größer, versetzt. Deshalb stehen die vier Werte hier noch einmal, statt
+            ''' die der Ebene mitzubenutzen.
+            '''
+            ''' Die Werte sind Deckung, wie überall: 255 zeigt die Ebene, 0 versteckt sie. Photoshop
+            ''' meint dasselbe (Weiß zeigt, Schwarz versteckt), also wird nichts umgekehrt.</summary>
+            Public Property MaskPixels As SKBitmap
+            Public Property MaskLeft As Integer
+            Public Property MaskTop As Integer
+            Public Property MaskWidth As Integer
+            Public Property MaskHeight As Integer
+
+            ''' <summary>Die Deckung AUSSERHALB des Maskenrechtecks. Nicht wegzudenken: eine Maske,
+            ''' die nur ein Loch in eine sonst sichtbare Ebene stanzt, steht als kleines Rechteck mit
+            ''' Vorgabewert 255 in der Datei. Wer den Wert übergeht, versteckt die ganze Ebene bis auf
+            ''' dieses Rechteck - also genau das Gegenteil.
+            '''
+            ''' Üblich sind 0 und 255, aber in der Datei steht ein ganzes Byte, und ein Wert dazwischen
+            ''' heißt: außerhalb deckt die Ebene eben halb. Er wird deshalb unverändert übernommen.</summary>
+            Public Property MaskDefaultValue As Byte = 0
+
+            ''' <summary>Die Maske ist in Photoshop abgeschaltet. Sie bleibt erhalten und wirkt
+            ''' nicht - dasselbe kennt der eigene Maskentyp als <c>IsDisabled</c>.</summary>
+            Public Property MaskDisabled As Boolean
+
+            Public ReadOnly Property HasMask As Boolean
+                Get
+                    Return MaskPixels IsNot Nothing AndAlso MaskWidth > 0 AndAlso MaskHeight > 0
+                End Get
+            End Property
+
+            ''' <summary>0 für eine gewöhnliche Ebene, sonst eine GRUPPENMARKE: 1 ist eine offene
+            ''' Gruppe, 2 eine zugeklappte, 3 das untere Ende einer Gruppe.
+            '''
+            ''' Die Reihenfolge in der Datei geht von UNTEN nach oben, und eine Gruppe steht darin
+            ''' verkehrt herum: erst das Ende (3), dann ihr Inhalt, dann die Zeile mit Namen,
+            ''' Deckkraft und Mischmethode (1 oder 2). Wer die Struktur nachbaut, öffnet also bei 3
+            ''' und schließt bei 1 oder 2 - nicht umgekehrt.</summary>
+            Public Property SectionType As Integer = 0
+
+            Public ReadOnly Property IsGroupMarker As Boolean
+                Get
+                    Return SectionType <> 0
+                End Get
+            End Property
         End Class
 
         ''' <summary>Rückübersetzung der Vierzeichenschlüssel. Was hier fehlt, wird "Normal" - die
@@ -140,9 +198,17 @@ Namespace Services
             Dim depth = CInt(buf(22)) * 256 + buf(23)
             Dim colorMode = CInt(buf(24)) * 256 + buf(25)
 
-            ' Nur 8 Bit RGB. Bei allem anderen müssten die Bildpunkte umgerechnet werden, und ein
-            ' halb richtiges Ergebnis ist hier schlechter als das flache Gesamtbild.
-            If depth <> 8 OrElse colorMode <> 3 Then Return Nothing
+            ' 8 und 16 Bit, RGB und Graustufen. Sechzehn Bit werden dabei auf acht gebracht, wie es
+            ' der flache Weg seit jeher tut - der Ebenenstapel rechnet in acht Bit, und ein
+            ' Ebenenstapel mit etwas Genauigkeitsverlust ist mehr wert als gar keiner.
+            '
+            ' CMYK bleibt draußen. Für das flache Gesamtbild gibt es die Umrechnung, für Ebenen
+            ' käme die Transparenz dazu, und eine falsch zusammengerechnete Ebene fiele erst am
+            ' fertigen Bild auf. Dort bleibt es beim Gesamtbild.
+            If depth <> 8 AndAlso depth <> 16 Then Return Nothing
+            If colorMode <> 3 AndAlso colorMode <> 1 Then Return Nothing
+            Dim bytesPerSample = depth \ 8
+            Dim grayscale = colorMode = 1
 
             If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing  ' Farbmodus-Daten
             If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing  ' Bildressourcen
@@ -170,6 +236,12 @@ Namespace Services
                 Dim rec = ReadLayerRecord(fs, isPsb)
                 If rec Is Nothing Then Return Nothing
                 totalPixels += CLng(Math.Max(0, rec.Right - rec.Left)) * Math.Max(0, rec.Bottom - rec.Top)
+                ' Die Maske zählt mit. Sie ist ein weiteres Raster im Speicher, und eine Datei, in
+                ' der jede Ebene eine bildgroße Maske trägt, käme sonst auf das Doppelte des Deckels.
+                If rec.HasMaskRect Then
+                    totalPixels += CLng(Math.Max(0, rec.MaskRight - rec.MaskLeft)) *
+                                   Math.Max(0, rec.MaskBottom - rec.MaskTop)
+                End If
                 If totalPixels > MaxTotalLayerPixels Then Return Nothing
                 records.Add(rec)
             Next
@@ -183,10 +255,13 @@ Namespace Services
             Dim completed = False
             Try
                 For Each rec In records
-                    Dim bmp = ReadChannelData(fs, rec, metadataOnly)
+                    Dim maskBmp As SKBitmap = Nothing
+                    Dim bmp = ReadChannelData(fs, rec, metadataOnly, maskBmp, bytesPerSample, grayscale)
                     If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing
-                    If bmp Is Nothing AndAlso Not metadataOnly Then Continue For
-                    If metadataOnly AndAlso Not rec.HasPixels Then Continue For
+                    ' Gruppenmarken haben keine Bildpunkte und gehen trotzdem mit: ohne sie wüsste
+                    ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört.
+                    If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly Then Continue For
+                    If metadataOnly AndAlso Not rec.HasPixels AndAlso rec.SectionType = 0 Then Continue For
 
                     layers.Add(New PsdLayerInfo With {
                         .Name = rec.Name,
@@ -199,7 +274,15 @@ Namespace Services
                         .ClipToLayerBelow = rec.Clipping <> 0,
                         .IsVisible = (rec.Flags And 2) = 0,
                         .Pixels = bmp,
-                        .TextContent = rec.TextContent
+                        .TextContent = rec.TextContent,
+                        .MaskPixels = maskBmp,
+                        .MaskLeft = rec.MaskLeft,
+                        .MaskTop = rec.MaskTop,
+                        .MaskWidth = If(maskBmp IsNot Nothing, rec.MaskRight - rec.MaskLeft, 0),
+                        .MaskHeight = If(maskBmp IsNot Nothing, rec.MaskBottom - rec.MaskTop, 0),
+                        .MaskDefaultValue = rec.MaskDefaultValue,
+                        .MaskDisabled = rec.MaskDisabled,
+                        .SectionType = rec.SectionType
                     })
                 Next
                 completed = True
@@ -216,6 +299,8 @@ Namespace Services
             For Each layer In doc.Layers
                 layer.Pixels?.Dispose()
                 layer.Pixels = Nothing
+                layer.MaskPixels?.Dispose()
+                layer.MaskPixels = Nothing
             Next
             doc.Layers.Clear()
         End Sub
@@ -237,6 +322,15 @@ Namespace Services
             ''' Eine Gruppenmarke oder eine Ebene ohne Fläche trägt keine Bildpunkte.
             Public Property HasPixels As Boolean = True
             Public Property TextContent As String = ""
+            ''' Das Rechteck der Ebenenmaske, in Dokumentkoordinaten wie das der Ebene.
+            Public Property MaskTop As Integer
+            Public Property MaskLeft As Integer
+            Public Property MaskBottom As Integer
+            Public Property MaskRight As Integer
+            Public Property MaskDefaultValue As Byte = 0
+            Public Property MaskDisabled As Boolean
+            Public Property HasMaskRect As Boolean = False
+            Public Property SectionType As Integer = 0
         End Class
 
         Private Shared Function ReadLayerRecord(fs As FileStream, isPsb As Boolean) As LayerRecord
@@ -274,7 +368,15 @@ Namespace Services
             If extraEnd > fs.Length Then Return Nothing
 
             Dim maskLen = ReadU32(fs)
-            If Not SkipBlock(fs, maskLen) Then Return Nothing
+            If maskLen < 0 OrElse fs.Position + maskLen > fs.Length Then Return Nothing
+            If maskLen > 0 Then
+                Dim maskEnd = fs.Position + maskLen
+                ReadMaskBlock(fs, rec, maskLen)
+                ' In JEDEM Fall auf das Blockende springen. Der Block ist 20 oder 36 Byte lang, und
+                ' die zweite Fassung trägt hinter der Maske noch ein zweites Rechteck, das hier
+                ' niemanden angeht - gelesen wird der Anfang, verlassen wird er über die Länge.
+                fs.Seek(maskEnd, SeekOrigin.Begin)
+            End If
             Dim rangesLen = ReadU32(fs)
             If Not SkipBlock(fs, rangesLen) Then Return Nothing
 
@@ -322,10 +424,14 @@ Namespace Services
                         rec.TextContent = PsdTextReader.ExtractText(textBlock)
                     End If
                 ElseIf bk = "lsct" AndAlso blockLen >= 4 Then
-                    ' Abschnittsmarke: 1 und 2 sind Gruppenanfänge, 3 ist das Ende. Solche Ebenen
-                    ' tragen keine Bildpunkte und werden übersprungen.
+                    ' Abschnittsmarke: 1 und 2 sind die Gruppenzeile selbst, 3 ist ihr unteres Ende.
+                    ' Solche Datensätze tragen keine Bildpunkte, werden aber weitergereicht - aus
+                    ' ihnen baut der Import die Gruppen nach.
                     Dim sectionType = ReadU32(fs)
-                    If sectionType >= 1 AndAlso sectionType <= 3 Then rec.HasPixels = False
+                    If sectionType >= 1 AndAlso sectionType <= 3 Then
+                        rec.HasPixels = False
+                        rec.SectionType = CInt(sectionType)
+                    End If
                 End If
 
                 fs.Seek(blockStart + blockLen + (blockLen And 1L), SeekOrigin.Begin)
@@ -337,15 +443,70 @@ Namespace Services
             Return rec
         End Function
 
+        ''' <summary>Der Maskenteil eines Ebenendatensatzes: Rechteck, Vorgabewert außerhalb davon,
+        ''' Merkmale. Der Aufrufer springt danach über die Blocklänge weiter, hier wird also nur
+        ''' gelesen, was gebraucht wird.
+        '''
+        ''' Das Merkmal-Byte trägt in Bit 1 das Abschalten der Maske und in Bit 0 die Aussage, dass
+        ''' ihr Rechteck RELATIV zur Ebene gemeint ist statt absolut im Dokument. Das kommt selten
+        ''' vor, kostet aber nichts - und übergangen säße die Maske um den Ebenenversatz verschoben,
+        ''' was bei einer Ebene am Bildrand sofort auffiele und bei einer bildgroßen nie.</summary>
+        Private Shared Sub ReadMaskBlock(fs As FileStream, rec As LayerRecord, maskLen As Long)
+            ' Rechteck, Vorgabewert und Merkmale sind zusammen achtzehn Byte. Weniger heißt: hier
+            ' steht etwas anderes, als diese Fassung des Formats vorsieht.
+            If maskLen < 18 Then Return
+            Try
+                Dim top = CInt(ReadU32Signed(fs))
+                Dim left = CInt(ReadU32Signed(fs))
+                Dim bottom = CInt(ReadU32Signed(fs))
+                Dim right = CInt(ReadU32Signed(fs))
+                Dim defaultValue = fs.ReadByte()
+                Dim flags = fs.ReadByte()
+                If defaultValue < 0 OrElse flags < 0 Then Return
+
+                If (flags And 1) <> 0 Then
+                    left += rec.Left : right += rec.Left
+                    top += rec.Top : bottom += rec.Top
+                End If
+
+                If right <= left OrElse bottom <= top Then Return
+                rec.MaskTop = top
+                rec.MaskLeft = left
+                rec.MaskBottom = bottom
+                rec.MaskRight = right
+                ' Der Wert wird UNVERAENDERT uebernommen. Das Format nennt zwar nur 0 und 255, aber
+                ' es steht ein ganzes Byte dort, und ein Grauwert dazwischen ist eine Maske, die
+                ' ausserhalb ihres Rechtecks halb deckt. Auf die beiden Enden gerundet aendert sich
+                ' die Deckkraft der Ebene sichtbar, und zwar ueberall dort, wo die Maske nichts sagt.
+                rec.MaskDefaultValue = CByte(defaultValue And &HFF)
+                rec.MaskDisabled = (flags And 2) <> 0
+                rec.HasMaskRect = True
+            Catch
+                ' Ein unlesbarer Maskenblock kostet die Maske, nicht die Ebene.
+                rec.HasMaskRect = False
+            End Try
+        End Sub
+
         ' ── Kanaldaten ───────────────────────────────────────────────────────────
 
         ''' <summary>Liest die Kanäle einer Ebene und setzt sie zu einem Bitmap zusammen. Kanäle, die
-        ''' nicht zum Bild gehören - Masken etwa - werden mitgelesen und verworfen, sonst verrutscht
-        ''' der Lesezeiger für alle folgenden Ebenen.</summary>
+        ''' nicht zum Bild gehören, werden mitgelesen und verworfen, sonst verrutscht der Lesezeiger
+        ''' für alle folgenden Ebenen.</summary>
+        ''' <param name="maskBitmap">Nimmt die Ebenenmaske auf, wenn eine dabei ist. Sie steht in
+        ''' einem eigenen Kanal mit eigenem Rechteck und kann deshalb nicht aus dem Rückgabewert
+        ''' kommen.</param>
+        ''' <param name="grayscale">Das Dokument hat nur einen Farbkanal. Er wird auf alle drei
+        ''' gelegt - Grau ist Rot gleich Grün gleich Blau, und der Ebenenstapel kennt nur Farbe.</param>
         Private Shared Function ReadChannelData(fs As FileStream, rec As LayerRecord,
-                                                Optional metadataOnly As Boolean = False) As SKBitmap
+                                                metadataOnly As Boolean,
+                                                ByRef maskBitmap As SKBitmap,
+                                                bytesPerSample As Integer,
+                                                grayscale As Boolean) As SKBitmap
             Dim width = rec.Right - rec.Left
             Dim height = rec.Bottom - rec.Top
+            Dim maskWidth = rec.MaskRight - rec.MaskLeft
+            Dim maskHeight = rec.MaskBottom - rec.MaskTop
+            maskBitmap = Nothing
 
             Dim red As Byte() = Nothing, green As Byte() = Nothing, blue As Byte() = Nothing, alpha As Byte() = Nothing
 
@@ -357,8 +518,16 @@ Namespace Services
                 ' Nur die vier Bildkanäle einer Ebene mit Fläche werden ausgewertet.
                 Dim wanted = Not metadataOnly AndAlso rec.HasPixels AndAlso
                              (id = 0 OrElse id = 1 OrElse id = 2 OrElse id = -1)
+                ' Die Maske liegt in Kanal -2 und hat die Maße IHRES Rechtecks, nicht die der Ebene.
+                ' Kanal -3 wäre die zusammengerechnete Fassung aus Ebenen- und Vektormaske; die
+                ' bleibt draußen, weil ihr Vektoranteil hier ohnehin nicht nachvollzogen wird und
+                ' eine halb übernommene Maske schlechter ist als die ehrliche Ebenenmaske.
+                ' Auch eine GRUPPENZEILE darf eine Maske tragen; sie gilt dann für alles, was in der
+                ' Gruppe liegt. Deshalb hängt das Lesen hier nicht an den Bildpunkten.
+                Dim wantMask = Not metadataOnly AndAlso (rec.HasPixels OrElse rec.SectionType <> 0) AndAlso
+                               rec.HasMaskRect AndAlso id = -2 AndAlso maskWidth > 0 AndAlso maskHeight > 0
                 If wanted Then
-                    Dim plane = ReadPlane(fs, width, height)
+                    Dim plane = ReadPlane(fs, width, height, declaredLen, bytesPerSample)
                     If plane IsNot Nothing Then
                         Select Case id
                             Case 0 : red = plane
@@ -367,16 +536,36 @@ Namespace Services
                             Case -1 : alpha = plane
                         End Select
                     End If
+                ElseIf wantMask Then
+                    ' Scheitert die Maske, bleibt die Ebene gültig - sie sieht dann aus wie ohne
+                    ' Maske, und das ist der Stand von vorher, kein neuer Schaden.
+                    Dim maskPlane = ReadPlane(fs, maskWidth, maskHeight, declaredLen, bytesPerSample)
+                    If maskPlane IsNot Nothing Then
+                        maskBitmap?.Dispose()
+                        maskBitmap = BuildAlphaBitmap(maskPlane, maskWidth, maskHeight)
+                    End If
                 End If
 
                 ' In jedem Fall exakt hinter den Block springen: die angegebene Länge ist die
                 ' Wahrheit, nicht das, was das Entpacken verbraucht hat.
-                If blockEnd > fs.Length Then Return Nothing
+                If blockEnd > fs.Length Then Return DropMask(maskBitmap)
                 fs.Seek(blockEnd, SeekOrigin.Begin)
             Next
 
-            If Not rec.HasPixels Then Return Nothing
-            If red Is Nothing OrElse green Is Nothing OrElse blue Is Nothing Then Return Nothing
+            ' Kommt keine Ebene zustande, ist auch ihre Maske gegenstandslos - und ein Bitmap, das
+            ' niemand mehr in die Hand bekommt, wäre nativer Speicher bis zum Finalisierer. Bei
+            ' einer Gruppenzeile ist das anders: sie hat nie Bildpunkte, ihre Maske gilt trotzdem.
+            If Not rec.HasPixels Then
+                If rec.SectionType <> 0 Then Return Nothing
+                Return DropMask(maskBitmap)
+            End If
+            ' Bei Graustufen gibt es nur den einen Kanal 0. Er wird auf alle drei gelegt, statt einen
+            ' zweiten Zusammenbauweg daneben zu stellen - die Werte sind dieselben.
+            If grayscale AndAlso red IsNot Nothing Then
+                green = red
+                blue = red
+            End If
+            If red Is Nothing OrElse green Is Nothing OrElse blue Is Nothing Then Return DropMask(maskBitmap)
 
             Dim info = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
             Dim bmp = New SKBitmap(info)
@@ -393,6 +582,35 @@ Namespace Services
                 Return bmp
             Catch
                 bmp.Dispose()
+                Return DropMask(maskBitmap)
+            End Try
+        End Function
+
+        ''' <summary>Gibt eine schon gelesene Maske wieder frei und liefert Nothing. Für die
+        ''' Abbruchwege des Kanallesers, damit dort nicht an drei Stellen dasselbe steht.</summary>
+        Private Shared Function DropMask(ByRef maskBitmap As SKBitmap) As SKBitmap
+            maskBitmap?.Dispose()
+            maskBitmap = Nothing
+            Return Nothing
+        End Function
+
+        ''' <summary>Eine Graustufenfläche als Alpha8-Bitmap. Genau die Bauform, die der eigene
+        ''' Maskentyp erwartet - dort liegen die Deckungswerte im Alphakanal, nicht in Helligkeiten.</summary>
+        Private Shared Function BuildAlphaBitmap(plane As Byte(), width As Integer, height As Integer) As SKBitmap
+            If plane Is Nothing OrElse width < 1 OrElse height < 1 Then Return Nothing
+            If plane.Length < width * height Then Return Nothing
+            Dim bmp = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
+            Try
+                ' ZEILENWEISE über RowBytes. Skia darf die Zeilenlänge aufrunden, und ein Kopieren
+                ' der Fläche am Stück verschöbe dann jede Zeile gegen die vorige.
+                Dim target = bmp.GetPixels()
+                Dim stride = bmp.RowBytes
+                For y = 0 To height - 1
+                    Runtime.InteropServices.Marshal.Copy(plane, y * width, IntPtr.Add(target, y * stride), width)
+                Next
+                Return bmp
+            Catch
+                bmp.Dispose()
                 Return Nothing
             End Try
         End Function
@@ -400,36 +618,152 @@ Namespace Services
         ''' <summary>Ein Kanal einer Ebene: Kompressionsmarke, bei RLE die Zeilenlängen dieses einen
         ''' Kanals, danach die Zeilen. Anders als beim Gesamtbild stehen die Längen NICHT gesammelt
         ''' für alle Kanäle vorneweg.</summary>
-        Private Shared Function ReadPlane(fs As FileStream, width As Integer, height As Integer) As Byte()
+        ''' <param name="declaredLen">Die im Verzeichnis angegebene Länge dieses Kanalblocks,
+        ''' EINSCHLIESSLICH der zwei Byte für die Kompressionsmarke. Nur der ZIP-Weg braucht sie: ein
+        ''' Deflate-Strom sagt selbst nicht, wo er aufhört, und weiterzulesen als der Block reicht
+        ''' hieße in den nächsten Kanal hinein.</param>
+        ''' <param name="bytesPerSample">1 bei acht Bit, 2 bei sechzehn. Herauskommt in beiden Fällen
+        ''' ein Byte je Bildpunkt - bei sechzehn Bit das obere, wie es der flache Weg auch tut.</param>
+        Private Shared Function ReadPlane(fs As FileStream, width As Integer, height As Integer,
+                                          declaredLen As Integer, bytesPerSample As Integer) As Byte()
             If width < 1 OrElse height < 1 Then Return Nothing
             Dim compression = ReadU16(fs)
             Dim plane(width * height - 1) As Byte
+            Dim rowBytes = width * bytesPerSample
 
             If compression = 0 Then
+                Dim rowBuffer(rowBytes - 1) As Byte
                 For row = 0 To height - 1
-                    If Not ReadExactly(fs, plane, width, row * width) Then Return Nothing
+                    If Not ReadExactly(fs, rowBuffer, rowBytes) Then Return Nothing
+                    StoreRow(plane, row, width, rowBuffer, bytesPerSample)
                 Next
                 Return plane
             End If
 
-            If compression <> 1 Then Return Nothing  ' 2/3 wären ZIP, hier nicht unterstützt
+            ' 2 und 3 sind ZIP: derselbe Deflate-Strom, bei 3 zusätzlich zeilenweise als Differenz
+            ' zum linken Nachbarn abgelegt. Photoshop schreibt bei acht Bit meist RLE, andere
+            ' Programme und alles ab sechzehn Bit greifen zu ZIP - ohne diesen Zweig lieferte der
+            ' Leser dort gar keine Ebenen, und die Datei fiel auf das flache Gesamtbild zurück.
+            If compression = 2 OrElse compression = 3 Then
+                Return ReadZipPlane(fs, width, height, declaredLen - 2, compression = 3, bytesPerSample)
+            End If
 
+            If compression <> 1 Then Return Nothing
+
+            ' Die Zeilenlängen sind GEPACKTE Längen. Der Schlimmstfall von PackBits ist etwas mehr
+            ' als die rohe Zeile, deshalb der großzügige Rand - alles darüber ist keine gültige Datei.
             Dim rowLengths(height - 1) As Integer
             For row = 0 To height - 1
                 rowLengths(row) = ReadU16(fs)
-                If rowLengths(row) < 0 OrElse rowLengths(row) > width * 2 + 64 Then Return Nothing
+                If rowLengths(row) < 0 OrElse rowLengths(row) > rowBytes * 2 + 64 Then Return Nothing
             Next
 
-            Dim packed(Math.Max(1, width * 2 + 64) - 1) As Byte
-            Dim rowBuffer(width - 1) As Byte
+            Dim packed(Math.Max(1, rowBytes * 2 + 64) - 1) As Byte
+            Dim unpacked(rowBytes - 1) As Byte
             For row = 0 To height - 1
                 Dim len = rowLengths(row)
                 If packed.Length < len Then ReDim packed(len - 1)
                 If Not ReadExactly(fs, packed, len) Then Return Nothing
-                If Not PsdPreviewService.UnpackBits(packed, len, rowBuffer, width) Then Return Nothing
-                Array.Copy(rowBuffer, 0, plane, row * width, width)
+                If Not PsdPreviewService.UnpackBits(packed, len, unpacked, rowBytes) Then Return Nothing
+                StoreRow(plane, row, width, unpacked, bytesPerSample)
             Next
             Return plane
+        End Function
+
+        ''' <summary>Legt eine entpackte Zeile in die Kanalfläche. Bei sechzehn Bit wird dabei das
+        ''' obere Byte genommen: der Ebenenstapel rechnet in acht Bit, und derselbe Griff steht seit
+        ''' jeher im flachen Weg.</summary>
+        Private Shared Sub StoreRow(plane As Byte(), row As Integer, width As Integer,
+                                    rowBuffer As Byte(), bytesPerSample As Integer)
+            Dim target = row * width
+            If bytesPerSample = 1 Then
+                Array.Copy(rowBuffer, 0, plane, target, width)
+                Return
+            End If
+            For x = 0 To width - 1
+                plane(target + x) = rowBuffer(x * 2)
+            Next
+        End Sub
+
+        ''' <summary>Ein ZIP-komprimierter Kanal. <paramref name="payloadLen"/> ist die Länge des
+        ''' Stroms ohne die Kompressionsmarke, <paramref name="predicted"/> unterscheidet die Marken
+        ''' 2 und 3.
+        '''
+        ''' Bei der VORHERSAGE (Marke 3) steht in jedem Byte nicht der Wert, sondern die Differenz
+        ''' zum linken Nachbarn; die Zeile beginnt jeweils neu. Die Rückrechnung läuft deshalb
+        ''' ZEILENWEISE und nicht über die Fläche - sonst schleppte der erste Punkt einer Zeile den
+        ''' letzten der vorigen mit sich, und das Bild zöge sich schräg auseinander.
+        '''
+        ''' Gerechnet wird über Integer und mit einer Maske zurück auf ein Byte. VB prüft
+        ''' Ganzzahlüberläufe von sich aus, und eine Summe über 255 wäre sonst kein Umlauf, sondern
+        ''' eine Ausnahme mitten im Entpacken.
+        '''
+        ''' Bei SECHZEHN Bit läuft die Vorhersage über ganze Werte und nicht über Bytes: die
+        ''' Differenz steht dort als Wort, oberes Byte zuerst. Byteweise gerechnet käme aus jedem
+        ''' Übertrag ein sichtbarer Fehler, der sich über die ganze Zeile fortpflanzt.</summary>
+        Private Shared Function ReadZipPlane(fs As FileStream, width As Integer, height As Integer,
+                                             payloadLen As Integer, predicted As Boolean,
+                                             bytesPerSample As Integer) As Byte()
+            If payloadLen <= 0 Then Return Nothing
+            If fs.Position + payloadLen > fs.Length Then Return Nothing
+
+            Dim packed(payloadLen - 1) As Byte
+            If Not ReadExactly(fs, packed, payloadLen) Then Return Nothing
+
+            Dim rowBytes = width * bytesPerSample
+            Dim raw(rowBytes * height - 1) As Byte
+            If Not Inflate(packed, raw) Then Return Nothing
+
+            If predicted Then
+                For row = 0 To height - 1
+                    PsdPreviewService.UndoPrediction(raw, row * rowBytes, width, bytesPerSample)
+                Next
+            End If
+
+            If bytesPerSample = 1 Then Return raw
+
+            Dim plane(width * height - 1) As Byte
+            For row = 0 To height - 1
+                For x = 0 To width - 1
+                    plane(row * width + x) = raw(row * rowBytes + x * 2)
+                Next
+            Next
+            Return plane
+        End Function
+
+        ''' <summary>Entpackt <paramref name="packed"/> nach <paramref name="target"/> und meldet, ob
+        ''' die Zielfläche VOLLSTAENDIG gefüllt wurde. Ein halb entpackter Kanal ist kein brauchbares
+        ''' Ergebnis: die untere Hälfte der Ebene bliebe schwarz, und das fiele erst im fertigen Bild
+        ''' auf.
+        '''
+        ''' Erwartet wird ein zlib-Strom, so schreibt Photoshop ihn. Fehlen die zwei Kopfbytes -
+        ''' andere Erzeuger legen gelegentlich den nackten Deflate-Strom ab -, wird der zweite Weg
+        ''' versucht, statt die Ebene aufzugeben.</summary>
+        Private Shared Function Inflate(packed As Byte(), target As Byte()) As Boolean
+            Dim withHeader = packed IsNot Nothing AndAlso packed.Length >= 2 AndAlso
+                             PsdPreviewService.LooksLikeZlib(packed(0), packed(1))
+            If withHeader AndAlso InflateWith(packed, target, True) Then Return True
+            Return InflateWith(packed, target, False)
+        End Function
+
+        Private Shared Function InflateWith(packed As Byte(), target As Byte(), zlibHeader As Boolean) As Boolean
+            Try
+                Using source = New MemoryStream(packed, False)
+                    Using raw As Stream = If(zlibHeader,
+                                             CType(New ZLibStream(source, CompressionMode.Decompress), Stream),
+                                             CType(New DeflateStream(source, CompressionMode.Decompress), Stream))
+                        Dim total = 0
+                        While total < target.Length
+                            Dim n = raw.Read(target, total, target.Length - total)
+                            If n <= 0 Then Exit While
+                            total += n
+                        End While
+                        Return total = target.Length
+                    End Using
+                End Using
+            Catch
+                Return False
+            End Try
         End Function
 
         Private Shared Function ResolveBlendName(key As String) As String

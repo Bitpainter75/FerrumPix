@@ -114,7 +114,10 @@ Namespace Services
             If Not SkipBlock(fs, layerLen) Then Return Nothing
 
             Dim compression = ReadU16(fs)
-            If compression <> 0 AndAlso compression <> 1 Then Return Nothing ' 2/3 = ZIP, nur in Ebenen üblich
+            ' 0 roh, 1 RLE, 2 und 3 ZIP. Die beiden ZIP-Spielarten sind hier seltener als bei den
+            ' Ebenen, aber ohne sie bleibt eine Datei mit gültigem Gesamtbild verschlossen und landet
+            ' im Thumbnail-Rückfall - oder, wenn keins eingebettet ist, gar nicht.
+            If compression < 0 OrElse compression > 3 Then Return Nothing
 
             ' Wie viele der planar abgelegten Kanäle das Ergebnis wirklich braucht: RGB 3 (+Alpha),
             ' Graustufen 1 (+Alpha), CMYK 4. Weitere Kanäle (gespeicherte Auswahlen) werden gelesen
@@ -155,35 +158,73 @@ Namespace Services
             Dim rowBuffer(rowBytes - 1) As Byte
             Dim packed(0) As Byte
 
-            For channel = 0 To header.Channels - 1
-                Dim keep = channel < neededChannels
-                If keep Then planes(channel) = New Byte(planeSize - 1) {}
+            ' Bei ZIP liegt EIN Strom über allen Kanälen, ohne Längen davor - er reicht bis zum
+            ' Dateiende, und die Bilddaten sind der letzte Abschnitt. Gelesen wird zeilenweise wie
+            ' im unkomprimierten Fall, nur eben aus dem Entpacker. Springen lässt der sich nicht,
+            ' deshalb werden auch die verworfenen Kanäle durchgelesen statt übersprungen - Bytes,
+            ' die niemand braucht, aber die Reihenfolge muss stimmen.
+            Dim zip As Stream = Nothing
+            Try
+                If compression = 2 OrElse compression = 3 Then
+                    zip = OpenInflate(fs)
+                    If zip Is Nothing Then Return Nothing
+                End If
 
-                If compression = 0 Then
-                    If Not keep Then
-                        If Not SkipBlock(fs, CLng(rowBytes) * header.Height) Then Return Nothing
-                        Continue For
-                    End If
-                    For row = 0 To header.Height - 1
-                        If Not ReadExactly(fs, rowBuffer, rowBytes) Then Return Nothing
-                        StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
-                    Next
-                Else
-                    For row = 0 To header.Height - 1
-                        Dim packedLen = rleRowLengths(channel * header.Height + row)
+                For channel = 0 To header.Channels - 1
+                    Dim keep = channel < neededChannels
+                    If keep Then planes(channel) = New Byte(planeSize - 1) {}
+
+                    If zip IsNot Nothing Then
+                        For row = 0 To header.Height - 1
+                            If Not ReadExactly(zip, rowBuffer, rowBytes) Then Return Nothing
+                            If compression = 3 Then UndoPrediction(rowBuffer, 0, header.Width, bytesPerSample)
+                            If keep Then StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
+                        Next
+                    ElseIf compression = 0 Then
                         If Not keep Then
-                            If Not SkipBlock(fs, packedLen) Then Return Nothing
+                            If Not SkipBlock(fs, CLng(rowBytes) * header.Height) Then Return Nothing
                             Continue For
                         End If
-                        If packed.Length < packedLen Then ReDim packed(packedLen - 1)
-                        If Not ReadExactly(fs, packed, packedLen) Then Return Nothing
-                        If Not UnpackBits(packed, packedLen, rowBuffer, rowBytes) Then Return Nothing
-                        StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
-                    Next
-                End If
-            Next
+                        For row = 0 To header.Height - 1
+                            If Not ReadExactly(fs, rowBuffer, rowBytes) Then Return Nothing
+                            StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
+                        Next
+                    Else
+                        For row = 0 To header.Height - 1
+                            Dim packedLen = rleRowLengths(channel * header.Height + row)
+                            If Not keep Then
+                                If Not SkipBlock(fs, packedLen) Then Return Nothing
+                                Continue For
+                            End If
+                            If packed.Length < packedLen Then ReDim packed(packedLen - 1)
+                            If Not ReadExactly(fs, packed, packedLen) Then Return Nothing
+                            If Not UnpackBits(packed, packedLen, rowBuffer, rowBytes) Then Return Nothing
+                            StoreRow(planes(channel), row, header.Width, rowBuffer, bytesPerSample)
+                        Next
+                    End If
+                Next
+            Finally
+                zip?.Dispose()
+            End Try
 
             Return ComposePlanes(header, planes, hasAlpha)
+        End Function
+
+        ''' <summary>Öffnet den Entpacker über der aktuellen Stelle der Datei. Der Aufrufer behält
+        ''' die Datei; geschlossen wird nur der Entpacker.</summary>
+        Private Shared Function OpenInflate(fs As FileStream) As Stream
+            Try
+                Dim start = fs.Position
+                Dim head(1) As Byte
+                If Not ReadExactly(fs, head, 2) Then Return Nothing
+                fs.Seek(start, SeekOrigin.Begin)
+                If LooksLikeZlib(head(0), head(1)) Then
+                    Return New Compression.ZLibStream(fs, Compression.CompressionMode.Decompress, leaveOpen:=True)
+                End If
+                Return New Compression.DeflateStream(fs, Compression.CompressionMode.Decompress, leaveOpen:=True)
+            Catch
+                Return Nothing
+            End Try
         End Function
 
         ''' Übernimmt eine dekomprimierte Zeile in die 8-Bit-Ebene; bei 16 Bit zählt das High-Byte
@@ -361,7 +402,9 @@ Namespace Services
             Return pixels * planes + pixels * 4 + pixels * 4
         End Function
 
-        Private Shared Function ReadExactly(fs As FileStream, buffer As Byte(), count As Integer) As Boolean
+        ''' <summary>Nimmt einen beliebigen Strom, nicht nur die Datei: bei ZIP wird aus dem
+        ''' Entpacker gelesen, und der ist kein FileStream.</summary>
+        Private Shared Function ReadExactly(fs As Stream, buffer As Byte(), count As Integer) As Boolean
             Dim total = 0
             While total < count
                 Dim n = fs.Read(buffer, total, count - total)
@@ -370,6 +413,47 @@ Namespace Services
             End While
             Return True
         End Function
+
+        ''' <summary>Sieht der Anfang nach einem zlib-Kopf aus? Untere vier Bit des ersten Bytes sind
+        ''' das Verfahren (8 = Deflate), und die beiden Bytes zusammen sind durch 31 teilbar.
+        '''
+        ''' Gebraucht wird das, weil manche Erzeuger den NACKTEN Deflate-Strom ablegen, ohne die zwei
+        ''' Kopfbytes. Die Prüfung kostet nichts und erspart den Fehlversuch.</summary>
+        Friend Shared Function LooksLikeZlib(first As Byte, second As Byte) As Boolean
+            If (first And &HF) <> 8 Then Return False
+            Return (CInt(first) * 256 + CInt(second)) Mod 31 = 0
+        End Function
+
+        ''' <summary>Macht die VORHERSAGE einer ZIP-Zeile rückgängig: dort steht in jedem Wert nicht
+        ''' der Wert selbst, sondern die Differenz zu seinem linken Nachbarn.
+        '''
+        ''' Zeilenweise, nie über die Fläche - sonst schleppte der erste Punkt einer Zeile den letzten
+        ''' der vorigen mit sich, und das Bild zöge sich schräg auseinander. Bei sechzehn Bit läuft
+        ''' die Rechnung über ganze Werte statt über Bytes; byteweise käme aus jedem Übertrag ein
+        ''' Fehler, der sich über die restliche Zeile fortpflanzt.
+        '''
+        ''' Gerechnet wird über Integer und mit einer Maske zurück. VB prüft Ganzzahlüberläufe von
+        ''' sich aus, und eine Summe über 255 wäre sonst kein Umlauf, sondern eine Ausnahme mitten
+        ''' im Entpacken.</summary>
+        Friend Shared Sub UndoPrediction(buffer As Byte(), offset As Integer, width As Integer,
+                                         bytesPerSample As Integer)
+            If buffer Is Nothing OrElse width < 2 Then Return
+            If bytesPerSample = 1 Then
+                For x = 1 To width - 1
+                    buffer(offset + x) = CByte((CInt(buffer(offset + x)) + CInt(buffer(offset + x - 1))) And &HFF)
+                Next
+                Return
+            End If
+            For x = 1 To width - 1
+                Dim here = offset + x * 2
+                Dim before = here - 2
+                Dim sum = ((CInt(buffer(here)) << 8) Or CInt(buffer(here + 1))) +
+                          ((CInt(buffer(before)) << 8) Or CInt(buffer(before + 1)))
+                sum = sum And &HFFFF
+                buffer(here) = CByte((sum >> 8) And &HFF)
+                buffer(here + 1) = CByte(sum And &HFF)
+            Next
+        End Sub
 
         Private Shared Function SkipBlock(fs As FileStream, length As Long) As Boolean
             If length < 0 OrElse fs.Position + length > fs.Length Then Return False
