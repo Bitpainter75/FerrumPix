@@ -284,6 +284,12 @@ jobs:
       # es die festen Downloadadressen ohne Not ab.
       #
       # Setzt einen Deploy-Key mit SCHREIBrechten voraus.
+      # Vor dem Push wird NEU AUFGESETZT. Der Runner hat seinen Stand beim Auschecken geholt,
+      # und bis hierher vergehen gut vierzehn Minuten - wer in dieser Zeit ins Build-Repo
+      # schiebt, laesst den Push scheitern. Genau das ist am 2026-08-15 passiert: der ganze Lauf
+      # war durch, die Pakete lagen draussen, und nur die beiden Merkposten blieben liegen.
+      # Der Versuch wird zweimal wiederholt, damit auch ein Schieben WAEHREND des Rebase nicht
+      # gleich das Ergebnis kostet.
       - name: Merkposten zurueckschreiben
         run: |
           cd packaging
@@ -291,4 +297,10 @@ jobs:
           git config user.email "ci@bitpainter.de"
           git add PUBLISHED-VERSION DOWNLOADS.md
           git diff --cached --quiet || git commit -m "Stand nach $(cat ../VERSION)"
-          git push
+          for versuch in 1 2 3; do
+            git pull --rebase --autostash origin main && git push && exit 0
+            echo "Push abgelehnt, Versuch $versuch von 3 - es wird neu aufgesetzt"
+            sleep 5
+          done
+          echo "::error::Merkposten liessen sich nicht zurueckschreiben"
+          exit 1
