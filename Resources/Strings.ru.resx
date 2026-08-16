@@ -7347,4 +7347,100 @@
   <data name="Symbole_werden_geladen_4792bfae" xml:space="preserve">
     <value>Загрузка символов</value>
   </data>
+  <data name="Auswahl_abgelegt_4bd4f8f6" xml:space="preserve">
+    <value>Выделение сохранено</value>
+  </data>
+  <data name="Die_abgelegte_Auswahl_passt_nicht_auf_dieses_Bil_dd6cf18d" xml:space="preserve">
+    <value>Сохранённое выделение не подходит к этому изображению</value>
+  </data>
+  <data name="Farbbereichsmaske_gesetzt_6377b0d0" xml:space="preserve">
+    <value>Маска цветового диапазона установлена</value>
+  </data>
+  <data name="Luminanzbereichsmaske_gesetzt_c3a89c9b" xml:space="preserve">
+    <value>Маска диапазона яркости установлена</value>
+  </data>
+  <data name="Adobe_Profil_erkannt_671ab7f9" xml:space="preserve">
+    <value>Обнаружен профиль Adobe: </value>
+  </data>
+  <data name="3D_Profildaten_sind_nicht_in_der_XMP_enthalten_19b7a3d0" xml:space="preserve">
+    <value> (данные 3D-профиля не содержатся в XMP)</value>
+  </data>
+  <data name="Zus_tzlich_anwenden_5f986a6e" xml:space="preserve">
+    <value>Применить дополнительно</value>
+  </data>
+  <data name="Adobe_Profile_werden_erkannt__ihre_3D_Daten_lieg_cca75b41" xml:space="preserve">
+    <value>Профили Adobe распознаются; их 3D-данные обычно не содержатся в XMP.</value>
+  </data>
+  <data name="Farbs_ume_korrigieren_6ff954e8" xml:space="preserve">
+    <value>Исправить цветные ореолы</value>
+  </data>
+  <data name="Ausrichten___Perspektive_b418e1a5" xml:space="preserve">
+    <value>Выравнивание и перспектива</value>
+  </data>
+  <data name="bernimmt_die_im_XMP_aktivierte_Objektivkorrektur_a336f668" xml:space="preserve">
+    <value>Применяет коррекцию объектива, включённую в XMP, если доступны подходящие данные калибровки</value>
+  </data>
+  <data name="Korrigiert_Farbs_ume_an_kontrastreichen_Kanten_4bcd0c95" xml:space="preserve">
+    <value>Исправляет цветные ореолы на контрастных границах</value>
+  </data>
+  <data name="bernimmt_Begradigen_sowie_horizontale__vertikale_b24e0cca" xml:space="preserve">
+    <value>Применяет выравнивание, а также горизонтальную, вертикальную коррекцию и коррекцию соотношения сторон</value>
+  </data>
+  <data name="bernimmt_den_in_Lightroom_gespeicherten_Bildauss_3a5b2c2a" xml:space="preserve">
+    <value>Применяет кадрирование, сохранённое в Lightroom</value>
+  </data>
+  <data name="Auswahl_verwerfen_20b7f200" xml:space="preserve">
+    <value>Отменить выделение</value>
+  </data>
+  <data name="Eine_Farbe_im_Bild_anklicken___hnliche_Farben_we_9373353e" xml:space="preserve">
+    <value>Щёлкните цвет на изображении; похожие цвета будут выделены везде.</value>
+  </data>
+  <data name="Zusammenh_ngend_5ac6e6ed" xml:space="preserve">
+    <value>Связанные</value>
+  </data>
+  <data name="Pinsel__Auswahl_frei_ins_Bild_malen___Hinzuf_gen_a95374d5" xml:space="preserve">
+    <value>Кисть: свободно нарисуйте выделение на изображении — добавляйте и вычитайте режимом ниже</value>
+  </data>
+  <data name="Farbbereich__Farbe_anklicken_und__hnliche_Farben_6fbd485c" xml:space="preserve">
+    <value>Цветовой диапазон: щёлкните цвет и выберите похожие цвета по всему изображению</value>
+  </data>
+  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_8648a335" xml:space="preserve">
+    <value>Диапазон яркости: выберите тени, средние тона или света</value>
+  </data>
+  <data name="L_sst_die_Auswahl_um_die_Kante_herum_wachsen_ode_41dec337" xml:space="preserve">
+    <value>Расширяет или сужает выделение вокруг его края. Используйте это, чтобы вернуть край, который модель выделила слишком узко.</value>
+  </data>
+  <data name="Tauscht_gew_hlte_und_freie_Seite_ea4e06a7" xml:space="preserve">
+    <value>Меняет местами выделенные и свободные области</value>
+  </data>
+  <data name="Hebt_die_Auswahl_auf__STRG_D_oder_ESC_2df1c8f3" xml:space="preserve">
+    <value>Снимает выделение (Ctrl+D или Esc)</value>
+  </data>
+  <data name="Legt_eine_Abschrift_dieser_Auswahl_ab_6a040196" xml:space="preserve">
+    <value>Сохраняет копию этого выделения</value>
+  </data>
+  <data name="Setzt_die_abgelegte_Auswahl_wieder_ein__Eine_vor_5c2d2553" xml:space="preserve">
+    <value>Восстанавливает сохранённое выделение. Существующее выделение будет заменено.</value>
+  </data>
+  <data name="W_hlt_nur_die_zusammenh_ngende_Fl_che_am_Klickpu_fffcf9cf" xml:space="preserve">
+    <value>Выбирает только связанную область в точке щелчка вместо совпадающих цветов по всему изображению</value>
+  </data>
+  <data name="Eine_Farbe_im_Bild_anklicken__Anders_als_der_Zau_2678e0ea" xml:space="preserve">
+    <value>Щёлкните цвет на изображении. В отличие от волшебной палочки, один и тот же цветовой диапазон выбирается по всему изображению.</value>
+  </data>
+  <data name="W_hlt_alle_Bildbereiche_innerhalb_des_Helligkeit_b9f3d596" xml:space="preserve">
+    <value>Выбирает все области изображения в диапазоне яркости. Маска обновляется при изменении ползунков.</value>
+  </data>
+  <data name="Farbbereich__Farbe_im_Bild_anklicken___hnliche_F_72874557" xml:space="preserve">
+    <value>Цветовой диапазон: щёлкните цвет на изображении; похожие цвета маскируются по всему изображению</value>
+  </data>
+  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_f4017429" xml:space="preserve">
+    <value>Диапазон яркости: маскируйте тени, средние тона или света по яркости</value>
+  </data>
+  <data name="Aus_der_Farbbereichsmaske_eine_Maskenebene_erste_08a03120" xml:space="preserve">
+    <value>Создать слой маски из маски цветового диапазона</value>
+  </data>
+  <data name="Aus_der_Luminanzbereichsmaske_eine_Maskenebene_e_9e087404" xml:space="preserve">
+    <value>Создать слой маски из маски диапазона яркости</value>
+  </data>
 </root>

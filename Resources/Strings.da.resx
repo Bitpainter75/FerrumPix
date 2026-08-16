@@ -7347,4 +7347,100 @@
   <data name="Symbole_werden_geladen_4792bfae" xml:space="preserve">
     <value>Symboler indlæses</value>
   </data>
+  <data name="Auswahl_abgelegt_4bd4f8f6" xml:space="preserve">
+    <value>Markering gemt</value>
+  </data>
+  <data name="Die_abgelegte_Auswahl_passt_nicht_auf_dieses_Bil_dd6cf18d" xml:space="preserve">
+    <value>Den gemte markering passer ikke til dette billede</value>
+  </data>
+  <data name="Farbbereichsmaske_gesetzt_6377b0d0" xml:space="preserve">
+    <value>Farveområdemaske indstillet</value>
+  </data>
+  <data name="Luminanzbereichsmaske_gesetzt_c3a89c9b" xml:space="preserve">
+    <value>Luminansområdemaske indstillet</value>
+  </data>
+  <data name="Adobe_Profil_erkannt_671ab7f9" xml:space="preserve">
+    <value>Adobe-profil fundet: </value>
+  </data>
+  <data name="3D_Profildaten_sind_nicht_in_der_XMP_enthalten_19b7a3d0" xml:space="preserve">
+    <value> (3D-profildata findes ikke i XMP)</value>
+  </data>
+  <data name="Zus_tzlich_anwenden_5f986a6e" xml:space="preserve">
+    <value>Anvend også</value>
+  </data>
+  <data name="Adobe_Profile_werden_erkannt__ihre_3D_Daten_lieg_cca75b41" xml:space="preserve">
+    <value>Adobe-profiler genkendes; deres 3D-data findes som regel ikke i XMP-filen.</value>
+  </data>
+  <data name="Farbs_ume_korrigieren_6ff954e8" xml:space="preserve">
+    <value>Ret farvekanter</value>
+  </data>
+  <data name="Ausrichten___Perspektive_b418e1a5" xml:space="preserve">
+    <value>Ret op og perspektiv</value>
+  </data>
+  <data name="bernimmt_die_im_XMP_aktivierte_Objektivkorrektur_a336f668" xml:space="preserve">
+    <value>Anvender den objektivkorrektion, der er aktiveret i XMP-filen, når passende måledata findes</value>
+  </data>
+  <data name="Korrigiert_Farbs_ume_an_kontrastreichen_Kanten_4bcd0c95" xml:space="preserve">
+    <value>Retter farvekanter ved kontrastfyldte kanter</value>
+  </data>
+  <data name="bernimmt_Begradigen_sowie_horizontale__vertikale_b24e0cca" xml:space="preserve">
+    <value>Anvender opretning samt vandrette, lodrette og billedformatkorrektioner</value>
+  </data>
+  <data name="bernimmt_den_in_Lightroom_gespeicherten_Bildauss_3a5b2c2a" xml:space="preserve">
+    <value>Anvender det beskæringsudsnit, der er gemt i Lightroom</value>
+  </data>
+  <data name="Auswahl_verwerfen_20b7f200" xml:space="preserve">
+    <value>Kassér markering</value>
+  </data>
+  <data name="Eine_Farbe_im_Bild_anklicken___hnliche_Farben_we_9373353e" xml:space="preserve">
+    <value>Klik på en farve i billedet; lignende farver vælges overalt.</value>
+  </data>
+  <data name="Zusammenh_ngend_5ac6e6ed" xml:space="preserve">
+    <value>Sammenhængende</value>
+  </data>
+  <data name="Pinsel__Auswahl_frei_ins_Bild_malen___Hinzuf_gen_a95374d5" xml:space="preserve">
+    <value>Pensel: mal en markering frit i billedet — tilføj og træk fra med tilstanden nedenfor</value>
+  </data>
+  <data name="Farbbereich__Farbe_anklicken_und__hnliche_Farben_6fbd485c" xml:space="preserve">
+    <value>Farveområde: klik på en farve, og vælg lignende farver i hele billedet</value>
+  </data>
+  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_8648a335" xml:space="preserve">
+    <value>Luminansområde: vælg skygger, mellemtoner eller højlys</value>
+  </data>
+  <data name="L_sst_die_Auswahl_um_die_Kante_herum_wachsen_ode_41dec337" xml:space="preserve">
+    <value>Udvider eller formindsker markeringen omkring kanten. Brug det til at hente en kant tilbage, som modellen har valgt for snævert.</value>
+  </data>
+  <data name="Tauscht_gew_hlte_und_freie_Seite_ea4e06a7" xml:space="preserve">
+    <value>Bytter mellem markerede og frie områder</value>
+  </data>
+  <data name="Hebt_die_Auswahl_auf__STRG_D_oder_ESC_2df1c8f3" xml:space="preserve">
+    <value>Fjerner markeringen (Ctrl+D eller Esc)</value>
+  </data>
+  <data name="Legt_eine_Abschrift_dieser_Auswahl_ab_6a040196" xml:space="preserve">
+    <value>Gemmer en kopi af denne markering</value>
+  </data>
+  <data name="Setzt_die_abgelegte_Auswahl_wieder_ein__Eine_vor_5c2d2553" xml:space="preserve">
+    <value>Gendanner den gemte markering. En eksisterende erstattes.</value>
+  </data>
+  <data name="W_hlt_nur_die_zusammenh_ngende_Fl_che_am_Klickpu_fffcf9cf" xml:space="preserve">
+    <value>Vælger kun det sammenhængende område ved klikpunktet i stedet for matchende farver i hele billedet</value>
+  </data>
+  <data name="Eine_Farbe_im_Bild_anklicken__Anders_als_der_Zau_2678e0ea" xml:space="preserve">
+    <value>Klik på en farve i billedet. I modsætning til tryllestaven vælges det samme farveområde i hele billedet.</value>
+  </data>
+  <data name="W_hlt_alle_Bildbereiche_innerhalb_des_Helligkeit_b9f3d596" xml:space="preserve">
+    <value>Vælger alle billedområder inden for lysstyrkeområdet. Masken opdateres, når skyderne ændres.</value>
+  </data>
+  <data name="Farbbereich__Farbe_im_Bild_anklicken___hnliche_F_72874557" xml:space="preserve">
+    <value>Farveområde: klik på en farve i billedet; lignende farver maskeres i hele billedet</value>
+  </data>
+  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_f4017429" xml:space="preserve">
+    <value>Luminansområde: masker skygger, mellemtoner eller højlys efter lysstyrke</value>
+  </data>
+  <data name="Aus_der_Farbbereichsmaske_eine_Maskenebene_erste_08a03120" xml:space="preserve">
+    <value>Opret et maskelag fra farveområdemasken</value>
+  </data>
+  <data name="Aus_der_Luminanzbereichsmaske_eine_Maskenebene_e_9e087404" xml:space="preserve">
+    <value>Opret et maskelag fra luminansområdemasken</value>
+  </data>
 </root>

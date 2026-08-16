@@ -21,6 +21,7 @@ Imports System.Threading.Tasks
 Imports System.Linq
 Imports System.Collections.Generic
 Imports System.IO
+Imports System.Runtime.InteropServices
 Imports SkiaSharp
 Imports Svg.Skia
 
@@ -3083,32 +3084,7 @@ Namespace Views
             Dim centers = _maskBrushPoints.Select(Function(p) New Avalonia.Point(
                 imageRect.Left + imageRect.Width * p.X / 100.0,
                 imageRect.Top + imageRect.Height * p.Y / 100.0)).ToList()
-            Dim boundary As New List(Of Avalonia.Point)()
-
-            If centers.Count = 1 Then
-                Const segments As Integer = 24
-                For i = 0 To segments - 1
-                    Dim angle = 2.0 * Math.PI * i / segments
-                    boundary.Add(New Avalonia.Point(centers(0).X + radius * Math.Cos(angle),
-                                                    centers(0).Y + radius * Math.Sin(angle)))
-                Next
-            Else
-                Dim left As New List(Of Avalonia.Point)()
-                Dim right As New List(Of Avalonia.Point)()
-                For i = 0 To centers.Count - 1
-                    Dim before = centers(Math.Max(0, i - 1))
-                    Dim after = centers(Math.Min(centers.Count - 1, i + 1))
-                    Dim dx = after.X - before.X, dy = after.Y - before.Y
-                    Dim length = Math.Sqrt(dx * dx + dy * dy)
-                    If length < 0.001 Then Continue For
-                    Dim nx = -dy / length * radius, ny = dx / length * radius
-                    left.Add(New Avalonia.Point(centers(i).X + nx, centers(i).Y + ny))
-                    right.Add(New Avalonia.Point(centers(i).X - nx, centers(i).Y - ny))
-                Next
-                boundary.AddRange(left)
-                right.Reverse()
-                boundary.AddRange(right)
-            End If
+            Dim boundary = BuildBrushUnionOutline(centers, radius)
             If boundary.Count < 3 Then Return
 
             Dim minX = boundary.Min(Function(p) p.X), maxX = boundary.Max(Function(p) p.X)
@@ -3123,6 +3099,126 @@ Namespace Views
             overlay.Width = Math.Max(1, maxX - minX)
             overlay.Height = Math.Max(1, maxY - minY)
         End Sub
+
+        ''' <summary>Die sichtbare Aussenkante der Vereinigung aller Pinselstempel.
+        '''
+        ''' Ein links/rechts versetzter Linienzug funktioniert nur, solange sich der Zug nicht
+        ''' selbst kreuzt. Bei einer Schleife zeichnet er sonst auch alle inneren, bereits
+        ''' übermalten Kanten. Hier malt Skia deshalb zunächst genau dieselben runden Kapseln wie
+        ''' der Pinsel in ein kleines Alpha-Raster. Aus dessen freien Kanten wird die größte
+        ''' geschlossene Schleife gelesen: das ist die alleinige, äußere Ameisenlinie.</summary>
+        Private Function BuildBrushUnionOutline(centers As List(Of Avalonia.Point), radius As Double) As List(Of Avalonia.Point)
+            Dim empty As New List(Of Avalonia.Point)()
+            If centers Is Nothing OrElse centers.Count = 0 OrElse radius <= 0 Then Return empty
+
+            Const cellSize As Integer = 2
+            Dim margin = radius + cellSize * 2
+            Dim minX = centers.Min(Function(p) p.X) - margin
+            Dim minY = centers.Min(Function(p) p.Y) - margin
+            Dim maxX = centers.Max(Function(p) p.X) + margin
+            Dim maxY = centers.Max(Function(p) p.Y) + margin
+            Dim width = Math.Max(1, CInt(Math.Ceiling((maxX - minX) / cellSize)))
+            Dim height = Math.Max(1, CInt(Math.Ceiling((maxY - minY) / cellSize)))
+
+            ' Eine Vorschau darf keinen riesigen Speicherblock anfordern. Bei sehr großen
+            ' Bildschirm-Zooms wird die Rasterauflösung etwas gröber; die Kontur bleibt trotzdem
+            ' geschlossen und wesentlich genauer als die bisherigen Kreuzungsschlaufen.
+            Const maxCells As Integer = 600_000
+            If CLng(width) * height > maxCells Then
+                Dim downscale = Math.Sqrt(CLng(width) * height / CDbl(maxCells))
+                width = Math.Max(1, CInt(Math.Ceiling(width / downscale)))
+                height = Math.Max(1, CInt(Math.Ceiling(height / downscale)))
+            End If
+            Dim scaleX = (maxX - minX) / width
+            Dim scaleY = (maxY - minY) / height
+            Dim scale = Math.Max(scaleX, scaleY)
+            width = Math.Max(1, CInt(Math.Ceiling((maxX - minX) / scale)))
+            height = Math.Max(1, CInt(Math.Ceiling((maxY - minY) / scale)))
+
+            Try
+                Using bitmap As New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
+                    Using canvas As New SKCanvas(bitmap)
+                        canvas.Clear(SKColors.Transparent)
+                        Using paint As New SKPaint With {
+                            .Color = SKColors.White,
+                            .Style = SKPaintStyle.Stroke,
+                            .StrokeWidth = CSng(radius * 2.0 / scale),
+                            .StrokeCap = SKStrokeCap.Round,
+                            .StrokeJoin = SKStrokeJoin.Round,
+                            .IsAntialias = False
+                        }
+                            Using path As New SKPath()
+                                path.MoveTo(CSng((centers(0).X - minX) / scale), CSng((centers(0).Y - minY) / scale))
+                                For i = 1 To centers.Count - 1
+                                    path.LineTo(CSng((centers(i).X - minX) / scale), CSng((centers(i).Y - minY) / scale))
+                                Next
+                                canvas.DrawPath(path, paint)
+                            End Using
+                        End Using
+                    End Using
+
+                    Dim bytes(bitmap.RowBytes * height - 1) As Byte
+                    Marshal.Copy(bitmap.GetPixels(), bytes, 0, bytes.Length)
+                    Return TraceLargestRasterOutline(bytes, bitmap.RowBytes, width, height, scale, minX, minY)
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.BrushOutline", ex)
+                Return empty
+            End Try
+        End Function
+
+        Private Function TraceLargestRasterOutline(bytes As Byte(), stride As Integer, rasterWidth As Integer, rasterHeight As Integer,
+                                                   scale As Double, originX As Double, originY As Double) As List(Of Avalonia.Point)
+            Dim edges As New Dictionary(Of Long, Long)()
+            For y As Integer = 0 To rasterHeight - 1
+                For x As Integer = 0 To rasterWidth - 1
+                    If bytes(y * stride + x * 4 + 3) = 0 Then Continue For
+                    If y = 0 OrElse bytes((y - 1) * stride + x * 4 + 3) = 0 Then AddOutlineEdge(edges, x, y, x + 1, y)
+                    If x = rasterWidth - 1 OrElse bytes(y * stride + (x + 1) * 4 + 3) = 0 Then AddOutlineEdge(edges, x + 1, y, x + 1, y + 1)
+                    If y = rasterHeight - 1 OrElse bytes((y + 1) * stride + x * 4 + 3) = 0 Then AddOutlineEdge(edges, x + 1, y + 1, x, y + 1)
+                    If x = 0 OrElse bytes(y * stride + (x - 1) * 4 + 3) = 0 Then AddOutlineEdge(edges, x, y + 1, x, y)
+                Next
+            Next
+
+            Dim best As List(Of Long) = Nothing, bestArea As Double = 0
+            While edges.Count > 0
+                Dim start = edges.Keys.First(), current = start
+                Dim loopPoints As New List(Of Long)()
+                Do
+                    loopPoints.Add(current)
+                    Dim following As Long
+                    If Not edges.TryGetValue(current, following) Then Exit Do
+                    edges.Remove(current)
+                    current = following
+                Loop While current <> start AndAlso loopPoints.Count <= rasterWidth * rasterHeight * 2
+                If current <> start OrElse loopPoints.Count < 3 Then Continue While
+                Dim area As Double = 0
+                For i = 0 To loopPoints.Count - 1
+                    Dim a = loopPoints(i), b = loopPoints((i + 1) Mod loopPoints.Count)
+                    area += CDbl(OutlineX(a)) * OutlineY(b) - CDbl(OutlineX(b)) * OutlineY(a)
+                Next
+                If Math.Abs(area) > bestArea Then bestArea = Math.Abs(area) : best = loopPoints
+            End While
+            If best Is Nothing Then Return New List(Of Avalonia.Point)()
+            Return best.Select(Function(p) New Avalonia.Point(originX + OutlineX(p) * scale,
+                                                              originY + OutlineY(p) * scale)).ToList()
+        End Function
+
+        Private Shared Sub AddOutlineEdge(edges As Dictionary(Of Long, Long), x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer)
+            edges(OutlinePointKey(x1, y1)) = OutlinePointKey(x2, y2)
+        End Sub
+
+        Private Shared Function OutlinePointKey(x As Integer, y As Integer) As Long
+            Return (CLng(y) << 32) Or CUInt(x)
+        End Function
+
+        Private Shared Function OutlineX(pointKey As Long) As Integer
+            Return CInt(pointKey And &HFFFFFFFFL)
+        End Function
+
+        Private Shared Function OutlineY(pointKey As Long) As Integer
+            Return CInt(pointKey >> 32)
+        End Function
 
         Private Sub CommitMaskBrushStroke()
             Dim vm = TryCast(DataContext, EditorViewModel)

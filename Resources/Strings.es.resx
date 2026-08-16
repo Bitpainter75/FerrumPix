@@ -7307,4 +7307,100 @@
   <data name="Symbole_werden_geladen_4792bfae" xml:space="preserve">
     <value>Cargando símbolos</value>
   </data>
+  <data name="Auswahl_abgelegt_4bd4f8f6" xml:space="preserve">
+    <value>Selección guardada</value>
+  </data>
+  <data name="Die_abgelegte_Auswahl_passt_nicht_auf_dieses_Bil_dd6cf18d" xml:space="preserve">
+    <value>La selección guardada no se ajusta a esta imagen</value>
+  </data>
+  <data name="Farbbereichsmaske_gesetzt_6377b0d0" xml:space="preserve">
+    <value>Máscara de rango de color establecida</value>
+  </data>
+  <data name="Luminanzbereichsmaske_gesetzt_c3a89c9b" xml:space="preserve">
+    <value>Máscara de rango de luminancia establecida</value>
+  </data>
+  <data name="Adobe_Profil_erkannt_671ab7f9" xml:space="preserve">
+    <value>Perfil Adobe detectado: </value>
+  </data>
+  <data name="3D_Profildaten_sind_nicht_in_der_XMP_enthalten_19b7a3d0" xml:space="preserve">
+    <value> (los datos de perfil 3D no están incluidos en el XMP)</value>
+  </data>
+  <data name="Zus_tzlich_anwenden_5f986a6e" xml:space="preserve">
+    <value>Aplicar adicionalmente</value>
+  </data>
+  <data name="Adobe_Profile_werden_erkannt__ihre_3D_Daten_lieg_cca75b41" xml:space="preserve">
+    <value>Se detectan perfiles Adobe; sus datos 3D no suelen estar incluidos en el XMP.</value>
+  </data>
+  <data name="Farbs_ume_korrigieren_6ff954e8" xml:space="preserve">
+    <value>Corregir franjas de color</value>
+  </data>
+  <data name="Ausrichten___Perspektive_b418e1a5" xml:space="preserve">
+    <value>Enderezar y perspectiva</value>
+  </data>
+  <data name="bernimmt_die_im_XMP_aktivierte_Objektivkorrektur_a336f668" xml:space="preserve">
+    <value>Aplica la corrección de lente activada en el XMP cuando hay datos de calibración adecuados</value>
+  </data>
+  <data name="Korrigiert_Farbs_ume_an_kontrastreichen_Kanten_4bcd0c95" xml:space="preserve">
+    <value>Corrige franjas de color en bordes de alto contraste</value>
+  </data>
+  <data name="bernimmt_Begradigen_sowie_horizontale__vertikale_b24e0cca" xml:space="preserve">
+    <value>Aplica el enderezado y las correcciones horizontal, vertical y de relación de aspecto</value>
+  </data>
+  <data name="bernimmt_den_in_Lightroom_gespeicherten_Bildauss_3a5b2c2a" xml:space="preserve">
+    <value>Aplica el recorte guardado en Lightroom</value>
+  </data>
+  <data name="Auswahl_verwerfen_20b7f200" xml:space="preserve">
+    <value>Descartar selección</value>
+  </data>
+  <data name="Eine_Farbe_im_Bild_anklicken___hnliche_Farben_we_9373353e" xml:space="preserve">
+    <value>Haz clic en un color de la imagen; los colores similares se seleccionan en todas partes.</value>
+  </data>
+  <data name="Zusammenh_ngend_5ac6e6ed" xml:space="preserve">
+    <value>Contiguo</value>
+  </data>
+  <data name="Pinsel__Auswahl_frei_ins_Bild_malen___Hinzuf_gen_a95374d5" xml:space="preserve">
+    <value>Pincel: pinta libremente una selección en la imagen; añade y resta con el modo inferior</value>
+  </data>
+  <data name="Farbbereich__Farbe_anklicken_und__hnliche_Farben_6fbd485c" xml:space="preserve">
+    <value>Rango de color: haz clic en un color y selecciona colores similares en toda la imagen</value>
+  </data>
+  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_8648a335" xml:space="preserve">
+    <value>Rango de luminancia: selecciona sombras, tonos medios o luces</value>
+  </data>
+  <data name="L_sst_die_Auswahl_um_die_Kante_herum_wachsen_ode_41dec337" xml:space="preserve">
+    <value>Amplía o reduce la selección alrededor de su borde. Úsalo para recuperar un borde que el modelo seleccionó demasiado estrecho.</value>
+  </data>
+  <data name="Tauscht_gew_hlte_und_freie_Seite_ea4e06a7" xml:space="preserve">
+    <value>Intercambia las áreas seleccionadas y libres</value>
+  </data>
+  <data name="Hebt_die_Auswahl_auf__STRG_D_oder_ESC_2df1c8f3" xml:space="preserve">
+    <value>Borra la selección (Ctrl+D o Esc)</value>
+  </data>
+  <data name="Legt_eine_Abschrift_dieser_Auswahl_ab_6a040196" xml:space="preserve">
+    <value>Guarda una copia de esta selección</value>
+  </data>
+  <data name="Setzt_die_abgelegte_Auswahl_wieder_ein__Eine_vor_5c2d2553" xml:space="preserve">
+    <value>Restaura la selección guardada. Se sustituye una existente.</value>
+  </data>
+  <data name="W_hlt_nur_die_zusammenh_ngende_Fl_che_am_Klickpu_fffcf9cf" xml:space="preserve">
+    <value>Selecciona solo el área conectada en el punto pulsado en lugar de colores coincidentes en toda la imagen</value>
+  </data>
+  <data name="Eine_Farbe_im_Bild_anklicken__Anders_als_der_Zau_2678e0ea" xml:space="preserve">
+    <value>Haz clic en un color de la imagen. A diferencia de la varita mágica, se selecciona el mismo rango de color en toda la imagen.</value>
+  </data>
+  <data name="W_hlt_alle_Bildbereiche_innerhalb_des_Helligkeit_b9f3d596" xml:space="preserve">
+    <value>Selecciona todas las áreas de la imagen dentro del rango de brillo. La máscara se actualiza al cambiar los controles.</value>
+  </data>
+  <data name="Farbbereich__Farbe_im_Bild_anklicken___hnliche_F_72874557" xml:space="preserve">
+    <value>Rango de color: haz clic en un color de la imagen; los colores similares se enmascaran en toda la imagen</value>
+  </data>
+  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_f4017429" xml:space="preserve">
+    <value>Rango de luminancia: enmascara sombras, tonos medios o luces según el brillo</value>
+  </data>
+  <data name="Aus_der_Farbbereichsmaske_eine_Maskenebene_erste_08a03120" xml:space="preserve">
+    <value>Crear una capa de máscara a partir de la máscara de rango de color</value>
+  </data>
+  <data name="Aus_der_Luminanzbereichsmaske_eine_Maskenebene_e_9e087404" xml:space="preserve">
+    <value>Crear una capa de máscara a partir de la máscara de rango de luminancia</value>
+  </data>
 </root>

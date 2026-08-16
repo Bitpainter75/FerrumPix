@@ -43,7 +43,7 @@
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Ellipse"
                         Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Ellipse}"
                         ToolTip.Tip="Kreis/Ellipse aufziehen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/oval.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle.svg" Width="16" Height="16" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Lasso"
