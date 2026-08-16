@@ -1325,6 +1325,17 @@ Namespace Services
                                                                ByRef rectPx As SKRectI) As SKBitmap
             rectPx = SKRectI.Empty
             If mask Is Nothing OrElse adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
+
+            ' Der bei weitem haeufigste Fall: eine einzige, gemalte Pinselmaske auf einem Bild ohne
+            ' Geometrieaenderung. Das PNG liegt bereits exakt im Anzeige- (= Quell-)raum und ist
+            ' auf seine belegte Flaeche beschnitten. Es erst auf ein 20/45-MP-Vollbild aufzublasen,
+            ' dann jeden Bildpunkt rueckzuprojezieren und danach wieder auf denselben kleinen
+            ' Ausschnitt zu schneiden, machte das erneute Anklicken selbst einer 300x300-Maske
+            ' sekundenlang. Die Anzahl der Striche ist fuer die fertige Alpha-Maske unerheblich;
+            ' entscheidend ist, dass wir ihren kompakten Raster direkt weiterreichen.
+            Dim direct = TryDecodeDirectSelectionMask(mask, adj, rectPx)
+            If direct IsNot Nothing Then Return direct
+
             Dim displaySize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
             If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
 
@@ -1375,6 +1386,54 @@ Namespace Services
             Finally
                 decoded?.Dispose()
             End Try
+        End Function
+
+        ''' <summary>Liefert das kompakte Raster einer einfachen gemalten Maske direkt. Jede
+        ''' Geometrie, Umkehrung oder mehrere Bestandteile fallen bewusst auf den allgemeinen Weg
+        ''' zurueck, weil nur der garantiert dieselbe zusammengesetzte Form erzeugen kann.</summary>
+        Private Shared Function TryDecodeDirectSelectionMask(mask As ImageMask, adj As ImageAdjustments,
+                                                              ByRef rectPx As SKRectI) As SKBitmap
+            If mask Is Nothing OrElse adj Is Nothing Then Return Nothing
+            If mask.IsDisabled OrElse mask.Inverted OrElse mask.InvertResult OrElse Not mask.PrimaryVisible Then Return Nothing
+            If Not String.IsNullOrWhiteSpace(mask.Kind) OrElse mask.HasBrushCorrection Then Return Nothing
+            If mask.ExtraComponents IsNot Nothing AndAlso mask.ExtraComponents.Count <> 0 Then Return Nothing
+            If String.IsNullOrWhiteSpace(mask.PngBase64) OrElse mask.Right <= mask.Left OrElse mask.Bottom <= mask.Top Then Return Nothing
+            If mask.SourceWidthPixels <> adj.SourceWidthPixels OrElse mask.SourceHeightPixels <> adj.SourceHeightPixels Then Return Nothing
+            If Not HasIdentityMaskGeometry(adj) Then Return Nothing
+
+            Try
+                Dim decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
+                If decoded Is Nothing Then Return Nothing
+                If decoded.ColorType <> SKColorType.Alpha8 OrElse decoded.Width <> mask.Right - mask.Left OrElse
+                   decoded.Height <> mask.Bottom - mask.Top Then
+                    decoded.Dispose()
+                    Return Nothing
+                End If
+                rectPx = New SKRectI(mask.Left, mask.Top, mask.Right, mask.Bottom)
+                Return decoded
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Bei identischer Geometrie sind Quell- und Anzeige-Pixel gleich. Diese enge
+        ''' Pruefung ist absichtlich konservativ: im Zweifel nutzt der Aufrufer die vollstaendige
+        ''' Projektion, nie eine falsch platzierte Maske.</summary>
+        Private Shared Function HasIdentityMaskGeometry(adj As ImageAdjustments) As Boolean
+            Return adj.CropLeftPercent = 0 AndAlso adj.CropTopPercent = 0 AndAlso
+                   adj.CropRightPercent = 0 AndAlso adj.CropBottomPercent = 0 AndAlso
+                   adj.RotationDegrees = 0 AndAlso adj.StraightenDegrees = 0 AndAlso
+                   Not adj.FlipHorizontal AndAlso Not adj.FlipVertical AndAlso
+                   adj.PerspectiveHorizontal = 0 AndAlso adj.PerspectiveVertical = 0 AndAlso
+                   adj.PerspectiveAspect = 0 AndAlso adj.PerspectiveScale = 0 AndAlso
+                   adj.PerspectiveCorner0X = 0 AndAlso adj.PerspectiveCorner0Y = 0 AndAlso
+                   adj.PerspectiveCorner1X = 0 AndAlso adj.PerspectiveCorner1Y = 0 AndAlso
+                   adj.PerspectiveCorner2X = 0 AndAlso adj.PerspectiveCorner2Y = 0 AndAlso
+                   adj.PerspectiveCorner3X = 0 AndAlso adj.PerspectiveCorner3Y = 0 AndAlso
+                   (adj.ImageWarp Is Nothing OrElse adj.ImageWarp.IsEmpty) AndAlso
+                   adj.ResizeWidth <= 0 AndAlso adj.ResizeHeight <= 0 AndAlso adj.ResizeScalePercent <= 0 AndAlso
+                   adj.CanvasWidth <= 0 AndAlso adj.CanvasHeight <= 0 AndAlso
+                   String.IsNullOrEmpty(adj.UpscaleModel)
         End Function
 
         ''' <summary>Baut eine ImageMask (Quellraum) aus einem vollbildgroßen Alpha-Puffer: schneidet auf

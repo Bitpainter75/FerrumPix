@@ -2092,10 +2092,12 @@ Namespace Views
                         End If
                         e.Handled = True
                         Return
-                    ElseIf AllowsObjectMarquee(vm) Then
+                    ElseIf AllowsObjectMarquee(vm) AndAlso Not (vm.HasActiveSelection AndAlso
+                                                                  IsPointInsideSelection(rawPos, imageRect, vm)) Then
                         ' Untermodus "Verschieben": ein Zug auf freier Fläche zieht das OBJEKT-Auswahl-
                         ' rechteck auf und markiert alles, was es berührt. Ein Klick ohne Zug hebt wie
-                        ' bisher die Auswahl auf (das entscheidet die Zugschwelle beim Loslassen).
+                        ' bisher die Auswahl auf (das entscheidet die Zugschwelle beim Loslassen). Eine
+                        ' vorhandene Auswahl hat Vorrang und wird direkt an ihrer Form verschoben.
                         ' Die Bühne verschiebt man hier weiterhin mit der RECHTEN Maustaste.
                         BeginObjectMarquee(e.GetPosition(canvas))
                         e.Pointer.Capture(canvas)

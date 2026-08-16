@@ -483,6 +483,7 @@ Namespace ViewModels
         Private _selectionMoveUndoSnapshot As ImageAdjustments = Nothing
         Private _selectionMoveStartXPercent As Double
         Private _selectionMoveStartYPercent As Double
+        Private _selectionMoveStartMaskRect As SKRectI = SKRectI.Empty
         ' Es gibt weiterhin höchstens EINE aktive Auswahl. Bereits abgeschlossene lokale Korrekturen
         ' behalten ihre eigenen SourceSpace-Masken jedoch im Dokument und bleiben dadurch stapelbar.
         Private ReadOnly _imageMasks As New List(Of ImageMask)()
@@ -9222,6 +9223,7 @@ Namespace ViewModels
             _selectionMoveUndoSnapshot = GetCurrentAdjustments()
             _selectionMoveStartXPercent = _selectionXPercent
             _selectionMoveStartYPercent = _selectionYPercent
+            _selectionMoveStartMaskRect = _selectionMaskRect
         End Sub
 
         Public Sub CommitSelectionMoveTransaction()
@@ -9229,14 +9231,23 @@ Namespace ViewModels
             Dim changed = Math.Abs(_selectionXPercent - _selectionMoveStartXPercent) > 0.0001 OrElse
                           Math.Abs(_selectionYPercent - _selectionMoveStartYPercent) > 0.0001
             If changed Then
+                ' Auch eine als AUSWAHLEBENE geöffnete Maske wird in diesem Pfad gezogen. Ihre
+                ' neue Lage muss anschließend zurück in die Ebene, sonst sprang sie beim nächsten
+                ' Anwählen wieder an die alte Stelle zurück.
+                If _editingLayerMaskId <> "" AndAlso Not WriteSelectionMaskBackToLayer() Then
+                    MoveEditedMaskComponents(_selectionMaskRect.Left - _selectionMoveStartMaskRect.Left,
+                                             _selectionMaskRect.Top - _selectionMoveStartMaskRect.Top)
+                End If
                 _undoStack.Push(New UndoEntry With {.Adjustments = _selectionMoveUndoSnapshot})
                 _lastPushedUndoEntry = Nothing
                 ClearRedoStack()
                 AddHistoryEntry(LocalizationService.T("Auswahl verschoben"))
                 Me.RaisePropertyChanged(NameOf(CanUndo))
                 Me.RaisePropertyChanged(NameOf(CanRedo))
+                SchedulePreviewUpdate()
             End If
             _selectionMoveUndoSnapshot = Nothing
+            _selectionMoveStartMaskRect = SKRectI.Empty
         End Sub
 
         Public Sub CancelSelectionMoveTransaction()
@@ -9244,6 +9255,7 @@ Namespace ViewModels
             MoveSelection(_selectionMoveStartXPercent - _selectionXPercent,
                           _selectionMoveStartYPercent - _selectionYPercent)
             _selectionMoveUndoSnapshot = Nothing
+            _selectionMoveStartMaskRect = SKRectI.Empty
         End Sub
 
         ''' Schneidet den aktuell verarbeiteten Bildinhalt (alle Anpassungen/Objekte gebacken) auf
