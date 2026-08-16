@@ -1931,6 +1931,113 @@ Namespace Services
             Return mask
         End Function
 
+        ''' <summary>Erstellt eine weiche, NICHT zusammenhängende Farbbereichsmaske. Anders als der
+        ''' Zauberstab trifft sie jede passende Farbe im Bild - genau das braucht man etwa für einen
+        ''' blauen Himmel, der durch einen Baum unterbrochen ist.</summary>
+        Public Shared Function BuildColorRangeMask(image As SKBitmap, seedX As Integer, seedY As Integer,
+                                                   tolerancePct As Double, featherPct As Double,
+                                                   ByRef bounds As SKRectI) As SKBitmap
+            bounds = SKRectI.Empty
+            If image Is Nothing OrElse seedX < 0 OrElse seedY < 0 OrElse seedX >= image.Width OrElse seedY >= image.Height Then Return Nothing
+            Dim rIdx, gIdx, bIdx As Integer
+            If image.ColorType = SKColorType.Bgra8888 Then
+                bIdx = 0 : gIdx = 1 : rIdx = 2
+            ElseIf image.ColorType = SKColorType.Rgba8888 Then
+                rIdx = 0 : gIdx = 1 : bIdx = 2
+            Else
+                Return Nothing
+            End If
+            Dim stride = image.RowBytes, raw(stride * image.Height - 1) As Byte
+            Marshal.Copy(image.GetPixels(), raw, 0, raw.Length)
+            Dim seed = seedY * stride + seedX * 4
+            Dim sr = CDbl(raw(seed + rIdx)), sg = CDbl(raw(seed + gIdx)), sb = CDbl(raw(seed + bIdx))
+            ' RGB-Abstand ist für eine Auswahl bewusst auf 0..100 normiert. Die weiche Zone sitzt
+            ' ausserhalb der harten Toleranz, damit 0 wirklich nur die angeklickte Farbe trifft.
+            Dim hard = Math.Max(0.0, Math.Min(100.0, tolerancePct)) / 100.0 * 441.6729559
+            Dim soft = Math.Max(1.0, Math.Min(100.0, featherPct)) / 100.0 * 220.8364779
+            Dim output = New SKBitmap(image.Width, image.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim outStride = output.RowBytes, data(outStride * image.Height - 1) As Byte
+            Dim minX = image.Width, minY = image.Height, maxX = -1, maxY = -1
+            For y = 0 To image.Height - 1
+                Dim row = y * stride, outRow = y * outStride
+                For x = 0 To image.Width - 1
+                    Dim p = row + x * 4
+                    Dim dr = CDbl(raw(p + rIdx)) - sr, dg = CDbl(raw(p + gIdx)) - sg, db = CDbl(raw(p + bIdx)) - sb
+                    Dim distance = Math.Sqrt(dr * dr + dg * dg + db * db)
+                    Dim a As Double
+                    If distance <= hard Then
+                        a = 255
+                    ElseIf distance >= hard + soft Then
+                        a = 0
+                    Else
+                        Dim t = (distance - hard) / soft
+                        a = (1.0 - t * t * (3.0 - 2.0 * t)) * 255.0
+                    End If
+                    If a >= 1 Then
+                        data(outRow + x) = CByte(Math.Round(a))
+                        If x < minX Then minX = x
+                        If x > maxX Then maxX = x
+                        If y < minY Then minY = y
+                        If y > maxY Then maxY = y
+                    End If
+                Next
+            Next
+            If maxX < minX Then output.Dispose() : Return Nothing
+            Marshal.Copy(data, 0, output.GetPixels(), data.Length)
+            bounds = New SKRectI(minX, minY, maxX + 1, maxY + 1)
+            Return output
+        End Function
+
+        ''' <summary>Erstellt eine Luminanzbereichsmaske mit zwei weichen Grenzen. 0 ist schwarz,
+        ''' 100 weiß; die Maske berücksichtigt alle Bildbereiche, nicht nur eine zusammenhängende Fläche.</summary>
+        Public Shared Function BuildLuminanceRangeMask(image As SKBitmap, fromPct As Double, toPct As Double,
+                                                       featherPct As Double, ByRef bounds As SKRectI) As SKBitmap
+            bounds = SKRectI.Empty
+            If image Is Nothing Then Return Nothing
+            Dim rIdx, gIdx, bIdx As Integer
+            If image.ColorType = SKColorType.Bgra8888 Then
+                bIdx = 0 : gIdx = 1 : rIdx = 2
+            ElseIf image.ColorType = SKColorType.Rgba8888 Then
+                rIdx = 0 : gIdx = 1 : bIdx = 2
+            Else
+                Return Nothing
+            End If
+            Dim low = Math.Max(0.0, Math.Min(100.0, Math.Min(fromPct, toPct))) / 100.0
+            Dim high = Math.Max(0.0, Math.Min(100.0, Math.Max(fromPct, toPct))) / 100.0
+            Dim feather = Math.Max(0.0, Math.Min(50.0, featherPct)) / 100.0
+            Dim stride = image.RowBytes, raw(stride * image.Height - 1) As Byte
+            Marshal.Copy(image.GetPixels(), raw, 0, raw.Length)
+            Dim output = New SKBitmap(image.Width, image.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim outStride = output.RowBytes, data(outStride * image.Height - 1) As Byte
+            Dim minX = image.Width, minY = image.Height, maxX = -1, maxY = -1
+            For y = 0 To image.Height - 1
+                Dim row = y * stride, outRow = y * outStride
+                For x = 0 To image.Width - 1
+                    Dim p = row + x * 4
+                    Dim l = (0.2126 * raw(p + rIdx) + 0.7152 * raw(p + gIdx) + 0.0722 * raw(p + bIdx)) / 255.0
+                    Dim a As Double
+                    If l < low Then
+                        a = If(feather = 0, 0, Math.Max(0, 1 - (low - l) / feather))
+                    ElseIf l > high Then
+                        a = If(feather = 0, 0, Math.Max(0, 1 - (l - high) / feather))
+                    Else
+                        a = 1
+                    End If
+                    If a > 0 Then
+                        data(outRow + x) = CByte(Math.Round(a * 255))
+                        If x < minX Then minX = x
+                        If x > maxX Then maxX = x
+                        If y < minY Then minY = y
+                        If y > maxY Then maxY = y
+                    End If
+                Next
+            Next
+            If maxX < minX Then output.Dispose() : Return Nothing
+            Marshal.Copy(data, 0, output.GetPixels(), data.Length)
+            bounds = New SKRectI(minX, minY, maxX + 1, maxY + 1)
+            Return output
+        End Function
+
         ''' <summary>Liegt dieser Bildpunkt auf der Ebene, auf die begrenzt wird? Ohne Deckung
         ''' entscheidet allein das Rechteck; mit Deckung zusätzlich, ob dort überhaupt etwas von der
         ''' Ebene liegt. Ein halb durchsichtiger Rand zählt dazu - abgeschnitten wird erst bei

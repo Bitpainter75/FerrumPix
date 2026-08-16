@@ -4432,6 +4432,8 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsMaskRadialMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskObjectMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskDepthMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskColorRangeMode))
+                Me.RaisePropertyChanged(NameOf(IsMaskLuminanceRangeMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskMoveMode))
                 Me.RaisePropertyChanged(NameOf(ShowGradientControls))
             Me.RaisePropertyChanged(NameOf(IsRefiningGradientMask))
@@ -4451,6 +4453,8 @@ Namespace ViewModels
                 ElseIf String.Equals(normalized, "Tiefe", StringComparison.Ordinal) Then
                     ' Beim Betreten gleich rechnen - ohne Klick gibt es hier nichts anzustossen.
                     Dim ignoriertT = RedrawDepthMask()
+                ElseIf String.Equals(normalized, "Luminanz", StringComparison.Ordinal) Then
+                    Dim ignoriertL = RedrawLuminanceRangeMask()
                 ElseIf String.Equals(normalized, "Objekt", StringComparison.Ordinal) Then
                     ' Die Objektauswahl sammelt Punkte fuer GENAU EIN Objekt. Beim Betreten des
                     ' Modus faengt sie frisch an - sonst haetten die Klicks des vorigen Objekts
@@ -4498,6 +4502,18 @@ Namespace ViewModels
         Public ReadOnly Property IsMaskRadialMode As Boolean
             Get
                 Return String.Equals(_maskMode, "Radial", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMaskColorRangeMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Farbe", StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsMaskLuminanceRangeMode As Boolean
+            Get
+                Return String.Equals(_maskMode, "Luminanz", StringComparison.Ordinal)
             End Get
         End Property
 

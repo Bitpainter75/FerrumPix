@@ -845,6 +845,134 @@ Namespace ViewModels
                 _motivTor.Release()
             End Try
         End Function
+
+        ' ── Bereichsmasken ──────────────────────────────────────────────────────
+        '
+        ' Farbe und Luminanz laufen absichtlich durch dieselbe Auswahl-Pipeline wie Pinsel,
+        ' Tiefe und Objekt. Dadurch lassen sie sich sofort addieren, abziehen, schneiden und mit
+        ' dem Pinsel nacharbeiten, bevor sie als lokale Anpassungsebene gespeichert werden.
+        Private ReadOnly _rangeMaskGate As New SemaphoreSlim(1, 1)
+        Private _colorRangeTolerance As Double = 18.0
+        Private _colorRangeFeather As Double = 14.0
+        Private _luminanceRangeFrom As Double = 0.0
+        Private _luminanceRangeTo As Double = 100.0
+        Private _luminanceRangeFeather As Double = 12.0
+
+        Public Property ColorRangeTolerance As Double
+            Get
+                Return _colorRangeTolerance
+            End Get
+            Set(value As Double)
+                _colorRangeTolerance = Math.Max(0.0, Math.Min(100.0, value))
+                Me.RaisePropertyChanged(NameOf(ColorRangeTolerance))
+            End Set
+        End Property
+
+        Public Property ColorRangeFeather As Double
+            Get
+                Return _colorRangeFeather
+            End Get
+            Set(value As Double)
+                _colorRangeFeather = Math.Max(1.0, Math.Min(100.0, value))
+                Me.RaisePropertyChanged(NameOf(ColorRangeFeather))
+            End Set
+        End Property
+
+        Public Property LuminanceRangeFrom As Double
+            Get
+                Return _luminanceRangeFrom
+            End Get
+            Set(value As Double)
+                _luminanceRangeFrom = Math.Max(0.0, Math.Min(100.0, value))
+                If _luminanceRangeFrom > _luminanceRangeTo Then _luminanceRangeTo = _luminanceRangeFrom
+                Me.RaisePropertyChanged(NameOf(LuminanceRangeFrom))
+                Me.RaisePropertyChanged(NameOf(LuminanceRangeTo))
+                If IsMaskLuminanceRangeMode Then Dim ignored = RedrawLuminanceRangeMask()
+            End Set
+        End Property
+
+        Public Property LuminanceRangeTo As Double
+            Get
+                Return _luminanceRangeTo
+            End Get
+            Set(value As Double)
+                _luminanceRangeTo = Math.Max(0.0, Math.Min(100.0, value))
+                If _luminanceRangeTo < _luminanceRangeFrom Then _luminanceRangeFrom = _luminanceRangeTo
+                Me.RaisePropertyChanged(NameOf(LuminanceRangeTo))
+                Me.RaisePropertyChanged(NameOf(LuminanceRangeFrom))
+                If IsMaskLuminanceRangeMode Then Dim ignored = RedrawLuminanceRangeMask()
+            End Set
+        End Property
+
+        Public Property LuminanceRangeFeather As Double
+            Get
+                Return _luminanceRangeFeather
+            End Get
+            Set(value As Double)
+                _luminanceRangeFeather = Math.Max(0.0, Math.Min(50.0, value))
+                Me.RaisePropertyChanged(NameOf(LuminanceRangeFeather))
+                If IsMaskLuminanceRangeMode Then Dim ignored = RedrawLuminanceRangeMask()
+            End Set
+        End Property
+
+        Public Async Function SetSelectionColorRangeMask(xPercent As Double, yPercent As Double) As Task
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            Await _rangeMaskGate.WaitAsync()
+            Try
+                Dim size = GetAnnotationDisplayPixelSize()
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return
+                Dim x = Math.Max(0, Math.Min(size.Width - 1, CInt(Math.Round(xPercent / 100.0 * size.Width))))
+                Dim y = Math.Max(0, Math.Min(size.Height - 1, CInt(Math.Round(yPercent / 100.0 * size.Height))))
+                Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
+                Dim tolerance = _colorRangeTolerance, feather = _colorRangeFeather
+                Dim result = Await Task.Run(Function()
+                                                Using rendered = ImageProcessor.RenderDisplayImage(sourcePath, adjustments, working)
+                                                    If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
+                                                    Dim bounds As SKRectI
+                                                    Dim mask = ImageProcessor.BuildColorRangeMask(rendered, x, y, tolerance, feather, bounds)
+                                                    Return (Mask:=mask, Bounds:=bounds)
+                                                End Using
+                                            End Function)
+                Using mask = result.Mask
+                    If mask Is Nothing Then Return
+                    Using cut = ExtractMaskRegion(mask, result.Bounds)
+                        If cut Is Nothing Then Return
+                        PushUndo()
+                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=True, forceNew:=True)
+                    End Using
+                End Using
+                StatusText = LocalizationService.T("Farbbereichsmaske gesetzt")
+            Finally
+                _rangeMaskGate.Release()
+            End Try
+        End Function
+
+        Public Async Function RedrawLuminanceRangeMask() As Task
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            Await _rangeMaskGate.WaitAsync()
+            Try
+                Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
+                Dim from = _luminanceRangeFrom, [to] = _luminanceRangeTo, feather = _luminanceRangeFeather
+                Dim result = Await Task.Run(Function()
+                                                Using rendered = ImageProcessor.RenderDisplayImage(sourcePath, adjustments, working)
+                                                    If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
+                                                    Dim bounds As SKRectI
+                                                    Dim mask = ImageProcessor.BuildLuminanceRangeMask(rendered, from, [to], feather, bounds)
+                                                    Return (Mask:=mask, Bounds:=bounds)
+                                                End Using
+                                            End Function)
+                Using mask = result.Mask
+                    If mask Is Nothing Then Return
+                    Using cut = ExtractMaskRegion(mask, result.Bounds)
+                        If cut Is Nothing Then Return
+                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=True, forceNew:=True)
+                    End Using
+                End Using
+                StatusText = LocalizationService.T("Luminanzbereichsmaske gesetzt")
+            Finally
+                _rangeMaskGate.Release()
+            End Try
+        End Function
     End Class
 
 End Namespace

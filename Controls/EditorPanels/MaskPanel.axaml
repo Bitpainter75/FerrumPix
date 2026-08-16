@@ -65,6 +65,20 @@
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
                 </Button>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Farbe"
+                        Classes.active="{Binding IsMaskColorRangeMode}"
+                        ToolTip.Tip="Farbbereich: Farbe im Bild anklicken; ähnliche Farben werden überall im Bild maskiert">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg" Width="16" Height="16" />
+                </Button>
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetMaskModeCommand}" CommandParameter="Luminanz"
+                        Classes.active="{Binding IsMaskLuminanceRangeMode}"
+                        ToolTip.Tip="Luminanzbereich: Schatten, Mitteltöne oder Lichter nach Helligkeit maskieren">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness.svg" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
 
             <!-- MODUS-REIHE, EINMAL FÜR ALLE ARTEN. Sie stand vorher zweimal im Panel (Pinsel und
                  Objekt) und bei den Verläufen gar nicht - dort gab es also weder Plus noch Minus,
@@ -103,6 +117,61 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg" Width="16" Height="16" />
                     </Button>
                 </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="8" IsVisible="{Binding IsMaskColorRangeMode}">
+                <TextBlock Text="Eine Farbe im Bild anklicken. Anders als der Zauberstab wird derselbe Farbbereich überall im Bild gewählt."
+                           TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Toleranz" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding ColorRangeTolerance}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeTolerance, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" Value="{Binding ColorRangeFeather}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeFeather, Mode=TwoWay}" Minimum="1" Maximum="100" />
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
+                        ToolTip.Tip="Aus der Farbbereichsmaske eine Maskenebene erstellen">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg" Width="16" Height="16" />
+                        <TextBlock Text="Neue Maskenebene" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <StackPanel Spacing="8" IsVisible="{Binding IsMaskLuminanceRangeMode}">
+                <TextBlock Text="Wählt alle Bildbereiche innerhalb des Helligkeitsbereichs. Die Maske wird beim Verändern der Regler aktualisiert."
+                           TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Von" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding LuminanceRangeFrom}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeFrom, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Bis" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding LuminanceRangeTo}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeTo, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50" Value="{Binding LuminanceRangeFeather}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeFeather, Mode=TwoWay}" Minimum="0" Maximum="50" />
+                </Grid>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                        IsEnabled="{Binding HasActiveSelection}"
+                        Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
+                        ToolTip.Tip="Aus der Luminanzbereichsmaske eine Maskenebene erstellen">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg" Width="16" Height="16" />
+                        <TextBlock Text="Neue Maskenebene" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
 
             <!-- Verschieben-Zweig: hier wird nicht gemalt. Der Knopf wandelt die aktuelle Form in

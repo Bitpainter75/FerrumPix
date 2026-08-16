@@ -2030,9 +2030,16 @@ Namespace Views
                     Dim laeuft = vm.SetSelectionSubjectMask(mPct, nPct, dazu)
                     e.Handled = True
                     Return
+                ElseIf vm.CurrentTool = EditorTool.Mask AndAlso vm.IsMaskColorRangeMode Then
+                    Dim mPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+                    Dim nPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+                    Dim laeuft = vm.SetSelectionColorRangeMask(mPct, nPct)
+                    e.Handled = True
+                    Return
                 End If
                 If vm.CurrentTool = EditorTool.Mask AndAlso Not vm.IsMaskBrushMode AndAlso
-                   Not vm.IsMaskMoveMode AndAlso Not vm.IsMaskObjectMode AndAlso Not vm.IsMaskDepthMode Then
+                   Not vm.IsMaskMoveMode AndAlso Not vm.IsMaskObjectMode AndAlso Not vm.IsMaskDepthMode AndAlso
+                   Not vm.IsMaskLuminanceRangeMode Then
                     Dim gxPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                     Dim gyPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                     ' Greifradius der Verlaufs-Anfasser in Bildschirmpixeln. 12 war messbar zu knapp -
