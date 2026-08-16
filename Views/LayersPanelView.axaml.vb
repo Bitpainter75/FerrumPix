@@ -107,6 +107,12 @@ Namespace Views
             Else
                 vm?.SelectGlobalAdjustmentsTarget()
             End If
+            ' MIT DEM AUSWAHLWERKZEUG hebt derselbe Klick auch die Pixelauswahl auf - genauso, wie
+            ' er beim Maskenwerkzeug die geoeffnete Maske schliesst. Ohne das blieben die
+            ' Laufameisen stehen, obwohl man gerade ausdruecklich alles abgewaehlt hat.
+            If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Selection AndAlso vm.HasActiveSelection Then
+                vm.ClearSelection()
+            End If
             ActivateObjectSelectionToolIfNothingIsSelected(vm)
             ' NICHT als behandelt markieren: der Tunnel laeuft vor der Liste, und ein behandeltes
             ' Ereignis naehme ihr das Scrollen und das Ausklappen von Gruppen.

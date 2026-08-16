@@ -1294,8 +1294,23 @@ Namespace Services
                     Case ".webp"
                         Dim chunk = ReadWebpChunks(File.ReadAllBytes(path)).FirstOrDefault(Function(c) c.Type = "EXIF")
                         If chunk IsNot Nothing Then
-                            PatchExifColorSpaceToSrgb(chunk.Data, 0)
-                            Return chunk.Data
+                            ' MANCHE ERZEUGER SCHREIBEN DEN JPEG-VORSPANN "Exif\0\0" AUCH IN DEN
+                            ' WEBP-CHUNK. Ohne ihn abzuziehen sucht der Fleck den TIFF-Kopf an Stelle
+                            ' 0, findet weder II noch MM und kehrt STILL zurueck - die Datei behielt
+                            ' ihren alten Farbraumeintrag, obwohl die Bildpunkte sRGB sind und das
+                            ' ICC-Profil entfernt wurde. Genau die Doppeldeutung, die der Fleck
+                            ' verhindern soll.
+                            Dim tiff = chunk.Data
+                            If tiff IsNot Nothing AndAlso tiff.Length > 8 AndAlso
+                               tiff(0) = AscW("E"c) AndAlso tiff(1) = AscW("x"c) AndAlso
+                               tiff(2) = AscW("i"c) AndAlso tiff(3) = AscW("f"c) AndAlso
+                               tiff(4) = 0 AndAlso tiff(5) = 0 Then
+                                Dim rest(tiff.Length - 7) As Byte
+                                Buffer.BlockCopy(tiff, 6, rest, 0, rest.Length)
+                                tiff = rest
+                            End If
+                            PatchExifColorSpaceToSrgb(tiff, 0)
+                            Return tiff
                         End If
                 End Select
             Catch

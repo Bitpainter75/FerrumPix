@@ -583,10 +583,12 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
         End Sub
 
-        ''' <summary>Umgekehrt, fuer die Bedienbarkeit ganzer Panelbereiche.</summary>
+        ''' <summary>Umgekehrt, fuer die Bedienbarkeit ganzer Panelbereiche. Der Ladezustand zaehlt
+        ''' mit: waehrend das Dokument aufgebaut wird, steht auf der Buehne noch gar kein Bild, und
+        ''' jede Einstellung daran ginge auf einen Stand, den es gleich nicht mehr gibt.</summary>
         Public ReadOnly Property IsInteractionAllowed As Boolean
             Get
-                Return Not _showsBusy
+                Return Not _showsBusy AndAlso Not _isDocumentLoading
             End Get
         End Property
 
@@ -1108,6 +1110,12 @@ Namespace ViewModels
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
         Public ReadOnly Property SavedXmpPresets As ObservableCollection(Of XmpPresetSettings) = New ObservableCollection(Of XmpPresetSettings)()
         Public ReadOnly Property SavedLutPresets As ObservableCollection(Of LutPresetSettings) = New ObservableCollection(Of LutPresetSettings)()
+        ' Zusatzteile eines Lightroom-XMPs sind absichtlich Opt-in: ein Look-Preset darf den
+        ' Bildausschnitt oder die vorhandene Objektivwahl nicht überraschend verändern.
+        Public Property ImportXmpLensCorrections As Boolean
+        Public Property ImportXmpChromaticAberration As Boolean
+        Public Property ImportXmpTransform As Boolean
+        Public Property ImportXmpCrop As Boolean
 
         ''' <summary>Der Name des zuletzt angewendeten Filters - und "Keine", wenn ÜBERHAUPT KEIN Look
         ''' anliegt, also weder Filter noch LUT noch XMP-Preset.
@@ -3978,9 +3986,32 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>WAEHREND EIN BILD GELADEN WIRD, DARF NICHTS ANDERES ANGESTOSSEN WERDEN. Der
+        ''' Zaehler steht fuer die ganze Dauer eines Ladelaufs, also auch bei den schnellen Formaten
+        ''' ohne sichtbare Anzeige - zwei Klicks im Filmstreifen kurz hintereinander bauten sonst zwei
+        ''' Dokumente ineinander, und welches am Ende auf der Buehne steht, entschied der Zufall.
+        ''' Ein ZAEHLER und kein Schalter: der Ladeweg ruft sich im Rueckfall (fehlende Datei) selbst
+        ''' auf, und ein Schalter waere danach zu frueh wieder offen.</summary>
+        Private _documentLoadDepth As Integer = 0
+
+        Public ReadOnly Property IsDocumentLoadRunning As Boolean
+            Get
+                Return _documentLoadDepth > 0
+            End Get
+        End Property
+
+        Private Sub BeginDocumentLoad()
+            _documentLoadDepth += 1
+        End Sub
+
+        Private Sub EndDocumentLoad()
+            _documentLoadDepth = Math.Max(0, _documentLoadDepth - 1)
+        End Sub
+
         Private Sub SetDocumentLoading(value As Boolean)
             If _isDocumentLoading = value Then Return
             _isDocumentLoading = value
+            Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
             Me.RaisePropertyChanged(NameOf(IsDocumentLoading))
             Me.RaisePropertyChanged(NameOf(ShowEditorDocument))
             Me.RaisePropertyChanged(NameOf(ShowNoImagePlaceholder))
@@ -4459,7 +4490,10 @@ Namespace ViewModels
                     ' Beim Betreten gleich rechnen - ohne Klick gibt es hier nichts anzustossen.
                     Dim ignoriertT = RedrawDepthMask()
                 ElseIf String.Equals(normalized, "Luminanz", StringComparison.Ordinal) Then
-                    Dim ignoriertL = RedrawLuminanceRangeMask()
+                    ' Das Betreten ERZEUGT die Maske - das ist die Geste, die sich zurueckziehen
+                    ' laesst. Die Regler danach ziehen dieselbe Maske nur nach und legen deshalb
+                    ' keinen weiteren Schritt an.
+                    Dim ignoriertL = RedrawLuminanceRangeMask(captureUndo:=True)
                 ElseIf String.Equals(normalized, "Objekt", StringComparison.Ordinal) Then
                     ' Die Objektauswahl sammelt Punkte fuer GENAU EIN Objekt. Beim Betreten des
                     ' Modus faengt sie frisch an - sonst haetten die Klicks des vorigen Objekts
@@ -7833,6 +7867,10 @@ Namespace ViewModels
         Private _motivSchluessel As String = ""
         Private ReadOnly _motivTor As New SemaphoreSlim(1, 1)
         Private ReadOnly _motivPunkte As New List(Of SubjectMaskService.Point)()
+        ''' <summary>Wurde die Objektauswahl als MASKE oder als AUSWAHL begonnen? Die Regler zeichnen
+        ''' aus denselben gemerkten Klicks nach, und ihr Ergebnis muss dorthin zurueck, wo es
+        ''' hergekommen ist - eine Auswahl darf beim Nachziehen nicht zur Maskenebene werden.</summary>
+        Private _motivAlsMaske As Boolean = True
 
         ''' <summary>Steht die Maske per Klick zur Verfuegung? Falsch heisst: Laufzeit oder
         ''' Modelldateien fehlen, und der Knopf bleibt weg.</summary>
@@ -8672,6 +8710,9 @@ Namespace ViewModels
             ' Die gesammelten Klicks der Objektauswahl gehoeren zu GENAU dieser Maske. Bleiben sie
             ' stehen, baut der naechste Klick auf einer Maske auf, die es nicht mehr gibt.
             _motivPunkte.Clear()
+            ' Aus demselben Grund die gemerkte Pipettenstelle: ein Regler wuerde sonst eine Maske an
+            ' einer Stelle nachziehen, die zur weggeraeumten Auswahl gehoerte.
+            ForgetSamplePoint()
             If captureUndo AndAlso _hasActiveSelection Then PushUndo()
             InvalidateSelectionLayerLink()
             CommitSelectionAdjustModeToModel()
@@ -8768,6 +8809,56 @@ Namespace ViewModels
         ''' desselben Schritts wie die Geometrie ist (der Aufrufer hat unmittelbar davor PushUndo gerufen).</summary>
         Private Sub ClearActiveSelectionForGeometry()
             If _hasActiveSelection OrElse _selectionMask IsNot Nothing Then ClearSelection(captureUndo:=False)
+        End Sub
+
+        ' ── Auswahlform ablegen und wieder einsetzen ────────────────────────────
+        '
+        ' Dasselbe wie "Maske kopieren/einfuegen" im Maskenwerkzeug, nur fuer die FORM einer
+        ' Auswahl. Eine sorgfaeltig aufgebaute Auswahl ist Arbeit; sie ein zweites Mal zu bauen,
+        ' weil dieselbe Form an einer anderen Stelle noch einmal gebraucht wird, war bisher der
+        ' einzige Weg. Abgelegt wird eine ABSCHRIFT - die abgelegte Form aendert sich nicht mehr
+        ' mit, wenn man die Auswahl danach weiterbearbeitet.
+        Private _copiedSelectionShape As SKBitmap = Nothing
+        Private _copiedSelectionShapeRect As SKRectI = SKRectI.Empty
+
+        Public ReadOnly Property CanCopySelectionShape As Boolean
+            Get
+                Return _hasActiveSelection AndAlso _selectionMask IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property CanPasteSelectionShape As Boolean
+            Get
+                Return _copiedSelectionShape IsNot Nothing
+            End Get
+        End Property
+
+        Public Sub CopySelectionShape()
+            If _selectionMask Is Nothing OrElse _selectionMaskRect.Width <= 0 Then Return
+            _copiedSelectionShape?.Dispose()
+            _copiedSelectionShape = _selectionMask.Copy()
+            _copiedSelectionShapeRect = _selectionMaskRect
+            Me.RaisePropertyChanged(NameOf(CanPasteSelectionShape))
+            StatusText = LocalizationService.T("Auswahl abgelegt")
+        End Sub
+
+        Public Sub PasteSelectionShape()
+            If _copiedSelectionShape Is Nothing Then Return
+            ' Die Form ist in ANZEIGEPIXELN abgelegt. Auf einem kleineren Bild laege sie teilweise
+            ' ausserhalb - dann lieber nichts tun und es sagen, statt eine angeschnittene Form
+            ' einzusetzen, die niemand so gemeint hat.
+            Dim size = GetAnnotationDisplayPixelSize()
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+            If _copiedSelectionShapeRect.Right > size.Width OrElse _copiedSelectionShapeRect.Bottom > size.Height Then
+                StatusText = LocalizationService.T("Die abgelegte Auswahl passt nicht auf dieses Bild")
+                Return
+            End If
+            PushUndo()
+            Using kopie = _copiedSelectionShape.Copy()
+                ApplySelectionCandidate(kopie, _copiedSelectionShapeRect, "MagicWand", Nothing, Nothing,
+                                        isMask:=False, forceNew:=True)
+            End Using
+            StatusText = LocalizationService.T("Auswahl eingefügt")
         End Sub
 
         Public Sub InvertSelection()
@@ -11792,6 +11883,8 @@ Namespace ViewModels
         Public ReadOnly Property ResetRetouchCommand As ICommand
         Public ReadOnly Property ClearSelectionCommand As ICommand
         Public ReadOnly Property InvertSelectionCommand As ICommand
+        Public ReadOnly Property CopySelectionShapeCommand As ICommand
+        Public ReadOnly Property PasteSelectionShapeCommand As ICommand
         Public ReadOnly Property CopySelectionCommand As ICommand
         Public ReadOnly Property AddPaintLayerCommand As ICommand
         Public ReadOnly Property ToggleTransparencyLockCommand As ICommand
@@ -12195,6 +12288,8 @@ Namespace ViewModels
             ClearCloneSourceCommand = ReactiveCommand.Create(Sub() ClearCloneSource())
             ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
             InvertSelectionCommand = ReactiveCommand.Create(Sub() InvertSelection())
+            CopySelectionShapeCommand = ReactiveCommand.Create(Sub() CopySelectionShape())
+            PasteSelectionShapeCommand = ReactiveCommand.Create(Sub() PasteSelectionShape())
             CopySelectionCommand = ReactiveCommand.Create(Sub() CopySelectionToNewObject())
             AddPaintLayerCommand = ReactiveCommand.Create(Sub() AddPaintLayer())
             ToggleTransparencyLockCommand = ReactiveCommand.Create(
@@ -12820,7 +12915,7 @@ Namespace ViewModels
         End Sub
 
         Public Async Function NavigateToFilmstripItemAsync(item As ImageItem) As Task
-            If item Is Nothing Then Return
+            If item Is Nothing OrElse IsDocumentLoadRunning Then Return
             Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, StringComparison.OrdinalIgnoreCase))
             If idx < 0 Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("dieses Bild öffnest") Then Return
@@ -12845,10 +12940,17 @@ Namespace ViewModels
         ''' Für Mausrad-Navigation im Filmstrip - normalisiert per Delta-Magnitude statt pro Event
         ''' einen vollen Schritt auszulösen (siehe FilmstripNavigationDebouncer.QueueWheelDelta).
         Public Sub NavigateByWheel(deltaY As Double)
+            ' Auch das Rad wird waehrend eines Ladelaufs nicht gesammelt: sonst stuenden die Schritte
+            ' in der Warteschlange und liefen nach dem Aufbau von selbst weiter.
+            If IsDocumentLoadRunning Then Return
             _filmstripNavDebouncer.QueueWheelDelta(deltaY)
         End Sub
 
         Private Async Function NavigateToFilmstripIndexAsync(idx As Integer) As Task
+            ' Solange ein Bild aufgebaut wird, fuehrt der naechste Wechsel nur dazu, dass zwei
+            ' Ladelaeufe uebereinander schreiben. Der Druck geht deshalb ins Leere statt in ein
+            ' halbes Dokument.
+            If IsDocumentLoadRunning Then Return
             If idx < 0 OrElse idx >= _folderPaths.Count OrElse idx = _currentIndex Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("das nächste Bild öffnest") Then Return
             _currentIndex = idx
@@ -12870,6 +12972,15 @@ Namespace ViewModels
         End Function
 
         Private Async Function LoadImageContent(path As String) As Task
+            BeginDocumentLoad()
+            Try
+                Await LoadImageContentCore(path)
+            Finally
+                EndDocumentLoad()
+            End Try
+        End Function
+
+        Private Async Function LoadImageContentCore(path As String) As Task
             If String.IsNullOrEmpty(path) OrElse Not File.Exists(path) Then
                 If Not String.IsNullOrEmpty(path) Then
                     _folderPaths.RemoveAll(Function(p) String.Equals(p, path, StringComparison.OrdinalIgnoreCase))
@@ -13098,12 +13209,16 @@ Namespace ViewModels
 
         Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False) As Task(Of Boolean)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
+            ' Dasselbe von aussen: waehrend der Editor noch aufbaut, wird kein zweites Dokument
+            ' daruebergelegt - auch nicht aus der Galerie oder dem Betrachter.
+            If IsDocumentLoadRunning Then Return False
             If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, StringComparison.OrdinalIgnoreCase) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
 
             Dim publishAtomically = FpxService.IsFpx(imagePath) OrElse RawSidecarService.IsSidecarFormat(imagePath)
             If publishAtomically Then SetDocumentLoading(True)
+            BeginDocumentLoad()
             Try
             ' .fpx-Projektdatei: Bündel entpacken; ab hier ist das entpackte Basisbild die Arbeitsquelle, und
             ' der gespeicherte Bearbeitungszustand wird unten (nach PreparePreviewSource) wiederhergestellt.
@@ -13311,6 +13426,7 @@ Namespace ViewModels
             Return True
             Finally
                 If publishAtomically Then SetDocumentLoading(False)
+                EndDocumentLoad()
             End Try
         End Function
 
@@ -20883,32 +20999,81 @@ Namespace ViewModels
         Public Sub ApplyXmpPreset(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
             Try
-                ' Lightroom-Presets sind häufig partiell (z. B. nur Weißabgleich oder Körnung).
-                ' Der Parser bekommt deshalb den aktuellen Stand als Basis und ändert nur die
-                ' tatsächlich in der XMP gesetzten crs:-Werte.
-                Dim look = XmpPresetService.LoadLook(xmpPath, GetCurrentAdjustments())
+                ' Ein Preset-Wechsel ist ein vollständiger Wechsel des Looks: Werte, die das
+                ' neue XMP nicht setzt, dürfen nicht vom zuvor gewählten Preset übrigbleiben.
+                ' Deshalb KEINE aktuellen Regler als Basis übergeben. (Der Service unterstützt
+                ' weiterhin partielle Übernahme für andere Aufrufer ausdrücklich über baseLook.)
+                Dim look = XmpPresetService.LoadLook(xmpPath)
                 If look Is Nothing Then Return
 
                 PushUndo()
                 _suppressUndoCapture = True
+                Dim profileNotice = ""
                 Try
                     ApplyLookAdjustments(look)
                     ' Lokale Korrekturen (Radial-/Verlaufsmasken) als Anpassungsebenen importieren - erst
                     ' hier möglich, weil die Masken die echten Bildmaße brauchen (im Preset stehen nur
                     ' Bruchkoordinaten). Pinsel-/Bereichsmasken werden noch übersprungen.
                     ImportLocalCorrectionsFromPreset(xmpPath)
+                    profileNotice = ApplyXmpImportExtras(xmpPath)
+                    If Not String.IsNullOrWhiteSpace(profileNotice) Then StatusText = profileNotice
                 Finally
                     _suppressUndoCapture = False
                 End Try
 
                 RaiseExtendedAdjustmentProperties()
                 SetLastAppliedXmpPreset(xmpPath)
-                StatusText = LocalizationService.T("XMP-Preset angewendet")
+                ' AM RUECKGABEWERT entscheiden, nicht am angezeigten Text. Der Hinweis wird mit
+                ' T("Adobe-Profil erkannt: ") gebaut, die Abfrage stand auf T("Adobe-Profil erkannt:")
+                ' ohne Leerzeichen - zwei verschiedene Schluessel. Solange beide unuebersetzt sind,
+                ' faellt das nicht auf; sobald einer von beiden eine Uebersetzung bekommt, wird der
+                ' Profilhinweis sofort wieder ueberschrieben.
+                If String.IsNullOrWhiteSpace(profileNotice) Then
+                    StatusText = LocalizationService.T("XMP-Preset angewendet")
+                End If
                 SchedulePreviewForCurrentTarget()
             Catch ex As Exception
                 StatusText = LocalizationService.T("XMP-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
         End Sub
+
+        ''' <summary>Übernimmt die explizit gewählten, nicht zum Look gehörenden XMP-Teile.
+        ''' Die Werte werden auf einen vollständigen aktuellen Schnappschuss gesetzt, damit die
+        ''' Ebenen/Masks aus demselben Preset erhalten bleiben.</summary>
+        Private Function ApplyXmpImportExtras(xmpPath As String) As String
+            Dim extras = XmpPresetService.LoadImportExtras(xmpPath)
+            If extras Is Nothing Then Return ""
+            Dim changed = False
+            Dim merged = GetCurrentAdjustments()
+            If ImportXmpTransform AndAlso extras.HasTransform Then
+                merged.StraightenDegrees = extras.Geometry.StraightenDegrees
+                merged.PerspectiveHorizontal = extras.Geometry.PerspectiveHorizontal
+                merged.PerspectiveVertical = extras.Geometry.PerspectiveVertical
+                merged.PerspectiveAspect = extras.Geometry.PerspectiveAspect
+                merged.PerspectiveScale = extras.Geometry.PerspectiveScale
+                changed = True
+            End If
+            If ImportXmpCrop AndAlso extras.HasCrop Then
+                ' NUR die Kanten, die im Preset wirklich stehen. Ein Preset mit einer einzelnen
+                ' Kante fuehrt die uebrigen drei als 0 - wer sie mit uebernimmt, loescht damit den
+                ' Zuschnitt, den der Nutzer am Bild bereits gesetzt hat.
+                If extras.HasCropLeft Then merged.CropLeftPercent = extras.Geometry.CropLeftPercent
+                If extras.HasCropTop Then merged.CropTopPercent = extras.Geometry.CropTopPercent
+                If extras.HasCropRight Then merged.CropRightPercent = extras.Geometry.CropRightPercent
+                If extras.HasCropBottom Then merged.CropBottomPercent = extras.Geometry.CropBottomPercent
+                changed = True
+            End If
+            If changed Then ApplyAdjustments(merged, scheduleRender:=False)
+            Dim profileNotice = If(extras.HasEmbeddedProfileReference,
+                                   LocalizationService.T("Adobe-Profil erkannt: ") & extras.ProfileName &
+                                   LocalizationService.T(" (3D-Profildaten sind nicht in der XMP enthalten)"), "")
+            ' Objektivdaten selbst sind proprietär und nicht in der XMP. Die beiden Schalter
+            ' bleiben sichtbar als bewusste Importentscheidung; eine Zuordnung wird nur über die
+            ' vorhandene FerrumPix-Objektivdatenbank vorgenommen, niemals über einen geratenen Namen.
+            If ImportXmpLensCorrections AndAlso extras.HasLensCorrection Then LensDistortionEnabled = True
+            If ImportXmpChromaticAberration AndAlso extras.HasChromaticAberration Then LensTcaEnabled = True
+            Return profileNotice
+        End Function
 
         ''' <summary>Importiert die lokalen Korrekturen (Radial-/Verlaufsmasken) eines Presets als
         ''' Anpassungsebenen. Die Masken werden JETZT mit den echten Bildmaßen gerastert (im Preset stehen

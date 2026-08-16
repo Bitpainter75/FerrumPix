@@ -24,6 +24,15 @@
                         ToolTip.Tip="Verschieben">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg" Width="16" Height="16" />
                 </Button>
+                <!-- Derselbe Pinsel wie im Maskenwerkzeug, an derselben Stelle der Reihe: was ein
+                     Zug bedeutet, soll nicht davon abhaengen, mit welchem Werkzeug man arbeitet.
+                     Hinzufuegen und Abziehen kommen aus der Modusreihe darunter. -->
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetSelectionModeCommand}" CommandParameter="Brush"
+                        Classes.active="{Binding IsBrushSelectionMode}"
+                        ToolTip.Tip="Pinsel: Auswahl frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="16" Height="16" />
+                </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Rectangle"
                         Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Rectangle}"
@@ -48,6 +57,15 @@
                         ToolTip.Tip="Zauberstab: zusammenhängende Farbfläche wählen">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wand.svg" Width="16" Height="16" />
                 </Button>
+                <!-- Dasselbe Werkzeug wie im Maskenpanel, nur wird hier eine AUSWAHL daraus. Grau,
+                     solange die Modelldatei fehlt - der Hinweis sagt dann, woran es liegt. -->
+                <Button Classes="ghost" Padding="8,6"
+                        IsEnabled="{Binding IsSubjectMaskAvailable}"
+                        Command="{Binding SetSelectionModeCommand}" CommandParameter="Subject"
+                        Classes.active="{Binding IsSubjectSelectionMode}"
+                        ToolTip.Tip="{Binding SubjectMaskHint}" ToolTip.ShowOnDisabled="True">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
+                </Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Classes="ghost" Padding="8,6"
@@ -62,6 +80,81 @@
                         ToolTip.Tip="Luminanzbereich: Schatten, Mitteltöne oder Lichter auswählen">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness.svg" Width="16" Height="16" />
                 </Button>
+            </StackPanel>
+
+            <!-- Objektauswahl: dieselben Regler wie im Maskenpanel. Sie zeichnen aus den GEMERKTEN
+                 Klicks nach, ohne das Modell erneut zu fragen - ohne sie hier waere die Auswahl
+                 nach dem Klick nicht mehr nachzujustieren. -->
+            <!-- Pinsel: nur die Groesse. Weiche Kante und Dichte gehoeren der Maske als Ganzes und
+                 stehen im Maskenwerkzeug unter den Maskeneigenschaften. -->
+            <StackPanel Spacing="8" IsVisible="{Binding IsBrushSelectionMode}">
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Pinselgröße" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="500"
+                                       DefaultValue="24"
+                                       Value="{Binding BrushSize}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding BrushSize, Mode=TwoWay}"
+                                             Minimum="1" Maximum="500" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
+            </StackPanel>
+
+            <StackPanel Spacing="8" IsVisible="{Binding IsSubjectSelectionMode}">
+                <TextBlock Text="Ein Klick ins Bild wählt das getroffene Objekt."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <TextBlock Text="Das erste Anklicken eines Bildes dauert einen Moment, danach geht es schnell."
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsSubjectMaskRunning}"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           FontSize="{DynamicResource FP.Font.Caption}" />
+                <TextBlock Text="Umfang der Auswahl" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding SetSubjectGrainCommand}" CommandParameter="0"
+                            Classes.active="{Binding IsGrainFine}"
+                            ToolTip.Tip="Nur den getroffenen Teil, etwa ein Ärmel">
+                        <TextBlock Text="Teil" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding SetSubjectGrainCommand}" CommandParameter="1"
+                            Classes.active="{Binding IsGrainMedium}"
+                            ToolTip.Tip="Den Gegenstand, zu dem der Teil gehört, etwa die Jacke">
+                        <TextBlock Text="Mittel" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                            Command="{Binding SetSubjectGrainCommand}" CommandParameter="2"
+                            Classes.active="{Binding IsGrainCoarse}"
+                            ToolTip.Tip="Das ganze Objekt, etwa die Person">
+                        <TextBlock Text="Ganzes" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Wie knapp die Kante sitzt. Klein lässt sie breiter auslaufen - für Haare, Zweige und Fell. Groß schneidet knapp - für harte Gegenstände.">
+                    <TextBlock Text="Kante" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                       DefaultValue="50"
+                                       Value="{Binding SubjectMaskEdge}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding SubjectMaskEdge, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      ToolTip.Tip="Lässt die Auswahl um die Kante herum wachsen oder schrumpfen. Erkennt das Modell eine Haaresbreite zu wenig, holt man sie damit zurück.">
+                    <TextBlock Text="Umfang" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100"
+                                       Value="{Binding SubjectMaskExtent}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding SubjectMaskExtent, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                </Grid>
             </StackPanel>
 
             <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -91,22 +184,49 @@
                         ToolTip.Tip="Schnittmenge mit bestehender Auswahl bilden">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/squares.svg" Width="16" Height="16" />
                 </Button>
-                <Border Width="1"
-                        Margin="4,4"
-                        Background="{DynamicResource FP.Border.Normal}" />
-                <Button Classes="ghost" Padding="8,6"
+            </StackPanel>
+
+            <!-- BESCHRIFTET statt als Symbol, wie im Maskenwerkzeug und aus demselben Grund: als
+                 Symbolpaar hinter der Modusreihe war nicht zu sehen, dass die beiden etwas ganz
+                 anderes tun als die vier davor - die sagen, was der naechste Zug tut, diese beiden
+                 tun etwas mit der vorhandenen Auswahl. -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                         IsEnabled="{Binding HasActiveSelection}"
                         Command="{Binding InvertSelectionCommand}"
-                        ToolTip.Tip="Auswahl umkehren">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg" Width="16" Height="16" />
+                        ToolTip.Tip="Tauscht gewählte und freie Seite">
+                    <TextBlock Text="Auswahl umkehren" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
                 </Button>
-                <Button Classes="ghost" Padding="8,6"
+                <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                         IsEnabled="{Binding HasActiveSelection}"
                         Command="{Binding ClearSelectionCommand}"
-                        ToolTip.Tip="Auswahl aufheben (STRG+D oder ESC)">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg" Width="16" Height="16" />
+                        ToolTip.Tip="Hebt die Auswahl auf (STRG+D oder ESC)">
+                    <TextBlock Text="Auswahl verwerfen" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
                 </Button>
-            </StackPanel>
+            </Grid>
+
+            <!-- ÜBERTRAGEN, wie bei der Maske: eine sorgfaeltig aufgebaute Auswahl ist Arbeit, und
+                 dieselbe Form woanders noch einmal zu bauen war bisher der einzige Weg. Abgelegt
+                 wird eine Abschrift - sie aendert sich nicht mit, wenn man die Auswahl danach
+                 weiterbearbeitet. -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanCopySelectionShape}"
+                        Command="{Binding CopySelectionShapeCommand}"
+                        ToolTip.Tip="Legt eine Abschrift dieser Auswahl ab">
+                    <TextBlock Text="Auswahl kopieren" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
+                </Button>
+                <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanPasteSelectionShape}"
+                        Command="{Binding PasteSelectionShapeCommand}"
+                        ToolTip.Tip="Setzt die abgelegte Auswahl wieder ein. Eine vorhandene wird ersetzt">
+                    <TextBlock Text="Auswahl einfügen" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
+                </Button>
+            </Grid>
 
             <TextBlock Text="Auswahl im Bild erstellen, dann kopieren oder füllen."
                        Foreground="{DynamicResource FP.Text.Secondary}"
@@ -140,7 +260,7 @@
                     <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" Value="{Binding ColorRangeFeather}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeFeather, Mode=TwoWay}" Minimum="1" Maximum="100" />
                 </Grid>
-                <CheckBox Content="Benachbart"
+                <CheckBox Content="Zusammenhängend"
                           IsChecked="{Binding ColorRangeContiguous}"
                           FontSize="{DynamicResource FP.Font.Small}"
                           ToolTip.Tip="Wählt nur die zusammenhängende Fläche am Klickpunkt statt gleicher Farben im ganzen Bild" />

@@ -885,12 +885,12 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/filter.svg"
                                    Classes="filter-glyph" Width="20" Height="20"/>
-                            <TextBlock Text="{Binding FilterLabel}"/>
+                            <TextBlock Text="{Binding FilterLabel}"
+                                       IsVisible="{Binding AreFilterLabelsVisible}"/>
                         </StackPanel>
                     </Button>
 
                     <Button Grid.Column="5"
-                            MinWidth="156" MaxWidth="260"
                             Height="34" Padding="8,5" Margin="0,0,8,0"
                             Tag="Sort"
                             PointerPressed="OnFilterButtonPointerPressed"
@@ -1118,8 +1118,7 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-down.svg"
                                    Width="20" Height="20"
                                    IsVisible="{Binding IsSortDescending}"/>
-                            <TextBlock Text="{Binding SortLabel}"
-                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding SortLabel}"/>
                         </StackPanel>
                     </Button>
 

@@ -119,6 +119,49 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- Gemeinsame Aktionen stehen – wie bei der Auswahl – direkt unter dem Modus.
+                 Sie beziehen sich auf die vorhandene Maske, nicht auf die darunter sichtbaren
+                 Einstellungen des gerade gewählten Werkzeugs. -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanInvertMask}"
+                        Command="{Binding InvertCurrentMaskCommand}"
+                        ToolTip.Tip="Tauscht gedeckte und freie Seite">
+                    <TextBlock Text="Maske umkehren" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
+                </Button>
+                <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanDiscardMask}"
+                        Command="{Binding DiscardCurrentMaskCommand}"
+                        ToolTip.Tip="Nimmt die Maske weg. Was sie begrenzt hat, wirkt danach überall">
+                    <TextBlock Text="Maske verwerfen" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
+                </Button>
+            </Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanCopyMask}"
+                        Command="{Binding CopyMaskCommand}"
+                        ToolTip.Tip="Legt eine Abschrift dieser Maske ab">
+                    <TextBlock Text="Maske kopieren" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
+                </Button>
+                <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsEnabled="{Binding CanPasteMask}"
+                        Command="{Binding PasteMaskCommand}"
+                        ToolTip.Tip="Setzt die abgelegte Maske auf das markierte Objekt, sonst auf die markierte Ebene. Eine vorhandene wird ersetzt">
+                    <TextBlock Text="Maske einfügen" FontSize="{DynamicResource FP.Font.Small}"
+                               HorizontalAlignment="Center" />
+                </Button>
+            </Grid>
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                    IsEnabled="{Binding CanCopyMask}"
+                    Command="{Binding LoadMaskAsSelectionCommand}"
+                    ToolTip.Tip="Übernimmt die Form der Maske als Auswahl - zum Füllen, Kopieren oder für eine weitere Ebene. Die Maske selbst bleibt">
+                <TextBlock Text="Als Auswahl laden" FontSize="{DynamicResource FP.Font.Small}"
+                           HorizontalAlignment="Center" />
+            </Button>
+
             <StackPanel Spacing="8" IsVisible="{Binding IsMaskColorRangeMode}">
                 <TextBlock Text="Eine Farbe im Bild anklicken. Anders als der Zauberstab wird derselbe Farbbereich überall im Bild gewählt."
                            TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -133,7 +176,7 @@
                     <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" Value="{Binding ColorRangeFeather}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeFeather, Mode=TwoWay}" Minimum="1" Maximum="100" />
                 </Grid>
-                <CheckBox Content="Benachbart"
+                <CheckBox Content="Zusammenhängend"
                           IsChecked="{Binding ColorRangeContiguous}"
                           FontSize="{DynamicResource FP.Font.Small}"
                           ToolTip.Tip="Wählt nur die zusammenhängende Fläche am Klickpunkt statt gleicher Farben im ganzen Bild" />
@@ -408,54 +451,6 @@
                           FontSize="{DynamicResource FP.Font.Small}"
                           ToolTip.Tip="Legt die Maske vorübergehend still: die Anpassung wirkt dann überall. Zum Vergleichen, die Maske bleibt erhalten" />
 
-                <!-- ÜBERTRAGEN. Eine Maske ist Arbeit; sie ein zweites Mal zu bauen, weil dieselbe
-                     Form auch woanders gebraucht wird, war bisher der einzige Weg. Kopiert wird
-                     immer eine Abschrift mit eigener Kennung - zwei Ebenen teilen sich nie eine
-                     Maske. Eingefügt wird auf das markierte Objekt, sonst auf die markierte Ebene. -->
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
-                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                            IsEnabled="{Binding CanCopyMask}"
-                            Command="{Binding CopyMaskCommand}"
-                            ToolTip.Tip="Legt eine Abschrift dieser Maske ab">
-                        <TextBlock Text="Maske kopieren" FontSize="{DynamicResource FP.Font.Small}"
-                                   HorizontalAlignment="Center" />
-                    </Button>
-                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                            IsEnabled="{Binding CanPasteMask}"
-                            Command="{Binding PasteMaskCommand}"
-                            ToolTip.Tip="Setzt die abgelegte Maske auf das markierte Objekt, sonst auf die markierte Ebene. Eine vorhandene wird ersetzt">
-                        <TextBlock Text="Maske einfügen" FontSize="{DynamicResource FP.Font.Small}"
-                                   HorizontalAlignment="Center" />
-                    </Button>
-                </Grid>
-                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                        IsEnabled="{Binding CanCopyMask}"
-                        Command="{Binding LoadMaskAsSelectionCommand}"
-                        ToolTip.Tip="Übernimmt die Form der Maske als Auswahl - zum Füllen, Kopieren oder für eine weitere Ebene. Die Maske selbst bleibt">
-                    <TextBlock Text="Als Auswahl laden" FontSize="{DynamicResource FP.Font.Small}"
-                               HorizontalAlignment="Center" />
-                </Button>
-
-                <!-- BESCHRIFTET statt als Symbol, und mit dem Wort "Maske" darin: als blosses
-                     Symbolpaar in der Modusreihe war nicht zu sehen, dass die beiden etwas ganz
-                     anderes tun als die vier davor. Ohne Symbol, weil "Maske umkehren" mit einem
-                     davor nicht mehr in die halbe Panelbreite passt. -->
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
-                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                            IsEnabled="{Binding CanInvertMask}"
-                            Command="{Binding InvertCurrentMaskCommand}"
-                            ToolTip.Tip="Tauscht gedeckte und freie Seite">
-                        <TextBlock Text="Maske umkehren" FontSize="{DynamicResource FP.Font.Small}"
-                                   HorizontalAlignment="Center" />
-                    </Button>
-                    <Button Grid.Column="1" Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
-                            IsEnabled="{Binding CanDiscardMask}"
-                            Command="{Binding DiscardCurrentMaskCommand}"
-                            ToolTip.Tip="Nimmt die Maske weg. Was sie begrenzt hat, wirkt danach überall">
-                        <TextBlock Text="Maske verwerfen" FontSize="{DynamicResource FP.Font.Small}"
-                                   HorizontalAlignment="Center" />
-                    </Button>
-                </Grid>
             </StackPanel>
 
             <!-- BESTANDTEILE DER MASKE. Sie gehoeren KEINEM Zweig: eine Maske kann aus Verlauf,

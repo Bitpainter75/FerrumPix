@@ -4175,6 +4175,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim sourceIsBgra = source.ColorType = SKColorType.Bgra8888
             Dim sourceIsRgba = source.ColorType = SKColorType.Rgba8888
             Dim fastRead = sourcePixels <> IntPtr.Zero AndAlso (sourceIsBgra OrElse sourceIsRgba)
+            ' Die Szene des Editors ist VORMULTIPLIZIERT. Der schnelle Weg liest die Bytes roh, das
+            ' Histogramm liest ueber GetPixel und bekommt sie zurueckgerechnet - ohne dieselbe
+            ' Rechnung zeigen die drei Analysebilder am selben Bild verschiedene Werte, sobald es
+            ' Transparenz gibt (Befund 2026-08-16).
+            Dim sourceIsPremul = source.AlphaType = SKAlphaType.Premul
             Dim sourceRowBytes = source.RowBytes
             Dim sourceRow(If(fastRead, sourceRowBytes, 1) - 1) As Byte
 
@@ -4193,11 +4198,22 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Dim c As SKColor
                     If fastRead Then
                         Dim p = columnOffsets(column)
+                        Dim r0 As Byte, g0 As Byte, b0 As Byte
                         If sourceIsBgra Then
-                            c = New SKColor(sourceRow(p + 2), sourceRow(p + 1), sourceRow(p))
+                            b0 = sourceRow(p) : g0 = sourceRow(p + 1) : r0 = sourceRow(p + 2)
                         Else
-                            c = New SKColor(sourceRow(p), sourceRow(p + 1), sourceRow(p + 2))
+                            r0 = sourceRow(p) : g0 = sourceRow(p + 1) : b0 = sourceRow(p + 2)
                         End If
+                        Dim a0 = sourceRow(p + 3)
+                        ' Bei Alpha 0 stehen in einem vormultiplizierten Bild ohnehin Nullen, bei 255
+                        ' aendert die Rechnung nichts - nur dazwischen muss zurueckgerechnet werden.
+                        ' CInt VOR der Multiplikation: eine Byte-Multiplikation wirft bei Ueberlauf.
+                        If sourceIsPremul AndAlso a0 > 0 AndAlso a0 < 255 Then
+                            r0 = CByte(Math.Min(255, CInt(r0) * 255 \ CInt(a0)))
+                            g0 = CByte(Math.Min(255, CInt(g0) * 255 \ CInt(a0)))
+                            b0 = CByte(Math.Min(255, CInt(b0) * 255 \ CInt(a0)))
+                        End If
+                        c = New SKColor(r0, g0, b0)
                     Else
                         c = source.GetPixel(columnOffsets(column) \ 4, y)
                     End If

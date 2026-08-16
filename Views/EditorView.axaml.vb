@@ -2161,6 +2161,13 @@ Namespace Views
                         Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                         Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                         Dim ignored = vm.SetSelectionColorRangeMask(xPct, yPct, isMask:=False)
+                    Case "Subject"
+                        ' Dasselbe Werkzeug wie im Maskenpanel, nur ist das Ergebnis hier eine
+                        ' AUSWAHL. Alt nimmt eine Stelle wieder weg - dieselbe Geste wie dort.
+                        Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+                        Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+                        Dim dazu = Not e.KeyModifiers.HasFlag(KeyModifiers.Alt)
+                        Dim ignored = vm.SetSelectionSubjectMask(xPct, yPct, dazu, isMask:=False)
                     Case "LuminanceRange"
                         ' Die Auswahl entsteht beim Wechsel in den Modus und wird von den Reglern aktualisiert.
                     Case "Lasso"
@@ -2178,6 +2185,7 @@ Namespace Views
                         _isMaskBrushDrawing = True
                         e.Pointer.Capture(canvas)
                         RefreshMaskBrushLive(vm)
+                        UpdateSelectionBrushOverlay(imageRect, vm)
                     Case Else   ' Rectangle, Ellipse - Rechteck aufziehen
                         _selectionStart = rawPos
                         _selectionEnd = rawPos
@@ -2549,6 +2557,7 @@ Namespace Views
                     Next
                 End If
                 RefreshMaskBrushLive(vm)
+                UpdateSelectionBrushOverlay(imageRect, vm)
                 e.Handled = True
                 Return
             End If
@@ -2991,7 +3000,9 @@ Namespace Views
         ''' die auch den angezeigten Cursorring bemisst, damit Ring und Wirkung nie auseinanderlaufen.
         ''' 0, wenn gerade kein Pixelwerkzeug aktiv ist.</summary>
         Private Function IsMaskBrushActive(vm As EditorViewModel) As Boolean
-            Return vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Mask AndAlso vm.IsMaskBrushMode
+            Return vm IsNot Nothing AndAlso
+                   ((vm.CurrentTool = EditorTool.Mask AndAlso vm.IsMaskBrushMode) OrElse
+                    (vm.CurrentTool = EditorTool.Selection AndAlso vm.IsBrushSelectionMode))
         End Function
 
         Private Function BrushDiameterOnScreen(imageRect As Avalonia.Rect, vm As EditorViewModel) As Double
@@ -3056,6 +3067,61 @@ Namespace Views
             Dim xs As Double() = Nothing, ys As Double() = Nothing
             MaskBrushPercentArrays(xs, ys)
             vm.RefreshMaskBrushLivePreview(xs, ys)
+        End Sub
+
+        ''' <summary>Reine View-Vorschau für den Auswahlpinsel. Die echte Auswahl wird erst beim
+        ''' Loslassen geschrieben; während des Malens zeichnet diese geschlossene Hülle schon die
+        ''' Laufameisen an der Kante des Pinselschlauchs. Masken behalten dagegen ihr rotes Overlay.</summary>
+        Private Sub UpdateSelectionBrushOverlay(imageRect As Avalonia.Rect, vm As EditorViewModel)
+            If vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Selection OrElse vm.ActiveSelectionIsMask OrElse
+               _maskBrushPoints.Count = 0 Then Return
+
+            Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
+            If overlay Is Nothing Then Return
+
+            Dim radius = Math.Max(1.0, BrushDiameterOnScreen(imageRect, vm) / 2.0)
+            Dim centers = _maskBrushPoints.Select(Function(p) New Avalonia.Point(
+                imageRect.Left + imageRect.Width * p.X / 100.0,
+                imageRect.Top + imageRect.Height * p.Y / 100.0)).ToList()
+            Dim boundary As New List(Of Avalonia.Point)()
+
+            If centers.Count = 1 Then
+                Const segments As Integer = 24
+                For i = 0 To segments - 1
+                    Dim angle = 2.0 * Math.PI * i / segments
+                    boundary.Add(New Avalonia.Point(centers(0).X + radius * Math.Cos(angle),
+                                                    centers(0).Y + radius * Math.Sin(angle)))
+                Next
+            Else
+                Dim left As New List(Of Avalonia.Point)()
+                Dim right As New List(Of Avalonia.Point)()
+                For i = 0 To centers.Count - 1
+                    Dim before = centers(Math.Max(0, i - 1))
+                    Dim after = centers(Math.Min(centers.Count - 1, i + 1))
+                    Dim dx = after.X - before.X, dy = after.Y - before.Y
+                    Dim length = Math.Sqrt(dx * dx + dy * dy)
+                    If length < 0.001 Then Continue For
+                    Dim nx = -dy / length * radius, ny = dx / length * radius
+                    left.Add(New Avalonia.Point(centers(i).X + nx, centers(i).Y + ny))
+                    right.Add(New Avalonia.Point(centers(i).X - nx, centers(i).Y - ny))
+                Next
+                boundary.AddRange(left)
+                right.Reverse()
+                boundary.AddRange(right)
+            End If
+            If boundary.Count < 3 Then Return
+
+            Dim minX = boundary.Min(Function(p) p.X), maxX = boundary.Max(Function(p) p.X)
+            Dim minY = boundary.Min(Function(p) p.Y), maxY = boundary.Max(Function(p) p.Y)
+            overlay.ShapeMode = "Lasso"
+            overlay.CombineMode = vm.SelectionCombineMode
+            overlay.EdgePoints = Nothing
+            overlay.Points = boundary.Select(Function(p) New Avalonia.Point(p.X - minX, p.Y - minY)).ToList()
+            overlay.IsVisible = True
+            Avalonia.Controls.Canvas.SetLeft(overlay, minX)
+            Avalonia.Controls.Canvas.SetTop(overlay, minY)
+            overlay.Width = Math.Max(1, maxX - minX)
+            overlay.Height = Math.Max(1, maxY - minY)
         End Sub
 
         Private Sub CommitMaskBrushStroke()

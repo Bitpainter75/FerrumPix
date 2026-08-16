@@ -1934,9 +1934,13 @@ Namespace Services
         ''' <summary>Erstellt eine weiche, NICHT zusammenhängende Farbbereichsmaske. Anders als der
         ''' Zauberstab trifft sie jede passende Farbe im Bild - genau das braucht man etwa für einen
         ''' blauen Himmel, der durch einen Baum unterbrochen ist.</summary>
+        ''' <param name="contiguous">Nur die zusammenhaengende Flaeche am Klickpunkt. Gerechnet wird
+        ''' mit DERSELBEN Aehnlichkeit wie sonst, begrenzt wird erst danach - der Regler bedeutet in
+        ''' beiden Faellen dasselbe, und der Uebergang wirkt auch hier.</param>
         Public Shared Function BuildColorRangeMask(image As SKBitmap, seedX As Integer, seedY As Integer,
                                                    tolerancePct As Double, featherPct As Double,
-                                                   ByRef bounds As SKRectI) As SKBitmap
+                                                   ByRef bounds As SKRectI,
+                                                   Optional contiguous As Boolean = False) As SKBitmap
             bounds = SKRectI.Empty
             If image Is Nothing OrElse seedX < 0 OrElse seedY < 0 OrElse seedX >= image.Width OrElse seedY >= image.Height Then Return Nothing
             Dim rIdx, gIdx, bIdx As Integer
@@ -1953,7 +1957,15 @@ Namespace Services
             Dim sr = CDbl(raw(seed + rIdx)), sg = CDbl(raw(seed + gIdx)), sb = CDbl(raw(seed + bIdx))
             ' RGB-Abstand ist für eine Auswahl bewusst auf 0..100 normiert. Die weiche Zone sitzt
             ' ausserhalb der harten Toleranz, damit 0 wirklich nur die angeklickte Farbe trifft.
-            Dim hard = Math.Max(0.0, Math.Min(100.0, tolerancePct)) / 100.0 * 441.6729559
+            '
+            ' DER REGLER GEHT QUADRATISCH IN DEN ABSTAND, nicht linear. An vier Fotos gemessen lag
+            ' linear der ganze nutzbare Bereich zwischen 5 und 25: dort sprang die gefasste Flaeche
+            ' von wenigen Prozent auf ueber 80, und die oberen zwei Drittel des Reglers taten nichts
+            ' mehr (Nutzerbefund 2026-08-16). Quadratisch liegt derselbe Uebergang etwa in der Mitte
+            ' des Wegs und ist ueber rund 30 Reglerpunkte gestreckt. Der Wert selbst bleibt, was er
+            ' war - die Kennlinie sitzt hier an EINER Stelle und nicht in den Aufrufern.
+            Dim norm = Math.Max(0.0, Math.Min(100.0, tolerancePct)) / 100.0
+            Dim hard = norm * norm * 441.6729559
             Dim soft = Math.Max(1.0, Math.Min(100.0, featherPct)) / 100.0 * 220.8364779
             Dim output = New SKBitmap(image.Width, image.Height, SKColorType.Alpha8, SKAlphaType.Premul)
             Dim outStride = output.RowBytes, data(outStride * image.Height - 1) As Byte
@@ -1983,6 +1995,46 @@ Namespace Services
                 Next
             Next
             If maxX < minX Then output.Dispose() : Return Nothing
+
+            If contiguous Then
+                ' Flutfuellung ueber alles, was ueberhaupt Deckung hat - vom Klickpunkt aus, vier
+                ' Nachbarn. Was von dort nicht erreichbar ist, faellt weg; die weiche Zone am Rand
+                ' bleibt erhalten, weil sie mitgeflutet wird.
+                Dim seedIndex = seedY * outStride + seedX
+                If data(seedIndex) = 0 Then output.Dispose() : Return Nothing
+                Dim reached(data.Length - 1) As Byte
+                Dim stack As New Stack(Of Integer)()
+                stack.Push(seedIndex)
+                reached(seedIndex) = 1
+                Dim cMinX = image.Width, cMinY = image.Height, cMaxX = -1, cMaxY = -1
+                While stack.Count > 0
+                    Dim idx = stack.Pop()
+                    Dim py = idx \ outStride
+                    Dim px = idx - py * outStride
+                    If px < cMinX Then cMinX = px
+                    If px > cMaxX Then cMaxX = px
+                    If py < cMinY Then cMinY = py
+                    If py > cMaxY Then cMaxY = py
+                    If px > 0 AndAlso reached(idx - 1) = 0 AndAlso data(idx - 1) > 0 Then
+                        reached(idx - 1) = 1 : stack.Push(idx - 1)
+                    End If
+                    If px < image.Width - 1 AndAlso reached(idx + 1) = 0 AndAlso data(idx + 1) > 0 Then
+                        reached(idx + 1) = 1 : stack.Push(idx + 1)
+                    End If
+                    If py > 0 AndAlso reached(idx - outStride) = 0 AndAlso data(idx - outStride) > 0 Then
+                        reached(idx - outStride) = 1 : stack.Push(idx - outStride)
+                    End If
+                    If py < image.Height - 1 AndAlso reached(idx + outStride) = 0 AndAlso data(idx + outStride) > 0 Then
+                        reached(idx + outStride) = 1 : stack.Push(idx + outStride)
+                    End If
+                End While
+                For i = 0 To data.Length - 1
+                    If reached(i) = 0 Then data(i) = 0
+                Next
+                If cMaxX < cMinX Then output.Dispose() : Return Nothing
+                minX = cMinX : minY = cMinY : maxX = cMaxX : maxY = cMaxY
+            End If
+
             Marshal.Copy(data, 0, output.GetPixels(), data.Length)
             bounds = New SKRectI(minX, minY, maxX + 1, maxY + 1)
             Return output

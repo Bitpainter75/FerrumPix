@@ -2513,6 +2513,22 @@ Namespace ViewModels
             ' beim Moduswechsel neu gebaut, das ViewModel ueberlebt - siehe RestoreNavigationTab).
             SidebarTab = TabForNode(node)
             SelectedFavoriteNode = If(node.IsFavoriteNode, node, Nothing)
+
+            ' EIN WECHSEL IM BAUM BEENDET JEDE KNOPFAUSWAHL. Fuer den Ordnerbaum steht das in
+            ' NavigateToFolderAsync; die virtuellen Ziele (Favoriten, Immich, Nextcloud, gespeicherte
+            ' Suchen) liefen bisher daran vorbei - dort blieb ein Personen-, Orts- oder
+            ' Stichwortfilter stehen und siebte still die Liste des neuen Ziels, waehrend die drei
+            ' Knoepfe ihre Akzentfarbe behielten (Nutzerbefund 2026-08-16). Die reinen Klappknoten
+            ' oeffnen gar keine Ansicht und lassen die Auswahl deshalb, wie sie ist.
+            Select Case node.Kind
+                Case "ImmichPeopleRoot", "ImmichPlacesRoot",
+                     "NextcloudPeopleRoot", "NextcloudPlacesRoot", "NextcloudTagsRoot",
+                     "FavoriteMissing"
+                    ' Klappknoten und tote Favoriten: kein Zielwechsel.
+                Case Else
+                    ClearButtonFiltersSilently()
+            End Select
+
             Select Case node.Kind
                 Case "NewSearch"
                     Return Await OpenSearchDialog(node.Source)

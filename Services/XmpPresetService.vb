@@ -13,6 +13,77 @@ Namespace Services
     ''' Galerie, und zwei Abbildungen derselben XMP-Schlüssel würden garantiert auseinanderlaufen.</summary>
     Public Class XmpPresetService
 
+        ''' <summary>Die nicht-destruktiven Teile eines Lightroom-XMPs, die nicht zum Look
+        ''' gehören. Der Editor kann sie einzeln anbieten, statt Geometrie stillschweigend mit
+        ''' einem Preset zu übernehmen.</summary>
+        Public Class ImportExtras
+            Public Property Geometry As New ImageAdjustments()
+            Public Property HasTransform As Boolean
+            Public Property HasCrop As Boolean
+            ''' <summary>WELCHE Kanten das Preset nennt. Ein Preset kann eine einzelne Kante tragen,
+            ''' und die uebrigen stehen dann im frisch erzeugten Geometry-Objekt auf 0. Wer alle vier
+            ''' uebernimmt, loescht damit den vorhandenen Zuschnitt des Bildes.</summary>
+            Public Property HasCropLeft As Boolean
+            Public Property HasCropTop As Boolean
+            Public Property HasCropRight As Boolean
+            Public Property HasCropBottom As Boolean
+            Public Property HasLensCorrection As Boolean
+            Public Property HasChromaticAberration As Boolean
+            Public Property ProfileName As String = ""
+            Public Property HasEmbeddedProfileReference As Boolean
+        End Class
+
+        ''' <summary>Liest die importierbaren Zusatzteile. Adobe speichert in XMP normalerweise
+        ''' nur eine Profil-REFERENZ; die 3D-Daten bleiben im Camera-Raw-Installationsordner. Daher
+        ''' wird der Name bewusst getrennt gemeldet und nicht als vermeintlich exakte LUT behandelt.</summary>
+        Public Shared Function LoadImportExtras(xmpPath As String) As ImportExtras
+            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return Nothing
+            Dim text = File.ReadAllText(xmpPath)
+            Dim values = ParseXmpValues(StripNestedCrsBlocks(text))
+            Dim result As New ImportExtras()
+            Dim profile = ParseLookProfile(text)
+            If profile IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(profile.Name) Then
+                result.ProfileName = profile.Name
+                result.HasEmbeddedProfileReference = True
+            End If
+            Dim d As Double
+            If TryGetXmpDouble(values, "StraightenAngle", d) Then
+                result.Geometry.StraightenDegrees = CSng(Clamp(d, -180, 180))
+                result.HasTransform = True
+            End If
+            If TryGetXmpDouble(values, "PerspectiveHorizontal", d) Then result.Geometry.PerspectiveHorizontal = CSng(Clamp100(d)) : result.HasTransform = True
+            If TryGetXmpDouble(values, "PerspectiveVertical", d) Then result.Geometry.PerspectiveVertical = CSng(Clamp100(d)) : result.HasTransform = True
+            If TryGetXmpDouble(values, "PerspectiveAspect", d) Then result.Geometry.PerspectiveAspect = CSng(Clamp100(d)) : result.HasTransform = True
+            If TryGetXmpDouble(values, "PerspectiveScale", d) Then result.Geometry.PerspectiveScale = CSng(Clamp100(d)) : result.HasTransform = True
+            Dim leftValue As Double, topValue As Double, rightValue As Double, bottomValue As Double
+            Dim hasLeft = TryGetXmpDouble(values, "CropLeft", leftValue)
+            Dim hasTop = TryGetXmpDouble(values, "CropTop", topValue)
+            Dim hasRight = TryGetXmpDouble(values, "CropRight", rightValue)
+            Dim hasBottom = TryGetXmpDouble(values, "CropBottom", bottomValue)
+            If hasLeft OrElse hasTop OrElse hasRight OrElse hasBottom Then
+                ' Lightroom speichert Kanten im Bereich 0..1, FerrumPix die wegzunehmenden
+                ' Anteile in Prozent. Fehlende Kanten bleiben beim aktuellen Bild unverändert.
+                If hasLeft Then result.Geometry.CropLeftPercent = CSng(Clamp(leftValue * 100, 0, 99))
+                If hasTop Then result.Geometry.CropTopPercent = CSng(Clamp(topValue * 100, 0, 99))
+                If hasRight Then result.Geometry.CropRightPercent = CSng(Clamp((1 - rightValue) * 100, 0, 99))
+                If hasBottom Then result.Geometry.CropBottomPercent = CSng(Clamp((1 - bottomValue) * 100, 0, 99))
+                result.HasCropLeft = hasLeft
+                result.HasCropTop = hasTop
+                result.HasCropRight = hasRight
+                result.HasCropBottom = hasBottom
+                result.HasCrop = True
+            End If
+            ' Die Adobe-Schalter sagen nur, DASS eine Korrektur aktiv war. Die konkreten
+            ' Objektivdaten sind nicht portabel; FerrumPix verwendet dafür seine eigene Datenbank.
+            result.HasLensCorrection = IsXmpTrue(values, "LensProfileEnable") OrElse
+                                       Not String.IsNullOrWhiteSpace(GetXmpString(values, "LensProfileSetup"))
+            result.HasChromaticAberration = IsXmpTrue(values, "ChromaticAberrationB") OrElse
+                                             IsXmpTrue(values, "ChromaticAberrationR") OrElse
+                                             IsXmpTrue(values, "RemoveChromaticAberration") OrElse
+                                             IsXmpTrue(values, "AutoLateralCA")
+            Return result
+        End Function
+
         ''' <summary>Nothing, wenn die Datei fehlt oder keine crs:-Werte enthält.
         '''
         ''' Ohne <paramref name="baseLook"/> entsteht wie bisher ein vollständiger Look mit neutralen
@@ -596,13 +667,18 @@ Namespace Services
                 a.ColorGradeGlobalSaturation <> 0)
         End Function
 
-        ''' <summary>Parst die lokalen Korrekturen (Radial-/Verlaufsmasken) eines XMP-Presets. Jede
-        ''' Correction (in GradientBasedCorrections bzw. CircularGradientBasedCorrections) hat genau eine
-        ''' Maske und ihre Local*-Werte; Pinsel-/Bereichsmasken werden (noch) übersprungen.</summary>
+        ''' <summary>Parst die lokalen Korrekturen (Radial-/Verlaufsmasken) eines XMP-Presets. Gelesen
+        ''' werden die beiden alten Behälter und die Maskengruppe neuerer Erzeuger; übernommen wird
+        ''' daraus nur, was sich abbilden lässt: eine Correction mit GENAU EINER Maske, und diese ein
+        ''' Verlauf oder Kreisverlauf. Pinsel-, Motiv- und Bereichsmasken sowie verrechnete Gruppen
+        ''' werden übersprungen.</summary>
         Public Shared Function ParseLocalCorrections(xmpText As String) As List(Of LocalCorrectionSpec)
             Dim result As New List(Of LocalCorrectionSpec)()
             If String.IsNullOrEmpty(xmpText) Then Return result
-            For Each container In {"GradientBasedCorrections", "CircularGradientBasedCorrections"}
+            ' Seit Lightroom Classic 11 liegen dieselben lokalen Korrekturen häufig unter
+            ' MaskGroupBasedCorrections. Die Gruppe ist nur ein Container: ihre linearen und
+            ' radialen Bestandteile lassen sich mit derselben Geometrie verlustfrei übernehmen.
+            For Each container In {"GradientBasedCorrections", "CircularGradientBasedCorrections", "MaskGroupBasedCorrections"}
                 Dim block = Regex.Match(xmpText, "<crs:" & container & ">(?<b>.*?)</crs:" & container & ">", RegexOptions.Singleline)
                 If Not block.Success Then Continue For
                 Dim parts = Regex.Split(block.Groups("b").Value, "crs:What=""Correction""")
@@ -624,8 +700,25 @@ Namespace Services
                     Dim mm = Regex.Match(chunk, "<rdf:li\s(?<body>[^>]*?crs:What=""Mask/(?<t>[A-Za-z]+)""[^>]*?)/>", RegexOptions.Singleline)
                     If Not mm.Success Then Continue For
                     Dim body = mm.Groups("body").Value
+                    Dim maskType = mm.Groups("t").Value
+
+                    ' IN EINER MASKENGRUPPE STEHT NICHT ZWANGSLAEUFIG EIN VERLAUF. Sie traegt auch
+                    ' Motiv- und Himmelmasken (Mask/Image), Pinselstriche (Mask/Paint) und
+                    ' Bereichsmasken. Deren Geometrie steht NICHT in denselben Attributen, der
+                    ' Zweig unten faende ZeroX/FullX also nicht und nutzte seine Vorgaben - daraus
+                    ' wird ein Verlauf ueber das GANZE Bild. Ein Preset mit Himmelmaske und -1,5 EV
+                    ' verdunkelte damit das ganze Foto.
+                    '
+                    ' Und mehrere Masken in einer Gruppe sind eine VERRECHNUNG (Schnitt, Abzug):
+                    ' eine einzelne davon herauszugreifen ergibt eine andere Auswahl als gemeint.
+                    ' Uebernommen wird deshalb nur, was sich wirklich abbilden laesst: genau eine
+                    ' Maske, und die muss ein Verlauf oder ein Kreisverlauf sein.
+                    If Regex.Matches(chunk, "crs:What=""Mask/").Count <> 1 Then Continue For
+                    If Not String.Equals(maskType, "Gradient", StringComparison.Ordinal) AndAlso
+                       Not String.Equals(maskType, "CircularGradient", StringComparison.Ordinal) Then Continue For
+
                     Dim spec As New LocalCorrectionSpec With {
-                        .MaskType = mm.Groups("t").Value,
+                        .MaskType = maskType,
                         .MaskValue = Math.Max(0.0, Math.Min(1.0, CorrAttr(body, "MaskValue", 1.0) * correctionAmount)),
                         .Adjustments = BuildLocalAdjustments(chunk)
                     }

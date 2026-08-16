@@ -47,6 +47,8 @@ Namespace ViewModels
                 If before <> _hasActiveSelection Then
                     RaiseCurrentTargetChanged()
                     Me.RaisePropertyChanged(NameOf(CanRemoveObject))
+                    ' Und das Ablegen der Auswahlform, aus demselben Grund.
+                    Me.RaisePropertyChanged(NameOf(CanCopySelectionShape))
                     ' Umkehren und Verwerfen haengen ebenfalls daran. Ohne diese Meldung blieben sie
                     ' nach dem ersten Pinselstrich grau, bis zufaellig ein Verlaufs-Ereignis feuerte,
                     ' und nach dem Aufheben blieben sie bedienbar.
@@ -112,13 +114,14 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsColorRangeSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsLuminanceRangeSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsBrushSelectionMode))
+                Me.RaisePropertyChanged(NameOf(IsSubjectSelectionMode))
                 ' Beim Wechsel in den Masken-Pinsel sinnvoll auf "Hinzufügen" vorbelegen (der erste Strich
                 ' ohne aktive Auswahl läuft über ApplySelectionCandidate ohnehin als "New"). Das Overlay
                 ' (rot vs. Ameisen) steuert NICHT mehr der Modus, sondern die Art der Auswahl
                 ' (ActiveSelectionIsMask) - so bleibt eine Masken-Ebene auch außerhalb des Pinsels rot.
                 If v = "Brush" AndAlso _selectionCombineMode = "New" Then SelectionCombineMode = "Add"
                 If v = "LuminanceRange" Then
-                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
+                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False, captureUndo:=True)
                 End If
             End Set
         End Property
@@ -225,6 +228,15 @@ Namespace ViewModels
         Public ReadOnly Property IsBrushSelectionMode As Boolean
             Get
                 Return _selectionMode = "Brush"
+            End Get
+        End Property
+
+        ''' <summary>Objektauswahl als AUSWAHL statt als Maskenebene. Dasselbe Werkzeug wie im
+        ''' Maskenpanel, nur ist das Ergebnis hier eine gewoehnliche Auswahl, die sich addieren,
+        ''' abziehen und mit dem Pinsel nacharbeiten laesst.</summary>
+        Public ReadOnly Property IsSubjectSelectionMode As Boolean
+            Get
+                Return _selectionMode = "Subject"
             End Get
         End Property
 
@@ -926,6 +938,16 @@ Namespace ViewModels
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return
+            ' Derselbe Stempel wird auch vom Auswahlpinsel benutzt. Nur eine bereits geöffnete
+            ' Ebenenmaske bzw. das Maskenwerkzeug ist eine Maske; eine freie Auswahl darf durch die
+            ' Live-Vorschau nicht zur Maske werden, sonst bleiben nach dem Loslassen das rote
+            ' Overlay und die Masken-Semantik statt der Laufameisen übrig.
+            Dim paintsMask = CurrentTool <> EditorTool.Selection OrElse _activeSelectionIsMask
+            If Not paintsMask Then
+                SetActiveSelectionIsMask(False)
+                SetSelectionMaskPreviewImage(Nothing)
+                Return
+            End If
             SetActiveSelectionIsMask(True)   ' laufender Masken-Strich = rotes Overlay
             ' Beim Nachbessern eines VERLAUFS gibt es keine aktive Auswahl - der Abzieh-Modus muss
             ' trotzdem als Radiergummi angezeigt werden, sonst sieht der Strich aus, als füge er hinzu.
@@ -1044,7 +1066,13 @@ Namespace ViewModels
                             ImageProcessor.ApplyMaskBrushStroke(gradient, stroke, _selectionCombineMode = "Subtract")
                         End If
                     Else
-                        ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=True)
+                        ' WOHIN der Strich geht, haengt am WERKZEUG: im Maskenwerkzeug entsteht eine
+                        ' Maske (rot), im Auswahlwerkzeug eine gewoehnliche Auswahl (Laufameisen) -
+                        ' derselbe Pinsel, aber das Ergebnis passt zu dem, womit man arbeitet.
+                        ' Liegt bereits eine Maske als aktive Auswahl, bleibt es eine Maske: sonst
+                        ' wuerde ein nachbessernder Strich sie in eine Auswahl verwandeln.
+                        Dim alsMaske = CurrentTool <> EditorTool.Selection OrElse ActiveSelectionIsMask
+                        ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=alsMaske)
                         ' Freistehende Auswahl: weiche Kante ist in die Alpha-Werte gebacken. Ebenen-Maske:
                         ' harte Form (Feather kommt beim Rendern über mask.FeatherPixels) - nicht baken.
                         _selectionMaskSoftBaked = (_editingLayerMaskId = "")
@@ -2735,15 +2763,23 @@ Namespace ViewModels
                String.Equals(mask.RangeKind, "Luminance", StringComparison.OrdinalIgnoreCase) OrElse
                String.Equals(mask.RangeKind, "Depth", StringComparison.OrdinalIgnoreCase) Then
                 _editingLayerMaskId = mask.Id
-                _colorRangeTolerance = mask.RangeTolerance
-                _colorRangeFeather = Math.Max(1.0, mask.RangeFeather)
-                _colorRangeContiguous = mask.RangeContiguous
-                _luminanceRangeFrom = mask.RangeFrom
-                _luminanceRangeTo = mask.RangeTo
-                _luminanceRangeFeather = Math.Max(0.0, mask.RangeFeather)
-                _depthFrom = mask.RangeFrom
-                _depthTo = mask.RangeTo
-                _depthFeather = Math.Max(0.0, mask.RangeFeather)
+                ' NUR DIE REGLER DER TATSAECHLICHEN ART. Die Maske traegt EINEN Uebergangswert und
+                ' EIN Wertepaar - sie in alle drei Werkzeuge zu schreiben hiess: eine Farbmaske mit
+                ' Uebergang 80 (Bereich 1..100) landete auch im Luminanz- und im Tiefenuebergang,
+                ' deren Regler bei 50 enden, und der dort zuvor gewaehlte Wert war weg.
+                If String.Equals(mask.RangeKind, "Color", StringComparison.OrdinalIgnoreCase) Then
+                    _colorRangeTolerance = Math.Max(0.0, Math.Min(100.0, mask.RangeTolerance))
+                    _colorRangeFeather = Math.Max(1.0, Math.Min(100.0, mask.RangeFeather))
+                    _colorRangeContiguous = mask.RangeContiguous
+                ElseIf String.Equals(mask.RangeKind, "Luminance", StringComparison.OrdinalIgnoreCase) Then
+                    _luminanceRangeFrom = Math.Max(0.0, Math.Min(100.0, mask.RangeFrom))
+                    _luminanceRangeTo = Math.Max(0.0, Math.Min(100.0, mask.RangeTo))
+                    _luminanceRangeFeather = Math.Max(0.0, Math.Min(50.0, mask.RangeFeather))
+                Else
+                    _depthFrom = Math.Max(0.0, Math.Min(100.0, mask.RangeFrom))
+                    _depthTo = Math.Max(0.0, Math.Min(100.0, mask.RangeTo))
+                    _depthFeather = Math.Max(0.0, Math.Min(50.0, mask.RangeFeather))
+                End If
                 For Each prop In {NameOf(ColorRangeTolerance), NameOf(ColorRangeFeather), NameOf(ColorRangeContiguous),
                                   NameOf(LuminanceRangeFrom), NameOf(LuminanceRangeTo), NameOf(LuminanceRangeFeather),
                                   NameOf(DepthFrom), NameOf(DepthTo), NameOf(DepthFeather)}
@@ -4304,19 +4340,15 @@ Namespace ViewModels
         ''' Anpassung), statt erst bei der ersten Regleränderung. Nutzt dieselbe Masken-Erzeugung und
         ''' Dedup wie der automatische Weg, also legt eine spätere Anpassung KEINE zweite Ebene an.
         '''
-        ''' STEHT DIE AUSWAHL SCHON AUF EINER EBENE, ENTSTEHT EINE KOPIE. Der Knopf heisst
-        ''' „Neue Masken-/Auswahlebene" und tat auf einer vorhandenen Ebene gar nichts: das Promoten
-        ''' fand die Ebene, zu der die Auswahl gehoert, und gab sie unveraendert zurueck - sichtbar
-        ''' passierte nichts. Gemeint ist dort eine weitere Ebene mit derselben Form, und die entsteht
-        ''' als unabhaengige Kopie samt eigener Maske. Beliebig oft wiederholbar: die Kopie wird zur
-        ''' bearbeiteten Ebene, der naechste Druck kopiert sie wieder.</summary>
+        ''' GEHOERT DIE AUSWAHL SCHON ZU EINER EBENE, BLEIBT ES BEI DIESER. Ein weiterer Druck legt
+        ''' keine zweite an: waehrend man mehrere Bereiche zu EINER Maske zusammensetzt, bleibt die
+        ''' Bindung bestehen, und der Abschlussknopf erzeugte sonst mehrere Ebenen ohne Wirkung.</summary>
         Public Sub CreateAdjustmentLayerFromSelection()
             TraceMask(Function() $"„Neue Masken-/Auswahlebene"" gedrückt: Auswahl aktiv={_hasActiveSelection}" &
                                  $" bearbeitet={Kurz(_editingLayerMaskId)} markiert={Kurz(_selectedMaskedAdjustmentLayerId)}" &
                                  $" promotet={Kurz(_selectionPromotedLayerId)}")
             If Not _hasActiveSelection Then Return
             PushUndo()
-            Dim countBefore = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return
             ' Die Auswahl gehört schon zu dieser Ebene. Ein weiterer Druck darf keine leere Kopie
