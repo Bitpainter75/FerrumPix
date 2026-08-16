@@ -133,6 +133,10 @@
                     <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" Value="{Binding ColorRangeFeather}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeFeather, Mode=TwoWay}" Minimum="1" Maximum="100" />
                 </Grid>
+                <CheckBox Content="Benachbart"
+                          IsChecked="{Binding ColorRangeContiguous}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Wählt nur die zusammenhängende Fläche am Klickpunkt statt gleicher Farben im ganzen Bild" />
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         IsEnabled="{Binding HasActiveSelection}"
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"

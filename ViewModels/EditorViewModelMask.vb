@@ -109,12 +109,17 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsEllipseSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsLassoSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsMagicWandSelectionMode))
+                Me.RaisePropertyChanged(NameOf(IsColorRangeSelectionMode))
+                Me.RaisePropertyChanged(NameOf(IsLuminanceRangeSelectionMode))
                 Me.RaisePropertyChanged(NameOf(IsBrushSelectionMode))
                 ' Beim Wechsel in den Masken-Pinsel sinnvoll auf "Hinzufügen" vorbelegen (der erste Strich
                 ' ohne aktive Auswahl läuft über ApplySelectionCandidate ohnehin als "New"). Das Overlay
                 ' (rot vs. Ameisen) steuert NICHT mehr der Modus, sondern die Art der Auswahl
                 ' (ActiveSelectionIsMask) - so bleibt eine Masken-Ebene auch außerhalb des Pinsels rot.
                 If v = "Brush" AndAlso _selectionCombineMode = "New" Then SelectionCombineMode = "Add"
+                If v = "LuminanceRange" Then
+                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
+                End If
             End Set
         End Property
 
@@ -202,6 +207,18 @@ Namespace ViewModels
         Public ReadOnly Property IsMagicWandSelectionMode As Boolean
             Get
                 Return _selectionMode = "MagicWand"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsColorRangeSelectionMode As Boolean
+            Get
+                Return _selectionMode = "ColorRange"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsLuminanceRangeSelectionMode As Boolean
+            Get
+                Return _selectionMode = "LuminanceRange"
             End Get
         End Property
 
@@ -2711,6 +2728,30 @@ Namespace ViewModels
                 RaiseMaskComponentsChanged()
                 Return
             End If
+            ' Bereichsmasken bleiben intern ein Alpha-Raster, tragen aber ihre Ursprungswerte.
+            ' Beim erneuten Öffnen stehen damit wieder dieselben Regler bereit statt nur der
+            ' Pinsel; die folgende Standardstrecke lädt zusätzlich die aktuelle Form als Overlay.
+            If String.Equals(mask.RangeKind, "Color", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(mask.RangeKind, "Luminance", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(mask.RangeKind, "Depth", StringComparison.OrdinalIgnoreCase) Then
+                _editingLayerMaskId = mask.Id
+                _colorRangeTolerance = mask.RangeTolerance
+                _colorRangeFeather = Math.Max(1.0, mask.RangeFeather)
+                _colorRangeContiguous = mask.RangeContiguous
+                _luminanceRangeFrom = mask.RangeFrom
+                _luminanceRangeTo = mask.RangeTo
+                _luminanceRangeFeather = Math.Max(0.0, mask.RangeFeather)
+                _depthFrom = mask.RangeFrom
+                _depthTo = mask.RangeTo
+                _depthFeather = Math.Max(0.0, mask.RangeFeather)
+                For Each prop In {NameOf(ColorRangeTolerance), NameOf(ColorRangeFeather), NameOf(ColorRangeContiguous),
+                                  NameOf(LuminanceRangeFrom), NameOf(LuminanceRangeTo), NameOf(LuminanceRangeFeather),
+                                  NameOf(DepthFrom), NameOf(DepthTo), NameOf(DepthFeather)}
+                    Me.RaisePropertyChanged(prop)
+                Next
+                MaskMode = If(String.Equals(mask.RangeKind, "Color", StringComparison.OrdinalIgnoreCase), "Farbe",
+                              If(String.Equals(mask.RangeKind, "Depth", StringComparison.OrdinalIgnoreCase), "Tiefe", "Luminanz"))
+            End If
             ' Ein Verlauf ist gerechnet, nicht gemalt: er wird NICHT in die Auswahlmaske geladen (das
             ' machte aus zwei Punkten ein PNG und nahm ihm die Aenderbarkeit). Eine noch laufende
             ' Pixelauswahl muss trotzdem weg, sonst laegen zwei Masken gleichzeitig auf dem Bild.
@@ -4278,20 +4319,9 @@ Namespace ViewModels
             Dim countBefore = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return
-            If _maskedAdjustmentLayers.Count = countBefore Then
-                ' Nichts dazugekommen - die Auswahl gehoerte bereits zu dieser Ebene.
-                Dim name = If(layer.IsMaskLayer, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) &
-                           " " & (_maskedAdjustmentLayers.Count + 1).ToString()
-                Dim copy = DuplicateAdjustmentLayer(layer, name)
-                If copy Is Nothing Then Return
-                TraceMask(Function() $"Kopie angelegt: aus Ebene={Kurz(layer.Id)} ({MaskTrace(layer.MaskId)})" &
-                                     $" wurde Ebene={Kurz(copy.Id)} ({MaskTrace(copy.MaskId)})")
-                layer = copy
-                ' Die Kopie wird zur bearbeiteten Maske. Ohne das zeigte das Panel die neue Ebene als
-                ' markiert, jeder Pinselstrich ginge aber weiter in die alte - und der naechste Druck
-                ' auf den Knopf kopierte wieder dieselbe Ausgangsebene.
-                LoadMaskIntoSelection(copy.MaskId, copy.IsMaskLayer)
-            End If
+            ' Die Auswahl gehört schon zu dieser Ebene. Ein weiterer Druck darf keine leere Kopie
+            ' erzeugen: während man mehrere Bereiche zu EINER Maske zusammensetzt, blieb diese
+            ' Bindung bestehen und der Abschlussknopf erzeugte sonst mehrere Ebenen ohne Wirkung.
             _selectedMaskedAdjustmentLayerId = layer.Id
             RebuildLayerRows()
             _hasChanges = True
@@ -4361,6 +4391,7 @@ Namespace ViewModels
                 ' mitzubenutzen band zwei Dinge an ein Raster: wer die Maske der einen Seite
                 ' nachmalte oder umkehrte, aenderte die andere mit.
                 _imageMasks.Add(mask)
+                ApplyPendingRangeMetadata(mask)
                 layer = New MaskedAdjustmentLayer With {
                     .Name = If(_activeSelectionIsMask, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) & " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
                     .MaskId = mask.Id,

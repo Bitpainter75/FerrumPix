@@ -13,10 +13,13 @@ Namespace Services
     ''' Galerie, und zwei Abbildungen derselben XMP-Schlüssel würden garantiert auseinanderlaufen.</summary>
     Public Class XmpPresetService
 
-        ''' <summary>Nothing, wenn die Datei fehlt oder keine crs:-Werte enthält. Alle Felder, die das
-        ''' Preset nicht setzt, bleiben auf ihrem neutralen Standard - ein geladenes Preset ersetzt den
-        ''' Look also vollständig, statt sich mit dem vorherigen zu vermischen.</summary>
-        Public Shared Function LoadLook(xmpPath As String) As ImageAdjustments
+        ''' <summary>Nothing, wenn die Datei fehlt oder keine crs:-Werte enthält.
+        '''
+        ''' Ohne <paramref name="baseLook"/> entsteht wie bisher ein vollständiger Look mit neutralen
+        ''' Ausgangswerten - nötig für Sidecars und Stapelverarbeitung. Übergibt der Editor dagegen
+        ''' sein aktuelles Rezept, überschreibt der Import ausschließlich die crs:-Schlüssel, die in
+        ''' der XMP-Datei tatsächlich stehen. Genau so verhalten sich partielle Lightroom-Presets.</summary>
+        Public Shared Function LoadLook(xmpPath As String, Optional baseLook As ImageAdjustments = Nothing) As ImageAdjustments
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return Nothing
             Dim rawText = File.ReadAllText(xmpPath)
             ' Das Profil MUSS aus dem ungekuerzten Text gelesen werden - gleich danach faellt sein Block
@@ -27,7 +30,7 @@ Namespace Services
             Dim values = ParseXmpValues(xmpText)
             If values.Count = 0 Then Return Nothing
 
-            Dim adj As New ImageAdjustments()
+            Dim adj As ImageAdjustments = If(baseLook Is Nothing, New ImageAdjustments(), baseLook.Clone())
             Dim d As Double
 
             ''' Die *2012-Schlüssel stammen aus Prozessversion 2012 und sind bei allem

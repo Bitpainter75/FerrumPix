@@ -1735,7 +1735,9 @@ Namespace Views
                     ' Laufameisen bzw. gar keine Auswahl. "Verschieben" und
                     ' "Zauberstab" haben außerhalb des Bildes keine Zieh-Geste und räumen weiterhin auf.
                     Dim startsSelectionDragOutside = (vm.CurrentTool = EditorTool.Selection AndAlso
-                                                      vm.SelectionMode <> "MagicWand") OrElse
+                                                      vm.SelectionMode <> "MagicWand" AndAlso
+                                                      vm.SelectionMode <> "ColorRange" AndAlso
+                                                      vm.SelectionMode <> "LuminanceRange") OrElse
                                                      vm.CurrentTool = EditorTool.Mask
                     ' Dasselbe für das OBJEKT-Auswahlrechteck: es darf ausserhalb des Bildes ansetzen und
                     ' ins Bild hineingezogen werden - genau so umschliesst man Objekte, die am Bildrand
@@ -2107,7 +2109,8 @@ Namespace Views
                     ' verschiebt die AUSWAHL, und ohne Auswahl gibt es nichts zu verschieben.
                     ' Die Buehne bewegt man mit der rechten Maustaste, der Leertaste oder dem Knopf.
                 End If
-                Dim clickedInsideSelection = vm.HasActiveSelection AndAlso vm.SelectionMode <> "MagicWand" AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
+                Dim rangeClickMode = vm.SelectionMode = "MagicWand" OrElse vm.SelectionMode = "ColorRange" OrElse vm.SelectionMode = "LuminanceRange"
+                Dim clickedInsideSelection = vm.HasActiveSelection AndAlso Not rangeClickMode AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
                 If clickedInsideSelection Then
                     If vm.SelectionMode = "Move" OrElse vm.SelectionCombineMode = "New" Then
                         _isSelectionMoveDragging = True
@@ -2126,13 +2129,13 @@ Namespace Views
                 ' löscht ein Lasso im +-Modus, das außerhalb ansetzt, die vorhandene Auswahl statt sie zu
                 ' ergänzen.
                 _selectionClickOutsideActiveSelection = vm.HasActiveSelection AndAlso
-                                                        vm.SelectionMode <> "MagicWand" AndAlso
+                                                        Not rangeClickMode AndAlso
                                                         Not clickedInsideSelection AndAlso
                                                         (vm.SelectionMode = "Move" OrElse vm.SelectionCombineMode = "New")
                 _selectionGestureStart = rawPos
                 _selectionGestureMoved = False
                 _selectionDragReplacesExisting = vm.HasActiveSelection AndAlso
-                                                 vm.SelectionMode <> "MagicWand" AndAlso
+                                                 Not rangeClickMode AndAlso
                                                  vm.SelectionCombineMode = "New" AndAlso
                                                  Not clickedInsideSelection
                 ' Die alte Auswahl sofort wegnehmen: sie wird durch den beginnenden Zug ersetzt, und
@@ -2154,6 +2157,12 @@ Namespace Views
                         Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                         Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                         Dim ignored = vm.SetSelectionMagicWand(xPct, yPct)
+                    Case "ColorRange"
+                        Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
+                        Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
+                        Dim ignored = vm.SetSelectionColorRangeMask(xPct, yPct, isMask:=False)
+                    Case "LuminanceRange"
+                        ' Die Auswahl entsteht beim Wechsel in den Modus und wird von den Reglern aktualisiert.
                     Case "Lasso"
                         _lassoPoints.Clear()
                         _lassoPoints.Add(rawPos)

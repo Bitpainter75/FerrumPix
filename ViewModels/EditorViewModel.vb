@@ -4426,6 +4426,11 @@ Namespace ViewModels
                 Dim normalized = If(String.IsNullOrWhiteSpace(value), "Brush", value.Trim())
                 If String.Equals(_maskMode, normalized, StringComparison.Ordinal) Then Return
                 _maskMode = normalized
+                If Not String.Equals(normalized, "Farbe", StringComparison.Ordinal) AndAlso
+                   Not String.Equals(normalized, "Luminanz", StringComparison.Ordinal) AndAlso
+                   Not String.Equals(normalized, "Tiefe", StringComparison.Ordinal) Then
+                    _pendingRangeKind = ""
+                End If
                 Me.RaisePropertyChanged(NameOf(MaskMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskBrushMode))
                 Me.RaisePropertyChanged(NameOf(IsMaskLinearMode))
@@ -8104,14 +8109,13 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _denoiseStrength As Double = 70.0
+        Private _denoiseStrength As Double = 25.0
 
         ''' <summary>Wie stark die HELLIGKEIT entrauscht wird, 0 bis 100. Die Farbe wird immer voll
         ''' entrauscht - warum, steht bei DenoiseModelService.Denoise.
         '''
-        ''' Die Vorgabe steht auf 70 und nicht auf 100, weil volle Staerke an einer naechtlichen
-        ''' Fassade gemessen die schwache Zeichnung halbiert; bei 70 bleibt sichtbar mehr davon
-        ''' stehen, und das Rauschen ist immer noch weitgehend weg. Wer die Zeit hat, dreht am
+        ''' Die Vorgabe steht auf 25 und nicht auf 100, damit das Modell Details nur behutsam
+        ''' glättet. Wer die Zeit hat, dreht am
         ''' einzelnen Bild nach - ein Schritt zurueck und der andere Wert kostet nur die Wartezeit.
         '''
         ''' KEIN Rezeptwert: das Entrauschen ist ein Zug in die Pixel, kein Regler an der Vorschau.
@@ -20879,13 +20883,13 @@ Namespace ViewModels
         Public Sub ApplyXmpPreset(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
             Try
-                Dim look = XmpPresetService.LoadLook(xmpPath)
+                ' Lightroom-Presets sind häufig partiell (z. B. nur Weißabgleich oder Körnung).
+                ' Der Parser bekommt deshalb den aktuellen Stand als Basis und ändert nur die
+                ' tatsächlich in der XMP gesetzten crs:-Werte.
+                Dim look = XmpPresetService.LoadLook(xmpPath, GetCurrentAdjustments())
                 If look Is Nothing Then Return
 
                 PushUndo()
-                ' Erst den bisherigen Look neutralisieren: ein Preset ersetzt ihn, es mischt sich nicht
-                ' dazu. Beschnitt, Geometrie und Objekte bleiben dabei stehen.
-                ResetFilterInternal()
                 _suppressUndoCapture = True
                 Try
                     ApplyLookAdjustments(look)

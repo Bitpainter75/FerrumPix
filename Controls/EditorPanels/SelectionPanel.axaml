@@ -49,6 +49,20 @@
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wand.svg" Width="16" Height="16" />
                 </Button>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetSelectionModeCommand}" CommandParameter="ColorRange"
+                        Classes.active="{Binding IsColorRangeSelectionMode}"
+                        ToolTip.Tip="Farbbereich: Farbe anklicken und ähnliche Farben im ganzen Bild auswählen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg" Width="16" Height="16" />
+                </Button>
+                <Button Classes="ghost" Padding="8,6"
+                        Command="{Binding SetSelectionModeCommand}" CommandParameter="LuminanceRange"
+                        Classes.active="{Binding IsLuminanceRangeSelectionMode}"
+                        ToolTip.Tip="Luminanzbereich: Schatten, Mitteltöne oder Lichter auswählen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness.svg" Width="16" Height="16" />
+                </Button>
+            </StackPanel>
 
             <TextBlock Text="Modus" Foreground="{DynamicResource FP.Text.Secondary}"
                        FontSize="{DynamicResource FP.Font.Small}" FontWeight="SemiBold" />
@@ -112,6 +126,42 @@
                                          Minimum="0" Maximum="100" Increment="1"
                                          FormatString="F0" />
             </Grid>
+            <StackPanel Spacing="6" IsVisible="{Binding IsColorRangeSelectionMode}">
+                <TextBlock Text="Eine Farbe im Bild anklicken; ähnliche Farben werden überall ausgewählt."
+                           TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Toleranz" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding ColorRangeTolerance}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeTolerance, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" Value="{Binding ColorRangeFeather}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeFeather, Mode=TwoWay}" Minimum="1" Maximum="100" />
+                </Grid>
+                <CheckBox Content="Benachbart"
+                          IsChecked="{Binding ColorRangeContiguous}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Wählt nur die zusammenhängende Fläche am Klickpunkt statt gleicher Farben im ganzen Bild" />
+            </StackPanel>
+            <StackPanel Spacing="6" IsVisible="{Binding IsLuminanceRangeSelectionMode}">
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Von" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding LuminanceRangeFrom}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeFrom, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Bis" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding LuminanceRangeTo}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeTo, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44">
+                    <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="50" Value="{Binding LuminanceRangeFeather}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LuminanceRangeFeather, Mode=TwoWay}" Minimum="0" Maximum="50" />
+                </Grid>
+            </StackPanel>
             <!-- Weiche Kante: wirkt auf Anpassungen in der Auswahl, auf Kopieren und auf Füllen. Die Maske
                  selbst bleibt hart gespeichert, der Wert ist deshalb jederzeit nachträglich änderbar.
                  Denselben Regler benutzt der Masken-Pinsel im Werkzeug „Maske" für seine Randweichheit

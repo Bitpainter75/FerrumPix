@@ -77,6 +77,21 @@ Namespace Services
         ''' Zwischenspeicher nach dem Umkehren das alte Bild zurück.</summary>
         Public Property InvertResult As Boolean
 
+        ''' <summary>Optionaler Ursprung einer gerasterten Bereichsmaske. Das Raster bleibt der
+        ''' Rendervertrag; die Parameter darunter erlauben es jedoch, Farbe, Luminanz oder Tiefe
+        ''' beim erneuten Öffnen der Ebene wieder mit ihren Reglern zu berechnen.</summary>
+        Public Property RangeKind As String = ""
+        Public Property RangeColorRed As Byte
+        Public Property RangeColorGreen As Byte
+        Public Property RangeColorBlue As Byte
+        Public Property RangeTolerance As Double
+        Public Property RangeFeather As Double
+        Public Property RangeFrom As Double
+        Public Property RangeTo As Double = 100.0
+        Public Property RangeSampleXPercent As Double
+        Public Property RangeSampleYPercent As Double
+        Public Property RangeContiguous As Boolean
+
         ''' <summary>Art der Maske. Leer = GEMALTE Maske, deren Alphawerte in PngBase64 liegen
         ''' (Rechteck, Ellipse, Lasso, Zauberstab, Masken-Pinsel). "Linear" und "Radial" =
         ''' VERLAUF, der NICHT gebacken wird, sondern bei jedem Render aus seiner Geometrie
@@ -262,6 +277,11 @@ Namespace Services
                 .PngBase64 = PngBase64, .FeatherPixels = FeatherPixels, .Inverted = Inverted,
                 .Density = Density, .IsDisabled = IsDisabled, .PrimaryVisible = PrimaryVisible,
                 .InvertResult = InvertResult,
+                .RangeKind = RangeKind, .RangeColorRed = RangeColorRed, .RangeColorGreen = RangeColorGreen,
+                .RangeColorBlue = RangeColorBlue, .RangeTolerance = RangeTolerance,
+                .RangeFeather = RangeFeather, .RangeFrom = RangeFrom, .RangeTo = RangeTo,
+                .RangeSampleXPercent = RangeSampleXPercent, .RangeSampleYPercent = RangeSampleYPercent,
+                .RangeContiguous = RangeContiguous,
                 .Kind = Kind,
                 .GradientStartXPercent = GradientStartXPercent, .GradientStartYPercent = GradientStartYPercent,
                 .GradientEndXPercent = GradientEndXPercent, .GradientEndYPercent = GradientEndYPercent,

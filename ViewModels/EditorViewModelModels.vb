@@ -630,6 +630,7 @@ Namespace ViewModels
 
                 Dim map = _depthMap
                 Dim from = _depthFrom, bis = _depthTo, weich = _depthFeather
+                Dim editingMaskId = _editingLayerMaskId
                 Dim mask = Await Task.Run(Function() DepthMapService.MaskFromDepth(map, from, bis, weich))
                 If mask Is Nothing Then Return
                 Using mask
@@ -640,9 +641,12 @@ Namespace ViewModels
                     End If
                     Using ausschnitt = ExtractMaskRegion(mask, rect)
                         If ausschnitt Is Nothing Then Return
+                        _pendingRangeKind = "Depth" : _pendingRangeSampleX = 0 : _pendingRangeSampleY = 0
                         ApplySelectionCandidate(ausschnitt, rect, "MagicWand", Nothing, Nothing,
                                                 isMask:=True, forceNew:=True)
+                        If editingMaskId <> "" Then _editingLayerMaskId = editingMaskId
                     End Using
+                    PersistRangeMaskIfEditing()
                     StatusText = LocalizationService.T("Maske nach Tiefe gesetzt")
                 End Using
             Finally
@@ -854,9 +858,50 @@ Namespace ViewModels
         Private ReadOnly _rangeMaskGate As New SemaphoreSlim(1, 1)
         Private _colorRangeTolerance As Double = 18.0
         Private _colorRangeFeather As Double = 14.0
+        Private _colorRangeContiguous As Boolean = False
         Private _luminanceRangeFrom As Double = 0.0
         Private _luminanceRangeTo As Double = 100.0
         Private _luminanceRangeFeather As Double = 12.0
+        Private _pendingRangeKind As String = ""
+        Private _pendingRangeSampleX As Double
+        Private _pendingRangeSampleY As Double
+
+        ''' <summary>Überträgt die gerade erzeugte Bereichsauswahl auf eine bereits geöffnete
+        ''' Maskenebene. Das verhindert, dass ein Reglerzug eine neue Ebene anlegt, und bewahrt
+        ''' zugleich die Parameter für das nächste Öffnen.</summary>
+        Private Sub PersistRangeMaskIfEditing()
+            Dim target = EditedLayerMask()
+            If target Is Nothing OrElse String.IsNullOrWhiteSpace(_pendingRangeKind) Then Return
+            Dim fresh = ImageProcessor.CreateSourceMaskFromSelection(BuildAdjustmentsFromFields(), target.Name)
+            If fresh Is Nothing Then Return
+            target.Left = fresh.Left : target.Top = fresh.Top : target.Right = fresh.Right : target.Bottom = fresh.Bottom
+            target.PngBase64 = fresh.PngBase64 : target.FeatherPixels = fresh.FeatherPixels
+            target.RangeKind = _pendingRangeKind
+            target.RangeTolerance = _colorRangeTolerance
+            target.RangeFeather = If(_pendingRangeKind = "Luminance", _luminanceRangeFeather,
+                                     If(_pendingRangeKind = "Depth", _depthFeather, _colorRangeFeather))
+            target.RangeFrom = If(_pendingRangeKind = "Depth", _depthFrom, _luminanceRangeFrom)
+            target.RangeTo = If(_pendingRangeKind = "Depth", _depthTo, _luminanceRangeTo)
+            target.RangeSampleXPercent = _pendingRangeSampleX : target.RangeSampleYPercent = _pendingRangeSampleY
+            target.RangeContiguous = _colorRangeContiguous
+            _hasChanges = True
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Wird beim erstmaligen Anlegen einer Bereichsmaske aufgerufen, nachdem die
+        ''' Auswahl zu einer Ebene promotet wurde.</summary>
+        Private Sub ApplyPendingRangeMetadata(mask As ImageMask)
+            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(_pendingRangeKind) Then Return
+            mask.RangeKind = _pendingRangeKind
+            mask.RangeTolerance = _colorRangeTolerance
+            mask.RangeFeather = If(_pendingRangeKind = "Luminance", _luminanceRangeFeather,
+                                   If(_pendingRangeKind = "Depth", _depthFeather, _colorRangeFeather))
+            mask.RangeFrom = If(_pendingRangeKind = "Depth", _depthFrom, _luminanceRangeFrom)
+            mask.RangeTo = If(_pendingRangeKind = "Depth", _depthTo, _luminanceRangeTo)
+            mask.RangeSampleXPercent = _pendingRangeSampleX : mask.RangeSampleYPercent = _pendingRangeSampleY
+            mask.RangeContiguous = _colorRangeContiguous
+            _pendingRangeKind = ""
+        End Sub
 
         Public Property ColorRangeTolerance As Double
             Get
@@ -865,6 +910,10 @@ Namespace ViewModels
             Set(value As Double)
                 _colorRangeTolerance = Math.Max(0.0, Math.Min(100.0, value))
                 Me.RaisePropertyChanged(NameOf(ColorRangeTolerance))
+                Dim mask = EditedLayerMask()
+                If IsMaskColorRangeMode AndAlso mask IsNot Nothing AndAlso mask.RangeKind = "Color" Then
+                    Dim ignored = SetSelectionColorRangeMask(mask.RangeSampleXPercent, mask.RangeSampleYPercent)
+                End If
             End Set
         End Property
 
@@ -875,6 +924,25 @@ Namespace ViewModels
             Set(value As Double)
                 _colorRangeFeather = Math.Max(1.0, Math.Min(100.0, value))
                 Me.RaisePropertyChanged(NameOf(ColorRangeFeather))
+                Dim mask = EditedLayerMask()
+                If IsMaskColorRangeMode AndAlso mask IsNot Nothing AndAlso mask.RangeKind = "Color" Then
+                    Dim ignored = SetSelectionColorRangeMask(mask.RangeSampleXPercent, mask.RangeSampleYPercent)
+                End If
+            End Set
+        End Property
+
+        Public Property ColorRangeContiguous As Boolean
+            Get
+                Return _colorRangeContiguous
+            End Get
+            Set(value As Boolean)
+                If _colorRangeContiguous = value Then Return
+                _colorRangeContiguous = value
+                Me.RaisePropertyChanged(NameOf(ColorRangeContiguous))
+                Dim mask = EditedLayerMask()
+                If IsMaskColorRangeMode AndAlso mask IsNot Nothing AndAlso mask.RangeKind = "Color" Then
+                    Dim ignored = SetSelectionColorRangeMask(mask.RangeSampleXPercent, mask.RangeSampleYPercent)
+                End If
             End Set
         End Property
 
@@ -887,7 +955,11 @@ Namespace ViewModels
                 If _luminanceRangeFrom > _luminanceRangeTo Then _luminanceRangeTo = _luminanceRangeFrom
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeFrom))
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeTo))
-                If IsMaskLuminanceRangeMode Then Dim ignored = RedrawLuminanceRangeMask()
+                If IsMaskLuminanceRangeMode Then
+                    Dim ignored = RedrawLuminanceRangeMask()
+                ElseIf IsLuminanceRangeSelectionMode Then
+                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
+                End If
             End Set
         End Property
 
@@ -900,7 +972,11 @@ Namespace ViewModels
                 If _luminanceRangeTo < _luminanceRangeFrom Then _luminanceRangeFrom = _luminanceRangeTo
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeTo))
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeFrom))
-                If IsMaskLuminanceRangeMode Then Dim ignored = RedrawLuminanceRangeMask()
+                If IsMaskLuminanceRangeMode Then
+                    Dim ignored = RedrawLuminanceRangeMask()
+                ElseIf IsLuminanceRangeSelectionMode Then
+                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
+                End If
             End Set
         End Property
 
@@ -911,11 +987,16 @@ Namespace ViewModels
             Set(value As Double)
                 _luminanceRangeFeather = Math.Max(0.0, Math.Min(50.0, value))
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeFeather))
-                If IsMaskLuminanceRangeMode Then Dim ignored = RedrawLuminanceRangeMask()
+                If IsMaskLuminanceRangeMode Then
+                    Dim ignored = RedrawLuminanceRangeMask()
+                ElseIf IsLuminanceRangeSelectionMode Then
+                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
+                End If
             End Set
         End Property
 
-        Public Async Function SetSelectionColorRangeMask(xPercent As Double, yPercent As Double) As Task
+        Public Async Function SetSelectionColorRangeMask(xPercent As Double, yPercent As Double,
+                                                         Optional isMask As Boolean = True) As Task
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
             Await _rangeMaskGate.WaitAsync()
             Try
@@ -924,12 +1005,15 @@ Namespace ViewModels
                 Dim x = Math.Max(0, Math.Min(size.Width - 1, CInt(Math.Round(xPercent / 100.0 * size.Width))))
                 Dim y = Math.Max(0, Math.Min(size.Height - 1, CInt(Math.Round(yPercent / 100.0 * size.Height))))
                 Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
-                Dim tolerance = _colorRangeTolerance, feather = _colorRangeFeather
+                Dim tolerance = _colorRangeTolerance, feather = _colorRangeFeather, contiguous = _colorRangeContiguous
+                Dim editingMaskId = _editingLayerMaskId
                 Dim result = Await Task.Run(Function()
                                                 Using rendered = ImageProcessor.RenderDisplayImage(sourcePath, adjustments, working)
                                                     If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
                                                     Dim bounds As SKRectI
-                                                    Dim mask = ImageProcessor.BuildColorRangeMask(rendered, x, y, tolerance, feather, bounds)
+                                                    Dim mask = If(contiguous,
+                                                        ImageProcessor.BuildMagicWandMask(rendered, x, y, CSng(tolerance / 100.0), bounds),
+                                                        ImageProcessor.BuildColorRangeMask(rendered, x, y, tolerance, feather, bounds))
                                                     Return (Mask:=mask, Bounds:=bounds)
                                                 End Using
                                             End Function)
@@ -937,22 +1021,26 @@ Namespace ViewModels
                     If mask Is Nothing Then Return
                     Using cut = ExtractMaskRegion(mask, result.Bounds)
                         If cut Is Nothing Then Return
+                        If isMask Then _pendingRangeKind = "Color" : _pendingRangeSampleX = xPercent : _pendingRangeSampleY = yPercent
                         PushUndo()
-                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=True, forceNew:=True)
+                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=isMask, forceNew:=isMask)
+                        If editingMaskId <> "" Then _editingLayerMaskId = editingMaskId
                     End Using
                 End Using
+                If isMask Then PersistRangeMaskIfEditing()
                 StatusText = LocalizationService.T("Farbbereichsmaske gesetzt")
             Finally
                 _rangeMaskGate.Release()
             End Try
         End Function
 
-        Public Async Function RedrawLuminanceRangeMask() As Task
+        Public Async Function RedrawLuminanceRangeMask(Optional isMask As Boolean = True) As Task
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
             Await _rangeMaskGate.WaitAsync()
             Try
                 Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
                 Dim from = _luminanceRangeFrom, [to] = _luminanceRangeTo, feather = _luminanceRangeFeather
+                Dim editingMaskId = _editingLayerMaskId
                 Dim result = Await Task.Run(Function()
                                                 Using rendered = ImageProcessor.RenderDisplayImage(sourcePath, adjustments, working)
                                                     If rendered Is Nothing Then Return (Mask:=DirectCast(Nothing, SKBitmap), Bounds:=SKRectI.Empty)
@@ -965,9 +1053,12 @@ Namespace ViewModels
                     If mask Is Nothing Then Return
                     Using cut = ExtractMaskRegion(mask, result.Bounds)
                         If cut Is Nothing Then Return
-                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=True, forceNew:=True)
+                        If isMask Then _pendingRangeKind = "Luminance" : _pendingRangeSampleX = 0 : _pendingRangeSampleY = 0
+                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=isMask, forceNew:=isMask)
+                        If editingMaskId <> "" Then _editingLayerMaskId = editingMaskId
                     End Using
                 End Using
+                If isMask Then PersistRangeMaskIfEditing()
                 StatusText = LocalizationService.T("Luminanzbereichsmaske gesetzt")
             Finally
                 _rangeMaskGate.Release()
