@@ -2386,10 +2386,10 @@
     <value>Tolerance</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Draw a rectangle</value>
+    <value>Draw a rectangle – hold Ctrl for a square</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Draw a circle/ellipse</value>
+    <value>Draw a circle/ellipse – hold Ctrl for a circle</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Freehand selection (lasso)</value>

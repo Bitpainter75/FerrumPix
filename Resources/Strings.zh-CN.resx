@@ -2383,10 +2383,10 @@
     <value>容差</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>绘制矩形</value>
+    <value>绘制矩形 — 按住 Ctrl 可绘制正方形</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>绘制圆形/椭圆</value>
+    <value>绘制圆形/椭圆 — 按住 Ctrl 可绘制正圆</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>自由选区（套索）</value>

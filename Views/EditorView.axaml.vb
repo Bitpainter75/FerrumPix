@@ -198,7 +198,7 @@ Namespace Views
                 Dim vm = TryCast(DataContext, EditorViewModel)
                 If vm Is Nothing OrElse String.IsNullOrEmpty(vm.CurrentImagePath) Then Return
                 Dim owner = TopLevel.GetTopLevel(Me)
-                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {vm.CurrentImagePath}, cut:=False)
+                If owner?.Clipboard IsNot Nothing Then Await owner.Clipboard.SetTextAsync(vm.CurrentImagePath)
             Catch ex As Exception
                 ' Eine Ausnahme in einem Async Sub landet sonst beim Dispatcher und beendet den Prozess.
                 DiagnosticLogService.LogException("EditorView.OnCopyPathClick", ex)
@@ -244,7 +244,7 @@ Namespace Views
                                           Try
                                               If String.IsNullOrEmpty(path) Then Return
                                               Dim owner = TopLevel.GetTopLevel(Me)
-                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {path}, cut:=False)
+                                              If owner?.Clipboard IsNot Nothing Then Await owner.Clipboard.SetTextAsync(path)
                                           Catch ex As Exception
                                               DiagnosticLogService.LogException("Editor.CopyPath", ex)
                                           End Try
@@ -2735,7 +2735,7 @@ Namespace Views
                 If canvas Is Nothing OrElse vm Is Nothing Then Return
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
-                _selectionEnd = e.GetPosition(canvas)
+                _selectionEnd = ConstrainSelectionDragToSquare(e.GetPosition(canvas), e.KeyModifiers, vm)
                 TrackSelectionGestureMovement(_selectionEnd)
                 UpdateSelectionOverlayFromDrag()
                 e.Handled = True
@@ -2797,6 +2797,11 @@ Namespace Views
                     TryCast(DataContext, EditorViewModel)?.ClearSelection()
                     HideSelectionDragOverlay()
                 Else
+                    Dim selectionCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                    Dim selectionVm = TryCast(DataContext, EditorViewModel)
+                    If selectionCanvas IsNot Nothing AndAlso selectionVm IsNot Nothing Then
+                        _selectionEnd = ConstrainSelectionDragToSquare(e.GetPosition(selectionCanvas), e.KeyModifiers, selectionVm)
+                    End If
                     CommitSelectionDrag()
                 End If
             End If
@@ -3878,6 +3883,27 @@ Namespace Views
             overlay.Width = Math.Max(1, width)
             overlay.Height = Math.Max(1, height)
         End Sub
+
+        ''' <summary>STRG hält beim Aufziehen von Rechteck- und Ellipsenauswahl die Seiten gleich.
+        ''' Damit entsteht unabhängig von der Zugrichtung ein Quadrat beziehungsweise ein Kreis.</summary>
+        Private Function ConstrainSelectionDragToSquare(pointer As Avalonia.Point,
+                                                         modifiers As KeyModifiers,
+                                                         vm As EditorViewModel) As Avalonia.Point
+            If vm Is Nothing OrElse Not modifiers.HasFlag(KeyModifiers.Control) OrElse
+               (vm.SelectionMode <> "Rectangle" AndAlso vm.SelectionMode <> "Ellipse") Then
+                Return pointer
+            End If
+
+            Dim deltaX = pointer.X - _selectionStart.X
+            Dim deltaY = pointer.Y - _selectionStart.Y
+            Dim length = Math.Max(Math.Abs(deltaX), Math.Abs(deltaY))
+            If Math.Abs(deltaX) >= Math.Abs(deltaY) Then
+                deltaY = If(deltaY < 0, -length, length)
+            Else
+                deltaX = If(deltaX < 0, -length, length)
+            End If
+            Return New Avalonia.Point(_selectionStart.X + deltaX, _selectionStart.Y + deltaY)
+        End Function
 
         ''' Repositioniert das Auswahl-Overlay anhand der im ViewModel gespeicherten Auswahl (Prozent-
         ''' vom-Bild), z.B. nach Zoom/Pan-Änderungen - analog zu PositionCropOverlayFromViewModel.

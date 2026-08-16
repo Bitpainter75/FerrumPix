@@ -2383,10 +2383,10 @@
     <value>Tolerans</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Dra upp en rektangel</value>
+    <value>Dra upp en rektangel – med Ctrl som en kvadrat</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Dra upp en cirkel eller ellips</value>
+    <value>Dra upp en cirkel eller ellips – med Ctrl som en cirkel</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Frihandsmarkering (lasso)</value>

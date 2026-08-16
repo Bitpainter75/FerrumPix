@@ -2385,10 +2385,10 @@
     <value>Tolleranza</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Traccia un rettangolo</value>
+    <value>Traccia un rettangolo – con Ctrl per un quadrato</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Traccia un cerchio/ellisse</value>
+    <value>Traccia un cerchio/ellisse – con Ctrl per un cerchio</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Selezione a mano libera (lazo)</value>

@@ -1728,18 +1728,18 @@ Namespace Views
 
         ''' <summary>Ohne Auswahl meint beides den OFFENEN ORDNER - so bietet der Bauplan die
         ''' Eintraege auch an. Mit Auswahl geht es um das eine markierte Element.</summary>
-        Public Sub OnContextCopyPath(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnContextCopyPath(sender As Object, e As RoutedEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             If IsSingleGallerySelection(vm) Then
                 Dim paths = vm.GetSelectedPaths()
                 If paths.Count = 0 Then Return
-                CopyPathsToClipboard(paths, False)
+                Await CopyTextToClipboardAsync(paths(0), "GalleryView.OnContextCopyPath")
                 Return
             End If
             If vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Count > 0 Then Return
             If String.IsNullOrEmpty(vm.CurrentFolder) Then Return
-            CopyPathsToClipboard(New List(Of String) From {vm.CurrentFolder}, False)
+            Await CopyTextToClipboardAsync(vm.CurrentFolder, "GalleryView.OnContextCopyPath")
         End Sub
 
         Public Sub OnContextReveal(sender As Object, e As RoutedEventArgs)
@@ -1770,7 +1770,7 @@ Namespace Views
             vm.RenameSelectedCommand.Execute(Nothing)
         End Sub
 
-        Public Sub OnContextCopy(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnContextCopy(sender As Object, e As RoutedEventArgs)
             Dim item = GetItemFromSender(sender)
             Dim vm = GetVm()
             If item IsNot Nothing AndAlso vm IsNot Nothing AndAlso
@@ -1778,7 +1778,25 @@ Namespace Views
                 vm.SelectOnly(item)
                 _selectionAnchor = item
             End If
-            CopySelectionToClipboard(False)
+            If vm Is Nothing Then Return
+
+            ' Das dynamische Menü merkt beim Öffnen bereits präzise, welche Kachel bzw. Zeile es
+            ' meint. Der Aufruf aus seinem Command hat keinen Sender; die globale Auswahl hier
+            ' nochmals auszulesen konnte deshalb leer oder inzwischen eine andere sein.
+            Dim paths = If(vm.ContextItems, Enumerable.Empty(Of ImageItem)()).
+                Select(Function(i) If(i?.FilePath, "")).
+                Where(Function(p) vm.CanCopyPath(p)).
+                Distinct(PathIdentity.Comparer).
+                ToList()
+            If paths.Count = 0 Then Return
+
+            vm.StoreClipboardPaths(paths, cut:=False)
+            Try
+                Dim owner = TopLevel.GetTopLevel(Me)
+                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, paths, cut:=False)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryView.OnContextCopy", ex)
+            End Try
         End Sub
 
         Public Sub OnContextCut(sender As Object, e As RoutedEventArgs)
@@ -2082,7 +2100,7 @@ Namespace Views
                 .PastePlace = vm.PastePlaceCommand,
                 .SetPlace = vm.SetPlaceCommand,
                 .RemovePlace = vm.RemovePlaceCommand,
-                .CopyPath = vm.CopyPathCommand,
+                .CopyPath = New DelegateCommand(Sub() OnContextCopyPath(Nothing, Nothing)),
                 .ShowInFileManager = vm.OpenFileManagerCommand,
                 .Delete = vm.DeleteSelectedCommand,
                 .RestoreFromTrash = New DelegateCommand(Sub()

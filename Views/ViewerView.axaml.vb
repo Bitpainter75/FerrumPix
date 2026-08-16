@@ -2,6 +2,7 @@ Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
+Imports Avalonia.Input.Platform
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Media.Imaging
@@ -164,7 +165,7 @@ Namespace Views
                                           Try
                                               If String.IsNullOrEmpty(path) Then Return
                                               Dim owner = TopLevel.GetTopLevel(Me)
-                                              Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {path}, cut:=False)
+                                              If owner?.Clipboard IsNot Nothing Then Await owner.Clipboard.SetTextAsync(path)
                                           Catch ex As Exception
                                               DiagnosticLogService.LogException("Viewer.CopyPath", ex)
                                           End Try
@@ -413,15 +414,14 @@ Namespace Views
             Return False
         End Function
 
-        ' Kopiert die Datei über ClipboardPathService (DataFormat.File / text/uri-list), damit sie
-        ' sich wie in der Galerie in einem Dateimanager (z.B. Dolphin) als echte Datei einfügen
-        ' lässt - reines SetTextAsync(path) erzeugt dort keinen einfügbaren Dateiverweis.
+        ' „Pfad kopieren“ meint den unveränderten Dateisystempfad als Text, nicht eine Datei zum
+        ' Einfügen in einen Dateimanager.
         Public Async Sub OnCopyPathClick(sender As Object, e As RoutedEventArgs)
             Try
                 Dim vm = GetVm()
                 If vm Is Nothing OrElse String.IsNullOrEmpty(vm.CurrentImagePath) Then Return
                 Dim owner = TopLevel.GetTopLevel(Me)
-                Await ClipboardPathService.CopyPathsAsync(owner?.Clipboard, owner?.StorageProvider, {vm.CurrentImagePath}, cut:=False)
+                If owner?.Clipboard IsNot Nothing Then Await owner.Clipboard.SetTextAsync(vm.CurrentImagePath)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.

@@ -720,23 +720,13 @@
                                 BorderBrush="{DynamicResource FP.Border.Normal}"
                                 BorderThickness="1"
                                 Cursor="SizeWestEast">
-                            <StackPanel Orientation="Horizontal" Spacing="3"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Path Width="7" Height="12"
-                                      Stretch="Uniform"
-                                      Stroke="#1A1A1A"
-                                      StrokeThickness="2"
-                                      StrokeLineCap="Round"
-                                      StrokeJoin="Round"
-                                      Data="M 10 0 L 0 10 L 10 20" />
-                                <Path Width="7" Height="12"
-                                      Stretch="Uniform"
-                                      Stroke="#1A1A1A"
-                                      StrokeThickness="2"
-                                      StrokeLineCap="Round"
-                                      StrokeJoin="Round"
-                                      Data="M 0 0 L 10 10 L 0 20" />
-                            </StackPanel>
+                            <!-- Der vertikale Teiler mit zwei seitlichen Pfeilen beschreibt den
+                                 horizontal beweglichen Vorher/Nachher-Schieber eindeutig. -->
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/separator-vertical.svg"
+                                           Width="24" Height="24"
+                                           IconBrush="#1A1A1A"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
                         </Border>
                         <Border x:Name="BeforeLabel" Background="#262933" CornerRadius="6" Padding="10,5">
                             <TextBlock Text="Vorher" FontSize="{DynamicResource FP.Font.Small}" Foreground="White" />

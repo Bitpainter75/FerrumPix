@@ -2385,10 +2385,10 @@
     <value>Toleranz</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Rechteck aufziehen</value>
+    <value>Rechteck aufziehen – mit STRG als Quadrat</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Kreis/Ellipse aufziehen</value>
+    <value>Kreis/Ellipse aufziehen – mit STRG als Kreis</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Freihand-Auswahl (Lasso)</value>

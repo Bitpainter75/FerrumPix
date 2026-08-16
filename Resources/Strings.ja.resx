@@ -2383,10 +2383,10 @@
     <value>許容値</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>長方形をドラッグ</value>
+    <value>長方形をドラッグ（Ctrl で正方形）</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>円と楕円をドラッグ</value>
+    <value>円と楕円をドラッグ（Ctrl で正円）</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>フリーハンド選択 (なげなわ)</value>

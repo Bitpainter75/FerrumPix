@@ -2385,10 +2385,10 @@
     <value>Tolerancia</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Dibujar un rectángulo</value>
+    <value>Dibujar un rectángulo – con Ctrl para un cuadrado</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Dibujar un círculo/elipse</value>
+    <value>Dibujar un círculo/elipse – con Ctrl para un círculo</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Selección a mano alzada (lazo)</value>

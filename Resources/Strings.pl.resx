@@ -2383,10 +2383,10 @@
     <value>Tolerancja</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Rozciągnij prostokąt</value>
+    <value>Rozciągnij prostokąt – z Ctrl jako kwadrat</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Rozciągnij koło lub elipsę</value>
+    <value>Rozciągnij koło lub elipsę – z Ctrl jako koło</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Zaznaczenie odręczne (lasso)</value>
