@@ -746,7 +746,7 @@ Namespace ViewModels
                     Using ausschnitt = ExtractMaskRegion(mask, rect)
                         If ausschnitt Is Nothing Then Return
                         ApplySelectionCandidate(ausschnitt, rect, "MagicWand", Nothing, Nothing,
-                                                isMask:=_motivAlsMaske, forceNew:=_motivAlsMaske)
+                                                isMask:=_subjectAsMask, forceNew:=_subjectAsMask)
                     End Using
                 End Using
             Finally
@@ -818,7 +818,7 @@ Namespace ViewModels
                 End If
                 _motivPunkte.Add(New SubjectMaskService.Point(
                     bw * xPercent / 100.0, bh * yPercent / 100.0, gehoertDazu))
-                _motivAlsMaske = isMask
+                _subjectAsMask = isMask
                 RememberSamplePoint(xPercent, yPercent, asMask:=isMask)
 
                 Dim einbettung = _motivEinbettung

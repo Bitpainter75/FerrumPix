@@ -1071,8 +1071,8 @@ Namespace ViewModels
                         ' derselbe Pinsel, aber das Ergebnis passt zu dem, womit man arbeitet.
                         ' Liegt bereits eine Maske als aktive Auswahl, bleibt es eine Maske: sonst
                         ' wuerde ein nachbessernder Strich sie in eine Auswahl verwandeln.
-                        Dim alsMaske = CurrentTool <> EditorTool.Selection OrElse ActiveSelectionIsMask
-                        ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=alsMaske)
+                        Dim asMask = CurrentTool <> EditorTool.Selection OrElse ActiveSelectionIsMask
+                        ApplySelectionCandidate(stamp, rectPx, "MagicWand", Nothing, Nothing, isMask:=asMask)
                         ' Freistehende Auswahl: weiche Kante ist in die Alpha-Werte gebacken. Ebenen-Maske:
                         ' harte Form (Feather kommt beim Rendern über mask.FeatherPixels) - nicht baken.
                         _selectionMaskSoftBaked = (_editingLayerMaskId = "")
@@ -4340,20 +4340,31 @@ Namespace ViewModels
         ''' Anpassung), statt erst bei der ersten Regleränderung. Nutzt dieselbe Masken-Erzeugung und
         ''' Dedup wie der automatische Weg, also legt eine spätere Anpassung KEINE zweite Ebene an.
         '''
-        ''' GEHOERT DIE AUSWAHL SCHON ZU EINER EBENE, BLEIBT ES BEI DIESER. Ein weiterer Druck legt
-        ''' keine zweite an: waehrend man mehrere Bereiche zu EINER Maske zusammensetzt, bleibt die
-        ''' Bindung bestehen, und der Abschlussknopf erzeugte sonst mehrere Ebenen ohne Wirkung.</summary>
+        ''' GEHOERT DIE AUSWAHL SCHON ZU EINER EBENE, legt ein weiterer Druck eine unabhaengige
+        ''' Kopie derselben Form an. So kann man dieselbe Auswahl direkt fuer mehrere, getrennt
+        ''' bearbeitbare Korrekturebenen verwenden.</summary>
         Public Sub CreateAdjustmentLayerFromSelection()
             TraceMask(Function() $"„Neue Masken-/Auswahlebene"" gedrückt: Auswahl aktiv={_hasActiveSelection}" &
                                  $" bearbeitet={Kurz(_editingLayerMaskId)} markiert={Kurz(_selectedMaskedAdjustmentLayerId)}" &
                                  $" promotet={Kurz(_selectionPromotedLayerId)}")
             If Not _hasActiveSelection Then Return
             PushUndo()
+            Dim countBefore = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return
-            ' Die Auswahl gehört schon zu dieser Ebene. Ein weiterer Druck darf keine leere Kopie
-            ' erzeugen: während man mehrere Bereiche zu EINER Maske zusammensetzt, blieb diese
-            ' Bindung bestehen und der Abschlussknopf erzeugte sonst mehrere Ebenen ohne Wirkung.
+            ' PromoteActiveSelectionToLayer findet bei einer offenen Ebenenmaske absichtlich deren
+            ' vorhandene Ebene. Der ausdrueckliche Neu-Befehl bedeutet dort jedoch: eine zweite,
+            ' unabhaengige Ebene mit derselben Maskenform.
+            If _maskedAdjustmentLayers.Count = countBefore Then
+                Dim name = If(layer.IsMaskLayer, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) &
+                           " " & (_maskedAdjustmentLayers.Count + 1).ToString()
+                Dim copy = DuplicateAdjustmentLayer(layer, name)
+                If copy Is Nothing Then Return
+                TraceMask(Function() $"Kopie angelegt: aus Ebene={Kurz(layer.Id)} ({MaskTrace(layer.MaskId)})" &
+                                     $" wurde Ebene={Kurz(copy.Id)} ({MaskTrace(copy.MaskId)})")
+                layer = copy
+                LoadMaskIntoSelection(copy.MaskId, copy.IsMaskLayer)
+            End If
             _selectedMaskedAdjustmentLayerId = layer.Id
             RebuildLayerRows()
             _hasChanges = True

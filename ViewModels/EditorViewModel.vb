@@ -7870,7 +7870,7 @@ Namespace ViewModels
         ''' <summary>Wurde die Objektauswahl als MASKE oder als AUSWAHL begonnen? Die Regler zeichnen
         ''' aus denselben gemerkten Klicks nach, und ihr Ergebnis muss dorthin zurueck, wo es
         ''' hergekommen ist - eine Auswahl darf beim Nachziehen nicht zur Maskenebene werden.</summary>
-        Private _motivAlsMaske As Boolean = True
+        Private _subjectAsMask As Boolean = True
 
         ''' <summary>Steht die Maske per Klick zur Verfuegung? Falsch heisst: Laufzeit oder
         ''' Modelldateien fehlen, und der Knopf bleibt weg.</summary>
