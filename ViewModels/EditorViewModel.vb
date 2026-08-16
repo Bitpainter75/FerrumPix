@@ -4457,6 +4457,7 @@ Namespace ViewModels
             Set(value As String)
                 Dim normalized = If(String.IsNullOrWhiteSpace(value), "Brush", value.Trim())
                 If String.Equals(_maskMode, normalized, StringComparison.Ordinal) Then Return
+                InvalidatePendingRangeMask()
                 _maskMode = normalized
                 If Not String.Equals(normalized, "Farbe", StringComparison.Ordinal) AndAlso
                    Not String.Equals(normalized, "Luminanz", StringComparison.Ordinal) AndAlso
@@ -8708,6 +8709,7 @@ Namespace ViewModels
         End Function
 
         Public Sub ClearSelection(Optional captureUndo As Boolean = True)
+            InvalidatePendingRangeMask()
             ' Die gesammelten Klicks der Objektauswahl gehoeren zu GENAU dieser Maske. Bleiben sie
             ' stehen, baut der naechste Klick auf einer Maske auf, die es nicht mehr gibt.
             _motivPunkte.Clear()

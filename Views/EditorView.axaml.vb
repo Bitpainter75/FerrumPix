@@ -3149,13 +3149,22 @@ Namespace Views
                             .StrokeJoin = SKStrokeJoin.Round,
                             .IsAntialias = False
                         }
-                            Using path As New SKPath()
-                                path.MoveTo(CSng((centers(0).X - minX) / scale), CSng((centers(0).Y - minY) / scale))
-                                For i = 1 To centers.Count - 1
-                                    path.LineTo(CSng((centers(i).X - minX) / scale), CSng((centers(i).Y - minY) / scale))
-                                Next
-                                canvas.DrawPath(path, paint)
-                            End Using
+                            If centers.Count = 1 Then
+                                ' Ein MoveTo ohne Segment zeichnet bei Skia nichts. Der erste
+                                ' Pinselpunkt ist aber - genau wie beim Commit - ein runder Stempel.
+                                paint.Style = SKPaintStyle.Fill
+                                canvas.DrawCircle(CSng((centers(0).X - minX) / scale),
+                                                  CSng((centers(0).Y - minY) / scale),
+                                                  CSng(radius / scale), paint)
+                            Else
+                                Using path As New SKPath()
+                                    path.MoveTo(CSng((centers(0).X - minX) / scale), CSng((centers(0).Y - minY) / scale))
+                                    For i = 1 To centers.Count - 1
+                                        path.LineTo(CSng((centers(i).X - minX) / scale), CSng((centers(i).Y - minY) / scale))
+                                    Next
+                                    canvas.DrawPath(path, paint)
+                                End Using
+                            End If
                         End Using
                     End Using
 

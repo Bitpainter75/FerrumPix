@@ -873,6 +873,27 @@ Namespace ViewModels
         Private _pendingRangeSampleX As Double
         Private _pendingRangeSampleY As Double
 
+        ''' <summary>Verwirft laufende Bereichsberechnungen. Ein Wechsel des Werkzeugs oder das
+        ''' Aufheben der Auswahl ist auch dann endgültig, wenn ein voller Renderlauf im Hintergrund
+        ''' gerade noch seine Maske fertigstellt.</summary>
+        Private Sub InvalidatePendingRangeMask()
+            Interlocked.Increment(_rangeMaskGeneration)
+        End Sub
+
+        ''' <summary>Gilt der Auftrag noch für das Werkzeug, das ihn gestartet hat? Der Dokument-
+        ''' und Generationscheck allein reicht nicht: derselbe Bildpfad bleibt beim Wechsel auf
+        ''' Pinsel oder Verschieben natürlich erhalten.</summary>
+        Private Function IsExpectedRangeMaskMode(kind As String, isMask As Boolean) As Boolean
+            If isMask Then
+                If _currentTool <> EditorTool.Mask Then Return False
+                Return If(String.Equals(kind, "Color", StringComparison.Ordinal),
+                          IsMaskColorRangeMode, IsMaskLuminanceRangeMode)
+            End If
+            If _currentTool <> EditorTool.Selection Then Return False
+            Return If(String.Equals(kind, "Color", StringComparison.Ordinal),
+                      IsColorRangeSelectionMode, IsLuminanceRangeSelectionMode)
+        End Function
+
         ''' <summary>DIE ZULETZT ANGEKLICKTE STELLE, unabhaengig davon, ob daraus eine Maskenebene
         ''' oder eine Auswahl wurde. Eine Maskenebene traegt ihre Stelle selbst mit sich
         ''' (RangeSampleXPercent); eine AUSWAHL hat kein solches Gedaechtnis, und ohne dieses Feld
@@ -1068,7 +1089,8 @@ Namespace ViewModels
                 ' nur fuer das Bild, das ihn ausgeloest hat. Ohne diese beiden Abbrueche laegen nach
                 ' einem Bildwechsel die Maske und die Masse des ALTEN Bildes auf dem neuen.
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
+                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not IsExpectedRangeMaskMode("Color", isMask) Then Return
 
                 Dim size = GetAnnotationDisplayPixelSize()
                 If size.Width <= 0 OrElse size.Height <= 0 Then Return
@@ -1097,7 +1119,8 @@ Namespace ViewModels
                                                 End Using
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not IsExpectedRangeMaskMode("Color", isMask) Then
                     result.Mask?.Dispose()
                     Return
                 End If
@@ -1128,7 +1151,8 @@ Namespace ViewModels
             Await _rangeMaskGate.WaitAsync()
             Try
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
+                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not IsExpectedRangeMaskMode("Luminance", isMask) Then Return
 
                 Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
                 Dim from = _luminanceRangeFrom, [to] = _luminanceRangeTo, feather = _luminanceRangeFeather
@@ -1142,7 +1166,8 @@ Namespace ViewModels
                                                 End Using
                                             End Function)
                 If generation <> Volatile.Read(_rangeMaskGeneration) OrElse
-                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then
+                   Not String.Equals(requestedDocument, _currentImagePath, StringComparison.OrdinalIgnoreCase) OrElse
+                   Not IsExpectedRangeMaskMode("Luminance", isMask) Then
                     result.Mask?.Dispose()
                     Return
                 End If

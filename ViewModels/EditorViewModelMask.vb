@@ -103,6 +103,7 @@ Namespace ViewModels
             Set(value As String)
                 Dim v = If(String.IsNullOrWhiteSpace(value), "Move", value)
                 If _selectionMode = v Then Return
+                InvalidatePendingRangeMask()
                 Me.RaiseAndSetIfChanged(_selectionMode, v)
                 Me.RaisePropertyChanged(NameOf(ShowMagicWandControls))
                 Me.RaisePropertyChanged(NameOf(ShowMaskBrushControls))
