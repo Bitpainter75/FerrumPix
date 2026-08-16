@@ -1094,7 +1094,15 @@ Namespace ViewModels
         End Property
 
 
+        ''' <summary>Wo die Symbole liegen. Eine Stelle fuer beide Listen, die feste und die
+        ''' gesammelte.</summary>
+        Private Const ShapeIconFolder As String = "avares://FerrumPix/Assets/Icons/outline/"
+
         Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
+        ''' <summary>Ob die Symbolliste schon angefordert wurde. Einmal reicht - auch wenn das
+        ''' Werkzeug danach noch oft gewechselt wird.</summary>
+        Private _shapeIconsRequested As Boolean
+        Private _shapeIconsLoading As Boolean
         Private ReadOnly _fixedShapeItems As New ObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _filteredShapeIcons As New BulkObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
@@ -1123,6 +1131,14 @@ Namespace ViewModels
         Public ReadOnly Property FilteredShapeIcons As BulkObservableCollection(Of ShapeIconEntry)
             Get
                 Return _filteredShapeIcons
+            End Get
+        End Property
+
+        ''' <summary>Ob die Symbolliste gerade entsteht. Das Feld zeigt so lange einen Hinweis - ein
+        ''' leerer Kasten sieht aus wie "keine Symbole" und nicht wie Arbeit.</summary>
+        Public ReadOnly Property IsShapeIconsLoading As Boolean
+            Get
+                Return _shapeIconsLoading
             End Get
         End Property
 
@@ -1321,34 +1337,75 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_shapeIconSearchText, If(value, ""))
+                ' Wer hier tippt, hat das Feld vor sich - dann muss die Liste auch da sein.
+                EnsureShapeIconsLoaded()
                 RefreshFilteredShapeIcons()
             End Set
         End Property
 
-        Private Sub LoadAllShapeIcons()
-            _allShapeIcons.Clear()
+        ''' <summary>Baut die Symbolliste beim ERSTEN Bedarf statt beim Programmstart.
+        '''
+        ''' Es sind ueber viertausend Symbole: einsammeln, jeden Namen uebersetzen und alles
+        ''' sortieren kostet Zeit und Speicher, und der Editor entsteht schon beim Start, auch wenn
+        ''' die Anwendung in der Galerie beginnt. Gebraucht wird die Liste erst, wenn das Symbolfeld
+        ''' des Einfuegen-Werkzeugs aufgeht (siehe <see cref="ShowSymbolControls"/>).
+        '''
+        ''' Gerechnet wird im Hintergrund, damit das Panel dabei bedienbar bleibt; solange steht im
+        ''' Kasten ein Hinweis statt einer leeren Flaeche (siehe <see cref="IsShapeIconsLoading"/>).
+        ''' Angefasst wird nur eine oertliche Liste - hereingereicht wird sie auf dem
+        ''' Anzeigefaden.</summary>
+        Friend Sub EnsureShapeIconsLoaded()
+            If _shapeIconsRequested Then Return
+            _shapeIconsRequested = True
+            _shapeIconsLoading = True
+            Me.RaisePropertyChanged(NameOf(IsShapeIconsLoading))
+
+            ' Den Ressourcenbestand der eigenen Anwendung einmal von HIER aus anfassen: die Abfrage
+            ' darunter liest ihn nur, aber angelegt wird er beim ersten Zugriff, und der soll nicht
+            ' zufaellig auf dem Hintergrundfaden neben einem Icon der Oberflaeche liegen.
             Try
-                Dim assets = Avalonia.Platform.AssetLoader.GetAssets(New Uri("avares://FerrumPix/Assets/Icons/outline/"), Nothing)
+                Avalonia.Platform.AssetLoader.Exists(New Uri(ShapeIconFolder & "x.svg"), Nothing)
+            Catch
+            End Try
+
+            Task.Run(Sub()
+                         Dim loaded = BuildShapeIcons()
+                         Dispatcher.UIThread.Post(Sub()
+                                                      _allShapeIcons.Clear()
+                                                      _allShapeIcons.AddRange(loaded)
+                                                      _shapeIconsLoading = False
+                                                      Me.RaisePropertyChanged(NameOf(IsShapeIconsLoading))
+                                                      RefreshFilteredShapeIcons()
+                                                  End Sub)
+                     End Sub)
+        End Sub
+
+        ''' <summary>Sammelt die Symbole ein. Keine Beruehrung mit der Oberflaeche - laeuft im
+        ''' Hintergrund.</summary>
+        Private Shared Function BuildShapeIcons() As List(Of ShapeIconEntry)
+            Dim result As New List(Of ShapeIconEntry)()
+            Try
+                Dim assets = Avalonia.Platform.AssetLoader.GetAssets(New Uri(ShapeIconFolder), Nothing)
                 For Each uri In assets
                     Dim path = uri.ToString()
                     If Not path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
                     Dim sourceName = FormatIconDisplayName(path)
-                    _allShapeIcons.Add(New ShapeIconEntry With {
+                    result.Add(New ShapeIconEntry With {
                         .IconPath = path,
                         .SourceName = sourceName,
                         .DisplayName = LocalizationService.Tag(sourceName),
                         .PendingKind = "Svg:" & path
                     })
                 Next
-                _allShapeIcons.Sort(Function(a, b) String.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase))
+                result.Sort(Function(a, b) String.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase))
             Catch
             End Try
-            RefreshFilteredShapeIcons()
-        End Sub
+            Return result
+        End Function
 
         Private Sub LoadFixedShapeItems()
             _fixedShapeItems.Clear()
-            Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
+            Const base As String = ShapeIconFolder
             ' Der PFAD gehoert hier NICHT hin (Patrick am 2026-08-04): jede Form dieser Liste wird
             ' AUFGEZOGEN, der Pfad wird Punkt fuer Punkt gesetzt. Er ist ein eigenes Werkzeug und
             ' keine Form - und stand hier zuletzt nur als zweiter Weg in dasselbe Werkzeug.
@@ -11796,7 +11853,8 @@ Namespace ViewModels
             ' lebt so lange wie das Fenster.
             AddHandler AiModelService.InventoryChanged, Sub(s, e) RefreshModelAvailability()
             LoadFixedShapeItems()
-            LoadAllShapeIcons()
+            ' Die viertausend Symbole NICHT hier: der Editor entsteht beim Programmstart, auch wenn
+            ' die Anwendung in der Galerie beginnt (siehe EnsureShapeIconsLoaded).
             LoadWatermarkPresets()
             LoadAdjustmentPresetNames()
             LoadSavedXmpPresets()
@@ -20579,6 +20637,9 @@ Namespace ViewModels
         End Sub
 
         Private Sub RaiseToolContextProperties()
+            ' Geht das Symbolfeld auf, wird die Liste jetzt gebraucht - und erst jetzt. Hier steht
+            ' es richtig, weil genau diese Stelle die Sichtbarkeit der Werkzeugfelder neu bewertet.
+            If ShowSymbolControls Then EnsureShapeIconsLoaded()
             Me.RaisePropertyChanged(NameOf(ShowCropAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowResizeAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowLightAdjustments))

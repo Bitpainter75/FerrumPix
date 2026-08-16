@@ -101,9 +101,18 @@
                                        Opacity="0.75"/>
                     </Button>
                 </Grid>
+                <!-- Die Liste entsteht erst, wenn dieses Feld aufgeht (siehe EnsureShapeIconsLoaded),
+                     und dabei im Hintergrund. Solange sagt eine Zeile, dass gearbeitet wird - ein
+                     leerer Kasten sähe aus wie "keine Symbole". -->
+                <TextBlock Text="Symbole werden geladen"
+                           IsVisible="{Binding IsShapeIconsLoading}"
+                           Margin="0,4"
+                           Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
                 <!-- Über viertausend Symbole: ein ItemsControl legt für jedes sofort einen Knopf an.
                      Der ItemsRepeater mit WrapLayout erzeugt nur die tatsächlich sichtbaren. -->
-                <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding !IsShapeIconsLoading}">
                     <ItemsRepeater ItemsSource="{Binding FilteredShapeIcons}">
                         <ItemsRepeater.Layout>
                             <WrapLayout />
