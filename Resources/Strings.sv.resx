@@ -7368,13 +7368,13 @@
   <data name="Zus_tzlich_anwenden_5f986a6e" xml:space="preserve">
     <value>Använd dessutom</value>
   </data>
-  <data name="Adobe_Profile_werden_erkannt__ihre_3D_Daten_lieg_cca75b41" xml:space="preserve">
+  <data name="Adobe_Profile_werden_erkannt_ihre_3D_Daten_liege_cca75b41" xml:space="preserve">
     <value>Adobe-profiler identifieras; deras 3D-data finns vanligtvis inte i XMP-filen.</value>
   </data>
   <data name="Farbs_ume_korrigieren_6ff954e8" xml:space="preserve">
     <value>Korrigera färgfransar</value>
   </data>
-  <data name="Ausrichten___Perspektive_b418e1a5" xml:space="preserve">
+  <data name="Ausrichten_Perspektive_b418e1a5" xml:space="preserve">
     <value>Räta upp och perspektiv</value>
   </data>
   <data name="bernimmt_die_im_XMP_aktivierte_Objektivkorrektur_a336f668" xml:space="preserve">
@@ -7383,7 +7383,7 @@
   <data name="Korrigiert_Farbs_ume_an_kontrastreichen_Kanten_4bcd0c95" xml:space="preserve">
     <value>Korrigerar färgfransar vid kontrastrika kanter</value>
   </data>
-  <data name="bernimmt_Begradigen_sowie_horizontale__vertikale_b24e0cca" xml:space="preserve">
+  <data name="bernimmt_Begradigen_sowie_horizontale_vertikale__b24e0cca" xml:space="preserve">
     <value>Använder upprätning samt horisontella, vertikala och bildförhållandekorrigeringar</value>
   </data>
   <data name="bernimmt_den_in_Lightroom_gespeicherten_Bildauss_3a5b2c2a" xml:space="preserve">
@@ -7392,19 +7392,19 @@
   <data name="Auswahl_verwerfen_20b7f200" xml:space="preserve">
     <value>Förkasta markering</value>
   </data>
-  <data name="Eine_Farbe_im_Bild_anklicken___hnliche_Farben_we_9373353e" xml:space="preserve">
+  <data name="Eine_Farbe_im_Bild_anklicken_hnliche_Farben_werd_9373353e" xml:space="preserve">
     <value>Klicka på en färg i bilden; liknande färger väljs överallt.</value>
   </data>
   <data name="Zusammenh_ngend_5ac6e6ed" xml:space="preserve">
     <value>Sammanhängande</value>
   </data>
-  <data name="Pinsel__Auswahl_frei_ins_Bild_malen___Hinzuf_gen_a95374d5" xml:space="preserve">
+  <data name="Pinsel_Auswahl_frei_ins_Bild_malen_Hinzuf_gen_un_a95374d5" xml:space="preserve">
     <value>Pensel: måla fritt en markering i bilden — lägg till och dra ifrån med läget nedan</value>
   </data>
-  <data name="Farbbereich__Farbe_anklicken_und__hnliche_Farben_6fbd485c" xml:space="preserve">
+  <data name="Farbbereich_Farbe_anklicken_und_hnliche_Farben_i_6fbd485c" xml:space="preserve">
     <value>Färgområde: klicka på en färg och välj liknande färger i hela bilden</value>
   </data>
-  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_8648a335" xml:space="preserve">
+  <data name="Luminanzbereich_Schatten_Mittelt_ne_oder_Lichter_8648a335" xml:space="preserve">
     <value>Luminansområde: välj skuggor, mellantoner eller högdagrar</value>
   </data>
   <data name="L_sst_die_Auswahl_um_die_Kante_herum_wachsen_ode_41dec337" xml:space="preserve">
@@ -7413,28 +7413,28 @@
   <data name="Tauscht_gew_hlte_und_freie_Seite_ea4e06a7" xml:space="preserve">
     <value>Byter valda och fria områden</value>
   </data>
-  <data name="Hebt_die_Auswahl_auf__STRG_D_oder_ESC_2df1c8f3" xml:space="preserve">
+  <data name="Hebt_die_Auswahl_auf_STRG_D_oder_ESC_2df1c8f3" xml:space="preserve">
     <value>Tar bort markeringen (Ctrl+D eller Esc)</value>
   </data>
   <data name="Legt_eine_Abschrift_dieser_Auswahl_ab_6a040196" xml:space="preserve">
     <value>Sparar en kopia av denna markering</value>
   </data>
-  <data name="Setzt_die_abgelegte_Auswahl_wieder_ein__Eine_vor_5c2d2553" xml:space="preserve">
+  <data name="Setzt_die_abgelegte_Auswahl_wieder_ein_Eine_vorh_5c2d2553" xml:space="preserve">
     <value>Återställer den sparade markeringen. En befintlig ersätts.</value>
   </data>
   <data name="W_hlt_nur_die_zusammenh_ngende_Fl_che_am_Klickpu_fffcf9cf" xml:space="preserve">
     <value>Väljer bara det sammanhängande området vid klickpunkten i stället för matchande färger i hela bilden</value>
   </data>
-  <data name="Eine_Farbe_im_Bild_anklicken__Anders_als_der_Zau_2678e0ea" xml:space="preserve">
+  <data name="Eine_Farbe_im_Bild_anklicken_Anders_als_der_Zaub_2678e0ea" xml:space="preserve">
     <value>Klicka på en färg i bilden. Till skillnad från trollstaven väljs samma färgområde i hela bilden.</value>
   </data>
   <data name="W_hlt_alle_Bildbereiche_innerhalb_des_Helligkeit_b9f3d596" xml:space="preserve">
     <value>Väljer alla bildområden inom ljusstyrkeintervallet. Masken uppdateras när reglagen ändras.</value>
   </data>
-  <data name="Farbbereich__Farbe_im_Bild_anklicken___hnliche_F_72874557" xml:space="preserve">
+  <data name="Farbbereich_Farbe_im_Bild_anklicken_hnliche_Farb_72874557" xml:space="preserve">
     <value>Färgområde: klicka på en färg i bilden; liknande färger maskeras i hela bilden</value>
   </data>
-  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_f4017429" xml:space="preserve">
+  <data name="Luminanzbereich_Schatten_Mittelt_ne_oder_Lichter_f4017429" xml:space="preserve">
     <value>Luminansområde: maskera skuggor, mellantoner eller högdagrar efter ljusstyrka</value>
   </data>
   <data name="Aus_der_Farbbereichsmaske_eine_Maskenebene_erste_08a03120" xml:space="preserve">

@@ -7328,13 +7328,13 @@
   <data name="Zus_tzlich_anwenden_5f986a6e" xml:space="preserve">
     <value>Zusätzlich anwenden</value>
   </data>
-  <data name="Adobe_Profile_werden_erkannt__ihre_3D_Daten_lieg_cca75b41" xml:space="preserve">
+  <data name="Adobe_Profile_werden_erkannt_ihre_3D_Daten_liege_cca75b41" xml:space="preserve">
     <value>Adobe-Profile werden erkannt; ihre 3D-Daten liegen meist nicht in der XMP.</value>
   </data>
   <data name="Farbs_ume_korrigieren_6ff954e8" xml:space="preserve">
     <value>Farbsäume korrigieren</value>
   </data>
-  <data name="Ausrichten___Perspektive_b418e1a5" xml:space="preserve">
+  <data name="Ausrichten_Perspektive_b418e1a5" xml:space="preserve">
     <value>Ausrichten &amp; Perspektive</value>
   </data>
   <data name="bernimmt_die_im_XMP_aktivierte_Objektivkorrektur_a336f668" xml:space="preserve">
@@ -7343,7 +7343,7 @@
   <data name="Korrigiert_Farbs_ume_an_kontrastreichen_Kanten_4bcd0c95" xml:space="preserve">
     <value>Korrigiert Farbsäume an kontrastreichen Kanten</value>
   </data>
-  <data name="bernimmt_Begradigen_sowie_horizontale__vertikale_b24e0cca" xml:space="preserve">
+  <data name="bernimmt_Begradigen_sowie_horizontale_vertikale__b24e0cca" xml:space="preserve">
     <value>Übernimmt Begradigen sowie horizontale, vertikale und Seitenverhältnis-Korrekturen</value>
   </data>
   <data name="bernimmt_den_in_Lightroom_gespeicherten_Bildauss_3a5b2c2a" xml:space="preserve">
@@ -7352,19 +7352,19 @@
   <data name="Auswahl_verwerfen_20b7f200" xml:space="preserve">
     <value>Auswahl verwerfen</value>
   </data>
-  <data name="Eine_Farbe_im_Bild_anklicken___hnliche_Farben_we_9373353e" xml:space="preserve">
+  <data name="Eine_Farbe_im_Bild_anklicken_hnliche_Farben_werd_9373353e" xml:space="preserve">
     <value>Eine Farbe im Bild anklicken; ähnliche Farben werden überall ausgewählt.</value>
   </data>
   <data name="Zusammenh_ngend_5ac6e6ed" xml:space="preserve">
     <value>Zusammenhängend</value>
   </data>
-  <data name="Pinsel__Auswahl_frei_ins_Bild_malen___Hinzuf_gen_a95374d5" xml:space="preserve">
+  <data name="Pinsel_Auswahl_frei_ins_Bild_malen_Hinzuf_gen_un_a95374d5" xml:space="preserve">
     <value>Pinsel: Auswahl frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter</value>
   </data>
-  <data name="Farbbereich__Farbe_anklicken_und__hnliche_Farben_6fbd485c" xml:space="preserve">
+  <data name="Farbbereich_Farbe_anklicken_und_hnliche_Farben_i_6fbd485c" xml:space="preserve">
     <value>Farbbereich: Farbe anklicken und ähnliche Farben im ganzen Bild auswählen</value>
   </data>
-  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_8648a335" xml:space="preserve">
+  <data name="Luminanzbereich_Schatten_Mittelt_ne_oder_Lichter_8648a335" xml:space="preserve">
     <value>Luminanzbereich: Schatten, Mitteltöne oder Lichter auswählen</value>
   </data>
   <data name="L_sst_die_Auswahl_um_die_Kante_herum_wachsen_ode_41dec337" xml:space="preserve">
@@ -7373,28 +7373,28 @@
   <data name="Tauscht_gew_hlte_und_freie_Seite_ea4e06a7" xml:space="preserve">
     <value>Tauscht gewählte und freie Seite</value>
   </data>
-  <data name="Hebt_die_Auswahl_auf__STRG_D_oder_ESC_2df1c8f3" xml:space="preserve">
+  <data name="Hebt_die_Auswahl_auf_STRG_D_oder_ESC_2df1c8f3" xml:space="preserve">
     <value>Hebt die Auswahl auf (STRG+D oder ESC)</value>
   </data>
   <data name="Legt_eine_Abschrift_dieser_Auswahl_ab_6a040196" xml:space="preserve">
     <value>Legt eine Abschrift dieser Auswahl ab</value>
   </data>
-  <data name="Setzt_die_abgelegte_Auswahl_wieder_ein__Eine_vor_5c2d2553" xml:space="preserve">
+  <data name="Setzt_die_abgelegte_Auswahl_wieder_ein_Eine_vorh_5c2d2553" xml:space="preserve">
     <value>Setzt die abgelegte Auswahl wieder ein. Eine vorhandene wird ersetzt</value>
   </data>
   <data name="W_hlt_nur_die_zusammenh_ngende_Fl_che_am_Klickpu_fffcf9cf" xml:space="preserve">
     <value>Wählt nur die zusammenhängende Fläche am Klickpunkt statt gleicher Farben im ganzen Bild</value>
   </data>
-  <data name="Eine_Farbe_im_Bild_anklicken__Anders_als_der_Zau_2678e0ea" xml:space="preserve">
+  <data name="Eine_Farbe_im_Bild_anklicken_Anders_als_der_Zaub_2678e0ea" xml:space="preserve">
     <value>Eine Farbe im Bild anklicken. Anders als der Zauberstab wird derselbe Farbbereich überall im Bild gewählt.</value>
   </data>
   <data name="W_hlt_alle_Bildbereiche_innerhalb_des_Helligkeit_b9f3d596" xml:space="preserve">
     <value>Wählt alle Bildbereiche innerhalb des Helligkeitsbereichs. Die Maske wird beim Verändern der Regler aktualisiert.</value>
   </data>
-  <data name="Farbbereich__Farbe_im_Bild_anklicken___hnliche_F_72874557" xml:space="preserve">
+  <data name="Farbbereich_Farbe_im_Bild_anklicken_hnliche_Farb_72874557" xml:space="preserve">
     <value>Farbbereich: Farbe im Bild anklicken; ähnliche Farben werden überall im Bild maskiert</value>
   </data>
-  <data name="Luminanzbereich__Schatten__Mittelt_ne_oder_Licht_f4017429" xml:space="preserve">
+  <data name="Luminanzbereich_Schatten_Mittelt_ne_oder_Lichter_f4017429" xml:space="preserve">
     <value>Luminanzbereich: Schatten, Mitteltöne oder Lichter nach Helligkeit maskieren</value>
   </data>
   <data name="Aus_der_Farbbereichsmaske_eine_Maskenebene_erste_08a03120" xml:space="preserve">
