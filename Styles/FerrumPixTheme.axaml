@@ -726,25 +726,44 @@
     <Style Selector="TextBox:focus">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- IN EINEM AUFKLAPPFENSTER LOESCHT EIN ELEMENT, DAS SELBST NICHTS ZEICHNET, DEN HINTERGRUND
+         SEINES ELTERNTEILS; an seiner Stelle kommt der Hintergrund des MENUES zum Vorschein. Am
+         gerenderten Aufklappfenster gemessen: ein leerer Border ueber einer roten Flaeche zeigte in
+         seinem Bereich nicht rot, sondern die Menuefarbe, ein Border MIT Hintergrund dagegen den
+         eigenen - schon ein durchsichtiger Hintergrund genuegt, um das Loeschen zu verhindern. In
+         der Vorlage einer TextBox stapeln sich mehrere solche leeren Behaelter (Raster, Andockfeld,
+         Rollbereich); in den Suchkaesten der Filtermenues stand deshalb ein hellerer Block ueber die
+         ganze Breite des Feldes, auch nachdem das Feld seine Flaeche selbst malte
+         (Nutzerbefund 2026-08-16). Der Rollbereich liegt zuoberst und deckt die Textflaeche ab, ihn
+         zu faerben genuegt. Im Hauptfenster tritt das nicht auf, nur in Popups - dort aber in JEDEM
+         Textfeld, auch in den Hex-Feldern der Farbwaehler. Die Klassen mit bewusst durchsichtigem
+         Feld ziehen das weiter unten einzeln wieder zurueck. -->
+    <Style Selector="TextBox /template/ ScrollViewer#PART_ScrollViewer">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+    </Style>
     <Style Selector="TextBox.search-input">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="MinHeight" Value="0"/>
     </Style>
-    <!-- Der RUHEZUSTAND muss ebenfalls durchsichtig sein, und das ist keine Doppelung: der
-         Hintergrund einer TextBox haengt bei Avalonia am PART_BorderElement der Vorlage, nicht an
-         ihrer Background-Eigenschaft. Ein Background="Transparent" an der TextBox selbst - ob als
-         Klasse oder direkt am Element - laeuft deshalb ins Leere. Ohne diese Regel malte das Feld in
-         den Suchkaesten der Filtermenues einen helleren Kasten in seinen eigenen Rahmen. -->
+    <!-- DAS FELD MALT SEINE FLAECHE SELBST, UND ZWAR IN DER FARBE SEINES KASTENS. Durchsichtig
+         waere naheliegend, weil der Kasten darunter dieselbe Farbe hat - in einem Aufklappfenster
+         kam darunter aber nicht der Kasten zum Vorschein, sondern der Hintergrund des MENUES: hinter
+         dem Platzhaltertext stand ein hellerer Block ueber die ganze Breite des Feldes
+         (Nutzerbefund 2026-08-16). Der Grund steht beim Rollbereich weiter oben. Alle Suchkaesten
+         liegen auf FP.Bg.Input, das Feld faellt also nirgends auf. Jeder Zustand braucht seine
+         eigene Regel, und das ist keine Doppelung: der Hintergrund einer TextBox haengt bei Avalonia
+         am PART_BorderElement der Vorlage, nicht an ihrer Background-Eigenschaft. Ein Background an
+         der TextBox selbst - ob als Klasse oder direkt am Element - laeuft ins Leere. -->
     <Style Selector="TextBox.search-input /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
     <Style Selector="TextBox.search-input:pointerover /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
     <Style Selector="TextBox.overlay-editor">
@@ -765,8 +784,12 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
-    <Style Selector="TextBox.search-input:focus /template/ Border#PART_BorderElement">
+    <!-- Der Text auf der Buehne steht ueber dem Bild und darf keine Flaeche mitbringen. -->
+    <Style Selector="TextBox.overlay-editor /template/ ScrollViewer#PART_ScrollViewer">
         <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="TextBox.search-input:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
 
@@ -788,6 +811,10 @@
     </Style>
     <Style Selector="TextBox.slider-value:focus /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <!-- Das Zahlenfeld sitzt AUF der Reglerzeile und nimmt deren Farbe an, nicht die eines Feldes. -->
+    <Style Selector="TextBox.slider-value /template/ ScrollViewer#PART_ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
     <!-- 1. Haupt-Style: Gilt für NumericUpDown, aber NUR mit der Klasse .slider-value -->
     <Style Selector=":is(NumericUpDown).slider-value">
@@ -823,6 +850,9 @@
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector=":is(NumericUpDown).slider-value /template/ TextBox#PART_TextBox /template/ ScrollViewer#PART_ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector=":is(NumericUpDown).slider-value /template/ TextBox#PART_TextBox:focus /template/ Border#PART_BorderElement">
         <Setter Property="Background" Value="Transparent"/>
@@ -1532,6 +1562,9 @@
         <Setter Property="Padding" Value="10,6"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="NumericUpDown.combo-like /template/ TextBox#PART_TextBox /template/ ScrollViewer#PART_ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="NumericUpDown.combo-like /template/ TextBox#PART_TextBox:focus /template/ Border#PART_BorderElement">
         <Setter Property="Background" Value="Transparent"/>
