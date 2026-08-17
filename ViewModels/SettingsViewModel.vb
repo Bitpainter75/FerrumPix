@@ -822,7 +822,7 @@ Namespace ViewModels
         Public ReadOnly Property ApplicationScaleScreenStatusText As String
             Get
                 If _applicationScaleScreens Is Nothing OrElse _applicationScaleScreens.Count = 0 Then
-                    Return "Keine Bildschirme erkannt."
+                    Return LocalizationService.T("Keine Bildschirme erkannt.")
                 End If
 
                 If IsApplicationScaleScreenKnown Then

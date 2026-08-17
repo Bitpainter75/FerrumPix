@@ -108,7 +108,7 @@ Namespace ViewModels
             SelectedAnnotationIndex = _annotations.Count - 1
             _hasChanges = True
             RaiseResetButtonStateChanged()
-            AddHistoryEntry("Malebene angelegt")
+            AddHistoryEntry(LocalizationService.T("Malebene angelegt"))
             RefreshPreviewImmediately()
         End Sub
 
@@ -378,7 +378,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseAnnotationMaskStateChanged()
             RebuildLayerRows()
-            AddHistoryEntry("Radiert")
+            AddHistoryEntry(LocalizationService.T("Radiert"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
             Return True
         End Function
@@ -459,7 +459,7 @@ Namespace ViewModels
             If Object.ReferenceEquals(target, CurrentObject()) Then RefreshObjectAdjustMode()
             RebuildLayerRows()
             RaiseResetButtonStateChanged()
-            AddHistoryEntry("Anpassungen der Ebene verworfen")
+            AddHistoryEntry(LocalizationService.T("Anpassungen der Ebene verworfen"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
         End Sub
 
@@ -542,7 +542,7 @@ Namespace ViewModels
             CurrentTool = EditorTool.Selection
             SelectionMode = "Move"
             SelectedAnnotationIndex = -1
-            AddHistoryEntry("Auswahl aus Ebene")
+            AddHistoryEntry(LocalizationService.T("Auswahl aus Ebene"))
             Return True
         End Function
 

@@ -2719,7 +2719,7 @@ Namespace ViewModels
             _gradientDragActive = False
             _gradientHandle = -1
             _gradientDragMaskId = ""
-            AddHistoryEntry("Verlauf geändert")
+            AddHistoryEntry(LocalizationService.T("Verlauf geändert"))
             SchedulePreviewUpdate()
             RaiseGradientPropertiesChanged()
         End Sub

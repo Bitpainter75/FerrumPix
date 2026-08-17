@@ -1143,7 +1143,7 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_lastAppliedFilterPresetName) Then Return _lastAppliedFilterPresetName
                 If Not String.IsNullOrWhiteSpace(_lastAppliedXmpPresetPath) Then Return ""
                 If Not String.IsNullOrWhiteSpace(_lastAppliedLutPresetPath) Then Return ""
-                Return "Keine"
+                Return LocalizationService.T("Keine")
             End Get
         End Property
         Public ReadOnly Property WatermarkPresetNames As ObservableCollection(Of String) = New ObservableCollection(Of String)()
@@ -6707,10 +6707,10 @@ Namespace ViewModels
 
         Public ReadOnly Property RetouchHintText As String
             Get
-                If IsRepairMode Then Return "Repariert aus der Umgebung und blendet die ersetzte Textur weich ein."
-                If Not IsCloneMode Then Return "Mittelt die Umgebung des Ziels und blendet sie weich ein."
-                If HasCloneSource Then Return "Quelle gesetzt - Ziehen kopiert die Textur von dort."
-                Return "Alt+Klick ins Bild setzt zuerst die Quelle, aus der kopiert wird."
+                If IsRepairMode Then Return LocalizationService.T("Repariert aus der Umgebung und blendet die ersetzte Textur weich ein.")
+                If Not IsCloneMode Then Return LocalizationService.T("Mittelt die Umgebung des Ziels und blendet sie weich ein.")
+                If HasCloneSource Then Return LocalizationService.T("Quelle gesetzt - Ziehen kopiert die Textur von dort.")
+                Return LocalizationService.T("Alt+Klick ins Bild setzt zuerst die Quelle, aus der kopiert wird.")
             End Get
         End Property
 
@@ -8703,7 +8703,7 @@ Namespace ViewModels
             Dim tempPath = CopySelectionToClipboardFile()
             If String.IsNullOrWhiteSpace(tempPath) Then Return Nothing
             EraseSelection()
-            AddHistoryEntry("Auswahl ausgeschnitten")
+            AddHistoryEntry(LocalizationService.T("Auswahl ausgeschnitten"))
             Return tempPath
         End Function
 
@@ -9457,7 +9457,7 @@ Namespace ViewModels
             ' Auswahl. An den Auswahlwerten platziert, würde der Ausschnitt gestaucht.
             Dim p = PixelRectToPercent(placement)
             AddSelectionImageAnnotationAt(tempPath, p.X, p.Y, p.W, p.H)
-            AddHistoryEntry("Auswahl kopiert")
+            AddHistoryEntry(LocalizationService.T("Auswahl kopiert"))
         End Sub
 
         Private _pendingColorPickCallback As Action(Of Avalonia.Media.Color) = Nothing
@@ -9671,7 +9671,7 @@ Namespace ViewModels
         Public Sub CopySelectionToClipboard()
             Dim tempPath = CopySelectionToClipboardFile()
             If tempPath Is Nothing Then Return
-            AddHistoryEntry("Auswahl kopiert")
+            AddHistoryEntry(LocalizationService.T("Auswahl kopiert"))
         End Sub
 
         Public Function CopySelectionToClipboardFile() As String
@@ -9693,7 +9693,7 @@ Namespace ViewModels
             _selectionClipboardPasteCount += 1
             Dim offset = 3.0 * _selectionClipboardPasteCount
             AddSelectionImageAnnotationAt(_selectionClipboardPath, _selectionClipboardXPercent + offset, _selectionClipboardYPercent + offset, _selectionClipboardWidthPercent, _selectionClipboardHeightPercent)
-            AddHistoryEntry("Auswahl eingefügt")
+            AddHistoryEntry(LocalizationService.T("Auswahl eingefügt"))
         End Sub
 
         ''' Füllt die aktive Auswahl mit Vollfarbe oder Verlauf, indem ein neues, randloses
@@ -9721,7 +9721,7 @@ Namespace ViewModels
             ' Rotes Overlay neu bauen: es zeigt jetzt die DECKUNG (Maske × Füll-Luminanz), also den
             ' Verlauf, mit dem die Anpassung dieser Ebene abgestuft wird.
             If _activeSelectionIsMask Then PublishSelectionRedOverlay()
-            AddHistoryEntry(If(layer.IsMaskLayer, "Maske gefüllt", "Auswahl gefüllt"))
+            AddHistoryEntry(LocalizationService.T(If(layer.IsMaskLayer, "Maske gefüllt", "Auswahl gefüllt")))
             SchedulePreviewUpdate()
         End Sub
 
@@ -11792,7 +11792,7 @@ Namespace ViewModels
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             RaiseResetButtonStateChanged()
-            AddHistoryEntry("Anpassung angewendet")
+            AddHistoryEntry(LocalizationService.T("Anpassung angewendet"))
             SchedulePreviewUpdate()
             StatusText = String.Format(LocalizationService.T("Anpassung angewendet: {0}"), name)
         End Sub
@@ -11818,7 +11818,7 @@ Namespace ViewModels
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             RaiseResetButtonStateChanged()
-            AddHistoryEntry("Anpassungen eingefügt")
+            AddHistoryEntry(LocalizationService.T("Anpassungen eingefügt"))
             SchedulePreviewUpdate()
             StatusText = LocalizationService.T("Anpassungen eingefügt")
         End Sub
@@ -12237,7 +12237,7 @@ Namespace ViewModels
                                                                       ResetPixelAdjustmentsInternal()
                                                                       _hasChanges = True
                                                                       Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
-                                                                      AddHistoryEntry("Anpassungen zurückgesetzt")
+                                                                      AddHistoryEntry(LocalizationService.T("Anpassungen zurückgesetzt"))
                                                                   End Sub)
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo()
@@ -16301,37 +16301,37 @@ Namespace ViewModels
         Private Shared Function GetHistoryLabelForProperty(propertyName As String) As String
             Select Case propertyName
                 Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
-                    Return "Zuschneiden"
+                    Return LocalizationService.T("Zuschneiden")
                 Case NameOf(ResizeWidth), NameOf(ResizeHeight), NameOf(LockResizeAspect), NameOf(ResizeInterpolationLabel)
-                    Return "Bildgröße"
+                    Return LocalizationService.T("Bildgröße")
                 Case NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor)
-                    Return "Leinwandgröße"
+                    Return LocalizationService.T("Leinwandgröße")
                 Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)
-                    Return "Gerade richten"
+                    Return LocalizationService.T("Gerade richten")
                 Case "Tonwertkurve"
-                    Return "Tonwertkurve"
+                    Return LocalizationService.T("Tonwertkurve")
                 Case NameOf(RedHue), NameOf(RedSaturation), NameOf(OrangeHue), NameOf(OrangeSaturation),
                      NameOf(YellowHue), NameOf(YellowSaturation), NameOf(GreenHue), NameOf(GreenSaturation),
                      NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
                      NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation)
-                    Return "Farbmischer"
+                    Return LocalizationService.T("Farbmischer")
                 Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(NoiseReduction),
                      NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
-                    Return "Details"
+                    Return LocalizationService.T("Details")
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
                      NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
                      NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(GrainColor)
-                    Return "Effekte"
+                    Return LocalizationService.T("Effekte")
                 Case NameOf(FilterPreset)
-                    Return "Filter"
+                    Return LocalizationService.T("Filter")
                 Case NameOf(FilterStrength)
-                    Return "Filterstärke"
+                    Return LocalizationService.T("Filterstärke")
                 Case NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint)
-                    Return "Weißabgleich"
+                    Return LocalizationService.T("Weißabgleich")
                 Case NameOf(NegativeEnabled), NameOf(NegativeMonochrome), NameOf(NegativeGamma)
-                    Return "Filmnegativ"
+                    Return LocalizationService.T("Filmnegativ")
                 Case Else
-                    Return "Anpassung"
+                    Return LocalizationService.T("Anpassung")
             End Select
         End Function
 
@@ -16374,7 +16374,7 @@ Namespace ViewModels
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
-            AddHistoryEntry("Rückgängig")
+            AddHistoryEntry(LocalizationService.T("Rückgängig"))
             ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
             ' zurückgesetzt (_activeSelectionIsMask), und damit wäre das Overlay verschwunden -
             ' beim VERLAUF völlig zu Unrecht, denn der hängt gar nicht an der Auswahl, sondern an
@@ -16404,7 +16404,7 @@ Namespace ViewModels
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
-            AddHistoryEntry("Wiederholt")
+            AddHistoryEntry(LocalizationService.T("Wiederholt"))
             ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
             ' zurückgesetzt (_activeSelectionIsMask), und damit wäre das Overlay verschwunden -
             ' beim VERLAUF völlig zu Unrecht, denn der hängt gar nicht an der Auswahl, sondern an
@@ -16792,7 +16792,7 @@ Namespace ViewModels
                 ' Objektdrehung läuft in [-180, 180]; nach 180 kippt sie auf -180 (identische Lage).
                 Dim rotated = ((_annotationRotation + degrees + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
                 AnnotationRotation = rotated
-                AddHistoryEntry(If(degrees < 0, "Objekt links gedreht", "Objekt rechts gedreht"))
+                AddHistoryEntry(LocalizationService.T(If(degrees < 0, "Objekt links gedreht", "Objekt rechts gedreht")))
                 Return
             End If
             _rotationDegrees = ((_rotationDegrees + degrees) Mod 360 + 360) Mod 360
@@ -16816,7 +16816,7 @@ Namespace ViewModels
             If Math.Abs(_annotationRotation) < 0.05 Then Return False
             PushUndo()
             AnnotationRotation = 0
-            AddHistoryEntry("Objekt-Drehung zurückgesetzt")
+            AddHistoryEntry(LocalizationService.T("Objekt-Drehung zurückgesetzt"))
             Return True
         End Function
 
@@ -16824,7 +16824,7 @@ Namespace ViewModels
             If HasSelectedAnnotation Then
                 PushUndo()
                 AnnotationFlipHorizontal = Not _annotationFlipH
-                AddHistoryEntry("Objekt horizontal gespiegelt")
+                AddHistoryEntry(LocalizationService.T("Objekt horizontal gespiegelt"))
                 Return
             End If
             _flipH = Not _flipH
@@ -16835,7 +16835,7 @@ Namespace ViewModels
             If HasSelectedAnnotation Then
                 PushUndo()
                 AnnotationFlipVertical = Not _annotationFlipV
-                AddHistoryEntry("Objekt vertikal gespiegelt")
+                AddHistoryEntry(LocalizationService.T("Objekt vertikal gespiegelt"))
                 Return
             End If
             _flipV = Not _flipV

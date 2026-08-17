@@ -3873,9 +3873,9 @@ Namespace ViewModels
             If Not String.IsNullOrWhiteSpace(textQuery) Then parts.Add(textQuery)
             Select Case AppSettingsService.NormalizeSearchFavoriteMode(favoriteMode)
                 Case "Only"
-                    parts.Add("Favoriten")
+                    parts.Add(LocalizationService.T("Favoriten"))
                 Case "Not"
-                    parts.Add("Ohne Favoriten")
+                    parts.Add(LocalizationService.T("Ohne Favoriten"))
             End Select
             Dim ratingList = If(ratings, Enumerable.Empty(Of Integer)()).
                 Select(Function(r) Math.Max(0, Math.Min(5, r))).
@@ -3884,15 +3884,16 @@ Namespace ViewModels
                 ToList()
             If ratingList.Count > 0 Then
                 parts.Add(String.Join(", ", ratingList.Select(Function(r)
-                    If r = 0 Then Return "Nicht bewertet"
-                    Return If(r = 1, "1 Stern", $"{r} Sterne")
+                    If r = 0 Then Return LocalizationService.T("Nicht bewertet")
+                    If r = 1 Then Return LocalizationService.T("1 Stern")
+                    Return String.Format(LocalizationService.T("{0} Sterne"), r)
                 End Function)))
             End If
             If parts.Count = 0 AndAlso Not String.IsNullOrWhiteSpace(rootFolder) Then
                 Dim folderName = Path.GetFileName(rootFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
                 parts.Add(If(String.IsNullOrWhiteSpace(folderName), rootFolder, folderName))
             End If
-            If parts.Count = 0 Then parts.Add("Katalog")
+            If parts.Count = 0 Then parts.Add(LocalizationService.T("Katalog"))
             Return String.Join(" · ", parts)
         End Function
 
