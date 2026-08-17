@@ -622,9 +622,15 @@ Namespace Services
 
         Public Shared Function RenderPngStream(sourcePath As String, adj As ImageAdjustments,
                                                maxDimension As Integer,
-                                               ByRef decodeMs As Long, ByRef processMs As Long, ByRef encodeMs As Long) As MemoryStream
+                                               ByRef decodeMs As Long, ByRef processMs As Long, ByRef encodeMs As Long,
+                                               Optional preferReducedRawDecode As Boolean = False) As MemoryStream
             Dim sw = Diagnostics.Stopwatch.StartNew()
-            Using original = DecodeOriented(sourcePath)
+            ' Nur die Kachelpipeline darf den halben RAW-Decode anfordern. Der allgemeine Weg
+            ' bleibt voll aufgeloest, damit Editor, Export und Druck nie eine Vorschauauflosung
+            ' bekommen. Die Objektivwahl gehoert zum Decode und muss auch fuer die Kachel gelten.
+            Using original = If(preferReducedRawDecode,
+                                RawDecodeService.TryDecodeThumbnail(sourcePath, LensChoiceFrom(adj)),
+                                DecodeOriented(sourcePath))
                 decodeMs = sw.ElapsedMilliseconds
                 If original Is Nothing Then Return Nothing
 

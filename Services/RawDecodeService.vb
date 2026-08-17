@@ -86,6 +86,7 @@ Namespace Services
         Private Shared _setNoAutoBright As SetIntFn
         Private Shared _setGamma As SetGammaFn
         Private Shared _setFbdd As SetIntFn
+        Private Shared _setDemosaic As SetIntFn
         Private Shared _process As IntFn
         Private Shared _unpackThumb As IntFn
         Private Shared _makeMemThumb As MakeMemImageFn
@@ -203,13 +204,18 @@ Namespace Services
                     Catch
                         _setFbdd = Nothing
                     End Try
+                    Try
+                        _setDemosaic = GetExport(Of SetIntFn)(handle, "libraw_set_demosaic")
+                    Catch
+                        _setDemosaic = Nothing
+                    End Try
                     _library = handle
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
                     _init = Nothing : _openFile = Nothing : _unpack = Nothing
                     _setOutputBps = Nothing : _setOutputColor = Nothing
                     _getCamMul = Nothing : _setUserMul = Nothing
-                    _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing
+                    _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
                     _unpackThumb = Nothing : _makeMemThumb = Nothing
                     NativeLibrary.Free(handle)
@@ -356,6 +362,35 @@ Namespace Services
                                          Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             Return DecodeGate.Run(Function() DecodeIntern(path, lensChoice))
+        End Function
+
+        ''' <summary>Reduzierter RAW-Decode ausschliesslich fuer kleine Vorschauen. LibRaw kann nur
+        ''' halbe Kantenlaenge liefern; das spart Demosaic und FBDD, bevor die Kachel auf ihre
+        ''' Zielgroesse skaliert wird. Dieser Weg beruehrt bewusst weder den Editor-MRU-Cache noch
+        ''' dessen Schluessel: ein 1/2-Decode darf niemals als Arbeitsbild wieder herauskommen.</summary>
+        Friend Shared Function TryDecodeThumbnail(path As String,
+                                                   Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice))
+        End Function
+
+        Private Shared Function DecodeThumbnailIntern(path As String,
+                                                       lensChoice As LensDataService.Wahl) As SKBitmap
+            Try
+                Dim baseEv = BaseExposureForFile(path)
+                Dim lens = LensCorrectionForFile(path, lensChoice)
+                Dim decoded As SKBitmap
+                If _reentrant Then
+                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True)
+                Else
+                    SyncLock _nativeLock
+                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True)
+                    End SyncLock
+                End If
+                Return WithDistortion(decoded, lens)
+            Catch
+                Return Nothing
+            End Try
         End Function
 
         Private Shared Function DecodeIntern(path As String,
@@ -581,8 +616,65 @@ Namespace Services
         ''' ist genau diese eine Zahl.</summary>
         Private Const DecodeOutputBits As Integer = 16
 
+        ' Offsets INNERHALB libraw_output_params_t. Die Basis dieses Feldes in libraw_data_t ist
+        ' absichtlich nicht fest verdrahtet: sie liegt z.B. bei 5024 (LibRaw 0.21.4) bzw. 5232
+        ' (0.22.2) und kann sich bei jeder Systembibliothek wieder verschieben.
+        Private Const HalfSizeOffset As Integer = 136
+        Private Const OutputColorOffset As Integer = 160
+        Private Const OutputBpsOffset As Integer = 200
+        Private Const DemosaicOffset As Integer = 216
+        Private Const ParamsSearchStart As Integer = 4096
+        Private Const ParamsSearchEnd As Integer = 8192
+
+        ''' <summary>Setzt params.half_size nur, wenn die params-Basis im nativen Handle eindeutig
+        ''' belegt ist. Die drei Werte werden ausschliesslich vor dcraw_process als Landmarken
+        ''' gesetzt und danach sofort auf die normalen FerrumPix-Werte zurueckgestellt. Jede
+        ''' unbekannte LibRaw-Struktur bleibt damit beim sicheren Voll-Decode.</summary>
+        Private Shared Function TryEnableHalfSize(handle As IntPtr) As Boolean
+            If handle = IntPtr.Zero OrElse _setDemosaic Is Nothing Then Return False
+
+            Const markerOutputColor As Integer = 5
+            Const markerOutputBps As Integer = 13
+            Const markerDemosaic As Integer = 7
+            Dim foundBase As Integer = -1
+            Try
+                _setOutputColor(handle, markerOutputColor)
+                _setOutputBps(handle, markerOutputBps)
+                _setDemosaic(handle, markerDemosaic)
+
+                For candidate = ParamsSearchStart To ParamsSearchEnd Step 4
+                    If Marshal.ReadInt32(handle, candidate + OutputColorOffset) <> markerOutputColor Then Continue For
+                    If Marshal.ReadInt32(handle, candidate + OutputBpsOffset) <> markerOutputBps Then Continue For
+                    If Marshal.ReadInt32(handle, candidate + DemosaicOffset) <> markerDemosaic Then Continue For
+
+                    ' Ein frisch erzeugter LibRaw-Kontext hat half_size = 0. Das ist eine vierte,
+                    ' passive Plausibilitaetspruefung gegen zufaellige Treffermuster im Handle.
+                    If Marshal.ReadInt32(handle, candidate + HalfSizeOffset) <> 0 Then Continue For
+                    If foundBase >= 0 Then Return False ' nicht eindeutig: nichts schreiben
+                    foundBase = candidate
+                Next
+
+                If foundBase < 0 Then Return False
+                Marshal.WriteInt32(handle, foundBase + HalfSizeOffset, 1)
+                Return True
+            Catch
+                Return False
+            Finally
+                ' DecodeCore setzt Bittiefe/Farbraum anschliessend ohnehin verbindlich. user_qual
+                ' muss hier aber wieder auf LibRaws Vorgabe zurueck, weil FerrumPix keinen eigenen
+                ' Demosaic-Algorithmus erzwingt.
+                Try
+                    _setOutputColor(handle, 1)
+                    _setOutputBps(handle, DecodeOutputBits)
+                    _setDemosaic(handle, 0)
+                Catch
+                End Try
+            End Try
+        End Function
+
         Private Shared Function DecodeCore(path As String, baseEv As Double,
-                                           lens As LensDataService.Korrektur) As SKBitmap
+                                           lens As LensDataService.Korrektur,
+                                           Optional useHalfSize As Boolean = False) As SKBitmap
             Dim handle = _init(0UI)
             If handle = IntPtr.Zero Then Return Nothing
             Dim pathPtr As IntPtr = IntPtr.Zero
@@ -593,6 +685,13 @@ Namespace Services
                 pathPtr = StringToUtf8(path)
                 If _openFile(handle, pathPtr) <> 0 Then Return Nothing
                 If _unpack(handle) <> 0 Then Return Nothing
+
+                ' Fuer eine Kachel reichen die 2x2-Bayer-Zellen von half_size. Einen C-API-Setter
+                ' gibt es dafuer nicht. Der Zugriff ueber params ist von LibRaw vorgesehen, seine
+                ' Basis in libraw_data_t aber versionsabhaengig. TryEnableHalfSize findet sie daher
+                ' erst anhand dreier Setter-Landmarken und faellt bei jeder Unsicherheit auf den
+                ' unveraenderten Voll-Decode zurueck.
+                If useHalfSize Then TryEnableHalfSize(handle)
 
                 _setOutputBps(handle, DecodeOutputBits)
                 _setOutputColor(handle, 1) ' sRGB

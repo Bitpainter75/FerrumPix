@@ -76,7 +76,8 @@ Namespace Services
         ' geschriebenen tragen die Bildpunkte ihres Aufnahmefarbraums und saehen in der Galerie
         ' weiter flau oder verschoben aus, waehrend dasselbe Bild geoeffnet richtig steht - und
         ' das ohne Ablaufdatum, denn ihr Name hing an Aenderungszeit und Groesse der Datei.
-        Private Const CacheFormatVersion As Integer = 3
+        ' 4 seit dem halbaufgeloesten LibRaw-Weg fuer entwickelte RAW-Kacheln.
+        Private Const CacheFormatVersion As Integer = 4
 
         Private Shared ReadOnly CacheRoot As String =
             IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ThumbnailCache")
@@ -251,7 +252,8 @@ Namespace Services
             If adj Is Nothing Then Return Nothing
             Try
                 Dim d, p, e As Long
-                Return ImageProcessor.RenderPngStream(filePath, adj, CacheWidth, d, p, e)
+                Return ImageProcessor.RenderPngStream(filePath, adj, CacheWidth, d, p, e,
+                                                      preferReducedRawDecode:=True)
             Catch
                 Return Nothing
             End Try
