@@ -288,6 +288,15 @@
                                     </StackPanel>
                                 </Border>
                             </Grid>
+                            <!-- Nur im KONVERTIEREN-Dialog: die uebrigen Stapeldialoge bringen die
+                                 Frage in ihrer eigenen Sektion mit, und beim Speichern aus dem
+                                 Editor gilt ohnehin das Arbeitsbild. -->
+                            <CheckBox Content="{Binding DialogPendingBakedLabel}"
+                                      IsChecked="{Binding DialogApplyPendingBaked, Mode=TwoWay}"
+                                      IsVisible="{Binding IsDialogConvertPendingBakedVisible}"
+                                      Classes="no-translate"
+                                      FontSize="{DynamicResource FP.Font.Small}"
+                                      ToolTip.Tip="Bei RAW- und Photoshop-Dateien liegt Entrauschen, Objektentfernen, Retusche und Pinsel nur als Vermerk neben der Datei. Mit Haken werden sie mitgerechnet, was mehrere Minuten je Bild kostet; ohne Haken kommen die Bilder ohne diese Bearbeitung heraus."/>
                         </StackPanel>
 
                         <!-- Beim UEBERSCHREIBEN ist der Speichern-unter-Block oben ausgeblendet

@@ -10218,9 +10218,13 @@ Namespace ViewModels
             DiagnosticLogService.LogAlways("Gallery.BatchConvert", $"selected={GetSelectedImageItems().Count} convertible={targetItems.Count}")
             If targetItems.Count = 0 Then Return
 
+            Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, MainWindowViewModel.DefaultSaveFormat(),
                                                              currentFolder:=BatchFolderHint(targetItems))
             If result Is Nothing Then Return
+            ' Der Haken wird JETZT festgehalten: der Schreiblauf liest ihn im Hintergrund, und bis
+            ' dahin kann der naechste Dialog ihn laengst zurueckgesetzt haben.
+            Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
             StatusText = LocalizationService.T("Konvertiere…")
             Dim convertedCount = 0
@@ -10228,6 +10232,26 @@ Namespace ViewModels
             ' Einstellung ist nur noch die Vorbelegung.
             Dim preserveMetadata = result.PreserveMetadata
             Dim uploadedCount = 0
+
+            ' KONVERTIEREN RENDERT WIE EXPORTIEREN. Vorher stand hier ein blankes
+            ' New ImageAdjustments() und die Vorgabe developRaw:=True, und zwar an allen vier
+            ' Schreibstellen. Beides war falsch: eine vorhandene Bearbeitung (.fpxmp) blieb liegen,
+            ' und der Schalter "RAWs im Stapel entwickeln" galt hier als einziger Stapelweg nicht.
+            ' Wer ein bearbeitetes RAW konvertierte, bekam es unbearbeitet zurueck - und wer die
+            ' Entwicklung abgeschaltet hatte, bekam trotzdem die volle Entwicklung statt des Bildes,
+            ' das ihm die Uebersicht zeigt. Gemeldet ueber Reddit am 2026-08-17.
+            Dim writer = Function(source As String, target As String)
+                             Dim adj = BatchBaseAdjustments(source)
+                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                                                             developRaw:=BatchDevelopsRaw(source),
+                                                             applyPendingBaked:=applyPendingBaked)
+                         End Function
+            ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher
+            ' gibt: liegt die Quelle schon im Zielformat vor, gibt es nichts zu konvertieren.
+            Dim serverWriter = Function(source As String, target As String)
+                                   If String.Equals(IO.Path.GetExtension(source), result.Extension, StringComparison.OrdinalIgnoreCase) Then Return False
+                                   Return writer(source, target)
+                               End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
             ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
             ' Datei behandelt.
@@ -10240,17 +10264,12 @@ Namespace ViewModels
 
             If saveToImmich Then
                 convertedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems,
-                    Function(source, target)
-                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
-                    End Function,
+                    writer,
                     Function(source) result.Extension,
                     uploadedAssetIds).ConfigureAwait(True)
 
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems,
-                    Function(source, target)
-                        If String.Equals(IO.Path.GetExtension(source), result.Extension, StringComparison.OrdinalIgnoreCase) Then Return False
-                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
-                    End Function,
+                    serverWriter,
                     Function(source) result.Extension,
                     uploadedAssetIds).ConfigureAwait(True)
             Else
@@ -10273,19 +10292,14 @@ Namespace ViewModels
                 Dim nameBuilder = CreateNameBuilder(result.NamePattern)
                 convertedCount = Await ProcessLocalBatchItemsToFolderAsync(localItems,
                     targetFolder,
-                    Function(source, target)
-                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
-                    End Function,
+                    writer,
                     Function(source) result.Extension,
                     metaCopy:=result.MetaCopy,
                     nameBuilder:=nameBuilder).ConfigureAwait(True)
 
                 uploadedCount = Await ProcessImmichBatchItemsToFolderAsync(immichItems,
                     targetFolder,
-                    Function(source, target)
-                        If String.Equals(IO.Path.GetExtension(source), result.Extension, StringComparison.OrdinalIgnoreCase) Then Return False
-                        Return ImageProcessor.SaveImage(source, target, New ImageAdjustments(), result.JpgQuality, preserveMetadata)
-                    End Function,
+                    serverWriter,
                     Function(source) result.Extension).ConfigureAwait(True)
             End If
 

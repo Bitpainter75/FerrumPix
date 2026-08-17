@@ -1319,6 +1319,7 @@ Namespace ViewModels
                 _dialogPendingBakedCount = Math.Max(0, value)
                 Me.RaisePropertyChanged(NameOf(DialogPendingBakedCount))
                 Me.RaisePropertyChanged(NameOf(IsDialogPendingBakedAvailable))
+                Me.RaisePropertyChanged(NameOf(IsDialogConvertPendingBakedVisible))
                 Me.RaisePropertyChanged(NameOf(DialogPendingBakedLabel))
             End Set
         End Property
@@ -1326,6 +1327,18 @@ Namespace ViewModels
         Public ReadOnly Property IsDialogPendingBakedAvailable As Boolean
             Get
                 Return _dialogPendingBakedCount > 0
+            End Get
+        End Property
+
+        ''' <summary>Derselbe Haken im KONVERTIEREN-Dialog. Er sitzt dort im gemeinsamen
+        ''' Speichern-unter-Block, und der steht auch beim Speichern aus dem Editor und beim
+        ''' Sammel-Export - beide bringen ihre eigene Frage danach schon mit (der Export als eigenes
+        ''' Kaestchen, der Editor gar nicht, weil dort das Arbeitsbild gilt). Deshalb haengt die
+        ''' Sichtbarkeit hier zusaetzlich an der Dialogart, sonst stuende das Kaestchen zweimal
+        ''' oder an einer Stelle, an der es nichts entscheidet.</summary>
+        Public ReadOnly Property IsDialogConvertPendingBakedVisible As Boolean
+            Get
+                Return _dialogPendingBakedCount > 0 AndAlso _dialogKind = AppDialogKind.BatchConvert
             End Get
         End Property
 
@@ -2067,6 +2080,8 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_dialogKind, value)
                 Me.RaisePropertyChanged(NameOf(DialogShowsInput))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
+                ' Haengt an der Dialogart UND am Zaehler - beim Wechsel der Art also mitmelden.
+                Me.RaisePropertyChanged(NameOf(IsDialogConvertPendingBakedVisible))
                 ' MUSS hier stehen: ResetDialogSaveAsMetaOptions läuft VOR dem Öffnen, also bevor
                 ' _dialogKind gesetzt ist - die Zeile „Übernehmen" wurde dort mit der Art des VORIGEN
                 ' Dialogs gemeldet und blieb je nach Vorgeschichte weg („mal drin, mal
