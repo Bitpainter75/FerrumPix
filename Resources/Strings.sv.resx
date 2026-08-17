@@ -2292,8 +2292,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Rutnät</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
-    <value>Visa eller dölj rutnätet (storlek: Inställningar → Redigerare)</value>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
+    <value>Visa eller dölj rutnätet (storlek: Inställningar, Redigerare)</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Rutnätsstorlek</value>
@@ -2383,10 +2383,10 @@
     <value>Tolerans</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Dra upp en rektangel – med Ctrl som en kvadrat</value>
+    <value>Dra upp en rektangel (med CTRL som en kvadrat)</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Dra upp en cirkel eller ellips – med Ctrl som en cirkel</value>
+    <value>Dra upp en cirkel eller ellips (med CTRL som en cirkel)</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Frihandsmarkering (lasso)</value>

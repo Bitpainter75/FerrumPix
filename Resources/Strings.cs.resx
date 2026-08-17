@@ -2292,8 +2292,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Mřížka</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
-    <value>Zobrazit nebo skrýt mřížku (velikost: Nastavení → Editor)</value>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
+    <value>Zobrazit nebo skrýt mřížku (velikost: Nastavení, Editor)</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Velikost mřížky</value>
@@ -2383,10 +2383,10 @@
     <value>Tolerance</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Roztáhnout obdélník – s Ctrl jako čtverec</value>
+    <value>Roztáhnout obdélník (s CTRL jako čtverec)</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Roztáhnout kruh nebo elipsu – s Ctrl jako kruh</value>
+    <value>Roztáhnout kruh nebo elipsu (s CTRL jako kruh)</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Výběr od ruky (laso)</value>

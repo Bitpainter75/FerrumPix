@@ -2295,8 +2295,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Grid</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
-    <value>Show or hide the grid (size: Settings → Editor)</value>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
+    <value>Show or hide the grid (size: Settings, Editor)</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Grid size</value>
@@ -2386,10 +2386,10 @@
     <value>Tolerance</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Draw a rectangle – hold Ctrl for a square</value>
+    <value>Draw a rectangle (hold CTRL for a square)</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Draw a circle/ellipse – hold Ctrl for a circle</value>
+    <value>Draw a circle/ellipse (hold CTRL for a circle)</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Freehand selection (lasso)</value>

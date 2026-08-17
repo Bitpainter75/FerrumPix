@@ -72,7 +72,11 @@ Namespace Services
         ' lastWriteTime/fileSize/quality/width ändern (z.B. die EXIF-Orientierungskorrektur),
         ' muss diese Version erhöht werden, damit alte Cache-Dateien automatisch als veraltet
         ' erkannt und neu erzeugt werden (siehe DeleteStaleCacheFiles/FindAnyCachedThumbnail).
-        Private Const CacheFormatVersion As Integer = 2
+        ' 3 seit dem Farbmanagement: Kacheln werden jetzt nach sRGB gewandelt. Die zuvor
+        ' geschriebenen tragen die Bildpunkte ihres Aufnahmefarbraums und saehen in der Galerie
+        ' weiter flau oder verschoben aus, waehrend dasselbe Bild geoeffnet richtig steht - und
+        ' das ohne Ablaufdatum, denn ihr Name hing an Aenderungszeit und Groesse der Datei.
+        Private Const CacheFormatVersion As Integer = 3
 
         Private Shared ReadOnly CacheRoot As String =
             IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ThumbnailCache")

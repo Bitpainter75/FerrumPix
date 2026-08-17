@@ -253,7 +253,7 @@
             </Button>
 
             <Button Name="GridModeButton" Classes="ghost" Height="34" Padding="6,0"
-                    ToolTip.Tip="Raster ein- oder ausblenden (Größe: Einstellungen → Editor)"
+                    ToolTip.Tip="Raster ein- oder ausblenden (Größe: Einstellungen, Editor)"
                     Focusable="False"
                     Click="OnGridModeToggleClick">
                 <StackPanel Orientation="Horizontal" Spacing="6">

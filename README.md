@@ -68,7 +68,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Details and effects.** Clarity, structure, dust and scratches, sharpening, softening and three kinds of noise reduction. *Depth blur* takes its strength from how far away each point is, so lights in the background open into bright discs. Vignette, grain and frame sit in a separate *Effects* tool, where the grain can also be coloured: a slider lets the three colour channels drift apart, from plain grey grain to the coloured speckles of a fast film.
 
-**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections, a soft-edged mask brush, and graduated and radial masks you drag onto the picture. One mask can be built from several parts, each added, subtracted or intersected and changeable afterwards, and any of them becomes a layer whose adjustment applies only inside it. A mask can be looked at on its own, switched off, or copied onto another layer.
+**Masks and selections.** Rectangle, ellipse, lasso and magic wand selections, a soft-edged mask brush, and graduated and radial masks you drag onto the picture. You can also select by colour - click one and everything close to it comes along - or by brightness, taking just the deep shadows or everything above a certain lightness. Clicking a person or an object picks it out on its own. One mask can be built from several parts, each added, subtracted or intersected and changeable afterwards, and any of them becomes a layer whose adjustment applies only inside it. A mask can be looked at on its own, switched off, copied onto another layer, or put aside and pasted back later.
 
 **The pen.** Draw a curve point by point and change it at its points afterwards. One button turns it into a selection, so a cut-out stays correctable. A path draws nothing until you give it a stroke or a fill, and text can follow one.
 
@@ -94,7 +94,7 @@ Edits to a RAW go into a small sidecar next to it; the RAW itself is never modif
 
 A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files and HEIC. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so.
 
-HEIC/HEIF/AVIF and TIFF open read-only. A Photoshop file (`.psd`/`.psb`) opens with its layers rather than as one flat picture and can be written back out, so it goes on to Photoshop, Affinity or GIMP; text can come in as text you keep typing on or as a picture. Layer masks and groups travel in both directions and stay editable, and files in 16 bit or greyscale open with their layers too. CMYK files and 32 bit open as one flat picture.
+Pictures from a phone or a scanner open too, and your edit is saved as a new file next to them. A Photoshop file keeps its layers, masks and groups, so a picture can go back to Photoshop, Affinity or GIMP and still be worked on there, and text stays text you can keep typing on. Photoshop files that FerrumPix cannot take apart open as one finished picture.
 
 ### Model files
 

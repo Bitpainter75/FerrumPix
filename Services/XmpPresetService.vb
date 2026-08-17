@@ -77,10 +77,16 @@ Namespace Services
             ' Objektivdaten sind nicht portabel; FerrumPix verwendet dafür seine eigene Datenbank.
             result.HasLensCorrection = IsXmpTrue(values, "LensProfileEnable") OrElse
                                        Not String.IsNullOrWhiteSpace(GetXmpString(values, "LensProfileSetup"))
-            result.HasChromaticAberration = IsXmpTrue(values, "ChromaticAberrationB") OrElse
-                                             IsXmpTrue(values, "ChromaticAberrationR") OrElse
-                                             IsXmpTrue(values, "RemoveChromaticAberration") OrElse
-                                             IsXmpTrue(values, "AutoLateralCA")
+            ' ChromaticAberrationR und -B sind bei Adobe ZAHLEN (-100 bis 100 fuer den Rot/Cyan-
+            ' und den Blau/Gelb-Saum), keine Schalter: auf "True" oder "1" geprueft erkennt man sie
+            ' nur beim Zufallswert 1, jedes echte Preset ginge durch. RemoveChromaticAberration und
+            ' AutoLateralCA sind dagegen wirklich Schalter.
+            Dim caValue As Double
+            result.HasChromaticAberration =
+                (TryGetXmpDouble(values, "ChromaticAberrationB", caValue) AndAlso Math.Abs(caValue) > 0.0001) OrElse
+                (TryGetXmpDouble(values, "ChromaticAberrationR", caValue) AndAlso Math.Abs(caValue) > 0.0001) OrElse
+                IsXmpTrue(values, "RemoveChromaticAberration") OrElse
+                IsXmpTrue(values, "AutoLateralCA")
             Return result
         End Function
 

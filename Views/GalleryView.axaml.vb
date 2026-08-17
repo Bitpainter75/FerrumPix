@@ -1729,17 +1729,23 @@ Namespace Views
         ''' <summary>Ohne Auswahl meint beides den OFFENEN ORDNER - so bietet der Bauplan die
         ''' Eintraege auch an. Mit Auswahl geht es um das eine markierte Element.</summary>
         Public Async Sub OnContextCopyPath(sender As Object, e As RoutedEventArgs)
-            Dim vm = GetVm()
-            If vm Is Nothing Then Return
-            If IsSingleGallerySelection(vm) Then
-                Dim paths = vm.GetSelectedPaths()
-                If paths.Count = 0 Then Return
-                Await CopyTextToClipboardAsync(paths(0), "GalleryView.OnContextCopyPath")
-                Return
-            End If
-            If vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Count > 0 Then Return
-            If String.IsNullOrEmpty(vm.CurrentFolder) Then Return
-            Await CopyTextToClipboardAsync(vm.CurrentFolder, "GalleryView.OnContextCopyPath")
+            ' Eine Ausnahme in einem Async Sub landet sonst beim Dispatcher und beendet den Prozess.
+            ' Der Kopierhelfer faengt zwar selbst, alles davor lief aber ungeschuetzt.
+            Try
+                Dim vm = GetVm()
+                If vm Is Nothing Then Return
+                If IsSingleGallerySelection(vm) Then
+                    Dim paths = vm.GetSelectedPaths()
+                    If paths.Count = 0 Then Return
+                    Await CopyTextToClipboardAsync(paths(0), "GalleryView.OnContextCopyPath")
+                    Return
+                End If
+                If vm.SelectedItems IsNot Nothing AndAlso vm.SelectedItems.Count > 0 Then Return
+                If String.IsNullOrEmpty(vm.CurrentFolder) Then Return
+                Await CopyTextToClipboardAsync(vm.CurrentFolder, "GalleryView.OnContextCopyPath")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("GalleryView.OnContextCopyPath", ex)
+            End Try
         End Sub
 
         Public Sub OnContextReveal(sender As Object, e As RoutedEventArgs)

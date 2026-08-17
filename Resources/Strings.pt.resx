@@ -2293,8 +2293,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Grade</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
-    <value>Mostrar ou ocultar a grade (tamanho: Configurações → Editor)</value>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
+    <value>Mostrar ou ocultar a grade (tamanho: Configurações, Editor)</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Tamanho da grade</value>
@@ -2384,10 +2384,10 @@
     <value>Tolerância</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Desenhar um retângulo – com Ctrl para um quadrado</value>
+    <value>Desenhar um retângulo (com CTRL para um quadrado)</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Desenhar um círculo/elipse – com Ctrl para um círculo</value>
+    <value>Desenhar um círculo/elipse (com CTRL para um círculo)</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Seleção à mão livre (laço)</value>

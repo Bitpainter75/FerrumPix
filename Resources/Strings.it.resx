@@ -2294,8 +2294,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Griglia</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
-    <value>Mostra o nascondi la griglia (dimensione: Impostazioni → Editor)</value>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
+    <value>Mostra o nascondi la griglia (dimensione: Impostazioni, Editor)</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Dimensione della griglia</value>
@@ -2385,10 +2385,10 @@
     <value>Tolleranza</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Traccia un rettangolo – con Ctrl per un quadrato</value>
+    <value>Traccia un rettangolo (con CTRL per un quadrato)</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Traccia un cerchio/ellisse – con Ctrl per un cerchio</value>
+    <value>Traccia un cerchio/ellisse (con CTRL per un cerchio)</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Selezione a mano libera (lazo)</value>

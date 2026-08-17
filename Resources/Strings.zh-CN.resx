@@ -2292,8 +2292,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>网格</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
-    <value>显示或隐藏网格（大小：设置 → 编辑器）</value>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
+    <value>显示或隐藏网格（大小：设置，编辑器）</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>网格大小</value>
@@ -2383,10 +2383,10 @@
     <value>容差</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>绘制矩形 — 按住 Ctrl 可绘制正方形</value>
+    <value>绘制矩形（按住 CTRL 可绘制正方形）</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>绘制圆形/椭圆 — 按住 Ctrl 可绘制正圆</value>
+    <value>绘制圆形/椭圆（按住 CTRL 可绘制正圆）</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>自由选区（套索）</value>

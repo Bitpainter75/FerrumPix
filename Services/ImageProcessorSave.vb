@@ -820,6 +820,34 @@ Namespace Services
         ''' Text, und ein Ersetzen aenderte die Laenge des Blocks. Steht in OFFENE_PUNKTE.md.</summary>
         ''' <param name="tiffStart">Wo der TIFF-Kopf im Puffer beginnt: 10 in einem JPEG-Segment
         ''' (hinter Marker, Laenge und "Exif\0\0"), 0 in einem nackten Block aus PNG oder WebP.</param>
+        ''' <summary>Wo in einem nackten EXIF-Block der TIFF-Kopf beginnt. MANCHE ERZEUGER SCHREIBEN
+        ''' DEN JPEG-VORSPANN "Exif\0\0" AUCH IN DEN PNG- ODER WEBP-BLOCK. Fest mit 0 gerechnet sucht
+        ''' der Fleck den Kopf an der falschen Stelle, findet weder II noch MM und kehrt STILL
+        ''' zurueck - die Datei behaelt dann ihren alten Farbraumeintrag, obwohl die Bildpunkte sRGB
+        ''' sind und das ICC-Profil entfernt wurde. Genau die Doppeldeutung, die der Fleck
+        ''' verhindern soll.</summary>
+        Private Shared Function ExifTiffStart(buffer As Byte()) As Integer
+            If buffer Is Nothing OrElse buffer.Length < 14 Then Return 0
+            If buffer(0) = AscW("E"c) AndAlso buffer(1) = AscW("x"c) AndAlso
+               buffer(2) = AscW("i"c) AndAlso buffer(3) = AscW("f"c) AndAlso
+               buffer(4) = 0 AndAlso buffer(5) = 0 Then Return 6
+            Return 0
+        End Function
+
+        ''' <summary>Derselbe Block OHNE den Vorspann. Fuer jeden Weg, der die nackten TIFF-Bytes
+        ''' erwartet: der JPEG-Export setzt "Exif\0\0" selbst davor, und ein durchgereichter
+        ''' Vorspann stuende dann doppelt in der Datei - ungueltige Aufnahmedaten, die kein Leser
+        ''' mehr aufmacht. Ohne Vorspann wird der Puffer unveraendert zurueckgegeben.</summary>
+        ''' Der Parameter heisst bewusst NICHT "buffer": der Name verdeckt in VB die Klasse
+        ''' System.Buffer, und BlockCopy waere darin kein Member mehr.
+        Private Shared Function WithoutExifPreamble(block As Byte()) As Byte()
+            Dim start = ExifTiffStart(block)
+            If start <= 0 Then Return block
+            Dim rest(block.Length - start - 1) As Byte
+            Buffer.BlockCopy(block, start, rest, 0, rest.Length)
+            Return rest
+        End Function
+
         Private Shared Sub PatchExifColorSpaceToSrgb(buffer As Byte(), tiffStart As Integer)
             Try
                 If buffer Is Nothing OrElse buffer.Length < tiffStart + 8 Then Return
@@ -1051,6 +1079,10 @@ Namespace Services
                         ' falsch. CreatePngChunk rechnet sie mit.
                         Dim data(length - 1) As Byte
                         Buffer.BlockCopy(chunk, 8, data, 0, length)
+                        ' Trug die Quelle den JPEG-Vorspann "Exif\0\0" im Block, faellt er hier
+                        ' weg: in ein PNG gehoeren die nackten TIFF-Bytes. Der Block wird ohnehin
+                        ' neu gebaut, die geaenderte Laenge kostet also nichts.
+                        data = WithoutExifPreamble(data)
                         PatchExifColorSpaceToSrgb(data, 0)
                         chunk = CreatePngChunk("eXIf", data)
                     ElseIf chunkType = "iTXt" AndAlso length > 0 Then
@@ -1117,8 +1149,11 @@ Namespace Services
 
             ' Farbraum-Angabe auf sRGB stellen (siehe PatchExifColorSpaceToSrgb). Ein WebP-Block
             ' traegt keine Pruefsumme, er laesst sich also an Ort und Stelle aendern; die Laenge
-            ' steht am Block selbst und wird beim Schreiben aus den Daten genommen.
+            ' steht am Block selbst und wird beim Schreiben aus den Daten genommen. Deshalb darf
+            ' hier auch der JPEG-Vorspann "Exif\0\0" wegfallen, den die Quelle mitgebracht haben
+            ' kann - in den Block gehoeren die nackten TIFF-Bytes.
             For Each chunk In sourceChunks.Where(Function(c) c.Type = "EXIF")
+                chunk.Data = WithoutExifPreamble(chunk.Data)
                 PatchExifColorSpaceToSrgb(chunk.Data, 0)
             Next
             For Each chunk In sourceChunks.Where(Function(c) c.Type = "XMP ")
@@ -1288,27 +1323,19 @@ Namespace Services
                                 Dim length = ReadInt32BE(chunk, 0)
                                 Dim data(length - 1) As Byte
                                 Buffer.BlockCopy(chunk, 8, data, 0, length)
-                                Return data
+                                ' Auch ein PNG-Block kann den JPEG-Vorspann tragen (siehe
+                                ' ExifTiffStart). Hier gehoeren die nackten TIFF-Bytes heraus:
+                                ' der JPEG-Export setzt "Exif\0\0" selbst davor.
+                                Return WithoutExifPreamble(data)
                             End If
                         Next
                     Case ".webp"
                         Dim chunk = ReadWebpChunks(File.ReadAllBytes(path)).FirstOrDefault(Function(c) c.Type = "EXIF")
                         If chunk IsNot Nothing Then
-                            ' MANCHE ERZEUGER SCHREIBEN DEN JPEG-VORSPANN "Exif\0\0" AUCH IN DEN
-                            ' WEBP-CHUNK. Ohne ihn abzuziehen sucht der Fleck den TIFF-Kopf an Stelle
-                            ' 0, findet weder II noch MM und kehrt STILL zurueck - die Datei behielt
-                            ' ihren alten Farbraumeintrag, obwohl die Bildpunkte sRGB sind und das
-                            ' ICC-Profil entfernt wurde. Genau die Doppeldeutung, die der Fleck
-                            ' verhindern soll.
-                            Dim tiff = chunk.Data
-                            If tiff IsNot Nothing AndAlso tiff.Length > 8 AndAlso
-                               tiff(0) = AscW("E"c) AndAlso tiff(1) = AscW("x"c) AndAlso
-                               tiff(2) = AscW("i"c) AndAlso tiff(3) = AscW("f"c) AndAlso
-                               tiff(4) = 0 AndAlso tiff(5) = 0 Then
-                                Dim rest(tiff.Length - 7) As Byte
-                                Buffer.BlockCopy(tiff, 6, rest, 0, rest.Length)
-                                tiff = rest
-                            End If
+                            ' Den JPEG-Vorspann "Exif\0\0" abziehen, den manche Erzeuger auch in den
+                            ' WEBP-Chunk schreiben (siehe ExifTiffStart): der Aufrufer erwartet hier
+                            ' die nackten TIFF-Bytes, nicht den Block mit Vorspann.
+                            Dim tiff = WithoutExifPreamble(chunk.Data)
                             PatchExifColorSpaceToSrgb(tiff, 0)
                             Return tiff
                         End If

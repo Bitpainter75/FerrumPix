@@ -2292,8 +2292,8 @@
   <data name="Raster_4e92822e" xml:space="preserve">
     <value>Raster</value>
   </data>
-  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_089598b9" xml:space="preserve">
-    <value>Raster tonen of verbergen (grootte: Instellingen → Editor)</value>
+  <data name="Raster_ein_oder_ausblenden_Gr_e_Einstellungen_Ed_6fa9b5f3" xml:space="preserve">
+    <value>Raster tonen of verbergen (grootte: Instellingen, Editor)</value>
   </data>
   <data name="Rastergr_e_cb478cbb" xml:space="preserve">
     <value>Rastergrootte</value>
@@ -2383,10 +2383,10 @@
     <value>Tolerantie</value>
   </data>
   <data name="Rechteck_aufziehen_9b8c693a" xml:space="preserve">
-    <value>Rechthoek trekken – met Ctrl als vierkant</value>
+    <value>Rechthoek trekken (met CTRL als vierkant)</value>
   </data>
   <data name="Kreis_Ellipse_aufziehen_954ba198" xml:space="preserve">
-    <value>Cirkel/ellips trekken – met Ctrl als cirkel</value>
+    <value>Cirkel/ellips trekken (met CTRL als cirkel)</value>
   </data>
   <data name="Freihand_Auswahl_Lasso_d4cea9db" xml:space="preserve">
     <value>Vrije-handselectie (lasso)</value>

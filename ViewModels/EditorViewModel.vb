@@ -4123,6 +4123,11 @@ Namespace ViewModels
                     ' Zuschnitt/Größe/Drehung waren bereits korrekt zurückgesetzt, verschwanden
                     ' aber im Gegensatz zu Gitter/Linien kommentarlos aus der Bedienung.
                     verworfen = DiscardUncommittedToolEdits(previousTool)
+                    ' Ein angefangener Bereichsvorgang gehoert zu dem Werkzeug, in dem er begonnen
+                    ' wurde: der laufende Auftrag wird verworfen, und die noch nicht abgelegte
+                    ' Bereichs-Angabe darf nicht auf die naechste, in einem anderen Werkzeug
+                    ' gezeichnete Ebene uebergehen.
+                    InvalidatePendingRangeMask()
                     ' Die Vorschau der Tiefen-Unschaerfe gehoert zum Detailwerkzeug. Sie liegt ueber
                     ' dem Bild und wuerde sonst in einem anderen Werkzeug stehen bleiben, wo ihre
                     ' Regler gar nicht mehr zu sehen sind.
@@ -21024,6 +21029,15 @@ Namespace ViewModels
                 _suppressUndoCapture = True
                 Dim profileNotice = ""
                 Try
+                    ' Zwei Dinge stehen NICHT im Rezept, das ApplyLookAdjustments schreibt, und
+                    ' gehören trotzdem zum abgelösten Look: eine von Hand geladene LUT und der
+                    ' Merker der automatischen Bildverbesserung. Ohne dieses Zurücksetzen läge die
+                    ' alte LUT weiter über dem neuen Preset, und die Automatik gäbe sich als aktiv
+                    ' aus, obwohl das Preset ihre Werte gerade überschrieben hat. (Ein XMP-Preset
+                    ' bringt selbst keine LUT mit - Adobe kennt dafür kein Feld.)
+                    LutPath = ""
+                    LutStrength = 100
+                    ClearAutoAdjustState()
                     ApplyLookAdjustments(look)
                     ' Lokale Korrekturen (Radial-/Verlaufsmasken) als Anpassungsebenen importieren - erst
                     ' hier möglich, weil die Masken die echten Bildmaße brauchen (im Preset stehen nur
@@ -21208,8 +21222,8 @@ Namespace ViewModels
             PurpleHue = look.PurpleHue : PurpleSaturation = look.PurpleSaturation : PurpleLuminance = look.PurpleLuminance
             MagentaHue = look.MagentaHue : MagentaSaturation = look.MagentaSaturation : MagentaLuminance = look.MagentaLuminance
 
-            ' Der Filter kommt aus dem Preset (S/W-Umwandlung). ResetFilterInternal hat unmittelbar davor
-            ' auf "Keine" zurückgesetzt - ohne diese Zeilen bliebe es dabei und das Preset käme bunt an.
+            ' Der Filter kommt aus dem Preset (S/W-Umwandlung). Ohne diese Zeilen bliebe der zuvor
+            ' gewählte stehen und das Preset käme bunt an.
             FilterPreset = look.FilterPreset
             FilterStrength = look.FilterStrength
 

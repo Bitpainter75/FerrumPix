@@ -745,8 +745,13 @@ Namespace ViewModels
                     If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
                     Using ausschnitt = ExtractMaskRegion(mask, rect)
                         If ausschnitt Is Nothing Then Return
+                        ' IMMER ersetzen, auch im Auswahlwerkzeug: das Hinzufuegen und Abziehen
+                        ' steckt schon in den gesammelten Klickpunkten, aus denen das Modell jedes
+                        ' Mal die GANZE Maske neu rechnet. Mit dem Kombinationsmodus "Hinzufuegen"
+                        ' ginge die kleinere neue Maske sonst in der groesseren alten unter, und ein
+                        ' Abzugspunkt koennte nie etwas wegnehmen.
                         ApplySelectionCandidate(ausschnitt, rect, "MagicWand", Nothing, Nothing,
-                                                isMask:=_subjectAsMask, forceNew:=_subjectAsMask)
+                                                isMask:=_subjectAsMask, forceNew:=True)
                     End Using
                 End Using
             Finally
@@ -819,7 +824,7 @@ Namespace ViewModels
                 _motivPunkte.Add(New SubjectMaskService.Point(
                     bw * xPercent / 100.0, bh * yPercent / 100.0, gehoertDazu))
                 _subjectAsMask = isMask
-                RememberSamplePoint(xPercent, yPercent, asMask:=isMask)
+                RememberSamplePoint(xPercent, yPercent)
 
                 Dim einbettung = _motivEinbettung
                 Dim points = _motivPunkte.ToList()
@@ -843,8 +848,10 @@ Namespace ViewModels
                     Using ausschnitt = ExtractMaskRegion(mask, rect)
                         If ausschnitt Is Nothing Then Return
                         PushUndo()
+                        ' Siehe RedrawSubjectMask: die gesammelten Klickpunkte SIND die Antwort,
+                        ' der Kandidat ersetzt deshalb in beiden Werkzeugen die bisherige Auswahl.
                         ApplySelectionCandidate(ausschnitt, rect, "MagicWand", Nothing, Nothing,
-                                                isMask:=isMask, forceNew:=isMask)
+                                                isMask:=isMask, forceNew:=True)
                     End Using
                     StatusText = LocalizationService.T("Objekt ausgewählt")
                 End Using
@@ -875,9 +882,16 @@ Namespace ViewModels
 
         ''' <summary>Verwirft laufende Bereichsberechnungen. Ein Wechsel des Werkzeugs oder das
         ''' Aufheben der Auswahl ist auch dann endgültig, wenn ein voller Renderlauf im Hintergrund
-        ''' gerade noch seine Maske fertigstellt.</summary>
+        ''' gerade noch seine Maske fertigstellt.
+        '''
+        ''' Dazu gehört auch die noch nicht abgelegte Bereichs-Angabe: sie beschreibt die
+        ''' angeklickte Stelle und die Regler des VERLASSENEN Vorgangs. Bleibt sie stehen, bekommt
+        ''' die nächste, von Hand gezeichnete Ebene beim Anlegen eine Bereichs-Art samt fremder
+        ''' Klickstelle aufgeprägt - und der erste Reglerzug daran ersetzt die gezeichnete Form
+        ''' durch eine Bereichsmaske an dieser fremden Stelle.</summary>
         Private Sub InvalidatePendingRangeMask()
             Interlocked.Increment(_rangeMaskGeneration)
+            _pendingRangeKind = ""
         End Sub
 
         ''' <summary>Gilt der Auftrag noch für das Werkzeug, das ihn gestartet hat? Der Dokument-
@@ -902,17 +916,15 @@ Namespace ViewModels
         Private _lastSampleXPercent As Double
         Private _lastSampleYPercent As Double
         Private _hasLastSample As Boolean = False
-        ''' <summary>War der Klick als MASKE oder als Auswahl gemeint? Das Nachziehen muss dorthin
-        ''' zurueck, wo es hergekommen ist - sonst wuerde aus einer Auswahl beim Reglerzug eine
-        ''' Maskenebene und umgekehrt.</summary>
-        Private _lastSampleWasMask As Boolean = True
 
         ''' <summary>Merkt die angeklickte Stelle. Ein Wechsel des Bildes oder ein Leeren der Auswahl
-        ''' setzt sie zurueck - eine Stelle aus dem vorigen Bild waere schlimmer als keine.</summary>
-        Public Sub RememberSamplePoint(xPercent As Double, yPercent As Double, Optional asMask As Boolean = True)
+        ''' setzt sie zurueck - eine Stelle aus dem vorigen Bild waere schlimmer als keine.
+        '''
+        ''' OB daraus eine Maske oder eine Auswahl wird, steht hier bewusst nicht: das entscheidet
+        ''' beim Nachziehen das Werkzeug, in dem gerade gearbeitet wird (RedrawColorRangeFromLastSample).</summary>
+        Public Sub RememberSamplePoint(xPercent As Double, yPercent As Double)
             _lastSampleXPercent = xPercent
             _lastSampleYPercent = yPercent
-            _lastSampleWasMask = asMask
             _hasLastSample = True
         End Sub
 
@@ -925,16 +937,36 @@ Namespace ViewModels
         ''' nimmt die zuletzt angeklickte. Ohne das taten die Regler in der Auswahl nichts, und man
         ''' musste fuer jede geaenderte Toleranz erneut ins Bild klicken.</summary>
         Private Sub RedrawColorRangeFromLastSample()
+            ' DAS WERKZEUG ENTSCHEIDET, nicht der gemerkte Modus. Masken- und Auswahlwerkzeug fuehren
+            ' ihre Moduswahl getrennt und behalten sie beim Wechsel: wer im Maskenwerkzeug einmal
+            ' "Farbe" gewaehlt hat, traegt _maskMode="Farbe" auch dann noch, wenn er laengst im
+            ' Auswahlwerkzeug arbeitet. Auf den Modus allein geprueft ginge von dort ein
+            ' MASKEN-Auftrag los, den IsExpectedRangeMaskMode gleich wieder verwirft - die Regler
+            ' taeten dann gar nichts.
+            Dim asMask = _currentTool = EditorTool.Mask
+            If Not ((asMask AndAlso IsMaskColorRangeMode) OrElse
+                    (_currentTool = EditorTool.Selection AndAlso IsColorRangeSelectionMode)) Then Return
+
             Dim mask = EditedLayerMask()
-            If IsMaskColorRangeMode AndAlso mask IsNot Nothing AndAlso mask.RangeKind = "Color" Then
+            If asMask AndAlso mask IsNot Nothing AndAlso mask.RangeKind = "Color" Then
                 ' Eine BEARBEITETE Maskenebene traegt ihre Stelle selbst mit sich.
                 Dim ignored = SetSelectionColorRangeMask(mask.RangeSampleXPercent, mask.RangeSampleYPercent, captureUndo:=False)
-            ElseIf _hasLastSample AndAlso HasActiveSelection AndAlso
-                   (IsColorRangeSelectionMode OrElse IsMaskColorRangeMode) Then
+            ElseIf _hasLastSample AndAlso HasActiveSelection Then
                 ' Frisch geklickt und noch keine Ebene daraus gemacht - das ist im Maskenwerkzeug der
                 ' Normalfall, und dort tat der Regler bisher gar nichts.
                 Dim ignored = SetSelectionColorRangeMask(_lastSampleXPercent, _lastSampleYPercent,
-                                                         isMask:=_lastSampleWasMask, captureUndo:=False)
+                                                         isMask:=asMask, captureUndo:=False)
+            End If
+        End Sub
+
+        ''' <summary>Zieht die Luminanzbereichsmaske fuer das Werkzeug nach, in dem gerade gearbeitet
+        ''' wird. Aus demselben Grund wie beim Farbbereich steht das Werkzeug aussen: der Modus des
+        ''' jeweils anderen Werkzeugs bleibt erhalten und darf hier nicht entscheiden.</summary>
+        Private Sub RedrawLuminanceRangeForCurrentTool()
+            If _currentTool = EditorTool.Mask AndAlso IsMaskLuminanceRangeMode Then
+                Dim ignored = RedrawLuminanceRangeMask()
+            ElseIf _currentTool = EditorTool.Selection AndAlso IsLuminanceRangeSelectionMode Then
+                Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
             End If
         End Sub
 
@@ -956,6 +988,9 @@ Namespace ViewModels
             target.RangeTo = If(_pendingRangeKind = "Depth", _depthTo, _luminanceRangeTo)
             target.RangeSampleXPercent = _pendingRangeSampleX : target.RangeSampleYPercent = _pendingRangeSampleY
             target.RangeContiguous = _colorRangeContiguous
+            ' Uebertragen heisst verbraucht: die Angabe steht jetzt in der Ebene. Bliebe sie stehen,
+            ' truege sie die naechste Ebene ein zweites Mal.
+            _pendingRangeKind = ""
             _hasChanges = True
             SchedulePreviewUpdate()
         End Sub
@@ -1030,11 +1065,7 @@ Namespace ViewModels
                 If _luminanceRangeFrom > _luminanceRangeTo Then _luminanceRangeTo = _luminanceRangeFrom
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeFrom))
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeTo))
-                If IsMaskLuminanceRangeMode Then
-                    Dim ignored = RedrawLuminanceRangeMask()
-                ElseIf IsLuminanceRangeSelectionMode Then
-                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
-                End If
+                RedrawLuminanceRangeForCurrentTool()
             End Set
         End Property
 
@@ -1049,11 +1080,7 @@ Namespace ViewModels
                 If _luminanceRangeTo < _luminanceRangeFrom Then _luminanceRangeFrom = _luminanceRangeTo
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeTo))
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeFrom))
-                If IsMaskLuminanceRangeMode Then
-                    Dim ignored = RedrawLuminanceRangeMask()
-                ElseIf IsLuminanceRangeSelectionMode Then
-                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
-                End If
+                RedrawLuminanceRangeForCurrentTool()
             End Set
         End Property
 
@@ -1066,11 +1093,7 @@ Namespace ViewModels
                 If Math.Abs(_luminanceRangeFeather - v) < 0.0001 Then Return
                 _luminanceRangeFeather = v
                 Me.RaisePropertyChanged(NameOf(LuminanceRangeFeather))
-                If IsMaskLuminanceRangeMode Then
-                    Dim ignored = RedrawLuminanceRangeMask()
-                ElseIf IsLuminanceRangeSelectionMode Then
-                    Dim ignored = RedrawLuminanceRangeMask(isMask:=False)
-                End If
+                RedrawLuminanceRangeForCurrentTool()
             End Set
         End Property
 
@@ -1096,7 +1119,7 @@ Namespace ViewModels
                 If size.Width <= 0 OrElse size.Height <= 0 Then Return
                 Dim x = Math.Max(0, Math.Min(size.Width - 1, CInt(Math.Round(xPercent / 100.0 * size.Width))))
                 Dim y = Math.Max(0, Math.Min(size.Height - 1, CInt(Math.Round(yPercent / 100.0 * size.Height))))
-                RememberSamplePoint(xPercent, yPercent, asMask:=isMask)
+                RememberSamplePoint(xPercent, yPercent)
                 Dim sourcePath = RenderSourcePath, adjustments = GetCurrentAdjustments(), working = CloneWorkingFullForRender()
                 Dim tolerance = _colorRangeTolerance, feather = _colorRangeFeather, contiguous = _colorRangeContiguous
                 Dim editingMaskId = _editingLayerMaskId
@@ -1130,7 +1153,13 @@ Namespace ViewModels
                         If cut Is Nothing Then Return
                         If isMask Then _pendingRangeKind = "Color" : _pendingRangeSampleX = xPercent : _pendingRangeSampleY = yPercent
                         If captureUndo Then PushUndo()
-                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=isMask, forceNew:=isMask)
+                        ' captureUndo=False heisst: der Auftrag kommt von einem REGLERZUG und zeichnet
+                        ' dieselbe Probe nach. Er ist keine neue Geste, sein Ergebnis ersetzt also die
+                        ' bisherige Auswahl. Stuende der Kombinationsmodus auf "Hinzufuegen" (der
+                        ' Maskenpinsel stellt ihn selbst darauf), waere jeder Zug die Vereinigung aus
+                        ' alt und neu - die Auswahl koennte nur noch wachsen.
+                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing,
+                                                isMask:=isMask, forceNew:=isMask OrElse Not captureUndo)
                         If editingMaskId <> "" Then _editingLayerMaskId = editingMaskId
                     End Using
                 End Using
@@ -1177,7 +1206,10 @@ Namespace ViewModels
                         If cut Is Nothing Then Return
                         If isMask Then _pendingRangeKind = "Luminance" : _pendingRangeSampleX = 0 : _pendingRangeSampleY = 0
                         If captureUndo Then PushUndo()
-                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing, isMask:=isMask, forceNew:=isMask)
+                        ' Wie beim Farbbereich: ein Reglerzug (captureUndo=False) zeichnet nach und
+                        ' ersetzt, statt sich mit der vorigen Auswahl zu vereinigen.
+                        ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing,
+                                                isMask:=isMask, forceNew:=isMask OrElse Not captureUndo)
                         If editingMaskId <> "" Then _editingLayerMaskId = editingMaskId
                     End Using
                 End Using
