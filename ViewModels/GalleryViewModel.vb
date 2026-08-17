@@ -8114,10 +8114,13 @@ Namespace ViewModels
                 Dim sourceAlbumId = If(SelectedImmichNode IsNot Nothing AndAlso String.Equals(SelectedImmichNode.Kind, "ImmichAlbum", StringComparison.Ordinal), SelectedImmichNode.Id, Nothing)
                 ' forceSaveAsOnly bleibt fuer Immich; bei Nextcloud entscheidet der Editor selbst,
                 ' denn dort ist die Begleitdatei ein echter Speicherweg.
+                ' Den Namen vom Server mitgeben: die Temp-Kopie heisst nach der Kennung, und ohne
+                ' ihn stuende sie so in der Fusszeile und im Vorschlag beim Speichern.
                 Await _mainVm.OpenImageInEditor(localPath, New List(Of String) From {localPath},
                                                 forceSaveAsOnly:=(itemOrigin Is Nothing OrElse Not itemOrigin.IsKnown),
                                                 immichAlbumId:=sourceAlbumId,
-                                                nextcloudSource:=itemOrigin)
+                                                nextcloudSource:=itemOrigin,
+                                                displayFileName:=item.FileName)
                 StatusText = ""
             Finally
                 IsLoading = False

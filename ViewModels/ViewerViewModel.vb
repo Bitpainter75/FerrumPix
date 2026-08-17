@@ -945,10 +945,14 @@ Namespace ViewModels
             ' Der Zwang zu "Speichern unter" gilt für Immich - und für Nextcloud nur so lange, wie
             ' die Herkunft unbekannt ist.
             Dim saveAsOnly = _isImmichSession AndAlso (origin Is Nothing OrElse Not origin.IsKnown)
+            ' In einer Serversitzung zeigt der Betrachter den Namen vom Server (CurrentFileName),
+            ' waehrend _currentImagePath auf die Arbeitskopie zeigt. Der Editor bekommt denselben
+            ' Namen, sonst hiesse dasselbe Bild dort ploetzlich anders.
             Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName,
                                             forceSaveAsOnly:=saveAsOnly,
                                             immichAlbumId:=_immichSourceAlbumId,
-                                            nextcloudSource:=origin)
+                                            nextcloudSource:=origin,
+                                            displayFileName:=If(_isImmichSession, CurrentFileName, Nothing))
         End Function
 
         ''' <summary>Öffnet eine Immich-Sitzung: der Filmstreifen zeigt das ganze Album (Pseudo-Pfade),

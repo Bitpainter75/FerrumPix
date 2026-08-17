@@ -39,7 +39,8 @@ Namespace ViewModels
                                    Optional cacheScopeName As String = Nothing,
                                    Optional forceSaveAsOnly As Boolean = False,
                                    Optional immichAlbumId As String = Nothing,
-                                   Optional nextcloudSource As Models.NextcloudOrigin = Nothing) As Task
+                                   Optional nextcloudSource As Models.NextcloudOrigin = Nothing,
+                                   Optional displayFileName As String = Nothing) As Task
         Sub BackToGallery(Optional sourcePath As String = Nothing)
         ''' <summary>Zur Galerie wechseln und dort alle Bilder mit diesem Stichwort zeigen.</summary>
         Sub OpenTagSearchInGallery(tag As String)

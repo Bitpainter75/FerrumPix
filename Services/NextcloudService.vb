@@ -174,6 +174,24 @@ Namespace Services
             Return fileId
         End Function
 
+        ''' <summary>Der NAME der Datei auf dem Server, gelesen aus dem Namen einer geholten
+        ''' Temp-Kopie ("{fileid}_{name}", im Papierkorb "trash_{name}"). Gegenstueck zu
+        ''' <see cref="FileIdFromTempPath"/>: dort steht der Teil VOR dem Trenner, hier der dahinter.
+        '''
+        ''' Gedacht fuer alles, was den Namen ANZEIGT - der Editor fuehrte eine solche Kopie sonst
+        ''' unter "12345_Bild.jpg" in Fusszeile, Infopanel und im Vorschlag beim Speichern.
+        ''' Der Papierkorb ist hier ausdruecklich eingeschlossen: sein Praefix ist keine Kennung,
+        ''' der Name dahinter aber derselbe.
+        '''
+        ''' Leer, wenn der Pfad keine solche Kopie ist.</summary>
+        Public Shared Function FileNameFromTempPath(path As String) As String
+            If Not IsNextcloudTempPath(path) Then Return ""
+            Dim name = IO.Path.GetFileName(path)
+            Dim separator = name.IndexOf("_"c)
+            If separator <= 0 OrElse separator >= name.Length - 1 Then Return ""
+            Return name.Substring(separator + 1)
+        End Function
+
         Public Shared Function IsNextcloudPseudoPath(path As String) As Boolean
             Return Not String.IsNullOrEmpty(path) AndAlso path.StartsWith(PseudoScheme, StringComparison.OrdinalIgnoreCase)
         End Function

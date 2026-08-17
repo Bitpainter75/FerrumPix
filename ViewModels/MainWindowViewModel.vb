@@ -533,7 +533,7 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing) As Task Implements IViewerHost.OpenImageInEditor
+        Public Async Function OpenImageInEditor(path As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional displayFileName As String = Nothing) As Task Implements IViewerHost.OpenImageInEditor
             ' EIN Oeffnen zur Zeit. Der zweite Klick auf dasselbe Bild - der, mit dem man nachhilft,
             ' weil scheinbar nichts passiert - startete sonst einen zweiten Decode neben dem ersten.
             ' Die Rueckfragen unten stehen bewusst INNERHALB der Sperre: sie gehoeren zum Oeffnen,
@@ -550,7 +550,8 @@ Namespace ViewModels
                 ' Erst NACH den Rueckfragen: solange ein Dialog offen steht, wird nichts geoeffnet,
                 ' und eine Warteanzeige hinter der Frage waere schlicht falsch.
                 BeginDocumentOpenIndicator()
-                Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId, nextcloudSource)
+                Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId, nextcloudSource,
+                                                        displayFileName:=displayFileName)
                 If Not opened Then Return
                 CurrentMode = AppMode.Editor
             Finally

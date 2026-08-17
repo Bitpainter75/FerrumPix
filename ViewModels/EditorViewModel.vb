@@ -90,6 +90,19 @@ Namespace ViewModels
         ''' Originaldateiname des Immich-Assets - die Temp-Kopie heißt nach der Asset-ID, beim
         ''' Zurückschreiben soll der Name aber erhalten bleiben (siehe SaveBackToImmichAsync).
         Private _immichSourceFileName As String = Nothing
+
+        ''' <summary>Der Name, unter dem das geöffnete Bild dem Nutzer bekannt ist - gesetzt nur dann,
+        ''' wenn die geöffnete Datei bloß eine ARBEITSKOPIE ist und ihr Dateiname deshalb nichts
+        ''' aussagt.
+        '''
+        ''' Genau das ist bei beiden Serverquellen der Fall: die Immich-Kopie heißt nach der
+        ''' Asset-Kennung ("a1b2…​.jpg"), die Nextcloud-Kopie trägt die Dateikennung vorn
+        ''' ("12345_Bild.jpg"). Beides stand vorher in der Fußzeile, im Infopanel und als Vorschlag
+        ''' bei "Speichern unter" - der Nutzer bekam sein Bild also unter einem fremden Namen zurück.
+        ''' Der Betrachter führt seinen Namen aus demselben Grund getrennt vom Pfad.
+        '''
+        ''' Leer heißt: die geöffnete Datei IST das Dokument, ihr Name gilt.</summary>
+        Private _sourceDisplayFileName As String = ""
         Private _currentImage As Bitmap
         Private _previewImage As Bitmap
         Private _comparisonImage As Bitmap
@@ -10887,8 +10900,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Name des geöffneten Bildes, wie ihn der Nutzer kennt. Bei einer Arbeitskopie
+        ''' vom Server ist das der Name auf dem Server, sonst der Dateiname (siehe
+        ''' <see cref="_sourceDisplayFileName"/>).</summary>
         Public ReadOnly Property CurrentFileName As String
             Get
+                If Not String.IsNullOrEmpty(_sourceDisplayFileName) Then Return _sourceDisplayFileName
                 If String.IsNullOrEmpty(_currentImagePath) Then Return ""
                 Return IO.Path.GetFileName(_currentImagePath)
             End Get
@@ -12744,15 +12761,32 @@ Namespace ViewModels
                 _mainVm.CurrentMode = AppMode.Gallery
                 Return
             End If
-            ' Immich-Edit: nach dem Speichern kann der Viewer noch die alte Temp-Kopie oder das alte Asset
-            ' halten. Deshalb wird hier bewusst frisch auf den Editor-Pfad geöffnet, damit beim Zurückkehren
-            ' der tatsächlich gespeicherte Stand sichtbar ist.
+            ' DIESELBE ARBEITSKOPIE, AUS DER DER EDITOR KAM: dann steht das Bild im Betrachter noch
+            ' da, mitsamt seiner Serversitzung (Filmstreifen des Albums bzw. der Ansicht). Hier ein
+            ' OpenImage zu rufen wäre das Ende dieser Sitzung - der Editor kann als Nachbarschaft nur
+            ' das eine Bild anbieten (siehe ViewerViewModel.EditorFilmstripPaths), und genau diese
+            ' einelementige Liste stand danach im Betrachter: von einem ganzen Album blieb ein Foto
+            ' übrig. Ein Neuladen genügt vollauf; es zeigt den gespeicherten Stand aus derselben
+            ' Datei und lässt Sitzung, Streifen und Position, wie sie waren.
+            Dim viewer = _mainVm.Viewer
+            Dim sameServerImage = viewer IsNot Nothing AndAlso viewer.IsImmichSession AndAlso
+                                  Not String.IsNullOrEmpty(_currentImagePath) AndAlso
+                                  String.Equals(viewer.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase)
+            If sameServerImage Then
+                viewer.ReloadCurrentImageFromDisk()
+                _mainVm.CurrentMode = AppMode.Viewer
+                Return
+            End If
+
+            ' Serverbild, aber nicht mehr dasselbe: nach "Speichern unter" arbeitet der Editor auf der
+            ' geschriebenen Datei weiter. Die ist kein Element der Sitzung, und der Betrachter soll
+            ' zeigen, was tatsächlich gespeichert wurde.
             Dim editorIsImmich = _immichSourceAlbumId IsNot Nothing OrElse ImmichService.IsImmichTempPath(_currentImagePath)
-            If editorIsImmich AndAlso _mainVm.Viewer IsNot Nothing AndAlso _mainVm.Viewer.IsImmichSession Then
+            If editorIsImmich AndAlso viewer IsNot Nothing AndAlso viewer.IsImmichSession Then
                 If Not String.IsNullOrEmpty(_currentImagePath) AndAlso IO.File.Exists(_currentImagePath) Then
-                    _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                    viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                 Else
-                    _mainVm.Viewer.ReloadCurrentImageFromDisk()
+                    viewer.ReloadCurrentImageFromDisk()
                 End If
                 _mainVm.CurrentMode = AppMode.Viewer
                 Return
@@ -13099,6 +13133,9 @@ Namespace ViewModels
             _nextcloudSourcePath = ""
             _nextcloudSourceETag = ""
             _nextcloudSourcePseudoPath = ""
+            ' Der Anzeigename gehoert ebenso zum ALTEN Bild. Was die Arbeitskopie selbst verraet,
+            ' steht sofort da; den Namen eines Immich-Assets zieht LoadImmichMetaAsync unten nach.
+            _sourceDisplayFileName = ResolveSourceDisplayFileName(path, Nothing, Nothing)
             CurrentImagePath = path
             _currentImagePath = path
             ' Der Reiter der Infoleiste bleibt stehen - wer sich EXIF ansieht und das naechste Bild
@@ -13214,9 +13251,12 @@ Namespace ViewModels
                     .ETag = _nextcloudSourceETag,
                     .PseudoPath = _nextcloudSourcePseudoPath}
             End If
+            ' Aus demselben Grund den Anzeigenamen: bei Immich steht er in keinem Pfad, und ohne ihn
+            ' hiesse das Bild nach der Rueckkehr aus den Einstellungen wieder nach seiner Kennung.
             Dim ignoriert = Await OpenImageAsync(pfad, If(pfade.Count > 0, pfade, Nothing),
                                                  _thumbCacheScopeId, _thumbCacheScopeName, _forceSaveAsOnly,
-                                                 nextcloudSource:=herkunft)
+                                                 nextcloudSource:=herkunft,
+                                                 displayFileName:=_sourceDisplayFileName)
         End Function
 
         ''' <summary><paramref name="deferFolderContext"/> reicht den Filmstreifen nach, statt ihn vor
@@ -13226,7 +13266,10 @@ Namespace ViewModels
             Dim ignored = OpenImageAsync(imagePath, allPaths, deferFolderContext:=deferFolderContext)
         End Sub
 
-        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False) As Task(Of Boolean)
+        ''' <summary><paramref name="displayFileName"/>: der Name, unter dem der Nutzer dieses Bild
+        ''' kennt. Nur noetig, wenn <paramref name="imagePath"/> bloss eine Arbeitskopie ist - bei
+        ''' beiden Serverquellen also. Ohne ihn stuende der Name der Temp-Datei in der Fusszeile.</summary>
+        Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False, Optional displayFileName As String = Nothing) As Task(Of Boolean)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
             ' Dasselbe von aussen: waehrend der Editor noch aufbaut, wird kein zweites Dokument
             ' daruebergelegt - auch nicht aus der Galerie oder dem Betrachter.
@@ -13350,6 +13393,9 @@ Namespace ViewModels
             _nextcloudSourcePath = If(nextcloudSource?.PathInTree, "")
             _nextcloudSourceETag = If(nextcloudSource?.ETag, "")
             _nextcloudSourcePseudoPath = If(nextcloudSource?.PseudoPath, "")
+            ' VOR dem Setzen des Pfades: dessen PropertyChanged meldet den Dateinamen an Fußzeile
+            ' und Fenstertitel, und der soll gleich der richtige sein.
+            _sourceDisplayFileName = ResolveSourceDisplayFileName(imagePath, displayFileName, nextcloudSource)
             CurrentImagePath = imagePath
             _currentImagePath = imagePath
             ' Wie oben: der gewaehlte Reiter ueberlebt den Bildwechsel.
@@ -13487,7 +13533,10 @@ Namespace ViewModels
             ' RenderSourcePath auf das entpackte Basisbild im Temp-Ordner - das Infopanel soll aber
             ' das Dokument nennen, das der Nutzer geöffnet hat.
             If Not String.IsNullOrEmpty(_currentImagePath) Then
-                data.FileName = IO.Path.GetFileName(_currentImagePath)
+                ' Der NAME kommt aus derselben Quelle wie die Fußzeile - eine Arbeitskopie vom Server
+                ' heißt auf der Platte anders als das Bild, das der Nutzer geöffnet hat. Größe und
+                ' Datum liest weiterhin die Datei; sie sind dieselben.
+                data.FileName = CurrentFileName
                 ExifService.FillFileFacts(data, _currentImagePath)
             End If
 
@@ -13520,11 +13569,41 @@ Namespace ViewModels
             RaiseFooterColorLabelState()
         End Sub
 
+        ''' <summary>Der Name, unter dem das geöffnete Bild dem Nutzer bekannt ist - leer, wenn die
+        ''' geöffnete Datei selbst das Dokument ist (siehe <see cref="_sourceDisplayFileName"/>).
+        '''
+        ''' Drei Quellen, in dieser Reihenfolge: die Ansage des Aufrufers (Galerie und Betrachter
+        ''' haben das Element in der Hand), sonst der Pseudo-Pfad der Nextcloud-Herkunft, sonst der
+        ''' Name der Nextcloud-Arbeitskopie selbst - dort steht er hinter der Dateikennung. Für
+        ''' Immich bleibt hier nichts übrig: die Kopie heißt nur nach der Asset-Kennung, den Namen
+        ''' nennt erst der Detail-Abruf (LoadImmichMetaAsync zieht ihn nach).</summary>
+        Private Shared Function ResolveSourceDisplayFileName(imagePath As String, displayFileName As String,
+                                                             nextcloudSource As Models.NextcloudOrigin) As String
+            If Not String.IsNullOrWhiteSpace(displayFileName) Then Return displayFileName.Trim()
+
+            Dim fileId As String = Nothing, fromPseudo As String = Nothing
+            If NextcloudService.TryParsePseudoPath(If(nextcloudSource?.PseudoPath, ""), fileId, fromPseudo) AndAlso
+               Not String.IsNullOrWhiteSpace(fromPseudo) Then
+                Return fromPseudo
+            End If
+
+            Return NextcloudService.FileNameFromTempPath(imagePath)
+        End Function
+
         Private Async Function LoadImmichMetaAsync(assetId As String) As Task
             Dim asset = Await ImmichService.GetAssetDetailAsync(assetId)
             If asset Is Nothing Then Return
 
             _immichSourceFileName = asset.FileName
+            ' Erst hier kennt der Editor den Namen des Assets - die Arbeitskopie heißt nach der
+            ' Kennung. Nur nachtragen, nicht überschreiben: hat der Aufrufer den Namen schon
+            ' mitgegeben, steht er längst richtig da.
+            If String.IsNullOrEmpty(_sourceDisplayFileName) AndAlso Not String.IsNullOrWhiteSpace(asset.FileName) AndAlso
+               ImmichService.IsImmichTempPath(_currentImagePath) Then
+                _sourceDisplayFileName = asset.FileName
+                Me.RaisePropertyChanged(NameOf(CurrentFileName))
+                _mainVm?.RefreshWindowTitle()
+            End If
             ' Der Aufnahmeort kommt vom Server: die Temp-Kopie steht in keinem Katalog, und die
             ' Leiste bliebe sonst ohne Ort - obwohl Galerie und Betrachter ihn zeigen. Das Element
             ' meldet die Aenderung, das Panel liest sie von dort.
@@ -15229,7 +15308,10 @@ Namespace ViewModels
                 ' daher den Bilder-Ordner vorschlagen statt den Temp-Pfad.
                 Dim dir = If(fromFpx, IO.Path.GetDirectoryName(_currentFpxPath),
                              If(_forceSaveAsOnly, Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), IO.Path.GetDirectoryName(_currentImagePath)))
-                Dim name = IO.Path.GetFileNameWithoutExtension(If(fromFpx, _currentFpxPath, _currentImagePath))
+                ' Der Vorschlag kommt aus dem Namen, den der Nutzer kennt: bei einer Arbeitskopie vom
+                ' Server ist das der Name auf dem Server, nicht der der Temp-Datei (Asset-Kennung
+                ' bzw. vorangestellte Dateikennung) - unter dem hätte er sein Bild sonst exportiert.
+                Dim name = IO.Path.GetFileNameWithoutExtension(If(fromFpx, _currentFpxPath, CurrentFileName))
                 ' Ein neu angelegtes Dokument wurde nie „bearbeitet" - es heißt schlicht „Unbenannt".
                 ' Ohne diesen Fall schlüge die Anwendung „Unbenannt_bearbeitet" vor.
                 Dim proposedName = If(_isNewDocument, name, name & "_bearbeitet")
@@ -15517,7 +15599,11 @@ Namespace ViewModels
                             ' und der Nutzer haette nach einem Strg+S eine andere Nachbarschaft.
                             Dim filmstripPaths = If(_folderPaths IsNot Nothing AndAlso _folderPaths.Count > 0,
                                                     New List(Of String)(_folderPaths), Nothing)
-                            Await OpenImageAsync(targetPath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+                            ' Derselbe Pfad heisst auch: dasselbe Dokument. Der Anzeigename einer
+                            ' Arbeitskopie muss deshalb mit - sonst hiesse das Bild nach einem
+                            ' Speichern wieder nach seiner Temp-Datei.
+                            Await OpenImageAsync(targetPath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
+                                                 displayFileName:=_sourceDisplayFileName)
                         End If
                         StatusText = statusAfterSave
                     Else
@@ -15745,7 +15831,8 @@ Namespace ViewModels
                     .ETag = _nextcloudSourceETag,
                     .PseudoPath = _nextcloudSourcePseudoPath}
                 Await OpenImageAsync(_currentImagePath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
-                                     nextcloudSource:=herkunftDanach)
+                                     nextcloudSource:=herkunftDanach,
+                                     displayFileName:=_sourceDisplayFileName)
                 Dim galerieAktualisiert = _mainVm?.Gallery?.RefreshNextcloudViewAsync()
                 If galerieAktualisiert IsNot Nothing Then Await galerieAktualisiert
                 StatusText = String.Format(LocalizationService.T("Original auf dem Server ersetzt: {0}"), targetPathInTree)
