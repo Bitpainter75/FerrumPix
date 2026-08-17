@@ -3078,28 +3078,46 @@ Namespace Views
         End Sub
 
         ''' <summary>Reine View-Vorschau für den Auswahlpinsel. Die echte Auswahl wird erst beim
-        ''' Loslassen geschrieben; während des Malens zeichnet diese geschlossene Hülle schon die
-        ''' Laufameisen an der Kante des Pinselschlauchs. Masken behalten dagegen ihr rotes Overlay.</summary>
+        ''' Loslassen geschrieben; während des Malens zeigen dieselben Laufameisen wie danach schon
+        ''' den Bereich, der daraus entsteht. Masken behalten dagegen ihr rotes Overlay.
+        '''
+        ''' Vorher stand hier eine einzige geschlossene Hülle: aus dem gerasterten Strich wurde die
+        ''' flächengrößte Schleife gelesen und als Polygon gezeichnet. Damit LOG die Vorschau, sobald
+        ''' ein Zug sich selbst kreuzte oder einen Bogen schloss - die Linie lief außen herum und
+        ''' behauptete eine gefüllte Fläche, wo nur ein Schlauch entsteht (gemessen an einer
+        ''' gemalten Schlaufe: 620 gemalte Rasterzellen, 2276 von der Linie umschlossene). Beim
+        ''' Loslassen sprang die Auswahl dann auf ihre tatsächliche Form. Jetzt gehen die RÄNDER des
+        ''' gemalten Bereichs als Punktwolke ins Overlay - Löcher und getrennte Teile inbegriffen,
+        ''' und exakt dieselbe Darstellung, die die fertige Auswahl über ihre Maskenkanten bekommt
+        ''' (BuildOverlayMaskEdgePoints). Live-Bild und Ergebnis sind damit dasselbe Bild.</summary>
         Private Sub UpdateSelectionBrushOverlay(imageRect As Avalonia.Rect, vm As EditorViewModel)
-            If vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Selection OrElse vm.ActiveSelectionIsMask OrElse
-               _maskBrushPoints.Count = 0 Then Return
+            If vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Selection OrElse vm.ActiveSelectionIsMask Then Return
 
             Dim overlay = Me.FindControl(Of SelectionOverlayControl)("SelectionDragOverlay")
             If overlay Is Nothing Then Return
+            ' Kein stummes Zurueckkehren mehr: ohne Punkte oder ohne Raender gehoert die Vorschau
+            ' WEG. Vorher blieb in beiden Faellen die zuletzt gezeichnete Kontur stehen.
+            If _maskBrushPoints.Count = 0 OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then
+                HideSelectionDragOverlay()
+                Return
+            End If
 
-            Dim radius = Math.Max(1.0, BrushDiameterOnScreen(imageRect, vm) / 2.0)
+            Dim radius = SelectionBrushRadiusOnScreen(imageRect, vm)
             Dim centers = _maskBrushPoints.Select(Function(p) New Avalonia.Point(
                 imageRect.Left + imageRect.Width * p.X / 100.0,
                 imageRect.Top + imageRect.Height * p.Y / 100.0)).ToList()
-            Dim boundary = BuildBrushUnionOutline(centers, radius)
-            If boundary.Count < 3 Then Return
+            Dim edgePoints = BuildBrushStrokeEdgePoints(centers, radius)
+            If edgePoints.Count = 0 Then
+                HideSelectionDragOverlay()
+                Return
+            End If
 
-            Dim minX = boundary.Min(Function(p) p.X), maxX = boundary.Max(Function(p) p.X)
-            Dim minY = boundary.Min(Function(p) p.Y), maxY = boundary.Max(Function(p) p.Y)
+            Dim minX = edgePoints.Min(Function(p) p.X), maxX = edgePoints.Max(Function(p) p.X)
+            Dim minY = edgePoints.Min(Function(p) p.Y), maxY = edgePoints.Max(Function(p) p.Y)
             overlay.ShapeMode = "Lasso"
             overlay.CombineMode = vm.SelectionCombineMode
-            overlay.EdgePoints = Nothing
-            overlay.Points = boundary.Select(Function(p) New Avalonia.Point(p.X - minX, p.Y - minY)).ToList()
+            overlay.Points = Nothing
+            overlay.EdgePoints = edgePoints.Select(Function(p) New Avalonia.Point(p.X - minX, p.Y - minY)).ToList()
             overlay.IsVisible = True
             Avalonia.Controls.Canvas.SetLeft(overlay, minX)
             Avalonia.Controls.Canvas.SetTop(overlay, minY)
@@ -3107,14 +3125,29 @@ Namespace Views
             overlay.Height = Math.Max(1, maxY - minY)
         End Sub
 
-        ''' <summary>Die sichtbare Aussenkante der Vereinigung aller Pinselstempel.
+        ''' <summary>Der Radius des Auswahlpinsels in BILDSCHIRM-Pixeln, gespiegelt von der Rechnung
+        ''' des Commits (MaskBrushRadiusDisplay: halbe Pinselgröße im Anzeigebildraum).
         '''
-        ''' Ein links/rechts versetzter Linienzug funktioniert nur, solange sich der Zug nicht
-        ''' selbst kreuzt. Bei einer Schleife zeichnet er sonst auch alle inneren, bereits
-        ''' übermalten Kanten. Hier malt Skia deshalb zunächst genau dieselben runden Kapseln wie
-        ''' der Pinsel in ein kleines Alpha-Raster. Aus dessen freien Kanten wird die größte
-        ''' geschlossene Schleife gelesen: das ist die alleinige, äußere Ameisenlinie.</summary>
-        Private Function BuildBrushUnionOutline(centers As List(Of Avalonia.Point), radius As Double) As List(Of Avalonia.Point)
+        ''' Bewusst NICHT BrushDiameterOnScreen: dessen Mindestdurchmesser von vier Bildschirmpixeln
+        ''' hält den Cursorring auch bei kleinem Pinsel sichtbar, machte die Vorschau beim Auszoomen
+        ''' aber breiter als den Strich, der daraus entsteht.</summary>
+        Private Function SelectionBrushRadiusOnScreen(imageRect As Avalonia.Rect, vm As EditorViewModel) As Double
+            Dim scale = 1.0
+            If vm.DisplayImageWidthPixels > 0 AndAlso vm.DisplayImageHeightPixels > 0 Then
+                scale = Math.Min(imageRect.Width / vm.DisplayImageWidthPixels, imageRect.Height / vm.DisplayImageHeightPixels)
+            End If
+            Return Math.Max(0.5, Math.Max(0.5, vm.BrushSize / 2.0) * scale)
+        End Function
+
+        ''' <summary>Die Ränder des gemalten Bereichs als Punktwolke, in Bildschirmkoordinaten.
+        '''
+        ''' Skia malt dafür genau dieselben runden Kapseln wie der Pinsel in ein kleines Raster;
+        ''' gesammelt wird danach jede gefüllte Zelle, die an eine freie grenzt. Das trifft ALLE
+        ''' Ränder - die äußeren wie die eines Lochs, das ein geschlossener Bogen stehen lässt -,
+        ''' und braucht keine Schleifenverfolgung, die an einer diagonalen Berührung zerfallen kann.
+        ''' Dass daraus einzelne Punkte statt einer durchgezogenen Linie werden, ist kein Verlust:
+        ''' die fertige Auswahl zeigt ihre Maskenkanten seit jeher genauso.</summary>
+        Private Function BuildBrushStrokeEdgePoints(centers As List(Of Avalonia.Point), radius As Double) As List(Of Avalonia.Point)
             Dim empty As New List(Of Avalonia.Point)()
             If centers Is Nothing OrElse centers.Count = 0 OrElse radius <= 0 Then Return empty
 
@@ -3175,7 +3208,7 @@ Namespace Views
 
                     Dim bytes(bitmap.RowBytes * height - 1) As Byte
                     Marshal.Copy(bitmap.GetPixels(), bytes, 0, bytes.Length)
-                    Return TraceLargestRasterOutline(bytes, bitmap.RowBytes, width, height, scale, minX, minY)
+                    Return CollectRasterEdgePoints(bytes, bitmap.RowBytes, width, height, scale, minX, minY)
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.BrushOutline", ex)
@@ -3183,57 +3216,42 @@ Namespace Views
             End Try
         End Function
 
-        Private Function TraceLargestRasterOutline(bytes As Byte(), stride As Integer, rasterWidth As Integer, rasterHeight As Integer,
-                                                   scale As Double, originX As Double, originY As Double) As List(Of Avalonia.Point)
-            Dim edges As New Dictionary(Of Long, Long)()
+        ''' <summary>Höchstzahl der Ameisenpunkte der Vorschau. Derselbe Deckel, den die fertige
+        ''' Auswahl für ihre Maskenkanten hat (RefreshSelectionMaskEdgePoints).</summary>
+        Private Const SelectionBrushMaxEdgePoints As Integer = 4000
+
+        ''' <summary>Sammelt aus dem gerasterten Strich jede gefüllte Zelle mit mindestens einem
+        ''' freien Nachbarn und rechnet sie zurück auf Bildschirmkoordinaten.
+        '''
+        ''' Ausgedünnt wird mit fester Schrittweite und nicht per Zufallsstichprobe: die Vorschau
+        ''' wird bei JEDER Mausbewegung neu gebaut, und eine Stichprobe ließe die Punkte zwischen
+        ''' zwei Bewegungen umherspringen.</summary>
+        Private Shared Function CollectRasterEdgePoints(bytes As Byte(), stride As Integer, rasterWidth As Integer, rasterHeight As Integer,
+                                                        scale As Double, originX As Double, originY As Double) As List(Of Avalonia.Point)
+            Dim cells As New List(Of Integer)()
             For y As Integer = 0 To rasterHeight - 1
+                Dim row = y * stride
                 For x As Integer = 0 To rasterWidth - 1
-                    If bytes(y * stride + x * 4 + 3) = 0 Then Continue For
-                    If y = 0 OrElse bytes((y - 1) * stride + x * 4 + 3) = 0 Then AddOutlineEdge(edges, x, y, x + 1, y)
-                    If x = rasterWidth - 1 OrElse bytes(y * stride + (x + 1) * 4 + 3) = 0 Then AddOutlineEdge(edges, x + 1, y, x + 1, y + 1)
-                    If y = rasterHeight - 1 OrElse bytes((y + 1) * stride + x * 4 + 3) = 0 Then AddOutlineEdge(edges, x + 1, y + 1, x, y + 1)
-                    If x = 0 OrElse bytes(y * stride + (x - 1) * 4 + 3) = 0 Then AddOutlineEdge(edges, x, y + 1, x, y)
+                    If bytes(row + x * 4 + 3) = 0 Then Continue For
+                    Dim isEdge = x = 0 OrElse y = 0 OrElse x = rasterWidth - 1 OrElse y = rasterHeight - 1 OrElse
+                                 bytes(row + (x - 1) * 4 + 3) = 0 OrElse
+                                 bytes(row + (x + 1) * 4 + 3) = 0 OrElse
+                                 bytes(row - stride + x * 4 + 3) = 0 OrElse
+                                 bytes(row + stride + x * 4 + 3) = 0
+                    If isEdge Then cells.Add(y * rasterWidth + x)
                 Next
             Next
 
-            Dim best As List(Of Long) = Nothing, bestArea As Double = 0
-            While edges.Count > 0
-                Dim start = edges.Keys.First(), current = start
-                Dim loopPoints As New List(Of Long)()
-                Do
-                    loopPoints.Add(current)
-                    Dim following As Long
-                    If Not edges.TryGetValue(current, following) Then Exit Do
-                    edges.Remove(current)
-                    current = following
-                Loop While current <> start AndAlso loopPoints.Count <= rasterWidth * rasterHeight * 2
-                If current <> start OrElse loopPoints.Count < 3 Then Continue While
-                Dim area As Double = 0
-                For i = 0 To loopPoints.Count - 1
-                    Dim a = loopPoints(i), b = loopPoints((i + 1) Mod loopPoints.Count)
-                    area += CDbl(OutlineX(a)) * OutlineY(b) - CDbl(OutlineX(b)) * OutlineY(a)
-                Next
-                If Math.Abs(area) > bestArea Then bestArea = Math.Abs(area) : best = loopPoints
+            Dim takeEvery = Math.Max(1, CInt(Math.Ceiling(cells.Count / CDbl(SelectionBrushMaxEdgePoints))))
+            Dim result As New List(Of Avalonia.Point)(Math.Min(cells.Count, SelectionBrushMaxEdgePoints))
+            Dim i As Integer = 0
+            While i < cells.Count
+                Dim cell = cells(i)
+                result.Add(New Avalonia.Point(originX + (cell Mod rasterWidth + 0.5) * scale,
+                                              originY + (cell \ rasterWidth + 0.5) * scale))
+                i += takeEvery
             End While
-            If best Is Nothing Then Return New List(Of Avalonia.Point)()
-            Return best.Select(Function(p) New Avalonia.Point(originX + OutlineX(p) * scale,
-                                                              originY + OutlineY(p) * scale)).ToList()
-        End Function
-
-        Private Shared Sub AddOutlineEdge(edges As Dictionary(Of Long, Long), x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer)
-            edges(OutlinePointKey(x1, y1)) = OutlinePointKey(x2, y2)
-        End Sub
-
-        Private Shared Function OutlinePointKey(x As Integer, y As Integer) As Long
-            Return (CLng(y) << 32) Or CUInt(x)
-        End Function
-
-        Private Shared Function OutlineX(pointKey As Long) As Integer
-            Return CInt(pointKey And &HFFFFFFFFL)
-        End Function
-
-        Private Shared Function OutlineY(pointKey As Long) As Integer
-            Return CInt(pointKey >> 32)
+            Return result
         End Function
 
         Private Sub CommitMaskBrushStroke()
@@ -4353,7 +4371,12 @@ Namespace Views
             Else
                 HideCurrentSelectionOverlay()
             End If
-            If dragOverlay IsNot Nothing AndAlso Not _isSelectionDragging AndAlso Not _isLassoDrawing Then dragOverlay.IsVisible = False
+            ' Der PINSEL muss hier mit stehen: sein Strich fuehrt dasselbe Zieh-Overlay wie Rechteck
+            ' und Lasso, und dieser Weg laeuft auch waehrend eines Zuges (jedes Abwaehlen, jeder
+            ' Wechsel der Ansicht ruft ihn). Ohne ihn knipste er die laufende Vorschau aus, und ob
+            ' sie wiederkam, hing daran, ob gleich danach noch eine Mausbewegung kam.
+            If dragOverlay IsNot Nothing AndAlso Not _isSelectionDragging AndAlso Not _isLassoDrawing AndAlso
+               Not _isMaskBrushDrawing Then dragOverlay.IsVisible = False
             UpdateSliderLayout()
         End Sub
 
