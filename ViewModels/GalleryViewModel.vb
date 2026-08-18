@@ -9045,7 +9045,18 @@ Namespace ViewModels
             ApplyFilterSelected(items)
         End Sub
 
+        ''' <summary>Der Mantel um den eigentlichen Ablauf: er raeumt die Abbruch-Marke des Stapels
+        ''' auf JEDEM Weg wieder ab. Ohne ihn bliebe sie nach einem fruehen Ausstieg stehen und
+        ''' zeigte auf einen Lauf, den es nicht mehr gibt.</summary>
         Public Async Function ResizeImageItemsAsync(items As IList(Of ImageItem)) As Task
+            Try
+                Await ResizeImageItemsCoreAsync(items)
+            Finally
+                EndBatchRun()
+            End Try
+        End Function
+
+        Private Async Function ResizeImageItemsCoreAsync(items As IList(Of ImageItem)) As Task
             Dim targetItems = If(items, New List(Of ImageItem)()).Where(Function(i) i IsNot Nothing).ToList()
             If targetItems.Count = 0 Then Return
 
@@ -9070,6 +9081,10 @@ Namespace ViewModels
             ' Auch beim Ueberschreiben zaehlt der Regler des Dialogs (Vorbelegung 95) - vorher
             ' wurde hier still mit fester Qualitaet gespeichert.
             Dim jpgQuality = resize.JpgQuality
+            ' Die Marke fuer den ganzen Lauf. Sie geht in jedes SaveImage und von dort in die
+            ' Modelldienste: das Hochskalieren steigt an der naechsten Kachelgrenze aus, und das
+            ' angefangene Bild wird NICHT geschrieben.
+            Dim cancel = BeginBatchRun(targetItems.Count)
             Dim writer = Function(source As String, target As String)
                              ' Prozent NICHT vorab aus der Datei schaetzen: SKCodec kennt die Masse
                              ' von RAW/PSD/.fpx nicht (das ergab stumm die Originalgroesse, und ohne
@@ -9093,7 +9108,8 @@ Namespace ViewModels
                              adj.UpscaleModel = resize.UpscaleModel
                              Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
-                                                             applyPendingBaked:=applyPendingBaked)
+                                                             applyPendingBaked:=applyPendingBaked,
+                                                             cancel:=cancel)
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -9115,7 +9131,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
-                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
                 RefreshAfterBatchFileRewrite(localTargets)
                 If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -9130,7 +9146,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) resize.Extension,
                                                                    uploadedAssetIds, "").ConfigureAwait(True)
-                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
             End If
@@ -9161,7 +9177,7 @@ Namespace ViewModels
                                                                        Function(source) resize.Extension,
                                                                        "", nameBuilder).ConfigureAwait(True)
 
-            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
+            StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
@@ -9213,7 +9229,21 @@ Namespace ViewModels
                 End Function)
         End Function
 
+        ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>: er raeumt die
+        ''' Abbruch-Marke des Stapels auf jedem Weg wieder ab.</summary>
         Private Async Sub ApplyFilterSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
+            Try
+                Await ApplyFilterSelectedCoreAsync(vorgabe)
+            Catch ex As Exception
+                ' Eigenes Try, weil es ein Async Sub ist: eine Ausnahme darin landet sonst beim
+                ' Dispatcher und beendet den Prozess.
+                DiagnosticLogService.LogException("Gallery.ApplyFilter", ex)
+            Finally
+                EndBatchRun()
+            End Try
+        End Sub
+
+        Private Async Function ApplyFilterSelectedCoreAsync(vorgabe As IList(Of ImageItem)) As Task
             Dim targetItems = If(vorgabe IsNot Nothing, vorgabe.ToList(), GetSelectedBatchEditableImageItems())
             If targetItems.Count = 0 Then Return
 
@@ -9240,6 +9270,7 @@ Namespace ViewModels
             ' Bildverbesserung wird zusätzlich PRO BILD gemessen - eine gemeinsame Vorlage gäbe allen
             ' Bildern die Korrektur des ersten.
             Dim isAutoEnhance = String.Equals(result.SourceKind, BatchFilterDialogResult.SourceAuto, StringComparison.OrdinalIgnoreCase)
+            Dim cancel = BeginBatchRun(targetItems.Count)
             Dim writer = Function(source As String, target As String)
                              ' Rezept als Grundlage, der Look kommt oben drauf - und zwar nur mit
                              ' den Reglern, die er wirklich setzt (siehe MergeNonDefault...).
@@ -9248,7 +9279,8 @@ Namespace ViewModels
                              If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
-                                                             applyPendingBaked:=applyPendingBaked)
+                                                             applyPendingBaked:=applyPendingBaked,
+                                                             cancel:=cancel)
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -9270,7 +9302,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
-                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
                 RefreshAfterBatchFileRewrite(localPaths)
                 If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -9284,7 +9316,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) result.Extension,
                                                                    uploadedAssetIds, suffix).ConfigureAwait(True)
-                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
             End If
@@ -9315,9 +9347,9 @@ Namespace ViewModels
                                                                        Function(source) result.Extension,
                                                                        suffix, nameBuilder).ConfigureAwait(True)
 
-            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
+            StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) gefiltert"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
-        End Sub
+        End Function
 
         ''' <summary>Übersetzt die Dialogauswahl in Anpassungen. XMP-Presets laufen durch denselben
         ''' XmpPresetService wie der Editor - es gibt nur eine Abbildung der crs:-Schlüssel.
@@ -9391,16 +9423,22 @@ Namespace ViewModels
                                                       LocalizationService.T("Abbrechen")) Then Return 0
 
                 StatusText = LocalizationService.T("Entferne Metadaten...")
+                ' Auch dieser Weg schreibt eine ganze Liste an Ort und Stelle und braucht deshalb
+                ' seinen Zaehler; ohne Anmeldung stuende in der Anzeige "1 von 0".
+                Dim cancel = BeginBatchRun(targets.Count)
                 Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
-                    Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95, preserveMetadata:=False))
+                    Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95,
+                                                                    preserveMetadata:=False, cancel:=cancel))
 
-                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) bereinigt"), changedCount, targets.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) bereinigt"), changedCount, targets.Count)
                 RefreshAfterBatchFileRewrite(targets)
                 Return changedCount
             Catch ex As Exception
                 DiagnosticLogService.LogException("GalleryViewModel.RemoveMetadataSelected", ex)
                 StatusText = LocalizationService.T("Aktion fehlgeschlagen")
                 Return 0
+            Finally
+                EndBatchRun()
             End Try
         End Function
 
@@ -9426,7 +9464,18 @@ Namespace ViewModels
         End Function
 
         ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
+        ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
         Private Async Sub ApplyWatermarkSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
+            Try
+                Await ApplyWatermarkSelectedCoreAsync(vorgabe)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ApplyWatermark", ex)
+            Finally
+                EndBatchRun()
+            End Try
+        End Sub
+
+        Private Async Function ApplyWatermarkSelectedCoreAsync(vorgabe As IList(Of ImageItem)) As Task
             Dim targetItems = If(vorgabe IsNot Nothing, vorgabe.ToList(), GetSelectedBatchEditableImageItems())
             If targetItems.Count = 0 Then Return
 
@@ -9449,6 +9498,7 @@ Namespace ViewModels
             ' Der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs entscheidet je Lauf; die
             ' Einstellung ist nur noch die Vorbelegung.
             Dim preserveMetadata = result.PreserveMetadata
+            Dim cancel = BeginBatchRun(targetItems.Count)
             Dim writer = Function(source As String, target As String)
                              ' Das Wasserzeichen kommt ZUSAETZLICH auf die vorhandene Bearbeitung -
                              ' Objekte aus dem Rezept bleiben stehen.
@@ -9456,7 +9506,8 @@ Namespace ViewModels
                              adj.Annotations.Add(annotation.Clone())
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
-                                                             applyPendingBaked:=applyPendingBaked)
+                                                             applyPendingBaked:=applyPendingBaked,
+                                                             cancel:=cancel)
                          End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
             ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
@@ -9475,7 +9526,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
-                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
                 RefreshAfterBatchFileRewrite(localTargets)
                 If uploadedCount > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
@@ -9489,7 +9540,7 @@ Namespace ViewModels
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) result.Extension,
                                                                    uploadedAssetIds, nameBuilder:=nameBuilder).ConfigureAwait(True)
-                StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
                 If uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
                 Return
             End If
@@ -9519,9 +9570,9 @@ Namespace ViewModels
                                                                        Function(source) result.Extension,
                                                                        nameBuilder:=nameBuilder).ConfigureAwait(True)
 
-            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
+            StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
-        End Sub
+        End Function
 
         Private Shared Function CreateWatermarkAnnotation(preset As WatermarkPresetSettings) As ImageAnnotation
             If preset Is Nothing Then Return Nothing
@@ -9561,12 +9612,109 @@ Namespace ViewModels
                 ToList()
         End Function
 
+        ' ── Stapel: Abbruch und Fortschritt ─────────────────────────────────────
+        '
+        ' EIN Lauf, EINE Marke. Die Schreibschleifen eines Stapels laufen nacheinander (erst die
+        ' lokalen Dateien, dann die Serverbilder), und das X soll den GANZEN Lauf anhalten, nicht
+        ' nur den Abschnitt, der gerade dran ist. Deshalb liegt die Marke hier und nicht in den
+        ' Schleifen.
+        '
+        ' Warum es das braucht: ein Bild vierfach zu vergroessern kostet auf dem Prozessor
+        ' achteinhalb Minuten, und bis hierher stand dazu nur "x von y Dateien" - von einem Haenger
+        ' nicht zu unterscheiden, und ohne Rueckweg, wenn man sich in der Auswahl vertan hat.
+        Private _batchCancellation As Threading.CancellationToken
+        Private _batchFilesDone As Integer
+        Private _batchFilesTotal As Integer
+        Private _batchTilesDone As Integer
+        Private _batchTilesTotal As Integer
+
+        ''' <summary>Beginn eines Stapellaufs. Zurueck kommt die Marke; sie geht in die
+        ''' Schreibschleifen und von dort ueber <c>SaveImage</c> bis in die Modelldienste.</summary>
+        Private Function BeginBatchRun(total As Integer) As Threading.CancellationToken
+            _batchFilesDone = 0
+            _batchFilesTotal = Math.Max(0, total)
+            _batchTilesDone = 0
+            _batchTilesTotal = 0
+            _batchCancellation = _mainVm.BeginBusyOverlayCancellation()
+            ' Die beiden Modelldienste melden je Kachel - im Stapel hoerte dem bisher niemand zu.
+            UpscaleModelService.Progress = AddressOf ReportBatchTiles
+            DenoiseModelService.Progress = AddressOf ReportBatchTiles
+            Return _batchCancellation
+        End Function
+
+        ''' <summary>Ende, egal ob fertig, abgebrochen oder fehlgeschlagen. Darf mehrfach und auch
+        ''' ohne vorherigen Beginn laufen - die Stapelwege haben mehrere Ausgaenge.</summary>
+        Private Sub EndBatchRun()
+            UpscaleModelService.Progress = Nothing
+            DenoiseModelService.Progress = Nothing
+            _mainVm.EndBusyOverlayCancellation()
+            _batchCancellation = Nothing
+            _batchTilesTotal = 0
+        End Sub
+
+        ''' <summary>Hat der Nutzer den laufenden Stapel angehalten?</summary>
+        Private Function BatchWasCancelled() As Boolean
+            Return _batchCancellation.IsCancellationRequested
+        End Function
+
+        ''' <summary>Kachelmeldung eines Modelldienstes. Kommt aus dem HINTERGRUND, die Anzeige
+        ''' gehoert aber dem UI-Faden.</summary>
+        Private Sub ReportBatchTiles(done As Integer, total As Integer)
+            _batchTilesDone = done
+            _batchTilesTotal = total
+            PostBatchProgress()
+        End Sub
+
+        ''' <summary>Ein Bild ist durch. Die Kachelzahl faellt damit weg - das naechste Bild faengt
+        ''' wieder bei null an, und eine stehengebliebene Zahl waere eine Falschaussage.</summary>
+        Private Sub ReportBatchFileDone()
+            _batchFilesDone += 1
+            _batchTilesTotal = 0
+            PostBatchProgress()
+        End Sub
+
+        Private Sub PostBatchProgress()
+            Dispatcher.UIThread.Post(
+                Sub()
+                    ' Nach dem Druck aufs X steht dort "Wird abgebrochen…" - diese Auskunft ist die
+                    ' wichtigere und darf nicht von der naechsten Kachel ueberschrieben werden.
+                    If BatchWasCancelled() Then Return
+                    _mainVm.UpdateBusyOverlay(BatchProgressText())
+                End Sub)
+        End Sub
+
+        ''' <summary>Der Text in der Warteanzeige. Gezaehlt wird das Bild, an dem gerade gerechnet
+        ''' wird, nicht das letzte fertige - sonst stuende beim ersten Bild minutenlang eine
+        ''' Null.</summary>
+        Private Function BatchProgressText() As String
+            Dim current = Math.Min(_batchFilesDone + 1, Math.Max(1, _batchFilesTotal))
+            If _batchTilesTotal > 0 Then
+                Return String.Format(LocalizationService.T("Bilder werden geschrieben: {0} von {1}, Kachel {2} von {3}"),
+                                     current, _batchFilesTotal, _batchTilesDone, _batchTilesTotal)
+            End If
+            Return String.Format(LocalizationService.T("Bilder werden geschrieben: {0} von {1}"),
+                                 current, _batchFilesTotal)
+        End Function
+
+        ''' <summary>Die Schlussmeldung eines Stapels. Nach einem Abbruch sagt sie das auch: eine
+        ''' blosse Zahl liest sich dort wie ein Fehlschlag.</summary>
+        Private Function BatchResultText(template As String, done As Integer, total As Integer) As String
+            If BatchWasCancelled() Then
+                Return String.Format(LocalizationService.T("Stapel abgebrochen: {0} von {1} Datei(en) geschrieben"), done, total)
+            End If
+            Return String.Format(template, done, total)
+        End Function
+
         Private Async Function RewriteImagesInPlaceAsync(targets As List(Of String), writer As Func(Of String, String, Boolean)) As Task(Of Integer)
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
             Try
+                _mainVm.BeginBusyOverlay(BatchProgressText())
                 Await Task.Run(Sub()
                     For Each source In targets
+                        ' Abbruch VOR dem naechsten Bild: das laufende steigt selbst an der
+                        ' naechsten Kachelgrenze aus (siehe SaveImage).
+                        If BatchWasCancelled() Then Exit For
                         Dim ext = IO.Path.GetExtension(source)
                         Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-{Guid.NewGuid():N}{ext}")
                         Try
@@ -9581,10 +9729,13 @@ Namespace ViewModels
                             Catch
                             End Try
                         End Try
+                        ReportBatchFileDone()
                     Next
                 End Sub)
             Catch ex As Exception
                 errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildverarbeitung fehlgeschlagen"), errorMessage)
             Return changedCount
@@ -9755,7 +9906,9 @@ Namespace ViewModels
                           Count(Function(i) i IsNot Nothing AndAlso i.IsRemoteAsset AndAlso Not i.IsImmichAsset)
 
             Try
+                _mainVm.BeginBusyOverlay(BatchProgressText())
                 For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                    If BatchWasCancelled() Then Exit For
                     If item Is Nothing OrElse Not item.IsImmichAsset Then Continue For
                     Dim source = Await EnsureLocalPathForBatchAsync(item)
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
@@ -9788,9 +9941,12 @@ Namespace ViewModels
                         Catch
                         End Try
                     End Try
+                    ReportBatchFileDone()
                 Next
             Catch ex As Exception
                 errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
             End Try
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Immich-Upload fehlgeschlagen"), errorMessage)
@@ -9825,14 +9981,21 @@ Namespace ViewModels
                     sources.Add(source)
                 Next
                 Dim pairs = Await ResolveBatchTargetsAsync(sources, targetFolder, outputExtension, nameSuffix, nameBuilder)
+                ' Erst JETZT die Anzeige: bis hierher standen die Rueckfragen zu vorhandenen
+                ' Dateien an, und eine Warteanzeige dahinter waere eine Falschaussage gewesen.
+                _mainVm.BeginBusyOverlay(BatchProgressText())
                 For Each pair In pairs
+                    If BatchWasCancelled() Then Exit For
                     Dim sourcePath = pair.Key
                     Dim target = pair.Value
                     Dim ok = Await Task.Run(Function() writer(sourcePath, target))
                     If ok AndAlso File.Exists(target) Then savedCount += 1
+                    ReportBatchFileDone()
                 Next
             Catch ex As Exception
                 errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
             End Try
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Immich-Export fehlgeschlagen"), errorMessage)
@@ -9871,10 +10034,12 @@ Namespace ViewModels
 
                 ' ES DAUERT, UND ZWAR SICHTBAR. Ein Stapel mit Modell-Hochskalierung rechnet je Bild
                 ' Minuten; ohne Anzeige sitzt die Oberflaeche still da und ist von einem Haenger
-                ' nicht zu unterscheiden (Nutzerbefund 2026-08-08).
-                _mainVm.BeginBusyOverlay(LocalizationService.T("Bilder werden geschrieben…"))
+                ' nicht zu unterscheiden (Nutzerbefund 2026-08-08). Die Anzeige zaehlt seither
+                ' Bilder UND Kacheln mit und traegt das X zum Abbrechen.
+                _mainVm.BeginBusyOverlay(BatchProgressText())
                 Await Task.Run(Sub()
                     For Each pair In pairs
+                        If BatchWasCancelled() Then Exit For
                         Dim sourcePath = pair.Key
                         Dim target = pair.Value
                         If writer(sourcePath, target) AndAlso File.Exists(target) Then
@@ -9887,6 +10052,7 @@ Namespace ViewModels
                                                                   If(metaCopy Is Nothing, True, metaCopy.CopyColorLabel),
                                                                   If(metaCopy Is Nothing, True, metaCopy.CopyKeywords))
                         End If
+                        ReportBatchFileDone()
                     Next
                 End Sub)
             Catch ex As Exception
@@ -9911,7 +10077,9 @@ Namespace ViewModels
             Dim albumId = CurrentImmichAlbumIdForUpload()
 
             Try
+                _mainVm.BeginBusyOverlay(BatchProgressText())
                 For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                    If BatchWasCancelled() Then Exit For
                     If item Is Nothing OrElse item.IsImmichAsset OrElse Not File.Exists(item.FilePath) Then Continue For
                     Dim sourceExt = IO.Path.GetExtension(item.FilePath)
                     Dim targetExt = outputExtension(item.FilePath)
@@ -9935,9 +10103,12 @@ Namespace ViewModels
                         Catch
                         End Try
                     End Try
+                    ReportBatchFileDone()
                 Next
             Catch ex As Exception
                 errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
             End Try
 
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Immich-Upload fehlgeschlagen"), errorMessage)
@@ -10029,7 +10200,16 @@ Namespace ViewModels
         End Sub
 
         ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
+        ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
         Private Async Function ExportSelectedAsync(Optional vorgabe As IList(Of ImageItem) = Nothing) As Task
+            Try
+                Await ExportSelectedCoreAsync(vorgabe)
+            Finally
+                EndBatchRun()
+            End Try
+        End Function
+
+        Private Async Function ExportSelectedCoreAsync(vorgabe As IList(Of ImageItem)) As Task
             Dim targetItems = If(vorgabe, GetSelectedImageItems()).
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
                 Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
@@ -10118,6 +10298,7 @@ Namespace ViewModels
             End If
 
             StatusText = LocalizationService.T("Exportiere…")
+            Dim cancel = BeginBatchRun(targetItems.Count)
             Dim writer = Function(source As String, target As String)
                              ' Wie beim Filter: Rezept als Grundlage, die Export-Vorlage darueber.
                              ' Groesse und Objekte gehoeren dem Export und werden gesetzt statt
@@ -10151,7 +10332,8 @@ Namespace ViewModels
                              End If
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
-                                                             applyPendingBaked:=applyPendingBaked)
+                                                             applyPendingBaked:=applyPendingBaked,
+                                                             cancel:=cancel)
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
@@ -10204,13 +10386,26 @@ Namespace ViewModels
             End If
 
             If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshImmichViewAsync()
-            StatusText = $"{exportedCount + uploadedCount} {LocalizationService.T("von")} {targetItems.Count} {LocalizationService.T("Datei(en) exportiert")}"
+            ' EINE Schablone statt dreier Bruchstuecke: in anderen Sprachen steht die Zahl woanders
+            ' im Satz, und aus aneinandergehaengten Teilen laesst sich das nicht bauen.
+            StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) exportiert"), exportedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
         ''' <param name="vorgabe">Wenn gesetzt, gilt DIESE Liste statt der Galerie-Auswahl. So loest
         ''' der Betrachter denselben Ablauf fuer das angezeigte Bild aus - eine Umsetzung, nicht zwei.</param>
+        ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
         Private Async Sub BatchConvertSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
+            Try
+                Await BatchConvertSelectedCoreAsync(vorgabe)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.BatchConvert", ex)
+            Finally
+                EndBatchRun()
+            End Try
+        End Sub
+
+        Private Async Function BatchConvertSelectedCoreAsync(vorgabe As IList(Of ImageItem)) As Task
             Dim targetItems = If(vorgabe, GetSelectedImageItems()).
                 Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
                 Where(Function(i) Not BatchConvertExcludedExtensions.Contains(IO.Path.GetExtension(i.FilePath).ToLowerInvariant())).
@@ -10240,11 +10435,13 @@ Namespace ViewModels
             ' Wer ein bearbeitetes RAW konvertierte, bekam es unbearbeitet zurueck - und wer die
             ' Entwicklung abgeschaltet hatte, bekam trotzdem die volle Entwicklung statt des Bildes,
             ' das ihm die Uebersicht zeigt. Gemeldet ueber Reddit am 2026-08-17.
+            Dim cancel = BeginBatchRun(targetItems.Count)
             Dim writer = Function(source As String, target As String)
                              Dim adj = BatchBaseAdjustments(source)
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
-                                                             applyPendingBaked:=applyPendingBaked)
+                                                             applyPendingBaked:=applyPendingBaked,
+                                                             cancel:=cancel)
                          End Function
             ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher
             ' gibt: liegt die Quelle schon im Zielformat vor, gibt es nichts zu konvertieren.
@@ -10303,10 +10500,10 @@ Namespace ViewModels
                     Function(source) result.Extension).ConfigureAwait(True)
             End If
 
-            StatusText = String.Format(LocalizationService.T("{0} von {1} Datei(en) konvertiert"), convertedCount + uploadedCount, targetItems.Count)
+            StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) konvertiert"), convertedCount + uploadedCount, targetItems.Count)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
             If saveToImmich AndAlso uploadedAssetIds.Count > 0 Then Await RefreshAfterImmichBatchUploadAsync(uploadedAssetIds)
-        End Sub
+        End Function
 
         Public Async Function MovePathsToFolderAsync(paths As IEnumerable(Of String), targetFolder As String) As Task
             If IsVirtualFolderPath(targetFolder) Then Return

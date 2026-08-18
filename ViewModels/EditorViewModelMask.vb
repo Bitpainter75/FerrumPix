@@ -1710,16 +1710,48 @@ Namespace ViewModels
             Dim m = CurrentMaskForComponents()
             If m Is Nothing Then Return
             If index < 0 OrElse index >= m.ComponentCount Then Return
+            ' ERST das Ziel holen, DANN den Rueckgaengig-Punkt setzen. Stand PushUndo davor, blieb
+            ' bei einem fehlenden Bestandteil ein Schritt stehen, der nichts geaendert hat.
+            Dim isPrimary = False
+            Dim target = MaskComponentAt(m, index, isPrimary)
+            If Not isPrimary AndAlso target Is Nothing Then Return
             PushUndo()
-            If index = 0 Then
+            If isPrimary Then
                 m.PrimaryVisible = Not m.PrimaryVisible
             Else
-                Dim extra = m.ExtraComponents(index - 1)
-                If extra Is Nothing Then Return
-                extra.IsVisible = Not extra.IsVisible
+                target.IsVisible = Not target.IsVisible
             End If
             AfterMaskComponentChange(m)
         End Sub
+
+        ''' <summary>Der Bestandteil an dieser Stelle der ANGEZEIGTEN Liste.
+        '''
+        ''' Gezaehlt wird wie in <see cref="ImageMask.GetComponents"/> und nicht mit
+        ''' <c>index - 1</c> auf die Zusatzliste: der erste Platz gehoert dem primaeren Bestandteil
+        ''' nur, wenn er ueberhaupt etwas traegt, und leere Eintraege der Zusatzliste zaehlen gar
+        ''' nicht mit. Die alte Rechnung stimmte nur, solange beides zutraf.
+        '''
+        ''' NOTHING mit <paramref name="isPrimary"/>=True heisst "der erste Bestandteil" - der hat
+        ''' keine eigene Instanz, seine Felder liegen an der Maske selbst.</summary>
+        Private Shared Function MaskComponentAt(m As ImageMask, index As Integer, ByRef isPrimary As Boolean) As MaskComponent
+            isPrimary = False
+            If m Is Nothing OrElse index < 0 Then Return Nothing
+            Dim position = 0
+            If m.HasPrimaryComponent Then
+                If index = 0 Then
+                    isPrimary = True
+                    Return Nothing
+                End If
+                position = 1
+            End If
+            If m.ExtraComponents Is Nothing Then Return Nothing
+            For Each c In m.ExtraComponents
+                If c Is Nothing Then Continue For
+                If position = index Then Return c
+                position += 1
+            Next
+            Return Nothing
+        End Function
 
         ''' <summary>Der gemeinsame Abschluss jeder Änderung an der Bestandteilliste: Liste neu
         ''' aufbauen, Overlay nachziehen, Vorschau anstoßen.
@@ -1776,9 +1808,11 @@ Namespace ViewModels
         ''' und ein Modus stünde dort ohne Gegenüber.</summary>
         Public Sub CycleMaskComponentMode(index As Integer)
             Dim m = CurrentMaskForComponents()
+            ' Der erste Bestandteil hat keinen Modus - er ist die Grundlage, auf die die anderen
+            ' rechnen.
             If m Is Nothing OrElse index <= 0 Then Return
-            If m.ExtraComponents Is Nothing OrElse index - 1 >= m.ExtraComponents.Count Then Return
-            Dim c = m.ExtraComponents(index - 1)
+            Dim isPrimary = False
+            Dim c = MaskComponentAt(m, index, isPrimary)
             If c Is Nothing Then Return
             PushUndo()
             Select Case If(c.Mode, "").Trim().ToLowerInvariant()
@@ -2355,7 +2389,7 @@ Namespace ViewModels
 
             Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
                 Dim stride = overlay.RowBytes
-                Dim puffer = New Byte(stride * oh - 1) {}
+                Dim buffer = New Byte(stride * oh - 1) {}
                 ' Premultipliziertes BGRA in reinem Rot: Deckung steht im Alphakanal, und Rot muss
                 ' denselben Wert tragen. Halbe Staerke, damit das Bild darunter sichtbar bleibt.
                 For y = 0 To oh - 1
@@ -2363,11 +2397,11 @@ Namespace ViewModels
                     For x = 0 To ow - 1
                         Dim a = CByte(CInt(coverage(qRow + x)) * 128 \ 255)
                         Dim o = row + x * 4
-                        puffer(o + 2) = a
-                        puffer(o + 3) = a
+                        buffer(o + 2) = a
+                        buffer(o + 3) = a
                     Next
                 Next
-                Runtime.InteropServices.Marshal.Copy(puffer, 0, overlay.GetPixels(), puffer.Length)
+                Runtime.InteropServices.Marshal.Copy(buffer, 0, overlay.GetPixels(), buffer.Length)
                 ApplyBrushCorrectionToOverlay(overlay, mask, bw, bh)
                 ' Laufender Strich obendrauf - sonst verschwaende das Verlaufs-Overlay waehrend des
                 ' Ziehens und kaeme erst beim Loslassen zurueck.

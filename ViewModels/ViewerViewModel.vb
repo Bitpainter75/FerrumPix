@@ -816,12 +816,19 @@ Namespace ViewModels
             InfoPanel.PersistRating = Sub(items, value)
                                      Me.RaisePropertyChanged(NameOf(RatingText))
                                      If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
+                                         ' Den BISHERIGEN Wert festhalten, bevor er ueberschrieben
+                                         ' wird: die Ruecknahme laese ihn sonst schon in der neuen
+                                         ' Fassung und setzte auf denselben Wert zurueck, also auf
+                                         ' nichts. Nothing heisst "nicht bekannt" - dann bleibt es
+                                         ' bei der Meldung, ohne die Sterne zu verstellen.
+                                         Dim previous As Integer? = Nothing
                                          ' Das Sitzungs-Element mitschreiben: LoadImmichAt liest beim
                                          ' Zuruecknavigieren aus dem Meta, sonst steht dort der alte Wert.
                                          If _currentIndex >= 0 AndAlso _currentIndex < _immichSessionItems.Count Then
+                                             previous = _immichSessionItems(_currentIndex).Rating
                                              _immichSessionItems(_currentIndex).Rating = value
                                          End If
-                                         Dim ignored = ImmichService.SetRatingAsync(_currentImmichAssetId, value)
+                                         Dim ignored = SetImmichRatingAsync(_currentImmichAssetId, value, _currentIndex, previous)
                                      ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                          LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
                                      End If
@@ -832,7 +839,7 @@ Namespace ViewModels
                                            If _currentIndex >= 0 AndAlso _currentIndex < _immichSessionItems.Count Then
                                                _immichSessionItems(_currentIndex).IsFavorite = value
                                            End If
-                                           Dim ignored = ImmichService.SetFavoriteAsync(_currentImmichAssetId, value)
+                                           Dim ignored = SetImmichFavoriteAsync(_currentImmichAssetId, value, _currentIndex)
                                        ElseIf CurrentNextcloudItem() IsNot Nothing Then
                                            ' Nextcloud kennt den Favoriten als Eigenschaft AN DER DATEI.
                                            ' Ohne diesen Zweig landete er im lokalen Katalog unter dem
@@ -864,16 +871,12 @@ Namespace ViewModels
             ' einem Bild, anders als im Sammelmodus der Galerie.
             InfoPanel.PersistTag = Sub(items, tag, gesetzt)
                                   If _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImmichAssetId) Then
-                                      Dim ignored = If(gesetzt,
-                                                       ImmichService.AddTagToAssetAsync(_currentImmichAssetId, tag),
-                                                       ImmichService.RemoveTagFromAssetAsync(_currentImmichAssetId, tag))
+                                      Dim ignored = SetServerTagAsync(tag, gesetzt, immich:=True)
                                   ElseIf CurrentNextcloudFileId() IsNot Nothing Then
                                       ' Auf diesem Server sind Stichwoerter System-Tags des Kerns.
                                       ' Ohne diesen Zweig liefe das Schreiben in den lokalen Katalog
                                       ' unter dem TEMP-Pfad der geholten Kopie - also ins Leere.
-                                      Dim ignored = If(gesetzt,
-                                                       NextcloudService.AddTagAsync(CurrentNextcloudFileId(), tag),
-                                                       NextcloudService.RemoveTagAsync(CurrentNextcloudFileId(), tag))
+                                      Dim ignored = SetServerTagAsync(tag, gesetzt, immich:=False)
                                   ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
                                       LibraryService.Instance.SetTags(_currentImagePath, InfoPanel.Tags, syncToXmp:=True)
                                   End If
@@ -887,10 +890,50 @@ Namespace ViewModels
             Return CurrentNextcloudItem()?.NextcloudFileId
         End Function
 
+        ' ── Wer darf zuruecknehmen: nur der LETZTE Schreibvorgang DIESES Bildes ──
+        '
+        ' Drei Klicks auf die Sterne (3, 4, 5) sind drei Anfragen, und sie kommen nicht
+        ' zwangslaeufig in der Reihenfolge zurueck, in der sie losgeschickt wurden. Nimmt eine
+        ' spaet eintreffende, fehlgeschlagene ERSTE Anfrage die Anzeige auf ihren alten Stand
+        ' zurueck, steht dort die 3, waehrend der Server die 5 hat, die inzwischen angekommen ist.
+        '
+        ' Deshalb zieht jeder Schreibvorgang eine Nummer und darf nur zuruecknehmen, wenn er noch
+        ' der letzte ist. Gezaehlt wird JE BILD UND JE ANGABE:
+        '
+        ' - je ANGABE, weil Bewertung und Favorit voneinander unabhaengig sind und einander nicht
+        '   fuer ueberholt erklaeren duerfen;
+        ' - je BILD, weil eine einzige Zahl fuer alle Bilder den Fehlschlag am vorigen Bild
+        '   verschluckt, sobald am naechsten geschrieben wurde. Dessen Sitzungs-Element behielte
+        '   dann den Wert, den der Server nie angenommen hat, und beim Zurueckblaettern staende er
+        '   wieder da.
+        '
+        ' Die Tabellen wachsen mit der Zahl der BERUEHRTEN Bilder einer Sitzung, je Eintrag eine
+        ' Zahl - das faellt neben den Vorschaubildern nicht ins Gewicht.
+        Private ReadOnly _ratingWriteRuns As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+        Private ReadOnly _favoriteWriteRuns As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+
+        ''' <summary>Die naechste Nummer fuer dieses Bild und diese Angabe.</summary>
+        Private Shared Function NextWriteRun(runs As Dictionary(Of String, Integer), key As String) As Integer
+            Dim wanted = If(key, "")
+            Dim current = 0
+            runs.TryGetValue(wanted, current)
+            current += 1
+            runs(wanted) = current
+            Return current
+        End Function
+
+        ''' <summary>Ist dieser Schreibvorgang noch der letzte fuer sein Bild und seine Angabe?</summary>
+        Private Shared Function IsLatestWriteRun(runs As Dictionary(Of String, Integer), key As String, run As Integer) As Boolean
+            Dim current = 0
+            runs.TryGetValue(If(key, ""), current)
+            Return current = run
+        End Function
+
         ''' <summary>Setzt den Favoriten auf dem Nextcloud-Server. Der Weg braucht den Pfad im
         ''' Dateibaum; steht er am Element noch nicht, wird er hier nachgeholt. Schlägt es fehl,
         ''' bleibt die Anzeige nicht auf einem Stand stehen, den der Server nicht kennt.</summary>
         Private Async Function SetNextcloudFavoriteAsync(item As ImageItem, value As Boolean) As Task
+            Dim run = NextWriteRun(_favoriteWriteRuns, item.NextcloudFileId)
             Try
                 Dim pathInTree = item.NextcloudPath
                 If String.IsNullOrEmpty(pathInTree) Then
@@ -901,6 +944,8 @@ Namespace ViewModels
                     End If
                 End If
                 If String.IsNullOrEmpty(pathInTree) OrElse Not Await NextcloudService.SetFavoriteAsync(pathInTree, value) Then
+                    ' Ein spaeter Fehlschlag darf einen inzwischen gelungenen Klick nicht umwerfen.
+                    If Not IsLatestWriteRun(_favoriteWriteRuns, item.NextcloudFileId, run) Then Return
                     ' ZURUECKNEHMEN, OHNE ZU SCHREIBEN. Der Setter des Panels ruft IMMER den
                     ' Speicherweg - eine Ruecknahme ueber ihn loeste sofort die Gegenanfrage aus,
                     ' und schluege auch die fehl, pendelte der Wert endlos zwischen den beiden hin
@@ -914,6 +959,138 @@ Namespace ViewModels
             Catch ex As Exception
                 DiagnosticLogService.LogException("Viewer.NextcloudFavorite", ex)
             End Try
+        End Function
+
+        ''' <summary>Bewertung an Immich schreiben - und die Anzeige zuruecknehmen, wenn der Server
+        ''' sie nicht annimmt.
+        '''
+        ''' Vorher lief der Aufruf als <c>Dim ignored = …Async(…)</c> ins Nichts: die Sterne standen
+        ''' danach da, als waeren sie gespeichert, und ein Serverfehler blieb unsichtbar. Beim
+        ''' Nextcloud-Favoriten war derselbe Weg schon abgesichert (siehe oben), hier nicht.
+        '''
+        ''' Zurueckgenommen wird nur, wenn dieser Schreibvorgang noch der letzte fuer DIESES Bild ist
+        ''' (siehe <see cref="_ratingWriteRuns"/>), und die ANZEIGE nur dann, wenn das Bild auch noch
+        ''' zu sehen ist - die Antwort kann nach einem Blaettern eintreffen. Das Sitzungs-Element
+        ''' gehoert dagegen dem Bild und wird auch dann geradegerueckt, wenn man weitergeblaettert
+        ''' hat: sonst staende beim Zurueckblaettern ein Wert, den der Server nie bekommen hat.</summary>
+        ''' <param name="previous">Der Wert VOR der Aenderung, vom Aufrufer festgehalten. Hier
+        ''' nachzulesen ginge nicht: der Aufrufer hat das Sitzungs-Element zu dem Zeitpunkt schon auf
+        ''' den neuen Wert gesetzt, und die Ruecknahme setzte damit auf sich selbst zurueck.
+        ''' Nothing heisst "nicht bekannt" - dann bleibt es bei der Meldung.</param>
+        Private Async Function SetImmichRatingAsync(assetId As String, value As Integer, index As Integer,
+                                                    previous As Integer?) As Task
+            Dim run = NextWriteRun(_ratingWriteRuns, assetId)
+            Try
+                If Await ImmichService.SetRatingAsync(assetId, value) Then Return
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.ImmichRating", ex)
+            End Try
+            ' Ueberholt: fuer DIESES Bild ist inzwischen eine neuere Bewertung unterwegs oder schon
+            ' angekommen. Die haelt ihren eigenen alten Stand fest und raeumt selbst auf, wenn sie
+            ' scheitert.
+            If Not IsLatestWriteRun(_ratingWriteRuns, assetId, run) Then
+                DiagnosticLogService.LogAlways("Viewer.ImmichRating",
+                    $"Fehlschlag von Lauf {run} verworfen - fuer dieses Bild ist ein neuerer unterwegs")
+                Return
+            End If
+            If previous.HasValue AndAlso index >= 0 AndAlso index < _immichSessionItems.Count Then
+                _immichSessionItems(index).Rating = previous.Value
+            End If
+            If Not String.Equals(assetId, _currentImmichAssetId, StringComparison.Ordinal) Then Return
+            ' ZURUECKNEHMEN, OHNE ZU SCHREIBEN - siehe SetNextcloudFavoriteAsync.
+            If previous.HasValue Then
+                InfoPanel.ApplyOwnedState(previous.Value, InfoPanel.IsFavorite, InfoPanel.ColorLabel)
+                Me.RaisePropertyChanged(NameOf(RatingText))
+            End If
+            StatusInfo = If(String.IsNullOrEmpty(ImmichService.LastError),
+                            LocalizationService.T("Bewertung konnte nicht gespeichert werden"), ImmichService.LastError)
+        End Function
+
+        ''' <summary>Favorit an Immich schreiben, mit derselben Ruecknahme wie bei der
+        ''' Bewertung - und derselben Frage, ob dieser Schreibvorgang noch der letzte ist.</summary>
+        Private Async Function SetImmichFavoriteAsync(assetId As String, value As Boolean, index As Integer) As Task
+            Dim run = NextWriteRun(_favoriteWriteRuns, assetId)
+            Try
+                If Await ImmichService.SetFavoriteAsync(assetId, value) Then Return
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.ImmichFavorite", ex)
+            End Try
+            If Not IsLatestWriteRun(_favoriteWriteRuns, assetId, run) Then
+                DiagnosticLogService.LogAlways("Viewer.ImmichFavorite",
+                    $"Fehlschlag von Lauf {run} verworfen - fuer dieses Bild ist ein neuerer unterwegs")
+                Return
+            End If
+            If index >= 0 AndAlso index < _immichSessionItems.Count Then _immichSessionItems(index).IsFavorite = Not value
+            If Not String.Equals(assetId, _currentImmichAssetId, StringComparison.Ordinal) Then Return
+            InfoPanel.ApplyOwnedState(InfoPanel.Rating, Not value, InfoPanel.ColorLabel)
+            StatusInfo = If(String.IsNullOrEmpty(ImmichService.LastError),
+                            LocalizationService.T("Favorit konnte nicht gespeichert werden"), ImmichService.LastError)
+        End Function
+
+        ''' <summary>Ein Stichwort auf dem Server setzen oder entfernen. Schlaegt es fehl, verschwindet
+        ''' es wieder aus der angezeigten Liste - stehen zu bleiben hiesse, dem Nutzer ein Stichwort
+        ''' zu zeigen, das der Server nicht kennt.
+        '''
+        ''' Das ZIEL wird beim Eintritt festgehalten und danach gegen das gerade gezeigte Bild
+        ''' geprueft: die Antwort kann nach einem Blaettern eintreffen, und eine Ruecknahme an der
+        ''' dann sichtbaren Liste naehme dem NAECHSTEN Bild ein Stichwort weg oder haengte ihm eines
+        ''' an - dieselbe Falle wie bei Bewertung und Favorit.</summary>
+        Private Async Function SetServerTagAsync(tag As String, add As Boolean, immich As Boolean) As Task
+            Dim assetId = _currentImmichAssetId
+            Dim fileId = CurrentNextcloudFileId()
+            Dim ok = False
+            Dim lastError As String = Nothing
+            Try
+                If immich Then
+                    ok = If(add,
+                            Await ImmichService.AddTagToAssetAsync(assetId, tag),
+                            Await ImmichService.RemoveTagFromAssetAsync(assetId, tag))
+                    lastError = ImmichService.LastError
+                Else
+                    ok = If(add,
+                            Await NextcloudService.AddTagAsync(fileId, tag),
+                            Await NextcloudService.RemoveTagAsync(fileId, tag))
+                    lastError = NextcloudService.LastError
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.ServerTag", ex)
+            End Try
+            If ok Then Return
+
+            ' Steht inzwischen ein anderes Bild da, gehoert weder die Ruecknahme noch die Meldung
+            ' hierher. Das Stichwort bleibt dann am gewechselten Bild falsch angezeigt, bis es neu
+            ' geladen wird - besser, als am naechsten Bild etwas zu verstellen.
+            Dim stillCurrent = If(immich,
+                                  String.Equals(assetId, _currentImmichAssetId, StringComparison.Ordinal),
+                                  String.Equals(fileId, CurrentNextcloudFileId(), StringComparison.Ordinal))
+            If Not stillCurrent Then
+                DiagnosticLogService.LogAlways("Viewer.ServerTag",
+                    $"Fehlschlag traf ein anderes Bild als das jetzt gezeigte - Stichwort '{tag}' bleibt stehen")
+                Return
+            End If
+
+            ' Und zeigt die Liste die eigene Aenderung gar nicht mehr, hat sie jemand inzwischen
+            ' wieder umgedreht - dann gehoert die Ruecknahme dem NEUEREN Vorgang, nicht diesem.
+            ' Bei Stichwoertern braucht es dafuer keine Nummer wie bei Bewertung und Favorit: der
+            ' Zustand sagt es selbst, und zwei verschiedene Stichwoerter duerfen nebeneinander
+            ' unterwegs sein, ohne sich gegenseitig fuer ueberholt zu erklaeren.
+            Dim wanted = InfoPanel.Tags.ToList()
+            Dim shown = wanted.Any(Function(t) String.Equals(t, tag, StringComparison.OrdinalIgnoreCase))
+            If shown <> add Then
+                DiagnosticLogService.LogAlways("Viewer.ServerTag",
+                    $"Fehlschlag verworfen - Stichwort '{tag}' steht inzwischen anders")
+                Return
+            End If
+
+            ' Die Liste zurueckdrehen, ohne den Speicherweg erneut anzustossen (ApplyOwnedTags).
+            If add Then
+                wanted.RemoveAll(Function(t) String.Equals(t, tag, StringComparison.OrdinalIgnoreCase))
+            Else
+                wanted.Add(tag)
+            End If
+            InfoPanel.ApplyOwnedTags(wanted)
+            StatusInfo = If(String.IsNullOrEmpty(lastError),
+                            LocalizationService.T("Stichwort konnte nicht geschrieben werden"), lastError)
         End Function
 
         ''' <summary>Das gerade gezeigte Element, wenn es von Nextcloud stammt - sonst Nothing.

@@ -802,17 +802,17 @@ Namespace Services
             Dim isIntersect = String.Equals(effective, "Intersect", StringComparison.Ordinal)
             subtract = String.Equals(effective, "Subtract", StringComparison.Ordinal)
             Dim sWidth = stroke.Right - stroke.Left, sHeight = stroke.Bottom - stroke.Top
-            Dim sPuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
-            If sPuffer Is Nothing Then Return False
+            Dim strokeBuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
+            If strokeBuffer Is Nothing Then Return False
 
             Dim oldWidth = mask.Right - mask.Left, oldHeight = mask.Bottom - mask.Top
-            Dim altPuffer As Byte() = Nothing
-            If oldWidth > 0 AndAlso oldHeight > 0 Then altPuffer = DecodeAlphaRaster(mask.PngBase64, oldWidth, oldHeight)
+            Dim oldBuffer As Byte() = Nothing
+            If oldWidth > 0 AndAlso oldHeight > 0 Then oldBuffer = DecodeAlphaRaster(mask.PngBase64, oldWidth, oldHeight)
 
             ' Ohne bisherige Maske ist ein ABZIEHEN gegenstandslos - sonst entstünde aus dem ersten
             ' Radiergummi-Strich eine leere Maske, die als "es gibt eine Maske" gilt. Fuer das
             ' SCHNEIDEN gilt dasselbe: der Schnitt mit nichts ist nichts.
-            If altPuffer Is Nothing Then
+            If oldBuffer Is Nothing Then
                 If subtract OrElse isIntersect Then Return False
                 mask.SourceWidthPixels = stroke.SourceWidthPixels
                 mask.SourceHeightPixels = stroke.SourceHeightPixels
@@ -839,7 +839,7 @@ Namespace Services
                         Dim strokeRow = (y + clipTop - stroke.Top) * sWidth + (clipLeft - stroke.Left)
                         Dim targetRow = y * clipWidth
                         For x = 0 To clipWidth - 1
-                            clipped(targetRow + x) = Math.Min(altPuffer(maskRow + x), sPuffer(strokeRow + x))
+                            clipped(targetRow + x) = Math.Min(oldBuffer(maskRow + x), strokeBuffer(strokeRow + x))
                         Next
                     Next
                     Dim clippedEncoded = EncodeAlphaRaster(clipped, clipWidth, clipHeight)
@@ -866,7 +866,7 @@ Namespace Services
             Dim target = New Byte(width * height - 1) {}
             Dim dx0 = mask.Left - left, dy0 = mask.Top - top
             For y = 0 To oldHeight - 1
-                Buffer.BlockCopy(altPuffer, y * oldWidth, target, (y + dy0) * width + dx0, oldWidth)
+                Buffer.BlockCopy(oldBuffer, y * oldWidth, target, (y + dy0) * width + dx0, oldWidth)
             Next
 
             Dim sx0 = stroke.Left - left, sy0 = stroke.Top - top
@@ -877,7 +877,7 @@ Namespace Services
                 For x = 0 To sWidth - 1
                     Dim zx = x + sx0
                     If zx < 0 OrElse zx >= width Then Continue For
-                    Dim v = sPuffer(sRow + x)
+                    Dim v = strokeBuffer(sRow + x)
                     If v = 0 Then Continue For
                     Dim i = zRow + zx
                     If subtract Then
@@ -917,8 +917,8 @@ Namespace Services
             If mask Is Nothing OrElse stroke Is Nothing OrElse Not mask.IsGradient Then Return False
             If stroke.Right <= stroke.Left OrElse stroke.Bottom <= stroke.Top Then Return False
             Dim sWidth = stroke.Right - stroke.Left, sHeight = stroke.Bottom - stroke.Top
-            Dim sPuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
-            If sPuffer Is Nothing Then Return False
+            Dim strokeBuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
+            If strokeBuffer Is Nothing Then Return False
 
             Dim oldWidth = mask.BrushRight - mask.BrushLeft, oldHeight = mask.BrushBottom - mask.BrushTop
             Dim altHinzu As Byte() = Nothing, altWeg As Byte() = Nothing
@@ -951,7 +951,7 @@ Namespace Services
             For y = 0 To sHeight - 1
                 Dim sRow = y * sWidth, zRow = (y + sy0) * width + sx0
                 For x = 0 To sWidth - 1
-                    Dim v = sPuffer(sRow + x)
+                    Dim v = strokeBuffer(sRow + x)
                     If v = 0 Then Continue For
                     Dim i = zRow + x
                     If v > targetTo(i) Then targetTo(i) = v

@@ -7403,4 +7403,25 @@
   <data name="Aus_der_Luminanzbereichsmaske_eine_Maskenebene_e_9e087404" xml:space="preserve">
     <value>Crear una capa de máscara a partir de la máscara de rango de luminancia</value>
   </data>
+  <data name="Bewertung_konnte_nicht_gespeichert_werden_9fe23e53" xml:space="preserve">
+    <value>No se pudo guardar la valoración</value>
+  </data>
+  <data name="Objektivzuordnung_konnte_nicht_gespeichert_werde_b2a8531d" xml:space="preserve">
+    <value>No se pudo guardar la asignación del objetivo</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_ed1aa935" xml:space="preserve">
+    <value>Escribiendo imágenes: {0} de {1}</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_Kachel_2_von_3_1de140a2" xml:space="preserve">
+    <value>Escribiendo imágenes: {0} de {1}, tesela {2} de {3}</value>
+  </data>
+  <data name="Stapel_abgebrochen_0_von_1_Datei_en_geschrieben_96418f3f" xml:space="preserve">
+    <value>Lote cancelado: {0} de {1} archivo(s) escrito(s)</value>
+  </data>
+  <data name="0_von_1_Datei_en_exportiert_4c8eb640" xml:space="preserve">
+    <value>{0} de {1} archivo(s) exportado(s)</value>
+  </data>
+  <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
+    <value>Cancelar. El lote termina tras la imagen que está calculando; esa imagen no se escribe.</value>
+  </data>
 </root>

@@ -4128,14 +4128,14 @@ Namespace ViewModels
             Set(value As EditorTool)
                 If value = EditorTool.Frame Then value = EditorTool.Effects
                 Dim previousTool = _currentTool
-                Dim verworfen As List(Of String) = Nothing
+                Dim discarded As List(Of String) = Nothing
                 Me.RaiseAndSetIfChanged(_currentTool, value)
                 If previousTool <> value Then
                     ' Jede offene Transaktion hat beim Werkzeugwechsel denselben sichtbaren
                     ' Abschluss: sie wird entweder übernommen oder ihr Verwurf wird benannt.
                     ' Zuschnitt/Größe/Drehung waren bereits korrekt zurückgesetzt, verschwanden
                     ' aber im Gegensatz zu Gitter/Linien kommentarlos aus der Bedienung.
-                    verworfen = DiscardUncommittedToolEdits(previousTool)
+                    discarded = DiscardUncommittedToolEdits(previousTool)
                     ' Ein angefangener Bereichsvorgang gehoert zu dem Werkzeug, in dem er begonnen
                     ' wurde: der laufende Auftrag wird verworfen, und die noch nicht abgelegte
                     ' Bereichs-Angabe darf nicht auf die naechste, in einem anderen Werkzeug
@@ -4158,7 +4158,7 @@ Namespace ViewModels
                     ' ein Wort dazu. Rueckgaengig holt es NICHT zurueck - diese Anfasser stehen im
                     ' Sitzungszustand und nicht im Rezept -, also sagt es die Fusszeile.
                     If HasWarpGridChanges Then
-                        verworfen.Add(LocalizationService.T("Gitter"))
+                        discarded.Add(LocalizationService.T("Gitter"))
                         ResetGrid()
                         Me.RaisePropertyChanged(NameOf(WarpGridValues))
                         Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
@@ -4166,14 +4166,14 @@ Namespace ViewModels
                     ' Dasselbe fuer die Linien: sie sind nichts als der Stand ihrer Griffe, und die
                     ' sieht man nur im Werkzeug.
                     If _linien.Count > 0 Then
-                        If HasLineChanges Then verworfen.Add(LocalizationService.T("Linien"))
+                        If HasLineChanges Then discarded.Add(LocalizationService.T("Linien"))
                         _linien.Clear()
                         RaiseLinesChanged()
                     End If
                     ' Und dasselbe fuer die Verformung: auch sie ist nichts als der Stand ihrer
                     ' zwoelf Anfasser.
                     If HasEnvelopeChanges Then
-                        verworfen.Add(LocalizationService.T("Verformen"))
+                        discarded.Add(LocalizationService.T("Verformen"))
                         ResetEnvelopePoints()
                         RaiseEnvelopeChanged()
                     End If
@@ -4269,9 +4269,9 @@ Namespace ViewModels
                 ' Erst NACH allen ausgelösten Vorschau- und Zustandswechseln melden: die
                 ' Rückstellung plant eine Vorschau und setzt dabei ihren eigenen Statustext. Die
                 ' Erklärung des Werkzeugwechsels ist für den Nutzer der wichtigere Abschluss.
-                If previousTool <> value AndAlso verworfen IsNot Nothing AndAlso verworfen.Count > 0 Then
+                If previousTool <> value AndAlso discarded IsNot Nothing AndAlso discarded.Count > 0 Then
                     StatusText = LocalizationService.T("Beim Werkzeugwechsel verworfen: ") &
-                                 String.Join(", ", verworfen)
+                                 String.Join(", ", discarded)
                 End If
             End Set
         End Property
@@ -5321,8 +5321,11 @@ Namespace ViewModels
                 CaptureUndoState(NameOf(LensAssignment))
                 If String.IsNullOrWhiteSpace(_objektivExifName) Then
                     _lensModel = newValue
-                Else
-                    LensDataService.SetAssignment(_objektivExifName, newValue)
+                ElseIf Not LensDataService.SetAssignment(_objektivExifName, newValue) Then
+                    ' Die Zuordnung wirkt, ist aber nicht in den Einstellungen gelandet - sie gilt
+                    ' also nur bis zum Beenden. Das gehoert gesagt: vorher sah es aus wie gemerkt,
+                    ' und nach dem naechsten Start stand wieder das erkannte Objektiv da.
+                    StatusText = LocalizationService.T("Objektivzuordnung konnte nicht gespeichert werden")
                 End If
                 RefreshLensCorrection()
                 RebuildWorkingImageForLens()
@@ -8151,12 +8154,13 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Wie der Weg im REZEPT heisst. Die Namen stehen in gespeicherten Rezepten und in
-        ''' Begleitdateien - sie bleiben, wie sie sind, sonst liest eine aeltere Aufnahme ins Leere.</summary>
+        ''' Begleitdateien - sie bleiben, wie sie sind, sonst liest eine aeltere Aufnahme ins Leere.
+        '''
+        ''' Die Zuordnung selbst gehoert dem Dienst (<see cref="DenoiseModelService.RecipeNameFor"/>):
+        ''' sie stand hier und im Nachziehweg getrennt, und beide rieten bei einem unbekannten Namen
+        ''' auf "gruendlich".</summary>
         Private Shared Function DenoiseRecipeName(kind As DenoiseModelService.DenoiseKind) As String
-            Select Case kind
-                Case DenoiseModelService.DenoiseKind.Fast : Return "fast"
-                Case Else : Return "quality"
-            End Select
+            Return DenoiseModelService.RecipeNameFor(kind)
         End Function
 
         ''' <summary>Ob ueberhaupt einer der Wege da ist. Der Staerke-Regler gehoert zu beiden, also
@@ -13213,6 +13217,9 @@ Namespace ViewModels
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
+                ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
+                ' Dateinamen danach.
+                _mainVm?.RefreshWindowTitle()
             Catch
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
@@ -13485,6 +13492,9 @@ Namespace ViewModels
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
+                ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
+                ' Dateinamen danach.
+                _mainVm?.RefreshWindowTitle()
             Catch ex As Exception
                 StatusText = LocalizationService.T("Fehler beim Laden")
             End Try
@@ -16218,7 +16228,7 @@ Namespace ViewModels
         ''' Applied-Felder liest - dieser Reset sorgt zusätzlich dafür, dass auch die Live-Vorschau
         ''' und die Eingabefelder selbst wieder den angewendeten Stand zeigen).
         Private Function DiscardUncommittedToolEdits(previousTool As EditorTool) As List(Of String)
-            Dim verworfen As New List(Of String)()
+            Dim discarded As New List(Of String)()
             Dim reverted = False
             Select Case previousTool
                 Case EditorTool.Crop
@@ -16236,7 +16246,7 @@ Namespace ViewModels
                             SetCropValues(0, 0, 0, 0)
                         End If
                         reverted = True
-                        verworfen.Add(LocalizationService.T("Zuschnitt"))
+                        discarded.Add(LocalizationService.T("Zuschnitt"))
                     End If
                 Case EditorTool.Resize
                     If HasImageResizeChanges Then
@@ -16255,7 +16265,7 @@ Namespace ViewModels
                     End If
                     If reverted Then
                         Me.RaisePropertyChanged(NameOf(OutputSizeText))
-                        verworfen.Add(LocalizationService.T("Bildgröße"))
+                        discarded.Add(LocalizationService.T("Bildgröße"))
                     End If
                 Case EditorTool.Rotate, EditorTool.Transform
                     If HasTransformChanges Then
@@ -16267,14 +16277,14 @@ Namespace ViewModels
                         Me.RaisePropertyChanged(NameOf(StraightenDegrees))
                         Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
                         reverted = True
-                        verworfen.Add(LocalizationService.T("Drehen und Verzerren"))
+                        discarded.Add(LocalizationService.T("Drehen und Verzerren"))
                     End If
             End Select
             If reverted Then
                 RaiseResetButtonStateChanged()
                 ScheduleToolPreviewUpdate()
             End If
-            Return verworfen
+            Return discarded
         End Function
 
         Private Sub ClearUndoHistory()

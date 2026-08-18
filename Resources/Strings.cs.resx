@@ -7443,4 +7443,25 @@
   <data name="Aus_der_Luminanzbereichsmaske_eine_Maskenebene_e_9e087404" xml:space="preserve">
     <value>Vytvořit vrstvu masky z masky rozsahu jasu</value>
   </data>
+  <data name="Bewertung_konnte_nicht_gespeichert_werden_9fe23e53" xml:space="preserve">
+    <value>Hodnocení se nepodařilo uložit</value>
+  </data>
+  <data name="Objektivzuordnung_konnte_nicht_gespeichert_werde_b2a8531d" xml:space="preserve">
+    <value>Přiřazení objektivu se nepodařilo uložit</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_ed1aa935" xml:space="preserve">
+    <value>Probíhá zápis obrázků: {0} z {1}</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_Kachel_2_von_3_1de140a2" xml:space="preserve">
+    <value>Probíhá zápis obrázků: {0} z {1}, dlaždice {2} z {3}</value>
+  </data>
+  <data name="Stapel_abgebrochen_0_von_1_Datei_en_geschrieben_96418f3f" xml:space="preserve">
+    <value>Dávka přerušena: zapsáno souborů {0} z {1}</value>
+  </data>
+  <data name="0_von_1_Datei_en_exportiert_4c8eb640" xml:space="preserve">
+    <value>Exportováno souborů: {0} z {1}</value>
+  </data>
+  <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
+    <value>Zrušit. Dávka skončí po obrázku, který se právě počítá; tento obrázek se nezapíše.</value>
+  </data>
 </root>

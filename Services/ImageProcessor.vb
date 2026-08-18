@@ -336,11 +336,20 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Ein vermerkter Entrausch-Durchlauf. Nothing, wenn seine Modelldatei fehlt.</summary>
+        ''' <summary>Ein vermerkter Entrausch-Durchlauf. Nothing, wenn seine Modelldatei fehlt oder
+        ''' der Vermerk eine Modellart nennt, die diese Fassung nicht kennt - dann bleibt der
+        ''' Vorgang liegen, statt mit einem ANDEREN Modell nachgezogen zu werden. Ein Bild, das
+        ''' anders aussieht als beim letzten Mal, ist schlechter als eines, dem etwas fehlt und das
+        ''' es sagt.</summary>
         Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation,
                                                 cancel As Threading.CancellationToken) As SKBitmap
-            Dim kind = If(String.Equals(op.DenoiseModel, "fast", StringComparison.OrdinalIgnoreCase),
-                          DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.DenoiseKind.Quality)
+            Dim known = DenoiseModelService.KindFromRecipeName(op.DenoiseModel)
+            If Not known.HasValue Then
+                DiagnosticLogService.LogAlways("Entrauschen",
+                    $"Vermerk nennt die unbekannte Modellart '{op.DenoiseModel}' - der Vorgang wird nicht nachgezogen")
+                Return Nothing
+            End If
+            Dim kind = known.Value
             If kind = DenoiseModelService.DenoiseKind.Fast Then
                 If Not DenoiseModelService.FastAvailable Then Return Nothing
             ElseIf Not DenoiseModelService.Available Then

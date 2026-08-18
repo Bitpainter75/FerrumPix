@@ -7403,4 +7403,25 @@
   <data name="Aus_der_Luminanzbereichsmaske_eine_Maskenebene_e_9e087404" xml:space="preserve">
     <value>Aus der Luminanzbereichsmaske eine Maskenebene erstellen</value>
   </data>
+  <data name="Bewertung_konnte_nicht_gespeichert_werden_9fe23e53" xml:space="preserve">
+    <value>Bewertung konnte nicht gespeichert werden</value>
+  </data>
+  <data name="Objektivzuordnung_konnte_nicht_gespeichert_werde_b2a8531d" xml:space="preserve">
+    <value>Objektivzuordnung konnte nicht gespeichert werden</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_ed1aa935" xml:space="preserve">
+    <value>Bilder werden geschrieben: {0} von {1}</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_Kachel_2_von_3_1de140a2" xml:space="preserve">
+    <value>Bilder werden geschrieben: {0} von {1}, Kachel {2} von {3}</value>
+  </data>
+  <data name="Stapel_abgebrochen_0_von_1_Datei_en_geschrieben_96418f3f" xml:space="preserve">
+    <value>Stapel abgebrochen: {0} von {1} Datei(en) geschrieben</value>
+  </data>
+  <data name="0_von_1_Datei_en_exportiert_4c8eb640" xml:space="preserve">
+    <value>{0} von {1} Datei(en) exportiert</value>
+  </data>
+  <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
+    <value>Abbrechen. Der Stapel endet nach dem Bild, an dem er gerade rechnet; dieses Bild wird nicht geschrieben.</value>
+  </data>
 </root>

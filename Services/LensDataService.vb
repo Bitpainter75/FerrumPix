@@ -412,22 +412,30 @@ Namespace Services
             End SyncLock
         End Function
 
-        ''' <summary>Ein Objektiv von Hand zuordnen. Leeres Modell loest die Zuordnung wieder.</summary>
-        Public Shared Sub SetAssignment(exifName As String, modell As String)
-            If String.IsNullOrWhiteSpace(exifName) Then Return
+        ''' <summary>Ein Objektiv von Hand zuordnen. Leeres Modell loest die Zuordnung wieder.
+        '''
+        ''' FALSE heisst: die Zuordnung ist NICHT dauerhaft. Sie gilt dann fuer diese Sitzung und ist
+        ''' nach dem naechsten Start weg - vorher verschwand der Fehlschlag hier wortlos und ohne
+        ''' Protokolleintrag, und dem Nutzer sah niemand an, warum seine Wahl nicht wiederkam.</summary>
+        Public Shared Function SetAssignment(exifName As String, model As String) As Boolean
+            If String.IsNullOrWhiteSpace(exifName) Then Return False
+            Dim saved = False
             SyncLock _zuordnungLock
-                Dim z = Zuordnungen()
-                If String.IsNullOrWhiteSpace(modell) Then z.Remove(exifName) Else z(exifName) = modell
+                Dim assignments = Zuordnungen()
+                If String.IsNullOrWhiteSpace(model) Then assignments.Remove(exifName) Else assignments(exifName) = model
                 Try
                     Dim settings = AppSettingsService.Load()
-                    settings.LensAssignments = z.Select(Function(p) New LensAssignment With {
+                    settings.LensAssignments = assignments.Select(Function(p) New LensAssignment With {
                         .ExifName = p.Key, .Modell = p.Value}).ToList()
                     AppSettingsService.Save(settings)
-                Catch
+                    saved = True
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Objektivdaten.Zuordnung", ex)
                 End Try
             End SyncLock
             ClearFileCache()
-        End Sub
+            Return saved
+        End Function
 
         Public Shared Function ZuordnungFuer(exifName As String) As String
             If String.IsNullOrWhiteSpace(exifName) Then Return ""

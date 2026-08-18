@@ -708,14 +708,23 @@ Namespace Services
 
         ' Die Hauptversion des Servers entscheidet, wie ein vorhandenes Asset ersetzt wird (siehe
         ' ReplaceAssetAsync). Sie ändert sich nur bei einem Server-Update, daher je Server einmal abfragen.
-        Private Shared _serverMajorVersion As Integer = -1
+        '
+        ' ZWEI Regeln dabei: gemerkt wird nur eine ECHTE Antwort (>= 1). Eine 0 heisst "nicht
+        ' ermittelbar" - meist, weil der Server gerade nicht erreichbar war -, und die dauerhaft zu
+        ' behalten hiesse, bis zum Neustart mit dem falschen Ersetzen-Weg zu arbeiten. Und beide
+        ' Felder gehoeren zusammen, also stehen sie unter einer Sperre; sonst kann ein zweiter Faden
+        ' die Version des einen Servers unter dem Schluessel des anderen lesen.
+        Private Shared ReadOnly _serverVersionLock As New Object()
+        Private Shared _serverMajorVersion As Integer = 0
         Private Shared _serverVersionKey As String = Nothing
 
         ''' <summary>Hauptversion des Immich-Servers (GET /server/version), 0 wenn nicht ermittelbar.</summary>
         Public Shared Async Function GetServerMajorVersionAsync(Optional cancellationToken As CancellationToken = Nothing) As Task(Of Integer)
             If Not IsConfigured Then Return 0
             Dim key = NormalizeServerUrl(AppSettingsService.Load().ImmichServerUrl)
-            If _serverMajorVersion >= 0 AndAlso String.Equals(_serverVersionKey, key, StringComparison.Ordinal) Then Return _serverMajorVersion
+            SyncLock _serverVersionLock
+                If _serverMajorVersion >= 1 AndAlso String.Equals(_serverVersionKey, key, StringComparison.Ordinal) Then Return _serverMajorVersion
+            End SyncLock
             Try
                 Dim client = GetClient()
                 Using resp = Await client.GetAsync(ApiUrl("server/version"), cancellationToken).ConfigureAwait(False)
@@ -723,8 +732,12 @@ Namespace Services
                     Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
                     Dim dto = JsonSerializer.Deserialize(Of ImmichVersionDto)(body, JsonOptions)
                     Dim major = If(dto Is Nothing, 0, dto.Major)
-                    _serverMajorVersion = major
-                    _serverVersionKey = key
+                    If major >= 1 Then
+                        SyncLock _serverVersionLock
+                            _serverMajorVersion = major
+                            _serverVersionKey = key
+                        End SyncLock
+                    End If
                     Return major
                 End Using
             Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
@@ -740,13 +753,9 @@ Namespace Services
         ''' Ersetzen oder Löschen zwingend - sonst zeigt die Galerie das Bild von vorher weiter.</summary>
         Public Shared Sub InvalidateAssetCaches(assetId As String)
             If String.IsNullOrWhiteSpace(assetId) Then Return
-            Try
-                For Each sizeKey In {ThumbnailSize, PreviewSize}
-                    Dim cachePath = GetCacheFilePath(assetId, sizeKey)
-                    If File.Exists(cachePath) Then File.Delete(cachePath)
-                Next
-            Catch
-            End Try
+            ' ALLE Fassungen des Assets, nicht nur die eine ohne Versionsmarke: seit die Marke im
+            ' Dateinamen steht, kann zu einem Asset mehr als eine Datei je Groesse liegen.
+            DeleteAssetCacheFiles(assetId, Nothing, Nothing)
             Try
                 If Directory.Exists(ImmichTempDir) Then
                     For Each temp In Directory.GetFiles(ImmichTempDir, SafeFileStem(assetId) & ".*")
@@ -1392,8 +1401,13 @@ Namespace Services
 
         ''' <summary>Lädt ein Thumbnail als Avalonia-Bitmap - zuerst aus dem lokalen Diskcache, sonst
         ''' per HTTP mit anschließendem Cachen. Liefert Nothing bei Abbruch/Fehler.</summary>
-        Public Shared Async Function LoadThumbnailBitmapAsync(assetId As String, size As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of Bitmap)
-            Dim bytes = Await GetThumbnailBytesAsync(assetId, size, cancellationToken).ConfigureAwait(False)
+        ''' <param name="version">Immichs <c>updatedAt</c> des Assets. Es gehoert in den Namen der
+        ''' abgelegten Datei, sonst zeigt ein anderswo bearbeitetes Bild dauerhaft seine alte
+        ''' Kachel. Ohne Angabe bleibt es beim Namen ohne Fassung.</param>
+        Public Shared Async Function LoadThumbnailBitmapAsync(assetId As String, size As String,
+                                                             Optional cancellationToken As CancellationToken = Nothing,
+                                                             Optional version As String = Nothing) As Task(Of Bitmap)
+            Dim bytes = Await GetThumbnailBytesAsync(assetId, size, cancellationToken, version).ConfigureAwait(False)
             If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
             cancellationToken.ThrowIfCancellationRequested()
             Try
@@ -1416,8 +1430,9 @@ Namespace Services
         ''' Der Weg nutzt denselben Zwischenspeicher wie die Anzeige - ein Durchlauf ueber einen
         ''' bereits angesehenen Ordner holt also gar nichts mehr vom Server.</summary>
         Public Shared Async Function GetPreviewBytesAsync(assetId As String,
-                                                          Optional cancellationToken As CancellationToken = Nothing) As Task(Of Byte())
-            Return Await GetThumbnailBytesAsync(assetId, PreviewSize, cancellationToken).ConfigureAwait(False)
+                                                          Optional cancellationToken As CancellationToken = Nothing,
+                                                          Optional version As String = Nothing) As Task(Of Byte())
+            Return Await GetThumbnailBytesAsync(assetId, PreviewSize, cancellationToken, version).ConfigureAwait(False)
         End Function
 
         ''' <summary>Schreibt die Personen eines Assets als Stichworte zurueck nach Immich.
@@ -1453,11 +1468,12 @@ Namespace Services
             Return written
         End Function
 
-        Private Shared Async Function GetThumbnailBytesAsync(assetId As String, size As String, cancellationToken As CancellationToken) As Task(Of Byte())
+        Private Shared Async Function GetThumbnailBytesAsync(assetId As String, size As String, cancellationToken As CancellationToken,
+                                                            Optional version As String = Nothing) As Task(Of Byte())
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) Then Return Nothing
             Dim sizeKey = If(String.Equals(size, PreviewSize, StringComparison.OrdinalIgnoreCase), PreviewSize, ThumbnailSize)
 
-            Dim cachePath = GetCacheFilePath(assetId, sizeKey)
+            Dim cachePath = GetCacheFilePath(assetId, sizeKey, version)
             Try
                 If File.Exists(cachePath) Then
                     Return Await File.ReadAllBytesAsync(cachePath, cancellationToken).ConfigureAwait(False)
@@ -1483,6 +1499,9 @@ Namespace Services
                         Return Nothing
                     End If
                     Await TryWriteCacheAsync(cachePath, bytes, cancellationToken).ConfigureAwait(False)
+                    ' Die Vorgaenger dieses Assets wegraeumen - sonst waechst der Zwischenspeicher
+                    ' mit jeder Bearbeitung um eine Fassung, die niemand mehr liest.
+                    If Not String.IsNullOrWhiteSpace(version) Then DeleteAssetCacheFiles(assetId, sizeKey, cachePath)
                     Return bytes
                 End Using
             Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
@@ -1825,10 +1844,47 @@ Namespace Services
             End Get
         End Property
 
-        Private Shared Function GetCacheFilePath(assetId As String, sizeKey As String) As String
+        Private Shared Function GetCacheFilePath(assetId As String, sizeKey As String,
+                                                 Optional version As String = Nothing) As String
             ' Nach Server getrennt ablegen, damit ein Serverwechsel keine fremden Thumbnails zeigt.
-            Return IO.Path.Combine(CacheRoot, ServerKey, $"{SafeFileStem(assetId)}_{sizeKey}.img")
+            '
+            ' Und die FASSUNG des Assets gehoert in den Namen (Immichs updatedAt). Ohne sie zeigte
+            ' ein anderswo bearbeitetes Bild dauerhaft seine alte Kachel - der Name war derselbe,
+            ' also wurde nie neu geholt. Bei Nextcloud macht der Etag dasselbe.
+            Return IO.Path.Combine(CacheRoot, ServerKey, $"{CacheFileStem(assetId, version)}_{sizeKey}.img")
         End Function
+
+        Private Shared Function CacheFileStem(assetId As String, version As String) As String
+            Dim stem = SafeFileStem(assetId)
+            If String.IsNullOrWhiteSpace(version) Then Return stem
+            Return stem & "-" & ShortHash(version)
+        End Function
+
+        ''' <summary>Loescht die abgelegten Kacheln eines Assets. <paramref name="sizeKey"/> leer
+        ''' heisst "alle Groessen"; <paramref name="keepPath"/> bleibt stehen - so raeumt der frisch
+        ''' geholte Stand seine Vorgaenger selbst weg, statt sie bis zum naechsten Leeren des
+        ''' Zwischenspeichers liegen zu lassen.</summary>
+        Private Shared Sub DeleteAssetCacheFiles(assetId As String, sizeKey As String, keepPath As String)
+            Try
+                Dim dir = IO.Path.Combine(CacheRoot, ServerKey)
+                If Not Directory.Exists(dir) Then Return
+                Dim stem = SafeFileStem(assetId)
+                ' NICHT "file" als Schleifenname: VB unterscheidet keine Gross- und Kleinschreibung,
+                ' der Name verdeckte die Klasse File und File.Delete waere unerreichbar.
+                For Each cached In Directory.EnumerateFiles(dir, stem & "*.img")
+                    If keepPath IsNot Nothing AndAlso String.Equals(cached, keepPath, StringComparison.Ordinal) Then Continue For
+                    ' Der Name eines ANDEREN Assets darf nicht mitgehen, nur weil er mit demselben
+                    ' Text beginnt: hinter der Kennung steht entweder "-" (Fassung) oder "_" (Groesse).
+                    Dim rest = IO.Path.GetFileName(cached).Substring(stem.Length)
+                    If Not rest.StartsWith("-", StringComparison.Ordinal) AndAlso
+                       Not rest.StartsWith("_", StringComparison.Ordinal) Then Continue For
+                    If Not String.IsNullOrEmpty(sizeKey) AndAlso
+                       Not rest.EndsWith("_" & sizeKey & ".img", StringComparison.Ordinal) Then Continue For
+                    Try : File.Delete(cached) : Catch : End Try
+                Next
+            Catch
+            End Try
+        End Sub
 
         Private Shared Function SafeFileStem(value As String) As String
             ' Asset-IDs sind UUIDs (dateisystemsicher); zur Sicherheit dennoch säubern.

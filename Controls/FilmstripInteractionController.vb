@@ -118,42 +118,23 @@ Namespace Controls
             _tracker.RequestRange(items, firstVisible, lastVisible)
         End Sub
 
+        ''' <summary>Die Schnellvorschau selbst liegt in <see cref="QuickPreviewController"/> - sie
+        ''' arbeitet hier genauso wie in der Galerie, und zwei Umsetzungen daneben sind zweimal
+        ''' dieselben Fallen (ueberholter Decode, nicht freigegebene Bitmap, Serverbild).</summary>
+        Private ReadOnly _preview As New QuickPreviewController()
+
         Public Sub ShowPreview(item As ImageItem)
             If item Is Nothing Then Return
             Dim overlay = _owner.FindControl(Of Panel)("FilmstripPreviewOverlay")
             Dim img = _owner.FindControl(Of Avalonia.Controls.Image)("FilmstripPreviewImage")
             If overlay Is Nothing OrElse img Is Nothing Then Return
-            img.Source = item.Thumbnail
-            overlay.IsVisible = True
+            _preview.Show(overlay, img, item)
             _owner.Focus()
-            LoadFullPreviewAsync(overlay, img, item)
-        End Sub
-
-        Private Async Sub LoadFullPreviewAsync(overlay As Panel, img As Avalonia.Controls.Image, item As ImageItem)
-            ' Videos lassen sich nicht als Vollbild-Bitmap dekodieren - das würde nur leise
-            ' fehlschlagen und die Vorschau leer lassen. Stattdessen bleibt das bereits gesetzte
-            ' Thumbnail (Standbild) sichtbar.
-            If item.IsVideoFile Then Return
-            Try
-                ' Ein Serverbild liegt auf KEINER Platte - sein Pfad ist eine Kennung. Ohne diesen
-                ' Schritt bekam der Dekoder "nextcloud://123/Bild.jpg" bzw. "immich://..." zu sehen
-                ' und lieferte still nichts; sichtbar blieb das Vorschaubild. Geholt wird nur auf
-                ' die ausdrueckliche Geste hin, und eine schon geholte Kopie wird wiederverwendet.
-                Dim path = If(item.IsRemoteAsset, Await item.EnsureLocalOriginalAsync(), item.FilePath)
-                If String.IsNullOrEmpty(path) Then Return
-                If Not overlay.IsVisible Then Return
-
-                ' Auto-Variante: erkennt Buendel (Komposit), RAW und PSD, die SkiaSharp nicht
-                ' direkt dekodiert.
-                Dim bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(path))
-                If overlay.IsVisible Then img.Source = bmp
-            Catch
-            End Try
         End Sub
 
         Public Sub HidePreview()
-            Dim overlay = _owner.FindControl(Of Panel)("FilmstripPreviewOverlay")
-            If overlay IsNot Nothing Then overlay.IsVisible = False
+            _preview.Hide(_owner.FindControl(Of Panel)("FilmstripPreviewOverlay"),
+                          _owner.FindControl(Of Avalonia.Controls.Image)("FilmstripPreviewImage"))
         End Sub
     End Class
 

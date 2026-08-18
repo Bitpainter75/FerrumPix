@@ -1657,42 +1657,25 @@ Namespace Views
             ' Auswahl-Abzeichen, nicht ueber dieses Ereignis der Liste.
         End Sub
 
-        Private Async Sub ShowQuickPreview(item As ImageItem)
+        ''' <summary>Die Schnellvorschau liegt in <see cref="QuickPreviewController"/> - derselbe Weg
+        ''' wie am Filmstreifen, samt Serverbild, ueberholtem Decode und Freigabe der Bitmap.</summary>
+        Private ReadOnly _quickPreview As New QuickPreviewController()
+
+        Private Sub ShowQuickPreview(item As ImageItem)
             Dim overlay = Me.FindControl(Of Panel)("PreviewOverlay")
             Dim img = Me.FindControl(Of Avalonia.Controls.Image)("PreviewImage")
             If overlay Is Nothing OrElse img Is Nothing Then Return
-            img.Source = item.Thumbnail
-            overlay.IsVisible = True
+            _quickPreview.Show(overlay, img, item)
             Me.Focus()
-            Try
-                ' Auto-Variante: erkennt Buendel (Komposit), RAW, PSD und ueber den HEIF-Zweig in
-                ' LoadOrientedAvaloniaBitmapAuto auch HEIC/HEIF/AVIF - derselbe Weg wie die
-                ' Filmstrip-Vorschau.
-                '
-                ' RAW BEKOMMT HIER KEINEN EIGENEN ZWEIG. Er stand einmal hier und nahm der
-                ' Schnellvorschau zwei Dinge, die die Auto-Variante mitbringt:
-                '
-                ' 1. die Drehung aus dem Sidecar (RawSidecarService.ReadRotationDegrees) - eine im
-                '    Betrachter gedrehte RAW steckt ihre Drehung nicht in die Pixel, sondern neben
-                '    die Datei. Ohne das stand sie hier wieder ungedreht.
-                ' 2. rawContainerPath, ueber das RawPreviewOrigin die Orientierung des CONTAINERS
-                '    heranzieht, wenn die eingebettete Vorschau kein eigenes Tag traegt. Ohne das
-                '    steht die Vorschau quer zur Entwicklung.
-                '
-                ' Beides sind genau die Fehlerbilder, vor denen die Kommentare an jenen Stellen
-                ' warnen. Die Auto-Variante kann RAW bereits vollstaendig - ein zweiter Weg daneben
-                ' kann hier nur schlechter sein.
-                Dim bmp = Await Task.Run(Function() ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(item.FilePath))
-                If overlay.IsVisible AndAlso bmp IsNot Nothing Then img.Source = bmp
-            Catch
-            End Try
+        End Sub
+
+        Private Sub HideQuickPreview()
+            _quickPreview.Hide(Me.FindControl(Of Panel)("PreviewOverlay"),
+                               Me.FindControl(Of Avalonia.Controls.Image)("PreviewImage"))
         End Sub
 
         Public Sub OnGlobalPointerReleased(sender As Object, e As PointerReleasedEventArgs)
-            If e.InitialPressMouseButton = MouseButton.Middle Then
-                Dim overlay = Me.FindControl(Of Panel)("PreviewOverlay")
-                If overlay IsNot Nothing Then overlay.IsVisible = False
-            End If
+            If e.InitialPressMouseButton = MouseButton.Middle Then HideQuickPreview()
         End Sub
 
         Public Sub OnThumbnailDoubleTapped(sender As Object, e As TappedEventArgs)
@@ -2671,8 +2654,7 @@ Namespace Views
 
         Public Sub HandleKeyUp(sender As Object, e As KeyEventArgs)
             If e.Key <> Key.Space OrElse Not _spaceOverviewActive Then Return
-            Dim overlay = Me.FindControl(Of Panel)("PreviewOverlay")
-            If overlay IsNot Nothing Then overlay.IsVisible = False
+            HideQuickPreview()
             _spaceOverviewActive = False
             e.Handled = True
         End Sub

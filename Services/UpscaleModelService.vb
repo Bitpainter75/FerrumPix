@@ -113,14 +113,24 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Der Eintrag zu einem Schluessel, oder der erste vorhandene.</summary>
+        ''' <summary>Der Eintrag zu einem Schluessel, oder der erste vorhandene.
+        '''
+        ''' Der Rueckfall ist Absicht - ein Rezept mit einem Modell, das inzwischen geloescht wurde,
+        ''' soll trotzdem ein Ergebnis liefern. Er STAND aber nirgends: das Bild sah anders aus als
+        ''' beim letzten Mal, und niemand konnte sagen, warum. Deshalb eine Zeile ins Protokoll.</summary>
         Public Shared Function ModelFor(key As String) As UpscaleModel
             Dim match = KnownModels.FirstOrDefault(
                 Function(m) String.Equals(m.Key, key, StringComparison.OrdinalIgnoreCase))
             If match IsNot Nothing AndAlso Not String.IsNullOrEmpty(AiModelService.BestFile(match.Key)) Then
                 Return match
             End If
-            Return AvailableModels.FirstOrDefault()
+            Dim fallback = AvailableModels.FirstOrDefault()
+            If Not String.IsNullOrWhiteSpace(key) AndAlso fallback IsNot Nothing AndAlso
+               Not String.Equals(fallback.Key, key, StringComparison.OrdinalIgnoreCase) Then
+                DiagnosticLogService.LogAlways("Hochskalieren",
+                    $"Modell '{key}' fehlt - es wird mit '{fallback.Key}' gerechnet")
+            End If
+            Return fallback
         End Function
 
         ''' <summary>Das Bild vergroessern. Zurueck kommt eine KOPIE, oder Nothing bei jedem
@@ -129,7 +139,12 @@ Namespace Services
         ''' Der Massstab kommt aus dem MODELL und nicht aus einem Wunsch: ein Vierfach-Modell macht
         ''' vierfach. Wer eine andere Zielgroesse will, laesst danach gewoehnlich skalieren - vom
         ''' Grossen herunter ist ein Mitteln und verliert nichts, im Gegensatz zum Hinaufrechnen.</summary>
-        Public Shared Function Upscale(image As SKBitmap, key As String) As SKBitmap
+        ''' <param name="cancel">Abbruch durch den Nutzer, geprueft an der KACHELGRENZE - dieselbe
+        ''' Stelle wie beim Entrauschen, denn ein laufender Modelldurchlauf laesst sich nicht
+        ''' mittendrin anhalten. Wird abgebrochen, kommt NOTHING zurueck; ein halb vergroessertes
+        ''' Bild darf der Aufrufer gar nicht erst in die Finger bekommen.</param>
+        Public Shared Function Upscale(image As SKBitmap, key As String,
+                                       Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
             If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
             If image.ColorType <> SKColorType.Bgra8888 Then Return Nothing
             Dim model = ModelFor(key)
@@ -177,6 +192,18 @@ Namespace Services
                 While y < image.Height
                     Dim x = 0
                     While x < image.Width
+                        ' ABBRUCH an der Kachelgrenze - die einzige Stelle, an der es sauber geht.
+                        ' Zurueck kommt Nothing, nicht das halbe Ergebnis: ein Bild, das oben
+                        ' vergroessert ist und unten nicht, waere das schlechteste aller Enden.
+                        If cancel.IsCancellationRequested Then
+                            DiagnosticLogService.LogAlways("Hochskalieren",
+                                $"abgebrochen nach {done} von {tiles} Kacheln")
+                            ' Das Zielbild von Hand abraeumen: es haengt an einer lokalen Variablen
+                            ' und nicht in einem Using, und bei vierfacher Vergroesserung sind das
+                            ' schnell mehrere hundert Megabyte.
+                            result.Dispose()
+                            Return Nothing
+                        End If
                         ' Der Ausschnitt darf ueber den Bildrand hinausragen; er wird dann nach
                         ' innen geschoben. Ein beschnittener Randstreifen waere kleiner als die
                         ' Kachel, und das ist bei diesen Modellen zwar erlaubt, kostet aber eine

@@ -1572,7 +1572,10 @@ Namespace Models
         ''' "fertig" (State 2), um Wiederhol-Stürme gegen einen ausgefallenen Server zu vermeiden.</summary>
         Private Async Function LoadImmichThumbnailAsync(token As CancellationToken, generation As Integer) As Task
             Try
-                Dim bmp = Await ImmichService.LoadThumbnailBitmapAsync(_immichAssetId, ImmichService.ThumbnailSize, token)
+                ' MIT der Fassung des Assets: ohne sie behielt eine anderswo bearbeitete Aufnahme
+                ' ihre alte Kachel, weil die abgelegte Datei denselben Namen trug.
+                Dim bmp = Await ImmichService.LoadThumbnailBitmapAsync(_immichAssetId, ImmichService.ThumbnailSize,
+                                                                       token, _immichUpdatedAt)
                 If token.IsCancellationRequested Then
                     bmp?.Dispose()
                     SetThumbStateAfterLoad(0, generation)

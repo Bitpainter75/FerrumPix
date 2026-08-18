@@ -64,6 +64,34 @@ Namespace Services
             End Select
         End Function
 
+        ''' <summary>Der Name, unter dem ein Durchlauf im REZEPT vermerkt wird (BakedOperation).
+        '''
+        ''' EINE Stelle fuer beide Richtungen, zusammen mit <see cref="KindFromRecipeName"/>. Vorher
+        ''' stand die Zuordnung im Editor und im Nachziehweg getrennt, und beide fielen bei allem,
+        ''' was nicht "fast" hiess, auf "gruendlich" zurueck: ein dritter Weg wuerde damit still als
+        ''' gruendlich vermerkt und beim Oeffnen mit dem falschen Modell nachgezogen. Wer die
+        ''' Aufzaehlung erweitert, muss hier vorbei - Unbekanntes wird abgewiesen statt geraten.</summary>
+        Public Shared Function RecipeNameFor(kind As DenoiseKind) As String
+            Select Case kind
+                Case DenoiseKind.Fast : Return "fast"
+                Case DenoiseKind.Quality : Return "quality"
+                Case Else
+                    DiagnosticLogService.LogAlways("Entrauschen", $"unbekannte Modellart {CInt(kind)} - Vermerk bleibt leer")
+                    Return ""
+            End Select
+        End Function
+
+        ''' <summary>Die Gegenrichtung: aus dem Vermerk im Rezept die Modellart. NOTHING heisst
+        ''' "kenne ich nicht" - der Aufrufer laesst den Vorgang dann liegen, statt ihn mit einem
+        ''' anderen Modell nachzuziehen. Ein leerer Vermerk stammt aus der Zeit vor dem Feld und
+        ''' meint die Vorgabe.</summary>
+        Public Shared Function KindFromRecipeName(name As String) As DenoiseKind?
+            If String.IsNullOrWhiteSpace(name) Then Return DenoiseKind.Quality
+            If String.Equals(name, "fast", StringComparison.OrdinalIgnoreCase) Then Return DenoiseKind.Fast
+            If String.Equals(name, "quality", StringComparison.OrdinalIgnoreCase) Then Return DenoiseKind.Quality
+            Return Nothing
+        End Function
+
         ''' <summary>Der Name des Weges fuer den Bericht. NICHT "NameOf" nennen - das ist in VB ein
         ''' Schluesselwort, und der Name waere still ueberdeckt.</summary>
         Private Shared Function KindName(kind As DenoiseKind) As String

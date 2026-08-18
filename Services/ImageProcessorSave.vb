@@ -367,7 +367,8 @@ Namespace Services
                                          Optional preserveMetadata As Boolean = True,
                                          Optional workingFull As SKBitmap = Nothing,
                                          Optional developRaw As Boolean = True,
-                                         Optional applyPendingBaked As Boolean = False) As Boolean
+                                         Optional applyPendingBaked As Boolean = False,
+                                         Optional cancel As Threading.CancellationToken = Nothing) As Boolean
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
             ' hier fälschlich die RAW-Rohdaten JPEG-kodiert über die Original-RAW-Datei schreiben.
@@ -413,11 +414,19 @@ Namespace Services
                 ' nebeneinanderlegt. Und VOR der Reglerkette, weil sie zum Bild gehoeren und nicht
                 ' zu den Reglern.
                 If workingFull Is Nothing AndAlso applyPendingBaked AndAlso decoded IsNot Nothing Then
-                    Dim reapplied = ApplyPendingBakedOperations(decoded, adj)
+                    Dim reapplied = ApplyPendingBakedOperations(decoded, adj, cancel)
                     If reapplied IsNot Nothing Then
                         decoded.Dispose()
                         decoded = reapplied
                     End If
+                End If
+
+                ' ABGEBROCHEN heisst: KEINE Datei. Ein Entrauschen, das der Nutzer angehalten hat,
+                ' gibt Nothing zurueck - ohne diese Frage liefe der Weg weiter und schriebe das
+                ' Bild ohne den Vorgang, den der Stapel gerade versprochen hat.
+                If cancel.IsCancellationRequested Then
+                    decoded?.Dispose()
+                    Return False
                 End If
 
                 ' Hochskalieren mit Modell - HIER und nur hier, also im Speicherweg. Es steht VOR der
@@ -426,10 +435,16 @@ Namespace Services
                 ' Speicher reicht nicht), wird gespeichert wie ohne - eine Vergroesserung, die nicht
                 ' geht, darf keine Datei kosten.
                 If decoded IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(adj.UpscaleModel) Then
-                    Dim hochskaliert = UpscaleModelService.Upscale(decoded, adj.UpscaleModel)
-                    If hochskaliert IsNot Nothing Then
+                    Dim upscaled = UpscaleModelService.Upscale(decoded, adj.UpscaleModel, cancel)
+                    If upscaled IsNot Nothing Then
                         decoded.Dispose()
-                        decoded = hochskaliert
+                        decoded = upscaled
+                    ElseIf cancel.IsCancellationRequested Then
+                        ' Angehalten, nicht ausgefallen: hier darf NICHTS geschrieben werden. Sonst
+                        ' laege nach einem Abbruch eine Datei in Originalgroesse im Zielordner, und
+                        ' der Nutzer haelt sie fuer das vergroesserte Ergebnis.
+                        decoded.Dispose()
+                        Return False
                     Else
                         DiagnosticLogService.LogAlways("Hochskalieren",
                             $"nicht angewandt auf {IO.Path.GetFileName(sourcePath)} - es wird ohne gespeichert")
@@ -456,6 +471,11 @@ Namespace Services
                                     SKEncodedImageFormat.Jpeg))
 
                     Using processed = ProcessBitmap(original, adj)
+                        ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
+                        ' Kachelgrenze aus, aber die Reglerkette darunter laeuft am Stueck und kostet
+                        ' bei einem grossen Bild Sekunden. Wer in dieser Zeit abbricht, bekaeme sonst
+                        ' doch noch eine Datei - und die saehe aus wie das Ergebnis.
+                        If cancel.IsCancellationRequested Then Return False
                         If isFpxTarget Then
                             ' composite.png ist nur das Anzeigebild des Bündels und bewusst gedeckelt -
                             ' die volle Auflösung entsteht beim Öffnen wieder aus Basisbild + Rezept.

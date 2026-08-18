@@ -7404,4 +7404,25 @@
   <data name="Aus_der_Luminanzbereichsmaske_eine_Maskenebene_e_9e087404" xml:space="preserve">
     <value>Create a mask layer from the luminance-range mask</value>
   </data>
+  <data name="Bewertung_konnte_nicht_gespeichert_werden_9fe23e53" xml:space="preserve">
+    <value>The rating could not be saved</value>
+  </data>
+  <data name="Objektivzuordnung_konnte_nicht_gespeichert_werde_b2a8531d" xml:space="preserve">
+    <value>The lens assignment could not be saved</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_ed1aa935" xml:space="preserve">
+    <value>Writing images: {0} of {1}</value>
+  </data>
+  <data name="Bilder_werden_geschrieben_0_von_1_Kachel_2_von_3_1de140a2" xml:space="preserve">
+    <value>Writing images: {0} of {1}, tile {2} of {3}</value>
+  </data>
+  <data name="Stapel_abgebrochen_0_von_1_Datei_en_geschrieben_96418f3f" xml:space="preserve">
+    <value>Batch cancelled: {0} of {1} file(s) written</value>
+  </data>
+  <data name="0_von_1_Datei_en_exportiert_4c8eb640" xml:space="preserve">
+    <value>{0} of {1} file(s) exported</value>
+  </data>
+  <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
+    <value>Cancel. The batch stops after the picture it is working on; that picture is not written.</value>
+  </data>
 </root>

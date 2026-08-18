@@ -11,6 +11,15 @@
         WindowStartupLocation="Manual"
         Background="Transparent">
 
+    <Window.Styles>
+        <Style Selector="TextBlock.window-title">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        </Style>
+        <Style Selector="TextBlock.window-title.raw-developed">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+    </Window.Styles>
+
     <Border x:Name="WindowFrame"
             CornerRadius="8"
             ClipToBounds="True"
@@ -68,12 +77,16 @@
                                      Fill="{Binding WindowTitleColorLabelBrush}"
                                      IsVisible="{Binding HasWindowTitleColorLabel}"
                                      VerticalAlignment="Center"/>
+                            <!-- Akzentfarbe = entwickeltes RAW. Wird bei einem RAW nur die
+                                 eingebettete JPEG-Vorschau bearbeitet, bleibt der Name gedaempft
+                                 wie bei jedem anderen Bild. -->
                             <TextBlock Text="{Binding WindowTitleFileName}"
+                                       Classes="window-title"
+                                       Classes.raw-developed="{Binding IsWindowTitleRawDeveloped}"
                                        VerticalAlignment="Center"
                                        MaxWidth="420"
                                        TextTrimming="CharacterEllipsis"
-                                       FontSize="{DynamicResource FP.Font.Body}"
-                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                       FontSize="{DynamicResource FP.Font.Body}"/>
                         </StackPanel>
 
                     </Grid>
@@ -105,6 +118,16 @@
                                    Text="{Binding DocumentOpenText}"
                                    VerticalAlignment="Center"
                                    FontSize="{DynamicResource FP.Font.Body}" />
+                        <!-- ABBRECHEN. Nur bei einem Stapellauf da; ein Bild zu oeffnen dauert
+                             Sekunden und braucht keinen Knopf. -->
+                        <Button Classes="icon-btn"
+                                Width="26" Height="26" Padding="0"
+                                IsVisible="{Binding CanCancelBusyOverlay}"
+                                Command="{Binding CancelBusyOverlayCommand}"
+                                ToolTip.Tip="Abbrechen. Der Stapel endet nach dem Bild, an dem er gerade rechnet; dieses Bild wird nicht geschrieben.">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                           Width="14" Height="14" />
+                        </Button>
                     </StackPanel>
                 </Border>
             </Border>

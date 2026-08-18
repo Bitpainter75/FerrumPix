@@ -137,12 +137,75 @@ Namespace ViewModels
             BeginDocumentOpenIndicator()
         End Sub
 
+        ''' <summary>Den Text eines LAUFENDEN Vorgangs nachziehen, ohne die Anzeige neu anzustossen.
+        ''' Ein zweites <c>BeginBusyOverlay</c> wuerde die Viertelsekunde Verzoegerung erneut starten
+        ''' und die Anzeige mitten im Lauf kurz verschwinden lassen.</summary>
+        Public Sub UpdateBusyOverlay(text As String)
+            Dim wanted = If(text, "")
+            If wanted = _busyOverlayText Then Return
+            _busyOverlayText = wanted
+            Me.RaisePropertyChanged(NameOf(DocumentOpenText))
+        End Sub
+
         Public Sub EndBusyOverlay()
             _documentOpenInFlight = False
             EndDocumentOpenIndicator()
             If _busyOverlayText = "" Then Return
             _busyOverlayText = ""
             Me.RaisePropertyChanged(NameOf(DocumentOpenText))
+        End Sub
+
+        ' ── Abbrechen eines Stapellaufs ─────────────────────────────────────────
+        '
+        ' Dasselbe Dreigespann wie im Editor (BeginCancellableBusy): der Lauf holt sich eine Marke,
+        ' das X in der Anzeige legt sie um, und das Ende raeumt sie weg. Ohne das Abraeumen bliebe
+        ' ein Knopf stehen, der auf einen Vorgang zeigt, den es nicht mehr gibt.
+        '
+        ' BEWUSST NICHT an <see cref="EndBusyOverlay"/> gehaengt: ein Stapel zeigt die Anzeige
+        ' mehrfach (erst die lokalen Dateien, dann die Serverbilder) und muss zwischendurch
+        ' abbrechbar bleiben. Die Marke gehoert dem ganzen Lauf, die Anzeige nur einem Abschnitt.
+        Private _busyOverlayCancellation As Threading.CancellationTokenSource
+
+        ''' <summary>Laesst sich der laufende Vorgang abbrechen? Steuert das X in der Anzeige.</summary>
+        Public ReadOnly Property CanCancelBusyOverlay As Boolean
+            Get
+                Return _busyOverlayCancellation IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Beginn eines ABBRECHBAREN Laufs. Zurueck kommt die Marke, die in die
+        ''' Schreibschleife und von dort in die Modelldienste geht. Die Anzeige selbst schaltet der
+        ''' Aufrufer mit <see cref="BeginBusyOverlay"/> - sie soll erst stehen, wenn wirklich
+        ''' gerechnet wird, und nicht schon waehrend der Rueckfragen davor.</summary>
+        Public Function BeginBusyOverlayCancellation() As Threading.CancellationToken
+            EndBusyOverlayCancellation()
+            _busyOverlayCancellation = New Threading.CancellationTokenSource()
+            Me.RaisePropertyChanged(NameOf(CanCancelBusyOverlay))
+            Return _busyOverlayCancellation.Token
+        End Function
+
+        ''' <summary>Den laufenden Stapel abbrechen. Wirkt nicht sofort: das Bild, an dem gerade
+        ''' gerechnet wird, steigt an der naechsten Kachelgrenze aus und wird NICHT geschrieben.
+        ''' Deshalb sagt die Anzeige danach "wird abgebrochen" - sonst haelt man den Knopf fuer
+        ''' kaputt und drueckt weiter.</summary>
+        Public Sub RequestBusyOverlayCancel()
+            If _busyOverlayCancellation Is Nothing Then Return
+            Try
+                _busyOverlayCancellation.Cancel()
+            Catch ex As ObjectDisposedException
+                ' Der Lauf war in derselben Sekunde fertig - dann gibt es nichts abzubrechen.
+                Return
+            End Try
+            UpdateBusyOverlay(LocalizationService.T("Wird abgebrochen…"))
+        End Sub
+
+        ''' <summary>Ende - egal ob fertig, abgebrochen oder fehlgeschlagen. Wird der Aufruf
+        ''' vergessen, zeigt das X auf einen Lauf, den es nicht mehr gibt.</summary>
+        Public Sub EndBusyOverlayCancellation()
+            If _busyOverlayCancellation Is Nothing Then Return
+            _busyOverlayCancellation.Dispose()
+            _busyOverlayCancellation = Nothing
+            Me.RaisePropertyChanged(NameOf(CanCancelBusyOverlay))
         End Sub
 
         ''' <summary>Eigenes Try, weil es ein <c>Async Sub</c> ist: eine Ausnahme darin landet sonst
@@ -286,12 +349,22 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Meldet die drei Titel-Eigenschaften neu. Wird beim Moduswechsel und bei jedem
+        ''' <summary>True, wenn im Editor ein WIRKLICH entwickeltes RAW offen ist. Der Dateiname in
+        ''' der Fensterleiste steht dann in der Akzentfarbe, damit auf einen Blick sichtbar ist, ob
+        ''' echte Sensordaten bearbeitet werden oder nur die eingebettete Vorschau.</summary>
+        Public ReadOnly Property IsWindowTitleRawDeveloped As Boolean
+            Get
+                Return CurrentMode = AppMode.Editor AndAlso Editor IsNot Nothing AndAlso Editor.IsRawDeveloped
+            End Get
+        End Property
+
+        ''' <summary>Meldet die Titel-Eigenschaften neu. Wird beim Moduswechsel und bei jedem
         ''' Bildwechsel gerufen - sie leiten sich ab und melden sonst nie von selbst.</summary>
         Public Sub RefreshWindowTitle() Implements IViewerHost.RefreshWindowTitle, IEditorHost.RefreshWindowTitle
             Me.RaisePropertyChanged(NameOf(WindowTitleFileName))
             Me.RaisePropertyChanged(NameOf(HasWindowTitleColorLabel))
             Me.RaisePropertyChanged(NameOf(WindowTitleColorLabelBrush))
+            Me.RaisePropertyChanged(NameOf(IsWindowTitleRawDeveloped))
         End Sub
 
         Public Property Title As String
@@ -381,6 +454,10 @@ Namespace ViewModels
         Public ReadOnly Property DialogSkipAllCommand As ICommand
         Public ReadOnly Property DialogOverwriteAllCommand As ICommand
 
+        ''' <summary>Das X in der Warteanzeige. Steht nur bei einem Lauf da, der sich abbrechen
+        ''' laesst (siehe <see cref="CanCancelBusyOverlay"/>).</summary>
+        Public ReadOnly Property CancelBusyOverlayCommand As ICommand
+
         Public Sub New(Optional initialImagePath As String = Nothing)
             Settings = New SettingsViewModel(Me)
             People = New PeopleViewModel(Me)
@@ -412,6 +489,7 @@ Namespace ViewModels
             SetDialogWatermarkAnchorCommand = ReactiveCommand.Create(Of String)(Sub(anchor) DialogWatermarkAnchor = anchor)
             DialogSkipAllCommand = ReactiveCommand.Create(Sub() CompleteDialog("SkipAll"))
             DialogOverwriteAllCommand = ReactiveCommand.Create(Sub() CompleteDialog("OverwriteAll"))
+            CancelBusyOverlayCommand = ReactiveCommand.Create(Sub() RequestBusyOverlayCancel())
 
             If Not String.IsNullOrEmpty(initialImagePath) Then
                 OpenInitialImage(initialImagePath)
