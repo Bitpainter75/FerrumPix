@@ -7424,4 +7424,37 @@
   <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
     <value>Cancelar. El lote termina tras la imagen que está calculando; esa imagen no se escribe.</value>
   </data>
+  <data name="Malebene_angelegt_76dc39e0" xml:space="preserve">
+    <value>Capa de pintura creada</value>
+  </data>
+  <data name="Radiert_fe422528" xml:space="preserve">
+    <value>Borrado</value>
+  </data>
+  <data name="Anpassungen_der_Ebene_verworfen_904e8acf" xml:space="preserve">
+    <value>Ajustes de la capa descartados</value>
+  </data>
+  <data name="Auswahl_aus_Ebene_7761e78e" xml:space="preserve">
+    <value>Selección a partir de la capa</value>
+  </data>
+  <data name="0_Sterne_d0af5eac" xml:space="preserve">
+    <value>{0} estrellas</value>
+  </data>
+  <data name="Auswahl_ausgeschnitten_8ae19043" xml:space="preserve">
+    <value>Selección cortada</value>
+  </data>
+  <data name="Auswahl_kopiert_f0018ce3" xml:space="preserve">
+    <value>Selección copiada</value>
+  </data>
+  <data name="Anpassung_adc7ec25" xml:space="preserve">
+    <value>Ajuste</value>
+  </data>
+  <data name="Wiederholt_a8c0a9ac" xml:space="preserve">
+    <value>Rehecho</value>
+  </data>
+  <data name="Objekt_horizontal_gespiegelt_698ecc5f" xml:space="preserve">
+    <value>Objeto volteado horizontalmente</value>
+  </data>
+  <data name="Objekt_vertikal_gespiegelt_d33a77fe" xml:space="preserve">
+    <value>Objeto volteado verticalmente</value>
+  </data>
 </root>

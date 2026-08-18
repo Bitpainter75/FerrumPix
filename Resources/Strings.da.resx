@@ -7464,4 +7464,37 @@
   <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
     <value>Afbryd. Batchen stopper efter det billede, den regner på nu; det billede skrives ikke.</value>
   </data>
+  <data name="Malebene_angelegt_76dc39e0" xml:space="preserve">
+    <value>Malelag oprettet</value>
+  </data>
+  <data name="Radiert_fe422528" xml:space="preserve">
+    <value>Slettet</value>
+  </data>
+  <data name="Anpassungen_der_Ebene_verworfen_904e8acf" xml:space="preserve">
+    <value>Lagets justeringer kasseret</value>
+  </data>
+  <data name="Auswahl_aus_Ebene_7761e78e" xml:space="preserve">
+    <value>Markering fra lag</value>
+  </data>
+  <data name="0_Sterne_d0af5eac" xml:space="preserve">
+    <value>{0} stjerner</value>
+  </data>
+  <data name="Auswahl_ausgeschnitten_8ae19043" xml:space="preserve">
+    <value>Markering klippet ud</value>
+  </data>
+  <data name="Auswahl_kopiert_f0018ce3" xml:space="preserve">
+    <value>Markering kopieret</value>
+  </data>
+  <data name="Anpassung_adc7ec25" xml:space="preserve">
+    <value>Justering</value>
+  </data>
+  <data name="Wiederholt_a8c0a9ac" xml:space="preserve">
+    <value>Gentaget</value>
+  </data>
+  <data name="Objekt_horizontal_gespiegelt_698ecc5f" xml:space="preserve">
+    <value>Objektet spejlet vandret</value>
+  </data>
+  <data name="Objekt_vertikal_gespiegelt_d33a77fe" xml:space="preserve">
+    <value>Objektet spejlet lodret</value>
+  </data>
 </root>

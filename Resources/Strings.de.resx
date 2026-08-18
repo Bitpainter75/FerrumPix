@@ -7424,4 +7424,37 @@
   <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
     <value>Abbrechen. Der Stapel endet nach dem Bild, an dem er gerade rechnet; dieses Bild wird nicht geschrieben.</value>
   </data>
+  <data name="Malebene_angelegt_76dc39e0" xml:space="preserve">
+    <value>Malebene angelegt</value>
+  </data>
+  <data name="Radiert_fe422528" xml:space="preserve">
+    <value>Radiert</value>
+  </data>
+  <data name="Anpassungen_der_Ebene_verworfen_904e8acf" xml:space="preserve">
+    <value>Anpassungen der Ebene verworfen</value>
+  </data>
+  <data name="Auswahl_aus_Ebene_7761e78e" xml:space="preserve">
+    <value>Auswahl aus Ebene</value>
+  </data>
+  <data name="0_Sterne_d0af5eac" xml:space="preserve">
+    <value>{0} Sterne</value>
+  </data>
+  <data name="Auswahl_ausgeschnitten_8ae19043" xml:space="preserve">
+    <value>Auswahl ausgeschnitten</value>
+  </data>
+  <data name="Auswahl_kopiert_f0018ce3" xml:space="preserve">
+    <value>Auswahl kopiert</value>
+  </data>
+  <data name="Anpassung_adc7ec25" xml:space="preserve">
+    <value>Anpassung</value>
+  </data>
+  <data name="Wiederholt_a8c0a9ac" xml:space="preserve">
+    <value>Wiederholt</value>
+  </data>
+  <data name="Objekt_horizontal_gespiegelt_698ecc5f" xml:space="preserve">
+    <value>Objekt horizontal gespiegelt</value>
+  </data>
+  <data name="Objekt_vertikal_gespiegelt_d33a77fe" xml:space="preserve">
+    <value>Objekt vertikal gespiegelt</value>
+  </data>
 </root>

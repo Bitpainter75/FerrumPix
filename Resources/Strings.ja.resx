@@ -7464,4 +7464,37 @@
   <data name="Abbrechen_Der_Stapel_endet_nach_dem_Bild_an_dem__224763ab" xml:space="preserve">
     <value>キャンセル。処理中の画像の後で一括処理を終了します。その画像は書き出されません。</value>
   </data>
+  <data name="Malebene_angelegt_76dc39e0" xml:space="preserve">
+    <value>ペイントレイヤーを作成しました</value>
+  </data>
+  <data name="Radiert_fe422528" xml:space="preserve">
+    <value>消しました</value>
+  </data>
+  <data name="Anpassungen_der_Ebene_verworfen_904e8acf" xml:space="preserve">
+    <value>レイヤーの調整を破棄しました</value>
+  </data>
+  <data name="Auswahl_aus_Ebene_7761e78e" xml:space="preserve">
+    <value>レイヤーから選択範囲</value>
+  </data>
+  <data name="0_Sterne_d0af5eac" xml:space="preserve">
+    <value>星 {0}</value>
+  </data>
+  <data name="Auswahl_ausgeschnitten_8ae19043" xml:space="preserve">
+    <value>選択範囲を切り取りました</value>
+  </data>
+  <data name="Auswahl_kopiert_f0018ce3" xml:space="preserve">
+    <value>選択範囲をコピーしました</value>
+  </data>
+  <data name="Anpassung_adc7ec25" xml:space="preserve">
+    <value>調整</value>
+  </data>
+  <data name="Wiederholt_a8c0a9ac" xml:space="preserve">
+    <value>やり直しました</value>
+  </data>
+  <data name="Objekt_horizontal_gespiegelt_698ecc5f" xml:space="preserve">
+    <value>オブジェクトを左右反転しました</value>
+  </data>
+  <data name="Objekt_vertikal_gespiegelt_d33a77fe" xml:space="preserve">
+    <value>オブジェクトを上下反転しました</value>
+  </data>
 </root>
