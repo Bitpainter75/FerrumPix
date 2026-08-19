@@ -7462,14 +7462,8 @@
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_entfernt_s_d84f9065" xml:space="preserve">
     <value>Definir avaliação (premir o mesmo número novamente remove-a); num campo de texto o algarismo continua a ser um algarismo</value>
   </data>
-  <data name="ALT_1_bis_ALT_9_d7b9c77b" xml:space="preserve">
-    <value>ALT+1 a ALT+9</value>
-  </data>
   <data name="Farbetikett_setzen_dieselbe_Farbe_erneut_entfern_3bdc0c45" xml:space="preserve">
     <value>Definir etiqueta de cor (repetir a mesma cor remove-a)</value>
-  </data>
-  <data name="ALT_0_86df2309" xml:space="preserve">
-    <value>ALT+0</value>
   </data>
   <data name="Farbetikett_entfernen_98fa69f2" xml:space="preserve">
     <value>Remover etiqueta de cor</value>

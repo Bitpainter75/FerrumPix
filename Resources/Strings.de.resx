@@ -7463,14 +7463,8 @@
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_entfernt_s_d84f9065" xml:space="preserve">
     <value>Bewertung setzen (dieselbe Zahl erneut entfernt sie); in einem Eingabefeld bleibt die Ziffer eine Ziffer</value>
   </data>
-  <data name="ALT_1_bis_ALT_9_d7b9c77b" xml:space="preserve">
-    <value>ALT+1 bis ALT+9</value>
-  </data>
   <data name="Farbetikett_setzen_dieselbe_Farbe_erneut_entfern_3bdc0c45" xml:space="preserve">
     <value>Farbetikett setzen (dieselbe Farbe erneut entfernt es)</value>
-  </data>
-  <data name="ALT_0_86df2309" xml:space="preserve">
-    <value>ALT+0</value>
   </data>
   <data name="Farbetikett_entfernen_98fa69f2" xml:space="preserve">
     <value>Farbetikett entfernen</value>

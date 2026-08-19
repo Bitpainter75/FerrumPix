@@ -7498,19 +7498,13 @@
     <value>Objekti peilattu pystysuunnassa</value>
   </data>
   <data name="1_bis_5_35954fb9" xml:space="preserve">
-    <value>1 – 5</value>
+    <value>1-5</value>
   </data>
   <data name="Bewertung_setzen_dieselbe_Zahl_erneut_entfernt_s_d84f9065" xml:space="preserve">
     <value>Aseta arvio (sama numero uudelleen poistaa sen); syöttökentässä numero pysyy numerona</value>
   </data>
-  <data name="ALT_1_bis_ALT_9_d7b9c77b" xml:space="preserve">
-    <value>ALT+1 – ALT+9</value>
-  </data>
   <data name="Farbetikett_setzen_dieselbe_Farbe_erneut_entfern_3bdc0c45" xml:space="preserve">
     <value>Aseta värimerkintä (sama väri uudelleen poistaa sen)</value>
-  </data>
-  <data name="ALT_0_86df2309" xml:space="preserve">
-    <value>ALT+0</value>
   </data>
   <data name="Farbetikett_entfernen_98fa69f2" xml:space="preserve">
     <value>Poista värimerkintä</value>
@@ -7549,7 +7543,7 @@
     <value>CTRL+P tai P</value>
   </data>
   <data name="SHIFT_1_bis_SHIFT_9_98032489" xml:space="preserve">
-    <value>SHIFT+1 – SHIFT+9</value>
+    <value>SHIFT+1-SHIFT+9</value>
   </data>
   <data name="SHIFT_0_52b3a2d7" xml:space="preserve">
     <value>SHIFT+0</value>
