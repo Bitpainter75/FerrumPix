@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
 Imports System.IO
@@ -91,6 +91,49 @@ Namespace ViewModels
             Return Math.Max(100.0, MaxAnnotationEdgePixels / height * 100.0)
         End Function
 
+        ''' <summary>Untergrenze der Objektgroesse in Prozent, nach Art des Objekts. EINE Stelle
+        ''' dafuer, weil sie an vier Orten gebraucht wird - in beiden Setzern, beim Setzen des ganzen
+        ''' Rechtecks aus dem Canvas und an den Bedienelementen. Liefen die auseinander, klemmte das
+        ''' Bedienelement bei einem anderen Wert als das Rezept, und der Nutzer kaeme an eine Groesse
+        ''' nicht heran, die die Anwendung sehr wohl haelt - genau so stand es hier.</summary>
+        Private Function MinAnnotationWidthPercentValue() As Double
+            If EffectiveAnnotationKind = "QR" Then Return PercentOfAxis(MinQrSidePixels(), DisplayImageWidthPixels)
+            Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
+            Return If(isTextual, MinTextAnnotationWidthPercent, MinShapeAnnotationWidthPercent)
+        End Function
+
+        Private Function MinAnnotationHeightPercentValue() As Double
+            If EffectiveAnnotationKind = "QR" Then Return PercentOfAxis(MinQrSidePixels(), DisplayImageHeightPixels)
+            Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
+            Return If(isTextual, MinTextAnnotationHeightPercent, MinShapeAnnotationHeightPercent)
+        End Function
+
+        ''' <summary>Die kleinste KANTE eines QR-Codes in Bildpunkten. Er ist quadratisch, also hat
+        ''' er EINE Untergrenze; die beiden Prozentwerte darueber sind nur ihre Umrechnung auf die
+        ''' jeweilige Achse.
+        '''
+        ''' Vorher standen dort zwei unabhaengige Prozentwerte, 5 der Breite und 4 der Hoehe. Beide
+        ''' beziehen sich auf eine ANDERE Kante, und auf einem nicht quadratischen Bild ergab die
+        ''' Untergrenze damit ein Rechteck: auf 2480x1403 waeren es 124 zu 56 Bildpunkte gewesen.
+        '''
+        ''' Ein Prozent, wie bei allem anderen auch, gemessen an der KUERZEREN Bildkante - damit ist
+        ''' die Grenze auf einem hochkanten und einem querformatigen Bild dieselbe. Ob ein so kleiner
+        ''' Code noch zu lesen ist, entscheidet nicht die Anwendung: das haengt an der Ausgabegroesse
+        ''' und am Drucker, und wer ihn klein haben will, hat dafuer seinen Grund.</summary>
+        Private Function MinQrSidePixels() As Double
+            Dim size = GetAnnotationDisplayPixelSize()
+            Dim shorter = Math.Min(size.Width, size.Height)
+            If shorter <= 0 Then Return 1.0
+            Return Math.Max(1.0, shorter * MinShapeAnnotationWidthPercent / 100.0)
+        End Function
+
+        ''' <summary>Eine Laenge in Bildpunkten als Anteil einer Bildkante. Ohne bekannte Kante
+        ''' bleibt es beim alten Zahlenwert, statt durch null zu teilen.</summary>
+        Private Shared Function PercentOfAxis(pixels As Double, axisPixels As Integer) As Double
+            If axisPixels <= 0 Then Return 5.0
+            Return Math.Max(0.0, pixels) / axisPixels * 100.0
+        End Function
+
         Public Property AnnotationXPercent As Double
             Get
                 If HasMultiAnnotationSelection Then Return SelectionBoxComponent(0)
@@ -162,16 +205,18 @@ Namespace ViewModels
                 If EffectiveAnnotationKind = "QR" Then
                     Dim displaySize = GetAnnotationDisplayPixelSize()
                     If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
-                        Dim sizePixels = Math.Max(1.0, displaySize.Width * Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), value)) / 100.0)
-                        _annotationWidthPercent = Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0))
-                        _annotationHeightPercent = Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0))
+                        ' EINE Kantenlaenge, daraus beide Achsen - nur so bleibt der Code quadratisch.
+                        ' Die Untergrenze gehoert deshalb an die Kante und nicht an die beiden
+                        ' Prozentwerte: die beziehen sich auf verschieden lange Bildkanten.
+                        Dim sizePixels = Math.Max(MinQrSidePixels(), displaySize.Width * Math.Min(MaxAnnotationWidthPercentValue(), value) / 100.0)
+                        _annotationWidthPercent = Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0)
+                        _annotationHeightPercent = Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0)
                         RaiseAnnotationSizeChanged()
                         SyncSelectedAnnotation()
                         Return
                     End If
                 End If
-                Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
-                Dim minWidth = If(isTextual, MinTextAnnotationWidthPercent, 5.0)
+                Dim minWidth = MinAnnotationWidthPercentValue()
                 Me.RaiseAndSetIfChanged(_annotationWidthPercent, Math.Max(minWidth, Math.Min(MaxAnnotationWidthPercentValue(), value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationWidthSliderMinimum))
@@ -196,16 +241,16 @@ Namespace ViewModels
                 If EffectiveAnnotationKind = "QR" Then
                     Dim displaySize = GetAnnotationDisplayPixelSize()
                     If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
-                        Dim sizePixels = Math.Max(1.0, displaySize.Height * Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), value)) / 100.0)
-                        _annotationWidthPercent = Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0))
-                        _annotationHeightPercent = Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0))
+                        ' Wie beim Breiten-Setzer: eine Kantenlaenge, daraus beide Achsen.
+                        Dim sizePixels = Math.Max(MinQrSidePixels(), displaySize.Height * Math.Min(MaxAnnotationHeightPercentValue(), value) / 100.0)
+                        _annotationWidthPercent = Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0)
+                        _annotationHeightPercent = Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0)
                         RaiseAnnotationSizeChanged()
                         SyncSelectedAnnotation()
                         Return
                     End If
                 End If
-                Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
-                Dim minHeight = If(isTextual, MinTextAnnotationHeightPercent, 4.0)
+                Dim minHeight = MinAnnotationHeightPercentValue()
                 Me.RaiseAndSetIfChanged(_annotationHeightPercent, Math.Max(minHeight, Math.Min(MaxAnnotationHeightPercentValue(), value)))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
                 Me.RaisePropertyChanged(NameOf(AnnotationHeightSliderMinimum))

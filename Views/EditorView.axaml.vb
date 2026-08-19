@@ -5403,7 +5403,13 @@ Namespace Views
             Dim top = _textDragInitialRect.Top
             Dim right = _textDragInitialRect.Right
             Dim bottom = _textDragInitialRect.Bottom
-            Const minSize As Double = 24
+            ' In BILDSCHIRM-Einheiten, nicht in Bildpunkten: die Grenze haengt also am Zoom, und
+            ' herausgezoomt war sie die eigentliche Bremse - bei stark verkleinerter Anzeige stehen
+            ' hinter 24 Punkten am Schirm schnell ueber hundert im Bild. Sie soll nur verhindern,
+            ' dass die Anfasser uebereinanderrutschen und keiner mehr zu treffen ist; dafuer genuegt
+            ' ein Wert in der Groesse eines Anfassers. Wer es genauer braucht, gibt die Zahl im
+            ' Panel ein - dort geht es bis auf einen Bildpunkt herunter.
+            Const minSize As Double = 8
 
             If _textDragMode = TextDragMode.Move Then
                 Dim width = _textDragInitialRect.Width

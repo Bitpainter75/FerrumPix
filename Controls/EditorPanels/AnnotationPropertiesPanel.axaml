@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.AnnotationPropertiesPanel">
@@ -303,12 +303,12 @@
               IsVisible="{Binding ShowStrokeWidthControls}">
             <TextBlock Text="Konturbreite" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+            <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200"
                                DefaultValue="0"
                                Value="{Binding AnnotationStrokeWidth}" Margin="0,0" />
             <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                      Value="{Binding AnnotationStrokeWidth, Mode=TwoWay}"
-                                     Minimum="0" Maximum="100" Increment="1"
+                                     Minimum="0" Maximum="200" Increment="1"
                                      FormatString="F0" />
         </Grid>
         <!-- Aus: nur die Fuellung geht durch den Mischmodus, die Kontur bleibt normal darueber.

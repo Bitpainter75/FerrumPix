@@ -177,8 +177,35 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # Dieser Schritt blieb wiederholt stehen, mal in "apt-get update", mal mitten im
+      # Herunterladen der Pakete - beides an denselben Zeilen: die Laeufer stehen in Azure und
+      # bekommen dessen Ubuntu-Spiegel zuerst vorgesetzt (/etc/apt/apt-mirrors.txt, von
+      # ubuntu.sources als "mirror+file:" gelesen). Klemmt der Spiegel, wartet apt ohne Ende; im
+      # Log sind es die Runden "Ign: azure.archive.ubuntu.com" oder ein "Get:" ohne Fortsetzung.
+      # Die Zeitschranke macht daraus im Wiederholungsfall einen schnellen Fehlschlag statt einer
+      # Haengepartie mitten im Release.
       - name: Werkzeuge
+        timeout-minutes: 10
         run: |
+          # Herausgeloescht, nicht neu geschrieben: die Datei hat ein eigenes Format (ein Spiegel je
+          # Zeile, dahinter Angaben wie "priority:2"), und das bleibt so unangetastet. Gezaehlt wird
+          # vorher, damit nicht der letzte Spiegel verschwindet - dann stuende apt ganz ohne da.
+          mirrors=/etc/apt/apt-mirrors.txt
+          if [ -f "$mirrors" ]; then
+            alle=$(grep -cE '^[[:space:]]*https?://' "$mirrors" || true)
+            azure=$(grep -cE '^[[:space:]]*https?://[^[:space:]]*azure\.archive\.ubuntu\.com' "$mirrors" || true)
+            if [ "$azure" -gt 0 ] && [ "$alle" -gt "$azure" ]; then
+              sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$mirrors"
+              echo "Spiegelliste ohne Azure:"; cat "$mirrors"
+            else
+              echo "HINWEIS: Spiegelliste unveraendert ($alle Spiegel, davon $azure bei Azure)."
+            fi
+          fi
+          # Timeout wirkt auch auf eine STEHENDE Uebertragung, nicht nur auf den Verbindungsaufbau.
+          # ForceIPv4 ist das zweite gaengige Mittel: die Laeufer bekommen AAAA-Eintraege, ueber die
+          # dann keine Daten fliessen, und apt merkt das von sich aus nicht.
+          printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
           sudo apt-get update
           sudo apt-get install -y nsis xz-utils jq rpm zsync desktop-file-utils \
                                   flatpak flatpak-builder

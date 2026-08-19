@@ -1019,11 +1019,25 @@ Namespace ViewModels
         ''' Stelle, die niemand so schnell abliest.</summary>
         Private Const ScopeDebounceMs As Double = 400.0
         Private Const UndoCaptureWindowMs As Double = 650
-        ' Text und Wasserzeichen dürfen kleiner werden als die 5%/4%, die für Formen gelten: ihr Rechteck
-        ' wird aus dem Text berechnet und soll ihn eng umschließen. Auf einem 4000-px-Foto wären 5% bereits
-        ' 200 px - ein kurzes Wort in 48 px Schrift bekäme so einen doppelt zu breiten Auswahlrahmen.
+        ' Text und Wasserzeichen: ihr Rechteck wird aus dem Text berechnet und soll ihn eng umschließen.
         Private Const MinTextAnnotationWidthPercent As Double = 1.0
         Private Const MinTextAnnotationHeightPercent As Double = 1.0
+        ' Alles Übrige - Formen, Bilder, Pfeile. Die Untergrenze ist ein ANTEIL des Bildes, und genau
+        ' das war das Problem: bei 5%/4% liess sich auf einem 2480x1403-Dokument nichts unter
+        ' 124x56 Bildpunkten anlegen, ein kleines Zeichen oder ein Logo also gar nicht. Sie liegt
+        ' jetzt bei denselben 1% wie beim Text; ein Grund, warum ausgerechnet eine Form nicht so
+        ' klein werden darf wie ein Wort, war nicht zu finden.
+        '
+        ' NICHT bei null: ein Objekt ohne Ausdehnung ist auf der Bühne weder zu sehen noch zu
+        ' greifen und liesse sich nur über das Ebenenpanel zurückholen.
+        '
+        ' Der QR-Code bleibt bei 5%/4% - er soll lesbar bleiben, und dafür braucht er Fläche.
+        Private Const MinShapeAnnotationWidthPercent As Double = 1.0
+        Private Const MinShapeAnnotationHeightPercent As Double = 1.0
+        ''' <summary>Die dickste Kontur, in Bildpunkten. Muss zu den beiden Bedienelementen im
+        ''' Objektpanel passen - laufen sie auseinander, klemmt das eine bei einem Wert, den das
+        ''' andere noch hergibt.</summary>
+        Private Const MaxAnnotationStrokeWidth As Double = 200.0
         ' Objekte dürfen über den Bildrand hinausragen (z.B. ein Rahmen, der größer ist als das Foto).
         ' Harte Obergrenze je Kante in Bildpixeln, damit ein Tippfehler im Zahlenfeld keine
         ' Gigapixel-Overlays anfordert; bei Bildern mit noch größerer Kante bleibt mindestens die
@@ -1277,9 +1291,14 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die Untergrenze des Reglers und des Zahlenfelds. Sie folgt der Art des Objekts,
+        ''' weil die Setzer das auch tun - stand hier ein anderer Wert, klemmte das Bedienelement
+        ''' frueher als das Rezept es verlangt, und der Nutzer kam an eine Groesse nicht heran, die
+        ''' die Anwendung sehr wohl haelt. Mindestens ein Bildpunkt, sonst liesse sich das Objekt
+        ''' auf null ziehen.</summary>
         Public ReadOnly Property AnnotationWidthSliderMinimum As Double
             Get
-                Return Math.Round(DisplayImageWidthPixels * 5.0 / 100.0)
+                Return Math.Max(1, Math.Round(DisplayImageWidthPixels * MinAnnotationWidthPercentValue() / 100.0))
             End Get
         End Property
 
@@ -1292,7 +1311,7 @@ Namespace ViewModels
 
         Public ReadOnly Property AnnotationHeightSliderMinimum As Double
             Get
-                Return Math.Round(DisplayImageHeightPixels * 4.0 / 100.0)
+                Return Math.Max(1, Math.Round(DisplayImageHeightPixels * MinAnnotationHeightPercentValue() / 100.0))
             End Get
         End Property
 
@@ -2025,9 +2044,14 @@ Namespace ViewModels
             Dim seite = textWidth / Math.PI
             ' Untergrenze, damit ein sehr kurzer Text nicht zu einem Punkt schrumpft.
             seite = Math.Max(seite, _annotationFontSize * 2.5)
+            ' Text auf einem Kreispfad hat eine QUADRATISCHE Box - der Radius ist min(Breite, Höhe).
+            ' Beide Grenzen gehören deshalb an die KANTE und nicht an die zwei Prozentwerte: die
+            ' beziehen sich auf verschieden lange Bildkanten, und der Kreis wäre an der Grenze eine
+            ' Ellipse geworden. Vorher standen dort 2% der Breite gegen 2% der Höhe unten und 100%
+            ' gegen 100% oben - auf einem 2480x1403-Bild also 50 zu 28 Bildpunkte.
+            seite = Math.Min(seite, Math.Min(baseW, baseH))
 
-            Return (Math.Max(2.0, Math.Min(100.0, seite / baseW * 100.0)),
-                    Math.Max(2.0, Math.Min(100.0, seite / baseH * 100.0)))
+            Return (seite / baseW * 100.0, seite / baseH * 100.0)
         End Function
 
         Private Function GetCurrentAnnotationDisplayRectPercent() As (X As Double, Y As Double, Width As Double, Height As Double)
@@ -7475,7 +7499,9 @@ Namespace ViewModels
                 Return _annotationStrokeWidth
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_annotationStrokeWidth, Math.Max(0, Math.Min(100, value)))
+                ' In BILDPUNKTEN, wie der Schriftgrad. Der Deckel lag bei 100 - auf einem grossen
+                ' Bild war damit kein dicker Rahmen moeglich.
+                Me.RaiseAndSetIfChanged(_annotationStrokeWidth, Math.Max(0, Math.Min(MaxAnnotationStrokeWidth, value)))
                 SyncSelectedAnnotation()
             End Set
         End Property
@@ -9741,8 +9767,8 @@ Namespace ViewModels
             ' sonst schnappt der Rahmen beim ersten Ziehen an einem Griff auf 5%/4% auf. Ein Wasserzeichen aus
             ' einer Bilddatei ist kein Text und bleibt bei den Formwerten.
             Dim isTextual = IsTextualAnnotationKind(EffectiveAnnotationKind) AndAlso Not IsWatermarkImageSource
-            Dim minWidth = If(isTextual, MinTextAnnotationWidthPercent, 5.0)
-            Dim minHeight = If(isTextual, MinTextAnnotationHeightPercent, 4.0)
+            Dim minWidth = MinAnnotationWidthPercentValue()
+            Dim minHeight = MinAnnotationHeightPercentValue()
             _annotationWidthPercent = Math.Max(minWidth, Math.Min(MaxAnnotationWidthPercentValue(), widthPercent))
             _annotationHeightPercent = Math.Max(minHeight, Math.Min(MaxAnnotationHeightPercentValue(), heightPercent))
             If EffectiveAnnotationKind = "QR" Then
@@ -9750,9 +9776,10 @@ Namespace ViewModels
                 If displaySize.Width > 0 AndAlso displaySize.Height > 0 Then
                     Dim widthPixels = displaySize.Width * _annotationWidthPercent / 100.0
                     Dim heightPixels = displaySize.Height * _annotationHeightPercent / 100.0
-                    Dim sizePixels = Math.Max(1.0, Math.Min(widthPixels, heightPixels))
-                    _annotationWidthPercent = Math.Max(5, Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0))
-                    _annotationHeightPercent = Math.Max(4, Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0))
+                    ' Wie in den beiden Setzern: EINE Kantenlaenge, daraus beide Achsen.
+                    Dim sizePixels = Math.Max(MinQrSidePixels(), Math.Min(widthPixels, heightPixels))
+                    _annotationWidthPercent = Math.Min(MaxAnnotationWidthPercentValue(), sizePixels / displaySize.Width * 100.0)
+                    _annotationHeightPercent = Math.Min(MaxAnnotationHeightPercentValue(), sizePixels / displaySize.Height * 100.0)
                 End If
             End If
             ' Ein Textobjekt hat keine freie Box: sie ist immer der gemessene Textkasten. Der Griff ändert
