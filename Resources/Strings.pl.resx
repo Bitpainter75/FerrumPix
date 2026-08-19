@@ -7518,4 +7518,34 @@
   <data name="PUNKT_oder_KOMMA_2d85ed70" xml:space="preserve">
     <value>KROPKA lub PRZECINEK</value>
   </data>
+  <data name="STRG_R_oder_R_b1ee1f00" xml:space="preserve">
+    <value>CTRL+R lub R</value>
+  </data>
+  <data name="STRG_T_oder_T_673b36e3" xml:space="preserve">
+    <value>CTRL+T lub T</value>
+  </data>
+  <data name="STRG_B_oder_B_0f3e8c0f" xml:space="preserve">
+    <value>CTRL+B lub B</value>
+  </data>
+  <data name="STRG_M_oder_M_bc5b7a80" xml:space="preserve">
+    <value>CTRL+M lub M</value>
+  </data>
+  <data name="STRG_I_oder_I_0e0195dd" xml:space="preserve">
+    <value>CTRL+I lub I</value>
+  </data>
+  <data name="STRG_K_oder_K_682f8b32" xml:space="preserve">
+    <value>CTRL+K lub K</value>
+  </data>
+  <data name="STRG_E_oder_E_86d58e6a" xml:space="preserve">
+    <value>CTRL+E lub E</value>
+  </data>
+  <data name="STRG_D_oder_D_a8e02e96" xml:space="preserve">
+    <value>CTRL+D lub D</value>
+  </data>
+  <data name="STRG_W_oder_W_1c74fa8a" xml:space="preserve">
+    <value>CTRL+W lub W</value>
+  </data>
+  <data name="STRG_P_oder_P_ec8eab63" xml:space="preserve">
+    <value>CTRL+P lub P</value>
+  </data>
 </root>

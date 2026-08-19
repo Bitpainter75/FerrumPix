@@ -1,4 +1,4 @@
-Imports Avalonia
+﻿Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Controls.Chrome
 Imports Avalonia.Input
@@ -620,7 +620,7 @@ Namespace Views
         ''' Diese Anwendungsbelegungen bleiben auf macOS bewusst bei Control: Command+Q
         ''' gehört dort dem systemweiten Beenden der Anwendung.
         Private Function TryHandleRatingShortcut(vm As MainWindowViewModel, e As KeyEventArgs) As Boolean
-            If IsTextInputSource(e.Source) Then Return False
+            If PlatformShortcutService.IsInputFieldSource(e.Source) Then Return False
 
             ' Der Punkt schaltet den Favoriten - auf allen Plattformen, nicht nur dort, wo Apple
             ' Fotos ihn vormacht. Das KOMMA zählt mit: auf dem deutschen Zahlenblock trägt die
@@ -776,13 +776,24 @@ Namespace Views
                     End Select
                 End If
 
+                ' DIE STAPELKÜRZEL GIBT ES DOPPELT: mit Strg und als BLANKER Buchstabe. Der blanke
+                ' Weg gilt aber NUR in Galerie und Betrachter, ausdrücklich nicht im Editor - dort
+                ' gehören die blanken Buchstaben den Werkzeugen (R ist die Bildgröße, T der Text).
+                ' Und er gilt nur außerhalb von Eingabefeldern: wo man tippt, ist ein Buchstabe ein
+                ' Buchstabe. Das Vollbild zählt zum Betrachter, es ist derselbe Modus.
+                Dim isBareLetter = e.KeyModifiers = KeyModifiers.None AndAlso
+                                   Not PlatformShortcutService.IsInputFieldSource(e.Source) AndAlso
+                                   (vm.CurrentMode = AppMode.Gallery OrElse vm.CurrentMode = AppMode.Viewer)
+
                 ' Strg+P zentral im Fenster-Tunnel statt in den einzelnen Ansichten: so greift es in
                 ' jedem Modus, im Vollbild und - weil der Tunnel vor den View-Kürzeln feuert - auch
                 ' noch, nachdem ein Overlay-Dialog den Fokus hatte.
                 ' Ohne den Umschalt-Ausschluss würde dieser Zweig auch Strg+Umschalt+P schlucken -
                 ' das ist im Editor „Vorschau anwenden".
-                If e.Key = Key.P AndAlso PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) AndAlso
-                   Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                If e.Key = Key.P AndAlso
+                   (isBareLetter OrElse
+                    (PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) AndAlso
+                     Not e.KeyModifiers.HasFlag(KeyModifiers.Shift))) Then
                     Select Case vm.CurrentMode
                         Case AppMode.Editor
                             vm.Editor.PrintCommand.Execute(Nothing)
@@ -804,8 +815,11 @@ Namespace Views
                 ' greift es unabhängig davon, wo der Fokus gerade steht (Ordnerbaum, Filmstreifen), auch im
                 ' Vollbild und auch noch, nachdem ein Overlay-Dialog den Fokus hatte. Im Editor bleibt
                 ' Strg+R das Drehen-Werkzeug - dort fällt dieser Zweig bewusst durch.
-                If e.Key = Key.R AndAlso PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) AndAlso
-                   Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso Not IsTextInputSource(e.Source) Then
+                If e.Key = Key.R AndAlso
+                   (isBareLetter OrElse
+                    (PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) AndAlso
+                     Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+                     Not PlatformShortcutService.IsInputFieldSource(e.Source))) Then
                     Select Case vm.CurrentMode
                         Case AppMode.Gallery
                             If vm.Gallery IsNot Nothing AndAlso vm.Gallery.HasSelectedImage Then
@@ -823,9 +837,11 @@ Namespace Views
                 ' Dieselbe Bauart wie Strg+R darueber, fuer die drei Stapel-Ablaeufe: in der Galerie
                 ' fuer die Auswahl, im Betrachter fuer das angezeigte Bild. Im Editor fallen sie
                 ' bewusst durch - dort ist Strg+D „Objekt duplizieren" und Strg+T das Textwerkzeug.
-                If PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) AndAlso
-                   Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso Not IsTextInputSource(e.Source) AndAlso
-                   (e.Key = Key.D OrElse e.Key = Key.T OrElse e.Key = Key.W) Then
+                If (e.Key = Key.D OrElse e.Key = Key.T OrElse e.Key = Key.W) AndAlso
+                   (isBareLetter OrElse
+                    (PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) AndAlso
+                     Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+                     Not PlatformShortcutService.IsInputFieldSource(e.Source))) Then
                     Dim inGalerie = vm.CurrentMode = AppMode.Gallery
                     Dim imBetrachter = vm.CurrentMode = AppMode.Viewer
                     If inGalerie OrElse imBetrachter Then
@@ -867,7 +883,7 @@ Namespace Views
                 ' WAS die Taste bedeutet, steht weiterhin an einer einzigen Stelle im ViewModel.
                 ' Ein Eingabefeld behaelt sie: dort loescht sie Zeichen.
                 If e.Key = Key.Delete AndAlso vm.CurrentMode = AppMode.Editor AndAlso
-                   vm.Editor IsNot Nothing AndAlso Not IsTextInputSource(e.Source) Then
+                   vm.Editor IsNot Nothing AndAlso Not PlatformShortcutService.IsInputFieldSource(e.Source) Then
                     vm.Editor.ApplyDeleteShortcut()
                     e.Handled = True
                     Return
@@ -928,7 +944,7 @@ Namespace Views
                     End Select
                 End If
 
-                If vm.CurrentMode = AppMode.Gallery AndAlso PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) AndAlso Not IsTextInputSource(e.Source) Then
+                If vm.CurrentMode = AppMode.Gallery AndAlso PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) AndAlso Not PlatformShortcutService.IsInputFieldSource(e.Source) Then
                     Select Case e.Key
                         Case Key.A
                             vm.Gallery?.SelectAllVisible()
@@ -1034,15 +1050,6 @@ Namespace Views
             Else
                 Await gallery.PasteIntoFolderAsync(gallery.CurrentFolder)
             End If
-        End Function
-
-        Private Shared Function IsTextInputSource(source As Object) As Boolean
-            Dim ctrl = TryCast(source, Control)
-            While ctrl IsNot Nothing
-                If TypeOf ctrl Is TextBox Then Return True
-                ctrl = TryCast(ctrl.Parent, Control)
-            End While
-            Return False
         End Function
 
         Private Sub OnWindowPointerPressed(sender As Object, e As PointerPressedEventArgs)

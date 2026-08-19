@@ -63,6 +63,7 @@
                             <icons:RoundSlider Grid.Column="1"
                                                Minimum="0.25"
                                                Maximum="4"
+                                               DefaultValue="1"
                                                Value="{Binding CollagePreviewZoom}"/>
                             <TextBlock Grid.Column="2"
                                        Text="{Binding CollagePreviewZoom, StringFormat={}{0:P0}}"

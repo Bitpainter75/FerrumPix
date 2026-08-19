@@ -1,4 +1,4 @@
-Imports Avalonia
+﻿Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Input
 Imports Avalonia.Input.Platform
@@ -171,7 +171,7 @@ Namespace Views
         Private Sub OnDescendantGotFocus(sender As Object, e As FocusChangedEventArgs)
             Dim focused = TryCast(e.Source, Control)
             If focused Is Nothing OrElse Object.ReferenceEquals(focused, Me) Then Return
-            If IsTextInputSource(focused) Then Return
+            If PlatformShortcutService.IsInputFieldSource(focused) Then Return
             If IsWithinNamedControl(focused, "FolderTreeView") Then Return
             If _spaceOverviewActive Then Return
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
@@ -2531,7 +2531,7 @@ Namespace Views
         Public Shadows Async Sub OnKeyDown(sender As Object, e As KeyEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
-            If IsTextInputSource(e.Source) Then Return
+            If PlatformShortcutService.IsInputFieldSource(e.Source) Then Return
 
             If PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) Then
                 Select Case e.Key
@@ -2658,15 +2658,6 @@ Namespace Views
             _spaceOverviewActive = False
             e.Handled = True
         End Sub
-
-        Private Function IsTextInputSource(source As Object) As Boolean
-            Dim ctrl = TryCast(source, Control)
-            While ctrl IsNot Nothing
-                If TypeOf ctrl Is TextBox Then Return True
-                ctrl = TryCast(ctrl.Parent, Control)
-            End While
-            Return False
-        End Function
 
         Private Sub CopySelectionToClipboard(cut As Boolean)
             Dim vm = GetVm()

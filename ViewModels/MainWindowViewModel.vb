@@ -1028,7 +1028,22 @@ Namespace ViewModels
             End Get
             Set(value As Integer)
                 Me.RaiseAndSetIfChanged(_dialogJpgQuality, AppSettingsService.NormalizeJpgSaveQuality(value))
+                Me.RaisePropertyChanged(NameOf(DialogJpgQualityDefault))
             End Set
+        End Property
+
+        ''' <summary>Worauf ein Doppelklick den Qualitätsregler zurücksetzt: auf den Wert, mit dem
+        ''' der Dialog GESTARTET ist. Ohne diesen Wert fiele er auf das Minimum des Reglers, also
+        ''' auf die SCHLECHTESTE Qualität - das wäre kein Zurücksetzen. Eine feste Zahl im XAML
+        ''' ginge nicht, weil der Startwert von der Einstellung abhängt.
+        '''
+        ''' Beim Überschreiben des Originals ist der Startwert 95 und NICHT die Einstellung -
+        ''' dieselbe Fallunterscheidung wie in <see cref="DialogBatchFilterOverwrite"/>. Stünde hier
+        ''' nur die Einstellung, führte der Doppelklick woandershin, als der Dialog begonnen hat.</summary>
+        Public ReadOnly Property DialogJpgQualityDefault As Double
+            Get
+                Return If(_dialogBatchFilterOverwrite, 95, DefaultJpgQuality())
+            End Get
         End Property
 
         ''' <summary>Zielort im Speichern-unter-Dialog: "Local" oder "Immich" (nur wählbar, wenn konfiguriert).</summary>
@@ -1364,6 +1379,9 @@ Namespace ViewModels
                 ' Beim Ueberschreiben startet die Qualitaet auf 95 (dem frueheren festen Wert),
                 ' bei Kopien gilt wieder die Einstellung.
                 DialogJpgQuality = If(value, 95, DefaultJpgQuality())
+                ' Der Rückfallwert des Doppelklicks hängt an derselben Wahl und muss mitgemeldet
+                ' werden - die Bindung am Regler liest ihn sonst nie neu.
+                Me.RaisePropertyChanged(NameOf(DialogJpgQualityDefault))
                 Me.RaisePropertyChanged(NameOf(DialogBatchFilterOverwrite))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))

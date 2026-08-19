@@ -161,6 +161,7 @@
                                          ebenfalls ganz aus. -->
                                     <icons:RoundSlider Minimum="1"
                                                        Maximum="100"
+                                                       DefaultValue="{Binding DialogJpgQualityDefault}"
                                                        Value="{Binding DialogJpgQuality, Mode=TwoWay}"
                                                        VerticalAlignment="Center"
                                                        HorizontalAlignment="Stretch"
@@ -320,6 +321,7 @@
                                   ColumnSpacing="12">
                                 <icons:RoundSlider Minimum="1"
                                                    Maximum="100"
+                                                   DefaultValue="{Binding DialogJpgQualityDefault}"
                                                    Value="{Binding DialogJpgQuality, Mode=TwoWay}"
                                                    VerticalAlignment="Center"
                                                    HorizontalAlignment="Stretch"

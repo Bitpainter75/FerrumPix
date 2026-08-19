@@ -324,7 +324,7 @@
                           ToolTip.Tip="Wie fein das Stützpunktraster ist. Gröber verzerrt weicher, feiner genauer.">
                         <TextBlock Text="Raster" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <icons:RoundSlider Grid.Column="1" Minimum="2" Maximum="12"
+                        <icons:RoundSlider Grid.Column="1" Minimum="2" Maximum="12" DefaultValue="4"
                                            Value="{Binding WarpGridSize}" Margin="0,0" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding WarpGridSize, Mode=TwoWay}" Minimum="2" Maximum="12" />

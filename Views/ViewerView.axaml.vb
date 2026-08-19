@@ -1,4 +1,4 @@
-Imports Avalonia
+﻿Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
@@ -299,7 +299,7 @@ Namespace Views
         Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
-            If IsTextInputSource(e.Source) Then Return
+            If PlatformShortcutService.IsInputFieldSource(e.Source) Then Return
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
 
             If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso (e.Key = Key.Escape OrElse e.Key = Key.Back) Then
@@ -342,6 +342,24 @@ Namespace Views
                         vm.RotateRightCommand.Execute(Nothing)
                         e.Handled = True
                         Return
+                    Case Key.I
+                        vm.ToggleInfoSidebarCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                    Case Key.E
+                        vm.EditCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
+                End Select
+            End If
+
+            ' I und E gibt es auch als BLANKEN Buchstaben, nicht nur mit Strg. Im Betrachter liegt
+            ' eine Hand ohnehin auf der Tastatur, und beide sind sofort wieder umkehrbar: die
+            ' Info-Leiste schaltet zurück, aus dem Editor führt Esc heraus. Ein Eingabefeld hat den
+            ' Handler ganz oben schon verlassen; der ausdrückliche Vergleich auf KeinModifikator
+            ' hält zusätzlich Alt- und Umschalt-Kombinationen heraus.
+            If e.KeyModifiers = KeyModifiers.None Then
+                Select Case e.Key
                     Case Key.I
                         vm.ToggleInfoSidebarCommand.Execute(Nothing)
                         e.Handled = True
@@ -406,15 +424,6 @@ Namespace Views
                     e.Handled = True
             End Select
         End Sub
-
-        Private Function IsTextInputSource(source As Object) As Boolean
-            Dim ctrl = TryCast(source, Control)
-            While ctrl IsNot Nothing
-                If TypeOf ctrl Is TextBox Then Return True
-                ctrl = TryCast(ctrl.Parent, Control)
-            End While
-            Return False
-        End Function
 
         ' „Pfad kopieren“ meint den unveränderten Dateisystempfad als Text, nicht eine Datei zum
         ' Einfügen in einen Dateimanager.

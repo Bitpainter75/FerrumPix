@@ -173,7 +173,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44">
                     <TextBlock Text="Übergang" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" Value="{Binding ColorRangeFeather}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" DefaultValue="14" Value="{Binding ColorRangeFeather}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding ColorRangeFeather, Mode=TwoWay}" Minimum="1" Maximum="100" />
                 </Grid>
                 <CheckBox Content="Zusammenhängend"

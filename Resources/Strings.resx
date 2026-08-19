@@ -7479,4 +7479,34 @@
   <data name="PUNKT_oder_KOMMA_2d85ed70" xml:space="preserve">
     <value>PERIOD or COMMA</value>
   </data>
+  <data name="STRG_R_oder_R_b1ee1f00" xml:space="preserve">
+    <value>CTRL+R or R</value>
+  </data>
+  <data name="STRG_T_oder_T_673b36e3" xml:space="preserve">
+    <value>CTRL+T or T</value>
+  </data>
+  <data name="STRG_B_oder_B_0f3e8c0f" xml:space="preserve">
+    <value>CTRL+B or B</value>
+  </data>
+  <data name="STRG_M_oder_M_bc5b7a80" xml:space="preserve">
+    <value>CTRL+M or M</value>
+  </data>
+  <data name="STRG_I_oder_I_0e0195dd" xml:space="preserve">
+    <value>CTRL+I or I</value>
+  </data>
+  <data name="STRG_K_oder_K_682f8b32" xml:space="preserve">
+    <value>CTRL+K or K</value>
+  </data>
+  <data name="STRG_E_oder_E_86d58e6a" xml:space="preserve">
+    <value>CTRL+E or E</value>
+  </data>
+  <data name="STRG_D_oder_D_a8e02e96" xml:space="preserve">
+    <value>CTRL+D or D</value>
+  </data>
+  <data name="STRG_W_oder_W_1c74fa8a" xml:space="preserve">
+    <value>CTRL+W or W</value>
+  </data>
+  <data name="STRG_P_oder_P_ec8eab63" xml:space="preserve">
+    <value>CTRL+P or P</value>
+  </data>
 </root>

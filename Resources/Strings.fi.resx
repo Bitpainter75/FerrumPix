@@ -7518,4 +7518,34 @@
   <data name="PUNKT_oder_KOMMA_2d85ed70" xml:space="preserve">
     <value>PISTE tai PILKKU</value>
   </data>
+  <data name="STRG_R_oder_R_b1ee1f00" xml:space="preserve">
+    <value>CTRL+R tai R</value>
+  </data>
+  <data name="STRG_T_oder_T_673b36e3" xml:space="preserve">
+    <value>CTRL+T tai T</value>
+  </data>
+  <data name="STRG_B_oder_B_0f3e8c0f" xml:space="preserve">
+    <value>CTRL+B tai B</value>
+  </data>
+  <data name="STRG_M_oder_M_bc5b7a80" xml:space="preserve">
+    <value>CTRL+M tai M</value>
+  </data>
+  <data name="STRG_I_oder_I_0e0195dd" xml:space="preserve">
+    <value>CTRL+I tai I</value>
+  </data>
+  <data name="STRG_K_oder_K_682f8b32" xml:space="preserve">
+    <value>CTRL+K tai K</value>
+  </data>
+  <data name="STRG_E_oder_E_86d58e6a" xml:space="preserve">
+    <value>CTRL+E tai E</value>
+  </data>
+  <data name="STRG_D_oder_D_a8e02e96" xml:space="preserve">
+    <value>CTRL+D tai D</value>
+  </data>
+  <data name="STRG_W_oder_W_1c74fa8a" xml:space="preserve">
+    <value>CTRL+W tai W</value>
+  </data>
+  <data name="STRG_P_oder_P_ec8eab63" xml:space="preserve">
+    <value>CTRL+P tai P</value>
+  </data>
 </root>

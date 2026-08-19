@@ -6304,67 +6304,71 @@ Namespace Views
                 If e.Handled Then Return
             End If
 
+            ' Strg+Pfeil dreht - dieselben Kuerzel wie im Betrachter. Ohne Strg verschieben die
+            ' Pfeile weiterhin das Objekt, das Drehen gibt es deshalb NUR mit Zusatztaste.
+            If PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) AndAlso Not isInputControlFocused Then
+                Select Case e.Key
+                    Case Key.Left
+                        vm.RotateLeftCommand.Execute(Nothing)
+                        e.Handled = True
+                    Case Key.Right
+                        vm.RotateRightCommand.Execute(Nothing)
+                        e.Handled = True
+                End Select
+                If e.Handled Then Return
+            End If
+
+            ' WERKZEUGKÜRZEL GIBT ES DOPPELT: mit Strg und als BLANKER Buchstabe. Der blanke Weg ist
+            ' der schnellere, wenn man ohnehin am Bild arbeitet; der Weg mit Strg bleibt, weil er
+            ' seit jeher in den Kürzellisten steht und weil er auch dann noch trägt, wenn eine
+            ' Ansicht einmal einen blanken Buchstaben für sich belegt.
+            '
+            ' Beide gelten NUR ausserhalb von Eingabefeldern, und dafuer reicht die Abfrage auf eine
+            ' TextBox nicht: gemeint sind auch die ZAHLENFELDER neben den Reglern und die
+            ' Auswahllisten. `IsEditorInputControlFocused` deckt beides ab und fragt zusaetzlich das
+            ' fokussierte Element ab - sonst kaeme ein blankes B aus einem Zahlenfeld heraus, dessen
+            ' Tastenereignis das Feld gar nicht als Quelle traegt.
+            '
             ' Werkzeug- und Bildbefehle sind FerrumPix-spezifisch. Sie bleiben auf
             ' macOS bei Control, damit Command+Q/W/R/I usw. ihre üblichen
             ' System- und Anwendungsbedeutungen behalten.
-            If PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) Then
+            Dim isToolShortcut = Not isInputControlFocused AndAlso
+                                 (PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) OrElse
+                                  e.KeyModifiers = KeyModifiers.None)
+            If isToolShortcut Then
                 Select Case e.Key
                     Case Key.R
-                        ' Strg+R ist überall „Bildgröße": in Galerie und Betrachter der Overlay-Dialog,
+                        ' R ist überall „Bildgröße": in Galerie und Betrachter der Overlay-Dialog,
                         ' hier das Werkzeug mit seinem Panel. Gedreht wird
-                        ' jetzt mit Strg+Pfeil, das Drehen-Werkzeug braucht das Kürzel also nicht mehr.
-                        If Not isTextInputFocused Then
-                            vm.CurrentTool = EditorTool.Resize
-                            e.Handled = True
-                        End If
-                    Case Key.Left
-                        ' Strg+Pfeil dreht - dieselben Kuerzel wie im Betrachter
-                        '. Ohne Strg verschieben die Pfeile weiterhin das Objekt.
-                        If Not isInputControlFocused Then
-                            vm.RotateLeftCommand.Execute(Nothing)
-                            e.Handled = True
-                        End If
-                    Case Key.Right
-                        If Not isInputControlFocused Then
-                            vm.RotateRightCommand.Execute(Nothing)
-                            e.Handled = True
-                        End If
+                        ' mit Strg+Pfeil, das Drehen-Werkzeug braucht das Kürzel also nicht mehr.
+                        vm.CurrentTool = EditorTool.Resize
+                        e.Handled = True
                     Case Key.T
                         ' SetToolCommand stellt das Werkzeug samt Platzierungsart scharf (derselbe Weg
                         ' wie die Knoepfe) - eine nackte CurrentTool-Zuweisung liesse PendingInsertKind leer.
-                        If Not isTextInputFocused Then
-                            vm.SetToolCommand.Execute("Text")
-                            e.Handled = True
-                        End If
+                        vm.SetToolCommand.Execute("Text")
+                        e.Handled = True
                     Case Key.B
-                        If Not isTextInputFocused Then
-                            vm.SetToolCommand.Execute("Brush")
-                            e.Handled = True
-                        End If
+                        vm.SetToolCommand.Execute("Brush")
+                        e.Handled = True
                     Case Key.M
                         ' „Werkzeug: Einfügen" (Objekte platzieren) - vorher auf Strg+G, das jetzt dem
                         ' Gruppieren gehört.
-                        If Not isTextInputFocused Then
-                            vm.SetToolCommand.Execute("Insert")
-                            e.Handled = True
-                        End If
+                        vm.SetToolCommand.Execute("Insert")
+                        e.Handled = True
                     Case Key.I
                         ' Bild- und QR-Objekt sind keine eigenen Werkzeuge, sondern Platzierungsarten:
                         ' SetToolCommand stellt dafür das Objekt-Werkzeug samt Art scharf (derselbe Weg
                         ' wie die Knöpfe in der Werkzeugleiste).
-                        If Not isTextInputFocused Then
-                            vm.SetToolCommand.Execute("Image")
-                            e.Handled = True
-                        End If
+                        vm.SetToolCommand.Execute("Image")
+                        e.Handled = True
                     Case Key.K
-                        ' QR-Code auf Strg+K: Strg+Q ist in ALLEN Ansichten der Favorit (Fenster-Tunnel),
+                        ' QR-Code auf K: Q ist in ALLEN Ansichten der Favorit (Fenster-Tunnel),
                         ' und K war das nächstliegende freie Kürzel.
-                        If Not isTextInputFocused Then
-                            vm.SetToolCommand.Execute("QR")
-                            e.Handled = True
-                        End If
+                        vm.SetToolCommand.Execute("QR")
+                        e.Handled = True
                     Case Key.E
-                        If Not isTextInputFocused AndAlso vm.CurrentTool = EditorTool.Draw Then
+                        If vm.CurrentTool = EditorTool.Draw Then
                             vm.IsEraserMode = Not vm.IsEraserMode
                             e.Handled = True
                         End If

@@ -40,6 +40,32 @@ Namespace Services
             Return modifiers.HasFlag(KeyModifiers.Control)
         End Function
 
+        ''' <summary>
+        ''' Ob die Taste in einem BEDIENELEMENT gelandet ist, das sie selbst braucht: Textfeld,
+        ''' Zahlenfeld, Auswahlliste oder Regler. Dort gehoert eine blanke Ziffer und ein blanker
+        ''' Buchstabe dem Element und ist kein Kuerzel.
+        '''
+        ''' Die Auswahlliste steht ausdruecklich mit in der Liste: sie sucht beim Tippen ihre
+        ''' Eintraege an, und der Fenster-Tunnel feuert VOR ihr. Ohne sie oeffnete ein R aus einer
+        ''' aufgeklappten Liste heraus den Bildgroessen-Dialog, statt in der Liste zu suchen.
+        '''
+        ''' Gelaufen wird der Elternbaum, nicht nur die Quelle selbst: das Tastenereignis eines
+        ''' Zahlenfeldes traegt dessen INNERE TextBox als Quelle. Fenster, Galerie und Betrachter
+        ''' teilen sich diese eine Abfrage - drei gleichlautende Abschriften waren vorher an drei
+        ''' Stellen zu pflegen, und die des Fensters kannte die Zahlenfelder als einzige nicht.
+        ''' </summary>
+        Public Shared Function IsInputFieldSource(source As Object) As Boolean
+            Dim control = TryCast(source, Control)
+            While control IsNot Nothing
+                If TypeOf control Is TextBox OrElse
+                   TypeOf control Is NumericUpDown OrElse
+                   TypeOf control Is ComboBox OrElse
+                   TypeOf control Is Slider Then Return True
+                control = TryCast(control.Parent, Control)
+            End While
+            Return False
+        End Function
+
         Public Shared Function IsRedoShortcut(key As Key, modifiers As KeyModifiers) As Boolean
             If Not HasPrimaryModifier(modifiers) Then Return False
             If IsMacOS Then

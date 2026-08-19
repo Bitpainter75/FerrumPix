@@ -2630,6 +2630,7 @@
                     <icons:RoundSlider Width="136"
                                        Minimum="140"
                                        Maximum="520"
+                                       DefaultValue="260"
                                        Value="{Binding ThumbnailSize}"
                                        VerticalAlignment="Center"/>
                     <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"

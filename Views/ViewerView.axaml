@@ -601,7 +601,11 @@
                                 Command="{Binding ZoomOutCommand}" ToolTip.Tip="Verkleinern">
                             <TextBlock Text="−" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                         </Button>
-                        <icons:RoundSlider Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100"
+                        <!-- DefaultValue 50 heisst 100 Prozent: der Regler ist logarithmisch zwischen 5
+                                     und 2000 Prozent, und 100 liegt genau in der Mitte dieser Skala
+                                     (5 * 2000 = 100²). Ein Doppelklick fuehrt damit auf die
+                                     Originalgroesse zurueck statt auf die kleinste Stufe. -->
+                        <icons:RoundSlider Width="110" Height="26" MinHeight="0" Minimum="0" Maximum="100" DefaultValue="50"
                                             Value="{Binding ZoomSliderValue, Mode=TwoWay}" VerticalAlignment="Center"/>
                         <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center" Focusable="False"
                                 Command="{Binding ZoomInCommand}" ToolTip.Tip="Vergrößern">
