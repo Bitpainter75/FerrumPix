@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Collections
 Imports System.Globalization
@@ -124,6 +124,27 @@ Namespace Services
         ' /Bilder/RAW.jpg und /Bilder/raw.jpg zwei Dateien - vorher teilten sie sich den
         ' EXIF-Eintrag, die zweite Datei bekam also die Aufnahmedaten der ersten angezeigt.
         Private Shared ReadOnly _cache As New Dictionary(Of String, ExifCacheEntry)(PathIdentity.Comparer)
+
+        ''' <summary>Der Urheberrechtshinweis aus der Beistelldatei, gemerkt an DEREN Zeitstempel und
+        ''' Groesse - nicht an denen der Bilddatei.
+        '''
+        ''' Warum ein eigener Zwischenspeicher: der Blick in die Beistelldatei liegt bewusst
+        ''' AUSSERHALB des EXIF-Zwischenspeichers (siehe WithSidecarCopyright), damit ein frisch
+        ''' geschriebener Hinweis sofort ankommt. Ohne diesen zweiten Speicher hiesse das aber, dass
+        ''' JEDER Aufruf die Datei neu einliest und als XML zergliedert - auch der, den der
+        ''' EXIF-Speicher gerade aus dem Aermel geschuettelt hat. Der Katalogindex geht ueber
+        ''' Tausende Dateien, und in einem RAW-Bestand liegt neben fast jeder eine Beistelldatei.
+        '''
+        ''' Geprueft wird weiterhin bei jedem Aufruf, OB eine danebenliegt und ob sie sich geaendert
+        ''' hat - das sind zwei Dateiabfragen und keine Zergliederung.</summary>
+        Private Class SidecarCopyrightEntry
+            Public Property SidecarPath As String
+            Public Property LastWriteUtc As DateTime
+            Public Property Size As Long
+            Public Property Value As String
+        End Class
+
+        Private Shared ReadOnly _sidecarCopyrightCache As New Concurrent.ConcurrentDictionary(Of String, SidecarCopyrightEntry)(PathIdentity.Comparer)
 
         ''' <summary>
         ''' EXIF ändert sich nach der Aufnahme normalerweise nicht mehr nachträglich - ein
@@ -1002,8 +1023,42 @@ Namespace Services
         Public Shared Function ReadXmpCopyrightSidecar(imagePath As String) As String
             If String.IsNullOrWhiteSpace(imagePath) Then Return ""
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
-            If String.IsNullOrEmpty(sidecarPath) OrElse Not IO.File.Exists(sidecarPath) Then Return ""
+            If String.IsNullOrEmpty(sidecarPath) Then
+                ' Keine Beistelldatei mehr da - ein gemerkter Wert waere ab jetzt falsch.
+                Dim removed As SidecarCopyrightEntry = Nothing
+                _sidecarCopyrightCache.TryRemove(imagePath, removed)
+                Return ""
+            End If
 
+            Dim info As IO.FileInfo
+            Try
+                info = New IO.FileInfo(sidecarPath)
+                If Not info.Exists Then Return ""
+            Catch
+                Return ""
+            End Try
+
+            Dim cached As SidecarCopyrightEntry = Nothing
+            If _sidecarCopyrightCache.TryGetValue(imagePath, cached) AndAlso
+               cached IsNot Nothing AndAlso
+               String.Equals(cached.SidecarPath, sidecarPath, StringComparison.Ordinal) AndAlso
+               cached.LastWriteUtc = info.LastWriteTimeUtc AndAlso
+               cached.Size = info.Length Then
+                Return cached.Value
+            End If
+
+            Dim parsed = ParseXmpCopyrightSidecar(sidecarPath)
+            _sidecarCopyrightCache(imagePath) = New SidecarCopyrightEntry With {
+                .SidecarPath = sidecarPath,
+                .LastWriteUtc = info.LastWriteTimeUtc,
+                .Size = info.Length,
+                .Value = parsed}
+            Return parsed
+        End Function
+
+        ''' <summary>Das eigentliche Zergliedern. Getrennt, damit der Zwischenspeicher darueber die
+        ''' einzige Stelle ist, die entscheidet, WANN gelesen wird.</summary>
+        Private Shared Function ParseXmpCopyrightSidecar(sidecarPath As String) As String
             Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
             Try
                 Dim doc = XDocument.Load(sidecarPath)
