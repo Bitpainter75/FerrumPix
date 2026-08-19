@@ -1,4 +1,4 @@
-Imports System.Windows.Input
+﻿Imports System.Windows.Input
 Imports System.Linq
 Imports System.IO
 Imports System.Threading
@@ -1557,6 +1557,7 @@ Namespace ViewModels
         Private _dialogWatermarkKeepSize As Boolean
         Private _dialogExportPreserveMetadata As Boolean = True
         Private _dialogSaveAsPreserveExif As Boolean = True
+        Private _dialogCopyright As String = ""
 
         ''' Die Sektionen des Sammel-Exports. Ist eine aus, bleibt ihr Formular verborgen UND ihre
         ''' Einstellungen wirken nicht - der Nutzer sieht genau das, was angewendet wird.
@@ -1779,6 +1780,7 @@ Namespace ViewModels
                 .ResizeInterpolation = _dialogBatchResizeInterpolation,
                 .UpscaleModel = upscaleModel,
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .Copyright = _dialogCopyright,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
@@ -1872,7 +1874,8 @@ Namespace ViewModels
                 .CopyColorLabel = _dialogSaveAsCopyColorLabel,
                 .CopyKeywords = _dialogSaveAsCopyKeywords,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
-                .PreserveMetadata = _dialogSaveAsPreserveExif
+                .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .Copyright = _dialogCopyright
             }
         End Function
 
@@ -2345,7 +2348,36 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Der Urheberrechtshinweis für die Dateien, die ein Stapellauf schreibt. LEER
+        ''' heißt „dieses Feld nicht anfassen" - deshalb beginnt er bei jedem Öffnen leer und wird
+        ''' NICHT aus den Einstellungen vorbelegt: eine Vorbelegung schriebe den Hinweis sonst
+        ''' unbemerkt in jeden Stapellauf, auch in den, bei dem niemand daran gedacht hat.</summary>
+        Public Property DialogCopyright As String
+            Get
+                Return _dialogCopyright
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogCopyright, If(value, ""))
+            End Set
+        End Property
+
+        ''' Überall dort, wo ein Lauf Dateien schreibt - anders als die Katalog-Optionen daneben auch
+        ''' beim ÜBERSCHREIBEN: der Hinweis gehört in die Datei, gleich ob sie neu entsteht.
+        Public ReadOnly Property DialogShowsCopyright As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.SaveAs OrElse
+                       _dialogKind = AppDialogKind.BatchConvert OrElse
+                       _dialogKind = AppDialogKind.BatchResize OrElse
+                       _dialogKind = AppDialogKind.WatermarkPreset OrElse
+                       _dialogKind = AppDialogKind.BatchFilter OrElse
+                       _dialogKind = AppDialogKind.ExportTo
+            End Get
+        End Property
+
         Private Sub ResetDialogSaveAsMetaOptions()
+            _dialogCopyright = ""
+            Me.RaisePropertyChanged(NameOf(DialogCopyright))
+            Me.RaisePropertyChanged(NameOf(DialogShowsCopyright))
             _dialogSaveAsCopyRating = True
             _dialogSaveAsCopyFavorite = True
             _dialogSaveAsCopyColorLabel = True
@@ -3524,7 +3556,8 @@ Namespace ViewModels
                 .CopyColorLabel = _dialogSaveAsCopyColorLabel,
                 .CopyKeywords = _dialogSaveAsCopyKeywords,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
-                .PreserveMetadata = _dialogSaveAsPreserveExif
+                .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .Copyright = _dialogCopyright
             }
         End Function
 
@@ -3581,6 +3614,7 @@ Namespace ViewModels
             PersistDialogTargetNamePattern()
             Return New WatermarkPresetDialogResult With {
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .Copyright = _dialogCopyright,
                 .Preset = BuildWatermarkPresetForRun(selectedPreset),
                 .Overwrite = _dialogBatchWatermarkOverwrite,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
@@ -3853,7 +3887,8 @@ Namespace ViewModels
                 .CopyColorLabel = _dialogSaveAsCopyColorLabel,
                 .CopyKeywords = _dialogSaveAsCopyKeywords,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
-                .PreserveMetadata = _dialogSaveAsPreserveExif
+                .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .Copyright = _dialogCopyright
             }
         End Function
 

@@ -144,7 +144,7 @@ Namespace Services
             SyncLock _cacheLock
                 Dim entry As ExifCacheEntry = Nothing
                 If _cache.TryGetValue(imagePath, entry) AndAlso entry.LastWriteUtc = lastWriteUtc AndAlso entry.Size = size Then
-                    Return CloneExifData(entry.Data)
+                    Return WithSidecarCopyright(imagePath, CloneExifData(entry.Data))
                 End If
             End SyncLock
 
@@ -154,7 +154,33 @@ Namespace Services
                 _cache(imagePath) = New ExifCacheEntry With {.LastWriteUtc = lastWriteUtc, .Size = size, .Data = freshData}
             End SyncLock
 
-            Return CloneExifData(freshData)
+            Return WithSidecarCopyright(imagePath, CloneExifData(freshData))
+        End Function
+
+        ''' <summary>Legt den Urheberrechtshinweis aus der Beistelldatei ueber den eingebetteten.
+        ''' XMP geht vor - das ist die Leseregel des Standards fuer dieses Feld (XMP vor IPTC vor
+        ''' EXIF), und es ist zugleich die einzige Reihenfolge, die hier funktioniert: an alles, was
+        ''' wir nicht selbst beschreiben (RAW, PSD, HEIC, PNG), schreibt FerrumPix ihn NUR daneben.
+        '''
+        ''' WARUM HIER UND NICHT IN ReadExifCore - zwei Gruende, jeder fuer sich ausreichend:
+        '''
+        ''' 1. Der ZWISCHENSPEICHER haengt an Zeitstempel und Groesse der BILDDATEI. Eine
+        '''    Beistelldatei zu schreiben aendert daran nichts, der Eintrag bliebe also gueltig und
+        '''    gaebe den alten (leeren) Hinweis zurueck - unmittelbar nach dem Setzen. Aufgesetzt
+        '''    wird deshalb NACH dem Zwischenspeicher, auf der Kopie; gespeichert bleibt der
+        '''    eingebettete Wert, sonst ueberlebte ein geloeschter Hinweis in der Ablage.
+        ''' 2. Der Kern steigt bei einer Datei, die sich nicht auswerten laesst, VORZEITIG aus. Eine
+        '''    RAW-Datei, mit der der Leser nichts anfangen kann, haette dann keinen Hinweis, obwohl
+        '''    einer danebenliegt.
+        '''
+        ''' Nur EINE Vorrangregel im ganzen Programm: `CopyrightService.ReadCopyright` liest ueber
+        ''' genau diesen Weg. Zwei Regeln fuer dasselbe Feld hiessen, dass die Info-Leiste den einen
+        ''' und der Dialog den anderen Wert zeigt, sobald eine Datei beides traegt.</summary>
+        Private Shared Function WithSidecarCopyright(imagePath As String, data As ExifData) As ExifData
+            If data Is Nothing Then Return data
+            Dim fromSidecar = ReadXmpCopyrightSidecar(imagePath)
+            If Not String.IsNullOrWhiteSpace(fromSidecar) Then data.Copyright = fromSidecar
+            Return data
         End Function
 
         Public Shared Sub Invalidate(imagePath As String)
@@ -282,6 +308,8 @@ Namespace Services
                 Dim model = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagModel)
                 data.Camera = (make & " " & model).Trim()
                 data.Software = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagSoftware)
+                ' NUR der eingebettete Wert. Der aus der Beistelldatei kommt in ReadExif obendrauf,
+                ' NACH dem Zwischenspeicher - siehe WithSidecarCopyright, dort steht auch warum.
                 data.Copyright = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagCopyright)
                 data.DateModifiedExif = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagDateTime)
                 If String.IsNullOrEmpty(data.DateTaken) Then
@@ -907,6 +935,130 @@ Namespace Services
 
                 Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
             Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Den Urheberrechtshinweis in eine XMP-Beistelldatei - derselbe Weg wie bei den
+        ''' Koordinaten, fuer alles, was keine JPEG-Datei ist.
+        '''
+        ''' Geschrieben wird `dc:rights`, und zwar als SPRACHALTERNATIVE (`rdf:Alt` mit einem
+        ''' `rdf:li xml:lang="x-default"`) und NICHT als Attribut. Der Aufbau verlangt das fuer
+        ''' dieses Feld: es ist ein Lang-Alt-Wert, und die Kurzform als Attribut lesen etliche
+        ''' Programme gar nicht erst. Vorhandene fremde Knoten bleiben unangetastet.</summary>
+        ''' <returns>Der Pfad der geschriebenen Datei, oder "" wenn nichts geschrieben wurde.</returns>
+        Public Shared Function WriteXmpCopyrightSidecar(imagePath As String, copyrightText As String,
+                                                        createIfMissing As Boolean) As String
+            If String.IsNullOrWhiteSpace(imagePath) Then Return ""
+            Dim text = If(copyrightText, "").Trim()
+            If text.Length = 0 Then Return ""
+
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then
+                If Not createIfMissing Then Return ""
+                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                If String.IsNullOrWhiteSpace(sidecarPath) Then Return ""
+            End If
+
+            Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+            Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
+            Dim xmlNamespace As XNamespace = "http://www.w3.org/XML/1998/namespace"
+
+            Try
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                If doc Is Nothing Then Return ""
+                Dim description = GetOrCreateSidecarDescription(doc)
+                If description Is Nothing Then Return ""
+
+                description.SetAttributeValue(XNamespace.Xmlns + "dc", dcNamespace.NamespaceName)
+                ' Beide Schreibweisen des alten Wertes weg, bevor der neue kommt: als Element UND
+                ' als Attribut. Bliebe eines davon stehen, laese ein Programm je nach Vorliebe den
+                ' alten Hinweis - derselbe Fehler, den es bei den Koordinaten schon gab.
+                description.SetAttributeValue(dcNamespace + "rights", Nothing)
+                For Each stale In description.Elements(dcNamespace + "rights").ToList()
+                    stale.Remove()
+                Next
+
+                description.Add(New XElement(dcNamespace + "rights",
+                                             New XElement(rdfNamespace + "Alt",
+                                                          New XElement(rdfNamespace + "li",
+                                                                       New XAttribute(xmlNamespace + "lang", "x-default"),
+                                                                       text))))
+
+                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
+                Return sidecarPath
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.WriteXmpCopyrightSidecar", ex)
+                Return ""
+            End Try
+        End Function
+
+        ''' <summary>Liest den Urheberrechtshinweis aus einer vorhandenen Beistelldatei. Leer, wenn
+        ''' keine da ist oder keiner darin steht.
+        '''
+        ''' BEIDE Schreibweisen werden gelesen: die Sprachalternative (`rdf:Alt` mit `rdf:li`), die
+        ''' wir selbst schreiben, UND die Kurzform als Attribut, die andere Programme benutzen. Wer
+        ''' nur eine davon liest, findet den Hinweis fremder Dateien nicht.</summary>
+        Public Shared Function ReadXmpCopyrightSidecar(imagePath As String) As String
+            If String.IsNullOrWhiteSpace(imagePath) Then Return ""
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) OrElse Not IO.File.Exists(sidecarPath) Then Return ""
+
+            Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
+            Try
+                Dim doc = XDocument.Load(sidecarPath)
+                For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description")
+                    Dim element = description.Elements(dcNamespace + "rights").FirstOrDefault()
+                    If element IsNot Nothing Then
+                        ' Bevorzugt x-default, sonst der erste Eintrag - eine Sprachalternative ohne
+                        ' x-default ist selten, aber sie ist erlaubt.
+                        Dim items = element.Descendants().Where(Function(e) e.Name.LocalName = "li").ToList()
+                        Dim chosen = items.FirstOrDefault(Function(e) e.Attributes().Any(
+                                        Function(a) a.Name.LocalName = "lang" AndAlso a.Value = "x-default"))
+                        If chosen Is Nothing Then chosen = items.FirstOrDefault()
+                        Dim text = If(chosen IsNot Nothing, chosen.Value, element.Value)
+                        If Not String.IsNullOrWhiteSpace(text) Then Return text.Trim()
+                    End If
+                    Dim attribute = description.Attribute(dcNamespace + "rights")
+                    If attribute IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(attribute.Value) Then
+                        Return attribute.Value.Trim()
+                    End If
+                Next
+                Return ""
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.ReadXmpCopyrightSidecar", ex)
+                Return ""
+            End Try
+        End Function
+
+        ''' <summary>Nimmt den Urheberrechtshinweis aus einer vorhandenen Beistelldatei - als
+        ''' Element wie als Attribut. Eine NEUE Datei wird dafuer nie angelegt.</summary>
+        ''' <returns>True, wenn wirklich etwas entfernt wurde.</returns>
+        Public Shared Function RemoveXmpCopyrightSidecar(imagePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(imagePath) Then Return False
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then Return False
+
+            Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
+            Try
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                If doc Is Nothing Then Return False
+
+                Dim removed = False
+                For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description").ToList()
+                    If description.Attribute(dcNamespace + "rights") IsNot Nothing Then
+                        description.SetAttributeValue(dcNamespace + "rights", Nothing)
+                        removed = True
+                    End If
+                    For Each child In description.Elements(dcNamespace + "rights").ToList()
+                        child.Remove()
+                        removed = True
+                    Next
+                Next
+                If Not removed Then Return False
+                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.RemoveXmpCopyrightSidecar", ex)
                 Return False
             End Try
         End Function

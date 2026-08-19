@@ -109,7 +109,7 @@
                                  nichts, was der Dateiname nicht schon zeigt, und kostete eine
                                  Zeile Hoehe. -->
                             <TextBlock Text="{Binding ExifInfo.FileName}" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
                                 <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
                                     <TextBlock Text="{Binding ExifInfo.ImageWidth}"/>
@@ -148,6 +148,19 @@
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
                                                    Width="14" Height="14" VerticalAlignment="Top" Margin="0,2,0,0" Opacity="0.75"/>
                                     <TextBlock Text="{Binding PlaceText}" Classes="no-translate"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <!-- Der Urheberrechtshinweis erscheint NUR, wenn einer im Bild steht.
+                                     Er ist eine Angabe zur Datei wie die daruber, aber ueber beide
+                                     Spalten und ohne rechtsbuendig: er ist ein Satz, keine Zahl, und
+                                     rechts an einer schmalen Spalte umbrochen waere er unlesbar.
+                                     Kein Uebersetzungsdurchlauf darauf - der Text gehoert dem Bild. -->
+                                <StackPanel Grid.Row="8" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6"
+                                            Margin="0,12,0,0"
+                                            IsVisible="{Binding ExifInfo.Copyright, Converter={StaticResource StringNotEmptyToBoolConverter}}">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copyright.svg"
+                                                   Width="14" Height="14" VerticalAlignment="Top" Margin="0,2,0,0" Opacity="0.75"/>
+                                    <TextBlock Text="{Binding ExifInfo.Copyright}" Classes="no-translate"
                                                TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Grid>

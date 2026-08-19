@@ -66,6 +66,7 @@ Namespace ViewModels
         Public Property PastePlace As ICommand
         Public Property SetPlace As ICommand
         Public Property RemovePlace As ICommand
+        Public Property SetCopyright As ICommand
         Public Property OpenPlaceInOsm As ICommand
 
         ' Wege nach draussen

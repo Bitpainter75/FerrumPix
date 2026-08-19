@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
@@ -48,18 +48,18 @@ Namespace Services
 
         ' TIFF-Feldtypen, wie sie in der EXIF-Spezifikation nummeriert sind.
         Private Const TiffTypeByte As Integer = 1
-        Private Const TiffTypeAscii As Integer = 2
+        Friend Const TiffTypeAscii As Integer = 2
         Private Const TiffTypeLong As Integer = 4
         Private Const TiffTypeRational As Integer = 5
 
         Private Const GpsInfoIfdPointerTag As Integer = &H8825
 
         ''' Ein IFD mit mehr Eintraegen als das ist keins mehr, sondern eine kaputt gelesene Zahl.
-        Private Const MaxIfdEntries As Integer = 512
+        Friend Const MaxIfdEntries As Integer = 512
 
         ''' Ein JPEG-Segment traegt seine Laenge in zwei Byte, abzueglich der Laengenbytes selbst
         ''' und der Kennung "Exif" mit ihren beiden Nullbytes.
-        Private Const MaxTiffBlockInJpeg As Integer = 65535 - 2 - 6
+        Friend Const MaxTiffBlockInJpeg As Integer = 65535 - 2 - 6
 
         ''' <summary>Wohin die Koordinate tatsaechlich gegangen ist. Der Aufrufer sagt es dem
         ''' Nutzer - "steht in der Datei" und "steht daneben" ist ein Unterschied, den man beim
@@ -615,14 +615,14 @@ Namespace Services
             End If
         End Sub
 
-        Private Shared Function IsExifSegment(bytes As Byte(), offset As Integer, totalLength As Integer) As Boolean
+        Friend Shared Function IsExifSegment(bytes As Byte(), offset As Integer, totalLength As Integer) As Boolean
             If totalLength < 12 OrElse offset + 12 > bytes.Length Then Return False
             Return bytes(offset + 4) = AscW("E"c) AndAlso bytes(offset + 5) = AscW("x"c) AndAlso
                    bytes(offset + 6) = AscW("i"c) AndAlso bytes(offset + 7) = AscW("f"c) AndAlso
                    bytes(offset + 8) = 0 AndAlso bytes(offset + 9) = 0
         End Function
 
-        Private Shared Function BuildExifSegment(tiff As Byte()) As Byte()
+        Friend Shared Function BuildExifSegment(tiff As Byte()) As Byte()
             Dim payloadLength = 6 + tiff.Length
             Dim segment(payloadLength + 3) As Byte
             segment(0) = &HFF
@@ -867,20 +867,20 @@ Namespace Services
         ' Byte-Helfer. TIFF verlangt Wortausrichtung, deshalb das Auffuellen auf gerade Laenge.
         ' ---------------------------------------------------------------------------------------
 
-        Private Shared Sub PadToEven(buffer As List(Of Byte))
+        Friend Shared Sub PadToEven(buffer As List(Of Byte))
             If buffer.Count Mod 2 <> 0 Then buffer.Add(0)
         End Sub
 
-        Private Shared Function ReadUInt16BigEndian(bytes As Byte(), offset As Integer) As Integer
+        Friend Shared Function ReadUInt16BigEndian(bytes As Byte(), offset As Integer) As Integer
             Return (CInt(bytes(offset)) << 8) Or CInt(bytes(offset + 1))
         End Function
 
-        Private Shared Function ReadUInt16(bytes As Byte(), offset As Integer, littleEndian As Boolean) As Integer
+        Friend Shared Function ReadUInt16(bytes As Byte(), offset As Integer, littleEndian As Boolean) As Integer
             If littleEndian Then Return (CInt(bytes(offset + 1)) << 8) Or CInt(bytes(offset))
             Return (CInt(bytes(offset)) << 8) Or CInt(bytes(offset + 1))
         End Function
 
-        Private Shared Function ReadUInt32(bytes As Byte(), offset As Integer, littleEndian As Boolean) As UInteger
+        Friend Shared Function ReadUInt32(bytes As Byte(), offset As Integer, littleEndian As Boolean) As UInteger
             If littleEndian Then
                 Return CUInt(bytes(offset)) Or (CUInt(bytes(offset + 1)) << 8) Or
                        (CUInt(bytes(offset + 2)) << 16) Or (CUInt(bytes(offset + 3)) << 24)
@@ -889,7 +889,7 @@ Namespace Services
                    (CUInt(bytes(offset + 2)) << 8) Or CUInt(bytes(offset + 3))
         End Function
 
-        Private Shared Sub WriteUInt16(bytes As Byte(), offset As Integer, value As Integer, littleEndian As Boolean)
+        Friend Shared Sub WriteUInt16(bytes As Byte(), offset As Integer, value As Integer, littleEndian As Boolean)
             If littleEndian Then
                 bytes(offset) = CByte(value And &HFF)
                 bytes(offset + 1) = CByte((value >> 8) And &HFF)
@@ -899,7 +899,7 @@ Namespace Services
             End If
         End Sub
 
-        Private Shared Sub WriteUInt32(bytes As Byte(), offset As Integer, value As UInteger, littleEndian As Boolean)
+        Friend Shared Sub WriteUInt32(bytes As Byte(), offset As Integer, value As UInteger, littleEndian As Boolean)
             If littleEndian Then
                 bytes(offset) = CByte(value And &HFFUI)
                 bytes(offset + 1) = CByte((value >> 8) And &HFFUI)
@@ -913,13 +913,13 @@ Namespace Services
             End If
         End Sub
 
-        Private Shared Sub AppendUInt16(buffer As List(Of Byte), value As Integer, littleEndian As Boolean)
+        Friend Shared Sub AppendUInt16(buffer As List(Of Byte), value As Integer, littleEndian As Boolean)
             Dim raw(1) As Byte
             WriteUInt16(raw, 0, value, littleEndian)
             buffer.AddRange(raw)
         End Sub
 
-        Private Shared Sub AppendUInt32(buffer As List(Of Byte), value As UInteger, littleEndian As Boolean)
+        Friend Shared Sub AppendUInt32(buffer As List(Of Byte), value As UInteger, littleEndian As Boolean)
             Dim raw(3) As Byte
             WriteUInt32(raw, 0, value, littleEndian)
             buffer.AddRange(raw)

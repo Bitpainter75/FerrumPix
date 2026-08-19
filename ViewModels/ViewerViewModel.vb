@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
 Imports System.IO
@@ -673,6 +673,7 @@ Namespace ViewModels
                                                     .OpenPlaceInOsm = OpenPlaceInOsmCommand,
                                                     .PastePlace = PastePlaceCommand,
                                                     .SetPlace = SetPlaceCommand,
+                                                    .SetCopyright = SetCopyrightCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
@@ -698,6 +699,7 @@ Namespace ViewModels
         Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
@@ -770,6 +772,7 @@ Namespace ViewModels
                                                            AfterPlaceChanged()
                                                        End Sub)
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
+            SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
@@ -3065,6 +3068,19 @@ Namespace ViewModels
                                             Await g.SetPlaceForImageItemsAsync(i)
                                         End Function)
             AfterPlaceChanged()
+        End Function
+
+        ''' <summary>Der Urheberrechtshinweis fuer das angezeigte Bild - derselbe Weg wie beim
+        ''' Aufnahmeort, damit Galerie, Betrachter und Editor dieselbe Regel und dieselbe
+        ''' Rueckmeldung haben.</summary>
+        Private Async Function SetCopyrightCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetCopyrightForImageItemsAsync(i)
+                                        End Function)
+            ' Refresh und nicht ShowItem: der Pfad hat sich nicht geaendert, nur sein Inhalt - und
+            ' bei gleichem Pfad steigt das Panel sofort wieder aus, ohne neu zu lesen.
+            InfoPanel.Refresh()
+            RefreshContextActions()
         End Function
 
         Private Async Function RemovePlaceCurrentAsync() As Task

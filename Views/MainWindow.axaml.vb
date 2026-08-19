@@ -613,7 +613,7 @@ Namespace Views
         ''' App-weite Kürzel für Bewertung, Favorit und Farbetikett - in Galerie, Viewer (auch
         ''' Vollbild) und Editor, jeweils auf dem aktuellen Bild bzw. der Galerie-Auswahl:
         ''' 0 bis 5 und Control+0 bis Control+5 setzen die Bewertung (dieselbe Zahl erneut entfernt
-        ''' sie), Alt+1 bis Alt+9 setzen das Farbetikett, Alt+0 nimmt es weg, Punkt und Control+Q
+        ''' sie), Shift+1 bis Shift+9 setzen das Farbetikett, Shift+0 nimmt es weg, Punkt und Control+Q
         ''' schalten den Favoriten.
         ''' Die BLANKEN Ziffern und der Punkt gelten nur außerhalb von Eingabefeldern: wo man eine
         ''' Zahl eintippen kann, ist eine Zahl eine Zahl und kein Kürzel.
@@ -636,9 +636,10 @@ Namespace Views
 
             Dim digit = DigitFromKey(e.Key)
 
-            ' Alt+Ziffer: Farbetikett. Ausdrücklich nur Alt und sonst nichts - Control+Alt ist auf
-            ' vielen Belegungen AltGr und schreibt Zeichen; das darf kein Etikett setzen.
-            If digit >= 0 AndAlso e.KeyModifiers = KeyModifiers.Alt Then
+            ' Umschalt+Ziffer: Farbetikett. Ausdrücklich NUR Umschalt und sonst nichts - mit Strg
+            ' dazu ist es kein Etikett-Kürzel mehr, und Alt Gr (also Strg+Alt) schreibt auf vielen
+            ' Belegungen Zeichen.
+            If digit >= 0 AndAlso e.KeyModifiers = KeyModifiers.Shift Then
                 Dim palette = MenuWidgets.LabelColorValues
                 Dim hex = If(digit = 0, "", If(digit <= palette.Count, palette(digit - 1), Nothing))
                 If hex Is Nothing Then Return False
@@ -690,7 +691,7 @@ Namespace Views
             Return True
         End Function
 
-        ''' <summary>Ein leerer Wert nimmt das Etikett weg (Alt+0). In der Galerie gilt das Kürzel
+        ''' <summary>Ein leerer Wert nimmt das Etikett weg (Shift+0). In der Galerie gilt das Kürzel
         ''' der ganzen Auswahl, nicht nur dem zuletzt angeklickten Bild.</summary>
         Private Shared Function TrySetColorLabel(vm As MainWindowViewModel, colorLabel As String) As Boolean
             If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then

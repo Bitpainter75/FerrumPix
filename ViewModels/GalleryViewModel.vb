@@ -1605,6 +1605,7 @@ Namespace ViewModels
             OpenPlaceInOsmCommand = ReactiveCommand.Create(Sub() OpenPlaceInOsmFromSelected())
             PastePlaceCommand = ReactiveCommand.Create(Sub() PastePlaceToSelected())
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceForSelectedAsync())
+            SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightForSelectedAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
@@ -1720,6 +1721,7 @@ Namespace ViewModels
         Public ReadOnly Property CopyPlaceCommand As ICommand
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
+        Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
 
@@ -1894,6 +1896,85 @@ Namespace ViewModels
             If items Is Nothing OrElse items.Count = 0 Then Return
             Await SetPlaceForSelectedAsync(items)
         End Function
+
+        ''' <summary>Derselbe Weg fuer den Urheberrechtshinweis: Betrachter und Editor loesen damit
+        ''' fuer ihr angezeigtes Bild aus, was die Galerie fuer ihre Auswahl tut.</summary>
+        Public Async Function SetCopyrightForImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await SetCopyrightForSelectedAsync(items)
+        End Function
+
+        ''' <summary>Fragt den Urheberrechtshinweis ab und schreibt ihn an die Auswahl.
+        '''
+        ''' Bei EINEM Bild, an dem schon einer steht, steht er beim Oeffnen im Feld - dann sieht man,
+        ''' was gilt, und kann ihn aendern statt ihn neu zu tippen. Bei mehreren Bildern nur dann,
+        ''' wenn alle denselben tragen; sonst bliebe unklar, wessen Hinweis da vorgeschlagen wird.
+        '''
+        ''' Ein LEER bestaetigtes Feld tut nichts. Zum Entfernen gibt es den eigenen Eintrag - sonst
+        ''' loeschte ein versehentlich geleertes Feld den Hinweis einer ganzen Auswahl.</summary>
+        Private Async Function SetCopyrightForSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task
+            Try
+                Dim images = GetPlaceTargets(preset)
+                If images.Count = 0 OrElse _mainVm Is Nothing Then Return
+
+                Dim initial = CopyrightService.ReadCopyright(images(0).FilePath)
+                If initial.Length > 0 Then
+                    For Each item In images
+                        If Not String.Equals(CopyrightService.ReadCopyright(item.FilePath), initial, StringComparison.Ordinal) Then
+                            initial = ""
+                            Exit For
+                        End If
+                    Next
+                End If
+
+                Dim entered = Await _mainVm.ShowInputAsync(AppDialogKind.Input,
+                                                           LocalizationService.T("Copyright setzen"),
+                                                           LocalizationService.T("Urheberrechtshinweis für die Auswahl:"),
+                                                           initial,
+                                                           "Setzen")
+                If entered Is Nothing Then Return
+                ApplyCopyrightToSelection(entered, images)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.SetCopyright", ex)
+            End Try
+        End Function
+
+        ''' <summary>Schreibt den Hinweis an die Bilder und meldet, was daraus geworden ist. Getrennt
+        ''' gemeldet wird, was in die DATEI ging und was in eine Beistelldatei daneben - das ist der
+        ''' Unterschied, der zaehlt, wenn man die Datei weitergibt.</summary>
+        Friend Sub ApplyCopyrightToSelection(copyrightText As String, Optional preset As IList(Of ImageItem) = Nothing)
+            Dim images = GetPlaceTargets(preset)
+            If images.Count = 0 Then Return
+            Dim text = CopyrightService.NormalizeText(copyrightText)
+            If text.Length = 0 Then Return
+
+            Dim inFile = 0, besideFile = 0, failed = 0
+            For Each item In images
+                Dim result = CopyrightService.WriteCopyright(item.FilePath, text)
+                If Not result.Success Then
+                    failed += 1
+                ElseIf result.Target = CopyrightTarget.EmbeddedExif Then
+                    inFile += 1
+                Else
+                    besideFile += 1
+                End If
+            Next
+
+            If failed = 0 Then
+                StatusText = String.Format(LocalizationService.T("Copyright gesetzt: {0} in der Datei, {1} in einer Beistelldatei"),
+                                           inFile, besideFile)
+            Else
+                StatusText = String.Format(LocalizationService.T("Copyright gesetzt für {0} von {1} Bildern"),
+                                           inFile + besideFile, images.Count)
+            End If
+
+            ' Das Infopanel zeigt den Hinweis in der Allgemein-Ansicht - es stuende sonst beim alten
+            ' Stand. Refresh MUSS dabei sein: der Pfad hat sich nicht geaendert, nur sein Inhalt,
+            ' und bei gleichem Pfad steigt das Panel sofort wieder aus, ohne neu zu lesen.
+            UpdateInfoPanelTarget()
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Sub
 
         Public Async Function RemovePlaceFromImageItemsAsync(items As IList(Of ImageItem)) As Task
             If items Is Nothing OrElse items.Count = 0 Then Return
@@ -9135,6 +9216,7 @@ Namespace ViewModels
                              Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
+                                                             copyrightText:=resize.Copyright,
                                                              cancel:=cancel)
                          End Function
 
@@ -9306,6 +9388,7 @@ Namespace ViewModels
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
+                                                             copyrightText:=result.Copyright,
                                                              cancel:=cancel)
                          End Function
 
@@ -9533,6 +9616,7 @@ Namespace ViewModels
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
+                                                             copyrightText:=result.Copyright,
                                                              cancel:=cancel)
                          End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -10359,6 +10443,7 @@ Namespace ViewModels
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
+                                                             copyrightText:=result.Copyright,
                                                              cancel:=cancel)
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
@@ -10467,6 +10552,7 @@ Namespace ViewModels
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
+                                                             copyrightText:=result.Copyright,
                                                              cancel:=cancel)
                          End Function
             ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher

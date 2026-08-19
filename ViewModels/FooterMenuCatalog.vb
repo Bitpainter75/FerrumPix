@@ -152,6 +152,12 @@ Namespace ViewModels
             Return New AppAction(text, "map-pin-plus", c)
         End Function
 
+        ''' <summary>Der Urheberrechtshinweis. Steht im Metadaten-Untermenue neben dem Aufnahmeort,
+        ''' weil beide dasselbe tun: eine Angabe ZUR Aufnahme an die Datei schreiben.</summary>
+        Public Shared Function SetCopyright(c As ICommand) As AppAction
+            Return Build("Copyright setzen", "copyright", c)
+        End Function
+
         Public Shared Function SetPlace(c As ICommand) As AppAction
             ' Ohne Auslassungspunkte, wie die uebrigen Eintraege, die einen Dialog oeffnen
             ' ("Größe ändern", "Exportieren nach").

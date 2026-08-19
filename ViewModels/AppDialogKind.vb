@@ -1,4 +1,4 @@
-Imports System.Collections.Generic
+﻿Imports System.Collections.Generic
 Imports FerrumPix.Services
 
 Namespace ViewModels
@@ -69,6 +69,9 @@ Namespace ViewModels
 
         ''' <summary>EXIF/XMP der Quelle in die Zieldatei übernehmen.</summary>
         Public Property PreserveMetadata As Boolean = True
+        ''' <summary>Urheberrechtshinweis fuer die geschriebenen Dateien. LEER heisst: das
+        ''' Feld bleibt unangetastet - genau so ist es im Formular gemeint.</summary>
+        Public Property Copyright As String = ""
         ''' <summary>Dateinamen-Muster für die Ziele (leer = Originalname), Platzhalter wie beim
         ''' Stapel-Umbenennen.</summary>
         Public Property NamePattern As String = ""
@@ -160,6 +163,9 @@ Namespace ViewModels
         ''' <summary>Datei-Metadaten (EXIF/XMP) der Quelle in die Zieldatei uebernehmen -
         ''' der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs.</summary>
         Public Property PreserveMetadata As Boolean = True
+        ''' <summary>Urheberrechtshinweis fuer die geschriebenen Dateien. LEER heisst: das
+        ''' Feld bleibt unangetastet - genau so ist es im Formular gemeint.</summary>
+        Public Property Copyright As String = ""
         Public Property Width As Integer
         Public Property Height As Integer
         Public Property ScalePercent As Integer
@@ -224,6 +230,9 @@ Namespace ViewModels
         ''' <summary>Datei-Metadaten (EXIF/XMP) der Quelle in die Zieldatei uebernehmen -
         ''' der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs.</summary>
         Public Property PreserveMetadata As Boolean = True
+        ''' <summary>Urheberrechtshinweis fuer die geschriebenen Dateien. LEER heisst: das
+        ''' Feld bleibt unangetastet - genau so ist es im Formular gemeint.</summary>
+        Public Property Copyright As String = ""
         Public Property Preset As WatermarkPresetSettings
         Public Property Overwrite As Boolean = True
         ''' Muster fuer die Zieldateinamen. Der Dialog zeigt das Feld schon laenger; ohne diese

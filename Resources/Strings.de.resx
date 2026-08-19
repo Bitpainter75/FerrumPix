@@ -7508,4 +7508,25 @@
   <data name="STRG_P_oder_P_ec8eab63" xml:space="preserve">
     <value>STRG+P oder P</value>
   </data>
+  <data name="SHIFT_1_bis_SHIFT_9_98032489" xml:space="preserve">
+    <value>SHIFT+1 bis SHIFT+9</value>
+  </data>
+  <data name="SHIFT_0_52b3a2d7" xml:space="preserve">
+    <value>SHIFT+0</value>
+  </data>
+  <data name="Copyright_setzen_34a46a86" xml:space="preserve">
+    <value>Copyright setzen</value>
+  </data>
+  <data name="Urheberrechtshinweis_f_r_die_Auswahl_aaa86a53" xml:space="preserve">
+    <value>Urheberrechtshinweis für die Auswahl:</value>
+  </data>
+  <data name="Leer_lassen_hei_t_unver_ndert_f08fa19b" xml:space="preserve">
+    <value>Leer lassen heißt: unverändert</value>
+  </data>
+  <data name="Copyright_gesetzt_0_in_der_Datei_1_in_einer_Beis_00f21a86" xml:space="preserve">
+    <value>Copyright gesetzt: {0} in der Datei, {1} in einer Beistelldatei</value>
+  </data>
+  <data name="Copyright_gesetzt_f_r_0_von_1_Bildern_7f035d9e" xml:space="preserve">
+    <value>Copyright gesetzt für {0} von {1} Bildern</value>
+  </data>
 </root>

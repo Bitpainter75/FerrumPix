@@ -243,6 +243,12 @@ Namespace ViewModels
                 If LibraryService.Instance.AnyGpsCoordinates(localImages.Select(Function(i) i.FilePath)) Then
                     AddIfOffered(children, commands.RemovePlace, FooterMenuCatalog.RemovePlace(commands.RemovePlace))
                 End If
+
+                ' Der Urheberrechtshinweis gilt IMMER fuer die ganze Auswahl und braucht keinen
+                ' Blick in den Katalog: er steht in der Datei, nicht bei uns. Ein Trenner davor,
+                ' weil er eine andere Angabe meint als der Aufnahmeort darueber.
+                children.Add(FooterMenuCatalog.Divider())
+                AddIfOffered(children, commands.SetCopyright, FooterMenuCatalog.SetCopyright(commands.SetCopyright))
             End If
 
             ' Metadaten entfernen schreibt die DATEI neu. Ein Serverbild hat keine, die wir

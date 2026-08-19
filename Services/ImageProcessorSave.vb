@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Buffers
 Imports System.Collections.Generic
 Imports System.ComponentModel
@@ -368,6 +368,7 @@ Namespace Services
                                          Optional workingFull As SKBitmap = Nothing,
                                          Optional developRaw As Boolean = True,
                                          Optional applyPendingBaked As Boolean = False,
+                                         Optional copyrightText As String = "",
                                          Optional cancel As Threading.CancellationToken = Nothing) As Boolean
             ' Zentraler Schutz: Bearbeitung einer RAW-Quelle wirkt nur auf deren eingebettete
             ' JPEG-Vorschau (siehe OpenSourceStream/DecodeOriented) - ein Speichern-in-place würde
@@ -516,6 +517,11 @@ Namespace Services
                     ' In ein PDF lässt sich kein EXIF-Block kopieren - der Versuch würde die Datei
                     ' beschädigen.
                     If preserveMetadata AndAlso Not isFpxSource AndAlso Not isPdf AndAlso Not isFpxTarget Then TryCopyMetadata(sourcePath, targetPath)
+                    ' Der Urheberrechtshinweis kommt NACH dem Kopieren der Metadaten: sonst
+                    ' ueberschriebe der Hinweis aus der Quelle den gerade gesetzten wieder. Ein
+                    ' leerer Text tut nichts - das ist die Regel der Stapelformulare, "leer heisst
+                    ' dieses Feld nicht anfassen". In ein PDF und in ein Buendel geht er nicht.
+                    If Not isPdf AndAlso Not isFpxTarget Then ApplyCopyright(targetPath, copyrightText)
                     Return True
                 End Using
             Catch ex As Exception
@@ -568,6 +574,24 @@ Namespace Services
                 Return ToAvaloniaBitmap(rendered)
             End Using
         End Function
+
+        ''' <summary>Setzt den Urheberrechtshinweis an die eben geschriebene Datei. Ein leerer Text
+        ''' laesst sie unangetastet - so ist das Feld in den Stapelformularen gemeint.
+        '''
+        ''' Ein Fehlschlag darf das Speichern NICHT scheitern lassen: das Bild steht dann bereits auf
+        ''' der Platte, und eine Rueckmeldung "nicht gespeichert" waere schlicht falsch. Er wandert
+        ''' ins Diagnoselog.</summary>
+        Private Shared Sub ApplyCopyright(targetPath As String, copyrightText As String)
+            If String.IsNullOrWhiteSpace(copyrightText) Then Return
+            Try
+                Dim result = CopyrightService.WriteCopyright(targetPath, copyrightText)
+                If Not result.Success Then
+                    DiagnosticLogService.LogAlways("Save.Copyright", "nicht gesetzt: " & result.FailureReason)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Save.Copyright", ex)
+            End Try
+        End Sub
 
         Private Shared Sub TryCopyMetadata(sourcePath As String, targetPath As String)
             If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return

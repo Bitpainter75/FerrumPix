@@ -101,7 +101,7 @@
                             <!-- Die Labelspalte teilt ihre Breite mit den dialogeigenen Sektionen
                                  (SharedSizeGroup): Eingabefelder beider Bereiche beginnen auf derselben
                                  Linie, egal welches Label das längste ist. -->
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="14"
                                   RowSpacing="12">
                                 <Grid.ColumnDefinitions>
@@ -288,6 +288,24 @@
                                                 Tag="Exif">EXIF</Button>
                                     </StackPanel>
                                 </Border>
+
+                                <!-- Der Urheberrechtshinweis steht bei den Metadaten, weil er einer
+                                     ist. LEER heisst ausdruecklich "das Feld nicht anfassen" - der
+                                     Platzhalter sagt das, damit niemand ein leeres Feld fuer
+                                     "Hinweis loeschen" haelt. Er erscheint auch beim UEBERSCHREIBEN,
+                                     anders als die Uebernahme-Schalter darueber: der Hinweis gehoert
+                                     in die Datei, gleich ob sie neu entsteht. -->
+                                <TextBlock Grid.Row="6"
+                                           Text="Copyright"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding DialogShowsCopyright}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <TextBox Grid.Row="6"
+                                         Grid.Column="1"
+                                         Text="{Binding DialogCopyright, Mode=TwoWay}"
+                                         PlaceholderText="Leer lassen heißt: unverändert"
+                                         IsVisible="{Binding DialogShowsCopyright}"
+                                         MinHeight="36"/>
                             </Grid>
                             <!-- Nur im KONVERTIEREN-Dialog: die uebrigen Stapeldialoge bringen die
                                  Frage in ihrer eigenen Sektion mit, und beim Speichern aus dem
