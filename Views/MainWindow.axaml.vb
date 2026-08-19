@@ -7,6 +7,7 @@ Imports Avalonia.Markup.Xaml
 Imports Avalonia.Platform
 Imports Avalonia.Threading
 Imports Avalonia.VisualTree
+Imports FerrumPix.Controls
 Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
 Imports System.Linq
@@ -609,44 +610,95 @@ Namespace Views
             End If
         End Sub
 
-        ''' App-weite Kürzel: Control+1–5 setzt die Bewertung (Control+0
-        ''' entfernt sie), Control+Q schaltet den Favoriten - in Galerie, Viewer (auch Vollbild)
-        ''' und Editor, jeweils auf dem aktuellen Bild bzw. der Galerie-Auswahl.
+        ''' App-weite Kürzel für Bewertung, Favorit und Farbetikett - in Galerie, Viewer (auch
+        ''' Vollbild) und Editor, jeweils auf dem aktuellen Bild bzw. der Galerie-Auswahl:
+        ''' 0 bis 5 und Control+0 bis Control+5 setzen die Bewertung (dieselbe Zahl erneut entfernt
+        ''' sie), Alt+1 bis Alt+9 setzen das Farbetikett, Alt+0 nimmt es weg, Punkt und Control+Q
+        ''' schalten den Favoriten.
+        ''' Die BLANKEN Ziffern und der Punkt gelten nur außerhalb von Eingabefeldern: wo man eine
+        ''' Zahl eintippen kann, ist eine Zahl eine Zahl und kein Kürzel.
         ''' Diese Anwendungsbelegungen bleiben auf macOS bewusst bei Control: Command+Q
         ''' gehört dort dem systemweiten Beenden der Anwendung.
         Private Function TryHandleRatingShortcut(vm As MainWindowViewModel, e As KeyEventArgs) As Boolean
             If IsTextInputSource(e.Source) Then Return False
 
-            ' Apple Photos verwendet den Punkt für „Favorit". Control+Q bleibt
-            ' auf allen Plattformen als FerrumPix-Kompatibilitätskürzel bestehen;
+            ' Der Punkt schaltet den Favoriten - auf allen Plattformen, nicht nur dort, wo Apple
+            ' Fotos ihn vormacht. Das KOMMA zählt mit: auf dem deutschen Zahlenblock trägt die
+            ' Trennzeichentaste ein Komma, und je nach Belegung meldet sie sich als Decimal oder
+            ' als OemComma. Wer die Sterne auf dem Zahlenblock vergibt, hat den Favoriten damit
+            ' unter demselben Daumen.
+            ' Control+Q bleibt auf allen Plattformen als FerrumPix-Kompatibilitätskürzel bestehen;
             ' Command+Q wird ausdrücklich nicht abgefangen.
-            If PlatformShortcutService.IsMacOS AndAlso e.Key = Key.OemPeriod AndAlso
-               e.KeyModifiers = KeyModifiers.None Then
+            If e.KeyModifiers = KeyModifiers.None AndAlso
+               (e.Key = Key.OemPeriod OrElse e.Key = Key.Decimal OrElse e.Key = Key.OemComma) Then
                 Return TryToggleFavorite(vm)
+            End If
+
+            Dim digit = DigitFromKey(e.Key)
+
+            ' Alt+Ziffer: Farbetikett. Ausdrücklich nur Alt und sonst nichts - Control+Alt ist auf
+            ' vielen Belegungen AltGr und schreibt Zeichen; das darf kein Etikett setzen.
+            If digit >= 0 AndAlso e.KeyModifiers = KeyModifiers.Alt Then
+                Dim palette = MenuWidgets.LabelColorValues
+                Dim hex = If(digit = 0, "", If(digit <= palette.Count, palette(digit - 1), Nothing))
+                If hex Is Nothing Then Return False
+                Return TrySetColorLabel(vm, hex)
+            End If
+
+            ' Blanke Ziffer: Bewertung. 6 bis 9 haben keine Bedeutung und fallen bewusst durch,
+            ' statt still verschluckt zu werden.
+            If digit >= 0 AndAlso digit <= 5 AndAlso e.KeyModifiers = KeyModifiers.None Then
+                Return TrySetRating(vm, digit)
             End If
 
             If Not PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) Then Return False
 
-            Dim rating As String = Nothing
-            Select Case e.Key
-                Case Key.D0, Key.NumPad0 : rating = "0"
-                Case Key.D1, Key.NumPad1 : rating = "1"
-                Case Key.D2, Key.NumPad2 : rating = "2"
-                Case Key.D3, Key.NumPad3 : rating = "3"
-                Case Key.D4, Key.NumPad4 : rating = "4"
-                Case Key.D5, Key.NumPad5 : rating = "5"
-                Case Key.Q
-                    Return TryToggleFavorite(vm)
-                Case Else
-                    Return False
-            End Select
+            If e.Key = Key.Q Then Return TryToggleFavorite(vm)
+            If digit < 0 OrElse digit > 5 Then Return False
+            Return TrySetRating(vm, digit)
+        End Function
 
+        ''' <summary>Die Ziffer hinter einer Taste, aus Zahlenreihe wie Ziffernblock; -1 für alles
+        ''' andere.</summary>
+        Private Shared Function DigitFromKey(key As Key) As Integer
+            Select Case key
+                Case Key.D0, Key.NumPad0 : Return 0
+                Case Key.D1, Key.NumPad1 : Return 1
+                Case Key.D2, Key.NumPad2 : Return 2
+                Case Key.D3, Key.NumPad3 : Return 3
+                Case Key.D4, Key.NumPad4 : Return 4
+                Case Key.D5, Key.NumPad5 : Return 5
+                Case Key.D6, Key.NumPad6 : Return 6
+                Case Key.D7, Key.NumPad7 : Return 7
+                Case Key.D8, Key.NumPad8 : Return 8
+                Case Key.D9, Key.NumPad9 : Return 9
+                Case Else : Return -1
+            End Select
+        End Function
+
+        Private Shared Function TrySetRating(vm As MainWindowViewModel, rating As Integer) As Boolean
+            Dim value = rating.ToString(System.Globalization.CultureInfo.InvariantCulture)
             If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then
-                vm.Viewer?.SetRatingCommand.Execute(rating)
+                vm.Viewer?.SetRatingCommand.Execute(value)
             ElseIf vm.CurrentMode = AppMode.Gallery Then
-                vm.Gallery?.SetSelectedRatingCommand.Execute(rating)
+                vm.Gallery?.SetSelectedRatingCommand.Execute(value)
             ElseIf vm.CurrentMode = AppMode.Editor Then
-                vm.Editor?.SetRatingCommand.Execute(rating)
+                vm.Editor?.SetRatingCommand.Execute(value)
+            Else
+                Return False
+            End If
+            Return True
+        End Function
+
+        ''' <summary>Ein leerer Wert nimmt das Etikett weg (Alt+0). In der Galerie gilt das Kürzel
+        ''' der ganzen Auswahl, nicht nur dem zuletzt angeklickten Bild.</summary>
+        Private Shared Function TrySetColorLabel(vm As MainWindowViewModel, colorLabel As String) As Boolean
+            If vm.IsFullscreen OrElse vm.CurrentMode = AppMode.Viewer Then
+                vm.Viewer?.SetColorLabelCommand.Execute(colorLabel)
+            ElseIf vm.CurrentMode = AppMode.Gallery Then
+                vm.Gallery?.SetSelectedColorLabelCommand.Execute(colorLabel)
+            ElseIf vm.CurrentMode = AppMode.Editor Then
+                vm.Editor?.SetColorLabelCommand.Execute(colorLabel)
             Else
                 Return False
             End If
@@ -984,7 +1036,7 @@ Namespace Views
             End If
         End Function
 
-        Private Function IsTextInputSource(source As Object) As Boolean
+        Private Shared Function IsTextInputSource(source As Object) As Boolean
             Dim ctrl = TryCast(source, Control)
             While ctrl IsNot Nothing
                 If TypeOf ctrl Is TextBox Then Return True

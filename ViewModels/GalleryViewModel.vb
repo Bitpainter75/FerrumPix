@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Diagnostics
 Imports System.Collections.ObjectModel
@@ -1295,6 +1295,7 @@ Namespace ViewModels
         Public ReadOnly Property ClearPlaceFilterCommand As ICommand
         Public ReadOnly Property ScanFacesCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
+        Public ReadOnly Property SetSelectedColorLabelCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
         Public ReadOnly Property DuplicateSelectedCommand As ICommand
         Public ReadOnly Property ResizeSelectedCommand As ICommand
@@ -1620,6 +1621,7 @@ Namespace ViewModels
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
             DecreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize -= 24)
             SetSelectedRatingCommand = ReactiveCommand.Create(Of String)(Sub(r) SetSelectedRating(r))
+            SetSelectedColorLabelCommand = ReactiveCommand.Create(Of String)(Sub(hex) SetSelectedColorLabel(hex))
             SetFilterFavoriteCommand = ReactiveCommand.Create(Of String)(Sub(v) FilterFavorite = v)
             SetFilterRatingCommand = ReactiveCommand.Create(Of String)(Sub(v)
                 Dim r As Integer
@@ -2085,6 +2087,30 @@ Namespace ViewModels
 
             Me.RaisePropertyChanged(NameOf(SelectedRating))
             If _sortMode = "Rating" Then FilterAndSort()
+        End Sub
+
+        ''' <summary>Setzt das Farbetikett auf die GANZE Auswahl - der Weg der Tastenkürzel ALT+1
+        ''' bis ALT+9. Ein leerer Wert (ALT+0) nimmt das Etikett weg, dieselbe Farbe noch einmal
+        ''' ebenfalls (Toggle wie bei den Sternen).
+        '''
+        ''' Verglichen wird gegen das Etikett der AUSWAHL, nicht gegen das eines einzelnen Bildes:
+        ''' tragen die markierten Bilder verschiedene Farben, gilt das als gemischt - dann setzt die
+        ''' Taste die Farbe, statt sie wegzunehmen. Sonst hinge das Ergebnis daran, welches Bild
+        ''' zufällig zuerst in der Auswahl steht.</summary>
+        Private Sub SetSelectedColorLabel(colorLabel As String)
+            Dim images = GetSelectedImageItems()
+            If images.Count = 0 Then Return
+
+            Dim value = If(colorLabel, "")
+            Dim common = If(images(0).ColorLabel, "")
+            If images.Any(Function(i) Not String.Equals(If(i.ColorLabel, ""), common, StringComparison.OrdinalIgnoreCase)) Then common = ""
+            Dim target = If(value.Length > 0 AndAlso String.Equals(common, value, StringComparison.OrdinalIgnoreCase), "", value)
+
+            For Each item In images
+                item.ColorLabel = target
+            Next
+            LibraryService.Instance.SetColorLabelForMany(images.Select(Function(i) i.FilePath), target, syncToXmp:=True)
+            If _filterColorLabels.Count > 0 Then FilterAndSort()
         End Sub
 
         ''' <summary>Setzt das Farbetikett. Ist das Bild Teil der aktuellen Auswahl, bekommt die GANZE

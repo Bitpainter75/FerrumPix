@@ -7497,4 +7497,25 @@
   <data name="Objekt_vertikal_gespiegelt_d33a77fe" xml:space="preserve">
     <value>Objektet spejlet lodret</value>
   </data>
+  <data name="1_bis_5_35954fb9" xml:space="preserve">
+    <value>1 til 5</value>
+  </data>
+  <data name="Bewertung_setzen_dieselbe_Zahl_erneut_entfernt_s_d84f9065" xml:space="preserve">
+    <value>Angiv bedømmelse (samme tal igen fjerner den); i et indtastningsfelt forbliver cifret et ciffer</value>
+  </data>
+  <data name="ALT_1_bis_ALT_9_d7b9c77b" xml:space="preserve">
+    <value>ALT+1 til ALT+9</value>
+  </data>
+  <data name="Farbetikett_setzen_dieselbe_Farbe_erneut_entfern_3bdc0c45" xml:space="preserve">
+    <value>Angiv farveetiket (samme farve igen fjerner den)</value>
+  </data>
+  <data name="ALT_0_86df2309" xml:space="preserve">
+    <value>ALT+0</value>
+  </data>
+  <data name="Farbetikett_entfernen_98fa69f2" xml:space="preserve">
+    <value>Fjern farveetiketten</value>
+  </data>
+  <data name="PUNKT_oder_KOMMA_2d85ed70" xml:space="preserve">
+    <value>PUNKTUM eller KOMMA</value>
+  </data>
 </root>

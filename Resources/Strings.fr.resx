@@ -7457,4 +7457,25 @@
   <data name="Objekt_vertikal_gespiegelt_d33a77fe" xml:space="preserve">
     <value>Objet miroité verticalement</value>
   </data>
+  <data name="1_bis_5_35954fb9" xml:space="preserve">
+    <value>1 à 5</value>
+  </data>
+  <data name="Bewertung_setzen_dieselbe_Zahl_erneut_entfernt_s_d84f9065" xml:space="preserve">
+    <value>Attribuer une note (appuyer à nouveau sur le même chiffre la supprime) ; dans un champ de saisie, le chiffre reste un chiffre</value>
+  </data>
+  <data name="ALT_1_bis_ALT_9_d7b9c77b" xml:space="preserve">
+    <value>ALT+1 à ALT+9</value>
+  </data>
+  <data name="Farbetikett_setzen_dieselbe_Farbe_erneut_entfern_3bdc0c45" xml:space="preserve">
+    <value>Attribuer une étiquette de couleur (la même couleur à nouveau la supprime)</value>
+  </data>
+  <data name="ALT_0_86df2309" xml:space="preserve">
+    <value>ALT+0</value>
+  </data>
+  <data name="Farbetikett_entfernen_98fa69f2" xml:space="preserve">
+    <value>Supprimer l'étiquette de couleur</value>
+  </data>
+  <data name="PUNKT_oder_KOMMA_2d85ed70" xml:space="preserve">
+    <value>POINT ou VIRGULE</value>
+  </data>
 </root>

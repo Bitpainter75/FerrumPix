@@ -366,7 +366,9 @@ Namespace Views
                 Case Key.Subtract, Key.OemMinus
                     vm.ZoomOut()
                     e.Handled = True
-                Case Key.D0, Key.NumPad0
+                ' Einpassen liegt auf F und NICHT mehr auf der 0: die blanken Ziffern setzen in
+                ' allen drei Ansichten die Bewertung, und die 0 nimmt sie weg.
+                Case Key.F
                     vm.ZoomFitCommand.Execute(Nothing)
                     ApplyImageFitMode()
                     e.Handled = True

@@ -2180,6 +2180,14 @@
                                 <TextBlock Grid.Column="1" Text="Vollbild ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="1 bis 5" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Bewertung setzen (dieselbe Zahl erneut entfernt sie); in einem Eingabefeld bleibt die Ziffer eine Ziffer" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="0" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Bewertung entfernen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+1 bis STRG+5" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bewertung setzen (dieselbe Zahl erneut entfernt sie)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
@@ -2188,7 +2196,19 @@
                                 <TextBlock Grid.Column="1" Text="Bewertung entfernen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="STRG+Q" Tag="MacFavorite" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="ALT+1 bis ALT+9" Tag="Alt" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Farbetikett setzen (dieselbe Farbe erneut entfernt es)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="ALT+0" Tag="Alt" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Farbetikett entfernen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="PUNKT oder KOMMA" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Favorit ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
+                                <TextBlock Text="STRG+Q" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Favorit ein/aus" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                         </StackPanel>
@@ -2340,7 +2360,7 @@
                                 <TextBlock Grid.Column="1" Text="Verkleinern" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
-                                <TextBlock Text="0" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="F" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1" Text="Bild einpassen" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">

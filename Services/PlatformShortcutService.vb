@@ -152,10 +152,11 @@ Namespace Services
                     Return ReplaceLeadingModifier(text, "⌘")
                 Case "Application"
                     Return ReplaceLeadingModifier(text, "⌃")
+                Case "Alt"
+                    ' Die Alt-Taste heisst auf macOS Option und schreibt sich ⌥.
+                    Return ReplaceLeadingModifier(text, "⌥")
                 Case "MacFullscreen"
                     Return "⌃⌘F / F11"
-                Case "MacFavorite"
-                    Return ". / ⌃Q"
                 Case "MacRotateLeft"
                     Return "⌘R"
                 Case "MacRotateRight"

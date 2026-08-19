@@ -30,6 +30,12 @@ Namespace Controls
             ("Lila", "#8B5CF6"), ("Blau", "#3B82F6"), ("Cyan", "#0891B2"),
             ("Türkis", "#0F766E"), ("Grün", "#22C55E"), ("Gelb", "#FACC15")}
 
+        ''' <summary>Dieselben neun Farben, nur die Werte - in derselben Reihenfolge, in der sie im
+        ''' Menue stehen. Die Tastenkuerzel ALT+1 bis ALT+9 belegen genau diese Reihenfolge und
+        ''' lesen sie HIER, damit Menue und Tastatur nicht auseinanderlaufen koennen.</summary>
+        Public Shared ReadOnly Property LabelColorValues As IReadOnlyList(Of String) =
+            Array.ConvertAll(LabelColors, Function(color) color.Hex)
+
         Private Sub New()
         End Sub
 
