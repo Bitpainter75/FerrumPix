@@ -13112,6 +13112,17 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
+            ElseIf PsdPreviewService.IsSupportedPsd(path) Then
+                ' Derselbe Weg wie beim Öffnen (LoadPsdDocumentAsync): eine Photoshop-Datei kommt
+                ' auch beim Blättern mit ihren Ebenen herein. Hier fehlte er, und dieselbe Datei
+                ' zeigte je nach Weg ein anderes Dokument.
+                Dim psdLoad = Await LoadPsdDocumentAsync(path)
+                fpxAdjustments = psdLoad.Adjustments
+                If psdLoad.HasLayers Then
+                    newRenderSourcePathOverride = psdLoad.BaseImagePath
+                    newFpxTempDir = psdLoad.TempDir
+                    newForceSaveAsOnly = True
+                End If
             ElseIf RawSidecarService.IsSidecarFormat(path) AndAlso
                    RawSidecarService.Exists(path) Then
                 ' Rezept-Begleitdatei (.fpxmp): die zuletzt gespeicherten Regler kommen wie beim
@@ -13280,6 +13291,79 @@ Namespace ViewModels
                                                  displayFileName:=_sourceDisplayFileName)
         End Function
 
+        ''' <summary>Was beim Öffnen einer Photoshop-Datei herauskommt. <see cref="HasLayers"/> ist
+        ''' die einzige Frage, die der Ladeweg danach noch stellt: nur dann gibt es ein Grundbild
+        ''' und einen Temp-Ordner, sonst bleibt es beim flachen Gesamtbild.</summary>
+        Private NotInheritable Class PsdDocumentLoad
+            Public Property Adjustments As ImageAdjustments
+            Public Property BaseImagePath As String = ""
+            Public Property TempDir As String = ""
+
+            Public ReadOnly Property HasLayers As Boolean
+                Get
+                    Return Not String.IsNullOrEmpty(BaseImagePath)
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>Öffnet eine Photoshop-Datei als Ebenenstapel und legt die gespeicherte
+        ''' Bearbeitung darüber.
+        '''
+        ''' Der Inhalt der Datei kommt IMMER herein, auch wenn daneben schon eine Begleitdatei
+        ''' liegt: die .psd trägt den Inhalt, die .fpxmp die Bearbeitung, und beides schliesst sich
+        ''' nicht aus (PsdImportService.MergeSidecarRecipe). Vorher stach jede Begleitdatei den
+        ''' Import, und schon eine Bewertung genügte dafür - der Katalog legt für sie eine
+        ''' Begleitdatei mit neutralem Rezept an, und der Ebenenstapel blieb weg.
+        '''
+        ''' Das Grundbild ist eine leere Fläche oder die unterste Ebene, NIE das Gesamtbild: läge
+        ''' das darunter, wäre alles doppelt zu sehen (siehe PsdImportService).
+        '''
+        ''' Gemeinsam für beide Ladewege - Öffnen und Filmstreifen. Im Filmstreifen fehlte er
+        ''' bisher ganz: dieselbe Datei kam mit Ebenen herein, wenn man sie öffnete, und flach,
+        ''' wenn man zu ihr blätterte.</summary>
+        Private Async Function LoadPsdDocumentAsync(psdSource As String) As Task(Of PsdDocumentLoad)
+            ' Die gespeicherte Bearbeitung, falls es eine gibt. Sie kommt ÜBER den Stapel und
+            ' ersetzt ihn nicht; ohne Ebenen in der Datei bleibt sie allein übrig, genau wie bei
+            ' einer RAW.
+            Dim sidecar = If(RawSidecarService.Exists(psdSource), RawSidecarService.TryRead(psdSource), Nothing)
+
+            ' Textebenen einer FREMDEN Datei: der Wortlaut lässt sich herausholen, Schrift und
+            ' Grad nicht verlässlich. Als Text ist er weiter tippbar, sieht aber womöglich anders
+            ' aus; als Bild stimmt jeder Punkt, dafür ist er fest. Die Abwägung gehört dem Nutzer.
+            ' Bei einer eigenen Datei stellt sich die Frage nicht, dort kommt alles vollständig
+            ' zurück - CountTextLayers meldet dann 0.
+            ' Die Antwort ist eine ARBEITSWEISE, keine Eigenschaft der Datei - sie steht deshalb
+            ' in den Einstellungen unter Editor. „Immer fragen" ist die Vorgabe; wer sich
+            ' festgelegt hat, bekommt die Frage gar nicht mehr. Gezählt wird trotzdem je Datei:
+            ' ohne Textebenen gibt es nichts zu entscheiden.
+            Dim textImportMode = AppSettingsService.NormalizePsdTextImport(AppSettingsService.Load().PsdTextImport)
+            Dim takeTextAsText = String.Equals(textImportMode, "Text", StringComparison.Ordinal)
+            Dim textLayers = Await Task.Run(Function() PsdImportService.CountTextLayers(psdSource))
+            If textLayers > 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal) Then
+                takeTextAsText = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Textebenen übernehmen?"),
+                    String.Format(LocalizationService.T("Diese Datei enthält {0} Textebenen. Als Text übernommen lässt sich der Wortlaut weiterbearbeiten, das Aussehen kann aber abweichen. Als Bild übernommen stimmt jeder Bildpunkt, der Text ist dann fest."), textLayers),
+                    LocalizationService.T("Als Text"),
+                    LocalizationService.T("Als Bild"))
+            End If
+
+            Dim importResult = Await Task.Run(Function() PsdImportService.Import(psdSource, takeTextAsText))
+            If importResult Is Nothing OrElse importResult.Adjustments Is Nothing OrElse
+               Not File.Exists(importResult.BaseImagePath) Then
+                ' Ohne Ebenen bleibt alles wie bisher: das flache Gesamtbild mit dem gespeicherten
+                ' Rezept.
+                Return New PsdDocumentLoad With {.Adjustments = sidecar}
+            End If
+
+            DiagnosticLogService.LogAlways("Editor.PsdImport",
+                $"{IO.Path.GetFileName(psdSource)} layers={importResult.LayerCount} skipped={importResult.SkippedLayers} sidecar={If(sidecar IsNot Nothing, "1", "0")}")
+            Return New PsdDocumentLoad With {
+                .Adjustments = PsdImportService.MergeSidecarRecipe(importResult.Adjustments, sidecar),
+                .BaseImagePath = importResult.BaseImagePath,
+                .TempDir = importResult.TempDir
+            }
+        End Function
+
         ''' <summary><paramref name="deferFolderContext"/> reicht den Filmstreifen nach, statt ihn vor
         ''' der Anzeige zu bauen - siehe LoadFilmstripContext. Gedacht für den Programmstart mit einer
         ''' Bilddatei.</summary>
@@ -13331,50 +13415,21 @@ Namespace ViewModels
                 ' dekodiert es statt des Basisbilds (Maße-Prüfung passiert dort).
                 newWorkingOverridePath = If(loaded.RetouchStagePath, "")
                 newWorkingOverrideHasAlpha = loaded.Adjustments.WorkingImageHasTransparency
-            ElseIf RawSidecarService.IsSidecarFormat(imagePath) AndAlso
-                   RawSidecarService.Exists(imagePath) Then
-                fpxAdjustments = RawSidecarService.TryRead(imagePath)
             ElseIf PsdPreviewService.IsSupportedPsd(imagePath) Then
-                ' Photoshop-Datei mit Ebenen: sie wird als Ebenenstapel geöffnet statt als flaches
-                ' Gesamtbild. Bewusst NACH dem Begleitdatei-Zweig - wurde die Datei hier schon einmal
-                ' bearbeitet, gilt das gespeicherte Rezept, sonst überschriebe der Import die eigene
-                ' Arbeit mit dem Stand aus Photoshop.
-                '
-                ' Das Grundbild ist eine leere Fläche oder die unterste Ebene, NIE das Gesamtbild:
-                ' läge das darunter, wäre alles doppelt zu sehen (siehe PsdImportService).
-                Dim psdSource = imagePath
-                ' Textebenen einer FREMDEN Datei: der Wortlaut lässt sich herausholen, Schrift und
-                ' Grad nicht verlässlich. Als Text ist er weiter tippbar, sieht aber womöglich anders
-                ' aus; als Bild stimmt jeder Punkt, dafür ist er fest. Die Abwägung gehört dem Nutzer.
-                ' Bei einer eigenen Datei stellt sich die Frage nicht, dort kommt alles vollständig
-                ' zurück - CountTextLayers meldet dann 0.
-                ' Die Antwort ist eine ARBEITSWEISE, keine Eigenschaft der Datei - sie steht deshalb
-                ' in den Einstellungen unter Editor. „Immer fragen" ist die Vorgabe; wer sich
-                ' festgelegt hat, bekommt die Frage gar nicht mehr. Gezählt wird trotzdem je Datei:
-                ' ohne Textebenen gibt es nichts zu entscheiden.
-                Dim textImportMode = AppSettingsService.NormalizePsdTextImport(AppSettingsService.Load().PsdTextImport)
-                Dim takeTextAsText = String.Equals(textImportMode, "Text", StringComparison.Ordinal)
-                Dim textLayers = Await Task.Run(Function() PsdImportService.CountTextLayers(psdSource))
-                If textLayers > 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal) Then
-                    takeTextAsText = Await _mainVm.ShowConfirmAsync(
-                        LocalizationService.T("Textebenen übernehmen?"),
-                        String.Format(LocalizationService.T("Diese Datei enthält {0} Textebenen. Als Text übernommen lässt sich der Wortlaut weiterbearbeiten, das Aussehen kann aber abweichen. Als Bild übernommen stimmt jeder Bildpunkt, der Text ist dann fest."), textLayers),
-                        LocalizationService.T("Als Text"),
-                        LocalizationService.T("Als Bild"))
-                End If
-                Dim importResult = Await Task.Run(Function() PsdImportService.Import(psdSource, takeTextAsText))
-                If importResult IsNot Nothing AndAlso importResult.Adjustments IsNot Nothing AndAlso
-                   File.Exists(importResult.BaseImagePath) Then
-                    fpxAdjustments = importResult.Adjustments
-                    newRenderSourcePathOverride = importResult.BaseImagePath
+                Dim psdLoad = Await LoadPsdDocumentAsync(imagePath)
+                fpxAdjustments = psdLoad.Adjustments
+                If psdLoad.HasLayers Then
+                    newRenderSourcePathOverride = psdLoad.BaseImagePath
                     ' Denselben Ordner-Haushalt wie beim .fpx benutzen; _currentFpxPath bleibt aber
                     ' leer, die Identität der Datei ist und bleibt die .psd.
-                    newFpxTempDir = importResult.TempDir
+                    newFpxTempDir = psdLoad.TempDir
                     forceSaveAsOnly = True
-                    DiagnosticLogService.LogAlways("Editor.PsdImport",
-                        $"{IO.Path.GetFileName(psdSource)} layers={importResult.LayerCount} skipped={importResult.SkippedLayers}")
                 End If
-                ' Ohne Ergebnis bleibt alles wie bisher: das flache Gesamtbild wird geöffnet.
+            ElseIf RawSidecarService.IsSidecarFormat(imagePath) AndAlso
+                   RawSidecarService.Exists(imagePath) Then
+                ' Bleibt nach dem Zweig darüber die RAW: die zuletzt gespeicherten Regler kommen
+                ' wie beim .fpx-Laden wieder an, ein defekter Sidecar wird still ignoriert.
+                fpxAdjustments = RawSidecarService.TryRead(imagePath)
             End If
 
             CleanupCurrentFpxTempDir()

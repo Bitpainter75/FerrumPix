@@ -79,6 +79,36 @@ Namespace Services
             Return DecodeGate.Run(Function() ImportIntern(psdPath, textAsText))
         End Function
 
+        ''' <summary>Legt die Bearbeitung aus der Begleitdatei über den frisch eingelesenen
+        ''' Ebenenstapel.
+        '''
+        ''' Beides gehört zusammen und schliesst sich nicht aus: die .psd trägt den INHALT, die
+        ''' .fpxmp die BEARBEITUNG. Früher stach die Begleitdatei den Import, und die Datei öffnete
+        ''' dann flach - schon eine Bewertung genügte dafür, denn der Katalog legt für sie eine
+        ''' Begleitdatei mit neutralem Rezept an.
+        '''
+        ''' Aus der Begleitdatei kommt alles Globale: Regler, Geometrie, Maskenebenen. Aus der Datei
+        ''' kommen die Ebenen. Sie gehören nach UNTEN in den Stapel, denn sie sind der Inhalt des
+        ''' Dokuments; was in der Begleitdatei steht, liegt darüber.
+        '''
+        ''' Eine Begleitdatei kann heute keinen Ebenenstapel tragen (der Editor bietet den Weg für
+        ''' eine PSD mit Ebenen gar nicht an), deshalb reicht das Anhängen. Sobald sie Änderungen an
+        ''' den Ursprungsebenen festhält, ist HIER die Stelle, an der sie angewandt werden.</summary>
+        Public Shared Function MergeSidecarRecipe(imported As ImageAdjustments, sidecar As ImageAdjustments) As ImageAdjustments
+            If imported Is Nothing Then Return sidecar
+            If sidecar Is Nothing Then Return imported
+
+            Dim merged = sidecar.Clone()
+            If merged.Annotations Is Nothing Then merged.Annotations = New List(Of ImageAnnotation)()
+            If merged.AnnotationGroups Is Nothing Then merged.AnnotationGroups = New List(Of AnnotationGroup)()
+            If merged.Masks Is Nothing Then merged.Masks = New List(Of ImageMask)()
+
+            If imported.Annotations IsNot Nothing Then merged.Annotations.InsertRange(0, imported.Annotations)
+            If imported.AnnotationGroups IsNot Nothing Then merged.AnnotationGroups.AddRange(imported.AnnotationGroups)
+            If imported.Masks IsNot Nothing Then merged.Masks.AddRange(imported.Masks)
+            Return merged
+        End Function
+
         ''' <summary>Die eigentliche Arbeit. Getrennt, damit die Schleuse EINE Klammer um alles legt
         ''' und nicht um jeden Abschnitt einzeln.</summary>
         Private Shared Function ImportIntern(psdPath As String, textAsText As Boolean) As PsdImportResult
