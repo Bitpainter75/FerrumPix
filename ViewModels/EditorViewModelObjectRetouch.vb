@@ -162,7 +162,7 @@ Namespace ViewModels
                 ' Die Puffer entstehen im Hintergrund; bis dahin (und bei sehr großen Radien) zeigt
                 ' die Maske, woran gearbeitet wird.
                 If Not istReparatur Then BeginObjectRetouchLiveBuffersAsync()
-                PublishObjectRetouchMaskPreview(force)
+                PublishObjectRetouchMaskPreview(force, displaySpot)
                 Return
             End If
 
@@ -446,11 +446,12 @@ Namespace ViewModels
 
         ''' Die orange Maske über dem bearbeiteten Bereich - dieselbe Anzeige, die das Foto beim
         ''' Reparaturpinsel und bei großen Radien zeigt.
-        Private Sub PublishObjectRetouchMaskPreview(force As Boolean)
+        Private Sub PublishObjectRetouchMaskPreview(force As Boolean, Optional newest As RetouchSpot = Nothing)
             If _objectRetouchDisplaySpots.Count = 0 Then Return
             If Not EnsureRetouchMaskPreviewSize() Then Return
-            ExpandRetouchMaskPatchRect(_objectRetouchDisplaySpots(_objectRetouchDisplaySpots.Count - 1))
-            PublishRetouchMaskPreview(force)
+            If newest Is Nothing Then newest = _objectRetouchDisplaySpots(_objectRetouchDisplaySpots.Count - 1)
+            ExpandRetouchMaskPatchRect(newest)
+            PublishRetouchMaskPreview(force, newest)
         End Sub
 
         ''' <summary>Schließt einen Zug auf einer Ebene ab. True heißt: hier behandelt. Der schwere

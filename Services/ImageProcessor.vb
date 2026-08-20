@@ -953,6 +953,25 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Fuegt einen einzelnen Reparaturpunkt in eine persistente Live-Maske ein.
+        ''' Der Editor kann dadurch nur dessen kleine Umgebung zur Anzeige kopieren, statt die
+        ''' gesamte bisherige Zugspur bei jeder Mausbewegung erneut zu rastern.</summary>
+        Friend Shared Sub DrawRetouchMaskSpot(target As SKBitmap, spot As RetouchSpot,
+                                              sourceWidthPixels As Integer, sourceHeightPixels As Integer)
+            If target Is Nothing OrElse spot Is Nothing OrElse sourceWidthPixels <= 0 OrElse sourceHeightPixels <= 0 Then Return
+            Dim scaleX = target.Width / CSng(sourceWidthPixels)
+            Dim scaleY = target.Height / CSng(sourceHeightPixels)
+            Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
+            Dim cx = Clamp(spot.XPixels * scaleX, 0, target.Width)
+            Dim cy = Clamp(spot.YPixels * scaleY, 0, target.Height)
+            Dim radius = Math.Max(1.0F, spot.RadiusPixels * radiusScale)
+            Using canvas As New SKCanvas(target)
+                Using paint As New SKPaint With {.Color = New SKColor(255, 136, 0, 96), .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                    canvas.DrawCircle(cx, cy, radius, paint)
+                End Using
+            End Using
+        End Sub
+
         ''' Schneller, UI-Thread-tauglicher Pfad, der NUR die Annotationen auf ein bereits
         ''' gecachtes Base-Bitmap neu komposiert (kein Neuberechnen der teuren Anpassungs-Pipeline).
         ''' Wird genutzt, um beim (De-)Selektieren eines Text-/Wasserzeichen-Objekts das Ausblenden

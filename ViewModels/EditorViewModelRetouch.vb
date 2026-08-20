@@ -184,7 +184,7 @@ Namespace ViewModels
                 End If
                 Dim maskSpot = TransformRetouchSpotToDisplayGeometry(spot)
                 ExpandRetouchMaskPatchRect(maskSpot)
-                PublishRetouchMaskPreview(forcePublish)
+                PublishRetouchMaskPreview(forcePublish, maskSpot)
                 Return
             End If
 
@@ -202,7 +202,7 @@ Namespace ViewModels
                 If EnsureRetouchMaskPreviewSize() Then
                     Dim maskSpot = TransformRetouchSpotToDisplayGeometry(spot)
                     ExpandRetouchMaskPatchRect(maskSpot)
-                    PublishRetouchMaskPreview(forcePublish)
+                    PublishRetouchMaskPreview(forcePublish, maskSpot)
                 End If
                 Return
             End If
@@ -216,7 +216,7 @@ Namespace ViewModels
                 If EnsureRetouchMaskPreviewSize() Then
                     Dim maskSpot = TransformRetouchSpotToDisplayGeometry(spot)
                     ExpandRetouchMaskPatchRect(maskSpot)
-                    PublishRetouchMaskPreview(forcePublish)
+                    PublishRetouchMaskPreview(forcePublish, maskSpot)
                 End If
                 Return
             End If
@@ -346,14 +346,10 @@ Namespace ViewModels
             Dim now = DateTime.UtcNow
             If force OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= 24.0 Then
                 _lastRetouchLivePreviewUtc = now
-                Dim patch = ImageProcessor.RenderChangedBitmapPatch(_retouchLiveBitmap,
-                                                                    _retouchLiveSampleBitmap,
-                                                                    _retouchLivePatchRect)
-                If patch Is Nothing Then patch = ImageProcessor.RenderBitmapPatch(_retouchLiveBitmap, _retouchLivePatchRect)
-                If patch IsNot Nothing Then
-                    _retouchLivePatchBitmapWidth = _retouchLiveBitmap.Width
-                    _retouchLivePatchBitmapHeight = _retouchLiveBitmap.Height
-                    RetouchLivePatchImage = patch
+                ' Nur der zuletzt hinzugekommene Bereich wird kopiert. Der fruehere Gesamtflicken
+                ' wurde mit jedem Punkt groesser und machte lange Zuege zunehmend zaeh.
+                If CopyRetouchOverlayRegion(_retouchLiveBitmap, _retouchLivePendingRect) Then
+                    _retouchLivePendingRect = SKRectI.Empty
                     UpdateRetouchLivePatchPercentages()
                 End If
                 If markPreviewPending Then
@@ -383,22 +379,26 @@ Namespace ViewModels
             Return True
         End Function
 
-        Private Sub PublishRetouchMaskPreview(force As Boolean)
+        Private Sub PublishRetouchMaskPreview(force As Boolean, Optional newest As RetouchSpot = Nothing)
             If _retouchLivePatchRect.IsEmpty OrElse _retouchLiveMaskBitmapWidth <= 0 OrElse _retouchLiveMaskBitmapHeight <= 0 Then Return
+            EnsureRetouchLiveOverlay(_retouchLiveMaskBitmapWidth, _retouchLiveMaskBitmapHeight)
+            EnsureRetouchMaskOverlay()
+            If newest Is Nothing Then
+                Dim spots = CurrentStrokeDisplaySpots()
+                If spots.Count > 0 Then newest = spots(spots.Count - 1)
+            End If
+            If newest IsNot Nothing AndAlso _retouchLiveMaskOverlay IsNot Nothing Then
+                ImageProcessor.DrawRetouchMaskSpot(_retouchLiveMaskOverlay, newest,
+                                                   Math.Max(1, DisplayImageWidthPixels), Math.Max(1, DisplayImageHeightPixels))
+            End If
             Dim now = DateTime.UtcNow
             If force OrElse (now - _lastRetouchLivePreviewUtc).TotalMilliseconds >= 24.0 Then
                 _lastRetouchLivePreviewUtc = now
-                Dim patch = ImageProcessor.RenderRetouchMaskPatch(CurrentStrokeDisplaySpots(),
-                                                                  _retouchLivePatchRect,
-                                                                  _retouchLiveMaskBitmapWidth,
-                                                                  _retouchLiveMaskBitmapHeight,
-                                                                  Math.Max(1, DisplayImageWidthPixels),
-                                                                  Math.Max(1, DisplayImageHeightPixels))
-                If patch IsNot Nothing Then
-                    _retouchLivePatchBitmapWidth = _retouchLiveMaskBitmapWidth
-                    _retouchLivePatchBitmapHeight = _retouchLiveMaskBitmapHeight
-                    RetouchLivePatchImage = patch
-                    UpdateRetouchLivePatchPercentages()
+                If _retouchLiveMaskOverlay IsNot Nothing Then
+                    If CopyRetouchOverlayRegion(_retouchLiveMaskOverlay, _retouchLivePendingRect) Then
+                        _retouchLivePendingRect = SKRectI.Empty
+                        UpdateRetouchLivePatchPercentages()
+                    End If
                 End If
             End If
         End Sub
@@ -457,6 +457,8 @@ Namespace ViewModels
                                    Math.Min(_retouchLiveBitmap.Width, CInt(Math.Ceiling(cx + radius))),
                                    Math.Min(_retouchLiveBitmap.Height, CInt(Math.Ceiling(cy + radius))))
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+            _retouchLiveDirtyRect = rect
+            _retouchLivePendingRect = UnionRetouchRects(_retouchLivePendingRect, rect)
 
             If _retouchLivePatchRect.IsEmpty Then
                 _retouchLivePatchRect = rect
@@ -489,6 +491,8 @@ Namespace ViewModels
                                    Math.Min(_retouchLiveMaskBitmapWidth, CInt(Math.Ceiling(cx + radius))),
                                    Math.Min(_retouchLiveMaskBitmapHeight, CInt(Math.Ceiling(cy + radius))))
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
+            _retouchLiveDirtyRect = rect
+            _retouchLivePendingRect = UnionRetouchRects(_retouchLivePendingRect, rect)
 
             If _retouchLivePatchRect.IsEmpty Then
                 _retouchLivePatchRect = rect
@@ -505,10 +509,9 @@ Namespace ViewModels
             Dim bitmapHeight = _retouchLivePatchBitmapHeight
             If _retouchLivePatchRect.IsEmpty OrElse bitmapWidth <= 0 OrElse bitmapHeight <= 0 Then Return
 
-            Dim l = _retouchLivePatchRect.Left / CDbl(bitmapWidth) * 100.0
-            Dim t = _retouchLivePatchRect.Top / CDbl(bitmapHeight) * 100.0
-            Dim w = _retouchLivePatchRect.Width / CDbl(bitmapWidth) * 100.0
-            Dim h = _retouchLivePatchRect.Height / CDbl(bitmapHeight) * 100.0
+            ' Die persistente Overlay-Bitmap hat volle Bildgroesse; ihr Inhalt ist transparent
+            ' ausserhalb der bereits kopierten Teilbereiche.
+            Dim l = 0.0, t = 0.0, w = 100.0, h = 100.0
             _retouchLivePatchLeftPercent = l
             _retouchLivePatchTopPercent = t
             _retouchLivePatchWidthPercent = w
@@ -519,9 +522,84 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(RetouchLivePatchHeightPercent))
         End Sub
 
+        Private Shared Function UnionRetouchRects(first As SKRectI, second As SKRectI) As SKRectI
+            If first.IsEmpty Then Return second
+            If second.IsEmpty Then Return first
+            Return New SKRectI(Math.Min(first.Left, second.Left), Math.Min(first.Top, second.Top),
+                               Math.Max(first.Right, second.Right), Math.Max(first.Bottom, second.Bottom))
+        End Function
+
+        ''' <summary>Schreibt nur die neue lokale Aenderung in die persistente Anzeige. Anders als
+        ''' ein neues Gesamt-Patch bleibt der Aufwand damit vom bisherigen Zug unabhaengig.</summary>
+        Private Function CopyRetouchOverlayRegion(source As SKBitmap, rect As SKRectI) As Boolean
+            If source Is Nothing OrElse rect.IsEmpty Then Return False
+            If Not EnsureRetouchLiveOverlay(source.Width, source.Height) Then Return False
+            Dim clipped = New SKRectI(Math.Max(0, rect.Left), Math.Max(0, rect.Top),
+                                      Math.Min(source.Width, rect.Right), Math.Min(source.Height, rect.Bottom))
+            If clipped.Width <= 0 OrElse clipped.Height <= 0 Then Return False
+            Dim bytes = clipped.Width * 4
+            Dim row(bytes - 1) As Byte
+            Try
+                Using fb = _retouchLiveOverlay.Lock()
+                    Dim sourcePixels = source.GetPixels()
+                    For y = 0 To clipped.Height - 1
+                        Marshal.Copy(IntPtr.Add(sourcePixels, (clipped.Top + y) * source.RowBytes + clipped.Left * 4), row, 0, bytes)
+                        Marshal.Copy(row, 0, IntPtr.Add(fb.Address, (clipped.Top + y) * fb.RowBytes + clipped.Left * 4), bytes)
+                    Next
+                End Using
+                Me.RaisePropertyChanged(NameOf(RetouchLivePatchImage))
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("Editor.RetouchOverlay", ex.Message)
+                Return False
+            End Try
+        End Function
+
+        Private Function EnsureRetouchLiveOverlay(width As Integer, height As Integer) As Boolean
+            If width <= 0 OrElse height <= 0 Then Return False
+            If _retouchLiveOverlay IsNot Nothing AndAlso _retouchLiveOverlay.PixelSize.Width = width AndAlso
+               _retouchLiveOverlay.PixelSize.Height = height Then Return True
+            RetouchLivePatchImage = Nothing
+            _retouchLiveOverlay = Nothing
+            Try
+                _retouchLiveOverlay = New WriteableBitmap(New Avalonia.PixelSize(width, height), New Avalonia.Vector(96, 96),
+                                                           Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul)
+                Using fb = _retouchLiveOverlay.Lock()
+                    Dim zero(Math.Max(0, fb.RowBytes - 1)) As Byte
+                    For y = 0 To height - 1
+                        Marshal.Copy(zero, 0, IntPtr.Add(fb.Address, y * fb.RowBytes), fb.RowBytes)
+                    Next
+                End Using
+                RetouchLivePatchImage = _retouchLiveOverlay
+                _retouchLivePatchBitmapWidth = width
+                _retouchLivePatchBitmapHeight = height
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("Editor.RetouchOverlay", ex.Message)
+                _retouchLiveOverlay = Nothing
+                Return False
+            End Try
+        End Function
+
+        Private Sub EnsureRetouchMaskOverlay()
+            Dim w = _retouchLiveMaskBitmapWidth, h = _retouchLiveMaskBitmapHeight
+            If w <= 0 OrElse h <= 0 Then Return
+            If _retouchLiveMaskOverlay IsNot Nothing AndAlso _retouchLiveMaskOverlay.Width = w AndAlso _retouchLiveMaskOverlay.Height = h Then Return
+            _retouchLiveMaskOverlay?.Dispose()
+            _retouchLiveMaskOverlay = New SKBitmap(w, h, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Using canvas As New SKCanvas(_retouchLiveMaskOverlay)
+                canvas.Clear(SKColors.Transparent)
+            End Using
+        End Sub
+
         Private Sub ClearRetouchLivePatch()
             RetouchLivePatchImage = Nothing
+            _retouchLiveOverlay = Nothing
+            _retouchLiveMaskOverlay?.Dispose()
+            _retouchLiveMaskOverlay = Nothing
             _retouchLivePatchRect = SKRectI.Empty
+            _retouchLiveDirtyRect = SKRectI.Empty
+            _retouchLivePendingRect = SKRectI.Empty
             _retouchLivePatchLeftPercent = 0
             _retouchLivePatchTopPercent = 0
             _retouchLivePatchWidthPercent = 0

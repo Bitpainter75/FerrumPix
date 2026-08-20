@@ -9,6 +9,8 @@ Imports System.Threading
 Imports System.Threading.Tasks
 Imports System.Windows.Input
 Imports Avalonia.Media.Imaging
+Imports Avalonia
+Imports Avalonia.Platform
 Imports Avalonia.Threading
 Imports FerrumPix.Controls
 Imports SkiaSharp
@@ -950,7 +952,13 @@ Namespace ViewModels
         Private _activeRetouchStrokeId As Integer = 0
         Private _retouchLiveBitmap As SKBitmap = Nothing
         Private _retouchLiveSampleBitmap As SKBitmap = Nothing
+        ' Eine persistente Anzeige statt eines mit dem Zug wachsenden Gesamtflickens. Es werden
+        ' nur die Pixel um den jeweils neuen Punkt geschrieben; die UI behält den Rest des Zuges.
+        Private _retouchLiveOverlay As WriteableBitmap = Nothing
+        Private _retouchLiveMaskOverlay As SKBitmap = Nothing
         Private _retouchLivePatchRect As SKRectI = SKRectI.Empty
+        Private _retouchLiveDirtyRect As SKRectI = SKRectI.Empty
+        Private _retouchLivePendingRect As SKRectI = SKRectI.Empty
         Private _retouchLiveMaskBitmapWidth As Integer = 0
         Private _retouchLiveMaskBitmapHeight As Integer = 0
         Private _retouchLivePatchBitmapWidth As Integer = 0
