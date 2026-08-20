@@ -425,6 +425,13 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
+    <!-- Ausnahme: beschriftete Knoepfe in der Mitte der Leiste (Diashow, Anpassen) behalten ihren
+         Rahmen. Sie stehen frei zwischen zwei Symbolgruppen, und ohne Rahmen ist nicht zu sehen,
+         wo die Klickflaeche anfaengt. Steht nach der Regel oben, damit sie diese ueberschreibt. -->
+    <Style Selector="Border.toolbar Button.ghost.framed">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
     <Style Selector="Button.ghost.active">
         <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>

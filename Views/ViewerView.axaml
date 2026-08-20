@@ -134,7 +134,7 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Button Classes="ghost" Height="34"
+                    <Button Classes="ghost framed" Height="34"
                             Command="{Binding ToggleSlideshowCommand}"
                             ToolTip.Tip="Diashow starten">
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -142,7 +142,7 @@
                             <TextBlock Text="Diashow starten" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="ghost" Height="34" Command="{Binding EditCommand}" ToolTip.Tip="Anpassen"
+                    <Button Classes="ghost framed" Height="34" Command="{Binding EditCommand}" ToolTip.Tip="Anpassen"
                             IsEnabled="{Binding CanEdit}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg" Width="20" Height="20" HorizontalAlignment="Center"/>
