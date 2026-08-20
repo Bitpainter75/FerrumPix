@@ -348,7 +348,13 @@ Namespace ViewModels
                 _lastRetouchLivePreviewUtc = now
                 ' Nur der zuletzt hinzugekommene Bereich wird kopiert. Der fruehere Gesamtflicken
                 ' wurde mit jedem Punkt groesser und machte lange Zuege zunehmend zaeh.
-                If CopyRetouchOverlayRegion(_retouchLiveBitmap, _retouchLivePendingRect) Then
+                ' Die Vorschau liegt UEBER dem bereits gezeichneten Dokument. Deshalb duerfen
+                ' nur Pixel hinein, die sich gegenueber dem Start des Zuges wirklich geaendert
+                ' haben: bei einer Bild-Ebene wuerde ein voller Rechteck-Ausschnitt sonst deren
+                ' unveraenderte (moeglicherweise halbtransparente) Pixel ein zweites Mal
+                ' kompositieren.
+                If CopyRetouchOverlayRegion(_retouchLiveBitmap, _retouchLivePendingRect,
+                                            _retouchLiveSampleBitmap) Then
                     _retouchLivePendingRect = SKRectI.Empty
                     UpdateRetouchLivePatchPercentages()
                 End If
@@ -531,7 +537,8 @@ Namespace ViewModels
 
         ''' <summary>Schreibt nur die neue lokale Aenderung in die persistente Anzeige. Anders als
         ''' ein neues Gesamt-Patch bleibt der Aufwand damit vom bisherigen Zug unabhaengig.</summary>
-        Private Function CopyRetouchOverlayRegion(source As SKBitmap, rect As SKRectI) As Boolean
+        Private Function CopyRetouchOverlayRegion(source As SKBitmap, rect As SKRectI,
+                                                  Optional baseline As SKBitmap = Nothing) As Boolean
             If source Is Nothing OrElse rect.IsEmpty Then Return False
             If Not EnsureRetouchLiveOverlay(source.Width, source.Height) Then Return False
             Dim clipped = New SKRectI(Math.Max(0, rect.Left), Math.Max(0, rect.Top),
@@ -539,11 +546,28 @@ Namespace ViewModels
             If clipped.Width <= 0 OrElse clipped.Height <= 0 Then Return False
             Dim bytes = clipped.Width * 4
             Dim row(bytes - 1) As Byte
+            Dim compareAgainstBaseline = baseline IsNot Nothing AndAlso
+                                         baseline.Width = source.Width AndAlso
+                                         baseline.Height = source.Height AndAlso
+                                         baseline.ColorType = source.ColorType
+            Dim baselineRow As Byte() = If(compareAgainstBaseline, New Byte(bytes - 1) {}, Nothing)
             Try
                 Using fb = _retouchLiveOverlay.Lock()
                     Dim sourcePixels = source.GetPixels()
+                    Dim baselinePixels = If(compareAgainstBaseline, baseline.GetPixels(), IntPtr.Zero)
                     For y = 0 To clipped.Height - 1
                         Marshal.Copy(IntPtr.Add(sourcePixels, (clipped.Top + y) * source.RowBytes + clipped.Left * 4), row, 0, bytes)
+                        If compareAgainstBaseline Then
+                            Marshal.Copy(IntPtr.Add(baselinePixels, (clipped.Top + y) * baseline.RowBytes + clipped.Left * 4), baselineRow, 0, bytes)
+                            ' Gleiche Pixel muessen transparent werden, nicht im Overlay stehen:
+                            ' sonst erscheint die zugrunde liegende Ebene hier ein zweites Mal.
+                            For x = 0 To bytes - 1 Step 4
+                                If row(x) = baselineRow(x) AndAlso row(x + 1) = baselineRow(x + 1) AndAlso
+                                   row(x + 2) = baselineRow(x + 2) AndAlso row(x + 3) = baselineRow(x + 3) Then
+                                    row(x) = 0 : row(x + 1) = 0 : row(x + 2) = 0 : row(x + 3) = 0
+                                End If
+                            Next
+                        End If
                         Marshal.Copy(row, 0, IntPtr.Add(fb.Address, (clipped.Top + y) * fb.RowBytes + clipped.Left * 4), bytes)
                     Next
                 End Using
