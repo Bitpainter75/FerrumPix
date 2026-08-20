@@ -379,6 +379,21 @@ Namespace Services
                 Return opaque
             End If
 
+            ' GEMERKT: dieselbe Maske in denselben Massen. Der Aufbau haengt an Maskeninhalt,
+            ' Geometrie, Massen und Deckkraft - NICHT an den Farbreglern. Beim Ziehen eines
+            ' Belichtungsreglers an einer Korrekturebene entsteht also bei jedem Vorschaubild
+            ' dieselbe Maske neu; gemessen sind das 248 ms je Ebene bei 45 MP.
+            ' Der Fuellungs-Fall bleibt aussen vor: dort geht der Inhalt der EBENE mit ein.
+            Dim cacheKey As String = Nothing
+            If fillLayer Is Nothing Then
+                cacheKey = String.Join("|", MaskFingerprint(maskData),
+                                       MaskGeometryKey(BuildMaskGeometry(geometry)),
+                                       pipelineInputWidth, pipelineInputHeight, targetW, targetH,
+                                       KeyPart(layerOpacity))
+                Dim cached = TryTakeMaskRaster(cacheKey, targetW, targetH)
+                If cached IsNot Nothing Then Return cached
+            End If
+
             Dim components = maskData.GetComponents()
             If components.Count = 0 Then Return Nothing
             Try
@@ -404,21 +419,40 @@ Namespace Services
                 If maskData.InvertResult Then InvertAlphaMaskInPlace(inputMask)
 
                 Using inputMask
+                    ' Ebenen-Deckkraft UND Maskendichte, beide an derselben Stelle: die eine gehoert
+                    ' der Ebene, die andere der Maske. Ein Objekt mit Ebenenmaske kommt hier mit
+                    ' layerOpacity = 1 herein und bekommt seine Abstufung damit ueber die Dichte.
+                    Dim opacity = Clamp(layerOpacity, 0, 1) *
+                                  Clamp(CSng(maskData.Density / 100.0), 0, 1)
+                    Dim maskGeometry = BuildMaskGeometry(geometry)
+
+                    ' ABKUERZUNG bei neutraler Geometrie und unveraenderten Massen: dann sind die
+                    ' sieben Stufen unten die Identitaet, und das Aufblasen der Alpha8-Maske auf vier
+                    ' Kanaele waere Arbeit fuer nichts (bei 45 MP 181 MB statt 45 MB durch sieben
+                    ' Stufen, gemessen 166 ms). Die Neutralitaet wird NICHT ueber eine eigene
+                    ' Feldliste bestimmt, sondern ueber denselben Schluessel, den auch der
+                    ' Deckungs-Speicher benutzt - eine dritte Liste liefe irgendwann auseinander.
+                    If pipelineInputWidth = targetW AndAlso pipelineInputHeight = targetH AndAlso
+                       String.Equals(MaskGeometryKey(maskGeometry), NeutralMaskGeometryKey, StringComparison.Ordinal) Then
+                        Return StoreMaskRaster(cacheKey, BuildAlpha8FromAlphaMask(inputMask, targetW, targetH, opacity))
+                    End If
+
                     Dim maskPixels = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Dim pStride = maskPixels.RowBytes
                     Dim pBuf = New Byte(pStride * pipelineInputHeight - 1) {}
                     Dim alphaBuf = New Byte(inputMask.RowBytes * inputMask.Height - 1) {}
                     Marshal.Copy(inputMask.GetPixels(), alphaBuf, 0, alphaBuf.Length)
-                    For y = 0 To pipelineInputHeight - 1
-                        Dim aRow = y * inputMask.RowBytes, pRow = y * pStride
-                        For x = 0 To pipelineInputWidth - 1
-                            Dim a = alphaBuf(aRow + x), o = pRow + x * 4
-                            pBuf(o) = a : pBuf(o + 1) = a : pBuf(o + 2) = a : pBuf(o + 3) = a
-                        Next
-                    Next
+                    Dim inputStride = inputMask.RowBytes
+                    ForEachRow(pipelineInputWidth, pipelineInputHeight,
+                        Sub(y As Integer)
+                            Dim aRow = y * inputStride, pRow = y * pStride
+                            For x = 0 To pipelineInputWidth - 1
+                                Dim a = alphaBuf(aRow + x), o = pRow + x * 4
+                                pBuf(o) = a : pBuf(o + 1) = a : pBuf(o + 2) = a : pBuf(o + 3) = a
+                            Next
+                        End Sub)
                     Marshal.Copy(pBuf, 0, maskPixels.GetPixels(), pBuf.Length)
 
-                    Dim maskGeometry = BuildMaskGeometry(geometry)
                     maskPixels = ReplaceBitmap(maskPixels, ApplyImageWarp(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyCrop(maskPixels, maskGeometry))
                     maskPixels = ReplaceBitmap(maskPixels, ApplyGeometryTransforms(maskPixels, maskGeometry))
@@ -447,27 +481,352 @@ Namespace Services
                         maskPixels.Dispose()
                         Return Nothing
                     End If
-                    ' Ebenen-Deckkraft UND Maskendichte, beide an derselben Stelle: die eine gehoert
-                    ' der Ebene, die andere der Maske. Ein Objekt mit Ebenenmaske kommt hier mit
-                    ' layerOpacity = 1 herein und bekommt seine Abstufung damit ueber die Dichte.
-                    Dim opacity = Clamp(layerOpacity, 0, 1) *
-                                  Clamp(CSng(maskData.Density / 100.0), 0, 1)
+                    ' Deckkraft und Dichte stehen schon oben, vor der Abkuerzung.
                     Dim result = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
                     Dim rStride = result.RowBytes
                     Dim rBuf = New Byte(rStride * targetH - 1) {}
-                    For y = 0 To targetH - 1
-                        Dim pRow = y * transformedStride, rRow = y * rStride
-                        For x = 0 To targetW - 1
-                            rBuf(rRow + x) = CByte(Math.Round(transformed(pRow + x * 4 + 3) * opacity))
-                        Next
-                    Next
+                    ForEachRow(targetW, targetH,
+                        Sub(y As Integer)
+                            Dim pRow = y * transformedStride, rRow = y * rStride
+                            For x = 0 To targetW - 1
+                                rBuf(rRow + x) = CByte(Math.Round(transformed(pRow + x * 4 + 3) * opacity))
+                            Next
+                        End Sub)
                     Marshal.Copy(rBuf, 0, result.GetPixels(), rBuf.Length)
                     maskPixels.Dispose()
-                    Return result
+                    Return StoreMaskRaster(cacheKey, result)
                 End Using
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Rand um das Maskenrechteck, in Bildpunkten. GEMESSEN, nicht geschätzt
+        ''' (<c>Diagnostics/Kettenmessung</c>, Befehl <c>raender</c>): die Reichweiten der
+        ''' Nachbarschaftsstufen sind absolut und wachsen NICHT mit der Bildgröße - Klarheit 4,
+        ''' Glühen 4, Rauschminderung 3, Struktur 2, Weichzeichner 2. Acht deckt alle ab.</summary>
+        Private Const MaskScopeMargin As Integer = 8
+
+        ''' <summary>Das Rechteck wird auf Vielfache dieser Zahl ausgerichtet, und das ist keine
+        ''' Kosmetik: der Dither der Quantisierung ist ein geordnetes 8x8-Muster aus den
+        ''' BILDKOORDINATEN (siehe <c>ImageProcessorPointOps</c>). Auf einem nicht ausgerichteten
+        ''' Ausschnitt sitzt es verschoben, und das Ergebnis weicht an Zehntausenden Stellen um je
+        ''' eine Stufe ab - unsichtbar, aber nicht mehr bitgleich nachweisbar. Ausgerichtet steht
+        ''' es an derselben Stelle wie im Vollbild.</summary>
+        Private Const MaskScopeAlignment As Integer = 8
+
+        ''' <summary>Unterhalb dieses Anteils der Bildfläche lohnt der Ausschnitt. Darüber kostet
+        ''' das Ausschneiden und Zurückschreiben mehr, als die kleinere Kette einspart.</summary>
+        Private Const MaskScopeMaxAreaShare As Double = 0.7
+
+        ''' <summary>NUR FÜR DEN PRÜFSTAND: erzwingt den Vollbildweg, damit sich beide Wege
+        ''' gegeneinander halten lassen (dasselbe Rezept einmal so, einmal so, und die Ergebnisse
+        ''' müssen bitgleich sein).
+        '''
+        ''' Ohne diesen Schalter prüft sich der Ausschnittweg nur selbst: man kann seine Bausteine
+        ''' einzeln messen, aber nicht den ECHTEN Weg durch <c>ApplyMaskedAdjustmentLayersCore</c>
+        ''' samt Besitzprüfung, Rechteckwahl und Rückschreiben. Genau dort sitzen die Fehler, die
+        ''' eine Bausteinprüfung nicht sieht.
+        '''
+        ''' Im Betrieb wird das Feld nie geschrieben.</summary>
+        Private Shared _maskScopeEnabled As Boolean = True
+
+        ''' <summary>Wie oft der Ausschnittweg tatsächlich gelaufen ist. NUR damit eine Prüfung
+        ''' feststellen kann, dass sie ihn überhaupt getroffen hat.
+        '''
+        ''' Der Grund steht in der Geschichte dieser Zeile: die erste Fassung der Whitelist-Prüfung
+        ''' war grün, obwohl sie den Weg nie erreichte - ihr Testrezept trug keine globalen Regler,
+        ''' also blieb das Bild fremder Besitz, und der Ausschnittweg lehnte ab. Eine Prüfung, die
+        ''' ihr Messobjekt nicht trifft, prüft nur, dass nichts da ist.</summary>
+        Private Shared _maskScopeUseCount As Integer = 0
+
+        ''' <summary>Darf die Kette dieser Ebene über einem AUSSCHNITT laufen?
+        '''
+        ''' Die Liste ist gemessen und nicht hergeleitet (<c>Diagnostics/Kettenmessung raender</c>).
+        ''' Ausgeschlossen sind zwei Sorten: Stufen, die an der POSITION im Bild hängen (Vignette
+        ''' weicht um bis zu 92 Stufen ab, Körnung 56, Staub und Kratzer 76), und Stufen, die auch
+        ''' ausgerichtet nur dither-gleich bleiben (Farbrauschen 2, grobes Farbrauschen 1).
+        '''
+        ''' Die SCHÄRFE ist bewusst ganz draußen, obwohl sie bei halbem Radius bitgleich war: bei
+        ''' vollem Radius ist sie es nicht mehr, und wo genau die Grenze liegt, ist nicht gemessen.
+        ''' Eine ungemessene Grenze im Quelltext wäre schlimmer als der entgangene Gewinn.
+        '''
+        ''' <para>ZWEITE AUSSCHLUSSKLASSE, und sie ist die tückischere: Stufen, die das GANZE BILD
+        ''' ANALYSIEREN und aus dem Ergebnis ihre Parameter ableiten. Sie fallen bei einem Vergleich
+        ''' Vollbild gegen Ausschnitt nur dann auf, wenn der Ausschnitt zufällig eine andere
+        ''' Statistik trägt - eine Messung allein findet sie also nicht verlässlich, man muss sie
+        ''' im Quelltext suchen. Bei uns ist das genau eine: das FILMNEGATIV. Fehlen Basis- und
+        ''' Dichtefarbe im Rezept, schätzt <c>ResolveFilmNegativeStats</c> beide aus dem Bild, das
+        ''' gerade vorliegt (Stapelverarbeitung, wiederhergestellte Anpassungen). Über einem
+        ''' Ausschnitt käme eine andere Schätzung heraus, und dieselbe lokale Korrektur sähe anders
+        ''' aus als auf dem Vollbild. Der Regler bleibt deshalb GANZ draußen, auch wenn beide Farben
+        ''' gesetzt sind - eine Bedingung, die von zwei Zeichenketten im Rezept abhängt, ist zu
+        ''' zerbrechlich für diese Stelle.</para>
+        '''
+        ''' Abgesichert durch die Prüfung „Ebenen-Ausschnitt: die erlaubten Regler sind bitgleich",
+        ''' die jeden hier erlaubten Regler einzeln gegen den Vollbildweg hält.</summary>
+        Private Shared Function LayerAdjustmentsAreCropSafe(a As ImageAdjustments) As Boolean
+            If a Is Nothing Then Return False
+            Return a.Vignette = 0 AndAlso
+                   a.Grain = 0 AndAlso
+                   a.DustScratches = 0 AndAlso
+                   a.AddNoise = 0 AndAlso
+                   a.ColorNoiseReduction = 0 AndAlso
+                   a.FarbrauschGrob = 0 AndAlso
+                   a.ColorNoiseAdd = 0 AndAlso
+                   a.Sharpness = 0
+        End Function
+
+        ''' <summary>Das ausgerichtete Rechteck, in dem diese Maske überhaupt deckt, oder Nothing,
+        ''' wenn sich der Ausschnitt nicht lohnt (zu groß, oder die Maske deckt nirgends).</summary>
+        Private Shared Function TryGetMaskScopeRect(mask As SKBitmap, imageWidth As Integer, imageHeight As Integer) As SKRectI?
+            If Not _maskScopeEnabled Then Return Nothing
+            If mask Is Nothing OrElse imageWidth <= 0 OrElse imageHeight <= 0 Then Return Nothing
+            If mask.ColorType <> SKColorType.Alpha8 Then Return Nothing
+
+            Dim stride = mask.RowBytes
+            Dim buffer = New Byte(stride * mask.Height - 1) {}
+            Marshal.Copy(mask.GetPixels(), buffer, 0, buffer.Length)
+
+            Dim left = Integer.MaxValue, top = Integer.MaxValue
+            Dim right = Integer.MinValue, bottom = Integer.MinValue
+            Dim breite = Math.Min(mask.Width, imageWidth)
+            Dim hoehe = Math.Min(mask.Height, imageHeight)
+            For y = 0 To hoehe - 1
+                Dim row = y * stride
+                For x = 0 To breite - 1
+                    If buffer(row + x) = 0 Then Continue For
+                    If x < left Then left = x
+                    If x > right Then right = x
+                    If y < top Then top = y
+                    If y > bottom Then bottom = y
+                Next
+            Next
+            If right < left OrElse bottom < top Then Return Nothing   ' die Maske deckt nirgends
+
+            ' Rand dazu, dann nach aussen auf die Ausrichtung runden, dann aufs Bild klemmen.
+            left = Math.Max(0, left - MaskScopeMargin)
+            top = Math.Max(0, top - MaskScopeMargin)
+            right = Math.Min(imageWidth - 1, right + MaskScopeMargin)
+            bottom = Math.Min(imageHeight - 1, bottom + MaskScopeMargin)
+            left -= (left Mod MaskScopeAlignment)
+            top -= (top Mod MaskScopeAlignment)
+            Dim rechts = Math.Min(imageWidth, right + 1)
+            Dim unten = Math.Min(imageHeight, bottom + 1)
+
+            Dim flaeche = CDbl(rechts - left) * CDbl(unten - top)
+            If flaeche <= 0 Then Return Nothing
+            If flaeche > CDbl(imageWidth) * CDbl(imageHeight) * MaskScopeMaxAreaShare Then Return Nothing
+
+            Return New SKRectI(left, top, rechts, unten)
+        End Function
+
+        ''' <summary>Kette und Zusammensetzen NUR im Rechteck, direkt in <paramref name="target"/>.
+        ''' Der Aufrufer muss Besitzer des Bildes sein - ausserhalb des Rechtecks bleibt es
+        ''' unverändert, und genau das ist richtig: dort deckt die Maske nicht.</summary>
+        Private Shared Function ApplyLayerAdjustmentsInRect(target As SKBitmap, effectMask As SKBitmap,
+                                                            layerAdjustments As ImageAdjustments,
+                                                            rect As SKRectI) As Boolean
+            If target Is Nothing OrElse effectMask Is Nothing OrElse layerAdjustments Is Nothing Then Return False
+            Dim width = rect.Width, height = rect.Height
+            If width <= 0 OrElse height <= 0 Then Return False
+
+            Using crop = CopyBgraRegion(target, rect)
+                If crop Is Nothing Then Return False
+                Threading.Interlocked.Increment(_maskScopeUseCount)
+                Using maskCrop = CopyAlphaRegion(effectMask, rect)
+                    If maskCrop Is Nothing Then Return False
+                    Using adjusted = ApplyPixelAdjustmentStages(crop, layerAdjustments)
+                        Using composited = CompositeSelectionScoped(crop, adjusted, maskCrop)
+                            If composited Is Nothing Then Return False
+                            Return WriteBgraRegion(composited, target, rect)
+                        End Using
+                    End Using
+                End Using
+            End Using
+        End Function
+
+        ' ZEILENWEISE zwischen Bitmap und Puffer, nie ueber das ganze Bild. Der erste Anlauf las in
+        ' allen drei Funktionen das VOLLE Bild in ein Byte-Feld, aenderte darin das Rechteck und
+        ' schrieb alles zurueck: bei 45 MP sind das 90 MB Kopie je Ebene, und genau die Ersparnis,
+        ' um die es hier geht, war damit wieder weg (gemessen 18 statt der moeglichen Prozente).
+        Private Shared Function CopyBgraRegion(source As SKBitmap, rect As SKRectI) As SKBitmap
+            If source.ColorType <> SKColorType.Bgra8888 AndAlso source.ColorType <> SKColorType.Rgba8888 Then Return Nothing
+            Dim sourceStride = source.RowBytes
+            Dim sourcePixels = source.GetPixels()
+
+            Dim result = New SKBitmap(rect.Width, rect.Height, source.ColorType, source.AlphaType)
+            Dim resultStride = result.RowBytes
+            Dim rowBytes = rect.Width * 4
+            Dim row = New Byte(rowBytes - 1) {}
+            For y = 0 To rect.Height - 1
+                Marshal.Copy(IntPtr.Add(sourcePixels, (y + rect.Top) * sourceStride + rect.Left * 4), row, 0, rowBytes)
+                Marshal.Copy(row, 0, IntPtr.Add(result.GetPixels(), y * resultStride), rowBytes)
+            Next
+            Return result
+        End Function
+
+        Private Shared Function CopyAlphaRegion(source As SKBitmap, rect As SKRectI) As SKBitmap
+            Dim sourceStride = source.RowBytes
+            Dim sourcePixels = source.GetPixels()
+
+            Dim result = New SKBitmap(rect.Width, rect.Height, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim resultStride = result.RowBytes
+            Dim rowBytes = Math.Min(rect.Width, Math.Max(0, source.Width - rect.Left))
+            If rowBytes <= 0 Then Return result
+            Dim row = New Byte(rowBytes - 1) {}
+            For y = 0 To rect.Height - 1
+                Dim sourceRow = y + rect.Top
+                If sourceRow >= source.Height Then Exit For
+                Marshal.Copy(IntPtr.Add(sourcePixels, sourceRow * sourceStride + rect.Left), row, 0, rowBytes)
+                Marshal.Copy(row, 0, IntPtr.Add(result.GetPixels(), y * resultStride), rowBytes)
+            Next
+            Return result
+        End Function
+
+        Private Shared Function WriteBgraRegion(source As SKBitmap, target As SKBitmap, rect As SKRectI) As Boolean
+            If source.ColorType <> target.ColorType Then Return False
+            Dim sourceStride = source.RowBytes
+            Dim targetStride = target.RowBytes
+            Dim sourcePixels = source.GetPixels()
+            Dim targetPixels = target.GetPixels()
+
+            Dim rowBytes = rect.Width * 4
+            Dim row = New Byte(rowBytes - 1) {}
+            For y = 0 To rect.Height - 1
+                Marshal.Copy(IntPtr.Add(sourcePixels, y * sourceStride), row, 0, rowBytes)
+                Marshal.Copy(row, 0, IntPtr.Add(targetPixels, (y + rect.Top) * targetStride + rect.Left * 4), rowBytes)
+            Next
+            Return True
+        End Function
+
+        Private NotInheritable Class MaskRasterEntry
+            Public Property Key As String
+            ''' <summary>Dicht gepackt, ein Byte je Bildpunkt, Zeilenlaenge = Breite. Absichtlich
+            ''' NICHT der Zeilenabstand der Bitmap: der haengt an Skias Ausrichtung und muss beim
+            ''' Herausgeben ohnehin neu gesetzt werden.</summary>
+            Public Property Raster As Byte()
+            Public Property Width As Integer
+            Public Property Height As Integer
+            Public Property LastUse As Long
+        End Class
+
+        ' Gemerkte FERTIGE Masken der Korrekturebenen, in Ausgabegroesse. Anders als der
+        ' Deckungs-Speicher darueber, der Objekt-Ebenenmasken haelt: dieser hier bedient den
+        ' Renderweg der Korrekturebenen, der bisher gar nichts merkte.
+        Private Shared ReadOnly _maskRasterCache As New List(Of MaskRasterEntry)()
+        Private Shared ReadOnly _maskRasterLock As New Object()
+        Private Shared _maskRasterClock As Long = 0
+        ' Reicht fuer mehrere Ebenen in Vorschaugroesse (3072x2048 sind rund 6 MB je Ebene). In
+        ' voller Aufloesung passt nur eine Handvoll, und dort laeuft jede Ebene ohnehin einmal.
+        Private Const MaskRasterBudgetBytes As Long = 96L * 1024L * 1024L
+
+        ''' <summary>Fertige Maske aus dem Speicher, als EIGENE Bitmap. Der Aufrufer entsorgt sie
+        ''' (er hat sie in einem Using), der Speicher behaelt sein Byte-Feld.</summary>
+        Private Shared Function TryTakeMaskRaster(key As String, targetW As Integer, targetH As Integer) As SKBitmap
+            If String.IsNullOrEmpty(key) Then Return Nothing
+            Dim raster As Byte() = Nothing
+            SyncLock _maskRasterLock
+                For Each entry In _maskRasterCache
+                    If String.Equals(entry.Key, key, StringComparison.Ordinal) AndAlso
+                       entry.Width = targetW AndAlso entry.Height = targetH Then
+                        _maskRasterClock += 1
+                        entry.LastUse = _maskRasterClock
+                        raster = entry.Raster
+                        Exit For
+                    End If
+                Next
+            End SyncLock
+            If raster Is Nothing Then Return Nothing
+
+            Dim result = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim rStride = result.RowBytes
+            Dim rBuf = New Byte(rStride * targetH - 1) {}
+            For y = 0 To targetH - 1
+                Array.Copy(raster, y * targetW, rBuf, y * rStride, targetW)
+            Next
+            Marshal.Copy(rBuf, 0, result.GetPixels(), rBuf.Length)
+            Return result
+        End Function
+
+        ''' <summary>Legt die fertige Maske ab und reicht sie unveraendert durch. Ohne Schluessel
+        ''' (Fuellungs-Fall) passiert nichts.</summary>
+        Private Shared Function StoreMaskRaster(key As String, mask As SKBitmap) As SKBitmap
+            If String.IsNullOrEmpty(key) OrElse mask Is Nothing Then Return mask
+            Dim width = mask.Width, height = mask.Height
+            If width <= 0 OrElse height <= 0 Then Return mask
+
+            Dim stride = mask.RowBytes
+            Dim source = New Byte(stride * height - 1) {}
+            Marshal.Copy(mask.GetPixels(), source, 0, source.Length)
+            Dim raster = New Byte(width * height - 1) {}
+            For y = 0 To height - 1
+                Array.Copy(source, y * stride, raster, y * width, width)
+            Next
+
+            SyncLock _maskRasterLock
+                _maskRasterClock += 1
+                For Each entry In _maskRasterCache
+                    If String.Equals(entry.Key, key, StringComparison.Ordinal) Then
+                        entry.Raster = raster
+                        entry.Width = width
+                        entry.Height = height
+                        entry.LastUse = _maskRasterClock
+                        Return mask
+                    End If
+                Next
+                _maskRasterCache.Add(New MaskRasterEntry With {
+                    .Key = key, .Raster = raster, .Width = width, .Height = height,
+                    .LastUse = _maskRasterClock})
+                Dim total As Long = 0
+                For Each entry In _maskRasterCache
+                    total += entry.Raster.LongLength
+                Next
+                While _maskRasterCache.Count > 1 AndAlso total > MaskRasterBudgetBytes
+                    Dim victim = _maskRasterCache(0)
+                    For Each entry In _maskRasterCache
+                        If entry.LastUse < victim.LastUse Then victim = entry
+                    Next
+                    total -= victim.Raster.LongLength
+                    _maskRasterCache.Remove(victim)
+                End While
+            End SyncLock
+            Return mask
+        End Function
+
+        ''' <summary>Der Schluessel einer Geometrie, die nichts tut. Gegen ihn wird verglichen, um die
+        ''' sieben Stufen im Maskenbau zu ueberspringen.
+        '''
+        ''' Absichtlich aus <see cref="MaskGeometryKey"/> und einem frischen Rezept gebildet statt aus
+        ''' einer Aufzaehlung neutraler Werte: so kann er gar nicht von dem abweichen, was die Kette
+        ''' tatsaechlich liest. Kommt ein Feld hinzu, wandert es ueber MaskGeometryKey automatisch
+        ''' auch hierher.</summary>
+        Private Shared ReadOnly NeutralMaskGeometryKey As String =
+            MaskGeometryKey(BuildMaskGeometry(New ImageAdjustments()))
+
+        ''' <summary>Fertige Alpha8-Maske direkt aus dem Alpha8-Raster, mit Deckkraft.
+        '''
+        ''' Bitgleich zum langen Weg: dort bekommen beim Aufblasen alle vier Kanaele denselben Wert,
+        ''' gelesen wird am Ende nur der Alphakanal, und die Geometriestufen dazwischen sind in
+        ''' diesem Fall die Identitaet. Es bleibt also genau dieselbe Rechnung auf demselben Byte.</summary>
+        Private Shared Function BuildAlpha8FromAlphaMask(inputMask As SKBitmap, targetW As Integer, targetH As Integer,
+                                                         opacity As Single) As SKBitmap
+            Dim sourceStride = inputMask.RowBytes
+            Dim sourceBuf = New Byte(sourceStride * inputMask.Height - 1) {}
+            Marshal.Copy(inputMask.GetPixels(), sourceBuf, 0, sourceBuf.Length)
+
+            Dim result = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
+            Dim rStride = result.RowBytes
+            Dim rBuf = New Byte(rStride * targetH - 1) {}
+            ForEachRow(targetW, targetH,
+                Sub(y As Integer)
+                    Dim sRow = y * sourceStride, rRow = y * rStride
+                    For x = 0 To targetW - 1
+                        rBuf(rRow + x) = CByte(Math.Round(sourceBuf(sRow + x) * opacity))
+                    Next
+                End Sub)
+            Marshal.Copy(rBuf, 0, result.GetPixels(), rBuf.Length)
+            Return result
         End Function
 
         ''' <summary>Genau der Teil des Rezepts, den eine Maske auf ihrem Weg vom Quellraum in die

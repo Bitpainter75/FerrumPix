@@ -6887,7 +6887,12 @@ Namespace ViewModels
         Private Sub QueueBackgroundMetaRefresh(items As List(Of ImageItem), cancellationToken As CancellationToken)
             If items Is Nothing OrElse items.Count = 0 Then Return
             Const MetaRefreshStartupDelayMs As Integer = 250
-            Dim degreeOfParallelism = Math.Max(1, Environment.ProcessorCount \ 2)
+            ' Die halbe Kernzahl ist die Obergrenze, nicht die Antwort: auf einer drehenden Platte
+            ' und auf einem knappen Rechner sind zwoelf gleichzeitige Leser schaedlich (siehe
+            ' IoConcurrencyService).
+            Dim folderForDisk = items.Select(Function(i) i?.FilePath).FirstOrDefault(Function(p) Not String.IsNullOrWhiteSpace(p))
+            Dim degreeOfParallelism = IoConcurrencyService.RecommendedReaders(
+                folderForDisk, Math.Max(1, Environment.ProcessorCount \ 2))
 
             Task.Run(Async Function()
                          Try

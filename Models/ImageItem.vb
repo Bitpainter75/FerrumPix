@@ -23,6 +23,22 @@ Namespace Models
 
         Private Const BackgroundThumbnailPriority As Integer = 0
         Private Const ViewportThumbnailPriority As Integer = 100
+
+        ''' <summary>Mit welcher Dringlichkeit die Oberflaeche erfaehrt, dass eine Kachel fertig ist
+        ''' oder verdraengt wurde.
+        '''
+        ''' EINE Stelle fuer alle sechs Meldungen, und das ist der ganze Zweck dieser Zeile: die
+        ''' Stufe stand vorher sechsmal einzeln im Quelltext, viermal davon in derselben
+        ''' wiederholten Zeile. Wer sie beurteilen oder aendern will, soll sie an einer Stelle
+        ''' finden und nicht an sechsen suchen muessen.
+        '''
+        ''' <para>Background heisst: die Meldung kommt dran, wenn sonst nichts mehr ansteht - beim
+        ''' Start also nach Aufbau, Layout und Uebersetzung aller Kacheln. Input statt Background
+        ''' war ausprobiert und brachte an der laufenden Anwendung nichts; die Stufe ist damit eine
+        ''' offene Entscheidung und kein Fehler. Bei der VERDRAENGUNG kommt ein zweiter Grund dazu:
+        ''' dort wird das Bitmap nach der Meldung entsorgt, und das darf nicht mitten in einem
+        ''' Layoutdurchlauf geschehen.</para></summary>
+        Private Shared ReadOnly ThumbnailReadyPriority As DispatcherPriority = DispatcherPriority.Background
         Private Const MaxParallelThumbnailJobs As Integer = 4
         ' Immich-Thumbnails sind NETZ-Abrufe (Latenz statt CPU/Platte): mit der lokalen
         ' Decode-Parallelitaet von 4 fuellte sich der Viewport eines 30k-Albums sekundenlang
@@ -935,7 +951,7 @@ Namespace Models
                         Dispatcher.UIThread.Post(Sub()
                                                       oldest.RaisePropertyChanged(NameOf(Thumbnail))
                                                       bmp.Dispose()
-                                                  End Sub, DispatcherPriority.Background)
+                                                  End Sub, ThumbnailReadyPriority)
                     End If
                 Next
             End If
@@ -1389,10 +1405,16 @@ Namespace Models
         ''' nicht vor (eine Galerie-Ansicht ist lokal ODER Immich), deshalb reicht der Blick
         ''' auf die als naechstes anstehenden Viewport-Elemente (LIFO-Ende).
         Private Shared Function CurrentThumbnailWorkerCap() As Integer
+            Dim localPath As String = Nothing
             For i = _viewportQueue.Count - 1 To Math.Max(0, _viewportQueue.Count - 4) Step -1
                 If _viewportQueue(i)._immichAssetId IsNot Nothing Then Return MaxParallelImmichThumbnailJobs
+                If localPath Is Nothing Then localPath = _viewportQueue(i)._filePath
             Next
-            Return MaxParallelThumbnailJobs
+            ' Vier ist die Obergrenze fuer LOKALE Kacheln. Auf einer drehenden Platte bringen vier
+            ' gleichzeitige Leser weniger als zwei, und auf einem knappen Rechner kostet jeder Leser
+            ' Speicher; beides beantwortet IoConcurrencyService. Der Netzweg oben bleibt unberuehrt,
+            ' dort gibt es keine Kopfbewegung.
+            Return Services.IoConcurrencyService.RecommendedReaders(localPath, MaxParallelThumbnailJobs)
         End Function
 
         Private Shared Async Function RunThumbnailWorkerAsync() As Task
@@ -1487,6 +1509,13 @@ Namespace Models
             End SyncLock
         End Sub
 
+        ''' <summary>Der Oberflaeche melden, dass diese Kachel jetzt ein Bild hat. Die Dringlichkeit
+        ''' steht an EINER Stelle (<see cref="ThumbnailReadyPriority"/>) und nicht in jeder der vier
+        ''' Meldungen einzeln - vorher stand hier viermal dieselbe Zeile.</summary>
+        Private Async Function NotifyThumbnailReadyAsync() As Task
+            Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), ThumbnailReadyPriority)
+        End Function
+
         Private Async Function LoadThumbnailAsync(generation As Integer) As Task
             If Volatile.Read(_thumbState) = 2 Then Return
             Dim token = _thumbnailCancellationToken
@@ -1536,7 +1565,7 @@ Namespace Models
                     bmp?.Dispose()
                     Return
                 End If
-                Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+                Await NotifyThumbnailReadyAsync()
                 If Not Object.ReferenceEquals(abgeloest, bmp) Then abgeloest?.Dispose()
 
                 If bmp IsNot Nothing AndAlso Not cachedWasExact Then
@@ -1552,7 +1581,7 @@ Namespace Models
                     Dim ersetzt As Bitmap = Nothing
                     If replacement IsNot Nothing AndAlso Not token.IsCancellationRequested AndAlso
                        CommitThumbnail(replacement, generation, ersetzt) Then
-                        Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+                        Await NotifyThumbnailReadyAsync()
                         If Not Object.ReferenceEquals(ersetzt, replacement) Then ersetzt?.Dispose()
                     Else
                         replacement?.Dispose()
@@ -1586,7 +1615,7 @@ Namespace Models
                     bmp?.Dispose()
                     Return
                 End If
-                Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+                Await NotifyThumbnailReadyAsync()
                 If Not Object.ReferenceEquals(abgeloest, bmp) Then abgeloest?.Dispose()
             Catch ex As OperationCanceledException
                 SetThumbStateAfterLoad(0, generation)
@@ -1619,7 +1648,7 @@ Namespace Models
                     bmp?.Dispose()
                     Return
                 End If
-                Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), DispatcherPriority.Background)
+                Await NotifyThumbnailReadyAsync()
                 If Not Object.ReferenceEquals(abgeloest, bmp) Then abgeloest?.Dispose()
             Catch ex As OperationCanceledException
                 SetThumbStateAfterLoad(0, generation)
@@ -1783,7 +1812,7 @@ Namespace Models
                 Dispatcher.UIThread.Post(Sub()
                                               RaisePropertyChanged(NameOf(Thumbnail))
                                               bmp.Dispose()
-                                          End Sub, DispatcherPriority.Background)
+                                          End Sub, ThumbnailReadyPriority)
             End If
         End Sub
     End Class

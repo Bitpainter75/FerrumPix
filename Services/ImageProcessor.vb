@@ -2381,9 +2381,28 @@ Namespace Services
                                                              processed.Width, processed.Height, onlyStackedAboveId)
                                 If eigene IsNot Nothing Then effectMask = eigene
                             End If
-                            Using adjusted = ApplyPixelAdjustmentStages(processed, layer.Adjustments.ExtractPixelAdjustments())
-                                processed = ReplaceBitmapOwned(processed, CompositeSelectionScoped(processed, adjusted, effectMask), owned)
-                            End Using
+                            ' NUR IM MASKENRECHTECK rechnen, wo das geht. Die Kette lief hier je
+                            ' Ebene ueber das GANZE Bild und schnitt erst danach zu; gemessen sind
+                            ' das bei 45 MP rund 100 ms je Ebene mit zwei Punktreglern. Die
+                            ' Bedingungen dafuer stehen an LayerAdjustmentsAreCropSafe und
+                            ' TryGetMaskScopeRect, beide gegen Messungen gesetzt.
+                            ' Der Ausschnittweg schreibt DIREKT in processed und setzt deshalb
+                            ' Besitz voraus - ohne ihn gehoert das Bild dem Aufrufer, und eine
+                            ' Kopie waere genau die Vollkopie, die der Weg vermeiden soll.
+                            Dim layerPixelAdjustments = layer.Adjustments.ExtractPixelAdjustments()
+                            Dim scopeRect As SKRectI? = Nothing
+                            If owned AndAlso LayerAdjustmentsAreCropSafe(layerPixelAdjustments) Then
+                                scopeRect = TryGetMaskScopeRect(effectMask, processed.Width, processed.Height)
+                            End If
+
+                            If scopeRect.HasValue AndAlso
+                               ApplyLayerAdjustmentsInRect(processed, effectMask, layerPixelAdjustments, scopeRect.Value) Then
+                                ' Fertig: processed traegt die Korrektur bereits.
+                            Else
+                                Using adjusted = ApplyPixelAdjustmentStages(processed, layerPixelAdjustments)
+                                    processed = ReplaceBitmapOwned(processed, CompositeSelectionScoped(processed, adjusted, effectMask), owned)
+                                End Using
+                            End If
                         Finally
                             eigene?.Dispose()
                         End Try

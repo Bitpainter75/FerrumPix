@@ -681,41 +681,73 @@ Namespace Services
             WriteAllBytesAtomic(targetPath, output.ToArray())
         End Sub
 
+        ''' <summary>Die Metadaten-Segmente eines JPEG, SEQUENZIELL gelesen statt die Datei am Stueck.
+        '''
+        ''' Sie stehen alle vor dem Bilddatenstrom, und die Schleife bricht an dessen Marke ohnehin
+        ''' ab - vorher wurde trotzdem die ganze Datei eingelesen. Bei einem 50-MB-Foto sind das
+        ''' 50 MB fuer ein paar Kilobyte Metadaten, und der Weg laeuft bei jedem Speichern und bei
+        ''' jeder Uebernahme von Metadaten. Uninteressante Segmente werden jetzt uebersprungen
+        ''' (Seek) statt kopiert.</summary>
         Private Shared Function ReadJpegMetadataSegments(path As String) As List(Of Byte())
-            Dim bytes = File.ReadAllBytes(path)
             Dim result As New List(Of Byte())()
-            If bytes.Length < 4 OrElse bytes(0) <> &HFF OrElse bytes(1) <> &HD8 Then Return result
+            Try
+                ' SequentialScan sagt dem System, dass vorwaerts gelesen wird - es liest dann
+                ' vorausschauend und wirft die Seiten hinter uns frueher weg.
+                Using stream = New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                                              64 * 1024, FileOptions.SequentialScan)
+                    Dim header(3) As Byte
+                    If Not ReadExactly(stream, header, 0, 2) Then Return result
+                    If header(0) <> &HFF OrElse header(1) <> &HD8 Then Return result
 
-            Dim offset = 2
-            While offset + 4 <= bytes.Length
-                If bytes(offset) <> &HFF Then Exit While
-                Dim marker = bytes(offset + 1)
-                If marker = &HDA OrElse marker = &HD9 Then Exit While
-                If marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then
-                    offset += 2
-                    Continue While
-                End If
+                    While True
+                        If Not ReadExactly(stream, header, 0, 2) Then Exit While
+                        If header(0) <> &HFF Then Exit While
+                        Dim marker = header(1)
+                        ' Bilddatenstrom und Dateiende: ab hier kommen keine Metadaten mehr.
+                        If marker = &HDA OrElse marker = &HD9 Then Exit While
+                        ' Marken ohne Laengenfeld.
+                        If marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then Continue While
 
-                Dim length = ReadUInt16BE(bytes, offset + 2)
-                If length < 2 OrElse offset + 2 + length > bytes.Length Then Exit While
-                Dim totalLength = 2 + length
+                        If Not ReadExactly(stream, header, 2, 2) Then Exit While
+                        Dim length = (CInt(header(2)) << 8) Or CInt(header(3))
+                        If length < 2 Then Exit While
+                        Dim totalLength = 2 + length
 
-                If IsJpegMetadataMarker(marker) Then
-                    Dim segment(totalLength - 1) As Byte
-                    Buffer.BlockCopy(bytes, offset, segment, 0, totalLength)
-                    If marker = &HE1 AndAlso IsExifSegment(segment) Then
-                        PatchExifOrientationToNormal(segment)
-                        PatchExifColorSpaceToSrgb(segment, 10)
-                    End If
-                    segment = WithoutXmpColorFields(segment)
-                    ' Das Farbprofil der Quelle bleibt draussen, siehe IsJpegIccSegment.
-                    If Not IsJpegIccSegment(segment) Then result.Add(segment)
-                End If
-
-                offset += totalLength
-            End While
+                        If IsJpegMetadataMarker(marker) Then
+                            Dim segment(totalLength - 1) As Byte
+                            segment(0) = header(0) : segment(1) = header(1)
+                            segment(2) = header(2) : segment(3) = header(3)
+                            If length > 2 AndAlso Not ReadExactly(stream, segment, 4, length - 2) Then Exit While
+                            If marker = &HE1 AndAlso IsExifSegment(segment) Then
+                                PatchExifOrientationToNormal(segment)
+                                PatchExifColorSpaceToSrgb(segment, 10)
+                            End If
+                            segment = WithoutXmpColorFields(segment)
+                            ' Das Farbprofil der Quelle bleibt draussen, siehe IsJpegIccSegment.
+                            If Not IsJpegIccSegment(segment) Then result.Add(segment)
+                        Else
+                            If length > 2 Then stream.Seek(length - 2, SeekOrigin.Current)
+                        End If
+                    End While
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.ReadJpegMetadataSegments", ex)
+            End Try
 
             Return result
+        End Function
+
+        ''' <summary>Liest genau so viele Bytes, wie verlangt. Ein FileStream DARF weniger liefern,
+        ''' als angefordert wurde - wer das nicht behandelt, bekommt bei grossen Dateien
+        ''' gelegentlich ein halb gefuelltes Segment und merkt es nie.</summary>
+        Private Shared Function ReadExactly(stream As Stream, buffer As Byte(), offset As Integer, count As Integer) As Boolean
+            Dim gelesen = 0
+            While gelesen < count
+                Dim jetzt = stream.Read(buffer, offset + gelesen, count - gelesen)
+                If jetzt <= 0 Then Return False
+                gelesen += jetzt
+            End While
+            Return True
         End Function
 
         Private Shared Function BuildJpegMetadataSegmentsFromSource(sourcePath As String) As List(Of Byte())
