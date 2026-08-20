@@ -1,5 +1,6 @@
 Imports System
 Imports System.Collections.Generic
+Imports System.Diagnostics
 Imports System.Linq
 Imports Microsoft.ML.OnnxRuntime
 Imports Microsoft.ML.OnnxRuntime.Tensors
@@ -122,6 +123,17 @@ Namespace Services
         ''' Fall, und sie gehoeren dorthin, wo man sie ohne Umweg sieht.</summary>
         Public Shared Property LastReport As String = ""
 
+        ''' <summary>Zeitanteile eines Durchlaufs. Sie dienen ausschliesslich der Diagnose: erst
+        ''' messen, dann einen moeglichen Pixel-Pfad optimieren.</summary>
+        Private NotInheritable Class FillTiming
+            Public MaskAndRegionMs As Long
+            Public ScalingAndMaskMs As Long
+            Public TensorMs As Long
+            Public InferenceMs As Long
+            Public OutputAndCheckMs As Long
+            Public CompositeMs As Long
+        End Class
+
         Public Shared ReadOnly Property Available As Boolean
             Get
                 Return AiModelService.RuntimeAvailable AndAlso
@@ -186,6 +198,8 @@ Namespace Services
             If cancel.IsCancellationRequested Then Return Nothing
             Dim session = AiModelService.SessionFor(ModelFile)
             If session Is Nothing Then Return Nothing
+            Dim runTimer = Stopwatch.StartNew()
+            Dim timing = New FillTiming()
 
             Dim ownMask As SKBitmap = Nothing
             Dim m = mask
@@ -214,6 +228,7 @@ Namespace Services
                 If gap.Width <= 0 OrElse gap.Height <= 0 Then Return Nothing
                 Dim window = RegionFor(gap, image.Width, image.Height)
                 If window.Width <= 0 Then Return Nothing
+                timing.MaskAndRegionMs = runTimer.ElapsedMilliseconds
 
                 ' Das Modell rechnet auf FREIER Groesse - nur ein Vielfaches von 32 muss es sein.
                 ' Deshalb wird der Ausschnitt nicht mehr in ein festes Quadrat gequetscht, sondern
@@ -252,6 +267,7 @@ Namespace Services
                                 If smallMask.GetPixel(x, y).Alpha >= threshold Then setPixels += 1
                             Next
                         Next
+                        timing.ScalingAndMaskMs = runTimer.ElapsedMilliseconds - timing.MaskAndRegionMs
                         Dim report = $"Bild {image.Width}x{image.Height}, Lücke {gap.Width}x{gap.Height}, " &
                                       $"Ausschnitt {window.Width}x{window.Height}, gerechnet auf {pw}x{ph}, " &
                                       $"Schwelle {threshold}, Maske {setPixels} von {aw * ah} Punkten"
@@ -269,7 +285,7 @@ Namespace Services
                         ' Zahlen erschliessen.
                         WriteDiagnosticImages(small, smallMask, threshold)
 
-                        Dim filled = Compute(session, small, smallMask, aw, ah, pw, ph, threshold)
+                        Dim filled = Compute(session, small, smallMask, aw, ah, pw, ph, threshold, timing)
                         If filled Is Nothing Then Return Nothing
                         Using filled
                             ' Wer waehrend des Durchlaufs abgebrochen hat, bekommt sein Bild
@@ -279,7 +295,15 @@ Namespace Services
                                 DiagnosticLogService.LogAlways("ObjektEntfernen", "abgebrochen, Ergebnis verworfen")
                                 Return Nothing
                             End If
-                            Return InsertInto(image, m, filled, window)
+                            Dim compositeStart = runTimer.ElapsedMilliseconds
+                            Dim output = InsertInto(image, m, filled, window)
+                            timing.CompositeMs = runTimer.ElapsedMilliseconds - compositeStart
+                            LastReport &= $", Zeiten Maske/Ausschnitt {timing.MaskAndRegionMs} ms, " &
+                                          $"Skalierung {timing.ScalingAndMaskMs} ms, Tensor {timing.TensorMs} ms, " &
+                                          $"ONNX {timing.InferenceMs} ms, Ausgabe/Prüfung {timing.OutputAndCheckMs} ms, " &
+                                          $"Einsetzen {timing.CompositeMs} ms, Gesamt {runTimer.ElapsedMilliseconds} ms"
+                            DiagnosticLogService.LogAlways("ObjektEntfernen", LastReport)
+                            Return output
                         End Using
                     End Using
                 End Using
@@ -372,7 +396,9 @@ Namespace Services
         ''' weggeschnitten.</summary>
         Private Shared Function Compute(session As InferenceSession, small As SKBitmap,
                                        smallMask As SKBitmap, aw As Integer, ah As Integer,
-                                       pw As Integer, ph As Integer, threshold As Byte) As SKBitmap
+                                       pw As Integer, ph As Integer, threshold As Byte,
+                                       timing As FillTiming) As SKBitmap
+            Dim phase = Stopwatch.StartNew()
             Dim layer = pw * ph
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 4, ph, pw})
             Dim z = tensor.Buffer.Span
@@ -393,10 +419,14 @@ Namespace Services
                     z(layer * 3 + i) = hole
                 Next
             Next
+            timing.TensorMs = phase.ElapsedMilliseconds
 
             Dim name = session.InputMetadata.Keys.First()
             Dim input = New List(Of NamedOnnxValue) From {NamedOnnxValue.CreateFromTensor(name, tensor)}
+            phase.Restart()
             Using result = session.Run(input)
+                timing.InferenceMs = phase.ElapsedMilliseconds
+                phase.Restart()
                 Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
                 If output Is Nothing Then Return Nothing
                 Dim dims = output.Dimensions.ToArray()
@@ -439,6 +469,7 @@ Namespace Services
                     DiagnosticLogService.LogAlways("ObjektEntfernen",
                         "Das Modell hat den Ausschnitt nur WIEDERHOLT statt zu fuellen.")
                 End If
+                timing.OutputAndCheckMs = phase.ElapsedMilliseconds
                 Return target
             End Using
         End Function

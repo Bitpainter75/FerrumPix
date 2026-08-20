@@ -116,9 +116,24 @@ Namespace Services
             If GeotagService.IsJpegPath(imagePath) Then
                 result.Target = CopyrightTarget.EmbeddedExif
                 Try
-                    Dim bytes = File.ReadAllBytes(imagePath)
-                    Dim rebuilt = BuildJpegWithCopyright(bytes, text, result)
-                    If rebuilt IsNot Nothing AndAlso ImageProcessor.WriteAllBytesAtomic(imagePath, rebuilt) Then
+                    If GeotagService.RewriteJpegExifAtomic(imagePath,
+                        Function(existingSegment)
+                            Dim existing(existingSegment.Length - 10 - 1) As Byte
+                            Buffer.BlockCopy(existingSegment, 10, existing, 0, existing.Length)
+                            Dim tiff = SetCopyrightInTiff(existing, text)
+                            If tiff Is Nothing Then
+                                SetReason(result, "EXIF-Block nicht lesbar")
+                                Return Nothing
+                            End If
+                            If tiff.Length > GeotagService.MaxTiffBlockInJpeg Then
+                                SetReason(result, "EXIF-Block passt nicht mehr in ein JPEG-Segment")
+                                Return Nothing
+                            End If
+                            Return GeotagService.BuildExifSegment(tiff)
+                        End Function,
+                        Function()
+                            Return GeotagService.BuildExifSegment(CreateTiffWithCopyright(text))
+                        End Function) Then
                         ' EINE VORHANDENE Beistelldatei muss mit. Sie wird NICHT neu angelegt - das
                         ' waere eine Datei, um die niemand gebeten hat -, aber wenn schon eine
                         ' danebenliegt, traegt sie sonst weiter den alten Hinweis. Programme, die
@@ -172,10 +187,14 @@ Namespace Services
             Dim removedSomething = False
             If GeotagService.IsJpegPath(imagePath) AndAlso File.Exists(imagePath) Then
                 Try
-                    Dim bytes = File.ReadAllBytes(imagePath)
-                    Dim rebuilt = BuildJpegWithCopyright(bytes, "", result)
-                    If rebuilt IsNot Nothing Then
-                        removedSomething = ImageProcessor.WriteAllBytesAtomic(imagePath, rebuilt)
+                    If GeotagService.RewriteJpegExifAtomic(imagePath,
+                        Function(existingSegment)
+                            Dim existing(existingSegment.Length - 10 - 1) As Byte
+                            Buffer.BlockCopy(existingSegment, 10, existing, 0, existing.Length)
+                            Dim tiff = SetCopyrightInTiff(existing, "")
+                            Return If(tiff Is Nothing, Nothing, GeotagService.BuildExifSegment(tiff))
+                        End Function) Then
+                        removedSomething = True
                         result.Target = CopyrightTarget.EmbeddedExif
                     End If
                 Catch ex As Exception

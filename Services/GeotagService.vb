@@ -334,10 +334,14 @@ Namespace Services
 
             If IsJpegPath(imagePath) AndAlso File.Exists(imagePath) Then
                 Try
-                    Dim bytes = File.ReadAllBytes(imagePath)
-                    Dim rebuilt = BuildJpegWithoutGps(bytes)
-                    If rebuilt IsNot Nothing Then
-                        removedSomething = ImageProcessor.WriteAllBytesAtomic(imagePath, rebuilt)
+                    If RewriteJpegExifAtomic(imagePath,
+                        Function(existingSegment)
+                            Dim tiff(existingSegment.Length - 10 - 1) As Byte
+                            Buffer.BlockCopy(existingSegment, 10, tiff, 0, tiff.Length)
+                            Dim stripped = RemoveGpsFromTiff(tiff)
+                            Return If(stripped Is Nothing, Nothing, BuildExifSegment(stripped))
+                        End Function) Then
+                        removedSomething = True
                         result.Target = GeotagTarget.EmbeddedExif
                     End If
                 Catch ex As Exception
@@ -504,11 +508,134 @@ Namespace Services
                                                      longitude As Double,
                                                      altitudeMeters As Double?,
                                                      result As GeotagWriteResult) As Boolean
-            Dim bytes = File.ReadAllBytes(imagePath)
-            Dim rebuilt = BuildJpegWithGps(bytes, latitude, longitude, altitudeMeters, result)
-            If rebuilt Is Nothing Then Return False
-            Return ImageProcessor.WriteAllBytesAtomic(imagePath, rebuilt)
+            Return RewriteJpegExifAtomic(imagePath,
+                Function(existingSegment)
+                    Dim existing(existingSegment.Length - 10 - 1) As Byte
+                    Buffer.BlockCopy(existingSegment, 10, existing, 0, existing.Length)
+                    Dim withoutOldPlace = RemoveGpsFromTiff(existing)
+                    If withoutOldPlace IsNot Nothing Then existing = withoutOldPlace
+
+                    Dim tiff = AppendGpsToTiff(existing, latitude, longitude, altitudeMeters)
+                    If tiff Is Nothing Then
+                        SetReason(result, "EXIF-Block nicht lesbar")
+                        Return Nothing
+                    End If
+                    If tiff.Length > MaxTiffBlockInJpeg Then
+                        SetReason(result, "EXIF-Block passt nicht mehr in ein JPEG-Segment")
+                        Return Nothing
+                    End If
+                    Return BuildExifSegment(tiff)
+                End Function,
+                Function()
+                    Return BuildExifSegment(CreateTiffWithGps(latitude, longitude, altitudeMeters))
+                End Function)
         End Function
+
+        ''' <summary>Ersetzt (oder fügt ein) EXIF in einer JPEG-Datei, ohne die Bilddaten komplett
+        ''' in den Speicher zu laden. Nur das höchstens 64 KiB große APP1-Segment wird aufgebaut;
+        ''' der übrige Container einschließlich Bildstrom wird blockweise in die atomare Zieldatei
+        ''' kopiert. <paramref name="replaceExisting"/> liefert Nothing, wenn keine Änderung sicher
+        ''' möglich ist - dann bleibt die Originaldatei unangetastet.</summary>
+        Friend Shared Function RewriteJpegExifAtomic(sourcePath As String,
+                                                     replaceExisting As Func(Of Byte(), Byte()),
+                                                     Optional createIfMissing As Func(Of Byte()) = Nothing) As Boolean
+            If String.IsNullOrWhiteSpace(sourcePath) OrElse replaceExisting Is Nothing Then Return False
+
+            Dim existing As Byte() = Nothing
+            Dim existingOffset As Long = -1
+            Dim insertOffset As Long = -1
+            If Not FindJpegExifSegment(sourcePath, existing, existingOffset, insertOffset) Then Return False
+
+            Dim replacement = If(existing IsNot Nothing, replaceExisting(existing),
+                                 If(createIfMissing IsNot Nothing, createIfMissing(), Nothing))
+            If replacement Is Nothing OrElse replacement.Length < 4 Then Return False
+
+            Dim replaceAt = If(existing IsNot Nothing, existingOffset, insertOffset)
+            If replaceAt < 2 Then Return False
+            Dim skipLength = If(existing IsNot Nothing, CLng(existing.Length), 0L)
+
+            Return ImageProcessor.WriteFileAtomic(sourcePath,
+                Sub(destination)
+                    Using source As New FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                                                   64 * 1024, FileOptions.SequentialScan)
+                        CopyJpegRange(source, destination, replaceAt)
+                        destination.Write(replacement, 0, replacement.Length)
+                        If skipLength > 0 Then source.Seek(skipLength, SeekOrigin.Current)
+                        source.CopyTo(destination, 64 * 1024)
+                    End Using
+                End Sub)
+        End Function
+
+        ''' <summary>Findet das EXIF-APP1-Segment und die Einfügestelle nach führenden APP0-Blöcken.
+        ''' Der Bildstrom wird dabei nie gelesen.</summary>
+        Private Shared Function FindJpegExifSegment(path As String, ByRef existing As Byte(),
+                                                     ByRef existingOffset As Long, ByRef insertOffset As Long) As Boolean
+            existing = Nothing : existingOffset = -1 : insertOffset = -1
+            Using stream As New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                                           64 * 1024, FileOptions.SequentialScan)
+                Dim header(3) As Byte
+                If Not ReadExactly(stream, header, 0, 2) OrElse header(0) <> &HFF OrElse header(1) <> &HD8 Then Return False
+                insertOffset = 2
+                Dim pastLeadingApp0 = False
+                While True
+                    Dim segmentOffset = stream.Position
+                    If Not ReadExactly(stream, header, 0, 2) Then Exit While
+                    If header(0) <> &HFF Then Exit While
+                    Dim marker = header(1)
+                    If marker = &HDA OrElse marker = &HD9 Then Exit While
+                    If marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then Continue While
+                    If Not ReadExactly(stream, header, 2, 2) Then Exit While
+                    Dim length = (CInt(header(2)) << 8) Or CInt(header(3))
+                    If length < 2 Then Exit While
+                    Dim totalLength = length + 2
+
+                    If Not pastLeadingApp0 Then
+                        If marker = &HE0 OrElse marker = &HEE Then
+                            insertOffset = segmentOffset + totalLength
+                        Else
+                            pastLeadingApp0 = True
+                        End If
+                    End If
+
+                    If marker = &HE1 Then
+                        Dim segment(totalLength - 1) As Byte
+                        segment(0) = header(0) : segment(1) = header(1)
+                        segment(2) = header(2) : segment(3) = header(3)
+                        If length > 2 AndAlso Not ReadExactly(stream, segment, 4, length - 2) Then Exit While
+                        If IsExifSegment(segment, 0, totalLength) Then
+                            existing = segment
+                            existingOffset = segmentOffset
+                            Return True
+                        End If
+                    Else
+                        stream.Seek(length - 2, SeekOrigin.Current)
+                    End If
+                End While
+            End Using
+            Return insertOffset >= 2
+        End Function
+
+        Private Shared Function ReadExactly(stream As Stream, buffer As Byte(), offset As Integer, count As Integer) As Boolean
+            Dim read = 0
+            While read < count
+                Dim now = stream.Read(buffer, offset + read, count - read)
+                If now <= 0 Then Return False
+                read += now
+            End While
+            Return True
+        End Function
+
+        Private Shared Sub CopyJpegRange(source As Stream, destination As Stream, count As Long)
+            Dim buffer(64 * 1024 - 1) As Byte
+            Dim remaining = count
+            While remaining > 0
+                Dim wanted = CInt(Math.Min(CLng(buffer.Length), remaining))
+                Dim read = source.Read(buffer, 0, wanted)
+                If read <= 0 Then Throw New EndOfStreamException("JPEG endet vor dem Metadaten-Segment.")
+                destination.Write(buffer, 0, read)
+                remaining -= read
+            End While
+        End Sub
 
         ''' <summary>Die fertigen JPEG-Bytes mit gesetzter Koordinate, oder Nothing wenn der
         ''' Aufbau der Datei nicht sicher gelesen werden konnte. Getrennt vom Schreiben, damit der
