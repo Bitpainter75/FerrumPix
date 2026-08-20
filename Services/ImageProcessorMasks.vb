@@ -567,6 +567,9 @@ Namespace Services
         ''' die jeden hier erlaubten Regler einzeln gegen den Vollbildweg hält.</summary>
         Private Shared Function LayerAdjustmentsAreCropSafe(a As ImageAdjustments) As Boolean
             If a Is Nothing Then Return False
+            ' Ohne gespeicherte Basis-/Dichtefarbe misst Filmnegativ aus dem Bild. Ein
+            ' lokaler Ausschnitt hätte andere Werte; auch mit gesetzten Farben bleibt es
+            ' bewusst außerhalb der Whitelist (siehe Erläuterung oben).
             Return a.Vignette = 0 AndAlso
                    a.Grain = 0 AndAlso
                    a.DustScratches = 0 AndAlso
@@ -574,7 +577,8 @@ Namespace Services
                    a.ColorNoiseReduction = 0 AndAlso
                    a.FarbrauschGrob = 0 AndAlso
                    a.ColorNoiseAdd = 0 AndAlso
-                   a.Sharpness = 0
+                   a.Sharpness = 0 AndAlso
+                   Not a.NegativeEnabled
         End Function
 
         ''' <summary>Das ausgerichtete Rechteck, in dem diese Maske überhaupt deckt, oder Nothing,
