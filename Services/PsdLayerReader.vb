@@ -20,8 +20,8 @@ Namespace Services
     ''' gibt es zwei Spielarten, die zweite legt jeden Punkt als Differenz zu seinem linken Nachbarn
     ''' ab (siehe <see cref="ReadZipPlane"/>).
     '''
-    ''' Acht und sechzehn Bit je Kanal, RGB und Graustufen. Sechzehn Bit werden auf acht gebracht,
-    ''' wie es der flache Weg seit jeher tut - der Ebenenstapel rechnet in acht Bit.
+    ''' Acht und sechzehn Bit je Kanal, RGB, Graustufen und CMYK. Sechzehn Bit werden auf acht
+    ''' gebracht, wie es der flache Weg seit jeher tut - der Ebenenstapel rechnet in acht Bit.
     '''
     ''' Gruppen sind im Format kein Behälter, sondern eine KLAMMER aus zwei Ebenen ohne Bildpunkte.
     ''' Sie werden als solche weitergereicht (<see cref="PsdLayerInfo.SectionType"/>); wer daraus
@@ -34,8 +34,8 @@ Namespace Services
     '''   steckt im Gesamtbild, das der Aufrufer als Grundlage nimmt.
     ''' - Vektormasken. Nur die gemalte Ebenenmaske kommt mit (Kanal -2); die zusammengerechnete
     '''   Fassung aus beidem (Kanal -3) bliebe ohne ihren Vektoranteil eine halbe Wahrheit.
-    ''' - 32 Bit je Kanal und CMYK. Dann liefert der Leser Nothing, und der Aufrufer bleibt beim
-    '''   flachen Gesamtbild - das kann beides.
+    ''' - 32 Bit je Kanal. Dann liefert der Leser Nothing, und der Aufrufer bleibt beim flachen
+    '''   Gesamtbild, das diese Variante besser auffangen kann.
     ''' </summary>
     Public NotInheritable Class PsdLayerReader
 
@@ -198,17 +198,16 @@ Namespace Services
             Dim depth = CInt(buf(22)) * 256 + buf(23)
             Dim colorMode = CInt(buf(24)) * 256 + buf(25)
 
-            ' 8 und 16 Bit, RGB und Graustufen. Sechzehn Bit werden dabei auf acht gebracht, wie es
-            ' der flache Weg seit jeher tut - der Ebenenstapel rechnet in acht Bit, und ein
-            ' Ebenenstapel mit etwas Genauigkeitsverlust ist mehr wert als gar keiner.
-            '
-            ' CMYK bleibt draußen. Für das flache Gesamtbild gibt es die Umrechnung, für Ebenen
-            ' käme die Transparenz dazu, und eine falsch zusammengerechnete Ebene fiele erst am
-            ' fertigen Bild auf. Dort bleibt es beim Gesamtbild.
+            ' 8 und 16 Bit, RGB, Graustufen und CMYK. Sechzehn Bit werden dabei auf acht gebracht,
+            ' wie es der flache Weg seit jeher tut - der Ebenenstapel rechnet in acht Bit, und ein
+            ' Ebenenstapel mit etwas Genauigkeitsverlust ist mehr wert als gar keiner. CMYK nimmt
+            ' denselben vorsichtigen, profilfreien Weg wie die Vorschau: die Ebenen bleiben damit
+            ' editierbar, statt dass die Datei nur als Gesamtbild aufgeht.
             If depth <> 8 AndAlso depth <> 16 Then Return Nothing
-            If colorMode <> 3 AndAlso colorMode <> 1 Then Return Nothing
+            If colorMode <> 3 AndAlso colorMode <> 1 AndAlso colorMode <> 4 Then Return Nothing
             Dim bytesPerSample = depth \ 8
             Dim grayscale = colorMode = 1
+            Dim cmyk = colorMode = 4
 
             If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing  ' Farbmodus-Daten
             If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing  ' Bildressourcen
@@ -256,7 +255,7 @@ Namespace Services
             Try
                 For Each rec In records
                     Dim maskBmp As SKBitmap = Nothing
-                    Dim bmp = ReadChannelData(fs, rec, metadataOnly, maskBmp, bytesPerSample, grayscale)
+                    Dim bmp = ReadChannelData(fs, rec, metadataOnly, maskBmp, bytesPerSample, grayscale, cmyk)
                     If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing
                     ' Gruppenmarken haben keine Bildpunkte und gehen trotzdem mit: ohne sie wüsste
                     ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört.
@@ -497,11 +496,14 @@ Namespace Services
         ''' kommen.</param>
         ''' <param name="grayscale">Das Dokument hat nur einen Farbkanal. Er wird auf alle drei
         ''' gelegt - Grau ist Rot gleich Grün gleich Blau, und der Ebenenstapel kennt nur Farbe.</param>
+        ''' <param name="cmyk">Die vier Farbkanäle sind Cyan, Magenta, Gelb und Schwarz. Photoshop
+        ''' speichert sie invertiert; die profilfreie Umrechnung entspricht dem flachen PSD-Weg.</param>
         Private Shared Function ReadChannelData(fs As FileStream, rec As LayerRecord,
                                                 metadataOnly As Boolean,
                                                 ByRef maskBitmap As SKBitmap,
                                                 bytesPerSample As Integer,
-                                                grayscale As Boolean) As SKBitmap
+                                                grayscale As Boolean,
+                                                cmyk As Boolean) As SKBitmap
             Dim width = rec.Right - rec.Left
             Dim height = rec.Bottom - rec.Top
             Dim maskWidth = rec.MaskRight - rec.MaskLeft
@@ -509,15 +511,17 @@ Namespace Services
             maskBitmap = Nothing
 
             Dim red As Byte() = Nothing, green As Byte() = Nothing, blue As Byte() = Nothing, alpha As Byte() = Nothing
+            Dim black As Byte() = Nothing
 
             For Each ch In rec.Channels
                 Dim id = ch(0)
                 Dim declaredLen = ch(1)
                 Dim blockEnd = fs.Position + declaredLen
 
-                ' Nur die vier Bildkanäle einer Ebene mit Fläche werden ausgewertet.
+                ' Nur die Bildkanäle einer Ebene mit Fläche werden ausgewertet: RGB/Grau braucht
+                ' drei beziehungsweise einen, CMYK vier; Transparenz liegt bei allen in Kanal -1.
                 Dim wanted = Not metadataOnly AndAlso rec.HasPixels AndAlso
-                             (id = 0 OrElse id = 1 OrElse id = 2 OrElse id = -1)
+                             (id = 0 OrElse id = 1 OrElse id = 2 OrElse id = -1 OrElse (cmyk AndAlso id = 3))
                 ' Die Maske liegt in Kanal -2 und hat die Maße IHRES Rechtecks, nicht die der Ebene.
                 ' Kanal -3 wäre die zusammengerechnete Fassung aus Ebenen- und Vektormaske; die
                 ' bleibt draußen, weil ihr Vektoranteil hier ohnehin nicht nachvollzogen wird und
@@ -533,6 +537,7 @@ Namespace Services
                             Case 0 : red = plane
                             Case 1 : green = plane
                             Case 2 : blue = plane
+                            Case 3 : black = plane
                             Case -1 : alpha = plane
                         End Select
                     End If
@@ -565,7 +570,7 @@ Namespace Services
                 green = red
                 blue = red
             End If
-            If red Is Nothing OrElse green Is Nothing OrElse blue Is Nothing Then Return DropMask(maskBitmap)
+            If red Is Nothing OrElse green Is Nothing OrElse blue Is Nothing OrElse (cmyk AndAlso black Is Nothing) Then Return DropMask(maskBitmap)
 
             Dim info = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
             Dim bmp = New SKBitmap(info)
@@ -573,9 +578,19 @@ Namespace Services
                 Dim count = width * height
                 Dim buffer(count * 4 - 1) As Byte
                 For i = 0 To count - 1
-                    buffer(i * 4) = red(i)
-                    buffer(i * 4 + 1) = green(i)
-                    buffer(i * 4 + 2) = blue(i)
+                    If cmyk Then
+                        ' Photoshop speichert CMYK invertiert (255 = keine Farbe). Ohne das
+                        ' eingebettete Druckprofil ist dies bewusst dieselbe robuste Näherung wie
+                        ' PsdPreviewService: C', M', Y' jeweils mit K' multiplizieren.
+                        Dim k = CInt(black(i))
+                        buffer(i * 4) = CByte(CInt(blue(i)) * k \ 255)      ' B aus Y'
+                        buffer(i * 4 + 1) = CByte(CInt(green(i)) * k \ 255) ' G aus M'
+                        buffer(i * 4 + 2) = CByte(CInt(red(i)) * k \ 255)   ' R aus C'
+                    Else
+                        buffer(i * 4) = red(i)
+                        buffer(i * 4 + 1) = green(i)
+                        buffer(i * 4 + 2) = blue(i)
+                    End If
                     buffer(i * 4 + 3) = If(alpha IsNot Nothing, alpha(i), CByte(255))
                 Next
                 Runtime.InteropServices.Marshal.Copy(buffer, 0, bmp.GetPixels(), buffer.Length)
