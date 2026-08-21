@@ -289,6 +289,14 @@ Namespace ViewModels
                             Using replacePaint = New SKPaint With {.BlendMode = SKBlendMode.Src}
                                 canvas.DrawBitmap(_sceneSk, region, region, replacePaint)
                             End Using
+                            ' Die Anschlagswarnung liegt auf dem BILD, nicht auf den Objekten
+                            ' darüber: sie beantwortet, wo die Reglerkette Zeichnung verloren hat.
+                            ' Ein Text in Weiss oder eine schwarze Form ist genau das nicht, und
+                            ' eine Warnung, die daran angeht, zeigte einen Anschlag, den es nicht
+                            ' gibt. Deshalb hier - nach der Szene, vor den Objekten.
+                            If ShowClippingWarning Then
+                                ImageProcessor.MarkClippingInPlace(target, clamped)
+                            End If
                             Try
                                 Dim adj = GetCompositorBlitAdjustments()
                                 OverlaySceneRenderer.DrawCachedAnnotations(canvas, adj, _sceneSk.Width, _sceneSk.Height,
@@ -313,6 +321,33 @@ Namespace ViewModels
                 Return
             End Try
             RaiseEvent SceneInvalidated(Me, EventArgs.Empty)
+        End Sub
+
+        ''' <summary>Kennung des aktuellen Bildstandes fuer den Analysebild-Zwischenspeicher. Die
+        ''' laufende Nummer der Szene erhoeht sich mit JEDEM neuen Szeneninhalt - also bei jeder
+        ''' Reglerbewegung, jedem Objekt und jeder Maske. Genau das ist die Bedingung: solange sie
+        ''' steht, gilt ein gerechnetes Diagramm weiter, und das Umschalten zwischen Histogramm,
+        ''' Waveform und Parade kostet nur noch das Zeichnen.</summary>
+        Friend Function SceneScopeKey() As String
+            If String.IsNullOrEmpty(_currentImagePath) Then Return ""
+            Return $"scene:{_currentImagePath}|{_sceneContentVersion}"
+        End Function
+
+        ''' <summary>Zeichnet die Anzeige aus der vorhandenen Szene neu, ohne die Kette anzufassen.
+        ''' Für Umschalter, die nur die DARSTELLUNG ändern (heute die Anschlagswarnung): die Szene
+        ''' bleibt, was sie ist, und der Blit legt sie samt Markierung noch einmal auf die Anzeige.
+        ''' Das Zoom-Detail wird nur neu AUSGESCHNITTEN - seine Detail-Szene bleibt ebenfalls
+        ''' stehen, ein Neu-Render wäre dort Sekunden für nichts.</summary>
+        Private Sub RepaintSceneDisplay()
+            If _sceneSk Is Nothing Then Return
+            EnsureSceneDisplay()
+            If _sceneDisplay Is Nothing Then Return
+            ' Ein Vollblit hebt die Zugbahn-Verkettung auf: der nächste Zug beginnt frisch, sonst
+            ' vereinigte sein erster Blit sich mit einem Rechteck von vor dem Umschalten.
+            _compositorPreviousBlitRect = SKRectI.Empty
+            _displayPendingRect = SKRectI.Empty
+            BlitSceneRegionToDisplay(New SKRectI(0, 0, _sceneSk.Width, _sceneSk.Height))
+            If _zoomDetailSk IsNot Nothing AndAlso _zoomDetailWanted Then ExtractZoomDetailRegion()
         End Sub
 
         ''' <summary>STUFE 2: rendert eine Region (Basis + Striche + ALLE Objekte in Z-Order) in die
@@ -883,7 +918,9 @@ Namespace ViewModels
                     Return
                 End If
 
-                Dim bmp = ImageProcessor.RenderBitmapPatch(_zoomDetailSk, rect)
+                ' Dieselbe Warnung wie auf der Szene: sie beim Hineinzoomen verschwinden zu lassen
+                ' waere genau dann weg, wenn man sie braucht - der Anschlag wird am Detail beurteilt.
+                Dim bmp = ImageProcessor.RenderBitmapPatch(_zoomDetailSk, rect, 0, ShowClippingWarning)
                 If bmp Is Nothing Then
                     SetZoomDetailImage(Nothing)
                     Return

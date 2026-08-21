@@ -105,6 +105,17 @@ Namespace Services
         ''' <summary>Das Analysebild im Infopanel: "Histogram", "Waveform" oder "Parade".
         ''' Gilt fuer Galerie, Betrachter und Editor gemeinsam - es ist dasselbe Panel.</summary>
         Public Property ScopeMode As String = "Histogram"
+        ''' <summary>WO das Analysebild steht. Beide Orte sind unabhaengig voneinander schaltbar,
+        ''' und beide duerfen auch aus sein - wer nie hinsieht, soll es auch nicht rechnen lassen.
+        ''' Die Infoleiste ist der bisherige Ort und bleibt die Vorgabe.</summary>
+        Public Property ScopeInInfoSidebar As Boolean = True
+        ''' <summary>Das Analysebild zusaetzlich in den Anpassungspanels des Editors (Anpassen,
+        ''' Farbe, Details, Effekte, Filter). Dort sitzt es neben den Reglern, auf die es antwortet -
+        ''' die Infoleiste liegt auf der anderen Bildschirmseite und ist oft zugeklappt.</summary>
+        Public Property ScopeInAdjustmentPanels As Boolean = False
+        ''' <summary>Die Darstellung im Anpassungspanel - EIGENE Wahl neben ScopeMode. Wer das Bild
+        ''' an zwei Orten sieht, will dort meist zwei verschiedene Fragen beantwortet haben.</summary>
+        Public Property ScopePanelMode As String = "Parade"
         Public Property GallerySortMode As String = AppSettingsService.DefaultGallerySortMode
         Public Property GallerySortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
         ''' <summary>Feinheit der Gruppen in der Gruppenansicht, solange nach einem Datum sortiert wird:
@@ -551,6 +562,7 @@ Namespace Services
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
+                settings.ScopePanelMode = NormalizeScopeMode(settings.ScopePanelMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
@@ -688,6 +700,7 @@ Namespace Services
                 settings.GalleryThumbnailSize = NormalizeThumbnailSize(settings.GalleryThumbnailSize)
                 settings.GalleryViewMode = NormalizeGalleryViewMode(settings.GalleryViewMode)
                 settings.ScopeMode = NormalizeScopeMode(settings.ScopeMode)
+                settings.ScopePanelMode = NormalizeScopeMode(settings.ScopePanelMode)
                 settings.GallerySortMode = NormalizeGallerySortMode(settings.GallerySortMode)
                 settings.GalleryGroupDateStep = NormalizeGalleryGroupDateStep(settings.GalleryGroupDateStep)
                 settings.GalleryTimelineMode = NormalizeGalleryTimelineMode(settings.GalleryTimelineMode)
@@ -1080,6 +1093,21 @@ Namespace Services
 
         Public Shared Sub SaveScopeMode(value As String)
             Update(Sub(s) s.ScopeMode = NormalizeScopeMode(value))
+        End Sub
+
+        ''' <summary>Die Darstellung im Anpassungspanel des Editors.</summary>
+        Public Shared Sub SaveScopePanelMode(value As String)
+            Update(Sub(s) s.ScopePanelMode = NormalizeScopeMode(value))
+        End Sub
+
+        ''' <summary>Die beiden Orte des Analysebildes. Zusammen gespeichert, weil sie zusammen
+        ''' gewaehlt werden - zwei Schreibvorgaenge fuer eine Entscheidung waeren zwei Gelegenheiten,
+        ''' dass nur die Haelfte ankommt.</summary>
+        Public Shared Sub SaveScopePlacement(inInfoSidebar As Boolean, inAdjustmentPanels As Boolean)
+            Update(Sub(s)
+                       s.ScopeInInfoSidebar = inInfoSidebar
+                       s.ScopeInAdjustmentPanels = inAdjustmentPanels
+                   End Sub)
         End Sub
 
         ''' <summary>Bei Datumssortierung ist der Tag der Normalfall (Vorgabe Patrick, 2026-08-12);

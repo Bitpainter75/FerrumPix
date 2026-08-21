@@ -1072,6 +1072,33 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
+                        <!-- Die beiden Orte des Analysebildes stehen bewusst nebeneinander und als
+                             zwei eigene Schalter: sie schliessen sich nicht aus. Beide aus ist
+                             ebenfalls eine gueltige Antwort - dann wird es auch nicht gerechnet. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Histogramm in der Info-Seitenleiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade in der rechten Leiste von Galerie, Betrachter und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ScopeInInfoSidebar}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Histogramm bei den Reglern im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade zusätzlich über den Reglern von Anpassen, Farbe, Details, Effekte und Filter. Dort steht es neben dem, was es beantwortet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ScopeInAdjustmentPanels}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Ebenen-Seitenleiste im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>

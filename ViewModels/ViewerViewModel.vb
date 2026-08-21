@@ -115,9 +115,20 @@ Namespace ViewModels
         ''' wenn Galerie oder Editor vorne stehen.</summary>
         Private ReadOnly Property IsScopeLive As Boolean
             Get
-                Return IsInfoSidebarVisible AndAlso _mainVm IsNot Nothing AndAlso _mainVm.CurrentMode = AppMode.Viewer
+                Return ScopeSelectionViewModel.ShowInInfoSidebar AndAlso IsInfoSidebarVisible AndAlso
+                       _mainVm IsNot Nothing AndAlso _mainVm.CurrentMode = AppMode.Viewer
             End Get
         End Property
+
+        ''' <summary>Der Ort des Analysebildes wurde umgestellt. Im Betrachter gibt es nur den
+        ''' einen - also entweder nachrechnen oder das vorhandene Bild loswerden.</summary>
+        Friend Sub RefreshScopeAfterPlacementChange()
+            If ScopeSelectionViewModel.ShowInInfoSidebar Then
+                InfoPanel.Refresh()
+            Else
+                InfoPanel.ScopeImage = Nothing
+            End If
+        End Sub
 
         ''' <summary>Meldet den Wechsel der Ansicht. Beim Betreten holt der Betrachter nach, was in
         ''' der Zwischenzeit ausgefallen ist.</summary>

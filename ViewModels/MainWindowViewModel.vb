@@ -963,6 +963,20 @@ Namespace ViewModels
             Editor?.RefreshInfoSidebarState()
         End Sub
 
+        ''' <summary>Der Ort des Analysebildes hat gewechselt. Alle drei Infopanels muessen ihre
+        ''' Sichtbarkeit neu bewerten, und der Editor zusaetzlich den Block in den Anpassungspanels -
+        ''' plus das Nachrechnen: war das Bild bisher nirgends sichtbar, wurde es auch nicht
+        ''' gerechnet, und ohne diesen Anstoss bliebe der Kasten beim Einschalten leer.</summary>
+        Public Sub RefreshScopePlacement()
+            Gallery?.InfoPanel?.RaisePropertyChanged(NameOf(InfoPanelViewModel.HasScope))
+            Viewer?.InfoPanel?.RaisePropertyChanged(NameOf(InfoPanelViewModel.HasScope))
+            Editor?.InfoPanel?.RaisePropertyChanged(NameOf(InfoPanelViewModel.HasScope))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsScopeInAdjustmentPanelsVisible))
+            Gallery?.RefreshScopeAfterPlacementChange()
+            Viewer?.RefreshScopeAfterPlacementChange()
+            Editor?.RefreshScopeAfterPlacementChange()
+        End Sub
+
         Public Sub RefreshDisplayBindings()
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.TransparencyBackgroundBrush))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.TransparencyBackgroundBrush))

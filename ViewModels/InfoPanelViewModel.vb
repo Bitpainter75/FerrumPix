@@ -310,7 +310,8 @@ Namespace ViewModels
         ''' Deshalb entfaellt fuer Videos beides - das Rechnen und das Anzeigen.</summary>
         Public ReadOnly Property HasScope As Boolean
             Get
-                Return IsSingleImage AndAlso Not VideoPreviewService.IsSupportedVideo(_path)
+                Return ScopeSelectionViewModel.ShowInInfoSidebar AndAlso
+                       IsSingleImage AndAlso Not VideoPreviewService.IsSupportedVideo(_path)
             End Get
         End Property
 
@@ -720,13 +721,23 @@ Namespace ViewModels
                          ' und verwarf nur noch das Ergebnis.
                          ' Ein Video bekommt gar kein Histogramm - weder gerechnet noch gezeigt.
                          If VideoPreviewService.IsSupportedVideo(path) Then Return
+                         ' Und wer das Analysebild aus der Leiste genommen hat, soll den Decode
+                         ' auch nicht bezahlen. Galerie und Betrachter zeigen es nur dort.
+                         If Not ScopeSelectionViewModel.ShowInInfoSidebar Then Return
 
                          Await Task.Delay(HistogramDelayMs)
                          If token <> _loadToken OrElse _isSummary OrElse Not IsPanelLive Then Return
 
+                         ' Darstellung UND Platzierung koennen sich waehrend des Laufs aendern; der
+                         ' Bildwechsel-Merker allein faengt beides nicht (siehe
+                         ' ScopeSelectionViewModel.Generation). Wer die Leiste inzwischen
+                         ' abgeschaltet hat, bekaeme sonst doch noch ein Bild - und mit ihm den
+                         ' Speicher dafuer.
+                         Dim scopeGeneration = ScopeSelectionViewModel.Generation
                          Dim histogram = ImageProcessor.BuildScopeImage(path, 600, 300)
                          Dispatcher.UIThread.Post(Sub()
-                                                      If token <> _loadToken Then
+                                                      If token <> _loadToken OrElse
+                                                         scopeGeneration <> ScopeSelectionViewModel.Generation Then
                                                           histogram?.Dispose()
                                                           Return
                                                       End If

@@ -776,11 +776,94 @@ Namespace Services
             Return CloneBitmap(source)
         End Function
 
+        ''' <summary>Farbe der Lichterwarnung. Rot, weil die Markierung auf einer WEISSEN Fläche
+        ''' liegt und dort auffallen muss.</summary>
+        Private Shared ReadOnly ClippingHighlightColor As Byte() = {255, 0, 0}
+
+        ''' <summary>Farbe der Tiefenwarnung. Kein reines Blau: auf einer SCHWARZEN Fläche ist ein
+        ''' dunkles Blau kaum vom Untergrund zu unterscheiden, deshalb ein heller Ton.</summary>
+        Private Shared ReadOnly ClippingShadowColor As Byte() = {60, 140, 255}
+
+        ''' <summary>Markiert im gegebenen Rechteck die Bildpunkte AM ANSCHLAG: ausgefressene
+        ''' Lichter rot, abgesoffene Tiefen blau. Arbeitet an Ort und Stelle auf dem ANZEIGEBILD -
+        ''' das Bild selbst, das Rezept und jeder Ausgabeweg bleiben unberührt.
+        '''
+        ''' ALLE DREI KANÄLE müssen am Anschlag stehen, nicht einer. Ein einzelner Kanal auf 255
+        ''' ist an jeder kräftigen Farbe der Normalfall - eine Warnung, die an jeder roten Blume und
+        ''' jedem blauen Himmel angeht, wird nach dem zweiten Mal ignoriert. Wo alle drei anstehen,
+        ''' ist dagegen wirklich keine Zeichnung mehr da, und genau das ist die Frage, die der
+        ''' Nutzer stellt.
+        '''
+        ''' Nur voll deckende Bildpunkte werden geprüft. Die Anzeige ist vormultipliziert; an einer
+        ''' halbtransparenten Stelle sagt ein Kanalwert nichts über die Zeichnung darunter aus.
+        '''
+        ''' Der Aufwand ist ein Durchgang über die Region: die Zeile wird gelesen, geprüft und nur
+        ''' dann zurückgeschrieben, wenn wirklich etwas markiert wurde. Auf einem Bild ohne
+        ''' Anschläge kostet die Warnung damit nur das Lesen.</summary>
+        Public Shared Sub MarkClippingInPlace(target As SKBitmap, rect As SKRectI,
+                                              Optional markHighlights As Boolean = True,
+                                              Optional markShadows As Boolean = True)
+            If target Is Nothing OrElse (Not markHighlights AndAlso Not markShadows) Then Return
+            Dim ri As Integer, gi As Integer, bi As Integer, ai As Integer
+            Select Case target.ColorType
+                Case SKColorType.Bgra8888
+                    ri = 2 : gi = 1 : bi = 0 : ai = 3
+                Case SKColorType.Rgba8888
+                    ri = 0 : gi = 1 : bi = 2 : ai = 3
+                Case Else
+                    Return
+            End Select
+
+            Dim left = Math.Max(0, rect.Left)
+            Dim top = Math.Max(0, rect.Top)
+            Dim right = Math.Min(target.Width, rect.Right)
+            Dim bottom = Math.Min(target.Height, rect.Bottom)
+            If right <= left OrElse bottom <= top Then Return
+
+            Dim basePointer = target.GetPixels()
+            If basePointer = IntPtr.Zero Then Return
+            Dim stride = target.RowBytes
+            Dim rowWidth = right - left
+            Dim rowBytes = rowWidth * 4
+            Dim rowOffset = left * 4
+
+            ' Zeilenweise und unabhängig: jede Zeile liest und schreibt ausschliesslich ihren
+            ' eigenen Abschnitt, deshalb ohne Sperre.
+            ForEachRow(rowWidth, bottom - top,
+                Sub(index)
+                    Dim y = top + index
+                    Dim rowPointer = IntPtr.Add(basePointer, y * stride + rowOffset)
+                    Dim row(rowBytes - 1) As Byte
+                    Marshal.Copy(rowPointer, row, 0, rowBytes)
+                    Dim marked = False
+                    For x = 0 To rowBytes - 4 Step 4
+                        If row(x + ai) <> 255 Then Continue For
+                        Dim r = row(x + ri), g = row(x + gi), b = row(x + bi)
+                        If markHighlights AndAlso r = 255 AndAlso g = 255 AndAlso b = 255 Then
+                            row(x + ri) = ClippingHighlightColor(0)
+                            row(x + gi) = ClippingHighlightColor(1)
+                            row(x + bi) = ClippingHighlightColor(2)
+                            marked = True
+                        ElseIf markShadows AndAlso r = 0 AndAlso g = 0 AndAlso b = 0 Then
+                            row(x + ri) = ClippingShadowColor(0)
+                            row(x + gi) = ClippingShadowColor(1)
+                            row(x + bi) = ClippingShadowColor(2)
+                            marked = True
+                        End If
+                    Next
+                    If marked Then Marshal.Copy(row, 0, rowPointer, rowBytes)
+                End Sub)
+        End Sub
+
         ''' <summary>Schneidet ein Rechteck aus <paramref name="source"/> als Avalonia-Bitmap aus.
         ''' <paramref name="rotationDegrees"/> (0/90/180/270) dreht den AUSGESCHNITTENEN Inhalt zusätzlich -
         ''' nötig für das Retusche-Live-Overlay: dessen Bitmap liegt im ungedrehten Arbeitsbild, das Overlay
-        ''' aber über dem per Rezept gedrehten Anzeigebild.</summary>
-        Public Shared Function RenderBitmapPatch(source As SKBitmap, rect As SKRectI, Optional rotationDegrees As Integer = 0) As Bitmap
+        ''' aber über dem per Rezept gedrehten Anzeigebild.
+        ''' <paramref name="markClipping"/> markiert im ausgeschnittenen Stück die Anschläge
+        ''' (siehe <see cref="MarkClippingInPlace"/>) - der Weg des Zoom-Details zur selben Warnung,
+        ''' die der Anzeige-Blit auf der Szene zeichnet.</summary>
+        Public Shared Function RenderBitmapPatch(source As SKBitmap, rect As SKRectI, Optional rotationDegrees As Integer = 0,
+                                                 Optional markClipping As Boolean = False) As Bitmap
             If source Is Nothing Then Return Nothing
 
             Dim clipped = New SKRectI(Math.Max(0, rect.Left),
@@ -796,6 +879,10 @@ Namespace Services
                                       New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
                                       New SKRect(0, 0, clipped.Width, clipped.Height))
                 End Using
+                ' VOR dem Drehen: die Markierung gehört auf die Bildpunkte, und gedreht wird nur
+                ' die Lage. Danach markiert liefe es aufs Gleiche hinaus, kostete aber einen
+                ' zweiten Durchgang über die bereits gedrehte Kopie.
+                If markClipping Then MarkClippingInPlace(patch, New SKRectI(0, 0, patch.Width, patch.Height))
                 Dim q = (((rotationDegrees \ 90) Mod 4) + 4) Mod 4
                 If q = 0 Then Return ToAvaloniaBitmap(patch)
                 Using rotated = RotateBitmapQuarter(patch, q)
@@ -1588,25 +1675,54 @@ Namespace Services
         End Function
 
         ''' <summary>Das Analysebild zum Bild: Histogramm, Waveform oder RGB-Parade, je nach
-        ''' Einstellung (siehe AppSettingsService.ScopeMode). Alle drei kosten denselben Decode.</summary>
-        Public Shared Function BuildScopeImage(sourcePath As String, width As Integer, height As Integer) As Bitmap
+        ''' Einstellung (siehe AppSettingsService.ScopeMode). Alle drei kosten denselben Decode -
+        ''' und genau deshalb wird das Ergebnis gemerkt (siehe <see cref="ScopeImageCache"/>): wer
+        ''' zwischen den drei Darstellungen hin und her schaltet, bezahlt den Decode sonst jedes
+        ''' Mal neu, obwohl sich am Bild nichts geaendert hat.</summary>
+        Public Shared Function BuildScopeImage(sourcePath As String, width As Integer, height As Integer,
+                                               Optional scopeMode As String = Nothing) As Bitmap
             Try
+                Dim mode = If(String.IsNullOrEmpty(scopeMode), CurrentScopeMode(),
+                              AppSettingsService.NormalizeScopeMode(scopeMode))
+                Dim sourceKey = ScopeImageCache.FileSourceKey(sourcePath)
+                Using cached = ScopeImageCache.TryGetCopy(sourceKey, mode, width, height)
+                    If cached IsNot Nothing Then Return ToAvaloniaBitmap(cached)
+                End Using
+
                 Using original = DecodeHistogramSource(sourcePath)
                     If original Is Nothing Then Return Nothing
-                    Using scopeImage = RenderScope(original, width, height)
-                        Return ToAvaloniaBitmap(scopeImage)
-                    End Using
+                    Dim scopeImage = RenderScope(original, width, height, mode)
+                    If scopeImage Is Nothing Then Return Nothing
+                    ' Erst die Anzeige-Kopie erstellen, DANN darf der Speicher das Skia-Bild
+                    ' übernehmen. Sonst könnte ein paralleler Lauf beim Cache-Wechsel dieses Bild
+                    ' zwischen Put und ToAvaloniaBitmap freigeben.
+                    Try
+                        Dim result = ToAvaloniaBitmap(scopeImage)
+                        ScopeImageCache.Put(sourceKey, mode, width, height, scopeImage)
+                        scopeImage = Nothing
+                        Return result
+                    Finally
+                        scopeImage?.Dispose()
+                    End Try
                 End Using
             Catch
                 Return Nothing
             End Try
         End Function
 
+        ''' <summary>Die eingestellte Darstellung, normiert. Steht im Schluessel des
+        ''' Zwischenspeichers und entscheidet in RenderScope ueber den Weg.</summary>
+        Private Shared Function CurrentScopeMode() As String
+            Return AppSettingsService.NormalizeScopeMode(AppSettingsService.Load().ScopeMode)
+        End Function
+
         ''' <summary>Waehlt die Darstellung. Eine unbekannte Einstellung landet beim Histogramm,
         ''' und das ist auch der Rueckfall, wenn eine der neuen Darstellungen scheitert: lieber
         ''' das gewohnte Bild als ein leeres Feld.</summary>
-        Private Shared Function RenderScope(source As SKBitmap, width As Integer, height As Integer) As SKBitmap
-            Dim mode = AppSettingsService.NormalizeScopeMode(AppSettingsService.Load().ScopeMode)
+        Private Shared Function RenderScope(source As SKBitmap, width As Integer, height As Integer,
+                                            Optional scopeMode As String = Nothing) As SKBitmap
+            Dim mode = If(String.IsNullOrEmpty(scopeMode), CurrentScopeMode(),
+                          AppSettingsService.NormalizeScopeMode(scopeMode))
             If mode = "Histogram" Then Return RenderHistogram(source, width, height)
             Try
                 Return RenderWaveform(source, width, height, mode = "Parade")
@@ -1629,11 +1745,38 @@ Namespace Services
             Return DecodeOriented(sourcePath)
         End Function
 
-        Public Shared Function BuildScopeImage(source As SKBitmap, width As Integer, height As Integer) As Bitmap
+        ''' <summary>Dasselbe aus einer bereits vorliegenden Bitmap (Editor: die Szene). Mit
+        ''' <paramref name="sourceKey"/> wird das Ergebnis gemerkt - der Aufrufer sagt damit, WAS
+        ''' derselbe Bildstand ist; im Editor ist das die laufende Nummer der Szene, die sich mit
+        ''' jeder Reglerbewegung erhoeht. Ohne Schluessel wird gerechnet wie bisher.</summary>
+        Public Shared Function BuildScopeImage(source As SKBitmap, width As Integer, height As Integer,
+                                               Optional sourceKey As String = Nothing,
+                                               Optional scopeMode As String = Nothing) As Bitmap
             If source Is Nothing Then Return Nothing
-            Using scopeImage = RenderScope(source, width, height)
-                Return ToAvaloniaBitmap(scopeImage)
-            End Using
+            Dim mode = If(String.IsNullOrEmpty(scopeMode), CurrentScopeMode(),
+                          AppSettingsService.NormalizeScopeMode(scopeMode))
+            If Not String.IsNullOrEmpty(sourceKey) Then
+                Using cached = ScopeImageCache.TryGetCopy(sourceKey, mode, width, height)
+                    If cached IsNot Nothing Then Return ToAvaloniaBitmap(cached)
+                End Using
+            End If
+            Dim scopeImage = RenderScope(source, width, height, mode)
+            If scopeImage Is Nothing Then Return Nothing
+            If String.IsNullOrEmpty(sourceKey) Then
+                Using scopeImage
+                    Return ToAvaloniaBitmap(scopeImage)
+                End Using
+            End If
+            ' Wie beim Dateipfad: die Anzeige besitzt ihre eigene Kopie, bevor die Cache-Instanz
+            ' an einen parallelen Lauf übergeben wird.
+            Try
+                Dim result = ToAvaloniaBitmap(scopeImage)
+                ScopeImageCache.Put(sourceKey, mode, width, height, scopeImage)
+                scopeImage = Nothing
+                Return result
+            Finally
+                scopeImage?.Dispose()
+            End Try
         End Function
 
         ''' <summary>Voll aufgelöster Decode für das ARBEITSBILD: öffentlicher

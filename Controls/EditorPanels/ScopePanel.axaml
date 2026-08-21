@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.ScopePanel">
+    <!-- Das Analysebild neben den Reglern. Es hat eine EIGENE Wahl der Darstellung (PanelScope,
+         Kanal AdjustmentPanel): hier die Kanaltrennung, drueben in der Leiste die Verteilung -
+         beides gleichzeitig sichtbar, und genau dafuer gibt es zwei Orte. Gerechnet wird aus
+         demselben Bildstand, den Rest erledigt der Zwischenspeicher. -->
+    <Expander Header="Analyse" icons:ExpanderState.Key="scope">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <icons:SvgIcon
+                        Source="avares://FerrumPix/Assets/Icons/outline/chart-histogram.svg"
+                        Width="14" Height="14" />
+                    <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                </StackPanel>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="8" Margin="0,8,0,0">
+            <!-- Dieselben drei Knoepfe wie in der Leiste, und aus demselben Grund nebeneinander:
+                 die drei Darstellungen beantworten verschiedene Fragen. -->
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="4">
+                <Button Grid.Column="0" Classes="ghost" Classes.accent="{Binding PanelScope.IsHistogram}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Padding="4,3" FontSize="{DynamicResource FP.Font.Small}"
+                        Content="Histogramm"
+                        Command="{Binding PanelScope.SetModeCommand}" CommandParameter="Histogram"/>
+                <Button Grid.Column="1" Classes="ghost" Classes.accent="{Binding PanelScope.IsWaveform}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Padding="4,3" FontSize="{DynamicResource FP.Font.Small}"
+                        Content="Waveform"
+                        Command="{Binding PanelScope.SetModeCommand}" CommandParameter="Waveform"/>
+                <Button Grid.Column="2" Classes="ghost" Classes.accent="{Binding PanelScope.IsParade}"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        Padding="4,3" FontSize="{DynamicResource FP.Font.Small}"
+                        Content="RGB-Parade"
+                        Command="{Binding PanelScope.SetModeCommand}" CommandParameter="Parade"/>
+            </Grid>
+            <!-- 150 Punkt hoch wie in der Leiste: senkrecht liegen 256 Helligkeitsstufen, und bei
+                 Waveform und Parade ist genau das die tragende Achse. -->
+            <Panel Height="150">
+                <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                    <Image Source="{Binding PanelScopeImage}"
+                           Stretch="Fill"
+                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                </Border>
+                <!-- Solange nichts da ist, steht der Hinweis im leeren Kasten: bei einem RAW dauert
+                     der Volldecode spuerbar, und ein leerer Rahmen sieht in der Zeit aus wie ein
+                     Fehler statt wie Arbeit. -->
+                <TextBlock Text="wird berechnet"
+                           IsVisible="{Binding PanelScopeImage, Converter={x:Static ObjectConverters.IsNull}}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Muted}"
+                           FontSize="{DynamicResource FP.Font.Small}"/>
+            </Panel>
+        </StackPanel>
+    </Expander>
+</UserControl>

@@ -1090,6 +1090,16 @@
                                     Margin="10,2,10,10"
                                     IsEnabled="{Binding IsInteractionAllowed}"
                                     HorizontalAlignment="Stretch">
+                            <!-- Das Analysebild steht GANZ OBEN, wenn es hierher gestellt wurde
+                                 (Einstellungen, Ansicht): es ist die Antwort auf die Regler
+                                 darunter, und wer sie zieht, sieht beim Scrollen nach unten immer
+                                 noch den Kopf des Panels. Sichtbar nur bei den fuenf Werkzeugen,
+                                 zu denen es etwas zu sagen hat. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0"
+                                    IsVisible="{Binding IsScopeInAdjustmentPanelsVisible}">
+                                <panels:ScopePanel />
+                            </Border>
+
                             <!-- OHNE aeusseren Rahmen: das Panel bringt seit dem Verzerren ZWEI
                                  Gruppen mit und rahmt jede selbst (siehe DetailsPanel). -->
                             <panels:TransformPanel Margin="0,7,0,0"

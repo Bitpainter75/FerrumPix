@@ -58,6 +58,9 @@ Namespace ViewModels
         Private _editorShowRulers As Boolean = False
         Private _editorShowGrid As Boolean = False
         Private _editorInfoSidebarExpanded As Boolean = True
+        ''' <summary>Wo das Analysebild steht. Siehe AppSettings.ScopeInInfoSidebar.</summary>
+        Private _scopeInInfoSidebar As Boolean = True
+        Private _scopeInAdjustmentPanels As Boolean = False
         Private _editorLayersPanelExpanded As Boolean = False
         Private _editorLayerThumbnails As Boolean = True
         Private _editorToolSidebarCollapsed As Boolean = False
@@ -1304,6 +1307,35 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_editorInfoSidebarExpanded, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Analysebild in der Infoleiste. Beide Orte sind unabhaengig; sind beide aus,
+        ''' wird es auch nicht mehr gerechnet.</summary>
+        Public Property ScopeInInfoSidebar As Boolean
+            Get
+                Return _scopeInInfoSidebar
+            End Get
+            Set(value As Boolean)
+                If _scopeInInfoSidebar = value Then Return
+                Me.RaiseAndSetIfChanged(_scopeInInfoSidebar, value)
+                AppSettingsService.SaveScopePlacement(_scopeInInfoSidebar, _scopeInAdjustmentPanels)
+                ScopeSelectionViewModel.ApplyPlacement(_scopeInInfoSidebar, _scopeInAdjustmentPanels)
+                _mainVm?.RefreshScopePlacement()
+            End Set
+        End Property
+
+        ''' <summary>Analysebild zusaetzlich in den Anpassungspanels des Editors.</summary>
+        Public Property ScopeInAdjustmentPanels As Boolean
+            Get
+                Return _scopeInAdjustmentPanels
+            End Get
+            Set(value As Boolean)
+                If _scopeInAdjustmentPanels = value Then Return
+                Me.RaiseAndSetIfChanged(_scopeInAdjustmentPanels, value)
+                AppSettingsService.SaveScopePlacement(_scopeInInfoSidebar, _scopeInAdjustmentPanels)
+                ScopeSelectionViewModel.ApplyPlacement(_scopeInInfoSidebar, _scopeInAdjustmentPanels)
+                _mainVm?.RefreshScopePlacement()
             End Set
         End Property
 
@@ -2594,6 +2626,8 @@ Namespace ViewModels
             _editorShowRulers = _appSettings.EditorShowRulers
             _editorShowGrid = _appSettings.EditorShowGrid
             _editorInfoSidebarExpanded = _appSettings.EditorInfoSidebarExpanded
+            _scopeInInfoSidebar = _appSettings.ScopeInInfoSidebar
+            _scopeInAdjustmentPanels = _appSettings.ScopeInAdjustmentPanels
             _editorLayersPanelExpanded = _appSettings.EditorLayersPanelExpanded
             _editorLayerThumbnails = _appSettings.EditorLayerThumbnails
             _editorToolSidebarCollapsed = _appSettings.EditorToolSidebarCollapsed

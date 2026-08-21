@@ -7563,4 +7563,25 @@
   <data name="Copyright_gesetzt_f_r_0_von_1_Bildern_7f035d9e" xml:space="preserve">
     <value>Autorská práva nastavena pro {0} z {1} obrázků</value>
   </data>
+  <data name="Analyse_28b6dc31" xml:space="preserve">
+    <value>Analýza</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Seitenleiste_91b5be2f" xml:space="preserve">
+    <value>Histogram v informačním panelu</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__2d74ce0b" xml:space="preserve">
+    <value>Zobrazuje histogram, waveform a RGB paradu v pravém panelu galerie, prohlížeče a editoru.</value>
+  </data>
+  <data name="Histogramm_bei_den_Reglern_im_Editor_fe8399f0" xml:space="preserve">
+    <value>Histogram u posuvníků v editoru</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_zus_tzl_12084549" xml:space="preserve">
+    <value>Zobrazuje histogram, waveform a RGB paradu také nad posuvníky sekcí Úpravy, Barva, Detaily, Efekty a Filtry, přímo vedle toho, na co odpovídají.</value>
+  </data>
+  <data name="Clipping_Warnung_anzeigen_a74be4f4" xml:space="preserve">
+    <value>Zobrazit upozornění na ořez</value>
+  </data>
+  <data name="Ausgefressene_Lichter_rot_und_zugelaufene_Tiefen_c2bc6e7d" xml:space="preserve">
+    <value>Označit vypálená světla červeně a slité stíny modře</value>
+  </data>
 </root>

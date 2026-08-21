@@ -87,6 +87,12 @@
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                          Value="{Binding Blacks, Mode=TwoWay}" Minimum="-100" Maximum="100" />
             </Grid>
+            <!-- Die Warnung steht bei den Reglern, mit denen man auf sie reagiert: Lichter,
+                 Tiefen, Weiß und Schwarz sitzen direkt darüber. Sie ist reine Ansicht und geht
+                 in kein Rezept und keine Datei. -->
+            <CheckBox Content="Clipping-Warnung anzeigen" IsChecked="{Binding ShowClippingWarning}"
+                      Margin="0,6,0,0"
+                      ToolTip.Tip="Ausgefressene Lichter rot und zugelaufene Tiefen blau markieren" />
         </StackPanel>
     </Expander>
 </UserControl>

@@ -976,6 +976,11 @@ Namespace ViewModels
         Private _gradientsFollowedDuringDrag As Boolean = False
         Private _activePreviewRenders As Integer
         Private _showBeforeImage As Boolean = False
+        ''' <summary>Anschlagswarnung auf der Bühne. Reine ANSICHT: nichts davon geht ins Rezept,
+        ''' in eine Datei oder in einen Ausgabeweg. Bleibt über den Bildwechsel im Filmstreifen
+        ''' stehen, weil der Editor derselbe bleibt - wer die Lichter eines Bildes prüft, prüft
+        ''' meist gleich die des nächsten.</summary>
+        Private _showClippingWarning As Boolean = False
         ' Zuletzt vom Nutzer gewählter Vergleichs-Zustand; kommt aus den Einstellungen und wird dort beim
         ' Umschalten wieder hinterlegt (SetComparisonVisibleFromUser).
         Private _comparisonAutoEnabled As Boolean = AppSettingsService.Load().EditorShowComparison
@@ -1109,6 +1114,41 @@ Namespace ViewModels
         ''' (<c>_curveHistogramCounts</c>) und bleibt bewusst am Ausgangsstand: sie ist der
         ''' Untergrund, gegen den man die Kurve zieht.</summary>
         Public ReadOnly Property InfoPanel As New InfoPanelViewModel()
+
+        ''' <summary>Die Wahl der Darstellung im ANPASSUNGSPANEL - eine eigene, unabhaengig von der
+        ''' in der Infoleiste. Genau darum geht es bei zwei Orten: links neben den Reglern die
+        ''' Kanaltrennung, rechts in der Leiste die Verteilung, beides gleichzeitig sichtbar.</summary>
+        Public ReadOnly Property PanelScope As ScopeSelectionViewModel =
+            New ScopeSelectionViewModel(Sub() OnPanelScopeModeChanged(),
+                                        ScopeSelectionViewModel.ScopeChannel.AdjustmentPanel)
+
+        Private _panelScopeImage As Bitmap
+
+        ''' <summary>Das Analysebild des Anpassungspanels. Eigenes Bild, weil es eine andere
+        ''' Darstellung zeigen darf als das der Leiste; gerechnet wird es aus demselben Bildstand,
+        ''' und der Zwischenspeicher sorgt dafuer, dass das zweite Bild in aller Regel nichts mehr
+        ''' kostet (siehe ScopeImageCache).</summary>
+        Public Property PanelScopeImage As Bitmap
+            Get
+                Return _panelScopeImage
+            End Get
+            Set(value As Bitmap)
+                Dim previous = _panelScopeImage
+                Me.RaiseAndSetIfChanged(_panelScopeImage, value)
+                ' Erst melden, dann freigeben - dieselbe Reihenfolge wie beim Bild der Leiste.
+                If previous IsNot Nothing AndAlso Not ReferenceEquals(previous, value) Then previous.Dispose()
+            End Set
+        End Property
+
+        ''' <summary>Im Panel wurde die Darstellung gewechselt: das alte Bild zeigt die vorherige und
+        ''' waere bis zum Eintreffen des neuen eine Falschaussage.</summary>
+        Private Sub OnPanelScopeModeChanged()
+            PanelScopeImage = Nothing
+            If IsScopeInAdjustmentPanelsVisible Then
+                _scopeDirty = True
+                EnsureScopeUpToDate()
+            End If
+        End Sub
 
         Public Property HistoryItems As ObservableCollection(Of String)
         Private Shared ReadOnly FallbackFontOptions As IReadOnlyList(Of String) =
@@ -3688,9 +3728,25 @@ Namespace ViewModels
         ''' wenn Galerie oder Betrachter vorne stehen.</summary>
         Private ReadOnly Property IsScopeLive As Boolean
             Get
-                Return IsInfoSidebarVisible AndAlso _mainVm IsNot Nothing AndAlso _mainVm.CurrentMode = AppMode.Editor
+                If _mainVm Is Nothing OrElse _mainVm.CurrentMode <> AppMode.Editor Then Return False
+                ' ZWEI Orte, und es reicht einer: die Leiste kann zugeklappt sein, waehrend das
+                ' Bild im Anpassungspanel steht - und umgekehrt.
+                Return (ScopeSelectionViewModel.ShowInInfoSidebar AndAlso IsInfoSidebarVisible) OrElse
+                       IsScopeInAdjustmentPanelsVisible
             End Get
         End Property
+
+        ''' <summary>Der Ort des Analysebildes wurde umgestellt. Wird es noch irgendwo gezeigt,
+        ''' holt der Editor es nach; sonst faellt es weg und mit ihm sein Rechenweg.</summary>
+        Friend Sub RefreshScopeAfterPlacementChange()
+            ' Was nicht mehr gezeigt wird, wird auch nicht mehr gehalten - jedes Bild ist Speicher.
+            If Not IsSidebarScopeVisible Then InfoPanel.ScopeImage = Nothing
+            If Not IsScopeInAdjustmentPanelsVisible Then PanelScopeImage = Nothing
+            If IsScopeLive Then
+                _scopeDirty = True
+                EnsureScopeUpToDate()
+            End If
+        End Sub
 
         ''' <summary>Meldet den Wechsel der Ansicht. Beim Betreten holt der Editor nach, was in der
         ''' Zwischenzeit ausgefallen ist.</summary>
@@ -4128,6 +4184,27 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Zeigt die Bühne an, wo Lichter ausgefressen und Tiefen abgesoffen sind.
+        '''
+        ''' Gezeichnet wird beim BLIT auf die Anzeige (siehe BlitSceneRegionToDisplay) und im
+        ''' Zoom-Detail, nicht in der Szene: die Szene ist die Rechengrundlage für Patches und
+        ''' Vergleiche, und eine hineingemalte Warnung stünde in jedem davon. So bleibt sie das,
+        ''' was sie ist - eine Sicht auf das fertige Bild, die sich ohne einen einzigen Renderlauf
+        ''' ein- und ausschalten lässt.</summary>
+        Public Property ShowClippingWarning As Boolean
+            Get
+                Return _showClippingWarning
+            End Get
+            Set(value As Boolean)
+                If _showClippingWarning = value Then Return
+                Me.RaiseAndSetIfChanged(_showClippingWarning, value)
+                ' Die Anzeige trägt die Markierung bereits (oder eben nicht) - beides lässt sich
+                ' nur durch einen vollen Blit auflösen. Der ist billig: er zeichnet aus der
+                ' fertigen Szene, ohne die Kette anzufassen.
+                RepaintSceneDisplay()
+            End Set
+        End Property
+
         ''' <summary>Der Vergleich ist ein Bedienzustand, den der Nutzer setzt - und der über Bildwechsel
         ''' UND Programmstarts hinweg stehen bleiben soll (gemerkt in den Einstellungen, wie die Info-Leiste;
         ''' kein Schalter im Einstellungsdialog).</summary>
@@ -4485,6 +4562,19 @@ Namespace ViewModels
         Public ReadOnly Property ShowFilterAdjustments As Boolean
             Get
                 Return _currentTool = EditorTool.Filters
+            End Get
+        End Property
+
+        ''' <summary>Steht das Analysebild im Anpassungspanel? Nur bei den fuenf Werkzeugen, zu
+        ''' denen es etwas zu sagen hat: Anpassen, Farbe, Details, Effekte, Filter. Beim Zuschneiden
+        ''' oder Retuschieren waere es ein Kasten, der Platz kostet und keine Frage beantwortet.
+        ''' Videos haben keines (siehe InfoPanelViewModel.HasScope).</summary>
+        Public ReadOnly Property IsScopeInAdjustmentPanelsVisible As Boolean
+            Get
+                If Not ScopeSelectionViewModel.ShowInAdjustmentPanels Then Return False
+                If Not InfoPanel.IsSingleImage Then Return False
+                Return ShowLightAdjustments OrElse ShowColorAdjustments OrElse ShowDetailAdjustments OrElse
+                       ShowEffectsAdjustments OrElse ShowFilterAdjustments
             End Get
         End Property
 
@@ -21027,6 +21117,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowEffectsAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFrameAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFilterAdjustments))
+            ' Das Analysebild im Anpassungspanel haengt an genau diesen fuenf Schaltern - und mit
+            ' ihm der Rechenweg: wer vom Zuschneiden zu den Reglern wechselt, macht es erst
+            ' sichtbar, und dann muss auch eines dastehen.
+            Me.RaisePropertyChanged(NameOf(IsScopeInAdjustmentPanelsVisible))
+            If IsScopeInAdjustmentPanelsVisible Then EnsureScopeUpToDate()
             Me.RaisePropertyChanged(NameOf(ShowRetouchAdjustments))
             Me.RaisePropertyChanged(NameOf(IsCloneMode))
             Me.RaisePropertyChanged(NameOf(IsRepairMode))
@@ -21693,11 +21788,48 @@ Namespace ViewModels
                 ' fuer den Bruchteil einer Sekunde auch richtig. Beim LADEN setzt RefreshHistogram.
                 Dim scene = _sceneSk
                 If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return
-                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(scene, 600, 300)
+                UpdateScopeImagesFromBitmap(scene, SceneScopeKey())
                 _scopeDirty = False
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.UpdateScopeFromScene", ex)
             End Try
+        End Sub
+
+        ''' <summary>Steht das Analysebild in der Infoleiste? Zwei Bedingungen: der Ort ist
+        ''' eingeschaltet, und die Leiste ist aufgeklappt.</summary>
+        Private ReadOnly Property IsSidebarScopeVisible As Boolean
+            Get
+                Return ScopeSelectionViewModel.ShowInInfoSidebar AndAlso IsInfoSidebarVisible
+            End Get
+        End Property
+
+        ''' <summary>Rechnet die Analysebilder BEIDER Orte aus derselben Bitmap - jedes in seiner
+        ''' eigenen Darstellung. Gerechnet wird nur, was auch jemand sieht. Der zweite Aufruf trifft
+        ''' bei gleicher Darstellung den Zwischenspeicher und kostet dann nur noch die Kopie.</summary>
+        Private Sub UpdateScopeImagesFromBitmap(source As SkiaSharp.SKBitmap, sourceKey As String)
+            If source Is Nothing Then Return
+            If IsSidebarScopeVisible Then
+                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(source, 600, 300, sourceKey,
+                                                                      ScopeSelectionViewModel.SidebarMode)
+            End If
+            If IsScopeInAdjustmentPanelsVisible Then
+                PanelScopeImage = ImageProcessor.BuildScopeImage(source, 600, 300, sourceKey,
+                                                                 ScopeSelectionViewModel.PanelMode)
+            End If
+        End Sub
+
+        ''' <summary>Dasselbe aus einer Datei. Der Zwischenspeicher greift hier ueber Pfad und
+        ''' Aenderungszeit, der zweite Ort kostet also keinen zweiten Decode.</summary>
+        Private Sub UpdateScopeImagesFromPath(path As String)
+            If String.IsNullOrEmpty(path) Then Return
+            If IsSidebarScopeVisible Then
+                InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(path, 600, 300,
+                                                                      ScopeSelectionViewModel.SidebarMode)
+            End If
+            If IsScopeInAdjustmentPanelsVisible Then
+                PanelScopeImage = ImageProcessor.BuildScopeImage(path, 600, 300,
+                                                                 ScopeSelectionViewModel.PanelMode)
+            End If
         End Sub
 
         ''' <summary>Analysebild und Kurvenzahlen zum geladenen Bild.
@@ -21717,12 +21849,13 @@ Namespace ViewModels
                 ' Aufklappen fuer einen Augenblick das Analysebild des vorherigen Bildes.
                 _scopeDirty = True
                 InfoPanel.ScopeImage = Nothing
+                PanelScopeImage = Nothing
             End If
             If FpxService.IsFpx(_currentImagePath) Then
                 ' Eine geoeffnete FPX zeigt im Infopanel den gespeicherten Projektstand, nicht das
                 ' unveraenderte base.* und auch keinen spaeter neu berechneten Zwischen-Preview.
                 If buildScope Then
-                    InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(_currentImagePath, 600, 300)
+                    UpdateScopeImagesFromPath(_currentImagePath)
                     _scopeDirty = False
                 End If
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(_currentImagePath)
@@ -21731,10 +21864,12 @@ Namespace ViewModels
             End If
             Dim previewSource = GetPreviewSource()
             If previewSource IsNot Nothing Then
-                If buildScope Then InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(previewSource, 600, 300)
+                ' Kein Zwischenspeicher-Schluessel: die Vorschauquelle traegt keine Nummer, an der
+                ' sich ein Bildstand erkennen liesse. Das ist der Ladefall und faellt einmal an.
+                If buildScope Then UpdateScopeImagesFromBitmap(previewSource, Nothing)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(previewSource)
             Else
-                If buildScope Then InfoPanel.ScopeImage = ImageProcessor.BuildScopeImage(RenderSourcePath, 600, 300)
+                If buildScope Then UpdateScopeImagesFromPath(RenderSourcePath)
                 _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(RenderSourcePath)
             End If
             If buildScope Then _scopeDirty = False

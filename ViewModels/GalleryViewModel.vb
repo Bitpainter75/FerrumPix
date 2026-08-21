@@ -267,6 +267,16 @@ Namespace ViewModels
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
         End Sub
 
+        ''' <summary>Der Ort des Analysebildes wurde umgestellt. Die Galerie kennt nur die Leiste:
+        ''' entweder nachrechnen oder das vorhandene Bild loswerden.</summary>
+        Friend Sub RefreshScopeAfterPlacementChange()
+            If ScopeSelectionViewModel.ShowInInfoSidebar Then
+                InfoPanel.Refresh()
+            Else
+                InfoPanel.ScopeImage = Nothing
+            End If
+        End Sub
+
         ''' <summary>Meldet den Wechsel der Ansicht. Steht die Galerie im Hintergrund, weil
         ''' Betrachter oder Editor vorne sind, faellt jede teure Arbeit der Leiste aus; das Panel
         ''' holt sie beim Zurueckkommen selbst nach.</summary>

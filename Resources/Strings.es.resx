@@ -7523,4 +7523,25 @@
   <data name="Copyright_gesetzt_f_r_0_von_1_Bildern_7f035d9e" xml:space="preserve">
     <value>Copyright establecido para {0} de {1} imágenes</value>
   </data>
+  <data name="Analyse_28b6dc31" xml:space="preserve">
+    <value>Análisis</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Seitenleiste_91b5be2f" xml:space="preserve">
+    <value>Histograma en la barra de información</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__2d74ce0b" xml:space="preserve">
+    <value>Muestra el histograma, la forma de onda y el desfile RGB en la barra derecha de la galería, el visor y el editor.</value>
+  </data>
+  <data name="Histogramm_bei_den_Reglern_im_Editor_fe8399f0" xml:space="preserve">
+    <value>Histograma junto a los controles del editor</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_zus_tzl_12084549" xml:space="preserve">
+    <value>Muestra además el histograma, la forma de onda y el desfile RGB sobre los controles de Ajustar, Color, Detalle, Efectos y Filtros, justo al lado de aquello que responden.</value>
+  </data>
+  <data name="Clipping_Warnung_anzeigen_a74be4f4" xml:space="preserve">
+    <value>Mostrar advertencia de recorte</value>
+  </data>
+  <data name="Ausgefressene_Lichter_rot_und_zugelaufene_Tiefen_c2bc6e7d" xml:space="preserve">
+    <value>Marcar las luces quemadas en rojo y las sombras empastadas en azul</value>
+  </data>
 </root>

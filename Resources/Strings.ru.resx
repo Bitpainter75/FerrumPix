@@ -7563,4 +7563,25 @@
   <data name="Copyright_gesetzt_f_r_0_von_1_Bildern_7f035d9e" xml:space="preserve">
     <value>Авторские права заданы для {0} из {1} изображений</value>
   </data>
+  <data name="Analyse_28b6dc31" xml:space="preserve">
+    <value>Анализ</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Seitenleiste_91b5be2f" xml:space="preserve">
+    <value>Гистограмма на панели сведений</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__2d74ce0b" xml:space="preserve">
+    <value>Показывает гистограмму, вейвформу и RGB-парад на правой панели галереи, просмотрщика и редактора.</value>
+  </data>
+  <data name="Histogramm_bei_den_Reglern_im_Editor_fe8399f0" xml:space="preserve">
+    <value>Гистограмма рядом с регуляторами редактора</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_zus_tzl_12084549" xml:space="preserve">
+    <value>Показывает гистограмму, вейвформу и RGB-парад также над регуляторами разделов Коррекция, Цвет, Детали, Эффекты и Фильтры, прямо рядом с тем, на что они отвечают.</value>
+  </data>
+  <data name="Clipping_Warnung_anzeigen_a74be4f4" xml:space="preserve">
+    <value>Показывать предупреждение об отсечении</value>
+  </data>
+  <data name="Ausgefressene_Lichter_rot_und_zugelaufene_Tiefen_c2bc6e7d" xml:space="preserve">
+    <value>Отмечать выбитые света красным, а проваленные тени синим</value>
+  </data>
 </root>
