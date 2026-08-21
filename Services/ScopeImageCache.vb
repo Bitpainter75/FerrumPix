@@ -86,8 +86,9 @@ Namespace Services
             End SyncLock
         End Sub
 
-        ''' <summary>Alles vergessen. Beim Schliessen eines Bildes und wenn der Speicher zur Last
-        ''' wird; das nächste Analysebild rechnet dann wieder von vorn.</summary>
+        ''' <summary>Alles vergessen. Gerufen, wo der Editor seine Szene fallen lässt (Bildwechsel):
+        ''' die Einträge tragen deren laufende Nummer im Schlüssel, werden also nie wieder getroffen
+        ''' und lägen nur noch im Speicher. Das nächste Analysebild rechnet wieder von vorn.</summary>
         Public Shared Sub Clear()
             SyncLock _lock
                 DisposeAllLocked()

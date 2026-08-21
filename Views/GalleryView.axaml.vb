@@ -2090,6 +2090,7 @@ Namespace Views
                 .SetPlace = vm.SetPlaceCommand,
                 .RemovePlace = vm.RemovePlaceCommand,
                 .SetCopyright = vm.SetCopyrightCommand,
+                .SetCaptureDate = vm.SetCaptureDateCommand,
                 .CopyPath = New DelegateCommand(Sub() OnContextCopyPath(Nothing, Nothing)),
                 .ShowInFileManager = vm.OpenFileManagerCommand,
                 .Delete = vm.DeleteSelectedCommand,

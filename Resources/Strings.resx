@@ -7545,4 +7545,52 @@
   <data name="Ausgefressene_Lichter_rot_und_zugelaufene_Tiefen_c2bc6e7d" xml:space="preserve">
     <value>Mark blown highlights in red and crushed shadows in blue</value>
   </data>
+  <data name="Auf_festen_Wert_setzen_1160d09e" xml:space="preserve">
+    <value>Set to a fixed value</value>
+  </data>
+  <data name="Um_eine_Zeitspanne_verschieben_d0d57dd5" xml:space="preserve">
+    <value>Shift by a time span</value>
+  </data>
+  <data name="Vorstellen_f3b2074a" xml:space="preserve">
+    <value>Forward</value>
+  </data>
+  <data name="Zur_ckstellen_d9af4e5e" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Tage_e94f59f3" xml:space="preserve">
+    <value>Days</value>
+  </data>
+  <data name="Stunden_f3bf6eff" xml:space="preserve">
+    <value>Hours</value>
+  </data>
+  <data name="Minuten_497af2bf" xml:space="preserve">
+    <value>Minutes</value>
+  </data>
+  <data name="Sekunden_3655e933" xml:space="preserve">
+    <value>Seconds</value>
+  </data>
+  <data name="Uhrzeit_b0b30059" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="HH_mm_ss_dce54dcd" xml:space="preserve">
+    <value>HH:mm:ss</value>
+  </data>
+  <data name="Sekunden_je_Bild_e1ee2246" xml:space="preserve">
+    <value>Seconds per picture</value>
+  </data>
+  <data name="0_setzt_bei_allen_Bildern_dieselbe_Zeit_7bc3fb08" xml:space="preserve">
+    <value>0 gives every picture the same time</value>
+  </data>
+  <data name="Aufnahmedatum_setzen_020aa987" xml:space="preserve">
+    <value>Set capture date</value>
+  </data>
+  <data name="Aufnahmedatum_gesetzt_f_r_0_von_1_Bildern_3b1f6dcc" xml:space="preserve">
+    <value>Capture date set for {0} of {1} pictures</value>
+  </data>
+  <data name="Aufnahmedatum_gesetzt_f_r_0_von_1_Bildern_2_ohne_30695af1" xml:space="preserve">
+    <value>Capture date set for {0} of {1} pictures, {2} without an existing time</value>
+  </data>
+  <data name="Setzt_die_Aufnahmezeit_oder_verschiebt_eine_vorh_dc874226" xml:space="preserve">
+    <value>Sets the capture time or shifts an existing one, for example after a wrongly set camera clock. The modification date gets the same value.</value>
+  </data>
 </root>

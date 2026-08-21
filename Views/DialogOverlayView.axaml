@@ -91,6 +91,67 @@
                                                   Margin="0,16,0,0"
                                                   IsVisible="{Binding DialogShowsSetPlace}"/>
 
+                        <!-- Aufnahmedatum: ZWEI Wege in einem Dialog. Der feste Wert ist für Bilder,
+                             deren Zeit fehlt oder ganz falsch ist; das Verschieben für eine falsch
+                             gestellte Kamerauhr, wo die Abstände zwischen den Aufnahmen stimmen und
+                             nur alles zusammen daneben liegt. Immer nur EIN Block ist sichtbar -
+                             beide gleichzeitig zu zeigen hiesse, dass die Hälfte der Felder
+                             wirkungslos dasteht. -->
+                        <StackPanel Grid.Row="3"
+                                    Margin="0,16,0,0"
+                                    Spacing="12"
+                                    IsVisible="{Binding DialogShowsCaptureDate}">
+                            <StackPanel Orientation="Horizontal" Spacing="20">
+                                <RadioButton GroupName="CaptureDateMode"
+                                             Content="Auf festen Wert setzen"
+                                             IsChecked="{Binding DialogCaptureUsesFixedValue, Mode=TwoWay}"/>
+                                <RadioButton GroupName="CaptureDateMode"
+                                             Content="Um eine Zeitspanne verschieben"
+                                             IsChecked="{Binding DialogCaptureUsesShift, Mode=TwoWay}"/>
+                            </StackPanel>
+
+                            <Grid RowDefinitions="Auto,Auto,Auto"
+                                  ColumnDefinitions="Auto,*"
+                                  RowSpacing="10"
+                                  ColumnSpacing="14"
+                                  IsVisible="{Binding DialogCaptureUsesFixedValue}">
+                                <TextBlock Text="Datum" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <DatePicker Grid.Column="1" Classes="capture-date-picker" SelectedDate="{Binding DialogCaptureDate, Mode=TwoWay}"/>
+                                <TextBlock Grid.Row="1" Text="Uhrzeit" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DialogCaptureTime, Mode=TwoWay}" PlaceholderText="HH:mm:ss" MinHeight="36"/>
+                                <TextBlock Grid.Row="2" Text="Sekunden je Bild" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DialogCaptureIncrement, Mode=TwoWay}" MinHeight="36" ToolTip.Tip="0 setzt bei allen Bildern dieselbe Zeit"/>
+                            </Grid>
+
+                            <StackPanel Spacing="10" IsVisible="{Binding DialogCaptureUsesShift}">
+                                <StackPanel Orientation="Horizontal" Spacing="20">
+                                    <RadioButton GroupName="CaptureDateShiftDirection"
+                                                 Content="Vorstellen"
+                                                 IsChecked="{Binding DialogCaptureShiftForward, Mode=TwoWay}"/>
+                                    <RadioButton GroupName="CaptureDateShiftDirection"
+                                                 Content="Zurückstellen"
+                                                 IsChecked="{Binding DialogCaptureShiftBackward, Mode=TwoWay}"/>
+                                </StackPanel>
+                                <!-- Vier Felder nebeneinander, Beschriftung darüber: die Angabe wird
+                                     als Ganzes gelesen ("2 Stunden 30 Minuten"), und untereinander
+                                     wäre sie vier einzelne Zeilen für einen Gedanken. Die Felder
+                                     werden addiert, "90 Minuten" ist also gültig. -->
+                                <Grid ColumnDefinitions="*,*,*,*"
+                                      RowDefinitions="Auto,Auto"
+                                      ColumnSpacing="10"
+                                      RowSpacing="4">
+                                    <TextBlock Text="Tage" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Grid.Column="1" Text="Stunden" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Grid.Column="2" Text="Minuten" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Grid.Column="3" Text="Sekunden" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBox Grid.Row="1" Text="{Binding DialogCaptureShiftDays, Mode=TwoWay}" MinHeight="36"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DialogCaptureShiftHours, Mode=TwoWay}" MinHeight="36"/>
+                                    <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding DialogCaptureShiftMinutes, Mode=TwoWay}" MinHeight="36"/>
+                                    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding DialogCaptureShiftSeconds, Mode=TwoWay}" MinHeight="36"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+
                         <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
                              seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
                              beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->

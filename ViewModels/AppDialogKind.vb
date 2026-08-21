@@ -17,6 +17,7 @@ Namespace ViewModels
         WatermarkPreset
         ExportTo
         SetPlace
+        CaptureDate
     End Enum
 
     ''' <summary>Was der Dialog "Aufnahmeort setzen" herausgibt: die Koordinate und, wenn bekannt,
@@ -26,6 +27,26 @@ Namespace ViewModels
         Public Property Latitude As Double
         Public Property Longitude As Double
         Public Property Label As String = ""
+    End Class
+
+    ''' <summary>Was der Dialog "Aufnahmedatum setzen" herausgibt. ZWEI Wege, und sie beantworten
+    ''' verschiedene Fragen:
+    '''
+    ''' <list type="bullet">
+    ''' <item>FESTER WERT für Bilder, deren Zeit gar nicht oder ganz falsch dasteht (eingescannte
+    ''' Abzüge, eine Kamera ohne Uhr). Das Inkrement ordnet dabei eine Serie.</item>
+    ''' <item>VERSCHIEBEN für eine falsch gestellte Kamerauhr. Jedes Bild behält seinen Abstand zum
+    ''' nächsten - genau das, was ein fester Wert samt Inkrement nicht leisten kann, weil er die
+    ''' tatsächlichen Abstände der Aufnahmen durch einen erfundenen ersetzt.</item>
+    ''' </list></summary>
+    Public Class CaptureDateDialogResult
+        Public Property UsesShift As Boolean
+        ''' <summary>Nur beim festen Wert.</summary>
+        Public Property CapturedAt As DateTime
+        ''' <summary>Nur beim festen Wert: Sekunden Abstand von Bild zu Bild.</summary>
+        Public Property IncrementSeconds As Integer
+        ''' <summary>Nur beim Verschieben: vorzeichenbehaftet, negativ heisst zurueckstellen.</summary>
+        Public Property Offset As TimeSpan
     End Class
 
     ''' <summary>Auswahl aus dem Dialog "Exportieren nach" (Galerie): ein Sammel-Export, der

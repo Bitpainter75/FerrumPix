@@ -35,6 +35,15 @@ Namespace ViewModels
         Private _dialogTitle As String = ""
         Private _dialogMessage As String = ""
         Private _dialogInputText As String = ""
+        Private _dialogCaptureDate As DateTimeOffset? = DateTimeOffset.Now.Date
+        Private _dialogCaptureTime As String = "12:00:00"
+        Private _dialogCaptureIncrement As String = "0"
+        Private _dialogCaptureUsesShift As Boolean = False
+        Private _dialogCaptureShiftBackward As Boolean = False
+        Private _dialogCaptureShiftDays As String = "0"
+        Private _dialogCaptureShiftHours As String = "0"
+        Private _dialogCaptureShiftMinutes As String = "0"
+        Private _dialogCaptureShiftSeconds As String = "0"
         Private _dialogConfirmText As String = "OK"
         Private _dialogCancelText As String = "Abbrechen"
         Private _dialogSecondaryText As String = ""
@@ -2209,6 +2218,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsWatermarkPreset))
                 Me.RaisePropertyChanged(NameOf(DialogShowsExportTo))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSetPlace))
+                Me.RaisePropertyChanged(NameOf(DialogShowsCaptureDate))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
@@ -2249,7 +2259,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.BatchFilter AndAlso
                        _dialogKind <> AppDialogKind.WatermarkPreset AndAlso
                        _dialogKind <> AppDialogKind.ExportTo AndAlso
-                       _dialogKind <> AppDialogKind.SetPlace
+                       _dialogKind <> AppDialogKind.SetPlace AndAlso
+                       _dialogKind <> AppDialogKind.CaptureDate
             End Get
         End Property
 
@@ -2482,6 +2493,129 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property DialogShowsCaptureDate As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.CaptureDate
+            End Get
+        End Property
+
+        ' Alle drei Felder melden den Zustand des Knopfes mit: er ist gesperrt, solange die Eingabe
+        ' nicht taugt (siehe HasDialogCaptureDate), und das muss sich beim Tippen sofort zeigen.
+        Public Property DialogCaptureDate As DateTimeOffset?
+            Get
+                Return _dialogCaptureDate
+            End Get
+            Set(value As DateTimeOffset?)
+                Me.RaiseAndSetIfChanged(_dialogCaptureDate, value)
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCaptureTime As String
+            Get
+                Return _dialogCaptureTime
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogCaptureTime, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCaptureIncrement As String
+            Get
+                Return _dialogCaptureIncrement
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogCaptureIncrement, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        ''' <summary>Der gewaehlte Weg. Zwei Eigenschaften fuer EINEN Zustand, weil die beiden
+        ''' Auswahlknoepfe je eine eigene Bindung brauchen; die zweite ist die Umkehrung der ersten
+        ''' und meldet sie mit, sonst bliebe der andere Knopf beim Umschalten stehen.</summary>
+        Public Property DialogCaptureUsesShift As Boolean
+            Get
+                Return _dialogCaptureUsesShift
+            End Get
+            Set(value As Boolean)
+                If _dialogCaptureUsesShift = value Then Return
+                Me.RaiseAndSetIfChanged(_dialogCaptureUsesShift, value)
+                Me.RaisePropertyChanged(NameOf(DialogCaptureUsesFixedValue))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCaptureUsesFixedValue As Boolean
+            Get
+                Return Not _dialogCaptureUsesShift
+            End Get
+            Set(value As Boolean)
+                DialogCaptureUsesShift = Not value
+            End Set
+        End Property
+
+        ''' <summary>Die Richtung, nach demselben Muster wie der Weg darueber.</summary>
+        Public Property DialogCaptureShiftBackward As Boolean
+            Get
+                Return _dialogCaptureShiftBackward
+            End Get
+            Set(value As Boolean)
+                If _dialogCaptureShiftBackward = value Then Return
+                Me.RaiseAndSetIfChanged(_dialogCaptureShiftBackward, value)
+                Me.RaisePropertyChanged(NameOf(DialogCaptureShiftForward))
+            End Set
+        End Property
+
+        Public Property DialogCaptureShiftForward As Boolean
+            Get
+                Return Not _dialogCaptureShiftBackward
+            End Get
+            Set(value As Boolean)
+                DialogCaptureShiftBackward = Not value
+            End Set
+        End Property
+
+        Public Property DialogCaptureShiftDays As String
+            Get
+                Return _dialogCaptureShiftDays
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogCaptureShiftDays, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCaptureShiftHours As String
+            Get
+                Return _dialogCaptureShiftHours
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogCaptureShiftHours, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCaptureShiftMinutes As String
+            Get
+                Return _dialogCaptureShiftMinutes
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogCaptureShiftMinutes, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCaptureShiftSeconds As String
+            Get
+                Return _dialogCaptureShiftSeconds
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogCaptureShiftSeconds, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
         ''' <summary>Ob der bestaetigende Knopf ueberhaupt etwas ausloesen kann.
         '''
         ''' Zwei Dialoge machen davon Gebrauch, beide aus demselben Grund: ein Knopf, der nichts tut,
@@ -2497,10 +2631,55 @@ Namespace ViewModels
         Public ReadOnly Property IsDialogPrimaryEnabled As Boolean
             Get
                 If _dialogKind = AppDialogKind.SetPlace Then Return HasDialogPlace
+                If _dialogKind = AppDialogKind.CaptureDate Then Return HasDialogCaptureDate
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
             End Get
         End Property
+
+        ''' <summary>Taugt, was im Datumsdialog steht? Der Knopf haengt daran, und das ist Absicht:
+        ''' vorher nahm der Dialog eine krumme Uhrzeit an, schloss sich und tat dann nichts - der
+        ''' Nutzer sah nur, dass nichts passierte, und erfuhr nirgends warum.
+        '''
+        ''' Geprueft wird nur der GEWAEHLTE Weg. Die Felder des anderen stehen zwar noch da, sind
+        ''' aber ausgeblendet - an einer Eingabe, die niemand sieht, darf der Knopf nicht haengen.</summary>
+        Private ReadOnly Property HasDialogCaptureDate As Boolean
+            Get
+                If _dialogCaptureUsesShift Then Return TryReadDialogCaptureOffset() <> TimeSpan.Zero
+                If Not _dialogCaptureDate.HasValue Then Return False
+                Dim time As TimeSpan
+                If Not CaptureDateService.TryParseTime(_dialogCaptureTime, time) Then Return False
+                Dim increment As Integer
+                Return Integer.TryParse(_dialogCaptureIncrement, increment)
+            End Get
+        End Property
+
+        ''' <summary>Die eingetippte Zeitspanne, vorzeichenbehaftet. TimeSpan.Zero heisst "taugt
+        ''' nicht ODER ist null" - beides ist derselbe Fall: es gibt nichts zu verschieben, und der
+        ''' Knopf bleibt gesperrt.
+        '''
+        ''' Die vier Felder werden ADDIERT, nicht einzeln begrenzt: "90 Minuten" ist eine gueltige
+        ''' Angabe, und wer sie so denkt, soll sie nicht in Stunden umrechnen muessen. Negative
+        ''' Zahlen nimmt kein Feld an - die Richtung steht an den zwei Knoepfen darueber, und ein
+        ''' Minus im Feld hiesse bei "zurueckstellen" eine doppelte Verneinung.</summary>
+        Private Function TryReadDialogCaptureOffset() As TimeSpan
+            Dim days, hours, minutes, seconds As Integer
+            If Not Integer.TryParse(_dialogCaptureShiftDays, days) OrElse days < 0 Then Return TimeSpan.Zero
+            If Not Integer.TryParse(_dialogCaptureShiftHours, hours) OrElse hours < 0 Then Return TimeSpan.Zero
+            If Not Integer.TryParse(_dialogCaptureShiftMinutes, minutes) OrElse minutes < 0 Then Return TimeSpan.Zero
+            If Not Integer.TryParse(_dialogCaptureShiftSeconds, seconds) OrElse seconds < 0 Then Return TimeSpan.Zero
+            ' Als Sekunden in einem Long rechnen: vier Felder mit je einer ganzen Zahl kommen sonst
+            ' beim Aufaddieren ueber den Bereich eines TimeSpan, und das waere eine Ausnahme statt
+            ' einer gesperrten Schaltflaeche.
+            Dim total = CLng(days) * 86400L + CLng(hours) * 3600L + CLng(minutes) * 60L + CLng(seconds)
+            If total <= 0 OrElse total > MaxCaptureShiftSeconds Then Return TimeSpan.Zero
+            Dim offset = TimeSpan.FromSeconds(total)
+            Return If(_dialogCaptureShiftBackward, offset.Negate(), offset)
+        End Function
+
+        ''' <summary>Hundert Jahre. Eine Kamerauhr geht falsch, sie geht nicht in ein anderes
+        ''' Jahrhundert - was darueber liegt, ist ein Vertipper.</summary>
+        Private Const MaxCaptureShiftSeconds As Long = 100L * 366L * 86400L
 
         ''' <summary>Zeigt dieser Dialog gerade eine Vorgabenliste, aus der etwas gewaehlt sein MUSS?
         ''' Beim Export nur, solange die Filter-Sektion eingeschaltet ist - ist sie aus, wirkt die
@@ -3455,6 +3634,40 @@ Namespace ViewModels
         Public Function ShowInputAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of String)
             Return ShowDialogAsync(kind, titleText, messageText, initialText,
                                    LocalizationService.T(confirmText), LocalizationService.T(cancelText))
+        End Function
+
+        Public Async Function ShowCaptureDateAsync(initial As DateTime?) As Task(Of CaptureDateDialogResult)
+            ' Die Vorgabe ist die Zeit des angeklickten Bildes - dann sieht man, was gilt, und
+            ' korrigiert sie, statt sie neu zu tippen. Eine Zeit ausserhalb des sinnvollen Bereichs
+            ' wird dabei NICHT uebernommen: DateTimeOffset kennt unterhalb des Jahres 1 nichts mehr
+            ' und wirft in jeder Zeitzone oestlich von Greenwich schon bei DateTime.MinValue.
+            Dim start = If(initial, DateTime.Now)
+            If Not CaptureDateService.IsInRange(start) Then start = DateTime.Now
+            DialogCaptureDate = New DateTimeOffset(start.Date)
+            DialogCaptureTime = start.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
+            DialogCaptureIncrement = "0"
+            Dim confirmed = Await ShowDialogAsync(AppDialogKind.CaptureDate, "Aufnahmedatum setzen",
+                                                  "Setzt die Aufnahmezeit oder verschiebt eine vorhandene, etwa nach einer falsch gestellten Kamerauhr. Das Änderungsdatum bekommt denselben Wert.",
+                                                  "", "Setzen", "Abbrechen")
+            If confirmed Is Nothing Then Return Nothing
+
+            ' Dass es hier noch scheitern KANN, ist nur die Absicherung: der Knopf war gesperrt,
+            ' solange die Eingabe nicht taugte (IsDialogPrimaryEnabled). Nothing heisst fuer den
+            ' Aufrufer damit eindeutig "abgebrochen" und nie "falsch getippt".
+            If DialogCaptureUsesShift Then
+                Dim offset = TryReadDialogCaptureOffset()
+                If offset = TimeSpan.Zero Then Return Nothing
+                Return New CaptureDateDialogResult With {.UsesShift = True, .Offset = offset}
+            End If
+
+            If Not DialogCaptureDate.HasValue Then Return Nothing
+            Dim time As TimeSpan
+            Dim increment As Integer
+            If Not CaptureDateService.TryParseTime(DialogCaptureTime, time) OrElse
+               Not Integer.TryParse(DialogCaptureIncrement, increment) Then Return Nothing
+            Return New CaptureDateDialogResult With {
+                .CapturedAt = DialogCaptureDate.Value.Date.Add(time),
+                .IncrementSeconds = increment}
         End Function
 
         ''' <param name="currentFolder">Der Ordner, in dem die Galerie gerade steht - Vorgabe für den

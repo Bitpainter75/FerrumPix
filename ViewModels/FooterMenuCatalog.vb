@@ -158,6 +158,10 @@ Namespace ViewModels
             Return Build("Copyright setzen", "copyright", c)
         End Function
 
+        Public Shared Function SetCaptureDate(c As ICommand) As AppAction
+            Return Build("Aufnahmedatum setzen", "calendar", c)
+        End Function
+
         Public Shared Function SetPlace(c As ICommand) As AppAction
             ' Ohne Auslassungspunkte, wie die uebrigen Eintraege, die einen Dialog oeffnen
             ' ("Größe ändern", "Exportieren nach").

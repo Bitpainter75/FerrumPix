@@ -1616,6 +1616,7 @@ Namespace ViewModels
             PastePlaceCommand = ReactiveCommand.Create(Sub() PastePlaceToSelected())
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceForSelectedAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightForSelectedAsync())
+            SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateForSelectedAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
@@ -1732,6 +1733,7 @@ Namespace ViewModels
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
+        Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
 
@@ -1912,6 +1914,87 @@ Namespace ViewModels
         Public Async Function SetCopyrightForImageItemsAsync(items As IList(Of ImageItem)) As Task
             If items Is Nothing OrElse items.Count = 0 Then Return
             Await SetCopyrightForSelectedAsync(items)
+        End Function
+
+        ''' <summary>Setzt eine Aufnahmezeit für die Auswahl - als festen Wert oder als Verschiebung
+        ''' einer vorhandenen (siehe <see cref="CaptureDateDialogResult"/>). Beim festen Wert ordnet
+        ''' das Inkrement eine Serie; beim Verschieben behält jedes Bild seinen Abstand zum nächsten.
+        ''' Das Original einer RAW-Datei bleibt in beiden Fällen unberührt - dort steht die Zeit in
+        ''' der Beistelldatei, und von dort liest FerrumPix sie auch wieder.</summary>
+        Private Async Function SetCaptureDateForSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task
+            Try
+                ' IN DER REIHENFOLGE DER ANZEIGE, nicht in der des Anklickens: das Inkrement ordnet
+                ' eine Serie zeitlich, und "das naechste Bild" ist fuer den Nutzer das rechts
+                ' daneben. Wer die Reihe per Strg-Klick von hinten nach vorn aufsammelt, bekaeme
+                ' sonst die Sekunden verkehrt herum verteilt.
+                Dim images = SortBySelectionDisplayOrder(GetPlaceTargets(preset))
+                If images.Count = 0 OrElse _mainVm Is Nothing Then Return
+                Dim chosen = Await _mainVm.ShowCaptureDateAsync(If(images.Count = 1, images(0).ExifDateTaken, Nothing))
+                If chosen Is Nothing Then Return
+                Dim succeeded = 0
+                Dim withoutDate = 0
+                For index = 0 To images.Count - 1
+                    Dim path = images(index).FilePath
+                    Dim value As DateTime?
+                    If chosen.UsesShift Then
+                        ' Die GELTENDE Zeit aus der Datei, nicht die des Katalogeintrags: der kann
+                        ' aelter sein als die Datei, und verschoben wird, was jetzt drinsteht.
+                        Dim current = CaptureDateService.ReadCaptureDate(path)
+                        If Not current.HasValue Then
+                            withoutDate += 1
+                            Continue For
+                        End If
+                        value = CaptureDateService.Shift(current.Value, chosen.Offset)
+                    Else
+                        value = CaptureDateService.Shift(chosen.CapturedAt,
+                                                        TimeSpan.FromSeconds(CLng(index) * chosen.IncrementSeconds))
+                    End If
+                    If Not value.HasValue Then Continue For
+                    If CaptureDateService.Write(path, value.Value) Then
+                        images(index).ExifDateTaken = value
+                        Dim exif = ExifService.ReadExif(path)
+                        Dim fields = ExifService.ExtractSearchFields(exif, path)
+                        LibraryService.Instance.SyncExifData(path, fields,
+                                                             ExifService.BuildCatalogSummary(exif, fields))
+                        succeeded += 1
+                    End If
+                Next
+                ' Bilder OHNE Zeit sind beim Verschieben kein Fehler, sondern der Normalfall einer
+                ' gemischten Auswahl - sie werden aber eigens genannt, sonst sucht der Nutzer den
+                ' Grund an der falschen Stelle.
+                If withoutDate > 0 Then
+                    StatusText = String.Format(LocalizationService.T("Aufnahmedatum gesetzt für {0} von {1} Bildern, {2} ohne vorhandene Zeit"),
+                                               succeeded, images.Count, withoutDate)
+                Else
+                    StatusText = String.Format(LocalizationService.T("Aufnahmedatum gesetzt für {0} von {1} Bildern"),
+                                               succeeded, images.Count)
+                End If
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+                RefreshContextActions()
+                ' Haengt die Sortierung am Aufnahmedatum, stehen die Kacheln jetzt an der falschen
+                ' Stelle - sie tragen ja eine neue Zeit. Nur dann neu ordnen: bei jeder anderen
+                ' Sortierung waere es ein Neuaufbau der ganzen Liste fuer nichts.
+                If succeeded > 0 AndAlso _sortMode = "ExifDateTaken" Then FilterAndSort()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.SetCaptureDate", ex)
+            End Try
+        End Function
+
+        ''' <summary>Bringt eine Auswahl in die Reihenfolge, in der die Bilder auf dem Schirm
+        ''' stehen. <see cref="Items"/> traegt die fertig sortierte Liste; wer dort nicht steht
+        ''' (Suchtreffer aus einem anderen Ordner), kommt hinten an, in sich nach Dateiname.</summary>
+        Private Function SortBySelectionDisplayOrder(images As List(Of ImageItem)) As List(Of ImageItem)
+            If images Is Nothing OrElse images.Count <= 1 Then Return If(images, New List(Of ImageItem)())
+            Dim order As New Dictionary(Of ImageItem, Integer)()
+            For index = 0 To Items.Count - 1
+                Dim item = Items(index)
+                If item IsNot Nothing AndAlso Not order.ContainsKey(item) Then order(item) = index
+            Next
+            Return images.
+                OrderBy(Function(i) If(order.ContainsKey(i), order(i), Integer.MaxValue)).
+                ThenBy(Function(i) i.FileName, StringComparer.CurrentCultureIgnoreCase).
+                ToList()
         End Function
 
         ''' <summary>Fragt den Urheberrechtshinweis ab und schreibt ihn an die Auswahl.

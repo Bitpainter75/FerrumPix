@@ -4573,6 +4573,7 @@ Namespace ViewModels
             Get
                 If Not ScopeSelectionViewModel.ShowInAdjustmentPanels Then Return False
                 If Not InfoPanel.IsSingleImage Then Return False
+                If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then Return False
                 Return ShowLightAdjustments OrElse ShowColorAdjustments OrElse ShowDetailAdjustments OrElse
                        ShowEffectsAdjustments OrElse ShowFilterAdjustments
             End Get
@@ -14676,6 +14677,9 @@ Namespace ViewModels
             _sceneDisplay = Nothing
             ' Objekt-Bitmaps gehoeren zum alten Dokument (Eintraege haengen an Objekt-Ids).
             _annotationBitmapCache.Clear()
+            ' Und die Analysebilder gehoeren zur alten Szene: ihr Schluessel traegt deren laufende
+            ' Nummer, sie werden also nie wieder getroffen und lagen nur noch im Speicher.
+            ScopeImageCache.Clear()
 
             ' EIGENER Zähler, nicht _previewRequestId: der wird auch von jedem Render-Start
             ' hochgezählt (RegisterPreviewRenderStart). Als Veraltungs-Marke für den Quellwechsel
@@ -14852,6 +14856,7 @@ Namespace ViewModels
             _sceneSk = Nothing
             _sceneDisplay = Nothing
             _annotationBitmapCache.Clear()
+            ScopeImageCache.Clear()
             Dim oldSource As SKBitmap = Nothing
             SyncLock _previewSync
                 oldSource = _previewSource

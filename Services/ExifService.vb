@@ -125,26 +125,31 @@ Namespace Services
         ' EXIF-Eintrag, die zweite Datei bekam also die Aufnahmedaten der ersten angezeigt.
         Private Shared ReadOnly _cache As New Dictionary(Of String, ExifCacheEntry)(PathIdentity.Comparer)
 
-        ''' <summary>Der Urheberrechtshinweis aus der Beistelldatei, gemerkt an DEREN Zeitstempel und
-        ''' Groesse - nicht an denen der Bilddatei.
+        ''' <summary>Was aus der Beistelldatei den eingebetteten Wert schlaegt - Urheberrechtshinweis
+        ''' und Aufnahmezeit -, gemerkt an DEREN Zeitstempel und Groesse, nicht an denen der Bilddatei.
         '''
         ''' Warum ein eigener Zwischenspeicher: der Blick in die Beistelldatei liegt bewusst
-        ''' AUSSERHALB des EXIF-Zwischenspeichers (siehe WithSidecarCopyright), damit ein frisch
-        ''' geschriebener Hinweis sofort ankommt. Ohne diesen zweiten Speicher hiesse das aber, dass
+        ''' AUSSERHALB des EXIF-Zwischenspeichers (siehe WithSidecarOverrides), damit ein frisch
+        ''' geschriebener Wert sofort ankommt. Ohne diesen zweiten Speicher hiesse das aber, dass
         ''' JEDER Aufruf die Datei neu einliest und als XML zergliedert - auch der, den der
         ''' EXIF-Speicher gerade aus dem Aermel geschuettelt hat. Der Katalogindex geht ueber
         ''' Tausende Dateien, und in einem RAW-Bestand liegt neben fast jeder eine Beistelldatei.
         '''
         ''' Geprueft wird weiterhin bei jedem Aufruf, OB eine danebenliegt und ob sie sich geaendert
-        ''' hat - das sind zwei Dateiabfragen und keine Zergliederung.</summary>
-        Private Class SidecarCopyrightEntry
+        ''' hat - das sind zwei Dateiabfragen und keine Zergliederung.
+        '''
+        ''' Die beiden Zeiten stehen im EXIF-Rohformat ("yyyy:MM:dd HH:mm:ss"), weil sie genau die
+        ''' Felder ersetzen, die der Leser aus der Bilddatei in diesem Format liefert.</summary>
+        Private Class SidecarOverrideEntry
             Public Property SidecarPath As String
             Public Property LastWriteUtc As DateTime
             Public Property Size As Long
-            Public Property Value As String
+            Public Property Copyright As String = ""
+            Public Property CaptureDate As String = ""
+            Public Property ModifyDate As String = ""
         End Class
 
-        Private Shared ReadOnly _sidecarCopyrightCache As New Concurrent.ConcurrentDictionary(Of String, SidecarCopyrightEntry)(PathIdentity.Comparer)
+        Private Shared ReadOnly _sidecarOverrideCache As New Concurrent.ConcurrentDictionary(Of String, SidecarOverrideEntry)(PathIdentity.Comparer)
 
         ''' <summary>
         ''' EXIF ändert sich nach der Aufnahme normalerweise nicht mehr nachträglich - ein
@@ -165,7 +170,7 @@ Namespace Services
             SyncLock _cacheLock
                 Dim entry As ExifCacheEntry = Nothing
                 If _cache.TryGetValue(imagePath, entry) AndAlso entry.LastWriteUtc = lastWriteUtc AndAlso entry.Size = size Then
-                    Return WithSidecarCopyright(imagePath, CloneExifData(entry.Data))
+                    Return WithSidecarOverrides(imagePath, CloneExifData(entry.Data))
                 End If
             End SyncLock
 
@@ -175,13 +180,20 @@ Namespace Services
                 _cache(imagePath) = New ExifCacheEntry With {.LastWriteUtc = lastWriteUtc, .Size = size, .Data = freshData}
             End SyncLock
 
-            Return WithSidecarCopyright(imagePath, CloneExifData(freshData))
+            Return WithSidecarOverrides(imagePath, CloneExifData(freshData))
         End Function
 
-        ''' <summary>Legt den Urheberrechtshinweis aus der Beistelldatei ueber den eingebetteten.
-        ''' XMP geht vor - das ist die Leseregel des Standards fuer dieses Feld (XMP vor IPTC vor
-        ''' EXIF), und es ist zugleich die einzige Reihenfolge, die hier funktioniert: an alles, was
-        ''' wir nicht selbst beschreiben (RAW, PSD, HEIC, PNG), schreibt FerrumPix ihn NUR daneben.
+        ''' <summary>Legt Urheberrechtshinweis UND Aufnahmezeit aus der Beistelldatei ueber die
+        ''' eingebetteten Werte. XMP geht vor - das ist die Leseregel des Standards fuer diese Felder
+        ''' (XMP vor IPTC vor EXIF), und es ist zugleich die einzige Reihenfolge, die hier
+        ''' funktioniert: an alles, was wir nicht selbst beschreiben (RAW, PSD, HEIC, PNG), schreibt
+        ''' FerrumPix sie NUR daneben.
+        '''
+        ''' DIE ZEIT MUSS VORGEHEN, NICHT NUR EINSPRINGEN. Bei der Koordinate genuegt der Blick
+        ''' daneben, wenn im Bild keine steht - eine Aufnahmezeit steht dagegen fast immer im Bild,
+        ''' und beim Korrigieren einer falsch gestellten Kamerauhr ist genau die der ueberholte
+        ''' Wert. Eine Regel "nur wenn leer" liesse die alte Zeit gewinnen, und der naechste
+        ''' Kataloglauf schriebe sie zurueck.
         '''
         ''' WARUM HIER UND NICHT IN ReadExifCore - zwei Gruende, jeder fuer sich ausreichend:
         '''
@@ -197,10 +209,13 @@ Namespace Services
         ''' Nur EINE Vorrangregel im ganzen Programm: `CopyrightService.ReadCopyright` liest ueber
         ''' genau diesen Weg. Zwei Regeln fuer dasselbe Feld hiessen, dass die Info-Leiste den einen
         ''' und der Dialog den anderen Wert zeigt, sobald eine Datei beides traegt.</summary>
-        Private Shared Function WithSidecarCopyright(imagePath As String, data As ExifData) As ExifData
+        Private Shared Function WithSidecarOverrides(imagePath As String, data As ExifData) As ExifData
             If data Is Nothing Then Return data
-            Dim fromSidecar = ReadXmpCopyrightSidecar(imagePath)
-            If Not String.IsNullOrWhiteSpace(fromSidecar) Then data.Copyright = fromSidecar
+            Dim fromSidecar = ReadSidecarOverrides(imagePath)
+            If fromSidecar Is Nothing Then Return data
+            If Not String.IsNullOrWhiteSpace(fromSidecar.Copyright) Then data.Copyright = fromSidecar.Copyright
+            If Not String.IsNullOrWhiteSpace(fromSidecar.CaptureDate) Then data.DateTaken = fromSidecar.CaptureDate
+            If Not String.IsNullOrWhiteSpace(fromSidecar.ModifyDate) Then data.DateModifiedExif = fromSidecar.ModifyDate
             Return data
         End Function
 
@@ -1014,6 +1029,40 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Schreibt die Aufnahmezeit in ein XMP-Sidecar. RAW-Dateien bleiben dabei stets
+        ''' unveraendert; bei JPEG synchronisiert der Aufrufer nur ein bereits vorhandenes Sidecar.</summary>
+        Public Shared Function WriteXmpCaptureDateSidecar(imagePath As String, capturedAt As DateTime,
+                                                          createIfMissing As Boolean) As String
+            If String.IsNullOrWhiteSpace(imagePath) Then Return ""
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then
+                If Not createIfMissing Then Return ""
+                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+            End If
+            Try
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                Dim description = GetOrCreateSidecarDescription(doc)
+                If description Is Nothing Then Return ""
+                Dim exifNs As XNamespace = "http://ns.adobe.com/exif/1.0/"
+                Dim xmpNs As XNamespace = "http://ns.adobe.com/xap/1.0/"
+                Dim iso = capturedAt.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)
+                description.SetAttributeValue(XNamespace.Xmlns + "exif", exifNs.NamespaceName)
+                description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNs.NamespaceName)
+                description.SetAttributeValue(exifNs + "DateTimeOriginal", iso)
+                description.SetAttributeValue(exifNs + "DateTimeDigitized", iso)
+                description.SetAttributeValue(xmpNs + "CreateDate", iso)
+                ' "Geaendert am" traegt DENSELBEN Wert. Wer eine falsch gestellte Kamerauhr
+                ' nachzieht, will das Bild danach an einer Stelle in der Zeit haben, nicht an zwei -
+                ' und die Galerie kann nach beiden sortieren.
+                description.SetAttributeValue(xmpNs + "ModifyDate", iso)
+                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
+                Return sidecarPath
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.WriteXmpCaptureDateSidecar", ex)
+                Return ""
+            End Try
+        End Function
+
         ''' <summary>Liest den Urheberrechtshinweis aus einer vorhandenen Beistelldatei. Leer, wenn
         ''' keine da ist oder keiner darin steht.
         '''
@@ -1021,69 +1070,143 @@ Namespace Services
         ''' wir selbst schreiben, UND die Kurzform als Attribut, die andere Programme benutzen. Wer
         ''' nur eine davon liest, findet den Hinweis fremder Dateien nicht.</summary>
         Public Shared Function ReadXmpCopyrightSidecar(imagePath As String) As String
-            If String.IsNullOrWhiteSpace(imagePath) Then Return ""
+            ' NICHT "overrides" nennen: das ist ein VB-Schluesselwort und der Bauvorgang bricht ab.
+            Dim fromSidecar = ReadSidecarOverrides(imagePath)
+            Return If(fromSidecar Is Nothing, "", fromSidecar.Copyright)
+        End Function
+
+        ''' <summary>Alles, was die Beistelldatei ueber die Bilddatei stellt, in EINEM Zug gelesen:
+        ''' Hinweis und Zeiten. Ein zweiter Weg fuer jedes Feld hiesse, dieselbe Datei mehrfach zu
+        ''' zergliedern - und zwei Zwischenspeicher, die auseinanderlaufen koennen.</summary>
+        Private Shared Function ReadSidecarOverrides(imagePath As String) As SidecarOverrideEntry
+            If String.IsNullOrWhiteSpace(imagePath) Then Return Nothing
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
             If String.IsNullOrEmpty(sidecarPath) Then
                 ' Keine Beistelldatei mehr da - ein gemerkter Wert waere ab jetzt falsch.
-                Dim removed As SidecarCopyrightEntry = Nothing
-                _sidecarCopyrightCache.TryRemove(imagePath, removed)
-                Return ""
+                Dim removed As SidecarOverrideEntry = Nothing
+                _sidecarOverrideCache.TryRemove(imagePath, removed)
+                Return Nothing
             End If
 
             Dim info As IO.FileInfo
             Try
                 info = New IO.FileInfo(sidecarPath)
-                If Not info.Exists Then Return ""
+                If Not info.Exists Then Return Nothing
             Catch
-                Return ""
+                Return Nothing
             End Try
 
-            Dim cached As SidecarCopyrightEntry = Nothing
-            If _sidecarCopyrightCache.TryGetValue(imagePath, cached) AndAlso
+            Dim cached As SidecarOverrideEntry = Nothing
+            If _sidecarOverrideCache.TryGetValue(imagePath, cached) AndAlso
                cached IsNot Nothing AndAlso
                String.Equals(cached.SidecarPath, sidecarPath, StringComparison.Ordinal) AndAlso
                cached.LastWriteUtc = info.LastWriteTimeUtc AndAlso
                cached.Size = info.Length Then
-                Return cached.Value
+                Return cached
             End If
 
-            Dim parsed = ParseXmpCopyrightSidecar(sidecarPath)
-            _sidecarCopyrightCache(imagePath) = New SidecarCopyrightEntry With {
-                .SidecarPath = sidecarPath,
-                .LastWriteUtc = info.LastWriteTimeUtc,
-                .Size = info.Length,
-                .Value = parsed}
+            Dim parsed = ParseSidecarOverrides(sidecarPath)
+            parsed.SidecarPath = sidecarPath
+            parsed.LastWriteUtc = info.LastWriteTimeUtc
+            parsed.Size = info.Length
+            _sidecarOverrideCache(imagePath) = parsed
             Return parsed
         End Function
 
         ''' <summary>Das eigentliche Zergliedern. Getrennt, damit der Zwischenspeicher darueber die
         ''' einzige Stelle ist, die entscheidet, WANN gelesen wird.</summary>
-        Private Shared Function ParseXmpCopyrightSidecar(sidecarPath As String) As String
+        Private Shared Function ParseSidecarOverrides(sidecarPath As String) As SidecarOverrideEntry
+            Dim result As New SidecarOverrideEntry()
             Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
+            Dim exifNamespace As XNamespace = "http://ns.adobe.com/exif/1.0/"
+            Dim xmpNamespace As XNamespace = "http://ns.adobe.com/xap/1.0/"
+            Dim photoshopNamespace As XNamespace = "http://ns.adobe.com/photoshop/1.0/"
             Try
                 Dim doc = XDocument.Load(sidecarPath)
                 For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description")
-                    Dim element = description.Elements(dcNamespace + "rights").FirstOrDefault()
-                    If element IsNot Nothing Then
-                        ' Bevorzugt x-default, sonst der erste Eintrag - eine Sprachalternative ohne
-                        ' x-default ist selten, aber sie ist erlaubt.
-                        Dim items = element.Descendants().Where(Function(e) e.Name.LocalName = "li").ToList()
-                        Dim chosen = items.FirstOrDefault(Function(e) e.Attributes().Any(
-                                        Function(a) a.Name.LocalName = "lang" AndAlso a.Value = "x-default"))
-                        If chosen Is Nothing Then chosen = items.FirstOrDefault()
-                        Dim text = If(chosen IsNot Nothing, chosen.Value, element.Value)
-                        If Not String.IsNullOrWhiteSpace(text) Then Return text.Trim()
+                    If String.IsNullOrEmpty(result.Copyright) Then
+                        result.Copyright = ReadSidecarCopyright(description, dcNamespace)
                     End If
-                    Dim attribute = description.Attribute(dcNamespace + "rights")
-                    If attribute IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(attribute.Value) Then
-                        Return attribute.Value.Trim()
+                    ' Reihenfolge nach Aussagekraft: DateTimeOriginal ist die Aufnahmezeit, CreateDate
+                    ' meint dasselbe und steht in aelteren Dateien allein da, photoshop:DateCreated ist
+                    ' die IPTC-Entsprechung. Der erste belegte Wert gewinnt.
+                    If String.IsNullOrEmpty(result.CaptureDate) Then
+                        result.CaptureDate = FirstSidecarDate(description,
+                                                              exifNamespace + "DateTimeOriginal",
+                                                              xmpNamespace + "CreateDate",
+                                                              photoshopNamespace + "DateCreated")
+                    End If
+                    If String.IsNullOrEmpty(result.ModifyDate) Then
+                        result.ModifyDate = FirstSidecarDate(description, xmpNamespace + "ModifyDate")
                     End If
                 Next
-                Return ""
+                Return result
             Catch ex As Exception
-                DiagnosticLogService.LogException("Exif.ReadXmpCopyrightSidecar", ex)
-                Return ""
+                DiagnosticLogService.LogException("Exif.ReadSidecarOverrides", ex)
+                Return result
             End Try
+        End Function
+
+        ''' <summary>Der Hinweis aus EINEM rdf:Description - als Sprachalternative wie als Attribut.</summary>
+        Private Shared Function ReadSidecarCopyright(description As XElement, dcNamespace As XNamespace) As String
+            Dim element = description.Elements(dcNamespace + "rights").FirstOrDefault()
+            If element IsNot Nothing Then
+                ' Bevorzugt x-default, sonst der erste Eintrag - eine Sprachalternative ohne
+                ' x-default ist selten, aber sie ist erlaubt.
+                Dim items = element.Descendants().Where(Function(e) e.Name.LocalName = "li").ToList()
+                Dim chosen = items.FirstOrDefault(Function(e) e.Attributes().Any(
+                                Function(a) a.Name.LocalName = "lang" AndAlso a.Value = "x-default"))
+                If chosen Is Nothing Then chosen = items.FirstOrDefault()
+                Dim text = If(chosen IsNot Nothing, chosen.Value, element.Value)
+                If Not String.IsNullOrWhiteSpace(text) Then Return text.Trim()
+            End If
+            Dim attribute = description.Attribute(dcNamespace + "rights")
+            If attribute IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(attribute.Value) Then
+                Return attribute.Value.Trim()
+            End If
+            Return ""
+        End Function
+
+        ''' <summary>Die erste lesbare Zeit aus den genannten Feldern, im EXIF-Rohformat.</summary>
+        Private Shared Function FirstSidecarDate(description As XElement, ParamArray names As XName()) As String
+            For Each name In names
+                Dim raw = ReadSidecarValue(description, name)
+                Dim parsed = ParseXmpDateTime(raw)
+                If parsed.HasValue Then Return parsed.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>Attribut ODER Kindelement - derselbe Wert steht je nach Erzeuger in der einen oder
+        ''' der anderen Form; wer nur eine liest, verliert die halbe Welt (wie in XmpSidecarService).</summary>
+        Private Shared Function ReadSidecarValue(description As XElement, name As XName) As String
+            Dim attribute = description.Attribute(name)
+            If attribute IsNot Nothing Then Return attribute.Value.Trim()
+            Dim child = description.Element(name)
+            If child Is Nothing Then Return ""
+            Dim item = child.Descendants().FirstOrDefault(Function(e) e.Name.LocalName = "li")
+            Return If(item IsNot Nothing, item.Value.Trim(), child.Value.Trim())
+        End Function
+
+        ''' <summary>Eine XMP-Zeit als ORTSZEIT ohne Zone.
+        '''
+        ''' Das Schema laesst die Zone weg, wo die Kamera keine kennt - und genau so schreibt
+        ''' FerrumPix sie auch. Steht doch eine dabei (fremde Programme setzen sie), wird sie in die
+        ''' Ortszeit umgerechnet: die EXIF-Felder daneben tragen keine, und zwei Zeiten in derselben
+        ''' Datei, die verschiedene Zonen meinen, waeren fuer jede Sortierung eine Falle.
+        ''' Auch die Kurzformen sind zugelassen ("2019", "2019-07", "2019-07-14").</summary>
+        Public Shared Function ParseXmpDateTime(raw As String) As DateTime?
+            If String.IsNullOrWhiteSpace(raw) Then Return Nothing
+            Dim text = raw.Trim()
+            Dim withZone As DateTimeOffset
+            If DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture,
+                                       DateTimeStyles.None, withZone) Then
+                Return withZone.LocalDateTime
+            End If
+            Dim plain As DateTime
+            If DateTime.TryParse(text, CultureInfo.InvariantCulture,
+                                 DateTimeStyles.None, plain) Then Return plain
+            Return Nothing
         End Function
 
         ''' <summary>Nimmt den Urheberrechtshinweis aus einer vorhandenen Beistelldatei - als

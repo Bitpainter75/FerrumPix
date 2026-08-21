@@ -7584,4 +7584,52 @@
   <data name="Ausgefressene_Lichter_rot_und_zugelaufene_Tiefen_c2bc6e7d" xml:space="preserve">
     <value>Merkitse palaneet huippuvalot punaisella ja tukkeutuneet varjot sinisellä</value>
   </data>
+  <data name="Auf_festen_Wert_setzen_1160d09e" xml:space="preserve">
+    <value>Aseta kiinteä arvo</value>
+  </data>
+  <data name="Um_eine_Zeitspanne_verschieben_d0d57dd5" xml:space="preserve">
+    <value>Siirrä aikavälillä</value>
+  </data>
+  <data name="Vorstellen_f3b2074a" xml:space="preserve">
+    <value>Eteenpäin</value>
+  </data>
+  <data name="Zur_ckstellen_d9af4e5e" xml:space="preserve">
+    <value>Taaksepäin</value>
+  </data>
+  <data name="Tage_e94f59f3" xml:space="preserve">
+    <value>Päivää</value>
+  </data>
+  <data name="Stunden_f3bf6eff" xml:space="preserve">
+    <value>Tuntia</value>
+  </data>
+  <data name="Minuten_497af2bf" xml:space="preserve">
+    <value>Minuuttia</value>
+  </data>
+  <data name="Sekunden_3655e933" xml:space="preserve">
+    <value>Sekuntia</value>
+  </data>
+  <data name="Uhrzeit_b0b30059" xml:space="preserve">
+    <value>Kellonaika</value>
+  </data>
+  <data name="HH_mm_ss_dce54dcd" xml:space="preserve">
+    <value>HH:mm:ss</value>
+  </data>
+  <data name="Sekunden_je_Bild_e1ee2246" xml:space="preserve">
+    <value>Sekuntia kuvaa kohti</value>
+  </data>
+  <data name="0_setzt_bei_allen_Bildern_dieselbe_Zeit_7bc3fb08" xml:space="preserve">
+    <value>0 antaa kaikille kuville saman ajan</value>
+  </data>
+  <data name="Aufnahmedatum_setzen_020aa987" xml:space="preserve">
+    <value>Aseta kuvauspäivä</value>
+  </data>
+  <data name="Aufnahmedatum_gesetzt_f_r_0_von_1_Bildern_3b1f6dcc" xml:space="preserve">
+    <value>Kuvauspäivä asetettu {0}/{1} kuvalle</value>
+  </data>
+  <data name="Aufnahmedatum_gesetzt_f_r_0_von_1_Bildern_2_ohne_30695af1" xml:space="preserve">
+    <value>Kuvauspäivä asetettu {0}/{1} kuvalle, {2} ilman aiempaa aikaa</value>
+  </data>
+  <data name="Setzt_die_Aufnahmezeit_oder_verschiebt_eine_vorh_dc874226" xml:space="preserve">
+    <value>Asettaa kuvausajan tai siirtää olemassa olevaa, esimerkiksi väärin asetetun kameran kellon jälkeen. Muokkauspäivä saa saman arvon.</value>
+  </data>
 </root>

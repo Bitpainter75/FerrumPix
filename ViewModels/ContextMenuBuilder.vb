@@ -249,6 +249,7 @@ Namespace ViewModels
                 ' weil er eine andere Angabe meint als der Aufnahmeort darueber.
                 children.Add(FooterMenuCatalog.Divider())
                 AddIfOffered(children, commands.SetCopyright, FooterMenuCatalog.SetCopyright(commands.SetCopyright))
+                AddIfOffered(children, commands.SetCaptureDate, FooterMenuCatalog.SetCaptureDate(commands.SetCaptureDate))
             End If
 
             ' Metadaten entfernen schreibt die DATEI neu. Ein Serverbild hat keine, die wir

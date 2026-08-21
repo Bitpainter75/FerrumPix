@@ -733,6 +733,61 @@
     <Style Selector="TextBox:focus">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+
+    <!-- WAS MAN AM DATEPICKER SIEHT, IST EIN KNOPF IN SEINER VORLAGE (PART_FlyoutButton), nicht
+         der DatePicker selbst. Fläche, Rahmen, Radius und Höhe muessen deshalb DORT stehen; am
+         DatePicker gesetzt lagen sie hinter dem Knopf und blieben unsichtbar, waehrend der Knopf
+         weiter die Werte des allgemeinen Button-Stils trug (Radius 6, Innenabstand 14,8) und mit
+         Fluents Mindestbreite von 296 aus der Reihe fiel.
+         Ein Stil auf ein Vorlagenteil sticht dessen Vorlagenbindung, die Werte greifen also auch
+         da, wo Fluent selbst etwas bindet. Der DatePicker tritt zurueck: ohne Flaeche, ohne
+         Rahmen, ohne Innenabstand - sonst laege Chrom ueber Chrom. -->
+    <Style Selector="DatePicker.capture-date-picker">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- Dieselben Werte wie beim Textfeld daneben (Feldfläche, Rahmen, Radius 8) und dieselbe
+         Höhe 36, damit Datum, Uhrzeit und Inkrement eine gemeinsame Kante bilden. Innenabstand
+         nur waagerecht: die Höhe steht fest, senkrecht zentriert der Knopf seinen Inhalt.
+         Der Zustand unter dem Zeiger kommt aus dem allgemeinen Button-Stil und sieht damit aus
+         wie ueberall sonst. -->
+    <Style Selector="DatePicker.capture-date-picker /template/ Button#PART_FlyoutButton">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <!-- DIESELBE FALLE WIE BEI DEN ICON+TEXT-KNOEPFEN, nur mit einem Grid: Tag, Monat und Jahr
+         liegen in den Zellen von PART_ButtonContentGrid, ein TextBlock ohne eigene Ausrichtung
+         wird darin auf die volle Zellenhöhe gestreckt und zeichnet seinen Text dann OBEN. Die
+         Zentrierung des Knopfes greift nur am Gitter als Ganzem, nicht an den Feldern darin. -->
+    <Style Selector="DatePicker.capture-date-picker /template/ Grid#PART_ButtonContentGrid">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="DatePicker.capture-date-picker /template/ TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- Die zwei Trennstriche zwischen Tag, Monat und Jahr kommen sonst aus Fluents Palette und
+         waeren im dunklen Theme kaum zu sehen. -->
+    <Style Selector="DatePicker.capture-date-picker /template/ Rectangle#PART_FirstSpacer">
+        <Setter Property="Fill" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
+    <Style Selector="DatePicker.capture-date-picker /template/ Rectangle#PART_SecondSpacer">
+        <Setter Property="Fill" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
     <!-- IN EINEM AUFKLAPPFENSTER LOESCHT EIN ELEMENT, DAS SELBST NICHTS ZEICHNET, DEN HINTERGRUND
          SEINES ELTERNTEILS; an seiner Stelle kommt der Hintergrund des MENUES zum Vorschein. Am
          gerenderten Aufklappfenster gemessen: ein leerer Border ueber einer roten Flaeche zeigte in
