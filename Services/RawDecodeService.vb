@@ -21,12 +21,21 @@ Namespace Services
     '''
     ''' Geladen wird über NativeLibrary.Load + Delegates statt DllImport: der DllImport-Resolver
     ''' der Assembly ist bereits durch MpvInterop belegt (nur EINER erlaubt), und so bleibt die
-    ''' Verfügbarkeit sauber prüfbar. Entwickelt wird mit Kamera-Weißabgleich (cam_mul als
-    ''' user_mul - libraw hat keinen C-API-Setter für use_camera_wb), sRGB, 8 Bit.
-    ''' LibRaws automatische Aufhellung bleibt an (Histogramm-Stretch bis 1 % Clipping) - sie ist
-    ''' das, was eine Entwicklung ohne weiteres Zutun brauchbar aussehen laesst.
-    ''' Ein 16-Bit-Zweig mit Dither-Quantisierung ist gebaut und STILLGELEGT (siehe
-    ''' DecodeOutputBits) - er bringt gemessen zu wenig fuer den doppelten Zwischenpuffer.
+    ''' Verfügbarkeit sauber prüfbar.
+    '''
+    ''' ENTWICKELT WIRD IN 16 BIT LINEAR (DecodeOutputBits), mit Kamera-Weißabgleich (cam_mul als
+    ''' user_mul - libraw hat keinen C-API-Setter für use_camera_wb), sRGB-Primärfarben, ohne
+    ''' LibRaws automatische Aufhellung und mit neutraler Gammakurve. Die Tonabbildung macht
+    ''' Convert16 selbst: Belichtungsrampe, ACR3-Tonkurve und die Quantisierung auf 8 Bit mit
+    ''' geordnetem Dither. LibRaws Auto-Aufhellung ist ein Histogramm-Stretch und fällt gemessen
+    ''' motivabhängig in BEIDE Richtungen falsch aus, deshalb ersetzt eine feste Wiedergabe sie.
+    ''' Objektiv-Messwerte (Farbquerfehler, Vignettierung) rechnet Convert16 mit, solange die
+    ''' Werte noch linear sind; die Verzeichnung ist eine eigene Stufe dahinter.
+    '''
+    ''' Auf 8 Bit fällt der Decode nur in zwei Fällen zurück: eine exotische libraw ohne die
+    ''' Schalter für Gamma und Auto-Aufhellung (dann kämen gamma-kodierte Daten, zu denen die
+    ''' Tabellen nicht passen), und eine DNG-Hülle um ein bereits fertig gerendertes RGB-Bild
+    ''' (siehe IsFinishedRgb - dort läge sonst eine zweite Tonkurve über der ersten).
     '''
     ''' MRU-1-Cache: der Editor ruft DecodeOriented beim Öffnen mehrfach (Arbeitsbild,
     ''' Vergleichsquelle, Export), das Demosaic eines 45-MP-RAW kostet aber Sekunden. Der letzte
@@ -845,8 +854,8 @@ Namespace Services
         ''' <summary>Packt LibRaws 16-Bit-Ausgabe nach Bgra8888 und quantisiert dabei mit
         ''' Bayer-Dither statt durch Abschneiden.
         '''
-        ''' DERZEIT NICHT AKTIV (DecodeOutputBits = 8), aber lauffaehig gehalten - die Diagnose
-        ''' ruft die Methode direkt auf.
+        ''' DER REGELWEG jedes RAW-Decodes (DecodeOutputBits = 16). Die Diagnose ruft die Methode
+        ''' zusaetzlich direkt auf, um die Quantisierung einzeln zu messen.
         '''
         ''' WARUM ueberhaupt: gemessen tragen dunkle Flaechen eines Konzertfotos nur 1-3 Byte
         ''' Kanalabstand. Beim direkten 8-Bit-Decode faellt dieser Rest beim Runden weg, BEVOR
