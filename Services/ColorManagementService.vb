@@ -1,4 +1,3 @@
-Imports System.Runtime.InteropServices
 Imports SkiaSharp
 
 Namespace Services
@@ -66,9 +65,20 @@ Namespace Services
                 ' verdrahtetes Bgra8888/Premul waere hier ein stiller Umbau: der HEIF-Weg etwa sagt
                 ' seinen Aufrufern Unpremul zu, und die Zusage darf eine Farbwandlung nicht brechen.
                 Dim managedInfo = sourceInfo.WithColorSpace(_srgb)
+                ' Das Ergebnis ist ab hier sRGB, und die Kette erwartet farbraumlose Bitmaps: eine
+                ' einzelne Bitmap MIT Profil mitten in einer Kette ohne Profile waere ein Sonderfall,
+                ' den jede spaetere Stufe kennen muesste. Die Zielbitmap traegt deshalb von vornherein
+                ' KEINEN Farbraum. Sie ist nur der Speicher dahinter - WONACH gewandelt wird, sagt die
+                ' Angabe, die ReadPixels bekommt (managedInfo), nicht die Bitmap. Frueher wurde in eine
+                ' Bitmap MIT sRGB-Profil gewandelt und der Farbraum danach durch eine zweite volle
+                ' Bildkopie abgestreift; bei 24 MP war das eine Neuanlage von 96 MB und der doppelte
+                ' Weg durch den Speicher, weil zeilenweise ueber ein Zwischenarray kopiert wurde.
+                ' Bildaufbau, Zeilenlaenge und Rechnung sind unveraendert, nur die Kopie entfaellt.
+                Dim plainInfo = New SKImageInfo(sourceInfo.Width, sourceInfo.Height,
+                                                sourceInfo.ColorType, sourceInfo.AlphaType)
                 Dim managed As SKBitmap = Nothing
                 Try
-                    managed = New SKBitmap(managedInfo)
+                    managed = New SKBitmap(plainInfo)
                     Using pixels = New SKPixmap(sourceInfo, source.GetPixels(), source.RowBytes)
                         ' Hier faellt die eigentliche Rechnung an: Skia legt die Uebertragungsfunktion
                         ' und die Primaerfarben der Quelle an und rechnet in sRGB um.
@@ -80,13 +90,7 @@ Namespace Services
                         End If
                     End Using
 
-                    ' Den Farbraum wieder abstreifen: ab hier ist alles sRGB, und die Kette erwartet
-                    ' farbraumlose Bitmaps. Eine einzelne Bitmap MIT Profil mitten in einer Kette
-                    ' ohne Profile waere ein Sonderfall, den jede spaetere Stufe kennen muesste.
-                    Dim plain = StripColorSpace(managed)
-                    If plain Is Nothing Then Return managed
-                    managed.Dispose()
-                    Return plain
+                    Return managed
                 Catch
                     managed?.Dispose()
                     Throw
@@ -95,38 +99,6 @@ Namespace Services
                 ' Ein Bild lieber unverwaltet zeigen als gar nicht.
                 DiagnosticLogService.LogException("Color.ToSrgb", ex)
                 Return source
-            End Try
-        End Function
-
-        ''' <summary>Eine farbraumlose Kopie mit demselben Bildaufbau - eine reine Speicherkopie
-        ''' Zeile fuer Zeile.
-        '''
-        ''' Zeilenweise und nicht als ein Block, weil die Zeilenlaenge einer Bitmap nicht
-        ''' zwingend Breite mal vier ist; Skia darf Zeilen auffuellen. Ein Block-Kopieren waere fuer
-        ''' die hier erzeugten Bitmaps zwar richtig, aber es waere eine unerzwungene Annahme.</summary>
-        Private Shared Function StripColorSpace(source As SKBitmap) As SKBitmap
-            Dim plainInfo = New SKImageInfo(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim plain As SKBitmap = Nothing
-            Try
-                plain = New SKBitmap(plainInfo)
-                Dim sourcePixels = source.GetPixels()
-                Dim targetPixels = plain.GetPixels()
-                If sourcePixels = IntPtr.Zero OrElse targetPixels = IntPtr.Zero Then
-                    plain.Dispose()
-                    Return Nothing
-                End If
-
-                Dim rowLength = Math.Min(source.RowBytes, plain.RowBytes)
-                Dim row(rowLength - 1) As Byte
-                For y As Integer = 0 To source.Height - 1
-                    Marshal.Copy(IntPtr.Add(sourcePixels, y * source.RowBytes), row, 0, rowLength)
-                    Marshal.Copy(row, 0, IntPtr.Add(targetPixels, y * plain.RowBytes), rowLength)
-                Next
-                Return plain
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Color.StripColorSpace", ex)
-                plain?.Dispose()
-                Return Nothing
             End Try
         End Function
 
