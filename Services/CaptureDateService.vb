@@ -45,6 +45,11 @@ Namespace Services
             Return value >= EarliestCaptureDate AndAlso value <= LatestCaptureDate
         End Function
 
+        ''' <summary>Weiter als von der einen Grenze zur anderen kann keine Verschiebung fuehren -
+        ''' alles darueber landet zwangslaeufig ausserhalb.</summary>
+        Private Shared ReadOnly MaxShiftSeconds As Long =
+            CLng((LatestCaptureDate - EarliestCaptureDate).TotalSeconds)
+
         ''' <summary>Verschiebt eine Zeit um eine Spanne, ohne ueber die Grenzen zu laufen.
         ''' Nothing heisst "ausserhalb" - der Aufrufer zaehlt das Bild dann als uebersprungen.</summary>
         Public Shared Function Shift(value As DateTime, offset As TimeSpan) As DateTime?
@@ -54,6 +59,18 @@ Namespace Services
             Catch ex As ArgumentOutOfRangeException
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Dasselbe mit einer Spanne in SEKUNDEN. Eigener Weg, weil ein Inkrement mal der
+        ''' laufenden Nummer schon vor dem Rechnen ueber den Bereich eines TimeSpan hinauslaufen
+        ''' kann - TimeSpan.FromSeconds wirft dann, und zwar VOR jedem Abfangen hier drin: der
+        ''' Stapel braeche mitten in der Auswahl ab, statt das eine Bild zu ueberspringen.</summary>
+        Public Shared Function Shift(value As DateTime, offsetSeconds As Long) As DateTime?
+            ' Beide Grenzen einzeln und OHNE Math.Abs: der negativste Long hat keinen positiven
+            ' Gegenwert, Math.Abs wuerfe an ihm selbst - eine Falle in der Pruefung, die die Falle
+            ' abfangen soll.
+            If offsetSeconds > MaxShiftSeconds OrElse offsetSeconds < -MaxShiftSeconds Then Return Nothing
+            Return Shift(value, TimeSpan.FromSeconds(offsetSeconds))
         End Function
 
         ''' <summary>Die Uhrzeit aus dem Dialogfeld. Sekunden duerfen fehlen: wer eine Serie auf
@@ -134,14 +151,25 @@ Namespace Services
                 Dim pos = ifd0 + 2 + i * 12
                 If GeotagService.ReadUInt16(tiff, pos, le) = ExifIfdPointerTag Then oldExif = CInt(GeotagService.ReadUInt32(tiff, pos + 8, le))
             Next
+            ' EIN VORHANDENER Exif-Block muss auch gelesen werden koennen, sonst wird die Datei GAR
+            ' NICHT angefasst. Ihn stillschweigend zu ueberspringen waere der schlimmste Ausgang:
+            ' der Zeiger in IFD0 zeigte danach auf einen neuen Block mit nur den zwei
+            ' Datumseintraegen, und Belichtungszeit, Blende, ISO, Objektiv und Farbraum waeren fuer
+            ' jeden Leser weg - die alten Bytes laegen zwar noch in der Datei, aber niemand faende
+            ' sie. Nothing heisst hier "nicht angefasst": der Aufrufer meldet, dass es nicht ging.
+            '
+            ' Die vier Byte hinter den Eintraegen (der Verweis auf den naechsten IFD) werden dabei
+            ' NICHT verlangt. Der Exif-Block ist der letzte, gelesen wird das Feld nie, und es gibt
+            ' Erzeuger, die es weglassen - danach zu verlangen hiesse, deren Dateien um ihr ganzes
+            ' EXIF zu bringen.
             Dim exifEntries As New List(Of Byte())()
-            If oldExif >= 8 AndAlso oldExif + 2 <= tiff.Length Then
+            If oldExif >= 0 Then
+                If oldExif < 8 OrElse oldExif + 2 > tiff.Length Then Return Nothing
                 Dim subCount = GeotagService.ReadUInt16(tiff, oldExif, le)
-                If subCount <= GeotagService.MaxIfdEntries AndAlso oldExif + 2 + subCount * 12 + 4 <= tiff.Length Then
-                    For i = 0 To subCount - 1
-                        Dim entry(11) As Byte : Buffer.BlockCopy(tiff, oldExif + 2 + i * 12, entry, 0, 12) : exifEntries.Add(entry)
-                    Next
-                End If
+                If subCount > GeotagService.MaxIfdEntries OrElse oldExif + 2 + subCount * 12 > tiff.Length Then Return Nothing
+                For i = 0 To subCount - 1
+                    Dim entry(11) As Byte : Buffer.BlockCopy(tiff, oldExif + 2 + i * 12, entry, 0, 12) : exifEntries.Add(entry)
+                Next
             End If
             Dim output As New List(Of Byte)(tiff) : GeotagService.PadToEven(output)
             Dim dateOffset = output.Count : output.AddRange(System.Text.Encoding.ASCII.GetBytes(raw & ChrW(0))) : GeotagService.PadToEven(output)

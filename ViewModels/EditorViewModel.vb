@@ -12122,6 +12122,7 @@ Namespace ViewModels
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
+        Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
 
@@ -12643,6 +12644,7 @@ Namespace ViewModels
                                                        End Sub)
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
+            SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(
                 Function() WithCurrentImageAsync(Async Function(g, i2)
@@ -12794,6 +12796,16 @@ Namespace ViewModels
             RefreshContextActions()
         End Function
 
+        ''' <summary>Die Aufnahmezeit fuer das angezeigte Bild, auf demselben Weg wie der
+        ''' Urheberrechtshinweis darueber.</summary>
+        Private Async Function SetCaptureDateCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetCaptureDateForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
         Private Async Function RemovePlaceCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
                                             Await g.RemovePlaceFromImageItemsAsync(i)
@@ -12834,6 +12846,7 @@ Namespace ViewModels
                                                     .PastePlace = PastePlaceCommand,
                                                     .SetPlace = SetPlaceCommand,
                                                     .SetCopyright = SetCopyrightCommand,
+                                                    .SetCaptureDate = SetCaptureDateCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,

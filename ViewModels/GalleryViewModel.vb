@@ -1916,6 +1916,14 @@ Namespace ViewModels
             Await SetCopyrightForSelectedAsync(items)
         End Function
 
+        ''' <summary>Der Weg fuer Betrachter und Editor: dort steht immer genau EIN Bild vorn, die
+        ''' Arbeit macht aber dieselbe Stelle wie in der Galerie - eine zweite Fassung hiesse zwei
+        ''' Regeln fuer dieselbe Frage.</summary>
+        Public Async Function SetCaptureDateForImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await SetCaptureDateForSelectedAsync(items)
+        End Function
+
         ''' <summary>Setzt eine Aufnahmezeit für die Auswahl - als festen Wert oder als Verschiebung
         ''' einer vorhandenen (siehe <see cref="CaptureDateDialogResult"/>). Beim festen Wert ordnet
         ''' das Inkrement eine Serie; beim Verschieben behält jedes Bild seinen Abstand zum nächsten.
@@ -1946,16 +1954,36 @@ Namespace ViewModels
                         End If
                         value = CaptureDateService.Shift(current.Value, chosen.Offset)
                     Else
+                        ' In Sekunden und in einem Long: das Inkrement mal der laufenden Nummer
+                        ' kann sonst schon beim Bilden der Spanne ueberlaufen.
                         value = CaptureDateService.Shift(chosen.CapturedAt,
-                                                        TimeSpan.FromSeconds(CLng(index) * chosen.IncrementSeconds))
+                                                        CLng(index) * chosen.IncrementSeconds)
                     End If
                     If Not value.HasValue Then Continue For
                     If CaptureDateService.Write(path, value.Value) Then
-                        images(index).ExifDateTaken = value
                         Dim exif = ExifService.ReadExif(path)
                         Dim fields = ExifService.ExtractSearchFields(exif, path)
                         LibraryService.Instance.SyncExifData(path, fields,
                                                              ExifService.BuildCatalogSummary(exif, fields))
+                        ' ALLE DREI Zeiten an der Kachel nachziehen, nicht nur die Aufnahme:
+                        ' geschrieben werden drei (siehe CaptureDateService), und die Galerie kann
+                        ' nach jeder davon sortieren und gruppieren. Zoege nur eine nach, zeigte die
+                        ' Kachel bei "Geaendert (Datei)" oder "Geaendert (EXIF)" weiter den alten
+                        ' Wert - bis der Ordner irgendwann neu gelesen wird.
+                        images(index).ExifDateTaken = value
+                        images(index).ExifDateModified = ExifService.ParseExifDateTime(exif.DateModifiedExif)
+                        ' Das Dateidatum vom DATEISYSTEM holen statt es anzunehmen. Das Nachziehen
+                        ' darf scheitern (schreibgeschuetzte Freigabe, Netzlaufwerk), und
+                        ' CaptureDateService laesst den ganzen Vorgang bewusst nicht daran
+                        ' scheitern - die Kachel zeigte dann eine Zeit, die die Datei nicht traegt,
+                        ' und sortierte auch noch danach.
+                        Try
+                            images(index).DateModified = IO.File.GetLastWriteTime(path)
+                        Catch ex As Exception
+                            ' Keine Auskunft ueber die Datei: lieber den bisherigen Wert stehen
+                            ' lassen als einen erfundenen setzen.
+                            DiagnosticLogService.LogException("Gallery.SetCaptureDate.FileModified", ex)
+                        End Try
                         succeeded += 1
                     End If
                 Next
@@ -1972,13 +2000,23 @@ Namespace ViewModels
                 UpdateInfoPanelTarget()
                 InfoPanel.Refresh()
                 RefreshContextActions()
-                ' Haengt die Sortierung am Aufnahmedatum, stehen die Kacheln jetzt an der falschen
-                ' Stelle - sie tragen ja eine neue Zeit. Nur dann neu ordnen: bei jeder anderen
-                ' Sortierung waere es ein Neuaufbau der ganzen Liste fuer nichts.
-                If succeeded > 0 AndAlso _sortMode = "ExifDateTaken" Then FilterAndSort()
+                ' Haengt die Sortierung an einer der drei geschriebenen Zeiten, stehen die Kacheln
+                ' jetzt an der falschen Stelle - und in der Gruppenansicht auch unter der falschen
+                ' Ueberschrift. Nur dann neu ordnen: bei jeder anderen Sortierung waere es ein
+                ' Neuaufbau der ganzen Liste fuer nichts.
+                If succeeded > 0 AndAlso IsCaptureDateSortAffected() Then FilterAndSort()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.SetCaptureDate", ex)
             End Try
+        End Function
+
+        ''' <summary>Ordnet die aktuelle Sortierung nach einer der Zeiten, die das Setzen des
+        ''' Aufnahmedatums aendert? Aufnahme, "geaendert am" im Bild und "geaendert am" der Datei
+        ''' bekommen alle drei denselben neuen Wert.</summary>
+        Private Function IsCaptureDateSortAffected() As Boolean
+            Return String.Equals(_sortMode, "ExifDateTaken", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(_sortMode, "ExifDateModified", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(_sortMode, "FileModifiedAt", StringComparison.OrdinalIgnoreCase)
         End Function
 
         ''' <summary>Bringt eine Auswahl in die Reihenfolge, in der die Bilder auf dem Schirm

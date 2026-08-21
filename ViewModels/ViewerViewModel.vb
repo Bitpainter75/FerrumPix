@@ -121,10 +121,20 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Der Ort des Analysebildes wurde umgestellt. Im Betrachter gibt es nur den
-        ''' einen - also entweder nachrechnen oder das vorhandene Bild loswerden.</summary>
+        ''' einen - also entweder nachrechnen oder das vorhandene Bild loswerden.
+        '''
+        ''' NICHT ueber InfoPanel.Refresh: der Betrachter bringt seinen eigenen Ladeweg mit
+        ''' (OwnerLoadsDetails), und Refresh kehrt genau dafuer sofort zurueck - der Kasten bliebe
+        ''' beim Einschalten leer, bis das Bild wechselt.
+        '''
+        ''' Der Merker muss in BEIDEN Faellen weg, nicht nur beim Nachrechnen: er sagt, fuer welchen
+        ''' Pfad zuletzt gerechnet wurde. Beim Abschalten wird das Bild verworfen, und ohne das
+        ''' Leeren hielte der Nachladeweg sich danach fuer fertig. Gleiche Stelle und gleicher Grund
+        ''' wie beim Wechsel der Darstellung (siehe InfoPanel.ScopeRefresh in SetUpInfoPanel).</summary>
         Friend Sub RefreshScopeAfterPlacementChange()
+            _histogramLoadedForPath = ""
             If ScopeSelectionViewModel.ShowInInfoSidebar Then
-                InfoPanel.Refresh()
+                EnsureHistogramLoaded()
             Else
                 InfoPanel.ScopeImage = Nothing
             End If
@@ -685,6 +695,7 @@ Namespace ViewModels
                                                     .PastePlace = PastePlaceCommand,
                                                     .SetPlace = SetPlaceCommand,
                                                     .SetCopyright = SetCopyrightCommand,
+                                                    .SetCaptureDate = SetCaptureDateCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
@@ -711,6 +722,7 @@ Namespace ViewModels
         Public ReadOnly Property PastePlaceCommand As ICommand
         Public ReadOnly Property SetPlaceCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
+        Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
@@ -784,6 +796,7 @@ Namespace ViewModels
                                                        End Sub)
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
+            SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
@@ -3090,6 +3103,16 @@ Namespace ViewModels
                                         End Function)
             ' Refresh und nicht ShowItem: der Pfad hat sich nicht geaendert, nur sein Inhalt - und
             ' bei gleichem Pfad steigt das Panel sofort wieder aus, ohne neu zu lesen.
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        ''' <summary>Die Aufnahmezeit fuer das angezeigte Bild, auf demselben Weg wie der
+        ''' Urheberrechtshinweis darueber.</summary>
+        Private Async Function SetCaptureDateCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetCaptureDateForImageItemsAsync(i)
+                                        End Function)
             InfoPanel.Refresh()
             RefreshContextActions()
         End Function
