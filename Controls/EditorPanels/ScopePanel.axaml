@@ -2,6 +2,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.ScopePanel">
+    <UserControl.Styles>
+        <!-- Wie in der Infoleiste: Avalonia deckelt Flyouts sonst bei rund 450 Punkten und
+             schneidet die native 600×300-Analyse ab. -->
+        <Style Selector="FlyoutPresenter.scope-flyout">
+            <Setter Property="MaxWidth" Value="720"/>
+            <Setter Property="MaxHeight" Value="420"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+        </Style>
+    </UserControl.Styles>
+
     <!-- Das Analysebild neben den Reglern. Es hat eine EIGENE Wahl der Darstellung (PanelScope,
          Kanal AdjustmentPanel): hier die Kanaltrennung, drueben in der Leiste die Verteilung -
          beides gleichzeitig sichtbar, und genau dafuer gibt es zwei Orte. Gerechnet wird aus
@@ -40,11 +51,28 @@
             <!-- 150 Punkt hoch wie in der Leiste: senkrecht liegen 256 Helligkeitsstufen, und bei
                  Waveform und Parade ist genau das die tragende Achse. -->
             <Panel Height="150">
-                <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
-                    <Image Source="{Binding PanelScopeImage}"
-                           Stretch="Fill"
-                           RenderOptions.BitmapInterpolationMode="LowQuality"/>
-                </Border>
+                <!-- Die kleine Ansicht beantwortet die Reglerfrage schnell. Ein Klick öffnet
+                     dieselbe Analyse in ihrer nativen 600×300-Größe, wie in der Infoleiste. -->
+                <Button Padding="0" BorderThickness="0" Background="Transparent"
+                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                        Cursor="Hand"
+                        IsEnabled="{Binding PanelScopeImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <Button.Flyout>
+                        <Flyout Placement="Left" ShowMode="Standard"
+                                FlyoutPresenterClasses="scope-flyout">
+                            <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6"
+                                    ClipToBounds="True">
+                                <Image Source="{Binding PanelScopeImage}" Width="600" Height="300"/>
+                            </Border>
+                        </Flyout>
+                    </Button.Flyout>
+                    <Border Background="{DynamicResource FP.Bg.Input}" CornerRadius="6" ClipToBounds="True">
+                        <Image Source="{Binding PanelScopeImage}"
+                               Stretch="Fill"
+                               RenderOptions.BitmapInterpolationMode="LowQuality"/>
+                    </Border>
+                </Button>
                 <!-- Solange nichts da ist, steht der Hinweis im leeren Kasten: bei einem RAW dauert
                      der Volldecode spuerbar, und ein leerer Rahmen sieht in der Zeit aus wie ein
                      Fehler statt wie Arbeit. -->
