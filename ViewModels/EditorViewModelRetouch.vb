@@ -463,7 +463,6 @@ Namespace ViewModels
                                    Math.Min(_retouchLiveBitmap.Width, CInt(Math.Ceiling(cx + radius))),
                                    Math.Min(_retouchLiveBitmap.Height, CInt(Math.Ceiling(cy + radius))))
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
-            _retouchLiveDirtyRect = rect
             _retouchLivePendingRect = UnionRetouchRects(_retouchLivePendingRect, rect)
 
             If _retouchLivePatchRect.IsEmpty Then
@@ -497,7 +496,6 @@ Namespace ViewModels
                                    Math.Min(_retouchLiveMaskBitmapWidth, CInt(Math.Ceiling(cx + radius))),
                                    Math.Min(_retouchLiveMaskBitmapHeight, CInt(Math.Ceiling(cy + radius))))
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return
-            _retouchLiveDirtyRect = rect
             _retouchLivePendingRect = UnionRetouchRects(_retouchLivePendingRect, rect)
 
             If _retouchLivePatchRect.IsEmpty Then
@@ -579,12 +577,29 @@ Namespace ViewModels
             End Try
         End Function
 
+        ''' <summary>Haengt die stehende Anzeige ab und entsorgt sie.
+        '''
+        ''' Zwei Schritte, und die Reihenfolge ist Absicht: erst nimmt das Steuerelement seine Quelle
+        ''' zurueck, dann faellt die Bitmap. Entsorgt wird NACH dem laufenden Durchlauf
+        ''' (<see cref="DispatcherPriority.Background"/>), aus demselben Grund, aus dem die Kacheln
+        ''' in <c>ImageItem</c> es so halten: mitten in einem Layout- oder Zeichendurchlauf darf sie
+        ''' dem Steuerelement nicht unter den Haenden verschwinden.
+        '''
+        ''' Ohne das Entsorgen bleibt der unverwaltete Speicher bis zum Finalizer liegen - bei
+        ''' Anzeigegroesse sind das je Zug etliche Megabyte, und ein Zug folgt auf den naechsten.</summary>
+        Private Sub ReleaseRetouchLiveOverlay()
+            Dim previous = _retouchLiveOverlay
+            _retouchLiveOverlay = Nothing
+            RetouchLivePatchImage = Nothing
+            If previous Is Nothing Then Return
+            Dispatcher.UIThread.Post(Sub() previous.Dispose(), DispatcherPriority.Background)
+        End Sub
+
         Private Function EnsureRetouchLiveOverlay(width As Integer, height As Integer) As Boolean
             If width <= 0 OrElse height <= 0 Then Return False
             If _retouchLiveOverlay IsNot Nothing AndAlso _retouchLiveOverlay.PixelSize.Width = width AndAlso
                _retouchLiveOverlay.PixelSize.Height = height Then Return True
-            RetouchLivePatchImage = Nothing
-            _retouchLiveOverlay = Nothing
+            ReleaseRetouchLiveOverlay()
             Try
                 _retouchLiveOverlay = New WriteableBitmap(New Avalonia.PixelSize(width, height), New Avalonia.Vector(96, 96),
                                                            Avalonia.Platform.PixelFormat.Bgra8888, Avalonia.Platform.AlphaFormat.Premul)
@@ -600,7 +615,8 @@ Namespace ViewModels
                 Return True
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Editor.RetouchOverlay", ex.Message)
-                _retouchLiveOverlay = Nothing
+                ' Auch die halb aufgebaute Bitmap haelt schon Speicher - sie geht denselben Weg.
+                ReleaseRetouchLiveOverlay()
                 Return False
             End Try
         End Function
@@ -617,12 +633,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub ClearRetouchLivePatch()
-            RetouchLivePatchImage = Nothing
-            _retouchLiveOverlay = Nothing
+            ReleaseRetouchLiveOverlay()
             _retouchLiveMaskOverlay?.Dispose()
             _retouchLiveMaskOverlay = Nothing
             _retouchLivePatchRect = SKRectI.Empty
-            _retouchLiveDirtyRect = SKRectI.Empty
             _retouchLivePendingRect = SKRectI.Empty
             _retouchLivePatchLeftPercent = 0
             _retouchLivePatchTopPercent = 0

@@ -191,6 +191,10 @@ Namespace Services
                         Function(existingSegment)
                             Dim existing(existingSegment.Length - 10 - 1) As Byte
                             Buffer.BlockCopy(existingSegment, 10, existing, 0, existing.Length)
+                            ' Nothing heisst beim ENTFERNEN schlicht: es stand keiner drin. Dann
+                            ' bleibt die Datei unangetastet, und weil ohne EXIF-Block gar nichts
+                            ' angelegt wird (kein createIfMissing), gilt dasselbe fuer eine Datei
+                            ' ohne jedes EXIF.
                             Dim tiff = SetCopyrightInTiff(existing, "")
                             Return If(tiff Is Nothing, Nothing, GeotagService.BuildExifSegment(tiff))
                         End Function) Then
@@ -215,96 +219,6 @@ Namespace Services
             result.Success = removedSomething
             If Not removedSomething Then SetReason(result, "Es stand kein Urheberrechtshinweis in der Datei")
             Return result
-        End Function
-
-        ''' <summary>Die fertigen JPEG-Bytes mit gesetztem (oder bei leerem Text: entferntem)
-        ''' Hinweis, sonst Nothing. Getrennt vom Schreiben, damit der Pruefstand den Umbau ohne
-        ''' Datei pruefen kann - genau wie bei <c>BuildJpegWithGps</c>.</summary>
-        Friend Shared Function BuildJpegWithCopyright(bytes As Byte(),
-                                                      copyrightText As String,
-                                                      result As CopyrightWriteResult) As Byte()
-            If bytes Is Nothing OrElse bytes.Length < 4 OrElse bytes(0) <> &HFF OrElse bytes(1) <> &HD8 Then
-                SetReason(result, "Keine JPEG-Datei")
-                Return Nothing
-            End If
-
-            Dim text = NormalizeText(copyrightText)
-            Dim exifStart = -1
-            Dim exifLength = 0
-            Dim insertAt = 2
-
-            ' Ein Durchlauf durch die Segmente: den EXIF-Block finden und zugleich die Stelle
-            ' merken, an der ein neuer stehen muesste - hinter JFIF (APP0), vor allem anderen.
-            ' Wortgleich zum Aufnahmeort, weil es dieselbe Frage an dieselbe Datei ist.
-            Dim offset = 2
-            Dim pastLeadingApp0 = False
-            While offset + 4 <= bytes.Length
-                If bytes(offset) <> &HFF Then Exit While
-                Dim marker = bytes(offset + 1)
-                If marker = &HDA OrElse marker = &HD9 Then Exit While
-                If marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then
-                    offset += 2
-                    Continue While
-                End If
-
-                Dim length = GeotagService.ReadUInt16BigEndian(bytes, offset + 2)
-                If length < 2 OrElse offset + 2 + length > bytes.Length Then Exit While
-                Dim totalLength = 2 + length
-
-                If Not pastLeadingApp0 Then
-                    If marker = &HE0 OrElse marker = &HEE Then
-                        insertAt = offset + totalLength
-                    Else
-                        pastLeadingApp0 = True
-                    End If
-                End If
-
-                If marker = &HE1 AndAlso GeotagService.IsExifSegment(bytes, offset, totalLength) Then
-                    exifStart = offset
-                    exifLength = totalLength
-                    Exit While
-                End If
-
-                offset += totalLength
-            End While
-
-            Dim tiff As Byte()
-            If exifStart >= 0 Then
-                Dim existing(exifLength - 10 - 1) As Byte
-                Buffer.BlockCopy(bytes, exifStart + 10, existing, 0, existing.Length)
-                tiff = SetCopyrightInTiff(existing, text)
-                If tiff Is Nothing Then
-                    ' Beim ENTFERNEN heisst das schlicht: es stand keiner drin. Beim Setzen: der
-                    ' Block ist nicht sicher lesbar, und dann wird er nicht angefasst.
-                    SetReason(result, If(text.Length = 0, "Es stand kein Urheberrechtshinweis in der Datei", "EXIF-Block nicht lesbar"))
-                    Return Nothing
-                End If
-            ElseIf text.Length = 0 Then
-                ' Nichts zu entfernen, wo gar kein EXIF steht.
-                Return Nothing
-            Else
-                tiff = CreateTiffWithCopyright(text)
-            End If
-
-            If tiff.Length > GeotagService.MaxTiffBlockInJpeg Then
-                ' Kein halber Schreibvorgang: lieber gar nicht in die Datei als ein abgeschnittenes
-                ' Segment. Der Aufrufer weicht dann auf die Beistelldatei aus.
-                SetReason(result, "EXIF-Block passt nicht mehr in ein JPEG-Segment")
-                Return Nothing
-            End If
-
-            Dim segment = GeotagService.BuildExifSegment(tiff)
-            Dim output As New List(Of Byte)(bytes.Length + segment.Length)
-            If exifStart >= 0 Then
-                output.AddRange(bytes.Take(exifStart))
-                output.AddRange(segment)
-                output.AddRange(bytes.Skip(exifStart + exifLength))
-            Else
-                output.AddRange(bytes.Take(insertAt))
-                output.AddRange(segment)
-                output.AddRange(bytes.Skip(insertAt))
-            End If
-            Return output.ToArray()
         End Function
 
         ''' <summary>Setzt den Hinweis in einen vorhandenen TIFF-Block, ohne ein einziges vorhandenes

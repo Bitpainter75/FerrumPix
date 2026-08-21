@@ -2823,6 +2823,10 @@ Namespace Services
                 _baseCacheKey = Nothing
                 _baseCacheSourceRef = Nothing
             End SyncLock
+            ' Die gemerkten Masken der Korrekturebenen gehoeren demselben Bild und haben denselben
+            ' Grund wegzukommen. Sie stehen in ImageProcessorMasks.vb, aber an EINEM Aufraeumen -
+            ' ein zweites, das der Aufrufer extra rufen muesste, wuerde irgendwann vergessen.
+            ClearMaskRasterCache()
         End Sub
 
         ' Liefert die gecachte Basis (Bild vor den Objekten) wenn sich seit dem letzten Aufruf nur

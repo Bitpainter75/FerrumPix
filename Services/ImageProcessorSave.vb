@@ -731,7 +731,13 @@ Namespace Services
                     End While
                 End Using
             Catch ex As Exception
+                ' PROTOKOLLIEREN UND WEITERREICHEN, nicht schlucken. Ein halb gelesener Kopf sieht
+                ' von aussen aus wie ein Foto ohne Aufnahmedaten: die Datei wuerde mit den Segmenten
+                ' geschrieben, die bis zum Fehler zusammengekommen sind, und der Verlust faellt erst
+                ' Wochen spaeter auf. Vor dem Umbau auf den Strom flog der Fehler an dieser Stelle
+                ' ebenfalls (File.ReadAllBytes); daran soll das schnellere Lesen nichts aendern.
                 DiagnosticLogService.LogException("ImageProcessor.ReadJpegMetadataSegments", ex)
+                Throw
             End Try
 
             Return result

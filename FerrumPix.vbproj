@@ -5,10 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>FerrumPix</RootNamespace>
     <AssemblyName>FerrumPix</AssemblyName>
-    <Version>0.9.30</Version>
-    <AssemblyVersion>0.9.30.0</AssemblyVersion>
-    <FileVersion>0.9.30.0</FileVersion>
-    <InformationalVersion>0.9.30</InformationalVersion>
+    <Version>0.9.31</Version>
+    <AssemblyVersion>0.9.31.0</AssemblyVersion>
+    <FileVersion>0.9.31.0</FileVersion>
+    <InformationalVersion>0.9.31</InformationalVersion>
     <Nullable>enable</Nullable>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>

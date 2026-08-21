@@ -594,11 +594,12 @@ Namespace Services
 
             Dim left = Integer.MaxValue, top = Integer.MaxValue
             Dim right = Integer.MinValue, bottom = Integer.MinValue
-            Dim breite = Math.Min(mask.Width, imageWidth)
-            Dim hoehe = Math.Min(mask.Height, imageHeight)
-            For y = 0 To hoehe - 1
+            ' Nur der Teil, den Maske UND Bild gemeinsam haben - eine Maske darf groesser sein.
+            Dim scanWidth = Math.Min(mask.Width, imageWidth)
+            Dim scanHeight = Math.Min(mask.Height, imageHeight)
+            For y = 0 To scanHeight - 1
                 Dim row = y * stride
-                For x = 0 To breite - 1
+                For x = 0 To scanWidth - 1
                     If buffer(row + x) = 0 Then Continue For
                     If x < left Then left = x
                     If x > right Then right = x
@@ -615,14 +616,16 @@ Namespace Services
             bottom = Math.Min(imageHeight - 1, bottom + MaskScopeMargin)
             left -= (left Mod MaskScopeAlignment)
             top -= (top Mod MaskScopeAlignment)
-            Dim rechts = Math.Min(imageWidth, right + 1)
-            Dim unten = Math.Min(imageHeight, bottom + 1)
+            ' Ab hier die AUSSCHLIESSENDEN Kanten des Rechtecks; oben waren es die letzten Punkte,
+            ' die die Maske noch deckt.
+            Dim rightEdge = Math.Min(imageWidth, right + 1)
+            Dim bottomEdge = Math.Min(imageHeight, bottom + 1)
 
-            Dim flaeche = CDbl(rechts - left) * CDbl(unten - top)
-            If flaeche <= 0 Then Return Nothing
-            If flaeche > CDbl(imageWidth) * CDbl(imageHeight) * MaskScopeMaxAreaShare Then Return Nothing
+            Dim area = CDbl(rightEdge - left) * CDbl(bottomEdge - top)
+            If area <= 0 Then Return Nothing
+            If area > CDbl(imageWidth) * CDbl(imageHeight) * MaskScopeMaxAreaShare Then Return Nothing
 
-            Return New SKRectI(left, top, rechts, unten)
+            Return New SKRectI(left, top, rightEdge, bottomEdge)
         End Function
 
         ''' <summary>Kette und Zusammensetzen NUR im Rechteck, direkt in <paramref name="target"/>.
@@ -724,6 +727,18 @@ Namespace Services
         ' Reicht fuer mehrere Ebenen in Vorschaugroesse (3072x2048 sind rund 6 MB je Ebene). In
         ' voller Aufloesung passt nur eine Handvoll, und dort laeuft jede Ebene ohnehin einmal.
         Private Const MaskRasterBudgetBytes As Long = 96L * 1024L * 1024L
+
+        ''' <summary>Wirft die gemerkten Masken weg. Gerufen aus <see cref="ClearBaseCache"/>, also
+        ''' beim Bildwechsel und beim Verlassen des Editors.
+        '''
+        ''' Das Budget allein reicht als Aufraeumen NICHT: es begrenzt, wie viel liegen bleibt,
+        ''' nicht wie lange. Ohne diese Zeile behielte ein statisches Feld bis zum Programmende bis
+        ''' zu 96 MB Masken eines Bildes, das niemand mehr offen hat.</summary>
+        Friend Shared Sub ClearMaskRasterCache()
+            SyncLock _maskRasterLock
+                _maskRasterCache.Clear()
+            End SyncLock
+        End Sub
 
         ''' <summary>Fertige Maske aus dem Speicher, als EIGENE Bitmap. Der Aufrufer entsorgt sie
         ''' (er hat sie in einem Using), der Speicher behaelt sein Byte-Feld.</summary>

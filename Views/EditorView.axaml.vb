@@ -1238,8 +1238,16 @@ Namespace Views
                     End If
                     UpdateSliderLayout()
                     HideBrushPreviewLineAfterBake()
-                Case NameOf(EditorViewModel.RetouchLivePatchImage),
-                     NameOf(EditorViewModel.HasRetouchLivePatch),
+                Case NameOf(EditorViewModel.RetouchLivePatchImage)
+                    UpdateSliderLayout()
+                    ' Waehrend eines Zuges bleibt es DIESELBE Bitmap, es aendern sich nur ihre
+                    ' Bildpunkte. Die Bindung setzt dann denselben Verweis noch einmal, Avalonia
+                    ' sieht keine Aenderung und zeichnet von sich aus nicht neu. Ohne diese Zeile
+                    ' haengt die Live-Vorschau daran, dass UpdateSliderLayout nebenbei ein NEUES
+                    ' Clip-Objekt setzt - ein Nebeneffekt, den niemand als tragend erkennt und der
+                    ' bei der naechsten Aufraeumrunde wegfaellt.
+                    Me.FindControl(Of Image)("RetouchLivePatchImage")?.InvalidateVisual()
+                Case NameOf(EditorViewModel.HasRetouchLivePatch),
                      NameOf(EditorViewModel.RetouchLivePatchLeftPercent),
                      NameOf(EditorViewModel.RetouchLivePatchTopPercent),
                      NameOf(EditorViewModel.RetouchLivePatchWidthPercent),

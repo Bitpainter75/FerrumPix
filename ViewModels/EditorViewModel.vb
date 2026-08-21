@@ -957,7 +957,7 @@ Namespace ViewModels
         Private _retouchLiveOverlay As WriteableBitmap = Nothing
         Private _retouchLiveMaskOverlay As SKBitmap = Nothing
         Private _retouchLivePatchRect As SKRectI = SKRectI.Empty
-        Private _retouchLiveDirtyRect As SKRectI = SKRectI.Empty
+        ' Was seit der letzten Veroeffentlichung dazugekommen ist und noch kopiert werden muss.
         Private _retouchLivePendingRect As SKRectI = SKRectI.Empty
         Private _retouchLiveMaskBitmapWidth As Integer = 0
         Private _retouchLiveMaskBitmapHeight As Integer = 0
@@ -1039,7 +1039,11 @@ Namespace ViewModels
         ' NICHT bei null: ein Objekt ohne Ausdehnung ist auf der Bühne weder zu sehen noch zu
         ' greifen und liesse sich nur über das Ebenenpanel zurückholen.
         '
-        ' Der QR-Code bleibt bei 5%/4% - er soll lesbar bleiben, und dafür braucht er Fläche.
+        ' Der QR-Code hat eine eigene Untergrenze, aber keine grössere: er ist QUADRATISCH, und
+        ' deshalb gehört sie an die Kante statt an zwei Prozentwerte, die sich auf verschieden
+        ' lange Bildkanten beziehen. Sie rechnet mit denselben 1% - siehe MinQrSidePixels in
+        ' EditorViewModelObjects.vb, dort steht auch, warum die Lesbarkeit nicht die Anwendung
+        ' entscheidet.
         Private Const MinShapeAnnotationWidthPercent As Double = 1.0
         Private Const MinShapeAnnotationHeightPercent As Double = 1.0
         ''' <summary>Die dickste Kontur, in Bildpunkten. Muss zu den beiden Bedienelementen im
@@ -4135,7 +4139,9 @@ Namespace ViewModels
 
         ''' Der Vergleichsregler liegt über der Leinwand und fängt Klicks ab. Werkzeuge, die auf der
         ''' Leinwand selbst arbeiten - malen, retuschieren, Objekte setzen, Bereiche aufziehen - können ihn
-        ''' deshalb nicht gebrauchen. Verwischen und Stempel (EditorTool.Retouch) gehören dazu.
+        ''' deshalb nicht gebrauchen. Verwischen und Stempel (EditorTool.Retouch) gehören dazu, und der
+        ''' PFAD ganz besonders: er wird Punkt für Punkt auf der Leinwand gesetzt, und jeder Klick, den
+        ''' der Regler abfängt, ist ein Stützpunkt, der nicht ankommt.
         Public ReadOnly Property CanShowBeforeAfter As Boolean
             Get
                 Return _currentTool <> EditorTool.Crop AndAlso
@@ -4149,7 +4155,8 @@ Namespace ViewModels
                        _currentTool <> EditorTool.Draw AndAlso
                        _currentTool <> EditorTool.Retouch AndAlso
                        _currentTool <> EditorTool.Geometry AndAlso
-                       _currentTool <> EditorTool.Insert
+                       _currentTool <> EditorTool.Insert AndAlso
+                       _currentTool <> EditorTool.Path
             End Get
         End Property
 
@@ -13151,7 +13158,8 @@ Namespace ViewModels
                 ' Derselbe Weg wie beim Öffnen (LoadPsdDocumentAsync): eine Photoshop-Datei kommt
                 ' auch beim Blättern mit ihren Ebenen herein. Hier fehlte er, und dieselbe Datei
                 ' zeigte je nach Weg ein anderes Dokument.
-                Dim psdLoad = Await LoadPsdDocumentAsync(path)
+                ' OHNE Rückfrage nach den Textebenen - die Begründung steht am Parameter.
+                Dim psdLoad = Await LoadPsdDocumentAsync(path, mayAskAboutText:=False)
                 fpxAdjustments = psdLoad.Adjustments
                 If psdLoad.HasLayers Then
                     newRenderSourcePathOverride = psdLoad.BaseImagePath
@@ -13356,7 +13364,19 @@ Namespace ViewModels
         ''' Gemeinsam für beide Ladewege - Öffnen und Filmstreifen. Im Filmstreifen fehlte er
         ''' bisher ganz: dieselbe Datei kam mit Ebenen herein, wenn man sie öffnete, und flach,
         ''' wenn man zu ihr blätterte.</summary>
-        Private Async Function LoadPsdDocumentAsync(psdSource As String) As Task(Of PsdDocumentLoad)
+        ''' <param name="mayAskAboutText">Darf dieser Weg die Rückfrage nach den Textebenen
+        ''' stellen? Beim ÖFFNEN ja, beim BLÄTTERN nein.
+        '''
+        ''' Der Unterschied ist keine Nachlässigkeit, sondern der Zweck der beiden Wege: Öffnen ist
+        ''' ein Entschluss für EINE Datei, Blättern ist Vorbeigehen. Ein Ordner mit zwanzig
+        ''' Photoshop-Dateien stellte sonst zwanzig Fragen, jede mitten in der Pfeiltaste. Beim
+        ''' Blättern gilt deshalb „als Bild": jeder Bildpunkt stimmt, der Text ist fest. Wer ihn
+        ''' tippbar braucht, öffnet die Datei ausdrücklich.
+        '''
+        ''' Eine FESTGELEGTE Einstellung gilt auf beiden Wegen unverändert - nur das „Immer fragen"
+        ''' wird beim Blättern zu „Als Bild".</param>
+        Private Async Function LoadPsdDocumentAsync(psdSource As String,
+                                                    Optional mayAskAboutText As Boolean = True) As Task(Of PsdDocumentLoad)
             ' Die gespeicherte Bearbeitung, falls es eine gibt. Sie kommt ÜBER den Stapel und
             ' ersetzt ihn nicht; ohne Ebenen in der Datei bleibt sie allein übrig, genau wie bei
             ' einer RAW.
@@ -13373,7 +13393,10 @@ Namespace ViewModels
             ' ohne Textebenen gibt es nichts zu entscheiden.
             Dim textImportMode = AppSettingsService.NormalizePsdTextImport(AppSettingsService.Load().PsdTextImport)
             Dim takeTextAsText = String.Equals(textImportMode, "Text", StringComparison.Ordinal)
-            Dim textLayers = Await Task.Run(Function() PsdImportService.CountTextLayers(psdSource))
+            ' Ohne Rückfrage ist auch das Zählen umsonst - es liest die Datei ein zweites Mal.
+            Dim textLayers = If(mayAskAboutText,
+                                Await Task.Run(Function() PsdImportService.CountTextLayers(psdSource)),
+                                0)
             If textLayers > 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal) Then
                 takeTextAsText = Await _mainVm.ShowConfirmAsync(
                     LocalizationService.T("Textebenen übernehmen?"),

@@ -582,10 +582,16 @@ Namespace Services
                         ' Photoshop speichert CMYK invertiert (255 = keine Farbe). Ohne das
                         ' eingebettete Druckprofil ist dies bewusst dieselbe robuste Näherung wie
                         ' PsdPreviewService: C', M', Y' jeweils mit K' multiplizieren.
+                        '
+                        ' Die REIHENFOLGE ist hier eine andere als dort: diese Bitmap ist Rgba8888,
+                        ' die der Vorschau Bgra8888. Wer die Rechnung von dort übernimmt, ohne die
+                        ' beiden Kanäle zu drehen, bekommt Rot und Blau vertauscht - und sieht es
+                        ' nur an einer CMYK-Datei mit Ebenen, weil das flache Gesamtbild denselben
+                        ' Weg gar nicht geht.
                         Dim k = CInt(black(i))
-                        buffer(i * 4) = CByte(CInt(blue(i)) * k \ 255)      ' B aus Y'
+                        buffer(i * 4) = CByte(CInt(red(i)) * k \ 255)       ' R aus C'
                         buffer(i * 4 + 1) = CByte(CInt(green(i)) * k \ 255) ' G aus M'
-                        buffer(i * 4 + 2) = CByte(CInt(red(i)) * k \ 255)   ' R aus C'
+                        buffer(i * 4 + 2) = CByte(CInt(blue(i)) * k \ 255)  ' B aus Y'
                     Else
                         buffer(i * 4) = red(i)
                         buffer(i * 4 + 1) = green(i)
