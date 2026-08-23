@@ -2,7 +2,11 @@
 #
 # Warum dort und nicht ins private packaging-Repo: Actions-Minuten sind fuer oeffentliche Repos
 # frei, fuer private werden sie gegen das Monatskontingent gerechnet. Ein voller Lauf ueber alle
-# Plattformen samt Flatpak ist nicht kurz.
+# Plattformen ist nicht kurz.
+#
+# DER FLATPAK GEHOERT NICHT MEHR HIERHER, er hat einen eigenen Lauf: flatpak-only.yml. Wird eine
+# Version veroeffentlicht, gehoert er danach von Hand gestartet, sonst bleibt im Latest-Release
+# das alte Bundle stehen oder es fehlt ganz.
 #
 # SICHERHEIT: Ein oeffentliches Repo kann jeder per Pull Request anstossen. GitHub gibt
 # Fork-Pull-Requests keine Secrets - das ist die schuetzende Regel, und sie faellt, sobald
@@ -207,23 +211,19 @@ jobs:
           printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
             | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
           sudo apt-get update
-          sudo apt-get install -y nsis xz-utils jq rpm zsync desktop-file-utils \
-                                  flatpak flatpak-builder
+          sudo apt-get install -y nsis xz-utils jq rpm zsync desktop-file-utils
 
-      # BEFUND ZWEITER LAUF: "flatpak-builder ist nicht installiert" - AppImage, deb und rpm
-      # liefen da schon durch.
+      # FLATPAK IST HIER RAUS und hat einen eigenen Lauf: flatpak-only.yml. Er war mit gut vier
+      # Minuten der teuerste Schritt, brauchte flatpak-builder samt Laufzeitumgebung von Flathub,
+      # und sein Bauordner mit Symlinks hat dem Windows-Bau schon einmal die Aufloesung von
+      # `**/*.axaml` zerschossen. Fuer ein Paket, das keinen der anderen Schritte braucht.
       #
-      # Die Laufzeitumgebung muss dazu, sonst hat flatpak-builder nichts zum Bauen. Version und
-      # Name stehen im Manifest (runtime-version 24.08) und muessen mit ihm uebereinstimmen.
-      #
-      # WARUM NICHT EINFACH WEGLASSEN: package.sh erzeugt dann keine FerrumPix.flatpak, und der
-      # Upload ersetzt nur, was da ist - die ALTE Datei bliebe im Latest-Release stehen und ginge
-      # stillschweigend als aktuell durch. Ein fehlendes Paket faellt auf, ein veraltetes nicht.
-      - name: Flatpak-Laufzeitumgebung
-        run: |
-          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          sudo flatpak install -y --noninteractive flathub \
-            org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+      # WAS MAN DAFUER IM AUGE BEHALTEN MUSS: der Upload ersetzt nur, was im Bauordner liegt.
+      # Ohne den Flatpak-Lauf bleibt die ALTE FerrumPix.flatpak im Latest-Release stehen und geht
+      # stillschweigend als aktuell durch - ein fehlendes Paket faellt auf, ein veraltetes nicht.
+      # Bei einer neuen Version mit pkgrel 1 ist es umgekehrt: das Latest-Release wird geloescht
+      # und neu angelegt, dann fehlt der Flatpak ganz. In beiden Faellen gehoert flatpak-only.yml
+      # NACH diesem Lauf gestartet, mit veroeffentlichen=true.
 
       - name: Fremdbinaerdateien bereitlegen
         run: packaging/ci/ensure-binaries.sh
@@ -233,20 +233,13 @@ jobs:
       # durchsucht - und man sieht auf einen Blick, welches Paket wie lange braucht.
       #
       # DER PREIS, und er ist bezahlbar: package.sh ruft `publish` einmal VOR der Modus-Auswahl
-      # auf, und AppImage, Flatpak, ZIP, deb und rpm teilen sich dieses eine Ergebnis. Getrennte
-      # Aufrufe bauen es je neu - gemessen rund 27 Sekunden je Durchgang, macht ein paar Minuten
-      # ueber den ganzen Lauf. Windows, macOS und ARM bauen ohnehin schon jeweils eigene.
+      # auf, und AppImage, ZIP, deb und rpm teilen sich dieses eine Ergebnis. Getrennte Aufrufe
+      # bauen es je neu - gemessen rund 27 Sekunden je Durchgang, macht ein paar Minuten ueber
+      # den ganzen Lauf. Windows, macOS und ARM bauen ohnehin schon jeweils eigene.
       #
       # DIE REIHENFOLGE IST NACH WICHTIGKEIT, nicht nach Bequemlichkeit: Linux-ZIP, AUR und
-      # AppImage zuerst, dann deb und rpm, dann Windows, dann macOS, und ganz zuletzt ARM und
-      # Flatpak. Bricht es spaet ab, weiss man dadurch trotzdem, dass die wichtigen Pakete bauen.
-      #
-      # Flatpak steht bewusst am Ende: sein Bau legt unter packaging/work/flatpak-build einen Baum
-      # mit Symlinks an (var/run auf /run), und im Lauf zuvor scheiterte der WINDOWS-Bau direkt
-      # danach daran, dass MSBuild `**/*.axaml` nicht mehr aufloesen konnte und den Platzhalter
-      # woertlich weiterreichte. Mit einem Schritt je Paket raeumt cleanup_after_run diesen Baum
-      # nach JEDEM Aufruf weg - der Fehler sollte damit ohnehin verschwinden. Die Reihenfolge ist
-      # der zweite Riegel.
+      # AppImage zuerst, dann deb und rpm, dann Windows, dann macOS, und ganz zuletzt ARM.
+      # Bricht es spaet ab, weiss man dadurch trotzdem, dass die wichtigen Pakete bauen.
       #
       # Nicht trennbar sind macOS (x64 und arm64 in einem Modus) und ARM (linux-arm64 und
       # win-arm64 in einem) - das ginge nur, indem man package.sh aendert.
@@ -290,11 +283,6 @@ jobs:
 
       - name: Paket - ARM64-ZIPs (linux + win)
         run: packaging/package.sh armzip
-        env:
-          FERRUMPIX_BUILD_BOX: ""
-
-      - name: Paket - Flatpak
-        run: packaging/package.sh flatpak
         env:
           FERRUMPIX_BUILD_BOX: ""
 

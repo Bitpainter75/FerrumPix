@@ -1,0 +1,140 @@
+# Baut NUR den Flatpak. Veroeffentlicht wird nur auf ausdrueckliche Ansage.
+#
+# Warum ein eigener Lauf: der Flatpak war im Release-Lauf mit gut vier Minuten der teuerste
+# Schritt, brauchte flatpak-builder samt Laufzeitumgebung von Flathub und legte einen Bauordner
+# mit Symlinks an, der dem Windows-Bau schon einmal die Aufloesung von `**/*.axaml` zerschossen
+# hat. Kein anderes Paket braucht ihn, also steht er jetzt fuer sich.
+#
+# WANN ER LAUFEN MUSS: nach JEDER veroeffentlichten Version, mit veroeffentlichen=true. Der
+# Upload im Release-Lauf ersetzt nur, was im Bauordner liegt - ohne diesen Lauf bleibt die alte
+# FerrumPix.flatpak im Latest-Release stehen und geht stillschweigend als aktuell durch. Bei
+# einer neuen Version mit pkgrel 1 wird das Latest-Release geloescht und neu angelegt, dann
+# fehlt der Flatpak sogar ganz.
+#
+# REIHENFOLGE, und sie ist nicht beliebig: erst der Release-Lauf, dann dieser. Vorher steht in
+# PUBLISHED-VERSION noch die vorige Ausgabe, und publish-github-release.sh wuerde bei pkgrel 1
+# das Latest-Release loeschen und mit dem Flatpak ALLEIN neu anlegen. Der Schritt "Reihenfolge
+# pruefen" unten laesst das nicht zu.
+#
+# Nur von Hand startbar, und wie bei jedem workflow_dispatch bietet GitHub den Start erst an,
+# wenn die Datei im Standardzweig liegt.
+
+name: Flatpak einzeln
+
+on:
+  workflow_dispatch:
+    inputs:
+      veroeffentlichen:
+        description: "Bundle ins Latest-Release hochladen (sonst nur als Artefakt)"
+        type: boolean
+        default: false
+
+# Zum Hochladen ins Release braucht der eingebaute Token Schreibrecht. Ohne Veroeffentlichung
+# wird es nicht genutzt.
+permissions:
+  contents: write
+
+jobs:
+  flatpak:
+    name: Nur Flatpak
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Das oeffentliche Repo in die Wurzel, das private nach packaging/ - genau diese Anordnung
+      # erwarten die Skripte. Der Deploy-Key braucht Schreibrechte, weil die Merkposten am Ende
+      # zurueckgeschrieben werden.
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # Der Riegel gegen die falsche Reihenfolge. Steht in PUBLISHED-VERSION etwas anderes als in
+      # VERSION, war der Release-Lauf fuer diese Version noch nicht durch - dann wird hier nicht
+      # veroeffentlicht. Gebaut wird trotzdem, das Artefakt gibt es also in jedem Fall.
+      - name: Reihenfolge pruefen
+        if: ${{ inputs.veroeffentlichen }}
+        run: |
+          version="$(cat VERSION)"
+          published="$(head -1 packaging/PUBLISHED-VERSION 2>/dev/null | tr -d '[:space:]')"
+          echo "VERSION=$version  PUBLISHED-VERSION=$published"
+          if [ "$version" != "$published" ]; then
+            echo "::error::Das Latest-Release steht auf '$published', gebaut wird '$version'. Erst den Release-Lauf, dann diesen."
+            exit 1
+          fi
+
+      # Dieselbe Zeitschranke wie im Release-Lauf: klemmt der Azure-Spiegel, wartet apt sonst
+      # ohne Ende. Die Werkzeugliste ist kurz gehalten - nsis, rpm und zsync braucht nur, wer
+      # die anderen Pakete baut.
+      - name: Werkzeuge
+        timeout-minutes: 10
+        run: |
+          printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y xz-utils jq desktop-file-utils flatpak flatpak-builder
+
+      # Version und Name muessen mit dem Manifest uebereinstimmen (runtime-version 24.08).
+      - name: Flatpak-Laufzeitumgebung
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y --noninteractive flathub \
+            org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+
+      # Die gebuendelte mpv-Runtime aus packaging/ci/ensure-binaries.sh entfaellt hier: sie ist
+      # fuer Windows, und der Flatpak bringt libmpv ohnehin nicht mit.
+      - name: Paket - Flatpak
+        run: packaging/package.sh flatpak
+        env:
+          FERRUMPIX_BUILD_BOX: ""     # der Runner ist bereits Ubuntu
+
+      # Der Beweis, nicht die Absicht: das gebaute Bundle wird installiert und nach seinen
+      # Rechten gefragt. Was im Manifest steht, ist eine Behauptung - was hier steht, ist das,
+      # was auf dem Rechner des Anwenders gilt. Nach einer Aenderung an den finish-args ist das
+      # die Stelle, an der man es nachliest.
+      - name: Berechtigungen des Bundles zeigen
+        run: |
+          bundle=$(ls packaging/build/*.flatpak | head -1)
+          echo "Bundle: $bundle"
+          sudo flatpak install -y --noninteractive "$bundle"
+          flatpak info --show-permissions io.github.Bitpainter75.FerrumPix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-bundle
+          path: packaging/build/*.flatpak
+          if-no-files-found: error
+
+      # Im Bauordner liegt jetzt NUR der Flatpak, und genau das ist hier richtig: das Skript
+      # laedt hoch, was es findet, und ersetzt damit allein dieses eine Asset. Die uebrigen
+      # Dateien des Latest-Release bleiben unberuehrt.
+      - name: Ins Latest-Release
+        if: ${{ inputs.veroeffentlichen }}
+        run: packaging/publish-github-release.sh --only-latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # DOWNLOADS.md haelt die Zaehlerstaende fest, bevor der Upload sie auf null setzt. Ohne
+      # Zurueckschreiben ginge dieser Stand verloren. PUBLISHED-VERSION aendert sich hier nicht,
+      # kommt aber mit, weil das Skript beide fuehrt.
+      - name: Merkposten zurueckschreiben
+        if: ${{ inputs.veroeffentlichen }}
+        run: |
+          cd packaging
+          git config user.name  "FerrumPix CI"
+          git config user.email "ci@bitpainter.de"
+          git add PUBLISHED-VERSION DOWNLOADS.md
+          git diff --cached --quiet || git commit -m "Flatpak-Stand nach $(cat ../VERSION)"
+          for versuch in 1 2 3; do
+            git pull --rebase --autostash origin main && git push && exit 0
+            echo "Push abgelehnt, Versuch $versuch von 3 - es wird neu aufgesetzt"
+            sleep 5
+          done
+          echo "::error::Merkposten liessen sich nicht zurueckschreiben"
+          exit 1
