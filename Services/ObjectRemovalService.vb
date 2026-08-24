@@ -78,9 +78,33 @@ Namespace Services
         ''' damit weder ein Rauschen noch eine fast leere Maske die Schwelle bestimmt.</summary>
         Private Shared Function ThresholdFor(mask As SKBitmap) As Byte
             If mask Is Nothing Then Return GapThresholdFixed
+            Dim alpha = TryReadMaskAlpha(mask)
+            If alpha Is Nothing Then Return ThresholdViaGetPixel(mask)
+            Return ThresholdFrom(alpha, mask.Width, mask.Height)
+        End Function
+
+        ''' <summary>Dieselbe Schwelle aus einem bereits gelesenen Alphapuffer. Gleiche Abtastung
+        ''' wie ueber die Bitmap, also derselbe Wert.</summary>
+        Private Shared Function ThresholdFrom(alpha As Byte(), width As Integer, height As Integer) As Byte
             Dim highest As Integer = 0
             ' Grob abtasten: fuer den Hoechstwert reicht jeder vierte Punkt, und das spart bei einem
             ' 40-Megapixel-Bild einen kompletten Durchlauf.
+            For y = 0 To height - 1 Step 2
+                Dim row = y * width
+                For x = 0 To width - 1 Step 2
+                    Dim a As Integer = alpha(row + x)
+                    If a > highest Then highest = a
+                    If highest >= 255 Then Exit For
+                Next
+                If highest >= 255 Then Exit For
+            Next
+            If highest <= 0 Then Return GapThresholdFixed
+            Return CByte(Math.Max(24, Math.Min(160, highest \ 2)))
+        End Function
+
+        ''' <summary>Rueckfall fuer Farbarten, die <see cref="TryReadMaskAlpha"/> nicht kennt.</summary>
+        Private Shared Function ThresholdViaGetPixel(mask As SKBitmap) As Byte
+            Dim highest As Integer = 0
             For y = 0 To mask.Height - 1 Step 2
                 For x = 0 To mask.Width - 1 Step 2
                     Dim a = mask.GetPixel(x, y).Alpha
@@ -92,6 +116,73 @@ Namespace Services
             If highest <= 0 Then Return GapThresholdFixed
             Return CByte(Math.Max(24, Math.Min(160, highest \ 2)))
         End Function
+
+        ''' <summary>Die Alphawerte einer Maske als DICHTER Puffer: eine Zeile je Bildzeile, ohne den
+        ''' Rand, den eine Bitmapzeile tragen kann. Nothing, wenn die Farbart nicht bekannt ist -
+        ''' der Aufrufer nimmt dann seinen Weg ueber GetPixel.
+        '''
+        ''' WARUM: <see cref="GapRect"/> und <see cref="ThresholdFor"/> lasen jeden Maskenpunkt
+        ''' einzeln. Bei einer bildgrossen Maske und 45 Megapixeln sind das 45 Millionen Aufrufe je
+        ''' vollem Lauf; zusammen mit dem zweiten <see cref="GapRect"/> nach dem Wachsen und den drei
+        ''' Schwellenlaeufen liegt das im Sekundenbereich - vor dem Modell, das die eigentliche
+        ''' Arbeit macht. Derselbe Weg wie in ImageProcessorMasks.TryGetMaskScopeRect.
+        '''
+        ''' Das Alpha steht bei Bgra8888 wie bei Rgba8888 im vierten Byte, und die Premultiplikation
+        ''' laesst es unangetastet - fuer den Alphakanal sind beide Farbarten derselbe Fall.</summary>
+        Private Shared Function TryReadMaskAlpha(mask As SKBitmap) As Byte()
+            If mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return Nothing
+            If CLng(mask.Width) * mask.Height > Integer.MaxValue Then Return Nothing
+            Dim result(mask.Width * mask.Height - 1) As Byte
+            If Not TryFillMaskAlpha(mask, result) Then Return Nothing
+            Return result
+        End Function
+
+        ''' <summary>Dasselbe in einen VORHANDENEN Puffer. Wer die Maske zweimal liest, braucht dafuer
+        ''' keinen zweiten: bei 45 Megapixeln waeren das 45 MB, waehrend Originalmaske, Zwischenstand
+        ''' und Ziel ohnehin schon stehen.</summary>
+        Private Shared Function TryFillMaskAlpha(mask As SKBitmap, result As Byte()) As Boolean
+            If mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return False
+            Dim basePtr = mask.GetPixels()
+            If basePtr = IntPtr.Zero Then Return False
+            Dim width = mask.Width, height = mask.Height
+            If CLng(width) * height > Integer.MaxValue Then Return False
+            If result Is Nothing OrElse result.Length < width * height Then Return False
+            Dim rowBytes = mask.RowBytes
+            If rowBytes <= 0 Then Return False
+
+            If mask.ColorType = SKColorType.Alpha8 Then
+                ' Zeilenweise, nicht am Stueck: ist die Zeile breiter als das Bild, wanderte ihr Rand
+                ' sonst in die naechste Zeile.
+                For y = 0 To height - 1
+                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basePtr, y * rowBytes),
+                                                         result, y * width, width)
+                Next
+                Return True
+            End If
+
+            If mask.BytesPerPixel <> 4 Then Return False
+            Dim row(rowBytes - 1) As Byte
+            For y = 0 To height - 1
+                Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basePtr, y * rowBytes), row, 0, rowBytes)
+                Dim target = y * width
+                For x = 0 To width - 1
+                    result(target + x) = row(x * 4 + 3)
+                Next
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Alphawerte zurueck in eine Alpha8-Maske, zeilenweise wie beim Lesen.</summary>
+        Private Shared Sub WriteMaskAlpha(mask As SKBitmap, alpha As Byte())
+            Dim basePtr = mask.GetPixels()
+            If basePtr = IntPtr.Zero Then Return
+            Dim width = mask.Width
+            Dim rowBytes = mask.RowBytes
+            For y = 0 To mask.Height - 1
+                Runtime.InteropServices.Marshal.Copy(alpha, y * width,
+                                                     IntPtr.Add(basePtr, y * rowBytes), width)
+            Next
+        End Sub
 
         ''' <summary>Um wie viel die Maske VOR dem Fuellen waechst, als Anteil der laengsten
         ''' Lueckenkante.
@@ -141,14 +232,58 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Das umschliessende Rechteck aller gesetzten Maskenpunkte, oder ein leeres.</summary>
+        ''' <summary>Das umschliessende Rechteck aller gesetzten Maskenpunkte, oder ein leeres.
+        '''
+        ''' Die Maske wird EINMAL gelesen und der Puffer traegt beides: die Schwelle und den Lauf
+        ''' ueber die Punkte. Vorher las die Schwelle ihre eigene Abtastung und der Lauf danach jeden
+        ''' Punkt noch einmal einzeln.</summary>
         Public Shared Function GapRect(mask As SKBitmap) As SKRectI
             If mask Is Nothing OrElse mask.Width <= 0 OrElse mask.Height <= 0 Then Return SKRectI.Empty
-            Dim GapThreshold = ThresholdFor(mask)
+            Dim alpha = TryReadMaskAlpha(mask)
+            If alpha Is Nothing Then Return GapRectViaGetPixel(mask)
+            Return GapRectFrom(alpha, mask.Width, mask.Height,
+                               ThresholdFrom(alpha, mask.Width, mask.Height))
+        End Function
+
+        Private Shared Function GapRectFrom(alpha As Byte(), width As Integer, height As Integer,
+                                            gapThreshold As Byte) As SKRectI
+            Dim l = Integer.MaxValue, t = Integer.MaxValue, r = Integer.MinValue, b = Integer.MinValue
+            For y = 0 To height - 1
+                Dim row = y * width
+                ' Von aussen nach innen: die erste und die letzte gesetzte Spalte der Zeile genuegen,
+                ' dazwischen ist nichts zu entscheiden. Bei einer Maske, die nur einen Teil des
+                ' Bildes belegt, bleibt der grosse Rest damit ein reiner Suchlauf ueber Bytes.
+                Dim first = -1
+                For x = 0 To width - 1
+                    If alpha(row + x) >= gapThreshold Then
+                        first = x
+                        Exit For
+                    End If
+                Next
+                If first < 0 Then Continue For
+                Dim last = first
+                For x = width - 1 To first + 1 Step -1
+                    If alpha(row + x) >= gapThreshold Then
+                        last = x
+                        Exit For
+                    End If
+                Next
+                If first < l Then l = first
+                If last > r Then r = last
+                If y < t Then t = y
+                If y > b Then b = y
+            Next
+            If r < l OrElse b < t Then Return SKRectI.Empty
+            Return New SKRectI(l, t, r + 1, b + 1)
+        End Function
+
+        ''' <summary>Rueckfall fuer Farbarten, die <see cref="TryReadMaskAlpha"/> nicht kennt.</summary>
+        Private Shared Function GapRectViaGetPixel(mask As SKBitmap) As SKRectI
+            Dim gapThreshold = ThresholdViaGetPixel(mask)
             Dim l = Integer.MaxValue, t = Integer.MaxValue, r = Integer.MinValue, b = Integer.MinValue
             For y = 0 To mask.Height - 1
                 For x = 0 To mask.Width - 1
-                    If mask.GetPixel(x, y).Alpha < GapThreshold Then Continue For
+                    If mask.GetPixel(x, y).Alpha < gapThreshold Then Continue For
                     If x < l Then l = x
                     If x > r Then r = x
                     If y < t Then t = y
@@ -322,19 +457,24 @@ Namespace Services
         ''' Radius und kostet nichts, waehrend ein echter Maximumfilter mit dem Radius waechst.</summary>
         Private Shared Function Grow(mask As SKBitmap, radius As Integer) As SKBitmap
             If mask Is Nothing OrElse radius < 1 Then Return Nothing
-            Dim threshold = ThresholdFor(mask)
+            ' EIN Lauf ueber die Maske traegt beides: die Schwelle und das harte Schwellen darunter.
+            ' Vorher las ThresholdFor die Maske fuer sich noch einmal, und die Kopie hier nahm dichte
+            ' Alpha8-Zeilen an - bei einer Maske in Bgra8888 haette sie Farbbytes als Alpha gelesen.
+            ' Kennt der Leser die Farbart nicht, waechst die Maske nicht; der Aufrufer arbeitet dann
+            ' mit der ungewachsenen weiter, statt auf geratenen Bytes zu rechnen.
+            Dim buffer = TryReadMaskAlpha(mask)
+            If buffer Is Nothing Then Return Nothing
+            Dim threshold = ThresholdFrom(buffer, mask.Width, mask.Height)
+            Dim target As SKBitmap = Nothing
             Try
-                Dim target = New SKBitmap(New SKImageInfo(mask.Width, mask.Height,
+                target = New SKBitmap(New SKImageInfo(mask.Width, mask.Height,
                                                         SKColorType.Alpha8, SKAlphaType.Premul))
                 Using hard = New SKBitmap(New SKImageInfo(mask.Width, mask.Height,
                                                           SKColorType.Alpha8, SKAlphaType.Premul))
-                    Dim n = mask.Width * mask.Height
-                    Dim buffer(n - 1) As Byte
-                    Runtime.InteropServices.Marshal.Copy(mask.GetPixels(), buffer, 0, n)
-                    For i = 0 To n - 1
+                    For i = 0 To buffer.Length - 1
                         buffer(i) = If(buffer(i) >= threshold, CByte(255), CByte(0))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(buffer, 0, hard.GetPixels(), n)
+                    WriteMaskAlpha(hard, buffer)
 
                     Using canvas = New SKCanvas(target)
                         canvas.Clear(SKColors.Transparent)
@@ -345,15 +485,21 @@ Namespace Services
                     End Using
 
                     ' Niedrig schwellen: aus dem weichen Rand der Unschaerfe wird wieder eine volle
-                    ' Deckung, und die Maske ist um rund einen Radius groesser als vorher.
-                    Runtime.InteropServices.Marshal.Copy(target.GetPixels(), buffer, 0, n)
-                    For i = 0 To n - 1
+                    ' Deckung, und die Maske ist um rund einen Radius groesser als vorher. Gelesen
+                    ' wird in DENSELBEN Puffer - ein zweiter waere bei 45 Megapixeln noch einmal
+                    ' 45 MB, waehrend Originalmaske, hard und target ohnehin schon stehen.
+                    If Not TryFillMaskAlpha(target, buffer) Then
+                        target.Dispose()
+                        Return Nothing
+                    End If
+                    For i = 0 To buffer.Length - 1
                         buffer(i) = If(buffer(i) >= 40, CByte(255), CByte(0))
                     Next
-                    Runtime.InteropServices.Marshal.Copy(buffer, 0, target.GetPixels(), n)
+                    WriteMaskAlpha(target, buffer)
                 End Using
                 Return target
             Catch
+                target?.Dispose()
                 Return Nothing
             End Try
         End Function

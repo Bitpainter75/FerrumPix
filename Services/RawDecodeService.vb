@@ -775,7 +775,19 @@ Namespace Services
 
                 Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
                 Try
-                    Dim pixels(CInt(pixelCount * 4L - 1)) As Byte
+                    ' ZEILENWEISE direkt in die Bitmap. Vorher stand hier ein 8-Bit-Vollbildpuffer
+                    ' (bei 45 Megapixeln rund 180 MB auf dem Haufen fuer grosse Objekte), der danach
+                    ' noch einmal komplett kopiert wurde. Eine Zeile ist ein paar Kilobyte und geht
+                    ' direkt an ihr Ziel; die Bitmapzeile kann breiter sein als das Bild, deshalb
+                    ' laeuft der Versatz ueber RowBytes und nicht ueber die Breite.
+                    Dim targetPtr = bitmap.GetPixels()
+                    If targetPtr = IntPtr.Zero Then
+                        bitmap.Dispose()
+                        Return Nothing
+                    End If
+                    Dim targetStride = bitmap.RowBytes
+                    Dim rowLength = width * 4
+                    Dim row(rowLength - 1) As Byte
                     If bits = 16 Then
                         ' Objektivkorrektur: Farbquerfehler und Vignettierung kommen aus der
                         ' mitgelieferten Sammlung von Messwerten. Die frueher hier stehende eigene
@@ -783,18 +795,25 @@ Namespace Services
                         ' nur ein Neuntel des Farbsaums. Mit Messwerten aus der Sammlung sind es
                         ' gemessen 30 bis 45 Prozent (siehe RAW_UND_FARBE.md); damit lohnt die
                         ' Stelle, an der die Korrektur sitzt, obwohl sie hinter dem Demosaic liegt.
-                        Convert16(image + 16, width, height, pixels, lens, baseEv)
+                        Convert16Rows(image + 16, width, height, row,
+                                      Sub(y) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
+                                      lens, baseEv)
                     Else
-                        Dim rgb(dataSize - 1) As Byte
-                        Marshal.Copy(image + 16, rgb, 0, dataSize)
-                        For i = 0 To CInt(pixelCount - 1)
-                            pixels(i * 4) = rgb(i * 3 + 2)      ' B
-                            pixels(i * 4 + 1) = rgb(i * 3 + 1)  ' G
-                            pixels(i * 4 + 2) = rgb(i * 3)      ' R
-                            pixels(i * 4 + 3) = 255
+                        Dim sourceStride = width * 3
+                        Dim rgb(sourceStride - 1) As Byte
+                        For y = 0 To height - 1
+                            Marshal.Copy(image + 16 + y * sourceStride, rgb, 0, sourceStride)
+                            Dim d = 0
+                            For x = 0 To width - 1
+                                row(d) = rgb(x * 3 + 2)      ' B
+                                row(d + 1) = rgb(x * 3 + 1)  ' G
+                                row(d + 2) = rgb(x * 3)      ' R
+                                row(d + 3) = 255
+                                d += 4
+                            Next
+                            Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength)
                         Next
                     End If
-                    Marshal.Copy(pixels, 0, bitmap.GetPixels(), pixels.Length)
                     ' Reihenfolge: erst Vignettierung und Farbquerfehler (beide im Umsetzungsschritt
                     ' oben, auf den unveraenderten Bildpunkten gemessen), DANN die Verzeichnung.
                     ' Andersherum wuerden beide an verschobenen Stellen rechnen. Die Verzeichnung
@@ -977,18 +996,46 @@ Namespace Services
             Return t
         End Function
 
+        ''' <summary>Dieselbe Umsetzung in einen VOLLBILDPUFFER, als Huelle um
+        ''' <see cref="Convert16Rows"/>.
+        '''
+        ''' KEIN Aufrufer in der Anwendung - der Decode schreibt zeilenweise. Sie steht fuer die
+        ''' beiden Diagnosepruefungen „RAW-Decode 16→8: Dither ist mittelwerttreu und faerbt Grau
+        ''' nicht ein" und „Der Decode wendet Vignettierung und Farbquerfehler wirklich an", die die
+        ''' Umsetzung an einem Puffer mit bekanntem Inhalt messen und sie ueber Reflexion aufrufen.
+        ''' Ein Puffer ist dort die brauchbare Form; entscheidend ist, dass beide Wege denselben Kern
+        ''' nehmen, sodass das Gemessene nicht vom Ausgelieferten abweichen kann. Wer diese
+        ''' Pruefungen entfernt, entfernt auch diese Huelle.</summary>
+        Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte(),
+                                     Optional lens As LensDataService.Korrektur = Nothing,
+                                     Optional grundbelichtungEvWert As Double = BaseExposureEv)
+            Dim rowBytes = width * 4
+            Dim row(rowBytes - 1) As Byte
+            Convert16Rows(data, width, height, row,
+                          Sub(y) Array.Copy(row, 0, pixels, y * rowBytes, rowBytes),
+                          lens, grundbelichtungEvWert)
+        End Sub
+
         ''' <summary>16-Bit-LINEARE LibRaw-Ausgabe in 8-Bit-sRGB umsetzen: Belichtungsrampe,
-        ''' ACR3-Tonkurve nach Adobes RGBTone-Regel, sRGB-Gamma, Bayer-Dither.
+        ''' ACR3-Tonkurve nach Adobes RGBTone-Regel, sRGB-Gamma, Bayer-Dither. Umgesetzt wird EINE
+        ''' Zeile nach der anderen in <paramref name="rowBuffer"/>; wohin sie geht, entscheidet der
+        ''' Aufrufer in <paramref name="onRow"/>.
         '''
         ''' RGBTone heisst: die Kurve laeuft auf dem HELLSTEN und dem DUNKELSTEN Kanal, der
         ''' mittlere wird zwischen den beiden Ergebnissen interpoliert. Kanalweise angewandt
         ''' verschoebe die Kurve den Farbton - genau der Fehler, der Lichter ausbleichen laesst.
         '''
         ''' Der Dither benutzt DIESELBE Schwelle fuer alle drei Kanaele eines Pixels: kanalweise
-        ''' verschiedene Schwellen faerben neutrale Flaechen ein.</summary>
-        Private Shared Sub Convert16(data As IntPtr, width As Integer, height As Integer, pixels As Byte(),
-                                     Optional lens As LensDataService.Korrektur = Nothing,
-                                     Optional grundbelichtungEvWert As Double = BaseExposureEv)
+        ''' verschiedene Schwellen faerben neutrale Flaechen ein.
+        '''
+        ''' WARUM ZEILENWEISE: vorher entstand hier ein 8-Bit-Vollbildpuffer, der bei 45 Megapixeln
+        ''' rund 180 MB gross ist, auf dem Haufen fuer grosse Objekte landet und danach noch einmal
+        ''' vollstaendig in die Bitmap kopiert wurde. Eine Zeile ist ein paar Kilobyte, wird
+        ''' wiederverwendet und geht direkt an ihr Ziel.</summary>
+        Private Shared Sub Convert16Rows(data As IntPtr, width As Integer, height As Integer,
+                                         rowBuffer As Byte(), onRow As Action(Of Integer),
+                                         Optional lens As LensDataService.Korrektur = Nothing,
+                                         Optional grundbelichtungEvWert As Double = BaseExposureEv)
             Dim thresholds = DitherThresholds
             Dim ton = TonTabelleFuer(grundbelichtungEvWert)
             Dim gamma = GammaTabelle
@@ -1034,7 +1081,7 @@ Namespace Services
 
             For y = 0 To height - 1
                 Dim rowShorts = FetchRow(y)
-                Dim d = y * width * 4
+                Dim d = 0
                 Dim ditherRow = (y And 7) << 3
                 Dim dyPix = y - cy
                 For x = 0 To width - 1
@@ -1099,12 +1146,13 @@ Namespace Services
                         bb = tTief + CInt(CLng(delta) * (b - tief) \ span)
                     End If
                     Dim t = thresholds(ditherRow Or (x And 7))
-                    pixels(d) = CByte((gamma(bb) * 255 + t) \ 65535)
-                    pixels(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
-                    pixels(d + 2) = CByte((gamma(rr) * 255 + t) \ 65535)
-                    pixels(d + 3) = 255
+                    rowBuffer(d) = CByte((gamma(bb) * 255 + t) \ 65535)
+                    rowBuffer(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
+                    rowBuffer(d + 2) = CByte((gamma(rr) * 255 + t) \ 65535)
+                    rowBuffer(d + 3) = 255
                     d += 4
                 Next
+                onRow(y)
             Next
         End Sub
 
