@@ -12134,7 +12134,14 @@ Namespace ViewModels
             ' Ebenen-Panel-Anzeige (umgekehrte Reihenfolge) an den Objektstapel koppeln. Wer die
             ' Liste in einem Rutsch umbaut, klammert das mit SuspendLayerRowRebuild - sonst baut
             ' JEDE einzelne Aenderung das ganze Panel neu auf.
-            AddHandler _annotations.CollectionChanged, Sub(s, e) RebuildLayerRows()
+            ' Und den Kompositor-Schnappschuss verwerfen: er haelt eine KOPIE der Objektliste, die
+            ' nach einem Neuaufbau auf weggeworfene Instanzen zeigt (siehe
+            ' InvalidateCompositorBlitSnapshot).
+            AddHandler _annotations.CollectionChanged,
+                Sub(s, e)
+                    InvalidateCompositorBlitSnapshot()
+                    RebuildLayerRows()
+                End Sub
             RebuildLayerRows()
             ' Wird waehrend der Sitzung ein Modell geladen, sollen die Werkzeuge dazu ohne Neustart
             ' bedienbar werden - siehe RefreshModelAvailability. Ohne Abmelden: dieses ViewModel

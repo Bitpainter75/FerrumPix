@@ -35,6 +35,22 @@ Namespace ViewModels
         Private _compositorBlitSnapshot As ImageAdjustments
         Private _compositorBlitGeometryKey As String = ""
 
+        ''' <summary>Wirft den Schnappschuss weg. NOETIG bei jeder Aenderung der Objektliste, denn
+        ''' <c>Annotations</c> ist dort eine KOPIE der Liste (aus ObservableCollection wird List) und
+        ''' haelt damit genau die Verweise fest, die zur Zeit des Schnappschusses galten.
+        '''
+        ''' <c>ApplyAdjustments</c> leert die Objektliste und fuellt sie mit KLONEN neu - beim
+        ''' Umschalten des Reglerziels (Objekt markiert, Anpassen/Farbe/Details/Effekte/Filter aktiv)
+        ''' passiert das ohne jeden Render. Der Schluessel aus Geometrie und Szenenversion aendert
+        ''' sich dabei nicht, der Schnappschuss zeigte also weiter auf die weggeworfenen Instanzen:
+        ''' der Blit zeichnete das Objekt an seiner ALTEN Stelle, waehrend Auswahlrahmen und
+        ''' Treffertest der neuen folgten (Nutzerbefund 2026-08-25: "der Selektionsrahmen verschiebt
+        ''' sich, das Objekt bleibt stehen" - ebenso beim Drehen und Skalieren).</summary>
+        Private Sub InvalidateCompositorBlitSnapshot()
+            _compositorBlitSnapshot = Nothing
+            _compositorBlitGeometryKey = ""
+        End Sub
+
         Private Function GetCompositorBlitAdjustments() As ImageAdjustments
             Dim crop = EffectiveCrop(fuerAnzeige:=True)
             Dim key = String.Join("|", GetBaseWidth(), GetBaseHeight(), _rotationDegrees, _flipH, _flipV,

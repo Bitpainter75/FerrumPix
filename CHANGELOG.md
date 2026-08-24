@@ -1,21 +1,26 @@
-## FerrumPix 0.9.31
+## FerrumPix 0.9.32
 
 ### What's new
 
-- **Photoshop files in CMYK open with their layers.** Until now they came in flat, as one finished picture, and only RGB and greyscale files kept their layers.
+- **Put the time right when the camera clock was wrong.** *Set capture date* under Metadata gives a picture a date and time, or shifts the time it already has by days, hours, minutes and seconds - forwards or back, over a whole selection at once. A raw file is never touched: its time goes in the sidecar next to it, and FerrumPix reads it back from there. The file's own date follows the capture time, so both say the same thing.
+
+- **See where the picture has nothing left.** A new switch under Light marks blown highlights in red and blocked shadows in blue, on the picture itself and at full zoom. It only shows where all three colour channels are against the stop, so a bright red flower does not set it off.
+
+- **Put the image analysis where it helps.** Histogram, waveform and RGB parade can now appear in the information sidebar, above the editor's adjustment controls, or in both places. The two locations can show different views at the same time, so you can keep the tonal distribution in sight while checking individual colour channels beside the controls. Click the compact chart to open its full-size view.
 
 ### Fixes
 
-- **Long retouch strokes stay responsive.** Smudging, healing and cloning got slower the longer you drew. A stroke is now as quick at the end as at the start.
+- **Objects follow the frame again in the adjustment tools.** With Adjust, Colour, Details, Effects or Filters selected, moving, turning or resizing an object shifted only its selection frame while the object stayed where it was. It moves with the frame again.
 
-- **Pictures with local corrections redraw much faster.** A correction layer used to rebuild its mask and run over the whole picture on every redraw, however small the brushed or graduated area was. The result looks exactly as it did before.
+- **No more quitting when a folder is opened.** On systems whose font setup does not name a usable standard font, FerrumPix closed itself without a message the moment a folder with pictures was opened. It now uses a font that is actually installed, and if the system has none at all, only the labels on the timeline and the rulers stay empty.
 
-- **Thumbnails on a spinning hard disk no longer fight each other.** Too many pictures were read at once, and on a drive with a moving head that makes it slower rather than faster. FerrumPix now asks what kind of drive your pictures live on. Pictures on a server are unaffected.
+- **Pictures with their own colour profile open a little quicker.** Bringing them to sRGB no longer makes a second copy of the whole picture on the way, which also keeps memory use down with large files.
 
-- **Saving a large JPEG is quicker.** Getting at the camera data, the keywords and the copyright notice no longer means reading the whole file first.
+- **Changing an analysis view is quicker.** FerrumPix reuses the already calculated histogram, waveform or RGB parade while the picture has not changed, instead of decoding the image again for every switch.
 
-- **A Photoshop file you have already edited opens with its layers again.** The sidecar file next to it used to push the layers aside, and a rating alone was enough to create one. The layers now come from the file and your edits lie on top. Browsing to such a file shows the same document as opening it does.
+- **Raw files need less memory while they open.** Developing a raw picture no longer builds the whole image a second time before handing it over, so opening a big raw leaves more room for everything else.
 
-- **Objects can be made much smaller.** Shapes, images and arrows were held to a size that made a small mark or a logo impossible on a large picture. The outline can now also be drawn twice as thick as before.
+- **Removing an object gets going quicker.** Working out which part of the picture has to be filled no longer walks the whole photo point by point, so there is less waiting before the filling itself starts.
 
-- **Smaller things.** The slideshow and adjust buttons in the viewer have a frame, so it is clear where they can be clicked, and browsing a folder whose pictures carry a copyright notice is quicker.
+- **Flatpak: pictures on a network share show up.** Folders that your file manager mounts from a Samba, NFS or SFTP share used to look empty in the Flatpak version. They can now be opened like any other folder.
+
