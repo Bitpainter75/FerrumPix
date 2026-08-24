@@ -155,9 +155,9 @@ Namespace Controls
             Dim h = Bounds.Height
             If w <= 0 OrElse h <= 0 Then Return
 
-            Dim typeface = New Typeface(FontFamily.Default)
-
             ' Grob-Marker (Jahre/Buchstaben) mit Mindestabstand, damit dichte Jahre nicht überlappen.
+            ' Die Beschriftung geht über UiTypeface: liefert das System keine brauchbare Schrift,
+            ' bleiben die Striche stehen und nur der Text fehlt (siehe UiTypeface).
             Dim lastLabelY As Double = Double.MinValue
             Dim tickPen = New Pen(LabelBrush, 1.0)
             For Each segment In _segments
@@ -165,9 +165,10 @@ Namespace Controls
                 Dim y = segment.StartIndex / CDbl(_totalCount) * h
                 If y - lastLabelY < 16.0 Then Continue For
                 lastLabelY = y
-                Dim label = New FormattedText(segment.Label, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
-                                              typeface, 10.0, LabelBrush)
-                context.DrawText(label, New Point(w - label.Width - 12.0, Math.Min(h - label.Height, y)))
+                Dim label = UiTypeface.TryFormat(Me, segment.Label, CultureInfo.CurrentUICulture, 10.0, LabelBrush)
+                If label IsNot Nothing Then
+                    context.DrawText(label, New Point(w - label.Width - 12.0, Math.Min(h - label.Height, y)))
+                End If
                 context.DrawLine(tickPen, New Point(w - 8.0, y), New Point(w - 3.0, y))
             Next
 
@@ -186,9 +187,9 @@ Namespace Controls
                         Exit For
                     End If
                 Next
-                If Not String.IsNullOrEmpty(detail) Then
-                    Dim text = New FormattedText(detail, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
-                                                 typeface, 12.0, BubbleForeground)
+                Dim text = UiTypeface.TryFormat(Me, detail, CultureInfo.CurrentUICulture, 12.0, BubbleForeground)
+                ' Ohne Text keine Blase: sie hat ohne den Feineintrag keine Aussage.
+                If text IsNot Nothing Then
                     Dim padX = 10.0
                     Dim padY = 5.0
                     Dim bubbleW = text.Width + padX * 2

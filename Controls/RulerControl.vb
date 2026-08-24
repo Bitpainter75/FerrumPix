@@ -188,7 +188,6 @@ Namespace Controls
             If minorStep * scale < 4.0 Then minorStep = majorStep
 
             Dim tickPen = New Pen(TickBrush, 1)
-            Dim typeface = New Typeface(FontFamily.Default)
 
             ' Ganzzahliger Schrittzähler statt aufaddiertem Double: sonst driftet der Wert über die
             ' vielen kleinen Schritte hinweg und die Beschriftungen landen neben ihren Strichen.
@@ -214,9 +213,12 @@ Namespace Controls
 
                 If Not isMajor Then Continue For
 
-                Dim label = New FormattedText(CLng(Math.Round(value)).ToString(CultureInfo.CurrentCulture),
-                                              CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                                              typeface, LabelFontSize, LabelBrush)
+                ' Beschriftung über UiTypeface: liefert das System keine brauchbare Schrift, bleibt
+                ' die Skala mit ihren Strichen stehen und nur die Zahlen fehlen (siehe UiTypeface).
+                Dim label = UiTypeface.TryFormat(Me, CLng(Math.Round(value)).ToString(CultureInfo.CurrentCulture),
+                                                 CultureInfo.CurrentCulture, LabelFontSize, LabelBrush)
+                If label Is Nothing Then Continue For
+
                 If horizontal Then
                     context.DrawText(label, New Point(pos + 3, 1))
                 Else
