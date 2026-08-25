@@ -1,3 +1,9 @@
+## Unreleased
+
+### Fixes
+
+- **Windows: FerrumPix is in the Start menu after installing.** If the installation asked for an administrator password, the entry was put into that administrator's Start menu and was missing from yours. The setup now creates it for everyone on the computer, and it tidies up a stray entry left behind by an earlier installation.
+
 ## FerrumPix 0.9.32
 
 ### What's new
