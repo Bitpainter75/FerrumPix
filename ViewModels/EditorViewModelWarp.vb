@@ -1901,7 +1901,20 @@ Namespace ViewModels
         Public ReadOnly Property HasOpenWarpTransaction As Boolean
             Get
                 If Not WarpsTheImage Then Return False
-                Return HasWarpGridChanges OrElse HasLineChanges OrElse HasEnvelopeChanges
+                ' Enter und Esc dürfen nur den Zustand bedienen, den der Nutzer gerade sehen
+                ' und beurteilen kann. Gitter, Linien und Hülle bleiben beim Umschalten bewusst
+                ' stehen, damit man zu ihnen zurückkehren kann; sie dürfen deshalb nicht als
+                ' unsichtbarer Nebenbestandteil einer Transaktion gelten.
+                Select Case _warpMode
+                    Case "Gitter"
+                        Return HasWarpGridChanges
+                    Case "Linien"
+                        Return HasLineChanges
+                    Case "Verformen"
+                        Return HasEnvelopeChanges
+                    Case Else
+                        Return False
+                End Select
             End Get
         End Property
 
@@ -1912,18 +1925,28 @@ Namespace ViewModels
         ''' hat, sucht sie zuerst.</summary>
         Public Sub ApplyOpenWarpTransaction()
             If Not HasOpenWarpTransaction Then Return
-            If HasWarpGridChanges Then ApplyWarpGrid()
-            If HasLineChanges Then ApplyLineWarp()
-            If HasEnvelopeChanges Then ApplyEnvelopeWarp()
+            Select Case _warpMode
+                Case "Gitter"
+                    ApplyWarpGrid()
+                Case "Linien"
+                    ApplyLineWarp()
+                Case "Verformen"
+                    ApplyEnvelopeWarp()
+            End Select
         End Sub
 
         ''' <summary>Die offene Verzerrung verwerfen - der Escape-Taste. Zurück auf gerade, nichts
         ''' wird übernommen.</summary>
         Public Sub DiscardOpenWarpTransaction()
             If Not HasOpenWarpTransaction Then Return
-            If HasWarpGridChanges Then ResetWarpGrid()
-            If HasLineChanges Then ResetLines()
-            If HasEnvelopeChanges Then ResetEnvelope()
+            Select Case _warpMode
+                Case "Gitter"
+                    ResetWarpGrid()
+                Case "Linien"
+                    ResetLines()
+                Case "Verformen"
+                    ResetEnvelope()
+            End Select
             StatusText = LocalizationService.T("Verzerrung verworfen")
         End Sub
 

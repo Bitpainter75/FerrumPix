@@ -198,12 +198,18 @@ Namespace Services
             ' der Ebenen-Sektion stehen VOR ihrem Inhalt und sind erst bekannt, wenn er gebaut ist.
             Dim tempPath = filePath & ".tmp"
             Try
+                ' Der Ebenenblock steht VOR dem Gesamtbild und braucht trotzdem schon dessen
+                ' Alpha-Markierung. Die Kanaele werden deshalb hier einmal zerlegt und beim
+                ' Schreiben des Gesamtbilds weiterverwendet, statt das Bild zweimal umzurechnen.
+                ' Der Preis dafuer: sie stehen waehrend des ganzen Ebenenblocks im Speicher,
+                ' also vier Byte je Bildpunkt zusaetzlich zu dessen eigenem Puffer.
+                Dim compositePlanes = ExtractPlanes(composite)
                 Using fs = File.Create(tempPath)
                     WriteHeader(fs, composite.Width, composite.Height)
                     WriteU32(fs, 0)  ' Farbmodus-Daten: keine
                     WriteImageResources(fs, recipe)
-                    WriteLayerSection(fs, usable)
-                    WriteMergedImage(fs, composite)
+                    WriteLayerSection(fs, usable, HasTransparentPixels(compositePlanes))
+                    WriteMergedImage(fs, composite.Width, composite.Height, compositePlanes)
                 End Using
                 File.Move(tempPath, filePath, overwrite:=True)
                 Return True
@@ -258,7 +264,8 @@ Namespace Services
         ''' <summary>Baut das Ebenenverzeichnis samt Kanaldaten und schreibt es mit den beiden
         ''' vorangestellten Laengen. Ohne Ebenen bleibt die Sektion leer - eine Laenge 0 ist gueltig
         ''' und heisst "nur ein Gesamtbild".</summary>
-        Private Shared Sub WriteLayerSection(fs As Stream, layers As IList(Of PsdLayerInput))
+        Private Shared Sub WriteLayerSection(fs As Stream, layers As IList(Of PsdLayerInput),
+                                             mergedImageHasTransparency As Boolean)
             If layers.Count = 0 Then
                 WriteU32(fs, 0)
                 Return
@@ -273,7 +280,12 @@ Namespace Services
             Next
 
             Using info As New MemoryStream()
-                WriteU16(info, layers.Count)
+                ' Das Vorzeichen gehoert NICHT in den Dateikopf: dort ist die Kanalzahl immer
+                ' positiv. Im Ebenen-Info-Block bedeutet eine negative Ebenenzahl dagegen, dass
+                ' der erste Alpha-Kanal des Gesamtbilds dessen Transparenz enthaelt (PSD-Spez.).
+                ' Ohne die Kennzeichnung deuten Programme, die nur das Composite lesen, ihn als
+                ' gewoehnlichen Zusatzkanal statt als Transparenz.
+                WriteU16(info, If(mergedImageHasTransparency, -layers.Count, layers.Count))
 
                 For i = 0 To layers.Count - 1
                     Dim layer = layers(i)
@@ -470,10 +482,8 @@ Namespace Services
         ''' <summary>Schreibt das fertige Bild planar je Kanal. Anders als bei den Ebenen stehen hier
         ''' die Zeilenlaengen ALLER Kanaele gesammelt vor den Daten - genau so, wie der eigene Leser
         ''' sie erwartet.</summary>
-        Private Shared Sub WriteMergedImage(fs As Stream, composite As SKBitmap)
-            Dim width = composite.Width
-            Dim height = composite.Height
-            Dim planes = ExtractPlanes(composite)
+        Private Shared Sub WriteMergedImage(fs As Stream, width As Integer, height As Integer,
+                                            planes As Byte()())
 
             WriteU16(fs, 1)  ' Kompression: RLE/PackBits
 
@@ -537,6 +547,17 @@ Namespace Services
             Next
 
             Return New Byte()() {r, g, b, a}
+        End Function
+
+        ''' <summary>Ob das Gesamtbild mindestens einen durchsichtigen Bildpunkt traegt. Der
+        ''' PSD-Ebenenblock braucht diese Information fuer das Vorzeichen der Ebenenzahl; die
+        ''' Kanalzahl im Dateikopf bleibt davon unberuehrt.</summary>
+        Private Shared Function HasTransparentPixels(planes As Byte()()) As Boolean
+            If planes Is Nothing OrElse planes.Length < 4 OrElse planes(3) Is Nothing Then Return False
+            For Each alpha In planes(3)
+                If alpha <> 255 Then Return True
+            Next
+            Return False
         End Function
 
         ''' <summary>Packt eine Kanal-Ebene zeilenweise und stellt die Kompressionsmarke voran.</summary>

@@ -41,6 +41,21 @@ on:
         description: "Nur bauen, nichts veroeffentlichen"
         type: boolean
         default: true
+      pakete:
+        description: "Welche Pakete? 'alle' oder genau eines - der Rest wird dann nicht gebaut"
+        type: choice
+        default: alle
+        options:
+          - alle
+          - aur
+          - zip
+          - appimage
+          - deb
+          - rpm
+          - winzip
+          - winsetup
+          - maczip
+          - armzip
   push:
     tags: ['[0-9]+.[0-9]+.[0-9]+*']
 
@@ -58,8 +73,16 @@ permissions:
 # Gebaut wird im Trockenlauf trotzdem vollstaendig - das ist der Teil, der schiefgehen kann.
 # Ein Tag-Push veroeffentlicht dagegen immer echt: dort gibt es keine Eingabe, und der Ausdruck
 # faellt auf den leeren Wert zurueck.
+#
+# EINZELNE PAKETE: der Handstart bietet neben "alle" jedes Paket fuer sich an. Gebaut wird dann
+# nur dieses eine, und hochgeladen wird es mit --partial - das Skript ersetzt damit allein die
+# Datei, die es mitbringt, und weigert sich, das Latest-Release neu anzulegen. Ohne diese Marke
+# stuende nach einem Einzellauf bei einer neuen Version nur noch dieses eine Paket darin.
+#
+# Ein Tag-Push hat keine Eingaben; der Ausdruck faellt dort auf "alle" zurueck.
 env:
   DRY: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+  PAKETE: ${{ (github.event_name == 'workflow_dispatch' && inputs.pakete) || 'alle' }}
 
 jobs:
 
@@ -73,6 +96,9 @@ jobs:
     name: AUR zuerst
     runs-on: ubuntu-latest
     container: archlinux:base-devel
+    # In einem job-level "if" gibt es den env-Kontext nicht, deshalb steht der Ausdruck hier
+    # ausgeschrieben und nicht als $PAKETE.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.pakete == 'alle' || inputs.pakete == 'aur' }}
 
     steps:
       - name: Werkzeuge
@@ -163,6 +189,13 @@ jobs:
     name: Alles Uebrige
     runs-on: ubuntu-latest
     needs: aur
+    # always() ist noetig, weil der AUR-Job bei einer Einzelauswahl uebersprungen wird und ein
+    # uebersprungenes needs sonst auch diesen Job ueberspringt. Ein FEHLGESCHLAGENER AUR-Job
+    # haelt den Lauf dagegen weiterhin an - das ist der Sinn der Reihenfolge.
+    # Wurde nur die AUR gewaehlt, gibt es hier nichts zu tun.
+    if: ${{ always()
+            && needs.aur.result != 'failure' && needs.aur.result != 'cancelled'
+            && (github.event_name != 'workflow_dispatch' || inputs.pakete != 'aur') }}
 
     steps:
       - uses: actions/checkout@v7
@@ -247,47 +280,64 @@ jobs:
       # Bricht ein Schritt ab, endet der Job VOR dem Hochladen - ein halber Satz Pakete darf nie
       # ins Release, sonst steht Neues neben Altem und niemand sieht es.
       - name: Paket - Linux-ZIP (mit AUR-ZIP)
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'zip' }}
         run: packaging/package.sh zip
         env:
           FERRUMPIX_BUILD_BOX: ""     # der Runner ist bereits Ubuntu
 
       - name: Paket - AppImage
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'appimage' }}
         run: packaging/package.sh appimage
         env:
           FERRUMPIX_BUILD_BOX: ""
 
       - name: Paket - deb
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'deb' }}
         run: packaging/package.sh deb
         env:
           FERRUMPIX_BUILD_BOX: ""
 
       - name: Paket - rpm
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'rpm' }}
         run: packaging/package.sh rpm
         env:
           FERRUMPIX_BUILD_BOX: ""
 
       - name: Paket - Windows-ZIP
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'winzip' }}
         run: packaging/package.sh winzip
         env:
           FERRUMPIX_BUILD_BOX: ""
 
       - name: Paket - Windows-Setup
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'winsetup' }}
         run: packaging/package.sh winsetup
         env:
           FERRUMPIX_BUILD_BOX: ""
 
       - name: Paket - macOS-ZIPs (x64 + arm64)
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'maczip' }}
         run: packaging/package.sh maczip
         env:
           FERRUMPIX_BUILD_BOX: ""
 
       - name: Paket - ARM64-ZIPs (linux + win)
+        if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'armzip' }}
         run: packaging/package.sh armzip
         env:
           FERRUMPIX_BUILD_BOX: ""
 
+      # --partial bei jeder Einzelauswahl. Das Skript ersetzt dann allein die Datei, die dieser
+      # Lauf gebaut hat, und legt das Latest-Release unter keinen Umstaenden neu an - sonst
+      # stuende danach nur dieses eine Paket darin. Es bricht ab, wenn ein Neuanlegen faellig
+      # waere, und sagt, dass zuerst ein vollstaendiger Lauf gehoert.
       - name: Ins Latest-Release
-        run: packaging/publish-github-release.sh --only-latest $DRY
+        run: |
+          if [ "$PAKETE" = "alle" ]; then
+            packaging/publish-github-release.sh --only-latest $DRY
+          else
+            packaging/publish-github-release.sh --only-latest --partial $DRY
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

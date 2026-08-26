@@ -346,8 +346,11 @@ Namespace Services
                 Dim id = ReadU16(fs)
                 If id > 32767 Then id -= 65536
                 Dim len = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
-                If len < 0 Then Return Nothing
-                rec.Channels.Add(New Integer() {id, CInt(Math.Min(len, Integer.MaxValue))})
+                ' Die nachfolgende Dekodierung und Positionsrechnung arbeiten mit Integer-Laengen.
+                ' Ein PSB-Kanal ueber 2 GB darf deshalb nicht still geklemmt werden: dann zeigte
+                ' blockEnd in den falschen Datenblock und alle folgenden Ebenen wurden fehlgelesen.
+                If len < 0 OrElse len > Integer.MaxValue Then Return Nothing
+                rec.Channels.Add(New Integer() {id, CInt(len)})
             Next
 
             Dim sig(3) As Byte
