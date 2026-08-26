@@ -491,21 +491,39 @@
                                 <TextBlock Text="Vergrößert oder verkleinert die Schrift der Oberfläche in ganzen Stufen. Wirkt sofort."
                                            Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                <icons:RoundSlider Width="150"
-                                                   Minimum="{Binding FontSizeOffsetMinimum}"
-                                                   Maximum="{Binding FontSizeOffsetMaximum}"
-                                                   DefaultValue="0"
-                                                   DragIncrement="1"
-                                                   WheelIncrement="1"
-                                                   Value="{Binding FontSizeOffset}"/>
-                                <TextBlock Text="{Binding FontSizeOffsetText}"
-                                           Foreground="{DynamicResource FP.Text.Secondary}"
-                                           FontSize="{DynamicResource FP.Font.Body}"
-                                           Width="56"
-                                           TextAlignment="Right"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <!-- Acht Stufen, acht Schaltflächen. Ein Regler war hier das falsche
+                                 Werkzeug: er rechnete eine Stufe je Bildpunkt und maß den Zug
+                                 relativ zu sich selbst, wanderte also unter dem Zeiger weg,
+                                 sobald die Schrift wuchs. Jede Fläche zeigt "aA" in der Größe,
+                                 die sie einstellt - man sieht die Wahl, statt eine Zahl zu
+                                 deuten. Die feste Höhe hält die Zeile ruhig, damit nicht die
+                                 ganze Reihe springt, wenn die größte Stufe gewählt wird. -->
+                            <ItemsControl Grid.Column="1"
+                                          ItemsSource="{Binding FontSizeOffsetOptions}"
+                                          VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="2" Height="30"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- Der Text steht als Content am Knopf, NICHT als eigener
+                                             TextBlock darin: der globale TextBlock-Stil setzt eine
+                                             Vordergrundfarbe, und ein Stil-Setter schlaegt den vom
+                                             Knopf geerbten Wert - die aktive Stufe bekam so nie den
+                                             Akzent. Denselben Weg gehen die uebrigen Auswahlknoepfe
+                                             im Theme. -->
+                                        <Button Classes="font-step no-translate"
+                                                Classes.active="{Binding IsActive}"
+                                                FontSize="{Binding PreviewFontSize}"
+                                                Content="aA"
+                                                Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).SetFontSizeOffsetCommand}"
+                                                CommandParameter="{Binding Offset}"
+                                                ToolTip.Tip="{Binding Label}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </Grid>
 
                         <!-- Anwendungsskalierung wirkt nur auf Avalonias X11-Backend, siehe

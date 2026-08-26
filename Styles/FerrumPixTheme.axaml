@@ -438,6 +438,34 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Background" Value="Transparent"/>
     </Style>
+    <!-- Die acht Stufen des Schriftgrads. OHNE RAHMEN, auch die aktive: acht Kaestchen
+         nebeneinander waeren ein Gitter, und die Schaltflaechen tragen ohnehin verschieden
+         grosse Schrift - der Groessenunterschied ist die eigentliche Auskunft, ein Rahmen
+         drumherum lenkt davon ab. Gewaehlt ist, was den Akzent traegt. -->
+    <Style Selector="Button.font-step">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+        <Setter Property="Padding" Value="7,2"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Bottom"/>
+    </Style>
+    <Style Selector="Button.font-step:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
+    <Style Selector="Button.font-step.active">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <!-- Die Farbe muss AUCH an den ContentPresenter: er zeichnet den Text des Knopfes, und ohne
+         diese Zeile bleibt er in der Vordergrundfarbe des Themes stehen. Dieselbe Stelle, an der
+         auch die Filterknoepfe ihren Akzent bekommen. -->
+    <Style Selector="Button.font-step.active /template/ ContentPresenter">
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
     <Style Selector="Button.ghost.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>

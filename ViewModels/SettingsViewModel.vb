@@ -739,19 +739,89 @@ Namespace ViewModels
                 value = AppSettingsService.NormalizeFontSizeOffset(value)
                 If _fontSizeOffset = value Then Return
                 Me.RaiseAndSetIfChanged(_fontSizeOffset, value)
-                Me.RaisePropertyChanged(NameOf(FontSizeOffsetText))
+                RefreshFontSizeOffsetOptions()
                 FontScaleService.Apply(value)
                 SaveAppearanceSettings()
             End Set
         End Property
 
-        Public ReadOnly Property FontSizeOffsetText As String
+        ''' <summary>Eine der acht Stufen des Schriftgrads, als eigene Schaltfläche.
+        '''
+        ''' WARUM SCHALTFLÄCHEN UND KEIN REGLER (Nutzerbefund vom 2026-08-26, mit Video): Der Regler
+        ''' hatte zwei Fehler auf einmal. Er rechnete eine Stufe je Bildpunkt Mausweg, alle acht
+        ''' Stufen lagen also auf acht Bildpunkten. Und er misst den Zug RELATIV ZU SICH SELBST -
+        ''' während die Schrift wächst, verschiebt er sich im Layout, der gemessene Abstand ändert
+        ''' sich ohne Mausbewegung, und der Wert läuft davon. Bei acht Werten ist ein Regler ohnehin
+        ''' das falsche Werkzeug: sein einziger Vorteil wäre feines Dosieren, und das gibt es hier
+        ''' nicht zu tun.
+        '''
+        ''' Jede Schaltfläche trägt ihre eigene Schriftgröße, damit man SIEHT, was man wählt.</summary>
+        Public NotInheritable Class FontSizeOffsetOption
+            Inherits ReactiveObject
+
+            Private _isActive As Boolean
+
+            Public Sub New(offset As Integer, previewFontSize As Double, label As String, isActive As Boolean)
+                Me.Offset = offset
+                Me.PreviewFontSize = previewFontSize
+                Me.Label = label
+                _isActive = isActive
+            End Sub
+
+            Public ReadOnly Property Offset As Integer
+            ''' Die Größe, die diese Stufe ergibt - die Schaltfläche zeigt ihren Text darin.
+            Public ReadOnly Property PreviewFontSize As Double
+            ''' "Standard", "+1", "-1" - steht im Tooltip, nicht auf der Fläche.
+            Public ReadOnly Property Label As String
+
+            Public Property IsActive As Boolean
+                Get
+                    Return _isActive
+                End Get
+                Set(value As Boolean)
+                    Me.RaiseAndSetIfChanged(_isActive, value)
+                End Set
+            End Property
+        End Class
+
+        Private _fontSizeOffsetOptions As IReadOnlyList(Of FontSizeOffsetOption)
+
+        Public ReadOnly Property FontSizeOffsetOptions As IReadOnlyList(Of FontSizeOffsetOption)
             Get
-                If _fontSizeOffset = 0 Then Return LocalizationService.T("Standard")
-                If _fontSizeOffset > 0 Then Return $"+{_fontSizeOffset}"
-                Return _fontSizeOffset.ToString(CultureInfo.InvariantCulture)
+                If _fontSizeOffsetOptions Is Nothing Then
+                    ' Die Ausgangsgröße kommt aus dem Theme, nicht aus einer zweiten Zahl hier.
+                    ' Liefert es nichts - etwa in einem Prüflauf ohne geladene Ressourcen -, dient
+                    ' der Textgrad als Ersatz, damit die Liste trotzdem entsteht.
+                    Dim baseSize = FontScaleService.BaseSize("FP.Font.Body")
+                    If baseSize <= 0 Then baseSize = 12
+                    Dim liste As New List(Of FontSizeOffsetOption)()
+                    For offset = CInt(FontSizeOffsetMinimum) To CInt(FontSizeOffsetMaximum)
+                        liste.Add(New FontSizeOffsetOption(offset, baseSize + offset,
+                                                           FontSizeOffsetLabel(offset),
+                                                           offset = _fontSizeOffset))
+                    Next
+                    _fontSizeOffsetOptions = liste
+                End If
+                Return _fontSizeOffsetOptions
             End Get
         End Property
+
+        Private Shared Function FontSizeOffsetLabel(offset As Integer) As String
+            If offset = 0 Then Return LocalizationService.T("Standard")
+            If offset > 0 Then Return $"+{offset}"
+            Return offset.ToString(CultureInfo.InvariantCulture)
+        End Function
+
+        ''' <summary>Hebt die Schaltfläche der gewählten Stufe hervor. Ohne das bliebe der Akzent
+        ''' auf der zuvor gewählten stehen - die Liste entsteht nur einmal.</summary>
+        Private Sub RefreshFontSizeOffsetOptions()
+            If _fontSizeOffsetOptions Is Nothing Then Return
+            ' NICHT "option" als Name: das ist in VB ein Schluesselwort (Option Compare/Strict),
+            ' und der Compiler bricht mitten in der Schleife ab.
+            For Each entry In _fontSizeOffsetOptions
+                entry.IsActive = (entry.Offset = _fontSizeOffset)
+            Next
+        End Sub
 
         Public ReadOnly Property FontSizeOffsetMinimum As Double
             Get
@@ -2231,6 +2301,7 @@ Namespace ViewModels
         Public ReadOnly Property SetThemeModeCommand As ICommand
         Public ReadOnly Property SetAccentColorCommand As ICommand
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
+        Public ReadOnly Property SetFontSizeOffsetCommand As ICommand
         Public ReadOnly Property SetGalleryOpenTargetCommand As ICommand
         Public ReadOnly Property SetStartupNoImageModeCommand As ICommand
         Public ReadOnly Property SetGalleryViewModeCommand As ICommand
@@ -2694,6 +2765,23 @@ Namespace ViewModels
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
             SetAccentColorCommand = ReactiveCommand.Create(Of String)(Sub(c) AccentColor = c)
             SetStartupImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupImageMode = m)
+            ' Der Parameter kommt als Zeichenkette aus dem AXAML, wie bei den uebrigen
+            ' Auswahl-Befehlen auch; eine unlesbare Angabe laesst den Stand, wie er ist.
+            ' Of Object, NICHT Of String: gebunden wird die Zahl der Stufe, und Avalonia reicht
+            ' sie weiter, wie sie ist. Ein Befehl Of String bekaeme einen Integer und liefe in
+            ' eine Umwandlungsausnahme - der Knopf taete dann einfach nichts.
+            SetFontSizeOffsetCommand = ReactiveCommand.Create(Of Object)(
+                Sub(wert)
+                    If TypeOf wert Is Integer Then
+                        FontSizeOffset = CInt(wert)
+                        Return
+                    End If
+                    Dim offset As Integer
+                    If Integer.TryParse(Convert.ToString(wert, CultureInfo.InvariantCulture),
+                                        NumberStyles.Integer, CultureInfo.InvariantCulture, offset) Then
+                        FontSizeOffset = offset
+                    End If
+                End Sub)
             SetGalleryOpenTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryOpenTarget = m)
             SetStartupNoImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupNoImageMode = m)
             SetGalleryViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryViewMode = m)
@@ -3665,6 +3753,10 @@ Namespace ViewModels
             ' Die Zeilen tragen ihre Texte selbst (Titel, Zahlen, "Ordner fehlt") und lesen sie beim
             ' Bauen - nach einem Sprachwechsel muessen sie deshalb neu entstehen.
             RebuildFolderRows()
+            ' Dasselbe fuer die Stufen des Schriftgrads: ihr Tooltip traegt "Standard" als
+            ' uebersetztes Wort, und die Liste entsteht nur einmal.
+            _fontSizeOffsetOptions = Nothing
+            Me.RaisePropertyChanged(NameOf(FontSizeOffsetOptions))
         End Sub
 
         Private Shared Sub ApplyTheme(themeMode As String, accentColor As String)

@@ -54,6 +54,22 @@ Namespace Services
             Next
         End Sub
 
+        ''' <summary>Die im Theme deklarierte Ausgangsgröße einer Schriftgrößen-Ressource, also der
+        ''' Wert OHNE jeden Versatz. 0, wenn die Ressource nicht bekannt ist.
+        '''
+        ''' Wozu: Die Einstellungen zeigen die acht Stufen als Schaltflächen, jede mit ihrer eigenen
+        ''' Schriftgröße - man soll sehen, was man wählt, statt eine Zahl zu deuten. Dafür braucht
+        ''' die Ansicht die Ausgangsgröße, und sie soll sie nicht ein zweites Mal im Quelltext
+        ''' stehen haben: das AXAML bleibt die einzige Stelle, an der die Zahlen stehen.</summary>
+        Public Shared Function BaseSize(key As String) As Double
+            Dim app = Application.Current
+            If app Is Nothing OrElse String.IsNullOrEmpty(key) Then Return 0
+            EnsureBaseSizes(app)
+            Dim value As Double
+            If _baseSizes IsNot Nothing AndAlso _baseSizes.TryGetValue(key, value) Then Return value
+            Return 0
+        End Function
+
         Private Shared Sub EnsureBaseSizes(app As Application)
             If _baseSizes IsNot Nothing Then Return
 
