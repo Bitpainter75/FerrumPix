@@ -67,6 +67,13 @@ Namespace Services
 
     Public Class ExifData
         Public Property FileName As String = ""
+        ''' <summary>Der ORDNER, in dem die Datei liegt - nicht der volle Pfad. Der Dateiname
+        ''' steht in der Info-Leiste direkt darueber, beides zusammen waere er zweimal.
+        '''
+        ''' Leer, wo es keinen Dateipfad gibt: ein Immich-Asset traegt nur einen Pseudo-Pfad,
+        ''' der auf keinem Datentraeger existiert, und den als Ordner auszugeben waere eine
+        ''' Auskunft, die niemand nachpruefen kann. Die Zeile blendet sich dann aus.</summary>
+        Public Property FolderPath As String = ""
         Public Property FileType As String = ""
         Public Property FileSize As String = ""
         ''' <summary>Erstell-/Änderungsdatum der DATEI (nicht aus EXIF), im selben Rohformat wie
@@ -259,6 +266,7 @@ Namespace Services
         Private Shared Function CloneExifData(source As ExifData) As ExifData
             Return New ExifData With {
                 .FileName = source.FileName,
+                .FolderPath = source.FolderPath,
                 .FileType = source.FileType,
                 .FileSize = source.FileSize,
                 .FileCreated = source.FileCreated,
@@ -293,6 +301,7 @@ Namespace Services
             Dim data = New ExifData()
 
             data.FileName = System.IO.Path.GetFileName(imagePath)
+            data.FolderPath = If(System.IO.Path.GetDirectoryName(imagePath), "")
             data.FileType = System.IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
             data.FileSize = FormatFileSize(info.Length)
             data.FileCreated = FormatFileDate(info.CreationTime)

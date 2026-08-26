@@ -277,6 +277,14 @@
     <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
     </Style>
+    <!-- IN EINEM AUFKLAPPMENUE BRAUCHT DERSELBE KNOPF EINE ANDERE FARBE. Der FlyoutPresenter ist
+         selbst FP.Bg.Elevated, die Regel darueber malt also genau den Untergrund - die Zeile unter
+         dem Zeiger sah aus wie jede andere. Gemeldet wurde es fuer das Sortiermenue, es galt aber
+         fuer jedes Menue aus Ghost-Knoepfen. FP.Bg.Hover ist dieselbe Farbe, die auch die
+         Kontextmenues nehmen, und sie hebt sich in allen vier Themen ab. -->
+    <Style Selector="FlyoutPresenter Button.ghost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
+    </Style>
     <Style Selector="Button.insert-option-btn">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>

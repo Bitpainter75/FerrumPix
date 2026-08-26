@@ -108,7 +108,20 @@
                                  Eine Ueberschrift "Bild" stand hier frueher darueber; sie sagte
                                  nichts, was der Dateiname nicht schon zeigt, und kostete eine
                                  Zeile Hoehe. -->
-                            <TextBlock Text="{Binding ExifInfo.FileName}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+<!-- Name und Ordner stehen ENG beieinander: sie gehoeren zusammen und bilden
+                                 zusammen den Pfad. Der Abstand nach unten sitzt deshalb am Block,
+                                 nicht zwischen den beiden Zeilen - sonst waeren es drei Abstaende
+                                 hintereinander und die Angaben rutschten weit nach unten. -->
+                            <StackPanel Spacing="2" Margin="0,0,0,10">
+                                <TextBlock Text="{Binding ExifInfo.FileName}" TextWrapping="Wrap"/>
+                                <!-- Der Ordner. Fehlt er - bei einem Bild vom Server gibt es keinen
+                                     Dateipfad -, faellt die Zeile weg. -->
+                                <TextBlock Text="{Binding ExifInfo.FolderPath}"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           IsVisible="{Binding ExifInfo.FolderPath, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+                            </StackPanel>
                             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
                                 <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">

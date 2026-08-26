@@ -206,8 +206,16 @@ Namespace ViewModels
         Private Shared Function BuildFromItem(item As ImageItem) As ExifData
             Dim name = If(item.ImmichOriginalFileName, "")
             If String.IsNullOrEmpty(name) Then name = If(item.FileName, "")
+            ' Der Ordner NUR bei einem echten Dateipfad. Ein Immich-Asset traegt einen
+            ' Pseudo-Pfad (immich://...), der auf keinem Datentraeger liegt - die Zeile bleibt
+            ' dort leer und blendet sich aus.
+            Dim ordner = ""
+            If Not item.IsRemoteAsset AndAlso Not String.IsNullOrEmpty(item.FilePath) Then
+                ordner = If(IO.Path.GetDirectoryName(item.FilePath), "")
+            End If
             Dim data As New ExifData With {
                 .FileName = name,
+                .FolderPath = ordner,
                 .FileType = IO.Path.GetExtension(name).TrimStart("."c).ToUpperInvariant()
             }
             If item.ImageWidth > 0 AndAlso item.ImageHeight > 0 Then
@@ -703,6 +711,10 @@ Namespace ViewModels
 
                          Dim size = ImageProcessor.GetOrientedImageSize(path)
                          Dim info = ImageInfoService.BuildImageInfo(path, size.Width, size.Height)
+                         ' Bei einem Bild vom Server steht hier der TEMP-Pfad der heruntergeladenen
+                         ' Kopie - eine Auskunft ueber einen Ordner, den es morgen nicht mehr gibt
+                         ' und der mit dem Bild nichts zu tun hat. Lieber keine Zeile als diese.
+                         If item IsNot Nothing AndAlso item.IsRemoteAsset Then info.FolderPath = ""
                          Dispatcher.UIThread.Post(Sub()
                                                       If token <> _loadToken Then Return
                                                       ExifInfo = info

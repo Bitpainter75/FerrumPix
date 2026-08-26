@@ -62,14 +62,20 @@ Namespace Services
                 If meta Is Nothing Then
                     Dim minimal As New ExifData With {
                         .FileName = IO.Path.GetFileName(imagePath),
+                        .FolderPath = If(IO.Path.GetDirectoryName(imagePath), ""),
                         .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
                     }
                     ExifService.FillFileFacts(minimal, imagePath)
                     Return minimal
                 End If
 
+                ' Der Ordner kommt aus dem PFAD und nicht aus dem Katalog: dort steht er nicht,
+                ' und er ist ohnehin bekannt - dieser Weg baut den ersten Stand der Info-Leiste,
+                ' noch bevor die Datei gelesen wird. Ohne ihn blieb die Zeile leer, bis der
+                ' Hintergrundlauf fertig war, und beim Blaettern war das jedes Mal aufs Neue.
                 Dim data As New ExifData With {
                     .FileName = IO.Path.GetFileName(imagePath),
+                    .FolderPath = If(IO.Path.GetDirectoryName(imagePath), ""),
                     .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant(),
                     .DateTaken = If(meta.DateTaken, ""),
                     .DateModifiedExif = If(meta.DateModifiedExif, ""),

@@ -3354,9 +3354,10 @@ Namespace Views
             End If
         End Sub
 
-        ' Breite des Anpassungspanels. Steht hier statt im XAML, weil sie beim Seitenwechsel von
-        ' Spalte 2 auf Spalte 1 umzieht und an beiden Orten dieselbe sein muss.
-        Private Const AdjustmentsPanelWidth As Double = 330.0
+        ' Breite des Anpassungspanels. Sie steht im EditorViewModel, weil auch die Schwelle fuer
+        ' die Beschriftungen der Kopfleiste daran haengt - zwei Zahlen an zwei Orten waeren genau
+        ' die Art Paar, das irgendwann auseinanderlaeuft.
+        Private Const AdjustmentsPanelWidth As Double = EditorViewModel.AdjustmentsPanelWidth
 
         ''' <summary>Tauscht Bühne und Anpassungspanel zwischen Spalte 1 und 2, je nach Einstellung
         ''' (EditorAdjustmentsPanelOnLeft). Links steht das Panel dann direkt neben der

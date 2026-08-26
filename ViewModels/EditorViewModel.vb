@@ -23,11 +23,23 @@ Namespace ViewModels
     Partial Public Class EditorViewModel
         Inherits ViewModelBase
 
+        ''' <summary>Breite des Anpassungspanels. Steht HIER und nicht nur in der Ansicht,
+        ''' weil zwei Dinge davon abhaengen: die Spalte, in die das Panel gesetzt wird, und
+        ''' die Schwelle fuer die Beschriftungen der Kopfleiste darunter.</summary>
+        Public Const AdjustmentsPanelWidth As Double = 330.0
+
         ''' Die vollste Leiste der App: links Navigation + Dateiname, mittig die vier
         ''' Modus-Schalter, rechts Speichern/Speichern unter und acht Symbolschalter.
+        '''
+        ''' LIEGT DAS ANPASSUNGSPANEL LINKS, braucht sie mehr: die mittigen Knopfgruppen
+        ''' stehen mittig zur BUEHNE und nicht zum Fenster, und die Buehne beginnt dann erst
+        ''' hinter dem Panel. Die mittlere Gruppe wandert damit um dessen volle Breite nach
+        ''' rechts und stiess bei knappem Fenster in die Knoepfe Speichern und Speichern
+        ''' unter - in der normalen Anordnung hatte derselbe Platz noch gereicht. Der
+        ''' Zuschlag ist deshalb genau die Panelbreite, um die sich die Mitte verschiebt.
         Protected Overrides ReadOnly Property ToolbarLabelWidthThreshold As Double
             Get
-                Return 1500
+                Return 1500 + If(IsAdjustmentsPanelOnLeft, AdjustmentsPanelWidth, 0)
             End Get
         End Property
 

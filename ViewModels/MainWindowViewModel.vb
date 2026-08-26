@@ -965,6 +965,10 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.AreToolSidebarLabelsVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ToolSidebarWidth))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsAdjustmentsPanelOnLeft))
+            ' Die Seite des Panels verschiebt die Mitte der Buehne und damit die Schwelle, ab der
+            ' die Beschriftungen der Kopfleiste weichen. Ohne diese Zeile bliebe der alte Stand bis
+            ' zur naechsten Groessenaenderung des Fensters stehen.
+            Editor?.RaiseToolbarLabelsChanged()
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorGridSize))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowRulers))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.EditorShowGrid))

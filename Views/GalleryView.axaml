@@ -121,11 +121,13 @@
                          Avalonia kann zwei Bindungen nicht ohne Konverter verunden. -->
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                                 IsVisible="{Binding AreToolbarLabelsVisible}">
+                        <!-- Etwas Luft links und rechts: der Knopf bekommt beim Ueberfahren einen
+                             Hintergrund, und ohne Innenabstand klebte der direkt an den Buchstaben. -->
                         <Button Classes="ghost"
                                 Command="{Binding NavigateParentCommand}"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Padding="0"
+                                Padding="6,0"
                                 Height="30"
                                 VerticalContentAlignment="Center"
                                 IsVisible="{Binding HasBreadcrumbParent}">
@@ -1737,9 +1739,13 @@
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <!-- Eine Stufe groesser als die uebrigen Nebentexte (Small statt Caption): die
+                         Zeile steht am unteren Rand der Leiste, in gedaempfter Farbe, und war in
+                         Caption kaum zu lesen. Weiter ueber die Ressource und nicht als feste
+                         Zahl, damit sie mit dem eingestellten Schriftgrad mitwaechst. -->
                     <TextBlock Text="{Binding StorageFreeText}"
                                Foreground="{DynamicResource FP.Text.Muted}"
-                               FontSize="{DynamicResource FP.Font.Caption}"/>
+                               FontSize="{DynamicResource FP.Font.Small}"/>
                     <ProgressBar Value="{Binding StorageFillPercent}"
                                  Minimum="0" Maximum="100"
                                  Height="4"
