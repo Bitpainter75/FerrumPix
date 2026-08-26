@@ -81,15 +81,27 @@ jobs:
           sudo apt-get install -y xz-utils jq desktop-file-utils flatpak flatpak-builder
 
       # Version und Name muessen mit dem Manifest uebereinstimmen (runtime-version 24.08).
+      #
+      # DIE SDK-ERWEITERUNG GEHOERT DAZU, seit das Manifest aus Quellen baut: sie bringt das
+      # .NET-SDK mit, mit dem der Bau in der Sandbox uebersetzt. Ohne sie bricht package.sh
+      # gleich zu Beginn ab ("Die SDK-Erweiterung ... fehlt") - was besser ist als ein Abbruch
+      # mitten im Bau, aber eben trotzdem ein Abbruch.
       - name: Flatpak-Laufzeitumgebung
         run: |
           sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           sudo flatpak install -y --noninteractive flathub \
-            org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+            org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08 \
+            org.freedesktop.Sdk.Extension.dotnet10//24.08
 
       # Die gebuendelte mpv-Runtime aus packaging/ci/ensure-binaries.sh entfaellt hier: sie ist
       # fuer Windows, und der Flatpak bringt libmpv ohnehin nicht mit.
+      #
+      # DIESER SCHRITT DAUERT, seit das Manifest aus Quellen baut: er laedt rund 843 MB
+      # NuGet-Pakete und uebersetzt danach in der Sandbox, statt ein fertiges Publish
+      # hineinzukopieren. Die Zeitschranke ist deshalb grosszuegig und trotzdem ein Riegel -
+      # ohne sie liefe ein Haenger gegen GitHubs Sechs-Stunden-Grenze.
       - name: Paket - Flatpak
+        timeout-minutes: 60
         run: packaging/package.sh flatpak
         env:
           FERRUMPIX_BUILD_BOX: ""     # der Runner ist bereits Ubuntu
@@ -114,9 +126,12 @@ jobs:
       # Im Bauordner liegt jetzt NUR der Flatpak, und genau das ist hier richtig: das Skript
       # laedt hoch, was es findet, und ersetzt damit allein dieses eine Asset. Die uebrigen
       # Dateien des Latest-Release bleiben unberuehrt.
+      # --partial sagt aus, was hier ohnehin gilt: dieser Lauf bringt genau ein Paket mit. Der
+      # Riegel oben haelt den Fall schon fern, in dem das Latest-Release neu entstehen muesste;
+      # die Marke macht daraus eine Zusage des Skripts statt einer Annahme.
       - name: Ins Latest-Release
         if: ${{ inputs.veroeffentlichen }}
-        run: packaging/publish-github-release.sh --only-latest
+        run: packaging/publish-github-release.sh --only-latest --partial
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
