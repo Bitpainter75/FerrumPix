@@ -3777,9 +3777,6 @@
   <data name="Videowiedergabe_und_Video_Vorschaubilder_b2bcf9a7" xml:space="preserve">
     <value>视频播放与视频缩略图</value>
   </data>
-  <data name="LibRaw_und_libmpv_stehen_unter_der_LGPL_sie_werd_bf6db0e8" xml:space="preserve">
-    <value>LibRaw 和 libmpv 采用 LGPL 许可证。FerrumPix 会以动态方式加载未经修改的版本，用户也可以替换为自行构建的相同版本。许可证文本和来源说明位于 FerrumPix 所在目录的 licenses 文件夹中。</value>
-  </data>
   <data name="GPL_3_0_5af8926d" xml:space="preserve">
     <value>GPL-3.0</value>
   </data>
@@ -4392,17 +4389,11 @@
   <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
     <value>BMP 和 GIF 无法写回原文件，将改为创建新文件。</value>
   </data>
-  <data name="libheif_optional_b3984920" xml:space="preserve">
-    <value>libheif（可选）</value>
-  </data>
   <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
     <value>读取 HEIC/HEIF/AVIF；仅从系统加载，不随应用提供</value>
   </data>
   <data name="LGPL_3_0_278977ae" xml:space="preserve">
     <value>LGPL-3.0</value>
-  </data>
-  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
-    <value>FerrumPix 有意不随附 libheif，而仅从系统加载：HEIC 文件通常使用 HEVC 编码，是否提供 HEVC 解码器由系统发行版决定。缺少 libheif 时，HEIC/AVIF 文件将无法打开，其他功能不受影响。</value>
   </data>
   <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
     <value>读取 TIFF 文件</value>
@@ -7589,5 +7580,14 @@
   </data>
   <data name="Setzt_die_Aufnahmezeit_oder_verschiebt_eine_vorh_dc874226" xml:space="preserve">
     <value>设置拍摄时间，或平移已有时间，例如相机时钟设置错误之后。修改日期取相同的值。</value>
+  </data>
+  <data name="libheif_6795a7dc" xml:space="preserve">
+    <value>libheif</value>
+  </data>
+  <data name="LibRaw_libmpv_und_libheif_stehen_unter_der_LGPL__7f9589da" xml:space="preserve">
+    <value>LibRaw、libmpv 和 libheif 均以 LGPL 授权：它们原样附带并动态加载，可用你自己编译的同一版本替换。授权文本和来源说明位于应用程序旁边的 licenses 文件夹中。</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
+    <value>libheif 用于读取 HEIC 和 HEIF 文件。Windows 版本已附带，Linux 从软件包管理器获取，macOS 自行读取这类文件。若缺少它，这类文件将无法打开，其余功能一切照常。</value>
   </data>
 </root>

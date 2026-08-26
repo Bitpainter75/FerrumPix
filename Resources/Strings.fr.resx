@@ -3779,9 +3779,6 @@
   <data name="Videowiedergabe_und_Video_Vorschaubilder_b2bcf9a7" xml:space="preserve">
     <value>Lecture vidéo et vignettes vidéo</value>
   </data>
-  <data name="LibRaw_und_libmpv_stehen_unter_der_LGPL_sie_werd_bf6db0e8" xml:space="preserve">
-    <value>LibRaw et libmpv sont sous licence LGPL : elles sont utilisées sans modification et chargées dynamiquement, et peuvent être remplacées par votre propre compilation de la même version. Les textes de licence et les justificatifs d'origine se trouvent dans le dossier licenses à côté de l'application.</value>
-  </data>
   <data name="GPL_3_0_5af8926d" xml:space="preserve">
     <value>GPL-3.0</value>
   </data>
@@ -4394,17 +4391,11 @@
   <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
     <value>Le BMP et le GIF ne peuvent pas être réécrits - de nouveaux fichiers sont créés.</value>
   </data>
-  <data name="libheif_optional_b3984920" xml:space="preserve">
-    <value>libheif (facultatif)</value>
-  </data>
   <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
     <value>Lecture des HEIC/HEIF/AVIF - chargée uniquement depuis le système, non fournie</value>
   </data>
   <data name="LGPL_3_0_278977ae" xml:space="preserve">
     <value>LGPL-3.0</value>
-  </data>
-  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
-    <value>libheif n'est délibérément pas fournie, mais chargée uniquement depuis le système : les fichiers HEIC sont généralement encodés en HEVC, et la décision concernant un décodeur HEVC revient à la distribution. Sans libheif, les fichiers HEIC/AVIF restent simplement fermés - tout le reste fonctionne à l'identique.</value>
   </data>
   <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
     <value>Lecture des fichiers TIFF</value>
@@ -7591,5 +7582,14 @@
   </data>
   <data name="Setzt_die_Aufnahmezeit_oder_verschiebt_eine_vorh_dc874226" xml:space="preserve">
     <value>Définit l’heure de prise de vue ou décale une heure existante, par exemple après une horloge d’appareil photo mal réglée. La date de modification reçoit la même valeur.</value>
+  </data>
+  <data name="libheif_6795a7dc" xml:space="preserve">
+    <value>libheif</value>
+  </data>
+  <data name="LibRaw_libmpv_und_libheif_stehen_unter_der_LGPL__7f9589da" xml:space="preserve">
+    <value>LibRaw, libmpv et libheif sont sous licence LGPL : elles sont incluses telles quelles et chargées dynamiquement, et peuvent être remplacées par votre propre compilation de la même version. Les textes de licence et les notes de provenance se trouvent dans le dossier licenses à côté de l'application.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
+    <value>libheif lit les fichiers HEIC et HEIF. Sous Windows elle est fournie, sous Linux elle vient du gestionnaire de paquets, et macOS lit ces fichiers lui-même. Sans elle, ces fichiers restent simplement fermés et tout le reste fonctionne comme avant.</value>
   </data>
 </root>

@@ -3777,9 +3777,6 @@
   <data name="Videowiedergabe_und_Video_Vorschaubilder_b2bcf9a7" xml:space="preserve">
     <value>動画の再生とサムネール</value>
   </data>
-  <data name="LibRaw_und_libmpv_stehen_unter_der_LGPL_sie_werd_bf6db0e8" xml:space="preserve">
-    <value>LibRaw と libmpv は LGPL のもとで提供されています。手を加えずに動的に読み込んで使っているため、同じバージョンを自分でビルドしたものと差し替えられます。ライセンス文と入手元の記録は、アプリケーションと同じ場所にある licenses フォルダーにあります。</value>
-  </data>
   <data name="GPL_3_0_5af8926d" xml:space="preserve">
     <value>GPL-3.0</value>
   </data>
@@ -4392,17 +4389,11 @@
   <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
     <value>BMP と GIF は元のファイルに書き戻せません。新しいファイルが作られます。</value>
   </data>
-  <data name="libheif_optional_b3984920" xml:space="preserve">
-    <value>libheif (任意)</value>
-  </data>
   <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
     <value>HEIC、HEIF、AVIF の読み取り。同梱せず、システムにあるものだけを読み込みます</value>
   </data>
   <data name="LGPL_3_0_278977ae" xml:space="preserve">
     <value>LGPL-3.0</value>
-  </data>
-  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
-    <value>libheif はあえて同梱せず、システムにあるものだけを読み込みます。HEIC ファイルはたいてい HEVC で符号化されており、HEVC デコーダーを入れるかどうかはディストリビューションが決めることだからです。libheif がない場合、HEIC と AVIF のファイルが開けないだけで、ほかの動作は変わりません。</value>
   </data>
   <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
     <value>TIFF ファイルの読み取り</value>
@@ -7631,5 +7622,14 @@
   </data>
   <data name="Setzt_die_Aufnahmezeit_oder_verschiebt_eine_vorh_dc874226" xml:space="preserve">
     <value>撮影時刻を設定するか、既存の時刻をずらします（カメラの時計がずれていた場合など）。更新日時にも同じ値が入ります。</value>
+  </data>
+  <data name="libheif_6795a7dc" xml:space="preserve">
+    <value>libheif</value>
+  </data>
+  <data name="LibRaw_libmpv_und_libheif_stehen_unter_der_LGPL__7f9589da" xml:space="preserve">
+    <value>LibRaw、libmpv、libheif は LGPL のもとで提供されます。変更せずに同梱し動的に読み込むため、同じバージョンの自作ビルドに置き換えられます。ライセンス本文と由来の記録はアプリケーションの隣の licenses フォルダーにあります。</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
+    <value>libheif は HEIC ファイルと HEIF ファイルを読み込みます。Windows では同梱され、Linux ではパッケージ管理から入り、macOS はこれらのファイルを自身で読みます。無い場合、そうしたファイルは開かれないだけで、ほかはすべてこれまでどおり動作します。</value>
   </data>
 </root>

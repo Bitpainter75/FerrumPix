@@ -3777,9 +3777,6 @@
   <data name="Videowiedergabe_und_Video_Vorschaubilder_b2bcf9a7" xml:space="preserve">
     <value>Videoweergave en videominiaturen</value>
   </data>
-  <data name="LibRaw_und_libmpv_stehen_unter_der_LGPL_sie_werd_bf6db0e8" xml:space="preserve">
-    <value>LibRaw en libmpv vallen onder de LGPL: ze worden ongewijzigd en dynamisch geladen ingebonden en kunnen door een eigen build van dezelfde versie worden vervangen. De licentieteksten en herkomstbewijzen staan in de map licenses naast de toepassing.</value>
-  </data>
   <data name="GPL_3_0_5af8926d" xml:space="preserve">
     <value>GPL-3.0</value>
   </data>
@@ -4392,17 +4389,11 @@
   <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
     <value>BMP en GIF kunnen niet worden teruggeschreven; er ontstaan nieuwe bestanden.</value>
   </data>
-  <data name="libheif_optional_b3984920" xml:space="preserve">
-    <value>libheif (optioneel)</value>
-  </data>
   <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
     <value>Lezen van HEIC/HEIF/AVIF, wordt alleen vanuit het systeem geladen en niet meegeleverd</value>
   </data>
   <data name="LGPL_3_0_278977ae" xml:space="preserve">
     <value>LGPL-3.0</value>
-  </data>
-  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
-    <value>libheif wordt bewust NIET meegeleverd maar alleen vanuit het systeem geladen: HEIC-bestanden zijn meestal HEVC-gecodeerd, en de beslissing over een HEVC-decoder ligt bij de distributie. Ontbreekt libheif, dan blijven HEIC/AVIF-bestanden simpelweg ongeopend; al het overige werkt ongewijzigd.</value>
   </data>
   <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
     <value>TIFF-bestanden lezen</value>
@@ -7631,5 +7622,14 @@
   </data>
   <data name="Setzt_die_Aufnahmezeit_oder_verschiebt_eine_vorh_dc874226" xml:space="preserve">
     <value>Stelt de opnametijd in of verschuift een bestaande, bijvoorbeeld na een verkeerd ingestelde cameraklok. De wijzigingsdatum krijgt dezelfde waarde.</value>
+  </data>
+  <data name="libheif_6795a7dc" xml:space="preserve">
+    <value>libheif</value>
+  </data>
+  <data name="LibRaw_libmpv_und_libheif_stehen_unter_der_LGPL__7f9589da" xml:space="preserve">
+    <value>LibRaw, libmpv en libheif vallen onder de LGPL: ze worden ongewijzigd en dynamisch geladen meegeleverd en kunnen worden vervangen door een eigen build van dezelfde versie. De licentieteksten en herkomstgegevens staan in de map licenses naast de toepassing.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
+    <value>libheif leest HEIC- en HEIF-bestanden. Op Windows wordt het meegeleverd, op Linux komt het uit het pakketbeheer en macOS leest deze bestanden zelf. Ontbreekt het, dan blijven zulke bestanden gewoon gesloten en werkt al het andere ongewijzigd.</value>
   </data>
 </root>

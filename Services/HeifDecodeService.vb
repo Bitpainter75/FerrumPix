@@ -28,13 +28,26 @@ Namespace Services
     ''' Verfügbarkeit sauber prüfbar. Fehlt libheif, meldet IsAvailable False und ALLES läuft wie
     ''' bisher - HEIC-Dateien erscheinen dann einfach nicht als Bild, kein Absturz.
     '''
-    ''' NUR die Bibliothek des SYSTEMS, bewusst ohne mitgelieferten Rückfall (anders als LibRaw):
-    ''' HEIC-Dateien sind in aller Regel HEVC-kodiert, und für HEVC bestehen Patentansprüche.
-    ''' Die Entscheidung, einen HEVC-Dekoder auszuliefern, trifft damit die Distribution
-    ''' (Arch/Debian/Fedora liefern libheif+libde265 in ihren Paketquellen), nicht FerrumPix.
+    ''' WOHER DIE BIBLIOTHEK KOMMT, hängt von der Plattform ab:
+    '''
+    '''   Linux    aus der Paketverwaltung. Arch, Debian und Fedora führen libheif und libde265
+    '''            in ihren Quellen; die Pakete empfehlen sie, erzwingen sie aber nicht.
+    '''   macOS    gar nicht, dort liest ImageIO die Dateien selbst (siehe oben).
+    '''   Windows  MITGELIEFERT, seit dem 26. August 2026. Vorher lag dort nichts bei, mit dem
+    '''            Codec als Begründung: HEIC ist in aller Regel HEVC-kodiert, HEVC ist
+    '''            patentbelastet, und diese Entscheidung sollte die Distribution treffen.
+    '''            Nur gibt es unter Windows keine, die sie treffen könnte - und dasselbe Paket
+    '''            bringt mit libmpv längst einen HEVC-Dekoder für Video mit. Die Zurückhaltung
+    '''            bei Standbildern stand damit neben einer Datei, die für Video dasselbe tut.
+    '''            Übrig blieb ein Anwender, der sich eine libheif.dll aus dem Netz suchen musste
+    '''            und mit der üblichen Einzeldatei scheiterte, weil ihr Dekoder und Laufzeit
+    '''            fehlen. Gebaut wird sie deshalb selbst, als EINE Datei ohne Beigaben und ohne
+    '''            Encoder: packaging/libheif/build-windows.sh.
+    '''
     ''' Lizenzseitig ist alles unkritisch: libheif und libde265 stehen unter der LGPL-3 und werden
-    ''' unverändert dynamisch geladen - dieselbe Konstruktion wie bei LibRaw und libmpv. Auch der
-    ''' macOS-Weg ändert daran nichts: ImageIO gehört zum Betriebssystem und wird nicht mitgeliefert.
+    ''' unverändert dynamisch geladen - dieselbe Konstruktion wie bei LibRaw und libmpv, und die
+    ''' mitgelieferte Datei lässt sich schlicht überschreiben. Version, Prüfsummen und Bauoptionen
+    ''' stehen in licenses/HERKUNFT.txt neben der DLL.
     '''
     ''' NUR LESEN: einen Encoder gibt es hier nicht. Bearbeitete HEIC-Dateien werden wie PSD als
     ''' neue Datei in einem schreibbaren Format gespeichert (ImageProcessor.CanEncodeToTargetExtension
@@ -186,6 +199,39 @@ Namespace Services
             End Select
         End Function
 
+        ''' <summary>Erst der blosse Name, dann die beiden Orte, an denen eine mitgelieferte
+        ''' Bibliothek liegen kann: neben der Anwendung und unter runtimes/&lt;rid&gt;/native, wohin
+        ''' packaging/package.sh sie legt.
+        '''
+        ''' DER BLOSSE NAME REICHT NICHT, und das hat gekostet: die Windows-Suche kennt das
+        ''' Verzeichnis der Anwendung, aber NICHT den runtimes-Unterordner. Die mitgelieferte
+        ''' libheif.dll lag dort und wurde nie gefunden; erst von Hand ins Hauptverzeichnis kopiert
+        ''' lief sie (Befund vom 2026-08-26). RawDecodeService und MpvInterop bauen dieselbe Liste,
+        ''' nur diese Stelle tat es nicht.
+        '''
+        ''' Der Name ZUERST: eine vom System gepflegte Bibliothek hat Vorrang vor der
+        ''' mitgelieferten - unter Linux ist sie die einzige, und dort soll die Paketverwaltung
+        ''' bestimmen, welche Fassung läuft.</summary>
+        Private Shared Iterator Function BundledCandidates(namen As String()) As IEnumerable(Of String)
+            Dim baseDir = AppContext.BaseDirectory
+
+            Dim archSuffix = If(RuntimeInformation.ProcessArchitecture = Architecture.Arm64, "arm64", "x64")
+            Dim rid As String = ""
+            If OperatingSystem.IsWindows() Then
+                rid = $"win-{archSuffix}"
+            ElseIf OperatingSystem.IsLinux() Then
+                rid = $"linux-{archSuffix}"
+            ElseIf OperatingSystem.IsMacOS() Then
+                rid = $"osx-{archSuffix}"
+            End If
+
+            For Each name In namen
+                Yield name
+                Yield IO.Path.Combine(baseDir, name)
+                If rid.Length > 0 Then Yield IO.Path.Combine(baseDir, "runtimes", rid, "native", name)
+            Next
+        End Function
+
         Private Shared Sub EnsureLoaded()
             SyncLock _initLock
                 If _initialized Then Return
@@ -203,14 +249,26 @@ Namespace Services
                 End If
 
                 Dim handle As IntPtr
-                For Each candidate In candidates
+                ' Der Mutationstest zu dieser Stelle: nimmt man BundledCandidates wieder heraus,
+                ' bleibt die Prüfung "Native Bibliotheken werden dort gesucht, wo das Paket sie
+                ' hinlegt" rot - sie ruft diese Liste per Reflexion ab.
+                For Each candidate In BundledCandidates(candidates)
                     If NativeLibrary.TryLoad(candidate, handle) Then
-                        _loadedLibrary = candidate
+                        _loadedLibrary = IO.Path.GetFileName(candidate)
                         Exit For
                     End If
                     handle = IntPtr.Zero
                 Next
-                If handle = IntPtr.Zero Then Return
+                If handle = IntPtr.Zero Then
+                    ' EINE ZEILE INS PROTOKOLL, und sie ist mehr wert als sie aussieht: bis hierher
+                    ' schwieg dieser Weg. Wer eine libheif danebenlegte, die wegen einer fehlenden
+                    ' Begleitbibliothek nicht lud, sah genau dasselbe wie jemand ohne Bibliothek -
+                    ' nämlich nichts, und hatte keine Möglichkeit, den Unterschied zu erkennen.
+                    DiagnosticLogService.LogAlways("HEIF",
+                        "kein HEIC-Dekoder geladen - vergeblich versucht: " & String.Join(", ", candidates) &
+                        ". Unter Windows liegt libheif bei; unter Linux kommt sie aus der Paketverwaltung.")
+                    Return
+                End If
 
                 Try
                     _contextAlloc = GetExport(Of ContextAllocFn)(handle, "heif_context_alloc")

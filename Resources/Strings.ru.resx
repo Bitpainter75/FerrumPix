@@ -3777,9 +3777,6 @@
   <data name="Videowiedergabe_und_Video_Vorschaubilder_b2bcf9a7" xml:space="preserve">
     <value>Воспроизведение видео и миниатюры видео</value>
   </data>
-  <data name="LibRaw_und_libmpv_stehen_unter_der_LGPL_sie_werd_bf6db0e8" xml:space="preserve">
-    <value>LibRaw и libmpv распространяются по LGPL: они подключаются без изменений и загружаются динамически, и их можно заменить собственной сборкой той же версии. Тексты лицензий и сведения о происхождении лежат в папке licenses рядом с приложением.</value>
-  </data>
   <data name="GPL_3_0_5af8926d" xml:space="preserve">
     <value>GPL-3.0</value>
   </data>
@@ -4392,17 +4389,11 @@
   <data name="BMP_und_GIF_lassen_sich_nicht_zur_ckschreiben_es_5046f9e5" xml:space="preserve">
     <value>BMP и GIF нельзя записать обратно; создаются новые файлы.</value>
   </data>
-  <data name="libheif_optional_b3984920" xml:space="preserve">
-    <value>libheif (необязательно)</value>
-  </data>
   <data name="Lesen_von_HEIC_HEIF_AVIF_wird_nur_vom_System_gel_ebca6ebf" xml:space="preserve">
     <value>Чтение HEIC/HEIF/AVIF; загружается только из системы и не поставляется в комплекте</value>
   </data>
   <data name="LGPL_3_0_278977ae" xml:space="preserve">
     <value>LGPL-3.0</value>
-  </data>
-  <data name="libheif_wird_bewusst_NICHT_mitgeliefert_sondern__6db1660e" xml:space="preserve">
-    <value>libheif сознательно НЕ поставляется в комплекте, а загружается только из системы: файлы HEIC обычно закодированы в HEVC, и решение о декодере HEVC принимает дистрибутив. Если libheif нет, файлы HEIC и AVIF просто не открываются; всё остальное работает без изменений.</value>
   </data>
   <data name="TIFF_Dateien_lesen_5bf61045" xml:space="preserve">
     <value>Чтение файлов TIFF</value>
@@ -7631,5 +7622,14 @@
   </data>
   <data name="Setzt_die_Aufnahmezeit_oder_verschiebt_eine_vorh_dc874226" xml:space="preserve">
     <value>Задаёт время съёмки или сдвигает существующее, например после неверно выставленных часов камеры. Дата изменения получает то же значение.</value>
+  </data>
+  <data name="libheif_6795a7dc" xml:space="preserve">
+    <value>libheif</value>
+  </data>
+  <data name="LibRaw_libmpv_und_libheif_stehen_unter_der_LGPL__7f9589da" xml:space="preserve">
+    <value>LibRaw, libmpv и libheif распространяются по LGPL: они включены без изменений и загружаются динамически, их можно заменить собственной сборкой той же версии. Тексты лицензий и сведения о происхождении лежат в папке licenses рядом с приложением.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
+    <value>libheif читает файлы HEIC и HEIF. В Windows она входит в комплект, в Linux берётся из менеджера пакетов, а macOS читает эти файлы сам. Если её нет, такие файлы просто не открываются, всё остальное работает как прежде.</value>
   </data>
 </root>
