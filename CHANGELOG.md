@@ -1,32 +1,37 @@
-## Unreleased
-
-### Fixes
-
-- **Windows: FerrumPix is in the Start menu after installing.** If the installation asked for an administrator password, the entry was put into that administrator's Start menu and was missing from yours. The setup now creates it for everyone on the computer, and it tidies up a stray entry left behind by an earlier installation.
-
-## FerrumPix 0.9.32
+## FerrumPix 0.9.33
 
 ### What's new
 
-- **Put the time right when the camera clock was wrong.** *Set capture date* under Metadata gives a picture a date and time, or shifts the time it already has by days, hours, minutes and seconds - forwards or back, over a whole selection at once. A raw file is never touched: its time goes in the sidecar next to it, and FerrumPix reads it back from there. The file's own date follows the capture time, so both say the same thing.
+- **Setting the text size is a matter of one click.** The slider moved a whole step per pixel of mouse travel, and the interface resized while you dragged it, so the control wandered away under your hand. There are eight buttons now, one per step, each showing "aA" in the size it sets, with the current one highlighted. They all stand on one line, so you can see the step you are choosing.
 
-- **See where the picture has nothing left.** A new switch under Light marks blown highlights in red and blocked shadows in blue, on the picture itself and at full zoom. It only shows where all three colour channels are against the stop, so a bright red flower does not set it off.
-
-- **Put the image analysis where it helps.** Histogram, waveform and RGB parade can now appear in the information sidebar, above the editor's adjustment controls, or in both places. The two locations can show different views at the same time, so you can keep the tonal distribution in sight while checking individual colour channels beside the controls. Click the compact chart to open its full-size view.
+- **Windows: HEIC and HEIF photos open straight away.** The pictures your phone takes needed a library you had to find and place next to FerrumPix yourself, and most downloads of it did not work because they expect further files beside them. That library now comes with the Windows download, so those photos open in the viewer and the editor instead of showing up as thumbnails only. On Linux it keeps coming from your package manager, and macOS reads these files itself.
 
 ### Fixes
 
-- **Objects follow the frame again in the adjustment tools.** With Adjust, Colour, Details, Effects or Filters selected, moving, turning or resizing an object shifted only its selection frame while the object stayed where it was. It moves with the frame again.
+- **The sorting menu highlights the entry under your pointer.** It always tried to, but with exactly the colour of the menu behind it, so the highlight painted itself invisible. The same applies to the other menus built that way.
 
-- **No more quitting when a folder is opened.** On systems whose font setup does not name a usable standard font, FerrumPix closed itself without a message the moment a folder with pictures was opened. It now uses a font that is actually installed, and if the system has none at all, only the labels on the timeline and the rulers stay empty.
+- **The entry under your pointer has rounded corners in every menu.** In the filter menus it always had, in the context menus it was a square block.
 
-- **Pictures with their own colour profile open a little quicker.** Bringing them to sRGB no longer makes a second copy of the whole picture on the way, which also keeps memory use down with large files.
+- **Submenus follow the theme you picked.** A submenu is a window of its own, and it kept the colours of the dark theme after a switch to one of the grey themes or to the light one, so it stood out against the menu it belongs to. The drop-down of a selection and the rows of a list had the same problem.
 
-- **Changing an analysis view is quicker.** FerrumPix reuses the already calculated histogram, waveform or RGB parade while the picture has not changed, instead of decoding the image again for every switch.
+- **Text fields that are switched off look like text fields.** Where a setting has its own switch, as with Immich and Nextcloud, the fields below it were framed by a pale block instead of their usual outline.
 
-- **Raw files need less memory while they open.** Developing a raw picture no longer builds the whole image a second time before handing it over, so opening a big raw leaves more room for everything else.
+- **The folder a picture lives in is shown in the information sidebar**, under its file name. Pictures from an Immich or Nextcloud server do not have one, so the line stays away there.
 
-- **Removing an object gets going quicker.** Working out which part of the picture has to be filled no longer walks the whole photo point by point, so there is less waiting before the filling itself starts.
+- **Save and Save as keep their labels out of each other's way.** With the adjustment panel on the left, the buttons in the middle of the editor's top bar move right along with the picture, and in a narrow window they ran into Save and Save as. The labels now give way earlier when the panel sits on the left.
 
-- **Flatpak: pictures on a network share show up.** Folders that your file manager mounts from a Samba, NFS or SFTP share used to look empty in the Flatpak version. They can now be opened like any other folder.
+- **Photos marked as Adobe RGB only in their EXIF now arrive in the right colours.** Some cameras write no colour profile into the file and say Adobe RGB in two metadata fields instead. Those photos looked flat and shifted, most visibly in saturated reds and greens. A profile in the file still wins over the metadata.
 
+- **Photoshop layers keep the colours of the document.** The flattened image was already converted, the layers were not, so a file in Adobe RGB fell apart into a correct background and shifted layers on top.
+
+- **A cut piece of the picture does not stay behind.** Cutting a selection and pasting it right away showed the piece twice, once as the pasted layer and once where it had been, until the editor happened to redraw the whole picture.
+
+- **Save as offers the folder the picture came from**, also when you opened the picture straight from the file manager or the command line and went on to the editor. There is no gallery behind that, so the dialog fell back to the folder you saved into last, and your picture went somewhere else than where it lives.
+
+- **The bar at the top of the window is slimmer.** It is a third lower than before, so the picture gets the room instead. Logo and window buttons came down with it.
+
+- **Smaller touches in the gallery.** The parent folder in the path bar has room around its highlight again, and the free space line below the folder tree is one step larger, which makes it readable.
+
+- **Windows: installing and uninstalling no longer leaves a half-removed program behind.** Windows keeps a running program locked, so uninstalling while FerrumPix was open removed everything except the program itself, and updating over a running FerrumPix stopped in the middle of copying. Both now say that FerrumPix is still open and wait until you have closed it.
+
+- **Windows: FerrumPix is in the Start menu after installing.** If the installation asked for an administrator password, the entry was put into that administrator's Start menu and was missing from yours. The setup now creates it for everyone on the computer, and it tidies up a stray entry left behind by an earlier installation.
