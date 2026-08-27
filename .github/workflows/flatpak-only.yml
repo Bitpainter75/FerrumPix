@@ -28,6 +28,10 @@ on:
         description: "Bundle ins Latest-Release hochladen (sonst nur als Artefakt)"
         type: boolean
         default: false
+      repo_hochladen:
+        description: "Flatpak-Repo auf den Webserver laden (braucht die drei Secrets)"
+        type: boolean
+        default: false
 
 # Zum Hochladen ins Release braucht der eingebaute Token Schreibrecht. Ohne Veroeffentlichung
 # wird es nicht genutzt.
@@ -121,6 +125,80 @@ jobs:
         with:
           name: flatpak-bundle
           path: packaging/build/*.flatpak
+          if-no-files-found: error
+
+      # DAS REPO GEHOERT MIT HERAUS, sonst ist es mit dem Laeufer weg. Aus ihm holen die
+      # Softwareverwaltungen Symbol, Beschreibung und Bildschirmfotos, nachdem jemand das Bundle
+      # installiert hat - und Aktualisierungen. Das Bundle traegt seine Adresse
+      # (build-bundle --repo-url), erreichbar wird sie aber erst, wenn dieser Ordner auf dem
+      # Webserver liegt: herunterladen, entpacken, mit packaging/publish-flatpak-repo.sh hochladen.
+      #
+      # Bewusst NICHT direkt aus dem Lauf hochgeladen: das braeuchte einen Schluessel fuer den
+      # Webserver als Secret. Solange das von Hand geht, bleibt der Server aus der CI heraus.
+      # DER WEBSERVER, DIREKT AUS DEM LAUF. Nur auf ausdrueckliche Ansage und nur, wenn die drei
+      # Secrets stehen - sonst wird der Schritt uebersprungen, statt mit halber Konfiguration
+      # etwas Halbes hochzuladen.
+      #
+      #   FLATPAK_REPO_SSH_KEY    privater Schluessel, dessen oeffentlicher Teil auf dem Server
+      #                           in authorized_keys steht
+      #   FLATPAK_REPO_KNOWN_HOST Ausgabe von `ssh-keyscan <server>`. NICHT weglassen: ohne sie
+      #                           muesste der Lauf jeden Rechner akzeptieren, der sich als der
+      #                           Server ausgibt
+      #   FLATPAK_REPO_TARGET     Ziel fuer rsync, z.B. benutzer@server:/var/www/ferrumpix/flatpak/
+      #
+      # DEM SCHLUESSEL SOLLTE MAN DIE HAENDE BINDEN. In authorized_keys davor:
+      #   command="rrsync -wo /var/www/ferrumpix/flatpak",no-agent-forwarding,no-port-forwarding,no-pty
+      # Dann kann er genau eines: in dieses Verzeichnis schreiben. Ohne diese Fessel ist ein
+      # Schluessel im Lauf ein Vollzugang zum Server.
+      - name: Repo auf den Webserver
+        if: ${{ inputs.repo_hochladen }}
+        env:
+          SSH_KEY: ${{ secrets.FLATPAK_REPO_SSH_KEY }}
+          KNOWN_HOST: ${{ secrets.FLATPAK_REPO_KNOWN_HOST }}
+          TARGET: ${{ secrets.FLATPAK_REPO_TARGET }}
+        run: |
+          if [ -z "$SSH_KEY" ] || [ -z "$KNOWN_HOST" ] || [ -z "$TARGET" ]; then
+            echo "::error::repo_hochladen ist gewaehlt, aber eines der drei Secrets fehlt."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/flatpak_repo
+          chmod 600 ~/.ssh/flatpak_repo
+          printf '%s\n' "$KNOWN_HOST" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+          # Die Datei zum Einbinden gehoert IN den abgeglichenen Ordner - daneben raeumte
+          # --delete sie beim naechsten Durchgang weg (siehe publish-flatpak-repo.sh).
+          cp -f packaging/ferrumpix.flatpakrepo packaging/work/flatpak-repo/ferrumpix.flatpakrepo
+
+          # Erst zeigen, dann tun: die Liste steht im Protokoll des Laufs und ist die einzige
+          # Gelegenheit zu sehen, was --delete am Ziel anfasst.
+          rsync -a --delete --dry-run --itemize-changes \
+            -e "ssh -i ~/.ssh/flatpak_repo -o IdentitiesOnly=yes" \
+            packaging/work/flatpak-repo/ "$TARGET" | head -50
+
+          rsync -a --delete --info=stats1 --human-readable \
+            -e "ssh -i ~/.ssh/flatpak_repo -o IdentitiesOnly=yes" \
+            packaging/work/flatpak-repo/ "$TARGET"
+
+          rm -f ~/.ssh/flatpak_repo
+
+      # FERTIG ZUM HOCHLADEN, ohne Nacharbeit: das Artefakt enthaelt GENAU das, was auf dem
+      # Webserver unter /flatpak/ liegen muss - einschliesslich der Datei zum Einbinden. Wer es
+      # herunterlaedt, entpackt einmal und schiebt den Inhalt hinueber, fertig. Deshalb kein
+      # zusaetzliches tar darin: das waere ein zweiter Entpackschritt fuer nichts.
+      - name: Repo fuer den Upload vorbereiten
+        run: |
+          # Die Datei zum Einbinden gehoert IN den Ordner - daneben gelegt raeumte ein Abgleich
+          # mit --delete sie beim naechsten Mal weg (siehe publish-flatpak-repo.sh).
+          cp -f packaging/ferrumpix.flatpakrepo packaging/work/flatpak-repo/ferrumpix.flatpakrepo
+          echo "Inhalt, der auf den Webserver gehoert:"
+          ls -1 packaging/work/flatpak-repo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-repo
+          path: packaging/work/flatpak-repo/
+          include-hidden-files: true
           if-no-files-found: error
 
       # Im Bauordner liegt jetzt NUR der Flatpak, und genau das ist hier richtig: das Skript
