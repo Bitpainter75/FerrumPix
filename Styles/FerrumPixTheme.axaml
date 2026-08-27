@@ -456,6 +456,14 @@
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
         <Setter Property="Padding" Value="7,2"/>
         <Setter Property="MinWidth" Value="0"/>
+        <!-- AUF EINER LINIE STEHEN, nicht in der Mitte schweben. Die Schaltflaechen sind ihrem
+             Inhalt nach verschieden hoch; auf gleiche Hoehe gestreckt und mittig gefuellt sitzt
+             jede Groesse anders, und der Unterschied zwischen den Stufen verschwindet fast. Unten
+             ausgerichtet stehen alle auf derselben Kante und wachsen nach oben - genau das ist die
+             Auskunft, die die Reihe geben soll. VerticalAlignment richtet die Schaltflaeche in der
+             Zeile aus, VerticalContentAlignment den Text darin; ohne beides bliebe eines von
+             beiden mittig. -->
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="VerticalContentAlignment" Value="Bottom"/>
     </Style>
     <Style Selector="Button.font-step:pointerover /template/ ContentPresenter">
@@ -839,6 +847,33 @@
     <Style Selector="TextBox /template/ ScrollViewer#PART_ScrollViewer">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
     </Style>
+    <!-- FLAECHE UND RAHMEN EINES TEXTFELDES HAENGEN AM PART_BorderElement DER VORLAGE, nicht an
+         Background und BorderBrush des Feldes (derselbe Grund wie beim Rollbereich darueber). Was
+         am Feld steht, kam damit nur an, solange die Standardvorlage es weiterreichte - tat sie es
+         nicht, malte sie ihre eigenen Farben: um den dunklen Textkasten lag ein heller, breiter
+         Rahmen (Nutzerbefund 2026-08-27, in der Flatpak-Fassung). Deshalb stehen die Farben hier
+         DIREKT am Rahmenelement, fuer jeden Zustand einzeln - das Standarderscheinungsbild hat an
+         einem Textfeld dann nichts mehr zu sagen.
+         Diese Regeln stehen bewusst VOR den Feldklassen weiter unten: bei gleichem Ziel gewinnt in
+         Avalonia die zuletzt genannte Regel, die Klassen ziehen ihre Sonderfaelle also weiter
+         hinten zurueck. -->
+    <Style Selector="TextBox /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="TextBox:disabled /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+    </Style>
     <Style Selector="TextBox.search-input">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
@@ -907,10 +942,21 @@
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
         <Setter Property="TextAlignment" Value="Right"/>
     </Style>
+    <!-- Das Zahlenfeld sitzt AUF der Reglerzeile und nimmt deren Farbe an, nicht die eines Feldes.
+         Deshalb holt es die Feldflaeche, die weiter oben fuer jedes Textfeld am Rahmenelement
+         steht, hier ausdruecklich zurueck. -->
+    <Style Selector="TextBox.slider-value /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Subtle}"/>
+    </Style>
+    <Style Selector="TextBox.slider-value:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+    </Style>
     <Style Selector="TextBox.slider-value:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
-    <!-- Das Zahlenfeld sitzt AUF der Reglerzeile und nimmt deren Farbe an, nicht die eines Feldes. -->
     <Style Selector="TextBox.slider-value /template/ ScrollViewer#PART_ScrollViewer">
         <Setter Property="Background" Value="Transparent"/>
     </Style>
@@ -1185,6 +1231,18 @@
         <Setter Property="MinWidth" Value="208"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <!-- ABGERUNDETER HOVER, wie ihn die Filtermenues haben (dort sind die Zeilen Button.ghost mit
+         CornerRadius 8). Der Hintergrund einer Menuezeile wird an ZWEI deckungsgleichen Stellen
+         der Vorlage gemalt: am Rahmen der Zeile und am Beschriftungsfeld darin. Rundet man nur
+         eine davon, malt die andere die Ecken wieder eckig darueber. Deshalb bekommen beide
+         denselben Radius. -->
+    <Style Selector="MenuItem /template/ Border">
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="MenuItem /template/ ContentPresenter">
+        <Setter Property="CornerRadius" Value="8"/>
     </Style>
     <!-- Das Zeichen fuer ein Untermenue kommt aus UNSEREM Symbolsatz und steht direkt hinter der
          Beschriftung (siehe die Vorlage der Kontextmenues in Galerie, Betrachter und Editor).

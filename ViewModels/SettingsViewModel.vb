@@ -3850,6 +3850,79 @@ Namespace ViewModels
             End If
 
             SetAccentBrushes(accentColor, isDark)
+            MirrorAppearanceBrushes()
+        End Sub
+
+        ''' <summary>Schluessel des Standarderscheinungsbilds, die eine FerrumPix-Farbe abbilden.
+        ''' Links steht der Schluessel, den eine Standardvorlage liest, rechts die Farbe, die er
+        ''' haben soll.</summary>
+        Private Shared ReadOnly MirroredBrushKeys As (Target As String, Source As String)() = {
+            ("MenuFlyoutPresenterBackground", "FP.Bg.Elevated"),
+            ("MenuFlyoutPresenterBorderBrush", "FP.Border.Normal"),
+            ("ComboBoxDropDownBackground", "FP.Bg.Elevated"),
+            ("ComboBoxDropDownBorderBrush", "FP.Border.Normal"),
+            ("ComboBoxItemBackgroundPointerOver", "FP.Bg.Hover"),
+            ("ComboBoxItemBackgroundPressed", "FP.Sel.Bg"),
+            ("ComboBoxItemBackgroundSelected", "FP.Sel.Bg"),
+            ("ComboBoxItemBackgroundSelectedPointerOver", "FP.Sel.Hover"),
+            ("ComboBoxItemBackgroundSelectedPressed", "FP.Sel.Hover"),
+            ("ComboBoxItemForeground", "FP.Text.Primary"),
+            ("ComboBoxItemForegroundPointerOver", "FP.Text.Primary"),
+            ("ComboBoxItemForegroundSelected", "FP.Text.Primary"),
+            ("ComboBoxItemForegroundSelectedPointerOver", "FP.Text.Primary"),
+            ("ComboBoxItemForegroundSelectedPressed", "FP.Text.Primary"),
+            ("ComboBoxItemRevealBackgroundPointerOver", "FP.Bg.Hover"),
+            ("ComboBoxItemRevealBackgroundPressed", "FP.Sel.Bg"),
+            ("ComboBoxItemRevealBackgroundSelected", "FP.Sel.Bg"),
+            ("ComboBoxItemRevealBackgroundSelectedPointerOver", "FP.Sel.Hover"),
+            ("ComboBoxItemRevealBackgroundSelectedPressed", "FP.Sel.Hover"),
+            ("ComboBoxItemRevealBorderBrushPointerOver", "FP.Border.Strong"),
+            ("ComboBoxItemRevealBorderBrushPressed", "FP.Border.Strong"),
+            ("ComboBoxItemRevealBorderBrushSelected", "FP.Border.Strong"),
+            ("ComboBoxItemRevealBorderBrushSelectedPointerOver", "FP.Border.Strong"),
+            ("ComboBoxItemRevealBorderBrushSelectedPressed", "FP.Border.Strong"),
+            ("ListBoxItemBackgroundPointerOver", "FP.Bg.Hover"),
+            ("ListBoxItemBackgroundPressed", "FP.Sel.Bg"),
+            ("ListBoxItemBackgroundSelected", "FP.Sel.Bg"),
+            ("ListBoxItemBackgroundSelectedPointerOver", "FP.Sel.Hover"),
+            ("ListBoxItemBackgroundSelectedPressed", "FP.Sel.Hover"),
+            ("ListBoxItemForeground", "FP.Text.Primary"),
+            ("ListBoxItemForegroundPointerOver", "FP.Text.Primary"),
+            ("ListBoxItemForegroundSelected", "FP.Text.Primary"),
+            ("ListBoxItemForegroundSelectedPointerOver", "FP.Text.Primary"),
+            ("ListBoxItemForegroundSelectedPressed", "FP.Text.Primary"),
+            ("SystemControlHighlightAccentBrush", "FP.Accent"),
+            ("SystemControlHighlightAltLowBrush", "FP.Sel.Bg"),
+            ("SystemControlHighlightAltMediumBrush", "FP.Sel.Hover"),
+            ("SystemControlHighlightAltHighBrush", "FP.Border.Strong"),
+            ("SystemControlHighlightListAccentLowBrush", "FP.Sel.Bg"),
+            ("SystemControlHighlightListAccentMediumBrush", "FP.Sel.Hover"),
+            ("SystemControlHighlightListAccentHighBrush", "FP.Border.Strong"),
+            ("SystemControlHighlightListLowBrush", "FP.Bg.Hover"),
+            ("SystemControlHighlightListMediumBrush", "FP.Sel.Bg"),
+            ("SystemControlHighlightListHighBrush", "FP.Sel.Hover")
+        }
+
+        ''' <summary>DAS UNTERMENUE IST EIN EIGENES POPUP und holt sein Aussehen nicht aus unseren
+        ''' Regeln, sondern aus den Schluesseln des Standarderscheinungsbilds (siehe den Kommentar
+        ''' dazu in FerrumPixTheme.axaml). Dort stehen feste Farben, und die passen nur zum dunklen
+        ''' Standardthema: nach einem Wechsel auf Grau oder Hell stand das Untermenue weiter
+        ''' dunkelblau da, waehrend das Menue darueber die neue Farbe hatte (Nutzerbefund
+        ''' 2026-08-27). Dasselbe gilt fuer die Aufklappliste einer Auswahl und fuer die Zeilen
+        ''' einer Liste.
+        '''
+        ''' Deshalb werden diese Schluessel nach jedem Themenwechsel aus den FerrumPix-Farben
+        ''' nachgezogen. Im AXAML bleiben sie stehen: sie gelten, bevor ein Thema angewandt ist.</summary>
+        Private Shared Sub MirrorAppearanceBrushes()
+            Dim app = Application.Current
+            If app Is Nothing Then Return
+
+            For Each pair In MirroredBrushKeys
+                Dim value As Object = Nothing
+                If app.TryGetResource(pair.Source, app.ActualThemeVariant, value) AndAlso value IsNot Nothing Then
+                    app.Resources(pair.Target) = value
+                End If
+            Next
         End Sub
 
         Private Shared Sub SetBrush(key As String, hexColor As String)
