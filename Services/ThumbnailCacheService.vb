@@ -683,7 +683,8 @@ Namespace Services
                                 ' Bliebe sie unverwaltet, waere der Farbfehler nicht nur sichtbar,
                                 ' sondern haltbar: er ueberlebte jeden Neustart, bis jemand den
                                 ' Kachelspeicher von Hand leert.
-                                Dim managed = ColorManagementService.ToSrgb(resized, codec.Info.ColorSpace)
+                                Dim managed = ColorManagementService.ToSrgb(
+                                    resized, ColorManagementService.EffectiveProfile(codec.Info.ColorSpace, source))
                                 Try
                                     Using image = SKImage.FromBitmap(managed)
                                         Using data = image.Encode(SKEncodedImageFormat.Jpeg, quality)
@@ -843,7 +844,7 @@ Namespace Services
                 Dim origin = PreviewOriginFor(rawContainerPath, codec.EncodedOrigin, codec.Info.Width, codec.Info.Height)
                 ' Wie im Anzeigeweg: ein abweichendes Farbprofil schliesst den schnellen
                 ' Avalonia-Decoder aus, sonst steht die Kachel anders da als das geoeffnete Bild.
-                Dim sourceProfile = codec.Info.ColorSpace
+                Dim sourceProfile = ColorManagementService.EffectiveProfile(codec.Info.ColorSpace, stream)
                 Dim needsColorConversion = ColorManagementService.NeedsConversion(sourceProfile)
                 If origin = SKEncodedOrigin.TopLeft AndAlso rotation = 0 AndAlso Not needsColorConversion Then
                     stream.Seek(0, SeekOrigin.Begin)

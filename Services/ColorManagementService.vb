@@ -20,10 +20,10 @@ Namespace Services
     ''' abweichendes Profil nimmt den neuen Weg. Damit bleibt der Golden-Hash der Pipeline fuer alle
     ''' bisherigen Pruefbilder stehen.</para>
     '''
-    ''' <para>Grenze: erkannt wird nur ein EINGEBETTETES ICC-Profil. Kameras, die ein Bild ohne
-    ''' Profil ablegen und Adobe RGB allein ueber EXIF (ColorSpace=Uncalibrated plus
-    ''' InteropIndex=R03) beschriften, sind damit nicht abgedeckt. Der Fall ist bekannt und bewusst
-    ''' offen: er braucht den Metadatenleser statt des Decoders.</para>
+    ''' <para>Erste Quelle ist ein EINGEBETTETES ICC-Profil. Fehlt es, wird das EXIF gefragt: manche
+    ''' Kameras legen ein Bild ohne Profil ab und beschriften Adobe RGB allein ueber ColorSpace=
+    ''' Uncalibrated plus InteropIndex=R03 (siehe <see cref="ProfileFromExif"/>). Weiter geht die
+    ''' Erkennung nicht - ein Profilname im XMP bleibt aussen vor.</para>
     Public NotInheritable Class ColorManagementService
         Private Sub New()
         End Sub
@@ -31,6 +31,114 @@ Namespace Services
         ''' <summary>Das Ziel aller Wandlungen. Skia legt dahinter einen festen Wert an, deshalb ist
         ''' das Halten billiger als das wiederholte Erzeugen.</summary>
         Private Shared ReadOnly _srgb As SKColorSpace = SKColorSpace.CreateSrgb()
+
+        ''' <summary>Adobe RGB (1998): dieselben Primaerfarben, dieselbe Kurve, nur eben aus zwei
+        ''' EXIF-Feldern erschlossen statt aus einem eingebetteten Profil. Einmal angelegt, weil es
+        ''' fuer jede so beschriftete Datei dasselbe ist.</summary>
+        Private Shared ReadOnly _adobeRgb As SKColorSpace =
+            SKColorSpace.CreateRgb(SKColorSpaceTransferFn.TwoDotTwo, SKColorSpaceXyz.AdobeRgb)
+
+        ''' <summary>EXIF-Wert 65535 fuer ColorSpace: "Uncalibrated", also ausdruecklich nicht sRGB.
+        ''' Was es stattdessen ist, sagt erst der Kompatibilitaetseintrag.</summary>
+        Private Const ExifColorSpaceUncalibrated As Integer = 65535
+
+        ''' <summary>Das Profil, das fuer diese Datei GILT: das eingebettete, wenn es eines gibt,
+        ''' sonst das aus dem EXIF erschlossene. Nothing heisst weiterhin "sRGB annehmen".
+        '''
+        ''' Die Reihenfolge ist keine Geschmacksfrage: ein ABWEICHENDES eingebettetes Profil ist eine
+        ''' Tatsache, der EXIF-Weg eine Auslegung. Eine Auslegung darf eine Tatsache nie
+        ''' ueberstimmen - deshalb wird gar nicht erst gefragt, sobald ein Profil da ist, das nicht
+        ''' sRGB ist.
+        '''
+        ''' Bei sRGB wird dagegen gefragt, und das ist Absicht: Skia gibt fuer ein JPEG OHNE Profil
+        ''' ebenfalls sRGB zurueck. "sRGB" heisst an dieser Stelle also nicht "die Datei sagt sRGB",
+        ''' sondern "niemand hat etwas anderes gesagt" - und genau dann ist das EXIF die bessere
+        ''' Auskunft. Eine Datei, die ein echtes sRGB-Profil einbettet UND sich im EXIF als Adobe RGB
+        ''' beschriftet, widerspraeche sich selbst; Kameras, die das zweite tun, tun das erste
+        ''' nicht.</summary>
+        ''' <param name="data">Die Bilddatei, wie sie ohnehin schon im Speicher liegt. Der
+        ''' Metadatenleser bekommt einen eigenen Datenstrom darauf - es wird nichts nachgeladen.</param>
+        Public Shared Function EffectiveProfile(decoderProfile As SKColorSpace, data As SKData) As SKColorSpace
+            If NeedsConversion(decoderProfile) Then Return decoderProfile
+            If data Is Nothing Then Return decoderProfile
+            Try
+                Using stream = data.AsStream()
+                    Return If(ProfileFromExif(stream), decoderProfile)
+                End Using
+            Catch ex As Exception
+                ' Ein unlesbares EXIF heisst nur: kein Hinweis. Das Bild laeuft wie bisher.
+                DiagnosticLogService.LogException("Color.EffectiveProfile", ex)
+                Return decoderProfile
+            End Try
+        End Function
+
+        ''' <summary>Wie oben, nur aus einem Datenstrom. Er wird an seine Ausgangsstelle
+        ''' zurueckgesetzt: die Aufrufer lesen danach weiter, und ein Metadatenblick darf ihren
+        ''' Decode nicht verstellen.</summary>
+        Public Shared Function EffectiveProfile(decoderProfile As SKColorSpace, stream As IO.Stream) As SKColorSpace
+            If NeedsConversion(decoderProfile) Then Return decoderProfile
+            If stream Is Nothing OrElse Not stream.CanSeek Then Return decoderProfile
+            Dim vorher = stream.Position
+            Try
+                stream.Seek(0, IO.SeekOrigin.Begin)
+                Return If(ProfileFromExif(stream), decoderProfile)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Color.EffectiveProfile", ex)
+                Return decoderProfile
+            Finally
+                Try
+                    stream.Seek(vorher, IO.SeekOrigin.Begin)
+                Catch
+                End Try
+            End Try
+        End Function
+
+        ''' <summary>Liest den Farbraum aus den EXIF-Feldern. Adobe RGB wird NUR angenommen, wenn
+        ''' BEIDE Felder es sagen: ColorSpace steht auf Uncalibrated und der Kompatibilitaetseintrag
+        ''' auf "R03". Ein einzelnes Feld reicht bewusst nicht - eine falsche Annahme verschiebt die
+        ''' Farben eines Bildes, das in Ordnung war, und das ist schlimmer als der Fall, den sie
+        ''' beheben soll. Alles andere (auch "R98" fuer sRGB) ergibt Nothing.
+        '''
+        ''' Und ein EINGEBETTETES Profil schliesst den Weg von vornherein aus, auch ein sRGB-Profil:
+        ''' hier - und nur hier - laesst sich "die Datei sagt sRGB" von "die Datei sagt nichts"
+        ''' unterscheiden, denn der Metadatenleser sieht den ICC-Block selbst.</summary>
+        Public Shared Function ProfileFromExif(stream As IO.Stream) As SKColorSpace
+            If stream Is Nothing Then Return Nothing
+            Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(stream)
+            If verzeichnisse Is Nothing Then Return Nothing
+
+            Dim uncalibrated = False
+            Dim r03 = False
+            For Each verzeichnis In verzeichnisse
+                If TypeOf verzeichnis Is MetadataExtractor.Formats.Icc.IccDirectory Then
+                    ' DIE DATEI TRAEGT EIN PROFIL - dann gilt es, Punkt. Am Decoder ist das nicht
+                    ' abzulesen: er meldet fuer "eingebettetes sRGB" und fuer "gar kein Profil"
+                    ' dasselbe. Und der Fall ist keineswegs weit hergeholt: wer eine Adobe-RGB-Datei
+                    ' nach sRGB wandelt, bekommt haeufig ein sRGB-Profil eingebettet, waehrend die
+                    ' alten EXIF-Felder unveraendert stehen bleiben. Ohne diese Zeile wuerde so eine
+                    ' Datei ein zweites Mal gewandelt und stuende zu bunt da.
+                    Return Nothing
+                ElseIf TypeOf verzeichnis Is MetadataExtractor.Formats.Exif.ExifSubIfdDirectory Then
+                    ' Der ROHWERT, nicht die Beschreibung: die uebersetzt 65535 je nach Fassung zu
+                    ' "Undefined" oder "Unknown (65535)", und daran haengt hier eine Entscheidung.
+                    Dim roh = verzeichnis.GetObject(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagColorSpace)
+                    If roh IsNot Nothing Then
+                        Try
+                            If Convert.ToInt32(roh, Globalization.CultureInfo.InvariantCulture) = ExifColorSpaceUncalibrated Then uncalibrated = True
+                        Catch
+                            ' Ein Feld, das keine Zahl ist, sagt hier nichts.
+                        End Try
+                    End If
+                ElseIf TypeOf verzeichnis Is MetadataExtractor.Formats.Exif.ExifInteropDirectory Then
+                    Dim roh = verzeichnis.GetObject(MetadataExtractor.Formats.Exif.ExifInteropDirectory.TagInteropIndex)
+                    Dim text = If(roh?.ToString(), "")
+                    If text.Trim().StartsWith("R03", StringComparison.OrdinalIgnoreCase) Then r03 = True
+                End If
+            Next
+
+            If uncalibrated AndAlso r03 Then Return _adobeRgb
+            Return Nothing
+        End Function
 
         ''' <summary>Braucht dieses Profil eine Wandlung? Nothing und sRGB nicht.</summary>
         Public Shared Function NeedsConversion(profile As SKColorSpace) As Boolean

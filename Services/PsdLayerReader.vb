@@ -129,12 +129,23 @@ Namespace Services
             Public Property Width As Integer
             Public Property Height As Integer
             Public Property Layers As New List(Of PsdLayerInfo)()
+            ''' <summary>Das Farbprofil des DOKUMENTS - es gilt fuer jede Ebene darin. Photoshop
+            ''' legt seine Dateien oft in Adobe RGB ab; ohne diese Angabe kaemen die Ebenen als sRGB
+            ''' an und stuenden flau und farbverschoben neben dem Gesamtbild, das laengst gewandelt
+            ''' wird. Nothing heisst sRGB. Der Aufrufer gibt es frei.</summary>
+            Public Property IccProfile As SKColorSpace
         End Class
 
         ''' <summary>Liefert die Bildebenen von unten nach oben, oder Nothing, wenn die Datei keine
         ''' Ebenen trägt oder in einer Spielart vorliegt, die dieser Leser nicht beherrscht.</summary>
         Public Shared Function ReadLayers(filePath As String) As List(Of PsdLayerInfo)
-            Return ReadDocument(filePath)?.Layers
+            Dim doc = ReadDocument(filePath)
+            If doc Is Nothing Then Return Nothing
+            ' Wer nur die Ebenen will, bekommt das Dokument nie in die Hand - und mit ihm nicht sein
+            ' Farbprofil. Das ist natives Eigentum und haengt sonst bis zum Finalisierer am Speicher.
+            doc.IccProfile?.Dispose()
+            doc.IccProfile = Nothing
+            Return doc.Layers
         End Function
 
         ''' <summary>Wie <see cref="ReadLayers"/>, liefert zusätzlich die Maße des Dokuments - der
@@ -210,7 +221,31 @@ Namespace Services
             Dim cmyk = colorMode = 4
 
             If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing  ' Farbmodus-Daten
-            If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing  ' Bildressourcen
+
+            ' BILDRESSOURCEN: hier steht das ICC-Profil des Dokuments (Ressource 1039). Frueher
+            ' wurde die Sektion nur uebersprungen, und die Ebenen kamen ohne Farbmanagement heraus.
+            ' Gelesen wird mit derselben Routine wie im flachen Weg - zwei Leser fuer denselben
+            ' Block liefen irgendwann auseinander. Beim reinen Verzeichnislesen bleibt es beim
+            ' Ueberspringen: dort gibt es keine Bildpunkte, auf die ein Profil passen wuerde.
+            Dim resourceLen = CLng(ReadU32(fs))
+            ' NUR DIE BYTES, noch kein Profil. Zwischen dieser Stelle und dem fertigen Dokument
+            ' liegen Abbrueche UND Ausnahmen (ein abgeschnittener Kopf laesst ReadU32 werfen). Ein
+            ' fertiges Profil waere ab hier natives Eigentum, das durch jeden dieser Pfade getragen
+            ' werden muesste; ein Bytefeld raeumt die Laufzeitumgebung selbst ab. Erzeugt wird es
+            ' deshalb erst unten, wenn das Dokument steht.
+            Dim iccBytes As Byte() = Nothing
+            If metadataOnly Then
+                If Not SkipBlock(fs, resourceLen) Then Return Nothing
+            Else
+                Dim resourceEnd = fs.Position + resourceLen
+                iccBytes = PsdPreviewService.ReadIccBytesFromResources(fs, resourceLen)
+                ' Der Leser steht danach hinter der Sektion; ein Abbruch mittendrin (unbekannter
+                ' Block) darf die folgenden Angaben nicht verschieben.
+                If fs.Position <> resourceEnd Then
+                    If resourceEnd > fs.Length Then Return Nothing
+                    fs.Position = resourceEnd
+                End If
+            End If
 
             Dim sectionLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
             If sectionLen <= 0 Then Return Nothing
@@ -245,7 +280,19 @@ Namespace Services
                 records.Add(rec)
             Next
 
-            Dim doc As New PsdDocumentInfo With {.Width = docWidth, .Height = docHeight}
+            ' CMYK bleibt profilfrei, genau wie im flachen Weg: die Wandlung nach RGB ist dort
+            ' eine grobe Naeherung, und ein RGB-Profil passt nicht auf vier Kanaele.
+            Dim iccProfile As SKColorSpace = Nothing
+            If iccBytes IsNot Nothing AndAlso Not cmyk Then
+                Try
+                    iccProfile = SKColorSpace.CreateIcc(iccBytes)
+                Catch
+                    ' Ein Block, der sich Profil nennt, aber keines ist, darf die Datei nicht
+                    ' unlesbar machen - die Ebenen sind davon unberuehrt und gelten dann als sRGB.
+                    iccProfile = Nothing
+                End Try
+            End If
+            Dim doc As New PsdDocumentInfo With {.Width = docWidth, .Height = docHeight, .IccProfile = iccProfile}
             Dim layers = doc.Layers
             ' Bricht das Lesen mittendrin ab - eine defekte Ebene oder eine Ausnahme -, sind die
             ' Ebenen davor bereits dekodiert und haengen als Bitmap in der Liste, die danach
@@ -256,7 +303,7 @@ Namespace Services
                 For Each rec In records
                     Dim maskBmp As SKBitmap = Nothing
                     Dim bmp = ReadChannelData(fs, rec, metadataOnly, maskBmp, bytesPerSample, grayscale, cmyk)
-                    If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing
+                    If bmp Is Nothing AndAlso rec.HasPixels AndAlso Not metadataOnly Then Return Nothing   ' das Profil raeumt der Finally-Zweig ab
                     ' Gruppenmarken haben keine Bildpunkte und gehen trotzdem mit: ohne sie wüsste
                     ' der Import nicht, wo eine Gruppe anfängt und wo sie aufhört.
                     If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly Then Continue For
@@ -287,7 +334,12 @@ Namespace Services
                 completed = True
                 Return doc
             Finally
-                If Not completed Then DisposeLayerPixels(doc)
+                If Not completed Then
+                    DisposeLayerPixels(doc)
+                    ' Das Dokument geht nicht hinaus, also gehoert auch sein Profil hier weg.
+                    doc.IccProfile?.Dispose()
+                    doc.IccProfile = Nothing
+                End If
             End Try
         End Function
 

@@ -311,7 +311,27 @@ Namespace Services
         ''' Aufbau eines Blocks: die Kennung "8BIM", zwei Byte Nummer, ein Pascal-Text als Name
         ''' (auf gerade Laenge aufgefuellt), vier Byte Groesse, dann die Daten (ebenfalls auf gerade
         ''' Laenge aufgefuellt).</summary>
-        Private Shared Function ReadIccFromResources(fs As FileStream, length As Long) As SKColorSpace
+        ''' <summary>Wie <see cref="ReadIccBytesFromResources"/>, liefert aber gleich das fertige
+        ''' Profil. Fuer den flachen Weg, der es sofort anwendet und wieder freigibt.</summary>
+        Friend Shared Function ReadIccFromResources(fs As FileStream, length As Long) As SKColorSpace
+            Dim bytes = ReadIccBytesFromResources(fs, length)
+            If bytes Is Nothing Then Return Nothing
+            Try
+                Return SKColorSpace.CreateIcc(bytes)
+            Catch
+                ' Ein Block, der sich Profil nennt, aber keines ist, kostet nur das Farbmanagement -
+                ' NICHT das Bild. Ohne dieses Abfangen liefe die Ausnahme bis zum Aufrufer, und eine
+                ' PSD mit beschaedigtem Profil liesse sich gar nicht mehr oeffnen.
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Dasselbe, aber als ROHE BYTES. Wer das Profil erst spaeter braucht, nimmt
+        ''' diesen Weg: ein Bytefeld raeumt die Laufzeitumgebung selbst ab, ein fertiges Profil
+        ''' dagegen ist natives Eigentum und muss durch jeden Abbruch- und Ausnahmepfad getragen
+        ''' werden, der bis dahin noch kommt. Der Ebenenleser tut genau das - er erzeugt das Profil
+        ''' erst, wenn sein Dokument steht.</summary>
+        Friend Shared Function ReadIccBytesFromResources(fs As FileStream, length As Long) As Byte()
             If length <= 0 OrElse fs.Position + length > fs.Length Then
                 If length > 0 Then SkipBlock(fs, length)
                 Return Nothing
@@ -342,7 +362,7 @@ Namespace Services
                     If id = 1039 AndAlso size > 0 Then
                         Dim profile(size - 1) As Byte
                         Buffer.BlockCopy(section, dataOffset, profile, 0, size)
-                        Return SKColorSpace.CreateIcc(profile)
+                        Return profile
                     End If
 
                     Dim padded = size

@@ -122,7 +122,7 @@ Namespace Services
                     ' (BitmapFromData) kennt kein Farbmanagement und zeigte ein Adobe-RGB- oder
                     ' Display-P3-Bild flau und farbverschoben. Der schnelle Weg bleibt fuer alles
                     ' andere unangetastet, und das ist die weit ueberwiegende Mehrheit.
-                    Dim sourceProfile = codec.Info.ColorSpace
+                    Dim sourceProfile = ColorManagementService.EffectiveProfile(codec.Info.ColorSpace, data)
                     Dim needsColorConversion = ColorManagementService.NeedsConversion(sourceProfile)
                     If origin = SKEncodedOrigin.TopLeft AndAlso NormalizeQuarterTurn(extraRotationDegrees) = 0 AndAlso
                        Not needsColorConversion Then

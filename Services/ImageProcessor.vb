@@ -501,22 +501,28 @@ Namespace Services
             Using data
                 Using codec = SKCodec.Create(data)
                     If codec Is Nothing OrElse codec.EncodedOrigin = SKEncodedOrigin.TopLeft Then
-                        ' SKBitmap.Decode nimmt das Profil der Datei in die Bitmap mit, ToSrgb liest
-                        ' es dort selbst ab - ein zweiter Parameter waere hier ueberfluessig.
-                        Return ToManagedSrgb(SKBitmap.Decode(data))
+                        ' SKBitmap.Decode nimmt das Profil der Datei in die Bitmap mit. Fehlt dort
+                        ' eines, fragt EffectiveProfile das EXIF - sonst liefe ein Adobe-RGB-Bild
+                        ' ohne eingebettetes Profil weiter als sRGB durch.
+                        Dim entschluesselt = SKBitmap.Decode(data)
+                        Return ToManagedSrgb(entschluesselt,
+                                             ColorManagementService.EffectiveProfile(entschluesselt?.ColorSpace, data))
                     End If
 
                     Dim info = codec.Info
                     ' Die Zielangabe bleibt farbraumlos, der Decode also unveraendert: der Codec
                     ' liefert die Zahlen so, wie sie in der Datei stehen. Gewandelt wird erst ganz
                     ' am Ende, mit dem Profil aus dem Dateikopf.
-                    Dim sourceProfile = info.ColorSpace
+                    Dim sourceProfile = ColorManagementService.EffectiveProfile(info.ColorSpace, data)
                     Dim decodeInfo = New SKImageInfo(info.Width, info.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
                     Dim original = New SKBitmap(decodeInfo)
                     Dim result = codec.GetPixels(decodeInfo, original.GetPixels())
                     If result <> SKCodecResult.Success AndAlso result <> SKCodecResult.IncompleteInput Then
                         original.Dispose()
-                        Return ToManagedSrgb(SKBitmap.Decode(data))
+                        ' MIT dem oben ermittelten Profil, auch auf diesem Weg: der Rueckfall
+                        ' dekodiert nur anders, die Datei ist dieselbe. Ohne das kaeme ausgerechnet
+                        ' im Fehlerfall ein Adobe-RGB-Bild unbehandelt heraus.
+                        Return ToManagedSrgb(SKBitmap.Decode(data), sourceProfile)
                     End If
 
                     Dim corrected = ImageOrientationService.ApplyOrientation(original, codec.EncodedOrigin)

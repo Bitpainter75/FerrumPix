@@ -138,7 +138,7 @@ Namespace Services
                     If fromRecipe IsNot Nothing Then
                         Dim basePath = Path.Combine(tempDir, "base.png")
                         Dim ok = If(IsUsableAsBackground(doc.Layers(0), doc.Width, doc.Height),
-                                    WritePng(doc.Layers(0).Pixels, basePath),
+                                    WritePng(doc.Layers(0).Pixels, basePath, doc.IccProfile),
                                     WriteEmptyPng(doc.Width, doc.Height, basePath))
                         If ok Then
                             success = True
@@ -164,6 +164,8 @@ Namespace Services
                         layer.Pixels?.Dispose()
                         layer.MaskPixels?.Dispose()
                     Next
+                    doc.IccProfile?.Dispose()
+                    doc.IccProfile = Nothing
                 End If
             End Try
 
@@ -177,7 +179,7 @@ Namespace Services
                 Dim firstIndex = 0
                 If IsUsableAsBackground(layers(0), doc.Width, doc.Height) Then
                     baseImagePath = Path.Combine(tempDir, "base.png")
-                    If Not WritePng(layers(0).Pixels, baseImagePath) Then Return Nothing
+                    If Not WritePng(layers(0).Pixels, baseImagePath, doc.IccProfile) Then Return Nothing
                     firstIndex = 1
                 Else
                     baseImagePath = Path.Combine(tempDir, "base.png")
@@ -234,7 +236,7 @@ Namespace Services
                     End If
 
                     Dim assetPath = Path.Combine(tempDir, "layer" & index.ToString() & ".png")
-                    If Not WritePng(layer.Pixels, assetPath) Then Continue For
+                    If Not WritePng(layer.Pixels, assetPath, doc.IccProfile) Then Continue For
                     index += 1
 
                     adjustments.Annotations.Add(New ImageAnnotation With {
@@ -279,6 +281,10 @@ Namespace Services
                     layer.Pixels?.Dispose()
                     layer.MaskPixels?.Dispose()
                 Next
+                ' Das Farbprofil des Dokuments ist ein eigenes natives Objekt und haengt sonst bis
+                ' zum naechsten Aufraeumlauf am Speicher - dieselbe Regel wie im flachen Weg.
+                doc.IccProfile?.Dispose()
+                doc.IccProfile = Nothing
                 ' Bei erfolgreichem Laden übernimmt der Editor den Temp-Ordner. Bei jedem Fehler wird
                 ' er sofort entfernt, sonst bleiben halbe Entpackungen liegen - dieselbe Regel wie
                 ' beim .fpx-Bündel.
@@ -502,7 +508,22 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function WritePng(bmp As SKBitmap, targetPath As String) As Boolean
+        ''' <param name="profile">Das Farbprofil des DOKUMENTS. Es gilt fuer jede Ebene darin, und
+        ''' gewandelt wird genau hier: die Ebene geht als PNG nach draussen, und ein Profil ginge
+        ''' dabei verloren, bevor es jemand sehen koennte - derselbe Grund wie beim Gesamtbild.
+        ''' Nothing oder sRGB heisst: nichts zu tun, kein Kopieren, keine Rechnung.</param>
+        Private Shared Function WritePng(bmp As SKBitmap, targetPath As String,
+                                         Optional profile As SKColorSpace = Nothing) As Boolean
+            If bmp Is Nothing Then Return False
+            Dim managed = ColorManagementService.ToSrgb(bmp, profile)
+            Try
+                Return WritePngCore(managed, targetPath)
+            Finally
+                If Not Object.ReferenceEquals(managed, bmp) Then managed?.Dispose()
+            End Try
+        End Function
+
+        Private Shared Function WritePngCore(bmp As SKBitmap, targetPath As String) As Boolean
             If bmp Is Nothing Then Return False
             Using pixmap = bmp.PeekPixels()
                 If pixmap Is Nothing Then Return False
