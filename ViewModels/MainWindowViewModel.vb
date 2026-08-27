@@ -1156,6 +1156,41 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Ordner des Bildes, das gerade offen ist - oder "", wenn es keines gibt oder
+        ''' sein Ordner als Ziel nicht taugt.
+        '''
+        ''' Zwei Faelle liegen im TEMP-Verzeichnis und sind deshalb ausgeschlossen: ein nie
+        ''' gespeichertes neues Bild und die Arbeitskopie eines Bildes von einem Server. Beide
+        ''' verschwinden wieder, ein Ziel darf dort nicht vorgeschlagen werden.</summary>
+        Private Function CurrentImageFolderOrEmpty() As String
+            Dim pfad As String = ""
+            Select Case CurrentMode
+                Case AppMode.Editor
+                    If Editor IsNot Nothing AndAlso Not Editor.IsNewDocument Then pfad = If(Editor.CurrentImagePath, "")
+                Case AppMode.Viewer
+                    pfad = If(Viewer?.CurrentImagePath, "")
+            End Select
+            If String.IsNullOrWhiteSpace(pfad) Then Return ""
+
+            Dim ordner As String
+            Try
+                ordner = Path.GetDirectoryName(Path.GetFullPath(pfad))
+            Catch
+                ' Ein Serverpfad ("immich://...") ist kein Dateipfad und wirft hier.
+                Return ""
+            End Try
+            If String.IsNullOrWhiteSpace(ordner) OrElse Not Directory.Exists(ordner) Then Return ""
+
+            ' AN DER PFADGRENZE vergleichen, nicht am Wortanfang: "/tmpfotos" faengt mit "/tmp" an,
+            ' liegt aber nicht darin. Ein reiner Praefixvergleich haette den Ordner daneben
+            ' mitgesperrt und einen gueltigen Zielordner verschwiegen.
+            Dim temp = Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar)
+            Dim voll = Path.GetFullPath(ordner).TrimEnd(Path.DirectorySeparatorChar)
+            If String.Equals(voll, temp, StringComparison.OrdinalIgnoreCase) OrElse
+               voll.StartsWith(temp & Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) Then Return ""
+            Return ordner
+        End Function
+
         ''' <summary>Belegt den Zielordner vor und merkt sich beide Wahlmoeglichkeiten. Alle
         ''' Dialoge, die einen Zielordner zeigen, gehen hier durch - sonst haetten die einen die
         ''' Schnellwahl und die anderen nicht.</summary>
@@ -1167,6 +1202,16 @@ Namespace ViewModels
             ' bleibt es beim Ausblenden, denn dort gibt es keinen echten Ordner.
             Dim folder = currentFolder
             If String.IsNullOrWhiteSpace(folder) Then folder = If(Gallery?.CurrentFolder, "")
+            ' DIE GALERIE KANN LEER SEIN. Wer die Anwendung MIT einer Bilddatei startet, landet
+            ' gleich im Betrachter oder im Editor - die Galerie wird dabei nie aufgebaut, und ihr
+            ' Ordner ist leer (siehe OpenInitialImage). "Speichern unter" zeigte dann keinen
+            ' aktuellen Ordner an und schlug den zuletzt benutzten vor, obwohl der Ordner des
+            ' offenen Bildes bekannt ist (Nutzerbefund 2026-08-27). Derselbe Fall tritt ein, wenn
+            ' die Galerie auf einer Suchliste oder auf Immich steht: dort gibt es keinen Ordner,
+            ' das offene Bild kann trotzdem eines auf der Platte sein.
+            If String.IsNullOrWhiteSpace(folder) OrElse Not Directory.Exists(folder) Then
+                folder = CurrentImageFolderOrEmpty()
+            End If
             _dialogFolderChoiceCurrent = If(Not String.IsNullOrWhiteSpace(folder) AndAlso Directory.Exists(folder),
                                             folder, "")
             _dialogFolderChoiceLastSaved = If(Not String.IsNullOrWhiteSpace(zuletzt) AndAlso Directory.Exists(zuletzt),

@@ -923,6 +923,14 @@ Namespace ViewModels
         Private _activeZoomPreset As ZoomPresetMode = ZoomPresetMode.Fit
         Private _saveQuality As Integer = 90
         Private _previewPending As Boolean
+        ''' EIN VOLLRENDER STEHT AUS und darf nicht verschluckt werden. Die Objekt-Kurzwege
+        ''' (Region- und Patch-Render) halten den Vorschau-Zeitgeber an und malen nur in die
+        ''' vorhandene Szene - was seit dem letzten Vollrender am ARBEITSBILD geschehen ist, bliebe
+        ''' damit unsichtbar. Genau so stand ein ausgeschnittener Bereich nach dem Einfuegen noch
+        ''' im Hintergrund, bis irgendwann ein Vollrender kam (Nutzerbefund 2026-08-27):
+        ''' Strg+X plant einen Vollrender, Strg+V hielt ihn an und rendert nur um das eingefuegte
+        ''' Objekt herum. Steht das Merkmal, gehen die Kurzwege deshalb auf den Vollrender zurueck.
+        Private _fullRenderPending As Boolean
         Private _annotationCompositePreviewPending As Boolean
         Private _annotationCompositePreviewRetries As Integer
         Private _suppressPreviewDirty As Boolean = False
@@ -14026,6 +14034,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             End If
             _previewPending = True
+            _fullRenderPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             RestartPreviewTimer(PreviewDebounceMs)
         End Sub
@@ -14037,7 +14046,7 @@ Namespace ViewModels
             End If
             _previewTimer.Stop()
             _previewPending = False
-            If Not TryRenderAnnotationOverlaySync() Then
+            If _fullRenderPending OrElse Not TryRenderAnnotationOverlaySync() Then
                 UpdatePreview()
             End If
         End Sub
@@ -14054,8 +14063,10 @@ Namespace ViewModels
             End If
             _previewTimer.Stop()
             _previewPending = False
-            If _sceneSk Is Nothing Then
+            If _sceneSk Is Nothing OrElse _fullRenderPending Then
                 ' Kalter Start: der asynchrone Vollrender baut die Szene inkl. Objekten auf.
+                ' Ebenso, wenn schon einer aussteht: er traegt eine Aenderung am Arbeitsbild, die
+                ' ein Regionsrender nicht kennt (siehe _fullRenderPending).
                 SchedulePreviewUpdate()
                 Return
             End If
@@ -14104,6 +14115,7 @@ Namespace ViewModels
         ''' noch das kanonische Ergebnis beeinflussen, bis der Nutzer "Anwenden" klickt.
         Private Sub ScheduleToolPreviewUpdate()
             _previewPending = True
+            _fullRenderPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             RestartPreviewTimer(PreviewDebounceMs)
         End Sub
@@ -14115,7 +14127,7 @@ Namespace ViewModels
             ' Szene behielt den alten Stand. Sichtbar wurde das beim Verschieben einer Gruppe mit
             ' Korrektur: die Objekte blieben stehen, nur der Auswahlrahmen stand an der neuen Stelle
             '.
-            If RequiresFullRenderForStackedCorrections(CandidateAnnotationDirtyRect()) Then
+            If _fullRenderPending OrElse RequiresFullRenderForStackedCorrections(CandidateAnnotationDirtyRect()) Then
                 _annotationCompositePreviewPending = False
                 _annotationCompositePreviewRetries = 0
                 SchedulePreviewUpdate()
@@ -14129,6 +14141,13 @@ Namespace ViewModels
         End Sub
 
         Private Sub OnPreviewTimerTick()
+            ' Der Objekt-Kurzweg gilt nur, solange KEIN Vollrender aussteht. Wurde einer geplant,
+            ' nachdem der Kurzweg sich vorgemerkt hatte, traegt er eine Aenderung am Arbeitsbild,
+            ' die kein Patch kennt - siehe _fullRenderPending.
+            If _annotationCompositePreviewPending AndAlso _fullRenderPending Then
+                _annotationCompositePreviewPending = False
+                _annotationCompositePreviewRetries = 0
+            End If
             If _annotationCompositePreviewPending Then
                 ' GEOMETRIEWECHSEL hat Vorrang: passt die Szene nicht mehr zum Rezept, kann weder
                 ' Patch noch Overlay die Anzeige richten - der Objekt-Kurzweg wuerde den hier
@@ -15391,6 +15410,8 @@ Namespace ViewModels
 
         Private Async Function UpdatePreviewAsync() As Task
             If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Ab hier laeuft er: was danach kommt, plant sich bei Bedarf selbst einen neuen.
+            _fullRenderPending = False
 
             Dim previewSource = GetPreviewSource()
             If previewSource Is Nothing Then

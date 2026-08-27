@@ -75,6 +75,28 @@ Namespace Services
         Private Shared _baseCacheSourceRef As SKBitmap = Nothing
         Private Shared _baseCacheBitmap As SKBitmap = Nothing
 
+        ''' <summary>DIE QUELLE KANN SICH AENDERN, OHNE EINE ANDERE ZU WERDEN. Das Arbeitsbild wird
+        ''' beim Backen einer Region IN DERSELBEN Bitmap-Instanz veraendert; die Vorschau-Ableitung
+        ''' zieht dabei Stueck fuer Stueck nach (WorkingImageService.CommitRegion). Der
+        ''' Referenzvergleich auf die Quelle merkt davon nichts, und der Rezept-Schluessel erst
+        ''' recht nicht - der Cache hielt das Bild von VOR der Aenderung fuer gueltig.
+        '''
+        ''' Sichtbar wurde das beim Ausschneiden mit anschliessendem Einfuegen: der ausgeschnittene
+        ''' Bereich stand doppelt da, einmal als eingefuegtes Objekt und einmal noch im Hintergrund,
+        ''' weil die schnellen Wege ihre Komposition auf dem alten Basisbild aufbauten
+        ''' (Nutzerbefund 2026-08-27). Erst ein Vollrender raeumte ihn weg.
+        '''
+        ''' Der Zaehler ist die fehlende Angabe: wer die Bildpunkte der Quelle anfasst, erhoeht ihn,
+        ''' und der Cache gilt nur fuer den Stand, mit dem er gebaut wurde.</summary>
+        Private Shared _baseSourceStamp As Long = 0
+        Private Shared _baseCacheSourceStamp As Long = -1
+
+        ''' <summary>Meldet, dass die Bildpunkte der Vorschauquelle sich geaendert haben, ohne dass
+        ''' eine neue Bitmap entstanden ist.</summary>
+        Public Shared Sub MarkBaseSourceChanged()
+            Interlocked.Increment(_baseSourceStamp)
+        End Sub
+
         ''' <summary>Warum ein Objekt-Region-Render kein Patch liefern konnte. Busy darf kurz
         ''' wiederholt werden; Stale braucht zwingend einen neuen Vollrender, weil nur dieser den
         ''' Basis-Cache mit den aktuellen Bildanpassungen aufbauen kann.</summary>
@@ -742,6 +764,7 @@ Namespace Services
                 Dim key = ComputeBaseKey(adj)
                 If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
                    Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
+                   Interlocked.Read(_baseSourceStamp) <> _baseCacheSourceStamp OrElse
                    _baseCacheBitmap Is Nothing Then
                     Return Nothing
                 End If
@@ -1076,6 +1099,7 @@ Namespace Services
                 Dim key = ComputeBaseKey(adj)
                 If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
                    Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
+                   Interlocked.Read(_baseSourceStamp) <> _baseCacheSourceStamp OrElse
                    _baseCacheBitmap Is Nothing Then
                     Return Nothing
                 End If
@@ -1144,6 +1168,7 @@ Namespace Services
                 Dim key = ComputeBaseKey(adj)
                 If Not Object.ReferenceEquals(_baseCacheSourceRef, source) OrElse
                    Not String.Equals(_baseCacheKey, key, StringComparison.Ordinal) OrElse
+                   Interlocked.Read(_baseSourceStamp) <> _baseCacheSourceStamp OrElse
                    _baseCacheBitmap Is Nothing Then
                     cacheState = AnnotationPatchCacheState.Stale
                     Return Nothing
@@ -2965,6 +2990,7 @@ Namespace Services
                 _baseCacheBitmap = Nothing
                 _baseCacheKey = Nothing
                 _baseCacheSourceRef = Nothing
+                _baseCacheSourceStamp = -1
             End SyncLock
             ' Die gemerkten Masken der Korrekturebenen gehoeren demselben Bild und haben denselben
             ' Grund wegzukommen. Sie stehen in ImageProcessorMasks.vb, aber an EINEM Aufraeumen -
@@ -2976,8 +3002,10 @@ Namespace Services
         ' die Objekte geändert haben, sonst wird die Pipeline neu berechnet und der Cache erneuert.
         Private Shared Function GetOrComputeBaseLocked(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim key = ComputeBaseKey(adj)
+            Dim stamp = Interlocked.Read(_baseSourceStamp)
             If Object.ReferenceEquals(_baseCacheSourceRef, source) AndAlso
                String.Equals(_baseCacheKey, key, StringComparison.Ordinal) AndAlso
+               stamp = _baseCacheSourceStamp AndAlso
                _baseCacheBitmap IsNot Nothing Then
                 Return _baseCacheBitmap
             End If
@@ -2987,6 +3015,7 @@ Namespace Services
             _baseCacheBitmap = computed
             _baseCacheKey = key
             _baseCacheSourceRef = source
+            _baseCacheSourceStamp = stamp
             Return computed
         End Function
 

@@ -438,6 +438,12 @@ Namespace Services
         ''' pixelidentisch zum kompletten Neu-Downscale, ohne Nähte. SKImage.FromPixels wrappt die
         ''' Voll-Pixel ohne Kopie (FromBitmap würde ~200 MB je Commit kopieren).</summary>
         Private Sub UpdatePreviewRegionLocked(rect As SKRectI)
+            ' DIE VORSCHAUQUELLE BLEIBT DIESELBE BITMAP und aendert nur ihre Bildpunkte. Wer sie
+            ' zwischenspeichert, kann das an nichts erkennen - deshalb wird es hier gemeldet, an der
+            ' EINEN Stelle, durch die jede solche Aenderung geht (Backen einer Region ebenso wie
+            ' Rueckgaengig und Wiederholen). Ohne die Meldung komponierten die schnellen Renderwege
+            ' weiter auf dem Bild von vorhin (siehe ImageProcessor.MarkBaseSourceChanged).
+            ImageProcessor.MarkBaseSourceChanged()
             If _preview Is Nothing OrElse _full Is Nothing Then Return
             If _preview.Width = _full.Width AndAlso _preview.Height = _full.Height Then
                 ' Unskalierte Vorschau (kleines Bild): Region 1:1 ersetzen (Src-Blend, inkl. Alpha).

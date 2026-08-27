@@ -63,7 +63,7 @@ Namespace Views
             ' Muss zur Hoehe von TopWindowDragArea in MainWindow.axaml passen: der Hinweis
             ' bestimmt, wieviel Platz macOS fuer die Titelleiste freihaelt, und eine Zahl daneben
             ' schiebt entweder den Inhalt unter die Fensterknoepfe oder laesst einen Streifen frei.
-            ExtendClientAreaTitleBarHeightHint = 46
+            ExtendClientAreaTitleBarHeightHint = 32
 
             ' Rundung, Rand, Schatten UND das Abschneiden der Fensterecken gehoeren
             ' auf macOS ausschliesslich NSWindow. Der Avalonia-Rahmen darf weder eine

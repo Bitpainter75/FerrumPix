@@ -30,27 +30,29 @@
                   IsHitTestVisible="{Binding IsAppContentHitTestVisible}">
                 <!-- window-drag: hier (und nur in den Fusszeilen der Modus-Views) laesst sich das
                      Fenster verschieben - siehe MainWindow.IsInWindowDragArea. -->
+                <!-- Die Hoehe steht an DREI Stellen zusammen: hier, am Logo darunter und an den
+                     Fensterknoepfen (CustomWindowControlsHost weiter unten, sie liegen ausserhalb
+                     dieser Leiste und richten sich ueber ihren Rand aus). Auf macOS kommt der
+                     Hinweis in MainWindow.axaml.vb dazu. Wer eine davon aendert, aendert alle. -->
                 <Border x:Name="TopWindowDragArea"
                         Grid.Row="0"
                         Classes="toolbar window-drag"
-                        Height="46"
+                        Height="32"
                         IsVisible="{Binding IsWindowChromeVisible}">
                     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
                         <StackPanel x:Name="WindowLogoPanel"
                                     Grid.Column="0"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center"
-                                    Margin="18,0,0,0"
+                                    Margin="16,0,0,0"
                                     IsHitTestVisible="False">
-                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarDark.png"
-                                   Width="140"
-                                   Height="32"
+                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarDark_small.png"
+                                   Height="22"
                                    VerticalAlignment="Center"
                                    Stretch="Uniform"
                                    IsVisible="{Binding IsDarkLogoVisible}"/>
-                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarLight.png"
-                                   Width="140"
-                                   Height="32"
+                            <Image Source="avares://FerrumPix/Assets/FerrumPix_TopBarLight_small.png"
+                                   Height="22"
                                    VerticalAlignment="Center"
                                    Stretch="Uniform"
                                    IsVisible="{Binding IsLightLogoVisible}"/>
@@ -140,10 +142,13 @@
                  immer davor liegen statt dahinter zu verschwinden. -->
             <views:PrintDialogOverlayView x:Name="PrintDialogOverlay" ZIndex="499"/>
 
+            <!-- Die Knoepfe liegen NICHT in der Leiste, sondern darueber im Fenstergitter - der
+                 obere Rand haelt sie in ihrer Mitte. Bei einer Leiste von 32 und Knoepfen von 24
+                 sind das 4 Punkte oben (siehe TopWindowDragArea). -->
             <Border x:Name="CustomWindowControlsHost"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
-                    Margin="0,8,8,0">
+                    Margin="0,4,8,0">
                 <StackPanel x:Name="CustomWindowControls"
                             Orientation="Horizontal"
                             Spacing="7"

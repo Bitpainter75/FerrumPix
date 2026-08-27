@@ -742,13 +742,15 @@
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Text.Primary}"/>
         <Setter Property="BorderThickness" Value="3"/>
     </Style>
+    <!-- Die drei Fensterknoepfe. Ihre Groesse haengt an der Hoehe der Fensterleiste
+         (TopWindowDragArea in MainWindow.axaml): sie stehen darueber und muessen hineinpassen. -->
     <Style Selector="Button.wnd-btn, Button.wnd-close">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Panel}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
-        <Setter Property="Width" Value="30"/>
-        <Setter Property="Height" Value="30"/>
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="Cursor" Value="Hand"/>
