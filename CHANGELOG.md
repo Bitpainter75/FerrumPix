@@ -12,6 +12,13 @@
   being read, the footer names both, with a count. Until now the only sign was that things kept
   appearing.
 
+- **A drawing tablet setting.** With a pen you could drag the sliders but not press anything.
+  Buttons and menu entries normally act when you let go, and with a pen that second half does not
+  always arrive. Switch this on under Settings, General, and everything acts the moment the pen
+  touches down. The price, and it applies to the mouse as well: a click can no longer be taken back
+  by moving away before letting go. With a mouse, leave it off.
+
+  
 ### Fixes
 
 - **Scrolling is smoother.** Every tile and every row that came into view made the gallery lay out
@@ -62,8 +69,3 @@
 - **Depth blur can be stopped while it is working**, and stopping it leaves the picture untouched.
   Until now the stop only took effect once the blur had finished.
 
-- **A drawing tablet setting.** With a pen you could drag the sliders but not press anything.
-  Buttons and menu entries normally act when you let go, and with a pen that second half does not
-  always arrive. Switch this on under Settings, General, and everything acts the moment the pen
-  touches down. The price, and it applies to the mouse as well: a click can no longer be taken back
-  by moving away before letting go. With a mouse, leave it off.
