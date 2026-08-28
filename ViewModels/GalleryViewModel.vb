@@ -76,6 +76,19 @@ Namespace ViewModels
         Private _isVirtualFolder As Boolean
         Private _virtualFolderName As String = ""
         Private _pendingReload As Boolean = False
+        ' Jede Dateisystem-Aenderung kann waehrend eines schon laufenden Abgleichs eintreffen.
+        ' Die Marke trennt diese Laeufe: nur das zuletzt begonnene Ergebnis darf die gebundenen
+        ' Collections anfassen. Ein Abbruch des Dateisystems selbst ist nicht immer moeglich
+        ' (ein Netzwerk-Listing kann bereits im Kernel warten), aber sein Ergebnis wird dann
+        ' wenigstens nicht mehr sichtbar.
+        Private _folderSyncGeneration As Integer
+        ' Nach dem Umbenennen soll das Ziel markiert sein. WELCHER Abgleichslauf das erledigt, steht
+        ' aber nicht fest: das Umbenennen loest selbst Watcher-Ereignisse aus, und die
+        ' Generationsmarke laesst nur den zuletzt begonnenen Lauf die Anzeige anfassen. Wer auf
+        ' "seinen" Lauf wartet, wartet deshalb womoeglich auf einen, der stillschweigend abbricht -
+        ' und liest danach die alte Liste. Der Wunsch wird darum hier hinterlegt und von dem Lauf
+        ' eingeloest, der tatsaechlich uebernimmt.
+        Private _pendingSelectionPaths As HashSet(Of String)
         Private _filterFavorite As String = "All"
         Private ReadOnly _filterRatings As New HashSet(Of Integer)()
         ''' Farbetikett-Filter (Mehrfachauswahl). Bewusst NICHT persistiert: Etiketten sind
@@ -5312,65 +5325,44 @@ Namespace ViewModels
                                    ' Nachpruefung war bisher die Aufgabe von Stufe zwei.
                                    Dim restored As New HashSet(Of String)(PathIdentity.Comparer)
 
-                                   ' Erste Stufe: die zuletzt gefundenen Pfade wiederherstellen,
-                                   ' der Plattenzugriff dazu laeuft im Hintergrund.
+                                   ' Erste Stufe: die zuletzt gefundenen KATALOG-Treffer sofort
+                                   ' wiederherstellen. File.Exists gehört bewusst NICHT hierher:
+                                   ' auf großen oder schlafenden Laufwerken würde schon diese
+                                   ' Prüfung den ersten sichtbaren Inhalt wieder ausbremsen. Die
+                                   ' anschließende Dateisystem-Suche prüft und bereinigt den Bestand.
                                    If savedPaths.Count > 0 Then
                                        Dim seenSaved As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
                                        Dim published = 0
                                        For Each pathBatch In savedPaths.Chunk(180)
                                            token.ThrowIfCancellationRequested()
-                                           ' Gemerkt heisst nicht mehr gueltig: eine Suchliste aus
-                                           ' der Zeit vor dem Riegel traegt noch Pfade aus dem
-                                           ' Papierkorb, und die Datei EXISTIERT ja - sie faellt
-                                           ' also nicht von selbst durch File.Exists.
-                                           '
-                                           ' Ebenso raus, was ausserhalb des Startordners liegt:
-                                           ' Stufe zwei haette es nicht wiedergefunden und die
-                                           ' Bereinigung haette es am Ende weggeworfen. Da Stufe
-                                           ' zwei diese Pfade nun auslaesst, muss die Grenze hier
-                                           ' gezogen werden.
+                                           ' Papierkorb- und Ordnergrenze sind reine Pfadregeln
+                                           ' und damit ohne Dateisystemzugriff sicher prüfbar.
                                            Dim valid = pathBatch.
                                                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
                                                Where(Function(p) seenSaved.Add(p)).
                                                Where(Function(p) Not IsTrashedLocalPath(p)).
                                                Where(Function(p) _imageExtensions.Contains(IO.Path.GetExtension(p).ToLowerInvariant())).
                                                Where(Function(p) IsPathInSearchRoot(p, rootFolder, node.IncludeSubfolders)).
-                                               Where(Function(p) File.Exists(p)).
                                                ToList()
                                            If valid.Count = 0 Then Continue For
 
                                            Dim metaByPath = LibraryService.Instance.GetMetaForPaths(valid)
+                                           Dim catalogPaths = valid.Where(Function(path) metaByPath.ContainsKey(path)).ToList()
                                            Dim matched As New List(Of LibraryImageMeta)()
                                            For Each path In valid
                                                token.ThrowIfCancellationRequested()
                                                Dim m As LibraryImageMeta = Nothing
-                                               If Not metaByPath.TryGetValue(path, m) OrElse m Is Nothing Then
-                                                   m = New LibraryImageMeta With {
-                                                       .FilePath = path,
-                                                       .IsFavorite = False,
-                                                       .Rating = 0,
-                                                       .Tags = New List(Of String)()
-                                                   }
-                                                   ' Kennt der Katalog die Datei nicht, kommen die
-                                                   ' Dateidaten von der Platte - sonst steht das
-                                                   ' Element ohne Datum da (siehe
-                                                   ' PublishSearchBatchAsync, gleiche Stelle).
-                                                   Try
-                                                       Dim info As New FileInfo(path)
-                                                       If info.Exists Then
-                                                           m.FileCreatedAt = info.CreationTime.ToString("o")
-                                                           m.ScannedSourceModifiedAt = info.LastWriteTime.ToString("o")
-                                                       End If
-                                                   Catch
-                                                   End Try
-                                               End If
+                                               ' Ohne Katalogzeile gibt es absichtlich keinen
+                                               ' Ersatz-Lookup auf der Platte. Der zweite Suchlauf
+                                               ' findet diese Datei später und ergänzt sie normal.
+                                               If Not metaByPath.TryGetValue(path, m) OrElse m Is Nothing Then Continue For
                                                If Not Await MatchesSavedSearchAsync(node, m, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
                                                matched.Add(m)
                                            Next
 
                                            ' ERLEDIGT ist auch, was durchgefallen ist: Stufe zwei kaeme
                                            ' ueber dieselbe Zeile zum selben Urteil.
-                                           For Each path In valid
+                                           For Each path In catalogPaths
                                                restored.Add(path)
                                            Next
                                            If matched.Count = 0 Then Continue For
@@ -6416,6 +6408,9 @@ Namespace ViewModels
             CancelActiveSearch()
             Dim thumbnailToken = BeginNewFolderThumbnailScope()
             ClearSelection()
+            ' Ein hinterlegter Auswahlwunsch gehoert zur verlassenen Ansicht und darf in der
+            ' naechsten nicht nachtraeglich zuschlagen.
+            _pendingSelectionPaths = Nothing
             _allItems.Clear()
             Items.Clear()
             DisplayItems.Clear()
@@ -6960,12 +6955,38 @@ Namespace ViewModels
             ClearVirtualFolderState()
             Dim thumbnailToken = BeginNewFolderThumbnailScope()
             ClearSelection()
+            ' Ein hinterlegter Auswahlwunsch gehoert zur verlassenen Ansicht und darf in der
+            ' naechsten nicht nachtraeglich zuschlagen.
+            _pendingSelectionPaths = Nothing
             _allItems.Clear()
             Items.Clear()
             DisplayItems.Clear()
             UpdateStorageInfo()
 
-            If String.IsNullOrEmpty(folderPath) OrElse Not Directory.Exists(folderPath) Then
+            If String.IsNullOrEmpty(folderPath) Then
+                StatusText = LocalizationService.T("Kein Ordner gewählt")
+                SetupWatcher(Nothing)
+                Return
+            End If
+
+            ' Auch diese kleine Pruefung kann auf einer getrennten Netzwerkfreigabe mehrere
+            ' Sekunden dauern. Sie gehoert daher zum Hintergrundteil des Ordnerwechsels und nicht
+            ' vor das erste Await auf dem Anzeigefaden.
+            Dim folderExists As Boolean
+            Try
+                folderExists = Await Task.Run(Function() Directory.Exists(folderPath), thumbnailToken)
+            Catch ex As OperationCanceledException
+                Return
+            Catch ex As Exception
+                If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
+                DiagnosticLogService.LogException("Gallery.LoadFolder.Exists", ex)
+                StatusText = LocalizationService.T("Fehler beim Laden")
+                SetupWatcher(Nothing)
+                Return
+            End Try
+
+            If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
+            If Not folderExists Then
                 StatusText = LocalizationService.T("Kein Ordner gewählt")
                 SetupWatcher(Nothing)
                 Return
@@ -6974,32 +6995,121 @@ Namespace ViewModels
             SetupWatcher(folderPath)
             StatusText = LocalizationService.T("Ordner wird gelesen...")
 
+            ' ZUERST den Katalog anzeigen. Der Dateisystem-Abgleich darf nicht gleichzeitig seinen
+            ' Parallel.For starten: er kann sonst sämtliche ThreadPool-Worker belegen, sodass die
+            ' an sich schnelle Katalogabfrage mehrere Sekunden auf einen freien Worker wartet.
+            Dim catalogTask = Task.Run(Function() BuildCatalogSnapshot(folderPath, thumbnailToken), thumbnailToken)
+
+            ' Die Katalogzeilen werden gleich ein zweites Mal gebraucht - der Dateisystemlauf
+            ' vergleicht sie mit dem, was wirklich auf der Platte liegt. Sie hier festzuhalten
+            ' spart die zweite Abfrage ueber denselben Ordner; sie kostete dasselbe wie die erste.
+            Dim catalogMetaByPath As Dictionary(Of String, LibraryImageMeta) = Nothing
+            Try
+                Dim catalog = Await catalogTask
+                catalogMetaByPath = catalog.MetaByPath
+                If IsCurrentFolderLoad(folderPath, thumbnailToken) AndAlso catalog.Items.Count > 0 Then
+                    PerformanceTraceService.Measure("Ordner: Katalogbestand anzeigen",
+                        Sub()
+                            _allItems.AddRange(catalog.Items)
+                            FilterAndSort()
+                        End Sub)
+                End If
+            Catch ex As OperationCanceledException
+                Return
+            Catch ex As Exception
+                ' Der Katalog ist ein Beschleuniger, nicht die Voraussetzung zum Öffnen eines Ordners.
+                DiagnosticLogService.LogException("Gallery.LoadFolder.Catalog", ex)
+            End Try
+
+            ' Das Einfüllen der Collections plant Layout, Zeichnen und das Anfordern der sichtbaren
+            ' Vorschaubilder nur EIN. Ohne diesen Yield startet der nachfolgende Scan seine Worker,
+            ' bevor davon irgendetwas gelaufen ist.
+            '
+            ' DIE PRIORITAET IST DER GANZE PUNKT, und sie war zuerst falsch herum. In Avalonia ist
+            ' ein GROESSERER Wert die hoehere Prioritaet, und die Reihenfolge lautet
+            ' Render > Loaded > Default > Input > Background (nachgeschlagen in
+            ' Avalonia.Threading.DispatcherPriority). Die Kette nach dem Fuellen haengt aber an
+            ' Loaded: das Reset von DisplayItems stellt InvalidateGalleryItemsLayout auf Loaded, und
+            ' erst DIESE Aufgabe stellt das Anfordern der Vorschaubilder nach. Ein Yield auf Render
+            ' laeuft damit VOR beidem - er wartete also auf gar nichts, und die Kacheln blieben leer,
+            ' bis der Scan durch war (Nutzerbefund 2026-08-28: "erst wenn die Meldung weg ist sieht
+            ' man die ersten Bilder").
+            '
+            ' Background liegt unter Loaded UND unter Render und kommt deshalb zuverlaessig als
+            ' Letzter dran - auch nach der von Loaded aus nachgestellten Render-Aufgabe.
+            If _allItems.Count > 0 Then
+                Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                      End Sub, DispatcherPriority.Background)
+            End If
+
+            ' Erst nachdem die Katalog-Collection gebunden wurde, den teuren Abgleich anstoßen.
+            ' Das nächste Await gibt den UI-Faden frei, damit die Kacheln vor dessen Abschluss
+            ' tatsächlich gemessen und gezeichnet werden können.
+            Dim scanTask = Task.Run(Function() ScanFolder(folderPath, thumbnailToken, catalogMetaByPath), thumbnailToken)
+
             Dim scan As FolderScanResult
             Try
-                scan = Await Task.Run(Function() ScanFolder(folderPath, thumbnailToken), thumbnailToken)
+                scan = Await scanTask
             Catch ex As OperationCanceledException
                 Return
             Catch ex As UnauthorizedAccessException
+                If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
                 StatusText = LocalizationService.T("Zugriff verweigert")
                 Return
             Catch ex As IOException
+                If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
                 StatusText = LocalizationService.T("Fehler beim Laden")
                 Return
             Catch ex As Exception
+                If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
                 DiagnosticLogService.LogException("Gallery.LoadFolder", ex)
                 StatusText = LocalizationService.T("Fehler beim Laden")
                 Return
             End Try
 
             ' Ein zwischenzeitlicher Ordnerwechsel macht dieses Ergebnis wertlos.
-            If thumbnailToken.IsCancellationRequested Then Return
-            If Not String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase) Then Return
+            If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
 
-            _allItems.AddRange(scan.Items)
-            FilterAndSort()
+            ' Der EINZIGE Teil des Ordnerwechsels, der auf dem Anzeigefaden liegt: einfuellen,
+            ' filtern, sortieren, Anzeigefenster stellen. Alles davor lief im Hintergrund. Ein
+            ' eigener Messpunkt, weil nur diese Zeitspanne das Fenster wirklich stehen laesst -
+            ' die Zeiten der Hintergrundschritte kosten Wartezeit, aber keine Stockung.
+            '
+            ' UEBERNEHMEN, NICHT ANHAENGEN UND NICHT ERSETZEN. Der Katalogbestand steht bereits in
+            ' _allItems, und das Dateisystem liefert dieselben Bilder noch einmal - diesmal als
+            ' Wahrheit. Beide naheliegenden Wege waren falsch:
+            '
+            ' ANHAENGEN legte jedes Bild doppelt in die Liste. Die pfadbasierte Sicherung in
+            ' FilterAndSort verbarg das in der Anzeige, behielt aber das KATALOG-Element - die
+            ' Kacheln bekamen nie die Dateiangaben, und der Nachlauf ueber NeedsMetaRefresh schrieb
+            ' in Objekte, die an keiner Kachel haengen. Eine extern geaenderte Bewertung blieb
+            ' unsichtbar.
+            '
+            ' ERSETZEN tauschte JEDES Objekt aus, auch die unveraenderten. Die Anzeige sah lauter
+            ' neue Elemente und baute saemtliche Kacheln neu auf - sichtbar als Flackern kurz nach
+            ' dem ersten Bild, obwohl sich nichts geaendert hatte (Nutzerbefund 2026-08-28).
+            '
+            ' Also behaelt jedes bereits gezeigte Element seine Identitaet und bekommt nur die
+            ' geprueften Werte (ImageItem.AdoptScannedState). Danach stehen in Items und
+            ' DisplayItems dieselben Objekte in derselben Reihenfolge, ApplyDisplayWindow sieht
+            ' ueber SequenceEqual keinen Unterschied - und die Anzeige ruehrt sich nicht.
+            Dim uebernommen = MergeScanIntoExistingItems(scan.Items)
+            PerformanceTraceService.Measure("Ordner: einfuellen und sortieren",
+                Sub()
+                    _allItems.Clear()
+                    _allItems.AddRange(uebernommen)
+                    FilterAndSort()
+                End Sub)
 
+            ' Der Nachlauf muss die ANGEZEIGTEN Objekte treffen, nicht die frisch gebauten: nach der
+            ' Uebernahme sind das zwei verschiedene. Der Pfad ist das Bindeglied.
             If scan.NeedsMetaRefresh.Count > 0 Then
-                QueueBackgroundMetaRefresh(scan.NeedsMetaRefresh, thumbnailToken)
+                Dim nachzulesen = scan.NeedsMetaRefresh.
+                    Where(Function(i) i IsNot Nothing).
+                    Select(Function(i) i.FilePath).
+                    ToHashSet(PathIdentity.Comparer)
+                Dim ziele = _allItems.Where(Function(i) i IsNot Nothing AndAlso nachzulesen.Contains(i.FilePath)).ToList()
+                If ziele.Count > 0 Then QueueBackgroundMetaRefresh(ziele, thumbnailToken)
             End If
 
             ' Im Ruhezustand (Viewport-Warteschlange leer) füllt sich der Rest des Ordners
@@ -7023,36 +7133,170 @@ Namespace ViewModels
                                           End Function)
         End Function
 
+        ''' <summary>Legt das Ergebnis des Dateisystemlaufs auf den bereits gezeigten Sofortbestand:
+        ''' Reihenfolge und Zusammensetzung kommen vom Lauf, die OBJEKTE aber von der Anzeige,
+        ''' soweit es sie dort schon gibt. Siehe <see cref="ImageItem.AdoptScannedState"/>.
+        '''
+        ''' <para>Laeuft auf dem Anzeigefaden - AdoptScannedState meldet Aenderungen an gebundene
+        ''' Kacheln.</para></summary>
+        Private Function MergeScanIntoExistingItems(scanItems As List(Of ImageItem)) As List(Of ImageItem)
+            If scanItems Is Nothing Then Return New List(Of ImageItem)()
+            If _allItems.Count = 0 Then Return scanItems
+
+            Dim vorhanden As New Dictionary(Of String, ImageItem)(PathIdentity.Comparer)
+            For Each item In _allItems
+                If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) Then Continue For
+                If Not vorhanden.ContainsKey(item.FilePath) Then vorhanden(item.FilePath) = item
+            Next
+
+            Dim merged As New List(Of ImageItem)(scanItems.Count)
+            For Each frisch In scanItems
+                Dim alt As ImageItem = Nothing
+                ' Gleicher Pfad reicht NICHT: aus einem Ordner kann eine Datei geworden sein und
+                ' umgekehrt. Dann ist es trotz gleichen Namens ein anderes Element.
+                If frisch IsNot Nothing AndAlso Not String.IsNullOrEmpty(frisch.FilePath) AndAlso
+                   vorhanden.TryGetValue(frisch.FilePath, alt) AndAlso alt IsNot Nothing AndAlso
+                   alt.IsFolder = frisch.IsFolder AndAlso
+                   alt.IsParentFolderEntry = frisch.IsParentFolderEntry Then
+                    ' Ordnerkacheln tragen keine Bild- oder Katalogwerte; sie bleiben, wie sie sind.
+                    If Not frisch.IsFolder Then alt.AdoptScannedState(frisch)
+                    merged.Add(alt)
+                Else
+                    merged.Add(frisch)
+                End If
+            Next
+            Return merged
+        End Function
+
         ''' Das Ergebnis eines Ordner-Durchlaufs, fertig zum Einfüllen auf dem UI-Thread.
         Private Structure FolderScanResult
             Public Items As List(Of ImageItem)
             Public NeedsMetaRefresh As List(Of ImageItem)
         End Structure
 
+        ''' Der Sofortbestand eines Ordners: die fertigen Kacheln UND die Katalogzeilen, aus denen
+        ''' sie stammen. Die Zeilen gehen weiter an den Dateisystemlauf, der sonst dieselbe Abfrage
+        ''' ein zweites Mal stellen wuerde.
+        Private Structure FolderCatalogSnapshot
+            Public Items As List(Of ImageItem)
+            Public MetaByPath As Dictionary(Of String, LibraryImageMeta)
+        End Structure
+
+        ''' <summary>Liest die Katalogzeilen der Ordner-Ebene und baut daraus den Sofortbestand.
+        ''' Laeuft vollstaendig im Hintergrund; keine gebundene Collection wird beruehrt.</summary>
+        Private Function BuildCatalogSnapshot(folderPath As String, thumbnailToken As CancellationToken) As FolderCatalogSnapshot
+            Dim rows = LibraryService.Instance.GetImagesInFolder(folderPath)
+            Dim byPath As New Dictionary(Of String, LibraryImageMeta)(PathIdentity.Comparer)
+            For Each row In rows
+                If row Is Nothing OrElse String.IsNullOrWhiteSpace(row.FilePath) Then Continue For
+                byPath(row.FilePath) = row
+            Next
+
+            ' "..", die Unterordner UND die Katalogbilder - der Sofortbestand zeigt dieselbe
+            ' Zusammensetzung wie der spaetere Dateisystemlauf. Alles andere liesse die Galerie
+            ' nachtraeglich springen (siehe BuildFolderEntries).
+            Dim items As New List(Of ImageItem)()
+            Try
+                items.AddRange(BuildFolderEntries(folderPath))
+            Catch ex As Exception
+                ' Ein nicht lesbarer Ordner ist kein Grund, den Katalogbestand fallenzulassen -
+                ' der Dateisystemlauf meldet den Fehler gleich darauf mit seinem eigenen Status.
+                DiagnosticLogService.LogException("Gallery.CatalogSnapshot.Folders", ex)
+            End Try
+            items.AddRange(BuildCatalogItems(rows, thumbnailToken))
+
+            Return New FolderCatalogSnapshot With {
+                .Items = items,
+                .MetaByPath = byPath
+            }
+        End Function
+
+        ''' <summary>Die Ordner-Eintraege einer Ebene: erst "..", dann die Unterordner.
+        '''
+        ''' <para>BEIDE Wege in den Ordner bauen sie ueber DIESE Stelle - der Sofortbestand aus dem
+        ''' Katalog und der Dateisystemlauf danach. Fehlten sie im Sofortbestand, schoebe der Lauf
+        ''' sie kurz darauf VOR den Bildern ein, und die ganze Galerie ruckte um eine Zeile weiter
+        ''' (Nutzerbefund 2026-08-28: "ansonsten springt die Gallery danach"). Ein
+        ''' Verzeichnis-Listing zweimal zu machen kostet weniger als dieser Sprung; das zweite
+        ''' beantwortet ohnehin das Betriebssystem aus seinem Zwischenspeicher.</para>
+        '''
+        ''' <para>Laeuft im Hintergrund und beruehrt keine gebundene Collection.</para></summary>
+        Private Function BuildFolderEntries(folderPath As String) As List(Of ImageItem)
+            Dim entries As New List(Of ImageItem)()
+            If Not _showFolders Then Return entries
+
+            If _showParentFolder Then
+                Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+                If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
+                    entries.Add(ImageItem.CreateParentFolderEntry(parentPath))
+                End If
+            End If
+
+            For Each folder In Directory.GetDirectories(folderPath).
+                Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
+                OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
+
+                entries.Add(ImageItem.FromFolder(folder))
+            Next
+            Return entries
+        End Function
+
+        ''' <summary>Baut sofort darstellbare Einträge ausschließlich aus dem Katalog. Dateigröße und
+        ''' Änderungszeit werden bei Bedarf später durch den Hintergrund-Abgleich beziehungsweise die
+        ''' sichtbaren Bindungen ergänzt; die Kachel-, Sortier- und Filterdaten liegen bereits vor.
+        '''
+        ''' <para>Diese Elemente sind eine VORSCHAU, kein Endstand: sie uebernehmen die Katalogwerte
+        ''' ungeprueft, also auch dann, wenn die Datei seit dem letzten Scan geaendert wurde. Sobald
+        ''' der Dateisystemlauf fertig ist, ersetzt er sie (siehe LoadFolderImagesAsync).</para></summary>
+        Private Function BuildCatalogItems(metaItems As IEnumerable(Of LibraryImageMeta), thumbnailToken As CancellationToken) As List(Of ImageItem)
+            Dim result As New List(Of ImageItem)()
+            For Each meta In metaItems
+                If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
+                Dim item = ImageItem.CreateLightweight(meta.FilePath, thumbnailToken)
+                item.IsFavorite = meta.IsFavorite
+                item.Rating = meta.Rating
+                item.ColorLabel = meta.ColorLabel
+                item.Tags = If(meta.Tags, New List(Of String)())
+                item.ImageWidth = meta.ImageWidth.GetValueOrDefault()
+                item.ImageHeight = meta.ImageHeight.GetValueOrDefault()
+                item.ExifDateTaken = ExifService.ParseExifDateTime(meta.DateTaken)
+                item.ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
+                item.ExifCamera = meta.Camera
+                item.ExifIso = meta.Iso
+                item.ExifAperture = meta.Aperture
+                item.HasExifMetadata = meta.HasExifMetadata
+                item.HasIptcMetadata = meta.HasIptcMetadata
+                item.HasXmpMetadata = meta.HasXmpMetadata
+                item.HasIccProfile = meta.HasIccProfile
+                item.ExifMetadataSummary = meta.ExifSummary
+                item.IptcMetadataSummary = meta.IptcSummary
+                item.XmpMetadataSummary = meta.XmpSummary
+                item.IccMetadataSummary = meta.IccSummary
+                ' Die Dateidaten gehören ebenfalls zur Sortierung (nicht nur EXIF). Ohne sie
+                ' stünden Katalogelemente bei "geändert" bzw. "erstellt" am Rand, bis der
+                ' Hintergrundscan sie ersetzt.
+                item.ApplyCatalogFileDates(meta.FileCreatedAt, meta.ScannedSourceModifiedAt)
+                result.Add(item)
+            Next
+            Return result
+        End Function
+
         ''' Läuft im Hintergrund. Berührt nur lesend Felder des ViewModels und keine gebundene Collection.
-        Private Function ScanFolder(folderPath As String, thumbnailToken As CancellationToken) As FolderScanResult
+        ''' <param name="catalogMetaByPath">Die Katalogzeilen des Ordners, falls der Sofortbestand sie
+        ''' schon geholt hat. Nothing bedeutet nur "noch nicht da" - dann fragt der Lauf selbst.</param>
+        Private Function ScanFolder(folderPath As String, thumbnailToken As CancellationToken,
+                                    Optional catalogMetaByPath As Dictionary(Of String, LibraryImageMeta) = Nothing) As FolderScanResult
             Dim items As New List(Of ImageItem)()
 
-            If _showFolders Then
-                If _showParentFolder Then
-                    Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
-                    If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
-                        items.Add(ImageItem.CreateParentFolderEntry(parentPath))
-                    End If
-                End If
-
-                For Each folder In Directory.GetDirectories(folderPath).
-                    Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
-                    OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
-
-                    items.Add(ImageItem.FromFolder(folder))
-                Next
-            End If
+            PerformanceTraceService.Measure("Ordner: Unterordner auflisten",
+                Sub() items.AddRange(BuildFolderEntries(folderPath)))
 
             thumbnailToken.ThrowIfCancellationRequested()
 
             Dim needsMetaRefresh As New List(Of ImageItem)()
-            items.AddRange(BuildFileItems(EnumerateImageFiles(folderPath), folderPath, thumbnailToken, needsMetaRefresh))
+            Dim files = PerformanceTraceService.Measure("Ordner: Dateien auflisten",
+                                                        Function() EnumerateImageFiles(folderPath))
+            items.AddRange(BuildFileItems(files, folderPath, thumbnailToken, needsMetaRefresh, catalogMetaByPath))
 
             Return New FolderScanResult With {.Items = items, .NeedsMetaRefresh = needsMetaRefresh}
         End Function
@@ -7256,17 +7500,61 @@ Namespace ViewModels
         ''' zurück, der den leeren Zustand samt Statusmeldung herstellt.
         ''' </summary>
         Private Sub SyncFolderItems()
+            ' Absichtlich ohne Warten: die meisten Aufrufer sind Ereignisse. Der Teil NACH dem
+            ' ersten Await liegt aber auf dem Anzeigefaden und kann werfen (PruneSelection,
+            ' FilterAndSort, UpdateStorageInfo). Ohne diesen Anhang landete das in einer Task, die
+            ' niemand liest, und verschwaende still - solange die Methode ein Sub war, war eine
+            ' solche Ausnahme wenigstens zu sehen.
+            SyncFolderItemsAsync().ContinueWith(
+                Sub(lauf) DiagnosticLogService.LogException("GalleryViewModel.SyncFolderItems", lauf.Exception),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default)
+        End Sub
+
+        ''' <summary>Gleicht den aktuellen Ordner im Hintergrund mit dem Dateisystem ab.
+        '''
+        ''' <para>Der Aufrufer darf sofort weiterarbeiten: Aufzaehlen, Katalogabfrage,
+        ''' Beistelldateien und der Aufbau neuer <see cref="ImageItem"/>s laufen ausserhalb des
+        ''' Anzeigefadens. Nur das Uebernehmen der fertig vorbereiteten Liste bleibt auf ihm. Das
+        ''' ist wichtig, weil diese Methode auch vom FileSystemWatcher und nach Dateioperationen
+        ''' gerufen wird - ein grosser Ordner durfte die Bedienung dabei nicht anhalten.</para></summary>
+        Private Async Function SyncFolderItemsAsync() As Task
             If _isVirtualFolder Then Return
             If String.IsNullOrEmpty(_currentFolder) Then Return
-            If Not Directory.Exists(_currentFolder) Then
-                LoadFolderImages(_currentFolder)
-                Return
-            End If
 
             Dim folderPath = _currentFolder
+            Dim generation = Interlocked.Increment(_folderSyncGeneration)
             ' Den laufenden Thumbnail-Scope weiterbenutzen: BeginNewFolderThumbnailScope würde die
             ' Vorschaubilder der erhalten gebliebenen Elemente verwerfen.
             Dim thumbnailToken = _thumbnailLoadCts.Token
+
+            Dim folderExists As Boolean
+            Try
+                folderExists = Await Task.Run(Function() Directory.Exists(folderPath), thumbnailToken)
+            Catch ex As OperationCanceledException
+                Return
+            Catch ex As UnauthorizedAccessException
+                If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+                StatusText = LocalizationService.T("Zugriff verweigert")
+                Return
+            Catch ex As IOException
+                If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+                StatusText = LocalizationService.T("Fehler beim Laden")
+                Return
+            Catch ex As Exception
+                If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+                DiagnosticLogService.LogException("GalleryViewModel.SyncFolderItems.Exists", ex)
+                StatusText = LocalizationService.T("Fehler beim Laden")
+                Return
+            End Try
+
+            If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+            If Not folderExists Then
+                LoadFolderImages(folderPath)
+                Return
+            End If
+
             Dim existing = New Dictionary(Of String, ImageItem)(StringComparer.OrdinalIgnoreCase)
             For Each item In _allItems
                 If item IsNot Nothing AndAlso Not item.IsParentFolderEntry AndAlso Not existing.ContainsKey(item.FilePath) Then
@@ -7274,58 +7562,144 @@ Namespace ViewModels
                 End If
             Next
 
-            Dim rebuilt As New List(Of ImageItem)()
+            Dim keepParent = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso i.IsParentFolderEntry)
+            Dim showFolders = _showFolders
+            Dim showParentFolder = _showParentFolder
+            Dim syncResult As FolderSyncResult
             Try
-                If _showFolders Then
-                    If _showParentFolder Then
-                        Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
-                        If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
-                            Dim keptParent = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso i.IsParentFolderEntry)
-                            rebuilt.Add(If(keptParent, ImageItem.CreateParentFolderEntry(parentPath)))
-                        End If
+                syncResult = Await Task.Run(Function() BuildFolderSyncResult(folderPath, thumbnailToken,
+                                                                              existing, keepParent,
+                                                                              showFolders, showParentFolder))
+            Catch ex As UnauthorizedAccessException
+                If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+                StatusText = LocalizationService.T("Zugriff verweigert")
+                Return
+            Catch ex As IOException
+                If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+                StatusText = LocalizationService.T("Fehler beim Laden")
+                Return
+            Catch ex As Exception
+                If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+                ' SyncFolderItems wird auch als Fire-and-forget vom Watcher aufgerufen. Eine
+                ' unerwartete Katalog- oder Metadaten-Ausnahme darf deshalb weder den Dispatcher
+                ' noch die virtuelle Ansicht spaeter beeinflussen.
+                DiagnosticLogService.LogException("GalleryViewModel.SyncFolderItems", ex)
+                StatusText = LocalizationService.T("Fehler beim Laden")
+                Return
+            End Try
+
+            ' Zwischenzeitlich kann ein weiterer Watcher-Tick, ein Ordnerwechsel oder eine
+            ' Dateioperation gelaufen sein. Dann gehoert dieses Ergebnis nicht mehr zur Ansicht.
+            If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
+
+            PruneSelection(New HashSet(Of ImageItem)(syncResult.Rebuilt))
+            _allItems.Clear()
+            _allItems.AddRange(syncResult.Rebuilt)
+            FilterAndSort()
+            UpdateStorageInfo()
+            ApplyPendingSelection()
+
+            If syncResult.ItemsNeedingMetaRefresh.Count > 0 Then
+                QueueBackgroundMetaRefresh(syncResult.ItemsNeedingMetaRefresh, thumbnailToken)
+            End If
+            If syncResult.NewItems.Count > 0 Then ImageItem.QueueBackgroundThumbnails(syncResult.NewItems)
+        End Function
+
+        ''' <summary>Hinterlegt, welche Pfade nach dem naechsten uebernommenen Abgleich markiert sein
+        ''' sollen. Siehe <see cref="_pendingSelectionPaths"/>.</summary>
+        Private Sub RequestSelectionAfterSync(paths As IEnumerable(Of String))
+            Dim wanted = If(paths, Enumerable.Empty(Of String)()).
+                Where(Function(p) Not String.IsNullOrEmpty(p)).
+                ToHashSet(PathIdentity.Comparer)
+            _pendingSelectionPaths = If(wanted.Count > 0, wanted, Nothing)
+        End Sub
+
+        ''' <summary>Loest einen hinterlegten Auswahlwunsch ein. Findet sich kein einziger Pfad
+        ''' wieder, bleibt die Auswahl wie sie ist: das Umbenennen kann fehlgeschlagen sein, und
+        ''' eine leergeraeumte Auswahl waere dann die schlechtere Antwort.</summary>
+        Private Sub ApplyPendingSelection()
+            Dim wanted = _pendingSelectionPaths
+            If wanted Is Nothing Then Return
+            _pendingSelectionPaths = Nothing
+            Dim treffer = Items.Where(Function(i) i IsNot Nothing AndAlso Not i.IsGroupHeader AndAlso
+                                                  wanted.Contains(If(i.FilePath, ""))).ToList()
+            If treffer.Count = 0 Then Return
+            ReplaceSelection(treffer)
+        End Sub
+
+        ''' <summary>Der Ordner kann waehrend selbst einer einfachen Existenzpruefung gewechselt
+        ''' werden. Das Ergebnis darf dann weder die neue Ansicht leeren noch ihren Status aendern.</summary>
+        Private Function IsCurrentFolderLoad(folderPath As String, thumbnailToken As CancellationToken) As Boolean
+            Return Not thumbnailToken.IsCancellationRequested AndAlso
+                   Not _isVirtualFolder AndAlso
+                   String.Equals(NormalizePath(folderPath), NormalizePath(_currentFolder), StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Prueft auch im Fehlerfall, ob ein Hintergrundlauf noch zur sichtbaren
+        ''' lokalen Ansicht gehoert. So kann ein spaeter Fehler niemals den Status einer
+        ''' inzwischen geoeffneten Server- oder Suchansicht ueberschreiben.</summary>
+        Private Function IsCurrentFolderSync(generation As Integer, folderPath As String,
+                                             thumbnailToken As CancellationToken) As Boolean
+            Return generation = Volatile.Read(_folderSyncGeneration) AndAlso
+                   Not thumbnailToken.IsCancellationRequested AndAlso
+                   Not _isVirtualFolder AndAlso
+                   String.Equals(folderPath, _currentFolder, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        Private Structure FolderSyncResult
+            Public Rebuilt As List(Of ImageItem)
+            Public NewItems As List(Of ImageItem)
+            Public ItemsNeedingMetaRefresh As List(Of ImageItem)
+        End Structure
+
+        ''' <summary>Der reine Hintergrundteil von <see cref="SyncFolderItemsAsync"/>. Die Methode
+        ''' beruehrt keine ObservableCollection und keine an die Ansicht gebundenen Eigenschaften.</summary>
+        Private Function BuildFolderSyncResult(folderPath As String,
+                                               thumbnailToken As CancellationToken,
+                                               existing As Dictionary(Of String, ImageItem),
+                                               keepParent As ImageItem,
+                                               showFolders As Boolean,
+                                               showParentFolder As Boolean) As FolderSyncResult
+            Dim rebuilt As New List(Of ImageItem)()
+            If showFolders Then
+                If showParentFolder Then
+                    Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+                    If Not String.IsNullOrEmpty(parentPath) AndAlso Not IsAncestorOrSelf(folderPath, parentPath) AndAlso Directory.Exists(parentPath) Then
+                        rebuilt.Add(If(keepParent, ImageItem.CreateParentFolderEntry(parentPath)))
                     End If
-
-                    For Each folder In Directory.GetDirectories(folderPath).
-                        Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
-                        OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
-
-                        Dim keptFolder As ImageItem = Nothing
-                        rebuilt.Add(If(existing.TryGetValue(folder, keptFolder) AndAlso keptFolder.IsFolder, keptFolder, ImageItem.FromFolder(folder)))
-                    Next
                 End If
 
-                Dim files = EnumerateImageFiles(folderPath)
+                For Each folder In Directory.GetDirectories(folderPath).
+                    Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
+                    OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
 
-                ' Nur für neue Dateien ein ImageItem bauen.
-                Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
-                Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
-                Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
-                Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase)
-
-                For Each file In files
-                    Dim keptFile As ImageItem = Nothing
-                    If existing.TryGetValue(file.FullName, keptFile) Then
-                        rebuilt.Add(keptFile)
-                    Else
-                        Dim added As ImageItem = Nothing
-                        If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
-                    End If
+                    Dim keptFolder As ImageItem = Nothing
+                    rebuilt.Add(If(existing.TryGetValue(folder, keptFolder) AndAlso keptFolder.IsFolder, keptFolder, ImageItem.FromFolder(folder)))
                 Next
+            End If
 
-                PruneSelection(New HashSet(Of ImageItem)(rebuilt))
-                _allItems.Clear()
-                _allItems.AddRange(rebuilt)
-                FilterAndSort()
-                UpdateStorageInfo()
+            Dim files = EnumerateImageFiles(folderPath)
+            Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
+            Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
+            Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
+            Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, StringComparer.OrdinalIgnoreCase)
 
-                If itemsNeedingMetaRefresh.Count > 0 Then QueueBackgroundMetaRefresh(itemsNeedingMetaRefresh, thumbnailToken)
-                If newItems.Count > 0 Then ImageItem.QueueBackgroundThumbnails(newItems)
-            Catch ex As UnauthorizedAccessException
-                StatusText = LocalizationService.T("Zugriff verweigert")
-            Catch ex As IOException
-                StatusText = LocalizationService.T("Fehler beim Laden")
-            End Try
-        End Sub
+            For Each file In files
+                Dim keptFile As ImageItem = Nothing
+                If existing.TryGetValue(file.FullName, keptFile) Then
+                    rebuilt.Add(keptFile)
+                Else
+                    Dim added As ImageItem = Nothing
+                    If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
+                End If
+            Next
+
+            Return New FolderSyncResult With {
+                .Rebuilt = rebuilt,
+                .NewItems = newItems,
+                .ItemsNeedingMetaRefresh = itemsNeedingMetaRefresh
+            }
+        End Function
 
         Public Sub RefreshChangedFiles(paths As IEnumerable(Of String))
             Dim changed = If(paths, Enumerable.Empty(Of String)()).
@@ -7410,13 +7784,31 @@ Namespace ViewModels
             .MatchCasing = MatchCasing.CaseInsensitive
         }
 
+        ''' <param name="vorhandeneKatalogzeilen">Bereits geholte Katalogzeilen derselben Ordner-Ebene.
+        ''' Der Ordnerwechsel gibt hier den Sofortbestand weiter; alle anderen Aufrufer lassen den
+        ''' Wert offen und fragen selbst.</param>
         Private Function BuildFileItems(files As FileInfo(),
                                         folderPath As String,
                                         thumbnailToken As CancellationToken,
-                                        itemsNeedingMetaRefresh As List(Of ImageItem)) As List(Of ImageItem)
+                                        itemsNeedingMetaRefresh As List(Of ImageItem),
+                                        Optional vorhandeneKatalogzeilen As Dictionary(Of String, LibraryImageMeta) = Nothing) As List(Of ImageItem)
             If files Is Nothing OrElse files.Length = 0 Then Return New List(Of ImageItem)()
+            ' Frueh aussteigen, wenn der Ordner schon gewechselt hat: was hier folgt, sind zwei
+            ' Verzeichnis-Listings und der Aufbau aller Kachelobjekte - alles fuer die Katz.
+            thumbnailToken.ThrowIfCancellationRequested()
 
-            Dim meta = LibraryService.Instance.GetFolderMeta(folderPath)
+            ' Nach den DATEIEN fragen, nicht nach dem Ordner. Eine Ordnerabfrage ueber
+            ' "FilePath LIKE 'ordner/%'" holt auch alles aus den Unterordnern - beim Oeffnen eines
+            ' reinen Elternordners waren das an Patricks Bestand 17178 Katalogzeilen zu
+            ' zweiunddreissig Spalten fuer null angezeigte Bilder. Hier steht die Dateiliste schon
+            ' fertig da, und ueber sie geht die Abfrage auf den Primaerschluessel.
+            '
+            ' Beim Ordnerwechsel entfaellt die Abfrage ganz: der Sofortbestand hat dieselbe
+            ' Ordner-Ebene gerade gelesen (EnumerateImageFiles geht nicht in Unterordner, deckt
+            ' sich also mit GetImagesInFolder), und zweimal dasselbe zu fragen kostete zweimal.
+            Dim meta = If(vorhandeneKatalogzeilen,
+                          PerformanceTraceService.Measure("Ordner: Katalogabfrage",
+                              Function() LibraryService.Instance.GetMetaForPaths(files.Select(Function(f) f.FullName))))
 
             ''' Die XMP-Beistelldateien EINMAL für den ganzen Ordner auflisten statt je Bild zu prüfen:
             ''' die Frische-Erkennung unten braucht das Änderungsdatum der Sidecar, und zwei zusätzliche
@@ -7424,21 +7816,24 @@ Namespace ViewModels
             ''' spürbar. Ein Verzeichnis-Listing kostet dagegen einmalig.
             Dim sidecarStamps As New Dictionary(Of String, String)(PathIdentity.Comparer)
             Dim eigeneRezepte As New Dictionary(Of String, String)(PathIdentity.Comparer)
-            Try
-                For Each sidecar In Directory.EnumerateFiles(folderPath, "*.xmp", SidecarSearchOptions)
-                    ' ".fpxmp" endet nicht auf ".xmp" und faellt hier nicht mit hinein - der Vergleich
-                    ' steht trotzdem da, weil ein Treffer den Stempel still verfaelschen wuerde.
-                    If sidecar.EndsWith(RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
-                    sidecarStamps(sidecar) = File.GetLastWriteTime(sidecar).ToString("o")
-                Next
-                ' Zweites Listing fuer die eigenen Rezepte: Vorhandensein UND Aenderungszeit gehoeren
-                ' in den Stempel. So werden extern geaenderte Katalogwerte aus .fpxmp ebenso erkannt
-                ' wie das Loeschen einer Sidecar.
-                For Each rezept In Directory.EnumerateFiles(folderPath, "*" & RawSidecarService.Extension, SidecarSearchOptions)
-                    eigeneRezepte(rezept) = File.GetLastWriteTime(rezept).ToString("o")
-                Next
-            Catch
-            End Try
+            PerformanceTraceService.Measure("Ordner: Beistelldateien auflisten",
+                Sub()
+                    Try
+                        For Each sidecar In Directory.EnumerateFiles(folderPath, "*.xmp", SidecarSearchOptions)
+                            ' ".fpxmp" endet nicht auf ".xmp" und faellt hier nicht mit hinein - der Vergleich
+                            ' steht trotzdem da, weil ein Treffer den Stempel still verfaelschen wuerde.
+                            If sidecar.EndsWith(RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
+                            sidecarStamps(sidecar) = File.GetLastWriteTime(sidecar).ToString("o")
+                        Next
+                        ' Zweites Listing fuer die eigenen Rezepte: Vorhandensein UND Aenderungszeit gehoeren
+                        ' in den Stempel. So werden extern geaenderte Katalogwerte aus .fpxmp ebenso erkannt
+                        ' wie das Loeschen einer Sidecar.
+                        For Each rezept In Directory.EnumerateFiles(folderPath, "*" & RawSidecarService.Extension, SidecarSearchOptions)
+                            eigeneRezepte(rezept) = File.GetLastWriteTime(rezept).ToString("o")
+                        Next
+                    Catch
+                    End Try
+                End Sub)
 
                 ''' Die FileInfo-Objekte kommen fertig befüllt aus DirectoryInfo.EnumerateFiles (siehe
                 ''' ImageItem.FromFileInfo) - der frühere Weg über New ImageItem(pfad) stieß je Datei einen
@@ -7448,7 +7843,34 @@ Namespace ViewModels
                 ''' erst der abschließende Durchlauf unten geht wieder sequenziell in fester Reihenfolge.
                 Dim results = New ImageItem(files.Length - 1) {}
                 Dim needsRefreshFlags = New Boolean(files.Length - 1) {}
-                Parallel.For(0, files.Length,
+                Dim bauUhr = If(PerformanceTraceService.IsActive, Diagnostics.Stopwatch.StartNew(), Nothing)
+                ' MIT DECKEL, sonst nimmt dieser Lauf dem Vorschaubild-Lader die Faeden weg. Ein
+                ' Parallel.For ohne Grenze belegt alle ThreadPool-Worker, und die Lader stehen als
+                ' Task.Run in derselben Schlange (ImageItem.StartThumbnailWorkersLocked). Der
+                ' ThreadPool legt danach nur ein bis zwei Faeden je Sekunde nach - deshalb konnte
+                ' schon die schnelle Katalogabfrage Sekunden auf einen freien Worker warten, und
+                ' beim Ordnerwechsel blieben die Kacheln leer, bis dieser Lauf durch war
+                ' (Nutzerbefund 2026-08-28).
+                '
+                ' EIN VIERTEL BLEIBT FREI, nicht eine feste Zahl: fest reserviert (vier Leser plus
+                ' ein Hintergrundlader) waere ein Vierkerner auf einen einzigen Faden zurueckgefallen
+                ' und haette den Ordnerwechsel selbst ausgebremst. So bleibt auf jeder Maschine
+                ' etwas frei und der Lauf trotzdem parallel.
+                '
+                ' UND MIT ABBRUCHMARKE. Ohne sie lief dieser Lauf nach einem Ordnerwechsel BIS ZUM
+                ' ENDE weiter, obwohl sein Ergebnis schon niemanden mehr interessierte - der
+                ' Ordnerwechsel prueft die Marke erst hinterher. Wer aus einem grossen Ordner in
+                ' einen anderen wechselte, wartete deshalb darauf, dass der ALTE Ordner fertig
+                ' gebaut wird, bevor die Katalogabfrage des neuen ueberhaupt einen freien Worker
+                ' bekam (Nutzerbefund 2026-08-28: "gefuehlt mehrere Sekunden, bis die ersten Bilder
+                ' sichtbar werden"). Parallel.For wirft dann OperationCanceledException, und die
+                ' faengt der Ordnerwechsel bereits ab.
+                Dim fuerVorschaubilder = Math.Max(1, Environment.ProcessorCount \ 4)
+                Dim bauOptionen As New ParallelOptions With {
+                    .MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - fuerVorschaubilder),
+                    .CancellationToken = thumbnailToken
+                }
+                Parallel.For(0, files.Length, bauOptionen,
                     Sub(i As Integer)
                         Dim file = files(i).FullName
                         Dim item = ImageItem.FromFileInfo(files(i), thumbnailToken)
@@ -7517,6 +7939,10 @@ Namespace ViewModels
                         results(i) = item
                         needsRefreshFlags(i) = needsRefresh
                     End Sub)
+                If bauUhr IsNot Nothing Then
+                    PerformanceTraceService.Record("Ordner: Kachelobjekte bauen", bauUhr.Elapsed.TotalMilliseconds)
+                    PerformanceTraceService.Record("Ordner: Bilder im Ordner", files.Length)
+                End If
 
             Dim built As New List(Of ImageItem)(results.Length)
             For i = 0 To results.Length - 1
@@ -7660,57 +8086,40 @@ Namespace ViewModels
         Private Sub ApplyDisplayWindow(source As IList(Of ImageItem), firstIndex As Integer, lastIndex As Integer)
             If _displayWindowFirst = firstIndex AndAlso _displayWindowLast = lastIndex Then Return
 
-            ' ZWEI WEGE, UND DER TEURE IST NICHT DER, DEN MAN VERMUTET.
+            ' ZWEI WEGE - UND WELCHER BILLIGER IST, HAENGT DARAN, WIE WEIT DAS FENSTER RUECKT.
             '
-            ' Ursprünglich stand hier ein Delta-Update: bei überlappenden Fenstern (Rollen um wenige
-            ' Zeilen, der Regelfall) wurden nur die Elemente getauscht, die das Fenster verlassen
-            ' bzw. betreten - statt das ganze Fenster per ReplaceAll zurückzusetzen. Die Begründung
-            ' war, dass ein Reset das nicht virtualisierende WrapPanel zwingt, alle Kacheln neu zu
-            ' erzeugen, samt der DAMALS je Kachel erzeugten Kontextmenüs.
+            ' Am Rand tauschen, wenn sich das Fenster nur verschiebt: beim Rollen um wenige Zeilen
+            ' bleiben die allermeisten Elemente dieselben, sie stehen nur an anderer Stelle. Dann
+            ' werden vorn und hinten so viele Plaetze entfernt und angehaengt, wie das Fenster
+            ' wirklich weitergerueckt ist - alles dazwischen behaelt seine fertig aufgebaute
+            ' Kachel. Beim Rollen um eine Zeile sind das fuenf Aenderungen statt sechzig
+            ' Neuaufbauten (Nutzerbefund 2026-08-28: Position fuer Position zu ersetzen brachte das
+            ' Rollen "mehr ins Stocken").
             '
-            ' Die Kontextmenüs hängen längst am Wurzel-Raster der Galerie, nicht mehr an der Kachel.
-            ' Und am echten Fenster gemessen (Nutzerprotokoll 2026-08-27, 1000 Bilder) hat sich die
-            ' Rechnung damit umgedreht: das Tauschen kostete bis zu 350 ms je Rollschritt, das
-            ' Ersetzen 58 ms. Der Grund ist, dass JEDE einzelne Änderung an DisplayItems für sich
-            ' gemeldet wird und das Panel daraufhin sein ganzes Layout wiederholt - zehn getauschte
-            ' Plätze sind zehn Layoutläufe über alle Kacheln, ein Ersetzen dagegen einer.
+            ' Ganz zuruecksetzen, wenn das neue Fenster mit dem alten NICHTS zu tun hat - beim
+            ' Sprung am Regler. Dann fuehrt kein Weg an einem Neuaufbau vorbei, und EIN
+            ' Zuruecksetzen ist dafuer der billigste.
             '
-            ' Deshalb geht jetzt BEIDES über einen Zug. Bleibt das Fenster gleich, passiert wie
-            ' bisher gar nichts (die Prüfung oben).
+            ' WAS DAMIT NICHT GELOEST IST: jede einzelne Aenderung an DisplayItems wird fuer sich
+            ' gemeldet, und das nicht virtualisierende WrapPanel des Rasters wiederholt daraufhin
+            ' sein Layout ueber alle Kacheln. Ein Rollschritt ueber zwei Zeilen bei sechs Spalten
+            ' sind vierundzwanzig Meldungen und damit vierundzwanzig Layoutlaeufe; am echten
+            ' Fenster gemessen bis zu 350 ms (Nutzerprotokoll 2026-08-27, 1000 Bilder). Die
+            ' LISTENansicht hat das seit der Umstellung auf den ItemsRepeater nicht mehr - der
+            ' verarbeitet einzelne Aenderungen guenstig. Fuer das Raster bleibt es offen; ein
+            ' Buendeln zu einer einzigen Meldung hilft dort nicht, weil eine Ruecksetzung genau den
+            ' Neuaufbau ausloest, den der Randtausch vermeiden soll. Der Weg waere, den reinen
+            ' Rasterpfad von der Gruppenansicht zu trennen und ihn ueber einen ItemsRepeater mit
+            ' UniformGridLayout laufen zu lassen - ohne Kopfzeilen sind die Kacheln gleich gross.
+            ' Das gehoert am echten Fenster gemessen, bevor es umgebaut wird.
             Dim hasOverlap = _displayWindowFirst >= 0 AndAlso firstIndex <= _displayWindowLast AndAlso lastIndex >= _displayWindowFirst
             ' Messpunkt: die beiden Wege bleiben getrennt zu sehen, damit sich am Protokoll ablesen
-            ' lässt, ob die Umstellung trägt.
+            ' lässt, welcher wie oft läuft und was er kostet.
             Dim messpunkt = If(hasOverlap, "Fenster: Kacheln tauschen", "Fenster: ganz ersetzen")
             Dim messuhr = If(PerformanceTraceService.IsActive, Diagnostics.Stopwatch.StartNew(), Nothing)
             ' Die ALTEN Grenzen werden unten noch gebraucht: der Randtausch rechnet aus, wie weit das
             ' Fenster gerückt ist. Gesetzt werden sie deshalb erst am Ende.
             Dim slice = source.Skip(firstIndex).Take(lastIndex - firstIndex + 1).ToList()
-
-            ' DEN INHALT TAUSCHEN, NICHT DIE KACHEL. Das ist der Kern: bleibt die Zahl der Plätze
-            ' gleich - und das ist beim Rollen immer so -, wird jeder Platz EINZELN ersetzt. Ein
-            ' Ersetzen an einer Stelle sagt der Anzeige "hier steht jetzt etwas anderes", und sie
-            ' setzt der vorhandenen Kachel einen neuen Datenkontext. Ein Zurücksetzen der ganzen
-            ' Liste sagt dagegen "alles ist neu", und dann baut das Panel jede Kachel neu auf -
-            ' vierzig Kacheln zu rund fünfzig Steuerelementen, bei jedem Rollschritt.
-            '
-            ' Gemessen am echten Fenster kostete der Neuaufbau bis zu 348 ms je Rollschritt
-            ' (Nutzerprotokoll 2026-08-28). Ersetzt werden nur die Plätze, deren Inhalt sich
-            ' wirklich ändert.
-            ' AN DEN RÄNDERN TAUSCHEN, WENN SICH DAS FENSTER NUR VERSCHIEBT.
-            '
-            ' Beim Rollen wandert das Fenster um wenige Zeilen: die allermeisten Elemente bleiben
-            ' dieselben, sie stehen nur an anderer Stelle. Dann werden vorn und hinten so viele
-            ' Plätze entfernt und angehängt, wie das Fenster wirklich weitergerückt ist - alles
-            ' dazwischen bleibt unangetastet, samt seiner fertig aufgebauten Kachel.
-            '
-            ' NICHT Position für Position ersetzen: das sähe nach "nur der Inhalt wechselt" aus,
-            ' erzeugt aber für JEDEN Platz eine Meldung, und die Anzeige baut die Kachel dabei neu
-            ' auf. Beim Rollen um eine Zeile wären das sechzig Neuaufbauten statt fünf (gemerkt am
-            ' Mausrad, Nutzerbefund 2026-08-28: das Rollen kam damit "mehr ins Stocken").
-            '
-            ' Zurückgesetzt wird nur, wenn das neue Fenster mit dem alten NICHTS zu tun hat - beim
-            ' Sprung am Regler. Dann führt kein Weg an einem Neuaufbau vorbei, und ein einzelnes
-            ' Zurücksetzen ist dafür der billigste.
             Dim ueberlappt = hasOverlap AndAlso DisplayItems.Count = _displayWindowLast - _displayWindowFirst + 1
             Dim geaendert = 0
             If ueberlappt Then
@@ -7811,6 +8220,21 @@ Namespace ViewModels
 
         Private Sub FilterAndSort()
             Dim filtered = _allItems.AsEnumerable()
+
+            ' Mehrere asynchrone Quellen dürfen denselben Treffer melden (Katalog-Wiederherstellung
+            ' und nachfolgender Dateisystemlauf einer Suchliste). Die Anzeige besitzt deshalb eine
+            ' letzte, pfadbasierte Sicherung; sie hält auch dann genau eine Kachel, wenn die beiden
+            ' Quellen unterschiedliche Groß-/Kleinschreibung des gleichen Pfads liefern.
+            '
+            ' Ein HashSet statt GroupBy: FilterAndSort laeuft bei jeder Filter- und
+            ' Sortieraenderung ueber den ganzen Bestand, und GroupBy legt dafuer je Pfad eine
+            ' eigene Liste an - bei 30000 Bildern also 30000 Listen fuer eine Frage, die ein
+            ' Merkposten beantwortet. Das ToList macht den Durchlauf einmalig; ohne es traege die
+            ' Kette einen Merkposten mit sich, der beim zweiten Durchlaufen alles verwuerfe.
+            Dim gesehenePfade As New HashSet(Of String)(PathIdentity.Comparer)
+            filtered = filtered.
+                Where(Function(i) i IsNot Nothing AndAlso gesehenePfade.Add(If(i.FilePath, ""))).
+                ToList()
 
             If Not String.IsNullOrEmpty(_searchText) Then
                 filtered = filtered.Where(Function(i) i.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
@@ -8870,8 +9294,16 @@ Namespace ViewModels
                                                       LoadFolderImages(newPath)
                                                       RestoreCurrentFolderTreeSelection()
                                                   Else
+                                                      ' Der Dialog erwartet, dass das Ziel danach markiert ist. Der
+                                                      ' Wunsch wird hinterlegt, statt auf einen bestimmten Lauf zu
+                                                      ' warten - siehe RequestSelectionAfterSync.
+                                                      '
+                                                      ' Markiert heisst AUSGEWAEHLT, nicht nur "aktuelles Element":
+                                                      ' bisher stand hier ein blosses SelectedItem, und damit blieb
+                                                      ' SelectedItems leer - ein zweites Umbenennen hintereinander
+                                                      ' nahm dann den Ordner als Ziel statt die eben umbenannte Datei.
+                                                      RequestSelectionAfterSync({newPath})
                                                       SyncFolderItems()
-                                                      SelectedItem = Items.FirstOrDefault(Function(i) String.Equals(i.FilePath, newPath, StringComparison.OrdinalIgnoreCase))
                                                   End If
                                               End Sub)
         End Sub
@@ -8907,10 +9339,12 @@ Namespace ViewModels
                 Next
 
                 ClearSelection()
-                SyncFolderItems()
+                ' Erst den Wunsch hinterlegen, dann abgleichen: das Umbenennen hat den Watcher schon
+                ' geweckt, und dessen Lauf darf den hier begonnenen ueberholen, ohne dass die
+                ' Auswahl verlorengeht (siehe RequestSelectionAfterSync).
+                RequestSelectionAfterSync(result.Mappings.Select(Function(m) m.TargetPath))
+                Await SyncFolderItemsAsync()
                 RefreshTree()
-                Dim renamedPaths = result.Mappings.Select(Function(m) m.TargetPath).ToHashSet(PathIdentity.Comparer)
-                ReplaceSelection(Items.Where(Function(i) i IsNot Nothing AndAlso renamedPaths.Contains(i.FilePath)))
             Catch ex As Exception
                 errorMessage = ex.Message
             End Try

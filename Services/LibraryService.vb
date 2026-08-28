@@ -862,7 +862,7 @@ Namespace Services
         ''' <summary>Nur die drei Stempel, an denen der Katalogindex erkennt, ob eine Datei erneut
         ''' gelesen werden muss - fuer den Ordner UND alles darunter, in EINER Abfrage.
         '''
-        ''' Warum nicht <see cref="GetFolderMeta"/>: das holt zweiunddreissig Spalten je Zeile, samt
+        ''' Warum nicht <see cref="GetMetaForPaths"/>: das holt zweiunddreissig Spalten je Zeile, samt
         ''' der vorformatierten Zusammenfassungen. Ueber einen Fotobestand mit sechsstelliger
         ''' Bilderzahl ist das ein Vielfaches an Speicher fuer eine Frage, die drei Zeichenketten
         ''' beantworten. Der Index vergleicht nur und zeigt nichts an.</summary>
@@ -892,29 +892,19 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Lädt alle Metadaten (inkl. EXIF) für alle Dateien im angegebenen Ordner in einem einzigen Query.</summary>
-        Public Function GetFolderMeta(folderPath As String) As Dictionary(Of String, LibraryImageMeta)
-            Dim result As New Dictionary(Of String, LibraryImageMeta)(PathIdentity.Comparer)
-            Dim prefix = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
-            Using conn = New SqliteConnection(_connectionString)
-                conn.Open()
-                Using cmd = conn.CreateCommand()
-                    ' Maskiert wie beim Loeschen: ein Unterstrich im Ordnernamen holte sonst auch die
-                    ' Nachbarordner herein - siehe EscapeLikeValue.
-                    cmd.CommandText = $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath LIKE $prefix" &
-                                      LikeEscapeClause
-                    cmd.Parameters.AddWithValue("$prefix", EscapeLikeValue(prefix) & "%")
-                    Using reader = cmd.ExecuteReader()
-                        While reader.Read()
-                            Dim meta = ReadMetaRow(reader)
-                            result(meta.FilePath) = meta
-                        End While
-                    End Using
-                End Using
-            End Using
-            Return result
-        End Function
-
+        ''' <summary>Die Katalogzeilen zu einer Dateiliste, in Bloecken zu 500 ueber den
+        ''' Primaerschluessel.
+        '''
+        ''' <para>ES GIBT KEINE ORDNER-ABFRAGE MEHR. Hier stand einmal ein GetFolderMeta ueber
+        ''' "FilePath LIKE 'ordner/%'", und das war an zwei Stellen teuer. Erstens holte das Muster
+        ''' auch ALLE UNTERORDNER: wer einen Elternordner oeffnete, der selbst kein Bild enthaelt,
+        ''' zog dessen ganzen Unterbau herein - an Patricks Bestand gemessen 17178 Zeilen zu
+        ''' zweiunddreissig Spalten (rund 5,5 MB Text, davon 4,4 MB vorformatierte
+        ''' Zusammenfassungen) fuer null angezeigte Bilder. Zweitens laesst SQLite die
+        ''' LIKE-Optimierung fallen, sobald eine ESCAPE-Klausel danebensteht - die Abfrage lief
+        ''' also als voller Tabellendurchlauf, obwohl FilePath der Primaerschluessel ist.
+        ''' Der Anrufer kennt seine Dateien ohnehin; ueber sie zu fragen ist genauer UND
+        ''' billiger (gemessen 4,9 ms gegen 1,9 ms fuer denselben Ordner mit 1659 Bildern).</para></summary>
         Public Function GetMetaForPaths(paths As IEnumerable(Of String)) As Dictionary(Of String, LibraryImageMeta)
             Dim result As New Dictionary(Of String, LibraryImageMeta)(PathIdentity.Comparer)
             Dim list = If(paths, Enumerable.Empty(Of String)()).
@@ -991,6 +981,57 @@ Namespace Services
                     cmd.CommandText = $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath LIKE @p ESCAPE '\'"
                     cmd.Parameters.AddWithValue("@p", likePattern)
                     Return ReadImageMeta(cmd)
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Gibt die bereits katalogisierten Bilder der DIREKTEN Ordner-Ebene zurück.
+        ''' Die Galerie verwendet dies als Sofortbestand, während das Dateisystem im Hintergrund
+        ''' den Katalog abgleicht. Unterordner werden dabei ausdrücklich nicht mitgeliefert.
+        '''
+        ''' <para>Der Katalog ist eine Erinnerung, keine Wahrheit: eine ausserhalb von FerrumPix
+        ''' geloeschte Datei steht hier noch drin und erscheint fuer den Augenblick bis zum
+        ''' Dateisystemlauf als Kachel. Das ist der bewusste Preis fuer den Sofortbestand - der
+        ''' Abgleich raeumt sie wieder weg.</para></summary>
+        Public Function GetImagesInFolder(folderPath As String) As List(Of LibraryImageMeta)
+            If String.IsNullOrWhiteSpace(folderPath) Then Return New List(Of LibraryImageMeta)()
+            Dim normalizedFolder = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            Dim prefix = normalizedFolder & Path.DirectorySeparatorChar
+            ' Kein LIKE ... ESCAPE: damit verliert SQLite die Indexoptimierung und prüft den
+            ' gesamten Katalog. Der halboffene Textbereich nutzt hingegen FilePath (PRIMARY KEY)
+            ' direkt als Index; der anschließende Vergleich entfernt weiterhin Unterordner.
+            '
+            ' Die Obergrenze ist das TRENNZEICHEN PLUS EINS, nicht das hoechste Zeichen der
+            ' Grundebene: SQLite vergleicht Text mit BINARY byteweise ueber UTF-8, und dort liegt
+            ' ein Emoji (F0 ...) UEBER U+FFFF (EF BF BF). Mit "prefix & ChrW(&HFFFF)" fiel jede
+            ' Datei mit einem Emoji im Namen aus dem Sofortbestand heraus. "/ordner/" bis
+            ' "/ordner0" fasst dagegen genau die Kinder des Ordners und nichts sonst.
+            '
+            ' DIESER BEREICH IST SCHREIBWEISENGENAU, und das ist eine Eigenschaft des KATALOGS,
+            ' nicht dieser Abfrage: FilePath ist TEXT PRIMARY KEY und traegt damit die
+            ' Standardkollation BINARY, und der Schreibweg legt den Pfad ab, wie der Aufrufer ihn
+            ' gerade hat - PathIdentity.Normalize wird dort NICHT angewandt. Unter Windows kann
+            ' die Schreibweise deshalb auseinanderlaufen, und dann findet auch GetMetaForPaths
+            ' ueber "FilePath IN (...)" nichts und ON CONFLICT(FilePath) legt eine zweite Zeile an.
+            ' Hier bliebe lediglich der Sofortbestand leer; der Dateisystemlauf traegt danach alles
+            ' nach. Ein NOCASE-Sonderweg nur an DIESER Stelle wuerde eine Vertraeglichkeit
+            ' vortaeuschen, die der Katalog nicht hat - siehe OFFENE_PUNKTE.md.
+            Dim upperBound = normalizedFolder & ChrW(AscW(Path.DirectorySeparatorChar) + 1)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = $"SELECT {MetaColumnList} FROM ImageMeta WHERE FilePath >= $prefix AND FilePath < $upper"
+                    cmd.Parameters.AddWithValue("$prefix", prefix)
+                    cmd.Parameters.AddWithValue("$upper", upperBound)
+                    ' Der Nachvergleich entfernt die Unterordner. Er nimmt die Vergleichsart der
+                    ' PLATTFORM, nicht fest OrdinalIgnoreCase: auf Linux sind "/a/Foto" und
+                    ' "/a/foto" zwei verschiedene Ordner, und was der Bereich oben schon nicht
+                    ' hereinlaesst, soll hier auch nicht durchrutschen.
+                    Return ReadImageMeta(cmd).
+                        Where(Function(meta) meta IsNot Nothing AndAlso
+                                             String.Equals(Path.GetDirectoryName(meta.FilePath)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                                                           normalizedFolder, PathIdentity.Comparison)).
+                        ToList()
                 End Using
             End Using
         End Function

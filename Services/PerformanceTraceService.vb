@@ -94,6 +94,29 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Dasselbe fuer einen Block MIT Ergebnis. Ohne diese Fassung fuehrt jeder Aufrufer,
+        ''' der einen Wert zurueckgibt, seine Uhr von Hand - und dann heisst der Messpunkt an jeder
+        ''' Stelle ein wenig anders, obwohl im Protokoll gerade das Zusammenzaehlen gleicher Namen
+        ''' den Wert ausmacht.</summary>
+        Public Shared Function Measure(Of T)(name As String, func As Func(Of T)) As T
+            If func Is Nothing Then Return Nothing
+            If Not IsActive Then Return func()
+            Dim aufAnzeigefaden = Dispatcher.UIThread.CheckAccess()
+            Dim vorheriger = _currentSection
+            If aufAnzeigefaden Then
+                _currentSection = name
+                Threading.Volatile.Write(_sectionStartedTicks, Stopwatch.GetTimestamp())
+            End If
+            Dim uhr = Stopwatch.StartNew()
+            Try
+                Return func()
+            Finally
+                uhr.Stop()
+                If aufAnzeigefaden Then _currentSection = vorheriger
+                Record(name, uhr.Elapsed.TotalMilliseconds)
+            End Try
+        End Function
+
         Private Shared Sub AusgabeWennFaellig()
             Dim jetzt = DateTime.UtcNow
             SyncLock _sperre

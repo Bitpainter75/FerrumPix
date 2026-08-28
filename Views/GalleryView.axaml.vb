@@ -53,6 +53,21 @@ Namespace Views
         ' Kachelgroesse oder der Schrift, nicht mit der Scrollposition.
         Private _latchedSlotHeight As Double = 0
         Private _latchedSlotThumbnailSize As Double = -1
+        ' Die Metriken werden im heissen Scrollpfad gebraucht. Das Durchlaufen des visuellen
+        ' Baums ist nur nach einer Breiten-, Ansichts- oder Kachelgrössenänderung nötig.
+        '
+        ' DIE SCHRIFTGROESSE GEHOERT IN DEN SCHLUESSEL. Die Zeilenhoehe ist eine Eigenschaft der
+        ' Kachelvorlage, und deren Beschriftungszeile misst sich selbst - sie haengt also an der
+        ' Schrift, nicht nur an der Kachelgroesse (siehe LatchSlotHeight). Ohne den Schriftversatz
+        ' im Schluessel kehrt der Cache vor der Neumessung zurueck, der gehaltene Wert kann sich
+        ' nach einer Schriftaenderung nie mehr korrigieren, und aus einer falschen Zeilenhoehe
+        ' folgt ein falscher Rollbereich.
+        Private _cachedMetricsThumbnailSize As Double = -1
+        Private _cachedMetricsViewportWidth As Double = -1
+        Private _cachedMetricsFontOffset As Integer = Integer.MinValue
+        Private _cachedMetricsForGroupView As Boolean
+        Private _cachedMetricsColumns As Integer
+        Private _cachedMetricsSlotHeight As Double
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
@@ -315,24 +330,43 @@ Namespace Views
             _observedVm = Nothing
         End Sub
 
-        ''' Der Ordner wird asynchron geladen: DisplayItems füllt sich, nachdem der ItemsControl bereits
+        ''' Der Ordner wird asynchron geladen: DisplayItems füllt sich, nachdem das Anzeigesteuerelement bereits
         ''' (leer) vermessen und angeordnet wurde. Sein Reset-Ereignis erneuert zwar seine eigene
-        ''' Wunschgröße, der umgebende StackPanel wird davon aber nicht neu vermessen - der ItemsControl
+        ''' Wunschgröße, der umgebende StackPanel wird davon aber nicht neu vermessen - das Steuerelement
         ''' bleibt mit Höhe 0 angeordnet, die Galerie sieht leer aus, bis ein Ordnerwechsel sie neu baut.
         ''' Bei vielen Bildern fiel das nie auf, weil dort die Platzhalter-Höhen des Sichtfensters von 0
         ''' abweichen und damit ohnehin eine neue Messung auslösen.
         Private Sub OnDisplayItemsCollectionChanged(sender As Object, e As NotifyCollectionChangedEventArgs)
             If e.Action <> NotifyCollectionChangedAction.Reset Then Return
-            Dispatcher.UIThread.Post(AddressOf InvalidateGalleryItemsLayout, DispatcherPriority.Loaded)
+            Dispatcher.UIThread.Post(
+                Sub()
+                    InvalidateGalleryItemsLayout()
+                    ' Erst nach dem Layout steht die tatsächliche Zahl sichtbarer Kacheln fest.
+                    ' Das ist der erste Bild-Ladeimpuls beim Ordnerwechsel und richtet sich damit
+                    ' nach Fenstergröße und Zoom statt nach einer starren Anzahl.
+                    '
+                    ' AUF Background, NICHT AUF Render. Render ist die HOEHERE Prioritaet (in
+                    ' Avalonia ist der groessere Wert der Vorrang: Render > Loaded > Default >
+                    ' Input > Background), und der Layoutlauf, den die Zeile darueber anstoesst,
+                    ' haengt selbst an Render. Gleiche Prioritaet heisst Warteschlange, und diese
+                    ' Aufgabe stand darin vorn - sie fragte das Sichtfenster also womoeglich ab,
+                    ' bevor es eine Hoehe hatte, und forderte dann kein einziges Vorschaubild an.
+                    ' Beim Ordnerwechsel blieben die Kacheln dadurch leer, bis der Dateisystemlauf
+                    ' mit seinem eigenen Reset einen zweiten Versuch ausloeste (Nutzerbefund
+                    ' 2026-08-28). Background liegt unter beidem und kommt sicher danach.
+                    Dispatcher.UIThread.Post(AddressOf RequestViewportThumbnails, DispatcherPriority.Background)
+                End Sub, DispatcherPriority.Loaded)
         End Sub
 
         Private Sub InvalidateGalleryItemsLayout()
             For Each scrollViewerName In {"GalleryGridScrollViewer", "GalleryListScrollViewer"}
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)(scrollViewerName)
-                Dim itemsControl = scrollViewer?.GetVisualDescendants().OfType(Of ItemsControl)().FirstOrDefault()
-                If itemsControl Is Nothing Then Continue For
-                itemsControl.InvalidateMeasure()
-                TryCast(itemsControl.GetVisualParent(), Control)?.InvalidateMeasure()
+                Dim itemsHost = scrollViewer?.GetVisualDescendants().
+                    OfType(Of Control)().
+                    FirstOrDefault(Function(c) TypeOf c Is ItemsControl OrElse TypeOf c Is ItemsRepeater)
+                If itemsHost Is Nothing Then Continue For
+                itemsHost.InvalidateMeasure()
+                TryCast(itemsHost.GetVisualParent(), Control)?.InvalidateMeasure()
             Next
         End Sub
 
@@ -2822,30 +2856,57 @@ Namespace Views
             itemSlotHeight = If(vm IsNot Nothing, Math.Max(1, vm.GridItemSlotHeight), 1)
             If vm Is Nothing Then Return
 
+            Dim viewportWidth = If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Width > 0,
+                                   scrollViewer.Viewport.Width, Bounds.Width)
+            If _cachedMetricsColumns > 0 AndAlso
+               _cachedMetricsThumbnailSize = vm.ThumbnailSize AndAlso
+               _cachedMetricsFontOffset = FontScaleService.CurrentOffset AndAlso
+               _cachedMetricsForGroupView = forGroupView AndAlso
+               Math.Abs(_cachedMetricsViewportWidth - viewportWidth) < 1.0 Then
+                columns = _cachedMetricsColumns
+                itemSlotHeight = _cachedMetricsSlotHeight
+                Return
+            End If
+
             Dim measuredColumns = 0
             Dim measuredSlotHeight = 0.0
             Dim measured = TryGetRenderedGridMetrics(scrollViewer, measuredColumns, measuredSlotHeight, forGroupView)
             itemSlotHeight = LatchSlotHeight(vm, If(measured, measuredSlotHeight, 0.0))
             If measured AndAlso Not forGroupView Then
                 columns = Math.Max(1, measuredColumns)
+                CacheGridLayoutMetrics(vm, viewportWidth, forGroupView, columns, itemSlotHeight)
                 Return
             End If
 
-            Dim itemsControl = scrollViewer?.GetVisualDescendants().OfType(Of ItemsControl)().FirstOrDefault()
-            Dim availableWidth = If(itemsControl IsNot Nothing AndAlso itemsControl.Bounds.Width > 0,
-                                    itemsControl.Bounds.Width,
+            Dim itemsHost = scrollViewer?.GetVisualDescendants().
+                OfType(Of Control)().
+                FirstOrDefault(Function(c) TypeOf c Is ItemsControl OrElse TypeOf c Is ItemsRepeater)
+            Dim availableWidth = If(itemsHost IsNot Nothing AndAlso itemsHost.Bounds.Width > 0,
+                                    itemsHost.Bounds.Width,
                                     If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Width > 0,
                                        scrollViewer.Viewport.Width - 30,
                                        Bounds.Width - 30))
             availableWidth = Math.Max(1, availableWidth)
             Dim itemWidth = Math.Max(1, vm.GridColumnPitch)
             columns = Math.Max(1, CInt(Math.Floor(availableWidth / itemWidth)))
+            CacheGridLayoutMetrics(vm, viewportWidth, forGroupView, columns, itemSlotHeight)
 
             ' In der Gruppenansicht kommt die Spaltenzahl IMMER aus der Breite, nie aus dem Gezeichneten:
             ' dort kann jede sichtbare Zeile eine teilweise gefuellte letzte Zeile einer Gruppe sein, und
             ' eine zu klein gemessene Spaltenzahl braecht die Zeilentabelle. Die Rechnung ist dieselbe,
             ' die auch das WrapPanel anstellt (ganze Kachelbreiten in die Zeilenbreite), also exakt.
             ' Die Zeilenhoehe steht bereits fest (LatchSlotHeight).
+        End Sub
+
+        Private Sub CacheGridLayoutMetrics(vm As GalleryViewModel, viewportWidth As Double,
+                                           forGroupView As Boolean, columns As Integer,
+                                           itemSlotHeight As Double)
+            _cachedMetricsThumbnailSize = vm.ThumbnailSize
+            _cachedMetricsViewportWidth = viewportWidth
+            _cachedMetricsFontOffset = FontScaleService.CurrentOffset
+            _cachedMetricsForGroupView = forGroupView
+            _cachedMetricsColumns = columns
+            _cachedMetricsSlotHeight = itemSlotHeight
         End Sub
 
         ''' <summary>Die gemessene Zeilenhoehe halten und nur bei einer echten Aenderung uebernehmen.

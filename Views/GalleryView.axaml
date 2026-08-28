@@ -1862,6 +1862,10 @@
                                 VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
+                        <!-- Dieser gemeinsame Pfad bleibt ein WrapPanel: die Gruppenansicht
+                             schiebt Kopfzeilen mit voller Sonderbreite zwischen die Kacheln.
+                             Avalonia WrapLayout kann diese gemischten Breiten im Repeater nicht
+                             zuverlässig virtualisieren (es verlor beim Scrollen seine Zeilenhöhe). -->
                         <ItemsControl ItemsSource="{Binding DisplayItems}">
                             <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -2263,13 +2267,15 @@
                                 VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
-                        <ItemsControl ItemsSource="{Binding DisplayItems}">
-                            <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Vertical"/>
-                            </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
+                        <!-- Der Repeater behaelt beim Rollen die bereits aufgebauten Zeilen und
+                             verwendet sie fuer neue Eintraege wieder. DisplayItems bleibt hier
+                             vorerst als Sicherheitsfenster bestehen; so bleibt die gleiche
+                             Scroll-Geometrie wie im bewährten Rasterpfad erhalten. -->
+                        <ItemsRepeater ItemsSource="{Binding DisplayItems}">
+                            <ItemsRepeater.Layout>
+                                <StackLayout Orientation="Vertical" />
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:ImageItem}">
                             <Border Name="ListItemBorder"
                                         Classes="thumb-card list-row"
@@ -2580,8 +2586,8 @@
                                     </Grid>
                                 </Border>
                             </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
                         <Border Height="{Binding BottomSpacerHeight}"/>
                     </StackPanel>
                 </ScrollViewer>

@@ -611,6 +611,86 @@ Namespace Models
             End If
         End Sub
 
+        ''' <summary>Uebernimmt den Stand, den der Dateisystemlauf fuer DIESELBE Datei ermittelt hat.
+        '''
+        ''' <para>Gedacht fuer den Ordnerwechsel: dort steht zuerst eine Kachel aus dem Katalog auf
+        ''' dem Schirm, und kurz darauf kommt der geprüfte Stand von der Platte. Wuerde dabei das
+        ''' ganze Element getauscht, baute die Anzeige jede Kachel neu auf - sichtbar als Flackern,
+        ''' obwohl sich an keinem Bild etwas geaendert hat (Nutzerbefund 2026-08-28). Stattdessen
+        ''' behaelt das vorhandene Element seine Identitaet und sein bereits geladenes Vorschaubild
+        ''' und bekommt nur die Werte; die gebundenen Sammlungen enthalten danach dieselben Objekte
+        ''' in derselben Reihenfolge, und die Anzeige merkt gar nichts.</para>
+        '''
+        ''' <para>Das Vorschaubild wird BEWUSST nicht angefasst: der frisch gebaute Eintrag hat
+        ''' keines, und es zu uebernehmen hiesse, das vorhandene wegzuwerfen.</para>
+        '''
+        ''' <para>NUR AUF DEM ANZEIGEFADEN aufrufen. Das Element haengt zu diesem Zeitpunkt bereits
+        ''' an einer Kachel, und jede dieser Zuweisungen meldet eine Aenderung.</para></summary>
+        Public Sub AdoptScannedState(scanned As ImageItem)
+            If scanned Is Nothing OrElse scanned Is Me Then Return
+
+            ' FileSize und DateModified sind Auto-Properties und melden NICHTS - auch nicht unter
+            ' ihrem eigenen Namen. Bei einem frisch gebauten Element faellt das nie auf, weil dort
+            ' noch keine Kachel haengt; hier haengt eine, und ohne die Meldung stuenden Groesse und
+            ' Datum sichtbar veraltet auf ihr. Genau deshalb meldet RefreshFileInfo dieselben beiden
+            ' von Hand nach.
+            '
+            ' NUR BEI ECHTER AENDERUNG. Der Regelfall dieses Aufrufs ist, dass sich NICHTS
+            ' geaendert hat - der Katalog stimmte ja. Eine feste Meldung je Element waeren bei einem
+            ' grossen Ordner Tausende Ereignisse auf dem Anzeigefaden fuer nichts. Alle uebrigen
+            ' Zuweisungen weiter unten haben echte Setter, die sich selbst gegen den gleichen Wert
+            ' schuetzen; nur diese beiden und Tags brauchen den Vergleich hier.
+            If FileSize <> scanned.FileSize Then
+                FileSize = scanned.FileSize
+                RaisePropertyChanged(NameOf(FileSizeText))
+            End If
+            If DateModified <> scanned.DateModified Then
+                DateModified = scanned.DateModified
+                RaisePropertyChanged(NameOf(DateText))
+            End If
+            ' Eigener Setter: meldet DateFileCreatedText selbst und nur bei Aenderung.
+            FileCreatedAt = scanned.FileCreatedAt
+            _fileInfoLoaded = True
+
+            IsFavorite = scanned.IsFavorite
+            Rating = scanned.Rating
+            ColorLabel = scanned.ColorLabel
+            ' Der Tags-Setter meldet IMMER, und er verwirft zusaetzlich den Suchtext. Deshalb hier
+            ' der Vergleich statt dort: eine unveraenderte Stichwortliste soll nichts ausloesen.
+            If Not SameTags(Tags, scanned.Tags) Then Tags = If(scanned.Tags, New List(Of String)())
+
+            ' Diese Werte traegt der Lauf nur, wenn die Katalogzeile zur Datei auf der Platte passt.
+            ' Passte sie nicht, stehen sie hier leer - und genau das ist richtig: die Kachel zeigt
+            ' dann nichts statt etwas Veraltetem, bis der Metadaten-Nachlauf sie fuellt.
+            ImageWidth = scanned.ImageWidth
+            ImageHeight = scanned.ImageHeight
+            ExifDateTaken = scanned.ExifDateTaken
+            ExifDateModified = scanned.ExifDateModified
+            ExifCamera = scanned.ExifCamera
+            ExifIso = scanned.ExifIso
+            ExifAperture = scanned.ExifAperture
+            HasExifMetadata = scanned.HasExifMetadata
+            HasIptcMetadata = scanned.HasIptcMetadata
+            HasXmpMetadata = scanned.HasXmpMetadata
+            HasIccProfile = scanned.HasIccProfile
+            ExifMetadataSummary = scanned.ExifMetadataSummary
+            IptcMetadataSummary = scanned.IptcMetadataSummary
+            XmpMetadataSummary = scanned.XmpMetadataSummary
+            IccMetadataSummary = scanned.IccMetadataSummary
+        End Sub
+
+        ''' <summary>Tragen beide Listen dieselben Stichwoerter in derselben Reihenfolge? Ohne
+        ''' Zwischenliste, weil das je Bild eines Ordners gefragt wird. Nothing gilt als leer.</summary>
+        Private Shared Function SameTags(a As List(Of String), b As List(Of String)) As Boolean
+            Dim linksAnzahl = If(a Is Nothing, 0, a.Count)
+            Dim rechtsAnzahl = If(b Is Nothing, 0, b.Count)
+            If linksAnzahl <> rechtsAnzahl Then Return False
+            For i = 0 To linksAnzahl - 1
+                If Not String.Equals(a(i), b(i), StringComparison.Ordinal) Then Return False
+            Next
+            Return True
+        End Function
+
         ' EXIF DateTimeOriginal - unterscheidet sich vom Dateisystem-Erstellungsdatum, da EXIF beim
         ' Kopieren/Synchronisieren der Datei erhalten bleibt, das Dateisystem-Datum aber nicht.
         Private _exifDateTaken As DateTime?
