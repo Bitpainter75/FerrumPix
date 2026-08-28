@@ -6159,6 +6159,9 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Шумоподавление прервано; изображение не изменилось</value>
   </data>
+  <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
+    <value>Размытие по глубине прервано; изображение не изменилось</value>
+  </data>
   <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
     <value>Удаление прервано; изображение не изменилось</value>
   </data>

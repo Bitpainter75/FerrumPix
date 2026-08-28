@@ -6161,6 +6161,9 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Débruitage annulé - la photo est inchangée</value>
   </data>
+  <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
+    <value>Flou de profondeur annulé - la photo est inchangée</value>
+  </data>
   <data name="Entfernen_abgebrochen_das_Bild_ist_unver_ndert_c6d597a0" xml:space="preserve">
     <value>Suppression annulée - la photo est inchangée</value>
   </data>
