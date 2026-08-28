@@ -491,13 +491,26 @@ Namespace Services
             Dim result As Korrektur = Nothing
             Try
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
-                Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
-                Dim sub0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)().FirstOrDefault()
-                Dim maker = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake), "")
-                Dim modell = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel), "")
-                Dim lens = If(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel), "")
-                Dim brennweite = FirstNumber(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
-                Dim blende = FirstNumber(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
+                ' NICHT das erste Verzeichnis nehmen, sondern das erste mit einem belegten Wert.
+                ' RAW-Container (ARW/DNG/NEF) zeigen ueber den TIFF-Eintrag "SubIFDs" auf ihre
+                ' Vorschaubilder, und jedes davon wird ebenfalls ein "Exif SubIFD". Da TIFF die
+                ' Eintraege aufsteigend nach Nummer ablegt, stehen diese Vorschau-Verzeichnisse IMMER
+                ' vor dem eigentlichen Aufnahme-Verzeichnis. Das erste zu nehmen liefert deshalb
+                ' zuverlaessig leere Werte: das Objektiv stand in der Anzeige, die Korrektur fand
+                ' aber weder Namen noch Brennweite noch Blende und blieb wirkungslos.
+                ' Fuer Hersteller und Modell gilt dasselbe, sobald eine Datei mehrere EXIF-Bloecke
+                ' mitbringt. Ohne sie faellt in FindCorrection der Anschlussfilter weg, und dann
+                ' gewinnt leicht die falsche Bauform eines aehnlich benannten Objektivs.
+                Dim maker = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake)
+                Dim modell = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)
+                Dim lens = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel)
+                Dim brennweite = FirstNumber(ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
+                Dim blende = FirstNumber(ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
                 Dim width = 0, height = 0
                 For Each d In verzeichnisse
                     Dim w = d.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageWidth)
