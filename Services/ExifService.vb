@@ -798,8 +798,12 @@ Namespace Services
         ''' dem der Aufnahme noch je eines für Vorschaubild- und Rohbild-Ebene. Das zuvor verwendete
         ''' FirstOrDefault erwischte davon regelmäßig ein Ebenen-Verzeichnis ohne Aufnahmedaten, weshalb
         ''' Blende, ISO, Belichtungszeit und Objektiv bei RAWs leer blieben - und zwar nicht nur in der
-        ''' Anzeige, sondern auch in Suche, Filter und Sortierung, die auf denselben Feldern arbeiten.</summary>
-        Private Shared Function GetTagDescAcross(Of TDirectory As MetadataExtractor.Directory)(
+        ''' Anzeige, sondern auch in Suche, Filter und Sortierung, die auf denselben Feldern arbeiten.
+        '''
+        ''' Friend, weil die Objektivkorrektur dieselben Felder aus derselben Datei liest. Solange sie
+        ''' das mit einer EIGENEN Kopie dieser Suche tat, konnten beide Seiten auseinanderlaufen - genau
+        ''' das war zu sehen: die Anzeige nannte das Objektiv, die Korrektur fand es nicht.</summary>
+        Friend Shared Function GetTagDescAcross(Of TDirectory As MetadataExtractor.Directory)(
                 metaDirectories As IEnumerable(Of MetadataExtractor.Directory), tagType As Integer) As String
             For Each metaDir In metaDirectories.OfType(Of TDirectory)()
                 Dim desc = metaDir.GetDescription(tagType)

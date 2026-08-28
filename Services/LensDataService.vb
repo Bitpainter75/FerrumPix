@@ -491,13 +491,26 @@ Namespace Services
             Dim result As Korrektur = Nothing
             Try
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
-                Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
-                Dim subIfds = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)().ToList()
-                Dim maker = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake), "")
-                Dim modell = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel), "")
-                Dim lens = FirstNonBlankDescription(subIfds, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel)
-                Dim brennweite = FirstNumber(FirstNonBlankDescription(subIfds, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
-                Dim blende = FirstNumber(FirstNonBlankDescription(subIfds, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
+                ' NICHT das erste Verzeichnis nehmen, sondern das erste mit einem belegten Wert.
+                ' RAW-Container (ARW/DNG/NEF) zeigen ueber den TIFF-Eintrag "SubIFDs" auf ihre
+                ' Vorschaubilder, und jedes davon wird ebenfalls ein "Exif SubIFD". Da TIFF die
+                ' Eintraege aufsteigend nach Nummer ablegt, stehen diese Vorschau-Verzeichnisse IMMER
+                ' vor dem eigentlichen Aufnahme-Verzeichnis. Das erste zu nehmen liefert deshalb
+                ' zuverlaessig leere Werte: das Objektiv stand in der Anzeige, die Korrektur fand
+                ' aber weder Namen noch Brennweite noch Blende und blieb wirkungslos.
+                ' Fuer Hersteller und Modell gilt dasselbe, sobald eine Datei mehrere EXIF-Bloecke
+                ' mitbringt. Ohne sie faellt in FindCorrection der Anschlussfilter weg, und dann
+                ' gewinnt leicht die falsche Bauform eines aehnlich benannten Objektivs.
+                Dim maker = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake)
+                Dim modell = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel)
+                Dim lens = ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel)
+                Dim brennweite = FirstNumber(ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
+                Dim blende = FirstNumber(ExifService.GetTagDescAcross(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)(
+                    verzeichnisse, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
                 Dim width = 0, height = 0
                 For Each d In verzeichnisse
                     Dim w = d.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageWidth)
@@ -557,16 +570,6 @@ Namespace Services
 
         Private Shared ReadOnly _dateiCacheLock As New Object()
         Private Shared ReadOnly _dateiCache As New Dictionary(Of String, Korrektur)(StringComparer.Ordinal)
-
-        ''' <summary> Traverses multiple exif sub-IFDs</summary>
-        Private Shared Function FirstNonBlankDescription(
-                dirs As List(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory), tagType As Integer) As String
-            For Each d In dirs
-                Dim desc = d.GetDescription(tagType)
-                If Not String.IsNullOrWhiteSpace(desc) Then Return desc
-            Next
-            Return ""
-        End Function
 
         ''' <summary>Die erste Zahl aus einem EXIF-Text ("70 mm", "f/5,6"). Die Beschreibungen sind
         ''' bereits nach der Anzeigesprache formatiert, deshalb zaehlen Punkt UND Komma als
