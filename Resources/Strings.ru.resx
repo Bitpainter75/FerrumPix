@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Шумоподавление прервано; изображение не изменилось</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Графический планшет</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Кнопки и пункты меню срабатывают при касании пером, а не при его подъеме. Включите, если пером можно двигать ползунки, но нельзя ничего нажать. Отменить нажатие, отведя перо до отпускания, тогда уже нельзя.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Размытие по глубине прервано; изображение не изменилось</value>
   </data>

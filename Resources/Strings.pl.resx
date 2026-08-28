@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Odszumianie przerwane; obraz jest niezmieniony</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Tablet graficzny</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Przyciski i pozycje menu działają w chwili dotknięcia piórem, a nie po jego uniesieniu. Włącz, jeśli piórem można przeciągać suwaki, ale nie da się niczego kliknąć. Kliknięcia nie da się wtedy cofnąć przez odsunięcie przed zwolnieniem.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Rozmycie według głębi przerwane; obraz jest niezmieniony</value>
   </data>

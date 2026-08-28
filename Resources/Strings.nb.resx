@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Støyreduksjonen avbrutt; bildet er uendret</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Tegnebrett</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Knapper og menyoppføringer utløses når pennen settes ned, ikke når den løftes. Slå på dette hvis pennen kan dra glidebrytere, men ikke klikke på noe. Et klikk kan da ikke lenger tas tilbake ved å bevege seg vekk før du slipper.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Dybdeuskarpheten avbrutt; bildet er uendret</value>
   </data>

@@ -6161,6 +6161,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Débruitage annulé - la photo est inchangée</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Tablette graphique</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Les boutons et les entrées de menu agissent quand le stylet touche la tablette, pas quand il se lève. À activer si le stylet déplace les curseurs mais ne clique sur rien. Un clic ne peut alors plus être annulé en s'éloignant avant de relâcher.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Flou de profondeur annulé - la photo est inchangée</value>
   </data>

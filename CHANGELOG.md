@@ -1,37 +1,69 @@
-## FerrumPix 0.9.33
+## FerrumPix 0.9.34
 
 ### What's new
 
-- **Setting the text size is a matter of one click.** The slider moved a whole step per pixel of mouse travel, and the interface resized while you dragged it, so the control wandered away under your hand. There are eight buttons now, one per step, each showing "aA" in the size it sets, with the current one highlighted. They all stand on one line, so you can see the step you are choosing.
+- **You choose what the info sidebar shows.** The General tab used to be a fixed list, and it left out what matters most while sorting through pictures. Camera, lens, aperture, shutter speed, ISO, focal length and the date the picture was taken are now on it, and every line has a tick of its own in Settings - the folder, the place and the copyright line too. Megapixels, aspect ratio and colour space are off to begin with; tick them and they come back. A line stays away when the picture has nothing to put on it.
 
-- **Windows: HEIC and HEIF photos open straight away.** The pictures your phone takes needed a library you had to find and place next to FerrumPix yourself, and most downloads of it did not work because they expect further files beside them. That library now comes with the Windows download, so those photos open in the viewer and the editor instead of showing up as thumbnails only. On Linux it keeps coming from your package manager, and macOS reads these files itself.
+- **Rating, label and keywords can be taken out of the sidebar as well.** Three ticks for the three sections below the tabs, for anyone who keeps those elsewhere.
+
+- **Everything about the info sidebar is in one place in Settings.** It has its own section now. The switches for it used to sit under Gallery, Viewer and Editor, three places for one sidebar. The sidebar also goes by one name throughout the interface now, where there used to be three.
+
+- **The gallery says what it is still doing.** While preview images are being made and metadata is
+  being read, the footer names both, with a count. Until now the only sign was that things kept
+  appearing.
 
 ### Fixes
 
-- **The sorting menu highlights the entry under your pointer.** It always tried to, but with exactly the colour of the menu behind it, so the highlight painted itself invisible. The same applies to the other menus built that way.
+- **Scrolling is smoother.** Every tile and every row that came into view made the gallery lay out
+  all of them again. Both keep what they have now and reuse it. Grouped by day, month or year the
+  gallery works as before - there the tiles share their row with the headings, and that needs the
+  old way of laying out.
 
-- **The entry under your pointer has rounded corners in every menu.** In the filter menus it always had, in the context menus it was a square block.
+- **Opening a folder is quicker.** Reading a folder also fetched everything the catalogue knew about
+  every folder underneath it, even when the folder itself held no pictures at all. It now asks only
+  about the pictures it is about to show, and only once instead of twice.
 
-- **Submenus follow the theme you picked.** A submenu is a window of its own, and it kept the colours of the dark theme after a switch to one of the grey themes or to the light one, so it stood out against the menu it belongs to. The drop-down of a selection and the rows of a list had the same problem.
+- **A folder you have opened before shows up straight away.** What the catalogue already knows is on
+  screen, folders and all, while the folder itself is still being read. Nothing moves or is redrawn
+  when the reading finishes. Pictures that were deleted elsewhere in the meantime are still shown
+  for that moment and then disappear.
 
-- **Text fields that are switched off look like text fields.** Where a setting has its own switch, as with Immich and Nextcloud, the fields below it were framed by a pale block instead of their usual outline.
+- **Leaving a large folder no longer holds up the next one.** Reading a folder carried on in the
+  background even after you had moved on, and the folder you had just opened waited for it.
 
-- **The folder a picture lives in is shown in the information sidebar**, under its file name. Pictures from an Immich or Nextcloud server do not have one, so the line stays away there.
+- **The timeline and the sort by creation date work in search results.** Pictures found by a search
+  carried no file dates until you looked at them, so the timeline said "no date" and sorting by
+  creation date sorted by nothing. The dates come from the catalogue now.
 
-- **Save and Save as keep their labels out of each other's way.** With the adjustment panel on the left, the buttons in the middle of the editor's top bar move right along with the picture, and in a narrow window they ran into Save and Save as. The labels now give way earlier when the panel sits on the left.
+- **The list of sections in Settings scrolls** when the window is too short for it. The last entries
+  used to be simply out of reach.
 
-- **Photos marked as Adobe RGB only in their EXIF now arrive in the right colours.** Some cameras write no colour profile into the file and say Adobe RGB in two metadata fields instead. Those photos looked flat and shifted, most visibly in saturated reds and greens. A profile in the file still wins over the metadata.
+- **The preview cache holds 500 pictures instead of 250**, and you can set it up to 10000. Scrolling
+  back over pictures you have already seen loads nothing again, as long as they fit.
 
-- **Photoshop layers keep the colours of the document.** The flattened image was already converted, the layers were not, so a file in Adobe RGB fell apart into a correct background and shifted layers on top.
+- **Pictures from a server are shown under their own name.** In the information sidebar you saw the name of the working copy, which is the asset's identifier, instead of the name of your photo. The folder line is gone there too: it named a temporary folder that has nothing to do with the picture.
 
-- **A cut piece of the picture does not stay behind.** Cutting a selection and pasting it right away showed the piece twice, once as the pasted layer and once where it had been, until the editor happened to redraw the whole picture.
+- **Lens correction works on raw files again.** The name of the lens was there in the sidebar, but the correction found nothing to apply. A raw file carries several sets of shooting data, one of them belonging to the small preview picture inside it, and that was the one being read. Reported and traced by atleag.
 
-- **Save as offers the folder the picture came from**, also when you opened the picture straight from the file manager or the command line and went on to the editor. There is no gallery behind that, so the dialog fell back to the folder you saved into last, and your picture went somewhere else than where it lives.
+- **The sliders in the editor follow your hand.** The picture used to wait for the drag to end
+  before it caught up. It now redraws while you drag, on a smaller version of the picture where
+  that does not change what you see, and at full size the moment you let go. A change made while a
+  preview was still being drawn is no longer dropped.
 
-- **The bar at the top of the window is slimmer.** It is a third lower than before, so the picture gets the room instead. Logo and window buttons came down with it.
+- **Editing a picture is quicker.** Grain was by far the most expensive step and held up every
+  other slider with it, because it had to be worked out one pixel after another. It is now
+  calculated from the position in the picture, which lets the whole picture be done at once.
+  Please note: the grain pattern is a different one now. It is as strong and as fine as it was, but
+  a saved recipe with grain in it will not look pixel for pixel the way it did.
 
-- **Smaller touches in the gallery.** The parent folder in the path bar has room around its highlight again, and the free space line below the folder tree is one step larger, which makes it readable.
+- **The warp grid sits on the part of the picture you can see.** After a crop it was still laid out
+  over the whole original, so the handles were in the wrong places and the tool was hard to use.
 
-- **Windows: installing and uninstalling no longer leaves a half-removed program behind.** Windows keeps a running program locked, so uninstalling while FerrumPix was open removed everything except the program itself, and updating over a running FerrumPix stopped in the middle of copying. Both now say that FerrumPix is still open and wait until you have closed it.
+- **Depth blur can be stopped while it is working**, and stopping it leaves the picture untouched.
+  Until now the stop only took effect once the blur had finished.
 
-- **Windows: FerrumPix is in the Start menu after installing.** If the installation asked for an administrator password, the entry was put into that administrator's Start menu and was missing from yours. The setup now creates it for everyone on the computer, and it tidies up a stray entry left behind by an earlier installation.
+- **A drawing tablet setting.** With a pen you could drag the sliders but not press anything.
+  Buttons and menu entries normally act when you let go, and with a pen that second half does not
+  always arrive. Switch this on under Settings, General, and everything acts the moment the pen
+  touches down. The price, and it applies to the mouse as well: a click can no longer be taken back
+  by moving away before letting go. With a mouse, leave it off.

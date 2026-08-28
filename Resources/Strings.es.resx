@@ -6161,6 +6161,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Reducción de ruido cancelada: la foto no ha cambiado</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Tableta gráfica</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Los botones y las entradas de menú actúan cuando el lápiz toca, no cuando se levanta. Actívelo si con el lápiz se arrastran los deslizadores pero no se puede hacer clic en nada. Un clic ya no se puede deshacer alejándose antes de soltar.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Desenfoque por profundidad cancelado: la foto no ha cambiado</value>
   </data>

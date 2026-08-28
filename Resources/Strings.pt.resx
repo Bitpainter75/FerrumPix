@@ -6160,6 +6160,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Redução de ruído cancelada - a foto está inalterada</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Mesa digitalizadora</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Os botões e as entradas de menu agem quando a caneta toca, não quando se levanta. Ative se com a caneta os cursores se movem mas nada pode ser clicado. Um clique deixa de poder ser desfeito afastando-se antes de largar.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Desfoque por profundidade cancelado - a foto está inalterada</value>
   </data>

@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Kohinanpoisto keskeytetty; kuva on muuttumaton</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Piirtopöytä</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Painikkeet ja valikon kohdat toimivat, kun kynä koskettaa, ei kun se nostetaan. Ota käyttöön, jos kynällä voi vetää liukusäätimiä mutta ei napsauttaa mitään. Napsautusta ei silloin voi enää perua siirtymällä pois ennen irrottamista.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Syvyyssumennus keskeytetty; kuva on muuttumaton</value>
   </data>

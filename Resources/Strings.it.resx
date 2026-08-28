@@ -6161,6 +6161,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Riduzione rumore annullata - la foto è invariata</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Tavoletta grafica</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>I pulsanti e le voci di menu agiscono quando la penna tocca, non quando si solleva. Da attivare se con la penna si spostano i cursori ma non si riesce a fare clic. Un clic non può più essere annullato allontanandosi prima di rilasciare.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Sfocatura di profondità annullata - la foto è invariata</value>
   </data>

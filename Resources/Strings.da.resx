@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Støjreduktionen afbrudt; billedet er uændret</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Tegneplade</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Knapper og menupunkter udløses, når pennen sættes ned, ikke når den løftes. Slå det til, hvis pennen kan trække skydere, men ikke klikke på noget. Et klik kan så ikke længere fortrydes ved at bevæge sig væk, før man slipper.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Dybdeuskarpheden afbrudt; billedet er uændret</value>
   </data>

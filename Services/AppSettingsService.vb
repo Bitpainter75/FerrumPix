@@ -436,6 +436,9 @@ Namespace Services
         Public Property LastBatchResizeInterpolation As String = "Bilinear"
         Public Property LastWatermarkPresetName As String = ""
         Public Property EnableDiagnosticLogging As Boolean = False
+        ''' Zeichentablett: alles loest beim Druecken aus statt beim Loslassen. Warum es das gibt und
+        ''' was es kostet, steht in TabletInputService.
+        Public Property TabletMode As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
         ''' Gespeicherte Regler-Zusammenstellungen aus dem Anpassen-Werkzeug (siehe
         ''' AdjustmentPresetSettings) und der Name der zuletzt benutzten.

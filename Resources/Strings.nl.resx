@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Ontruisen afgebroken; de afbeelding is ongewijzigd</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Tekentablet</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Knoppen en menu-items reageren zodra de pen het tablet raakt, niet bij het optillen. Zet dit aan als u met de pen wel schuifregelaars kunt slepen, maar niets kunt aanklikken. Een klik kan dan niet meer worden teruggenomen door weg te bewegen voor het loslaten.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Scherptediepte afgebroken; de afbeelding is ongewijzigd</value>
   </data>

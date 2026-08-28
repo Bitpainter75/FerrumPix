@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Potlačení šumu přerušeno; obrázek je nezměněný</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Grafický tablet</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Tlačítka a položky nabídky se spustí při dotyku pera, ne při jeho zvednutí. Zapněte, pokud lze perem táhnout posuvníky, ale na nic kliknout. Kliknutí pak už nelze vzít zpět odtažením před uvolněním.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Rozostření podle hloubky přerušeno; obrázek je nezměněný</value>
   </data>

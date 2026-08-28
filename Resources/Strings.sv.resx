@@ -6159,6 +6159,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Brusreduceringen avbruten; bilden är oförändrad</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Ritplatta</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Knappar och menyposter utlöses när pennan sätts ned, inte när den lyfts. Slå på detta om pennan kan dra reglage men inte klicka på något. En klickning kan då inte längre tas tillbaka genom att flytta bort innan man släpper.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Djuposkärpan avbruten; bilden är oförändrad</value>
   </data>

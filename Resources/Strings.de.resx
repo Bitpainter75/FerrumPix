@@ -6158,6 +6158,12 @@
   <data name="Entrauschen_abgebrochen_das_Bild_ist_unver_ndert_014b59b9" xml:space="preserve">
     <value>Entrauschen abgebrochen - das Bild ist unverändert</value>
   </data>
+  <data name="Zeichentablett_fbd0a394" xml:space="preserve">
+    <value>Zeichentablett</value>
+  </data>
+  <data name="Schaltfl_chen_und_Men_eintr_ge_l_sen_beim_Aufset_e6051b1c" xml:space="preserve">
+    <value>Schaltflächen und Menüeinträge lösen beim Aufsetzen des Stifts aus statt beim Abheben. Einschalten, wenn sich mit dem Stift zwar Regler ziehen, aber nichts anklicken lässt. Ein Klick lässt sich dann nicht mehr zurücknehmen, indem man vor dem Loslassen wegzieht.</value>
+  </data>
   <data name="Tiefenunsch_rfe_abgebrochen_das_Bild_ist_unver_n_ed72488b" xml:space="preserve">
     <value>Tiefen-Unschärfe abgebrochen - das Bild ist unverändert</value>
   </data>

@@ -156,6 +156,8 @@ The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish
 
 Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
 
+A drawing tablet setting makes buttons and menu entries act the moment the pen touches down instead of when it lifts, for pens that can drag a slider but press nothing.
+
 Your version is at the top, with a link to the download page when a different one has been published. The last two sections are reference: all keyboard and mouse shortcuts, and everything FerrumPix is built on with a link to each licence.
 
 ## Installation

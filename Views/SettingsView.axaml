@@ -343,6 +343,28 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Zeichentablett" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schaltflächen und Menüeinträge lösen beim Aufsetzen des Stifts aus statt beim Abheben. Einschalten, wenn sich mit dem Stift zwar Regler ziehen, aber nichts anklicken lässt. Ein Klick lässt sich dann nicht mehr zurücknehmen, indem man vor dem Loslassen wegzieht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- ClickMode FEST auf Press, und zwar in BEIDEN Richtungen. Dieser eine
+                                 Schalter aendert seinen eigenen ClickMode, waehrend er bedient wird:
+                                 im Modus steht er auf Press, loest also beim Druecken aus, nimmt
+                                 dabei den Stil weg - und beim Loslassen steht er wieder auf Release
+                                 und loest ein ZWEITES Mal aus. Derselbe Klick schaltete damit aus
+                                 und sofort wieder ein. Ein Wert im XAML schlaegt den Stil, damit
+                                 bleibt er waehrend der Geste stehen. Und Press und nicht Release:
+                                 mit dem Stift ist Druecken die Haelfte, die ankommt - sonst laesst
+                                 sich der Modus mit dem Stift gar nicht erst einschalten. -->
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding TabletMode}"
+                                          ClickMode="Press"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 

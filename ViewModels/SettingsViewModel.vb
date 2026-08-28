@@ -92,6 +92,7 @@ Namespace ViewModels
         Private _transparencyBackgroundMode As String = "Checkerboard"
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
         Private _enableDiagnosticLogging As Boolean = False
+        Private _tabletMode As Boolean = False
         Private _isThumbnailCacheRefreshing As Boolean = False
         Private _isThumbnailCacheRefreshQueued As Boolean = False
         Private _immichEnabled As Boolean = False
@@ -2778,6 +2779,7 @@ Namespace ViewModels
             _transparencyBackgroundMode = AppSettingsService.NormalizeTransparencyBackgroundMode(_appSettings.TransparencyBackgroundMode)
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
             _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
+            _tabletMode = _appSettings.TabletMode
             _immichEnabled = _appSettings.ImmichEnabled
             _immichServerUrl = _appSettings.ImmichServerUrl
             _immichApiKey = _appSettings.ImmichApiKey
@@ -3414,6 +3416,21 @@ Namespace ViewModels
                 Else
                     PerformanceTraceService.StopUiThreadWatchdog()
                 End If
+            End Set
+        End Property
+
+        ''' <summary>Zeichentablett: alles löst beim Drücken aus statt beim Loslassen. Die Begründung
+        ''' und der Preis stehen in <see cref="TabletInputService"/>. Sofort wirksam, damit sich das
+        ''' Umlegen im selben Dialog gleich ausprobieren lässt.</summary>
+        Public Property TabletMode As Boolean
+            Get
+                Return _tabletMode
+            End Get
+            Set(value As Boolean)
+                If _tabletMode = value Then Return
+                Me.RaiseAndSetIfChanged(_tabletMode, value)
+                AppSettingsService.Update(Sub(s) s.TabletMode = value)
+                TabletInputService.Apply(value)
             End Set
         End Property
 

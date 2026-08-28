@@ -85,6 +85,9 @@ Public Class App
             End If
 
             LocalizationService.LanguageMode = AppSettingsService.Load().LanguageMode
+            ' Zeichentablett-Modus VOR dem ersten Fenster anhaengen: die Stile setzen ClickMode, und
+            ' ein spaeter angehaengter Stil muesste alles noch einmal durchstilen.
+            TabletInputService.Apply(AppSettingsService.Load().TabletMode)
             ' EINMAL beim Start nachsehen, welche gelernten Modelle vorliegen. Danach steht fuer
             ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
             ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.
