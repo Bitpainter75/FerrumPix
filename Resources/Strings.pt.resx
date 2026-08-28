@@ -7591,4 +7591,73 @@
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif lê ficheiros HEIC e HEIF. No Windows vem incluída, no Linux vem do gestor de pacotes e o macOS lê estes ficheiros por si próprio. Se faltar, esses ficheiros ficam simplesmente por abrir e tudo o resto funciona na mesma.</value>
   </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>Painel de informações</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>A barra ao lado da imagem: onde aparece e o que mostra. Galeria, visualizador e editor partilham-na.</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>Dados no separador Geral</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>Escolha que linhas são mostradas da imagem. O que uma imagem não tem fica oculto, mesmo assinalado.</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>Painel de informações</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>Painel de informações no visualizador</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>Painel de informações no editor</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>Histograma no painel de informações</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>Esse lado recebe o foco; o rodapé e o painel de informações mostram a sua foto</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>Os nomes são atribuídos no painel de informações junto à foto</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>O cesto não é uma pessoa e por isso não aceita nome nenhum. Para atribuir um rosto isolado que esteja lá, escreva o nome no painel de informações junto da foto.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>Aplica-se apenas ao visualizador: reduzir só quando a imagem for maior do que a área de exibição, ou dimensionar sempre para a área.</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>Mostra o histograma, a forma de onda e o desfile RGB no painel direito da galeria, do visualizador e do editor.</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>Como os ficheiros RAW são revelados e mostrados na galeria, no visualizador e no editor.</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>Visão geral das atribuições de teclado e mouse na galeria, no visualizador e no editor.</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>Abra uma imagem a partir do visualizador</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>A barra ao lado da imagem: onde aparece e o que mostra. Galeria, visualizador e editor partilham-na.</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>Excluir na galeria e no visualizador afeta também os ativos do Immich - no servidor, não apenas na visualização local. Desativado: imagens do Immich não podem ser excluídas.</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>Secções do painel</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>A classificação, a etiqueta e as palavras-chave definem-se no painel. Quem as trata noutro sítio, retira-as aqui.</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>Classificação e favorito</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>Metadados {0} de {1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>abrir o visualizador</value>
+  </data>
 </root>

@@ -7632,4 +7632,73 @@
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif leest HEIC- en HEIF-bestanden. Op Windows wordt het meegeleverd, op Linux komt het uit het pakketbeheer en macOS leest deze bestanden zelf. Ontbreekt het, dan blijven zulke bestanden gewoon gesloten en werkt al het andere ongewijzigd.</value>
   </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>Infopaneel</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>De balk naast de afbeelding: waar hij verschijnt en wat hij toont. Galerij, viewer en editor delen hem.</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>Gegevens op het tabblad Algemeen</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>Kies welke regels bij de afbeelding worden getoond. Wat een afbeelding niet biedt, blijft ook met vinkje weg.</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>Info-zijbalk</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>Info-zijbalk in de viewer</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>Info-zijbalk in de editor</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>Histogram in de info-zijbalk</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>Dat vlak krijgt de focus; voettekst en info-zijbalk tonen de afbeelding ervan</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>Namen worden in de info-zijbalk bij de afbeelding gegeven</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>De verzamelbak is geen persoon en neemt daarom geen naam aan. Een enkel gezicht eruit wijst u toe in de info-zijbalk bij de afbeelding.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>Geldt alleen voor de viewer: alleen verkleinen wanneer de afbeelding groter is dan het weergavevlak, of altijd naar het vlak schalen.</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>Toont histogram, waveform en RGB-parade in de rechterbalk van galerij, viewer en editor.</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>Hoe RAW-bestanden worden ontwikkeld en in galerij, viewer en editor worden weergegeven.</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>Overzicht van de toetsen- en muisindeling in galerij, viewer en editor.</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>Open een afbeelding vanuit de viewer</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>De balk naast de afbeelding: waar hij verschijnt en wat hij toont. Galerij, viewer en editor delen hem.</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>Verwijderen werkt in galerij en viewer ook op Immich-assets, dus op de server en niet alleen op de lokale weergave. Uit: Immich-afbeeldingen kunnen niet worden verwijderd.</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>Onderdelen van de balk</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>Beoordeling, etiket en trefwoorden kunt u in de balk instellen. Wie ze elders bijhoudt, haalt ze hier weg.</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>Beoordeling en favoriet</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>Metadata {0} van {1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>de viewer opent</value>
+  </data>
 </root>

@@ -12,6 +12,61 @@
              KeyUp="HandleKeyUp"
              PointerReleased="OnGlobalPointerReleased">
 
+    <UserControl.Resources>
+        <!-- Die Kopfzeile einer Gruppe. Sie steht HIER und nicht in der Kachelvorlage, weil sie im
+             Raster nie vorkommt: als Teil der Kachel entstand sie in jedem Element, nur um
+             unsichtbar zu bleiben. Der ContentControl in der Kachel fuellt sie erst, wenn das
+             Element wirklich eine Kopfzeile ist.
+             Die Hoehe ist fest und muss mit GalleryViewModel.GroupHeaderRowHeight uebereinstimmen,
+             sonst driftet die Scrollrechnung mit der Scrolltiefe. Die Breite ist genau eine volle
+             Kachelzeile, damit das WrapPanel die Kopfzeile immer allein in eine Zeile setzt.
+             no-translate ist Pflicht: der Uebersetzungsdurchlauf schreibt sonst Text zu und bricht
+             die Bindung. -->
+        <DataTemplate x:Key="GalleryGroupHeaderTemplate" DataType="{x:Type models:ImageItem}">
+            <Border Height="48"
+                    Width="{Binding DataContext.GroupHeaderWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    Padding="5,0,5,0">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,6" VerticalAlignment="Bottom">
+                    <!-- Derselbe Kreis wie auf der Kachel, nur eine Ebene hoeher: er markiert die
+                         ganze Gruppe und hebt sie wieder auf. Gefuellt steht er, wenn JEDES Bild
+                         der Gruppe markiert ist. -->
+                    <Button Grid.Column="0"
+                            Classes="selection-badge"
+                            Classes.active="{Binding IsSelected}"
+                            Width="16" Height="16"
+                            Margin="0,0,8,2"
+                            VerticalAlignment="Bottom"
+                            Click="OnGroupSelectionBadgeClick"
+                            ToolTip.Tip="Gruppe auswählen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                       Classes="badge-glyph"
+                                       Width="14" Height="14"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                    </Button>
+                    <TextBlock Grid.Column="1"
+                               Classes="no-translate"
+                               Text="{Binding GroupTitle}"
+                               FontSize="{DynamicResource FP.Font.Subtitle}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource FP.Text.Primary}"
+                               VerticalAlignment="Bottom"/>
+                    <Border Grid.Column="2"
+                            Height="1"
+                            Margin="12,0,12,5"
+                            VerticalAlignment="Bottom"
+                            Background="{DynamicResource FP.Border.Normal}"/>
+                    <TextBlock Grid.Column="3"
+                               Classes="no-translate"
+                               Text="{Binding GroupCountText}"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               VerticalAlignment="Bottom"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <UserControl.Styles>
         <Style Selector="TreeViewItem">
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
@@ -369,7 +424,7 @@
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"
                                                Margin="10,8,10,2"/>
-                                    <TextBlock Text="Namen werden im Infopanel am Bild vergeben"
+                                    <TextBlock Text="Namen werden in der Info-Leiste am Bild vergeben"
                                                IsVisible="{Binding !PersonFilterOptions.Count}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"
@@ -1828,51 +1883,22 @@
                                      immer allein in eine Zeile setzt.
                                      no-translate ist Pflicht: der Uebersetzungsdurchlauf schreibt
                                      sonst Text zu und bricht die Bindung. -->
-                                <Border IsVisible="{Binding IsGroupHeader}"
-                                        Height="48"
-                                        Width="{Binding DataContext.GroupHeaderWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        Padding="5,0,5,0">
-                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,6" VerticalAlignment="Bottom">
-                                        <!-- Derselbe Kreis wie auf der Kachel, nur eine Ebene hoeher:
-                                             er markiert die ganze Gruppe und hebt sie wieder auf.
-                                             Gefuellt steht er, wenn JEDES Bild der Gruppe markiert
-                                             ist. -->
-                                        <Button Grid.Column="0"
-                                                Classes="selection-badge"
-                                                Classes.active="{Binding IsSelected}"
-                                                Width="16" Height="16"
-                                                Margin="0,0,8,2"
-                                                VerticalAlignment="Bottom"
-                                                Click="OnGroupSelectionBadgeClick"
-                                                ToolTip.Tip="Gruppe auswählen">
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
-                                                           Classes="badge-glyph"
-                                                           Width="14" Height="14"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"/>
-                                        </Button>
-                                        <TextBlock Grid.Column="1"
-                                                   Classes="no-translate"
-                                                   Text="{Binding GroupTitle}"
-                                                   FontSize="{DynamicResource FP.Font.Subtitle}"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource FP.Text.Primary}"
-                                                   VerticalAlignment="Bottom"/>
-                                        <Border Grid.Column="2"
-                                                Height="1"
-                                                Margin="12,0,12,5"
-                                                VerticalAlignment="Bottom"
-                                                Background="{DynamicResource FP.Border.Normal}"/>
-                                        <TextBlock Grid.Column="3"
-                                                   Classes="no-translate"
-                                                   Text="{Binding GroupCountText}"
-                                                   FontSize="{DynamicResource FP.Font.Small}"
-                                                   Foreground="{DynamicResource FP.Text.Muted}"
-                                                   VerticalAlignment="Bottom"/>
-                                    </Grid>
-                                </Border>
+                                <!-- WEIL SIE IM RASTER NIE VORKOMMT, wird sie dort auch nicht mehr
+                                     gebaut: der ContentControl bekommt seinen Inhalt nur, wenn das
+                                     Element wirklich eine Kopfzeile ist (GroupHeaderContent gibt
+                                     sich selbst zurueck, sonst Nothing). Vorher entstanden ihre
+                                     sieben Steuerelemente in JEDER Kachel, nur um unsichtbar zu
+                                     bleiben - bei vierzig sichtbaren Kacheln also 280 Stueck, die
+                                     bei jedem Rollschritt mit erzeugt und vermessen wurden. -->
+                                <ContentControl Content="{Binding GroupHeaderContent}"
+                                                ContentTemplate="{StaticResource GalleryGroupHeaderTemplate}"/>
+                                <!-- Und dasselbe umgekehrt: eine Gruppenkopfzeile baut keine Kachel
+                                     mehr auf. Das sind rund fuenfzig Steuerelemente je Kopfzeile,
+                                     die vorher nur entstanden, um ausgeblendet zu werden. -->
+                                <ContentControl Content="{Binding TileContent}">
+                                  <ContentControl.ContentTemplate>
+                                    <DataTemplate DataType="{x:Type models:ImageItem}">
                                 <Border Name="ThumbBorder"
-                                        IsVisible="{Binding IsContentEntry}"
                                         Classes="thumb-card"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.navigation-selected="{Binding IsNavigationSelected}"
@@ -1936,6 +1962,18 @@
                                                                    Classes="badge-glyph"
                                                                    IsVisible="{Binding IsSelected}"/>
                                                 </Button>
+                                                <!-- DIE AUFSAETZE DER KACHEL stehen bewusst FEST in
+                                                     der Vorlage und werden ueber Opacity versteckt.
+                                                     Sie erst beim Ueberfahren zu bauen war am
+                                                     2026-08-28 kurz eingebaut und ist wieder
+                                                     draussen: gemessen brachte es nichts (die Zeit
+                                                     steckte im zu grossen Anzeigefenster, nicht in
+                                                     der Zahl der Steuerelemente), und beim Rollen
+                                                     mit dem Mausrad wanderten die Kacheln unter dem
+                                                     Zeiger durch - jede baute dabei ihre
+                                                     fuenfunddreissig Aufsaetze auf und gleich wieder
+                                                     ab. Das Rollen wurde dadurch traeger, nicht
+                                                     schneller. -->
                                                 <StackPanel Classes="gallery-hover-actions"
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Left"
@@ -2199,6 +2237,9 @@
                                         </Border>
                                     </Grid>
                                 </Border>
+                                    </DataTemplate>
+                                  </ContentControl.ContentTemplate>
+                                </ContentControl>
                               </Panel>
                             </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -2626,6 +2667,21 @@
                                FontSize="{DynamicResource FP.Font.Body}"
                                Margin="16,0,0,0"
                                VerticalAlignment="Center"/>
+                    <!-- Was im Hintergrund noch laeuft: Vorschaubilder und Metadaten. Die Zeile
+                         steht nur da, solange wirklich etwas laeuft, und traegt einen kleinen
+                         Punkt davor - ohne ihn saehe die Zahl aus wie ein Teil der Angabe links.
+                         Der Text kommt aus dem ViewModel und ist dort schon uebersetzt. -->
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="16,0,0,0"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding HasBackgroundWork}">
+                        <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                 Fill="{DynamicResource FP.Accent}"/>
+                        <TextBlock Text="{Binding BackgroundWorkText}"
+                                   Classes="no-translate"
+                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                   FontSize="{DynamicResource FP.Font.Body}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Center">

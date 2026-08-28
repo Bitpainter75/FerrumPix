@@ -102,6 +102,7 @@ Namespace ViewModels
         Private _collagePreviewRequestId As Integer
         Private ReadOnly _collagePreviewTimer As DispatcherTimer
         Private ReadOnly _searchDebounceTimer As DispatcherTimer
+        Private ReadOnly _backgroundWorkTimer As DispatcherTimer
         Private _thumbnailLoadCts As New CancellationTokenSource()
         Private _activeSearchCts As CancellationTokenSource
         Private ReadOnly _virtualPathSet As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -1130,6 +1131,7 @@ Namespace ViewModels
             End Set
         End Property
 
+
         Public Property ShowParentFolder As Boolean
             Get
                 Return _showParentFolder
@@ -1578,6 +1580,14 @@ Namespace ViewModels
                                                        _searchDebounceTimer.Stop()
                                                        FilterAndSort()
                                                    End Sub
+
+            ' Die Fusszeile fragt nach, statt sich melden zu lassen: das Erzeugen der Vorschaubilder
+            ' meldete sonst je Bild, und das waeren bei einem grossen Ordner tausende Meldungen fuer
+            ' eine Zeile Text. Dreimal je Sekunde reicht dem Auge, und gemeldet wird nur, wenn der
+            ' Satz sich wirklich geaendert hat.
+            _backgroundWorkTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(350)}
+            AddHandler _backgroundWorkTimer.Tick, Sub() RefreshBackgroundWorkText()
+            _backgroundWorkTimer.Start()
 
             RefreshCommand = ReactiveCommand.Create(Sub() LoadCurrentFolder())
             ClearSearchCommand = ReactiveCommand.Create(Sub() SearchText = "")
@@ -5341,6 +5351,18 @@ Namespace ViewModels
                                                        .Rating = 0,
                                                        .Tags = New List(Of String)()
                                                    }
+                                                   ' Kennt der Katalog die Datei nicht, kommen die
+                                                   ' Dateidaten von der Platte - sonst steht das
+                                                   ' Element ohne Datum da (siehe
+                                                   ' PublishSearchBatchAsync, gleiche Stelle).
+                                                   Try
+                                                       Dim info As New FileInfo(path)
+                                                       If info.Exists Then
+                                                           m.FileCreatedAt = info.CreationTime.ToString("o")
+                                                           m.ScannedSourceModifiedAt = info.LastWriteTime.ToString("o")
+                                                       End If
+                                                   Catch
+                                                   End Try
                                                End If
                                                If Not Await MatchesSavedSearchAsync(node, m, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
                                                matched.Add(m)
@@ -5362,6 +5384,10 @@ Namespace ViewModels
                                                           item.Tags = If(m.Tags, New List(Of String)())
                                                           item.ImageWidth = If(m.ImageWidth, 0)
                                                           item.ImageHeight = If(m.ImageHeight, 0)
+                                                          ' Ohne die Dateidaten aus dem Katalog stuende die Zeitleiste
+                                                          ' auf "Ohne Datum" und die Sortierung nach Erstellungs- oder
+                                                          ' Aenderungsdatum sortierte nach nichts.
+                                                          item.ApplyCatalogFileDates(m.FileCreatedAt, m.ScannedSourceModifiedAt)
                                                           Return item
                                                       End Function).ToList()
 
@@ -5810,6 +5836,23 @@ Namespace ViewModels
                         .Rating = 0,
                         .Tags = New List(Of String)()
                     }
+                    ' DEN KATALOG KENNT DIESE DATEI NOCH NICHT - dann kommen ihre Dateidaten direkt
+                    ' von der Platte. Ohne sie stuende das Element ohne Datum da, und die Zeitleiste
+                    ' meldete fuer den ganzen Bereich "Ohne Datum" (Nutzerbefund 2026-08-28: in einer
+                    ' Suche ueber 7500 Bilder war der Katalog noch nicht vollstaendig).
+                    '
+                    ' HIER und nicht beim Anzeigen: dieser Lauf ist der Hintergrundfaden. Auf einer
+                    ' Netzwerkfreigabe ist jeder Dateizugriff ein Gang ueber die Leitung, und auf dem
+                    ' Anzeigefaden waere das genau die Stockung, die niemand haben will.
+                    Try
+                        Dim info As New FileInfo(file)
+                        If info.Exists Then
+                            meta.FileCreatedAt = info.CreationTime.ToString("o")
+                            meta.ScannedSourceModifiedAt = info.LastWriteTime.ToString("o")
+                        End If
+                    Catch
+                        ' Nicht lesbar: dann bleibt das Element ohne Datum, wie bisher.
+                    End Try
                 End If
 
                 If Not Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
@@ -6434,14 +6477,18 @@ Namespace ViewModels
                 If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
                 If Not _virtualPathSet.Add(meta.FilePath) Then Continue For
 
-                _allItems.Add(New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName) With {
+                Dim neu = New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName) With {
                     .IsFavorite = meta.IsFavorite,
                     .Rating = meta.Rating,
                     .ColorLabel = meta.ColorLabel,
                     .Tags = If(meta.Tags, New List(Of String)()),
                     .ImageWidth = If(meta.ImageWidth, 0),
                     .ImageHeight = If(meta.ImageHeight, 0)
-                })
+                }
+                ' Siehe den anderen Weg oben: ohne die Dateidaten aus dem Katalog kennt weder die
+                ' Zeitleiste noch die Sortierung ein Datum.
+                neu.ApplyCatalogFileDates(meta.FileCreatedAt, meta.ScannedSourceModifiedAt)
+                _allItems.Add(neu)
                 added = True
             Next
             If added Then FilterAndSort()
@@ -7032,6 +7079,21 @@ Namespace ViewModels
                              Return
                          End Try
 
+                         ' Fuer die Fusszeile: wie viele Bilder dieser Lauf vor sich hat und wie
+                         ' viele davon schon durch sind. Ohne das ist ein laufender Metadatenlauf
+                         ' unsichtbar - man merkt ihn nur daran, dass die Anwendung beschaeftigt wirkt.
+                         ' Die eigene Laufnummer ziehen und die Zähler übernehmen - UNTER EINER
+                         ' SPERRE. Beides einzeln zu tun ließe ein Fenster zwischen Nummer und
+                         ' Zählern: startet dort ein neuer Lauf, überschreibt der ältere dessen
+                         ' frisch gesetzte Zahlen und die Fußzeile zählt den falschen Scan.
+                         Dim meinLauf As Integer
+                         SyncLock _metaRefreshLock
+                             meinLauf = _metaRefreshRun + 1
+                             _metaRefreshRun = meinLauf
+                             Threading.Volatile.Write(_metaRefreshTotal, items.Count)
+                             Threading.Volatile.Write(_metaRefreshDone, 0)
+                         End SyncLock
+
                          Dim nextIndex = -1
                          Dim workers As New List(Of Task)()
                          For w = 1 To degreeOfParallelism
@@ -7095,10 +7157,26 @@ Namespace ViewModels
                                                                                                       End Sub)
                                                            Catch
                                                            End Try
+                                                           ' Nur der jüngste Lauf zählt mit - ein
+                                                           ' überholter würde den Fortschritt des
+                                                           ' neuen verfälschen.
+                                                           If Threading.Volatile.Read(_metaRefreshRun) = meinLauf Then
+                                                               Threading.Interlocked.Increment(_metaRefreshDone)
+                                                           End If
                                                        Loop
                                                    End Function))
                          Next
                          Await Task.WhenAll(workers)
+                         ' Fertig heisst: die Fusszeile soll nichts mehr melden. Auch bei Abbruch -
+                         ' deshalb VOR der Abbruchpruefung. ABER nur, wenn inzwischen kein neuer Lauf
+                         ' begonnen hat: sonst raeumt der ueberholte Lauf die Zaehler des laufenden
+                         ' ab, und die Fusszeile verschweigt einen Scan, der noch arbeitet.
+                         SyncLock _metaRefreshLock
+                             If _metaRefreshRun = meinLauf Then
+                                 Threading.Volatile.Write(_metaRefreshTotal, 0)
+                                 Threading.Volatile.Write(_metaRefreshDone, 0)
+                             End If
+                         End SyncLock
 
                          If cancellationToken.IsCancellationRequested Then Return
                          Await Dispatcher.UIThread.InvokeAsync(Sub()
@@ -7106,6 +7184,63 @@ Namespace ViewModels
                                                                     FilterAndSort()
                                                                 End Sub)
                      End Function)
+        End Sub
+
+        ' ── Was im Hintergrund noch laeuft ──────────────────────────────────────
+        '
+        ' Zwei Laeufe arbeiten der Galerie zu, ohne sich bisher zu zeigen: das Erzeugen der
+        ' Vorschaubilder und das Nachlesen der Metadaten. Beide waren nur daran zu erkennen, dass
+        ' nach und nach etwas erschien (Patrick, 2026-08-27: "man sollte auch erkennen koennen,
+        ' wenn im Hintergrund noch weitere Threads Thumbnails erstellen und Metadaten einlesen").
+        Private Shared _metaRefreshTotal As Integer = 0
+        Private Shared _metaRefreshDone As Integer = 0
+
+        ''' <summary>Die Nummer des jüngsten Metadatenlaufs.
+        '''
+        ''' <para>Die Zähler darüber sind gemeinsam, die Läufe aber nicht: wer schnell den Ordner
+        ''' wechselt, hat zwei davon gleichzeitig unterwegs. Ohne diese Nummer räumte der ältere,
+        ''' langsamere Lauf beim Fertigwerden die Zähler ab - und die Fußzeile verschwieg den
+        ''' Fortschritt des NEUEN, noch laufenden Scans. Jeder Lauf zieht deshalb beim Start eine
+        ''' Nummer und schreibt nur weiter, solange sie noch die aktuelle ist.</para></summary>
+        Private Shared _metaRefreshRun As Integer = 0
+        Private Shared ReadOnly _metaRefreshLock As New Object()
+
+        Private _backgroundWorkText As String = ""
+
+        ''' <summary>Was gerade im Hintergrund laeuft, als Satz fuer die Fusszeile - leer, wenn
+        ''' nichts laeuft. Der Text wird von einem Zeitgeber nachgezogen und nur gemeldet, wenn er
+        ''' sich wirklich geaendert hat: eine Meldung je Vorschaubild waere selbst eine Last.</summary>
+        Public ReadOnly Property BackgroundWorkText As String
+            Get
+                Return _backgroundWorkText
+            End Get
+        End Property
+
+        Public ReadOnly Property HasBackgroundWork As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_backgroundWorkText)
+            End Get
+        End Property
+
+        ''' <summary>Baut den Satz neu und meldet ihn, falls er sich geaendert hat.</summary>
+        Private Sub RefreshBackgroundWorkText()
+            Dim teile As New List(Of String)()
+
+            Dim thumbs = ImageItem.PendingThumbnails
+            If thumbs > 0 Then teile.Add($"{thumbs:N0} {LocalizationService.T("Vorschaubilder")}")
+
+            Dim total = Threading.Volatile.Read(_metaRefreshTotal)
+            If total > 0 Then
+                Dim done = Math.Min(total, Threading.Volatile.Read(_metaRefreshDone))
+                teile.Add(String.Format(LocalizationService.T("Metadaten {0} von {1}"),
+                                        done.ToString("N0"), total.ToString("N0")))
+            End If
+
+            Dim text = If(teile.Count = 0, "", String.Join("  ·  ", teile))
+            If String.Equals(text, _backgroundWorkText, StringComparison.Ordinal) Then Return
+            _backgroundWorkText = text
+            Me.RaisePropertyChanged(NameOf(BackgroundWorkText))
+            Me.RaisePropertyChanged(NameOf(HasBackgroundWork))
         End Sub
 
 
@@ -7509,7 +7644,15 @@ Namespace ViewModels
             BottomSpacerHeight = bottomRows * itemSlotHeight
             ContentHeight = totalRows * itemSlotHeight
 
-            ApplyDisplayWindow(Items, firstIndex, lastIndex)
+            ' Messpunkt (nur bei eingeschaltetem Diagnoselog): der Fensterwechsel ist die DATENSEITE
+            ' des Rollens. Was danach noch kostet, ist der Aufbau der Kacheln - der steht im
+            ' Waechter ueber dem Anzeigefaden.
+            If PerformanceTraceService.IsActive Then
+                PerformanceTraceService.Measure("Galerie Fensterwechsel",
+                                                Sub() ApplyDisplayWindow(Items, firstIndex, lastIndex))
+            Else
+                ApplyDisplayWindow(Items, firstIndex, lastIndex)
+            End If
         End Sub
 
         ''' <summary>Das Anzeigefenster auf einen Ausschnitt der Quelle stellen. Quelle ist in Raster und
@@ -7517,39 +7660,91 @@ Namespace ViewModels
         Private Sub ApplyDisplayWindow(source As IList(Of ImageItem), firstIndex As Integer, lastIndex As Integer)
             If _displayWindowFirst = firstIndex AndAlso _displayWindowLast = lastIndex Then Return
 
-            ' Delta-Update statt vollem Reset: bei überlappenden Fenstern (normales Scrollen um
-            ' wenige Zeilen, der Regelfall) werden nur die Elemente entfernt/hinzugefügt, die das
-            ' Fenster tatsächlich verlassen bzw. neu betreten, statt bei jedem Scroll-Tick das
-            ' komplette (durch den Keep-Alive-Puffer ohnehin schon große) Fenster per ReplaceAll
-            ' zurückzusetzen - ein Reset zwingt das nicht-virtualisierende WrapPanel, ausnahmslos
-            ' alle Item-Controls (inkl. der pro Kachel eager erzeugten Kontextmenüs) neu zu
-            ' erzeugen und zu layouten, was sich als spürbares Ruckeln bemerkbar macht.
+            ' ZWEI WEGE, UND DER TEURE IST NICHT DER, DEN MAN VERMUTET.
+            '
+            ' Ursprünglich stand hier ein Delta-Update: bei überlappenden Fenstern (Rollen um wenige
+            ' Zeilen, der Regelfall) wurden nur die Elemente getauscht, die das Fenster verlassen
+            ' bzw. betreten - statt das ganze Fenster per ReplaceAll zurückzusetzen. Die Begründung
+            ' war, dass ein Reset das nicht virtualisierende WrapPanel zwingt, alle Kacheln neu zu
+            ' erzeugen, samt der DAMALS je Kachel erzeugten Kontextmenüs.
+            '
+            ' Die Kontextmenüs hängen längst am Wurzel-Raster der Galerie, nicht mehr an der Kachel.
+            ' Und am echten Fenster gemessen (Nutzerprotokoll 2026-08-27, 1000 Bilder) hat sich die
+            ' Rechnung damit umgedreht: das Tauschen kostete bis zu 350 ms je Rollschritt, das
+            ' Ersetzen 58 ms. Der Grund ist, dass JEDE einzelne Änderung an DisplayItems für sich
+            ' gemeldet wird und das Panel daraufhin sein ganzes Layout wiederholt - zehn getauschte
+            ' Plätze sind zehn Layoutläufe über alle Kacheln, ein Ersetzen dagegen einer.
+            '
+            ' Deshalb geht jetzt BEIDES über einen Zug. Bleibt das Fenster gleich, passiert wie
+            ' bisher gar nichts (die Prüfung oben).
             Dim hasOverlap = _displayWindowFirst >= 0 AndAlso firstIndex <= _displayWindowLast AndAlso lastIndex >= _displayWindowFirst
-            If hasOverlap AndAlso DisplayItems.Count = _displayWindowLast - _displayWindowFirst + 1 Then
+            ' Messpunkt: die beiden Wege bleiben getrennt zu sehen, damit sich am Protokoll ablesen
+            ' lässt, ob die Umstellung trägt.
+            Dim messpunkt = If(hasOverlap, "Fenster: Kacheln tauschen", "Fenster: ganz ersetzen")
+            Dim messuhr = If(PerformanceTraceService.IsActive, Diagnostics.Stopwatch.StartNew(), Nothing)
+            ' Die ALTEN Grenzen werden unten noch gebraucht: der Randtausch rechnet aus, wie weit das
+            ' Fenster gerückt ist. Gesetzt werden sie deshalb erst am Ende.
+            Dim slice = source.Skip(firstIndex).Take(lastIndex - firstIndex + 1).ToList()
+
+            ' DEN INHALT TAUSCHEN, NICHT DIE KACHEL. Das ist der Kern: bleibt die Zahl der Plätze
+            ' gleich - und das ist beim Rollen immer so -, wird jeder Platz EINZELN ersetzt. Ein
+            ' Ersetzen an einer Stelle sagt der Anzeige "hier steht jetzt etwas anderes", und sie
+            ' setzt der vorhandenen Kachel einen neuen Datenkontext. Ein Zurücksetzen der ganzen
+            ' Liste sagt dagegen "alles ist neu", und dann baut das Panel jede Kachel neu auf -
+            ' vierzig Kacheln zu rund fünfzig Steuerelementen, bei jedem Rollschritt.
+            '
+            ' Gemessen am echten Fenster kostete der Neuaufbau bis zu 348 ms je Rollschritt
+            ' (Nutzerprotokoll 2026-08-28). Ersetzt werden nur die Plätze, deren Inhalt sich
+            ' wirklich ändert.
+            ' AN DEN RÄNDERN TAUSCHEN, WENN SICH DAS FENSTER NUR VERSCHIEBT.
+            '
+            ' Beim Rollen wandert das Fenster um wenige Zeilen: die allermeisten Elemente bleiben
+            ' dieselben, sie stehen nur an anderer Stelle. Dann werden vorn und hinten so viele
+            ' Plätze entfernt und angehängt, wie das Fenster wirklich weitergerückt ist - alles
+            ' dazwischen bleibt unangetastet, samt seiner fertig aufgebauten Kachel.
+            '
+            ' NICHT Position für Position ersetzen: das sähe nach "nur der Inhalt wechselt" aus,
+            ' erzeugt aber für JEDEN Platz eine Meldung, und die Anzeige baut die Kachel dabei neu
+            ' auf. Beim Rollen um eine Zeile wären das sechzig Neuaufbauten statt fünf (gemerkt am
+            ' Mausrad, Nutzerbefund 2026-08-28: das Rollen kam damit "mehr ins Stocken").
+            '
+            ' Zurückgesetzt wird nur, wenn das neue Fenster mit dem alten NICHTS zu tun hat - beim
+            ' Sprung am Regler. Dann führt kein Weg an einem Neuaufbau vorbei, und ein einzelnes
+            ' Zurücksetzen ist dafür der billigste.
+            Dim ueberlappt = hasOverlap AndAlso DisplayItems.Count = _displayWindowLast - _displayWindowFirst + 1
+            Dim geaendert = 0
+            If ueberlappt Then
                 While _displayWindowFirst < firstIndex
                     DisplayItems.RemoveAt(0)
                     _displayWindowFirst += 1
+                    geaendert += 1
                 End While
                 While _displayWindowLast > lastIndex
                     DisplayItems.RemoveAt(DisplayItems.Count - 1)
                     _displayWindowLast -= 1
+                    geaendert += 1
                 End While
                 Dim insertAt = 0
                 For i = firstIndex To _displayWindowFirst - 1
                     DisplayItems.Insert(insertAt, source(i))
                     insertAt += 1
+                    geaendert += 1
                 Next
                 For i = _displayWindowLast + 1 To lastIndex
                     DisplayItems.Add(source(i))
+                    geaendert += 1
                 Next
-                _displayWindowFirst = firstIndex
-                _displayWindowLast = lastIndex
-            Else
-                _displayWindowFirst = firstIndex
-                _displayWindowLast = lastIndex
-                Dim slice = source.Skip(firstIndex).Take(lastIndex - firstIndex + 1).ToList()
-                If Not DisplayItems.SequenceEqual(slice) Then DisplayItems.ReplaceAll(slice)
+            ElseIf Not DisplayItems.SequenceEqual(slice) Then
+                DisplayItems.ReplaceAll(slice)
+                geaendert = slice.Count
             End If
+            _displayWindowFirst = firstIndex
+            _displayWindowLast = lastIndex
+            If messuhr IsNot Nothing Then
+                PerformanceTraceService.Record("Fenster: geaenderte Plaetze", geaendert)
+                PerformanceTraceService.Record("Fenster: Plaetze insgesamt", slice.Count)
+            End If
+            If messuhr IsNot Nothing Then PerformanceTraceService.Record(messpunkt, messuhr.Elapsed.TotalMilliseconds)
         End Sub
 
         ''' <summary>Baut das angezeigte Fenster mit der zuletzt gemeldeten Geometrie neu auf. Noetig nach
@@ -10802,13 +10997,13 @@ Namespace ViewModels
         End Sub
 
         Private Sub SaveFileBrowserSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.GalleryShowFolders = _showFolders
-            settings.GalleryShowParentFolder = _showParentFolder
-            settings.GalleryRatingBadgesAlwaysVisible = _ratingBadgesAlwaysVisible
-            settings.GalleryFavoriteBadgeAlwaysVisible = _favoriteBadgeAlwaysVisible
-            settings.GalleryMetadataBadgesAlwaysVisible = _metadataBadgesAlwaysVisible
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.GalleryShowFolders = _showFolders
+                                          s.GalleryShowParentFolder = _showParentFolder
+                                          s.GalleryRatingBadgesAlwaysVisible = _ratingBadgesAlwaysVisible
+                                          s.GalleryFavoriteBadgeAlwaysVisible = _favoriteBadgeAlwaysVisible
+                                          s.GalleryMetadataBadgesAlwaysVisible = _metadataBadgesAlwaysVisible
+                                      End Sub)
         End Sub
 
         Private Sub RemovePathsFromVirtualFolder(paths As IEnumerable(Of String))

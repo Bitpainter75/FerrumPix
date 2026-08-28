@@ -100,6 +100,14 @@ Namespace Services
     End Class
 
     Public Class AppSettings
+
+        ''' <summary>Eine flache Kopie - der Einstieg für <c>AppSettingsService.CloneSettings</c>,
+        ''' das danach die Listen ersetzt. Steht hier, weil <c>MemberwiseClone</c> nur von innen
+        ''' erreichbar ist.</summary>
+        Public Function ShallowCopy() As AppSettings
+            Return DirectCast(MemberwiseClone(), AppSettings)
+        End Function
+
         Public Property GalleryThumbnailSize As Double = 260
         Public Property GalleryViewMode As String = "Grid"
         ''' <summary>Das Analysebild im Infopanel: "Histogram", "Waveform" oder "Parade".
@@ -116,6 +124,39 @@ Namespace Services
         ''' <summary>Die Darstellung im Anpassungspanel - EIGENE Wahl neben ScopeMode. Wer das Bild
         ''' an zwei Orten sieht, will dort meist zwei verschiedene Fragen beantwortet haben.</summary>
         Public Property ScopePanelMode As String = "Parade"
+
+        ' ── Welche Zeilen der Reiter "Allgemein" im Infopanel zeigt ──────────────
+        '
+        ' Je Zeile ein eigener Schalter und keine Liste in einer Zeichenkette: eine leere Liste
+        ' waere sonst nicht von "noch nie gespeichert" zu unterscheiden, und wer alles abwaehlt,
+        ' bekaeme beim naechsten Start den Werksstand zurueck. Fehlt ein Feld in der Datei einer
+        ' aelteren Fassung, gilt der Vorgabewert hier - eine neue Zeile ist damit ohne Migration
+        ' beim Werksstand dabei.
+        '
+        ' Der Werksstand folgt dem, was beim SICHTEN zaehlt (Nutzerrueckmeldung 2026-08-27):
+        ' Aufnahmedaten an, die technischen Angaben zur Datei aus. Wer sie braucht, hakt sie an.
+        Public Property InfoPanelShowDateTaken As Boolean = True
+        Public Property InfoPanelShowCamera As Boolean = True
+        Public Property InfoPanelShowLens As Boolean = True
+        Public Property InfoPanelShowAperture As Boolean = True
+        Public Property InfoPanelShowShutterSpeed As Boolean = True
+        Public Property InfoPanelShowIso As Boolean = True
+        Public Property InfoPanelShowFocalLength As Boolean = True
+        Public Property InfoPanelShowDimensions As Boolean = True
+        Public Property InfoPanelShowMegapixels As Boolean = False
+        Public Property InfoPanelShowAspectRatio As Boolean = False
+        Public Property InfoPanelShowColorSpace As Boolean = False
+        Public Property InfoPanelShowFileSize As Boolean = True
+        Public Property InfoPanelShowFileCreated As Boolean = True
+        Public Property InfoPanelShowFileModified As Boolean = False
+        Public Property InfoPanelShowFolderPath As Boolean = True
+        Public Property InfoPanelShowPlace As Boolean = True
+        Public Property InfoPanelShowCopyright As Boolean = True
+        ' Die drei BEREICHE unter dem Reiter. Ab Werk an, weil sie es bisher immer waren - und weil
+        ' sie das einzige in der Leiste sind, mit dem man etwas TUT.
+        Public Property InfoPanelShowRating As Boolean = True
+        Public Property InfoPanelShowColorLabel As Boolean = True
+        Public Property InfoPanelShowTags As Boolean = True
         Public Property GallerySortMode As String = AppSettingsService.DefaultGallerySortMode
         Public Property GallerySortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
         ''' <summary>Feinheit der Gruppen in der Gruppenansicht, solange nach einem Datum sortiert wird:
@@ -192,7 +233,10 @@ Namespace Services
         ''' belegt. Wer ihn will, schaltet ihn ein; wer ihn einmalig will, nimmt "Jetzt indizieren".
         ''' Ohne eingetragene Ordner tut der Schalter ohnehin nichts.</summary>
         Public Property CatalogIndexOnStartup As Boolean = False
-        Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 250
+        ''' <summary>500 seit 2026-08-27 (vorher 250, Patrick): in einem Ordner mittlerer Groesse
+        ''' reicht das fuer den ganzen Bestand, und Hin- und Herrollen loest dann keinen einzigen
+        ''' neuen Decode mehr aus. Die Obergrenze liegt bei 10.000.</summary>
+        Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 500
         Public Property JpgSaveQuality As Integer = 90
         ''' Vorgewähltes Zielformat in „Speichern unter", „Konvertieren nach" und „Exportieren nach".
         ''' "JPG" | "PNG" | "WEBP" | "FPX" - FPX gibt es nur beim Speichern unter, die übrigen
@@ -517,9 +561,33 @@ Namespace Services
             Path.Combine(SettingsDirectory, "settings.json")
 
         ''' Der zuletzt bekannte, bereits normalisierte Stand als JSON. Load liest daraus statt von der
-        ''' Platte: die Einstellungen werden an 34 Stellen abgefragt, unter anderem aus Vorschaubild-Threads.
+        ''' Platte: die Einstellungen werden an 148 Stellen abgefragt, unter anderem aus Vorschaubild-Threads.
         Private Shared ReadOnly _cacheLock As New Object()
         Private Shared _cachedJson As String = Nothing
+
+        ''' <summary>Der ausgewertete Stand, nicht nur sein Text.
+        '''
+        ''' <para>Bis zum 2026-08-27 merkte sich der Dienst allein den JSON-TEXT und baute daraus bei
+        ''' JEDEM <see cref="Load"/> ein frisches Objekt: deserialisieren plus rund fünfzig
+        ''' Normalisierungen. Gemessen an einer benutzten Einstellungsdatei (25 Vorlagen) sind das
+        ''' 118 Mikrosekunden - je Aufruf, und aufgerufen wird an 148 Stellen, im Zweifel hundertfach
+        ''' je Bedienschritt und aus Vorschaubild-Fäden heraus. „Es macht doch keinen Sinn, die immer
+        ''' neu reinzuladen in einer aktiven App" (Patrick, 2026-08-27).</para>
+        '''
+        ''' <para>ES GIBT GENAU EINEN STAND, und <see cref="Load"/> gibt ihn heraus - ohne Kopie.
+        ''' Zwischenzeitlich bekam jeder Aufrufer seine eigene Ausfertigung, weil das übliche Muster
+        ''' „laden, ändern, speichern" lautete und eine geteilte Instanz aus dem Ändern ein
+        ''' sofortiges, ungespeichertes Wirken für alle gemacht hätte. Es gab 22 solcher Stellen,
+        ''' 17 davon im Einstellungsdialog; sie gehen seit dem 2026-08-27 alle über
+        ''' <see cref="Update"/>. „Ich verstehe zudem auch nicht, wieso wir mehrere Instanzen von
+        ''' Einstellungsobjekten brauchen und die je Anforderer neu erzeugen statt einem globalen"
+        ''' (Patrick, 2026-08-27).</para>
+        '''
+        ''' <para>DAMIT GILT EINE REGEL: wer etwas ändern will, ruft <see cref="Update"/>. Eine
+        ''' Zuweisung am Ergebnis von <see cref="Load"/> wirkt sofort für alle und wird nie
+        ''' gespeichert - ein stiller Fehler. Die Diagnose sucht dieses Muster im Quelltext
+        ''' („Einstellungen: geändert wird nur über Update").</para></summary>
+        Private Shared _cachedSettings As AppSettings = Nothing
 
         ''' Geschrieben wird verzögert und zusammengefasst. Sonst löste jedes Häkchen im Dialog ein
         ''' vollständiges Serialisieren samt Temporärdatei und Umbenennen aus. Flush erzwingt das Schreiben -
@@ -541,6 +609,14 @@ Namespace Services
 
         Public Shared Function Load() As AppSettings
             Try
+                ' Der eine ausgewertete Stand, falls er schon vorliegt. Dann kostet ein Laden gar
+                ' nichts mehr - weder Deserialisieren noch Normalisieren noch Kopieren.
+                Dim bereitsAusgewertet As AppSettings = Nothing
+                SyncLock _cacheLock
+                    bereitsAusgewertet = _cachedSettings
+                End SyncLock
+                If bereitsAusgewertet IsNot Nothing Then Return bereitsAusgewertet
+
                 Dim json As String
                 Dim readError As Exception = Nothing
                 SyncLock _cacheLock
@@ -554,7 +630,16 @@ Namespace Services
                 ' hielte sie nicht auf.
                 If readError IsNot Nothing Then DiagnosticLogService.LogException("Settings.Read", readError)
 
-                If String.IsNullOrEmpty(json) Then Return New AppSettings()
+                ' AUCH DER LEERE STAND WIRD GEMERKT. Ohne das baute jeder Aufruf beim ersten Start
+                ' (noch keine Datei) ein frisches Objekt, und die Zusage "es gibt genau einen Stand"
+                ' gälte ausgerechnet dann nicht, wenn noch nichts gespeichert wurde.
+                If String.IsNullOrEmpty(json) Then
+                    Dim leer As New AppSettings()
+                    SyncLock _cacheLock
+                        _cachedSettings = leer
+                    End SyncLock
+                    Return leer
+                End If
 
                 Dim settings = JsonSerializer.Deserialize(Of AppSettings)(json)
                 If settings Is Nothing Then Return New AppSettings()
@@ -613,17 +698,113 @@ Namespace Services
                 settings.AdjustmentPresets = NormalizeAdjustmentPresets(settings.AdjustmentPresets)
                 settings.LightroomPresets = NormalizeXmpPresets(settings.LightroomPresets)
                 settings.LutPresets = NormalizeLutPresets(settings.LutPresets)
+
+                ' Den ausgewerteten Stand merken - und genau ihn herausgeben.
+                SyncLock _cacheLock
+                    _cachedSettings = settings
+                End SyncLock
                 Return settings
             Catch ex As JsonException
                 ' Kaputte Datei: der nächste Save überschriebe sie mit Standardwerten. Vorher zur
                 ' Seite legen, damit Presets und gespeicherte Suchen von Hand zu retten sind.
                 BackupUnreadableSettings()
+                ' Der Stand IST jetzt der leere - und auch er wird gemerkt, sonst laufen alle
+                ' folgenden Aufrufe erneut in dieselbe kaputte Datei.
+                Dim nachSicherung As New AppSettings()
                 SyncLock _cacheLock
                     _cachedJson = ""
+                    _cachedSettings = nachSicherung
                 End SyncLock
-                Return New AppSettings()
+                Return nachSicherung
             Catch
+                ' Unbekannter Fehler: NICHT merken. Er kann vorübergehend sein (eine Datei, die
+                ' gerade geschrieben wird), und ein gemerkter Leerstand hielte bis zum Neustart.
                 Return New AppSettings()
+            End Try
+        End Function
+
+        ''' <summary>Eine eigene Ausfertigung der Einstellungen.
+        '''
+        ''' <para>ÜBER REFLEXION und nicht als Liste von Hand kopierter Felder: bei 161
+        ''' Eigenschaften wäre eine vergessene ein stiller Fehler, der erst auffällt, wenn eine
+        ''' Einstellung sich nicht mehr merken lässt. Die flache Kopie erledigt alle Skalare und
+        ''' Zeichenketten auf einen Schlag (Zeichenketten sind unveränderlich und dürfen geteilt
+        ''' werden); danach bekommt jede LISTE eine eigene Instanz samt eigener Elemente.</para>
+        '''
+        ''' <para>Die Elemente mitzukopieren ist kein Übereifer: die Vorlagenobjekte tragen
+        ''' veränderliche Felder (etwa <c>IsLastApplied</c>), und ohne eigene Elemente schlüge eine
+        ''' solche Änderung sofort auf den gemerkten Stand durch - also auf jeden anderen Leser,
+        ''' ohne dass je gespeichert wurde.</para></summary>
+        Private Shared Function CloneSettings(source As AppSettings) As AppSettings
+            If source Is Nothing Then Return New AppSettings()
+            Dim copy = source.ShallowCopy()
+            For Each entry In CollectionProperties()
+                Dim originalList = TryCast(entry.GetValue(source), IList)
+                If originalList IsNot Nothing Then
+                    Dim elementType = entry.PropertyType.GetGenericArguments()(0)
+                    Dim newList = DirectCast(Activator.CreateInstance(entry.PropertyType), IList)
+                    For Each element In originalList
+                        newList.Add(CloneElement(element, elementType))
+                    Next
+                    entry.SetValue(copy, newList)
+                    Continue For
+                End If
+
+                ' AUCH WOERTERBUECHER, nicht nur Listen. Das wurde beim ersten Anlauf uebersehen, und
+                ' der Fehler war still: die flache Kopie reicht die Instanz weiter, ein Eintrag in
+                ' EditorExpanderStates aenderte damit den gemerkten Stand, noch bevor gespeichert
+                ' wurde - und blieb bei einem Fehlschlag des Speicherns trotzdem wirksam.
+                Dim originalMap = TryCast(entry.GetValue(source), IDictionary)
+                If originalMap Is Nothing Then Continue For
+                Dim valueType = entry.PropertyType.GetGenericArguments()(1)
+                Dim newMap = DirectCast(Activator.CreateInstance(entry.PropertyType), IDictionary)
+                For Each key In originalMap.Keys
+                    newMap(key) = CloneElement(originalMap(key), valueType)
+                Next
+                entry.SetValue(copy, newMap)
+            Next
+            Return copy
+        End Function
+
+        ''' <summary>Die SAMMLUNGS-Eigenschaften von <see cref="AppSettings"/>, EINMAL ermittelt -
+        ''' Listen und Woerterbuecher. Die Reflexion selbst ist der teure Teil; sie je Kopie zu
+        ''' wiederholen haette den Gewinn wieder aufgezehrt.
+        '''
+        ''' <para>Gesucht wird ueber den TYP und nicht ueber eine gepflegte Namensliste: eine neue
+        ''' Sammlung in den Einstellungen ist damit von selbst dabei. Genau daran hing der erste
+        ''' Anlauf, der nur Listen kannte und das eine Woerterbuch stillschweigend teilte.</para></summary>
+        Private Shared _collectionProperties As Reflection.PropertyInfo() = Nothing
+
+        Private Shared Function CollectionProperties() As Reflection.PropertyInfo()
+            Dim cached = _collectionProperties
+            If cached IsNot Nothing Then Return cached
+            cached = GetType(AppSettings).GetProperties(Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance).
+                Where(Function(p) p.CanRead AndAlso p.CanWrite AndAlso
+                                  p.PropertyType.IsGenericType AndAlso
+                                  (p.PropertyType.GetGenericTypeDefinition() Is GetType(List(Of )) OrElse
+                                   p.PropertyType.GetGenericTypeDefinition() Is GetType(Dictionary(Of ,)))).
+                ToArray()
+            _collectionProperties = cached
+            Return cached
+        End Function
+
+        ''' <summary>Ein Listenelement kopieren. Unveränderliche Elemente (Zahlen, Zeichenketten)
+        ''' werden weitergereicht; alles andere bekommt ein neues Objekt mit denselben Werten.</summary>
+        Private Shared Function CloneElement(element As Object, elementType As Type) As Object
+            If element Is Nothing Then Return Nothing
+            If elementType.IsValueType OrElse elementType Is GetType(String) Then Return element
+
+            Try
+                Dim copy = Activator.CreateInstance(elementType)
+                For Each p In elementType.GetProperties(Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance)
+                    If Not p.CanRead OrElse Not p.CanWrite OrElse p.GetIndexParameters().Length > 0 Then Continue For
+                    p.SetValue(copy, p.GetValue(element))
+                Next
+                Return copy
+            Catch
+                ' Kein parameterloser Konstruktor oder eine Eigenschaft, die sich beim Setzen wehrt:
+                ' dann lieber das Element teilen als die Einstellungen verlieren.
+                Return element
             End Try
         End Function
 
@@ -754,8 +935,12 @@ Namespace Services
                 Dim json = JsonSerializer.Serialize(settings, New JsonSerializerOptions With {.WriteIndented = True})
 
                 ' Der neue Stand gilt ab sofort für alle Leser; auf die Platte geht er gesammelt.
+                ' Der ausgewertete Stand wird dabei als EIGENE Ausfertigung gemerkt: der Aufrufer
+                ' hält sein Objekt weiter in der Hand und darf daran weiterarbeiten, ohne dass der
+                ' gemerkte Stand sich mitändert.
                 SyncLock _cacheLock
                     _cachedJson = json
+                    _cachedSettings = CloneSettings(settings)
                 End SyncLock
                 ThumbnailCacheService.InvalidateSettingsCache()
                 ScheduleWrite(json)
@@ -811,9 +996,15 @@ Namespace Services
 
         ''' <summary>Ändert genau ein paar Felder und speichert. Ersetzt das fünfzehnmal kopierte
         ''' Load-ändern-Save-Muster.</summary>
+        ''' <summary>Der EINZIGE Weg, Einstellungen zu ändern.
+        '''
+        ''' <para>Gearbeitet wird auf einer eigenen Ausfertigung, nicht am gemerkten Stand: sonst
+        ''' gälte eine halb durchgeführte Änderung schon für alle, und ein Fehler mittendrin ließe
+        ''' den Stand verbogen zurück. Erst wenn <see cref="Save"/> durch ist, gilt der neue
+        ''' Stand.</para></summary>
         Public Shared Sub Update(mutate As Action(Of AppSettings))
             If mutate Is Nothing Then Return
-            Dim settings = Load()
+            Dim settings = CloneSettings(Load())
             mutate(settings)
             Save(settings)
         End Sub
@@ -827,8 +1018,13 @@ Namespace Services
             Return Math.Max(45, Math.Min(95, value))
         End Function
 
+        ''' <summary>Obergrenze 10.000 (vorher 5.000, Patrick am 2026-08-27): ein Ordner mit 7.500
+        ''' Bildern passte nicht mehr hinein, und beim Zurueckrollen wurde deshalb neu geladen, was
+        ''' eben noch da war. Der Preis ist Arbeitsspeicher - eine Kachel belegt je nach eingestellter
+        ''' Groesse einige hundert Kilobyte, zehntausend davon also durchaus ein bis zwei Gigabyte.
+        ''' Deshalb bleibt es eine WAHL und wird keine neue Vorgabe.</summary>
         Public Shared Function NormalizeGalleryThumbnailMemoryCacheCapacity(value As Integer) As Integer
-            Return Math.Max(50, Math.Min(5000, value))
+            Return Math.Max(50, Math.Min(10000, value))
         End Function
 
         Public Shared Function NormalizeJpgSaveQuality(value As Integer) As Integer

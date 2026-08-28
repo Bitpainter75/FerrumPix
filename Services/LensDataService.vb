@@ -424,10 +424,10 @@ Namespace Services
                 Dim assignments = Zuordnungen()
                 If String.IsNullOrWhiteSpace(model) Then assignments.Remove(exifName) Else assignments(exifName) = model
                 Try
-                    Dim settings = AppSettingsService.Load()
-                    settings.LensAssignments = assignments.Select(Function(p) New LensAssignment With {
-                        .ExifName = p.Key, .Modell = p.Value}).ToList()
-                    AppSettingsService.Save(settings)
+                    AppSettingsService.Update(Sub(s)
+                                                  s.LensAssignments = assignments.Select(Function(p) New LensAssignment With {
+                                                      .ExifName = p.Key, .Modell = p.Value}).ToList()
+                                              End Sub)
                     saved = True
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Objektivdaten.Zuordnung", ex)

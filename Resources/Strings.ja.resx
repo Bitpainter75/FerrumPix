@@ -7632,4 +7632,73 @@
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif は HEIC ファイルと HEIF ファイルを読み込みます。Windows では同梱され、Linux ではパッケージ管理から入り、macOS はこれらのファイルを自身で読みます。無い場合、そうしたファイルは開かれないだけで、ほかはすべてこれまでどおり動作します。</value>
   </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>情報パネル</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>画像の横にあるバー: どこに表示し、何を示すか。ギャラリー、ビューアー、エディターで共通です。</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>一般タブの項目</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>画像について表示する行を選びます。画像にない項目は、チェックしても表示されません。</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>情報パネル</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>ビューアーの情報パネル</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>エディターの情報パネル</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>情報パネルにヒストグラムを表示</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>その側が操作の対象になり、フッターと情報パネルにその画像が表示されます</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>名前は画像の情報パネルで付けます</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>未分類の入れ物は人物ではないため、名前は付けられません。そこから 1 人分の顔を割り当てるには、画像の情報パネルで名前を入力します。</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>ビューアーだけに適用されます。画像が表示領域より大きいときだけ縮小するか、常に表示領域に合わせるかを選びます。</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>ギャラリー、ビューアー、エディターの右サイドバーにヒストグラム、波形、RGB パレードを表示します。</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>RAW ファイルをどう現像し、ギャラリー、ビューアー、エディターでどう表示するかを決めます。</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>ギャラリー、ビューアー、エディターでのキーとマウスの割り当て一覧です。</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>ビューアーから画像を開いてください</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>画像の横にあるバー: どこに表示し、何を示すか。ギャラリー、ビューアー、エディターで共通です。</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>ギャラリーとビューアーでの削除が Immich のアセットにも及びます。つまりローカルの表示だけでなくサーバーにも作用します。オフのときは Immich の画像を削除できません。</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>パネルの区画</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>評価、ラベル、キーワードはパネルで設定できます。別の場所で管理している場合は、ここで外してください。</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>評価とお気に入り</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>メタデータ {0} / {1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>ビューアーを開く</value>
+  </data>
 </root>

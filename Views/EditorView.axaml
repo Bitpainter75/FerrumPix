@@ -188,7 +188,7 @@
                     <Button Classes="icon-btn" Width="34" Height="34"
                             Classes.active="{Binding IsInfoSidebarVisible}"
                             Command="{Binding ToggleInfoSidebarCommand}"
-                            ToolTip.Tip="Info-Seitenleiste">
+                            ToolTip.Tip="Info-Leiste">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg" Width="20"
                                        Height="20" />
                     </Button>
@@ -596,7 +596,7 @@
                             IsVisible="{Binding ShowNoImagePlaceholder}">
                     <TextBlock Text="Kein Bild zum Bearbeiten" Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center" />
-                    <TextBlock Text="Öffne ein Bild aus dem Betrachter" Foreground="{DynamicResource FP.Text.Muted}"
+                    <TextBlock Text="Öffne ein Bild aus dem Viewer" Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center" />
                 </StackPanel>
 

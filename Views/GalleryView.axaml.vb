@@ -476,6 +476,14 @@ Namespace Views
         ''' Sortierwechsel. Ein O(n)-Durchlauf, auch bei 30k Immich-Assets unkritisch - aber nicht
         ''' pro Scroll-Tick, deshalb getrennt vom Viewport-Refresh.
         Private Sub RebuildTimelineSegments()
+            If Not PerformanceTraceService.IsActive Then
+                RebuildTimelineSegmentsCore()
+                Return
+            End If
+            PerformanceTraceService.Measure("Zeitleiste neu bauen", AddressOf RebuildTimelineSegmentsCore)
+        End Sub
+
+        Private Sub RebuildTimelineSegmentsCore()
             Dim scrubber = Me.FindControl(Of GalleryTimelineScrubber)("GalleryTimelineScrubber")
             Dim vm = GetVm()
             If scrubber Is Nothing Then Return
@@ -564,7 +572,18 @@ Namespace Views
             _viewportRefreshTrailingTimer.Start()
         End Sub
 
+        ''' <summary>Messpunkt: dieser Weg laeuft bei JEDER Rollbewegung (gedrosselt auf 90 ms) und
+        ''' stellt das Anzeigefenster neu. Er ist damit der Kandidat Nummer eins fuer eine hakende
+        ''' Bildlaufleiste - gemessen wird deshalb der GANZE Weg, nicht nur ein Teil davon.</summary>
         Private Sub RequestViewportThumbnails()
+            If Not PerformanceTraceService.IsActive Then
+                RequestViewportThumbnailsCore()
+                Return
+            End If
+            PerformanceTraceService.Measure("Galerie Rollschritt", AddressOf RequestViewportThumbnailsCore)
+        End Sub
+
+        Private Sub RequestViewportThumbnailsCore()
             Dim vm = GetVm()
             If vm Is Nothing OrElse vm.Items Is Nothing OrElse vm.Items.Count = 0 Then Return
 
@@ -616,9 +635,20 @@ Namespace Views
                 If scrollViewer.Offset.Y <= 1.0 Then
                     firstIndex = 0
                 End If
+                ' DIE GROESSE DIESES FENSTERS IST DER PREIS JEDES ROLLSCHRITTS. Vorgehalten wurden
+                ' oben und unten je ZWEI Bildschirmhoehen - das Fenster war damit fuenfmal so gross
+                ' wie der sichtbare Bereich, und jeder Rollschritt baute entsprechend viele Kacheln
+                ' auf. Am echten Fenster gemessen waren das bis zu 160 gewechselte Plaetze und
+                ' 100 bis 400 ms je Schritt (Nutzerprotokoll 2026-08-28).
+                '
+                ' EINE Hoehe nach oben und unten (Patrick am 2026-08-28, nach dem Vergleich am echten
+                ' Fenster): eine halbe war beim Ziehen am Regler zu knapp, zwei sind zu teuer. Damit
+                ' ist das Fenster dreimal so gross wie der sichtbare Bereich statt fuenfmal - und
+                ' jeder Sprung kostet entsprechend weniger.
                 Dim rowCount = Math.Max(1, lastRow - firstRow + 1)
-                Dim displayFirst = Math.Max(0, (firstRow - rowCount * 2) * cols)
-                Dim displayLast = Math.Min(vm.Items.Count - 1, ((lastRow + rowCount * 2 + 1) * cols) - 1)
+                Dim bufferRows = Math.Max(1, rowCount)
+                Dim displayFirst = Math.Max(0, (firstRow - bufferRows) * cols)
+                Dim displayLast = Math.Min(vm.Items.Count - 1, ((lastRow + bufferRows + 1) * cols) - 1)
                 vm.SetDisplayWindow(displayFirst, displayLast, itemSlotHeight, cols)
                 RequestThumbnailRange(vm, firstIndex, lastIndex)
                 UpdateTimelineScrollState(scrollViewer)

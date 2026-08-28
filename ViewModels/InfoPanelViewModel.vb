@@ -72,6 +72,12 @@ Namespace ViewModels
             AddTagCommand = ReactiveCommand.Create(AddressOf AddTag)
             RemoveTagCommand = ReactiveCommand.Create(Of String)(AddressOf RemoveTag)
             OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) OpenTagSearch?.Invoke(tag))
+
+            ' Die Zeilenauswahl gilt anwendungsweit, und es gibt drei Leisten. Ohne dieses Abo
+            ' zeigte nur die Ansicht, die beim Umschalten auf dem Schirm stand, den neuen Stand -
+            ' die anderen beiden erst beim naechsten Bildwechsel. Kein Abmelden: es gibt genau
+            ' drei Instanzen, alle so langlebig wie das Fenster (siehe InfoPanelRowSettings).
+            AddHandler InfoPanelRowSettings.Changed, AddressOf RaiseRowVisibility
         End Sub
 
         ''' <summary>Was beim Klick auf ein Stichwort geschehen soll. Die Galerie haengt sich hier
@@ -204,8 +210,7 @@ Namespace ViewModels
         ''' <summary>Was das Element selbst ueber sich weiss - Name, Masse, Groesse. Fuer ein
         ''' Immich-Asset ist das alles, was ohne Herunterladen zu haben ist.</summary>
         Private Shared Function BuildFromItem(item As ImageItem) As ExifData
-            Dim name = If(item.ImmichOriginalFileName, "")
-            If String.IsNullOrEmpty(name) Then name = If(item.FileName, "")
+            Dim name = item.DisplayFileName
             ' Der Ordner NUR bei einem echten Dateipfad. Ein Immich-Asset traegt einen
             ' Pseudo-Pfad (immich://...), der auf keinem Datentraeger liegt - die Zeile bleibt
             ' dort leer und blendet sich aus.
@@ -294,7 +299,8 @@ Namespace ViewModels
             For Each propertyName In {NameOf(IsSummary), NameOf(IsSingleImage), NameOf(HasScope), NameOf(HasInfoContent),
                                       NameOf(Name), NameOf(IsInfoTabGeneral), NameOf(IsInfoTabExif),
                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc),
-                                      NameOf(IsInfoTabPeople), NameOf(PlaceText), NameOf(HasPlace)}
+                                      NameOf(IsInfoTabPeople), NameOf(PlaceText), NameOf(HasPlace),
+                                      NameOf(ShowPlaceRow)}
                 Me.RaisePropertyChanged(propertyName)
             Next
         End Sub
@@ -520,6 +526,8 @@ Namespace ViewModels
             _placeText = PlacePanelService.TextFor(If(_items.Count = 1, _items(0), Nothing))
             Me.RaisePropertyChanged(NameOf(PlaceText))
             Me.RaisePropertyChanged(NameOf(HasPlace))
+            ' Die Zeile haengt an BEIDEM, am Ort und am Haken - der Ort allein meldet sie nicht.
+            Me.RaisePropertyChanged(NameOf(ShowPlaceRow))
         End Sub
 
         ''' <summary>Hebt die Zuordnung EINES Gesichts auf: es bekommt eine eigene, namenlose Gruppe.
@@ -714,7 +722,12 @@ Namespace ViewModels
                          ' Bei einem Bild vom Server steht hier der TEMP-Pfad der heruntergeladenen
                          ' Kopie - eine Auskunft ueber einen Ordner, den es morgen nicht mehr gibt
                          ' und der mit dem Bild nichts zu tun hat. Lieber keine Zeile als diese.
-                         If item IsNot Nothing AndAlso item.IsRemoteAsset Then info.FolderPath = ""
+                         ' Und der NAME dieser Kopie ist die Asset-Kennung, nicht der des Fotos:
+                         ' er kommt deshalb vom Element (siehe ImageItem.DisplayFileName).
+                         If item IsNot Nothing AndAlso item.IsRemoteAsset Then
+                             info.FolderPath = ""
+                             info.FileName = item.DisplayFileName
+                         End If
                          Dispatcher.UIThread.Post(Sub()
                                                       If token <> _loadToken Then Return
                                                       ExifInfo = info
@@ -841,8 +854,219 @@ Namespace ViewModels
                 ' Der angezeigte Name kommt aus den Aufnahmedaten. Im Besitzer-Betrieb setzt sie
                 ' der Betrachter oder der Editor, und dann meldet ihn sonst niemand.
                 Me.RaisePropertyChanged(NameOf(Name))
+                ' Und mit den Daten aendert sich, welche Zeilen ueberhaupt etwas zu sagen haben:
+                ' ein Bild ohne Aufnahmedaten soll keine Reihe leerer Beschriftungen zeigen.
+                RaiseRowVisibility()
             End Set
         End Property
+
+        ' ── Welche Zeilen der Reiter "Allgemein" zeigt ───────────────────────────
+        '
+        ' Zwei Bedingungen je Zeile, und beide muessen stimmen: der Benutzer hat sie in den
+        ' Einstellungen ausgewaehlt (siehe InfoPanelRowSettings), UND das Bild hat den Wert. Die
+        ' zweite ist der Grund, warum das hier steht und nicht im XAML: eine angehakte Zeile ohne
+        ' Wert waere eine Beschriftung mit Leere dahinter, und bei einem Scan ohne Aufnahmedaten
+        ' waeren das sechs davon untereinander.
+
+        Private Shared Function HasText(value As String) As Boolean
+            Return Not String.IsNullOrWhiteSpace(value)
+        End Function
+
+        Public ReadOnly Property ShowDateTakenRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.DateTaken) AndAlso HasText(_exifInfo.DateTaken)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowCameraRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Camera) AndAlso HasText(_exifInfo.Camera)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowLensRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Lens) AndAlso HasText(_exifInfo.Lens)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowApertureRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Aperture) AndAlso HasText(_exifInfo.Aperture)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowShutterSpeedRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.ShutterSpeed) AndAlso HasText(_exifInfo.ShutterSpeed)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowIsoRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Iso) AndAlso HasText(_exifInfo.ISO)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFocalLengthRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.FocalLength) AndAlso HasText(_exifInfo.FocalLength)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowDimensionsRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Dimensions) AndAlso
+                       HasText(_exifInfo.ImageWidth) AndAlso HasText(_exifInfo.ImageHeight)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowMegapixelsRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Megapixels) AndAlso HasText(_exifInfo.Megapixels)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowAspectRatioRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.AspectRatio) AndAlso HasText(_exifInfo.AspectRatio)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowColorSpaceRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.ColorSpace) AndAlso HasText(_exifInfo.ColorSpace)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFileSizeRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.FileSize) AndAlso HasText(_exifInfo.FileSize)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFileCreatedRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.FileCreated) AndAlso HasText(_exifInfo.FileCreated)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFileModifiedRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.FileModified) AndAlso HasText(_exifInfo.FileModified)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowFolderPathRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.FolderPath) AndAlso HasText(_exifInfo.FolderPath)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowPlaceRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Place) AndAlso HasPlace
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowCopyrightRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Copyright) AndAlso HasText(_exifInfo.Copyright)
+            End Get
+        End Property
+
+        ' ── Die drei BEREICHE unter dem Reiter ──────────────────────────────────
+        '
+        ' Anders als die Zeilen haengen sie NICHT am Bild: Sterne, Etikett und Stichwoerter sind
+        ' immer bedienbar, auch an einem Bild, das noch keines von beidem traegt - das ist ja gerade
+        ' der Sinn. Hier entscheidet deshalb allein der Haken.
+
+        Public ReadOnly Property ShowRatingSection As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Rating)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowColorLabelSection As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.ColorLabel)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowTagsSection As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Tags)
+            End Get
+        End Property
+
+        ''' <summary>Der Block um Sterne und Farben. Er faellt erst weg, wenn BEIDE aus sind.</summary>
+        Public ReadOnly Property ShowRatingOrColorLabelSection As Boolean
+            Get
+                Return ShowRatingSection OrElse ShowColorLabelSection
+            End Get
+        End Property
+
+        ''' <summary>Drei Ueberschriften, von denen hoechstens eine steht: der Block heisst
+        ''' "Bewertung &amp; Etikett", solange beides da ist, und sonst nach dem, was uebrig
+        ''' bleibt. Als EIN Text mit wechselndem Inhalt waere er nicht uebersetzbar - der
+        ''' Baumdurchlauf sieht nur Literale (siehe LocalizationService.ApplyTo).</summary>
+        Public ReadOnly Property ShowRatingAndColorLabelHeading As Boolean
+            Get
+                Return ShowRatingSection AndAlso ShowColorLabelSection
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowRatingOnlyHeading As Boolean
+            Get
+                Return ShowRatingSection AndAlso Not ShowColorLabelSection
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowColorLabelOnlyHeading As Boolean
+            Get
+                Return ShowColorLabelSection AndAlso Not ShowRatingSection
+            End Get
+        End Property
+
+        ''' <summary>Die Trennlinie ueber den Stichwoertern gehoert zu dem, was sie TRENNT: steht
+        ''' ueber ihr nichts mehr, waere sie ein Strich unter dem Analysebild - und genau darunter
+        ''' steht bewusst keiner (der dunkle Kasten grenzt sich selbst ab).</summary>
+        Public ReadOnly Property ShowTagsSeparator As Boolean
+            Get
+                Return ShowTagsSection AndAlso ShowRatingOrColorLabelSection
+            End Get
+        End Property
+
+        ''' <summary>Alle Zeilen auf einmal melden. Einzeln zu pruefen, welche sich geaendert hat,
+        ''' braucht es nicht: das geschieht beim Bildwechsel und beim Umschalten im
+        ''' Einstellungsdialog, also selten, und vergessen waere eine Zeile, die stehen bleibt.</summary>
+        Private Sub RaiseRowVisibility()
+            Me.RaisePropertyChanged(NameOf(ShowDateTakenRow))
+            Me.RaisePropertyChanged(NameOf(ShowCameraRow))
+            Me.RaisePropertyChanged(NameOf(ShowLensRow))
+            Me.RaisePropertyChanged(NameOf(ShowApertureRow))
+            Me.RaisePropertyChanged(NameOf(ShowShutterSpeedRow))
+            Me.RaisePropertyChanged(NameOf(ShowIsoRow))
+            Me.RaisePropertyChanged(NameOf(ShowFocalLengthRow))
+            Me.RaisePropertyChanged(NameOf(ShowDimensionsRow))
+            Me.RaisePropertyChanged(NameOf(ShowMegapixelsRow))
+            Me.RaisePropertyChanged(NameOf(ShowAspectRatioRow))
+            Me.RaisePropertyChanged(NameOf(ShowColorSpaceRow))
+            Me.RaisePropertyChanged(NameOf(ShowFileSizeRow))
+            Me.RaisePropertyChanged(NameOf(ShowFileCreatedRow))
+            Me.RaisePropertyChanged(NameOf(ShowFileModifiedRow))
+            Me.RaisePropertyChanged(NameOf(ShowFolderPathRow))
+            Me.RaisePropertyChanged(NameOf(ShowPlaceRow))
+            Me.RaisePropertyChanged(NameOf(ShowCopyrightRow))
+            Me.RaisePropertyChanged(NameOf(ShowRatingSection))
+            Me.RaisePropertyChanged(NameOf(ShowColorLabelSection))
+            Me.RaisePropertyChanged(NameOf(ShowTagsSection))
+            Me.RaisePropertyChanged(NameOf(ShowRatingOrColorLabelSection))
+            Me.RaisePropertyChanged(NameOf(ShowRatingAndColorLabelHeading))
+            Me.RaisePropertyChanged(NameOf(ShowRatingOnlyHeading))
+            Me.RaisePropertyChanged(NameOf(ShowColorLabelOnlyHeading))
+            Me.RaisePropertyChanged(NameOf(ShowTagsSeparator))
+        End Sub
 
         Public Property ScopeImage As Bitmap
             Get

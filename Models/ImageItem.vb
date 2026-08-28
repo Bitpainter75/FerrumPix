@@ -62,6 +62,17 @@ Namespace Models
         Private Shared _runningThumbnailWorkers As Integer = 0
         Private Shared _runningBackgroundWorkers As Integer = 0
 
+        ''' <summary>Wie viele Vorschaubilder noch ausstehen - sichtbare und vorsorgliche zusammen.
+        ''' Fuer die Fusszeile der Galerie: dass im Hintergrund noch gearbeitet wird, war bisher nur
+        ''' daran zu merken, dass Kacheln nach und nach auftauchten (Patrick, 2026-08-27).</summary>
+        Public Shared ReadOnly Property PendingThumbnails As Integer
+            Get
+                SyncLock _thumbnailQueueLock
+                    Return _viewportQueue.Count + _backgroundQueue.Count + _runningThumbnailWorkers
+                End SyncLock
+            End Get
+        End Property
+
         Private _filePath As String
         Public Property FilePath As String
             Get
@@ -134,6 +145,28 @@ Namespace Models
         Public ReadOnly Property IsContentEntry As Boolean
             Get
                 Return Not IsGroupHeader
+            End Get
+        End Property
+
+        ''' <summary>Sich selbst - aber NUR fuer eine Gruppenkopfzeile, sonst Nothing.
+        '''
+        ''' <para>Damit entscheidet die Ansicht nicht mehr ueber <c>IsVisible</c>, ob die Kopfzeile
+        ''' zu sehen ist, sondern der ContentControl bekommt schlicht keinen Inhalt und BAUT sie gar
+        ''' nicht erst. Der Unterschied zaehlt: eine ausgeblendete Kopfzeile wurde in jeder Kachel
+        ''' erzeugt, also im Raster vierzigmal je Rollschritt fuer etwas, das dort nie vorkommt.
+        ''' Dasselbe umgekehrt fuer die Kachel selbst (siehe <see cref="TileContent"/>).</para></summary>
+        Public ReadOnly Property GroupHeaderContent As Object
+            Get
+                Return If(IsGroupHeader, CObj(Me), Nothing)
+            End Get
+        End Property
+
+        ''' <summary>Sich selbst - aber NUR fuer eine echte Kachel, sonst Nothing. Das Gegenstueck zu
+        ''' <see cref="GroupHeaderContent"/>: in der Gruppenansicht baut eine Kopfzeile damit keine
+        ''' Kachel mehr auf, und das sind rund fuenfzig Steuerelemente je Kopfzeile.</summary>
+        Public ReadOnly Property TileContent As Object
+            Get
+                Return If(IsContentEntry, CObj(Me), Nothing)
             End Get
         End Property
 
@@ -293,6 +326,21 @@ Namespace Models
         Public ReadOnly Property ImmichOriginalFileName As String
             Get
                 Return _immichOriginalFileName
+            End Get
+        End Property
+
+        ''' <summary>Der Name, unter dem der Nutzer dieses Bild kennt.
+        '''
+        ''' Bei einem Serverbild ist das NICHT der Name der Datei, mit der gearbeitet wird: die
+        ''' Temp-Kopie eines Immich-Assets heisst nach dessen Kennung ({uuid}.jpg), damit der
+        ''' Rueckweg zum Asset daran haengen kann. Wer den Dateinamen aus dem Arbeitspfad zieht,
+        ''' zeigt dem Nutzer deshalb eine Kennung statt seines Fotos - genau das stand in der
+        ''' Info-Leiste (Nutzerbefund 2026-08-27).</summary>
+        Public ReadOnly Property DisplayFileName As String
+            Get
+                If Not String.IsNullOrEmpty(_immichOriginalFileName) Then Return _immichOriginalFileName
+                If Not String.IsNullOrEmpty(_fileName) Then Return _fileName
+                Return If(String.IsNullOrEmpty(_filePath), "", IO.Path.GetFileName(_filePath))
             End Get
         End Property
 
@@ -536,6 +584,32 @@ Namespace Models
                 RaisePropertyChanged(NameOf(DateFileCreatedText))
             End Set
         End Property
+
+        ''' <summary>Die Dateidaten aus dem KATALOG uebernehmen, ohne die Datei anzufassen.
+        '''
+        ''' <para>Elemente, die aus einer Suche oder einem Katalogtreffer entstehen, kommen ohne
+        ''' Dateiangaben auf die Welt: die holt <see cref="EnsureFileInfoLoaded"/> erst, wenn eine
+        ''' Kachel sie ANZEIGT. Zeitleiste und Sortierung lesen die Felder aber roh, und beide standen
+        ''' deshalb bei einer Suche auf Anfang - die Zeitleiste meldete "Ohne Datum", und "Erstellt
+        ''' (Datei)" sortierte in Wahrheit nach nichts (Nutzerbefund 2026-08-27).</para>
+        '''
+        ''' <para>Der Katalog kennt beide Werte seit dem Scan. Sie hier zu setzen kostet keinen
+        ''' Plattenzugriff - und der Merker <c>_fileInfoLoaded</c> bleibt bewusst OFFEN: die
+        ''' Dateigroesse fehlt weiterhin, und sobald die Kachel sichtbar wird, holt der uebliche Weg
+        ''' die echten Werte nach.</para></summary>
+        Public Sub ApplyCatalogFileDates(createdIso As String, modifiedIso As String)
+            Dim parsed As DateTime
+            If Not String.IsNullOrEmpty(createdIso) AndAlso
+               DateTime.TryParse(createdIso, Globalization.CultureInfo.InvariantCulture,
+                                 Globalization.DateTimeStyles.RoundtripKind, parsed) Then
+                FileCreatedAt = parsed
+            End If
+            If Not String.IsNullOrEmpty(modifiedIso) AndAlso
+               DateTime.TryParse(modifiedIso, Globalization.CultureInfo.InvariantCulture,
+                                 Globalization.DateTimeStyles.RoundtripKind, parsed) Then
+                DateModified = parsed
+            End If
+        End Sub
 
         ' EXIF DateTimeOriginal - unterscheidet sich vom Dateisystem-Erstellungsdatum, da EXIF beim
         ' Kopieren/Synchronisieren der Datei erhalten bleibt, das Dateisystem-Datum aber nicht.
@@ -854,12 +928,12 @@ Namespace Models
 
         ' Ein bei ~480px Cache-Breite dekodiertes Thumbnail liegt typischerweise bei ca. 400-700KB
         ' (Bgra8888). Der Cap bindet die dauerhaft im Speicher gehaltenen, bereits gesehenen
-        ' Thumbnails auf ca. 100-180MB bei Standardeinstellung (250), unabhängig davon, wie weit
+        ' Thumbnails auf ca. 200-350MB bei Standardeinstellung (500), unabhängig davon, wie weit
         ' der Nutzer inzwischen weitergescrollt ist - deutlich mehr als der alte, an die
         ' Sichtfenster-Position gekoppelte Keep-Alive-Puffer, damit Hin- und Herscrollen im selben
         ' Bereich keinen Re-Decode mehr auslöst (siehe TouchResident). Über die Einstellungen
         ' (Vorschaubild-Speichercache-Regler) vom Nutzer einstellbar, siehe MaxResidentThumbnails.
-        Private Const DefaultMaxResidentThumbnails As Integer = 250
+        Private Const DefaultMaxResidentThumbnails As Integer = 500
         Private Shared _maxResidentThumbnails As Integer = DefaultMaxResidentThumbnails
         Private Shared ReadOnly _residentLru As New LinkedList(Of ImageItem)()
 
@@ -1513,7 +1587,18 @@ Namespace Models
         ''' steht an EINER Stelle (<see cref="ThumbnailReadyPriority"/>) und nicht in jeder der vier
         ''' Meldungen einzeln - vorher stand hier viermal dieselbe Zeile.</summary>
         Private Async Function NotifyThumbnailReadyAsync() As Task
-            Await Dispatcher.UIThread.InvokeAsync(Sub() RaisePropertyChanged(NameOf(Thumbnail)), ThumbnailReadyPriority)
+            ' Messpunkt: die Meldung selbst ist eine Zeile, aber sie loest das Zeichnen der Kachel
+            ' aus - und das laeuft auf dem Anzeigefaden. Bei vierzig neuen Kacheln je Rollschritt
+            ' summiert sich das, und genau danach wird gesucht.
+            Await Dispatcher.UIThread.InvokeAsync(
+                Sub()
+                    If PerformanceTraceService.IsActive Then
+                        PerformanceTraceService.Measure("Kachel bekommt ihr Bild",
+                                                        Sub() RaisePropertyChanged(NameOf(Thumbnail)))
+                    Else
+                        RaisePropertyChanged(NameOf(Thumbnail))
+                    End If
+                End Sub, ThumbnailReadyPriority)
         End Function
 
         Private Async Function LoadThumbnailAsync(generation As Integer) As Task

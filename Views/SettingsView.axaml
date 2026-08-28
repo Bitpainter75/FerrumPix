@@ -11,9 +11,17 @@
 
     <Grid ColumnDefinitions="250,*">
 
+        <!-- Die Bereichsliste kann laenger sein als das Fenster hoch: sechzehn Eintraege brauchen
+             gut 700 Punkte, und auf einem kleinen Bildschirm oder in einem verkleinerten Fenster
+             fielen die untersten heraus - ohne jeden Hinweis, dass da noch etwas ist. Der
+             Rollbereich zeigt seine Leiste nur, wenn er gebraucht wird; die Ueberschrift bleibt
+             ausserhalb stehen, damit sie beim Rollen nicht verschwindet. -->
         <Border Grid.Column="0" Classes="sidebar" Padding="12,16,10,16">
+            <DockPanel LastChildFill="True">
+                <TextBlock DockPanel.Dock="Top" Text="Einstellungen" FontSize="{DynamicResource FP.Font.Title}"
+                           FontWeight="SemiBold" Margin="6,0,0,8"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="10">
-                <TextBlock Text="Einstellungen" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold" Margin="6,0,0,8"/>
 
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
@@ -48,7 +56,16 @@
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="16" Height="16"/>
-                        <TextBlock Text="Betrachter"/>
+                        <TextBlock Text="Viewer"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
+                        Tag="InfoPanelSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Info-Leiste"/>
                     </StackPanel>
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
@@ -149,6 +166,8 @@
                     </StackPanel>
                 </Button>
             </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
 
         <Grid Grid.Column="1" RowDefinitions="*,66">
@@ -636,14 +655,6 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Info-Leiste in der Galerie" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt rechts die Angaben zum markierten Bild: Aufnahmedaten, Histogramm, Bewertung, Etikett und Stichwörter. Lässt sich in der Galerie auch über das Info-Symbol oben rechts umschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryInfoSidebarExpanded}" OnContent="" OffContent="" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Fußzeile in der Galerie" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Zeigt unten die Leiste mit Menü, Auswahl und Anzahl. Ausgeschaltet bleibt mehr Platz für die Bilder; die Aktionen der Leiste stehen weiterhin im Menü mit der rechten Maustaste." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -785,7 +796,7 @@
                 <Border x:Name="ViewerSection" Classes="section">
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Betrachter" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Viewer" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
                             <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
@@ -804,7 +815,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Einpassen-Verhalten" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Gilt nur für den Betrachter: nur verkleinern, wenn das Bild größer als die Anzeigefläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Gilt nur für den Viewer: nur verkleinern, wenn das Bild größer als die Anzeigefläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <Button Classes="ghost"
@@ -846,18 +857,6 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Info-Seitenleiste im Viewer anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding ViewerInfoSidebarExpanded}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Diashow-Dauer" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Legt fest, wie lange ein Bild in der Diashow sichtbar bleibt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -887,6 +886,133 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- Alles zur Info-Leiste steht HIER zusammen. Vorher lagen die Schalter in drei
+                     Bereichen verstreut - der für die Galerie unter "Galerie", der für den
+                     Betrachter unter "Betrachter", die beiden für das Analysebild unter "Editor" -,
+                     obwohl es dieselbe Leiste ist, dieselbe für alle drei Ansichten. Wer sie
+                     einrichten wollte, musste den Dialog dreimal durchsuchen. -->
+                <Border x:Name="InfoPanelSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Info-Leiste" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Die Leiste rechts neben dem Bild: wo sie erscheint und was sie zeigt. Galerie, Viewer und Editor teilen sie sich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Info-Leiste in der Galerie" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt rechts die Angaben zum markierten Bild: Aufnahmedaten, Histogramm, Bewertung, Etikett und Stichwörter. Lässt sich in der Galerie auch über das Info-Symbol oben rechts umschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryInfoSidebarExpanded}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Info-Leiste im Viewer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerInfoSidebarExpanded}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Info-Leiste im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorInfoSidebarExpanded}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Die beiden Orte des Analysebildes stehen bewusst nebeneinander und als
+                             zwei eigene Schalter: sie schliessen sich nicht aus. Beide aus ist
+                             ebenfalls eine gueltige Antwort - dann wird es auch nicht gerechnet. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Histogramm in der Info-Leiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade in der rechten Leiste von Galerie, Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ScopeInInfoSidebar}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Histogramm bei den Reglern im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade zusätzlich über den Reglern von Anpassen, Farbe, Details, Effekte und Filter. Dort steht es neben dem, was es beantwortet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ScopeInAdjustmentPanels}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Die Haken bestimmen den Reiter "Allgemein". Eine Zeile ohne Wert bleibt
+                             trotz Haken weg - eine Beschriftung mit Leere dahinter sagt nichts.
+                             Drei Spalten wie bei den Anpassungsgruppen: vierzehn Haken untereinander
+                             waeren eine Bildschirmseite fuer sich. -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Angaben im Reiter Allgemein" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wählt, welche Zeilen zum Bild angezeigt werden. Was ein Bild nicht hergibt, bleibt trotz Haken weg." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding InfoPanelRowItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="3"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsVisibleEntry, Mode=TwoWay}"
+                                                  Margin="0,0,12,2">
+                                            <TextBlock Classes="no-translate" Text="{Binding Label}"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Getrennt von den Zeilen darueber, weil es etwas anderes ist: die drei
+                             sind Bedienung, nicht Auskunft, und sie stehen auch dann in der Leiste,
+                             wenn mehrere Bilder markiert sind und es den Reiter gar nicht gibt. -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Bereiche der Leiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Bewertung, Etikett und Stichwörter lassen sich in der Leiste setzen. Wer sie woanders pflegt, nimmt sie hier heraus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding InfoPanelSectionItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="3"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsVisibleEntry, Mode=TwoWay}"
+                                                  Margin="0,0,12,2">
+                                            <TextBlock Classes="no-translate" Text="{Binding Label}"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
 
                     </StackPanel>
                 </Border>
@@ -1080,45 +1206,6 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Info-Seitenleiste im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding EditorInfoSidebarExpanded}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <!-- Die beiden Orte des Analysebildes stehen bewusst nebeneinander und als
-                             zwei eigene Schalter: sie schliessen sich nicht aus. Beide aus ist
-                             ebenfalls eine gueltige Antwort - dann wird es auch nicht gerechnet. -->
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Histogramm in der Info-Seitenleiste" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade in der rechten Leiste von Galerie, Betrachter und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding ScopeInInfoSidebar}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Histogramm bei den Reglern im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade zusätzlich über den Reglern von Anpassen, Farbe, Details, Effekte und Filter. Dort steht es neben dem, was es beantwortet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding ScopeInAdjustmentPanels}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Ebenen-Seitenleiste im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Blendet das Ebenen-Panel neben der Info-Leiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -1301,7 +1388,7 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="RAW-Entwicklung" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Wie RAW-Dateien entwickelt und in Galerie, Betrachter und Editor angezeigt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Wie RAW-Dateien entwickelt und in Galerie, Viewer und Editor angezeigt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -1455,7 +1542,7 @@
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Löschen in Immich erlauben" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Löschen wirkt in Galerie und Betrachter auch auf Immich-Assets - also auf den Server, nicht nur auf die lokale Ansicht. Aus: Immich-Bilder lassen sich nicht löschen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Löschen wirkt in Galerie und Viewer auch auf Immich-Assets - also auf den Server, nicht nur auf die lokale Ansicht. Aus: Immich-Bilder lassen sich nicht löschen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichAllowDelete}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                         </Grid>
@@ -2185,13 +2272,15 @@
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
                                                    Minimum="50"
-                                                   Maximum="5000"
-                                                   DefaultValue="250"
+                                                   Maximum="10000"
+                                                   DefaultValue="500"
                                                    Value="{Binding ThumbnailMemoryCacheCapacity}"/>
+                                <!-- Fuenf Stellen brauchen Platz: bei 34 Punkten stand die
+                                     Zehntausend abgeschnitten da. -->
                                 <TextBlock Text="{Binding ThumbnailMemoryCacheCapacity}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
                                            FontSize="{DynamicResource FP.Font.Body}"
-                                           Width="34"
+                                           Width="46"
                                            TextAlignment="Right"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
@@ -2221,7 +2310,7 @@
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Tastenkürzel" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Übersicht der Tasten- und Mausbelegung in Galerie, Betrachter und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Übersicht der Tasten- und Mausbelegung in Galerie, Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <TextBlock Text="Überall" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}"/>
@@ -2372,7 +2461,7 @@
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Klick auf eine Fläche" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                <TextBlock Grid.Column="1" Text="Diese Fläche bekommt den Fokus; Fußzeile und Infopanel zeigen ihr Bild" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Diese Fläche bekommt den Fokus; Fußzeile und Info-Leiste zeigen ihr Bild" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="Doppelklick auf eine Fläche" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
@@ -2392,7 +2481,7 @@
                             </Grid>
                         </StackPanel>
 
-                        <TextBlock Text="Betrachter" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
+                        <TextBlock Text="Viewer" FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Body}" Margin="0,6,0,0"/>
                         <StackPanel Spacing="6">
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="PFEIL LINKS oder Bild auf" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

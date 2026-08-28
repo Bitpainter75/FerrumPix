@@ -2455,6 +2455,12 @@ Namespace ViewModels
             Dim token = System.Threading.Interlocked.Increment(_infoPanelLoadToken)
             Dim capturedWidth = _imageWidth
             Dim capturedHeight = _imageHeight
+            ' JETZT festhalten, nicht im Hintergrundlauf: bis der zurueckkommt, kann laengst
+            ' weitergeblaettert worden sein, und dann traege der Name des naechsten Bildes.
+            Dim sessionDisplayName As String = Nothing
+            If _isImmichSession AndAlso _currentIndex >= 0 AndAlso _currentIndex < _immichSessionItems.Count Then
+                sessionDisplayName = _immichSessionItems(_currentIndex).DisplayFileName
+            End If
             ' Videos bleiben aussen vor: der Histogramm-Lauf dekodiert die Datei komplett neu, und
             ' fuer ein Video gibt es dabei nichts zu holen.
             Dim loadHistogram = IsScopeLive AndAlso Not VideoPreviewService.IsSupportedVideo(imagePath)
@@ -2499,10 +2505,17 @@ Namespace ViewModels
                          Dim infoHeight = If(headerSize.Height > 0, headerSize.Height, capturedHeight)
                          Dim info = ImageInfoService.BuildImageInfo(imagePath, infoWidth, infoHeight)
                          ' In einer Immich-Sitzung sind Größe und Zeitstempel die der Temp-Kopie -
-                         ' keines davon beschreibt das Asset, das der Nutzer sieht.
+                         ' keines davon beschreibt das Asset, das der Nutzer sieht. Das gilt auch
+                         ' für ihren NAMEN: sie heißt nach der Asset-Kennung ({uuid}.jpg), damit
+                         ' der Rückweg zum Asset daran hängt. In der Leiste stand deshalb eine
+                         ' Kennung statt des Fotonamens (Nutzerbefund 2026-08-27); der richtige
+                         ' Name kommt vom Sitzungs-Element, der Temp-Ordner geht niemanden an.
                          If _isImmichSession Then
                              info.FileCreated = ""
                              info.FileModified = ""
+                             info.FolderPath = ""
+                             Dim displayName = If(sessionDisplayName, "")
+                             If Not String.IsNullOrEmpty(displayName) Then info.FileName = displayName
                          End If
                          Dispatcher.UIThread.Post(Sub()
                                                        If token <> _infoPanelLoadToken Then Return

@@ -7592,4 +7592,73 @@
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif lit les fichiers HEIC et HEIF. Sous Windows elle est fournie, sous Linux elle vient du gestionnaire de paquets, et macOS lit ces fichiers lui-même. Sans elle, ces fichiers restent simplement fermés et tout le reste fonctionne comme avant.</value>
   </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>Panneau d'informations</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>La barre à côté de l'image : où elle apparaît et ce qu'elle affiche. La galerie, la visionneuse et l'éditeur la partagent.</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>Données de l'onglet Général</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>Choisissez les lignes affichées pour l'image. Ce qu'une image ne contient pas reste masqué, même coché.</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>Panneau d'informations</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>Panneau d'informations dans la visionneuse</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>Panneau d'informations dans l'éditeur</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>Histogramme dans le panneau d'informations</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>Ce côté prend le focus ; le pied de page et le panneau d'informations affichent sa photo</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>Les noms se donnent dans le panneau d'informations à côté de la photo</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>La corbeille n'est pas une personne et n'accepte donc aucun nom. Pour attribuer un visage isolé qui s'y trouve, saisissez le nom dans le panneau d'informations à côté de la photo.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>S'applique uniquement à la visionneuse : réduire seulement si l'image est plus grande que la zone d'affichage, ou toujours l'adapter à la zone.</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>Affiche l'histogramme, la forme d'onde et la parade RVB dans le panneau de droite de la galerie, de la visionneuse et de l'éditeur.</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>Comment les fichiers RAW sont développés et affichés dans la galerie, la visionneuse et l'éditeur.</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>Aperçu des affectations clavier et souris dans la galerie, la visionneuse et l'éditeur.</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>Ouvrir une image depuis la visionneuse</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>La barre à côté de l'image : où elle apparaît et ce qu'elle affiche. La galerie, la visionneuse et l'éditeur la partagent.</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>La suppression dans la galerie et la visionneuse touche aussi les ressources Immich - donc le serveur, pas seulement la vue locale. Désactivé : les images Immich ne peuvent pas être supprimées.</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>Sections du panneau</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>La note, l'étiquette et les mots-clés se règlent dans le panneau. Si vous les gérez ailleurs, retirez-les ici.</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>Note et favori</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>Métadonnées {0} sur {1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>ouvrir la visionneuse</value>
+  </data>
 </root>

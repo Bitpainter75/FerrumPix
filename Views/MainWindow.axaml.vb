@@ -37,6 +37,10 @@ Namespace Views
             Icon = App.AppIcon
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             AddHandler Loaded, Sub(s, e) ApplyLocalization()
+            ' Der Waechter ueber dem Anzeigefaden laeuft nur bei eingeschaltetem Diagnoselog und
+            ' meldet, wenn der Faden laenger als eine Fuenftelsekunde stillstand - genau das, was
+            ' sich beim Rollen als hakende Bildlaufleiste zeigt.
+            AddHandler Loaded, Sub(s, e) Services.PerformanceTraceService.StartUiThreadWatchdog()
             AddHandler Opened, Sub(s, e) RestoreWindowPlacement()
             AddHandler Closing, AddressOf HandleWindowClosing
             AddHandler PositionChanged, Sub(s, e) OnWindowPlacementChanged()

@@ -7632,4 +7632,73 @@
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif lukee HEIC- ja HEIF-tiedostoja. Windowsissa se tulee mukana, Linuxissa se saadaan paketinhallinnasta, ja macOS lukee nämä tiedostot itse. Jos se puuttuu, tällaiset tiedostot jäävät yksinkertaisesti avaamatta, kaikki muu toimii ennallaan.</value>
   </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>Tietopaneeli</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>Kuvan viereinen palkki: missä se näkyy ja mitä se näyttää. Galleria, katselin ja muokkain jakavat sen.</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>Yleiset-välilehden tiedot</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>Valitse, mitkä rivit kuvasta näytetään. Sitä mitä kuvassa ei ole, ei näytetä, vaikka rasti olisi.</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>Tietopaneeli</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>Tietopaneeli katselimessa</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>Tietopaneeli muokkaimessa</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>Histogrammi tietopaneelissa</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>Kyseinen alue saa kohdistuksen; alapalkki ja tietopaneeli näyttävät sen kuvan</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>Nimet annetaan kuvan vieressä olevassa tietopaneelissa</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>Kokoomakori ei ole henkilö eikä siksi ota nimeä vastaan. Yksittäiset kasvot siitä kohdistetaan kuvan vieressä olevassa tietopaneelissa.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>Koskee vain katselinta: pienennä vain, kun kuva on näyttöaluetta suurempi, tai skaalaa aina alueeseen.</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>Näyttää histogrammin, aaltomuodon ja RGB-paraatin gallerian, katselimen ja muokkaimen oikeassa paneelissa.</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>Miten RAW-tiedostot kehitetään ja näytetään galleriassa, katselimessa ja muokkaimessa.</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>Yleiskuva näppäin- ja hiiritoiminnoista galleriassa, katselimessa ja muokkaimessa.</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>Avaa kuva katselimesta</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>Kuvan viereinen palkki: missä se näkyy ja mitä se näyttää. Galleria, katselin ja muokkain jakavat sen.</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>Poistaminen galleriassa ja katselimessa vaikuttaa myös Immich-kohteisiin, siis palvelimella eikä vain paikallisessa näkymässä. Pois: Immich-kuvia ei voi poistaa.</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>Paneelin osat</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>Arvosana, etiketti ja avainsanat voi asettaa paneelissa. Jos hoidat ne muualla, poista ne täältä.</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>Arvosana ja suosikki</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>Metatiedot {0}/{1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>avaat katselimen</value>
+  </data>
 </root>

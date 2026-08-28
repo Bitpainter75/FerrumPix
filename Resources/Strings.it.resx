@@ -7592,4 +7592,73 @@
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif legge i file HEIC e HEIF. Su Windows è inclusa, su Linux arriva dal gestore di pacchetti e macOS legge questi file da solo. Se manca, tali file restano semplicemente chiusi e tutto il resto funziona come prima.</value>
   </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>Pannello informazioni</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>La barra accanto all'immagine: dove compare e che cosa mostra. Galleria, visualizzatore ed editor la condividono.</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>Voci nella scheda Generale</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>Scegli quali righe mostrare per l'immagine. Ciò che un'immagine non contiene resta nascosto, anche se selezionato.</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>Pannello informazioni</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>Pannello informazioni nel visualizzatore</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>Pannello informazioni nell'editor</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>Istogramma nel pannello informazioni</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>Quel lato riceve il fuoco; piè di pagina e pannello informazioni mostrano la sua foto</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>I nomi si assegnano nel pannello informazioni accanto alla foto</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>Il cestino non è una persona e per questo non accetta alcun nome. Per assegnare un singolo volto che si trova lì, scrivi il nome nel pannello informazioni accanto alla foto.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>Vale solo per il visualizzatore: ridurre solo se l'immagine è più grande dell'area di visualizzazione, oppure adattare sempre all'area.</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>Mostra istogramma, forma d'onda e parata RGB nel pannello destro di galleria, visualizzatore ed editor.</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>Come i file RAW vengono sviluppati e mostrati in galleria, visualizzatore ed editor.</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>Panoramica delle assegnazioni di tastiera e mouse in galleria, visualizzatore ed editor.</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>Apri un'immagine dal visualizzatore</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>La barra accanto all'immagine: dove compare e che cosa mostra. Galleria, visualizzatore ed editor la condividono.</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>L'eliminazione nella galleria e nel visualizzatore agisce anche sulle risorse Immich, quindi sul server e non solo sulla vista locale. Disattivato: le immagini di Immich non possono essere eliminate.</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>Sezioni del pannello</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>Voto, etichetta e parole chiave si impostano nel pannello. Chi li gestisce altrove, li toglie qui.</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>Voto e preferito</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>Metadati {0} di {1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>aprire il visualizzatore</value>
+  </data>
 </root>

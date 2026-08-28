@@ -1569,13 +1569,13 @@ Namespace ViewModels
         End Sub
 
         Private Sub PersistSavedXmpPresets()
-            Dim settings = AppSettingsService.Load()
-            settings.LightroomPresets = SavedXmpPresets.Select(Function(p) New XmpPresetSettings With {
-                .Id = p.Id,
-                .Name = p.Name,
-                .Path = p.Path
-            }).ToList()
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.LightroomPresets = SavedXmpPresets.Select(Function(p) New XmpPresetSettings With {
+                                              .Id = p.Id,
+                                              .Name = p.Name,
+                                              .Path = p.Path
+                                          }).ToList()
+                                      End Sub)
             LoadSavedXmpPresets()
         End Sub
 
@@ -1780,19 +1780,19 @@ Namespace ViewModels
         End Sub
 
         Private Sub PersistSavedLutPresets()
-            Dim settings = AppSettingsService.Load()
-            settings.LutPresets = SavedLutPresets.Select(Function(p) New LutPresetSettings With {
-                .Id = p.Id,
-                .Name = p.Name,
-                .Path = p.Path
-            }).ToList()
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.LutPresets = SavedLutPresets.Select(Function(p) New LutPresetSettings With {
+                                              .Id = p.Id,
+                                              .Name = p.Name,
+                                              .Path = p.Path
+                                          }).ToList()
+                                      End Sub)
             LoadSavedLutPresets()
         End Sub
 
         Private Sub PersistWatermarkPresets()
-            Dim settings = AppSettingsService.Load()
-            settings.WatermarkPresets = _watermarkPresets.Select(Function(p) New WatermarkPresetSettings With {
+            AppSettingsService.Update(Sub(s)
+                                          s.WatermarkPresets = _watermarkPresets.Select(Function(p) New WatermarkPresetSettings With {
                 .Id = p.Id,
                 .Name = p.Name,
                 .Text = p.Text,
@@ -1809,7 +1809,7 @@ Namespace ViewModels
                 .FontSizePixels = p.FontSizePixels,
                 .FillColor = p.FillColor
             }).ToList()
-            AppSettingsService.Save(settings)
+                                      End Sub)
             LoadWatermarkPresets()
         End Sub
 
@@ -13806,6 +13806,13 @@ Namespace ViewModels
                 ' Datum liest weiterhin die Datei; sie sind dieselben.
                 data.FileName = CurrentFileName
                 ExifService.FillFileFacts(data, _currentImagePath)
+                ' Der ORDNER einer Arbeitskopie vom Server ist der Temp-Ordner - eine Auskunft
+                ' ueber ein Verzeichnis, das mit dem Bild nichts zu tun hat und das es morgen nicht
+                ' mehr gibt. Lieber keine Zeile als diese; Betrachter und Galerie halten es genauso.
+                If ImmichService.IsImmichTempPath(_currentImagePath) OrElse
+                   NextcloudService.IsNextcloudTempPath(_currentImagePath) Then
+                    data.FolderPath = ""
+                End If
             End If
 
             ' Nebenläufig persistieren, damit das im Editor geöffnete Bild ab jetzt über EXIF

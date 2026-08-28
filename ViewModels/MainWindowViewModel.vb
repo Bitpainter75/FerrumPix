@@ -572,7 +572,7 @@ Namespace ViewModels
             Try
                 If String.IsNullOrWhiteSpace(leftPath) OrElse String.IsNullOrWhiteSpace(rightPath) Then Return
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("den Betrachter öffnest") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("den Viewer öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer AndAlso Viewer IsNot Nothing AndAlso
                    Not String.Equals(Viewer.CurrentImagePath, leftPath, StringComparison.OrdinalIgnoreCase) Then
@@ -588,7 +588,7 @@ Namespace ViewModels
         Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             Try
                 If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
-                    If Not Await ConfirmEditorLeaveAsync("den Betrachter öffnest") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("den Viewer öffnest") Then Return
                 End If
                 If CurrentMode = AppMode.Viewer AndAlso
                    Viewer IsNot Nothing AndAlso
@@ -609,7 +609,7 @@ Namespace ViewModels
         Public Async Sub OpenImmichViewer(startPseudoPath As String, sessionItems As System.Collections.Generic.List(Of Models.ImageItem), Optional immichAlbumId As String = Nothing)
             Try
                 If CurrentMode = AppMode.Editor Then
-                    If Not Await ConfirmEditorLeaveAsync("den Betrachter öffnest") Then Return
+                    If Not Await ConfirmEditorLeaveAsync("den Viewer öffnest") Then Return
                 End If
                 Viewer.OpenImmichSession(startPseudoPath, sessionItems, immichAlbumId)
                 CurrentMode = AppMode.Viewer

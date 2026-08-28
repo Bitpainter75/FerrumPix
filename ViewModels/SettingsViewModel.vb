@@ -454,9 +454,7 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _developRawInBatch = value Then Return
                 Me.RaiseAndSetIfChanged(_developRawInBatch, value)
-                Dim settings = AppSettingsService.Load()
-                settings.DevelopRawInBatch = value
-                AppSettingsService.Save(settings)
+                AppSettingsService.Update(Sub(s) s.DevelopRawInBatch = value)
             End Set
         End Property
 
@@ -470,9 +468,7 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _useCameraBaselineTable = value Then Return
                 Me.RaiseAndSetIfChanged(_useCameraBaselineTable, value)
-                Dim settings = AppSettingsService.Load()
-                settings.UseCameraBaselineTable = value
-                AppSettingsService.Save(settings)
+                AppSettingsService.Update(Sub(s) s.UseCameraBaselineTable = value)
             End Set
         End Property
         Private _useCameraBaselineTable As Boolean
@@ -486,9 +482,7 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _lensCorrectionEnabled = value Then Return
                 Me.RaiseAndSetIfChanged(_lensCorrectionEnabled, value)
-                Dim settings = AppSettingsService.Load()
-                settings.LensCorrectionEnabled = value
-                AppSettingsService.Save(settings)
+                AppSettingsService.Update(Sub(s) s.LensCorrectionEnabled = value)
             End Set
         End Property
         Private _lensCorrectionEnabled As Boolean
@@ -1596,6 +1590,70 @@ Namespace ViewModels
                 AdjustmentGroupItems.Where(Function(i) Not i.IsVisibleEntry).Select(Function(i) i.Key))
         End Sub
 
+        ''' <summary>Die Zeilen des Reiters "Allgemein" in der Info-Leiste, als Haken zum Anwaehlen.
+        ''' Reihenfolge und Bestand kommen aus <see cref="InfoPanelRowSettings.AllRows"/> - dieselbe
+        ''' Abfolge, in der die Leiste sie zeichnet.</summary>
+        Public ReadOnly Property InfoPanelRowItems As New ObservableCollection(Of InfoPanelRowItem)()
+
+        ''' <summary>Baut die Hakenliste neu auf. Die Beschriftungen kommen ÜBERSETZT aus dem
+        ''' ViewModel: der Sprach-Baumlauf sieht nur, was beim Wechsel schon im Baum steht - was eine
+        ''' Liste erst danach erzeugt, bliebe deutsch.</summary>
+        ''' <summary>Die BEREICHE der Leiste - Bewertung, Etikett, Stichwoerter. Eigene Liste, weil
+        ''' sie etwas anderes sind als die Zeilen: Bedienung statt Angabe, und sie gelten auch bei
+        ''' mehreren markierten Bildern.</summary>
+        Public ReadOnly Property InfoPanelSectionItems As New ObservableCollection(Of InfoPanelRowItem)()
+
+        Private Sub BuildInfoPanelRowItems()
+            InfoPanelRowItems.Clear()
+            For Each row In InfoPanelRowSettings.AllRows
+                InfoPanelRowItems.Add(NewInfoPanelRowItem(row))
+            Next
+            InfoPanelSectionItems.Clear()
+            For Each row In InfoPanelRowSettings.AllSections
+                InfoPanelSectionItems.Add(NewInfoPanelRowItem(row))
+            Next
+        End Sub
+
+        Private Shared Function NewInfoPanelRowItem(row As InfoPanelRow) As InfoPanelRowItem
+            Dim item = New InfoPanelRowItem With {
+                .Row = row,
+                .Label = InfoPanelRowLabel(row)}
+            ' Ueber SetVisible und nicht ueber die Eigenschaft: die schriebe schon beim Fuellen der
+            ' Liste jeden Eintrag in die Einstellungen zurueck.
+            item.SetVisible(InfoPanelRowSettings.IsVisible(row))
+            Return item
+        End Function
+
+        ''' <summary>Die Beschriftung einer Zeile - wortgleich mit der in der Leiste, sonst sucht
+        ''' man im Dialog nach dem, was man dort gesehen hat. "ISO" bleibt "ISO": eine Abkuerzung,
+        ''' die in jeder Sprache so heisst.</summary>
+        Private Shared Function InfoPanelRowLabel(row As InfoPanelRow) As String
+            Select Case row
+                Case InfoPanelRow.DateTaken : Return LocalizationService.T("Aufnahmedatum")
+                Case InfoPanelRow.Camera : Return LocalizationService.T("Kamera")
+                Case InfoPanelRow.Lens : Return LocalizationService.T("Objektiv")
+                Case InfoPanelRow.Aperture : Return LocalizationService.T("Blende")
+                Case InfoPanelRow.ShutterSpeed : Return LocalizationService.T("Belichtungszeit")
+                Case InfoPanelRow.Iso : Return "ISO"
+                Case InfoPanelRow.FocalLength : Return LocalizationService.T("Brennweite")
+                Case InfoPanelRow.Dimensions : Return LocalizationService.T("Abmessungen")
+                Case InfoPanelRow.Megapixels : Return LocalizationService.T("Megapixel")
+                Case InfoPanelRow.AspectRatio : Return LocalizationService.T("Seitenverhältnis")
+                Case InfoPanelRow.ColorSpace : Return LocalizationService.T("Farbraum")
+                Case InfoPanelRow.FileSize : Return LocalizationService.T("Dateigröße")
+                Case InfoPanelRow.FileCreated : Return LocalizationService.T("Erstellt")
+                Case InfoPanelRow.FileModified : Return LocalizationService.T("Geändert")
+                Case InfoPanelRow.FolderPath : Return LocalizationService.T("Ordner")
+                Case InfoPanelRow.Place : Return LocalizationService.T("Ort")
+                Case InfoPanelRow.Copyright : Return LocalizationService.T("Copyright")
+                ' Das Herz sitzt neben den Sternen und in derselben Zeile - ein eigener Haken dafuer
+                ' liesse eine Zeile mit einem einzigen Knopf uebrig.
+                Case InfoPanelRow.Rating : Return LocalizationService.T("Bewertung und Favorit")
+                Case InfoPanelRow.ColorLabel : Return LocalizationService.T("Etikett")
+                Case Else : Return LocalizationService.T("Stichwörter")
+            End Select
+        End Function
+
         Public ReadOnly Property EditorToolGroupItems As New ObservableCollection(Of EditorToolGroupItem)()
 
         ''' <summary>Baut die Anzeigeliste neu auf. Die Beschriftungen kommen ÜBERSETZT aus dem
@@ -2634,10 +2692,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub SaveCatalogIndexSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.CatalogWatchFolders = CatalogWatchFolders.ToList()
-            settings.CatalogIndexOnStartup = _catalogIndexOnStartup
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.CatalogWatchFolders = CatalogWatchFolders.ToList()
+                                          s.CatalogIndexOnStartup = _catalogIndexOnStartup
+                                      End Sub)
         End Sub
 
         Public Sub New(mainVm As MainWindowViewModel)
@@ -2743,6 +2801,7 @@ Namespace ViewModels
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
             BuildModelGroups()
             BuildAdjustmentGroupItems()
+            BuildInfoPanelRowItems()
             BuildLanguageOptions()
             BuildGpuDeviceOptions()
             FetchModelCommand = ReactiveCommand.Create(Of ModelGroup)(
@@ -3163,7 +3222,10 @@ Namespace ViewModels
             DevelopRawInViewer = False
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
-            ThumbnailMemoryCacheCapacity = 250
+            ' NICHT die Zahl hier pflegen: der Werkswert steht in AppSettings, und eine zweite
+            ' Fassung an dieser Stelle lief prompt auseinander - "Standard wiederherstellen" setzte
+            ' weiter 250, obwohl der Werkswert längst 500 ist.
+            ThumbnailMemoryCacheCapacity = New AppSettings().GalleryThumbnailMemoryCacheCapacity
             JpgSaveQuality = 90
             PreserveMetadataOnSave = True
             ImmichStoreRatingInDescription = False
@@ -3221,44 +3283,42 @@ Namespace ViewModels
         End Sub
 
         Private Sub SaveAppearanceSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.ThemeMode = _themeMode
-            settings.AccentColor = _accentColor
-            settings.FontSizeOffset = _fontSizeOffset
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.ThemeMode = _themeMode
+                                          s.AccentColor = _accentColor
+                                          s.FontSizeOffset = _fontSizeOffset
+                                      End Sub)
         End Sub
 
         Private Sub SaveLanguageSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.LanguageMode = _languageMode
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s) s.LanguageMode = _languageMode)
         End Sub
 
         Private Sub SavePlaybackSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.VideoHardwareAcceleration = _videoHardwareAcceleration
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s) s.VideoHardwareAcceleration = _videoHardwareAcceleration)
         End Sub
 
         ''' Sofort geschrieben und nicht erst beim Übernehmen: der Dienst, der die Modelle lädt,
         ''' liest die Einstellung direkt und nicht über diese Ansicht.
         Private Sub SaveGpuAccelerationSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.GpuAccelerationEnabled = _gpuAccelerationEnabled
-            settings.GpuAccelerationDevice = _gpuAccelerationDevice
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.GpuAccelerationEnabled = _gpuAccelerationEnabled
+                                          s.GpuAccelerationDevice = _gpuAccelerationDevice
+                                      End Sub)
         End Sub
 
         ''' Die beiden Funktionen, die der Benutzer erst freischalten muss. Sofort geschrieben wie die
         ''' Wiedergabe-Einstellung: wer einen solchen Schalter umlegt, erwartet, dass er umgelegt ist -
         ''' und nicht, dass er es beim Abbrechen des Dialogs wieder verliert.
         Private Sub SaveFeatureSettings()
-            Dim settings = AppSettingsService.Load()
-            Dim faceWasOn = settings.FaceRecognitionEnabled
-            settings.FaceRecognitionEnabled = _faceRecognitionEnabled
-            settings.PhotoMapEnabled = _photoMapEnabled
-            settings.FaceMinimumSizePercent = _faceMinimumSizePercent
-            AppSettingsService.Save(settings)
+            ' Der ALTE Stand wird vor dem Schreiben gebraucht (siehe unten: das Ausschalten wirft die
+            ' Merkmale weg) - deshalb erst lesen, dann schreiben.
+            Dim faceWasOn = AppSettingsService.Load().FaceRecognitionEnabled
+            AppSettingsService.Update(Sub(s)
+                                          s.FaceRecognitionEnabled = _faceRecognitionEnabled
+                                          s.PhotoMapEnabled = _photoMapEnabled
+                                          s.FaceMinimumSizePercent = _faceMinimumSizePercent
+                                      End Sub)
 
             ' AUSSCHALTEN WIRFT DIE MERKMALE WEG - aber erst nach einer Rueckfrage. Biometrische
             ' Merkmale entstehen nur auf ausdrueckliche Ansage, und sie sollen auch nur solange
@@ -3343,99 +3403,107 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _enableDiagnosticLogging = value Then Return
                 Me.RaiseAndSetIfChanged(_enableDiagnosticLogging, value)
-                Dim settings = AppSettingsService.Load()
-                settings.EnableDiagnosticLogging = value
-                AppSettingsService.Save(settings)
+                AppSettingsService.Update(Sub(s) s.EnableDiagnosticLogging = value)
+                ' Der Protokolldienst merkt sich den Schalter, statt ihn bei jeder Zeile aus der
+                ' Einstellungsdatei zu lesen - also muss ihm das Umlegen gesagt werden.
+                DiagnosticLogService.RefreshEnabled(value)
+                ' Und die Messpunkte hängen am selben Schalter: einschalten heißt messen, ausschalten
+                ' heißt aufhören und das Gesammelte noch wegschreiben.
+                If value Then
+                    PerformanceTraceService.StartUiThreadWatchdog()
+                Else
+                    PerformanceTraceService.StopUiThreadWatchdog()
+                End If
             End Set
         End Property
 
         Private Sub SaveDisplaySettings()
-            Dim settings = AppSettingsService.Load()
-            settings.TransparencyBackgroundMode = _transparencyBackgroundMode
-            settings.TransparencyBackgroundColor = _transparencyBackgroundColor
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.TransparencyBackgroundMode = _transparencyBackgroundMode
+                                          s.TransparencyBackgroundColor = _transparencyBackgroundColor
+                                      End Sub)
             _mainVm?.RefreshDisplayBindings()
         End Sub
 
         Private Sub SaveApplicationScaleSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.ApplicationScale = _applicationScale
-            settings.ApplicationScaleScreen = _applicationScaleScreen
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.ApplicationScale = _applicationScale
+                                          s.ApplicationScaleScreen = _applicationScaleScreen
+                                      End Sub)
         End Sub
 
         Private Sub SaveStartupSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.StartupImageMode = _startupImageMode
-            settings.GalleryOpenTarget = _galleryOpenTarget
-            settings.StartupNoImageMode = _startupNoImageMode
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.StartupImageMode = _startupImageMode
+                                          s.GalleryOpenTarget = _galleryOpenTarget
+                                          s.StartupNoImageMode = _startupNoImageMode
+                                      End Sub)
         End Sub
 
         Private Sub SaveDeleteSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.DeleteSkipTrash = _deleteSkipTrash
-            settings.DeleteSkipConfirmation = _deleteSkipConfirmation
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.DeleteSkipTrash = _deleteSkipTrash
+                                          s.DeleteSkipConfirmation = _deleteSkipConfirmation
+                                      End Sub)
         End Sub
 
         Private Sub SaveFileBrowserSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.ShowHiddenFolders = _showHiddenFolders
-            settings.FollowLinkedFolders = _followLinkedFolders
-            settings.GalleryShowFolders = _galleryShowFolders
-            settings.GalleryShowParentFolder = _galleryShowParentFolder
-            settings.GalleryRatingBadgesAlwaysVisible = _galleryRatingBadgesAlwaysVisible
-            settings.GalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
-            settings.GalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
-            settings.GalleryViewMode = _galleryViewMode
-            settings.GalleryStartupFolderMode = _galleryStartupFolderMode
-            settings.GalleryStartupCustomFolder = _galleryStartupCustomFolder
-            settings.GalleryTimelineMode = _galleryTimelineMode
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.ShowHiddenFolders = _showHiddenFolders
+                                          s.FollowLinkedFolders = _followLinkedFolders
+                                          s.GalleryShowFolders = _galleryShowFolders
+                                          s.GalleryShowParentFolder = _galleryShowParentFolder
+                                          s.GalleryRatingBadgesAlwaysVisible = _galleryRatingBadgesAlwaysVisible
+                                          s.GalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
+                                          s.GalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
+                                          s.GalleryViewMode = _galleryViewMode
+                                          s.GalleryStartupFolderMode = _galleryStartupFolderMode
+                                          s.GalleryStartupCustomFolder = _galleryStartupCustomFolder
+                                          s.GalleryTimelineMode = _galleryTimelineMode
+                                      End Sub)
         End Sub
 
         Private Sub SaveLayoutSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.ViewerShowFilmstrip = _viewerShowFilmstrip
-            settings.GalleryShowFooter = _galleryShowFooter
-            settings.ViewerShowFooter = _viewerShowFooter
-            settings.EditorShowFooter = _editorShowFooter
-            settings.ViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
-            settings.ViewerOpenFitToWindow = _viewerOpenFitToWindow
-            settings.ViewerFitBehavior = _viewerFitBehavior
-            settings.EditorFitBehavior = _editorFitBehavior
-            settings.EditorShowFilmstrip = _editorShowFilmstrip
-            settings.EditorGridSize = _editorGridSize
-            settings.EditorShowRulers = _editorShowRulers
-            settings.EditorShowGrid = _editorShowGrid
-            settings.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
-            settings.EditorLayersPanelExpanded = _editorLayersPanelExpanded
-            settings.EditorLayerThumbnails = _editorLayerThumbnails
-            settings.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
-            settings.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
-            settings.EditorStartupTool = _editorStartupTool
-            settings.PsdTextImport = _psdTextImport
-            settings.EditorToolGroupOrder = _editorToolGroupOrder
-            settings.HiddenAdjustmentGroups = _versteckteAnpassungsgruppen
-            settings.DefaultSaveFormat = _defaultSaveFormat
-            settings.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
-            settings.GalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.ViewerShowFilmstrip = _viewerShowFilmstrip
+                                          s.GalleryShowFooter = _galleryShowFooter
+                                          s.ViewerShowFooter = _viewerShowFooter
+                                          s.EditorShowFooter = _editorShowFooter
+                                          s.ViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
+                                          s.ViewerOpenFitToWindow = _viewerOpenFitToWindow
+                                          s.ViewerFitBehavior = _viewerFitBehavior
+                                          s.EditorFitBehavior = _editorFitBehavior
+                                          s.EditorShowFilmstrip = _editorShowFilmstrip
+                                          s.EditorGridSize = _editorGridSize
+                                          s.EditorShowRulers = _editorShowRulers
+                                          s.EditorShowGrid = _editorShowGrid
+                                          s.EditorInfoSidebarExpanded = _editorInfoSidebarExpanded
+                                          s.EditorLayersPanelExpanded = _editorLayersPanelExpanded
+                                          s.EditorLayerThumbnails = _editorLayerThumbnails
+                                          s.EditorToolSidebarCollapsed = _editorToolSidebarCollapsed
+                                          s.EditorAdjustmentsPanelOnLeft = _editorAdjustmentsPanelOnLeft
+                                          s.EditorStartupTool = _editorStartupTool
+                                          s.PsdTextImport = _psdTextImport
+                                          s.EditorToolGroupOrder = _editorToolGroupOrder
+                                          s.HiddenAdjustmentGroups = _versteckteAnpassungsgruppen
+                                          s.DefaultSaveFormat = _defaultSaveFormat
+                                          s.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
+                                          s.GalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
+                                      End Sub)
         End Sub
 
         Private Sub SavePerformanceSettings()
-            Dim settings = AppSettingsService.Load()
-            settings.ThumbnailCacheEnabled = _thumbnailCacheEnabled
-            settings.ThumbnailQuality = _thumbnailQuality
-            settings.GalleryThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
-            settings.JpgSaveQuality = _jpgSaveQuality
-            settings.PreserveMetadataOnSave = _preserveMetadataOnSave
-            settings.SyncCatalogToXmp = _syncCatalogToXmp
-            settings.CreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
-            settings.DevelopRawThumbnails = _developRawThumbnails
-            settings.DevelopRawInViewer = _developRawInViewer
-            AppSettingsService.Save(settings)
+            AppSettingsService.Update(Sub(s)
+                                          s.ThumbnailCacheEnabled = _thumbnailCacheEnabled
+                                          s.ThumbnailQuality = _thumbnailQuality
+                                          s.GalleryThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
+                                          s.JpgSaveQuality = _jpgSaveQuality
+                                          s.PreserveMetadataOnSave = _preserveMetadataOnSave
+                                          s.SyncCatalogToXmp = _syncCatalogToXmp
+                                          s.CreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
+                                          s.DevelopRawThumbnails = _developRawThumbnails
+                                          s.DevelopRawInViewer = _developRawInViewer
+                                      End Sub)
         End Sub
 
 
@@ -3740,6 +3808,7 @@ Namespace ViewModels
         ''' gemeldet. Ohne das stand die halbe Einstellungsseite weiter in der alten Sprache.</summary>
         Public Sub RefreshLocalization()
             BuildAdjustmentGroupItems()
+            BuildInfoPanelRowItems()
             BuildModelGroups()
             BuildLanguageOptions()
             ' Die Kartennamen tragen ihre Bauart als übersetztes Wort in sich - sie stünden nach
@@ -3747,6 +3816,7 @@ Namespace ViewModels
             BuildGpuDeviceOptions()
             For Each n In {NameOf(FolderSummaryText),
                            NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
+                           NameOf(InfoPanelRowItems), NameOf(InfoPanelSectionItems),
                            NameOf(ModelGroups), NameOf(GpuAccelerationStatusText)}
                 Me.RaisePropertyChanged(n)
             Next
@@ -4261,6 +4331,35 @@ Namespace ViewModels
 
         ''' <summary>Setzen OHNE das Ereignis - fuer den Aufbau der Liste. Sonst schriebe schon das
         ''' Fuellen die Einstellung zurueck, und zwar Eintrag fuer Eintrag.</summary>
+        Public Sub SetVisible(value As Boolean)
+            _istSichtbar = value
+            Me.RaisePropertyChanged(NameOf(IsVisibleEntry))
+        End Sub
+    End Class
+
+    ''' <summary>Ein Haken fuer eine Zeile des Reiters "Allgemein" der Info-Leiste. Schreibt
+    ''' unmittelbar durch: die Einstellungen kennen kein "Uebernehmen", und die Leiste steht
+    ''' waehrenddessen sichtbar daneben.</summary>
+    Public Class InfoPanelRowItem
+        Inherits ReactiveObject
+
+        Public Property Row As InfoPanelRow
+        Public Property Label As String = ""
+
+        Private _istSichtbar As Boolean = True
+        Public Property IsVisibleEntry As Boolean
+            Get
+                Return _istSichtbar
+            End Get
+            Set(value As Boolean)
+                If _istSichtbar = value Then Return
+                Me.RaiseAndSetIfChanged(_istSichtbar, value)
+                InfoPanelRowSettings.SetVisible(Row, value)
+            End Set
+        End Property
+
+        ''' <summary>Setzen OHNE Rueckschreiben - fuer den Aufbau der Liste (siehe
+        ''' <see cref="AdjustmentGroupItem.SetVisible"/>, dieselbe Falle).</summary>
         Public Sub SetVisible(value As Boolean)
             _istSichtbar = value
             Me.RaisePropertyChanged(NameOf(IsVisibleEntry))

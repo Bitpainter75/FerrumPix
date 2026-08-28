@@ -120,35 +120,99 @@
                                            TextWrapping="Wrap"
                                            Foreground="{DynamicResource FP.Text.Muted}"
                                            FontSize="{DynamicResource FP.Font.Small}"
-                                           IsVisible="{Binding ExifInfo.FolderPath, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+                                           IsVisible="{Binding ShowFolderPathRow}"/>
                             </StackPanel>
-                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
-                                <TextBlock Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                            <!-- WELCHE dieser Zeilen erscheinen, waehlt der Benutzer in den
+                                 Einstellungen unter "Infopanel". Jede haengt an einer eigenen
+                                 Eigenschaft des Panels, und die verundet zwei Bedingungen: die Zeile
+                                 ist angehakt UND das Bild hat den Wert. Beschriftung und Wert tragen
+                                 dieselbe Bindung - blieb eine von beiden stehen, saehe man eine
+                                 Beschriftung ohne Wert oder eine Zahl ohne Namen.
+                                 Die Aufnahmedaten stehen OBEN: beim Sichten zaehlen Kamera, Objektiv
+                                 und Belichtung, die technischen Angaben zur Datei kommen danach
+                                 (Nutzerrueckmeldung 2026-08-27). -->
+                            <Grid ColumnDefinitions="Auto,*"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                  ColumnSpacing="10">
+                                <!-- Das EXIF-Aufnahmedatum, nicht das Dateidatum weiter unten. -->
+                                <TextBlock Text="Aufnahmedatum" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowDateTakenRow}"/>
+                                <TextBlock Grid.Column="1" HorizontalAlignment="Right"
+                                           Text="{Binding ExifInfo.DateTaken, Converter={StaticResource ExifDateConverter}}"
+                                           IsVisible="{Binding ShowDateTakenRow}"/>
+                                <!-- Kamera, Objektiv und die Belichtungsangaben stehen nicht
+                                     rechtsbuendig umbrochen, sondern duerfen umbrechen: ein
+                                     Objektivname ist ein Satz, keine Zahl. -->
+                                <TextBlock Grid.Row="1" Text="Kamera" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowCameraRow}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ExifInfo.Camera}"
+                                           Classes="no-translate"
+                                           HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"
+                                           IsVisible="{Binding ShowCameraRow}"/>
+                                <TextBlock Grid.Row="2" Text="Objektiv" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowLensRow}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ExifInfo.Lens}"
+                                           Classes="no-translate"
+                                           HorizontalAlignment="Right" TextAlignment="Right" TextWrapping="Wrap"
+                                           IsVisible="{Binding ShowLensRow}"/>
+                                <TextBlock Grid.Row="3" Text="Blende" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowApertureRow}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ExifInfo.Aperture}"
+                                           Classes="no-translate" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowApertureRow}"/>
+                                <TextBlock Grid.Row="4" Text="Belichtungszeit" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowShutterSpeedRow}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ExifInfo.ShutterSpeed}"
+                                           Classes="no-translate" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowShutterSpeedRow}"/>
+                                <TextBlock Grid.Row="5" Text="ISO" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowIsoRow}"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding ExifInfo.ISO}"
+                                           Classes="no-translate" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowIsoRow}"/>
+                                <TextBlock Grid.Row="6" Text="Brennweite" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowFocalLengthRow}"/>
+                                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding ExifInfo.FocalLength}"
+                                           Classes="no-translate" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowFocalLengthRow}"/>
+                                <TextBlock Grid.Row="7" Text="Abmessungen" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowDimensionsRow}"/>
+                                <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                            HorizontalAlignment="Right"
+                                            IsVisible="{Binding ShowDimensionsRow}">
                                     <TextBlock Text="{Binding ExifInfo.ImageWidth}"/>
                                     <TextBlock Text="x" Foreground="{DynamicResource FP.Text.Secondary}"/>
                                     <TextBlock Text="{Binding ExifInfo.ImageHeight}"/>
                                 </StackPanel>
-                                <TextBlock Grid.Row="1" Text="Megapixel" Foreground="{DynamicResource FP.Text.Muted}"/>
-                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ExifInfo.Megapixels}" HorizontalAlignment="Right"/>
-                                <TextBlock Grid.Row="2" Text="Seitenverhältnis" Foreground="{DynamicResource FP.Text.Muted}"/>
-                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ExifInfo.AspectRatio}" HorizontalAlignment="Right"/>
-                                <TextBlock Grid.Row="3" Text="Farbraum" Foreground="{DynamicResource FP.Text.Muted}"/>
-                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ExifInfo.ColorSpace}" HorizontalAlignment="Right"/>
-                                <TextBlock Grid.Row="4" Text="Dateigröße" Foreground="{DynamicResource FP.Text.Muted}"/>
-                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ExifInfo.FileSize}" HorizontalAlignment="Right"/>
-                                <!-- Dateidatum, nicht EXIF-Aufnahmedatum. Beide Zeilen blenden sich aus,
-                                     wo es keinen Zeitstempel gibt (Immich, Dateisystem ohne Geburtszeit). -->
-                                <TextBlock Grid.Row="5" Text="Erstellt" Foreground="{DynamicResource FP.Text.Muted}"
-                                           IsVisible="{Binding ExifInfo.FileCreated, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
-                                <TextBlock Grid.Row="5" Grid.Column="1" HorizontalAlignment="Right"
+                                <TextBlock Grid.Row="8" Text="Megapixel" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowMegapixelsRow}"/>
+                                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding ExifInfo.Megapixels}" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowMegapixelsRow}"/>
+                                <TextBlock Grid.Row="9" Text="Seitenverhältnis" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowAspectRatioRow}"/>
+                                <TextBlock Grid.Row="9" Grid.Column="1" Text="{Binding ExifInfo.AspectRatio}" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowAspectRatioRow}"/>
+                                <TextBlock Grid.Row="10" Text="Farbraum" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowColorSpaceRow}"/>
+                                <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding ExifInfo.ColorSpace}" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowColorSpaceRow}"/>
+                                <TextBlock Grid.Row="11" Text="Dateigröße" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowFileSizeRow}"/>
+                                <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding ExifInfo.FileSize}" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowFileSizeRow}"/>
+                                <!-- Dateidatum, nicht EXIF-Aufnahmedatum. Beide Zeilen fallen auch
+                                     dort weg, wo es keinen Zeitstempel gibt (Server, Dateisystem
+                                     ohne Geburtszeit) - das steckt in der Panel-Eigenschaft mit drin. -->
+                                <TextBlock Grid.Row="12" Text="Erstellt" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowFileCreatedRow}"/>
+                                <TextBlock Grid.Row="12" Grid.Column="1" HorizontalAlignment="Right"
                                            Text="{Binding ExifInfo.FileCreated, Converter={StaticResource ExifDateConverter}}"
-                                           IsVisible="{Binding ExifInfo.FileCreated, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
-                                <TextBlock Grid.Row="6" Text="Geändert" Foreground="{DynamicResource FP.Text.Muted}"
-                                           IsVisible="{Binding ExifInfo.FileModified, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
-                                <TextBlock Grid.Row="6" Grid.Column="1" HorizontalAlignment="Right"
+                                           IsVisible="{Binding ShowFileCreatedRow}"/>
+                                <TextBlock Grid.Row="13" Text="Geändert" Foreground="{DynamicResource FP.Text.Muted}"
+                                           IsVisible="{Binding ShowFileModifiedRow}"/>
+                                <TextBlock Grid.Row="13" Grid.Column="1" HorizontalAlignment="Right"
                                            Text="{Binding ExifInfo.FileModified, Converter={StaticResource ExifDateConverter}}"
-                                           IsVisible="{Binding ExifInfo.FileModified, Converter={StaticResource StringNotEmptyToBoolConverter}}"/>
+                                           IsVisible="{Binding ShowFileModifiedRow}"/>
                                 <!-- Der Ort steht als Zeile HIER und nicht mehr als eigener Block mit
                                      Ueberschrift und Trennlinie: er ist eine Angabe wie Abmessungen oder
                                      Dateigroesse und braucht dafuer keine drei Zeilen Hoehe.
@@ -156,8 +220,8 @@
                                      es ist, und lange Ortsnamen ("Sant Feliu de Guixols, Katalonien,
                                      Spanien") haben so die ganze Breite zum Umbrechen statt der halben.
                                      Der Abstand oben trennt ihn von den Datumszeilen darueber. -->
-                                <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6"
-                                            Margin="0,12,0,0" IsVisible="{Binding HasPlace}">
+                                <StackPanel Grid.Row="14" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6"
+                                            Margin="0,12,0,0" IsVisible="{Binding ShowPlaceRow}">
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
                                                    Width="14" Height="14" VerticalAlignment="Top" Margin="0,2,0,0" Opacity="0.75"/>
                                     <TextBlock Text="{Binding PlaceText}" Classes="no-translate"
@@ -168,9 +232,9 @@
                                      Spalten und ohne rechtsbuendig: er ist ein Satz, keine Zahl, und
                                      rechts an einer schmalen Spalte umbrochen waere er unlesbar.
                                      Kein Uebersetzungsdurchlauf darauf - der Text gehoert dem Bild. -->
-                                <StackPanel Grid.Row="8" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6"
+                                <StackPanel Grid.Row="15" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6"
                                             Margin="0,12,0,0"
-                                            IsVisible="{Binding ExifInfo.Copyright, Converter={StaticResource StringNotEmptyToBoolConverter}}">
+                                            IsVisible="{Binding ShowCopyrightRow}">
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copyright.svg"
                                                    Width="14" Height="14" VerticalAlignment="Top" Margin="0,2,0,0" Opacity="0.75"/>
                                     <TextBlock Text="{Binding ExifInfo.Copyright}" Classes="no-translate"
@@ -261,9 +325,18 @@
                         <!-- Bewertung, Favorit und Farbetikett direkt am Bild pflegen - dieselben
                              Sterne wie in der Werkzeugleiste, dieselben Akzentfarben-Punkte wie im
                              Galerie-Kontextmenü (gleiche Farbe erneut = Etikett entfernen). -->
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Bewertung &amp; Etikett" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
-                            <StackPanel Orientation="Horizontal" Spacing="1">
+                        <!-- Bewertung und Etikett sind EINZELN abwaehlbar, teilen sich aber einen
+                             Block: zwei Ueberschriften uebereinander kosteten Hoehe, die die Leiste
+                             nicht hat. Deshalb drei Ueberschriften, von denen hoechstens eine steht -
+                             als ein Text mit wechselndem Inhalt waere sie nicht uebersetzbar. -->
+                        <StackPanel Spacing="10" IsVisible="{Binding ShowRatingOrColorLabelSection}">
+                            <TextBlock Text="Bewertung &amp; Etikett" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
+                                       IsVisible="{Binding ShowRatingAndColorLabelHeading}"/>
+                            <TextBlock Text="Bewertung" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
+                                       IsVisible="{Binding ShowRatingOnlyHeading}"/>
+                            <TextBlock Text="Etikett" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
+                                       IsVisible="{Binding ShowColorLabelOnlyHeading}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="1" IsVisible="{Binding ShowRatingSection}">
                                 <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="2,0,2,2" VerticalAlignment="Center"
                                         Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                         Command="{Binding SetRatingCommand}" CommandParameter="1">
@@ -304,7 +377,7 @@
                                     </Grid>
                                 </Button>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="5">
+                            <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding ShowColorLabelSection}">
                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12"
                                         Command="{Binding SetColorLabelCommand}" CommandParameter="#F08A1A" ToolTip.Tip="Orange">
                                     <Grid>
@@ -389,9 +462,10 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"
+                                IsVisible="{Binding ShowTagsSeparator}"/>
 
-                        <StackPanel Spacing="10">
+                        <StackPanel Spacing="10" IsVisible="{Binding ShowTagsSection}">
                             <TextBlock Text="Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
                             <ItemsControl ItemsSource="{Binding Tags}">
                                 <ItemsControl.ItemsPanel>

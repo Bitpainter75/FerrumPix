@@ -32,9 +32,38 @@ Namespace Services
 
         Private Shared ReadOnly _writeLock As New Object()
 
+        ''' <summary>Ob ausführlich protokolliert wird - EINMAL gelesen und danach gemerkt.
+        '''
+        ''' <para><see cref="AppSettingsService.Load"/> merkt sich zwar den Text der
+        ''' Einstellungsdatei, deserialisiert ihn aber bei JEDEM Aufruf neu und normalisiert dabei
+        ''' rund fünfzig Felder. Als erste Zeile jeder Protokollzeile stand das an einer Stelle, die
+        ''' im Zweifel hundertfach je Bedienschritt durchlaufen wird - und zwar auch dann, wenn gar
+        ''' nichts geschrieben wird. Wer den Schalter im Dialog umlegt, meldet es über
+        ''' <see cref="RefreshEnabled"/>.</para></summary>
+        Private Shared _enabled As Integer = -1   ' -1 = noch nicht gelesen, 0 = aus, 1 = an
+
+        Public Shared ReadOnly Property IsVerboseEnabled As Boolean
+            Get
+                Dim state = Threading.Volatile.Read(_enabled)
+                If state >= 0 Then Return state = 1
+                Dim value = False
+                Try
+                    value = AppSettingsService.Load().EnableDiagnosticLogging
+                Catch
+                End Try
+                Threading.Volatile.Write(_enabled, If(value, 1, 0))
+                Return value
+            End Get
+        End Property
+
+        ''' <summary>Nach dem Umlegen des Schalters in den Einstellungen aufrufen.</summary>
+        Public Shared Sub RefreshEnabled(value As Boolean)
+            Threading.Volatile.Write(_enabled, If(value, 1, 0))
+        End Sub
+
         ''' <summary>Schreibt eine Info-Zeile - nur bei eingeschaltetem EnableDiagnosticLogging.</summary>
         Public Shared Sub LogAlways(area As String, message As String)
-            If Not AppSettingsService.Load().EnableDiagnosticLogging Then Return
+            If Not IsVerboseEnabled Then Return
             Try
                 Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {message}" & Environment.NewLine
                 SyncLock _writeLock
@@ -50,11 +79,7 @@ Namespace Services
             If ex Is Nothing Then Return
             Dim entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{area}] {ex}" & Environment.NewLine &
                         New String("-"c, 80) & Environment.NewLine
-            Dim verbose = False
-            Try
-                verbose = AppSettingsService.Load().EnableDiagnosticLogging
-            Catch
-            End Try
+            Dim verbose = IsVerboseEnabled
             Try
                 SyncLock _writeLock
                     Directory.CreateDirectory(LogDirectory)

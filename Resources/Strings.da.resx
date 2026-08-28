@@ -7632,4 +7632,73 @@
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif læser HEIC- og HEIF-filer. På Windows følger det med, på Linux kommer det fra pakkehåndteringen, og macOS læser disse filer selv. Mangler det, forbliver sådanne filer ganske enkelt uåbnede, alt andet arbejder uændret.</value>
   </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>Infopanel</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>Linjen ved siden af billedet: hvor den vises, og hvad den viser. Galleri, fremviser og editor deler den.</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>Oplysninger under fanen Generelt</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>Vælg, hvilke linjer der vises for billedet. Det, et billede ikke har, vises ikke, selv om der er sat flueben.</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>Infopanel</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>Infopanel i fremviseren</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>Infopanel i redigeringen</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>Histogram i infopanelen</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>Den flade får fokus; sidefoden og infopanelet viser dens billede</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>Navne gives i infopanelet ved billedet</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>Samlebakken er ikke en person og tager derfor ikke imod noget navn. Et enkelt ansigt derfra tildeler man i infopanelet ved billedet.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>Gælder kun fremviseren: formindsk kun, når billedet er større end visningsfladen, eller skaler altid til fladen.</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>Viser histogram, waveform og RGB-parade i den højre panel i galleri, fremviser og editor.</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>Hvordan RAW-filer fremkaldes og vises i galleri, fremviser og redigering.</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>Oversigt over taste- og musefunktioner i galleri, fremviser og redigering.</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>Åbn et billede fra fremviseren</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>Linjen ved siden af billedet: hvor den vises, og hvad den viser. Galleri, fremviser og editor deler den.</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>Sletning i galleriet og fremviseren virker også på Immich-objekter, altså på serveren og ikke kun i den lokale visning. Fra: Immich-billeder kan ikke slettes.</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>Dele af panelet</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>Bedømmelse, etiket og nøgleord kan sættes i panelet. Holder du dem et andet sted, tager du dem væk her.</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>Bedømmelse og favorit</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>Metadata {0} af {1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>åbner fremviseren</value>
+  </data>
 </root>

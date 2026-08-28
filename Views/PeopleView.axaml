@@ -192,7 +192,7 @@
                                                  Classes="no-translate"
                                                  LostFocus="OnPersonNameCommitted"
                                                  KeyDown="OnPersonNameKeyDown"/>
-                                <TextBlock Text="Der Ablagekorb ist keine Person und nimmt deshalb keinen Namen an. Einen einzelnen Kopf daraus ordnet man in der Infoleiste am Bild zu."
+                                <TextBlock Text="Der Ablagekorb ist keine Person und nimmt deshalb keinen Namen an. Einen einzelnen Kopf daraus ordnet man in der Info-Leiste am Bild zu."
                                            IsVisible="{Binding SelectedPerson.IsUnknownBin}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
                                            FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>

@@ -1432,7 +1432,7 @@
     <value>Ansicht:</value>
   </data>
   <data name="Viewer_dbad9f12" xml:space="preserve">
-    <value>Betrachter</value>
+    <value>Viewer</value>
   </data>
   <data name="Vignette_42275e06" xml:space="preserve">
     <value>Vignette</value>
@@ -7591,5 +7591,74 @@
   </data>
   <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
     <value>libheif liest HEIC- und HEIF-Dateien. Unter Windows liegt sie bei, unter Linux kommt sie aus der Paketverwaltung, und macOS liest diese Dateien selbst. Fehlt sie, bleiben solche Dateien einfach ungeöffnet - alles andere arbeitet unverändert.</value>
+  </data>
+  <data name="Infopanel_affd0653" xml:space="preserve">
+    <value>Infopanel</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_625fc910" xml:space="preserve">
+    <value>Die Leiste rechts neben dem Bild: wo sie erscheint und was sie zeigt. Galerie, Betrachter und Editor teilen sie sich.</value>
+  </data>
+  <data name="Angaben_im_Reiter_Allgemein_31c13d6e" xml:space="preserve">
+    <value>Angaben im Reiter Allgemein</value>
+  </data>
+  <data name="W_hlt_welche_Zeilen_zum_Bild_angezeigt_werden_Wa_eebf4018" xml:space="preserve">
+    <value>Wählt, welche Zeilen zum Bild angezeigt werden. Was ein Bild nicht hergibt, bleibt trotz Haken weg.</value>
+  </data>
+  <data name="Info_Leiste_36f092dc" xml:space="preserve">
+    <value>Info-Leiste</value>
+  </data>
+  <data name="Info_Leiste_im_Viewer_8f02663b" xml:space="preserve">
+    <value>Info-Leiste im Viewer</value>
+  </data>
+  <data name="Info_Leiste_im_Editor_95326aba" xml:space="preserve">
+    <value>Info-Leiste im Editor</value>
+  </data>
+  <data name="Histogramm_in_der_Info_Leiste_8d964ac6" xml:space="preserve">
+    <value>Histogramm in der Info-Leiste</value>
+  </data>
+  <data name="Diese_Fl_che_bekommt_den_Fokus_Fu_zeile_und_Info_8c88999c" xml:space="preserve">
+    <value>Diese Fläche bekommt den Fokus; Fußzeile und Info-Leiste zeigen ihr Bild</value>
+  </data>
+  <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
+    <value>Namen werden in der Info-Leiste am Bild vergeben</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
+    <value>Der Ablagekorb ist keine Person und nimmt deshalb keinen Namen an. Einen einzelnen Kopf daraus ordnet man in der Info-Leiste am Bild zu.</value>
+  </data>
+  <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
+    <value>Gilt nur für den Viewer: nur verkleinern, wenn das Bild größer als die Anzeigefläche ist, oder immer auf die Fläche skalieren.</value>
+  </data>
+  <data name="Zeigt_Histogramm_Waveform_und_RGB_Parade_in_der__4f4ce211" xml:space="preserve">
+    <value>Zeigt Histogramm, Waveform und RGB-Parade in der rechten Leiste von Galerie, Viewer und Editor.</value>
+  </data>
+  <data name="Wie_RAW_Dateien_entwickelt_und_in_Galerie_Viewer_6f12a9a2" xml:space="preserve">
+    <value>Wie RAW-Dateien entwickelt und in Galerie, Viewer und Editor angezeigt werden.</value>
+  </data>
+  <data name="bersicht_der_Tasten_und_Mausbelegung_in_Galerie__7793494b" xml:space="preserve">
+    <value>Übersicht der Tasten- und Mausbelegung in Galerie, Viewer und Editor.</value>
+  </data>
+  <data name="ffne_ein_Bild_aus_dem_Viewer_c9877f11" xml:space="preserve">
+    <value>Öffne ein Bild aus dem Viewer</value>
+  </data>
+  <data name="Die_Leiste_rechts_neben_dem_Bild_wo_sie_erschein_7d8066ba" xml:space="preserve">
+    <value>Die Leiste rechts neben dem Bild: wo sie erscheint und was sie zeigt. Galerie, Viewer und Editor teilen sie sich.</value>
+  </data>
+  <data name="L_schen_wirkt_in_Galerie_und_Viewer_auch_auf_Imm_09477259" xml:space="preserve">
+    <value>Löschen wirkt in Galerie und Viewer auch auf Immich-Assets - also auf den Server, nicht nur auf die lokale Ansicht. Aus: Immich-Bilder lassen sich nicht löschen.</value>
+  </data>
+  <data name="Bereiche_der_Leiste_b52ef1df" xml:space="preserve">
+    <value>Bereiche der Leiste</value>
+  </data>
+  <data name="Bewertung_Etikett_und_Stichw_rter_lassen_sich_in_ab61da37" xml:space="preserve">
+    <value>Bewertung, Etikett und Stichwörter lassen sich in der Leiste setzen. Wer sie woanders pflegt, nimmt sie hier heraus.</value>
+  </data>
+  <data name="Bewertung_und_Favorit_68baccb4" xml:space="preserve">
+    <value>Bewertung und Favorit</value>
+  </data>
+  <data name="Metadaten_0_von_1_77405729" xml:space="preserve">
+    <value>Metadaten {0} von {1}</value>
+  </data>
+  <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
+    <value>den Viewer öffnest</value>
   </data>
 </root>
