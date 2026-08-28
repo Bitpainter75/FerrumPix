@@ -597,6 +597,16 @@ Namespace Services
         Private Shared _pendingJson As String = Nothing
         Private Shared _flushTimer As Timers.Timer = Nothing
 
+        ''' Die Klammer um LESEN-AENDERN-SPEICHERN. Ohne sie sind das drei Schritte, und zwei Faeden
+        ''' koennen sich dazwischenschieben: der Zeitgeber-Faden schreibt beim Flush den gemerkten
+        ''' Galerieordner, waehrend der Anzeigefaden eine Einstellung aendert. Beide starten dann vom
+        ''' SELBEN alten Stand, und wer zuletzt speichert, wirft die Aenderung des anderen weg.
+        '''
+        ''' Die Sperre liegt UEBER _cacheLock und _writeLock, nie darunter - sonst gaebe es zwei
+        ''' Reihenfolgen und damit eine Verklemmung. Save nimmt _cacheLock nur kurz und laesst es vor
+        ''' ScheduleWrite wieder los; Flush ruft CommitPendingLastGalleryFolder VOR seinem _writeLock.
+        Private Shared ReadOnly _updateLock As New Object()
+
         ''' Der zuletzt geöffnete Galerie-Ordner wird beim Navigieren nur gemerkt, nicht geschrieben. Ein
         ''' Ordnerklick soll gar nichts serialisieren; persistiert wird der Ordner gesammelt beim nächsten
         ''' Flush (Programmende oder ohnehin fälliger Schreibvorgang). Gelesen wird er nur beim Start.
@@ -1001,12 +1011,17 @@ Namespace Services
         ''' <para>Gearbeitet wird auf einer eigenen Ausfertigung, nicht am gemerkten Stand: sonst
         ''' gälte eine halb durchgeführte Änderung schon für alle, und ein Fehler mittendrin ließe
         ''' den Stand verbogen zurück. Erst wenn <see cref="Save"/> durch ist, gilt der neue
-        ''' Stand.</para></summary>
+        ''' Stand.</para>
+        '''
+        ''' <para>UND ES IST EIN VORGANG, kein Dreischritt: siehe <c>_updateLock</c>. Ohne die
+        ''' Klammer verlieren sich gleichzeitige Aenderungen gegenseitig.</para></summary>
         Public Shared Sub Update(mutate As Action(Of AppSettings))
             If mutate Is Nothing Then Return
-            Dim settings = CloneSettings(Load())
-            mutate(settings)
-            Save(settings)
+            SyncLock _updateLock
+                Dim settings = CloneSettings(Load())
+                mutate(settings)
+                Save(settings)
+            End SyncLock
         End Sub
 
         Public Shared Function NormalizeThumbnailSize(value As Double) As Double
@@ -1684,8 +1699,14 @@ Namespace Services
             End SyncLock
             If folder Is Nothing Then Return
 
-            If String.Equals(Load().LastGalleryFolder, NormalizeFolderPath(folder), StringComparison.Ordinal) Then Return
-            Update(Sub(s) s.LastGalleryFolder = folder)
+            ' Vergleich UND Aenderung unter derselben Klammer: sonst koennte zwischen beiden ein
+            ' anderer Faden speichern, und die Entscheidung "steht schon so drin" waere auf einem
+            ' Stand getroffen, den es nicht mehr gibt. SyncLock ist wiedereintrittsfaehig, das
+            ' Update darin nimmt dieselbe Sperre also ohne Umstand noch einmal.
+            SyncLock _updateLock
+                If String.Equals(Load().LastGalleryFolder, NormalizeFolderPath(folder), StringComparison.Ordinal) Then Return
+                Update(Sub(s) s.LastGalleryFolder = folder)
+            End SyncLock
         End Sub
 
         Public Shared Sub SaveJpgSaveQuality(value As Integer)

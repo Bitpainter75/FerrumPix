@@ -1522,6 +1522,7 @@ Namespace ViewModels
             Private Set(value As Double)
                 If Math.Abs(_topSpacerHeight - value) < 0.1 Then Return
                 Me.RaiseAndSetIfChanged(_topSpacerHeight, value)
+                Me.RaisePropertyChanged(NameOf(DisplayWindowHeight))
             End Set
         End Property
 
@@ -1532,6 +1533,7 @@ Namespace ViewModels
             Private Set(value As Double)
                 If Math.Abs(_bottomSpacerHeight - value) < 0.1 Then Return
                 Me.RaiseAndSetIfChanged(_bottomSpacerHeight, value)
+                Me.RaisePropertyChanged(NameOf(DisplayWindowHeight))
             End Set
         End Property
 
@@ -1542,7 +1544,32 @@ Namespace ViewModels
             Private Set(value As Double)
                 If Math.Abs(_contentHeight - value) < 0.1 Then Return
                 Me.RaiseAndSetIfChanged(_contentHeight, value)
+                Me.RaisePropertyChanged(NameOf(DisplayWindowHeight))
             End Set
+        End Property
+
+        ''' <summary>Die Hoehe, die das Anzeigefenster selbst einnimmt: Gesamthoehe abzueglich der
+        ''' beiden Platzhalter.
+        '''
+        ''' <para>DIE REPEATER BINDEN SIE ALS MinHeight, und das ist keine Kosmetik. Ein
+        ''' ItemsRepeater realisiert nur, was in sein Sichtfenster faellt, und dieses Fenster ist
+        ''' seine EIGENE sichtbare Flaeche (EffectiveViewportChanged, ausgewertet im
+        ''' ViewportManager). Ein Repeater, der leer in eine Ansicht geht, ist null hoch; damit ist
+        ''' sein Sichtfenster leer, er realisiert nichts - und bleibt null hoch. Aus dieser Klemme
+        ''' kommt er nicht von selbst heraus.
+        '''
+        ''' <para>Sichtbar wurde das ueberall dort, wo der Inhalt ERST NACH dem Aufbau der Ansicht
+        ''' eintrifft: ein Ordner ohne Katalogdaten, Suchlisten, Immich und Nextcloud blieben leer,
+        ''' bis ein Ansichts- oder Ordnerwechsel die Flaeche neu aufbaute (Nutzerbefund
+        ''' 2026-08-28). Nur wo der Katalog vorfuellte, stand schon Inhalt da, als der Repeater das
+        ''' erste Mal vermessen wurde - deshalb fiel es dort nicht auf.</para>
+        '''
+        ''' <para>MinHeight und nicht Height: braucht der Repeater mehr, soll er sich nehmen, was
+        ''' er braucht.</para></summary>
+        Public ReadOnly Property DisplayWindowHeight As Double
+            Get
+                Return Math.Max(0, _contentHeight - _topSpacerHeight - _bottomSpacerHeight)
+            End Get
         End Property
 
         Public Sub New(mainVm As MainWindowViewModel)
@@ -8161,6 +8188,18 @@ Namespace ViewModels
         ''' erst das naechste Viewport-Ereignis der Ansicht nach.</summary>
         Private Sub RefreshDisplayWindow()
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
+
+            ' DAS RASTER HAT KEIN ANZEIGEFENSTER MEHR. Dort haengt der Repeater direkt an Items und
+            ' virtualisiert selbst (siehe GalleryView.axaml). DisplayItems bleibt hier leer - es zu
+            ' fuellen kostete bei jedem Filter- und Sortierlauf, ohne dass es je jemand ansieht.
+            ' Liste und Gruppenansicht brauchen das Fenster weiterhin.
+            If IsGridView Then
+                If DisplayItems.Count > 0 Then DisplayItems.Clear()
+                _displayWindowFirst = -1
+                _displayWindowLast = -1
+                Return
+            End If
+
             If Items.Count = 0 Then
                 If DisplayItems.Count > 0 Then DisplayItems.Clear()
                 Return
@@ -8194,6 +8233,15 @@ Namespace ViewModels
             BottomSpacerHeight = 0
             ContentHeight = 0
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
+
+            ' Auch hier: das Raster hat kein Anzeigefenster mehr (siehe RefreshDisplayWindow). Der
+            ' Riegel muss an BEIDEN Stellen stehen - FilterAndSort ruft bei leerem Fenster nicht
+            ' RefreshDisplayWindow, sondern genau diese Methode, und die haette es sofort wieder
+            ' gefuellt.
+            If IsGridView Then
+                If DisplayItems.Count > 0 Then DisplayItems.Clear()
+                Return
+            End If
 
             If IsGroupView Then
                 EnsureGroupEntries()

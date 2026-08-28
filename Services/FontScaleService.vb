@@ -39,6 +39,16 @@ Namespace Services
         ''' letzte Wort ab, und im Bild sieht das aus wie ein fehlender Text.</summary>
         Public Shared ReadOnly Property CurrentOffset As Integer
 
+        ''' <summary>Die Schriftgroesse wurde neu gesetzt.
+        '''
+        ''' <para>Wer eine Kachelhoehe ZWISCHENSPEICHERT, muss das erfahren. Das
+        ''' UniformGridLayout der Rasteransicht merkt sich die Kachelmasse und liest sie nur in
+        ''' seinem MeasureOverride neu - eine groessere Schrift macht die Kachel hoeher, ohne dass
+        ''' sich sonst irgendetwas aendert, und ohne dieses Signal stuenden die Kacheln danach im
+        ''' alten Raster und liefen ineinander. Beim Zoomen faellt derselbe Fall ueber
+        ''' ThumbnailSize auf.</para></summary>
+        Public Shared Event Applied As EventHandler
+
         Public Shared Sub Apply(offset As Integer)
             Dim app = Application.Current
             If app Is Nothing Then Return
@@ -52,6 +62,8 @@ Namespace Services
                 If Not _baseSizes.TryGetValue(key, baseSize) Then Continue For
                 app.Resources(key) = baseSize + offset
             Next
+
+            RaiseEvent Applied(Nothing, EventArgs.Empty)
         End Sub
 
         ''' <summary>Die im Theme deklarierte Ausgangsgröße einer Schriftgrößen-Ressource, also der

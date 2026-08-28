@@ -219,19 +219,13 @@ Namespace Views
 
             AddHandler Me.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
 
-            Dim gridScroll = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
-            If gridScroll IsNot Nothing Then
-                AddHandler gridScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
-                AddHandler gridScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
-                gridScroll.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged, RoutingStrategies.Tunnel)
-            End If
+            For Each scrollViewer In AllGalleryScrollViewers()
+                AddHandler scrollViewer.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
+                AddHandler scrollViewer.ScrollChanged, AddressOf OnGalleryScrollChanged
+                scrollViewer.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged, RoutingStrategies.Tunnel)
+            Next
 
-            Dim listScroll = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
-            If listScroll IsNot Nothing Then
-                AddHandler listScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
-                AddHandler listScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
-                listScroll.AddHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged, RoutingStrategies.Tunnel)
-            End If
+            AddHandler FontScaleService.Applied, AddressOf OnFontScaleApplied
 
             _scrollHandlersAttached = True
             QueueViewportThumbnailRefresh()
@@ -291,22 +285,57 @@ Namespace Views
 
             RemoveHandler Me.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
 
-            Dim gridScroll = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
-            If gridScroll IsNot Nothing Then
-                RemoveHandler gridScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
-                RemoveHandler gridScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
-                gridScroll.RemoveHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged)
-            End If
+            For Each scrollViewer In AllGalleryScrollViewers()
+                RemoveHandler scrollViewer.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
+                RemoveHandler scrollViewer.ScrollChanged, AddressOf OnGalleryScrollChanged
+                scrollViewer.RemoveHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged)
+            Next
 
-            Dim listScroll = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
-            If listScroll IsNot Nothing Then
-                RemoveHandler listScroll.PropertyChanged, AddressOf OnGalleryScrollPropertyChanged
-                RemoveHandler listScroll.ScrollChanged, AddressOf OnGalleryScrollChanged
-                listScroll.RemoveHandler(InputElement.PointerWheelChangedEvent, AddressOf OnGalleryScrollWheelChanged)
-            End If
+            ' Abmelden ist hier Pflicht und nicht Kosmetik: das Ereignis liegt an einer GETEILTEN
+            ' Klasse, und diese Ansicht wird bei jedem Moduswechsel neu gebaut. Ohne Abmelden haengt
+            ' jede alte Ansicht samt Kachelbaum am Dienst.
+            RemoveHandler FontScaleService.Applied, AddressOf OnFontScaleApplied
 
             _scrollHandlersAttached = False
         End Sub
+
+        ''' <summary>Eine groessere Schrift macht die Kachel hoeher, ohne dass sich sonst etwas
+        ''' aendert - und das gemerkte Kachelmass des UniformGridLayout bliebe stehen. Siehe den
+        ''' gleichen Fall beim Zoomen in OnViewModelPropertyChanged.</summary>
+        Private Sub OnFontScaleApplied(sender As Object, e As EventArgs)
+            Dispatcher.UIThread.Post(
+                Sub()
+                    InvalidateGalleryItemsLayout()
+                    QueueViewportThumbnailRefresh()
+                End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Die drei Flaechen der Galerie. Raster und Gruppenansicht liefen frueher ueber
+        ''' dieselbe: seit das Raster ueber einen ItemsRepeater mit UniformGridLayout laeuft und die
+        ''' Gruppenansicht bei ihrem WrapPanel bleibt (siehe GalleryView.axaml), sind es drei.</summary>
+        Private Iterator Function AllGalleryScrollViewers() As IEnumerable(Of ScrollViewer)
+            ' NICHT "name" als Laufvariable: das verdeckt Control.Name, und VB lehnt eine
+            ' Eigenschaft als Schleifensteuervariable ab (BC30039).
+            For Each scrollViewerName In {"GalleryGridScrollViewer", "GalleryGroupScrollViewer", "GalleryListScrollViewer"}
+                Dim scrollViewer = Me.FindControl(Of ScrollViewer)(scrollViewerName)
+                If scrollViewer IsNot Nothing Then Yield scrollViewer
+            Next
+        End Function
+
+        ''' <summary>Die Flaeche der gerade sichtbaren KACHEL-Ansicht - Raster oder Gruppenansicht.
+        ''' Wer die Scrollrechnung einer Kachelansicht anfasst, will immer diese.</summary>
+        Private Function TileScrollViewer() As ScrollViewer
+            Dim vm = GetVm()
+            Return Me.FindControl(Of ScrollViewer)(
+                If(vm IsNot Nothing AndAlso vm.IsGroupView, "GalleryGroupScrollViewer", "GalleryGridScrollViewer"))
+        End Function
+
+        ''' <summary>Die Flaeche der gerade sichtbaren Ansicht, Liste eingeschlossen.</summary>
+        Private Function ActiveGalleryScrollViewer() As ScrollViewer
+            Dim vm = GetVm()
+            If vm IsNot Nothing AndAlso vm.IsListView Then Return Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
+            Return TileScrollViewer()
+        End Function
 
         Private Sub RebindViewModel()
             UnsubscribeViewModel()
@@ -359,8 +388,7 @@ Namespace Views
         End Sub
 
         Private Sub InvalidateGalleryItemsLayout()
-            For Each scrollViewerName In {"GalleryGridScrollViewer", "GalleryListScrollViewer"}
-                Dim scrollViewer = Me.FindControl(Of ScrollViewer)(scrollViewerName)
+            For Each scrollViewer In AllGalleryScrollViewers()
                 Dim itemsHost = scrollViewer?.GetVisualDescendants().
                     OfType(Of Control)().
                     FirstOrDefault(Function(c) TypeOf c Is ItemsControl OrElse TypeOf c Is ItemsRepeater)
@@ -437,8 +465,23 @@ Namespace Views
                 Return
             End If
 
-            If e.PropertyName = NameOf(GalleryViewModel.ViewMode) OrElse
-               e.PropertyName = NameOf(GalleryViewModel.ThumbnailSize) Then
+            If e.PropertyName = NameOf(GalleryViewModel.ViewMode) Then
+                ' Raster und Gruppenansicht haben seit ihrer Trennung je einen eigenen
+                ' ScrollViewer - der Stand muss jetzt bewusst mitgenommen werden.
+                RestoreTileScrollOffset()
+                QueueViewportThumbnailRefresh()
+                Return
+            End If
+
+            If e.PropertyName = NameOf(GalleryViewModel.ThumbnailSize) Then
+                ' DAS RASTER MUSS BEIM ZOOMEN NEU VERMESSEN WERDEN. UniformGridLayout merkt sich die
+                ' Kachelmasse (EffectiveItemWidth/Height im UniformGridLayoutState) und liest sie nur
+                ' in seinem MeasureOverride neu. Solange das Raster noch im StackPanel mit
+                ' ContentHeight sass, kam dieser Durchlauf von selbst - SetDisplayWindow aenderte
+                ' beim Zoomen die Gesamthoehe. Seit der Repeater direkt am ScrollViewer haengt,
+                ' aendert sich von aussen nichts mehr, und die Kacheln wurden zwar groesser, standen
+                ' aber weiter im alten Raster - sie liefen ineinander (Nutzerbefund 2026-08-28).
+                InvalidateGalleryItemsLayout()
                 QueueViewportThumbnailRefresh()
                 Return
             End If
@@ -544,7 +587,7 @@ Namespace Views
         Private Sub OnTimelineScrubRequested(sender As Object, offsetFraction As Double)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
-            Dim scrollViewer = Me.FindControl(Of ScrollViewer)(If(vm.IsListView, "GalleryListScrollViewer", "GalleryGridScrollViewer"))
+            Dim scrollViewer = ActiveGalleryScrollViewer()
             If scrollViewer Is Nothing Then Return
             Dim range = Math.Max(0.0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height)
             scrollViewer.Offset = New Avalonia.Vector(scrollViewer.Offset.X, offsetFraction * range)
@@ -569,7 +612,49 @@ Namespace Views
         End Sub
 
         Private Sub OnGalleryScrollChanged(sender As Object, e As ScrollChangedEventArgs)
+            RememberTileScrollOffset(TryCast(sender, ScrollViewer))
             QueueViewportThumbnailRefresh()
+        End Sub
+
+        ' Der Bildlaufstand der KACHEL-Ansichten, geteilt zwischen Raster und Gruppenansicht.
+        ' Solange beide ueber denselben ScrollViewer liefen, behielt ein Wechsel die Position von
+        ' selbst. Seit sie getrennt sind, hat jede ihren eigenen Stand - und die Gruppenansicht
+        ' sprang beim ersten Wechsel an ihren alten, meist ganz nach oben (Nutzerbefund
+        ' 2026-08-28). Die Liste bleibt bewusst aussen vor: sie hatte schon immer einen eigenen
+        ' ScrollViewer, und ihr Stand soll ein Wechsel ins Raster nicht mitnehmen.
+        Private _tileScrollOffsetY As Double = 0
+
+        ''' <summary>Nur die GERADE SICHTBARE Kachelflaeche darf den Stand setzen.
+        '''
+        ''' <para>Ein Namensvergleich reicht dafuer nicht: auch die unsichtbare Flaeche haengt an
+        ''' denselben DisplayItems und meldet ein ScrollChanged, sobald sich ihr Umfang aendert -
+        ''' und ihr Versatz ist dann meist 0. Sie haette den gemerkten Stand also genau in dem
+        ''' Augenblick auf null gezogen, in dem er gebraucht wird.</para></summary>
+        Private Sub RememberTileScrollOffset(scrollViewer As ScrollViewer)
+            If scrollViewer Is Nothing Then Return
+            If Not Object.ReferenceEquals(scrollViewer, TileScrollViewer()) Then Return
+            _tileScrollOffsetY = scrollViewer.Offset.Y
+        End Sub
+
+        ''' <summary>Traegt den gemerkten Stand auf die Flaeche, die nach einem Wechsel zwischen
+        ''' Raster und Gruppenansicht sichtbar ist.
+        '''
+        ''' <para>Auf Background, damit die neue Flaeche vorher vermessen ist: ihre Gesamthoehe
+        ''' unterscheidet sich (die Gruppenansicht traegt Kopfzeilen), und ohne fertigen Umfang
+        ''' klemmte die Begrenzung unten den Wert auf null.</para></summary>
+        Private Sub RestoreTileScrollOffset()
+            Dim gemerkt = _tileScrollOffsetY
+            If gemerkt <= 0 Then Return
+            Dispatcher.UIThread.Post(
+                Sub()
+                    Dim vm = GetVm()
+                    If vm Is Nothing OrElse Not vm.IsTileView Then Return
+                    Dim scrollViewer = TileScrollViewer()
+                    If scrollViewer Is Nothing Then Return
+                    Dim maxOffset = Math.Max(0.0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height)
+                    scrollViewer.Offset = New Avalonia.Vector(scrollViewer.Offset.X, Math.Min(gemerkt, maxOffset))
+                    QueueViewportThumbnailRefresh()
+                End Sub, DispatcherPriority.Background)
         End Sub
 
         Private _lastViewportRefreshUtc As DateTime = DateTime.MinValue
@@ -625,7 +710,7 @@ Namespace Views
                 ' Die Gruppenansicht teilt sich die Flaeche mit dem Raster, rechnet aber anders: die
                 ' Zeilen sind unterschiedlich hoch, deshalb bekommt das ViewModel den Scrollversatz und
                 ' schlaegt in seiner Zeilentabelle nach, was dort steht.
-                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
                 Dim cols = 1
@@ -648,7 +733,7 @@ Namespace Views
             End If
 
             If vm.IsGridView Then
-                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
                 Dim cols = 1
@@ -679,11 +764,11 @@ Namespace Views
                 ' Fenster): eine halbe war beim Ziehen am Regler zu knapp, zwei sind zu teuer. Damit
                 ' ist das Fenster dreimal so gross wie der sichtbare Bereich statt fuenfmal - und
                 ' jeder Sprung kostet entsprechend weniger.
-                Dim rowCount = Math.Max(1, lastRow - firstRow + 1)
-                Dim bufferRows = Math.Max(1, rowCount)
-                Dim displayFirst = Math.Max(0, (firstRow - bufferRows) * cols)
-                Dim displayLast = Math.Min(vm.Items.Count - 1, ((lastRow + bufferRows + 1) * cols) - 1)
-                vm.SetDisplayWindow(displayFirst, displayLast, itemSlotHeight, cols)
+                ' KEIN SetDisplayWindow MEHR. Der Repeater des Rasters haengt direkt an Items und
+                ' entscheidet selbst, welche Kacheln er baut; ein Handfenster darueber waere die
+                ' zweite Schicht, die nichts mehr beitraegt (siehe GalleryView.axaml). Was hier
+                ' bleibt, ist die Frage, fuer welche Bilder ein Vorschaubild geholt werden soll -
+                ' und die haengt am sichtbaren Bereich, nicht am Fenster.
                 RequestThumbnailRange(vm, firstIndex, lastIndex)
                 UpdateTimelineScrollState(scrollViewer)
             Else
@@ -714,11 +799,14 @@ Namespace Views
         End Sub
 
         Private Sub ResetGalleryScroll()
-            Dim gridScroll = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
-            If gridScroll IsNot Nothing Then gridScroll.Offset = New Avalonia.Vector(0, 0)
-
-            Dim listScroll = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
-            If listScroll IsNot Nothing Then listScroll.Offset = New Avalonia.Vector(0, 0)
+            ' Alle drei, nicht nur die sichtbare: ein Ansichtswechsel soll nicht mitten in einem
+            ' alten Bildlaufstand landen.
+            For Each scrollViewer In AllGalleryScrollViewers()
+                scrollViewer.Offset = New Avalonia.Vector(0, 0)
+            Next
+            ' Und der gemerkte Stand der Kachelansichten mit: sonst zoege ihn der naechste Wechsel
+            ' zwischen Raster und Gruppenansicht in den frisch geoeffneten Ordner hinein.
+            _tileScrollOffsetY = 0
         End Sub
 
         Private Sub OnRequestScrollToItem(sender As Object, e As EventArgs)
@@ -733,7 +821,7 @@ Namespace Views
             If idx < 0 Then Return
 
             If vm.IsGroupView Then
-                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
                 Dim cols = 1
@@ -760,7 +848,7 @@ Namespace Views
             End If
 
             If vm.IsGridView Then
-                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
                 Dim cols = 1
@@ -2185,7 +2273,9 @@ Namespace Views
             Dim menu = Me.FindControl(Of ContextMenu)("GalleryContextMenu")
             If vm Is Nothing OrElse menu Is Nothing Then Return
 
-            Dim grid = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+            ' Die Kachelflaeche ist je nach Ansicht das Raster oder die Gruppenansicht; die
+            ' Unterscheidung unten (Kachel oder Zeile) bleibt davon unberuehrt.
+            Dim grid = TileScrollViewer()
             Dim rows = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
             Dim hit = ContextTarget.UnderPointer(e, grid)
             Dim fromGrid = hit IsNot Nothing
@@ -2833,7 +2923,7 @@ Namespace Views
             Dim idx = vm.Items.IndexOf(vm.SelectedItem)
             If idx < 0 Then Return rowDelta
 
-            Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+            Dim scrollViewer = TileScrollViewer()
             Dim cols = 1
             Dim itemSlotHeight = 0.0
             GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
@@ -2843,7 +2933,7 @@ Namespace Views
         Private Function GetGridColumnCount() As Integer
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsTileView Then Return 1
-            Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+            Dim scrollViewer = TileScrollViewer()
             Dim cols = 1
             Dim itemSlotHeight = 0.0
             GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=vm.IsGroupView)
@@ -3009,8 +3099,7 @@ Namespace Views
         Private Function GetVisibleRowCount() As Integer
             Dim vm = GetVm()
             If vm Is Nothing Then Return 1
-            Dim scrollViewerName = If(vm.IsListView, "GalleryListScrollViewer", "GalleryGridScrollViewer")
-            Dim scrollViewer = Me.FindControl(Of ScrollViewer)(scrollViewerName)
+            Dim scrollViewer = ActiveGalleryScrollViewer()
             Dim viewportHeight = If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Height > 0,
                                     scrollViewer.Viewport.Height,
                                     Bounds.Height)
@@ -3067,7 +3156,7 @@ Namespace Views
             If vm Is Nothing OrElse vm.Items Is Nothing OrElse vm.Items.Count = 0 Then Return
 
             If vm.IsGroupView Then
-                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
                 Dim cols = 1
@@ -3085,7 +3174,7 @@ Namespace Views
             End If
 
             If vm.IsGridView Then
-                Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryGridScrollViewer")
+                Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
                 Dim cols = 1

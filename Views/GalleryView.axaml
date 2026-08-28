@@ -1842,15 +1842,17 @@
                     <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- Raster UND Gruppenansicht laufen ueber dieselbe Flaeche: es ist dasselbe
-                     Kachelraster, die Gruppenansicht schiebt nur Kopfzeilen dazwischen. Eine zweite
-                     Kopie der Kachelvorlage wuerde nach drei Aenderungen auseinanderlaufen. Was sich
-                     unterscheidet, ist allein die Scrollrechnung im Code dahinter. -->
-                <ScrollViewer x:Name="GalleryGridScrollViewer"
+                <!-- DIE GRUPPENANSICHT BLEIBT EIN WrapPanel. Sie schiebt Kopfzeilen mit voller
+                     Sonderbreite zwischen die Kacheln, und diese gemischten Breiten virtualisiert
+                     WrapLayout im ItemsRepeater nicht zuverlaessig - es verlor beim Rollen seine
+                     Zeilenhoehe. Das reine Raster hat dieses Problem nicht und laeuft deshalb
+                     ueber einen eigenen Repeater darunter; die Kachel selbst teilen sich beide
+                     (GalleryTileTemplate). -->
+                <ScrollViewer x:Name="GalleryGroupScrollViewer"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
                               PointerPressed="OnGalleryAreaPointerPressed"
-                              IsVisible="{Binding IsTileView}"
+                              IsVisible="{Binding IsGroupView}"
                               DragDrop.AllowDrop="True"
                               DragDrop.DragOver="OnGalleryAreaDragOver"
                               DragDrop.Drop="OnGalleryAreaDrop"
@@ -1862,10 +1864,6 @@
                                 VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
-                        <!-- Dieser gemeinsame Pfad bleibt ein WrapPanel: die Gruppenansicht
-                             schiebt Kopfzeilen mit voller Sonderbreite zwischen die Kacheln.
-                             Avalonia WrapLayout kann diese gemischten Breiten im Repeater nicht
-                             zuverlässig virtualisieren (es verlor beim Scrollen seine Zeilenhöhe). -->
                         <ItemsControl ItemsSource="{Binding DisplayItems}">
                             <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -1899,9 +1897,30 @@
                                 <!-- Und dasselbe umgekehrt: eine Gruppenkopfzeile baut keine Kachel
                                      mehr auf. Das sind rund fuenfzig Steuerelemente je Kopfzeile,
                                      die vorher nur entstanden, um ausgeblendet zu werden. -->
-                                <ContentControl Content="{Binding TileContent}">
-                                  <ContentControl.ContentTemplate>
-                                    <DataTemplate DataType="{x:Type models:ImageItem}">
+                                <ContentControl Content="{Binding TileContent}"
+                                                ContentTemplate="{StaticResource GalleryTileTemplate}"/>
+                              </Panel>
+                            </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Border Height="{Binding BottomSpacerHeight}"/>
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- DIE KACHEL STEHT EINMAL, und beide Ansichten holen sie sich von hier: das
+                     Raster als ItemTemplate seines Repeaters, die Gruppenansicht als
+                     ContentTemplate in ihrer Kopfzeilen-Weiche. Eine zweite Kopie waere nach drei
+                     Aenderungen auseinandergelaufen.
+
+                     REIHENFOLGE BEACHTEN: StaticResource laeuft den Elternstapel ab und loest zur
+                     KONSTRUKTIONSZEIT auf (Avalonia.Markup.Xaml StaticResourceExtension). Wer den
+                     Schluessel ausserhalb einer DataTemplate benutzt, muss deshalb UNTER diesem
+                     Block stehen - beim Rasterpfad direkt darunter ist das der Fall. Die
+                     Gruppenansicht darueber benutzt ihn nur INNERHALB ihrer DataTemplate, und deren
+                     Inhalt entsteht erst, wenn eine Kachel gebraucht wird; da steht die Ressource
+                     laengst. Ein neuer Nutzer oberhalb dieses Blocks, der nicht in einer
+                     DataTemplate steckt, faende den Schluessel nicht. -->
+                <Grid.Resources>
+                  <DataTemplate x:Key="GalleryTileTemplate" DataType="{x:Type models:ImageItem}">
                                 <Border Name="ThumbBorder"
                                         Classes="thumb-card"
                                         Classes.selected="{Binding IsSelected}"
@@ -2241,15 +2260,63 @@
                                         </Border>
                                     </Grid>
                                 </Border>
-                                    </DataTemplate>
-                                  </ContentControl.ContentTemplate>
-                                </ContentControl>
-                              </Panel>
-                            </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Border Height="{Binding BottomSpacerHeight}"/>
-                    </StackPanel>
+                  </DataTemplate>
+                </Grid.Resources>
+
+                <!-- DAS REINE RASTER. Hier gibt es keine Kopfzeilen, also sind alle Kacheln gleich
+                     gross - und genau das braucht UniformGridLayout, um im ItemsRepeater zu
+                     virtualisieren. Der Repeater behaelt beim Rollen seine Kacheln und setzt ihnen
+                     neue Daten, statt sie neu zu bauen; im nicht virtualisierenden WrapPanel war
+                     jede einzelne Aenderung an DisplayItems ein Layoutlauf ueber alle Kacheln
+                     (gemessen bis 350 ms je Rollschritt, Nutzerprotokoll 2026-08-27).
+                     Die Kachelmasse kommen aus der Kachel selbst (Breite ThumbnailSize plus das
+                     Aussenmass 5 der thumb-card, also GridColumnPitch); dieselbe Rechnung stellt
+                     GetGridLayoutMetrics im Code dahinter an, damit Scrollrechnung und Layout
+                     nicht auseinanderlaufen. -->
+                <ScrollViewer x:Name="GalleryGridScrollViewer"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              PointerPressed="OnGalleryAreaPointerPressed"
+                              IsVisible="{Binding IsGridView}"
+                              DragDrop.AllowDrop="True"
+                              DragDrop.DragOver="OnGalleryAreaDragOver"
+                              DragDrop.Drop="OnGalleryAreaDrop"
+                              Margin="0,0,8,0">
+                    <!-- KEIN HANDFENSTER MEHR. Der Repeater haengt direkt an Items und traegt den
+                         Rollbereich selbst; Platzhalter, ContentHeight und SetDisplayWindow gibt es
+                         hier nicht. Zwei Gruende:
+
+                         Erstens war es doppelt gemoppelt - DisplayItems hielt rund 120 Eintraege,
+                         und der Repeater virtualisierte darin ein zweites Mal. Der Gewinn kam vom
+                         Wiederverwenden der Kacheln, nicht von dieser zweiten Schicht.
+
+                         Zweitens erzeugte die Kombination eine Klemme: in einem StackPanel mit
+                         fester Hoehe ist ein leer gestarteter Repeater null hoch, hat damit ein
+                         leeres Sichtfenster, realisiert nichts - und bleibt null hoch. Alles, was
+                         seinen Inhalt ERST NACH dem Aufbau bekam, blieb leer (Ordner ohne
+                         Katalogdaten, Suchlisten, Immich, Nextcloud). Als eigener Inhalt des
+                         ScrollViewers bekommt er sein Sichtfenster von diesem und kann gar nicht
+                         mehr hineingeraten.
+
+                         MinItemWidth/MinItemHeight werden BEWUSST NICHT gesetzt. Sie sind kein
+                         Mindestmass, sondern eine Ansage: UniformGridLayoutState.SetSize nimmt den
+                         angegebenen Wert unveraendert und vergleicht ihn NICHT mit der gemessenen
+                         Kachel. Aus GridItemSlotHeight - einem Schaetzwert fuer die Scrollrechnung -
+                         wurde damit eine zu kurze Zeile, und der Akzentrahmen unten war
+                         abgeschnitten (Nutzerbefund 2026-08-28).
+                         Ungesetzt stehen beide auf NaN, und dann misst das Layout Element 0 (es
+                         erzeugt es notfalls eigens dafuer, siehe EnsureElementSize). Es kennt die
+                         Kachelmasse also immer - auch bevor irgendetwas realisiert ist. -->
+                    <ItemsRepeater ItemsSource="{Binding Items}"
+                                   Margin="12,12,18,20"
+                                   VerticalAlignment="Top"
+                                   ItemTemplate="{StaticResource GalleryTileTemplate}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout Orientation="Horizontal"
+                                               ItemsStretch="None"
+                                               ItemsJustification="Start"/>
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
                 </ScrollViewer>
 
                 <ScrollViewer x:Name="GalleryListScrollViewer"
@@ -2271,7 +2338,10 @@
                              verwendet sie fuer neue Eintraege wieder. DisplayItems bleibt hier
                              vorerst als Sicherheitsfenster bestehen; so bleibt die gleiche
                              Scroll-Geometrie wie im bewährten Rasterpfad erhalten. -->
-                        <ItemsRepeater ItemsSource="{Binding DisplayItems}">
+                        <!-- MinHeight wie im Raster - dieselbe Klemme, siehe
+                             GalleryViewModel.DisplayWindowHeight. -->
+                        <ItemsRepeater ItemsSource="{Binding DisplayItems}"
+                                       MinHeight="{Binding DisplayWindowHeight}">
                             <ItemsRepeater.Layout>
                                 <StackLayout Orientation="Vertical" />
                             </ItemsRepeater.Layout>
