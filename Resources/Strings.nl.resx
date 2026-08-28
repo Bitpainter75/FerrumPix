@@ -2125,7 +2125,7 @@
     <value>Alle retoucheerpunten herstellen</value>
   </data>
   <data name="Alt_e30eff92" xml:space="preserve">
-    <value>Verouderd</value>
+    <value>Oude foto</value>
   </data>
   <data name="Anker_47a80269" xml:space="preserve">
     <value>Anker</value>
@@ -4906,7 +4906,7 @@
     <value>Masker op diepte gezet</value>
   </data>
   <data name="Tiefen_Unsch_rfe_f28adc70" xml:space="preserve">
-    <value>Diepteonscherpte</value>
+    <value>Scherptediepte</value>
   </data>
   <data name="Sch_rfe_bei_d661d52b" xml:space="preserve">
     <value>Scherp op</value>
@@ -5005,7 +5005,7 @@
     <value>Downloaden</value>
   </data>
   <data name="Maske_nach_Entfernung_und_Tiefen_Unsch_rfe_858745e5" xml:space="preserve">
-    <value>Masker op afstand en diepteonscherpte</value>
+    <value>Masker op afstand en scherptediepte</value>
   </data>
   <data name="Objekt_im_Bild_anklicken_Maske_entsteht_von_selb_357e9326" xml:space="preserve">
     <value>Klik op een object in de afbeelding, het masker ontstaat vanzelf</value>
@@ -5038,7 +5038,7 @@
     <value>Rond</value>
   </data>
   <data name="Tiefen_Unsch_rfe_zur_cksetzen_67530835" xml:space="preserve">
-    <value>Diepteonscherpte herstellen</value>
+    <value>Scherptediepte herstellen</value>
   </data>
   <data name="Wie_stark_Lichtpunkte_als_leuchtende_Scheiben_er_3766ef3a" xml:space="preserve">
     <value>Hoe sterk lichtpunten als lichtgevende schijfjes behouden blijven in plaats van tot een doffe vlek te vervlakken</value>

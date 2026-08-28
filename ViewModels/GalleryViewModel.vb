@@ -7120,11 +7120,11 @@ Namespace ViewModels
             ' geprueften Werte (ImageItem.AdoptScannedState). Danach stehen in Items und
             ' DisplayItems dieselben Objekte in derselben Reihenfolge, ApplyDisplayWindow sieht
             ' ueber SequenceEqual keinen Unterschied - und die Anzeige ruehrt sich nicht.
-            Dim uebernommen = MergeScanIntoExistingItems(scan.Items)
+            Dim adopted = MergeScanIntoExistingItems(scan.Items)
             PerformanceTraceService.Measure("Ordner: einfuellen und sortieren",
                 Sub()
                     _allItems.Clear()
-                    _allItems.AddRange(uebernommen)
+                    _allItems.AddRange(adopted)
                     FilterAndSort()
                 End Sub)
 
@@ -7892,12 +7892,12 @@ Namespace ViewModels
                 ' bekam (Nutzerbefund 2026-08-28: "gefuehlt mehrere Sekunden, bis die ersten Bilder
                 ' sichtbar werden"). Parallel.For wirft dann OperationCanceledException, und die
                 ' faengt der Ordnerwechsel bereits ab.
-                Dim fuerVorschaubilder = Math.Max(1, Environment.ProcessorCount \ 4)
-                Dim bauOptionen As New ParallelOptions With {
-                    .MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - fuerVorschaubilder),
+                Dim reservedForThumbnails = Math.Max(1, Environment.ProcessorCount \ 4)
+                Dim buildOptions As New ParallelOptions With {
+                    .MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - reservedForThumbnails),
                     .CancellationToken = thumbnailToken
                 }
-                Parallel.For(0, files.Length, bauOptionen,
+                Parallel.For(0, files.Length, buildOptions,
                     Sub(i As Integer)
                         Dim file = files(i).FullName
                         Dim item = ImageItem.FromFileInfo(files(i), thumbnailToken)
@@ -8147,9 +8147,9 @@ Namespace ViewModels
             ' Die ALTEN Grenzen werden unten noch gebraucht: der Randtausch rechnet aus, wie weit das
             ' Fenster gerückt ist. Gesetzt werden sie deshalb erst am Ende.
             Dim slice = source.Skip(firstIndex).Take(lastIndex - firstIndex + 1).ToList()
-            Dim ueberlappt = hasOverlap AndAlso DisplayItems.Count = _displayWindowLast - _displayWindowFirst + 1
+            Dim overlaps = hasOverlap AndAlso DisplayItems.Count = _displayWindowLast - _displayWindowFirst + 1
             Dim geaendert = 0
-            If ueberlappt Then
+            If overlaps Then
                 While _displayWindowFirst < firstIndex
                     DisplayItems.RemoveAt(0)
                     _displayWindowFirst += 1

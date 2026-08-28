@@ -682,10 +682,10 @@ Namespace Models
         ''' <summary>Tragen beide Listen dieselben Stichwoerter in derselben Reihenfolge? Ohne
         ''' Zwischenliste, weil das je Bild eines Ordners gefragt wird. Nothing gilt als leer.</summary>
         Private Shared Function SameTags(a As List(Of String), b As List(Of String)) As Boolean
-            Dim linksAnzahl = If(a Is Nothing, 0, a.Count)
-            Dim rechtsAnzahl = If(b Is Nothing, 0, b.Count)
-            If linksAnzahl <> rechtsAnzahl Then Return False
-            For i = 0 To linksAnzahl - 1
+            Dim leftCount = If(a Is Nothing, 0, a.Count)
+            Dim rightCount = If(b Is Nothing, 0, b.Count)
+            If leftCount <> rightCount Then Return False
+            For i = 0 To leftCount - 1
                 If Not String.Equals(a(i), b(i), StringComparison.Ordinal) Then Return False
             Next
             Return True

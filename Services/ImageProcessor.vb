@@ -504,9 +504,9 @@ Namespace Services
                         ' SKBitmap.Decode nimmt das Profil der Datei in die Bitmap mit. Fehlt dort
                         ' eines, fragt EffectiveProfile das EXIF - sonst liefe ein Adobe-RGB-Bild
                         ' ohne eingebettetes Profil weiter als sRGB durch.
-                        Dim entschluesselt = SKBitmap.Decode(data)
-                        Return ToManagedSrgb(entschluesselt,
-                                             ColorManagementService.EffectiveProfile(entschluesselt?.ColorSpace, data))
+                        Dim decoded = SKBitmap.Decode(data)
+                        Return ToManagedSrgb(decoded,
+                                             ColorManagementService.EffectiveProfile(decoded?.ColorSpace, data))
                     End If
 
                     Dim info = codec.Info
@@ -2008,14 +2008,23 @@ Namespace Services
             Dim processed As SKBitmap = source
             Dim owned = False
 
-            processed = ReplaceBitmapOwned(processed, ApplyImageWarp(processed, adj), owned)
-            processed = ReplaceBitmapOwned(processed, ApplyCrop(processed, adj), owned)
-            processed = ReplaceBitmapOwned(processed, ApplyGeometryTransforms(processed, adj), owned)
-            processed = ReplaceBitmapOwned(processed, ApplyStraighten(processed, adj), owned)
-            processed = ReplaceBitmapOwned(processed, ApplyPerspective(processed, adj), owned)
-            processed = ReplaceBitmapOwned(processed, ApplyResize(processed, adj), owned)
-            processed = ReplaceBitmapOwned(processed, ApplyCanvasResize(processed, adj), owned)
-            processed = ReplaceBitmapOwned(processed, ApplyDocumentBackground(processed, adj), owned)
+            ' EIN MESSPUNKT UM DIE GANZE GEOMETRIE. Diese acht Stufen haengen ausschliesslich an den
+            ' Geometriewerten - kein Ton-, Farb- oder Effektregler, keine Retusche und keine Maske
+            ' aendert daran etwas. Damit sind sie der erste Kandidat fuer eine Abkuerzung, und die
+            ' Zahl hier sagt, ob sie sich lohnt. Steht keine Geometrie an, liefert jede Stufe ihre
+            ' Quelle unveraendert zurueck (Copy-on-write) und der Messwert liegt bei null - genau
+            ' das muss man wissen, bevor man einen Zwischenspeicher dafuer baut.
+            PerformanceTraceService.Measure("Pixel: Geometrie",
+                Sub()
+                    processed = ReplaceBitmapOwned(processed, ApplyImageWarp(processed, adj), owned)
+                    processed = ReplaceBitmapOwned(processed, ApplyCrop(processed, adj), owned)
+                    processed = ReplaceBitmapOwned(processed, ApplyGeometryTransforms(processed, adj), owned)
+                    processed = ReplaceBitmapOwned(processed, ApplyStraighten(processed, adj), owned)
+                    processed = ReplaceBitmapOwned(processed, ApplyPerspective(processed, adj), owned)
+                    processed = ReplaceBitmapOwned(processed, ApplyResize(processed, adj), owned)
+                    processed = ReplaceBitmapOwned(processed, ApplyCanvasResize(processed, adj), owned)
+                    processed = ReplaceBitmapOwned(processed, ApplyDocumentBackground(processed, adj), owned)
+                End Sub)
 
             ' Eine Auswahl wird im bereits gerenderten Display-Raum angelegt. Deshalb muss auch der
             ' unveraenderte Vergleichsstand fuer selektive Farb-/Detailanpassungen NACH der Geometrie
@@ -2072,7 +2081,8 @@ Namespace Services
             ' Die Umkehr steckt dabei ganz vorn in der Kette: Belichtung, Weißabgleich, Kurven und
             ' Filter sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie
             ' seitenverkehrt (Aufhellen würde abdunkeln).
-            processed = ReplaceBitmapOwned(processed, ApplyPointOpChain(processed, adj), owned)
+            processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj)), owned)
 
             ' "weich" steht im selben Select Case wie die 15 Farbpresets, ist aber als einziges KEINE
             ' Punktoperation, sondern eine echte räumliche Unschärfe. BuildFilterPresetMatrix liefert
@@ -2081,55 +2091,73 @@ Namespace Services
                 processed = ReplaceBitmapOwned(processed, ApplySoftFocusBlur(processed, Clamp(adj.FilterStrength / 100.0F, 0, 1)), owned)
             End If
 
+            ' JE STUFE EIN MESSPUNKT. Die Kette kostet an einem realistischen Bild rund 150 ms
+            ' Vorschau, aber WELCHE Stufe das ist, stand nirgends - und ohne diese Aufteilung ist
+            ' jede Beschleunigung geraten. Die Messung haengt in den If-Zweigen und kostet deshalb
+            ' nur, was auch wirklich rechnet; bei ausgeschaltetem Diagnoselog kostet sie gar nichts
+            ' (PerformanceTraceService prueft den Schalter zuerst).
             If adj.Clarity <> 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyClarity(processed, adj.Clarity / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Klarheit", Function() ApplyClarity(processed, adj.Clarity / 100.0F)), owned)
             End If
             If adj.[Structure] <> 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyStructure(processed, adj.[Structure] / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Struktur", Function() ApplyStructure(processed, adj.[Structure] / 100.0F)), owned)
             End If
             If adj.Haze <> 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyHaze(processed, adj.Haze / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Dunst", Function() ApplyHaze(processed, adj.Haze / 100.0F)), owned)
             End If
 
             If adj.NoiseReduction > 0 Then
                 If adj.NoiseReductionMethod = NoiseReductionMethod.Median Then
-                    processed = ReplaceBitmapOwned(processed, ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F), owned)
+                    processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                        "Pixel: Rauschen (Median)", Function() ApplyMedianBlur(processed, adj.NoiseReduction / 100.0F)), owned)
                 Else
-                    processed = ReplaceBitmapOwned(processed, ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F), owned)
+                    processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                        "Pixel: Rauschen", Function() ApplyNoiseReduction(processed, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F)), owned)
                 End If
             End If
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
             ' (crs:ColorNoiseReduction) - siehe ImageAdjustments.ColorNoiseAdd.
             If adj.ColorNoiseReduction > 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Farbrauschen", Function() ApplyColorNoiseReduction(processed, adj.ColorNoiseReduction / 100.0F)), owned)
             End If
             ' NACH der einstufigen Glaettung: die nimmt das feine Farbkorn, diese Stufe die groben
             ' Flecken. Umgekehrt muesste die grobe Stufe erst durch das feine Korn hindurch.
             If adj.FarbrauschGrob > 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyMultiScaleDenoise(
-                    processed, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Farbrauschen grob", Function() ApplyMultiScaleDenoise(
+                        processed, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F)), owned)
             End If
             If adj.ColorNoiseAdd > 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Farbflecken", Function() ApplyColorNoiseAdd(processed, adj.ColorNoiseAdd / 100.0F)), owned)
             End If
             If adj.DustScratches <> 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyDustScratches(processed, adj.DustScratches / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Staub/Kratzer", Function() ApplyDustScratches(processed, adj.DustScratches / 100.0F)), owned)
             End If
             If adj.Glow <> 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyImageGlow(processed, adj.Glow / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Gluehen", Function() ApplyImageGlow(processed, adj.Glow / 100.0F)), owned)
             End If
 
             If adj.Sharpness > 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Schaerfe", Function() ApplySharpness(processed, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F)), owned)
             End If
 
             If adj.Vignette <> 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Vignette", Function() ApplyVignette(processed, adj.Vignette / 100.0F, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle)), owned)
             End If
 
             If adj.Grain > 0 Then
-                processed = ReplaceBitmapOwned(processed, ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F), owned)
+                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
+                    "Pixel: Koernung", Function() ApplyGrain(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F)), owned)
             End If
             If adj.AddNoise > 0 Then
                 processed = ReplaceBitmapOwned(processed, ApplyAddNoise(processed, adj.AddNoise / 100.0F), owned)
@@ -3284,6 +3312,60 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return True
         End Function
 
+        ''' <summary>Wie <see cref="TryBorrowRgbaLikeBuffer"/>, nimmt das Feld aber aus dem
+        ''' <see cref="ArrayPool(Of Byte)"/> statt es neu anzulegen. Der Aufrufer MUSS es mit
+        ''' <see cref="ReturnPooledBuffer"/> zurueckgeben, am besten in einem Finally.
+        '''
+        ''' <para>WARUM: "Borrow" im Namen der aelteren Fassung ist eine Untertreibung - sie legt ein
+        ''' frisches Byte-Feld in BILDGROESSE an und kopiert das ganze Bitmap hinein. Bei einer
+        ''' Vorschau von 9,85 Megapixeln sind das 39 MB je Aufruf, und zwar auf dem Large Object
+        ''' Heap. ApplyLocalContrast holt sich zwei davon, legt ein drittes fuer die Ausgabe an und
+        ''' kopiert am Ende zurueck: rund 156 MB belegt und 117 MB kopiert - je Aufruf, und die
+        ''' Stufe laeuft zweimal je Render (Klarheit und Struktur).</para>
+        '''
+        ''' <para>Das Feld aus dem Pool ist NICHT genullt und meist GROESSER als angefordert. Beides
+        ''' ist hier ohne Folgen, solange der Aufrufer mit der angeforderten Laenge rechnet und nicht
+        ''' mit <c>buffer.Length</c> - genau daran wuerde ein Marshal.Copy sonst ueber das Bitmap
+        ''' hinausschreiben.</para></summary>
+        Private Shared Function TryRentRgbaLikeBuffer(bmp As SKBitmap, ByRef buffer As Byte(),
+                                                      ByRef length As Integer,
+                                                      ByRef stride As Integer,
+                                                      ByRef ri As Integer, ByRef gi As Integer,
+                                                      ByRef bi As Integer, ByRef ai As Integer) As Boolean
+            buffer = Nothing
+            length = 0
+            stride = 0
+            ri = 0 : gi = 0 : bi = 0 : ai = 0
+            If bmp Is Nothing Then Return False
+
+            Select Case bmp.ColorType
+                Case SKColorType.Bgra8888
+                    ri = 2 : gi = 1 : bi = 0 : ai = 3
+                Case SKColorType.Rgba8888
+                    ri = 0 : gi = 1 : bi = 2 : ai = 3
+                Case Else
+                    Return False
+            End Select
+
+            stride = bmp.RowBytes
+            length = stride * bmp.Height
+            If length <= 0 Then
+                length = 0
+                Return False
+            End If
+            buffer = ArrayPool(Of Byte).Shared.Rent(length)
+            Marshal.Copy(bmp.GetPixels(), buffer, 0, length)
+            Return True
+        End Function
+
+        ''' <summary>Ein Feld aus <see cref="TryRentRgbaLikeBuffer"/> oder aus einer eigenen
+        ''' Anforderung zurueckgeben. Nothing ist erlaubt, damit der Finally-Zweig nicht pruefen
+        ''' muss. NICHT genullt zurueckgeben: das kostet die Ersparnis wieder auf, und jeder Nutzer
+        ''' beschreibt die Bytes, die er liest.</summary>
+        Private Shared Sub ReturnPooledBuffer(buffer As Byte())
+            If buffer IsNot Nothing Then ArrayPool(Of Byte).Shared.Return(buffer)
+        End Sub
+
         Private Shared Sub CommitBgraBuffer(bmp As SKBitmap, buffer As Byte())
             Marshal.Copy(buffer, 0, bmp.GetPixels(), buffer.Length)
         End Sub
@@ -3848,15 +3930,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End Using
             End Using
 
-            Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
+            Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim bStride, bri, bgi, bbi, bai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) OrElse
-               Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+            Dim sLen = 0, bLen = 0
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) OrElse
+               Not TryRentRgbaLikeBuffer(blurred, blurBuf, bLen, bStride, bri, bgi, bbi, bai) Then
                 blurred.Dispose()
                 Return result
             End If
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
             Dim w = source.Width, h = source.Height
 
             ForEachRow(w, h,
@@ -3888,9 +3973,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Next
                 End Sub)
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             blurred.Dispose()
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(blurBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         ' ── Vorschau der Maskierung ─────────────────────────────────────────────
@@ -3918,9 +4008,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If source Is Nothing OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return Nothing
             Dim srcBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return Nothing
+            Dim sLen = 0
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return Nothing
 
             Dim w = source.Width, h = source.Height
+            ' Die KARTE bleibt eine eigene Belegung: sie verlaesst die Funktion und wird vom
+            ' Aufrufer ueber den ganzen Reglerzug gehalten. Ein geliehenes Feld duerfte man dann
+            ' nicht zurueckgeben, und ein zurueckgegebenes waere fremder Besitz.
             Dim map = New Byte(w * h - 1) {}
             ForEachRow(w, h,
                 Sub(y)
@@ -3934,6 +4029,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Next
                 End Sub)
             Return map
+            Finally
+                ReturnPooledBuffer(srcBuf)
+            End Try
         End Function
 
         ''' <summary>Das Anzeigebild zur Kantenkarte bei einem bestimmten Maskierungswert: genau die
@@ -4009,11 +4107,14 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         Private Shared Function ApplySharpness3x3(source As SKBitmap, amount As Single) As SKBitmap
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim srcBuf As Byte() = Nothing
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
+            Dim sLen = 0
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
 
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
             Dim w = source.Width
             Dim h = source.Height
             Dim center = 1.0F + 4.0F * amount
@@ -4048,8 +4149,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Next
                 End Sub)
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         Private Shared Function ApplyGeometryTransforms(source As SKBitmap, adj As ImageAdjustments) As SKBitmap

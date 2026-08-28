@@ -183,8 +183,12 @@ Namespace Services
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Dim srcBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim sLen = 0
+            Dim dstBuf As Byte() = Nothing
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
             Dim random = New Random(source.Width * 733 Xor source.Height * 397)
             Dim amplitude = strength * 48.0
@@ -205,8 +209,12 @@ Namespace Services
                 Next
             Next
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         Private Shared Function ApplyNoiseReduction(source As SKBitmap, amount As Single, Optional detail As Single = 0) As SKBitmap
@@ -230,12 +238,16 @@ Namespace Services
             Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim bStride, bri, bgi, bbi, bai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) OrElse
-               Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+            Dim sLen = 0, bLen = 0
+            Dim dstBuf As Byte() = Nothing
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) OrElse
+               Not TryRentRgbaLikeBuffer(blurred, blurBuf, bLen, bStride, bri, bgi, bbi, bai) Then
                 blurred.Dispose()
                 Return result
             End If
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
             Dim w = source.Width, h = source.Height
 
             ForEachRow(w, h,
@@ -258,9 +270,14 @@ Namespace Services
                     Next
                 End Sub)
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             blurred.Dispose()
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(blurBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         ''' <summary>Der Wert an Position <paramref name="mid"/> der sortierten Fensterwerte, gelesen aus dem
@@ -388,22 +405,44 @@ Namespace Services
         ''' wieder (gemessen: gespeichert (100,50,25,128) liefert GetPixel (199,100,50,128)).
         ''' Ein naiver Umbau auf Rohbytes wuerde deshalb bei teiltransparenten Pixeln ANDERE Ergebnisse
         ''' liefern. Das Verhalten ist unten exakt nachgebildet.</summary>
+        ''' <remarks>ZWEI MESSPUNKTE, weil die Stufe zwei ganz verschiedene Dinge tut: eine
+        ''' Weichzeichnung des ganzen Bildes (Skia, separierbar, Sigma hoechstens 2,45) und danach
+        ''' das Verrechnen beider Bilder ueber alle Bildpunkte. Klarheit und Struktur waren mit
+        ''' zusammen 325 ms der groesste Posten der Kette, nachdem die Koernung erledigt war
+        ''' (Patricks Protokoll vom 2026-08-28) - und ohne diese Teilung ist nicht zu sagen, welche
+        ''' Haelfte das ist. Beide Aufrufer teilen sich die Namen; die Summe steht im Protokoll.</remarks>
         Private Shared Function ApplyLocalContrast(source As SKBitmap, blurSigma As Single, amount As Single, strengthMultiplier As Single) As SKBitmap
-            Using blurred = ApplyNoiseReduction(source, blurSigma / 8.0F)
+            Using blurred = PerformanceTraceService.Measure(
+                "Pixel: Lokalkontrast Unschaerfe", Function() ApplyNoiseReduction(source, blurSigma / 8.0F))
                 Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
 
-                Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
+                ' GELIEHEN STATT NEU: drei Felder in Bildgroesse je Aufruf, und die Stufe laeuft
+                ' zweimal je Render. Frisch angelegt sind das bei 9,85 Megapixeln rund 156 MB auf
+                ' dem Large Object Heap - siehe TryRentRgbaLikeBuffer. Das Ergebnis bleibt bitgleich.
+                Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
                 Dim sStride, bStride, ri, gi, bi, ai As Integer
                 Dim bri, bgi, bbi, bai As Integer
-                If Not TryBorrowRgbaLikeBuffer(source, srcBuf, sStride, ri, gi, bi, ai) OrElse
-                   Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+                Dim sLen = 0, bLen = 0
+                Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, sStride, ri, gi, bi, ai) OrElse
+                   Not TryRentRgbaLikeBuffer(blurred, blurBuf, bLen, bStride, bri, bgi, bbi, bai) Then
                     Return result
                 End If
 
-                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                ' Ein geliehenes Feld ist nicht genullt. Die Schleife unten beschreibt je Bildpunkt
+                ' alle vier Bytes, also bleibt hoechstens die ZEILENAUFFUELLUNG stehen - die gibt es
+                ' bei Bgra8888/Rgba8888 normalerweise nicht, und wenn doch, wird sie hier geraeumt.
+                If sStride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
                 Dim factor = amount * strengthMultiplier
                 Dim width = source.Width
 
+                ' Der Messpunkt umschliesst die Schleife UND die Kopie zurueck ins Bitmap. Vorher lag
+                ' er nur um die Schleife, und dadurch fehlten in der Rechnung "Unschaerfe plus
+                ' Verrechnen gegen die ganze Stufe" rund 60 ms - genau die Belegungen und die
+                ' Kopiererei, um die es hier geht.
+                PerformanceTraceService.Measure("Pixel: Lokalkontrast Verrechnen",
+                    Sub()
                 ForEachRow(width, source.Height,
                     Sub(y)
                         Dim so = y * sStride
@@ -455,9 +494,18 @@ Namespace Services
                             dstBuf(o + ai) = a
                         Next
                     End Sub)
+                        ' sLen, NICHT dstBuf.Length: das geliehene Feld ist meist groesser als
+                        ' angefordert, und eine Kopie ueber seine volle Laenge schriebe ueber das
+                        ' Bitmap hinaus.
+                        Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                    End Sub)
 
-                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
                 Return result
+                Finally
+                    ReturnPooledBuffer(srcBuf)
+                    ReturnPooledBuffer(blurBuf)
+                    ReturnPooledBuffer(dstBuf)
+                End Try
             End Using
         End Function
 
@@ -493,8 +541,12 @@ Namespace Services
 
             Dim srcBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim sLen = 0
+            Dim dstBuf As Byte() = Nothing
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
             Dim width = source.Width
 
             ForEachRow(width, source.Height,
@@ -521,8 +573,12 @@ Namespace Services
                     Next
                 End Sub)
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         ''' <summary>Leuchten. Wie ApplyHaze von GetPixel/SetPixel auf Puffer umgestellt
@@ -536,11 +592,15 @@ Namespace Services
                 Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing
                 Dim sStride, bStride, ri, gi, bi, ai As Integer
                 Dim bri, bgi, bbi, bai As Integer
-                If Not TryBorrowRgbaLikeBuffer(source, srcBuf, sStride, ri, gi, bi, ai) OrElse
-                   Not TryBorrowRgbaLikeBuffer(blurred, blurBuf, bStride, bri, bgi, bbi, bai) Then
+                Dim sLen = 0, bLen = 0
+                Dim dstBuf As Byte() = Nothing
+                Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, sStride, ri, gi, bi, ai) OrElse
+                   Not TryRentRgbaLikeBuffer(blurred, blurBuf, bLen, bStride, bri, bgi, bbi, bai) Then
                     Return result
                 End If
-                Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                If sStride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
                 Dim width = source.Width
                 Dim positiv = strength > 0
                 Dim sv = If(positiv, strength * 0.55F, -strength * 0.55F)
@@ -566,8 +626,13 @@ Namespace Services
                         Next
                     End Sub)
 
-                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
                 Return result
+                Finally
+                    ReturnPooledBuffer(srcBuf)
+                    ReturnPooledBuffer(blurBuf)
+                    ReturnPooledBuffer(dstBuf)
+                End Try
             End Using
         End Function
 
@@ -1312,6 +1377,30 @@ Namespace Services
         ''' zweites Feld in Bildgröße wären bei 45 Megapixeln drei Puffer zu je 360 MB.
         ''' Gerechnet wird in ULong und nach jedem Schritt auf 32 Bit maskiert: VB prüft Überläufe,
         ''' und die Zwischenwerte bleiben so unter ULong.MaxValue.</summary>
+        ''' <summary>Der Streuwert des Korns an einer Stelle, -1..1 - als reine Funktion von Ort und
+        ''' Startwert, nicht als Zug aus einem Strom.
+        '''
+        ''' <para>WARUM DAS DEN STROM ABLOEST: die Koernung war mit 345 ms die teuerste Stufe der
+        ''' ganzen Pixelkette, ein knappes Drittel (Messung an 3840x2564, Patricks Protokoll vom
+        ''' 2026-08-28). Sie stand ganz am Ende, also zahlte JEDER Regler sie mit - auch die
+        ''' Belichtung. Der Grund war nicht die Rechnung, sondern die Reihenfolge: ein
+        ''' <c>Random</c>-Strom laesst sich nicht vorspulen, also musste die Schleife seriell
+        ''' bleiben. Ein Ortshash haengt an gar nichts und laeuft zeilenparallel.</para>
+        '''
+        ''' <para>DER PREIS IST EIN ANDERES KORNMUSTER. Gleich stark und gleich fein, aber nicht
+        ''' dasselbe Korn wie vorher - gespeicherte Rezepte mit Koernung sehen danach anders aus.
+        ''' Bewusst so entschieden (Patrick am 2026-08-28).</para>
+        '''
+        ''' <para>Der Startwert kommt wie vorher aus der Bildgroesse, damit zwei verschiedene
+        ''' Groessen nicht dasselbe Muster tragen.</para></summary>
+        Private Shared Function GrainNoiseAt(index As Integer, seed As Integer) As Double
+            Dim h As ULong = (CULng(CUInt(index)) * 2654435761UL + CULng(CUInt(seed)) * 40503UL) And &HFFFFFFFFUL
+            h = ((h Xor (h >> 15)) * 2246822519UL) And &HFFFFFFFFUL
+            h = ((h Xor (h >> 13)) * 3266489917UL) And &HFFFFFFFFUL
+            h = h Xor (h >> 16)
+            Return CDbl(h) / 2147483647.5 - 1.0
+        End Function
+
         Private Shared Function CellChannelNoise(cellIndex As Integer, channel As Integer) As Double
             Dim h As ULong = (CULng(cellIndex) * 2654435761UL + CULng(channel) * 2246822519UL) And &HFFFFFFFFUL
             h = ((h Xor (h >> 15)) * 2246822519UL) And &HFFFFFFFFUL
@@ -1325,28 +1414,41 @@ Namespace Services
             If strength <= 0 Then Return source
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim srcBuf As Byte() = Nothing
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim sLen = 0
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
-            Dim random = New Random(source.Width * 397 Xor source.Height * 151)
+            Dim seed = source.Width * 397 Xor source.Height * 151
             Dim amplitude = 8.0 + strength * 34.0
+            Dim w = source.Width, h = source.Height
 
-            For y As Integer = 0 To source.Height - 1
-                Dim rowOffset = y * stride
-                For x As Integer = 0 To source.Width - 1
-                    Dim o = rowOffset + x * 4
-                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
-                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                    Dim noise = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                                       ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
-                Next
-            Next
+            ' Zeilenparallel: jede Zeile schreibt nur in ihre eigenen Bytes und liest sonst nichts,
+            ' was sich aendert. Der Streuwert kommt aus dem Ort (GrainNoiseAt), nicht aus einem
+            ' Strom - deshalb ist das Ergebnis unabhaengig von der Aufteilung.
+            ForEachRow(w, h,
+                Sub(y As Integer)
+                    Dim rowOffset = y * stride
+                    Dim rowBase = y * w
+                    For x As Integer = 0 To w - 1
+                        Dim o = rowOffset + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim noise = GrainNoiseAt(rowBase + x, seed) * amplitude
+                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                           ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
+                    Next
+                End Sub)
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         ''' <summary>Gröberes/unregelmäßigeres Korn. Größe = Zellkantenlänge (Pixel einer Zelle teilen
@@ -1366,10 +1468,13 @@ Namespace Services
             If strength <= 0 Then Return source
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Dim srcBuf As Byte() = Nothing
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim sLen = 0
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
             Dim w = source.Width, h = source.Height
             Dim cell = 1 + CInt(Math.Round(Clamp(sizeAmount, 0, 1) * 5))   ' 1..6 px
@@ -1381,74 +1486,76 @@ Namespace Services
             Dim colorNorm = If(colorMix <= 0, 1.0,
                                1.0 / Math.Sqrt((1.0 - colorMix) * (1.0 - colorMix) + colorMix * colorMix))
             Dim amplitude = 8.0 + strength * 34.0
-            Dim random = New Random(w * 397 Xor h * 151)
+            Dim seed = w * 397 Xor h * 151
 
-            ' Korn-Zellraster zuerst, seriell und deterministisch.
+            ' KEINE VORAB GEZOGENEN FELDER MEHR. Zell- und Modulationsrauschen kommen aus dem Ort
+            ' (GrainNoiseAt) statt aus einem Strom. Das kostet zweierlei nicht mehr:
+            '
+            ' Erstens die Reihenfolge - der Strom zwang die Schleife seriell, jetzt laeuft sie
+            ' zeilenparallel. Zweitens den Speicher: bei Korngroesse 0 ist die Zellkante 1, das
+            ' Zellfeld hatte also ein Element JE BILDPUNKT - bei 45 Megapixeln 360 MB, genau der
+            ' Posten, den der Kommentar an CellChannelNoise vermeiden wollte.
+            '
+            ' Das Kornmuster aendert sich dadurch einmalig, siehe GrainNoiseAt. Die Zusage
+            ' "Groesse 0 und Rauheit 0 rechnet bitgleich mit ApplyGrainFine" gilt weiterhin: dort
+            ' ist die Zellkante 1, der Zellindex also y*w+x - genau der Index, den die feine
+            ' Fassung benutzt.
             Dim gridW = (w + cell - 1) \ cell
-            Dim gridH = (h + cell - 1) \ cell
-            Dim cellNoise(gridW * gridH - 1) As Double
-            For i = 0 To cellNoise.Length - 1
-                cellNoise(i) = random.NextDouble() * 2.0 - 1.0
-            Next
 
-            ' Grobes Modulationsraster (fester grober Abstand) nur bei aktiver Frequenz - danach gezogen,
-            ' damit der Korn-Strom bei freq=0 exakt gleich bleibt. Werte 0..1 = lokale Korn-Intensität.
             Const ModCell As Integer = 16
             Dim modW = (w + ModCell - 1) \ ModCell
-            Dim modH = (h + ModCell - 1) \ ModCell
-            Dim modNoise As Double() = Nothing
-            If freq > 0 Then
-                modNoise = New Double(Math.Max(1, modW * modH) - 1) {}
-                For i = 0 To modNoise.Length - 1
-                    modNoise(i) = random.NextDouble()
-                Next
-            End If
 
-            ' Die drei Kanalabweichungen gelten je ZELLE, nicht je Bildpunkt - sonst zerfiele ein
-            ' grobes Korn farblich wieder in Einzelpunkte. Gerechnet werden sie nur beim Wechsel der
-            ' Zelle, der Zaehler laeuft bewusst ueber die Zeilen hinweg.
-            Dim lastCellIndex As Integer = -1
-            Dim devR As Double = 0, devG As Double = 0, devB As Double = 0
-
-            For y As Integer = 0 To h - 1
-                Dim rowOffset = y * stride
-                Dim gy = y \ cell
-                Dim my = y \ ModCell
-                For x As Integer = 0 To w - 1
-                    Dim o = rowOffset + x * 4
-                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
-                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                    Dim cellIndex = gy * gridW + (x \ cell)
-                    Dim n = cellNoise(cellIndex)
-                    Dim amp = amplitude
-                    If freq > 0 Then
-                        ' 0..1 -> -1..1, mit K=0.9 skaliert: Faktor in [1-0.9*freq, 1+0.9*freq], nie <= 0.
-                        Dim m = modNoise(my * modW + (x \ ModCell)) * 2.0 - 1.0
-                        amp = amplitude * (1.0 + freq * m * 0.9)
-                    End If
-                    If colorMix <= 0 Then
-                        Dim noise = n * amp
-                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                                           ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
-                    Else
-                        If cellIndex <> lastCellIndex Then
-                            devR = CellChannelNoise(cellIndex, 1)
-                            devG = CellChannelNoise(cellIndex, 2)
-                            devB = CellChannelNoise(cellIndex, 3)
-                            lastCellIndex = cellIndex
+            ForEachRow(w, h,
+                Sub(y As Integer)
+                    Dim rowOffset = y * stride
+                    Dim gy = y \ cell
+                    Dim my = y \ ModCell
+                    ' Die drei Kanalabweichungen gelten je ZELLE, nicht je Bildpunkt - sonst zerfiele
+                    ' ein grobes Korn farblich wieder in Einzelpunkte. Der Merker gilt jetzt JE ZEILE
+                    ' statt ueber die Zeilen hinweg; weil CellChannelNoise eine reine Funktion des
+                    ' Zellindex ist, kommen dabei dieselben Werte heraus.
+                    Dim lastCellIndex As Integer = -1
+                    Dim devR As Double = 0, devG As Double = 0, devB As Double = 0
+                    For x As Integer = 0 To w - 1
+                        Dim o = rowOffset + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim cellIndex = gy * gridW + (x \ cell)
+                        Dim n = GrainNoiseAt(cellIndex, seed)
+                        Dim amp = amplitude
+                        If freq > 0 Then
+                            ' 0..1 -> -1..1, mit K=0.9 skaliert: Faktor in [1-0.9*freq, 1+0.9*freq], nie <= 0.
+                            ' Eigener Startwert, damit die Modulation nicht mit dem Korn gleichlaeuft.
+                            Dim m = GrainNoiseAt(my * modW + (x \ ModCell), seed Xor &H5BF03635)
+                            amp = amplitude * (1.0 + freq * m * 0.9)
                         End If
-                        Dim mono = (1.0 - colorMix) * n
-                        Dim scale = amp * colorNorm
-                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                                           ClampToByte(cr + (mono + colorMix * devR) * scale),
-                                           ClampToByte(cg + (mono + colorMix * devG) * scale),
-                                           ClampToByte(cb + (mono + colorMix * devB) * scale), a)
-                    End If
-                Next
-            Next
+                        If colorMix <= 0 Then
+                            Dim noise = n * amp
+                            WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                               ClampToByte(cr + noise), ClampToByte(cg + noise), ClampToByte(cb + noise), a)
+                        Else
+                            If cellIndex <> lastCellIndex Then
+                                devR = CellChannelNoise(cellIndex, 1)
+                                devG = CellChannelNoise(cellIndex, 2)
+                                devB = CellChannelNoise(cellIndex, 3)
+                                lastCellIndex = cellIndex
+                            End If
+                            Dim mono = (1.0 - colorMix) * n
+                            Dim scale = amp * colorNorm
+                            WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                               ClampToByte(cr + (mono + colorMix * devR) * scale),
+                                               ClampToByte(cg + (mono + colorMix * devG) * scale),
+                                               ClampToByte(cb + (mono + colorMix * devB) * scale), a)
+                        End If
+                    Next
+                End Sub)
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         ''' <summary>Rauschen hinzufuegen. Von GetPixel/SetPixel auf Puffer umgestellt.
@@ -1459,8 +1566,12 @@ Namespace Services
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Dim srcBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return result
-            Dim dstBuf = New Byte(srcBuf.Length - 1) {}
+            Dim sLen = 0
+            Dim dstBuf As Byte() = Nothing
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
             Dim random = New Random(source.Width * 541 Xor source.Height * 877)
             Dim amplitude = strength * 72.0
@@ -1482,8 +1593,12 @@ Namespace Services
                 Next
             Next
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
     End Class

@@ -1,6 +1,7 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.Linq
+Imports System.Threading
 Imports Microsoft.ML.OnnxRuntime
 Imports Microsoft.ML.OnnxRuntime.Tensors
 Imports SkiaSharp
@@ -42,53 +43,68 @@ Namespace Services
 
         ''' <summary>Die Tiefenkarte als Alpha8-Bild in der Groesse des Quellbildes. Nothing bei
         ''' jedem Fehlschlag - eine halbe Tiefenkarte waere schlimmer als keine.</summary>
-        Public Shared Function Compute(image As SKBitmap) As SKBitmap
+        Public Shared Function Compute(image As SKBitmap, Optional cancel As CancellationToken = Nothing) As SKBitmap
             If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then Return Nothing
-            Dim session = AiModelService.SessionFor(ModelFile)
-            If session Is Nothing Then Return Nothing
 
-            ' Das Modell rechnet auf einem festen Quadrat. Das Bild wird darauf VERZERRT, nicht
-            ' eingepasst: eine Auffuellung mit Schwarz haette das Netz als sehr weit entfernte
-            ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt.
-            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
-            Using small = New SKBitmap(ModelEdge, ModelEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                If Not image.ScalePixels(small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
-                ' Normierung aus dem Training des Modells - nicht geraten.
-                Dim average = New Single() {0.485F, 0.456F, 0.406F}
-                Dim spread = New Single() {0.229F, 0.224F, 0.225F}
-                Dim target = tensor.Buffer.Span
-                Dim layer = ModelEdge * ModelEdge
-                For y = 0 To ModelEdge - 1
-                    For x = 0 To ModelEdge - 1
-                        Dim p = small.GetPixel(x, y)
-                        Dim i = y * ModelEdge + x
-                        target(i) = (p.Red / 255.0F - average(0)) / spread(0)
-                        target(layer + i) = (p.Green / 255.0F - average(1)) / spread(1)
-                        target(layer * 2 + i) = (p.Blue / 255.0F - average(2)) / spread(2)
-                    Next
-                Next
-            End Using
-
+            ' DER FANGBLOCK UMSCHLIESST ALLES, nicht nur den Modelllauf. "Nothing bei jedem
+            ' Fehlschlag" ist die Zusage dieser Funktion, und ein Abbruch ist einer davon - auch
+            ' wenn er schon beim Skalieren oder beim Fuellen des Tensors auffaellt. Lag der Anfang
+            ' ausserhalb, flog von dort eine OperationCanceledException heraus, der Aufrufer kam
+            ' nicht mehr an seinen Aufraeumweg, und das Abbruchkreuz blieb auf einem Vorgang
+            ' stehen, den es nicht mehr gab.
             Try
+                cancel.ThrowIfCancellationRequested()
+                Dim session = AiModelService.SessionFor(ModelFile)
+                If session Is Nothing Then Return Nothing
+
+                ' Das Modell rechnet auf einem festen Quadrat. Das Bild wird darauf VERZERRT, nicht
+                ' eingepasst: eine Auffuellung mit Schwarz haette das Netz als sehr weit entfernte
+                ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt.
+                Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
+                Using small = New SKBitmap(ModelEdge, ModelEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                    If Not image.ScalePixels(small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                    ' Normierung aus dem Training des Modells - nicht geraten.
+                    Dim average = New Single() {0.485F, 0.456F, 0.406F}
+                    Dim spread = New Single() {0.229F, 0.224F, 0.225F}
+                    Dim target = tensor.Buffer.Span
+                    Dim layer = ModelEdge * ModelEdge
+                    For y = 0 To ModelEdge - 1
+                        If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
+                        For x = 0 To ModelEdge - 1
+                            Dim p = small.GetPixel(x, y)
+                            Dim i = y * ModelEdge + x
+                            target(i) = (p.Red / 255.0F - average(0)) / spread(0)
+                            target(layer + i) = (p.Green / 255.0F - average(1)) / spread(1)
+                            target(layer * 2 + i) = (p.Blue / 255.0F - average(2)) / spread(2)
+                        Next
+                    Next
+                End Using
+
+                cancel.ThrowIfCancellationRequested()
                 Dim input = New List(Of NamedOnnxValue) From {
                     NamedOnnxValue.CreateFromTensor("image", tensor)}
                 Using result = session.Run(input)
                     Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
                     If output Is Nothing Then Return Nothing
-                    Return AsGrayscale(output.Buffer.ToArray(), image.Width, image.Height)
+                    cancel.ThrowIfCancellationRequested()
+                    Return AsGrayscale(output.Buffer.ToArray(), image.Width, image.Height, cancel)
                 End Using
+            Catch ex As OperationCanceledException
+                Return Nothing
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Tiefenkarte", ex.Message)
                 Return Nothing
             End Try
         End Function
 
-        Private Shared Function AsGrayscale(values As Single(), targetWidth As Integer, targetHeight As Integer) As SKBitmap
+        Private Shared Function AsGrayscale(values As Single(), targetWidth As Integer, targetHeight As Integer,
+                                            cancel As CancellationToken) As SKBitmap
             If values Is Nothing OrElse values.Length < ModelEdge * ModelEdge Then Return Nothing
             Dim offset = values.Length - ModelEdge * ModelEdge
 
             Dim min = Single.MaxValue, max = Single.MinValue
             For i = offset To values.Length - 1
+                If (i - offset) Mod (ModelEdge * 16) = 0 Then cancel.ThrowIfCancellationRequested()
                 Dim v = values(i)
                 If Single.IsNaN(v) OrElse Single.IsInfinity(v) Then Continue For
                 If v < min Then min = v
@@ -101,6 +117,7 @@ Namespace Services
             Using small = New SKBitmap(New SKImageInfo(ModelEdge, ModelEdge, SKColorType.Alpha8, SKAlphaType.Premul))
                 Dim buffer(ModelEdge * ModelEdge - 1) As Byte
                 For i = 0 To buffer.Length - 1
+                    If i Mod (ModelEdge * 16) = 0 Then cancel.ThrowIfCancellationRequested()
                     Dim v = (values(offset + i) - min) / span
                     buffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
                 Next
@@ -221,7 +238,16 @@ Namespace Services
         ''' mitteln; dann wuerde der Rand heller oder dunkler als seine Umgebung.</summary>
         Private Shared Function BlurWithDisc(source As SKBitmap, radius As Double,
                                                     corners As Integer, highlightsPct As Double) As SKBitmap
+            Return BlurWithDisc(source, radius, corners, highlightsPct, Nothing)
+        End Function
+
+        ''' <summary>Wie die öffentliche Berechnung: auch der teure Scheiben-Blur steigt an
+        ''' Zeilengrenzen aus. Ein Abbruch darf nie eine halbe Fassung ins Arbeitsbild schreiben.</summary>
+        Private Shared Function BlurWithDisc(source As SKBitmap, radius As Double,
+                                              corners As Integer, highlightsPct As Double,
+                                              cancel As CancellationToken) As SKBitmap
             If source Is Nothing OrElse radius < 0.5 Then Return Nothing
+            cancel.ThrowIfCancellationRequested()
             Dim scale = 1.0
             Dim r = CInt(Math.Round(radius))
             If r > MaxKernelRadius Then
@@ -270,6 +296,7 @@ Namespace Services
                     sums(k) = New Single(ah * width1 - 1) {}
                 Next
                 For y = 0 To ah - 1
+                    If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
                     Dim row = y * width1
                     Dim pass0 As Single = 0, pass1 As Single = 0, pass2 As Single = 0
                     For x = 0 To aw - 1
@@ -284,6 +311,7 @@ Namespace Services
                 Using blurred = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                     Dim divisor = CSng(1.0 / count)
                     For y = 0 To ah - 1
+                        If y Mod 8 = 0 Then cancel.ThrowIfCancellationRequested()
                         For x = 0 To aw - 1
                             Dim s0 As Single = 0, s1 As Single = 0, s2 As Single = 0
                             For row = 0 To r * 2
@@ -329,6 +357,7 @@ Namespace Services
                     Dim back = If(scale < 1.0,
                                      New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
                                      New SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None))
+                    cancel.ThrowIfCancellationRequested()
                     If Not blurred.ScalePixels(result, back) Then
                         result.Dispose()
                         Return Nothing
@@ -383,8 +412,10 @@ Namespace Services
                                                 strengthPct As Double,
                                                 transitionPct As Double,
                                                 Optional cornerCount As Integer = 0,
-                                                Optional highlightsPct As Double = 60.0) As SKBitmap
+                                                Optional highlightsPct As Double = 60.0,
+                                                Optional cancel As CancellationToken = Nothing) As SKBitmap
             If source Is Nothing OrElse depth Is Nothing Then Return Nothing
+            cancel.ThrowIfCancellationRequested()
             If source.Width <= 0 OrElse source.Height <= 0 Then Return Nothing
             Dim strength = Math.Max(0.0, Math.Min(100.0, strengthPct))
             If strength <= 0.01 Then Return Nothing
@@ -421,13 +452,14 @@ Namespace Services
                     ' Stufe 0 ist das scharfe Bild, darueber jede weitere Stufe staerker verwischt.
                     canvas.DrawBitmap(source, 0, 0)
                     For stufe = 1 To Steps
+                        cancel.ThrowIfCancellationRequested()
                         Dim share = stufe / CDbl(Steps)
                         ' Die Maske dieser Stufe: wie weit ist dieser Punkt von der Fokusebene weg,
                         ' gemessen in Anteilen des Uebergangs, geklemmt auf diese Stufe.
-                        Using mask = StepMask(map, from, bis, uebergang, share, 1.0 / Steps)
+                        Using mask = StepMask(map, from, bis, uebergang, share, 1.0 / Steps, cancel)
                             If mask Is Nothing Then Continue For
                             Using blurred = BlurWithDisc(source, maxRadius * share,
-                                                                  cornerCount, highlightsPct)
+                                                                  cornerCount, highlightsPct, cancel)
                                 If blurred Is Nothing Then Continue For
                                 ' Die verwischte Fassung mit der Stufenmaske daruebermischen.
                                 Using p3 = New SKPaint()
@@ -450,12 +482,14 @@ Namespace Services
         ''' sich bewusst und laufen weich aus - ohne das saehe man ihre Grenzen als Ringe.</summary>
         Private Shared Function StepMask(depth As SKBitmap, fromPct As Double, toPct As Double,
                                             transitionPct As Double,
-                                            share As Double, width As Double) As SKBitmap
+                                            share As Double, width As Double,
+                                            cancel As CancellationToken) As SKBitmap
             Dim w = depth.Width, h = depth.Height
             Dim output = New SKBitmap(New SKImageInfo(w, h, SKColorType.Alpha8, SKAlphaType.Premul))
             Dim buffer(w * h - 1) As Byte
             Dim empty = True
             For y = 0 To h - 1
+                If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
                 For x = 0 To w - 1
                     Dim t = depth.GetPixel(x, y).Alpha / 255.0 * 100.0
                     ' Abstand aus dem scharfen BAND heraus, auf 0..1 gebracht. Innerhalb ist er null

@@ -759,7 +759,13 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
         End Function
 
-        Private Sub EnqueueWorkingCommit(work As Func(Of WorkingImagePatch), onDoneUi As Action(Of WorkingImagePatch))
+        ''' <param name="onAlwaysUi">Aufraeumen, das AUF JEDEN FALL laufen muss - auch wenn der
+        ''' Commit verfaellt (Bildwechsel) und <paramref name="onDoneUi"/> deshalb ausbleibt. Genau
+        ''' dafuer gibt es den Parameter: wer eine Sperre haelt oder ein Abbruchkreuz zeigt, darf
+        ''' beides nicht an einen Abschluss haengen, der uebersprungen werden kann - die Sperre
+        ''' bliebe sonst fuer immer zu.</param>
+        Private Sub EnqueueWorkingCommit(work As Func(Of WorkingImagePatch), onDoneUi As Action(Of WorkingImagePatch),
+                                         Optional onAlwaysUi As Action = Nothing)
             _pendingWorkingCommits += 1
             RefreshBusyState()
             RaiseSaveAvailabilityChanged()
@@ -799,6 +805,20 @@ Namespace ViewModels
                             Try
                                 If Not expire AndAlso onDoneUi IsNot Nothing Then onDoneUi(patch)
                             Finally
+                                ' DAS ABBRUCHKREUZ GEHT AUCH BEIM VERFALLEN AUS. Die Abschluesse der
+                                ' abbrechbaren Vorgaenge (Entrauschen, gespeicherte Bearbeitung,
+                                ' Objektentfernen) rufen EndCancellableBusy selbst - aber genau die
+                                ' laufen bei einem verfallenen Commit nicht mehr, und dann zeigte
+                                ' das X auf einen Vorgang, den es nicht mehr gibt. Der Abschluss
+                                ' bleibt trotzdem aus: er gehoert zum ALTEN Bild. Mehrfach
+                                ' aufzurufen ist ausdruecklich erlaubt.
+                                If expire Then EndCancellableBusy()
+                                ' Laeuft IMMER, auch beim Verfallen - siehe onAlwaysUi.
+                                Try
+                                    onAlwaysUi?.Invoke()
+                                Catch ex As Exception
+                                    DiagnosticLogService.LogException("Editor.WorkingCommit.Always", ex)
+                                End Try
                                 ' Ein Commit kann der erste GEBACKENE Inhalt sein - dann kippt bei
                                 ' RAW-Quellen der Speichern-Weg von Sidecar auf "Speichern unter".
                                 RaiseSaveAvailabilityChanged()
@@ -957,8 +977,27 @@ Namespace ViewModels
         Private _comparisonOriginalSource As SKBitmap
         Private _comparisonOriginalPath As String
         Private _previewSource As SKBitmap
+        ' Kleine Quelle nur fuer den aktiven Reglerzug. Die Abmessungen entstehen über eine
+        ' maximale Kantenlänge, nie über ein festes Rechteck - das Seitenverhältnis bleibt exakt.
+        Private _sliderPreviewSource As SKBitmap
+        Private _sliderPreviewSourcePath As String
+        Private _sliderPreviewSourceWorkingVersion As Long = -1
+        Private _sliderPreviewSourceUsesUnbakedPixels As Boolean
+        Private _sliderPreviewSourceMaxDimension As Integer
+        Private _sliderPreviewRequestedMaxDimension As Integer
+        Private _sliderPreviewBuildRunning As Boolean
+        ' ZWEI GETRENNTE BEGRIFFE, und sie fallen bewusst nicht zusammen:
+        '   _sliderDragActive        - irgendein Bild-Regler wird gerade gezogen. Daran haengt der
+        '                              durchlaufende Takt und der Nachzug beim Loslassen.
+        '   _sliderPreviewDragActive - und die verkleinerte Quelle ist dabei ERLAUBT.
+        ' Bei massstabsabhaengigen Reglern gilt das erste, aber nicht das zweite.
+        Private _sliderDragActive As Boolean
+        Private _sliderPreviewDragActive As Boolean
         Private _previewRenderCts As CancellationTokenSource
         Private _previewRequestId As Integer
+        ''' Zaehlt JEDE angemeldete Aenderung - siehe MarkPreviewPending. Getrennt von
+        ''' _previewRequestId, der nur Render-STARTS zaehlt.
+        Private _previewChangeId As Integer
 
         ''' Marke des QUELLWECHSELS (Bild öffnen/wechseln). Bewusst getrennt von _previewRequestId,
         ''' den auch jeder Render-Start hochzählt - sonst würde ein währenddessen anlaufender Render
@@ -1047,6 +1086,19 @@ Namespace ViewModels
         ' Deckel des Anzeigebilds im Bündel - EINE Quelle für Editor und Stapel-Export.
         Private Const FpxCompositeMaxDimension As Integer = ImageProcessor.FpxCompositeMaxDimension
         Private Const PreviewDebounceMs As Double = 90.0
+        ''' <summary>Die Kantenlaenge der Live-Quelle waehrend eines Reglerzugs.
+        '''
+        ''' <para>Sie gilt nur fuer Regler, deren Wirkung NICHT am Bildmassstab haengt - Belichtung,
+        ''' Kontrast, Weissabgleich, Saettigung, Kurven. Die rechnen je Bildpunkt, und ein
+        ''' verkleinertes Bild zeigt exakt dasselbe Ergebnis, nur mit weniger Punkten.</para>
+        '''
+        ''' <para>Massstabsabhaengige Regler bekommen KEINE verkleinerte Quelle, sondern die
+        ''' gewoehnliche Vorschau - siehe BeginSliderPreviewDrag. Fuer sie gibt es kein "gross
+        ''' genug": Schaerferadius, Koernungsgroesse, Fleckengroesse und Strukturradius zaehlen in
+        ''' Bildpunkten, und jede Verkleinerung zeigt etwas anderes, als hinterher herauskommt
+        ''' (Patrick am 2026-08-28: auch 2304 war dort noch verfaelschend). Der durchlaufende Takt
+        ''' gilt fuer sie trotzdem - das war der eigentliche Befund.</para></summary>
+        Private Const SliderPreviewMaxDimension As Integer = 2048
         ''' <summary>Deutlich traeger als die Vorschau: das Analysebild ist eine Begleitanzeige, und
         ''' es bei jedem der 90-Millisekunden-Schritte mitzurechnen waere verschenkte Arbeit an einer
         ''' Stelle, die niemand so schnell abliest.</summary>
@@ -14040,7 +14092,7 @@ Namespace ViewModels
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             End If
-            _previewPending = True
+            MarkPreviewPending()
             _fullRenderPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             RestartPreviewTimer(PreviewDebounceMs)
@@ -14121,7 +14173,7 @@ Namespace ViewModels
         ''' GetCurrentAdjustments(forPreview:=True)), aber weder als ungespeicherte Änderung zählen
         ''' noch das kanonische Ergebnis beeinflussen, bis der Nutzer "Anwenden" klickt.
         Private Sub ScheduleToolPreviewUpdate()
-            _previewPending = True
+            MarkPreviewPending()
             _fullRenderPending = True
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             RestartPreviewTimer(PreviewDebounceMs)
@@ -14142,7 +14194,7 @@ Namespace ViewModels
             End If
             _annotationCompositePreviewPending = True
             _annotationCompositePreviewRetries = 0
-            _previewPending = True
+            MarkPreviewPending()
             StatusText = LocalizationService.T("Vorschau wird aktualisiert...")
             RestartPreviewTimer(delayMs)
         End Sub
@@ -14200,6 +14252,22 @@ Namespace ViewModels
         End Sub
 
         Private Sub RestartPreviewTimer(delayMs As Double)
+            ' WAEHREND EINES REGLERZUGS GIBT ES KEINEN FESTEN TAKT, sondern eine Kette: der naechste
+            ' Render startet erst, wenn der vorige fertig ist (siehe das Ende von RenderPreview).
+            '
+            ' Ein fester Takt war hier und ging nach hinten los. Jeder neue Render BRICHT DEN
+            ' LAUFENDEN AB (Interlocked.Exchange auf _previewRenderCts), und dauert ein Render
+            ' laenger als der Takt, wird nie einer fertig: A wird von B abgebrochen, B von C. Der
+            ' Nutzer sieht waehrend des Zugs gar nichts, und die verworfene Arbeit kostet trotzdem
+            ' Rechenzeit, die dem Zeiger fehlt - das Ziehen wurde dadurch TRAEGER statt fluessiger
+            ' (Patrick am 2026-08-28).
+            '
+            ' Mit der Kette laeuft jeder Render durch und wird auch gezeigt. Die Bildrate ist dann
+            ' genau das, was die Maschine hergibt, und keine einzige Rechnung ist umsonst.
+            If _sliderDragActive Then
+                If _previewTimer.IsEnabled Then Return
+                If Threading.Volatile.Read(_activePreviewRenders) > 0 Then Return
+            End If
             _previewTimer.Stop()
             _previewTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(1.0, delayMs))
             _previewTimer.Start()
@@ -14922,7 +14990,19 @@ Namespace ViewModels
                 If oldSource IsNot Nothing Then
                     _stalePreviewSources.Add(oldSource)
                 End If
+                If _sliderPreviewSource IsNot Nothing Then
+                    _stalePreviewSources.Add(_sliderPreviewSource)
+                    _sliderPreviewSource = Nothing
+                End If
+                _sliderPreviewSourcePath = Nothing
+                _sliderPreviewSourceWorkingVersion = -1
+                _sliderPreviewSourceUsesUnbakedPixels = False
+                _sliderPreviewSourceMaxDimension = 0
             End SyncLock
+            _sliderPreviewBuildRunning = False
+            _sliderDragActive = False
+            _sliderPreviewDragActive = False
+            _sliderPreviewRequestedMaxDimension = 0
             ' Arbeitsbild gehört zur alten Quelle (das Vorschau-Bitmap entsorgt die
             ' Stale-Mechanik oben, das Voll-Bitmap der Service selbst).
             _workingImage.Clear()
@@ -15179,6 +15259,151 @@ Namespace ViewModels
             End SyncLock
         End Function
 
+        ''' <summary>Aktiviert die kleine, proportional skalierte Live-Quelle für Bild-Regler.
+        ''' Overlay-Objekte werden davon nicht abgeleitet: sie zeichnet der bestehende
+        ''' Kompositor separat über die Szene.</summary>
+        ''' <summary>Ist im REZEPT eine Stufe aktiv, deren Ergebnis am Bildmassstab haengt?
+        '''
+        ''' <para>Es reicht NICHT, den gezogenen Regler zu betrachten. Wer bei eingeschalteter
+        ''' Koernung an der Belichtung zieht, bekaeme sonst die verkleinerte Quelle - und die
+        ''' Koernung rechnet aus Bildgroesse und Bildpunkt, also traegt sie dort ein anderes Muster
+        ''' und eine andere physische Groesse. Beim Loslassen springt sie zurueck. Dasselbe gilt fuer
+        ''' Schaerfe, Rauschen, Klarheit, Struktur und alles andere, dessen Radius in BILDPUNKTEN
+        ''' zaehlt (Reviewbefund 2026-08-28).</para>
+        '''
+        ''' <para>Die Vignette fehlt hier bewusst: ihre Masse sind Anteile des Bildes, nicht
+        ''' Bildpunkte. Die Punktkette ebenso - sie rechnet je Bildpunkt.</para></summary>
+        Private Function HasScaleSensitiveStages() As Boolean
+            Return Grain <> 0 OrElse AddNoise <> 0 OrElse
+                   Sharpness <> 0 OrElse
+                   NoiseReduction <> 0 OrElse ColorNoiseReduction <> 0 OrElse
+                   FarbrauschGrob <> 0 OrElse ColorNoiseAdd <> 0 OrElse
+                   Clarity <> 0 OrElse [Structure] <> 0 OrElse Haze <> 0 OrElse
+                   DustScratches <> 0 OrElse Glow <> 0 OrElse
+                   String.Equals(If(FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <param name="scaleSensitive">Haengt die Wirkung dieses Reglers am Bildmassstab? Dann
+        ''' laeuft der Zug auf der gewoehnlichen Vorschau weiter - siehe
+        ''' <see cref="SliderPreviewMaxDimension"/>.</param>
+        Public Sub BeginSliderPreviewDrag(Optional scaleSensitive As Boolean = False)
+            _sliderDragActive = True
+            ' Der gezogene Regler ist nur die eine Haelfte. Die andere ist, was sonst noch im Rezept
+            ' steht: eine aktive massstabsabhaengige Stufe verbietet die verkleinerte Quelle auch
+            ' dann, wenn gerade an der Belichtung gezogen wird.
+            If scaleSensitive OrElse HasScaleSensitiveStages() Then
+                ' Keine verkleinerte Quelle - aber der Takt laeuft, und das Loslassen zieht nach.
+                _sliderPreviewDragActive = False
+                _sliderPreviewRequestedMaxDimension = 0
+                Return
+            End If
+            If _sliderPreviewDragActive AndAlso
+               _sliderPreviewRequestedMaxDimension = SliderPreviewMaxDimension Then Return
+            _sliderPreviewDragActive = True
+            _sliderPreviewRequestedMaxDimension = SliderPreviewMaxDimension
+            EnsureSliderPreviewSource()
+        End Sub
+
+        ''' <summary>Schaltet wieder auf die normale Vorschau zurück und rendert den letzten
+        ''' Reglerstand sofort in voller Vorschauauflösung.
+        '''
+        ''' <para>Der Nachzug laeuft IMMER, nicht nur bei ausstehender Aenderung. Der Regelfall ist
+        ''' naemlich, dass keine aussteht: wer aufhoert zu ziehen und kurz darauf loslaesst, dessen
+        ''' letzter Zug-Render ist bereits durch, und mit ihm wurde _previewPending geloescht (siehe
+        ''' das Ende von RenderPreview). Mit einer Bedingung darauf bliebe genau dann die KLEINE
+        ''' Fassung stehen - sichtbar weicher, und ausgerechnet bei Schaerfe und Rauschen faellt das
+        ''' am meisten auf. Ein ueberzaehliger Render je Reglerzug kostet dagegen nichts.</para></summary>
+        Public Sub EndSliderPreviewDrag()
+            If Not _sliderDragActive AndAlso Not _sliderPreviewDragActive Then Return
+            _sliderDragActive = False
+            _sliderPreviewDragActive = False
+            _sliderPreviewRequestedMaxDimension = 0
+            MarkPreviewPending()
+            RestartPreviewTimer(1.0)
+        End Sub
+
+        Private Sub EnsureSliderPreviewSource()
+            Dim path = RenderSourcePath
+            Dim workingVersion = _workingImage.Version
+            Dim usesUnbaked = _pixelLayerHidden
+            Dim maxDimension = _sliderPreviewRequestedMaxDimension
+            If String.IsNullOrWhiteSpace(path) Then Return
+            If maxDimension <= 0 Then Return
+
+            SyncLock _previewSync
+                If _sliderPreviewBuildRunning Then Return
+                If _sliderPreviewSource IsNot Nothing AndAlso
+                   String.Equals(_sliderPreviewSourcePath, path, StringComparison.Ordinal) AndAlso
+                   _sliderPreviewSourceWorkingVersion = workingVersion AndAlso
+                   _sliderPreviewSourceUsesUnbakedPixels = usesUnbaked AndAlso
+                   _sliderPreviewSourceMaxDimension = maxDimension Then Return
+                _sliderPreviewBuildRunning = True
+            End SyncLock
+            BuildSliderPreviewSourceAsync(path, workingVersion, usesUnbaked, maxDimension)
+        End Sub
+
+        Private Async Sub BuildSliderPreviewSourceAsync(path As String, workingVersion As Long, usesUnbaked As Boolean,
+                                                         maxDimension As Integer)
+            Dim built As SKBitmap = Nothing
+            Try
+                built = Await Task.Run(Function()
+                                           If usesUnbaked Then
+                                               Return ImageProcessor.LoadPreviewSource(path, maxDimension)
+                                           End If
+                                           Return _workingImage.RenderDownscale(maxDimension)
+                                       End Function)
+
+                If Not _sliderPreviewDragActive OrElse
+                   Not String.Equals(RenderSourcePath, path, StringComparison.Ordinal) OrElse
+                   _workingImage.Version <> workingVersion OrElse _pixelLayerHidden <> usesUnbaked OrElse
+                   _sliderPreviewRequestedMaxDimension <> maxDimension OrElse
+                   built Is Nothing Then
+                    built?.Dispose()
+                    Return
+                End If
+
+                SyncLock _previewSync
+                    If _sliderPreviewSource IsNot Nothing Then _stalePreviewSources.Add(_sliderPreviewSource)
+                    _sliderPreviewSource = built
+                    _sliderPreviewSourcePath = path
+                    _sliderPreviewSourceWorkingVersion = workingVersion
+                    _sliderPreviewSourceUsesUnbakedPixels = usesUnbaked
+                    _sliderPreviewSourceMaxDimension = maxDimension
+                    built = Nothing
+                End SyncLock
+                ' Nach dem Aufbau nicht bis zur nächsten kurzen Pause warten.
+                If _sliderPreviewDragActive AndAlso _previewPending Then RestartPreviewTimer(1.0)
+            Catch ex As Exception
+                built?.Dispose()
+                DiagnosticLogService.LogException("EditorViewModel.BuildSliderPreviewSource", ex)
+            Finally
+                SyncLock _previewSync
+                    _sliderPreviewBuildRunning = False
+                End SyncLock
+                TryDisposeStalePreviewSources()
+            End Try
+        End Sub
+
+        Private Function GetPreviewSourceForRender() As SKBitmap
+            If _sliderPreviewDragActive Then
+                Dim path = RenderSourcePath
+                Dim workingVersion = _workingImage.Version
+                Dim usesUnbaked = _pixelLayerHidden
+                Dim maxDimension = _sliderPreviewRequestedMaxDimension
+                SyncLock _previewSync
+                    If _sliderPreviewSource IsNot Nothing AndAlso
+                       String.Equals(_sliderPreviewSourcePath, path, StringComparison.Ordinal) AndAlso
+                       _sliderPreviewSourceWorkingVersion = workingVersion AndAlso
+                       _sliderPreviewSourceUsesUnbakedPixels = usesUnbaked AndAlso
+                       _sliderPreviewSourceMaxDimension = maxDimension Then
+                        Return _sliderPreviewSource
+                    End If
+                End SyncLock
+                EnsureSliderPreviewSource()
+            End If
+            Return GetPreviewSource()
+        End Function
+
         ''' <summary>Arbeitsbild fuer den Voll-Render (Export/Speichern). Nothing bei ausgeblendeter
         ''' Pixel-Ebene - der Renderer faellt dann auf den Datei-Decode des Basisbilds zurueck, also auf
         ''' denselben ungebackenen Stand, den die Vorschau zeigt.</summary>
@@ -15269,6 +15494,21 @@ Namespace ViewModels
             Return ex.Message.IndexOf("CancellationTokenSource has been disposed", StringComparison.OrdinalIgnoreCase) >= 0
         End Function
 
+        ''' <summary>Es liegt eine Aenderung an, die noch keiner gerendert hat.
+        '''
+        ''' <para>Der Zaehler daneben ist der Grund fuer diese Methode. Solange ein neuer Render den
+        ''' laufenden abbrach, war _previewRequestId die Marke: der alte Lauf sah beim Landen eine
+        ''' fremde Nummer und stieg aus. Seit ein Reglerzug die Renders KETTET, startet waehrend
+        ''' eines laufenden absichtlich keiner mehr - die Nummer bleibt also stehen, der alte Lauf
+        ''' haelt sich fuer aktuell und loescht die Wartemarke. Die Aenderung, die waehrenddessen
+        ''' eintraf, waere damit verloren: die Anzeige zeigte den vorletzten Reglerwert, und
+        ''' RegisterPreviewRenderEnd plant keinen Nachfolger, weil nichts mehr anliegt
+        ''' (Reviewbefund 2026-08-28).</para></summary>
+        Private Sub MarkPreviewPending()
+            _previewPending = True
+            Interlocked.Increment(_previewChangeId)
+        End Sub
+
         Private Sub RegisterPreviewRenderStart()
             Interlocked.Increment(_previewRequestId)
             Interlocked.Increment(_activePreviewRenders)
@@ -15277,6 +15517,10 @@ Namespace ViewModels
         Private Sub RegisterPreviewRenderEnd()
             If Interlocked.Decrement(_activePreviewRenders) = 0 Then
                 TryDisposeStalePreviewSources()
+                ' DAS GLIED, DAS DIE KETTE WEITERZIEHT. Waehrend eines Reglerzugs armiert
+                ' RestartPreviewTimer nichts, solange ein Render laeuft - sonst braeche der naechste
+                ' den laufenden ab. Ist er durch und liegt eine Aenderung an, geht es sofort weiter.
+                If _sliderDragActive AndAlso _previewPending Then RestartPreviewTimer(1.0)
             End If
         End Sub
 
@@ -15420,16 +15664,19 @@ Namespace ViewModels
             ' Ab hier laeuft er: was danach kommt, plant sich bei Bedarf selbst einen neuen.
             _fullRenderPending = False
 
-            Dim previewSource = GetPreviewSource()
+            Dim previewSource = GetPreviewSourceForRender()
             If previewSource Is Nothing Then
                 ' Kein zweiter Render nötig - dieser Aufruf rendert gleich selbst.
                 PreparePreviewSource(RenderSourcePath, scheduleInitialRender:=False)
-                previewSource = GetPreviewSource()
+                previewSource = GetPreviewSourceForRender()
                 If previewSource Is Nothing Then Return
             End If
 
             RegisterPreviewRenderStart()
             Dim requestId = _previewRequestId
+            ' Der Stand der Aenderungen BEIM START. Nur wenn er am Ende noch derselbe ist, hat
+            ' dieser Lauf wirklich alles gezeigt, was anlag - siehe MarkPreviewPending.
+            Dim changeIdAtStart = Threading.Volatile.Read(_previewChangeId)
             ' Arbeitsbild-Stand beim Render-START: landet waehrend des asynchronen Renders ein
             ' neuer Commit (Strich/Retusche), ist die frisch gebaute Szene veraltet - der
             ' Commit-Callback plant dann ohnehin einen neuen Render (SchedulePreviewUpdate).
@@ -15444,11 +15691,13 @@ Namespace ViewModels
             Dim oldCts = Interlocked.Exchange(_previewRenderCts, cts)
             CancelAndDisposePreviewCts(oldCts)
 
+            ' Die Uhr steht VOR dem Try: der Abbruchzweig misst mit ihr, wieviel Zeit in einem
+            ' weggeworfenen Lauf steckte.
+            Dim fullRenderSw = Diagnostics.Stopwatch.StartNew()
             Try
                 StatusText = LocalizationService.T("Vorschau wird berechnet…")
                 PreviewFailed = False
                 Dim needsComparison = _showBeforeImage
-                Dim fullRenderSw = Diagnostics.Stopwatch.StartNew()
                 Dim result = Await Task.Run(Function()
                                                 token.ThrowIfCancellationRequested()
                                                 ' Szene als SKBitmap (persistente Wahrheit) + Avalonia-Konvertierung fuer
@@ -15513,7 +15762,10 @@ Namespace ViewModels
                 SetSceneBitmap(result.SceneSk)
                 result.SceneSk = Nothing
                 ComparisonImage = result.Comparison
-                _previewPending = False
+                ' NUR loeschen, wenn seit dem Start nichts Neues angemeldet wurde. Sonst bleibt die
+                ' Marke stehen, und RegisterPreviewRenderEnd zieht die Kette weiter - genau der
+                ' Fall, in dem waehrend dieses Renders am Regler weitergezogen wurde.
+                If Threading.Volatile.Read(_previewChangeId) = changeIdAtStart Then _previewPending = False
                 ReportPreviewReady()
                 PreviewFailed = False
                 If _clearRetouchLivePatchAfterPreview Then
@@ -15526,10 +15778,17 @@ Namespace ViewModels
                 ' Diese Unterscheidung hat bei der Zuschnitt-Forensik gefehlt.
                 DiagnosticLogService.LogAlways("Editor.FullPreviewRender",
                                                $"pixels={CLng(previewSource.Width) * CLng(previewSource.Height)} size={previewSource.Width}x{previewSource.Height} out={_sceneSk?.Width}x{_sceneSk?.Height} retouch={If(adj.RetouchSpots Is Nothing, 0, adj.RetouchSpots.Count)} annotations={If(adj.Annotations Is Nothing, 0, adj.Annotations.Count)} ms={fullRenderSw.ElapsedMilliseconds}")
+                PerformanceTraceService.Record("Vorschau: fertig", fullRenderSw.Elapsed.TotalMilliseconds)
                 result.Preview = Nothing
                 result.Comparison = Nothing
                 result.Dispose()
             Catch ex As OperationCanceledException
+                ' ABGEBROCHENE RENDERS SIND DER TEUERSTE POSTEN, DEN NIEMAND SIEHT. Sie verschwanden
+                ' hier spurlos: kein Protokolleintrag, kein Zaehler. Genau daran war nicht abzulesen,
+                ' dass ein fester Takt die Laeufe gegenseitig abschiesst. Jetzt steht im Protokoll
+                ' nebeneinander, wieviele durchliefen und wieviele weggeworfen wurden - und wieviel
+                ' Zeit in den weggeworfenen steckte.
+                PerformanceTraceService.Record("Vorschau: abgebrochen", fullRenderSw.Elapsed.TotalMilliseconds)
             Catch ex As Exception
                 If IsIgnorablePreviewException(ex) Then
                     If requestId <> _previewRequestId OrElse _previewPending Then

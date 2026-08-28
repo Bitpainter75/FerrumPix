@@ -1,4 +1,5 @@
 Imports System
+Imports System.Buffers
 Imports System.Runtime.InteropServices
 Imports SkiaSharp
 
@@ -825,9 +826,11 @@ Namespace Services
         ' ── Der eine Durchlauf ───────────────────────────────────────────────────
 
         Private Shared Function RunPointOpChain(source As SKBitmap, chain As PointOpChain) As SKBitmap
-            Dim srcBuf As Byte() = Nothing
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
-            If Not TryBorrowRgbaLikeBuffer(source, srcBuf, stride, ri, gi, bi, ai) Then Return source
+            Dim sLen = 0, dstLen = 0
+            Try
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return source
 
             ' Quellen sind IMMER 8 Bit (Bgra8888/Rgba8888; TryBorrowRgbaLikeBuffer lehnt anderes ab
             ' und die Kette laesst die Quelle dann unveraendert). Ein 16-Bit-Arbeitsbild wurde
@@ -843,7 +846,10 @@ Namespace Services
             Dim srcPremul = source.AlphaType = SKAlphaType.Premul
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Dim width = source.Width
-            Dim dstBuf = New Byte(width * source.Height * 4 - 1) {}
+            ' Dicht gepackt (width*4 je Zeile), also ohne Zeilenauffuellung - und die Kette schreibt
+            ' jeden Bildpunkt. Ein geliehenes, ungenulltes Feld ist hier deshalb ohne Folgen.
+            dstLen = width * source.Height * 4
+            dstBuf = ArrayPool(Of Byte).Shared.Rent(dstLen)
             Dim dstStride = width * 4
 
             Dim m = chain.ColorMatrix
@@ -1171,8 +1177,12 @@ Namespace Services
                     Next
                 End Sub)
 
-            Marshal.Copy(dstBuf, 0, result.GetPixels(), dstBuf.Length)
+            Marshal.Copy(dstBuf, 0, result.GetPixels(), dstLen)
             Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
     End Class

@@ -78,7 +78,7 @@ Namespace Services
         Public Shared Function EffectiveProfile(decoderProfile As SKColorSpace, stream As IO.Stream) As SKColorSpace
             If NeedsConversion(decoderProfile) Then Return decoderProfile
             If stream Is Nothing OrElse Not stream.CanSeek Then Return decoderProfile
-            Dim vorher = stream.Position
+            Dim startPosition = stream.Position
             Try
                 stream.Seek(0, IO.SeekOrigin.Begin)
                 Return If(ProfileFromExif(stream), decoderProfile)
@@ -87,7 +87,7 @@ Namespace Services
                 Return decoderProfile
             Finally
                 Try
-                    stream.Seek(vorher, IO.SeekOrigin.Begin)
+                    stream.Seek(startPosition, IO.SeekOrigin.Begin)
                 Catch
                 End Try
             End Try

@@ -432,12 +432,12 @@ Namespace ViewModels
 
         ' ── Gitterverzerrung ────────────────────────────────────────────────────
         '
-        ' Das Raster lebt im QUELLRAUM (Prozent des unbeschnittenen Arbeitsbildes), nicht im
-        ' Anzeigeraum - aus demselben Grund wie bei den Verlaufsmasken: sonst wanderte die
-        ' Verzerrung, sobald zugeschnitten oder gedreht wird, und das Anwenden traefe eine andere
-        ' Stelle als die, auf die man gezogen hat. Fuer die Anzeige werden die Punkte einzeln in den
-        ' Anzeigeraum zurueckgerechnet; was ausserhalb des sichtbaren Ausschnitts liegt, kommt als
-        ' NaN heraus und wird weder gezeichnet noch angefasst.
+        ' Ohne Beschnitt lebt das Raster im Quellraum. Nach einem Beschnitt ist sein Arbeitsraum
+        ' dagegen der SICHTBARE Ausschnitt: ein 4x4-Raster muss dann das sichtbare Bild fuellen,
+        ' statt nur seine (zufaellig noch sichtbaren) Quellknoten in der Mitte zu zeigen. Beim
+        ' Anwenden wird dieser lokale Rasterraum wieder eindeutig in den unbeschnittenen Quellraum
+        ' ueberfuehrt. So bleiben Bild, Overlay-Objekte und gespeichertes Rezept auf derselben
+        ' Geometrie, ohne dass die Bedienung nach einem Crop unbrauchbar wird.
         '
         ' Das RASTER selbst ist Sitzungszustand: es sagt nur, wohin gezogen wurde. Beim Anwenden
         ' wird daraus ein Knotenfeld im REZEPT (ComposeImageWarp, siehe unten) - nichts wird in die
@@ -502,7 +502,7 @@ Namespace ViewModels
                 arr(0) = _warpColumns
                 arr(1) = _warpRows
                 For i = 0 To _warpX.Length - 1
-                    Dim anzeige = WarpSpaceToDisplay(_warpX(i), _warpY(i))
+                    Dim anzeige = GridPointToDisplay(_warpX(i), _warpY(i))
                     If anzeige.HasValue Then
                         arr(2 + i * 2) = anzeige.Value.X
                         arr(3 + i * 2) = anzeige.Value.Y
@@ -641,12 +641,13 @@ Namespace ViewModels
         ''' des UNVERZERRTEN Rasters im Anzeigeraum. Letztere ist noetig, weil das Raster im
         ''' Quellraum gleichmaessig ist, im Anzeigeraum nach Beschnitt oder Drehung aber nicht.</summary>
         Private Sub PrepareGridPreview()
-            PrepareWarpPreview(_warpColumns, _warpRows)
+            PrepareWarpPreview(_warpColumns, _warpRows, AddressOf GridPointToDisplay)
         End Sub
 
         ''' <summary>Dasselbe fuer ein beliebig feines Auswertungsraster - das Verformen-Werkzeug
         ''' fuehrt seinen Zustand in vier Randkurven und wertet sie erst hier auf Knoten aus.</summary>
-        Private Sub PrepareWarpPreview(columns As Integer, rows As Integer)
+        Private Sub PrepareWarpPreview(columns As Integer, rows As Integer,
+                                       Optional sourcePointToDisplay As Func(Of Double, Double, SKPoint?) = Nothing)
             DisposeGridPreview()
             Dim size = GetAnnotationDisplayPixelSize()
             If size.Width <= 0 OrElse size.Height <= 0 Then Return
@@ -680,8 +681,11 @@ Namespace ViewModels
             For rowIdx = 0 To rows
                 For colIdx = 0 To columns
                     Dim i = rowIdx * (columns + 1) + colIdx
-                    Dim anzeige = SourcePercentToDisplayPercent(colIdx * 100.0 / columns,
-                                                                rowIdx * 100.0 / rows)
+                    Dim x = colIdx * 100.0 / columns
+                    Dim y = rowIdx * 100.0 / rows
+                    Dim anzeige = If(sourcePointToDisplay Is Nothing,
+                                     SourcePercentToDisplayPercent(x, y),
+                                     sourcePointToDisplay(x, y))
                     If anzeige.HasValue Then
                         _gridPreviewSourceX(i) = CSng(anzeige.Value.X / 100.0 * bw)
                         _gridPreviewSourceY(i) = CSng(anzeige.Value.Y / 100.0 * bh)
@@ -1249,7 +1253,7 @@ Namespace ViewModels
                 Next
             Next
             ApplyNodeWarp(steps, steps, xs, ys,
-                          Sub()
+                          afterApply:=Sub()
                               DisposeLinePreview()
                               _linien.Clear()
                               RaiseLinesChanged()
@@ -1613,20 +1617,28 @@ Namespace ViewModels
         ''' <summary>Dieselben Knoten in ANZEIGE-Prozent, im Format des Rasters:
         ''' [spalten, zeilen, x0, y0, ...]. Punkte ohne Anzeigeort kommen als NaN heraus.</summary>
         Private Function EnvelopeDisplayNodes(steps As Integer) As Double()
-            Dim xs As Double() = Nothing, ys As Double() = Nothing
-            EnvelopeNodes(steps, xs, ys)
-            Dim arr(1 + xs.Length * 2) As Double
+            PrepareEnvelope()
+            Dim arr(1 + (steps + 1) * (steps + 1) * 2) As Double
             arr(0) = steps
             arr(1) = steps
-            For i = 0 To xs.Length - 1
-                Dim display = WarpSpaceToDisplay(xs(i), ys(i))
-                If display.HasValue Then
-                    arr(2 + i * 2) = display.Value.X
-                    arr(3 + i * 2) = display.Value.Y
-                Else
-                    arr(2 + i * 2) = Double.NaN
-                    arr(3 + i * 2) = Double.NaN
-                End If
+            For rowIdx = 0 To steps
+                For colIdx = 0 To steps
+                    Dim i = rowIdx * (steps + 1) + colIdx
+                    ' Nur der sichtbare Bezugsbereich wird in der Vorschau gebraucht. Das
+                    ' gespeicherte Mesh rechnet EnvelopeNodes weiterhin ueber das ganze Original
+                    ' fort; seine ausserhalb des Crops liegenden Knoten haben im Anzeigebild aber
+                    ' keinen Ort und duerfen die Vorschau nicht mehr abbrechen.
+                    Dim u = colIdx / CDbl(steps), v = rowIdx / CDbl(steps)
+                    Dim target = EnvelopePoint(_envelope, u, v)
+                    Dim display = WarpSpaceToDisplay(target.X, target.Y)
+                    If display.HasValue Then
+                        arr(2 + i * 2) = display.Value.X
+                        arr(3 + i * 2) = display.Value.Y
+                    Else
+                        arr(2 + i * 2) = Double.NaN
+                        arr(3 + i * 2) = Double.NaN
+                    End If
+                Next
             Next
             Return arr
         End Function
@@ -1812,7 +1824,7 @@ Namespace ViewModels
             Dim xs As Double() = Nothing, ys As Double() = Nothing
             EnvelopeNodes(EnvelopeSteps, xs, ys)
             ApplyNodeWarp(EnvelopeSteps, EnvelopeSteps, xs, ys,
-                          Sub()
+                          afterApply:=Sub()
                               DisposeGridPreview()
                               ResetEnvelopePoints()
                               RaiseEnvelopeChanged()
@@ -1845,7 +1857,12 @@ Namespace ViewModels
         ' Auswertungsraster. Beide Werkzeuge koennen nie gleichzeitig laufen.
 
         Private Sub PrepareEnvelopePreview()
-            PrepareWarpPreview(EnvelopeSteps, EnvelopeSteps)
+            PrepareEnvelope()
+            Dim rect = CurrentEnvelopeRect()
+            PrepareWarpPreview(EnvelopeSteps, EnvelopeSteps,
+                Function(x As Double, y As Double) WarpSpaceToDisplay(
+                    rect.X + x / 100.0 * rect.Width,
+                    rect.Y + y / 100.0 * rect.Height))
         End Sub
 
         Private Sub RefreshEnvelopePreview()
@@ -1984,6 +2001,49 @@ Namespace ViewModels
             Dim point = DisplayPointThroughObjectWarpGeometry((xPercent - r.X) / r.Width * 100.0,
                                                                (yPercent - r.Y) / r.Height * 100.0)
             Return New SKPoint(CSng(point.X), CSng(point.Y))
+        End Function
+
+        ''' <summary>Der Beschnitt, auf dem ein neu bedientes Bildraster liegt. Die Werte des
+        ''' Rasters bleiben damit immer 0..100, auch wenn der sichtbare Ausschnitt zum Beispiel bei
+        ''' 18..82 Prozent des Originalbilds liegt.</summary>
+        Private Function GridCropRect() As (Left As Double, Top As Double, Width As Double, Height As Double)
+            ' Nicht die momentane Crop-Ansicht abfragen: RAW/PSD/.fpx zeigen beim Zuschneiden
+            ' absichtlich wieder das ganze Original. Das Verzerren-Werkzeug muss trotzdem immer
+            ' den bestaetigten Rezept-Ausschnitt verwenden.
+            Dim crop = EffectiveCrop(fuerAnzeige:=False)
+            Dim width = Math.Max(0.0001, 100.0 - crop.Left - crop.Right)
+            Dim height = Math.Max(0.0001, 100.0 - crop.Top - crop.Bottom)
+            Return (crop.Left, crop.Top, width, height)
+        End Function
+
+        Private Function GridUsesVisibleCropSpace() As Boolean
+            If WarpsTheObject Then Return False
+            Dim crop = GridCropRect()
+            Return crop.Left > 0.0001 OrElse crop.Top > 0.0001 OrElse
+                   crop.Width < 99.9999 OrElse crop.Height < 99.9999
+        End Function
+
+        ''' <summary>Ein Gitterpunkt des lokalen sichtbaren Ausschnitts in die Anzeige. Ohne Crop
+        ''' ist das exakt dieselbe Abbildung wie der allgemeine Verzerrraum.</summary>
+        Private Function GridPointToDisplay(xPercent As Double, yPercent As Double) As SKPoint?
+            If Not GridUsesVisibleCropSpace() Then Return WarpSpaceToDisplay(xPercent, yPercent)
+            Dim crop = GridCropRect()
+            Return SourcePercentToDisplayPercent(
+                crop.Left + xPercent / 100.0 * crop.Width,
+                crop.Top + yPercent / 100.0 * crop.Height)
+        End Function
+
+        ''' <summary>Gegenrichtung zu <see cref="GridPointToDisplay"/>. Ein Zeiger neben dem
+        ''' sichtbaren Bild hat weiterhin keinen gueltigen Rasterpunkt.</summary>
+        Private Function DisplayToGridPoint(xPercent As Double, yPercent As Double) As SKPoint?
+            Dim source = DisplayToWarpSpace(xPercent, yPercent)
+            If Not source.HasValue OrElse Not GridUsesVisibleCropSpace() Then Return source
+            Dim crop = GridCropRect()
+            Dim x = (source.Value.X - crop.Left) / crop.Width * 100.0
+            Dim y = (source.Value.Y - crop.Top) / crop.Height * 100.0
+            If x < -0.01 OrElse x > 100.01 OrElse y < -0.01 OrElse y > 100.01 Then Return Nothing
+            Return New SKPoint(CSng(Math.Max(0.0, Math.Min(100.0, x))),
+                               CSng(Math.Max(0.0, Math.Min(100.0, y))))
         End Function
 
         ''' <summary>Die sichtbare Lage der Objektanfasser: erst eigene Objekttransformation,
@@ -2395,7 +2455,7 @@ Namespace ViewModels
         Public Sub UpdateWarpDrag(xPercent As Double, yPercent As Double,
                                   Optional axisLock As Boolean = False)
             If _warpDragIndex < 0 Then Return
-            Dim source = DisplayToWarpSpace(xPercent, yPercent)
+            Dim source = DisplayToGridPoint(xPercent, yPercent)
             ' Neben dem Bildinhalt (Leinwandrand, leere Begradigungsecke) gibt es keinen Quellpunkt.
             ' Der Zug bleibt dann einfach stehen, statt auf einen geratenen Wert zu springen.
             If Not source.HasValue Then Return
@@ -2475,7 +2535,8 @@ Namespace ViewModels
             PrepareGrid()
             ApplyNodeWarp(_warpColumns, _warpRows,
                           CType(_warpX.Clone(), Double()), CType(_warpY.Clone(), Double()),
-                          Sub()
+                          gridUsesVisibleCropSpace:=GridUsesVisibleCropSpace(),
+                          afterApply:=Sub()
                               DisposeGridPreview()
                               ResetGrid()
                               Me.RaisePropertyChanged(NameOf(WarpGridValues))
@@ -2492,15 +2553,19 @@ Namespace ViewModels
         ''' Verzerrung als Knotenraster ins Rezept geschrieben und laeuft bei jedem Render in der
         ''' Geometriestufe mit - beim naechsten Oeffnen also wieder.</summary>
         Private Sub ApplyNodeWarp(columns As Integer, rows As Integer,
-                                  xs As Double(), ys As Double(), afterApply As Action)
+                                  xs As Double(), ys As Double(),
+                                  Optional gridUsesVisibleCropSpace As Boolean = False,
+                                  Optional afterApply As Action = Nothing)
             If Not HasDocument Then Return
 
             PushUndo()
             ' Die OBJEKTE gehen mit: sie bekommen die Verzerrung als eigene Angabe und bleiben damit
             ' aenderbar - Text laesst sich weiter tippen. Das Bild darunter braucht das nicht mehr,
             ' seine Verzerrung steht ab jetzt im Rezept.
-            ApplyWarpToObjects(NodeMapping(columns, rows, xs, ys))
-            ComposeImageWarp(columns, rows, xs, ys)
+            Dim mapping = NodeMapping(columns, rows, xs, ys)
+            Dim imageMapping = MapGridToImageSpace(mapping, gridUsesVisibleCropSpace)
+            ApplyWarpToObjects(imageMapping)
+            ComposeImageWarp(imageMapping)
             afterApply?.Invoke()
             StatusText = LocalizationService.T("Verzerrung angewendet")
             _hasChanges = True
@@ -2541,16 +2606,35 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
         End Sub
 
+        ''' <summary>Hebt die Bedienkoordinaten eines nach dem Crop geoeffneten Gitters in den
+        ''' unbeschnittenen Bildraum. Ausserhalb des sichtbaren Ausschnitts bleibt die neue
+        ''' Abbildung identisch; dort darf ein Zug im sichtbaren Bild nichts veraendern. Bild und
+        ''' alle mitwandernden Overlay-Objekte erhalten genau diese eine globale Abbildung.</summary>
+        Private Function MapGridToImageSpace(mapping As Func(Of Double, Double, (X As Double, Y As Double)),
+                                              gridUsesVisibleCropSpace As Boolean) As Func(Of Double, Double, (X As Double, Y As Double))
+            If Not gridUsesVisibleCropSpace Then Return mapping
+            Dim crop = GridCropRect()
+            Return Function(x As Double, y As Double) As (X As Double, Y As Double)
+                       Dim localX = (x - crop.Left) / crop.Width * 100.0
+                       Dim localY = (y - crop.Top) / crop.Height * 100.0
+                       If localX < 0 OrElse localX > 100 OrElse localY < 0 OrElse localY > 100 Then
+                           Return (x, y)
+                       End If
+                       Dim target = mapping(localX, localY)
+                       Return (crop.Left + target.X / 100.0 * crop.Width,
+                               crop.Top + target.Y / 100.0 * crop.Height)
+                   End Function
+        End Function
+
         ''' <summary>Das neue Feld auf das vorhandene setzen. Ausgewertet wird auf dem FEINEREN der
         ''' beiden Raster: das gröbere gäbe die Krümmung des feineren nicht wieder.</summary>
-        Private Sub ComposeImageWarp(columns As Integer, rows As Integer, xs As Double(), ys As Double())
+        Private Sub ComposeImageWarp(mapping As Func(Of Double, Double, (X As Double, Y As Double)))
             Dim old = _imageWarp
             ' Das Bedienraster darf grob bleiben, das Rezept nicht: Gitter, Linien und Envelope
             ' werden ausnahmslos in ein 48×48-Auswertungsmesh übernommen. So sieht derselbe
             ' Zug in Vorschau, nach erneutem Öffnen und beim JPEG-/PNG-Export gleich aus.
             Dim steps = MaxImageWarpSteps
 
-            Dim mapping = NodeMapping(columns, rows, xs, ys)
             Dim node((steps + 1) * (steps + 1) * 2 - 1) As Double
             For rowIdx = 0 To steps
                 For colIdx = 0 To steps

@@ -720,12 +720,12 @@ Namespace Services
                 BackupUnreadableSettings()
                 ' Der Stand IST jetzt der leere - und auch er wird gemerkt, sonst laufen alle
                 ' folgenden Aufrufe erneut in dieselbe kaputte Datei.
-                Dim nachSicherung As New AppSettings()
+                Dim afterBackup As New AppSettings()
                 SyncLock _cacheLock
                     _cachedJson = ""
-                    _cachedSettings = nachSicherung
+                    _cachedSettings = afterBackup
                 End SyncLock
-                Return nachSicherung
+                Return afterBackup
             Catch
                 ' Unbekannter Fehler: NICHT merken. Er kann vorübergehend sein (eine Datei, die
                 ' gerade geschrieben wird), und ein gemerkter Leerstand hielte bis zum Neustart.
@@ -953,6 +953,14 @@ Namespace Services
                     _cachedSettings = CloneSettings(settings)
                 End SyncLock
                 ThumbnailCacheService.InvalidateSettingsCache()
+                ' Und der Schalter des Diagnose-Logs mit. Er liegt dort als gemerktes Feld, weil
+                ' JEDE Protokollzeile ihn abfragt - nachgezogen wurde er aber bisher nur von der
+                ' Einstellungsoberflaeche. Wer die Einstellung auf einem anderen Weg aenderte,
+                ' bekam deshalb keine einzige Zeile: das Log blieb stumm, obwohl es eingeschaltet
+                ' war. Hier steht der neue Stand ohnehin fest, also gehoert es hierher - damit
+                ' stimmt der Schalter auf jedem Weg. Nur ein Volatile.Write, kein Load, keine
+                ' Sperre: aus Save heraus in den Protokolldienst zu laufen waere sonst ein Kreis.
+                DiagnosticLogService.RefreshEnabled(settings.EnableDiagnosticLogging)
                 ScheduleWrite(json)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Settings.Save", ex)

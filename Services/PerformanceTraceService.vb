@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Concurrent
 Imports System.Diagnostics
 Imports Avalonia.Threading
@@ -25,14 +25,14 @@ Namespace Services
         End Sub
 
         Private NotInheritable Class Sammlung
-            Public Property Anzahl As Integer
-            Public Property SummeMs As Double
+            Public Property Count As Integer
+            Public Property SumMs As Double
             Public Property MaxMs As Double
         End Class
 
         Private Shared ReadOnly _messungen As New ConcurrentDictionary(Of String, Sammlung)()
         Private Shared ReadOnly _sperre As New Object()
-        Private Shared _letzteAusgabe As DateTime = DateTime.MinValue
+        Private Shared _lastReport As DateTime = DateTime.MinValue
 
         ''' <summary>Wie oft eine Zusammenfassung ins Protokoll geht. Kurz genug, um eine einzelne
         ''' Bewegung wiederzufinden, lang genug, dass das Schreiben nicht selbst zaehlt.</summary>
@@ -54,11 +54,11 @@ Namespace Services
             If Not IsActive OrElse String.IsNullOrEmpty(name) Then Return
             Dim eintrag = _messungen.GetOrAdd(name, Function(k) New Sammlung())
             SyncLock eintrag
-                eintrag.Anzahl += 1
-                eintrag.SummeMs += milliseconds
+                eintrag.Count += 1
+                eintrag.SumMs += milliseconds
                 If milliseconds > eintrag.MaxMs Then eintrag.MaxMs = milliseconds
             End SyncLock
-            AusgabeWennFaellig()
+            ReportWhenDue()
         End Sub
 
         ''' <summary>Was der Anzeigefaden gerade tut, soweit es einen Messpunkt dafuer gibt.
@@ -78,9 +78,9 @@ Namespace Services
             End If
             ' Nur der ANZEIGEFADEN traegt den Marker: der Waechter fragt nach ihm, und ein
             ' Hintergrundfaden wuerde ihn nur ueberschreiben.
-            Dim aufAnzeigefaden = Dispatcher.UIThread.CheckAccess()
+            Dim onUiThread = Dispatcher.UIThread.CheckAccess()
             Dim vorheriger = _currentSection
-            If aufAnzeigefaden Then
+            If onUiThread Then
                 _currentSection = name
                 Threading.Volatile.Write(_sectionStartedTicks, Stopwatch.GetTimestamp())
             End If
@@ -89,7 +89,7 @@ Namespace Services
                 action()
             Finally
                 uhr.Stop()
-                If aufAnzeigefaden Then _currentSection = vorheriger
+                If onUiThread Then _currentSection = vorheriger
                 Record(name, uhr.Elapsed.TotalMilliseconds)
             End Try
         End Sub
@@ -101,9 +101,9 @@ Namespace Services
         Public Shared Function Measure(Of T)(name As String, func As Func(Of T)) As T
             If func Is Nothing Then Return Nothing
             If Not IsActive Then Return func()
-            Dim aufAnzeigefaden = Dispatcher.UIThread.CheckAccess()
+            Dim onUiThread = Dispatcher.UIThread.CheckAccess()
             Dim vorheriger = _currentSection
-            If aufAnzeigefaden Then
+            If onUiThread Then
                 _currentSection = name
                 Threading.Volatile.Write(_sectionStartedTicks, Stopwatch.GetTimestamp())
             End If
@@ -112,16 +112,16 @@ Namespace Services
                 Return func()
             Finally
                 uhr.Stop()
-                If aufAnzeigefaden Then _currentSection = vorheriger
+                If onUiThread Then _currentSection = vorheriger
                 Record(name, uhr.Elapsed.TotalMilliseconds)
             End Try
         End Function
 
-        Private Shared Sub AusgabeWennFaellig()
+        Private Shared Sub ReportWhenDue()
             Dim jetzt = DateTime.UtcNow
             SyncLock _sperre
-                If (jetzt - _letzteAusgabe).TotalSeconds < AusgabeIntervallSekunden Then Return
-                _letzteAusgabe = jetzt
+                If (jetzt - _lastReport).TotalSeconds < AusgabeIntervallSekunden Then Return
+                _lastReport = jetzt
             End SyncLock
             Flush()
         End Sub
@@ -134,8 +134,8 @@ Namespace Services
             Dim teile As New List(Of String)()
             For Each name In _messungen.Keys.OrderBy(Function(k) k).ToList()
                 Dim eintrag As Sammlung = Nothing
-                If Not _messungen.TryRemove(name, eintrag) OrElse eintrag Is Nothing OrElse eintrag.Anzahl = 0 Then Continue For
-                teile.Add($"{name}: {eintrag.Anzahl}x, Mittel {eintrag.SummeMs / eintrag.Anzahl:F1} ms, max {eintrag.MaxMs:F1} ms")
+                If Not _messungen.TryRemove(name, eintrag) OrElse eintrag Is Nothing OrElse eintrag.Count = 0 Then Continue For
+                teile.Add($"{name}: {eintrag.Count}x, Mittel {eintrag.SumMs / eintrag.Count:F1} ms, max {eintrag.MaxMs:F1} ms")
             Next
             If teile.Count = 0 Then Return
             DiagnosticLogService.LogAlways("Messung", String.Join(" | ", teile))

@@ -431,7 +431,14 @@ Namespace ViewModels
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
             Await _depthGate.WaitAsync()
+            ' Sobald der Commit unterwegs ist, gehoeren Abbruchkreuz und Gate IHM - siehe unten.
+            Dim commitEnqueued = False
             Try
+                ' Dieselbe Abbruchmarke wie Entrauschen und Objektentfernen: die Tiefenkarte kann
+                ' zwar einen laufenden ONNX-Aufruf nicht mitten darin unterbrechen, aber danach
+                ' und in jedem Blur-Schritt wird sie gelesen. Ein abgebrochener Lauf darf nie
+                ' auch nur einen Teil ins Arbeitsbild schreiben.
+                Dim cancel = BeginCancellableBusy()
                 _depthRunning = True
                 Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
                     RefreshBusyState()
@@ -446,7 +453,7 @@ Namespace ViewModels
                         Function()
                             Using fertig = ImageProcessor.RenderDisplayImage(sourcePath, rezept, workingImage)
                                 If fertig Is Nothing Then Return Nothing
-                                Return DepthMapService.Compute(fertig)
+                                Return DepthMapService.Compute(fertig, cancel)
                             End Using
                         End Function)
                 Finally
@@ -455,7 +462,18 @@ Namespace ViewModels
                     RefreshBusyState()
                 End Try
                 If map Is Nothing Then
-                    StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
+                    Dim cancelled = BusyWasCancelled()
+                    EndCancellableBusy()
+                    StatusText = LocalizationService.T(If(cancelled,
+                                                          "Tiefenunschärfe abgebrochen - das Bild ist unverändert",
+                                                          "Tiefe konnte nicht berechnet werden"))
+                    Return
+                End If
+
+                If cancel.IsCancellationRequested Then
+                    map.Dispose()
+                    EndCancellableBusy()
+                    StatusText = LocalizationService.T("Tiefenunschärfe abgebrochen - das Bild ist unverändert")
                     Return
                 End If
 
@@ -465,6 +483,7 @@ Namespace ViewModels
                 PushUndo()
                 ' Der Schritt zurueck merkt sich nur das Rezept - der Flicken traegt die PIXEL.
                 Dim undoItem = _lastPushedUndoEntry
+                Dim bokehApplied = False
                 StatusText = LocalizationService.T("Unschärfe wird angewendet…")
                 SetBusyReason(LocalizationService.T("Unschärfe wird angewendet"))
                 EnqueueWorkingCommit(
@@ -472,20 +491,34 @@ Namespace ViewModels
                         Return _workingImage.CommitRegion(New SKRectI(0, 0, _workingImage.FullWidth, _workingImage.FullHeight),
                             Sub(full)
                                 Using unscharf = DepthMapService.DepthBlur(full, map, from, bis,
-                                                                                    strength, uebergang, corners, lichter)
-                                    If unscharf Is Nothing Then Return
+                                                                                    strength, uebergang, corners, lichter, cancel)
+                                    If unscharf Is Nothing Then
+                                        cancel.ThrowIfCancellationRequested()
+                                        Return
+                                    End If
+                                    cancel.ThrowIfCancellationRequested()
                                     Using canvas = New SKCanvas(full)
                                         canvas.Clear(SKColors.Transparent)
                                         Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
                                             canvas.DrawBitmap(unscharf, 0, 0, paint)
                                         End Using
+                                        ' Erst NACH dem Zeichnen: nur dann stehen die Pixel wirklich
+                                        ' im Arbeitsbild, und nur dann darf der Abschluss unten den
+                                        ' Vorgang als gelungen melden.
+                                        bokehApplied = True
                                     End Using
                                 End Using
                             End Sub)
                     End Function,
                     Sub(patch)
                         map.Dispose()
-                        If patch Is Nothing Then
+                        Dim cancelled = BusyWasCancelled()
+                        EndCancellableBusy()
+                        If cancelled Then
+                            StatusText = LocalizationService.T("Tiefenunschärfe abgebrochen - das Bild ist unverändert")
+                            Return
+                        End If
+                        If patch Is Nothing OrElse Not bokehApplied Then
                             StatusText = LocalizationService.T("Unschärfe fehlgeschlagen")
                             Return
                         End If
@@ -494,9 +527,34 @@ Namespace ViewModels
                         DisposeBokehPreview()
                         StatusText = LocalizationService.T("Unschärfe angewendet")
                         SchedulePreviewUpdate()
-                    End Sub)
+                    End Sub,
+                    onAlwaysUi:=Sub()
+                                    ' ERST HIER, nicht beim Einreihen. EnqueueWorkingCommit kehrt
+                                    ' sofort zurueck, der Blur laeuft danach noch. Lag das Aufraeumen
+                                    ' im Finally unten, verschwand das Abbruchkreuz sofort, der Token
+                                    ' war ueber RequestBusyCancel nicht mehr erreichbar, und
+                                    ' BusyWasCancelled im Abschluss lieferte zwangslaeufig False -
+                                    ' die Tiefenunschaerfe war waehrend ihres teuersten Teils gar
+                                    ' nicht mehr abbrechbar (Reviewbefund 2026-08-28). Das Gate wurde
+                                    ' aus demselben Grund zu frueh frei, und zwar schon vorher.
+                                    ' onAlwaysUi laeuft auch, wenn der Commit verfaellt - sonst
+                                    ' bliebe die Sperre fuer immer zu.
+                                    EndCancellableBusy()
+                                    _depthGate.Release()
+                                End Sub)
+                commitEnqueued = True
+            Catch ex As OperationCanceledException
+                ' Ein Abbruch ist kein Fehler und soll auch nicht als einer aus dieser Methode
+                ' herausfliegen: sie laeuft als Task, und dort wuerde niemand ihn lesen.
+                StatusText = LocalizationService.T("Tiefenunschärfe abgebrochen - das Bild ist unverändert")
             Finally
-                _depthGate.Release()
+                ' NUR wenn der Commit gar nicht erst eingereiht wurde. Ist er unterwegs, gehoert das
+                ' Aufraeumen ihm - siehe onAlwaysUi oben. Ohne diese Weiche liefe beides doppelt:
+                ' EndCancellableBusy vertraegt das, ein zweites Release des Gates aber nicht.
+                If Not commitEnqueued Then
+                    EndCancellableBusy()
+                    _depthGate.Release()
+                End If
             End Try
         End Function
         ' ── Maske nach Tiefe ────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ Imports Avalonia.Threading
 Imports Avalonia.Vector
 Imports Avalonia.VisualTree
 Imports FerrumPix.Controls
+Imports FerrumPix.Controls.EditorPanels
 Imports FerrumPix.Models
 Imports FerrumPix.Services
 Imports FerrumPix.ViewModels
@@ -965,6 +966,14 @@ Namespace Views
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("EditorRootGrid"), AddressOf OnContextRequested)
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnEditorKeyDownTunnel, RoutingStrategies.Tunnel)
+            ' Der Tunnel sieht Pointer auch dann, wenn RoundSlider sie fuer seinen eigenen Zug
+            ' behandelt. Der Zoom-Regler ist reine Ansicht und bleibt davon ausgeschlossen.
+            Me.AddHandler(InputElement.PointerPressedEvent, AddressOf OnRoundSliderPreviewPressed,
+                          RoutingStrategies.Tunnel, handledEventsToo:=True)
+            Me.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnRoundSliderPreviewReleased,
+                          RoutingStrategies.Tunnel, handledEventsToo:=True)
+            Me.AddHandler(InputElement.PointerCaptureLostEvent, AddressOf OnRoundSliderPreviewCaptureLost,
+                          RoutingStrategies.Tunnel, handledEventsToo:=True)
             ' Tunnel direkt auf dem Text-Overlay-Editor: siehe OnTextOverlayEditorKeyDown.
             Me.FindControl(Of TextBox)("TextOverlayEditor")?.AddHandler(InputElement.KeyDownEvent, AddressOf OnTextOverlayEditorKeyDown, RoutingStrategies.Tunnel)
             AddHandler Loaded, Sub(s, e)
@@ -997,6 +1006,80 @@ Namespace Views
                                                    End Sub
                 End If
             End Sub
+        End Sub
+
+        ''' <summary>Was dieser Regler fuer die Vorschau bedeutet.</summary>
+        Private Enum SliderKind
+            ''' Keine Bildkorrektur - Werkzeug- oder Objektregler. Die Live-Vorschau bleibt aus.
+            None = 0
+            ''' Bildkorrektur, deren Wirkung NICHT am Bildmassstab haengt.
+            Adjustment = 1
+            ''' Bildkorrektur, die in Bildpunkten rechnet.
+            ScaleSensitive = 2
+        End Enum
+
+        ''' <summary>Eine WEISSLISTE der Korrektur-Panels, keine Ausnahme fuer den Zoom-Regler.
+        '''
+        ''' <para>Vorher galt "jeder RoundSlider ausser dem Zoom", und damit starteten auch reine
+        ''' Werkzeug- und Objektregler den Aufbau der verkleinerten Quelle und erzwangen beim
+        ''' Loslassen einen vollen Render - die Pinselgroesse der Auswahl, die Griffe des Rahmens,
+        ''' die Eigenschaften eines Objekts. Die aendern gar keine Bildkorrektur; die Last war
+        ''' umsonst, und waehrend des Zugs konnte die Vorschau kurz weicher werden.</para>
+        '''
+        ''' <para>Panelweise und nicht reglerweise: eine Liste einzelner Regler wuerde beim
+        ''' naechsten neuen Regler still falsch. Wer ein Korrektur-Panel hinzufuegt, traegt es
+        ''' hier ein - sonst bleibt seine Vorschau beim alten, langsameren Verhalten, was der
+        ''' harmlose Fehler von beiden ist.</para></summary>
+        Private Function ClassifySlider(source As Object) As SliderKind
+            ' Die Tonwertkurve ist kein RoundSlider, aber dieselbe Sache: sie rechnet je Bildpunkt.
+            If TypeOf source Is CurveEditor Then Return SliderKind.Adjustment
+            Dim slider = TryCast(source, RoundSlider)
+            If slider Is Nothing Then Return SliderKind.None
+            ' MASSSTABSABHAENGIG zuerst, denn ein Panel kann nur eines von beidem sein: Schaerfe,
+            ' Rauschen, Klarheit/Struktur/Staub-Kratzer, Koernung, Bokeh und die Objektivkorrektur
+            ' rechnen in BILDPUNKTEN. Verkleinert man die Quelle, wirkt derselbe Reglerwert auf
+            ' einen anderen Bildausschnitt, und die Vorschau zeigt etwas anderes als das Ergebnis.
+            ' Ein groesserer Zwischenwert half nicht (Patrick am 2026-08-28: auch 2304 war noch
+            ' verfaelschend) - "gross genug" gibt es hier nicht, nur die Vorschauaufloesung selbst.
+            '
+            ' Danach die uebrigen Korrekturen: Licht, Farbe, Farbmischer, Farbgradierung,
+            ' Kalibrierung, Filmnegativ, Filter und LUT rechnen je Bildpunkt, ein verkleinertes
+            ' Bild zeigt dasselbe Ergebnis mit weniger Punkten. Die Tonwertkurve gehoert dazu, wird
+            ' aber oben ueber ihren eigenen Typ erkannt.
+            For Each ancestor In slider.GetVisualAncestors()
+                If TypeOf ancestor Is SharpnessPanel OrElse TypeOf ancestor Is NoisePanel OrElse
+                   TypeOf ancestor Is DetailsPanel OrElse TypeOf ancestor Is EffectsPanel OrElse
+                   TypeOf ancestor Is BokehPanel OrElse TypeOf ancestor Is LensCorrectionPanel Then
+                    Return SliderKind.ScaleSensitive
+                End If
+                If TypeOf ancestor Is LightPanel OrElse TypeOf ancestor Is ColorPanel OrElse
+                   TypeOf ancestor Is HslPanel OrElse TypeOf ancestor Is ColorGradingPanel OrElse
+                   TypeOf ancestor Is CalibrationPanel OrElse TypeOf ancestor Is FilmNegativePanel OrElse
+                   TypeOf ancestor Is FilterPanel OrElse TypeOf ancestor Is LutPresetPanel Then
+                    Return SliderKind.Adjustment
+                End If
+            Next
+            Return SliderKind.None
+        End Function
+
+
+        Private Sub OnRoundSliderPreviewPressed(sender As Object, e As PointerPressedEventArgs)
+            Dim art = ClassifySlider(e.Source)
+            If art = SliderKind.None Then Return
+            Dim control = TryCast(e.Source, InputElement)
+            If control Is Nothing OrElse Not e.GetCurrentPoint(control).Properties.IsLeftButtonPressed Then Return
+            TryCast(DataContext, EditorViewModel)?.BeginSliderPreviewDrag(
+                scaleSensitive:=(art = SliderKind.ScaleSensitive))
+        End Sub
+
+        Private Sub OnRoundSliderPreviewReleased(sender As Object, e As PointerReleasedEventArgs)
+            If ClassifySlider(e.Source) = SliderKind.None Then Return
+            TryCast(DataContext, EditorViewModel)?.EndSliderPreviewDrag()
+        End Sub
+
+        Private Sub OnRoundSliderPreviewCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            If ClassifySlider(e.Source) = SliderKind.None Then Return
+            TryCast(DataContext, EditorViewModel)?.EndSliderPreviewDrag()
         End Sub
 
         ''' <summary>Fenster-Tunnel: diese Kürzel müssen auch dann noch greifen, wenn zuvor ein
