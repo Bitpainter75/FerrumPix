@@ -492,12 +492,12 @@ Namespace Services
             Try
                 Dim verzeichnisse = MetadataExtractor.ImageMetadataReader.ReadMetadata(path)
                 Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
-                Dim sub0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)().FirstOrDefault()
+                Dim subIfds = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory)().ToList()
                 Dim maker = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake), "")
                 Dim modell = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel), "")
-                Dim lens = If(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel), "")
-                Dim brennweite = FirstNumber(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
-                Dim blende = FirstNumber(sub0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
+                Dim lens = FirstNonBlankDescription(subIfds, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagLensModel)
+                Dim brennweite = FirstNumber(FirstNonBlankDescription(subIfds, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFocalLength))
+                Dim blende = FirstNumber(FirstNonBlankDescription(subIfds, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagFNumber))
                 Dim width = 0, height = 0
                 For Each d In verzeichnisse
                     Dim w = d.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageWidth)
@@ -557,6 +557,16 @@ Namespace Services
 
         Private Shared ReadOnly _dateiCacheLock As New Object()
         Private Shared ReadOnly _dateiCache As New Dictionary(Of String, Korrektur)(StringComparer.Ordinal)
+
+        ''' <summary> Traverses multiple exif sub-IFDs</summary>
+        Private Shared Function FirstNonBlankDescription(
+                dirs As List(Of MetadataExtractor.Formats.Exif.ExifSubIfdDirectory), tagType As Integer) As String
+            For Each d In dirs
+                Dim desc = d.GetDescription(tagType)
+                If Not String.IsNullOrWhiteSpace(desc) Then Return desc
+            Next
+            Return ""
+        End Function
 
         ''' <summary>Die erste Zahl aus einem EXIF-Text ("70 mm", "f/5,6"). Die Beschreibungen sind
         ''' bereits nach der Anzeigesprache formatiert, deshalb zaehlen Punkt UND Komma als
