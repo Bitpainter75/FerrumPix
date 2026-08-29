@@ -7716,4 +7716,7 @@
   <data name="0_Eintr_ge_ohne_Datei_48204d32" xml:space="preserve">
     <value>{0} oppføringer uten fil</value>
   </data>
+  <data name="LUT_80cf900e" xml:space="preserve">
+    <value>LUT</value>
+  </data>
 </root>

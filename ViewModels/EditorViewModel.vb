@@ -7975,13 +7975,16 @@ Namespace ViewModels
 
         ''' KAMERAKALIBRIERUNG: dreht und saettigt die Primaerfarben, wirkt vor Weissabgleich und
         ''' Saettigung. Macht einen guten Teil des Farbstichs importierter Presets aus.
+        ''' <summary>Die sieben Regler der KALIBRIERUNG gehen ueber denselben Weg wie jeder andere
+        ''' Regler (<see cref="SetUndoableDouble"/>). Vorher schrieben sie nur ihren Wert und stiessen
+        ''' die Vorschau an: es gab keinen Rueckgaengig-Punkt, Strg+Z ging an ihnen vorbei, und in
+        ''' der Historie stand nichts (Nutzerbefund 2026-08-29).</summary>
         Public Property CalibrationRedHue As Double
             Get
                 Return _calibrationRedHue
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_calibrationRedHue, Math.Max(-100, Math.Min(100, value)))
-                SchedulePreviewUpdate()
+                SetUndoableDouble(_calibrationRedHue, Math.Max(-100, Math.Min(100, value)), NameOf(CalibrationRedHue))
             End Set
         End Property
 
@@ -7990,8 +7993,7 @@ Namespace ViewModels
                 Return _calibrationRedSaturation
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_calibrationRedSaturation, Math.Max(-100, Math.Min(100, value)))
-                SchedulePreviewUpdate()
+                SetUndoableDouble(_calibrationRedSaturation, Math.Max(-100, Math.Min(100, value)), NameOf(CalibrationRedSaturation))
             End Set
         End Property
 
@@ -8000,8 +8002,7 @@ Namespace ViewModels
                 Return _calibrationGreenHue
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_calibrationGreenHue, Math.Max(-100, Math.Min(100, value)))
-                SchedulePreviewUpdate()
+                SetUndoableDouble(_calibrationGreenHue, Math.Max(-100, Math.Min(100, value)), NameOf(CalibrationGreenHue))
             End Set
         End Property
 
@@ -8010,8 +8011,7 @@ Namespace ViewModels
                 Return _calibrationGreenSaturation
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_calibrationGreenSaturation, Math.Max(-100, Math.Min(100, value)))
-                SchedulePreviewUpdate()
+                SetUndoableDouble(_calibrationGreenSaturation, Math.Max(-100, Math.Min(100, value)), NameOf(CalibrationGreenSaturation))
             End Set
         End Property
 
@@ -8020,8 +8020,7 @@ Namespace ViewModels
                 Return _calibrationBlueHue
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_calibrationBlueHue, Math.Max(-100, Math.Min(100, value)))
-                SchedulePreviewUpdate()
+                SetUndoableDouble(_calibrationBlueHue, Math.Max(-100, Math.Min(100, value)), NameOf(CalibrationBlueHue))
             End Set
         End Property
 
@@ -8030,8 +8029,7 @@ Namespace ViewModels
                 Return _calibrationBlueSaturation
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_calibrationBlueSaturation, Math.Max(-100, Math.Min(100, value)))
-                SchedulePreviewUpdate()
+                SetUndoableDouble(_calibrationBlueSaturation, Math.Max(-100, Math.Min(100, value)), NameOf(CalibrationBlueSaturation))
             End Set
         End Property
 
@@ -8040,8 +8038,7 @@ Namespace ViewModels
                 Return _calibrationShadowTint
             End Get
             Set(value As Double)
-                Me.RaiseAndSetIfChanged(_calibrationShadowTint, Math.Max(-100, Math.Min(100, value)))
-                SchedulePreviewUpdate()
+                SetUndoableDouble(_calibrationShadowTint, Math.Max(-100, Math.Min(100, value)), NameOf(CalibrationShadowTint))
             End Set
         End Property
 
@@ -17054,9 +17051,42 @@ Namespace ViewModels
                 Case NameOf(SharpenRadius) : Return CombineHistoryLabel("Schärfe", "Radius")
                 Case NameOf(SharpenDetail) : Return CombineHistoryLabel("Schärfe", "Detail")
                 Case NameOf(SharpenMasking) : Return CombineHistoryLabel("Schärfe", "Maskierung")
-                Case NameOf(NoiseReduction) : Return LocalizationService.T("Rauschen")
-                Case NameOf(NoiseReductionDetail) : Return CombineHistoryLabel("Rauschen", "Detail")
-                Case NameOf(NoiseReductionMethodLabel) : Return CombineHistoryLabel("Rauschen", "Methode")
+                ' Die Wortlaute sind die der Panels: der Regler NoiseReduction heisst dort
+                ' "Weichzeichnen", "Rauschen" ist der Regler, der welches HINZUFUEGT.
+                Case NameOf(NoiseReduction) : Return LocalizationService.T("Weichzeichnen")
+                Case NameOf(NoiseReductionDetail) : Return CombineHistoryLabel("Weichzeichnen", "Detail")
+                Case NameOf(NoiseReductionMethodLabel) : Return CombineHistoryLabel("Weichzeichnen", "Methode")
+                Case NameOf(AddNoise) : Return LocalizationService.T("Rauschen")
+                Case NameOf(ColorNoiseReduction), NameOf(ColorNoiseAdd) : Return LocalizationService.T("Farbrauschen")
+                Case NameOf(FarbrauschGrob) : Return LocalizationService.T("Farbflecken")
+                Case NameOf(ColorNoiseCoarseScale) : Return LocalizationService.T("Fleckengröße")
+                Case NameOf([Structure]) : Return LocalizationService.T("Struktur")
+                Case NameOf(Haze) : Return LocalizationService.T("Dunst")
+                Case NameOf(DustScratches) : Return LocalizationService.T("Staub/Kratzer")
+                Case NameOf(Glow) : Return LocalizationService.T("Glühen")
+                ' FARBGRADIERUNG: die Zone ist der Regler. Farbton, Saettigung und Helligkeit einer
+                ' Zone gehoeren zu EINEM Rad; sie einzeln zu benennen hiesse, denselben Handgriff in
+                ' drei Namen zu zerlegen.
+                Case NameOf(ColorGradeShadowHue), NameOf(ColorGradeShadowSaturation), NameOf(ColorGradeShadowLuminance)
+                    Return CombineHistoryLabel("Farbgradierung", "Schatten")
+                Case NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance)
+                    Return CombineHistoryLabel("Farbgradierung", "Mitten")
+                Case NameOf(ColorGradeHighlightHue), NameOf(ColorGradeHighlightSaturation), NameOf(ColorGradeHighlightLuminance)
+                    Return CombineHistoryLabel("Farbgradierung", "Lichter")
+                Case NameOf(ColorGradeGlobalHue), NameOf(ColorGradeGlobalSaturation), NameOf(ColorGradeGlobalLuminance)
+                    Return CombineHistoryLabel("Farbgradierung", "Global")
+                Case NameOf(ColorGradeBalance) : Return CombineHistoryLabel("Farbgradierung", "Balance")
+                Case NameOf(ColorGradeBlending) : Return CombineHistoryLabel("Farbgradierung", "Überblendung")
+                Case NameOf(CalibrationRedHue) : Return CombineHistoryLabel("Kalibrierung", "Rot Farbton")
+                Case NameOf(CalibrationRedSaturation) : Return CombineHistoryLabel("Kalibrierung", "Rot Sättigung")
+                Case NameOf(CalibrationGreenHue) : Return CombineHistoryLabel("Kalibrierung", "Grün Farbton")
+                Case NameOf(CalibrationGreenSaturation) : Return CombineHistoryLabel("Kalibrierung", "Grün Sättigung")
+                Case NameOf(CalibrationBlueHue) : Return CombineHistoryLabel("Kalibrierung", "Blau Farbton")
+                Case NameOf(CalibrationBlueSaturation) : Return CombineHistoryLabel("Kalibrierung", "Blau Sättigung")
+                Case NameOf(CalibrationShadowTint) : Return CombineHistoryLabel("Kalibrierung", "Tiefen Tönung")
+                Case NameOf(LutPath) : Return LocalizationService.T("LUT")
+                Case NameOf(LutStrength) : Return CombineHistoryLabel("LUT", "Stärke")
+                Case NameOf(LensAssignment) : Return LocalizationService.T("Objektivkorrektur")
                 Case NameOf(Vignette) : Return CombineHistoryLabel("Vignette", "Stärke")
                 Case NameOf(VignetteTransition) : Return CombineHistoryLabel("Vignette", "Übergang")
                 Case NameOf(VignetteRoundness) : Return CombineHistoryLabel("Vignette", "Rundheit")
@@ -17071,24 +17101,25 @@ Namespace ViewModels
                     Return LocalizationService.T("Zuschneiden")
                 Case NameOf(ResizeWidth), NameOf(ResizeHeight), NameOf(LockResizeAspect), NameOf(ResizeInterpolationLabel)
                     Return LocalizationService.T("Bildgröße")
-                Case NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor)
+                Case NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor),
+                     NameOf(CanvasAnchor)
                     Return LocalizationService.T("Leinwandgröße")
                 Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)
                     Return LocalizationService.T("Gerade richten")
                 Case "Tonwertkurve"
                     Return LocalizationService.T("Tonwertkurve")
-                Case NameOf(RedHue), NameOf(RedSaturation), NameOf(OrangeHue), NameOf(OrangeSaturation),
-                     NameOf(YellowHue), NameOf(YellowSaturation), NameOf(GreenHue), NameOf(GreenSaturation),
-                     NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
-                     NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation)
+                ' DER FARBMISCHER bleibt bei seinem Gruppennamen: die 24 Baender sind dreimal acht
+                ' Regler derselben Bedienung, und "Aqua Helligkeit" saehe in der Liste aus wie ein
+                ' eigenes Werkzeug.
+                Case NameOf(RedHue), NameOf(RedSaturation), NameOf(RedLuminance),
+                     NameOf(OrangeHue), NameOf(OrangeSaturation), NameOf(OrangeLuminance),
+                     NameOf(YellowHue), NameOf(YellowSaturation), NameOf(YellowLuminance),
+                     NameOf(GreenHue), NameOf(GreenSaturation), NameOf(GreenLuminance),
+                     NameOf(AquaHue), NameOf(AquaSaturation), NameOf(AquaLuminance),
+                     NameOf(BlueHue), NameOf(BlueSaturation), NameOf(BlueLuminance),
+                     NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
+                     NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance)
                     Return LocalizationService.T("Farbmischer")
-                Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(NoiseReduction),
-                     NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
-                    Return LocalizationService.T("Details")
-                Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
-                     NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
-                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(GrainColor)
-                    Return LocalizationService.T("Effekte")
                 Case NameOf(FilterPreset)
                     Return LocalizationService.T("Filter")
                 Case NameOf(FilterStrength)
@@ -17166,16 +17197,42 @@ Namespace ViewModels
                 Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
                     Return outline & "crop.svg"
                 Case NameOf(ResizeWidth), NameOf(ResizeHeight), NameOf(LockResizeAspect), NameOf(ResizeInterpolationLabel),
-                     NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor)
+                     NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor),
+                     NameOf(CanvasAnchor)
                     Return outline & "aspect-ratio.svg"
+                ' Farbgradierung und Kalibrierung sind Farbwerkzeuge und tragen dessen Symbol.
+                Case NameOf(ColorGradeShadowHue), NameOf(ColorGradeShadowSaturation), NameOf(ColorGradeShadowLuminance),
+                     NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance),
+                     NameOf(ColorGradeHighlightHue), NameOf(ColorGradeHighlightSaturation), NameOf(ColorGradeHighlightLuminance),
+                     NameOf(ColorGradeGlobalHue), NameOf(ColorGradeGlobalSaturation), NameOf(ColorGradeGlobalLuminance),
+                     NameOf(ColorGradeBalance), NameOf(ColorGradeBlending),
+                     NameOf(CalibrationRedHue), NameOf(CalibrationRedSaturation),
+                     NameOf(CalibrationGreenHue), NameOf(CalibrationGreenSaturation),
+                     NameOf(CalibrationBlueHue), NameOf(CalibrationBlueSaturation),
+                     NameOf(CalibrationShadowTint)
+                    Return outline & "color-filter.svg"
+                Case NameOf([Structure]), NameOf(Haze), NameOf(DustScratches), NameOf(Glow),
+                     NameOf(AddNoise), NameOf(ColorNoiseReduction), NameOf(ColorNoiseAdd),
+                     NameOf(FarbrauschGrob), NameOf(ColorNoiseCoarseScale)
+                    Return outline & "adjustments.svg"
+                Case NameOf(LutPath), NameOf(LutStrength)
+                    Return outline & "palette.svg"
+                Case NameOf(LensAssignment)
+                    Return outline & "aperture.svg"
                 Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)
                     Return outline & "rotate-2.svg"
                 Case "Tonwertkurve"
                     Return outline & "chart-line.svg"
-                Case NameOf(RedHue), NameOf(RedSaturation), NameOf(OrangeHue), NameOf(OrangeSaturation),
-                     NameOf(YellowHue), NameOf(YellowSaturation), NameOf(GreenHue), NameOf(GreenSaturation),
-                     NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
-                     NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation),
+                ' Alle 24 Baender des Farbmischers, also auch die HELLIGKEIT: sie tragen denselben
+                ' Namen wie Farbton und Saettigung und muessen deshalb dasselbe Symbol tragen.
+                Case NameOf(RedHue), NameOf(RedSaturation), NameOf(RedLuminance),
+                     NameOf(OrangeHue), NameOf(OrangeSaturation), NameOf(OrangeLuminance),
+                     NameOf(YellowHue), NameOf(YellowSaturation), NameOf(YellowLuminance),
+                     NameOf(GreenHue), NameOf(GreenSaturation), NameOf(GreenLuminance),
+                     NameOf(AquaHue), NameOf(AquaSaturation), NameOf(AquaLuminance),
+                     NameOf(BlueHue), NameOf(BlueSaturation), NameOf(BlueLuminance),
+                     NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
+                     NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
                      NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint)
                     Return outline & "color-filter.svg"
                 Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(NoiseReduction),
