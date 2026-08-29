@@ -108,7 +108,7 @@ Namespace ViewModels
             SelectedAnnotationIndex = _annotations.Count - 1
             _hasChanges = True
             RaiseResetButtonStateChanged()
-            AddHistoryEntry(LocalizationService.T("Malebene angelegt"))
+            NameHistoryStep(LocalizationService.T("Malebene angelegt"))
             RefreshPreviewImmediately()
         End Sub
 
@@ -378,7 +378,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseAnnotationMaskStateChanged()
             RebuildLayerRows()
-            AddHistoryEntry(LocalizationService.T("Radiert"))
+            NameHistoryStep(LocalizationService.T("Radiert"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
             Return True
         End Function
@@ -459,7 +459,7 @@ Namespace ViewModels
             If Object.ReferenceEquals(target, CurrentObject()) Then RefreshObjectAdjustMode()
             RebuildLayerRows()
             RaiseResetButtonStateChanged()
-            AddHistoryEntry(LocalizationService.T("Anpassungen der Ebene verworfen"))
+            NameHistoryStep(LocalizationService.T("Anpassungen der Ebene verworfen"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
         End Sub
 
@@ -542,7 +542,9 @@ Namespace ViewModels
             CurrentTool = EditorTool.Selection
             SelectionMode = "Move"
             SelectedAnnotationIndex = -1
-            AddHistoryEntry(LocalizationService.T("Auswahl aus Ebene"))
+            ' KEIN Historien-Schritt: die Auswahl aus der Ebene zu holen setzt keinen
+            ' Rueckgaengig-Punkt (ApplySelectionCandidate sichert nichts), es gaebe also keinen
+            ' Schritt, den der Name meinen koennte.
             Return True
         End Function
 

@@ -1220,7 +1220,7 @@ Namespace ViewModels
             RaisePathOverlayChanged()
             RebuildLayerRows()
             RaiseResetButtonStateChanged()
-            AddHistoryEntry(LocalizationService.T("Text auf den Pfad gesetzt"))
+            NameHistoryStep(LocalizationService.T("Text auf den Pfad gesetzt"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(text))
         End Sub
 
@@ -1303,7 +1303,7 @@ Namespace ViewModels
             RebuildLayerRows()
             RaiseResetButtonStateChanged()
             StatusText = LocalizationService.T("Pfade verbunden")
-            AddHistoryEntry(LocalizationService.T("Pfade verbunden"))
+            NameHistoryStep(LocalizationService.T("Pfade verbunden"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(first))
         End Sub
 
@@ -1399,7 +1399,7 @@ Namespace ViewModels
             SelectionMode = "Move"
             SelectedAnnotationIndex = -1
             StatusText = LocalizationService.T("Auswahl aus dem Pfad erstellt")
-            AddHistoryEntry(LocalizationService.T("Auswahl aus dem Pfad erstellt"))
+            NameHistoryStep(LocalizationService.T("Auswahl aus dem Pfad erstellt"))
         End Sub
 
         ''' <summary>Dreht einen Punkt in ANZEIGE-Prozent um einen Mittelpunkt.
@@ -2118,7 +2118,7 @@ Namespace ViewModels
                     ' Zwei verschiedene Vorgänge landen hier: die Grundlinie eines Textes entsteht,
                     ' oder ein vorhandener Pfad wurde weitergezeichnet. Im Verlauf soll stehen, was
                     ' wirklich passiert ist.
-                    AddHistoryEntry(If(String.Equals(NormalizeAnnotationKind(target.Kind), "Path", StringComparison.Ordinal),
+                    NameHistoryStep(If(String.Equals(NormalizeAnnotationKind(target.Kind), "Path", StringComparison.Ordinal),
                                        LocalizationService.T("Pfad weitergezeichnet"),
                                        LocalizationService.T("Grundlinie gesetzt")))
                     RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(target))
@@ -2189,7 +2189,7 @@ Namespace ViewModels
             RaisePathOverlayChanged()
             RebuildLayerRows()
             RaiseResetButtonStateChanged()
-            AddHistoryEntry(LocalizationService.T("Pfad gezeichnet"))
+            NameHistoryStep(LocalizationService.T("Pfad gezeichnet"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(annotation))
         End Sub
     End Class

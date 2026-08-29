@@ -263,6 +263,15 @@ Namespace Controls
         Protected Overrides Sub OnPointerMoved(e As PointerEventArgs)
             MyBase.OnPointerMoved(e)
             If _draggingIndex < 0 Then Return
+
+            ' Siehe RoundSlider: beim Zeichenstift kann das Loslassen ausbleiben, wenn der Stift das
+            ' Tablett verlaesst. Ohne diese Pruefung zog der zuletzt angefasste Kurvenpunkt danach
+            ' bei jeder Zeigerbewegung mit.
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
+                EndDrag(e.Pointer)
+                Return
+            End If
+
             Dim pts = Points
             If pts Is Nothing OrElse _draggingIndex >= pts.Count Then Return
 
@@ -287,8 +296,19 @@ Namespace Controls
 
         Protected Overrides Sub OnPointerReleased(e As PointerReleasedEventArgs)
             MyBase.OnPointerReleased(e)
+            EndDrag(e.Pointer)
+        End Sub
+
+        Protected Overrides Sub OnPointerCaptureLost(e As PointerCaptureLostEventArgs)
+            MyBase.OnPointerCaptureLost(e)
+            EndDrag(e.Pointer)
+        End Sub
+
+        ''' <summary>Beendet das Ziehen eines Kurvenpunktes. Der Fang wird nur freigegeben, solange er
+        ''' noch bei diesem Editor liegt.</summary>
+        Private Sub EndDrag(pointer As IPointer)
             _draggingIndex = -1
-            e.Pointer.Capture(Nothing)
+            If pointer IsNot Nothing AndAlso pointer.Captured Is Me Then pointer.Capture(Nothing)
         End Sub
 
     End Class

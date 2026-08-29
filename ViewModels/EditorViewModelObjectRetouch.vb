@@ -117,7 +117,7 @@ Namespace ViewModels
             ' Erst der erste Punkt, der die Ebene wirklich trifft, schreibt in die Historie - ein Zug
             ' NEBEN der Ebene tut nichts und soll dort auch nichts hinterlassen.
             If _objectRetouchSpots.Count = 0 Then
-                AddHistoryEntry(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen")))
+                NameHistoryStep(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen")))
             End If
             _objectRetouchSpots.Add(spot)
             ' Der Zwilling im Anzeigeraster trägt ALLES mit, was das Ergebnis ausmacht - Stärke,
@@ -620,7 +620,7 @@ Namespace ViewModels
                                        ' allein lässt offen, ob das Foto oder die Ebene getroffen
                                        ' wurde - und genau diese Frage stellt sich hier.
                                        StatusText = LocalizationService.T("Objekt aus der Ebene entfernt")
-                                       AddHistoryEntry(LocalizationService.T("Objekt aus der Ebene entfernt"))
+                                       NameHistoryStep(LocalizationService.T("Objekt aus der Ebene entfernt"))
                                    End Sub,
                                    countsAsBusy:=True,
                                    cancelledMessage:=LocalizationService.T("Entfernen abgebrochen - die Ebene ist unverändert"))

@@ -1161,6 +1161,14 @@ Namespace ViewModels
             ''' änderte sich nichts. Nothing heißt: zu diesem Schritt gab es keinen offenen
             ''' Arbeitsstand.</summary>
             Public WarpSession As WarpSessionState
+            ''' <summary>Wie der Schritt in der Historie heisst. Der Eintrag sichert den Zustand VOR
+            ''' einer Aktion, die Beschriftung nennt die Aktion selbst - beim Umhaengen zwischen
+            ''' Rueckgaengig- und Wiederholen-Stapel wandert sie deshalb mit.</summary>
+            Public Label As String
+
+            ''' <summary>Das Symbol des Schritts, dasselbe wie in der Werkzeugleiste. Es wandert mit
+            ''' der Beschriftung.</summary>
+            Public IconSource As String
         End Class
 
         Private ReadOnly _undoStack As New Stack(Of UndoEntry)()
@@ -1222,7 +1230,37 @@ Namespace ViewModels
             End If
         End Sub
 
-        Public Property HistoryItems As ObservableCollection(Of String)
+        ''' <summary>DIE HISTORIE, und zwar als Abbild der beiden Stapel und nicht als Protokoll:
+        ''' Eintrag 0 ist der Ausgangszustand, danach folgt je ein Schritt fuer jeden
+        ''' Rueckgaengig-Eintrag und dahinter die Schritte, die per Wiederholen wieder erreichbar
+        ''' sind. Genau deshalb laesst sich jeder Eintrag anspringen: seine Nummer IST die Zahl der
+        ''' Schritte, die auf dem Ausgangszustand liegen.</summary>
+        Public Property HistorySteps As ObservableCollection(Of HistoryStep)
+
+        ''' <summary>Wo die Historie gerade steht, gleichbedeutend mit der Hoehe des
+        ''' Rueckgaengig-Stapels. Der Setter SPRINGT: die Liste bindet ihren SelectedIndex daran,
+        ''' ein Klick in die Liste ist damit der Sprung.</summary>
+        Public Property CurrentHistoryIndex As Integer
+            Get
+                Return _undoStack.Count
+            End Get
+            Set(value As Integer)
+                If _suppressHistorySelection Then Return
+                JumpToHistoryStep(value)
+            End Set
+        End Property
+
+        ''' Waehrend die Liste neu aufgebaut wird, ist ihr SelectedIndex kurzzeitig -1 oder ein
+        ''' alter Wert. Ohne diese Sperre loeste allein das Neuaufbauen einen Sprung aus.
+        Private _suppressHistorySelection As Boolean
+
+        ''' Ob der oberste Schritt seinen Namen aus der Aktion schon bekommen hat. Siehe
+        ''' NameHistoryStep - er verhindert, dass ein Name am Schritt einer fremden Aktion landet.
+        Private _historyStepNamed As Boolean
+
+        ''' Laeuft gerade ein Sprung in der Historie? Siehe JumpToHistoryStep.
+        Private _historyJumpRunning As Boolean
+
         Private Shared ReadOnly FallbackFontOptions As IReadOnlyList(Of String) =
             New List(Of String) From {"Arial", "Segoe UI", "DejaVu Sans", "Liberation Sans", "Times New Roman", "Georgia", "Courier New", "Consolas", "Verdana", "Tahoma"}
 
@@ -8556,7 +8594,7 @@ Namespace ViewModels
                     StatusText = LocalizationService.T("Bild entrauscht") &
                                  If(String.IsNullOrEmpty(report), "", " - " & report)
                     _hasChanges = True
-                    AddHistoryEntry(LocalizationService.T("Bild entrauscht") &
+                    NameHistoryStep(LocalizationService.T("Bild entrauscht") &
                                     If(String.IsNullOrEmpty(report), "", " - " & report))
                     SchedulePreviewUpdate()
                 End Sub)
@@ -8715,7 +8753,7 @@ Namespace ViewModels
                     _pendingBakedFromRecipe = False
                     _bakedOperationsApplied = True
                     StatusText = LocalizationService.T("Gespeicherte Bearbeitung angewendet")
-                    AddHistoryEntry(LocalizationService.T("Gespeicherte Bearbeitung angewendet"))
+                    NameHistoryStep(LocalizationService.T("Gespeicherte Bearbeitung angewendet"))
                     SchedulePreviewUpdate()
                 End Sub)
         End Sub
@@ -8817,7 +8855,7 @@ Namespace ViewModels
                     StatusText = LocalizationService.T("Objekt entfernt") &
                                  If(String.IsNullOrEmpty(report), "", " - " & report)
                     _hasChanges = True
-                    AddHistoryEntry(LocalizationService.T("Objekt entfernt") &
+                    NameHistoryStep(LocalizationService.T("Objekt entfernt") &
                                     If(String.IsNullOrEmpty(report), "", " - " & report))
                     SchedulePreviewUpdate()
                 End Sub)
@@ -8911,7 +8949,7 @@ Namespace ViewModels
             Dim tempPath = CopySelectionToClipboardFile()
             If String.IsNullOrWhiteSpace(tempPath) Then Return Nothing
             EraseSelection()
-            AddHistoryEntry(LocalizationService.T("Auswahl ausgeschnitten"))
+            NameHistoryStep(LocalizationService.T("Auswahl ausgeschnitten"))
             Return tempPath
         End Function
 
@@ -9026,7 +9064,7 @@ Namespace ViewModels
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
                     ' Unter den gelöschten Pixeln liegt jetzt der Transparenz-Hintergrund.
                     Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
-                    AddHistoryEntry(LocalizationService.T("Auswahl gelöscht"))
+                    NameHistoryStep(LocalizationService.T("Auswahl gelöscht"))
                     SchedulePreviewUpdate()
                 End Sub)
         End Sub
@@ -9466,10 +9504,13 @@ Namespace ViewModels
                     MoveEditedMaskComponents(_selectionMaskRect.Left - _selectionMoveStartMaskRect.Left,
                                              _selectionMaskRect.Top - _selectionMoveStartMaskRect.Top)
                 End If
-                _undoStack.Push(New UndoEntry With {.Adjustments = _selectionMoveUndoSnapshot})
+                _undoStack.Push(New UndoEntry With {.Adjustments = _selectionMoveUndoSnapshot,
+                                                    .Label = LocalizationService.T("Auswahl verschoben"),
+                                                    .IconSource = HistoryIconForTool(EditorTool.Selection)})
                 _lastPushedUndoEntry = Nothing
+                _historyStepNamed = True
                 ClearRedoStack()
-                AddHistoryEntry(LocalizationService.T("Auswahl verschoben"))
+                RebuildHistorySteps()
                 Me.RaisePropertyChanged(NameOf(CanUndo))
                 Me.RaisePropertyChanged(NameOf(CanRedo))
                 SchedulePreviewUpdate()
@@ -9665,7 +9706,7 @@ Namespace ViewModels
             ' Auswahl. An den Auswahlwerten platziert, würde der Ausschnitt gestaucht.
             Dim p = PixelRectToPercent(placement)
             AddSelectionImageAnnotationAt(tempPath, p.X, p.Y, p.W, p.H)
-            AddHistoryEntry(LocalizationService.T("Auswahl kopiert"))
+            NameHistoryStep(LocalizationService.T("Auswahl kopiert"))
         End Sub
 
         Private _pendingColorPickCallback As Action(Of Avalonia.Media.Color) = Nothing
@@ -9876,10 +9917,11 @@ Namespace ViewModels
         ''' Strg+C im Auswahl-Werkzeug: schneidet die Auswahl zu und merkt sie sich (samt Ursprungsposition
         ''' und -größe) als "Zwischenablage", statt sofort ein Objekt anzulegen - Strg+V fügt sie danach
         ''' beliebig oft ein.
+        ''' KEIN Historien-Schritt: Kopieren aendert am Bild nichts, es gibt also nichts, wohin man
+        ''' zurueckspringen koennte. Die Rueckmeldung gibt CopySelectionToClipboardFile ueber die
+        ''' Statuszeile.
         Public Sub CopySelectionToClipboard()
-            Dim tempPath = CopySelectionToClipboardFile()
-            If tempPath Is Nothing Then Return
-            AddHistoryEntry(LocalizationService.T("Auswahl kopiert"))
+            CopySelectionToClipboardFile()
         End Sub
 
         Public Function CopySelectionToClipboardFile() As String
@@ -9901,7 +9943,7 @@ Namespace ViewModels
             _selectionClipboardPasteCount += 1
             Dim offset = 3.0 * _selectionClipboardPasteCount
             AddSelectionImageAnnotationAt(_selectionClipboardPath, _selectionClipboardXPercent + offset, _selectionClipboardYPercent + offset, _selectionClipboardWidthPercent, _selectionClipboardHeightPercent)
-            AddHistoryEntry(LocalizationService.T("Auswahl eingefügt"))
+            NameHistoryStep(LocalizationService.T("Auswahl eingefügt"))
         End Sub
 
         ''' Füllt die aktive Auswahl mit Vollfarbe oder Verlauf, indem ein neues, randloses
@@ -9929,7 +9971,7 @@ Namespace ViewModels
             ' Rotes Overlay neu bauen: es zeigt jetzt die DECKUNG (Maske × Füll-Luminanz), also den
             ' Verlauf, mit dem die Anpassung dieser Ebene abgestuft wird.
             If _activeSelectionIsMask Then PublishSelectionRedOverlay()
-            AddHistoryEntry(LocalizationService.T(If(layer.IsMaskLayer, "Maske gefüllt", "Auswahl gefüllt")))
+            NameHistoryStep(LocalizationService.T(If(layer.IsMaskLayer, "Maske gefüllt", "Auswahl gefüllt")))
             SchedulePreviewUpdate()
         End Sub
 
@@ -11088,6 +11130,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsToolTabSelected))
                 Me.RaisePropertyChanged(NameOf(IsLayersTabSelected))
                 Me.RaisePropertyChanged(NameOf(IsHistoryTabSelected))
+                Me.RaisePropertyChanged(NameOf(IsLayerStackVisible))
             End Set
         End Property
 
@@ -11106,6 +11149,15 @@ Namespace ViewModels
         Public ReadOnly Property IsHistoryTabSelected As Boolean
             Get
                 Return _selectedLayersPanelTab = LayersPanelTab.History
+            End Get
+        End Property
+
+        ''' <summary>Ob im Ebenen-Panel der EBENENSTAPEL zu sehen ist. Das ist alles ausser der
+        ''' Historie: der Reiter steht an mehreren Stellen im Editor auch auf <c>Tool</c>, und in dem
+        ''' Fall gehoert der Stapel gezeigt und nicht ein leeres Panel.</summary>
+        Public ReadOnly Property IsLayerStackVisible As Boolean
+            Get
+                Return _selectedLayersPanelTab <> LayersPanelTab.History
             End Get
         End Property
 
@@ -12001,7 +12053,7 @@ Namespace ViewModels
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             RaiseResetButtonStateChanged()
-            AddHistoryEntry(LocalizationService.T("Anpassung angewendet"))
+            NameHistoryStep(LocalizationService.T("Anpassung angewendet"))
             SchedulePreviewUpdate()
             StatusText = String.Format(LocalizationService.T("Anpassung angewendet: {0}"), name)
         End Sub
@@ -12027,7 +12079,7 @@ Namespace ViewModels
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             RaiseResetButtonStateChanged()
-            AddHistoryEntry(LocalizationService.T("Anpassungen eingefügt"))
+            NameHistoryStep(LocalizationService.T("Anpassungen eingefügt"))
             SchedulePreviewUpdate()
             StatusText = LocalizationService.T("Anpassungen eingefügt")
         End Sub
@@ -12094,6 +12146,9 @@ Namespace ViewModels
         Public ReadOnly Property TogglePixelLayerVisibilityCommand As ICommand
         Public ReadOnly Property ToggleBackgroundVisibilityCommand As ICommand
         Public ReadOnly Property ToggleGlobalAdjustmentsVisibilityCommand As ICommand
+        ''' Die beiden Reiter des Ebenen-Panels.
+        Public ReadOnly Property ShowLayersTabCommand As ICommand
+        Public ReadOnly Property ShowHistoryTabCommand As ICommand
         Public ReadOnly Property ResetPixelAdjustmentsCommand As ICommand
         Public ReadOnly Property ResetCurrentToolCommand As ICommand
         Public ReadOnly Property ResetLightCommand As ICommand
@@ -12201,7 +12256,8 @@ Namespace ViewModels
         Public Sub New(mainVm As IEditorHost)
             _mainVm = mainVm
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
-            HistoryItems = New ObservableCollection(Of String)()
+            HistorySteps = New ObservableCollection(Of HistoryStep)()
+            RebuildHistorySteps()
             SetUpInfoPanel()
             ' Ebenen-Panel-Anzeige (umgekehrte Reihenfolge) an den Objektstapel koppeln. Wer die
             ' Liste in einem Rutsch umbaut, klammert das mit SuspendLayerRowRebuild - sonst baut
@@ -12448,6 +12504,8 @@ Namespace ViewModels
                                                                        End Sub)
             ToggleBackgroundVisibilityCommand = ReactiveCommand.Create(Sub() ToggleBackgroundVisibility())
             ToggleGlobalAdjustmentsVisibilityCommand = ReactiveCommand.Create(Sub() ToggleGlobalAdjustmentsVisibility())
+            ShowLayersTabCommand = ReactiveCommand.Create(Sub() SelectedLayersPanelTab = LayersPanelTab.Layers)
+            ShowHistoryTabCommand = ReactiveCommand.Create(Sub() SelectedLayersPanelTab = LayersPanelTab.History)
             TogglePixelLayerVisibilityCommand = ReactiveCommand.Create(Sub() TogglePixelLayerVisibility())
             ResetPixelAdjustmentsCommand = ReactiveCommand.Create(Sub()
                                                                       If Not HasDocument Then Return
@@ -12455,7 +12513,7 @@ Namespace ViewModels
                                                                       ResetPixelAdjustmentsInternal()
                                                                       _hasChanges = True
                                                                       Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
-                                                                      AddHistoryEntry(LocalizationService.T("Anpassungen zurückgesetzt"))
+                                                                      NameHistoryStep(LocalizationService.T("Anpassungen zurückgesetzt"))
                                                                   End Sub)
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo()
@@ -16728,12 +16786,18 @@ Namespace ViewModels
 
             If Not shouldCapture Then Return
 
+            ' Hier ist die Beschriftung genau: der Reglername steht fest, BEVOR der neue Wert
+            ' geschrieben wird.
             _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
-                                               .WarpSession = CaptureWarpSession()})
+                                               .WarpSession = CaptureWarpSession(),
+                                               .Label = GetHistoryLabelForProperty(propertyName),
+                                               .IconSource = HistoryIconForProperty(propertyName)})
             ClearRedoStack()
             _lastUndoProperty = propertyName
             _lastUndoCapturedAt = now
-            AddHistoryEntry(GetHistoryLabelForProperty(propertyName))
+            ' Der Reglername steht schon; eine spaetere Aktion soll ihn nicht ueberschreiben.
+            _historyStepNamed = True
+            RebuildHistorySteps()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
@@ -16831,13 +16895,126 @@ Namespace ViewModels
         Private Sub ClearUndoHistory()
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
+            _historyStepNamed = True
             For Each entry In _undoStack
                 If entry.Patch IsNot Nothing Then _workingImage.DiscardPatch(entry.Patch)
             Next
             _undoStack.Clear()
             ClearRedoStack()
+            RebuildHistorySteps()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
+        End Sub
+
+        ''' <summary>Baut die Historie aus den beiden Stapeln neu auf.
+        '''
+        ''' Warum jedes Mal komplett und nicht fortgeschrieben: die Liste IST der Stapelzustand, und
+        ''' der aendert sich in Spruengen (ein neuer Schritt wirft den ganzen Wiederholen-Zweig weg).
+        ''' Eine fortgeschriebene Liste muesste jeden dieser Faelle einzeln nachbilden; bei den paar
+        ''' Dutzend Zeilen kostet der Neuaufbau nichts.
+        '''
+        ''' `Stack.ToArray` gibt das ZULETZT gelegte Element zuerst - der Rueckgaengig-Stapel wird
+        ''' deshalb rueckwaerts durchlaufen, damit die aelteste Aenderung oben in der Liste steht.
+        ''' Der Wiederholen-Stapel dagegen vorwaerts: sein oberstes Element ist der naechste Schritt
+        ''' nach vorn.</summary>
+        Private Sub RebuildHistorySteps()
+            If HistorySteps Is Nothing Then Return
+            _suppressHistorySelection = True
+            Try
+                HistorySteps.Clear()
+                HistorySteps.Add(New HistoryStep(0, LocalizationService.T("Original"),
+                                                 "avares://FerrumPix/Assets/Icons/outline/photo.svg"))
+
+                Dim undoEntries = _undoStack.ToArray()
+                For i = undoEntries.Length - 1 To 0 Step -1
+                    HistorySteps.Add(New HistoryStep(HistorySteps.Count, StepLabel(undoEntries(i)),
+                                                     StepIcon(undoEntries(i))))
+                Next
+
+                ' Alles hinter dem aktuellen Stand ist rueckgaengig gemacht und nur noch per
+                ' Wiederholen erreichbar. Die Liste zeigt es weiter, sonst waere der Weg zurueck
+                ' nach vorn unsichtbar.
+                For Each entry In _redoStack
+                    HistorySteps.Add(New HistoryStep(HistorySteps.Count, StepLabel(entry), StepIcon(entry),
+                                                     isUndone:=True))
+                Next
+            Finally
+                _suppressHistorySelection = False
+            End Try
+            Me.RaisePropertyChanged(NameOf(CurrentHistoryIndex))
+        End Sub
+
+        ''' <summary>Gibt dem zuletzt gesicherten Schritt seinen Namen.
+        '''
+        ''' Aufgerufen wird sie NACH der Aktion, aus der der Name stammt ("Ebenenmaske hinzugefuegt",
+        ''' "Auswahl gefuellt"). Der Werkzeugname, den <see cref="PushUndo"/> vorlaeufig vergeben hat,
+        ''' wird damit durch den genaueren ersetzt.
+        '''
+        ''' Ohne einen Schritt auf dem Stapel tut sie nichts: Aktionen, die das Bild gar nicht
+        ''' aendern, haben keinen Schritt, den sie benennen koennten.</summary>
+        Private Sub NameHistoryStep(label As String)
+            If String.IsNullOrWhiteSpace(label) OrElse _undoStack.Count = 0 Then Return
+            ' NUR EINMAL JE SCHRITT. Nicht jede Aktion, die einen Namen mitbringt, sichert auch
+            ' einen Zustand - eine solche Aktion wuerde sonst den Schritt der VORIGEN umbenennen.
+            If _historyStepNamed Then Return
+            _historyStepNamed = True
+            _undoStack.Peek().Label = label
+            RebuildHistorySteps()
+        End Sub
+
+        Private Shared Function StepLabel(entry As UndoEntry) As String
+            If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.Label) Then
+                Return LocalizationService.T("Bearbeitung")
+            End If
+            Return entry.Label
+        End Function
+
+        Private Shared Function StepIcon(entry As UndoEntry) As String
+            If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.IconSource) Then
+                Return "avares://FerrumPix/Assets/Icons/outline/exposure.svg"
+            End If
+            Return entry.IconSource
+        End Function
+
+        ''' <summary>Springt an eine Stelle der Historie: die Nummer des Schritts ist die Zahl der
+        ''' Aenderungen, die dann auf dem Ausgangszustand liegen.
+        '''
+        ''' Gegangen wird der Weg Schritt fuer Schritt ueber Rueckgaengig und Wiederholen, nicht per
+        ''' Sprung auf den Schnappschuss. Das ist Absicht: an den Schritten haengen Pixel-Patches,
+        ''' die einzeln zurueckgetauscht werden muessen, und der Arbeitsstand des Verzerren-Werkzeugs
+        ''' gehoert ebenfalls zum jeweiligen Schritt. Die Vorschau wird dabei nur einmal gerechnet,
+        ''' weil ihr Zeitgeber bei jedem Schritt neu anlaeuft.</summary>
+        Public Sub JumpToHistoryStep(target As Integer)
+            If target < 0 Then Return
+            ' Waehrend ein Region-Commit laeuft, sind beide Richtungen gesperrt (siehe CanUndo).
+            If _pendingWorkingCommits > 0 Then Return
+            ' JEDER SCHRITT BAUT DIE LISTE NEU AUF und meldet dabei den neuen Stand. Die Liste in der
+            ' Ansicht schreibt ihre Auswahl zurueck, und das landete mitten im laufenden Sprung
+            ' wieder hier - ein Sprung ueber drei Schritte rief sich selbst dreimal. Das Ergebnis
+            ' stimmte, weil jeder Aufruf sein Ziel schon erreicht vorfand, aber verlassen sollte man
+            ' sich darauf nicht.
+            If _historyJumpRunning Then Return
+            _historyJumpRunning = True
+            Try
+                Dim guard = HistorySteps.Count + 1
+                While _undoStack.Count > target AndAlso guard > 0
+                    Dim before = _undoStack.Count
+                    UndoAction()
+                    If _undoStack.Count = before Then Exit While
+                    guard -= 1
+                End While
+                While _undoStack.Count < target AndAlso _redoStack.Count > 0 AndAlso guard > 0
+                    Dim before = _undoStack.Count
+                    RedoAction()
+                    If _undoStack.Count = before Then Exit While
+                    guard -= 1
+                End While
+            Finally
+                _historyJumpRunning = False
+            End Try
+            ' Zum Schluss den erreichten Stand melden: die Liste soll auf dem Schritt stehen, auf dem
+            ' das Bild steht - auch wenn das Ziel nicht ganz erreichbar war.
+            Me.RaisePropertyChanged(NameOf(CurrentHistoryIndex))
         End Sub
 
         ''' Redo-Einträge können Pixel-Patches halten (Wiederholen-Inhalte) - nach einer neuen
@@ -16849,8 +17026,47 @@ Namespace ViewModels
             _redoStack.Clear()
         End Sub
 
+        ''' <summary>Wie ein Schritt heisst, der aus einem Regler entsteht.
+        '''
+        ''' DER REGLER NENNT SICH SELBST, wo er einen eigenen Namen hat: "Anpassung" oder "Details"
+        ''' sagt nicht, WAS bewegt wurde, und genau danach sucht man in einer Historie. Wo der Name
+        ''' allein mehrdeutig waere - "Radius", "Staerke", "Detail" gibt es mehrfach - steht die
+        ''' Gruppe davor. Beide Teile sind einzeln uebersetzt; zusammengesetzt wird erst danach,
+        ''' sonst haette der Satz keinen Schluessel.
+        '''
+        ''' Die Wortlaute sind die der Panels, damit die Zeile in der Historie dasselbe Wort nennt
+        ''' wie der Regler, den man gerade angefasst hat.</summary>
         Private Shared Function GetHistoryLabelForProperty(propertyName As String) As String
             Select Case propertyName
+                Case NameOf(Exposure) : Return LocalizationService.T("Belichtung")
+                Case NameOf(Brightness) : Return LocalizationService.T("Helligkeit")
+                Case NameOf(Contrast) : Return LocalizationService.T("Kontrast")
+                Case NameOf(Highlights) : Return LocalizationService.T("Lichter")
+                Case NameOf(ShadowsLevel) : Return LocalizationService.T("Tiefen")
+                Case NameOf(Whites) : Return LocalizationService.T("Weiß")
+                Case NameOf(Blacks) : Return LocalizationService.T("Schwarz")
+                Case NameOf(Saturation) : Return LocalizationService.T("Sättigung")
+                Case NameOf(Vibrance) : Return LocalizationService.T("Dynamik")
+                Case NameOf(Temperature) : Return LocalizationService.T("Temperatur")
+                Case NameOf(Tint) : Return LocalizationService.T("Tönung")
+                Case NameOf(Clarity) : Return LocalizationService.T("Klarheit")
+                Case NameOf(Sharpness) : Return LocalizationService.T("Schärfe")
+                Case NameOf(SharpenRadius) : Return CombineHistoryLabel("Schärfe", "Radius")
+                Case NameOf(SharpenDetail) : Return CombineHistoryLabel("Schärfe", "Detail")
+                Case NameOf(SharpenMasking) : Return CombineHistoryLabel("Schärfe", "Maskierung")
+                Case NameOf(NoiseReduction) : Return LocalizationService.T("Rauschen")
+                Case NameOf(NoiseReductionDetail) : Return CombineHistoryLabel("Rauschen", "Detail")
+                Case NameOf(NoiseReductionMethodLabel) : Return CombineHistoryLabel("Rauschen", "Methode")
+                Case NameOf(Vignette) : Return CombineHistoryLabel("Vignette", "Stärke")
+                Case NameOf(VignetteTransition) : Return CombineHistoryLabel("Vignette", "Übergang")
+                Case NameOf(VignetteRoundness) : Return CombineHistoryLabel("Vignette", "Rundheit")
+                Case NameOf(VignetteFeather) : Return CombineHistoryLabel("Vignette", "Weiche Kante")
+                Case NameOf(VignetteCenterX), NameOf(VignetteCenterY) : Return CombineHistoryLabel("Vignette", "Mitte")
+                Case NameOf(VignetteStyleLabel) : Return CombineHistoryLabel("Vignette", "Stil")
+                Case NameOf(Grain) : Return CombineHistoryLabel("Körnung", "Stärke")
+                Case NameOf(GrainSize) : Return CombineHistoryLabel("Körnung", "Größe")
+                Case NameOf(GrainFrequency) : Return CombineHistoryLabel("Körnung", "Rauheit")
+                Case NameOf(GrainColor) : Return CombineHistoryLabel("Körnung", "Farbe")
                 Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
                     Return LocalizationService.T("Zuschneiden")
                 Case NameOf(ResizeWidth), NameOf(ResizeHeight), NameOf(LockResizeAspect), NameOf(ResizeInterpolationLabel)
@@ -16886,19 +17102,108 @@ Namespace ViewModels
             End Select
         End Function
 
-        Private Sub PushUndo()
+        ''' <summary>Sichert den Zustand VOR einer Aktion.
+        '''
+        ''' <paramref name="label"/> ist der Name des Schritts in der Historie. Ohne Angabe nimmt er
+        ''' den des aktuellen Werkzeugs: die Aktion selbst ist zum Zeitpunkt des Sicherns noch nicht
+        ''' passiert, aus dem Schnappschuss laesst sie sich also nicht ablesen - das Werkzeug in der
+        ''' Hand sagt dagegen genau, was gleich geschieht ("Pinsel", "Maske", "Zuschneiden").</summary>
+        Private Sub PushUndo(Optional label As String = Nothing)
             ResetUndoCapture()
-            ' GetCurrentAdjustments klont alle Objekte und Retusche-Punkte und serialisiert fünf Kurven -
-            ' einmal reicht, der Schnappschuss taugt auch als Vorlage für die Beschriftung.
-            Dim snapshot = GetCurrentAdjustments()
-            Dim entry As New UndoEntry With {.Adjustments = snapshot, .WarpSession = CaptureWarpSession()}
+            Dim entry As New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
+                                             .WarpSession = CaptureWarpSession(),
+                                             .Label = BuildUndoLabel(label),
+                                             .IconSource = HistoryIconForTool(_currentTool)}
             _undoStack.Push(entry)
             _lastPushedUndoEntry = entry
+            _historyStepNamed = False
             ClearRedoStack()
-            AddHistoryEntry(BuildHistoryLabel(snapshot))
+            RebuildHistorySteps()
             Me.RaisePropertyChanged(NameOf(CanUndo))
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
+
+        ''' <summary>Setzt "Gruppe: Regler" zusammen. Beide Teile gehen EINZELN durch die
+        ''' Uebersetzung - ein fertiger Satz haette keinen Schluessel und bliebe deutsch.</summary>
+        Private Shared Function CombineHistoryLabel(group As String, slider As String) As String
+            Return LocalizationService.T(group) & ": " & LocalizationService.T(slider)
+        End Function
+
+        ''' <summary>Das Symbol eines Schritts, der aus einer AKTION entsteht: dasselbe, das das
+        ''' Werkzeug in der Leiste des Editors traegt. Die Zeile der Historie sieht damit aus wie die
+        ''' Zeile einer Ebene - Symbol, dann Name.</summary>
+        Private Function HistoryIconForTool(tool As EditorTool) As String
+            Const outline = "avares://FerrumPix/Assets/Icons/outline/"
+            Select Case tool
+                Case EditorTool.Crop : Return outline & "crop.svg"
+                Case EditorTool.Resize : Return outline & "aspect-ratio.svg"
+                Case EditorTool.Rotate, EditorTool.Transform : Return outline & "rotate-2.svg"
+                Case EditorTool.Adjust : Return outline & "exposure.svg"
+                Case EditorTool.Color : Return outline & "color-filter.svg"
+                Case EditorTool.Details : Return outline & "adjustments.svg"
+                Case EditorTool.Effects, EditorTool.Frame : Return outline & "sparkles.svg"
+                Case EditorTool.Filters : Return outline & "palette.svg"
+                Case EditorTool.Move : Return outline & "pointer.svg"
+                Case EditorTool.Selection : Return outline & "marquee.svg"
+                Case EditorTool.Mask : Return outline & "mask.svg"
+                Case EditorTool.Text : Return outline & "text-size.svg"
+                Case EditorTool.Path : Return outline & "vector.svg"
+                Case EditorTool.Geometry, EditorTool.Insert : Return outline & "shape.svg"
+                Case EditorTool.Draw
+                    Return outline & If(_isEraserMode, "eraser.svg", "brush.svg")
+                Case EditorTool.Retouch
+                    Return outline & If(_isRepairMode, "bandage.svg", "brush.svg")
+                Case Else : Return outline & "photo.svg"
+            End Select
+        End Function
+
+        ''' <summary>Das Symbol eines Schritts, der aus einem REGLER entsteht. Es folgt derselben
+        ''' Einteilung wie <see cref="GetHistoryLabelForProperty"/>: der Regler nennt die Gruppe, die
+        ''' Gruppe traegt das Symbol ihres Werkzeugs.</summary>
+        Private Function HistoryIconForProperty(propertyName As String) As String
+            Const outline = "avares://FerrumPix/Assets/Icons/outline/"
+            Select Case propertyName
+                Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
+                    Return outline & "crop.svg"
+                Case NameOf(ResizeWidth), NameOf(ResizeHeight), NameOf(LockResizeAspect), NameOf(ResizeInterpolationLabel),
+                     NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor)
+                    Return outline & "aspect-ratio.svg"
+                Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas)
+                    Return outline & "rotate-2.svg"
+                Case "Tonwertkurve"
+                    Return outline & "chart-line.svg"
+                Case NameOf(RedHue), NameOf(RedSaturation), NameOf(OrangeHue), NameOf(OrangeSaturation),
+                     NameOf(YellowHue), NameOf(YellowSaturation), NameOf(GreenHue), NameOf(GreenSaturation),
+                     NameOf(AquaHue), NameOf(AquaSaturation), NameOf(BlueHue), NameOf(BlueSaturation),
+                     NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(MagentaHue), NameOf(MagentaSaturation),
+                     NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint)
+                    Return outline & "color-filter.svg"
+                Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(NoiseReduction),
+                     NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Clarity)
+                    Return outline & "adjustments.svg"
+                Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
+                     NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
+                     NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(GrainColor)
+                    Return outline & "sparkles.svg"
+                Case NameOf(FilterPreset), NameOf(FilterStrength)
+                    Return outline & "palette.svg"
+                Case Else
+                    Return outline & "exposure.svg"
+            End Select
+        End Function
+
+        ''' <summary>Die Beschriftung eines Schritts: die ausdrueckliche, sonst der Werkzeugname.
+        ''' `CurrentToolLabel` faellt bei einem Werkzeug ohne eigenen Namen auf "Werkzeug" zurueck -
+        ''' als Name eines Arbeitsschritts sagt das nichts, dort steht dann "Bearbeitung".</summary>
+        Private Function BuildUndoLabel(label As String) As String
+            If Not String.IsNullOrWhiteSpace(label) Then Return label
+            Dim toolLabel = CurrentToolLabel
+            If String.IsNullOrWhiteSpace(toolLabel) OrElse
+               String.Equals(toolLabel, LocalizationService.T("Werkzeug"), StringComparison.Ordinal) Then
+                Return LocalizationService.T("Bearbeitung")
+            End If
+            Return toolLabel
+        End Function
 
         Private Sub UndoAction()
             ' Auch Tastatur-Pfade (Strg+Z) respektieren die Commit-Sperre - siehe CanUndo.
@@ -16906,11 +17211,15 @@ Namespace ViewModels
             CommitSelectionAdjustModeToModel()
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
+            _historyStepNamed = True
             Dim entry = _undoStack.Pop()
             ' Der Patch wandert in den Redo-Eintrag: RevertPatch tauscht die Region und hält
             ' danach die Wiederholen-Pixel im selben Objekt (Tausch-Schema im Service).
+            ' Die Beschriftung wandert MIT: sie gehoert dem Schritt, nicht dem Stapel. Ohne sie
+            ' hiesse der Schritt nach einem Rueckgaengig in der Vorwaerts-Liste anders als vorher.
             _redoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch,
-                                                .WarpSession = CaptureWarpSession()})
+                                                .WarpSession = CaptureWarpSession(), .Label = entry.Label,
+                                                .IconSource = entry.IconSource})
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
@@ -16925,7 +17234,7 @@ Namespace ViewModels
             If entry.Patch IsNot Nothing AndAlso _workingImage.RevertPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
-            AddHistoryEntry(LocalizationService.T("Rückgängig"))
+            RebuildHistorySteps()
             ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
             ' zurückgesetzt (_activeSelectionIsMask), und damit wäre das Overlay verschwunden -
             ' beim VERLAUF völlig zu Unrecht, denn der hängt gar nicht an der Auswahl, sondern an
@@ -16941,9 +17250,11 @@ Namespace ViewModels
             CommitSelectionAdjustModeToModel()
             ResetUndoCapture()
             _lastPushedUndoEntry = Nothing
+            _historyStepNamed = True
             Dim entry = _redoStack.Pop()
             _undoStack.Push(New UndoEntry With {.Adjustments = GetCurrentAdjustments(), .Patch = entry.Patch,
-                                                .WarpSession = CaptureWarpSession()})
+                                                .WarpSession = CaptureWarpSession(), .Label = entry.Label,
+                                                .IconSource = entry.IconSource})
             _suppressUndoCapture = True
             Try
                 ApplyAdjustments(entry.Adjustments, resetTransientSelectionBinding:=True)
@@ -16955,7 +17266,7 @@ Namespace ViewModels
             If entry.Patch IsNot Nothing AndAlso _workingImage.ReapplyPatch(entry.Patch) Then
                 OnWorkingImageRegionChanged(entry.Patch.Rect)
             End If
-            AddHistoryEntry(LocalizationService.T("Wiederholt"))
+            RebuildHistorySteps()
             ' Das rote Overlay neu zeichnen: ApplyAdjustments hat die transiente Auswahl-Bindung
             ' zurückgesetzt (_activeSelectionIsMask), und damit wäre das Overlay verschwunden -
             ' beim VERLAUF völlig zu Unrecht, denn der hängt gar nicht an der Auswahl, sondern an
@@ -17343,7 +17654,7 @@ Namespace ViewModels
                 ' Objektdrehung läuft in [-180, 180]; nach 180 kippt sie auf -180 (identische Lage).
                 Dim rotated = ((_annotationRotation + degrees + 180.0) Mod 360.0 + 360.0) Mod 360.0 - 180.0
                 AnnotationRotation = rotated
-                AddHistoryEntry(LocalizationService.T(If(degrees < 0, "Objekt links gedreht", "Objekt rechts gedreht")))
+                NameHistoryStep(LocalizationService.T(If(degrees < 0, "Objekt links gedreht", "Objekt rechts gedreht")))
                 Return
             End If
             _rotationDegrees = ((_rotationDegrees + degrees) Mod 360 + 360) Mod 360
@@ -17367,7 +17678,7 @@ Namespace ViewModels
             If Math.Abs(_annotationRotation) < 0.05 Then Return False
             PushUndo()
             AnnotationRotation = 0
-            AddHistoryEntry(LocalizationService.T("Objekt-Drehung zurückgesetzt"))
+            NameHistoryStep(LocalizationService.T("Objekt-Drehung zurückgesetzt"))
             Return True
         End Function
 
@@ -17375,7 +17686,7 @@ Namespace ViewModels
             If HasSelectedAnnotation Then
                 PushUndo()
                 AnnotationFlipHorizontal = Not _annotationFlipH
-                AddHistoryEntry(LocalizationService.T("Objekt horizontal gespiegelt"))
+                NameHistoryStep(LocalizationService.T("Objekt horizontal gespiegelt"))
                 Return
             End If
             _flipH = Not _flipH
@@ -17386,7 +17697,7 @@ Namespace ViewModels
             If HasSelectedAnnotation Then
                 PushUndo()
                 AnnotationFlipVertical = Not _annotationFlipV
-                AddHistoryEntry(LocalizationService.T("Objekt vertikal gespiegelt"))
+                NameHistoryStep(LocalizationService.T("Objekt vertikal gespiegelt"))
                 Return
             End If
             _flipV = Not _flipV
@@ -17751,6 +18062,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsToolTabSelected))
             Me.RaisePropertyChanged(NameOf(IsLayersTabSelected))
             Me.RaisePropertyChanged(NameOf(IsHistoryTabSelected))
+            Me.RaisePropertyChanged(NameOf(IsLayerStackVisible))
             Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
             RaisePixelLayerVisibilityChanged()
@@ -19492,7 +19804,7 @@ Namespace ViewModels
             RebuildLayerRows()
             _hasChanges = True
             RaiseResetButtonStateChanged()
-            AddHistoryEntry(LocalizationService.T("Ebenen zusammengelegt"))
+            NameHistoryStep(LocalizationService.T("Ebenen zusammengelegt"))
             StatusText = LocalizationService.T("Ebenen zusammengelegt")
             RefreshOverlayAfterAnnotationChange(ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(result)))
         End Sub
@@ -19566,7 +19878,7 @@ Namespace ViewModels
                     _hasChanges = True
                     RaiseResetButtonStateChanged()
                     Dim label = If(targets.Count > 1, LocalizationService.T("Ebenen gerastert"), LocalizationService.T("Ebene gerastert"))
-                    AddHistoryEntry(label)
+                    NameHistoryStep(label)
                     StatusText = label
                     SchedulePreviewUpdate()
                 End Sub)
@@ -21625,36 +21937,6 @@ Namespace ViewModels
             End Select
         End Sub
 
-        Private Sub AddHistoryEntry(label As String)
-            If HistoryItems Is Nothing Then Return
-            If String.IsNullOrWhiteSpace(label) Then label = "Bearbeitung"
-            HistoryItems.Insert(0, $"{DateTime.Now:HH:mm:ss}  {label}")
-            While HistoryItems.Count > 30
-                HistoryItems.RemoveAt(HistoryItems.Count - 1)
-            End While
-        End Sub
-
-        Private Function BuildHistoryLabel(adj As ImageAdjustments) As String
-            If adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 Then Return "Zuschneiden"
-            If adj.ResizeWidth > 0 OrElse adj.ResizeHeight > 0 Then Return "Bildgröße"
-            If adj.CanvasWidth > 0 OrElse adj.CanvasHeight > 0 Then Return "Leinwandgröße"
-            If adj.RasterPaintStrokes IsNot Nothing AndAlso adj.RasterPaintStrokes.Count > 0 Then Return "Pinsel/Radierer"
-            If adj.Annotations IsNot Nothing AndAlso adj.Annotations.Count > 0 Then Return "Text"
-            If adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse adj.FlipHorizontal OrElse adj.FlipVertical Then Return "Transformieren"
-            If Not ImageAdjustments.IsIdentityCurve(adj.CurveRgbPoints) OrElse Not ImageAdjustments.IsIdentityCurve(adj.CurveRedPoints) OrElse
-               Not ImageAdjustments.IsIdentityCurve(adj.CurveGreenPoints) OrElse Not ImageAdjustments.IsIdentityCurve(adj.CurveBluePoints) OrElse
-               Not ImageAdjustments.IsIdentityCurve(adj.CurveLuminancePoints) Then Return "Tonwertkurve"
-            If adj.HasHslChanges() Then Return "Farbmischer"
-            If adj.Clarity <> 0 OrElse adj.Sharpness <> 0 OrElse adj.NoiseReduction <> 0 OrElse adj.ColorNoiseReduction <> 0 OrElse
-               adj.ColorNoiseAdd <> 0 OrElse adj.Grain <> 0 Then Return "Details"
-            If adj.Vignette <> 0 Then Return "Vignette"
-            If Not String.Equals(adj.FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) Then Return "Filter"
-            Return "Anpassung"
-        End Function
-
-
-
-
 
         ''' Übernimmt den Look eines XMP-Presets. Die Abbildung der crs:-Schlüssel
         ''' liegt in XmpPresetService - die Stapelverarbeitung der Galerie braucht exakt dieselbe.
@@ -22284,6 +22566,39 @@ Namespace ViewModels
         Layers
         History
     End Enum
+
+    ''' <summary>Eine Zeile der Historie. Sie traegt keine Daten des Schritts, sondern nur seine
+    ''' Nummer und seinen Namen: die Zustaende selbst liegen in den beiden Stapeln des ViewModels,
+    ''' und der Sprung dorthin geht ueber die Nummer.</summary>
+    Public NotInheritable Class HistoryStep
+        Public Sub New(index As Integer, label As String, iconSource As String,
+                       Optional isUndone As Boolean = False)
+            Me.Index = index
+            Me.Label = label
+            Me.IconSource = iconSource
+            Me.IsUndone = isUndone
+        End Sub
+
+        Public ReadOnly Property Index As Integer
+
+        Public ReadOnly Property Label As String
+
+        ''' <summary>Das Symbol der Zeile, dasselbe wie am Werkzeug, mit dem der Schritt entstanden
+        ''' ist. Der Ausgangszustand traegt das Bildsymbol.</summary>
+        Public ReadOnly Property IconSource As String
+
+        ''' <summary>Die laufende Nummer, wie sie in der Zeile steht. Der Ausgangszustand hat keine,
+        ''' er ist der Anfang und kein Schritt.</summary>
+        Public ReadOnly Property Number As String
+            Get
+                Return If(Index = 0, "", Index.ToString())
+            End Get
+        End Property
+
+        ''' <summary>Ob der Schritt hinter dem aktuellen Stand liegt, also rueckgaengig gemacht und
+        ''' nur noch per Wiederholen erreichbar ist. Die Liste zeigt ihn blasser.</summary>
+        Public ReadOnly Property IsUndone As Boolean
+    End Class
 
     Public Enum CurveChannel
         Rgb

@@ -190,6 +190,17 @@ Namespace Controls
         Protected Overrides Sub OnPointerMoved(e As PointerEventArgs)
             MyBase.OnPointerMoved(e)
             If Not _isDragging Then Return
+
+            ' EIN ZUG ENDET NICHT IMMER MIT EINEM LOSLASSEN. Beim Zeichenstift bleibt dieses Ereignis
+            ' aus, wenn der Stift vom Tablett abgehoben wird und dessen Naehe verlaesst. Ohne die
+            ' Pruefung hier blieb der Regler danach am Zeiger haengen und aenderte seinen Wert schon
+            ' beim blossen Darueberfahren. Deshalb wird vor JEDER Wertaenderung geprueft, ob die
+            ' Taste ueberhaupt noch gedrueckt ist; ist sie es nicht, endet der Zug hier.
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
+                EndDrag(e.Pointer)
+                Return
+            End If
+
             If DragIncrement > 0 Then
                 Dim deltaX = e.GetPosition(Me).X - _dragStartX
                 Value = ClampValue(_dragStartValue + deltaX * DragIncrement)
@@ -201,11 +212,25 @@ Namespace Controls
 
         Protected Overrides Sub OnPointerReleased(e As PointerReleasedEventArgs)
             MyBase.OnPointerReleased(e)
+            EndDrag(e.Pointer)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Der Fang kann auch ohne Loslassen wegfallen, etwa wenn ein Aufklappfenster
+        ''' aufgeht oder ein anderes Geraet dazwischenkommt. Dann endet der Zug ebenfalls.</summary>
+        Protected Overrides Sub OnPointerCaptureLost(e As PointerCaptureLostEventArgs)
+            MyBase.OnPointerCaptureLost(e)
+            EndDrag(e.Pointer)
+        End Sub
+
+        ''' <summary>Setzt den Zugzustand zurueck und gibt den Fang frei. Der Fang wird nur dann
+        ''' freigegeben, wenn er noch bei diesem Regler liegt: nach einem verlorenen Fang gehoert er
+        ''' schon jemand anderem, und ihn dort wegzunehmen wuerde dessen Zug abbrechen.</summary>
+        Private Sub EndDrag(pointer As IPointer)
             _isDragging = False
             _dragStartX = 0
             _dragStartValue = 0
-            e.Pointer.Capture(Nothing)
-            e.Handled = True
+            If pointer IsNot Nothing AndAlso pointer.Captured Is Me Then pointer.Capture(Nothing)
         End Sub
 
         Protected Overrides Sub OnPointerWheelChanged(e As PointerWheelEventArgs)

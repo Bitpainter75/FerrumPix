@@ -91,10 +91,10 @@ Namespace Views
         ''' Anfang einer Zieh-Auswahl, die ausserhalb ansetzt.</summary>
         Private _maskOutsideClickStart As Avalonia.Point? = Nothing
         Private _isEnvelopeDragging As Boolean = False
-        Private _isLinienDragging As Boolean = False
+        Private _isLineDragging As Boolean = False
         Private _isObjectCornerDragging As Boolean = False
         Private _isPerspectiveDragging As Boolean = False
-        Private _maskeSchiebtGerade As Boolean = False
+        Private _isMaskMoveDragging As Boolean = False
         Private _selectionStart As Avalonia.Point
         Private _selectionEnd As Avalonia.Point
         Private _isSelectionMoveDragging As Boolean = False
@@ -2077,14 +2077,14 @@ Namespace Views
                     ' Erst schauen, ob eine vorhandene Linie gemeint ist - sonst legte jeder Klick
                     ' eine neue an und die bestehende waere nicht mehr zu fassen.
                     If vm.TryBeginLineDrag(lx, ly, slopX, slopY) Then
-                        _isLinienDragging = True
+                        _isLineDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
                     End If
                     ' Auf freier Flaeche eine neue Linie aufziehen.
                     If vm.BeginneNeueLinie(lx, ly) Then
-                        _isLinienDragging = True
+                        _isLineDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
@@ -2112,7 +2112,7 @@ Namespace Views
                     ' im selben Modus erreichbar, ohne dass man umschalten muss.
                     If vm.TryBeginMaskMove((pos.X - imageRect.Left) / imageRect.Width * 100.0,
                                                    (pos.Y - imageRect.Top) / imageRect.Height * 100.0) Then
-                        _maskeSchiebtGerade = True
+                        _isMaskMoveDragging = True
                         e.Pointer.Capture(canvas)
                         e.Handled = True
                         Return
@@ -2483,6 +2483,22 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerMoved(sender As Object, e As PointerEventArgs)
+            ' EIN ZUG ENDET NICHT IMMER MIT EINEM LOSLASSEN. Beim Zeichenstift bleibt dieses Ereignis
+            ' aus, wenn der Stift vom Tablett abgehoben wird und dessen Naehe verlaesst; der Fang
+            ' bleibt dabei bestehen, ein Fangverlust rettet also nichts. Ohne die Pruefung hier malte
+            ' der Pinsel danach beim blossen Darueberfahren weiter, und Auswahl- oder Zuschnittzuege
+            ' liefen dem Zeiger hinterher. Bewegt sich der Zeiger, ohne dass IRGENDEINE Taste
+            ' gedrueckt ist, ist die Geste vorbei: sie wird auf demselben Weg abgeschlossen wie beim
+            ' Loslassen, damit der begonnene Strich erhalten bleibt statt verworfen zu werden.
+            If HasActivePointerGesture() Then
+                Dim buttons = e.GetCurrentPoint(Me).Properties
+                If Not buttons.IsLeftButtonPressed AndAlso Not buttons.IsRightButtonPressed AndAlso
+                   Not buttons.IsMiddleButtonPressed Then
+                    FinishPointerGesture(e)
+                    Return
+                End If
+            End If
+
             If _objectMarqueeActive Then
                 Dim marqueeCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 If marqueeCanvas IsNot Nothing Then
@@ -2686,7 +2702,7 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
-            If _maskeSchiebtGerade Then
+            If _isMaskMoveDragging Then
                 Dim mCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim mVm = TryCast(DataContext, EditorViewModel)
                 If mCanvas Is Nothing OrElse mVm Is Nothing Then Return
@@ -2756,7 +2772,7 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
-            If _isLinienDragging Then
+            If _isLineDragging Then
                 Dim lCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim lVm = TryCast(DataContext, EditorViewModel)
                 If lCanvas Is Nothing OrElse lVm Is Nothing Then Return
@@ -2840,6 +2856,32 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            FinishPointerGesture(e)
+        End Sub
+
+        ''' <summary>Ob auf der Buehne gerade eine Geste laeuft, die mit gedrueckter Taste begonnen
+        ''' hat und in FinishPointerGesture ihren Abschluss findet. Aufgezaehlt sind nur solche
+        ''' Merker: der Pfad-Entwurf etwa arbeitet zwischen den Klicks ohne gedrueckte Taste weiter
+        ''' und gehoert deshalb nicht dazu.</summary>
+        Private Function HasActivePointerGesture() As Boolean
+            Return _isDraggingSlider OrElse _isPanDragging OrElse _isCropDragging OrElse
+                   _isSelectionDragging OrElse _isSelectionMoveDragging OrElse _isLassoDrawing OrElse
+                   _isMaskBrushDrawing OrElse _isBrushDrawing OrElse _isRetouching OrElse
+                   _isGuideDragging OrElse _objectMarqueeActive OrElse _isMaskMoveDragging OrElse
+                   _isPerspectiveDragging OrElse _isWarpDragging OrElse _isEnvelopeDragging OrElse
+                   _isLineDragging OrElse _isObjectCornerDragging OrElse _isGradientDragging OrElse
+                   _isPathPointerActive
+        End Function
+
+        ''' <summary>Schliesst die laufende Zeigergeste auf der Buehne ab: Striche werden uebernommen,
+        ''' Zuege beendet, alle Zugmerker zurueckgesetzt.
+        '''
+        ''' Gerufen wird sie aus zwei Richtungen: normal beim Loslassen, und aus der Bewegung heraus,
+        ''' wenn dort auffaellt, dass gar keine Taste mehr gedrueckt ist (siehe
+        ''' OnSliderPointerMoved). Deshalb nimmt sie die allgemeinen Zeiger-Argumente und nicht die
+        ''' des Loslassens - aus ihnen braucht sie nur Position, Umschalttasten und den Zeiger
+        ''' selbst.</summary>
+        Private Sub FinishPointerGesture(e As PointerEventArgs)
             ' Klick neben das Bild im Masken-Werkzeug: die Markierung der Maskenebene faellt. Erst
             ' hier zu entscheiden ist noetig, weil derselbe Druck auch der Anfang einer Zieh-Auswahl
             ' sein kann, die ausserhalb ansetzt - ohne Weg war es ein Klick.
@@ -2909,9 +2951,9 @@ Namespace Views
                 CommitMaskBrushStroke()
                 _maskBrushPoints.Clear()
             End If
-            If _maskeSchiebtGerade Then
+            If _isMaskMoveDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndMaskMove()
-                _maskeSchiebtGerade = False
+                _isMaskMoveDragging = False
             End If
             If _isPerspectiveDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndPerspectiveCornerDrag()
@@ -2926,9 +2968,9 @@ Namespace Views
                 _isEnvelopeDragging = False
                 UpdateSliderLayout()
             End If
-            If _isLinienDragging Then
+            If _isLineDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndLineDrag()
-                _isLinienDragging = False
+                _isLineDragging = False
                 UpdateSliderLayout()
             End If
             If _isObjectCornerDragging Then
@@ -5447,6 +5489,18 @@ Namespace Views
                 If hoverOverlay IsNot Nothing Then UpdateTextOverlayHoverCursor(hoverOverlay, e)
                 Return
             End If
+
+            ' Wie auf der Buehne (siehe OnSliderPointerMoved): bleibt das Loslassen aus, weil der
+            ' Zeichenstift das Tablett verlaesst, klebte das Objekt danach am Zeiger. Ohne gedrueckte
+            ' Taste ist der Zug vorbei und wird auf demselben Weg abgewickelt wie bei einem
+            ' Fangverlust - mit Uebernahme der zuletzt gezogenen Stelle.
+            Dim textButtons = e.GetCurrentPoint(Me).Properties
+            If Not textButtons.IsLeftButtonPressed AndAlso Not textButtons.IsRightButtonPressed AndAlso
+               Not textButtons.IsMiddleButtonPressed Then
+                EndTextOverlayDrag(e.Pointer)
+                Return
+            End If
+
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim overlay = Me.FindControl(Of Border)("TextOverlay")
@@ -5883,6 +5937,21 @@ Namespace Views
         ''' pinke Einrast-Hilfslinie dauerhaft im Bild stehen (Nutzer-Screenshot 17.07.).
         ''' Gleiche Abwicklung wie OnTextOverlayPointerReleased.
         Public Sub OnTextOverlayCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            EndTextOverlayDrag(e.Pointer)
+        End Sub
+
+        ''' <summary>Wickelt einen Objekt-Zug ohne eigenes Loslass-Ereignis ab - bei Fangverlust und
+        ''' bei einer Bewegung ohne gedrueckte Taste.
+        '''
+        ''' DER FANG MUSS MIT WEG. Beim Fangverlust ist er ohnehin schon fort, bei der Bewegung ohne
+        ''' Taste aber nicht: der Druck hat ihn auf das Overlay gelegt (siehe
+        ''' OnTextOverlayPointerPressed), und ohne Freigabe blieben danach ALLE Zeigerereignisse an
+        ''' ihm haengen, obwohl der Zug beendet ist. Freigegeben wird nur, was noch beim Overlay
+        ''' liegt - nach einem Fangverlust gehoert er schon jemand anderem.</summary>
+        Private Sub EndTextOverlayDrag(pointer As IPointer)
+            If pointer IsNot Nothing AndAlso pointer.Captured Is Me.FindControl(Of Border)("TextOverlay") Then
+                pointer.Capture(Nothing)
+            End If
             If Not _isTextDragging Then Return
             Dim vm = TryCast(DataContext, EditorViewModel)
             _isTextDragging = False

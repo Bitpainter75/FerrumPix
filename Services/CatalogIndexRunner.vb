@@ -20,6 +20,14 @@ Namespace Services
         Public Property Failed As Integer
         ''' <summary>Wie viele Katalogeintraege einen Ortsnamen bekommen haben.</summary>
         Public Property PlacesResolved As Integer
+
+        ''' <summary>Wie viele Katalogeintraege unter den durchsuchten Ordnern auf eine Datei zeigen,
+        ''' die es nicht mehr gibt. NUR GEZAEHLT: geloescht wird auf Ansage ueber "Datenbank
+        ''' bereinigen". Eine Bewertung und ein Stichwort sind Handarbeit, und ein Ordner kann auch
+        ''' nur voruebergehend fehlen - eine nicht eingehaengte Platte saehe fuer den Lauf aus wie
+        ''' tausend geloeschte Fotos.</summary>
+        Public Property Orphaned As Integer
+
         Public Property Cancelled As Boolean
 
         ''' <summary>Der Lauf hat gar nicht erst begonnen, weil schon einer laeuft.
@@ -229,6 +237,13 @@ Namespace Services
                     If Not result.Cancelled Then
                         result.PlacesResolved = Await Task.Run(Function() LibraryService.Instance.FillMissingPlaces(),
                                                                runToken).ConfigureAwait(False)
+
+                        ' Was ins Leere zeigt, wird GEZAEHLT und gesagt - nicht weggeraeumt (siehe
+                        ' CatalogIndexResult.Orphaned). Nur nach einem vollstaendigen Durchlauf:
+                        ' nach einem Abbruch fehlt die halbe Wahrheit, und eine Zahl, die zu hoch
+                        ' ist, waere schlimmer als keine.
+                        result.Orphaned = Await Task.Run(Function() LibraryService.Instance.CountOrphanedRecordsUnder(roots),
+                                                         runToken).ConfigureAwait(False)
                     End If
                 End Using
             Catch ex As OperationCanceledException
@@ -247,7 +262,8 @@ Namespace Services
             DiagnosticLogService.LogAlways("Katalogindex.Durchlauf",
                 $"{result.Indexed} indiziert, {result.Unchanged} unveraendert, " &
                 $"{result.ThumbnailsCreated} Vorschaubilder, {result.Failed} fehlgeschlagen, " &
-                $"{result.PlacesResolved} Orte" & If(result.Cancelled, ", abgebrochen", ""))
+                $"{result.PlacesResolved} Orte, {result.Orphaned} ohne Datei" &
+                If(result.Cancelled, ", abgebrochen", ""))
             Return result
         End Function
 

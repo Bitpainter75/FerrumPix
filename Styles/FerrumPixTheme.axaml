@@ -1153,6 +1153,55 @@
         <Setter Property="IconBrush" Value="#FFFFFFFF"/>
     </Style>
 
+    <!-- DIE REITER DES EBENEN-PANELS (Ebenen und Historie). Zwei Knoepfe und kein TabControl: die
+         beiden Inhalte liegen im Panel selbst und schalten ueber IsVisible, ein Reiterkopf mit
+         eigener Vorlage waere dafuer die groessere Maschine. Der aktive Reiter traegt die Klasse
+         "active" - gesetzt aus dem Panel heraus ueber Classes.active. -->
+    <Style Selector="Button.panel-tab">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="0,7"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
+        <Setter Property="FontSize" Value="{DynamicResource FP.Font.Small}"/>
+    </Style>
+    <Style Selector="Button.panel-tab:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="TextBlock.Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.panel-tab.active">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.panel-tab.active:pointerover /template/ ContentPresenter">
+        <Setter Property="TextBlock.Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+    </Style>
+
+    <!-- DIE HISTORIE. Ihre Zeilen sind die der Ebenen: Symbol im Kasten, Name, und die Auswahl
+         markiert den aktuellen Stand mit der Akzentflaeche. Eigen ist ihnen nur die Nummer rechts
+         und der blasse Zustand der zurueckgenommenen Schritte - die bleiben anklickbar, genau ueber
+         sie geht der Weg zurueck nach vorn. -->
+    <Style Selector="TextBlock.history-number">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
+    </Style>
+    <Style Selector="Border.history-row.undone TextBlock.history-step">
+        <Setter Property="Foreground" Value="{DynamicResource FP.Text.Muted}"/>
+    </Style>
+    <Style Selector="Border.history-row.undone icons|SvgIcon">
+        <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+    <!-- Auf der ausgewaehlten (orangefarbenen) Zeile gilt dieselbe Sprache wie im Ebenenstapel:
+         Symbol und Nummer werden weiss, sonst verschwinden sie in der Flaeche. -->
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.history-row icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#FFFFFFFF"/>
+    </Style>
+    <Style Selector="ListBox.layers-panel-list ListBoxItem:selected Border.history-row TextBlock.history-number">
+        <Setter Property="Foreground" Value="#CCFFFFFF"/>
+    </Style>
+
     <Style Selector="ListBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource FP.Sel.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>

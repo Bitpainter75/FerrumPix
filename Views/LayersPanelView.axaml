@@ -12,8 +12,21 @@
             IsVisible="{Binding IsLayersPanelVisible}">
         <Grid RowDefinitions="Auto,*,Auto,Auto">
 
+            <StackPanel Grid.Row="0">
+
+            <!-- Die beiden Reiter. Sie stehen ÜBER der Deckkraft-Leiste, weil die zum Ebenenstapel
+                 gehört und in der Historie nichts zu suchen hat. -->
+            <Grid ColumnDefinitions="*,*" Margin="10,8,10,0">
+                <Button Grid.Column="0" Classes="panel-tab" Content="Ebenen"
+                        Classes.active="{Binding IsLayerStackVisible}"
+                        Command="{Binding ShowLayersTabCommand}" />
+                <Button Grid.Column="1" Classes="panel-tab" Content="Historie"
+                        Classes.active="{Binding IsHistoryTabSelected}"
+                        Command="{Binding ShowHistoryTabCommand}" />
+            </Grid>
+
             <!-- Kopfleiste: Deckkraft (Slider) über dem Mischmodus der markierten Ebene. -->
-            <Border Grid.Row="0" Padding="10,10,10,8"
+            <Border Padding="10,10,10,8" IsVisible="{Binding IsLayerStackVisible}"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,0,0,1">
                 <StackPanel Spacing="8" IsEnabled="{Binding HasSelectedPanelLayer}">
                     <Grid ColumnDefinitions="70,*,44" VerticalAlignment="Center">
@@ -44,8 +57,58 @@
                 </StackPanel>
             </Border>
 
+            </StackPanel>
+
+            <!-- DIE HISTORIE. Sie liegt in derselben Zeile wie der Ebenenstapel und tauscht mit ihm:
+                 das Panel ist für eine Liste gebaut, und zwei übereinander gäben zwei halbe.
+                 Angesprungen wird über die Auswahl der Liste - die Nummer eines Schritts ist die
+                 Zahl der Änderungen, die dann auf dem Original liegen. -->
+            <Grid Grid.Row="1" IsVisible="{Binding IsHistoryTabSelected}">
+                <ListBox x:Name="HistoryListBox"
+                         Classes="layers-panel-list"
+                         ItemsSource="{Binding HistorySteps}"
+                         SelectedIndex="{Binding CurrentHistoryIndex, Mode=TwoWay}"
+                         Background="Transparent" BorderThickness="0" Padding="0"
+                         VerticalAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Dieselbe Zeile wie im Ebenenstapel, nur schmaler: Symbol im Kasten,
+                                 Name, und rechts die Nummer des Schritts. Der aktuelle Stand ist die
+                                 ausgewählte Zeile und trägt darüber die Akzentfläche. -->
+                            <Border Classes="layers-panel-row history-row" Padding="8,4" MinHeight="34"
+                                    Classes.undone="{Binding IsUndone}">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <Border Grid.Column="0" Width="24" Height="24" CornerRadius="3"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource FP.Border.Normal}"
+                                            Background="{DynamicResource FP.Bg.Root}">
+                                        <icons:SvgIcon Source="{Binding IconSource}"
+                                                       Width="13" Height="13"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Label}"
+                                               Classes="layer-name history-step"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               Margin="7,0,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding Number}"
+                                               Classes="history-number"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               Margin="6,0,2,0"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
             <!-- Ebenenstapel: oberster Eintrag = vorderste Ebene, Hintergrund liegt fest darunter. -->
-            <Grid Grid.Row="1" x:Name="LayerListArea">
+            <Grid Grid.Row="1" x:Name="LayerListArea" IsVisible="{Binding IsLayerStackVisible}">
             <ListBox x:Name="LayerListBox"
                      Classes="layers-panel-list"
                      ItemsSource="{Binding LayerRows}"
@@ -248,6 +311,7 @@
                  volle Akzentflaeche - die haette die Symbole, deren Farbe hier die Aussage traegt,
                  unlesbar gemacht. -->
             <Border Grid.Row="2" Padding="8,5" MinHeight="46"
+                    IsVisible="{Binding IsLayerStackVisible}"
                     PointerPressed="OnFixedLayerPointerPressed"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0"
                     Background="{DynamicResource FP.Bg.Dark}">
@@ -311,6 +375,7 @@
                  acht Pixel je Seite waren genau das, was am Ende fehlte. Oben und unten bleibt es
                  beim gewohnten Abstand. -->
             <Border Grid.Row="3" Padding="1,6"
+                    IsVisible="{Binding IsLayerStackVisible}"
                     BorderBrush="{DynamicResource FP.Border.Subtle}" BorderThickness="0,1,0,0">
                 <!-- WAS GERADE MARKIERT IST, entscheidet, welche Knoepfe ueberhaupt dastehen -
                      dieselbe Regel wie im Kontextmenue, und aus derselben Quelle im ViewModel.

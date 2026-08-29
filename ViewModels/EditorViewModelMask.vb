@@ -1364,7 +1364,7 @@ Namespace ViewModels
                 Return
             End If
             RebuildLayerRows()
-            AddHistoryEntry(If(mask.IsRadialGradient, "Radialer Verlauf", "Linearer Verlauf"))
+            NameHistoryStep(If(mask.IsRadialGradient, "Radialer Verlauf", "Linearer Verlauf"))
             SchedulePreviewUpdate()
             RaiseGradientPropertiesChanged()
         End Sub
@@ -2753,7 +2753,7 @@ Namespace ViewModels
             _gradientDragActive = False
             _gradientHandle = -1
             _gradientDragMaskId = ""
-            AddHistoryEntry(LocalizationService.T("Verlauf geändert"))
+            NameHistoryStep(LocalizationService.T("Verlauf geändert"))
             SchedulePreviewUpdate()
             RaiseGradientPropertiesChanged()
         End Sub
@@ -4114,7 +4114,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseMaskComponentsChanged()
             RebuildLayerRows()
-            AddHistoryEntry(LocalizationService.T("Maske eingefügt"))
+            NameHistoryStep(LocalizationService.T("Maske eingefügt"))
             SchedulePreviewUpdate()
         End Sub
 
@@ -4167,7 +4167,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseAnnotationMaskStateChanged()
             RebuildLayerRows()
-            AddHistoryEntry(LocalizationService.T("Ebenenmaske hinzugefügt"))
+            NameHistoryStep(LocalizationService.T("Ebenenmaske hinzugefügt"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))
         End Sub
 
@@ -4208,7 +4208,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseAnnotationMaskStateChanged()
             RebuildLayerRows()
-            AddHistoryEntry(LocalizationService.T("Gruppenmaske hinzugefügt"))
+            NameHistoryStep(LocalizationService.T("Gruppenmaske hinzugefügt"))
             RequestOverlayStateNotify()
             RefreshPreviewImmediately()
         End Sub
@@ -4229,7 +4229,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseAnnotationMaskStateChanged()
             RebuildLayerRows()
-            AddHistoryEntry(LocalizationService.T("Gruppenmaske entfernt"))
+            NameHistoryStep(LocalizationService.T("Gruppenmaske entfernt"))
             RequestOverlayStateNotify()
             RefreshPreviewImmediately()
         End Sub
@@ -4328,7 +4328,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseAnnotationMaskStateChanged()
             RebuildLayerRows()
-            AddHistoryEntry(LocalizationService.T("Ebenenmaske entfernt"))
+            NameHistoryStep(LocalizationService.T("Ebenenmaske entfernt"))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))
         End Sub
 
@@ -4342,7 +4342,7 @@ Namespace ViewModels
                 _hasChanges = True
                 RaiseAnnotationMaskStateChanged()
                 RebuildLayerRows()
-                AddHistoryEntry(If(adjustmentLayer.ClipToLayerBelow,
+                NameHistoryStep(If(adjustmentLayer.ClipToLayerBelow,
                                    LocalizationService.T("Auf Ebene darunter beschränkt"),
                                    LocalizationService.T("Beschränkung aufgehoben")))
                 SchedulePreviewUpdate()
@@ -4356,7 +4356,7 @@ Namespace ViewModels
             _hasChanges = True
             RaiseAnnotationMaskStateChanged()
             RebuildLayerRows()
-            AddHistoryEntry(If(a.ClipToLayerBelow,
+            NameHistoryStep(If(a.ClipToLayerBelow,
                                LocalizationService.T("Auf Ebene darunter beschränkt"),
                                LocalizationService.T("Beschränkung aufgehoben")))
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))

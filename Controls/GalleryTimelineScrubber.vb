@@ -105,19 +105,38 @@ Namespace Controls
         Protected Overrides Sub OnPointerMoved(e As PointerEventArgs)
             MyBase.OnPointerMoved(e)
             UpdatePointer(e)
-            If _isDragging Then
-                RaiseScrub()
-                e.Handled = True
+            If Not _isDragging Then Return
+
+            ' Siehe RoundSlider: beim Zeichenstift kann das Loslassen ausbleiben, wenn der Stift das
+            ' Tablett verlaesst. Ohne diese Pruefung sprang die Galerie danach schon beim blossen
+            ' Darueberfahren zu einer anderen Stelle.
+            If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
+                EndDrag(e.Pointer)
+                Return
             End If
+
+            RaiseScrub()
+            e.Handled = True
         End Sub
 
         Protected Overrides Sub OnPointerReleased(e As PointerReleasedEventArgs)
             MyBase.OnPointerReleased(e)
             If _isDragging Then
-                _isDragging = False
-                e.Pointer.Capture(Nothing)
+                EndDrag(e.Pointer)
                 e.Handled = True
             End If
+        End Sub
+
+        Protected Overrides Sub OnPointerCaptureLost(e As PointerCaptureLostEventArgs)
+            MyBase.OnPointerCaptureLost(e)
+            EndDrag(e.Pointer)
+        End Sub
+
+        ''' <summary>Beendet das Ziehen an der Zeitleiste. Der Fang wird nur freigegeben, solange er
+        ''' noch bei dieser Leiste liegt.</summary>
+        Private Sub EndDrag(pointer As IPointer)
+            _isDragging = False
+            If pointer IsNot Nothing AndAlso pointer.Captured Is Me Then pointer.Capture(Nothing)
         End Sub
 
         Protected Overrides Sub OnPointerExited(e As PointerEventArgs)

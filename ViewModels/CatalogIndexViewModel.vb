@@ -127,6 +127,12 @@ Namespace ViewModels
             If result.PlacesResolved > 0 Then
                 text &= ", " & String.Format(LocalizationService.T("{0} Aufnahmeorte"), result.PlacesResolved)
             End If
+            ' WAS INS LEERE ZEIGT, wird hier gesagt und nicht still weggeraeumt: Bewertungen,
+            ' Stichwoerter und Personen sind Handarbeit. Wegraeumen kann man sie in den Einstellungen
+            ' mit "Datenbank bereinigen" - dann aber auf Ansage.
+            If result.Orphaned > 0 Then
+                text &= ", " & String.Format(LocalizationService.T("{0} Einträge ohne Datei"), result.Orphaned)
+            End If
             Return text
         End Function
 

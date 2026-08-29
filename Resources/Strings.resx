@@ -7671,4 +7671,10 @@
   <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
     <value>open the viewer</value>
   </data>
+  <data name="Historie_bd96146e" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="0_Eintr_ge_ohne_Datei_48204d32" xml:space="preserve">
+    <value>{0} entries with no file</value>
+  </data>
 </root>

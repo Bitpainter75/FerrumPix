@@ -7668,4 +7668,10 @@
   <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
     <value>打开查看器</value>
   </data>
+  <data name="Historie_bd96146e" xml:space="preserve">
+    <value>历史记录</value>
+  </data>
+  <data name="0_Eintr_ge_ohne_Datei_48204d32" xml:space="preserve">
+    <value>{0} 个条目没有对应文件</value>
+  </data>
 </root>

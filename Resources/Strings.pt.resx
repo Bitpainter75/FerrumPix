@@ -7669,4 +7669,10 @@
   <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
     <value>abrir o visualizador</value>
   </data>
+  <data name="Historie_bd96146e" xml:space="preserve">
+    <value>Histórico</value>
+  </data>
+  <data name="0_Eintr_ge_ohne_Datei_48204d32" xml:space="preserve">
+    <value>{0} entradas sem ficheiro</value>
+  </data>
 </root>

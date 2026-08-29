@@ -7710,4 +7710,10 @@
   <data name="den_Viewer_ffnest_ee38d2f9" xml:space="preserve">
     <value>ビューアーを開く</value>
   </data>
+  <data name="Historie_bd96146e" xml:space="preserve">
+    <value>履歴</value>
+  </data>
+  <data name="0_Eintr_ge_ohne_Datei_48204d32" xml:space="preserve">
+    <value>ファイルのない項目 {0} 件</value>
+  </data>
 </root>

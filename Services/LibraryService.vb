@@ -1391,12 +1391,64 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>ZAEHLT die Katalogeintraege unter den angegebenen Ordnern, deren Datei es nicht
+        ''' mehr gibt. Sie loescht NICHTS.
+        '''
+        ''' Gedacht fuer den Indexlauf: der weiss hinterher, wie viele Zeilen ins Leere zeigen, und
+        ''' sagt es. Geloescht wird weiter nur auf Ansage, ueber "Datenbank bereinigen" - eine
+        ''' Bewertung und ein Stichwort sind Handarbeit, und ein Ordner kann auch nur voruebergehend
+        ''' fehlen, etwa wenn eine Platte nicht eingehaengt ist.
+        '''
+        ''' Auf die Ordner eingegrenzt und nicht ueber den ganzen Katalog: der Lauf hat nur diese
+        ''' Ordner angesehen, und ueber alles andere kann er nichts sagen.</summary>
+        Public Function CountOrphanedRecordsUnder(folders As IReadOnlyList(Of String)) As Integer
+            If folders Is Nothing OrElse folders.Count = 0 Then Return 0
+            Dim orphans = 0
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Dim seen As New HashSet(Of String)(PathIdentity.Comparer)
+                For Each folder In folders
+                    If String.IsNullOrWhiteSpace(folder) Then Continue For
+                    ' Maskiert und mit Trennzeichen, genau wie beim ordnerweisen Loeschen: sonst
+                    ' zaehlte "100_Fotos" auch die Zeilen von "100aFotos" mit.
+                    Dim prefix = EscapeLikeValue(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
+                                                 Path.DirectorySeparatorChar) & "%"
+                    Using cmd = conn.CreateCommand()
+                        ' Dieselben drei Tabellen wie beim Aufraeumen: ein Bild, ueber das nur die
+                        ' Gesichtssuche gelaufen ist, hat keine Zeile in ImageMeta.
+                        cmd.CommandText = "SELECT FilePath FROM ImageMeta WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM Face WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM ScannedImage WHERE FilePath LIKE $p" & LikeEscapeClause
+                        cmd.Parameters.AddWithValue("$p", prefix)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                Dim p = reader.GetString(0)
+                                ' Zwei eingetragene Ordner koennen ueber Verweise auf denselben
+                                ' Bestand zeigen - ohne diese Liste zaehlte dieselbe Zeile zweimal.
+                                If Not seen.Add(p) Then Continue While
+                                If IsServerPseudoPath(p) Then Continue While
+                                If Not File.Exists(p) Then orphans += 1
+                            End While
+                        End Using
+                    End Using
+                Next
+            End Using
+            Return orphans
+        End Function
+
         Private Function PurgeOrphanedRecordsLocked() As Integer
             Dim orphans As New List(Of String)()
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
-                    cmd.CommandText = "SELECT FilePath FROM ImageMeta"
+                    ' AUS ALLEN DREI TABELLEN, die auf einen Pfad zeigen. Ein Bild, ueber das nur
+                    ' die Gesichtssuche gelaufen ist, steht in Face und ScannedImage, aber nicht in
+                    ' ImageMeta - ohne Bewertung, Etikett oder Stichwort gibt es dort keine Zeile.
+                    ' Ueber ImageMeta allein waere es unauffindbar gewesen und seine Gesichter waeren
+                    ' fuer immer stehen geblieben.
+                    cmd.CommandText = "SELECT FilePath FROM ImageMeta " &
+                                      "UNION SELECT FilePath FROM Face " &
+                                      "UNION SELECT FilePath FROM ScannedImage"
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
                             Dim p = reader.GetString(0)
@@ -1420,9 +1472,18 @@ Namespace Services
                 End Using
                 If orphans.Count > 0 Then
                     Using transaction = conn.BeginTransaction()
+                        ' ALLE DREI TABELLEN, die auf den Pfad zeigen - dieselbe Reihenfolge wie in
+                        ' DeleteFolderCatalogDataLocked. Frueher stand hier nur ImageMeta: die
+                        ' Gesichter eines geloeschten Bildes blieben stehen, und weil
+                        ' GetPersonImageCount ueber die Face-Tabelle zaehlt, zeigte die Personenwand
+                        ' weiter Bilder mit, die es nicht mehr gab. Das Aufraeumen namenloser
+                        ' Personen unten griff aus demselben Grund nicht: ihre Gesichter existierten
+                        ' ja noch.
                         Using cmd = conn.CreateCommand()
                             cmd.Transaction = transaction
-                            cmd.CommandText = "DELETE FROM ImageMeta WHERE FilePath=$p"
+                            cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p;" &
+                                              "DELETE FROM ScannedImage WHERE FilePath=$p;" &
+                                              "DELETE FROM ImageMeta WHERE FilePath=$p"
                             Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
                             For Each p In orphans
                                 pParam.Value = p

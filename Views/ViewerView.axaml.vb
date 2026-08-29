@@ -660,6 +660,26 @@ Namespace Views
         Private Sub OnImagePointerMoved(sender As Object, e As PointerEventArgs)
             UpdateMousePositionText(e)
 
+            ' Beim Zeichenstift bleibt das Loslassen aus, wenn der Stift das Tablett verlaesst; der
+            ' Fang bleibt dabei bestehen, der Weg ueber den Fangverlust greift also nicht. Ohne
+            ' gedrueckte Taste ist der Zug vorbei: das Bild soll dem Zeiger nicht weiter folgen, und
+            ' das Zuschnittrechteck nicht weiterwachsen. Abgewickelt wird wie bei einem Fangverlust,
+            ' der Zuschnitt also verworfen statt uebernommen - ein Wechsel in den Editor waere eine
+            ' zu grosse Wirkung fuer eine blosse Zeigerbewegung.
+            If _isPanningImage OrElse _isCropDragging Then
+                Dim buttons = e.GetCurrentPoint(Me).Properties
+                If Not buttons.IsLeftButtonPressed AndAlso Not buttons.IsRightButtonPressed AndAlso
+                   Not buttons.IsMiddleButtonPressed Then
+                    EndPanning()
+                    If _isCropDragging Then
+                        _isCropDragging = False
+                        _cropDragMoved = False
+                        HideCropSelectionVisual()
+                    End If
+                    Return
+                End If
+            End If
+
             If _isPanningImage Then
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
                 If scrollViewer Is Nothing Then Return

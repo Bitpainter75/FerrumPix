@@ -143,7 +143,7 @@ Namespace ViewModels
             ' die 30 Einträge fluten. Beim Ziehen rendert der Stempel/Retusche live gedrosselt:
             ' schnell genug für sichtbares Zeichnen, aber ohne für jeden Pointer-Punkt einen kompletten
             ' Pipeline-Render zu starten.
-            If captureUndo Then AddHistoryEntry(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen")))
+            If captureUndo Then NameHistoryStep(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen")))
             UpdateRetouchLivePreview(spot, captureUndo)
         End Sub
 
