@@ -7885,6 +7885,6 @@
     <value>Kosketuslevytila</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Ottaa käyttöön kosketuslevyeleet: zoomaa katselimessa kahdella sormella, selaa pyyhkäisemällä vaakasuunnassa ja panoroi suurennettua kuvaa vetämällä. Katselimessa Vaihto+veto valitsee rajauksen. Hiiren käyttö pysyy ennallaan, kun tila ei ole käytössä.</value>
+    <value>Ottaa käyttöön kosketuslevyeleet: zoomaa katselimessa kahdella sormella, selaa pyyhkäisemällä vaakasuunnassa ja panoroi suurennettua kuvaa vetämällä. Katselimessa SHIFT+veto valitsee rajauksen. Hiiren käyttö pysyy ennallaan, kun tila ei ole käytössä.</value>
   </data>
 </root>

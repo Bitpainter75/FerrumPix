@@ -73,11 +73,15 @@ Namespace Controls.EditorPanels
         End Sub
 
         Public Async Sub OnRemoveSavedXmpPresetClick(sender As Object, e As RoutedEventArgs)
-            Dim vm = TryCast(DataContext, EditorViewModel)
-            Dim preset = TryCast(TryCast(sender, Control)?.DataContext, XmpPresetSettings)
-            If vm Is Nothing OrElse preset Is Nothing Then Return
-            e.Handled = True
-            Await vm.ConfirmRemoveSavedPresetAsync(preset.Path, isLut:=False)
+            Try
+                Dim vm = TryCast(DataContext, EditorViewModel)
+                Dim preset = TryCast(TryCast(sender, Control)?.DataContext, XmpPresetSettings)
+                If vm Is Nothing OrElse preset Is Nothing Then Return
+                e.Handled = True
+                Await vm.ConfirmRemoveSavedPresetAsync(preset.Path, isLut:=False)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("XmpPresetPanel.OnRemoveSavedXmpPresetClick", ex)
+            End Try
         End Sub
     End Class
 

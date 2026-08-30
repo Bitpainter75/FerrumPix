@@ -7885,6 +7885,6 @@
     <value>Styrplatte-läge</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. I visaren väljer Skift+dra en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
+    <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. I visaren väljer SHIFT+dra en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
   </data>
 </root>

@@ -7845,6 +7845,6 @@
     <value>Modalità trackpad</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Nel visualizzatore, Maiusc+trascina seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
+    <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Nel visualizzatore, SHIFT+trascina seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
   </data>
 </root>

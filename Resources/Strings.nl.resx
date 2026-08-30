@@ -7885,6 +7885,6 @@
     <value>Trackpadmodus</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Schakelt trackpadgebaren in: zoomen met twee vingers in de viewer, horizontaal vegen om te bladeren en slepen om een ingezoomde afbeelding te pannen. In de viewer selecteert Shift+slepen een uitsnede. De muisbediening blijft ongewijzigd zolang deze modus uit staat.</value>
+    <value>Schakelt trackpadgebaren in: zoomen met twee vingers in de viewer, horizontaal vegen om te bladeren en slepen om een ingezoomde afbeelding te pannen. In de viewer selecteert SHIFT+slepen een uitsnede. De muisbediening blijft ongewijzigd zolang deze modus uit staat.</value>
   </data>
 </root>

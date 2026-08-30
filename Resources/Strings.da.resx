@@ -7885,6 +7885,6 @@
     <value>Trackpad-tilstand</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Aktiverer trackpadbevægelser: zoom med to fingre i fremviseren, stryg vandret for at bladre og træk for at panorere et forstørret billede. I fremviseren vælger Skift+træk et beskæringsområde. Musebetjeningen forbliver uændret, når tilstanden er slået fra.</value>
+    <value>Aktiverer trackpadbevægelser: zoom med to fingre i fremviseren, stryg vandret for at bladre og træk for at panorere et forstørret billede. I fremviseren vælger SHIFT+træk et beskæringsområde. Musebetjeningen forbliver uændret, når tilstanden er slået fra.</value>
   </data>
 </root>

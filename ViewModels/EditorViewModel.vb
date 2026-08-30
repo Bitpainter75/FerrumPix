@@ -19530,7 +19530,7 @@ Namespace ViewModels
             CommitSelectionAdjustModeToModel()
             Dim index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = layerId)
             If index < 0 Then Return
-            PushUndo(LocalizationService.T("Korrekturebene gelöscht"))
+            PushUndo(LocalizationService.T("Ebene gelöscht"))
             Dim maskId = _maskedAdjustmentLayers(index).MaskId
             _maskedAdjustmentLayers.RemoveAt(index)
             RemoveMaskIfUnreferenced(maskId)
@@ -20347,7 +20347,7 @@ Namespace ViewModels
             If _hasActiveSelection Then ClearSelection(captureUndo:=False)
             index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
             If index < 0 Then Return
-            PushUndo(LocalizationService.T("Korrekturebene dupliziert"))
+            PushUndo(LocalizationService.T("Ebene dupliziert"))
             Dim source = _maskedAdjustmentLayers(index)
             Dim copy = DuplicateAdjustmentLayer(source,
                 If(String.IsNullOrWhiteSpace(source.Name), LocalizationService.T("Auswahlebene"), source.Name) &

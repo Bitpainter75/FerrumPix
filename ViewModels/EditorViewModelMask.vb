@@ -4383,7 +4383,7 @@ Namespace ViewModels
                                  $" bearbeitet={Kurz(_editingLayerMaskId)} markiert={Kurz(_selectedMaskedAdjustmentLayerId)}" &
                                  $" promotet={Kurz(_selectionPromotedLayerId)}")
             If Not _hasActiveSelection Then Return
-            PushUndo(LocalizationService.T("Korrekturebene erstellt"))
+            PushUndo(LocalizationService.T("Ebenenmaske hinzugefügt"))
             Dim countBefore = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return

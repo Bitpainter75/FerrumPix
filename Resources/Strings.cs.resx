@@ -7885,6 +7885,6 @@
     <value>Režim touchpadu</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Zapne gesta touchpadu: přiblížení dvěma prsty v prohlížeči, vodorovné přejetí pro procházení a tažení pro posun zvětšeného obrázku. V prohlížeči Shift+tažení vybere ořez. Ovládání myší zůstává při vypnutém režimu beze změny.</value>
+    <value>Zapne gesta touchpadu: přiblížení dvěma prsty v prohlížeči, vodorovné přejetí pro procházení a tažení pro posun zvětšeného obrázku. V prohlížeči SHIFT+tažení vybere ořez. Ovládání myší zůstává při vypnutém režimu beze změny.</value>
   </data>
 </root>

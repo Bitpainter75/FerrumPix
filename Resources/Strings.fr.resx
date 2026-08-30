@@ -7845,6 +7845,6 @@
     <value>Mode pavé tactile</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Dans le visualiseur, Maj+glisser sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
+    <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Dans le visualiseur, SHIFT+glisser sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
   </data>
 </root>

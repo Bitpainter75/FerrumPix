@@ -7885,6 +7885,6 @@
     <value>Styreflate-modus</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Aktiverer styreflatebevegelser: zoom med to fingre i visningen, sveip vannrett for å bla og dra for å panorere et forstørret bilde. I visningen velger Shift+dra et beskjæringsområde. Musebetjeningen er uendret når modusen er av.</value>
+    <value>Aktiverer styreflatebevegelser: zoom med to fingre i visningen, sveip vannrett for å bla og dra for å panorere et forstørret bilde. I visningen velger SHIFT+dra et beskjæringsområde. Musebetjeningen er uendret når modusen er av.</value>
   </data>
 </root>

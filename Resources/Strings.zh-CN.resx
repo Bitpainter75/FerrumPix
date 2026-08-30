@@ -7843,6 +7843,6 @@
     <value>触控板模式</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 Shift 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
+    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
   </data>
 </root>

@@ -7845,6 +7845,6 @@
     <value>Modo de trackpad</value>
   </data>
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. En el visor, Mayús+arrastrar selecciona un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
+    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. En el visor, SHIFT+arrastrar selecciona un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
   </data>
 </root>
