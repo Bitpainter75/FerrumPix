@@ -7866,4 +7866,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Akwamaryn</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Wróć do galerii (na pełnym ekranie: wyjdź z pełnego ekranu; także klawiszem Spacja)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Pokaż oznaczenia na pasku filmowym</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Pokazuje ocenę gwiazdkową, ulubione i etykietę koloru na kafelkach paska filmowego w przeglądarce i edytorze.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Usunąć {0} '{1}' z listy? Sam plik zostanie zachowany.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Nie można zmienić obrazu na pełnym ekranie, gdy istnieją niezapisane zmiany.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Tryb gładzika</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Włącza gesty gładzika: powiększanie dwoma palcami w przeglądarce, przesuwanie poziome do przeglądania i przeciąganie do panoramowania powiększonego obrazu. W przeglądarce Shift+przeciąganie wybiera kadrowanie. Sterowanie myszą pozostaje bez zmian, gdy ten tryb jest wyłączony.</value>
+  </data>
 </root>

@@ -3788,6 +3788,13 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowFilmstripItemBadges As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripItemBadgesVisible
+            End Get
+        End Property
+
         ''' <summary>Ob die Fusszeile sichtbar ist: die Leiste mit Bildangaben und Zoom. NICHT der
         ''' Filmstreifen darueber - der hat seinen eigenen Schalter und bleibt stehen.</summary>
         Public ReadOnly Property ShowFooter As Boolean
@@ -3921,6 +3928,14 @@ Namespace ViewModels
             InfoPanel.OwnerLoadsDetails = True
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
+            AddHandler InfoPanel.PropertyChanged,
+                Sub(sender, e)
+                    If e.PropertyName = NameOf(InfoPanel.Rating) OrElse
+                       e.PropertyName = NameOf(InfoPanel.IsFavorite) OrElse
+                       e.PropertyName = NameOf(InfoPanel.ColorLabel) Then
+                        SyncCurrentFilmstripItemBadges()
+                    End If
+                End Sub
             ' Wechselt die Darstellung (Histogramm, Waveform, Parade), rechnet der Editor sie aus
             ' dem BEARBEITETEN Bild neu - derselbe Weg wie nach einem Reglerzug. Ohne Szene bleibt
             ' der Weg ueber die Datei.
@@ -14116,6 +14131,7 @@ Namespace ViewModels
                         ToList()
 
                     FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)))
+                    RefreshFilmstripItemBadges()
 
                     _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
                     If _currentIndex < 0 Then _currentIndex = 0
@@ -14153,6 +14169,7 @@ Namespace ViewModels
         Private Sub ApplyFilmstripFolderPaths(paths As List(Of String), imagePath As String)
             _folderPaths = paths
             FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path)))
+            RefreshFilmstripItemBadges()
 
             _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, StringComparison.OrdinalIgnoreCase))
             If _currentIndex < 0 Then _currentIndex = 0
@@ -14160,6 +14177,33 @@ Namespace ViewModels
             MarkCurrentFilmstripItem()
             Dim itemsSnapshot = FilmstripItems.ToList()
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Der Editor-Filmstrip verwendet ebenfalls schlanke Kacheln. Sobald seine
+        ''' Markierungen eingeschaltet sind, werden die drei Katalogwerte gesammelt nachgereicht.</summary>
+        Public Sub RefreshFilmstripItemBadges()
+            If Not ShowFilmstripItemBadges OrElse FilmstripItems Is Nothing Then Return
+
+            Dim catalog = LibraryService.Instance.GetMetaForPaths(
+                FilmstripItems.Where(Function(item) item IsNot Nothing).Select(Function(item) item.FilePath))
+            For Each item In FilmstripItems
+                If item Is Nothing Then Continue For
+                Dim meta As LibraryImageMeta = Nothing
+                If catalog.TryGetValue(item.FilePath, meta) Then
+                    item.Rating = meta.Rating
+                    item.IsFavorite = meta.IsFavorite
+                    item.ColorLabel = meta.ColorLabel
+                End If
+            Next
+        End Sub
+
+        Private Sub SyncCurrentFilmstripItemBadges()
+            If _currentIndex < 0 OrElse _currentIndex >= FilmstripItems.Count Then Return
+            Dim item = FilmstripItems(_currentIndex)
+            If item Is Nothing Then Return
+            item.Rating = InfoPanel.Rating
+            item.IsFavorite = InfoPanel.IsFavorite
+            item.ColorLabel = InfoPanel.ColorLabel
         End Sub
 
         Private Async Sub LoadFilmstripContextDeferred(folder As String, imagePath As String, token As Integer)
@@ -22683,6 +22727,33 @@ Namespace ViewModels
             PersistSavedLutPresets()
             SyncLastAppliedLutPreset()
         End Sub
+
+        ''' <summary>Entfernt nur den gespeicherten Verweis, niemals die LUT-/XMP-Datei selbst.
+        ''' Die Rückfrage gehört hierher, damit jede Preset-Kachel dieselbe sichere Regel benutzt.</summary>
+        Public Async Function ConfirmRemoveSavedPresetAsync(path As String, isLut As Boolean) As Task
+            If String.IsNullOrWhiteSpace(path) OrElse _mainVm Is Nothing Then Return
+
+            Dim savedName As String
+            If isLut Then
+                savedName = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, path.Trim(), StringComparison.OrdinalIgnoreCase))?.Name
+            Else
+                savedName = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, path.Trim(), StringComparison.OrdinalIgnoreCase))?.Name
+            End If
+            If String.IsNullOrWhiteSpace(savedName) Then Return
+
+            Dim presetKind = If(isLut, LocalizationService.T("LUT"), LocalizationService.T("XMP-Preset"))
+            Dim confirmed = Await _mainVm.ShowConfirmAsync(
+                LocalizationService.T("Preset entfernen"),
+                String.Format(LocalizationService.T("Soll {0} '{1}' aus der Liste entfernt werden? Die Datei selbst bleibt erhalten."), presetKind, savedName),
+                LocalizationService.T("Entfernen"), LocalizationService.T("Behalten"))
+            If Not confirmed Then Return
+
+            If isLut Then
+                RemoveLutPresetFromSettings(path)
+            Else
+                RemoveXmpPresetFromSettings(path)
+            End If
+        End Function
 
         ''' <summary>Der Weg, den die gespeicherten Preset-Kacheln nehmen. Die Liste steht in den
         ''' Einstellungen, die Dateien liegen irgendwo beim Nutzer - verschiebt oder löscht er eine, zeigt

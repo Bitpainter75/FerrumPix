@@ -72,12 +72,12 @@ Namespace Controls.EditorPanels
             End Try
         End Sub
 
-        Public Sub OnRemoveSavedXmpPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnRemoveSavedXmpPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim preset = TryCast(TryCast(sender, Control)?.DataContext, XmpPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.RemoveXmpPresetFromSettings(preset.Path)
             e.Handled = True
+            Await vm.ConfirmRemoveSavedPresetAsync(preset.Path, isLut:=False)
         End Sub
     End Class
 

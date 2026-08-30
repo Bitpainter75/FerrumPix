@@ -49,6 +49,7 @@ Namespace ViewModels
         Private _galleryTimelineMode As String = "All"
         Private _galleryStartupCustomFolder As String = ""
         Private _viewerShowFilmstrip As Boolean = True
+        Private _filmstripItemBadgesVisible As Boolean = False
         Private _galleryShowFooter As Boolean = True
         Private _viewerShowFooter As Boolean = True
         Private _editorShowFooter As Boolean = True
@@ -93,6 +94,7 @@ Namespace ViewModels
         Private _transparencyBackgroundColor As String = "#FFFFFFFF"
         Private _enableDiagnosticLogging As Boolean = False
         Private _tabletMode As Boolean = False
+        Private _trackpadMode As Boolean = False
         Private _isThumbnailCacheRefreshing As Boolean = False
         Private _isThumbnailCacheRefreshQueued As Boolean = False
         Private _immichEnabled As Boolean = False
@@ -169,6 +171,7 @@ Namespace ViewModels
         Private _savedGalleryStartupCustomFolder As String = ""
         Private _catalogIndexOnStartup As Boolean = False
         Private _savedViewerShowFilmstrip As Boolean = True
+        Private _savedFilmstripItemBadgesVisible As Boolean = False
         Private _savedGalleryShowFooter As Boolean = True
         Private _savedViewerShowFooter As Boolean = True
         Private _savedEditorShowFooter As Boolean = True
@@ -1256,6 +1259,20 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _viewerShowFilmstrip = value Then Return
                 Me.RaiseAndSetIfChanged(_viewerShowFilmstrip, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Sterne, Favorit und Farbetikett direkt auf den kleinen Filmstrip-Kacheln.
+        ''' Standardmäßig aus, weil die Vorschaufläche dort wichtiger ist als Metadaten.</summary>
+        Public Property FilmstripItemBadgesVisible As Boolean
+            Get
+                Return _filmstripItemBadgesVisible
+            End Get
+            Set(value As Boolean)
+                If _filmstripItemBadgesVisible = value Then Return
+                Me.RaiseAndSetIfChanged(_filmstripItemBadgesVisible, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -2743,6 +2760,7 @@ Namespace ViewModels
             _galleryTimelineMode = AppSettingsService.NormalizeGalleryTimelineMode(_appSettings.GalleryTimelineMode)
             _galleryStartupCustomFolder = AppSettingsService.NormalizeFolderPath(_appSettings.GalleryStartupCustomFolder)
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
+            _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
             _galleryShowFooter = _appSettings.GalleryShowFooter
             _viewerShowFooter = _appSettings.ViewerShowFooter
             _editorShowFooter = _appSettings.EditorShowFooter
@@ -2780,6 +2798,7 @@ Namespace ViewModels
             _transparencyBackgroundColor = AppSettingsService.NormalizeHexColor(_appSettings.TransparencyBackgroundColor, "#FFFFFFFF")
             _enableDiagnosticLogging = _appSettings.EnableDiagnosticLogging
             _tabletMode = _appSettings.TabletMode
+            _trackpadMode = _appSettings.TrackpadMode
             _immichEnabled = _appSettings.ImmichEnabled
             _immichServerUrl = _appSettings.ImmichServerUrl
             _immichApiKey = _appSettings.ImmichApiKey
@@ -3079,6 +3098,7 @@ Namespace ViewModels
             _savedGalleryTimelineMode = _galleryTimelineMode
             _savedGalleryStartupCustomFolder = _galleryStartupCustomFolder
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
+            _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
             _savedGalleryShowFooter = _galleryShowFooter
             _savedViewerShowFooter = _viewerShowFooter
             _savedEditorShowFooter = _editorShowFooter
@@ -3155,6 +3175,7 @@ Namespace ViewModels
             GalleryTimelineMode = _savedGalleryTimelineMode
             GalleryStartupCustomFolder = _savedGalleryStartupCustomFolder
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
+            FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
             GalleryShowFooter = _savedGalleryShowFooter
             ViewerShowFooter = _savedViewerShowFooter
             EditorShowFooter = _savedEditorShowFooter
@@ -3249,6 +3270,7 @@ Namespace ViewModels
             GalleryStartupFolderMode = "Pictures"
             GalleryStartupCustomFolder = ""
             ViewerShowFilmstrip = True
+            FilmstripItemBadgesVisible = False
             GalleryShowFooter = True
             ViewerShowFooter = True
             EditorShowFooter = True
@@ -3434,6 +3456,19 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Schaltet eine bewusst eigene Trackpad-Belegung ein, ohne die Maus-Standardwege
+        ''' für alle anderen Nutzer zu verändern.</summary>
+        Public Property TrackpadMode As Boolean
+            Get
+                Return _trackpadMode
+            End Get
+            Set(value As Boolean)
+                If _trackpadMode = value Then Return
+                Me.RaiseAndSetIfChanged(_trackpadMode, value)
+                AppSettingsService.Update(Sub(s) s.TrackpadMode = value)
+            End Set
+        End Property
+
         Private Sub SaveDisplaySettings()
             AppSettingsService.Update(Sub(s)
                                           s.TransparencyBackgroundMode = _transparencyBackgroundMode
@@ -3483,6 +3518,7 @@ Namespace ViewModels
         Private Sub SaveLayoutSettings()
             AppSettingsService.Update(Sub(s)
                                           s.ViewerShowFilmstrip = _viewerShowFilmstrip
+                                          s.FilmstripItemBadgesVisible = _filmstripItemBadgesVisible
                                           s.GalleryShowFooter = _galleryShowFooter
                                           s.ViewerShowFooter = _viewerShowFooter
                                           s.EditorShowFooter = _editorShowFooter

@@ -7826,4 +7826,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Aguamarina</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Volver a la galería (en pantalla completa: salir de pantalla completa; también con Espacio)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Mostrar indicadores en la tira de imágenes</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Muestra la valoración por estrellas, favorito y etiqueta de color en las miniaturas de la tira de imágenes del visor y editor.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>¿Quitar {0} '{1}' de la lista? El archivo se conservará.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>No se puede cambiar de imagen en pantalla completa mientras haya cambios sin guardar.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Modo de trackpad</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. En el visor, Mayús+arrastrar selecciona un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
+  </data>
 </root>

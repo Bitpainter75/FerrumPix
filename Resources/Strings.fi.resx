@@ -7866,4 +7866,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Turkoosi</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Takaisin galleriaan (koko näytössä: poistu koko näytöstä; myös välilyönnillä)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Näytä merkinnät filminauhassa</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Näyttää tähtiluokituksen, suosikin ja värimerkinnän katselimen ja muokkaimen filminauhan ruuduissa.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Poistetaanko {0} '{1}' luettelosta? Itse tiedosto säilytetään.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Kuvan vaihtaminen ei ole mahdollista koko näytössä, kun muutoksia ei ole tallennettu.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Kosketuslevytila</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Ottaa käyttöön kosketuslevyeleet: zoomaa katselimessa kahdella sormella, selaa pyyhkäisemällä vaakasuunnassa ja panoroi suurennettua kuvaa vetämällä. Katselimessa Vaihto+veto valitsee rajauksen. Hiiren käyttö pysyy ennallaan, kun tila ei ole käytössä.</value>
+  </data>
 </root>

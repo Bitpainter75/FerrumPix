@@ -189,17 +189,16 @@ The AppImage carries update information, so tools that manage AppImages find new
 
 | Package | For | Download |
 |---|---|---|
-| App bundle | Intel Macs | [FerrumPix-osx-x64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-x64-unsigned.app.zip) |
 | App bundle | Apple Silicon | [FerrumPix-osx-arm64-unsigned.app.zip](https://github.com/Bitpainter75/FerrumPix/releases/download/latest/FerrumPix-osx-arm64-unsigned.app.zip) |
 
 ### Experimental
 
-The ARM64 and macOS builds are untested. If you try one, please let me know whether it works.
+The ARM64 and macOS builds are untested. The macOS build currently requires Apple Silicon (M1 or newer): ONNX Runtime no longer ships an Intel-macOS library, so an Intel build would be missing the Models and People features. If you try it, please let me know whether it works.
 
 The macOS builds are unsigned, so Gatekeeper may say the app is "damaged" or "can't be
 opened". That does not mean the ZIP is broken. Please try this:
 
-1. Download the right build: arm64 for Apple Silicon (M1, M2, M3, M4), x64 for Intel Macs.
+1. Download the arm64 build for Apple Silicon (M1, M2, M3, M4).
 2. Unzip it.
 3. Move FerrumPix to Applications.
 4. Open Terminal and run:

@@ -7825,4 +7825,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Água-marinha</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Voltar à galeria (em ecrã inteiro: sair do ecrã inteiro; também com Espaço)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Mostrar marcadores na tira de filmes</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Mostra a classificação por estrelas, favorito e etiqueta de cor nas miniaturas da tira de filmes no visualizador e editor.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Remover {0} '{1}' da lista? O próprio ficheiro será mantido.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Não é possível mudar de imagem em ecrã inteiro com alterações não guardadas.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Modo de trackpad</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Ativa gestos de trackpad: zoom com dois dedos no visualizador, deslize horizontal para navegar e arraste para mover uma imagem ampliada. No visualizador, Shift+arrastar seleciona um recorte. Os controlos do rato mantêm-se inalterados quando este modo está desativado.</value>
+  </data>
 </root>

@@ -925,6 +925,12 @@ Namespace Views
                 current = TryCast(current.Parent, Control)
             End While
             If Not isInsideCanvas Then Return
+            If IsTrackpadMode() AndAlso Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y) AndAlso e.Delta.X <> 0 Then
+                Dim navigationVm = TryCast(DataContext, EditorViewModel)
+                navigationVm?.NavigateByWheel(e.Delta.X)
+                e.Handled = True
+                Return
+            End If
             If e.Delta.Y = 0 Then Return
             Dim pointerPoint = e.GetCurrentPoint(canvas)
             ' Das Mausrad über dem Bild zoomt IMMER - vorher nur mit gedrückter rechter Maustaste
@@ -1826,6 +1832,22 @@ Namespace Views
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 Dim sampledColor = SampleDisplayedColor(vm, imageRect, e.GetPosition(canvas))
                 If sampledColor.HasValue Then vm.CompleteColorPick(sampledColor.Value) Else vm.CancelColorPick()
+                e.Handled = True
+                Return
+            End If
+
+            ' Im Trackpad-Modus ist Ziehen auf einem Bild, das größer als die Bühne ist, das
+            ' direkte Verschieben. Umschalt hält die gewöhnliche Werkzeug-Geste verfügbar, damit
+            ' Auswahl, Objektzug und Pinsel nicht verloren gehen.
+            If IsTrackpadMode() AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+               vm IsNot Nothing AndAlso CanTrackpadPan(canvas, vm) Then
+                Dim pos = e.GetPosition(canvas)
+                _panStartX = pos.X
+                _panStartY = pos.Y
+                _panStartOffsetX = _panX
+                _panStartOffsetY = _panY
+                _isPanDragging = True
+                e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
             End If
@@ -6225,6 +6247,18 @@ Namespace Views
             vm.NavigateByWheel(e.Delta.Y)
             e.Handled = True
         End Sub
+
+        Private Function IsTrackpadMode() As Boolean
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            Return mainVm IsNot Nothing AndAlso mainVm.Settings IsNot Nothing AndAlso mainVm.Settings.TrackpadMode
+        End Function
+
+        Private Function CanTrackpadPan(canvas As Canvas, vm As EditorViewModel) As Boolean
+            Dim displaySize = GetEffectiveDisplaySize(vm)
+            Dim scale = SliderToZoom(_zoomSliderValue) / 100.0
+            Return displaySize.Width * scale > canvas.Bounds.Width + 1 OrElse
+                   displaySize.Height * scale > canvas.Bounds.Height + 1
+        End Function
 
         Public Sub OnFilmstripItemPressed(sender As Object, e As PointerPressedEventArgs)
             Dim border = TryCast(sender, Border)

@@ -7866,4 +7866,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Akvamarin</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Tillbaka till galleriet (i helskärm: avsluta helskärm; även med mellanslag)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Visa markeringar i filmremsan</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Visar stjärnbetyg, favorit och färgetikett på filmremsans miniatyrer i visaren och redigeraren.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Ta bort {0} '{1}' från listan? Själva filen behålls.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Det går inte att byta bild i helskärm när det finns osparade ändringar.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Styrplatte-läge</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. I visaren väljer Skift+dra en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
+  </data>
 </root>

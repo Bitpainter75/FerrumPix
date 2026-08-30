@@ -31,6 +31,10 @@ Namespace ViewModels
         Sub RefreshWindowTitle()
         Sub ShowNewDocumentDialog()
         ReadOnly Property IsFullscreen As Boolean
+        ''' <summary>Ein Vollbild, das aus einem noch nicht gespeicherten Editorbild geöffnet wurde,
+        ''' zeigt bewusst nur dieses Bild: Weiterblättern würde die offene Bearbeitung verdecken.
+        ''' Der Betrachter fragt diese Regel an seiner einzigen Navigationsschleuse ab.</summary>
+        ReadOnly Property IsFullscreenNavigationLocked As Boolean
         Sub EnterFullscreen()
 
         Function OpenImageInEditor(path As String,

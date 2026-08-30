@@ -177,6 +177,8 @@ Namespace Services
         Public Property LastGalleryFolder As String = ""
         Public Property LastSaveAsTargetFolder As String = ""
         Public Property ViewerShowFilmstrip As Boolean = True
+        ''' Markierungen im Filmstrip kosten etwas Bildruhe und sind deshalb ab Werk aus.
+        Public Property FilmstripItemBadgesVisible As Boolean = False
         ''' Fusszeile am unteren Rand, je Bereich getrennt. AB WERK AN: sie traegt nicht nur Angaben
         ''' zum Bild, sondern auch Bedienelemente (Menue, Zoom, Bewertung, im Betrachter und im Editor
         ''' zusaetzlich den Filmstreifen). Wer die Bildflaeche maximal will, schaltet sie dort ab, wo
@@ -439,6 +441,8 @@ Namespace Services
         ''' Zeichentablett: alles loest beim Druecken aus statt beim Loslassen. Warum es das gibt und
         ''' was es kostet, steht in TabletInputService.
         Public Property TabletMode As Boolean = False
+        ''' Eigene Gestenbelegung für Trackpads; standardmäßig aus, damit Mauswege unverändert bleiben.
+        Public Property TrackpadMode As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
         ''' Gespeicherte Regler-Zusammenstellungen aus dem Anpassen-Werkzeug (siehe
         ''' AdjustmentPresetSettings) und der Name der zuletzt benutzten.

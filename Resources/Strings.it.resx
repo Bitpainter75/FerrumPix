@@ -7826,4 +7826,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Acquamarina</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Torna alla galleria (a schermo intero: esci dallo schermo intero; anche con Spazio)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Mostra indicatori nella striscia di miniature</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Mostra valutazione a stelle, preferito ed etichetta colore sulle miniature della striscia nel visualizzatore e nell’editor.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Rimuovere {0} '{1}' dall’elenco? Il file verrà conservato.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Non è possibile cambiare immagine a schermo intero con modifiche non salvate.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Modalità trackpad</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Nel visualizzatore, Maiusc+trascina seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
+  </data>
 </root>

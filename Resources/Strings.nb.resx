@@ -7866,4 +7866,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Akvamarin</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Tilbake til galleriet (i fullskjerm: avslutt fullskjerm; også med mellomromstasten)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Vis markeringer i filmstripen</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Viser stjernerangering, favoritt og fargeetikett på filmstrip-rutene i visningen og redigeringen.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Fjerne {0} '{1}' fra listen? Selve filen beholdes.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Det er ikke mulig å bytte bilde i fullskjerm med ulagrede endringer.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Styreflate-modus</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Aktiverer styreflatebevegelser: zoom med to fingre i visningen, sveip vannrett for å bla og dra for å panorere et forstørret bilde. I visningen velger Shift+dra et beskjæringsområde. Musebetjeningen er uendret når modusen er av.</value>
+  </data>
 </root>

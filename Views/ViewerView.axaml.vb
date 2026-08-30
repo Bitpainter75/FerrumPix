@@ -462,11 +462,20 @@ Namespace Views
             If vm Is Nothing Then Return
             If IsWithinInfoSidebar(e.Source) Then Return
 
+            ' Der Modus ist absichtlich opt-in: Avalonia liefert Trackpad-Scrollen und Mausrad
+            ' beide als PointerWheel. Nur wer ihn einschaltet, tauscht im Viewer vertikales Rad-
+            ' Blättern gegen Zoom und bekommt horizontales Zwei-Finger-Wischen zum Blättern.
+            If IsTrackpadMode() AndAlso Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y) AndAlso e.Delta.X <> 0 Then
+                vm.NavigateByWheel(e.Delta.X)
+                e.Handled = True
+                Return
+            End If
+
             ' Im Vergleich zoomt das Rad BEIDE Flaechen: sie teilen sich ZoomLevel, es genuegt also,
             ' den Wert zu aendern. Ohne diesen Zweig griffe der Handler auf die versteckte
             ' Einzelbildflaeche zu und das Rad wuerde die Vergleichsflaeche nur scrollen.
             If vm.IsCompareMode Then
-                If e.GetCurrentPoint(Me).Properties.IsRightButtonPressed OrElse
+                If IsTrackpadMode() OrElse e.GetCurrentPoint(Me).Properties.IsRightButtonPressed OrElse
                    e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                     _suppressNextImageContextMenu = True
                     Dim underMouse = ComparePaneUnder(e)
@@ -489,7 +498,17 @@ Namespace Views
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
             Dim rightButtonZoom = scrollViewer IsNot Nothing AndAlso e.GetCurrentPoint(scrollViewer).Properties.IsRightButtonPressed
 
-            If rightButtonZoom Then
+            If IsTrackpadMode() Then
+                If scrollViewer IsNot Nothing Then
+                    ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                ElseIf e.Delta.Y < 0 Then
+                    vm.ZoomOut()
+                    ApplyImageFitMode()
+                ElseIf e.Delta.Y > 0 Then
+                    vm.ZoomIn()
+                    ApplyImageFitMode()
+                End If
+            ElseIf rightButtonZoom Then
                 _suppressNextImageContextMenu = True
                 ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
             ElseIf e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
@@ -607,7 +626,8 @@ Namespace Views
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
             If vm Is Nothing OrElse scrollViewer Is Nothing Then Return
 
-            If isRightButton AndAlso CanPanImage(vm, scrollViewer) Then
+            If (isRightButton OrElse (isLeftButton AndAlso IsTrackpadMode() AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Shift))) AndAlso
+               CanPanImage(vm, scrollViewer) Then
                 _isPanningImage = True
                 _panStartPoint = e.GetPosition(scrollViewer)
                 _panStartOffset = scrollViewer.Offset
@@ -625,7 +645,7 @@ Namespace Views
                 Return
             End If
 
-            If CanCropDrag(vm) Then
+            If CanCropDrag(vm) AndAlso (Not IsTrackpadMode() OrElse e.KeyModifiers.HasFlag(KeyModifiers.Shift)) Then
                 Dim image = Me.FindControl(Of Image)("MainImage")
                 If image Is Nothing OrElse image.Bounds.Width <= 0 OrElse image.Bounds.Height <= 0 Then Return
                 _cropDragStartNorm = NormalizeImagePoint(e.GetPosition(image), image.Bounds.Size)
@@ -748,6 +768,11 @@ Namespace Views
         Private Function CanCropDrag(vm As ViewerViewModel) As Boolean
             Return vm IsNot Nothing AndAlso vm.CurrentImage IsNot Nothing AndAlso vm.CanEdit AndAlso
                    vm.RotationAngle = 0 AndAlso vm.ScaleX = 1.0
+        End Function
+
+        Private Function IsTrackpadMode() As Boolean
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            Return mainVm IsNot Nothing AndAlso mainVm.Settings IsNot Nothing AndAlso mainVm.Settings.TrackpadMode
         End Function
 
         ''' <summary>Läuft unabhängig von Pan/Crop-Dragging bei jeder Mausbewegung über der Bühne, damit

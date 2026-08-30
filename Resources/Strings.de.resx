@@ -7826,4 +7826,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Aqua</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Zurück zur Galerie (im Vollbild: Vollbild verlassen; auch mit Leertaste)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Markierungen im Filmstrip anzeigen</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstrip-Kacheln im Viewer und Editor.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Soll {0} '{1}' aus der Liste entfernt werden? Die Datei selbst bleibt erhalten.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Bildwechsel ist bei ungespeicherten Änderungen im Vollbild nicht möglich</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Trackpad-Modus</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Aktiviert Trackpad-Gesten: Zwei-Finger-Zoom im Viewer, horizontal wischen zum Blättern sowie Pannen mit Ziehen bei vergrößertem Bild. Im Viewer öffnet Umschalt+Ziehen den Zuschneidebereich. Die Maus-Standardbedienung bleibt bei ausgeschaltetem Modus unverändert.</value>
+  </data>
 </root>

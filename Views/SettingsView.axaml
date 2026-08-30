@@ -365,6 +365,18 @@
                                           OffContent=""
                                           VerticalAlignment="Center"/>
                         </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Trackpad-Modus" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Aktiviert Trackpad-Gesten: Zwei-Finger-Zoom im Viewer, horizontal wischen zum Blättern sowie Pannen mit Ziehen bei vergrößertem Bild. Im Viewer öffnet Umschalt+Ziehen den Zuschneidebereich. Die Maus-Standardbedienung bleibt bei ausgeschaltetem Modus unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding TrackpadMode}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -860,6 +872,18 @@
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding ViewerShowFilmstrip}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Markierungen im Filmstrip anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstrip-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripItemBadgesVisible}"
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>
@@ -2575,7 +2599,7 @@
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="ESC" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                <TextBlock Grid.Column="1" Text="Zurück zur Galerie (im Vollbild: Vollbild verlassen)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Zurück zur Galerie (im Vollbild: Vollbild verlassen; auch mit Leertaste)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

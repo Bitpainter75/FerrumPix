@@ -7866,4 +7866,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Аквамарин</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Вернуться в галерею (в полноэкранном режиме: выйти из полноэкранного режима; также клавишей пробела)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Показывать метки на ленте кадров</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Показывает оценку звёздами, избранное и цветовую метку на миниатюрах ленты в просмотрщике и редакторе.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Удалить {0} '{1}' из списка? Сам файл будет сохранён.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Нельзя сменить изображение в полноэкранном режиме при наличии несохранённых изменений.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Режим трекпада</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Включает жесты трекпада: масштабирование двумя пальцами в просмотрщике, горизонтальный свайп для листания и перетаскивание для панорамирования увеличенного изображения. В просмотрщике Shift+перетаскивание выделяет кадрирование. Управление мышью не меняется, пока режим выключен.</value>
+  </data>
 </root>

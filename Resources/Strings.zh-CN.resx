@@ -7824,4 +7824,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>青绿</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>返回图库（全屏时：退出全屏；也可按空格键）</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>在胶片条中显示标记</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>在查看器和编辑器的胶片条缩略图上显示星级评分、收藏和颜色标签。</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>要从列表中移除{0}“{1}”吗？文件本身将保留。</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>存在未保存的更改时，无法在全屏模式下切换图像。</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>触控板模式</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 Shift 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
+  </data>
 </root>

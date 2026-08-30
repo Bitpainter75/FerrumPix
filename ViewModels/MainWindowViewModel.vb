@@ -393,6 +393,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_isFullscreen, value)
                 Me.RaisePropertyChanged(NameOf(IsWindowChromeVisible))
                 Me.RaisePropertyChanged(NameOf(IsFullscreenViewer))
+                Me.RaisePropertyChanged(NameOf(IsFullscreenNavigationLocked))
                 If value Then
                     ' Ins Vollbild: die Vollbildflaeche erst zeigen, wenn das Betriebssystem das
                     ' Fenster wirklich aufgezogen hat. Sonst ist das Bild kurz auf die normale
@@ -415,6 +416,15 @@ Namespace ViewModels
         Public ReadOnly Property IsFullscreenViewer As Boolean
             Get
                 Return _isFullscreen AndAlso _currentMode = AppMode.Viewer
+            End Get
+        End Property
+
+        ''' <summary>Vollbild darf eine offene Editorbearbeitung ansehen, aber nicht unbemerkt zu einem
+        ''' anderen Bild wechseln. Beim Verlassen kehrt die Bearbeitung unverändert in den Editor zurück.</summary>
+        Public ReadOnly Property IsFullscreenNavigationLocked As Boolean Implements IViewerHost.IsFullscreenNavigationLocked
+            Get
+                Return _isFullscreen AndAlso _previousModeBeforeFullscreen = AppMode.Editor AndAlso
+                       Editor IsNot Nothing AndAlso Editor.HasUnsavedChanges
             End Get
         End Property
 
@@ -794,7 +804,7 @@ Namespace ViewModels
             Editor?.ShowNewDocumentDialogCommand.Execute(Nothing)
         End Sub
 
-        Public Async Sub EnterFullscreen() Implements IViewerHost.EnterFullscreen
+        Public Sub EnterFullscreen() Implements IViewerHost.EnterFullscreen
             Try
                 If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
                     _previousModeBeforeFullscreen = AppMode.Gallery
@@ -806,7 +816,9 @@ Namespace ViewModels
                     ' Wie beim bildlosen Betrachter unten: nichts tun.
                     Return
                 ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
-                    If Not Await ConfirmEditorLeaveAsync("den Vollbildmodus öffnest") Then Return
+                    ' Das Vollbild ist nur eine andere Ansicht desselben Bildes, kein Verlassen der
+                    ' Bearbeitung. Die Änderungen bleiben im Editor erhalten; der Viewer sperrt seine
+                    ' Bildnavigation dafür über IsFullscreenNavigationLocked.
                     _previousModeBeforeFullscreen = AppMode.Editor
                     Viewer.OpenImage(Editor.CurrentImagePath)
                     CurrentMode = AppMode.Viewer
@@ -951,6 +963,8 @@ Namespace ViewModels
 
         Public Sub RefreshLayoutBindings()
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstrip))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstripItemBadges))
+            Viewer?.RefreshFilmstripItemBadges()
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFooter))
             ' Haengt an BEIDEN Schaltern darueber - jeder von ihnen kann den unteren Rand als
             ' Ganzes kommen oder gehen lassen.
@@ -959,6 +973,8 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFooter))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsBottomBarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstrip))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstripItemBadges))
+            Editor?.RefreshFilmstripItemBadges()
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsInfoSidebarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsLayersPanelVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsToolSidebarCollapsed))

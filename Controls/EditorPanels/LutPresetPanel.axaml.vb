@@ -72,12 +72,12 @@ Namespace Controls.EditorPanels
             End Try
         End Sub
 
-        Public Sub OnRemoveSavedLutPresetClick(sender As Object, e As RoutedEventArgs)
+        Public Async Sub OnRemoveSavedLutPresetClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim preset = TryCast(TryCast(sender, Control)?.DataContext, LutPresetSettings)
             If vm Is Nothing OrElse preset Is Nothing Then Return
-            vm.RemoveLutPresetFromSettings(preset.Path)
             e.Handled = True
+            Await vm.ConfirmRemoveSavedPresetAsync(preset.Path, isLut:=True)
         End Sub
     End Class
 

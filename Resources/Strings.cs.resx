@@ -7866,4 +7866,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Akvamarín</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Zpět do galerie (na celé obrazovce: ukončit celou obrazovku; také mezerníkem)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Zobrazit značky na filmovém pásu</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Zobrazuje hodnocení hvězdičkami, oblíbené a barevný štítek na dlaždicích filmového pásu v prohlížeči a editoru.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Odebrat {0} '{1}' ze seznamu? Samotný soubor zůstane zachován.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Při neuložených změnách nelze na celé obrazovce změnit obrázek.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Režim touchpadu</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Zapne gesta touchpadu: přiblížení dvěma prsty v prohlížeči, vodorovné přejetí pro procházení a tažení pro posun zvětšeného obrázku. V prohlížeči Shift+tažení vybere ořez. Ovládání myší zůstává při vypnutém režimu beze změny.</value>
+  </data>
 </root>

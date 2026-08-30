@@ -7826,4 +7826,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Aigue-marine</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Retour à la galerie (en plein écran : quitter le plein écran ; également avec Espace)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Afficher les indicateurs dans la pellicule</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Affiche la note par étoiles, le favori et l’étiquette de couleur sur les vignettes de la pellicule dans le visualiseur et l’éditeur.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>Supprimer {0} '{1}' de la liste ? Le fichier lui-même sera conservé.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Il est impossible de changer d’image en plein écran tant que des modifications ne sont pas enregistrées.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Mode pavé tactile</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Dans le visualiseur, Maj+glisser sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
+  </data>
 </root>

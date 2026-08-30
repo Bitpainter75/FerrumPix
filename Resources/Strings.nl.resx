@@ -7866,4 +7866,25 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Aqua</value>
   </data>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+    <value>Terug naar de galerij (in volledig scherm: volledig scherm verlaten; ook met de spatiebalk)</value>
+  </data>
+  <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
+    <value>Markeringen in de filmstrip weergeven</value>
+  </data>
+  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_b1426eb1" xml:space="preserve">
+    <value>Toont sterbeoordeling, favoriet en kleurlabel op filmstriptegels in de viewer en editor.</value>
+  </data>
+  <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
+    <value>{0} '{1}' uit de lijst verwijderen? Het bestand zelf blijft behouden.</value>
+  </data>
+  <data name="Bildwechsel_ist_bei_ungespeicherten_nderungen_im_f33b4307" xml:space="preserve">
+    <value>Van afbeelding wisselen is niet mogelijk in volledig scherm met niet-opgeslagen wijzigingen.</value>
+  </data>
+  <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
+    <value>Trackpadmodus</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
+    <value>Schakelt trackpadgebaren in: zoomen met twee vingers in de viewer, horizontaal vegen om te bladeren en slepen om een ingezoomde afbeelding te pannen. In de viewer selecteert Shift+slepen een uitsnede. De muisbediening blijft ongewijzigd zolang deze modus uit staat.</value>
+  </data>
 </root>

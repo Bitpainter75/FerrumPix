@@ -621,6 +621,13 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowFilmstripItemBadges As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripItemBadgesVisible
+            End Get
+        End Property
+
         ''' <summary>Ob die Fusszeile sichtbar ist: die Leiste mit Bildangaben, Zoom und Bewertung.
         ''' NICHT der Filmstreifen darueber - der hat seinen eigenen Schalter und bleibt stehen.
         ''' Ausgeblendet bleiben Blaettern, Zoomen und Bewerten ueber Tastatur, Mausrad und
@@ -833,6 +840,14 @@ Namespace ViewModels
             InfoPanel.OwnerLoadsDetails = True
             InfoPanel.IsInfoSidebarVisible = IsInfoSidebarVisible
             InfoPanel.OpenTagSearch = Sub(tag) _mainVm?.OpenTagSearchInGallery(tag)
+            AddHandler InfoPanel.PropertyChanged,
+                Sub(sender, e)
+                    If e.PropertyName = NameOf(InfoPanel.Rating) OrElse
+                       e.PropertyName = NameOf(InfoPanel.IsFavorite) OrElse
+                       e.PropertyName = NameOf(InfoPanel.ColorLabel) Then
+                        SyncCurrentFilmstripItemBadges()
+                    End If
+                End Sub
             ' Wechselt die Darstellung (Histogramm, Waveform, Parade), muss das Bild neu entstehen.
             ' Der Merker wird zurueckgesetzt, weil der Nachladeweg sonst meint, er sei fertig.
             InfoPanel.ScopeRefresh = Sub()
@@ -2392,6 +2407,7 @@ Namespace ViewModels
             FilmstripItems.ReplaceAll(_folderPaths.
                 Where(Function(p) Not String.IsNullOrEmpty(p)).
                 Select(AddressOf CreateFilmstripItem))
+            RefreshFilmstripItemBadges()
             MarkCurrentFilmstripItem()
             Dim itemsSnapshot = FilmstripItems.ToList()
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
@@ -2416,6 +2432,51 @@ Namespace ViewModels
             End If
             Return ImageItem.CreateLightweight(pseudoOrPath, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)
         End Function
+
+        ''' <summary>Die Filmstrip-Kacheln sind absichtlich schlanke neue ImageItems und bringen
+        ''' deshalb keine Katalogwerte mit. Die optionalen Badges laden sie gesammelt in EINER
+        ''' Abfrage nach; pro Kachel drei Datenbankzugriffe würden bei großen Ordnern ruckeln.</summary>
+        Public Sub RefreshFilmstripItemBadges()
+            If Not ShowFilmstripItemBadges OrElse FilmstripItems Is Nothing Then Return
+
+            Dim localPaths = FilmstripItems.
+                Where(Function(item) item IsNot Nothing AndAlso Not item.IsRemoteAsset).
+                Select(Function(item) item.FilePath).
+                ToList()
+            Dim catalog = LibraryService.Instance.GetMetaForPaths(localPaths)
+
+            For index = 0 To FilmstripItems.Count - 1
+                Dim item = FilmstripItems(index)
+                If item Is Nothing Then Continue For
+
+                If item.IsRemoteAsset AndAlso _isImmichSession AndAlso index < _immichSessionItems.Count Then
+                    Dim source = _immichSessionItems(index)
+                    item.Rating = source.Rating
+                    item.IsFavorite = source.IsFavorite
+                    item.ColorLabel = source.ColorLabel
+                    Continue For
+                End If
+
+                Dim meta As LibraryImageMeta = Nothing
+                If catalog.TryGetValue(item.FilePath, meta) Then
+                    item.Rating = meta.Rating
+                    item.IsFavorite = meta.IsFavorite
+                    item.ColorLabel = meta.ColorLabel
+                End If
+            Next
+        End Sub
+
+        ''' <summary>Die Werte werden im Infopanel auch über Tastatur und Kontextmenü geändert.
+        ''' Der Filmstrip hat eigene, schlanke Items und muss deshalb das aktuelle davon sofort
+        ''' nachziehen, statt erst beim nächsten Öffnen des Bildes.</summary>
+        Private Sub SyncCurrentFilmstripItemBadges()
+            If _currentIndex < 0 OrElse _currentIndex >= FilmstripItems.Count Then Return
+            Dim item = FilmstripItems(_currentIndex)
+            If item Is Nothing Then Return
+            item.Rating = InfoPanel.Rating
+            item.IsFavorite = InfoPanel.IsFavorite
+            item.ColorLabel = InfoPanel.ColorLabel
+        End Sub
 
         Private Sub UpdateStatus()
             Try
@@ -2785,6 +2846,10 @@ Namespace ViewModels
         End Sub
 
         Private Async Function CommitNavigateAsync(idx As Integer) As Task
+            If _mainVm?.IsFullscreenNavigationLocked Then
+                StatusInfo = LocalizationService.T("Bildwechsel ist bei ungespeicherten Änderungen im Vollbild nicht möglich")
+                Return
+            End If
             If Not Await ConfirmPendingRotationAsync("zu einem anderen Bild wechselst") Then Return
             LoadPathAt(idx)
         End Function
