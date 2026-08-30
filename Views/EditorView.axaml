@@ -145,7 +145,12 @@
                                   Data="M 12 5 L 16 9 L 12 13 M 15 9 H 8 C 5 9 3 11 3 14 C 3 17 5 19 8 19 H 12" />
                         </Canvas>
                     </Button>
-                    <Button Classes="accent" Height="34" Padding="14,5" Command="{Binding SaveCommand}"
+                    <!-- DER VOLLE AKZENT NUR BEI ÄNDERUNG: ein dauerhaft leuchtender Knopf sagt
+                         nichts, ein leuchtender bei ungesicherter Arbeit sagt alles. Ohne Änderung
+                         bleibt er ein gewöhnlicher Knopf - anklickbar bleibt er, solange das Format
+                         sich an Ort und Stelle schreiben lässt. -->
+                    <Button Classes="ghost" Classes.save-dirty="{Binding HasUnsavedChanges}"
+                            Height="34" Padding="14,5" Command="{Binding SaveCommand}"
                             ToolTip.Tip="Speichern"
                             IsEnabled="{Binding CanSaveInPlace}">
                         <StackPanel Orientation="Horizontal" Spacing="8">

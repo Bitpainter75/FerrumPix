@@ -1207,9 +1207,10 @@ Namespace ViewModels
         ''' er beim LADEN eines Bildes selbst. Das Analysebild laeuft seit dem 2026-08-15 bei jeder
         ''' Aenderung MIT und zeigt den Stand der Szene, also das, was auf dem Schirm steht (siehe
         ''' <see cref="UpdateScopeFromScene"/>); vorher zeigte es den Stand der Datei. Die
-        ''' Tonwertkurve im Anpassen-Werkzeug rechnet weiterhin mit eigenen Zahlen
-        ''' (<c>_curveHistogramCounts</c>) und bleibt bewusst am Ausgangsstand: sie ist der
-        ''' Untergrund, gegen den man die Kurve zieht.</summary>
+        ''' Tonwertkurve rechnet mit eigenen Zahlen (<c>_curveHistogramCounts</c>), laeuft seit dem
+        ''' 2026-08-30 aber ebenfalls MIT: ihr Untergrund zeigt den Stand, gegen den man die Kurve
+        ''' gerade zieht. Vorher blieb er am Ausgangsstand der Datei stehen und beantwortete nach
+        ''' der ersten Reglerbewegung keine Frage mehr.</summary>
         Public ReadOnly Property InfoPanel As New InfoPanelViewModel()
 
         ''' <summary>Die Wahl der Darstellung im ANPASSUNGSPANEL - eine eigene, unabhaengig von der
@@ -3863,6 +3864,27 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Steht die TONWERTKURVE auf dem Schirm? Nur dann laeuft ihr Untergrund mit - er
+        ''' kostet einen Durchlauf ueber die Szene, und die Kurve steht nur im Anpassen-Werkzeug.
+        ''' Wer die Gruppe in den Einstellungen abgeschaltet hat, zahlt ihn gar nicht.</summary>
+        Private ReadOnly Property IsCurveHistogramLive As Boolean
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.CurrentMode <> AppMode.Editor Then Return False
+                If Not ShowLightAdjustments Then Return False
+                Return Not HiddenAdjustmentGroups.Split(","c).
+                           Select(Function(k) k.Trim()).
+                           Contains("curve", StringComparer.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Wird aus der fertigen SZENE ueberhaupt etwas ausgewertet? Analysebild, Kurven-
+        ''' untergrund oder beides - eines reicht, damit der Zeitgeber laeuft.</summary>
+        Private ReadOnly Property IsSceneAnalysisLive As Boolean
+            Get
+                Return IsScopeLive OrElse IsCurveHistogramLive
+            End Get
+        End Property
+
         ''' <summary>Der Ort des Analysebildes wurde umgestellt. Wird es noch irgendwo gezeigt,
         ''' holt der Editor es nach; sonst faellt es weg und mit ihm sein Rechenweg.</summary>
         Friend Sub RefreshScopeAfterPlacementChange()
@@ -4441,6 +4463,11 @@ Namespace ViewModels
                     ' Objekt-, Retusche-, Pinsel- und Transformwerkzeuge verdecken mit dem roten
                     ' Overlay genau das, woran man arbeitet - dort verschwindet es sofort.
                     If CoversMaskOverlay(value) Then HideMaskOverlay()
+                    ' Die Clipping-Warnung gehoert zum Anpassen-Werkzeug: ihr Haken steht bei den
+                    ' Reglern, mit denen man auf sie reagiert. Blieb sie beim Wechsel an, lagen die
+                    ' Markierungen ueber einem Bild, an dem man ganz anders arbeitet - und der
+                    ' Schalter dafuer war nicht mehr zu sehen.
+                    ShowClippingWarning = False
                 End If
                 ' Die Ausnahmen zum Abwählen stehen in ToolKeepsSelectedAnnotationOnEnter - EINE
                 ' Stelle für diesen Weg UND für SetToolCommand, das schon vorher abwählt.
@@ -16919,6 +16946,10 @@ Namespace ViewModels
         Private Sub RaiseSaveAvailabilityChanged()
             Me.RaisePropertyChanged(NameOf(CanSaveSidecar))
             Me.RaisePropertyChanged(NameOf(CanSaveInPlace))
+            ' Der Speichern-Knopf traegt den vollen Akzent nur, solange es etwas zu speichern gibt -
+            ' er meldet sich also bei jeder Aenderung mit, nicht nur dort, wo _hasChanges selbst
+            ' ausdruecklich gemeldet wird.
+            Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
         End Sub
 
         ''' Wird beim Verlassen eines Werkzeugs mit "Anwenden"-Bestätigung aufgerufen. Noch nicht
@@ -22124,7 +22155,9 @@ Namespace ViewModels
             ' ihm der Rechenweg: wer vom Zuschneiden zu den Reglern wechselt, macht es erst
             ' sichtbar, und dann muss auch eines dastehen.
             Me.RaisePropertyChanged(NameOf(IsScopeInAdjustmentPanelsVisible))
-            If IsScopeInAdjustmentPanelsVisible Then EnsureScopeUpToDate()
+            ' Dasselbe gilt fuer den Untergrund der Tonwertkurve: er haengt am Anpassen-Werkzeug und
+            ' muss beim Betreten stehen, nicht erst nach der naechsten Aenderung.
+            If IsScopeInAdjustmentPanelsVisible OrElse IsCurveHistogramLive Then EnsureScopeUpToDate()
             Me.RaisePropertyChanged(NameOf(ShowRetouchAdjustments))
             Me.RaisePropertyChanged(NameOf(IsCloneMode))
             Me.RaisePropertyChanged(NameOf(IsRepairMode))
@@ -22729,7 +22762,7 @@ Namespace ViewModels
             ' Der Merker faellt auch dann, wenn gerade niemand hinsieht: sonst stuende beim
             ' Aufklappen der Leiste das Analysebild eines laengst ueberholten Standes da.
             _scopeDirty = True
-            If Not IsScopeLive Then Return
+            If Not IsSceneAnalysisLive Then Return
             _scopeTimer.Stop()
             _scopeTimer.Start()
         End Sub
@@ -22738,7 +22771,7 @@ Namespace ViewModels
         ''' Hintergrund ausgefallen ist. Aus der Szene, wenn eine dasteht - der Weg ueber die Datei
         ''' kostet einen vollen Decode.</summary>
         Private Sub EnsureScopeUpToDate()
-            If Not IsScopeLive OrElse Not _scopeDirty Then Return
+            If Not IsSceneAnalysisLive OrElse Not _scopeDirty Then Return
             Dim scene = _sceneSk
             If scene IsNot Nothing AndAlso scene.Width > 0 AndAlso scene.Height > 0 Then
                 UpdateScopeFromScene()
@@ -22759,7 +22792,7 @@ Namespace ViewModels
         ''' faellt hier nicht an. Steht noch keine (kalter Start, Ladeweg), greift der Weg ueber die
         ''' Datei.</summary>
         Private Sub UpdateScopeFromScene()
-            If Not IsScopeLive Then Return
+            If Not IsSceneAnalysisLive Then Return
             Try
                 ' Der Kompositor arbeitet auf dem UI-Thread, und dieser Zeitgeber ebenfalls - die
                 ' Szene kann hier also nicht unter der Hand ausgetauscht werden.
@@ -22769,7 +22802,13 @@ Namespace ViewModels
                 ' fuer den Bruchteil einer Sekunde auch richtig. Beim LADEN setzt RefreshHistogram.
                 Dim scene = _sceneSk
                 If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return
-                UpdateScopeImagesFromBitmap(scene, SceneScopeKey())
+                If IsScopeLive Then UpdateScopeImagesFromBitmap(scene, SceneScopeKey())
+                ' Der Untergrund der Tonwertkurve kommt aus DERSELBEN Szene: er zeigt damit den
+                ' Stand, gegen den man die Kurve gerade zieht, und nicht mehr den der Datei.
+                If IsCurveHistogramLive Then
+                    _curveHistogramCounts = ImageProcessor.BuildChannelHistogramCounts(scene)
+                    Me.RaisePropertyChanged(NameOf(ActiveCurveHistogramCounts))
+                End If
                 _scopeDirty = False
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.UpdateScopeFromScene", ex)

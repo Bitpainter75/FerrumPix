@@ -2258,6 +2258,10 @@ Namespace ViewModels
                 ' Dialogs gemeldet und blieb je nach Vorgeschichte weg („mal drin, mal
                 ' draußen").
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsMetaOptions))
+                ' Aus demselben Grund und seit derselben Stelle: der Urheberrechtshinweis traegt
+                ' jetzt die Sichtbarkeit seines ganzen Blocks (siehe DialogOverlayView), und der
+                ' Wert aus ResetDialogSaveAsMetaOptions gehoert noch zum vorigen Dialog.
+                Me.RaisePropertyChanged(NameOf(DialogShowsCopyright))
                 Me.RaisePropertyChanged(NameOf(DialogShowsFileConflict))
                 Me.RaisePropertyChanged(NameOf(DialogShowsStandardActions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchRename))

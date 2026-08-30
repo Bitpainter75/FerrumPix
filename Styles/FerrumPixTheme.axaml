@@ -285,6 +285,32 @@
     <Style Selector="FlyoutPresenter Button.ghost:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
     </Style>
+    <!-- SPEICHERN MIT UNGESICHERTER ARBEIT. Dieselben Setter wie Button.accent, aber HINTER
+         Button.ghost: der Knopf traegt beide Klassen, und bei gleicher Spezifitaet gewinnt in
+         Avalonia die spaeter stehende Regel - stuende dies weiter oben, malte Ghost den Akzent
+         wieder zu. Doppelt (Button UND ContentPresenter) aus demselben Grund wie beim Filterknopf:
+         der :pointerover-Zustand setzt Hintergrund und Rahmen direkt am ContentPresenter. -->
+    <Style Selector="Button.save-dirty">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.save-dirty /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.save-dirty:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="TextElement.Foreground" Value="White"/>
+    </Style>
+    <Style Selector="Button.save-dirty icons|SvgIcon">
+        <Setter Property="IconBrush" Value="White"/>
+    </Style>
+
     <Style Selector="Button.insert-option-btn">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>

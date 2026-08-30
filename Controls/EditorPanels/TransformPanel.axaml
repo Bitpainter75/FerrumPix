@@ -337,7 +337,9 @@
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
                                Margin="0,6,0,6"/>
-                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                    <!-- Der Akzent wie bei Zuschneiden und Bildgröße: es ist der Knopf, der die
+                         Arbeit wirksam macht, und ohne etwas zu übernehmen bleibt er ausgegraut. -->
+                    <Button Classes="accent" HorizontalAlignment="Stretch" Padding="10,5"
                             IsVisible="{Binding WarpsTheImage}"
                             IsEnabled="{Binding HasWarpGridChanges}"
                             Command="{Binding ApplyWarpGridCommand}">
@@ -395,7 +397,7 @@
                                IsVisible="{Binding WarpsTheImage}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
-                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                    <Button Classes="accent" HorizontalAlignment="Stretch" Padding="10,5"
                             IsVisible="{Binding WarpsTheImage}"
                             IsEnabled="{Binding HasEnvelopeChanges}"
                             Command="{Binding ApplyEnvelopeCommand}">
@@ -457,7 +459,7 @@
                                IsVisible="{Binding WarpsTheImage}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
-                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,5"
+                    <Button Classes="accent" HorizontalAlignment="Stretch" Padding="10,5"
                             IsVisible="{Binding WarpsTheImage}"
                             IsEnabled="{Binding HasLineChanges}"
                             Command="{Binding ApplyLinesCommand}">

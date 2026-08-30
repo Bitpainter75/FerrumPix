@@ -155,16 +155,22 @@
                         <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
                              seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
                              beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->
+                        <!-- Der Block trägt die Sichtbarkeit des URHEBERRECHTSHINWEISES, nicht die der
+                             Speichern-unter-Optionen: der Hinweis gehört auch dorthin, wo die Originale
+                             ÜBERSCHRIEBEN werden, und stand vorher mit dem ganzen Block daneben.
+                             DialogShowsCopyright deckt jede Dialogart ab, in der auch die Optionen
+                             erscheinen - der Block wird dadurch nirgends zusätzlich sichtbar. -->
                         <StackPanel Grid.Row="4"
                                     Spacing="14"
                                     Margin="0,14,0,0"
-                                    IsVisible="{Binding DialogShowsSaveAsOptions}">
+                                    IsVisible="{Binding DialogShowsCopyright}">
                             <!-- Die Labelspalte teilt ihre Breite mit den dialogeigenen Sektionen
                                  (SharedSizeGroup): Eingabefelder beider Bereiche beginnen auf derselben
                                  Linie, egal welches Label das längste ist. -->
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="14"
-                                  RowSpacing="12">
+                                  RowSpacing="12"
+                                  IsVisible="{Binding DialogShowsSaveAsOptions}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
                                     <ColumnDefinition Width="*"/>
@@ -350,22 +356,27 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Der Urheberrechtshinweis steht bei den Metadaten, weil er einer
-                                     ist. LEER heisst ausdruecklich "das Feld nicht anfassen" - der
-                                     Platzhalter sagt das, damit niemand ein leeres Feld fuer
-                                     "Hinweis loeschen" haelt. Er erscheint auch beim UEBERSCHREIBEN,
-                                     anders als die Uebernahme-Schalter darueber: der Hinweis gehoert
-                                     in die Datei, gleich ob sie neu entsteht. -->
-                                <TextBlock Grid.Row="6"
-                                           Text="Copyright"
+                            </Grid>
+                            <!-- Der Urheberrechtshinweis steht bei den Metadaten, weil er einer ist.
+                                 LEER heisst ausdruecklich "das Feld nicht anfassen" - der Platzhalter
+                                 sagt das, damit niemand ein leeres Feld fuer "Hinweis loeschen" haelt.
+                                 EIGENE ZEILE ausserhalb des Speichern-unter-Rasters: er erscheint auch
+                                 beim UEBERSCHREIBEN, wo Format, Ziel und die Uebernahme-Schalter
+                                 wegfallen - der Hinweis gehoert in die Datei, gleich ob sie neu
+                                 entsteht. Im Raster darueber verschwand er mit ihm. Dieselbe
+                                 Labelspalte (SharedSizeGroup), damit die Zeile buendig bleibt. -->
+                            <Grid ColumnSpacing="14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Copyright"
                                            VerticalAlignment="Center"
-                                           IsVisible="{Binding DialogShowsCopyright}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                <TextBox Grid.Row="6"
-                                         Grid.Column="1"
+                                <TextBox Grid.Column="1"
+                                         x:Name="DialogCopyrightBox"
                                          Text="{Binding DialogCopyright, Mode=TwoWay}"
                                          PlaceholderText="Leer lassen heißt: unverändert"
-                                         IsVisible="{Binding DialogShowsCopyright}"
                                          MinHeight="36"/>
                             </Grid>
                             <!-- Nur im KONVERTIEREN-Dialog: die uebrigen Stapeldialoge bringen die
