@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.FramePanel">
@@ -148,19 +148,31 @@
                                 Command="{Binding SetFrameFillKindCommand}"
                                 CommandParameter="Solid"
                                 Classes.active="{Binding FrameFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
-                            <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
+                                               Width="14" Height="14" />
+                                <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
+                            </StackPanel>
                         </Button>
                         <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                                 Command="{Binding SetFrameFillKindCommand}"
                                 CommandParameter="LinearGradient"
                                 Classes.active="{Binding FrameFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
-                            <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg"
+                                               Width="14" Height="14" />
+                                <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
+                            </StackPanel>
                         </Button>
                         <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                                 Command="{Binding SetFrameFillKindCommand}"
                                 CommandParameter="RadialGradient"
                                 Classes.active="{Binding FrameFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
-                            <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg"
+                                               Width="14" Height="14" />
+                                <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
+                            </StackPanel>
                         </Button>
                     </WrapPanel>
                 </Grid>

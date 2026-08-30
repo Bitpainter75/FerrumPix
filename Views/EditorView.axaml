@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              xmlns:views="clr-namespace:FerrumPix.Views"
@@ -1241,33 +1241,45 @@
                                             <Button Classes="ghost"
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Center"
-                                                    Padding="6,5"
+                                                    Padding="4,5"
                                                     IsEnabled="{Binding CanApplyAdjustmentPreset}"
                                                     Command="{Binding ApplyAdjustmentPresetCommand}"
                                                     ToolTip.Tip="Die gewählte Anpassung auf dieses Bild anwenden">
-                                                <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
-                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/check.svg"
+                                                                   Width="14" Height="14" />
+                                                    <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
                                             </Button>
                                             <Button Grid.Column="1"
                                                     Classes="ghost"
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Center"
-                                                    Padding="6,5"
+                                                    Padding="4,5"
                                                     IsEnabled="{Binding CanSaveAdjustmentPreset}"
                                                     Command="{Binding SaveAdjustmentPresetCommand}"
                                                     ToolTip.Tip="Die aktuellen Regler unter diesem Namen merken - ein gleichnamiger Eintrag wird ersetzt">
-                                                <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}"
-                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-floppy.svg"
+                                                                   Width="14" Height="14" />
+                                                    <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
                                             </Button>
                                             <Button Grid.Column="2"
                                                     Classes="ghost"
                                                     HorizontalAlignment="Stretch"
                                                     HorizontalContentAlignment="Center"
-                                                    Padding="6,5"
+                                                    Padding="4,5"
                                                     IsEnabled="{Binding CanApplyAdjustmentPreset}"
                                                     Command="{Binding DeleteAdjustmentPresetCommand}">
-                                                <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"
-                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                                   Width="14" Height="14" />
+                                                    <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
                                             </Button>
                                         </Grid>
                                     </StackPanel>

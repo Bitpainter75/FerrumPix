@@ -38,10 +38,18 @@
             <Grid ColumnDefinitions="92,*">
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Orientation="Horizontal" Spacing="6">
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkSavePresetClick">
-                        <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-floppy.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
                     </Button>
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkDeletePresetClick">
-                        <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -50,10 +58,18 @@
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Orientation="Horizontal" Spacing="6">
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkChooseImageClick">
-                        <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
                     </Button>
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkClearImageClick">
-                        <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Small}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/typography.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Text" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -67,7 +83,11 @@
             <Button Grid.Column="1" Margin="6,0,0,0" Classes="ghost" Padding="8,4"
                     HorizontalAlignment="Left"
                     Click="OnInsertImageClick">
-                <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
+                                   Width="14" Height="14" />
+                    <TextBlock Text="Bild einfügen" FontSize="{DynamicResource FP.Font.Small}" />
+                </StackPanel>
             </Button>
         </Grid>
         <!-- Neue Zeile NUR über Strg+Enter: ein Tunnel-Handler im Code-Behind schluckt Enter
@@ -159,32 +179,52 @@
                         Command="{Binding SetAnnotationTextPathKindCommand}"
                         CommandParameter="None"
                         Classes.active="{Binding IsTextPathNone}">
-                    <TextBlock Text="Kein" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ban.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Kein" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationTextPathKindCommand}"
                         CommandParameter="Arc"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Arc}">
-                    <TextBlock Text="Bogen" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rainbow.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Bogen" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationTextPathKindCommand}"
                         CommandParameter="Circle"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Circle}">
-                    <TextBlock Text="Kreis" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-dashed.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Kreis" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationTextPathKindCommand}"
                         CommandParameter="Wave"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Wave}">
-                    <TextBlock Text="Welle" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wave-sine.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Welle" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationTextPathKindCommand}"
                         CommandParameter="CircleInverted"
                         ToolTip.Tip="Buchstaben auf der Linie umgeschlagen - Kopf zur Kreismitte"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=CircleInverted}">
-                    <TextBlock Text="Kreis invers" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-arrow-down.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Kreis invers" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
                 <!-- Wieder da seit 2026-08-08, zusammen mit dem Pfad-Werkzeug: die Grundlinie selbst
                      zu setzen geht denselben Weg wie das Zeichnen eines Pfades und hängt damit
@@ -194,7 +234,11 @@
                         CommandParameter="Free"
                         ToolTip.Tip="Grundlinie selbst setzen - Punkt für Punkt auf dem Bild, Eingabe schließt ab"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Free}">
-                    <TextBlock Text="Freier Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Freier Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
             </WrapPanel>
         </Grid>
@@ -247,19 +291,31 @@
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="Solid"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Solid}">
-                    <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Vollfarbe" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="LinearGradient"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=LinearGradient}">
-                    <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Verlauf" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
                         Command="{Binding SetAnnotationFillKindCommand}"
                         CommandParameter="RadialGradient"
                         Classes.active="{Binding AnnotationFillKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RadialGradient}">
-                    <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Radial" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
                 </Button>
             </WrapPanel>
         </Grid>
