@@ -529,9 +529,21 @@ Namespace Views
         '''
         ''' Aufgeraeumt wird nur, was OHNE Uebernahme endet - Schwenken, Vergleichsregler,
         ''' Objektrechteck. Striche und Auswahlgesten tragen ein Ergebnis und bleiben beim
-        ''' Loslassen, das ihre Uebernahme kennt.</summary>
+        ''' Loslassen, das ihre Uebernahme kennt.
+        '''
+        ''' DER PFAD-ZUG IST DIE AUSNAHME und gehoert trotzdem hierher: er schreibt seinen Stand
+        ''' waehrend der Bewegung laufend in das Objekt, es gibt am Ende nichts mehr zu uebernehmen.
+        ''' <c>EndPathPointer</c> zieht nur das Objektrechteck nach und frischt die Anzeige auf -
+        ''' genau das, was auch das Loslassen tut. Ohne diese Zeilen blieb <c>_isPathPointerActive</c>
+        ''' nach einem Fensterwechsel, einem Aufklappfenster oder einem Abbruch am Grafiktablett
+        ''' stehen, und der Zug endete erst irgendwann bei der naechsten Zeigerbewegung.</summary>
         Private Sub OnPreviewCanvasCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
             If _objectMarqueeActive Then EndObjectMarquee()
+            If _isPathPointerActive Then
+                TryCast(DataContext, EditorViewModel)?.EndPathPointer()
+                _isPathPointerActive = False
+                UpdateSliderLayout()
+            End If
             _isPanDragging = False
             _isDraggingSlider = False
         End Sub

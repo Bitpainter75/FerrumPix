@@ -1979,14 +1979,21 @@ Namespace ViewModels
         End Function
 
         Public Sub EndPathPointer()
-            Dim wasDragging = _pathDragIndex >= 0
+            ' OB ETWAS PASSIERT IST, sagt der Merker fuer den Rueckgaengig-Schritt und NICHT der
+            ' Zug-Index. Den setzt BeginPathDrag schon beim Druecken, ein blosser Klick auf einen
+            ' Punkt oder Griff traf also die Bedingung ebenso wie ein echter Zug - das Bild galt
+            ' danach als geaendert, und beim Schliessen kam die Nachfrage nach dem Speichern, obwohl
+            ' nichts anders lag als vorher. Der Merker dagegen wird erst in UpdatePathDrag gesetzt,
+            ' also erst bei der ersten Bewegung; beim Einfuegen eines Punktes auf der Kurve setzt ihn
+            ' TryBeginPathPointer selbst, denn dort hat sich der Pfad schon durch den Klick geaendert.
+            Dim changed = _pathDragCapturedUndo
             _pathShapingIndex = -1
             _pathDragIndex = -1
             _pathDragPart = ""
             _pathDragCapturedUndo = False
             _pathDragWasSmooth = False
             _pathDragStartAnchor = Nothing
-            If wasDragging Then
+            If changed Then
                 ' Ein Punkt darf ueber das Objektrechteck hinausgezogen werden - danach muss das
                 ' Rechteck ihm folgen. Sonst waere der Teil ausserhalb nicht mehr zu sehen: alles
                 ' andere am Objekt rechnet mit diesem Rechteck, vom Auffrischen der Anzeige bis zum
