@@ -24,7 +24,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
 - Work in your own language: sixteen are built in, and the symbol search finds shapes by their name in each of them.
 
-Your originals are never changed behind your back: edits to RAW and Photoshop files live in a small sidecar next to the file, and everything else is only written when you save.
+Your originals are never changed behind your back, and nothing at all is written until you save. Saving a RAW or a Photoshop file puts your edits in a small sidecar beside it, because those two are never written to; everything else is written the way you asked for it.
 
 ## Gallery
 
@@ -78,7 +78,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 **Retouching and painting.** Brush, eraser, blur and smudge, clone stamp and repair brush, with thirteen brush variants. A selection keeps them inside it, and with a picture layer selected they work on that layer instead of on the photo. An empty layer to paint on is one click away in the layers panel, its transparent pixels can be locked so strokes stay inside what is already there, and CTRL-clicking a layer thumbnail loads its shape as a selection.
 
-**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups. The panel has a second tab with the history of the picture: every step by name, from the original onwards, and clicking one takes the picture back to it.
+**Objects and layers.** Text, shapes, symbols, images, QR codes and watermarks, each with opacity, blend mode, shadow, glow and transform, and text that follows an arc, a circle or a wave. Any of them can carry a mask or be clipped to the layer below, and an adjustment placed above an object can be held to that object the same way. The layers panel holds the whole stack with visibility, order, grouping, merging and rasterizing, and layers can be copied and pasted, also from and to other programs. A group counts as one layer, with its own opacity, blend mode and mask, and groups can go inside groups. The panel has a second tab with the history of the picture: every step by name, from the original onwards, and clicking one takes the picture back to it. The list belongs to the session at hand; close the picture and what you saved comes back, but not the road you took to it.
 
 <img src="Screenshots/Editor_Edit.png" />
 
@@ -92,7 +92,7 @@ RAW files are developed from the actual sensor data: a photo keeps the exposure 
 
 Lens defects are corrected from measured data covering some 1300 lenses: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed.
 
-Edits to a RAW go into a small sidecar next to it; the RAW itself is never modified. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
+Save a RAW and your edits go into a small sidecar next to it; the RAW itself is never modified, and opening the photo again brings the edits back. Save it as a JPEG or a PNG instead and you get that one file, with the edits baked in and no sidecar. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
 A picture that carries its own colour profile, such as Adobe RGB or Display P3, is converted when it is opened, so it looks the way it was meant to instead of flat and shifted. That covers JPEG, PNG, WEBP, TIFF, Photoshop files and HEIC. Pictures without a profile are left exactly as they are, and what you save is sRGB and says so.
 
