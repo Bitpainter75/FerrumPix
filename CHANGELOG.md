@@ -1,71 +1,89 @@
-## FerrumPix 0.9.34
+## FerrumPix 0.9.35
 
 ### What's new
 
-- **You choose what the info sidebar shows.** The General tab used to be a fixed list, and it left out what matters most while sorting through pictures. Camera, lens, aperture, shutter speed, ISO, focal length and the date the picture was taken are now on it, and every line has a tick of its own in Settings - the folder, the place and the copyright line too. Megapixels, aspect ratio and colour space are off to begin with; tick them and they come back. A line stays away when the picture has nothing to put on it.
+- **A trackpad mode, without changing the mouse controls.** Switch it on below the drawing tablet
+  setting and two fingers zoom in Viewer and Editor, a clear horizontal swipe moves through the
+  filmstrip, and dragging a zoomed picture pans it. In the Viewer, hold SHIFT while dragging to
+  draw a crop instead.
 
-- **Rating, label and keywords can be taken out of the sidebar as well.** Three ticks for the three sections below the tabs, for anyone who keeps those elsewhere.
+- **Ratings, favourites and colour labels can appear on filmstrip pictures.** They are off by
+  default and can be enabled in Settings. Their badges update straight away, whether you set them
+  in the info sidebar, with a shortcut or from a menu.
 
-- **Everything about the info sidebar is in one place in Settings.** It has its own section now. The switches for it used to sit under Gallery, Viewer and Editor, three places for one sidebar. The sidebar also goes by one name throughout the interface now, where there used to be three.
+- **Saved LUTs and XMP presets ask before they are removed.** The question names the preset and
+  makes clear that only the saved entry is removed; the file itself stays where it is.
 
-- **The gallery says what it is still doing.** While preview images are being made and metadata is
-  being read, the footer names both, with a count. Until now the only sign was that things kept
-  appearing.
+- **The history of a picture, in the layers panel.** A second tab lists every step you have taken,
+  from the original onwards, each in a row of its own with the icon of the tool it came from and its
+  number: Exposure, Temperature, Crop, Brush, Mask. Every slider names itself, down to Colour
+  mixer: Aqua saturation and Calibration: Red hue, so you can see which one you moved. Objects say what
+  you changed on which of them, Text: Shadow strength or Image: Opacity, and so do the actions
+  behind them: Grouped, Layer moved, Path point added, Added: Text. Click a step and
+  the picture goes back to it, as far back as the original and forward again. Steps you have moved
+  back past stay in the list, greyed out, until you change something - then the way forward from
+  there is gone, as you would expect.
 
-- **A drawing tablet setting.** With a pen you could drag the sliders but not press anything.
-  Buttons and menu entries normally act when you let go, and with a pen that second half does not
-  always arrive. Switch this on under Settings, General, and everything acts the moment the pen
-  touches down. The price, and it applies to the mouse as well: a click can no longer be taken back
-  by moving away before letting go. With a mouse, leave it off.
+- **One drag on a slider is one step.** A long drag used to leave a pile of identical rows behind,
+  and CTRL+Z then took the move back in pieces. The step is now written when you let go of the
+  slider, and taking it back returns to where the slider stood before you touched it. A click that
+  changes nothing leaves nothing behind.
+
+- **Icons on the buttons of the editor sidebar.** Fill type under Object, Selection and Frame, the
+  path a text runs along, the watermark templates, the saved adjustments, the background of the
+  picture, and inverting, discarding, copying and pasting a mask or a selection: every one of those
+  buttons now carries a small picture beside its word, the way the other panels already did.
 
   
 ### Fixes
 
-- **Scrolling is smoother.** Every tile and every row that came into view made the gallery lay out
-  all of them again. Both keep what they have now and reuse it. Grouped by day, month or year the
-  gallery works as before - there the tiles share their row with the headings, and that needs the
-  old way of laying out.
+- **Fullscreen is easier to leave and safer while editing.** SPACE now returns from fullscreen as
+  well as ESC. You can enter fullscreen with unsaved edits; while it is open the picture cannot be
+  changed, so those edits cannot accidentally be left behind.
 
-- **Opening a folder is quicker.** Reading a folder also fetched everything the catalogue knew about
-  every folder underneath it, even when the folder itself held no pictures at all. It now asks only
-  about the pictures it is about to show, and only once instead of twice.
+- **Touching a path point is not a change.** Clicking a point or a handle in the path tool, without
+  moving it, marked the picture as edited, and closing then asked whether to save something that was
+  never altered. Only an actual drag counts now.
 
-- **A folder you have opened before shows up straight away.** What the catalogue already knows is on
-  screen, folders and all, while the folder itself is still being read. Nothing moves or is redrawn
-  when the reading finishes. Pictures that were deleted elsewhere in the meantime are still shown
-  for that moment and then disappear.
+- **A path drag ends when the pointer does.** If the pointer was taken away mid-drag, by a window
+  change, a popup or a tablet that stopped reporting, the drag stayed on inside and only ended at
+  some later movement.
 
-- **Leaving a large folder no longer holds up the next one.** Reading a folder carried on in the
-  background even after you had moved on, and the folder you had just opened waited for it.
+- **The history stays open while you work.** Picking another tool used to close the history tab and
+  put the layer stack back, so you had to open it again after every tool.
 
-- **The timeline and the sort by creation date work in search results.** Pictures found by a search
-  carried no file dates until you looked at them, so the timeline said "no date" and sorting by
-  creation date sorted by nothing. The dates come from the catalogue now.
+- **The tone curve now sits on the picture you are working on.** The histogram behind the curve
+  stayed at the state of the file, so after the first slider it no longer answered the question you
+  were asking it.
 
-- **The list of sections in Settings scrolls** when the window is too short for it. The last entries
-  used to be simply out of reach.
+- **The copyright field is back in the batch dialogs that overwrite.** Resize, Apply filter and
+  Watermark hid it together with the target settings when you kept the originals - the very runs
+  where you are most likely to set it.
 
-- **The preview cache holds 500 pictures instead of 250**, and you can set it up to 10000. Scrolling
-  back over pictures you have already seen loads nothing again, as long as they fit.
+- **The Save button only lights up when there is something to save.** It carried the accent colour
+  at all times, and a button that is always bright says nothing.
 
-- **Pictures from a server are shown under their own name.** In the information sidebar you saw the name of the working copy, which is the asset's identifier, instead of the name of your photo. The folder line is gone there too: it named a temporary folder that has nothing to do with the picture.
+- **Apply looks the same everywhere.** In the three warp tools - grid, envelope and lines - the
+  button that makes the work stick was a plain one and went unnoticed among the sliders. It now
+  carries the accent colour, as it does under Crop and Image size.
 
-- **Lens correction works on raw files again.** The name of the lens was there in the sidebar, but the correction found nothing to apply. A raw file carries several sets of shooting data, one of them belonging to the small preview picture inside it, and that was the one being read. Reported and traced by atleag.
+- **The clipping warning ends with the tool.** It used to stay on after you switched away from the
+  adjustment sliders, marking a picture you were working on in a different way, with its tick box
+  out of sight.
 
-- **The sliders in the editor follow your hand.** The picture used to wait for the drag to end
-  before it caught up. It now redraws while you drag, on a smaller version of the picture where
-  that does not change what you see, and at full size the moment you let go. A change made while a
-  preview was still being drawn is no longer dropped.
+- **The calibration sliders can be undone.** The seven sliders under Calibration wrote their value
+  and nothing else: CTRL+Z went straight past them and took back the step before instead. They now
+  go the same way as every other slider.
 
-- **Editing a picture is quicker.** Grain was by far the most expensive step and held up every
-  other slider with it, because it had to be worked out one pixel after another. It is now
-  calculated from the position in the picture, which lets the whole picture be done at once.
-  Please note: the grain pattern is a different one now. It is as strong and as fine as it was, but
-  a saved recipe with grain in it will not look pixel for pixel the way it did.
+- **Cleaning the database now also clears faces.** Deleting a picture left its faces behind, so a
+  person kept counting photos that were no longer there, and Clean database did not help: it only
+  ever cleared ratings, labels and keywords. It now clears faces and scan marks with them, including
+  those of pictures that only ever went through the face search. Indexing your watched folders tells
+  you how many entries point at files that are gone, so you know when it is worth running.
 
-- **The warp grid sits on the part of the picture you can see.** After a crop it was still laid out
-  over the whole original, so the handles were in the wrong places and the tool was hard to use.
-
-- **Depth blur can be stopped while it is working**, and stopping it leaves the picture untouched.
-  Until now the stop only took effect once the blur had finished.
+- **Sliders no longer stick to the pen.** Lift a pen off the tablet and the letting go often never
+  reaches the application. A slider you had just touched then followed the pen around and changed
+  its value as you passed over it, and only a click somewhere else set it free. Sliders, curves, the
+  timeline, brush strokes and every drag on the editor stage now end as soon as the pointer moves
+  with no button held. Anything you had drawn or dragged is kept.
 
