@@ -602,7 +602,7 @@ Namespace ViewModels
                 Math.Min(bw, CInt(Math.Round(bw * (xPercent + widthPercent) / 100.0))),
                 Math.Min(bh, CInt(Math.Round(bh * (yPercent + heightPercent) / 100.0))))
             If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
-            If captureUndo Then PushUndo()
+            If captureUndo Then PushUndo(LocalizationService.T("Auswahl gesetzt"))
 
             If _selectionCombineMode = "New" OrElse Not _hasActiveSelection Then
                 _editingLayerMaskId = ""   ' neue Auswahl ersetzt eine evtl. geladene Ebenen-Maske
@@ -638,7 +638,7 @@ Namespace ViewModels
                 Math.Min(bw, rawRight),
                 Math.Min(bh, rawBottom))
             If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
-            If captureUndo Then PushUndo()
+            If captureUndo Then PushUndo(LocalizationService.T("Auswahl gesetzt"))
             Dim localOval = New SKRect(rawLeft - rectPx.Left,
                                        rawTop - rectPx.Top,
                                        rawRight - rectPx.Left,
@@ -670,7 +670,7 @@ Namespace ViewModels
                 localX(i) = CSng(bw * xsPercent(i) / 100.0 - rectPx.Left)
                 localY(i) = CSng(bh * ysPercent(i) / 100.0 - rectPx.Top)
             Next
-            If captureUndo Then PushUndo()
+            If captureUndo Then PushUndo(LocalizationService.T("Auswahl gesetzt"))
             Using mask = ImageProcessor.BuildPolygonMask(localX, localY, rectPx.Width, rectPx.Height)
                 If mask IsNot Nothing Then ApplySelectionCandidate(mask, rectPx, "Lasso", xsPercent.ToArray(), ysPercent.ToArray())
             End Using
@@ -1027,7 +1027,7 @@ Namespace ViewModels
             ' derselben Kette sind genau die Bauform, in der hier schon dreimal derselbe Fehler
             ' entstanden ist. Der Unterschied ist jetzt eine einzige Verzweigung: WOHIN der Strich
             ' geht. Alles davor und danach ist gemeinsam.
-            PushUndo()
+            PushUndo(LocalizationService.T("Maske gemalt"))
             Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx)
                 If stamp IsNot Nothing Then
                     Dim gradient = SelectedGradientMask
@@ -1204,7 +1204,7 @@ Namespace ViewModels
                 End If
             End If
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Verlauf gezogen"))
             ' Eine laufende Pixelauswahl hat mit dem Verlauf nichts zu tun und würde sonst als
             ' zweite, konkurrierende Maske weiterleben.
             If _hasActiveSelection Then ClearSelection(captureUndo:=False)
@@ -1270,7 +1270,7 @@ Namespace ViewModels
         ''' <summary>Haengt einen Verlauf als weiteren Bestandteil an eine vorhandene Maske und macht
         ''' ihn zum aktiven - der Zug bedient ab jetzt IHN.</summary>
         Private Sub BeginGradientComponentDrag(target As ImageMask, start As SKPoint)
-            PushUndo()
+            PushUndo(LocalizationService.T("Verlauf geändert"))
             ' Eine laufende PIXELAUSWAHL gehoert nicht dazu; sonst laege eine zweite Maske an. Die
             ' bearbeitete EBENENMASKE ist aber keine solche Auswahl, sondern genau die Maske, an die
             ' angehaengt wird - sie wegzuraeumen loeschte das rote Overlay und die Bindung daran.
@@ -1645,7 +1645,7 @@ Namespace ViewModels
             End If
             Dim mask = CurrentMaskForComponents()
             If mask Is Nothing Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Maske verworfen"))
             _workingMaskId = ""
             Dim owners = _annotations.Where(Function(a) a IsNot Nothing AndAlso
                                                 String.Equals(a.MaskId, mask.Id, StringComparison.Ordinal)).ToList()
@@ -1681,7 +1681,7 @@ Namespace ViewModels
             Dim m = CurrentMaskForComponents()
             If m Is Nothing Then Return
             If index < 0 OrElse index >= m.ComponentCount Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Maskenteil entfernt"))
             m.RemoveComponentAt(index)
             _activeMaskComponentIndex = -1
             RaiseGradientPropertiesChanged()
@@ -1715,7 +1715,7 @@ Namespace ViewModels
             Dim isPrimary = False
             Dim target = MaskComponentAt(m, index, isPrimary)
             If Not isPrimary AndAlso target Is Nothing Then Return
-            PushUndo()
+            PushUndo(CombineHistoryLabel("Maskenteil", "Sichtbarkeit"))
             If isPrimary Then
                 m.PrimaryVisible = Not m.PrimaryVisible
             Else
@@ -1788,7 +1788,7 @@ Namespace ViewModels
             Dim target = index + delta
             If index < 0 OrElse index >= components.Count Then Return
             If target < 0 OrElse target >= components.Count Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Maskenteil verschoben"))
             Dim moved = components(index)
             components.RemoveAt(index)
             components.Insert(target, moved)
@@ -1814,7 +1814,7 @@ Namespace ViewModels
             Dim isPrimary = False
             Dim c = MaskComponentAt(m, index, isPrimary)
             If c Is Nothing Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Maskenteil geändert"))
             Select Case If(c.Mode, "").Trim().ToLowerInvariant()
                 Case "subtract" : c.Mode = "Intersect"
                 Case "intersect" : c.Mode = "Add"
@@ -2472,7 +2472,7 @@ Namespace ViewModels
                 handle = 2
             End If
             If handle < 0 Then Return False
-            PushUndo()
+            PushUndo(LocalizationService.T("Verlauf geändert"))
             _gradientDragMaskId = mask.Id
             _gradientDragActive = True
             _gradientHandle = handle
@@ -4383,7 +4383,7 @@ Namespace ViewModels
                                  $" bearbeitet={Kurz(_editingLayerMaskId)} markiert={Kurz(_selectedMaskedAdjustmentLayerId)}" &
                                  $" promotet={Kurz(_selectionPromotedLayerId)}")
             If Not _hasActiveSelection Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Korrekturebene erstellt"))
             Dim countBefore = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return

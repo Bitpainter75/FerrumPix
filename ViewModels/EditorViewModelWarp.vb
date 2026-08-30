@@ -379,7 +379,7 @@ Namespace ViewModels
                 End If
             Next
             If bester < 0 Then Return False
-            PushUndo()
+            PushUndo(CombineHistoryLabel("Verzerren", "Perspektive"))
             _perspectiveCornerDrag = bester
             _perspectiveDragStartX = _perspectiveCorners(bester * 2)
             _perspectiveDragStartY = _perspectiveCorners(bester * 2 + 1)
@@ -1717,7 +1717,7 @@ Namespace ViewModels
                 End If
             Next
             If best < 0 Then Return False
-            PushUndo()
+            PushUndo(CombineHistoryLabel("Verzerren", "Verformen"))
             _envelopeDragIndex = best
             PrepareEnvelope()
             _envelopeDragStartX = _envelope(best * 2)
@@ -2439,7 +2439,7 @@ Namespace ViewModels
                 End If
             Next
             If bester < 0 Then Return False
-            PushUndo()
+            PushUndo(CombineHistoryLabel("Verzerren", "Gitter"))
             _warpDragIndex = bester
             ' Der Ausgangspunkt fuer die Achsentreue: Umschalt haelt den Zug auf der Achse, die
             ' ueberwiegt, und dafuer braucht es die Stelle, an der er begann.
@@ -2558,7 +2558,7 @@ Namespace ViewModels
                                   Optional afterApply As Action = Nothing)
             If Not HasDocument Then Return
 
-            PushUndo()
+            PushUndo(CombineHistoryLabel("Verzerren", "Verformen"))
             ' Die OBJEKTE gehen mit: sie bekommen die Verzerrung als eigene Angabe und bleiben damit
             ' aenderbar - Text laesst sich weiter tippen. Das Bild darunter braucht das nicht mehr,
             ' seine Verzerrung steht ab jetzt im Rezept.
@@ -2701,7 +2701,7 @@ Namespace ViewModels
         ''' frueher, als Raster und Linien in den Pixeln standen.</summary>
         Public Sub ResetImageWarp()
             If Not HasAnyImageWarp Then Return
-            PushUndo()
+            PushUndo(ResetHistoryLabel("Verzerren"))
             _imageWarp = Nothing
             RaiseImageWarpChanged()
             ' Eine stehende Vorschau MUSS mit weg. Sie liegt ueber dem Bild und zeigte sonst den

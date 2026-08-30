@@ -480,7 +480,7 @@ Namespace ViewModels
                 Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
                 Dim corners = _bokehBlende, lichter = _bokehLichter
-                PushUndo()
+                PushUndo(LocalizationService.T("Bokeh"))
                 ' Der Schritt zurueck merkt sich nur das Rezept - der Flicken traegt die PIXEL.
                 Dim undoItem = _lastPushedUndoEntry
                 Dim bokehApplied = False
@@ -905,7 +905,7 @@ Namespace ViewModels
                     ' skaliert und versetzt.
                     Using ausschnitt = ExtractMaskRegion(mask, rect)
                         If ausschnitt Is Nothing Then Return
-                        PushUndo()
+                        PushUndo(LocalizationService.T("Motiv ausgewählt"))
                         ' Siehe RedrawSubjectMask: die gesammelten Klickpunkte SIND die Antwort,
                         ' der Kandidat ersetzt deshalb in beiden Werkzeugen die bisherige Auswahl.
                         ApplySelectionCandidate(ausschnitt, rect, "MagicWand", Nothing, Nothing,
@@ -1210,7 +1210,7 @@ Namespace ViewModels
                     Using cut = ExtractMaskRegion(mask, result.Bounds)
                         If cut Is Nothing Then Return
                         If isMask Then _pendingRangeKind = "Color" : _pendingRangeSampleX = xPercent : _pendingRangeSampleY = yPercent
-                        If captureUndo Then PushUndo()
+                        If captureUndo Then PushUndo(LocalizationService.T("Farbbereich ausgewählt"))
                         ' captureUndo=False heisst: der Auftrag kommt von einem REGLERZUG und zeichnet
                         ' dieselbe Probe nach. Er ist keine neue Geste, sein Ergebnis ersetzt also die
                         ' bisherige Auswahl. Stuende der Kombinationsmodus auf "Hinzufuegen" (der
@@ -1263,7 +1263,7 @@ Namespace ViewModels
                     Using cut = ExtractMaskRegion(mask, result.Bounds)
                         If cut Is Nothing Then Return
                         If isMask Then _pendingRangeKind = "Luminance" : _pendingRangeSampleX = 0 : _pendingRangeSampleY = 0
-                        If captureUndo Then PushUndo()
+                        If captureUndo Then PushUndo(LocalizationService.T("Helligkeitsbereich ausgewählt"))
                         ' Wie beim Farbbereich: ein Reglerzug (captureUndo=False) zeichnet nach und
                         ' ersetzt, statt sich mit der vorigen Auswahl zu vereinigen.
                         ApplySelectionCandidate(cut, result.Bounds, "MagicWand", Nothing, Nothing,

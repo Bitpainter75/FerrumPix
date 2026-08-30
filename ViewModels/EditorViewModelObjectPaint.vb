@@ -496,7 +496,7 @@ Namespace ViewModels
             Set(value As Boolean)
                 Dim target = FindStrokeTargetImageAnnotation()
                 If target Is Nothing OrElse target.LockTransparentPixels = value Then Return
-                PushUndo()
+                PushUndo(CombineHistoryLabel("Ebene", "Transparenz sperren"))
                 target.LockTransparentPixels = value
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(LayerTransparencyLocked))
@@ -853,7 +853,7 @@ Namespace ViewModels
             If Not _annotations.Contains(target) Then Return
 
             RegisterObjectPaintFile(newPath)
-            PushUndo()
+            PushUndo(LocalizationService.T(If(IsCloneMode, "Stempeln", If(IsRepairMode, "Reparatur", "Verwischen"))))
             target.ImagePath = newPath
             _hasChanges = True
             RaiseResetButtonStateChanged()

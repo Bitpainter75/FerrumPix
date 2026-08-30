@@ -7719,4 +7719,151 @@
   <data name="LUT_80cf900e" xml:space="preserve">
     <value>LUT</value>
   </data>
+  <data name="Auswahl_aufgehoben_64d19a34" xml:space="preserve">
+    <value>Zaznaczenie anulowane</value>
+  </data>
+  <data name="Auswahl_gesetzt_845595cc" xml:space="preserve">
+    <value>Ustawiono zaznaczenie</value>
+  </data>
+  <data name="Auswahl_mit_dem_Zauberstab_e4e5f0a4" xml:space="preserve">
+    <value>Zaznaczenie różdżką</value>
+  </data>
+  <data name="Auswahl_umgekehrt_f5ad7d49" xml:space="preserve">
+    <value>Zaznaczenie odwrócone</value>
+  </data>
+  <data name="Auswahl_umgewandelt_c70451d2" xml:space="preserve">
+    <value>Zaznaczenie przekształcone</value>
+  </data>
+  <data name="Auswahlform_eingef_gt_5fd33e01" xml:space="preserve">
+    <value>Wklejono kształt zaznaczenia</value>
+  </data>
+  <data name="Automatisch_angepasst_623004c4" xml:space="preserve">
+    <value>Dopasowano automatycznie</value>
+  </data>
+  <data name="Bildgr_e_ge_ndert_7b86db2b" xml:space="preserve">
+    <value>Zmieniono rozmiar obrazu</value>
+  </data>
+  <data name="Bokeh_287774ec" xml:space="preserve">
+    <value>Bokeh</value>
+  </data>
+  <data name="Ebene_dupliziert_763a0ff2" xml:space="preserve">
+    <value>Warstwa zduplikowana</value>
+  </data>
+  <data name="Ebene_gel_scht_5b0b3098" xml:space="preserve">
+    <value>Warstwa usunięta</value>
+  </data>
+  <data name="Ebene_umbenannt_d5101f06" xml:space="preserve">
+    <value>Zmieniono nazwę warstwy</value>
+  </data>
+  <data name="Ebene_verschoben_4b5d50fd" xml:space="preserve">
+    <value>Warstwa przeniesiona</value>
+  </data>
+  <data name="Farbbereich_ausgew_hlt_27afb0b2" xml:space="preserve">
+    <value>Wybrano zakres kolorów</value>
+  </data>
+  <data name="Gruppe_ge_ndert_6804b67d" xml:space="preserve">
+    <value>Zmieniono grupę</value>
+  </data>
+  <data name="Gruppiert_f225b0ff" xml:space="preserve">
+    <value>Zgrupowano</value>
+  </data>
+  <data name="Gruppierung_aufgehoben_d1d65c66" xml:space="preserve">
+    <value>Rozgrupowano</value>
+  </data>
+  <data name="Helligkeitsbereich_ausgew_hlt_83bc004a" xml:space="preserve">
+    <value>Wybrano zakres jasności</value>
+  </data>
+  <data name="Hinzugef_gt_b7739b1a" xml:space="preserve">
+    <value>Dodano</value>
+  </data>
+  <data name="Horizontal_spiegeln_47eb0055" xml:space="preserve">
+    <value>Odbij w poziomie</value>
+  </data>
+  <data name="Inhalt_85840de2" xml:space="preserve">
+    <value>Treść</value>
+  </data>
+  <data name="Korrekturebene_dupliziert_4925b048" xml:space="preserve">
+    <value>Zduplikowano warstwę korekcyjną</value>
+  </data>
+  <data name="Korrekturebene_erstellt_5e802067" xml:space="preserve">
+    <value>Utworzono warstwę korekcyjną</value>
+  </data>
+  <data name="Korrekturebene_gel_scht_96dee797" xml:space="preserve">
+    <value>Usunięto warstwę korekcyjną</value>
+  </data>
+  <data name="Leinwandgr_e_ge_ndert_7fc9f674" xml:space="preserve">
+    <value>Zmieniono rozmiar płótna</value>
+  </data>
+  <data name="Maske_gemalt_e0def40d" xml:space="preserve">
+    <value>Namalowano maskę</value>
+  </data>
+  <data name="Maske_verworfen_93444881" xml:space="preserve">
+    <value>Odrzucono maskę</value>
+  </data>
+  <data name="Maskenteil_02389fff" xml:space="preserve">
+    <value>Część maski</value>
+  </data>
+  <data name="Maskenteil_entfernt_391f4322" xml:space="preserve">
+    <value>Usunięto część maski</value>
+  </data>
+  <data name="Maskenteil_ge_ndert_251cb176" xml:space="preserve">
+    <value>Zmieniono część maski</value>
+  </data>
+  <data name="Maskenteil_verschoben_8cb3420f" xml:space="preserve">
+    <value>Przeniesiono część maski</value>
+  </data>
+  <data name="Motiv_ausgew_hlt_2f8a2f13" xml:space="preserve">
+    <value>Wybrano temat</value>
+  </data>
+  <data name="Objekte_dupliziert_8fb4fb82" xml:space="preserve">
+    <value>Zduplikowano obiekty</value>
+  </data>
+  <data name="Objekte_gel_scht_657d16d1" xml:space="preserve">
+    <value>Usunięto obiekty</value>
+  </data>
+  <data name="Pfad_geschlossen_9a609ee6" xml:space="preserve">
+    <value>Zamknięto ścieżkę</value>
+  </data>
+  <data name="Pfadpunkt_entfernt_fcae20f3" xml:space="preserve">
+    <value>Usunięto punkt ścieżki</value>
+  </data>
+  <data name="Pfadpunkt_gegl_ttet_acdf3e93" xml:space="preserve">
+    <value>Wygładzono punkt ścieżki</value>
+  </data>
+  <data name="Pfadpunkt_hinzugef_gt_3a259f1a" xml:space="preserve">
+    <value>Dodano punkt ścieżki</value>
+  </data>
+  <data name="Pixelebene_ef03ee4f" xml:space="preserve">
+    <value>Warstwa pikseli</value>
+  </data>
+  <data name="Preset_angewendet_b68ac3bc" xml:space="preserve">
+    <value>Zastosowano ustawienie</value>
+  </data>
+  <data name="Rahmen_hinzugef_gt_5c384987" xml:space="preserve">
+    <value>Dodano ramkę</value>
+  </data>
+  <data name="Sichtbarkeit_0218eb5c" xml:space="preserve">
+    <value>Widoczność</value>
+  </data>
+  <data name="Sperren_12109099" xml:space="preserve">
+    <value>Zablokuj</value>
+  </data>
+  <data name="Transparenz_sperren_915829d7" xml:space="preserve">
+    <value>Zablokuj przezroczystość</value>
+  </data>
+  <data name="Verlauf_gezogen_59a26c33" xml:space="preserve">
+    <value>Wyznaczono gradient</value>
+  </data>
+  <data name="Vertikal_spiegeln_ca5e600e" xml:space="preserve">
+    <value>Odbij w pionie</value>
+  </data>
+  <data name="Zugeschnitten_4245240f" xml:space="preserve">
+    <value>Przycięto</value>
+  </data>
+  <data name="Zuschnitt_verworfen_d1f2d04b" xml:space="preserve">
+    <value>Odrzucono kadrowanie</value>
+  </data>
+  <data name="Aqua_644abaa7" xml:space="preserve">
+    <value>Akwamaryn</value>
+  </data>
 </root>

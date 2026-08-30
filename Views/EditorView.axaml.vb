@@ -1063,23 +1063,52 @@ Namespace Views
         End Function
 
 
+        ''' <summary>Welche Bedienelemente einen Zug klammern, aus dem GENAU EIN Schritt in der
+        ''' Historie wird.
+        '''
+        ''' Das ist eine andere Frage als die von <see cref="ClassifySlider"/>: dort geht es um die
+        ''' Vorschauaufloesung waehrend des Zuges, hier um Rueckgaengig und Historie. Deshalb zaehlen
+        ''' hier ALLE Wertgeber des Editors - auch die der Objektpanels, die keine schnellere
+        ''' Vorschau brauchen. Wo nichts Sicherbares passiert (Pinselgroesse), entsteht auch kein
+        ''' Schritt; der Zug bleibt dann folgenlos.
+        '''
+        ''' Ausgenommen ist der Zoom-Regler: er ist reine Ansicht.</summary>
+        Private Function IsUndoGestureSource(source As Object) As Boolean
+            If TypeOf source Is CurveEditor OrElse TypeOf source Is ColorWheel OrElse
+               TypeOf source Is ColorGradeWheel OrElse TypeOf source Is HslWheelPicker Then Return True
+            Dim slider = TryCast(source, RoundSlider)
+            If slider Is Nothing Then Return False
+            Return Not String.Equals(slider.Name, "EditorZoomSlider", StringComparison.Ordinal)
+        End Function
+
         Private Sub OnRoundSliderPreviewPressed(sender As Object, e As PointerPressedEventArgs)
-            Dim art = ClassifySlider(e.Source)
-            If art = SliderKind.None Then Return
             Dim control = TryCast(e.Source, InputElement)
             If control Is Nothing OrElse Not e.GetCurrentPoint(control).Properties.IsLeftButtonPressed Then Return
-            TryCast(DataContext, EditorViewModel)?.BeginSliderPreviewDrag(
-                scaleSensitive:=(art = SliderKind.ScaleSensitive))
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            ' EIN ZUG = EIN SCHRITT, und zwar erst beim Loslassen - siehe BeginSliderUndoGesture.
+            If IsUndoGestureSource(e.Source) Then vm.BeginSliderUndoGesture()
+            Dim art = ClassifySlider(e.Source)
+            If art = SliderKind.None Then Return
+            vm.BeginSliderPreviewDrag(scaleSensitive:=(art = SliderKind.ScaleSensitive))
         End Sub
 
         Private Sub OnRoundSliderPreviewReleased(sender As Object, e As PointerReleasedEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            If IsUndoGestureSource(e.Source) Then vm.EndSliderUndoGesture()
             If ClassifySlider(e.Source) = SliderKind.None Then Return
-            TryCast(DataContext, EditorViewModel)?.EndSliderPreviewDrag()
+            vm.EndSliderPreviewDrag()
         End Sub
 
         Private Sub OnRoundSliderPreviewCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            ' AUCH OHNE LOSLASSEN: geht der Zeigerfang verloren (Stift abgehoben, Aufklappfenster),
+            ' ist der Zug zu Ende und sein Schritt gehoert in die Historie.
+            If IsUndoGestureSource(e.Source) Then vm.EndSliderUndoGesture()
             If ClassifySlider(e.Source) = SliderKind.None Then Return
-            TryCast(DataContext, EditorViewModel)?.EndSliderPreviewDrag()
+            vm.EndSliderPreviewDrag()
         End Sub
 
         ''' <summary>Fenster-Tunnel: diese Kürzel müssen auch dann noch greifen, wenn zuvor ein
@@ -5515,7 +5544,10 @@ Namespace Views
                 If Math.Abs(pos.X - _textDragPointerStart.X) < 3 AndAlso
                    Math.Abs(pos.Y - _textDragPointerStart.Y) < 3 Then Return
                 _textDragPlacementStarted = True
-                vm.BeginSelectedAnnotationPlacementEdit()
+                ' Der angefasste Griff benennt den Schritt in der Historie.
+                vm.BeginSelectedAnnotationPlacementEdit(
+                    If(_textDragMode = TextDragMode.Rotate, "Drehung",
+                       If(_textDragMode = TextDragMode.Move, "Position", "Größe")))
                 If _textDragMode <> TextDragMode.Rotate Then ShowTextSizeBadge()
             End If
 

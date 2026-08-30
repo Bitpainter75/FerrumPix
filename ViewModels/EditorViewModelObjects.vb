@@ -436,10 +436,16 @@ Namespace ViewModels
             Dim centerX = AnnotationXPixels + width \ 2
             Dim centerY = AnnotationYPixels + height \ 2
 
-            AnnotationWidthPixels = seite
-            AnnotationHeightPixels = seite
-            AnnotationXPixels = Math.Max(0, centerX - seite \ 2)
-            AnnotationYPixels = Math.Max(0, centerY - seite \ 2)
+            ' Vier Schreibvorgaenge, ein Handgriff - siehe BeginObjectHistoryGroup.
+            BeginObjectHistoryGroup()
+            Try
+                AnnotationWidthPixels = seite
+                AnnotationHeightPixels = seite
+                AnnotationXPixels = Math.Max(0, centerX - seite \ 2)
+                AnnotationYPixels = Math.Max(0, centerY - seite \ 2)
+            Finally
+                EndObjectHistoryGroup()
+            End Try
         End Sub
 
         Public Property AnnotationFillColor2 As String
@@ -788,7 +794,7 @@ Namespace ViewModels
         ''' Mitglieder danach doppelt: einmal gebacken, einmal darüber gezeichnet.</summary>
         Private Sub ApplyGroupRenderChange(group As AnnotationGroup, change As Action)
             If group Is Nothing OrElse change Is Nothing Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Gruppe geändert"))
             change()
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(GroupOpacity))
@@ -865,7 +871,7 @@ Namespace ViewModels
         Public Sub ToggleSelectedPathClosed()
             Dim target = PathEditTarget()
             If target Is Nothing Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Pfad geschlossen"))
             target.PathClosed = Not target.PathClosed
             _hasChanges = True
             RaisePathOverlayChanged()
@@ -898,7 +904,7 @@ Namespace ViewModels
             Dim nextIndex = (best + 1) Mod nodes.Count
             Dim mid = New SKPoint((nodes(best).Anchor.X + nodes(nextIndex).Anchor.X) / 2.0F,
                                   (nodes(best).Anchor.Y + nodes(nextIndex).Anchor.Y) / 2.0F)
-            PushUndo()
+            PushUndo(LocalizationService.T("Pfadpunkt hinzugefügt"))
             nodes.Insert(best + 1, ImageProcessor.PathNode.Corner(mid.X, mid.Y))
             target.PathPoints = ImageProcessor.FormatPathPoints(nodes)
             _hasChanges = True
@@ -922,7 +928,7 @@ Namespace ViewModels
                     StatusText = LocalizationService.T("Ein Pfad braucht mindestens zwei Punkte.")
                     Return
                 End If
-                PushUndo()
+                PushUndo(LocalizationService.T("Pfadpunkt entfernt"))
                 For Each index In gewaehlt
                     nodes.RemoveAt(index)
                 Next
@@ -945,7 +951,7 @@ Namespace ViewModels
             Dim nodes = ImageProcessor.ParsePathPoints(target.PathPoints)
             If nodes.Count <= 2 Then Return
             If index < 0 OrElse index >= nodes.Count Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Pfadpunkt entfernt"))
             nodes.RemoveAt(index)
             target.PathPoints = ImageProcessor.FormatPathPoints(nodes)
             ' Die Reihenfolge hat sich geaendert - eine Menge aus Indizes zeigt danach auf andere
@@ -1042,7 +1048,7 @@ Namespace ViewModels
             Dim p123 = LerpPoint(p12, p23, t)
             Dim anchor = LerpPoint(p012, p123, t)
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Pfadpunkt hinzugefügt"))
             a.HandleOut = p01
             b.HandleIn = p23
             nodes(segment) = a
@@ -1072,7 +1078,7 @@ Namespace ViewModels
             Dim index = If(_lastTouchedPathNode >= 0 AndAlso _lastTouchedPathNode < nodes.Count,
                            _lastTouchedPathNode, nodes.Count - 1)
             Dim node = nodes(index)
-            PushUndo()
+            PushUndo(LocalizationService.T("Pfadpunkt geglättet"))
             Dim isCorner = Math.Abs(node.HandleIn.X - node.Anchor.X) < 0.0001F AndAlso
                            Math.Abs(node.HandleIn.Y - node.Anchor.Y) < 0.0001F AndAlso
                            Math.Abs(node.HandleOut.X - node.Anchor.X) < 0.0001F AndAlso

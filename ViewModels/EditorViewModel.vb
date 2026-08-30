@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
 Imports System.IO
 Imports System.Linq
+Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Text.RegularExpressions
 Imports System.Threading
@@ -1103,6 +1104,10 @@ Namespace ViewModels
         ''' es bei jedem der 90-Millisekunden-Schritte mitzurechnen waere verschenkte Arbeit an einer
         ''' Stelle, die niemand so schnell abliest.</summary>
         Private Const ScopeDebounceMs As Double = 400.0
+        ''' <summary>Wie lange eine Reihe von Aenderungen am SELBEN Regler noch als ein Handgriff
+        ''' gilt. Gemessen wird die Pause zwischen zwei Aenderungen, nicht die Dauer des Handgriffs -
+        ''' siehe CaptureUndoState. Fuer gezogene Regler zaehlt das gar nicht mehr, die klammert der
+        ''' Zug selbst (BeginSliderUndoGesture); es bleibt fuer Zahlenfeld, Pfeiltasten und Mausrad.</summary>
         Private Const UndoCaptureWindowMs As Double = 650
         ' Text und Wasserzeichen: ihr Rechteck wird aus dem Text berechnet und soll ihn eng umschließen.
         Private Const MinTextAnnotationWidthPercent As Double = 1.0
@@ -1133,8 +1138,20 @@ Namespace ViewModels
         ' volle Bildkante (100%) erlaubt.
         Private Const MaxAnnotationEdgePixels As Double = 10000.0
         Private _suppressUndoCapture As Boolean
+        ''' Tiefe der Klammer, die mehrere Objektaenderungen zu EINEM Schritt macht - siehe
+        ''' BeginObjectHistoryGroup.
+        Private _objectHistoryGroupDepth As Integer
         Private _lastUndoProperty As String = ""
-        Private _lastUndoCapturedAt As DateTime = DateTime.MinValue
+        ''' Zeitpunkt der letzten AENDERUNG an diesem Regler - nicht der letzten Sicherung. Siehe
+        ''' CaptureUndoState.
+        Private _lastUndoTouchedAt As DateTime = DateTime.MinValue
+
+        ''' <summary>Laeuft gerade ein Zug an einem Regler? Siehe BeginSliderUndoGesture.</summary>
+        Private _sliderGestureActive As Boolean
+        ''' Der Stand VOR dem Zug. Er wird beim Druck auf den Regler genommen und erst beim
+        ''' Loslassen auf den Stapel gelegt - und nur dann, wenn der Zug wirklich etwas geaendert hat.
+        Private _sliderGestureEntry As UndoEntry
+        Private _sliderGestureChanged As Boolean
 
         Public Property WhiteBalanceOptions As New System.Collections.ObjectModel.ObservableCollection(Of String) From {
             "Wie Aufnahme", "Automatisch", "Tageslicht", "Bewölkt", "Schatten",
@@ -1809,7 +1826,7 @@ Namespace ViewModels
                 Return
             End If
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Automatisch angepasst"))
             ' Beim ERSTEN „Auto" den Stand davor merken - ein zweiter Knopfdruck darf ihn nicht mit
             ' den Werten der Automatik überschreiben, sonst führte der Zurücksetzen-Knopf danach
             ' nirgendwohin.
@@ -2892,7 +2909,7 @@ Namespace ViewModels
                 Return
             End If
             CommitObjectAdjustModeToModel()
-            PushUndo()
+            PushUndo(LocalizationService.T("Objekte gelöscht"))
             ReanchorStackedCorrectionsBeforeRemoval(victims)
             Dim dirty = SKRectI.Empty
             For Each a In victims
@@ -2919,7 +2936,7 @@ Namespace ViewModels
                 DuplicateSelectedAnnotation()
                 Return
             End If
-            PushUndo()
+            PushUndo(LocalizationService.T("Objekte dupliziert"))
             Dim copies As New List(Of ImageAnnotation)()
             Dim displaySize = GetAnnotationDisplayPixelSize()
             Dim offsetX = CSng(Math.Max(1.0, displaySize.Width * 0.02))
@@ -3177,7 +3194,7 @@ Namespace ViewModels
             If indices.Count + mitKorrekturen.Count < 2 Then Return
             If indices.Count = 0 Then Return
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Gruppiert"))
             Dim members = indices.Select(Function(i) _annotations(i)).ToList()
             Dim dirty = ComputeSceneDirtyRectFor(members(0))
             For Each m In members
@@ -3267,7 +3284,7 @@ Namespace ViewModels
                 Distinct().ToList()
             If groupIds.Count = 0 Then Return
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Gruppierung aufgehoben"))
             For Each id In groupIds
                 ' Die aufgeloeste Gruppe kann selbst in einer liegen: ihre Mitglieder ruecken dann
                 ' eine Ebene nach AUSSEN statt ganz herauszufallen. Dasselbe gilt fuer ihre
@@ -3295,7 +3312,7 @@ Namespace ViewModels
         Private Sub GroupSelectedAdjustmentLayers()
             Dim members = SelectedAdjustmentLayers.ToList()
             If members.Count < 2 Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Gruppiert"))
             Dim ordered = _maskedAdjustmentLayers.Where(Function(l) members.Contains(l)).ToList()
             Dim topIndex = ordered.Select(Function(l) _maskedAdjustmentLayers.IndexOf(l)).Max()
 
@@ -5887,7 +5904,7 @@ Namespace ViewModels
             Dim vorhanden = FindFrameAnnotation()
             If vorhanden IsNot Nothing Then Return vorhanden
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Rahmen hinzugefügt"))
             Dim frame = New ImageAnnotation With {
                 .Kind = "Frame",
                 .XPixels = 0,
@@ -7964,12 +7981,18 @@ Namespace ViewModels
             End If
             If Math.Abs(newW - boxW) < 0.5 AndAlso Math.Abs(newH - boxH) < 0.5 Then Return
 
-            If Not IsWatermarkImageSource Then
-                AnnotationXPixels = CInt(Math.Round(AnnotationXPixels + (boxW - newW) / 2.0))
-                AnnotationYPixels = CInt(Math.Round(AnnotationYPixels + (boxH - newH) / 2.0))
-            End If
-            AnnotationWidthPixels = CInt(Math.Round(newW))
-            AnnotationHeightPixels = CInt(Math.Round(newH))
+            ' Lage und Groesse in einem Zug: EIN Schritt in der Historie, nicht drei.
+            BeginObjectHistoryGroup()
+            Try
+                If Not IsWatermarkImageSource Then
+                    AnnotationXPixels = CInt(Math.Round(AnnotationXPixels + (boxW - newW) / 2.0))
+                    AnnotationYPixels = CInt(Math.Round(AnnotationYPixels + (boxH - newH) / 2.0))
+                End If
+                AnnotationWidthPixels = CInt(Math.Round(newW))
+                AnnotationHeightPixels = CInt(Math.Round(newH))
+            Finally
+                EndObjectHistoryGroup()
+            End Try
         End Sub
 
 
@@ -8104,7 +8127,7 @@ Namespace ViewModels
                             $"noSelection seed={seedX},{seedY} display={bw}x{bh} pct={xPercent:0.###},{yPercent:0.###} tol={_selectionTolerance:0.###} confine={If(confinePlan Is Nothing, "aus", $"{confineRect.Left},{confineRect.Top},{confineRect.Width}x{confineRect.Height}")}")
                         Return
                     End If
-                    PushUndo()
+                    PushUndo(LocalizationService.T("Auswahl mit dem Zauberstab"))
                     ' Kein Polygonzug: für maskenbasierte Auswahlen zeichnet das Overlay die Ameisenlinie aus den
                     ' Maskenrändern und die Treffererkennung fragt die Maske selbst (siehe HasSelectionMask).
                     ApplySelectionCandidate(mask, result.Bounds, "MagicWand", Nothing, Nothing)
@@ -8157,7 +8180,7 @@ Namespace ViewModels
         Public Function TryBeginMaskMove(xPercent As Double, yPercent As Double) As Boolean
             If Not _hasActiveSelection OrElse _selectionMask Is Nothing Then Return False
             If Not IsPointInsideSelectionPercent(xPercent, yPercent) Then Return False
-            PushUndo()
+            PushUndo(LocalizationService.T("Auswahl verschoben"))
             _maskeSchiebtStartX = xPercent
             _maskeSchiebtStartY = yPercent
             _maskeSchiebtRechteck = _selectionMaskRect
@@ -8257,7 +8280,7 @@ Namespace ViewModels
         Public Sub ConvertSelectionKind(zuMaske As Boolean)
             If Not _hasActiveSelection Then Return
             If _activeSelectionIsMask = zuMaske Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Auswahl umgewandelt"))
             SetActiveSelectionIsMask(zuMaske)
             ' Die Darstellung haengt an der Art, und SetActiveSelectionIsMask baut sie nur bei einem
             ' Wechsel neu - der liegt hier vor, also passt das.
@@ -8522,7 +8545,7 @@ Namespace ViewModels
             End If
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Bild entrauscht"))
             Dim undoItem = _lastPushedUndoEntry
             StatusText = LocalizationService.T("Bild wird entrauscht…")
             SetBusyReason(LocalizationService.T("Bild wird entrauscht"))
@@ -8765,7 +8788,7 @@ Namespace ViewModels
 
             Dim recipe = GetCurrentAdjustments()
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Objekt entfernt"))
             ' Der eben abgelegte Schritt zurueck merkt sich nur das REZEPT. Was hier passiert, sind
             ' aber PIXEL: ohne den Flicken daran holt ein Schritt zurueck die Maske wieder her und
             ' laesst die gefuellte Stelle stehen. Genau derselbe Weg wie bei Retusche und
@@ -8977,7 +9000,7 @@ Namespace ViewModels
             ' Aus demselben Grund die gemerkte Pipettenstelle: ein Regler wuerde sonst eine Maske an
             ' einer Stelle nachziehen, die zur weggeraeumten Auswahl gehoerte.
             ForgetSamplePoint()
-            If captureUndo AndAlso _hasActiveSelection Then PushUndo()
+            If captureUndo AndAlso _hasActiveSelection Then PushUndo(LocalizationService.T("Auswahl aufgehoben"))
             InvalidateSelectionLayerLink()
             CommitSelectionAdjustModeToModel()
             ClearSelectionMask()
@@ -9117,7 +9140,7 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Die abgelegte Auswahl passt nicht auf dieses Bild")
                 Return
             End If
-            PushUndo()
+            PushUndo(LocalizationService.T("Auswahlform eingefügt"))
             Using kopie = _copiedSelectionShape.Copy()
                 ApplySelectionCandidate(kopie, _copiedSelectionShapeRect, "MagicWand", Nothing, Nothing,
                                         isMask:=False, forceNew:=True)
@@ -9137,7 +9160,7 @@ Namespace ViewModels
                 Dim existingRect = SelectionRectPixels()
                 If existingMask Is Nothing OrElse existingRect.Width <= 0 OrElse existingRect.Height <= 0 Then Return
 
-                PushUndo()
+                PushUndo(LocalizationService.T("Auswahl umgekehrt"))
                 Dim fullRect = New SKRectI(0, 0, bw, bh)
                 Using fullMask = CreateSolidMask(bw, bh)
                     Dim inverted = CombineSelectionMasks(fullMask, fullRect, existingMask, existingRect, fullRect, "Subtract")
@@ -9771,7 +9794,7 @@ Namespace ViewModels
             End If
             BeginColorPick(Sub(picked)
                                _suppressNegativeForPick = False
-                               PushUndo()
+                               PushUndo(CombineHistoryLabel("Filmnegativ", "Filmbasis"))
                                _negativeBaseColor = $"#FF{picked.R:X2}{picked.G:X2}{picked.B:X2}"
                                ' Der Dichtepunkt (das andere Ende der Kurve) bleibt gemessen - von Hand
                                ' ist er nicht sinnvoll zu treffen, er liegt irgendwo im Motiv.
@@ -11137,6 +11160,17 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Stellt das Panel auf das WERKZEUG um - ausser, die Historie steht offen.
+        '''
+        ''' Der Reiter ist eine Entscheidung des Nutzers, und ein Werkzeugwechsel ist kein Grund, sie
+        ''' zurueckzunehmen: wer die Historie offen hat, arbeitet gerade mit ihr und griffe sonst nach
+        ''' jedem Werkzeugwechsel wieder zum Reiter. Fuer den Bildwechsel gilt das nicht - dort faengt
+        ''' die Historie ohnehin von vorn an (siehe ResetEditorUiStateForNewImage).</summary>
+        Private Sub ShowToolTabUnlessHistoryOpen()
+            If _selectedLayersPanelTab = LayersPanelTab.History Then Return
+            SelectedLayersPanelTab = LayersPanelTab.Tool
+        End Sub
+
         Public ReadOnly Property IsLayersTabSelected As Boolean
             Get
                 Return _selectedLayersPanelTab = LayersPanelTab.Layers
@@ -12325,7 +12359,7 @@ Namespace ViewModels
                                                                                SelectedAnnotationIndex = -1
                                                                                CurrentTool = EditorTool.Text
                                                                                PendingInsertKind = NormalizeAnnotationKind(toolName)
-                                                                               SelectedLayersPanelTab = LayersPanelTab.Tool
+                                                                               ShowToolTabUnlessHistoryOpen()
                                                                            Finally
                                                                                _overlayNotifySuppressDepth -= 1
                                                                            End Try
@@ -12347,7 +12381,7 @@ Namespace ViewModels
                                                                            If Not IsObjectScopeTool(parsed) AndAlso
                                                                               Not ToolKeepsSelectedAnnotationOnEnter(parsed) Then SelectedAnnotationIndex = -1
                                                                            CurrentTool = parsed
-                                                                           SelectedLayersPanelTab = LayersPanelTab.Tool
+                                                                           ShowToolTabUnlessHistoryOpen()
                                                                        Finally
                                                                            _overlayNotifySuppressDepth -= 1
                                                                        End Try
@@ -12411,7 +12445,7 @@ Namespace ViewModels
                                                                Await ApplyTransformAsync()
                                                            End Function)
             ResetCropCommand = ReactiveCommand.Create(Sub()
-                                                          PushUndo()
+                                                          PushUndo(ResetHistoryLabel("Zuschneiden"))
                                                           SetCropValues(0, 0, 0, 0)
                                                           _appliedCropLeft = 0
                                                           _appliedCropTop = 0
@@ -12424,7 +12458,7 @@ Namespace ViewModels
                                                                          ApplyCropPreset(preset)
                                                                      End Sub)
             ResetResizeCommand = ReactiveCommand.Create(Sub()
-                                                            PushUndo()
+                                                            PushUndo(ResetHistoryLabel("Bildgröße"))
                                                             _appliedResizeWidth = 0
                                                             _appliedResizeHeight = 0
                                                             _hasChanges = True
@@ -12434,7 +12468,7 @@ Namespace ViewModels
                                                                           ApplyResizePreset(preset)
                                                                       End Sub)
             ResetCanvasCommand = ReactiveCommand.Create(Sub()
-                                                            PushUndo()
+                                                            PushUndo(ResetHistoryLabel("Leinwandgröße"))
                                                             _appliedCanvasWidth = 0
                                                             _appliedCanvasHeight = 0
                                                             _hasChanges = True
@@ -12513,31 +12547,33 @@ Namespace ViewModels
                                                                       NameHistoryStep(LocalizationService.T("Anpassungen zurückgesetzt"))
                                                                   End Sub)
             ResetCurrentToolCommand = ReactiveCommand.Create(Sub()
-                                                                 PushUndo()
+                                                                 ' Der Knopf raeumt das GERADE gewaehlte Werkzeug - sein Name steht schon fertig
+                                                                 ' uebersetzt bereit und wird deshalb nicht noch einmal durch T() geschickt.
+                                                                 PushUndo(LocalizationService.T("Zurücksetzen") & ": " & CurrentToolLabel)
                                                                  ResetCurrentToolInternal()
                                                              End Sub)
             ResetLightCommand = ReactiveCommand.Create(Sub()
-                                                           PushUndo()
+                                                           PushUndo(ResetHistoryLabel("Licht"))
                                                            ResetLightInternal()
                                                        End Sub)
             ResetColorCommand = ReactiveCommand.Create(Sub()
-                                                           PushUndo()
+                                                           PushUndo(ResetHistoryLabel("Farbe"))
                                                            ResetColorInternal()
                                                        End Sub)
             PickNegativeBaseCommand = ReactiveCommand.Create(Sub() BeginNegativeBasePick())
             AutoNegativeBaseCommand = ReactiveCommand.Create(Sub()
-                                                                 PushUndo()
+                                                                 PushUndo(CombineHistoryLabel("Filmnegativ", "Automatisch"))
                                                                  MeasureFilmNegative()
                                                                  _negativeEnabled = True
                                                                  RaiseNegativePropertiesChanged()
                                                                  SchedulePreviewForCurrentTarget()
                                                              End Sub)
             ResetNegativeCommand = ReactiveCommand.Create(Sub()
-                                                              PushUndo()
+                                                              PushUndo(ResetHistoryLabel("Filmnegativ"))
                                                               ResetNegativeInternal()
                                                           End Sub)
             ResetDetailCommand = ReactiveCommand.Create(Sub()
-                                                            PushUndo()
+                                                            PushUndo(ResetHistoryLabel("Details"))
                                                             ResetDetailInternal()
                                                         End Sub)
             ResetWarpGridCommand = ReactiveCommand.Create(Sub() ResetWarpGrid())
@@ -12586,11 +12622,11 @@ Namespace ViewModels
             ApplyLensAssignmentCommand = ReactiveCommand.Create(Of String)(Sub(text) ApplyLensAssignment(text))
             ResetLensCorrectionCommand = ReactiveCommand.Create(Sub() ResetLensCorrection())
             ResetEffectsCommand = ReactiveCommand.Create(Sub()
-                                                             PushUndo()
+                                                             PushUndo(ResetHistoryLabel("Effekte"))
                                                              ResetEffectsInternal()
                                                          End Sub)
             ResetRetouchCommand = ReactiveCommand.Create(Sub()
-                                                             PushUndo()
+                                                             PushUndo(ResetHistoryLabel("Retusche"))
                                                              ResetRetouchInternal()
                                                          End Sub)
             ' Löst nur die Quelle - bereits gesetzte Punkte behalten ihre und bleiben unverändert.
@@ -12618,12 +12654,12 @@ Namespace ViewModels
             SetFrameFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) FrameFillKind = kind)
             SetAnnotationTextPathKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationTextPathKind(kind))
             ResetTransformCommand = ReactiveCommand.Create(Sub()
-                                                               PushUndo()
+                                                               PushUndo(ResetHistoryLabel("Drehen und Verzerren"))
                                                                ResetTransformInternal()
                                                            End Sub)
             SetBrushPresetCommand = ReactiveCommand.Create(Of String)(AddressOf SelectBrushPreset)
             SetFilterPresetCommand = ReactiveCommand.Create(Of String)(Sub(preset)
-                                                                          PushUndo()
+                                                                          PushUndo(LocalizationService.T("Filter"))
                                                                           ApplyExclusiveFilterPreset(preset)
                                                                       End Sub)
             AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
@@ -12633,44 +12669,44 @@ Namespace ViewModels
             ' des ganzen Looks (ResetFilterInternal) läuft nur noch beim Wechsel auf einen anderen
             ' Filter mit, sonst über die Zurücksetzer der einzelnen Gruppen.
             ResetFilterCommand = ReactiveCommand.Create(Sub()
-                                                            PushUndo()
+                                                            PushUndo(ResetHistoryLabel("Filter"))
                                                             ResetFilterGroupInternal()
                                                         End Sub)
             ResetFrameCommand = ReactiveCommand.Create(Sub()
-                                                           PushUndo()
+                                                           PushUndo(ResetHistoryLabel("Rahmen"))
                                                            ResetFrameInternal()
                                                        End Sub)
             ' Die LUT-Gruppe traegt nur Pfad und Staerke - mehr raeumt ihr Zuruecksetzer nicht weg.
             ' "Schärfe und Weichzeichnen" hing am Details-Zurücksetzer und nahm Klarheit, Struktur,
             ' Dunst, Glühen, Korn und Staub mit weg - die stehen alle in der Gruppe "Details".
             ResetSharpnessCommand = ReactiveCommand.Create(Sub()
-                                                               PushUndo()
+                                                               PushUndo(ResetHistoryLabel("Schärfe"))
                                                                ResetSharpnessInternal()
                                                            End Sub)
             ' Eigenständige Gruppen-Zurücksetzer, seit Schärfe/Weichzeichnen/Körnung je einen eigenen
             ' Expander haben - jeder räumt NUR seine Gruppe, nicht die Nachbargruppen.
             ResetSharpenCommand = ReactiveCommand.Create(Sub()
-                                                             PushUndo()
+                                                             PushUndo(ResetHistoryLabel("Schärfe"))
                                                              ResetSharpenGroupInternal()
                                                          End Sub)
             ResetSoftenCommand = ReactiveCommand.Create(Sub()
-                                                            PushUndo()
+                                                            PushUndo(ResetHistoryLabel("Weichzeichnen"))
                                                             ResetSoftenGroupInternal()
                                                         End Sub)
             ResetRauschenCommand = ReactiveCommand.Create(Sub()
-                                                              PushUndo()
+                                                              PushUndo(ResetHistoryLabel("Rauschen"))
                                                               ResetNoiseGroupInternal()
                                                           End Sub)
             ResetGrainCommand = ReactiveCommand.Create(Sub()
-                                                           PushUndo()
+                                                           PushUndo(ResetHistoryLabel("Körnung"))
                                                            ResetGrainGroupInternal()
                                                        End Sub)
             ResetDetailGroupCommand = ReactiveCommand.Create(Sub()
-                                                                 PushUndo()
+                                                                 PushUndo(ResetHistoryLabel("Details"))
                                                                  ResetDetailGroupInternal()
                                                              End Sub)
             ResetLutCommand = ReactiveCommand.Create(Sub()
-                                                         PushUndo()
+                                                         PushUndo(ResetHistoryLabel("LUT"))
                                                          ResetLutInternal()
                                                      End Sub)
             ' Die Preset-Gruppe ist der Sonderfall: ein XMP-Preset SCHREIBT in Licht, Farbe,
@@ -12678,11 +12714,11 @@ Namespace ViewModels
             ' genauso weit reichen - hier ist die weite Wirkung nicht ueberraschend, sondern genau
             ' das, was "Preset entfernen" bedeutet.
             ResetXmpPresetCommand = ReactiveCommand.Create(Sub()
-                                                                     PushUndo()
+                                                                     PushUndo(ResetHistoryLabel("XMP-Preset"))
                                                                      ResetFilterInternal()
                                                                  End Sub)
             ResetCurveCommand = ReactiveCommand.Create(Sub()
-                                                           PushUndo()
+                                                           PushUndo(ResetHistoryLabel("Tonwertkurve"))
                                                            ResetCurvePoints()
                                                            RaiseResetButtonStateChanged()
                                                            SchedulePreviewForCurrentTarget()
@@ -12694,16 +12730,16 @@ Namespace ViewModels
             AddHandler _curveBluePoints.CollectionChanged, AddressOf OnCurvePointsChanged
             AddHandler _curveLuminancePoints.CollectionChanged, AddressOf OnCurvePointsChanged
             ResetHslCommand = ReactiveCommand.Create(Sub()
-                                                         PushUndo()
+                                                         PushUndo(ResetHistoryLabel("Farbmischer"))
                                                          ResetHslInternal()
                                                      End Sub)
             ResetColorGradingCommand = ReactiveCommand.Create(Sub()
-                                                                  PushUndo()
+                                                                  PushUndo(ResetHistoryLabel("Farbgradierung"))
                                                                   ResetColorGradingInternal()
                                                               End Sub)
 
             ResetCalibrationCommand = ReactiveCommand.Create(Sub()
-                                                                 PushUndo()
+                                                                 PushUndo(ResetHistoryLabel("Kalibrierung"))
                                                                  CalibrationRedHue = 0
                                                                  CalibrationRedSaturation = 0
                                                                  CalibrationGreenHue = 0
@@ -14659,14 +14695,16 @@ Namespace ViewModels
             If Not TryRenderAnnotationPatchSync() Then ScheduleAnnotationCompositePreviewUpdate(40.0)
         End Sub
 
-        Public Sub BeginSelectedAnnotationPlacementEdit()
+        ''' <param name="handle">Was der Zug am Objekt tut - "Position", "Größe" oder "Drehung". Der
+        ''' Griff, den man angefasst hat, sagt es; aus dem Ergebnis liesse es sich nur raten.</param>
+        Public Sub BeginSelectedAnnotationPlacementEdit(Optional handle As String = "Position")
             If Not HasSelectedAnnotation Then Return
             _annotationPlacementEditActive = True
             ' EIN Mauszug = EIN Undo-Schritt. Ohne das legt jede Bewegung nach Ablauf des
             ' Sammelfensters (CaptureUndoState) einen weiteren Eintrag an - ein längeres Verschieben,
             ' Drehen oder Skalieren erzeugte dutzende. Der Schnappschuss
             ' entsteht VOR der ersten Änderung, danach ist das Aufzeichnen bis zum Loslassen still.
-            PushUndo()
+            PushUndo(SelectedObjectKindLabel() & ": " & LocalizationService.T(handle))
             _suppressUndoCapture = True
             _groupDragRotationTotal = 0
             ' Startbox merken, sobald IRGENDEINE Maske mitwandern muss - die einer mitmarkierten
@@ -15621,7 +15659,7 @@ Namespace ViewModels
         ''' </summary>
         Private Async Function ApplyCropAsync() As Task
             If Not HasCropChanges Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Zugeschnitten"))
             ClearActiveSelectionForGeometry()
 
             Dim replacesAppliedCrop = ShowsFullImageWhileCropping
@@ -15677,7 +15715,7 @@ Namespace ViewModels
 
         Private Async Function ApplyResizeAsync() As Task
             If Not HasImageResizeChanges Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Bildgröße geändert"))
             ClearActiveSelectionForGeometry()
             _appliedResizeWidth = _resizeWidth
             _appliedResizeHeight = _resizeHeight
@@ -15689,7 +15727,7 @@ Namespace ViewModels
 
         Private Async Function ApplyCanvasAsync() As Task
             If Not HasCanvasSizeChanges Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Leinwandgröße geändert"))
             ClearActiveSelectionForGeometry()
             _appliedCanvasWidth = _canvasWidth
             _appliedCanvasHeight = _canvasHeight
@@ -15701,7 +15739,7 @@ Namespace ViewModels
 
         Private Async Function ApplyTransformAsync() As Task
             If Not HasTransformChanges Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Drehen und Verzerren"))
             ClearActiveSelectionForGeometry()
             _appliedRotationDegrees = _rotationDegrees
             _appliedStraightenDegrees = _straightenDegrees
@@ -16776,10 +16814,28 @@ Namespace ViewModels
         Private Sub CaptureUndoState(propertyName As String)
             If _suppressUndoCapture Then Return
 
+            ' EIN ZUG AM REGLER IST EIN SCHRITT, und er entsteht beim LOSLASSEN. Waehrend des Zuges
+            ' liegt der Stand von vorher schon bereit (BeginSliderUndoGesture) und bekommt hier nur
+            ' seinen Namen - vom ersten Regler, den der Zug bewegt hat.
+            If _sliderGestureActive AndAlso _sliderGestureEntry IsNot Nothing Then
+                If Not _sliderGestureChanged Then
+                    _sliderGestureEntry.Label = GetHistoryLabelForProperty(propertyName)
+                    _sliderGestureEntry.IconSource = HistoryIconForProperty(propertyName)
+                    _sliderGestureChanged = True
+                End If
+                Return
+            End If
+
             Dim now = DateTime.UtcNow
+            ' OHNE ZUG (Zahlenfeld, Pfeiltasten, Mausrad) zaehlt die PAUSE seit der letzten
+            ' Aenderung, nicht der Abstand zur letzten Sicherung. Am alten Mass lief die Frist
+            ' mitten in einer laufenden Reihe ab und legte alle 650 ms einen weiteren Schritt an -
+            ' eine Historie voll gleichnamiger Eintraege fuer EINE Bewegung.
             Dim shouldCapture =
                 Not String.Equals(_lastUndoProperty, propertyName, StringComparison.Ordinal) OrElse
-                (now - _lastUndoCapturedAt).TotalMilliseconds > UndoCaptureWindowMs
+                (now - _lastUndoTouchedAt).TotalMilliseconds > UndoCaptureWindowMs
+            _lastUndoProperty = propertyName
+            _lastUndoTouchedAt = now
 
             If Not shouldCapture Then Return
 
@@ -16790,8 +16846,6 @@ Namespace ViewModels
                                                .Label = GetHistoryLabelForProperty(propertyName),
                                                .IconSource = HistoryIconForProperty(propertyName)})
             ClearRedoStack()
-            _lastUndoProperty = propertyName
-            _lastUndoCapturedAt = now
             ' Der Reglername steht schon; eine spaetere Aktion soll ihn nicht ueberschreiben.
             _historyStepNamed = True
             RebuildHistorySteps()
@@ -16799,9 +16853,53 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanRedo))
         End Sub
 
+        ''' <summary>Beginnt einen Zug an einem Regler: der Stand von VORHER wird genommen, aber
+        ''' noch nicht auf den Stapel gelegt.
+        '''
+        ''' Erst das Loslassen macht daraus einen Schritt (<see cref="EndSliderUndoGesture"/>) - und
+        ''' nur, wenn der Zug ueberhaupt etwas geaendert hat. Ein blosser Klick auf den Regler
+        ''' hinterlaesst damit nichts, ein langer Zug genau einen Eintrag, und die Historie waechst
+        ''' nicht sichtbar mit, waehrend man noch zieht.</summary>
+        Public Sub BeginSliderUndoGesture()
+            ' Ein Zug, dessen Ende nie kam (verlorener Zeiger), wird hier abgeschlossen statt
+            ' verworfen: seine Aenderungen sind ja passiert.
+            If _sliderGestureActive Then EndSliderUndoGesture()
+            If _suppressUndoCapture Then Return
+            _sliderGestureActive = True
+            _sliderGestureChanged = False
+            _sliderGestureEntry = New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
+                                                      .WarpSession = CaptureWarpSession()}
+        End Sub
+
+        ''' <summary>Beendet den Zug und macht aus ihm EINEN Schritt - oder nichts, wenn sich kein
+        ''' Wert geaendert hat.</summary>
+        Public Sub EndSliderUndoGesture()
+            If Not _sliderGestureActive Then Return
+            _sliderGestureActive = False
+            Dim entry = _sliderGestureEntry
+            _sliderGestureEntry = Nothing
+            If Not _sliderGestureChanged OrElse entry Is Nothing Then Return
+            _undoStack.Push(entry)
+            ClearRedoStack()
+            _historyStepNamed = True
+            ' Der naechste Handgriff faengt einen eigenen Schritt an, auch am selben Regler.
+            ResetUndoCapture()
+            RebuildHistorySteps()
+            Me.RaisePropertyChanged(NameOf(CanUndo))
+            Me.RaisePropertyChanged(NameOf(CanRedo))
+        End Sub
+
+        ''' <summary>Wirft einen offenen Zug weg, ohne ihn zu sichern. Nur fuer Faelle, in denen der
+        ''' Stapel als Ganzes verschwindet (anderes Bild, neues Dokument).</summary>
+        Private Sub DiscardSliderUndoGesture()
+            _sliderGestureActive = False
+            _sliderGestureEntry = Nothing
+            _sliderGestureChanged = False
+        End Sub
+
         Private Sub ResetUndoCapture()
             _lastUndoProperty = ""
-            _lastUndoCapturedAt = DateTime.MinValue
+            _lastUndoTouchedAt = DateTime.MinValue
         End Sub
 
         Private Sub RaiseResetButtonStateChanged()
@@ -16891,6 +16989,7 @@ Namespace ViewModels
 
         Private Sub ClearUndoHistory()
             ResetUndoCapture()
+            DiscardSliderUndoGesture()
             _lastPushedUndoEntry = Nothing
             _historyStepNamed = True
             For Each entry In _undoStack
@@ -17033,7 +17132,12 @@ Namespace ViewModels
         '''
         ''' Die Wortlaute sind die der Panels, damit die Zeile in der Historie dasselbe Wort nennt
         ''' wie der Regler, den man gerade angefasst hat.</summary>
-        Private Shared Function GetHistoryLabelForProperty(propertyName As String) As String
+        Private Function GetHistoryLabelForProperty(propertyName As String) As String
+            ' Regler eines OBJEKTS nennen zuerst das Objekt: "Text: Schatten Stärke". Ohne das
+            ' hiessen alle Handgriffe an allen Objekten gleich.
+            Dim objectLabel = ObjectHistoryLabel(propertyName)
+            If Not String.IsNullOrEmpty(objectLabel) Then Return objectLabel
+
             Select Case propertyName
                 Case NameOf(Exposure) : Return LocalizationService.T("Belichtung")
                 Case NameOf(Brightness) : Return LocalizationService.T("Helligkeit")
@@ -17108,18 +17212,34 @@ Namespace ViewModels
                     Return LocalizationService.T("Gerade richten")
                 Case "Tonwertkurve"
                     Return LocalizationService.T("Tonwertkurve")
-                ' DER FARBMISCHER bleibt bei seinem Gruppennamen: die 24 Baender sind dreimal acht
-                ' Regler derselben Bedienung, und "Aqua Helligkeit" saehe in der Liste aus wie ein
-                ' eigenes Werkzeug.
-                Case NameOf(RedHue), NameOf(RedSaturation), NameOf(RedLuminance),
-                     NameOf(OrangeHue), NameOf(OrangeSaturation), NameOf(OrangeLuminance),
-                     NameOf(YellowHue), NameOf(YellowSaturation), NameOf(YellowLuminance),
-                     NameOf(GreenHue), NameOf(GreenSaturation), NameOf(GreenLuminance),
-                     NameOf(AquaHue), NameOf(AquaSaturation), NameOf(AquaLuminance),
-                     NameOf(BlueHue), NameOf(BlueSaturation), NameOf(BlueLuminance),
-                     NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
-                     NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance)
-                    Return LocalizationService.T("Farbmischer")
+                ' DER FARBMISCHER nennt Band UND Regler: "Farbmischer: Aqua Sättigung". Der blosse
+                ' Gruppenname stand 24 Mal gleich in der Liste und sagte nicht, was bewegt wurde.
+                ' Die Wortlaute sind die des Panels (Farbton, Sättigung, Luminanz) und die des
+                ' Farbrads.
+                Case NameOf(RedHue) : Return HslHistoryLabel("Rot", "Farbton")
+                Case NameOf(RedSaturation) : Return HslHistoryLabel("Rot", "Sättigung")
+                Case NameOf(RedLuminance) : Return HslHistoryLabel("Rot", "Luminanz")
+                Case NameOf(OrangeHue) : Return HslHistoryLabel("Orange", "Farbton")
+                Case NameOf(OrangeSaturation) : Return HslHistoryLabel("Orange", "Sättigung")
+                Case NameOf(OrangeLuminance) : Return HslHistoryLabel("Orange", "Luminanz")
+                Case NameOf(YellowHue) : Return HslHistoryLabel("Gelb", "Farbton")
+                Case NameOf(YellowSaturation) : Return HslHistoryLabel("Gelb", "Sättigung")
+                Case NameOf(YellowLuminance) : Return HslHistoryLabel("Gelb", "Luminanz")
+                Case NameOf(GreenHue) : Return HslHistoryLabel("Grün", "Farbton")
+                Case NameOf(GreenSaturation) : Return HslHistoryLabel("Grün", "Sättigung")
+                Case NameOf(GreenLuminance) : Return HslHistoryLabel("Grün", "Luminanz")
+                Case NameOf(AquaHue) : Return HslHistoryLabel("Aqua", "Farbton")
+                Case NameOf(AquaSaturation) : Return HslHistoryLabel("Aqua", "Sättigung")
+                Case NameOf(AquaLuminance) : Return HslHistoryLabel("Aqua", "Luminanz")
+                Case NameOf(BlueHue) : Return HslHistoryLabel("Blau", "Farbton")
+                Case NameOf(BlueSaturation) : Return HslHistoryLabel("Blau", "Sättigung")
+                Case NameOf(BlueLuminance) : Return HslHistoryLabel("Blau", "Luminanz")
+                Case NameOf(PurpleHue) : Return HslHistoryLabel("Lila", "Farbton")
+                Case NameOf(PurpleSaturation) : Return HslHistoryLabel("Lila", "Sättigung")
+                Case NameOf(PurpleLuminance) : Return HslHistoryLabel("Lila", "Luminanz")
+                Case NameOf(MagentaHue) : Return HslHistoryLabel("Magenta", "Farbton")
+                Case NameOf(MagentaSaturation) : Return HslHistoryLabel("Magenta", "Sättigung")
+                Case NameOf(MagentaLuminance) : Return HslHistoryLabel("Magenta", "Luminanz")
                 Case NameOf(FilterPreset)
                     Return LocalizationService.T("Filter")
                 Case NameOf(FilterStrength)
@@ -17128,10 +17248,157 @@ Namespace ViewModels
                     Return LocalizationService.T("Weißabgleich")
                 Case NameOf(NegativeEnabled), NameOf(NegativeMonochrome), NameOf(NegativeGamma)
                     Return LocalizationService.T("Filmnegativ")
+                ' Die folgenden Schluessel sind keine Eigenschaftsnamen, sondern Marken, die eine
+                ' Stelle im Quelltext selbst gesetzt hat (CaptureUndoState("Gitter") und so fort).
+                ' Ohne eigenen Fall hiessen alle diese Handgriffe "Anpassung".
+                Case "Verzerren", "Verformen"
+                    Return LocalizationService.T("Verzerren")
+                Case "Gitter"
+                    Return CombineHistoryLabel("Verzerren", "Gitter")
+                Case "Linien"
+                    Return CombineHistoryLabel("Verzerren", "Linien")
+                Case "Pfad"
+                    Return LocalizationService.T("Pfad")
+                Case "LayerLocked"
+                    Return CombineHistoryLabel("Ebene", "Sperren")
+                Case "LayerVisibility"
+                    Return CombineHistoryLabel("Ebene", "Sichtbarkeit")
+                Case "BackgroundVisibility"
+                    Return CombineHistoryLabel("Hintergrund", "Sichtbarkeit")
+                Case "GlobalAdjustmentsVisibility"
+                    Return CombineHistoryLabel("Anpassungen", "Sichtbarkeit")
+                Case "PixelLayerVisibility"
+                    Return CombineHistoryLabel("Pixelebene", "Sichtbarkeit")
+                ' Der Sammelschluessel der Objektaenderungen (siehe ObjectHistoryKey): hier ist nur
+                ' bekannt, WELCHES Objekt bearbeitet wurde, nicht womit.
+                Case "TextAnnotation"
+                    Return SelectedObjectKindLabel()
                 Case Else
                     Return LocalizationService.T("Anpassung")
             End Select
         End Function
+
+        ''' <summary>Die ART des gerade bearbeiteten Objekts, wie sie auch im Ebenenpanel steht.
+        ''' Bewusst die Art und nicht der Ebenenname: ein selbst vergebener Name stuende in der
+        ''' Historie an der Stelle, an der man den Regler sucht.</summary>
+        Private Function SelectedObjectKindLabel() As String
+            Dim annotation = SelectedLayer
+            If annotation Is Nothing Then Return LocalizationService.T("Ebene")
+            Return LocalizationService.T(ImageAnnotation.GermanKindLabel(annotation.Kind))
+        End Function
+
+        ''' <summary>Wie ein Schritt heisst, der aus einem Regler des OBJEKTPANELS entsteht: erst die
+        ''' Art des Objekts, dann der Regler - "Text: Schatten Stärke", "Bild: Deckkraft".
+        '''
+        ''' Leer fuer alles, was kein Objektregler ist. Daran erkennt auch
+        ''' <see cref="ObjectHistoryKey"/>, welche Aufrufe von SyncSelectedAnnotation ueberhaupt
+        ''' einen eigenen Schritt verdienen.</summary>
+        Private Function ObjectHistoryLabel(propertyName As String) As String
+            Dim slider = ObjectHistorySliderLabel(propertyName)
+            If String.IsNullOrEmpty(slider) Then Return ""
+            Return SelectedObjectKindLabel() & ": " & slider
+        End Function
+
+        ''' <summary>Der Reglername innerhalb des Objektpanels. Die Wortlaute sind die der Panels,
+        ''' damit die Zeile in der Historie dasselbe Wort nennt wie der Regler, den man angefasst
+        ''' hat. Zusammengesetzt wird erst nach der Uebersetzung - jeder Teil hat seinen eigenen
+        ''' Schluessel, ein fertiger Satz haette keinen.</summary>
+        Private Function ObjectHistorySliderLabel(propertyName As String) As String
+            Select Case propertyName
+                Case NameOf(AnnotationText) : Return LocalizationService.T("Inhalt")
+                Case NameOf(AnnotationFontFamily) : Return LocalizationService.T("Schrift")
+                Case NameOf(AnnotationFontSize) : Return LocalizationService.T("Größe")
+                Case NameOf(AnnotationBold) : Return LocalizationService.T("Fett")
+                Case NameOf(AnnotationItalic) : Return LocalizationService.T("Kursiv")
+                Case NameOf(AnnotationLetterSpacingPercent) : Return LocalizationService.T("Zeichenabstand")
+                Case NameOf(AnnotationTextPathKind), NameOf(SetAnnotationTextPathKind)
+                    Return LocalizationService.T("Pfad")
+                Case NameOf(AnnotationTextPathBend) : Return LocalizationService.T("Krümmung")
+                Case NameOf(AnnotationTextPathStartOffset) : Return LocalizationService.T("Startversatz")
+                ' Fuellung und Kontur heissen beim QR-Code anders (Hintergrund/Vordergrund) - dieselbe
+                ' Beschriftung wie im Panel, also dieselbe Quelle.
+                Case NameOf(AnnotationFillColor) : Return FillColorLabel
+                Case NameOf(AnnotationStrokeColor) : Return StrokeColorLabel
+                Case NameOf(AnnotationFillKind) : Return LocalizationService.T("Füllart")
+                Case NameOf(AnnotationFillColor2) : Return LocalizationService.T("Verlauf bis")
+                Case NameOf(AnnotationGradientAngleDegrees) : Return LocalizationService.T("Winkel")
+                Case NameOf(AnnotationGradientInverted) : Return LocalizationService.T("Verlauf invertieren")
+                Case NameOf(AnnotationStrokeWidth) : Return LocalizationService.T("Konturbreite")
+                Case NameOf(AnnotationBlendIncludesStroke) : Return LocalizationService.T("Kontur mitmischen")
+                Case NameOf(AnnotationOpacity) : Return LocalizationService.T("Deckkraft")
+                Case NameOf(AnnotationBlendMode) : Return LocalizationService.T("Mischen")
+                Case NameOf(AnnotationRotation) : Return LocalizationService.T("Drehung")
+                Case NameOf(AnnotationFlipHorizontal) : Return LocalizationService.T("Horizontal spiegeln")
+                Case NameOf(AnnotationFlipVertical) : Return LocalizationService.T("Vertikal spiegeln")
+                Case NameOf(AnnotationLockAspect) : Return LocalizationService.T("Seitenverhältnis")
+                Case NameOf(AnnotationAnchor) : Return LocalizationService.T("Anker")
+                Case NameOf(AnnotationIsVisible) : Return LocalizationService.T("Sichtbarkeit")
+                Case NameOf(AnnotationWidthPercent) : Return LocalizationService.T("Breite")
+                Case NameOf(AnnotationHeightPercent) : Return LocalizationService.T("Höhe")
+                Case NameOf(AnnotationXPercent), NameOf(AnnotationYPercent), NameOf(SetSelectedAnnotationRect)
+                    Return LocalizationService.T("Position")
+                Case NameOf(AnnotationShadowEnabled) : Return LocalizationService.T("Schatten")
+                Case NameOf(AnnotationShadowColor) : Return ObjectBlockLabel("Schatten", "Farbe")
+                Case NameOf(AnnotationShadowLightAngle) : Return ObjectBlockLabel("Schatten", "Lichtwinkel")
+                Case NameOf(AnnotationShadowOffsetX) : Return ObjectBlockLabel("Schatten", "Versatz X")
+                Case NameOf(AnnotationShadowOffsetY) : Return ObjectBlockLabel("Schatten", "Versatz Y")
+                Case NameOf(AnnotationShadowBlur) : Return ObjectBlockLabel("Schatten", "Weichzeichnen")
+                Case NameOf(AnnotationShadowStrength) : Return ObjectBlockLabel("Schatten", "Stärke")
+                Case NameOf(AnnotationShadowSize) : Return ObjectBlockLabel("Schatten", "Größe")
+                Case NameOf(AnnotationShadowRounded) : Return ObjectBlockLabel("Schatten", "Abgerundet")
+                Case NameOf(AnnotationShadowCornerRadius) : Return ObjectBlockLabel("Schatten", "Rundung")
+                Case NameOf(AnnotationGlowEnabled) : Return LocalizationService.T("Glühen")
+                Case NameOf(AnnotationGlowColor) : Return ObjectBlockLabel("Glühen", "Farbe")
+                Case NameOf(AnnotationGlowBlur) : Return ObjectBlockLabel("Glühen", "Größe")
+                Case NameOf(AnnotationGlowStrength) : Return ObjectBlockLabel("Glühen", "Stärke")
+                ' Die Pinselregler gehoeren zur Mal- und Radierebene: dort sind sie deren
+                ' Eigenschaften und landen ueber SyncSelectedAnnotationIfStroke hier.
+                Case NameOf(BrushSize) : Return LocalizationService.T("Größe")
+                Case NameOf(BrushHardness) : Return LocalizationService.T("Härte")
+                Case NameOf(BrushOpacity) : Return LocalizationService.T("Deckkraft")
+                Case NameOf(BrushFlow) : Return LocalizationService.T("Fluss")
+                Case NameOf(EraserFillColor) : Return LocalizationService.T("Hintergrundfarbe")
+                Case NameOf(ApplyWatermarkPreset) : Return LocalizationService.T("Vorlage")
+                Case NameOf(SetWatermarkImagePath) : Return LocalizationService.T("Quelle")
+                Case Else : Return ""
+            End Select
+        End Function
+
+        ''' <summary>"Gruppe Regler" fuer die Bloecke des Objektpanels (Schatten, Gluehen). Anders als
+        ''' <see cref="CombineHistoryLabel"/> ohne Doppelpunkt, weil vor der Gruppe schon die Art des
+        ''' Objekts mit einem steht - "Text: Schatten Stärke" statt "Text: Schatten: Stärke".</summary>
+        Private Shared Function ObjectBlockLabel(block As String, slider As String) As String
+            Return LocalizationService.T(block) & " " & LocalizationService.T(slider)
+        End Function
+
+        ''' <summary>Unter welchem Schluessel eine Objektaenderung gesammelt wird.
+        '''
+        ''' Der Reglername, wo es einen gibt - so bekommt jeder Regler seinen eigenen Schritt. Alles
+        ''' Uebrige laeuft unter EINEM gemeinsamen Schluessel: Aufrufer, die den Objektstand nur ins
+        ''' Modell zurueckschreiben (Speichern, Drucken), duerfen dabei keinen Schritt anlegen, und
+        ''' ein wechselnder Schluessel wuerde genau das tun.</summary>
+        Private Function ObjectHistoryKey(propertyName As String) As String
+            ' In einer Klammer zaehlt der gemeinsame Schluessel: siehe BeginObjectHistoryGroup.
+            If _objectHistoryGroupDepth > 0 Then Return "TextAnnotation"
+            If String.IsNullOrEmpty(ObjectHistorySliderLabel(propertyName)) Then Return "TextAnnotation"
+            Return propertyName
+        End Function
+
+        ''' <summary>Klammert mehrere Objektaenderungen zu EINEM Schritt.
+        '''
+        ''' Ein Handgriff, der auf einmal an mehreren Reglern schreibt - den Werkzeugstand uebernehmen,
+        ''' die Box auf das Seitenverhaeltnis schnappen -, ist fuer den Nutzer EINE Aktion. Seit jeder
+        ''' Regler seinen eigenen Schluessel hat, ergaebe er sonst je Regler einen Schritt und die
+        ''' Historie fuellte sich mit Bruchstuecken.
+        '''
+        ''' Immer mit Try/Finally, sonst bleibt die Klammer nach einem Fehler offen.</summary>
+        Private Sub BeginObjectHistoryGroup()
+            _objectHistoryGroupDepth += 1
+        End Sub
+
+        Private Sub EndObjectHistoryGroup()
+            If _objectHistoryGroupDepth > 0 Then _objectHistoryGroupDepth -= 1
+        End Sub
 
         ''' <summary>Sichert den Zustand VOR einer Aktion.
         '''
@@ -17140,6 +17407,9 @@ Namespace ViewModels
         ''' passiert, aus dem Schnappschuss laesst sie sich also nicht ablesen - das Werkzeug in der
         ''' Hand sagt dagegen genau, was gleich geschieht ("Pinsel", "Maske", "Zuschneiden").</summary>
         Private Sub PushUndo(Optional label As String = Nothing)
+            ' Ein noch offener Reglerzug gehoert VOR diese Aktion auf den Stapel, sonst stuende sein
+            ' Stand von vorher hinterher ueber ihr.
+            EndSliderUndoGesture()
             ResetUndoCapture()
             Dim entry As New UndoEntry With {.Adjustments = GetCurrentAdjustments(),
                                              .WarpSession = CaptureWarpSession(),
@@ -17158,6 +17428,27 @@ Namespace ViewModels
         ''' Uebersetzung - ein fertiger Satz haette keinen Schluessel und bliebe deutsch.</summary>
         Private Shared Function CombineHistoryLabel(group As String, slider As String) As String
             Return LocalizationService.T(group) & ": " & LocalizationService.T(slider)
+        End Function
+
+        ''' <summary>"Farbmischer: Aqua Sättigung" - Gruppe, Farbband, Regler. Drei Teile, jeder
+        ''' einzeln uebersetzt: ein fertiger Satz haette keinen Schluessel.</summary>
+        Private Shared Function HslHistoryLabel(band As String, slider As String) As String
+            Return LocalizationService.T("Farbmischer") & ": " &
+                   LocalizationService.T(band) & " " & LocalizationService.T(slider)
+        End Function
+
+        ''' <summary>Der Name eines Zuruecksetzers in der Historie: "Zurücksetzen: Licht". Die
+        ''' Gruppennamen sind die der Panelkoepfe, damit die Zeile die Gruppe nennt, deren Knopf man
+        ''' gedrueckt hat.</summary>
+        Private Shared Function ResetHistoryLabel(group As String) As String
+            Return CombineHistoryLabel("Zurücksetzen", group)
+        End Function
+
+        ''' <summary>Der Name eines neu angelegten Objekts in der Historie: "Hinzugefügt: Text". Die
+        ''' Art kommt aus derselben Quelle wie die Beschriftung im Ebenenpanel.</summary>
+        Private Shared Function AddHistoryLabel(kind As String) As String
+            Return LocalizationService.T("Hinzugefügt") & ": " &
+                   LocalizationService.T(ImageAnnotation.GermanKindLabel(NormalizeAnnotationKind(kind)))
         End Function
 
         ''' <summary>Das Symbol eines Schritts, der aus einer AKTION entsteht: dasselbe, das das
@@ -17193,6 +17484,16 @@ Namespace ViewModels
         ''' Gruppe traegt das Symbol ihres Werkzeugs.</summary>
         Private Function HistoryIconForProperty(propertyName As String) As String
             Const outline = "avares://FerrumPix/Assets/Icons/outline/"
+            ' Ein Handgriff an einem OBJEKT traegt dessen eigenes Symbol - dasselbe, unter dem die
+            ' Ebene im Ebenenpanel steht. Die Zeile in der Historie sieht damit aus wie die Zeile
+            ' der Ebene, an der man gearbeitet hat.
+            If Not String.IsNullOrEmpty(ObjectHistorySliderLabel(propertyName)) OrElse
+               String.Equals(propertyName, "TextAnnotation", StringComparison.Ordinal) Then
+                Dim annotation = SelectedLayer
+                If annotation IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(annotation.IconSource) Then
+                    Return annotation.IconSource
+                End If
+            End If
             Select Case propertyName
                 Case NameOf(CropLeft), NameOf(CropTop), NameOf(CropRight), NameOf(CropBottom)
                     Return outline & "crop.svg"
@@ -17263,6 +17564,9 @@ Namespace ViewModels
         End Function
 
         Private Sub UndoAction()
+            ' Ein offener Reglerzug wird erst zum Schritt gemacht, sonst nimmt Strg+Z den Schritt
+            ' DAVOR zurueck und der eben gezogene Wert bliebe stehen.
+            EndSliderUndoGesture()
             ' Auch Tastatur-Pfade (Strg+Z) respektieren die Commit-Sperre - siehe CanUndo.
             If _undoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
             CommitSelectionAdjustModeToModel()
@@ -17303,6 +17607,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub RedoAction()
+            EndSliderUndoGesture()
             If _redoStack.Count = 0 OrElse _pendingWorkingCommits > 0 Then Return
             CommitSelectionAdjustModeToModel()
             ResetUndoCapture()
@@ -18547,7 +18852,7 @@ Namespace ViewModels
         End Sub
 
         Public Sub AddAnnotationAt(kind As String, xPercent As Double, yPercent As Double)
-            PushUndo()
+            PushUndo(AddHistoryLabel(kind))
             Dim normalizedKind = NormalizeAnnotationKind(kind)
             Dim defaultSize = GetDefaultAnnotationSizePercent(normalizedKind, kind)
             Dim width = defaultSize.WidthPercent
@@ -18716,7 +19021,7 @@ Namespace ViewModels
 
         Public Sub AddImageAnnotationAt(imagePath As String, xPercent As Double, yPercent As Double)
             If String.IsNullOrWhiteSpace(imagePath) Then Return
-            PushUndo()
+            PushUndo(AddHistoryLabel("Image"))
             ' Ohne scharfgestelltes Bild-Werkzeug (Drag&Drop aus dem Dateimanager) beschreiben die Puffer
             ' noch das selektierte Objekt - sonst erbt das Bild dessen Kontur/Mischmodus/Deckkraft.
             If Not BuffersDescribePendingInsert("Image") Then ResetAnnotationBuffersToImageDefaults()
@@ -18988,7 +19293,7 @@ Namespace ViewModels
                 Return
             End If
 
-            PushUndo()
+            PushUndo(LocalizationService.T(If(_isEraserMode, "Radiert", "Gemalt")))
             Dim undoEntry = _lastPushedUndoEntry
             Dim renderAnn = stroke.ToRenderAnnotation()
             ' Radierer mit transparenter Füllfarbe stanzt echte Alpha-Löcher (DstOut).
@@ -19150,7 +19455,7 @@ Namespace ViewModels
             CommitSelectionAdjustModeToModel()
             Dim index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = layerId)
             If index < 0 Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Korrekturebene gelöscht"))
             Dim maskId = _maskedAdjustmentLayers(index).MaskId
             _maskedAdjustmentLayers.RemoveAt(index)
             RemoveMaskIfUnreferenced(maskId)
@@ -19234,7 +19539,7 @@ Namespace ViewModels
         ''' den Bearbeitungszustand exklusiv auf diese Ebene legen (nur eine wird gleichzeitig bearbeitet).</summary>
         Public Sub BeginLayerRename(annotation As ImageAnnotation)
             If annotation Is Nothing Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene umbenannt"))
             ' Das Eingabefeld mit der aktuellen (ggf. automatischen) Beschriftung vorbefüllen.
             If String.IsNullOrWhiteSpace(annotation.CustomName) Then annotation.CustomName = annotation.LayerLabel
             For Each a In _annotations
@@ -19244,7 +19549,7 @@ Namespace ViewModels
 
         Public Sub BeginLayerRename(row As LayerPanelRow)
             If row Is Nothing Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene umbenannt"))
             If String.IsNullOrWhiteSpace(row.EditableName) Then row.EditableName = row.LayerLabel
             For Each item In _layerRows
                 item.IsRenaming = Object.ReferenceEquals(item, row)
@@ -19305,7 +19610,7 @@ Namespace ViewModels
             End If
             If unchanged Then Return
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene verschoben"))
             _annotations.Clear()
             For Each a In target
                 _annotations.Add(a)
@@ -19394,7 +19699,7 @@ Namespace ViewModels
                     ' Mitglied und mit dessen Gruppe). Obere Hälfte = darüber, also ausserhalb.
                     Dim headerMembers = AnnotationsInGroup(targetRow.Group.Id)
                     If headerMembers.Count = 0 Then Return
-                    PushUndo()
+                    PushUndo(LocalizationService.T("Ebene verschoben"))
                     dragged.AdjustmentLayer.StackAboveAnnotationId = headerMembers(headerMembers.Count - 1).Id
                     dragged.AdjustmentLayer.GroupId = If(below, targetRow.Group.Id, "")
                     CommitSelectionAdjustModeToModel()
@@ -19409,7 +19714,7 @@ Namespace ViewModels
                 ' darin gemacht. Sie erbt dann die Gruppenzugehörigkeit: das Auge der Gruppe blendet
                 ' sie mit aus, und im Panel steht sie eingerückt im Block. Beim Herausziehen fällt die
                 ' Zugehörigkeit wieder weg.
-                PushUndo()
+                PushUndo(LocalizationService.T("Ebene verschoben"))
                 ' „unterhalb abgelegt" heisst: unter diesem Objekt - dann gehört sie über das nächst
                 ' tiefere Objekt bzw. ins Basisbild, wenn es keines mehr gibt.
                 Dim targetIndex = _annotations.IndexOf(targetAnnotation)
@@ -19434,7 +19739,7 @@ Namespace ViewModels
             If dragged.AdjustmentLayer IsNot Nothing AndAlso targetRow.AdjustmentLayer IsNot Nothing AndAlso
                String.IsNullOrEmpty(targetRow.AdjustmentLayer.StackAboveAnnotationId) AndAlso
                Not String.IsNullOrEmpty(dragged.AdjustmentLayer.StackAboveAnnotationId) Then
-                PushUndo()
+                PushUndo(LocalizationService.T("Ebene verschoben"))
                 dragged.AdjustmentLayer.StackAboveAnnotationId = ""
                 RebuildLayerRows()
                 _hasChanges = True
@@ -19475,7 +19780,7 @@ Namespace ViewModels
             Dim unchanged = reordered.Count = _maskedAdjustmentLayers.Count AndAlso
                             reordered.Select(Function(l) l.Id).SequenceEqual(_maskedAdjustmentLayers.Select(Function(l) l.Id))
             If unchanged Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene verschoben"))
             _maskedAdjustmentLayers.Clear()
             _maskedAdjustmentLayers.AddRange(reordered)
             _selectedMaskedAdjustmentLayerId = draggedId
@@ -19527,7 +19832,7 @@ Namespace ViewModels
                 End If
                 If block.Count = 0 Then Return
 
-                PushUndo()
+                PushUndo(LocalizationService.T("Ebene verschoben"))
                 Dim removedBefore = block.Where(Function(l) items.IndexOf(l) < targetIndex).Count()
                 For Each l In block
                     items.Remove(l)
@@ -19570,7 +19875,7 @@ Namespace ViewModels
             End If
             If objBlock.Count = 0 Then Return
 
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene verschoben"))
             Dim dirty = SKRectI.Empty
             For Each a In objBlock
                 dirty = ImageProcessor.UnionRects(dirty, ComputeSceneDirtyRectFor(a))
@@ -19698,7 +20003,7 @@ Namespace ViewModels
         Private Sub DeleteAnnotationAt(index As Integer)
             If index < 0 OrElse index >= _annotations.Count Then Return
             CommitObjectAdjustModeToModel()
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene gelöscht"))
             ' Rect VOR dem Entfernen erfassen - danach ist das Objekt weg.
             Dim deletedRect = ComputeSceneDirtyRectFor(_annotations(index))
             ReanchorStackedCorrectionsBeforeRemoval({_annotations(index)})
@@ -19948,7 +20253,7 @@ Namespace ViewModels
             End If
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CommitObjectAdjustModeToModel()
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene dupliziert"))
             Dim copy = _annotations(_selectedAnnotationIndex).Clone()
             copy.Id = Guid.NewGuid().ToString("N")
             GiveCopyItsOwnMask(copy)
@@ -19967,7 +20272,7 @@ Namespace ViewModels
             If _hasActiveSelection Then ClearSelection(captureUndo:=False)
             index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
             If index < 0 Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Korrekturebene dupliziert"))
             Dim source = _maskedAdjustmentLayers(index)
             Dim copy = DuplicateAdjustmentLayer(source,
                 If(String.IsNullOrWhiteSpace(source.Name), LocalizationService.T("Auswahlebene"), source.Name) &
@@ -20006,7 +20311,7 @@ Namespace ViewModels
             CommitObjectAdjustModeToModel()
             Dim target = _selectedAnnotationIndex + If(direction >= 0, 1, -1)
             If target < 0 OrElse target >= _annotations.Count Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene verschoben"))
             Dim item = _annotations(_selectedAnnotationIndex)
             _annotations.RemoveAt(_selectedAnnotationIndex)
             _annotations.Insert(target, item)
@@ -20026,7 +20331,7 @@ Namespace ViewModels
             index = _maskedAdjustmentLayers.FindIndex(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
             target = index + If(direction >= 0, 1, -1)
             If index < 0 OrElse target < 0 OrElse target >= _maskedAdjustmentLayers.Count Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("Ebene verschoben"))
             Dim item = _maskedAdjustmentLayers(index)
             _maskedAdjustmentLayers.RemoveAt(index)
             _maskedAdjustmentLayers.Insert(target, item)
@@ -20751,10 +21056,13 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Sub SyncSelectedAnnotation()
+        ''' <param name="propertyName">Wird vom Compiler mit dem Namen der aufrufenden Eigenschaft
+        ''' gefuellt und benennt damit den Schritt in der Historie ("Text: Schatten Stärke"). Wer von
+        ''' woanders her aufruft, landet unter dem Sammelschluessel - siehe ObjectHistoryKey.</param>
+        Private Sub SyncSelectedAnnotation(<CallerMemberName> Optional propertyName As String = Nothing)
             If _isLoadingAnnotation Then Return
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
-            CaptureUndoState("TextAnnotation")
+            CaptureUndoState(ObjectHistoryKey(propertyName))
             Dim a = _annotations(_selectedAnnotationIndex)
             Dim previewSource = GetPreviewSource()
             Dim sceneSize = GetCurrentScenePixelSize()
@@ -20926,9 +21234,11 @@ Namespace ViewModels
             RefreshSelectedAnnotationPreviewImmediatelyIfNeeded()
         End Sub
 
-        Private Sub SyncSelectedAnnotationIfStroke()
+        ''' Reicht den Namen des aufrufenden Reglers DURCH - ohne das hiesse der Schritt nach dieser
+        ''' Zwischenstation und nicht nach dem Regler.
+        Private Sub SyncSelectedAnnotationIfStroke(<CallerMemberName> Optional propertyName As String = Nothing)
             If _isLoadingAnnotation OrElse Not IsSelectedStrokeAnnotation() Then Return
-            SyncSelectedAnnotation()
+            SyncSelectedAnnotation(propertyName)
         End Sub
 
         Private Shared Function ParseAvaloniaColorOrDefault(value As String, fallback As Avalonia.Media.Color) As Avalonia.Media.Color
@@ -21123,7 +21433,7 @@ Namespace ViewModels
             ' Nur im Zuschneide-Werkzeug gibt es einen schwebenden Rahmen zum Verwerfen.
             If Not ShowCropAdjustments Then Return
             If Not HasCropChanges Then Return
-            If captureUndo Then PushUndo()
+            If captureUndo Then PushUndo(LocalizationService.T("Zuschnitt verworfen"))
             ' Zurueck auf den BESTAETIGTEN Stand, nicht auf null: wo das ganze Bild zu sehen ist,
             ' liegt der Rahmen auf dem bestaetigten Ausschnitt, und ein Klick neben das Bild soll ihn
             ' nicht aufziehen.
@@ -21552,7 +21862,7 @@ Namespace ViewModels
         Private Sub ResetFrameInternal()
             Dim frame = FindFrameAnnotation()
             If frame Is Nothing Then Return
-            PushUndo()
+            PushUndo(ResetHistoryLabel("Rahmen"))
             Dim schmutz = ComputeSceneDirtyRectFor(frame)
             _annotations.Remove(frame)
             RemoveMaskIfUnreferenced(frame.MaskId)
@@ -21886,7 +22196,7 @@ Namespace ViewModels
                         CurrentTool = EditorTool.Draw
                         IsEraserMode = False
                 End Select
-                SelectedLayersPanelTab = LayersPanelTab.Tool
+                ShowToolTabUnlessHistoryOpen()
                 If Not String.Equals(previousPaintMode, SelectedPaintMode, StringComparison.Ordinal) Then
                     StorePaintToolState(previousPaintMode)
                     ApplyPaintToolState(SelectedPaintMode)
@@ -21973,6 +22283,11 @@ Namespace ViewModels
             Dim state As PaintToolState = Nothing
             If String.IsNullOrEmpty(paintMode) OrElse Not _paintToolStates.TryGetValue(paintMode, state) Then Return
 
+            ' Den Stand eines Werkzeugs zu uebernehmen ist EIN Handgriff, auch wenn er vier Regler
+            ' schreibt - bei markierter Mal- oder Radierebene landet er sonst als vier Schritte in
+            ' der Historie.
+            BeginObjectHistoryGroup()
+            Try
             Select Case paintMode
                 Case "Brush"
                     AnnotationStrokeColor = state.StrokeColor
@@ -21992,6 +22307,9 @@ Namespace ViewModels
                     BrushOpacity = state.Opacity
                     BrushFlow = state.Flow
             End Select
+            Finally
+                EndObjectHistoryGroup()
+            End Try
         End Sub
 
 
@@ -22007,7 +22325,7 @@ Namespace ViewModels
                 Dim look = XmpPresetService.LoadLook(xmpPath)
                 If look Is Nothing Then Return
 
-                PushUndo()
+                PushUndo(LocalizationService.T("Preset angewendet"))
                 _suppressUndoCapture = True
                 Dim profileNotice = ""
                 Try
@@ -22293,7 +22611,7 @@ Namespace ViewModels
 
         Public Sub ApplyLutPreset(cubePath As String)
             If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return
-            PushUndo()
+            PushUndo(LocalizationService.T("LUT angewendet"))
             ResetFilterInternal()
             _suppressUndoCapture = True
             Try

@@ -7680,4 +7680,151 @@
   <data name="LUT_80cf900e" xml:space="preserve">
     <value>LUT</value>
   </data>
+  <data name="Auswahl_aufgehoben_64d19a34" xml:space="preserve">
+    <value>Selection cleared</value>
+  </data>
+  <data name="Auswahl_gesetzt_845595cc" xml:space="preserve">
+    <value>Selection set</value>
+  </data>
+  <data name="Auswahl_mit_dem_Zauberstab_e4e5f0a4" xml:space="preserve">
+    <value>Magic wand selection</value>
+  </data>
+  <data name="Auswahl_umgekehrt_f5ad7d49" xml:space="preserve">
+    <value>Selection inverted</value>
+  </data>
+  <data name="Auswahl_umgewandelt_c70451d2" xml:space="preserve">
+    <value>Selection converted</value>
+  </data>
+  <data name="Auswahlform_eingef_gt_5fd33e01" xml:space="preserve">
+    <value>Selection shape pasted</value>
+  </data>
+  <data name="Automatisch_angepasst_623004c4" xml:space="preserve">
+    <value>Auto adjusted</value>
+  </data>
+  <data name="Bildgr_e_ge_ndert_7b86db2b" xml:space="preserve">
+    <value>Image size changed</value>
+  </data>
+  <data name="Bokeh_287774ec" xml:space="preserve">
+    <value>Bokeh</value>
+  </data>
+  <data name="Ebene_dupliziert_763a0ff2" xml:space="preserve">
+    <value>Layer duplicated</value>
+  </data>
+  <data name="Ebene_gel_scht_5b0b3098" xml:space="preserve">
+    <value>Layer deleted</value>
+  </data>
+  <data name="Ebene_umbenannt_d5101f06" xml:space="preserve">
+    <value>Layer renamed</value>
+  </data>
+  <data name="Ebene_verschoben_4b5d50fd" xml:space="preserve">
+    <value>Layer moved</value>
+  </data>
+  <data name="Farbbereich_ausgew_hlt_27afb0b2" xml:space="preserve">
+    <value>Color range selected</value>
+  </data>
+  <data name="Gruppe_ge_ndert_6804b67d" xml:space="preserve">
+    <value>Group changed</value>
+  </data>
+  <data name="Gruppiert_f225b0ff" xml:space="preserve">
+    <value>Grouped</value>
+  </data>
+  <data name="Gruppierung_aufgehoben_d1d65c66" xml:space="preserve">
+    <value>Ungrouped</value>
+  </data>
+  <data name="Helligkeitsbereich_ausgew_hlt_83bc004a" xml:space="preserve">
+    <value>Luminance range selected</value>
+  </data>
+  <data name="Hinzugef_gt_b7739b1a" xml:space="preserve">
+    <value>Added</value>
+  </data>
+  <data name="Horizontal_spiegeln_47eb0055" xml:space="preserve">
+    <value>Flip horizontally</value>
+  </data>
+  <data name="Inhalt_85840de2" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="Korrekturebene_dupliziert_4925b048" xml:space="preserve">
+    <value>Adjustment layer duplicated</value>
+  </data>
+  <data name="Korrekturebene_erstellt_5e802067" xml:space="preserve">
+    <value>Adjustment layer created</value>
+  </data>
+  <data name="Korrekturebene_gel_scht_96dee797" xml:space="preserve">
+    <value>Adjustment layer deleted</value>
+  </data>
+  <data name="Leinwandgr_e_ge_ndert_7fc9f674" xml:space="preserve">
+    <value>Canvas size changed</value>
+  </data>
+  <data name="Maske_gemalt_e0def40d" xml:space="preserve">
+    <value>Mask painted</value>
+  </data>
+  <data name="Maske_verworfen_93444881" xml:space="preserve">
+    <value>Mask discarded</value>
+  </data>
+  <data name="Maskenteil_02389fff" xml:space="preserve">
+    <value>Mask part</value>
+  </data>
+  <data name="Maskenteil_entfernt_391f4322" xml:space="preserve">
+    <value>Mask part removed</value>
+  </data>
+  <data name="Maskenteil_ge_ndert_251cb176" xml:space="preserve">
+    <value>Mask part changed</value>
+  </data>
+  <data name="Maskenteil_verschoben_8cb3420f" xml:space="preserve">
+    <value>Mask part moved</value>
+  </data>
+  <data name="Motiv_ausgew_hlt_2f8a2f13" xml:space="preserve">
+    <value>Subject selected</value>
+  </data>
+  <data name="Objekte_dupliziert_8fb4fb82" xml:space="preserve">
+    <value>Objects duplicated</value>
+  </data>
+  <data name="Objekte_gel_scht_657d16d1" xml:space="preserve">
+    <value>Objects deleted</value>
+  </data>
+  <data name="Pfad_geschlossen_9a609ee6" xml:space="preserve">
+    <value>Path closed</value>
+  </data>
+  <data name="Pfadpunkt_entfernt_fcae20f3" xml:space="preserve">
+    <value>Path point removed</value>
+  </data>
+  <data name="Pfadpunkt_gegl_ttet_acdf3e93" xml:space="preserve">
+    <value>Path point smoothed</value>
+  </data>
+  <data name="Pfadpunkt_hinzugef_gt_3a259f1a" xml:space="preserve">
+    <value>Path point added</value>
+  </data>
+  <data name="Pixelebene_ef03ee4f" xml:space="preserve">
+    <value>Pixel layer</value>
+  </data>
+  <data name="Preset_angewendet_b68ac3bc" xml:space="preserve">
+    <value>Preset applied</value>
+  </data>
+  <data name="Rahmen_hinzugef_gt_5c384987" xml:space="preserve">
+    <value>Frame added</value>
+  </data>
+  <data name="Sichtbarkeit_0218eb5c" xml:space="preserve">
+    <value>Visibility</value>
+  </data>
+  <data name="Sperren_12109099" xml:space="preserve">
+    <value>Lock</value>
+  </data>
+  <data name="Transparenz_sperren_915829d7" xml:space="preserve">
+    <value>Lock transparency</value>
+  </data>
+  <data name="Verlauf_gezogen_59a26c33" xml:space="preserve">
+    <value>Gradient drawn</value>
+  </data>
+  <data name="Vertikal_spiegeln_ca5e600e" xml:space="preserve">
+    <value>Flip vertically</value>
+  </data>
+  <data name="Zugeschnitten_4245240f" xml:space="preserve">
+    <value>Cropped</value>
+  </data>
+  <data name="Zuschnitt_verworfen_d1f2d04b" xml:space="preserve">
+    <value>Crop discarded</value>
+  </data>
+  <data name="Aqua_644abaa7" xml:space="preserve">
+    <value>Aqua</value>
+  </data>
 </root>
