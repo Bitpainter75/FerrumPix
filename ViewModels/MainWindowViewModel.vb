@@ -3050,11 +3050,14 @@ Namespace ViewModels
         Public ReadOnly Property DialogWidth As Double
             Get
                 If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch Then Return 820
-                If DialogShowsBatchResize OrElse DialogShowsExportTo Then Return 780
-                If _dialogKind = AppDialogKind.SaveAs OrElse
+                ' Die Stapel-Dialoge teilen sich mit „Exportieren nach“ umfangreiche Formulare
+                ' und den Speichern-unter-Block. 570 px lässt insbesondere die Quellenwahl,
+                ' Wasserzeichenoptionen und die Zielauswahl unnötig gedrängt wirken.
+                If DialogShowsBatchResize OrElse DialogShowsExportTo OrElse
                    _dialogKind = AppDialogKind.BatchConvert OrElse
-                   _dialogKind = AppDialogKind.BatchFilter Then Return 570
-                If _dialogKind = AppDialogKind.WatermarkPreset AndAlso DialogShowsSaveAsOptions Then Return 570
+                   _dialogKind = AppDialogKind.BatchFilter OrElse
+                   _dialogKind = AppDialogKind.WatermarkPreset Then Return 780
+                If _dialogKind = AppDialogKind.SaveAs Then Return 570
                 Return 440
             End Get
         End Property

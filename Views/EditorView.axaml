@@ -1583,8 +1583,6 @@
                                             <StackPanel Orientation="Horizontal" Spacing="3">
                                                 <Border Width="10" Height="10" CornerRadius="5"
                                                         Background="{Binding ColorLabelBrush}"
-                                                        BorderBrush="#E6FFFFFF"
-                                                        BorderThickness="1"
                                                         IsVisible="{Binding HasColorLabel}"/>
                                                 <StackPanel Orientation="Horizontal" Spacing="1"
                                                             IsVisible="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}">
