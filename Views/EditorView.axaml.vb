@@ -1928,6 +1928,11 @@ Namespace Views
                     ' draussen.
                     Dim startsEnvelopeOutside = ShowsEnvelope(vm) AndAlso
                                                 HitsEnvelopePoint(vm, canvas, e.GetPosition(canvas))
+                    ' Auch Pfad-Anfasser duerfen weit ausserhalb der Bildflaeche liegen. Der
+                    ' Klick muss deshalb bis zum Pfad-Zweig weiter unten durchgelassen werden;
+                    ' andernfalls raeumt dieser Aussenbereich die aktuelle Pfad-Ebene auf, bevor
+                    ' TryBeginPathPointer den Griff ueberhaupt pruefen kann.
+                    Dim startsPathPointOutside = HitsPathPoint(vm, canvas, e.GetPosition(canvas))
                     ' EIN KLICK NEBEN DAS BILD HEBT DIE MARKIERUNG AUF - auch im Masken-Werkzeug.
                     ' Dort ist der Klick nicht zu verschlucken, weil eine Zieh-Auswahl ausserhalb
                     ' ansetzen und ins Bild gezogen werden darf; unterschieden wird deshalb erst
@@ -1944,7 +1949,8 @@ Namespace Views
                     End If
                     If Not startsSelectionDragOutside AndAlso Not startsCropHandleOutside AndAlso
                        Not startsPerspectiveCornerOutside AndAlso Not startsGridPointOutside AndAlso
-                       Not startsLinesOutside AndAlso Not startsEnvelopeOutside Then
+                       Not startsLinesOutside AndAlso Not startsEnvelopeOutside AndAlso
+                       Not startsPathPointOutside Then
                         ClearEditorSelections(vm)
                         e.Handled = True
                         Return
