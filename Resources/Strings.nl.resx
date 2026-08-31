@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Schakelt trackpadgebaren in: zoomen met twee vingers in de viewer, horizontaal vegen om te bladeren en slepen om een ingezoomde afbeelding te pannen. In de viewer selecteert SHIFT+slepen een uitsnede. De muisbediening blijft ongewijzigd zolang deze modus uit staat.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Pad omkeren</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Tekst aan de andere kant van de padlijn plaatsen</value></data>
 </root>

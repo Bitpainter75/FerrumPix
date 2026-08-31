@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Включает жесты трекпада: масштабирование двумя пальцами в просмотрщике, горизонтальный свайп для листания и перетаскивание для панорамирования увеличенного изображения. В просмотрщике SHIFT+перетаскивание выделяет кадрирование. Управление мышью не меняется, пока режим выключен.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Инвертировать контур</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Разместить текст по другую сторону линии контура</value></data>
 </root>

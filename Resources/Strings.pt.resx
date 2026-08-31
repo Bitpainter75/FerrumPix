@@ -7846,4 +7846,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Ativa gestos de trackpad: zoom com dois dedos no visualizador, deslize horizontal para navegar e arraste para mover uma imagem ampliada. No visualizador, SHIFT+arrastar seleciona um recorte. Os controlos do rato mantêm-se inalterados quando este modo está desativado.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Inverter caminho</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Colocar o texto do outro lado da linha do caminho</value></data>
 </root>

@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Włącza gesty gładzika: powiększanie dwoma palcami w przeglądarce, przesuwanie poziome do przeglądania i przeciąganie do panoramowania powiększonego obrazu. W przeglądarce SHIFT+przeciąganie wybiera kadrowanie. Sterowanie myszą pozostaje bez zmian, gdy ten tryb jest wyłączony.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Odwróć ścieżkę</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Umieść tekst po drugiej stronie linii ścieżki</value></data>
 </root>

@@ -7848,4 +7848,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Enables trackpad gestures: two-finger zoom in the viewer, swipe horizontally to browse, and drag to pan a zoomed image. In the viewer, hold SHIFT while dragging to select a crop. Mouse controls remain unchanged while this mode is off.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Invert path</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Place text on the other side of the path line</value></data>
 </root>

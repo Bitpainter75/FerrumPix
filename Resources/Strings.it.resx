@@ -7847,4 +7847,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Nel visualizzatore, SHIFT+trascina seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Inverti tracciato</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Posiziona il testo sull’altro lato della linea del tracciato</value></data>
 </root>

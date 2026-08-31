@@ -7845,4 +7845,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>反转路径</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>将文本放置在路径线的另一侧</value></data>
 </root>

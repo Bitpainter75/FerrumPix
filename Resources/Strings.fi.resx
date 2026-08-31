@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Ottaa käyttöön kosketuslevyeleet: zoomaa katselimessa kahdella sormella, selaa pyyhkäisemällä vaakasuunnassa ja panoroi suurennettua kuvaa vetämällä. Katselimessa SHIFT+veto valitsee rajauksen. Hiiren käyttö pysyy ennallaan, kun tila ei ole käytössä.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Käännä polku</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Sijoita teksti polun viivan toiselle puolelle</value></data>
 </root>

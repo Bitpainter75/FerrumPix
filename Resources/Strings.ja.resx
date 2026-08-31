@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>トラックパッドのジェスチャーを有効にします。ビューアーでは二本指でズーム、横方向のスワイプで移動、ドラッグで拡大画像をパンできます。ビューアーでは SHIFT+ドラッグで切り抜きを選択します。このモードがオフの間はマウス操作は変わりません。</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>パスを反転</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>テキストをパス線の反対側に配置</value></data>
 </root>

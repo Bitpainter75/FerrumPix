@@ -7847,4 +7847,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Dans le visualiseur, SHIFT+glisser sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Inverser le tracé</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Placer le texte de l’autre côté de la ligne du tracé</value></data>
 </root>

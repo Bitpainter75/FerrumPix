@@ -7847,4 +7847,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Aktiviert Trackpad-Gesten: Zwei-Finger-Zoom im Viewer, horizontal wischen zum Blättern sowie Pannen mit Ziehen bei vergrößertem Bild. Im Viewer öffnet SHIFT+Ziehen den Zuschneidebereich. Die Maus-Standardbedienung bleibt bei ausgeschaltetem Modus unverändert.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Pfad invertieren</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Text auf die andere Seite der Pfadlinie setzen</value></data>
 </root>

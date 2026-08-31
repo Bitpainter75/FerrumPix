@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. I visaren väljer SHIFT+dra en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Vänd på banan</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Placera texten på andra sidan av banlinjen</value></data>
 </root>

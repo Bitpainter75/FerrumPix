@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Aktiverer trackpadbevægelser: zoom med to fingre i fremviseren, stryg vandret for at bladre og træk for at panorere et forstørret billede. I fremviseren vælger SHIFT+træk et beskæringsområde. Musebetjeningen forbliver uændret, når tilstanden er slået fra.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Vend sti</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Placer teksten på den anden side af stilinjen</value></data>
 </root>

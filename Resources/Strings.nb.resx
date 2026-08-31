@@ -7887,4 +7887,6 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
     <value>Aktiverer styreflatebevegelser: zoom med to fingre i visningen, sveip vannrett for å bla og dra for å panorere et forstørret bilde. I visningen velger SHIFT+dra et beskjæringsområde. Musebetjeningen er uendret når modusen er av.</value>
   </data>
+  <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Snu banen</value></data>
+  <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Plasser teksten på andre siden av banens linje</value></data>
 </root>
