@@ -2399,7 +2399,13 @@ Namespace Views
             If vm IsNot Nothing Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width > 0 AndAlso imageRect.Height > 0 Then
-                    Dim pos = ClampPointToRect(e.GetPosition(canvas), imageRect)
+                    ' Ein fertiger Pfad darf Anfasser weit über die Bildkante hinaus haben. Für
+                    ' seine Trefferprüfung darf der Druck deshalb NICHT auf die Bildfläche geklemmt
+                    ' werden - sonst wird jeder äußere Griff als nächster Punkt am Bildrand gelesen
+                    ' und ist nicht mehr greifbar. Beim freien Pfadentwurf bleibt das bisherige
+                    ' Klemmen bestehen; dort setzt ein Klick einen neuen Stützpunkt.
+                    Dim rawPos = e.GetPosition(canvas)
+                    Dim pos = If(vm.CanEditPathNodes, rawPos, ClampPointToRect(rawPos, imageRect))
                     Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                     Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                     Const hitSlopPixels As Double = 10.0

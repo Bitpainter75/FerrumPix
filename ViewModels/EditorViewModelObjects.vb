@@ -448,6 +448,16 @@ Namespace ViewModels
                     BeginPathDraftFor(target)
                 End If
             End If
+
+            ' Die Form ändert die sichtbare Ausdehnung des Textes (ein Kreis hat eine quadratische
+            ' Box, Bogen/Welle wieder den Textkasten). Der Property-Setter schreibt bislang nur die
+            ' neue Form in das Objekt; ohne diesen Schritt blieb der Auswahlrahmen auf den Maßen und
+            ' der Position der VORHERIGEN Form stehen, obwohl der Renderer schon den neuen Pfad
+            ' zeichnete. Freie Pfade mit vorhandenen Punkten sind in SyncSelectedTextAnnotationSize
+            ' bewusst ausgenommen: deren Box gehört zur gezeichneten Grundlinie und darf nicht
+            ' umgemessen werden.
+            SyncSelectedTextAnnotationSize()
+            SyncSelectedAnnotation()
         End Sub
 
         ''' <summary>Macht die Objektbox quadratisch (kleinere Seite gewinnt) und behaelt dabei den
