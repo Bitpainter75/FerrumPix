@@ -31,7 +31,7 @@ jobs:
         run: packaging/ci/ensure-binaries.sh
 
       - name: AUR-ZIP bauen
-        run: packaging/package.sh zip
+        run: packaging/package.sh aurzip
         env:
           FERRUMPIX_BUILD_BOX: ""
 

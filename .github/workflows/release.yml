@@ -69,7 +69,7 @@ env:
 jobs:
 
   rest:
-    name: Alles Uebrige
+    name: Alle Packages
     runs-on: ubuntu-latest
 
     steps:
@@ -145,7 +145,7 @@ jobs:
       # bauen es je neu - gemessen rund 27 Sekunden je Durchgang, macht ein paar Minuten ueber
       # den ganzen Lauf. Windows, macOS und ARM bauen ohnehin schon jeweils eigene.
       #
-      # DIE REIHENFOLGE IST NACH WICHTIGKEIT, nicht nach Bequemlichkeit: Linux-ZIP, AUR und
+      # DIE REIHENFOLGE IST NACH WICHTIGKEIT, nicht nach Bequemlichkeit: Linux-ZIP und
       # AppImage zuerst, dann deb und rpm, dann Windows, dann macOS, und ganz zuletzt ARM.
       # Bricht es spaet ab, weiss man dadurch trotzdem, dass die wichtigen Pakete bauen.
       #
@@ -154,7 +154,7 @@ jobs:
       #
       # Bricht ein Schritt ab, endet der Job VOR dem Hochladen - ein halber Satz Pakete darf nie
       # ins Release, sonst steht Neues neben Altem und niemand sieht es.
-      - name: Paket - Linux-ZIP (mit AUR-ZIP)
+      - name: Paket - Linux-ZIP
         if: ${{ env.PAKETE == 'alle' || env.PAKETE == 'zip' }}
         run: packaging/package.sh zip
         env:
