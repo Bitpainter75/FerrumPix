@@ -215,17 +215,6 @@
                         <TextBlock Text="Welle" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
-                <Button Classes="ghost" Padding="8,4" Margin="0,0,6,4"
-                        Command="{Binding SetAnnotationTextPathKindCommand}"
-                        CommandParameter="CircleInverted"
-                        ToolTip.Tip="Buchstaben auf der Linie umgeschlagen - Kopf zur Kreismitte"
-                        Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=CircleInverted}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-arrow-down.svg"
-                                       Width="14" Height="14" />
-                        <TextBlock Text="Kreis invers" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
                 <!-- Wieder da seit 2026-08-08, zusammen mit dem Pfad-Werkzeug: die Grundlinie selbst
                      zu setzen geht denselben Weg wie das Zeichnen eines Pfades und hängt damit
                      ebenfalls am Zeiger. -->
@@ -242,6 +231,10 @@
                 </Button>
             </WrapPanel>
         </Grid>
+        <CheckBox Content="Pfad invertieren" Margin="98,0,0,0"
+                  IsChecked="{Binding AnnotationTextPathInverted}"
+                  ToolTip.Tip="Text auf die andere Seite der Pfadlinie setzen"
+                  IsVisible="{Binding ShowTextPathControls}" />
         <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
               IsVisible="{Binding ShowTextPathControls}">
             <TextBlock Text="Krümmung" Foreground="{DynamicResource FP.Text.Secondary}"

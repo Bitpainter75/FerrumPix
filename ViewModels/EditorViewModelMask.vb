@@ -4378,12 +4378,12 @@ Namespace ViewModels
         ''' GEHOERT DIE AUSWAHL SCHON ZU EINER EBENE, legt ein weiterer Druck eine unabhaengige
         ''' Kopie derselben Form an. So kann man dieselbe Auswahl direkt fuer mehrere, getrennt
         ''' bearbeitbare Korrekturebenen verwenden.</summary>
-        Public Sub CreateAdjustmentLayerFromSelection()
+        Public Sub CreateAdjustmentLayerFromSelection(Optional captureUndo As Boolean = True)
             TraceMask(Function() $"„Neue Masken-/Auswahlebene"" gedrückt: Auswahl aktiv={_hasActiveSelection}" &
                                  $" bearbeitet={Kurz(_editingLayerMaskId)} markiert={Kurz(_selectedMaskedAdjustmentLayerId)}" &
                                  $" promotet={Kurz(_selectionPromotedLayerId)}")
             If Not _hasActiveSelection Then Return
-            PushUndo(LocalizationService.T("Ebenenmaske hinzugefügt"))
+            If captureUndo Then PushUndo(LocalizationService.T("Ebenenmaske hinzugefügt"))
             Dim countBefore = _maskedAdjustmentLayers.Count
             Dim layer = PromoteActiveSelectionToLayer()
             If layer Is Nothing Then Return

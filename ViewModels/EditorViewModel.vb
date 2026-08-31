@@ -430,6 +430,7 @@ Namespace ViewModels
         Private _annotationHeightPercent As Double = 12
         Private _annotationFillKind As String = "Solid"
         Private _annotationTextPathKind As String = ""
+        Private _annotationTextPathInverted As Boolean = False
         Private _annotationTextPathBend As Double = 50
         Private _annotationTextPathStartOffset As Double = 0
         Private _calibrationRedHue As Double = 0
@@ -3644,6 +3645,7 @@ Namespace ViewModels
             AnnotationGlowStrength = 100
             AnnotationGlowColor = "#FFFFFF00"
             AnnotationTextPathKind = ""
+            AnnotationTextPathInverted = False
             AnnotationTextPathBend = 50
             AnnotationTextPathStartOffset = 0
             AnnotationLetterSpacingPercent = 0
@@ -12201,6 +12203,7 @@ Namespace ViewModels
         Public ReadOnly Property TogglePathNodeSmoothCommand As ICommand
         Public ReadOnly Property CreateTextOnPathCommand As ICommand
         Public ReadOnly Property CreateSelectionFromPathCommand As ICommand
+        Public ReadOnly Property CreateMaskLayerFromPathCommand As ICommand
         Public ReadOnly Property JoinPathsCommand As ICommand
         Public ReadOnly Property InvertCurrentMaskCommand As ICommand
         Public ReadOnly Property DiscardCurrentMaskCommand As ICommand
@@ -12554,6 +12557,7 @@ Namespace ViewModels
             TogglePathNodeSmoothCommand = ReactiveCommand.Create(Sub() ToggleLastPathNodeSmooth())
             CreateTextOnPathCommand = ReactiveCommand.Create(Sub() CreateTextOnSelectedPath())
             CreateSelectionFromPathCommand = ReactiveCommand.Create(Sub() CreateSelectionFromSelectedPath())
+            CreateMaskLayerFromPathCommand = ReactiveCommand.Create(Sub() CreateMaskLayerFromSelectedPath())
             JoinPathsCommand = ReactiveCommand.Create(Sub() JoinSelectedPaths())
             InvertCurrentMaskCommand = ReactiveCommand.Create(Sub() InvertCurrentMask())
             DiscardCurrentMaskCommand = ReactiveCommand.Create(Sub() DiscardCurrentMask())
@@ -18433,9 +18437,11 @@ Namespace ViewModels
             _annotationHeightPercent = 12
             _annotationFillKind = "Solid"
             _annotationTextPathKind = ""
+            _annotationTextPathInverted = False
             _annotationTextPathBend = 50
             _annotationTextPathStartOffset = 0
             Me.RaisePropertyChanged(NameOf(AnnotationTextPathKind))
+            Me.RaisePropertyChanged(NameOf(AnnotationTextPathInverted))
             Me.RaisePropertyChanged(NameOf(AnnotationTextPathBend))
             Me.RaisePropertyChanged(NameOf(AnnotationTextPathStartOffset))
             Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
@@ -19532,11 +19538,16 @@ Namespace ViewModels
             If index < 0 Then Return
             PushUndo(LocalizationService.T("Ebene gelöscht"))
             Dim maskId = _maskedAdjustmentLayers(index).MaskId
+            ' Eine aus dem Pfad erzeugte Maskenebene liegt beim Löschen häufig noch als rote,
+            ' editierbare Auswahl vor. Das Bitmap dieser Auswahl lebt unabhängig von der Ebene;
+            ' ohne diesen Merker würde es nach dem Entfernen der letzten Maskenreferenz weiter
+            ' angezeigt, obwohl sein Ziel nicht mehr existiert.
+            Dim wasEditingDeletedMask = String.Equals(_editingLayerMaskId, maskId, StringComparison.Ordinal)
             _maskedAdjustmentLayers.RemoveAt(index)
             RemoveMaskIfUnreferenced(maskId)
             _selectedMaskedAdjustmentLayerId = ""
             _selectedLayerRow = Nothing
-            If wasActiveSelectionTarget Then ClearSelection(captureUndo:=False)
+            If wasActiveSelectionTarget OrElse wasEditingDeletedMask Then ClearSelection(captureUndo:=False)
             ' Die geloeschte Ebene war vielleicht die, deren rote Deckung gerade zu sehen ist. Ohne
             ' diese zwei Zeilen bleibt das alte Overlay-Bitmap stehen, und die View bekommt nicht
             ' einmal mit, dass es keinen markierten Verlauf mehr gibt - die Maske sieht dann aus,
@@ -20610,6 +20621,18 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_selectedAnnotationIndex)
             If annotation Is Nothing Then Return False
+            ' Text auf einem freien Pfad ist beim Wechsel in das Pfad-Werkzeug das ZIEL der
+            ' Punktbearbeitung. Wurde er hier abgewählt, konnte PathEditTarget ihn zwar korrekt
+            ' erkennen, bekam aber nie eine selektierte Ebene zu sehen - nach der Umwandlung war
+            ' die Grundlinie damit faktisch nicht mehr editierbar.
+            If tool = EditorTool.Path Then
+                Dim kind = NormalizeAnnotationKind(annotation.Kind)
+                Return String.Equals(kind, "Path", StringComparison.Ordinal) OrElse
+                       ((String.Equals(kind, "Text", StringComparison.Ordinal) OrElse
+                         (String.Equals(kind, "Watermark", StringComparison.Ordinal) AndAlso
+                          String.IsNullOrWhiteSpace(annotation.ImagePath))) AndAlso
+                        IsFreeTextPath(annotation.TextPathKind))
+            End If
             ' EIN PFAD IST DAVON AUSGENOMMEN, aus demselben Grund wie beim Anklicken seiner Zeile:
             ' im Auswahl-Werkzeug gibt es auf ihm nichts auszuwaehlen und an seine Stuetzpunkte
             ' kommt man nicht heran. Bliebe er markiert, verschwaende die Kurve (ohne Kontur
@@ -21070,7 +21093,14 @@ Namespace ViewModels
                     _annotationWidthPercent = displayRect.Width
                     _annotationHeightPercent = displayRect.Height
                     AnnotationFillKind = a.FillKind
-                    AnnotationTextPathKind = a.TextPathKind
+                    ' Frühere Dokumente speicherten die Umkehrung im Namen der Pfadform.
+                    ' Beim Laden wird sie in die allgemeine Checkbox überführt; beim nächsten
+                    ' Speichern liegt die Form wieder einheitlich als Kind + Boolean vor.
+                    Dim legacyPathInverted = String.Equals(a.TextPathKind, "CircleInverted", StringComparison.OrdinalIgnoreCase) OrElse
+                                             String.Equals(a.TextPathKind, "FreeInverted", StringComparison.OrdinalIgnoreCase)
+                    AnnotationTextPathKind = If(String.Equals(a.TextPathKind, "CircleInverted", StringComparison.OrdinalIgnoreCase), "Circle",
+                                                If(String.Equals(a.TextPathKind, "FreeInverted", StringComparison.OrdinalIgnoreCase), "Free", a.TextPathKind))
+                    AnnotationTextPathInverted = a.TextPathInverted OrElse legacyPathInverted
                     AnnotationTextPathBend = a.TextPathBend
                     AnnotationTextPathStartOffset = a.TextPathStartOffset
                     AnnotationLetterSpacingPercent = a.LetterSpacingPercent
@@ -21214,6 +21244,7 @@ Namespace ViewModels
             End If
             a.FillKind = _annotationFillKind
             a.TextPathKind = _annotationTextPathKind
+            a.TextPathInverted = _annotationTextPathInverted
             a.TextPathBend = CSng(_annotationTextPathBend)
             a.TextPathStartOffset = CSng(_annotationTextPathStartOffset)
             a.LetterSpacingPercent = CSng(_annotationLetterSpacingPercent)

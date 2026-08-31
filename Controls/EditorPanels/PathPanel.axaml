@@ -102,9 +102,10 @@
                                FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
 
-                <!-- AUSWAHL AUS DEM PFAD: der Grund, aus dem es das Werkzeug gibt. Steht deshalb
-                     VOR dem Text auf dem Pfad und mit Akzent - alles andere hier ist Zuarbeit. -->
-                <Button Classes="accent" HorizontalAlignment="Stretch" Padding="8,5"
+                <!-- AUSWAHL AUS DEM PFAD: nur bei einem geeigneten Pfad sichtbar. Kein dauerhafter
+                     Akzent: die Farbe bedeutet in der Oberfläche einen aktiven Zustand, nicht bloß
+                     eine besonders wichtige Aktion. -->
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                         IsVisible="{Binding CanCreateSelectionFromPath}"
                         Command="{Binding CreateSelectionFromPathCommand}"
                         ToolTip.Tip="Macht aus der Kurve eine Auswahl. Wer den Freisteller später ändern will, zieht einen Stützpunkt und drückt noch einmal.">
@@ -115,13 +116,23 @@
                     </StackPanel>
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
+                        IsVisible="{Binding CanCreateSelectionFromPath}"
+                        Command="{Binding CreateMaskLayerFromPathCommand}"
+                        ToolTip.Tip="Erzeugt eine neue, eigenständige Maskenebene aus diesem Pfad. Der Pfad bleibt zum späteren Anpassen erhalten.">
+                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
+                                       Width="14" Height="14" />
+                        <TextBlock Text="Maskenebene aus Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="8,5"
                         IsVisible="{Binding CanCreateTextOnPath}"
                         Command="{Binding CreateTextOnPathCommand}"
-                        ToolTip.Tip="Erzeugt ein Textobjekt, dessen Grundlinie die Punkte dieses Pfades übernimmt. Der Pfad selbst bleibt bestehen.">
+                        ToolTip.Tip="Wandelt diesen Pfad in ein Textobjekt um. Seine Grundlinie bleibt mit dem Pfad-Werkzeug bearbeitbar.">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/abc.svg"
                                        Width="14" Height="14" />
-                        <TextBlock Text="Text auf dem Pfad" FontSize="{DynamicResource FP.Font.Small}" />
+                        <TextBlock Text="In Text umwandeln" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
             </StackPanel>

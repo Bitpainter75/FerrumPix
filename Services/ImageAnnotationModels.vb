@@ -298,9 +298,11 @@ Namespace Services
         Private _hardnessPercent As Single = 100
         Private _brushPreset As String = "soft"
         Private _fillKind As String = "Solid"
-        ' Text an Pfaden (nur Kind "Text"): "" = gerade, sonst "Arc"/"Circle"/"Wave". Der Pfad wird
+        ' Text an Pfaden (nur Kind "Text"): "" = gerade, sonst "Arc"/"Circle"/"Wave" oder
+        ' "Free". Die Seite der Grundlinie steht separat in TextPathInverted. Der Pfad wird
         ' aus dem Objektrechteck abgeleitet - Selektion/Anfasser/Verschieben bleiben unveraendert.
         Private _textPathKind As String = ""
+        Private _textPathInverted As Boolean
         Private _textPathBend As Single = 50
         Private _textPathStartOffset As Single
         Private _letterSpacingPercent As Single
@@ -997,13 +999,24 @@ Namespace Services
             End Set
         End Property
 
-        ''' <summary>Pfadform fuer Text: "" (gerade), "Arc", "Circle" oder "Wave" - siehe BuildTextPath.</summary>
+        ''' <summary>Pfadform fuer Text: "" (gerade), "Arc", "Circle", "Wave" oder "Free" -
+        ''' siehe BuildTextPath.</summary>
         Public Property TextPathKind As String
             Get
                 Return _textPathKind
             End Get
             Set(value As String)
                 SetField(_textPathKind, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Kehrt die Laufrichtung eines Textpfads um.</summary>
+        Public Property TextPathInverted As Boolean
+            Get
+                Return _textPathInverted
+            End Get
+            Set(value As Boolean)
+                SetField(_textPathInverted, value)
             End Set
         End Property
 
@@ -1263,6 +1276,7 @@ Namespace Services
                 .BrushPreset = BrushPreset,
                 .FillKind = FillKind,
                 .TextPathKind = TextPathKind,
+                .TextPathInverted = TextPathInverted,
                 .TextPathBend = TextPathBend,
                 .TextPathStartOffset = TextPathStartOffset,
                 .LetterSpacingPercent = LetterSpacingPercent,

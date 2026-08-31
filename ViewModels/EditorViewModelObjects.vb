@@ -290,6 +290,18 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Kehrt die Laufrichtung des Textpfads um und setzt die Buchstaben damit auf
+        ''' die andere Seite seiner Grundlinie. Gilt fuer jede Textpfadform und Text-Wasserzeichen.</summary>
+        Public Property AnnotationTextPathInverted As Boolean
+            Get
+                Return _annotationTextPathInverted
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_annotationTextPathInverted, value)
+                SyncSelectedAnnotation()
+            End Set
+        End Property
+
         Public Property AnnotationTextPathBend As Double
             Get
                 Return _annotationTextPathBend
@@ -383,6 +395,14 @@ Namespace ViewModels
                    kind.StartsWith("Circle", StringComparison.OrdinalIgnoreCase)
         End Function
 
+        ''' <summary>True fuer beide Varianten des freien Textpfads. Die inverse Variante benutzt
+        ''' dieselben Stuetzpunkte, laeuft sie aber in Gegenrichtung ab, damit der Text auf der
+        ''' anderen Seite der Grundlinie sitzt.</summary>
+        Friend Shared Function IsFreeTextPath(kind As String) As Boolean
+            Return Not String.IsNullOrWhiteSpace(kind) AndAlso
+                   kind.StartsWith("Free", StringComparison.OrdinalIgnoreCase)
+        End Function
+
         ''' <summary>Behaelt ein Text auf FREIEM Pfad seine Box? Ja, sobald die Grundlinie gezeichnet
         ''' ist: die Punkte liegen in Prozent der Box, und jede Neuvermessung auf den geraden
         ''' Textkasten streckte die gezeichnete Kurve auf den neuen Kasten - die Grundlinie verformte
@@ -390,7 +410,7 @@ Namespace ViewModels
         ''' Punkte, wie beim Pfad-Objekt; ein Zug am Auswahlrahmen skaliert Grundlinie und Box
         ''' gemeinsam.</summary>
         Private Function FreeTextPathKeepsBox() As Boolean
-            If Not String.Equals(_annotationTextPathKind, "Free", StringComparison.OrdinalIgnoreCase) Then Return False
+            If Not IsFreeTextPath(_annotationTextPathKind) Then Return False
             Dim a = CurrentObject()
             Return a IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(a.PathPoints)
         End Function
@@ -417,9 +437,14 @@ Namespace ViewModels
             ' FREIER PFAD: die Grundlinie gibt es noch nicht - also gleich danach fragen, statt den
             ' Nutzer raten zu lassen. Steht schon eine, bleibt sie und laesst sich mit den Griffen
             ' nachziehen.
-            If String.Equals(AnnotationTextPathKind, "Free", StringComparison.OrdinalIgnoreCase) Then
+            If IsFreeTextPath(AnnotationTextPathKind) Then
                 Dim target = CurrentObject()
                 If target IsNot Nothing AndAlso String.IsNullOrWhiteSpace(target.PathPoints) Then
+                    ' Der Entwurf braucht dieselbe Zeigerbehandlung wie ein eigenstaendiger Pfad.
+                    ' Ohne den Werkzeugwechsel konnte der erste Klick je nach zuvor aktivem Werkzeug
+                    ' noch als Verschieben/Einsetzen des Textes verarbeitet werden. Das betraf auch
+                    ' Text-Wasserzeichen, weil sie den gleichen Entwurf verwenden.
+                    If _currentTool <> EditorTool.Path Then CurrentTool = EditorTool.Path
                     BeginPathDraftFor(target)
                 End If
             End If
@@ -1159,7 +1184,7 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Das Objekt, dessen Punkte gerade nachgezogen werden koennen: ein markierter Pfad
-        ''' oder ein Textobjekt, dessen Grundlinie ein freier Pfad ist. NUR im Pfad-Werkzeug: sonst
+        ''' oder ein Textobjekt bzw. Text-Wasserzeichen, dessen Grundlinie ein freier Pfad ist. NUR im Pfad-Werkzeug: sonst
         ''' laegen die Stuetzpunkte unter dem Auswahlrahmen des Objekts, und ein Zug meinte je nach
         ''' getroffenem Pixel das eine oder das andere - dieselbe Entscheidung wie beim Verzerren,
         ''' wo die Ecken den Rahmen verdraengen.
@@ -1173,9 +1198,14 @@ Namespace ViewModels
             Dim a = CurrentObject()
             If a Is Nothing Then Return Nothing
             Dim kind = NormalizeAnnotationKind(a.Kind)
-            Dim isFreeTextPath = String.Equals(kind, "Text", StringComparison.Ordinal) AndAlso
-                                 String.Equals(a.TextPathKind, "Free", StringComparison.OrdinalIgnoreCase)
-            If Not String.Equals(kind, "Path", StringComparison.Ordinal) AndAlso Not isFreeTextPath Then Return Nothing
+            ' Ein Wasserzeichen mit Text wird vom Renderer wie ein Textobjekt gezeichnet. Es muss
+            ' deshalb auch hier als freie Grundlinie gelten; zuvor konnten dessen Punkte nach dem
+            ' Setzen weder angezeigt noch bearbeitet werden.
+            Dim isTextBearingKind = String.Equals(kind, "Text", StringComparison.Ordinal) OrElse
+                                    (String.Equals(kind, "Watermark", StringComparison.Ordinal) AndAlso
+                                     String.IsNullOrWhiteSpace(a.ImagePath))
+            Dim isTextOnFreePath = isTextBearingKind AndAlso IsFreeTextPath(a.TextPathKind)
+            If Not String.Equals(kind, "Path", StringComparison.Ordinal) AndAlso Not isTextOnFreePath Then Return Nothing
             Return a
         End Function
 
@@ -1192,37 +1222,50 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Erzeugt ein Textobjekt, dessen Grundlinie die Punkte des markierten Pfades
-        ''' uebernimmt - der Standardweg "Pfad zeichnen, Text daraufsetzen". Der Pfad selbst bleibt
-        ''' bestehen: wer nur die Linie als Grundlinie wollte, blendet ihn aus oder loescht ihn.
-        ''' Punkte und Box werden KOPIERT, nicht geteilt - zwei Objekte auf derselben Punktliste
-        ''' zoegen einander die Grundlinie weg, sobald eines skaliert wird.</summary>
+        ''' <summary>Wandelt den markierten Pfad in ein Textobjekt um. Die Punkte werden zur
+        ''' editierbaren Grundlinie des Textes; eine zweite, gleich aussehende Pfadebene bleibt
+        ''' nicht zurueck. Punkte und Box werden dabei kopiert, nicht geteilt: zwei Objekte auf
+        ''' derselben Punktliste zögen einander die Grundlinie weg, sobald eines skaliert wird.</summary>
         Public Sub CreateTextOnSelectedPath()
             Dim source = CurrentObject()
             If source Is Nothing OrElse String.IsNullOrWhiteSpace(source.PathPoints) Then Return
             If Not String.Equals(NormalizeAnnotationKind(source.Kind), "Path", StringComparison.Ordinal) Then Return
             PushUndo()
+            ' Die Identität und Ebenen-Zugehörigkeit gehören zur umgewandelten Ebene,
+            ' nicht zum alten Pfadtyp. So bleiben Gruppen, Masken und Verweise von
+            ' Korrekturebenen intakt.
             Dim text = New ImageAnnotation With {
                 .Kind = "Text",
                 .Text = LocalizationService.T("Text"),
+                .Id = source.Id,
+                .CustomName = source.CustomName,
+                .GroupId = source.GroupId,
+                .MaskId = source.MaskId,
+                .ClipToLayerBelow = source.ClipToLayerBelow,
                 .XPixels = source.XPixels, .YPixels = source.YPixels,
                 .WidthPixels = source.WidthPixels, .HeightPixels = source.HeightPixels,
                 .RotationDegrees = source.RotationDegrees,
                 .TextPathKind = "Free",
                 .PathPoints = source.PathPoints,
                 .PathClosed = source.PathClosed,
-                .IsVisible = True
+                .IsVisible = source.IsVisible,
+                .IsLocked = source.IsLocked
             }
             Dim index = _annotations.IndexOf(source)
-            If index < 0 Then index = _annotations.Count - 1
-            _annotations.Insert(index + 1, text)
+            If index < 0 Then Return
+            ' "Text auf dem Pfad" ist eine Umwandlung, keine Kopie. Das Textobjekt übernimmt
+            ' die Grundlinie und steht an exakt derselben Stelle in der Ebenenliste.
+            _annotations(index) = text
             _hasChanges = True
-            ' Danach ins TEXT-Werkzeug: dort steht das Eingabefeld, und genau das Tippen ist der
-            ' naechste Schritt. Aus dem Pfad-Werkzeug heraus bleibt das Werkzeug beim Markieren
-            ' sonst bewusst stehen (IsObjectTransformTool), deshalb der ausdrueckliche Wechsel.
-            ' Die Grundlinie bleibt im Pfad-Werkzeug an ihren Punkten aenderbar.
-            SelectedAnnotationIndex = index + 1
+            ' Die Ebene blieb am SELBEN Index. Ein direktes `SelectedAnnotationIndex = index`
+            ' waere damit ein No-op und liesse den Editor-Puffer beim alten Pfad stehen. Noch
+            ' schlimmer: der anschliessende Wechsel ins Textwerkzeug wuerde diese vermeintlich
+            ' unveraenderte Auswahl nach der allgemeinen Werkzeugregel abwaehlen. Erst loesen,
+            ' dann ins Textwerkzeug und DANACH die neue Textebene waehlen: so laedt der Puffer
+            ' Text, TextPathKind="Free" und PathPoints gemeinsam und das Textfeld bleibt aktiv.
+            SelectedAnnotationIndex = -1
             If _currentTool <> EditorTool.Text Then CurrentTool = EditorTool.Text
+            SelectedAnnotationIndex = index
             RaisePathOverlayChanged()
             RebuildLayerRows()
             RaiseResetButtonStateChanged()
@@ -1350,6 +1393,36 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Berechnet das geschlossene Polygon eines Pfades für Auswahl und Maskenebene.
+        ''' Beide sind pixelbasierte Schnappschüsse; der Pfad selbst bleibt editierbare Geometrie.</summary>
+        Private Function TryBuildSelectedPathPolygon(ByRef xs As Double(), ByRef ys As Double()) As Boolean
+            xs = Nothing : ys = Nothing
+            Dim target = PathEditTarget()
+            If target Is Nothing OrElse Not String.Equals(NormalizeAnnotationKind(target.Kind), "Path", StringComparison.Ordinal) Then Return False
+            Dim nodes = ReadPathNodesForDisplay(target)
+            If nodes.Count < 2 Then Return False
+
+            Const steps As Integer = 16
+            Dim xValues As New List(Of Double)()
+            Dim yValues As New List(Of Double)()
+            Dim last = If(target.PathClosed, nodes.Count - 1, nodes.Count - 2)
+            For i = 0 To last
+                Dim a = nodes(i)
+                Dim b = nodes((i + 1) Mod nodes.Count)
+                For s = 0 To steps - 1
+                    Dim p = EvaluateCubic(a.Anchor, a.HandleOut, b.HandleIn, b.Anchor, s / CDbl(steps))
+                    xValues.Add(p.X) : yValues.Add(p.Y)
+                Next
+            Next
+            If Not target.PathClosed Then
+                xValues.Add(nodes(nodes.Count - 1).Anchor.X)
+                yValues.Add(nodes(nodes.Count - 1).Anchor.Y)
+            End If
+            If xValues.Count < 3 Then Return False
+            xs = xValues.ToArray() : ys = yValues.ToArray()
+            Return True
+        End Function
+
         ''' <summary>DER EIGENTLICHE NUTZEN DES WERKZEUGS: die Kurve wird zur Auswahl.
         '''
         ''' Damit ist ein Freisteller nachträglich korrigierbar - man zieht einen Stützpunkt und macht
@@ -1362,34 +1435,9 @@ Namespace ViewModels
         ''' wird dabei durch eine gerade Linie geschlossen - eine Auswahl ohne geschlossenen Rand gibt
         ''' es nicht, und der Standard macht es genauso.</summary>
         Public Sub CreateSelectionFromSelectedPath()
-            Dim target = PathEditTarget()
-            If target Is Nothing Then Return
-            If Not String.Equals(NormalizeAnnotationKind(target.Kind), "Path", StringComparison.Ordinal) Then Return
-            Dim nodes = ReadPathNodesForDisplay(target)
-            If nodes.Count < 2 Then Return
-
-            ' Je Abschnitt sechzehn Stützstellen: fein genug, dass eine Kurve am Bildschirm rund
-            ' bleibt, und weit unter der Grenze, ab der die Ameisenlinie ausdünnt.
-            Const steps As Integer = 16
-            Dim xs As New List(Of Double)()
-            Dim ys As New List(Of Double)()
-            Dim last = If(target.PathClosed, nodes.Count - 1, nodes.Count - 2)
-            For i = 0 To last
-                Dim a = nodes(i)
-                Dim b = nodes((i + 1) Mod nodes.Count)
-                ' Der Endpunkt gehört dem NÄCHSTEN Abschnitt - sonst stünde jeder Stützpunkt doppelt.
-                For s = 0 To steps - 1
-                    Dim p = EvaluateCubic(a.Anchor, a.HandleOut, b.HandleIn, b.Anchor, s / CDbl(steps))
-                    xs.Add(p.X) : ys.Add(p.Y)
-                Next
-            Next
-            If Not target.PathClosed Then
-                xs.Add(nodes(nodes.Count - 1).Anchor.X)
-                ys.Add(nodes(nodes.Count - 1).Anchor.Y)
-            End If
-            If xs.Count < 3 Then Return
-
-            SetSelectionLasso(xs.ToArray(), ys.ToArray())
+            Dim xs As Double() = Nothing, ys As Double() = Nothing
+            If Not TryBuildSelectedPathPolygon(xs, ys) Then Return
+            SetSelectionLasso(xs, ys)
 
             ' DANACH GEHÖRT DIE BÜHNE DER AUSWAHL, NICHT DEM PFAD - dieselbe Regel wie bei der Form
             ' einer Ebene als Auswahl (siehe LoadSelectionFromAnnotationAlpha), und aus denselben
@@ -1406,6 +1454,29 @@ Namespace ViewModels
             SelectedAnnotationIndex = -1
             StatusText = LocalizationService.T("Auswahl aus dem Pfad erstellt")
             NameHistoryStep(LocalizationService.T("Auswahl aus dem Pfad erstellt"))
+        End Sub
+
+        ''' <summary>Erzeugt direkt eine neue, unabhängige Maskenebene aus dem markierten Pfad.
+        ''' Der Pfad bleibt als editierbare Vorlage erhalten und kann nach einer Änderung erneut
+        ''' in eine Maskenebene überführt werden.</summary>
+        Public Sub CreateMaskLayerFromSelectedPath()
+            Dim xs As Double() = Nothing, ys As Double() = Nothing
+            If Not TryBuildSelectedPathPolygon(xs, ys) Then Return
+
+            PushUndo(LocalizationService.T("Maskenebene aus Pfad erstellt"))
+            SetSelectionLasso(xs, ys, captureUndo:=False)
+            If Not _hasActiveSelection Then Return
+            SetActiveSelectionIsMask(True)
+            CreateAdjustmentLayerFromSelection(captureUndo:=False)
+
+            Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
+                                                                  String.Equals(l.Id, _selectedMaskedAdjustmentLayerId, StringComparison.Ordinal))
+            If layer Is Nothing Then Return
+            If _currentTool <> EditorTool.Mask Then CurrentTool = EditorTool.Mask
+            MaskMode = "Brush"
+            LoadMaskIntoSelection(layer.MaskId, showAsMask:=True)
+            StatusText = LocalizationService.T("Maskenebene aus Pfad erstellt")
+            NameHistoryStep(LocalizationService.T("Maskenebene aus Pfad erstellt"))
         End Sub
 
         ''' <summary>Dreht einen Punkt in ANZEIGE-Prozent um einen Mittelpunkt.

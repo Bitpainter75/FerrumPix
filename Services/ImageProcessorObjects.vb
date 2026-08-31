@@ -1161,12 +1161,12 @@ Namespace Services
                         ' Pfad-Parameter durchreichen wie beim normalen Text: der Renderer kann
                         ' das laengst, hier wurden sie nur nicht weitergegeben - das Wasserzeichen
                         ' blieb dadurch immer gerade.
-                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
                         Dim fill2 = ApplyAlpha(ParseColor(annotation.FillColor2, SKColors.White), alphaFactor)
-                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
                     End If
             End Select
         End Sub
@@ -1421,6 +1421,11 @@ Namespace Services
         ' begrenzte Menge an im Editor tatsächlich genutzten Font-Familiennamen.
         Private Shared ReadOnly _typefaceCache As New Dictionary(Of String, SKTypeface)()
         Private Shared ReadOnly _typefaceCacheLock As New Object()
+        ' Der gewaehlte Font ist eine gestalterische Vorgabe. Fehlt ihm ein Zeichen, darf das
+        ' Einbrennen es aber nicht als leeres Kaestchen verlieren: Fontconfig/CoreText/DirectWrite
+        ' kennen passende System-Fallbacks. Die von Skia gelieferten Typefaces bleiben wie die
+        ' Familien-Typefaces im Prozesscache, damit beim Live-Render nicht pro Bild neu gematcht wird.
+        Private Shared ReadOnly _characterFallbackTypefaceCache As New Dictionary(Of String, SKTypeface)()
 
         ''' <summary>Schriftschnitt aus Familie und Stil. Der Cacheschluessel enthaelt den STIL -
         ''' ohne ihn haette der erste Aufruf (etwa normal) alle spaeteren ueberdeckt und Fett/Kursiv
@@ -1442,7 +1447,68 @@ Namespace Services
             End SyncLock
         End Function
 
-        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
+        ''' <summary>Erzeugt einen Font und ersetzt ihn bei fehlenden Glyphen durch den passenden
+        ''' System-Fallback. Das ist besonders auf Linux wichtig: die TextBox nutzt Fontconfig-
+        ''' Fallbacks, das gebackene Skia-Rendering sonst aber nicht.</summary>
+        Private Shared Function CreateTextFont(fontFamily As String, fontSize As Single, text As String,
+                                               Optional bold As Boolean = False, Optional italic As Boolean = False) As SKFont
+            Dim typeface = GetTypeface(fontFamily, bold, italic)
+            Dim missingCodePoint = FindMissingCodePoint(typeface, fontSize, text)
+            If missingCodePoint >= 0 Then
+                Dim fallback = GetCharacterFallbackTypeface(fontFamily, bold, italic, text, missingCodePoint)
+                If fallback IsNot Nothing Then typeface = fallback
+            End If
+            Return New SKFont(typeface, fontSize) With {.LinearMetrics = True}
+        End Function
+
+        Private Shared Function FindMissingCodePoint(typeface As SKTypeface, fontSize As Single, text As String) As Integer
+            If typeface Is Nothing OrElse String.IsNullOrEmpty(text) Then Return -1
+            Using font As New SKFont(typeface, fontSize)
+                Dim index = 0
+                While index < text.Length
+                    Dim codePoint = Char.ConvertToUtf32(text, index)
+                    Dim charCount = If(codePoint > &HFFFF, 2, 1)
+                    If Not Char.IsWhiteSpace(text, index) AndAlso font.GetGlyph(codePoint) = 0US Then Return codePoint
+                    index += charCount
+                End While
+            End Using
+            Return -1
+        End Function
+
+        Private Shared Function GetCharacterFallbackTypeface(fontFamily As String, bold As Boolean, italic As Boolean,
+                                                              text As String, codePoint As Integer) As SKTypeface
+            Dim style = New SKFontStyle(If(bold, SKFontStyleWeight.Bold, SKFontStyleWeight.Normal),
+                                        SKFontStyleWidth.Normal,
+                                        If(italic, SKFontStyleSlant.Italic, SKFontStyleSlant.Upright))
+            Dim language = GetTextLanguageHint(text)
+            Dim key = If(fontFamily, "") & "|" & style.Weight.ToString() & "|" & style.Slant.ToString() & "|" & language & "|" & codePoint.ToString()
+            SyncLock _typefaceCacheLock
+                Dim cached As SKTypeface = Nothing
+                If _characterFallbackTypefaceCache.TryGetValue(key, cached) Then Return cached
+                Dim languages As String() = If(String.IsNullOrEmpty(language), Nothing, New String() {language})
+                Dim matched = SKFontManager.Default.MatchCharacter(fontFamily, style, languages, codePoint)
+                If matched IsNot Nothing Then _characterFallbackTypefaceCache(key) = matched
+                Return matched
+            End SyncLock
+        End Function
+
+        ''' <summary>Bei Han-Zeichen entscheidet die Sprache ueber die Glyphenform. Kana,
+        ''' Thai und Devanagari liefern eindeutige Hinweise fuer den System-Fallback.</summary>
+        Private Shared Function GetTextLanguageHint(text As String) As String
+            If String.IsNullOrEmpty(text) Then Return ""
+            Dim index = 0
+            While index < text.Length
+                Dim codePoint = Char.ConvertToUtf32(text, index)
+                If (codePoint >= &H3040 AndAlso codePoint <= &H30FF) OrElse
+                   (codePoint >= &H31F0 AndAlso codePoint <= &H31FF) Then Return "ja"
+                If codePoint >= &HE00 AndAlso codePoint <= &HE7F Then Return "th"
+                If codePoint >= &H900 AndAlso codePoint <= &H97F Then Return "hi"
+                index += If(codePoint > &HFFFF, 2, 1)
+            End While
+            Return ""
+        End Function
+
+        Private Shared Sub DrawAnnotationText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, fill As SKColor, stroke As SKColor, strokeWidth As Single, fontFamily As String, bounds As SKRect, Optional fillKind As String = "Solid", Optional fill2 As SKColor = Nothing, Optional gradientAngleDegrees As Single = 0, Optional gradientInverted As Boolean = False, Optional textPathKind As String = "", Optional textPathInverted As Boolean = False, Optional textPathBend As Single = 0, Optional textPathStartOffset As Single = 0, Optional letterSpacingPercent As Single = 0, Optional bold As Boolean = False, Optional italic As Boolean = False, Optional pathPoints As String = "", Optional pathClosed As Boolean = False)
             ' Text an Pfad: EIN Zweig fuer Kontur und Fuellung, damit beide exakt dieselben
             ' Glyphenpositionen bekommen (und damit auch die Effekt-Maske, die ueber dieselbe
             ' Routine laeuft - Regel "Objektinhalt nur aus GENAU EINEM Renderpfad").
@@ -1453,10 +1519,10 @@ Namespace Services
             ' wie Illustrator/Photoshop es tun.
             Dim path As SKPath = Nothing
             If Not String.IsNullOrWhiteSpace(textPathKind) Then
-                path = BuildTextPath(bounds, textPathKind, textPathBend, textPathStartOffset, pathPoints, pathClosed)
+                path = BuildTextPath(bounds, textPathKind, textPathInverted, textPathBend, textPathStartOffset, pathPoints, pathClosed)
             End If
             Try
-                Using font = CreateFont(fontFamily, fontSize, bold, italic)
+                Using font = CreateTextFont(fontFamily, fontSize, text, bold, italic)
                     ' Abstand in Pixeln aus dem Prozentwert - relativ zur EFFEKTIVEN Schriftgroesse,
                     ' die die Pfad-Einpassung unten noch aendern kann. Wird deshalb nach jeder
                     ' Groessenaenderung neu berechnet.
@@ -1575,7 +1641,7 @@ Namespace Services
             If String.IsNullOrWhiteSpace(text) Then Return 1.0F
             Try
                 Dim rect = SKRect.Create(0, 0, Math.Max(1.0F, annotation.WidthPixels), Math.Max(1.0F, annotation.HeightPixels))
-                Using path = BuildTextPath(rect, annotation.TextPathKind, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.PathPoints, annotation.PathClosed)
+                Using path = BuildTextPath(rect, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.PathPoints, annotation.PathClosed)
                     Using measure = New SKPathMeasure(path, False)
                         Using font = CreateFont(annotation.FontFamily, Math.Max(1.0F, annotation.FontSizePixels), annotation.Bold, annotation.Italic)
                             ' Abstand einrechnen - sonst weicht die Einpassung vom gezeichneten
@@ -1667,9 +1733,26 @@ Namespace Services
         ''' Jeder Abschnitt ist eine Bezierkurve vom ausgehenden Griff des einen zum eingehenden des
         ''' naechsten Punktes. Liegen beide Griffe auf ihren Stuetzpunkten, ist die Kurve eine
         ''' Gerade - ein Eckpunkt braucht deshalb keinen eigenen Zweig.</summary>
-        Public Shared Function BuildFreePath(rect As SKRect, pointsText As String, closed As Boolean) As SKPath
+        Public Shared Function BuildFreePath(rect As SKRect, pointsText As String, closed As Boolean,
+                                             Optional inverted As Boolean = False) As SKPath
             Dim nodes = ParsePathPoints(pointsText)
             If nodes.Count < 2 OrElse rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
+            ' Die inverse Textvariante darf die gespeicherte Geometrie nicht veraendern: die
+            ' Punkte muessen im Pfad-Werkzeug unveraendert sichtbar und bearbeitbar bleiben. Nur
+            ' fuer den Renderpfad drehen wir ihre Reihenfolge und tauschen die Beziergriffe. So
+            ' entsteht exakt dieselbe Kurve in Gegenrichtung - wie bei "Kreis invers".
+            If inverted Then
+                Dim reversed As New List(Of PathNode)(nodes.Count)
+                For i = nodes.Count - 1 To 0 Step -1
+                    Dim original = nodes(i)
+                    reversed.Add(New PathNode With {
+                        .Anchor = original.Anchor,
+                        .HandleIn = original.HandleOut,
+                        .HandleOut = original.HandleIn
+                    })
+                Next
+                nodes = reversed
+            End If
             Dim toCanvas = Function(p As SKPoint) New SKPoint(rect.Left + p.X / 100.0F * rect.Width,
                                                               rect.Top + p.Y / 100.0F * rect.Height)
             Dim path = New SKPath()
@@ -1688,20 +1771,22 @@ Namespace Services
             Return path
         End Function
 
-        Private Shared Function BuildTextPath(rect As SKRect, kind As String, bend As Single, startOffset As Single,
+        Private Shared Function BuildTextPath(rect As SKRect, kind As String, inverted As Boolean, bend As Single, startOffset As Single,
                                               Optional pathPoints As String = "",
                                               Optional pathClosed As Boolean = False) As SKPath
             ' Freier Pfad: die Grundlinie kommt aus den Stuetzpunkten des Objekts statt aus einer
             ' Formel. Faellt sie aus (zu wenige Punkte), gilt weiter der Bogen darunter - ein Text
             ' ohne Grundlinie waere sonst gar nicht zu sehen.
-            If String.Equals(kind, "Free", StringComparison.OrdinalIgnoreCase) Then
-                Dim free = BuildFreePath(rect, pathPoints, pathClosed)
+            If String.Equals(kind, "Free", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(kind, "FreeInverted", StringComparison.OrdinalIgnoreCase) Then
+                Dim free = BuildFreePath(rect, pathPoints, pathClosed,
+                                         inverted:=inverted Xor String.Equals(kind, "FreeInverted", StringComparison.OrdinalIgnoreCase))
                 If free IsNot Nothing Then Return free
             End If
-            Return BuildTextPathCore(rect, kind, bend, startOffset)
+            Return BuildTextPathCore(rect, kind, inverted, bend, startOffset)
         End Function
 
-        Private Shared Function BuildTextPathCore(rect As SKRect, kind As String, bend As Single, startOffset As Single) As SKPath
+        Private Shared Function BuildTextPathCore(rect As SKRect, kind As String, inverted As Boolean, bend As Single, startOffset As Single) As SKPath
             Const Steps As Integer = 96
             Dim path = New SKPath()
             Dim normalized = If(kind, "").Trim().ToLowerInvariant()
@@ -1714,7 +1799,7 @@ Namespace Services
                     ' faktisch einen Bogen (ausprobiert und wieder verworfen).
                     Dim radius = Math.Min(rect.Width, rect.Height) / 2.0F
                     Dim cx = rect.MidX, cy = rect.MidY
-                    Dim inverted = normalized = "circleinverted"
+                    Dim isInverted = inverted Xor (normalized = "circleinverted")
 
                     ' Bildschirmkoordinaten (y nach UNTEN): der Punkt zum Winkel a ist
                     ' (cos a, sin a), also a=90 Grad = unten, a=270 Grad = oben.
@@ -1730,7 +1815,7 @@ Namespace Services
                     ' INNEN und dem Fuss nach aussen - der Text liegt gleichsam auf der Innenseite
                     ' des Rings. Es ist derselbe Ort wie bei "Kreis", nur die Schrift ist auf der
                     ' Linie umgeschlagen.
-                    Dim baseDirection = If(inverted, -1.0, 1.0)
+                    Dim baseDirection = If(isInverted, -1.0, 1.0)
                     Dim startAngle = Math.PI / 2.0 + baseDirection * startOffset / 100.0 * 2.0 * Math.PI
                     ' Negative Kruemmung dreht die Laufrichtung wie bisher zusaetzlich um.
                     Dim direction = If(amount < 0, -baseDirection, baseDirection)
@@ -1744,7 +1829,7 @@ Namespace Services
                 Case "wave"
                     Dim amplitude = amount * rect.Height / 2.0F
                     For i = 0 To Steps
-                        Dim t = i / CSng(Steps)
+                        Dim t = If(inverted, 1.0F - i / CSng(Steps), i / CSng(Steps))
                         Dim px = rect.Left + t * rect.Width
                         Dim py = CSng(rect.MidY - amplitude * Math.Sin(t * 2.0 * Math.PI))
                         If i = 0 Then path.MoveTo(px, py) Else path.LineTo(px, py)
@@ -1755,15 +1840,21 @@ Namespace Services
                     ' Praktisch keine Biegung -> gerade Linie (die Sehnenformel wuerde degenerieren).
                     Dim sagitta = amount * rect.Height / 2.0F
                     If Math.Abs(sagitta) < 0.5F Then
-                        path.MoveTo(rect.Left, rect.MidY)
-                        path.LineTo(rect.Right, rect.MidY)
+                        If inverted Then
+                            path.MoveTo(rect.Right, rect.MidY)
+                            path.LineTo(rect.Left, rect.MidY)
+                        Else
+                            path.MoveTo(rect.Left, rect.MidY)
+                            path.LineTo(rect.Right, rect.MidY)
+                        End If
                     Else
                         Dim half = rect.Width / 2.0F
                         Dim radius = (half * half + sagitta * sagitta) / (2.0F * Math.Abs(sagitta))
                         Dim cy = rect.MidY + Math.Sign(sagitta) * (radius - Math.Abs(sagitta))
                         Dim halfSweep = Math.Asin(Math.Min(1.0, half / radius))
                         For i = 0 To Steps
-                            Dim a = -halfSweep + 2.0 * halfSweep * i / Steps
+                            Dim t = If(inverted, 1.0 - i / CDbl(Steps), i / CDbl(Steps))
+                            Dim a = -halfSweep + 2.0 * halfSweep * t
                             Dim px = CSng(rect.MidX + radius * Math.Sin(a))
                             Dim py = CSng(cy - Math.Sign(sagitta) * radius * Math.Cos(a))
                             If i = 0 Then path.MoveTo(px, py) Else path.LineTo(px, py)
