@@ -1949,6 +1949,26 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanEdit))
         End Sub
 
+        ''' <summary>Öffnet eine unabhängige, noch nicht gespeicherte Editor-Vorschau im Viewer.
+        ''' OpenImage richtet dabei weiterhin Titel, Informationen und den üblichen Viewer-Zustand
+        ''' ein; unmittelbar danach wird sein asynchroner Platten-Ladevorgang ungültig gemacht.
+        ''' Sonst würde dessen Ergebnis den aktuellen Editorstand Sekunden später wieder durch die
+        ''' Originaldatei ersetzen.</summary>
+        Public Sub OpenEditorPreview(imagePath As String, preview As Bitmap)
+            If preview Is Nothing Then
+                OpenImage(imagePath)
+                Return
+            End If
+
+            OpenImage(imagePath)
+            InvalidatePendingBitmapLoad()
+            CurrentImage = preview
+            ImageWidth = CInt(preview.Size.Width)
+            ImageHeight = CInt(preview.Size.Height)
+            If _isFitToWindow Then UpdateFitZoom()
+            UpdateStatus()
+        End Sub
+
         ' Öffnet das Bild im Editor mit aktivem Zuschneiden-Werkzeug und übernimmt den im
         ' Viewer per Ziehgeste ausgewählten Bildausschnitt als Vorschlag.
         ''' <summary>Filmstreifen-Pfade für den Editor: in einer Serversitzung nur das aktuelle

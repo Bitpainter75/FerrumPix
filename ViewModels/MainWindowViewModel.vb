@@ -818,9 +818,11 @@ Namespace ViewModels
                 ElseIf CurrentMode = AppMode.Editor AndAlso Not String.IsNullOrEmpty(Editor.CurrentImagePath) Then
                     ' Das Vollbild ist nur eine andere Ansicht desselben Bildes, kein Verlassen der
                     ' Bearbeitung. Die Änderungen bleiben im Editor erhalten; der Viewer sperrt seine
-                    ' Bildnavigation dafür über IsFullscreenNavigationLocked.
+                    ' Bildnavigation dafür über IsFullscreenNavigationLocked. Entscheidend ist die
+                    ' Momentaufnahme der Editor-Szene: OpenImage allein dekodiert die Originaldatei
+                    ' und würde damit alle noch nicht gespeicherten Änderungen unterschlagen.
                     _previousModeBeforeFullscreen = AppMode.Editor
-                    Viewer.OpenImage(Editor.CurrentImagePath)
+                    Viewer.OpenEditorPreview(Editor.CurrentImagePath, Editor.CreateFullscreenPreviewSnapshot())
                     CurrentMode = AppMode.Viewer
                 ElseIf CurrentMode = AppMode.Viewer AndAlso String.IsNullOrEmpty(Viewer.CurrentImagePath) Then
                     Return

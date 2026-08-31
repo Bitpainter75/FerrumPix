@@ -15634,6 +15634,25 @@ Namespace ViewModels
             Return ms
         End Function
 
+        ''' <summary>Erzeugt eine unabhängige Momentaufnahme der aktuell im Editor gezeigten
+        ''' Bildszene. Der Vollbild-Betrachter darf niemals DisplayImage selbst übernehmen: der
+        ''' Editor ersetzt und disposed diese Bitmap bei jeder weiteren Vorschau-Aktualisierung.
+        ''' Die PNG-Runde trennt deshalb Besitz und Lebensdauer sauber voneinander.</summary>
+        Public Function CreateFullscreenPreviewSnapshot() As Bitmap
+            Dim display = DisplayImage
+            If display Is Nothing Then Return Nothing
+            Try
+                Using stream As New IO.MemoryStream()
+                    display.Save(stream, PngBitmapEncoderOptions.Default)
+                    stream.Position = 0
+                    Return New Bitmap(stream)
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("EditorViewModel.CreateFullscreenPreviewSnapshot", ex)
+                Return Nothing
+            End Try
+        End Function
+
         Private Sub InvalidatePreviewWork()
             Interlocked.Increment(_previewRequestId)
             Dim oldCts = Interlocked.Exchange(_previewRenderCts, Nothing)
