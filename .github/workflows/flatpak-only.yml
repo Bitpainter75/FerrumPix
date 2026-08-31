@@ -1,11 +1,11 @@
-# Baut NUR den Flatpak. Veroeffentlicht wird nur auf ausdrueckliche Ansage.
+# Baut und veroeffentlicht NUR den Flatpak.
 #
 # Warum ein eigener Lauf: der Flatpak war im Release-Lauf mit gut vier Minuten der teuerste
 # Schritt, brauchte flatpak-builder samt Laufzeitumgebung von Flathub und legte einen Bauordner
 # mit Symlinks an, der dem Windows-Bau schon einmal die Aufloesung von `**/*.axaml` zerschossen
 # hat. Kein anderes Paket braucht ihn, also steht er jetzt fuer sich.
 #
-# WANN ER LAUFEN MUSS: nach JEDER veroeffentlichten Version, mit veroeffentlichen=true. Der
+# WANN ER LAUFEN MUSS: nach JEDER veroeffentlichten Version. Der
 # Upload im Release-Lauf ersetzt nur, was im Bauordner liegt - ohne diesen Lauf bleibt die alte
 # FerrumPix.flatpak im Latest-Release stehen und geht stillschweigend als aktuell durch. Bei
 # einer neuen Version mit pkgrel 1 wird das Latest-Release geloescht und neu angelegt, dann
@@ -23,14 +23,8 @@ name: Flatpak einzeln
 
 on:
   workflow_dispatch:
-    inputs:
-      veroeffentlichen:
-        description: "Bundle ins Latest-Release hochladen (sonst nur als Artefakt)"
-        type: boolean
-        default: false
 
-# Zum Hochladen ins Release braucht der eingebaute Token Schreibrecht. Ohne Veroeffentlichung
-# wird es nicht genutzt.
+# Zum Hochladen ins Release braucht der eingebaute Token Schreibrecht.
 permissions:
   contents: write
 
@@ -56,10 +50,8 @@ jobs:
           dotnet-version: '10.0.x'
 
       # Der Riegel gegen die falsche Reihenfolge. Steht in PUBLISHED-VERSION etwas anderes als in
-      # VERSION, war der Release-Lauf fuer diese Version noch nicht durch - dann wird hier nicht
-      # veroeffentlicht. Gebaut wird trotzdem, das Artefakt gibt es also in jedem Fall.
+      # VERSION, war der allgemeine Release-Lauf fuer diese Version noch nicht durch.
       - name: Reihenfolge pruefen
-        if: ${{ inputs.veroeffentlichen }}
         run: |
           version="$(cat VERSION)"
           published="$(head -1 packaging/PUBLISHED-VERSION 2>/dev/null | tr -d '[:space:]')"
@@ -141,7 +133,6 @@ jobs:
       # Riegel oben haelt den Fall schon fern, in dem das Latest-Release neu entstehen muesste;
       # die Marke macht daraus eine Zusage des Skripts statt einer Annahme.
       - name: Ins Latest-Release
-        if: ${{ inputs.veroeffentlichen }}
         run: packaging/publish-github-release.sh --only-latest --partial
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -150,7 +141,6 @@ jobs:
       # Zurueckschreiben ginge dieser Stand verloren. PUBLISHED-VERSION aendert sich hier nicht,
       # kommt aber mit, weil das Skript beide fuehrt.
       - name: Merkposten zurueckschreiben
-        if: ${{ inputs.veroeffentlichen }}
         run: |
           cd packaging
           git config user.name  "FerrumPix CI"

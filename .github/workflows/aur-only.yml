@@ -1,0 +1,67 @@
+# Veroeffentlicht ausschliesslich das AUR-Paket. Dieser Lauf ist absichtlich vom allgemeinen
+# Release getrennt: dessen Auswahl "alle" umfasst weder AUR noch Flatpak.
+name: AUR veroeffentlichen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  aur:
+    name: AUR
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+
+    steps:
+      - name: Werkzeuge
+        run: pacman -Sy --noconfirm --needed git openssh xz zip unzip jq curl python dotnet-sdk
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      # libmpv-2.dll liegt im Repo nur komprimiert; package.sh erwartet sie ausgepackt.
+      - name: Fremdbinaerdateien bereitlegen
+        run: packaging/ci/ensure-binaries.sh
+
+      - name: AUR-ZIP bauen
+        run: packaging/package.sh zip
+        env:
+          FERRUMPIX_BUILD_BOX: ""
+
+      # Das Versionsrelease braucht das Quell-ZIP, auf das der PKGBUILD mit seiner Pruefsumme zeigt.
+      - name: AUR-ZIP ins Versionsrelease
+        run: packaging/publish-github-release.sh --only-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: AUR-Repo klonen
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null || true
+          if grep -q aur.archlinux.org ~/.ssh/known_hosts 2>/dev/null; then
+            echo "Hostschluessel der AUR uebernommen"
+          else
+            echo "ssh-keyscan lieferte nichts - es gilt accept-new"
+          fi
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new"
+          git clone ssh://aur@aur.archlinux.org/ferrumpix-bin.git packaging/AUR
+
+      # makepkg laeuft nicht als root; die Identitaet entspricht der manuellen Veroeffentlichung.
+      - name: AUR veroeffentlichen
+        run: |
+          useradd -m builder
+          chown -R builder:builder .
+          cp -r ~/.ssh /home/builder/.ssh
+          chown -R builder:builder /home/builder/.ssh
+          su builder -c "git config --global user.name 'Bitpainter75'"
+          su builder -c "git config --global user.email 'patrick@bitpainter.de'"
+          su builder -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new' packaging/publish-aur.sh"

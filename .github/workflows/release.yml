@@ -4,9 +4,8 @@
 # frei, fuer private werden sie gegen das Monatskontingent gerechnet. Ein voller Lauf ueber alle
 # Plattformen ist nicht kurz.
 #
-# DER FLATPAK GEHOERT NICHT MEHR HIERHER, er hat einen eigenen Lauf: flatpak-only.yml. Wird eine
-# Version veroeffentlicht, gehoert er danach von Hand gestartet, sonst bleibt im Latest-Release
-# das alte Bundle stehen oder es fehlt ganz.
+# AUR und Flatpak haben eigene Veroeffentlichungslaeufe. "alle" baut hier deshalb nur die
+# uebrigen Release-Pakete.
 #
 # SICHERHEIT: Ein oeffentliches Repo kann jeder per Pull Request anstossen. GitHub gibt
 # Fork-Pull-Requests keine Secrets - das ist die schuetzende Regel, und sie faellt, sobald
@@ -17,7 +16,6 @@
 #   PACKAGING_DEPLOY_KEY  privater SSH-Schluessel, oeffentlicher Teil als Deploy-Key im
 #                         privaten packaging-Repo. Schreibrechte nur, wenn Schritt
 #                         "Merkposten zurueckschreiben" genutzt wird.
-#   AUR_SSH_KEY           privater SSH-Schluessel fuer aur.archlinux.org.
 #
 # KEIN eigener Release-Token noetig. Der Lauf schreibt nur in DIESES Repo, und dafuer stellt
 # GitHub jedem Job automatisch einen bereit (secrets.GITHUB_TOKEN). Er ist auf dieses Repo
@@ -37,17 +35,12 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: "Nur bauen, nichts veroeffentlichen"
-        type: boolean
-        default: true
       pakete:
-        description: "Welche Pakete? 'alle' oder genau eines - der Rest wird dann nicht gebaut"
+        description: "Welche Pakete? 'alle' baut alles ausser AUR und Flatpak; sonst genau eines"
         type: choice
         default: alle
         options:
           - alle
-          - aur
           - zip
           - appimage
           - deb
@@ -64,16 +57,6 @@ on:
 permissions:
   contents: write
 
-# DER TROCKENLAUF IST DIE VOREINSTELLUNG, und zwar aus einem handfesten Grund: ein echter Lauf
-# ersetzt das AUR-ZIP im Versionsrelease. Der PKGBUILD in der AUR nagelt eine Pruefsumme auf
-# genau diese Adresse, und ein neu gebautes ZIP hat andere Bytes - zwischen dem Ersetzen und dem
-# Nachziehen durch publish-aur.sh waere das AUR-Paket kaputt. Dazu laufen die festen
-# Downloadadressen des Latest-Release beim Ersetzen kurz ins Leere.
-#
-# Gebaut wird im Trockenlauf trotzdem vollstaendig - das ist der Teil, der schiefgehen kann.
-# Ein Tag-Push veroeffentlicht dagegen immer echt: dort gibt es keine Eingabe, und der Ausdruck
-# faellt auf den leeren Wert zurueck.
-#
 # EINZELNE PAKETE: der Handstart bietet neben "alle" jedes Paket fuer sich an. Gebaut wird dann
 # nur dieses eine, und hochgeladen wird es mit --partial - das Skript ersetzt damit allein die
 # Datei, die es mitbringt, und weigert sich, das Latest-Release neu anzulegen. Ohne diese Marke
@@ -81,121 +64,13 @@ permissions:
 #
 # Ein Tag-Push hat keine Eingaben; der Ausdruck faellt dort auf "alle" zurueck.
 env:
-  DRY: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
   PAKETE: ${{ (github.event_name == 'workflow_dispatch' && inputs.pakete) || 'alle' }}
 
 jobs:
 
-  # ---------------------------------------------------------------------------------------
-  # DIE AUR ZUERST. Sie haengt allein am AUR-ZIP, und das ist in Minuten gebaut. Alles andere
-  # braucht sie nicht und sie nichts davon. Frueher lief der ganze Bau und der ganze Upload
-  # zuerst, und die AUR stand solange auf der alten Version, obwohl das noetige Paket laengst
-  # fertig war.
-  # ---------------------------------------------------------------------------------------
-  aur:
-    name: AUR zuerst
-    runs-on: ubuntu-latest
-    container: archlinux:base-devel
-    # In einem job-level "if" gibt es den env-Kontext nicht, deshalb steht der Ausdruck hier
-    # ausgeschrieben und nicht als $PAKETE.
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.pakete == 'alle' || inputs.pakete == 'aur' }}
-
-    steps:
-      - name: Werkzeuge
-        run: pacman -Sy --noconfirm --needed git openssh xz zip unzip jq curl python dotnet-sdk
-
-      # Das oeffentliche Repo in die Wurzel, das private nach packaging/. Genau diese Anordnung
-      # erwarten die Skripte: sie rechnen mit SCRIPT_DIR/.. als Repo-Wurzel. Deshalb ist an
-      # ihnen nichts zu aendern.
-      - uses: actions/checkout@v7
-
-      - uses: actions/checkout@v7
-        with:
-          repository: Bitpainter75/FerrumPix-Build
-          path: packaging
-          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
-
-      # libmpv-2.dll liegt im Repo nur komprimiert (112 MB roh, ueber GitHubs Grenze).
-      # Auspacken und gegen die Sollwerte pruefen, BEVOR package.sh laeuft - das Handskript
-      # bleibt dadurch unveraendert und findet die DLL einfach vor.
-      - name: Fremdbinaerdateien bereitlegen
-        run: packaging/ci/ensure-binaries.sh
-
-      - name: AUR-ZIP bauen
-        run: packaging/package.sh zip
-        env:
-          FERRUMPIX_BUILD_BOX: ""     # kein Distrobox-Wechsel, wir SIND schon im Container
-
-      # Der Text des Versionsreleases kommt aus CHANGELOG.md, und die liegt im OEFFENTLICHEN Repo,
-      # kommt also mit dessen Auscheck. Kein Nebenschauplatz: publish-aur.sh uebernimmt genau
-      # diesen Text als AUR-Commit-Nachricht. Fehlt die Datei, faellt beides stillschweigend auf
-      # einen nackten Titel zurueck.
-      - name: AUR-ZIP ins Versionsrelease
-        run: packaging/publish-github-release.sh --only-version $DRY
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Das AUR-Repo ist ein EIGENES Repo und nicht Teil des privaten packaging-Repos - dort
-      # steht es in der .gitignore. Hier wird es frisch geklont.
-      # BEFUND ERSTER LAUF: "Host key verification failed". Nicht der Schluessel war das Problem,
-      # sondern dass der Runner aur.archlinux.org nicht kennt - ein frischer Runner hat eine leere
-      # known_hosts, und ssh-keyscan hatte still nichts geliefert (kein -H mehr, damit sich das
-      # Ergebnis auch nachlesen laesst).
-      #
-      # accept-new statt no: der Host wird beim ersten Kontakt uebernommen, ein WECHSEL des
-      # Schluessels waehrend des Laufs faellt aber weiter auf. Strenger ginge nur mit einem fest
-      # eingetragenen Fingerabdruck - der muesste dann bei jedem Schluesselwechsel der AUR von
-      # Hand nachgezogen werden, und ein Release, das daran scheitert, faellt niemandem rechtzeitig auf.
-      - name: AUR-Repo klonen
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts 2>/dev/null || true
-          if grep -q aur.archlinux.org ~/.ssh/known_hosts 2>/dev/null; then
-            echo "Hostschluessel der AUR uebernommen"
-          else
-            echo "ssh-keyscan lieferte nichts - es gilt accept-new"
-          fi
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new"
-          git clone ssh://aur@aur.archlinux.org/ferrumpix-bin.git packaging/AUR
-
-      # makepkg laeuft nicht als root. Deshalb ein eigener Benutzer, der auch pushen darf.
-      #
-      # BEFUND: "Author identity unknown ... fatal: unable to auto-detect email address (got
-      # 'builder@<container>.(none)')", Abbruch mit 128 beim Commit ins AUR-Repo. Der Benutzer wird
-      # hier frisch angelegt und hat keine Git-Identitaet; die geraten Werte aus Benutzername und
-      # Rechnername weist Git zurueck. Die Identitaet gehoert dem BENUTZER, nicht dem Auscheck -
-      # deshalb --global fuer builder und nicht im Skript, das lokal Patricks eigene Einstellung
-      # ueberschreiben wuerde.
-      #
-      # Es ist dieselbe Kennung, mit der auch von Hand veroeffentlicht wird. Eine eigene CI-Kennung
-      # daneben liesse das Paket aussehen, als haette es den Betreuer gewechselt.
-      - name: AUR veroeffentlichen
-        run: |
-          useradd -m builder
-          chown -R builder:builder .
-          cp -r ~/.ssh /home/builder/.ssh
-          chown -R builder:builder /home/builder/.ssh
-          su builder -c "git config --global user.name 'Bitpainter75'"
-          su builder -c "git config --global user.email 'patrick@bitpainter.de'"
-          su builder -c "GIT_SSH_COMMAND='ssh -i ~/.ssh/aur -o StrictHostKeyChecking=accept-new' packaging/publish-aur.sh $DRY"
-
-  # ---------------------------------------------------------------------------------------
-  # Ab hier ist die AUR aktuell. Was jetzt noch dauert, laesst niemanden mehr auf einer alten
-  # Version sitzen.
-  # ---------------------------------------------------------------------------------------
   rest:
     name: Alles Uebrige
     runs-on: ubuntu-latest
-    needs: aur
-    # always() ist noetig, weil der AUR-Job bei einer Einzelauswahl uebersprungen wird und ein
-    # uebersprungenes needs sonst auch diesen Job ueberspringt. Ein FEHLGESCHLAGENER AUR-Job
-    # haelt den Lauf dagegen weiterhin an - das ist der Sinn der Reihenfolge.
-    # Wurde nur die AUR gewaehlt, gibt es hier nichts zu tun.
-    if: ${{ always()
-            && needs.aur.result != 'failure' && needs.aur.result != 'cancelled'
-            && (github.event_name != 'workflow_dispatch' || inputs.pakete != 'aur') }}
 
     steps:
       - uses: actions/checkout@v7
@@ -334,9 +209,9 @@ jobs:
       - name: Ins Latest-Release
         run: |
           if [ "$PAKETE" = "alle" ]; then
-            packaging/publish-github-release.sh --only-latest $DRY
+            packaging/publish-github-release.sh --only-latest
           else
-            packaging/publish-github-release.sh --only-latest --partial $DRY
+            packaging/publish-github-release.sh --only-latest --partial
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
