@@ -211,6 +211,17 @@ opened". That does not mean the ZIP is broken. Please try this:
 
        open /Applications/FerrumPix.app
 
+### macOS signing
+
+The macOS packages are currently unsigned and should still be considered experimental.
+
+Code signing and notarization require an Apple Developer account and come with an ongoing cost.
+Since FerrumPix is currently a free, non-commercial project and does not generate any revenue,
+signed macOS builds are not planned for the time being.
+
+If the project receives sponsorship or other financial support in the future, official signing
+and notarization may be added.
+
 ### Good to know
 
 The packages are self-contained and bring the .NET runtime with them, so nothing has to be
