@@ -1143,12 +1143,21 @@ Namespace ViewModels
         ''' <summary>Traegt die gerade bestaetigte Perspektive in das eigene Verzerrungsfeld jedes
         ''' Objekts ein - das Gegenstueck zum Gitterverzerren.
         '''
-        ''' Gerechnet wird auf der ANZEIGEGROESSE: die Perspektive laesst die Masse unveraendert,
-        ''' und das Feld steht ohnehin in Prozent. Wichtig ist allein, dass es dieselbe Matrix ist,
-        ''' die auch die Pixel verzieht (ImageGeometryMapper.WarpMatrix) - eine zweite Rechnung
-        ''' liefe frueher oder spaeter neben dem Bild her.</summary>
+        ''' DER BEZUGSRAUM IST DER KNACKPUNKT. Bedient wird die Perspektive auf dem ANGEZEIGTEN
+        ''' Bild, das Feld eines Objekts wird beim Rendern aber im QUELLRAUM des unbeschnittenen
+        ''' Bildes ausgewertet (ImageGeometryMapper.MeshPoint mit den Quellmassen). Steht vor der
+        ''' Perspektive schon ein Beschnitt, eine Vierteldrehung oder eine Groessenaenderung, sind
+        ''' das zwei verschiedene Raeume - ein direkt uebernommenes Feld zoege die Objekte dann in
+        ''' die falsche Richtung.
+        '''
+        ''' Deshalb wird die Abbildung eingerahmt: Quellpunkt in den Anzeigeraum, dort die
+        ''' Perspektive, und wieder zurueck. Genommen wird dafuer die Kette, die auch die Objekte
+        ''' selbst durchlaufen (ohne Verzerren und Perspektive, siehe GeometryForAnnotations),
+        ''' sonst wuerde eine bereits bestaetigte Verzerrung doppelt einfliessen.</summary>
         Private Sub ApplyPerspectiveToObjects()
             If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return
+            Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return
             Dim size = GetAnnotationDisplayPixelSize()
             If size.Width <= 0 OrElse size.Height <= 0 Then Return
             Dim corners = New Double() {_perspectiveCorners(0), _perspectiveCorners(1),
@@ -1159,9 +1168,24 @@ Namespace ViewModels
                                                         _perspectiveHorizontal, _perspectiveVertical,
                                                         _perspectiveAspect, _perspectiveScale, corners)
             If matrix.IsIdentity Then Return
+
+            Dim geometry = BuildAppliedGeometryAdjustments()
+            geometry.SourceWidthPixels = baseWidth
+            geometry.SourceHeightPixels = baseHeight
+            Dim objectGeometry = ImageProcessor.GeometryForAnnotations(geometry)
+
             ApplyWarpToObjects(Function(px, py)
-                                   Dim p = matrix.MapPoint(CSng(px / 100.0 * size.Width), CSng(py / 100.0 * size.Height))
-                                   Return (p.X / size.Width * 100.0, p.Y / size.Height * 100.0)
+                                   Dim shown As SkiaSharp.SKPoint
+                                   If Not ImageProcessor.TrySourcePointToGeometryOutput(px / 100.0 * baseWidth,
+                                                                                        py / 100.0 * baseHeight,
+                                                                                        baseWidth, baseHeight,
+                                                                                        objectGeometry, shown) Then Return (px, py)
+                                   Dim moved = matrix.MapPoint(shown)
+                                   Dim back As SkiaSharp.SKPoint
+                                   If Not ImageProcessor.TryGeometryOutputToSourcePoint(moved.X, moved.Y,
+                                                                                        baseWidth, baseHeight,
+                                                                                        objectGeometry, back) Then Return (px, py)
+                                   Return (back.X / baseWidth * 100.0, back.Y / baseHeight * 100.0)
                                End Function)
         End Sub
 
@@ -1179,15 +1203,22 @@ Namespace ViewModels
                         Dim i = (rowIdx * (Steps + 1) + colIdx) * 2
                         Dim px = colIdx / CDbl(Steps) * 100.0
                         Dim py = rowIdx / CDbl(Steps) * 100.0
-                        ' Dieselbe Reihenfolge wie beim Bild (siehe ComposeImageWarp): erst der neue
-                        ' Zug, dann was schon steht. Nur so laufen Bild und Objekte gleich - und
-                        ' genau das ist der Sinn der Sache, die Objekte sollen mitgehen.
-                        Dim n = abbildung(px, py)
-                        px = n.X : py = n.Y
+                        ' ERST WAS SCHON STEHT, DANN DER NEUE ZUG - und zwar seit der geordneten
+                        ' Geometriekette. Das Bild faltet seine Verzerrungen nicht mehr in EIN Feld
+                        ' (so tat es ComposeImageWarp, und dort stand der neue Zug deshalb vorn);
+                        ' es fuehrt jede bestaetigte Verzerrung als eigenen Schritt und wendet den
+                        ' aelteren ZUERST an. Ein Objekt traegt beide in einem einzigen Feld und
+                        ' muss sie deshalb in derselben Reihenfolge verketten.
+                        '
+                        ' Gemessen von "Objekt und Bild bleiben auch nach zwei projektiven
+                        ' Schritten zusammen": in der anderen Reihenfolge liefen Objekt und Bild
+                        ' nach Gitter plus Perspektive um 17 Punkte auseinander.
                         If alt IsNot Nothing AndAlso Not alt.IsEmpty Then
                             Dim v = ExistingWarp(alt, px, py)
                             px = v.X : py = v.Y
                         End If
+                        Dim n = abbildung(px, py)
+                        px = n.X : py = n.Y
                         node(i) = px
                         node(i + 1) = py
                     Next
