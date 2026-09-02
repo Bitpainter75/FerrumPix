@@ -4276,7 +4276,11 @@ Namespace Views
             If vm Is Nothing OrElse canvas Is Nothing Then Return False
             Dim rect = GetDisplayedImageRect(canvas, vm)
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return False
-            Dim corners = vm.PerspectiveCornerValues
+            ' Bei einer markierten Ebene sind es deren Ecken, nicht die Perspektive des
+            ' Gesamtbilds. Die können bewusst weit über die Bildgrenze hinausreichen; mit den
+            ' Bildwerten traf die Außenbereich-Prüfung nie und der Canvas räumte die Auswahl vor
+            ' dem Start des Zugs ab.
+            Dim corners = If(vm.ShowsObjectCorners, vm.ObjectCornerValues, vm.PerspectiveCornerValues)
             If corners Is Nothing OrElse corners.Length < 8 Then Return False
             For i = 0 To 3
                 Dim x = rect.Left + corners(i * 2) / 100.0 * rect.Width
@@ -4422,16 +4426,20 @@ Namespace Views
             If vm IsNot Nothing AndAlso vm.ShowsObjectCorners AndAlso iw > 0 AndAlso ih > 0 Then
                 Dim ov = vm.ObjectCornerValues
                 If ov IsNot Nothing AndAlso ov.Length = 8 Then
+                    ' Genau wie beim Bild-Perspektivwerkzeug Platz ringsum lassen: ein
+                    ' Objekt-Anfasser darf über den Bildrand hinausgezogen werden und muss dort
+                    ' sichtbar sowie hit-testbar bleiben.
+                    Const objectBorder As Double = 400.0
                     Dim ow(7) As Double
                     For i = 0 To 3
-                        ow(i * 2) = ov(i * 2) / 100.0 * iw
-                        ow(i * 2 + 1) = ov(i * 2 + 1) / 100.0 * ih
+                        ow(i * 2) = ov(i * 2) / 100.0 * iw + objectBorder
+                        ow(i * 2 + 1) = ov(i * 2 + 1) / 100.0 * ih + objectBorder
                     Next
                     overlay.CornerValues = ow
-                    Avalonia.Controls.Canvas.SetLeft(overlay, ix)
-                    Avalonia.Controls.Canvas.SetTop(overlay, iy)
-                    overlay.Width = iw
-                    overlay.Height = ih
+                    Avalonia.Controls.Canvas.SetLeft(overlay, ix - objectBorder)
+                    Avalonia.Controls.Canvas.SetTop(overlay, iy - objectBorder)
+                    overlay.Width = iw + objectBorder * 2
+                    overlay.Height = ih + objectBorder * 2
                     overlay.IsVisible = True
                     overlay.InvalidateVisual()
                     Return

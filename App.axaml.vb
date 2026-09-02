@@ -37,6 +37,15 @@ Public Class App
     Public Overrides Sub Initialize()
         AvaloniaXamlLoader.Load(Me)
 
+        ' Microsoft.Data.Sqlite bringt den SQLitePCL-Provider mit, aktiviert ihn aber nicht
+        ' automatisch in jeder Veröffentlichungsart. Ohne diese Initialisierung schlugen
+        ' Katalog, Ortsnachträge und Hintergrundindex erst beim ersten Datenbankzugriff fehl.
+        Try
+            SQLitePCL.Batteries_V2.Init()
+        Catch ex As Exception
+            DiagnosticLogService.LogException("App.SQLiteInit", ex)
+        End Try
+
         ' ERST HIER, nicht vor dem Aufbau: LogToTrace setzt den Empfaenger der Oberflaechenschicht
         ' beim Bauen und wuerde einen frueher gesetzten ersetzen. Mit eingeschaltetem Diagnoselog
         ' schreibt sie danach mit, was sie beim Ziehen und Ablegen tut - die einzige Stelle, die

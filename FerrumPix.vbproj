@@ -46,6 +46,9 @@
     <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
     <PackageReference Include="MetadataExtractor" Version="2.9.3" />
+    <!-- MetadataExtractor lädt den XMP-Leser erst beim Auswerten eines JPEG-Segments. Als
+         direkte Abhängigkeit wird die DLL auch in selbständige Linux-Pakete übernommen. -->
+    <PackageReference Include="XmpCore" Version="6.1.10.1" />
     <!-- TIFF lesen: SkiaSharp kann das Format nicht. Rein verwaltet (kein natives Beiwerk),
          BSD-3-Clause und damit mit der GPL-3 der Anwendung vertraeglich. -->
     <PackageReference Include="BitMiracle.LibTiff.NET" Version="2.4.660" />

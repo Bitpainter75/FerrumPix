@@ -4588,6 +4588,10 @@ Namespace ViewModels
                 ' Die Ausnahmen zum Abwählen stehen in ToolKeepsSelectedAnnotationOnEnter - EINE
                 ' Stelle für diesen Weg UND für SetToolCommand, das schon vorher abwählt.
                 If Not IsLayerTool(value) AndAlso Not ToolKeepsSelectedAnnotationOnEnter(value) Then SelectedAnnotationIndex = -1
+                ' Das Verzerren-Werkzeug soll sofort eine direkt manipulierbare Form anbieten.
+                ' Der Modus wurde oben beim Werkzeugwechsel bewusst abgewählt; deshalb kann das
+                ' Setzen hier nichts toggeln, sondern aktiviert verlässlich „Verformen“.
+                If value = EditorTool.Warp Then WarpMode = "Verformen"
                 If Not CanShowBeforeAfter AndAlso _showBeforeImage Then
                     _showBeforeImage = False
                     Me.RaisePropertyChanged(NameOf(ShowBeforeImage))
@@ -14728,8 +14732,13 @@ Namespace ViewModels
             DisposeGridPreview()
             DisposeLinePreview()
             If markDirty AndAlso Not _suppressPreviewDirty Then
+                Dim wasDirty = _hasChanges
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                If Not wasDirty Then
+                    DiagnosticLogService.LogAlways("Editor.Dirty",
+                        $"set=true source=SchedulePreviewUpdate tool={_currentTool} selected={_selectedAnnotationIndex} objectWarp={HasObjectWarp} previewPending={_previewPending}")
+                End If
             End If
             MarkPreviewPending()
             _fullRenderPending = True
@@ -14739,8 +14748,13 @@ Namespace ViewModels
 
         Private Sub RefreshPreviewImmediately()
             If Not _suppressPreviewDirty Then
+                Dim wasDirty = _hasChanges
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                If Not wasDirty Then
+                    DiagnosticLogService.LogAlways("Editor.Dirty",
+                        $"set=true source=RefreshPreviewImmediately tool={_currentTool} selected={_selectedAnnotationIndex} objectWarp={HasObjectWarp} previewPending={_previewPending}")
+                End If
             End If
             _previewTimer.Stop()
             _previewPending = False
@@ -16616,13 +16630,34 @@ Namespace ViewModels
         End Sub
 
         Private Async Function SaveImageAsync(saveAs As Boolean) As Task(Of Boolean)
-            If String.IsNullOrEmpty(_currentImagePath) Then Return False
-            If Not saveAs AndAlso Not CanSaveInPlace Then Return False
+            DiagnosticLogService.LogAlways("Editor.Save",
+                $"begin saveAs={saveAs} dirty={_hasChanges} tool={_currentTool} selected={_selectedAnnotationIndex} objectWarp={HasObjectWarp} openWarp={HasOpenWarpTransaction}")
+            If String.IsNullOrEmpty(_currentImagePath) Then
+                DiagnosticLogService.LogException("Editor.Save", New InvalidOperationException("Kein aktuelles Bild zum Speichern."))
+                Await _mainVm?.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
+                                                 LocalizationService.T("Es ist kein Bild zum Speichern geöffnet."))
+                Return False
+            End If
+            DiagnosticLogService.LogAlways("Editor.Save", "stage=beforeCanSaveInPlace")
+            Dim canSaveInPlaceNow = CanSaveInPlace
+            DiagnosticLogService.LogAlways("Editor.Save", $"stage=afterCanSaveInPlace value={canSaveInPlaceNow}")
+            If Not saveAs AndAlso Not canSaveInPlaceNow Then
+                ' Ein nicht direkt beschreibbares Dokument (z.B. HEIC, TIFF oder eine externe
+                ' Arbeitskopie) darf auf den Speichern-Knopf nicht still reagieren. Dieser Weg
+                ' muss denselben „Speichern unter“-Dialog öffnen wie die Abfrage beim Verlassen.
+                Return Await SaveImageAsync(True)
+            End If
             ' "Speichern" bei einem Immich-Bild schreibt nicht die Temp-Kopie zurück, sondern das Asset.
+            DiagnosticLogService.LogAlways("Editor.Save", "stage=beforeDestinationBranches")
             If Not saveAs AndAlso SavesBackToImmich Then Return Await SaveBackToImmichAsync()
             ' "Speichern" bei RAW oder PSD = Rezept in die Begleitdatei (.fpxmp) schreiben -
             ' keines dieser Formate ist je ein Schreibziel.
-            If Not saveAs AndAlso IsCurrentImageSidecarFormat Then
+            ' Ein geöffnetes .fpx kann ein RAW-/PSD-Basisbild haben. IsCurrentImageSidecarFormat
+            ' betrachtet absichtlich diese Renderquelle und wäre dann True, das Speicherziel ist
+            ' aber das .fpx-Projekt selbst. Ohne diese Abgrenzung landete Strg+S im Sidecar-Zweig;
+            ' TrySaveSidecar lehnt offene Projekte wiederum ab und der Speichervorgang endete still.
+            If Not saveAs AndAlso String.IsNullOrEmpty(_currentFpxPath) AndAlso IsCurrentImageSidecarFormat Then
+                DiagnosticLogService.LogAlways("Editor.Save", "stage=sidecarBranch")
                 ' Stammt das Bild aus Nextcloud, gehoert die Begleitdatei NEBEN DAS ORIGINAL AUF DEM
                 ' SERVER. Sie entsteht zuerst neben der Temp-Kopie (derselbe Weg wie lokal) und wird
                 ' dann hochgeladen - das Original wird dabei nicht angefasst. Das gilt AUCH mit
@@ -16711,9 +16746,13 @@ Namespace ViewModels
             Try
                 StatusText = LocalizationService.T("Wird gespeichert…")
                 If _retouchStrokeActive Then CommitRetouchStroke()
+                DiagnosticLogService.LogAlways("Editor.Save", "stage=beforeSyncSelectedAnnotation")
                 If HasSelectedAnnotation Then SyncSelectedAnnotation()
+                DiagnosticLogService.LogAlways("Editor.Save", "stage=afterSyncSelectedAnnotation")
                 CommitObjectAdjustModeToModel()
+                DiagnosticLogService.LogAlways("Editor.Save", "stage=afterCommitObjectAdjustments")
                 Dim adj = If(isFpxSave, GetCurrentFpxSaveAdjustments(), GetCurrentAdjustments())
+                DiagnosticLogService.LogAlways("Editor.Save", $"stage=adjustmentsReady annotations={If(adj.Annotations Is Nothing, 0, adj.Annotations.Count)}")
                 Dim preserveMetadata = If(saveAs AndAlso _mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
                 Dim ok As Boolean
                 If isFpxSave Then
@@ -16900,7 +16939,7 @@ Namespace ViewModels
                     StatusText = If(saveAs,
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
                                     LocalizationService.T("Gespeichert"))
-                    _hasChanges = False
+                    MarkDocumentSaved()
                     If saveAs Then
                         ' Katalog-Metadaten zur neuen Datei übernehmen - das Original behält seine.
                         ' Was mitwandert, bestimmen die Einzeloptionen des Dialogs.
@@ -16956,6 +16995,14 @@ Namespace ViewModels
                     Return True
                 Else
                     StatusText = LocalizationService.T("Speichern fehlgeschlagen")
+                    DiagnosticLogService.LogAlways("Editor.Save",
+                        $"failed rendererReturnedFalse saveAs={saveAs} dirty={_hasChanges} selected={_selectedAnnotationIndex} objectWarp={HasObjectWarp}")
+                    ' Der Render-/Encoder-Weg kann bei einem ungültigen Objektzustand nur False
+                    ' zurückgeben. Eine Statuszeile geht beim anschließenden Schließen unter und
+                    ' führte so zu einer nicht erklärten Endlosschleife aus Speichern-Frage und
+                    ' Abbruch. Den Fehlzustand deshalb unmittelbar zeigen.
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
+                                                   LocalizationService.T("Die Datei konnte nicht gespeichert werden. Details stehen in der Statuszeile bzw. im Diagnoseprotokoll."))
                     Return False
                 End If
             Catch ex As Exception
@@ -17277,8 +17324,14 @@ Namespace ViewModels
         End Function
 
         Private Function TrySaveSidecar() As Boolean
-            If Not CanSaveSidecar Then Return False
+            If Not CanSaveSidecar Then
+                DiagnosticLogService.LogAlways("Editor.Save",
+                    $"sidecarRejected canSaveSidecar=false fpxOpen={Not String.IsNullOrEmpty(_currentFpxPath)} annotations={_annotations.Count} bakedUnrecorded={_workingImage.HasUnrecordedBakedContent} retouchActive={_retouchStrokeActive} pendingCommits={_pendingWorkingCommits}")
+                Return False
+            End If
             If Not RawSidecarService.TryWrite(RenderSourcePath, GetCurrentAdjustments()) Then
+                DiagnosticLogService.LogAlways("Editor.Save",
+                    $"sidecarRejected writeFailed source={IO.Path.GetFileName(RenderSourcePath)}")
                 StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")
                 Return False
             End If
@@ -17696,6 +17749,19 @@ Namespace ViewModels
             ' er meldet sich also bei jeder Aenderung mit, nicht nur dort, wo _hasChanges selbst
             ' ausdruecklich gemeldet wird.
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+        End Sub
+
+        ''' <summary>Markiert den gerade erfolgreich geschriebenen Dokumentstand als gespeichert.
+        '''
+        ''' Ein direkter Zugriff auf <c>_hasChanges</c> ist hier nicht ausreichend: insbesondere
+        ''' Objektverzerrungen planen beim Ziehen noch einen Vollrender. Ohne eine
+        ''' PropertyChanged-Meldung blieb die Oberfläche dann beim alten True-Wert und behandelte
+        ''' das bereits gespeicherte Bild weiter als ungespeichert.</summary>
+        Private Sub MarkDocumentSaved()
+            _hasChanges = False
+            DiagnosticLogService.LogAlways("Editor.Dirty",
+                $"set=false source=MarkDocumentSaved tool={_currentTool} selected={_selectedAnnotationIndex} objectWarp={HasObjectWarp} previewPending={_previewPending}")
+            RaiseSaveAvailabilityChanged()
         End Sub
 
         ''' Wird beim Verlassen eines Werkzeugs mit "Anwenden"-Bestätigung aufgerufen. Noch nicht

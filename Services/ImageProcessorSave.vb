@@ -526,6 +526,11 @@ Namespace Services
                     Return True
                 End Using
             Catch ex As Exception
+                ' Ein False ohne jede Spur lässt den Editor beim Verlassen immer wieder nach
+                ' dem Speichern fragen, obwohl der eigentliche Fehler (besonders gut sichtbar
+                ' bei einer Objektverzerrung) längst passiert ist. Der aufrufende Editor kann
+                ' den Vorgang dann sauber abbrechen; die Diagnose enthält die Ursache.
+                DiagnosticLogService.LogException("ImageProcessor.Save", ex)
                 Return False
             End Try
         End Function
