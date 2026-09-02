@@ -1390,6 +1390,17 @@ Namespace Views
                     ' STUFE 3: asynchron gelandeter Detail-Ausschnitt - Overlay (neu) positionieren.
                     ' Terminiert: der Folge-Durchlauf trifft einen passenden Cache und loest nichts aus.
                     UpdateSliderLayout()
+                Case NameOf(EditorViewModel.ToolPreviewImage)
+                    ' Die Gitter-/Verformen-Vorschau wird waehrend eines Zeigerzugs als neue
+                    ' Bitmap geliefert. Das Binding allein kann dabei zwar die Quelle tauschen,
+                    ' aber nicht verlaesslich den Canvas-Abschnitt und die Sichtbarkeit des Bildes
+                    ' darunter neu auswerten. Ohne einen Layout-Durchlauf blieb die Live-Ansicht
+                    ' je nach vorherigem Bildstand unsichtbar.
+                    ' HasPreview steht NICHT mit hier drin - dafuer gibt es weiter unten schon einen
+                    ' Zweig, und ein zweiter Fall mit demselben Namen im selben Select Case waere ab
+                    ' dann tot: VB nimmt den ersten Treffer.
+                    UpdateSliderLayout()
+                    Me.FindControl(Of Image)("ToolPreviewImage")?.InvalidateVisual()
                 Case NameOf(EditorViewModel.CurrentTool)
                     If TryCast(sender, EditorViewModel)?.CurrentTool <> EditorTool.Transform Then _fitAfterNextDisplayImage = False
                     UpdateCropOverlayVisibility()
@@ -1455,6 +1466,8 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationFontFamily),
                      NameOf(EditorViewModel.AnnotationOpacity),
                      NameOf(EditorViewModel.AnnotationRotation),
+                     NameOf(EditorViewModel.AnnotationDisplayFlipHorizontal),
+                     NameOf(EditorViewModel.AnnotationDisplayFlipVertical),
                      NameOf(EditorViewModel.AnnotationStrokeWidth),
                      NameOf(EditorViewModel.AnnotationFillKind),
                      NameOf(EditorViewModel.AnnotationAnchor),
@@ -5183,6 +5196,49 @@ Namespace Views
                                       End Sub, DispatcherPriority.Background)
         End Sub
 
+        ''' <summary>Die Lage des Auswahlrahmens: Drehung UND Spiegelung, so wie der Renderer das
+        ''' Objekt zeichnet.
+        '''
+        ''' DIE SPIEGELUNG GEHOERT MIT HINEIN. Der Renderer dreht das Objekt erst und spiegelt es
+        ''' danach um die eigene Mitte (ImageProcessorObjects), und gespiegelt wird um die EIGENE
+        ''' Spiegelung des Objekts zusammen mit der des Grundbilds - eine Bildspiegelung klappt die
+        ''' Objekte mit um (TransformAnnotationForGeometry). Der Rahmen trug bisher nur die Drehung:
+        ''' bei gespiegeltem Bild sass sein Dreh-Anfasser auf der Seite, die der Bildinhalt gerade
+        ''' verlassen hatte.
+        '''
+        ''' SKALIEREN VOR DREHEN, in genau dieser Reihenfolge: Avalonia wendet die Glieder einer
+        ''' TransformGroup der Reihe nach an, und die beiden sind nicht vertauschbar - andersherum
+        ''' bekaeme ein gedrehtes und gespiegeltes Objekt den Rahmen mit umgekehrtem Drehsinn.
+        '''
+        ''' Eine MEHRFACHAUSWAHL bleibt achsenparallel und ungespiegelt: ihre Mitglieder koennen
+        ''' verschieden gedreht und gespiegelt sein, die gemeinsame Box hat davon nichts.</summary>
+        Private Shared Function BuildSelectionFrameTransform(vm As EditorViewModel, rotationDegrees As Double) As Transform
+            Dim flip = SelectionFrameFlip(vm)
+            If Not flip.Horizontal AndAlso Not flip.Vertical Then Return New RotateTransform(rotationDegrees)
+            Dim group As New TransformGroup()
+            group.Children.Add(New ScaleTransform(If(flip.Horizontal, -1.0, 1.0), If(flip.Vertical, -1.0, 1.0)))
+            group.Children.Add(New RotateTransform(rotationDegrees))
+            Return group
+        End Function
+
+        ''' <summary>Die Umkehrung von <see cref="BuildSelectionFrameTransform"/> - fuer alles, was
+        ''' IM Rahmen liegt und trotzdem aufrecht und seitenrichtig bleiben muss.</summary>
+        Private Shared Function BuildSelectionFrameCounterTransform(vm As EditorViewModel, rotationDegrees As Double) As Transform
+            Dim flip = SelectionFrameFlip(vm)
+            If Not flip.Horizontal AndAlso Not flip.Vertical Then Return New RotateTransform(-rotationDegrees)
+            ' Umgekehrte Reihenfolge und umgekehrte Vorzeichen: erst die Drehung heraus, dann die
+            ' Spiegelung.
+            Dim group As New TransformGroup()
+            group.Children.Add(New RotateTransform(-rotationDegrees))
+            group.Children.Add(New ScaleTransform(If(flip.Horizontal, -1.0, 1.0), If(flip.Vertical, -1.0, 1.0)))
+            Return group
+        End Function
+
+        Private Shared Function SelectionFrameFlip(vm As EditorViewModel) As (Horizontal As Boolean, Vertical As Boolean)
+            If vm Is Nothing OrElse vm.HasMultiAnnotationSelection Then Return (False, False)
+            Return (vm.AnnotationDisplayFlipHorizontal, vm.AnnotationDisplayFlipVertical)
+        End Function
+
         Private Sub PositionTextOverlayFromViewModel(ix As Double, iy As Double, iw As Double, ih As Double, scale As Double)
             Dim overlay = Me.FindControl(Of Border)("TextOverlay")
             Dim editor = Me.FindControl(Of TextBox)("TextOverlayEditor")
@@ -5220,9 +5276,7 @@ Namespace Views
             overlay.Width = width
             overlay.Height = height
             overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-            ' Die gemeinsame Box hat keine eigene Drehung - die Mitglieder koennen verschieden gedreht
-            ' sein. Sie bleibt deshalb achsenparallel.
-            overlay.RenderTransform = New RotateTransform(If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation))
+            overlay.RenderTransform = BuildSelectionFrameTransform(vm, If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation))
             overlay.IsVisible = True
             ' Der Selektionsrahmen folgt bewusst der Objekt-Konturfarbe (
             ' "so wie frueher darstellen", nicht Akzentfarbe). Genau deshalb braucht er einen
@@ -5677,13 +5731,15 @@ Namespace Views
                     ' sie wird beim Loslassen aus den gedrehten Mitgliedern neu eingepasst).
                     _textRotateBoxAngle = newRotation - _textRotateStartRotation
                     overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-                    overlay.RenderTransform = New RotateTransform(_textRotateBoxAngle)
+                    overlay.RenderTransform = BuildSelectionFrameTransform(vm, _textRotateBoxAngle)
                     e.Handled = True
                     Return
                 End If
                 vm.AnnotationRotation = newRotation
                 overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-                overlay.RenderTransform = New RotateTransform(newRotation)
+                ' Dieselbe Lage wie im Layoutdurchlauf - sonst verloere der Rahmen waehrend des
+                ' Drehens seine Spiegelung und bekaeme sie beim Loslassen wieder.
+                overlay.RenderTransform = BuildSelectionFrameTransform(vm, newRotation)
                 e.Handled = True
                 Return
             End If
@@ -6026,7 +6082,9 @@ Namespace Views
             If badgeText Is Nothing OrElse vm Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
             If badge IsNot Nothing Then
                 badge.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-                badge.RenderTransform = New RotateTransform(-vm.AnnotationRotation)
+                ' Die Anzeige liegt IM Rahmen und traegt dessen Lage mit. Sie muss sie deshalb genau
+                ' zuruecknehmen, sonst steht die Zahl bei einem gespiegelten Objekt seitenverkehrt.
+                badge.RenderTransform = BuildSelectionFrameCounterTransform(vm, vm.AnnotationRotation)
             End If
             Dim visualBounds = RotatedBoundsSize(rect.Width, rect.Height, vm.AnnotationRotation)
             Dim visualRect = New Avalonia.Rect(rect.Center.X - visualBounds.Width / 2.0,

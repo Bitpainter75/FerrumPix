@@ -2051,6 +2051,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationFlipHorizontal))
             Me.RaisePropertyChanged(NameOf(AnnotationFlipVertical))
+            Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipHorizontal))
+            Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipVertical))
             Me.RaisePropertyChanged(NameOf(AnnotationShadowEnabled))
             Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
             Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetY))
@@ -8089,10 +8091,12 @@ Namespace ViewModels
                     ' Mehrfachauswahl: an der Mittelachse der gemeinsamen Box spiegeln (Anordnung UND
                     ' Objekte), statt nur das Ankerobjekt umzuklappen.
                     Me.RaiseAndSetIfChanged(_annotationFlipH, value)
+                    Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipHorizontal))
                     FlipSelectionBox(horizontal:=True)
                     Return
                 End If
                 Me.RaiseAndSetIfChanged(_annotationFlipH, value)
+                Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipHorizontal))
                 SyncSelectedAnnotation()
                 RaiseEnvelopeChanged()
             End Set
@@ -11174,6 +11178,21 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Effektive Spiegelung des Auswahlrahmens: eigene Spiegelung des Objekts und
+        ''' die Spiegelung des Grundbilds. Der Rahmen muss beides zeichnen, damit seine Griffe bei
+        ''' einem bereits gedrehten Objekt auf derselben Seite wie der Bildinhalt liegen.</summary>
+        Public ReadOnly Property AnnotationDisplayFlipHorizontal As Boolean
+            Get
+                Return _annotationFlipH Xor AppliedFlipHorizontal
+            End Get
+        End Property
+
+        Public ReadOnly Property AnnotationDisplayFlipVertical As Boolean
+            Get
+                Return _annotationFlipV Xor AppliedFlipVertical
+            End Get
+        End Property
+
         ''' <summary>Drehung und Spiegelung aller bestaetigten Schritte zu EINER Lage
         ''' zusammengesetzt - nicht aufsummiert.
         '''
@@ -11240,32 +11259,51 @@ Namespace ViewModels
         Private Sub RaiseDisplayImageGeometryProperties()
             Me.RaisePropertyChanged(NameOf(DisplayImageWidthPixels))
             Me.RaisePropertyChanged(NameOf(DisplayImageHeightPixels))
+            Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipHorizontal))
+            Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipVertical))
+            ' DIE PUFFER DES MARKIERTEN OBJEKTS SIND ANZEIGEWERTE und veralten genau hier. Lage,
+            ' Groesse und Drehwinkel stehen im Editor in Anzeige-Prozent bzw. Anzeige-Grad; das
+            ' Objekt selbst hat sich nicht geruehrt, aber die Anzeige unter ihm schon. Ohne das
+            ' Nachladen stand der Auswahlrahmen nach einem Spiegeln oder Drehen des Bildes weiter
+            ' auf dem Winkel von vorher - gemessen: der Rahmen auf 24 Grad, waehrend der Renderer
+            ' das Objekt auf -24 Grad zeichnete. Neu gelesen wird aus dem OBJEKT, es wird also
+            ' nichts zurueckgeschrieben.
+            If Not _isLoadingAnnotation AndAlso HasSelectedAnnotation Then LoadSelectedAnnotationIntoEditor()
             RaiseAnnotationPositionControlProperties()
             RaiseEnvelopeChanged()
         End Sub
 
         ''' <summary>Der Drehwinkel, unter dem ein gespeichertes Objekt auf dem Bildschirm steht.
-        ''' Vierteldrehung und Spiegelungen permutieren ihn, das AUSRICHTEN kommt danach obendrauf:
-        ''' ein Objekt dreht mit dem Bildinhalt mit (siehe ImageProcessor.StraightenAnnotation).</summary>
+        '''
+        ''' DAS AUSRICHTEN GEHOERT IN DIE DREHUNG, NICHT DAHINTER. Es ist Teil derselben Lage wie
+        ''' die Vierteldrehung: <c>AppliedTransformState</c> setzt beide zu EINER Drehung zusammen,
+        ''' und eine einzelne Spiegelung kehrt sie gemeinsam um. Wer die Begradigung erst hinter der
+        ''' Umkehrung addiert, laesst ihr Vorzeichen stehen, waehrend das der Objektdrehung kippt.
+        '''
+        ''' Gemessen an einem echten Rezept mit den Schritten "begradigen um 29,7 Grad",
+        ''' "beschneiden", "waagerecht spiegeln": der Renderer zeichnet das Objekt auf
+        ''' -(eigene + 29,7), der Editor las -(eigene) + 29,7 - der Auswahlrahmen lag um 59,4 Grad
+        ''' neben seinem Objekt, und zwar sichtbar erst, wenn Begradigung UND Spiegelung
+        ''' zusammenkamen.</summary>
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0.0
             Dim state = AppliedTransformState()
             Return NormalizeAnnotationRotation(
-                ImageGeometryMapper.SourceObjectRotationToDisplay(annotation.RotationDegrees,
+                ImageGeometryMapper.SourceObjectRotationToDisplay(annotation.RotationDegrees + state.Straighten,
                                                                   state.Rotation,
                                                                   state.FlipHorizontal,
-                                                                  state.FlipVertical) + state.Straighten)
+                                                                  state.FlipVertical))
         End Function
 
-        ''' <summary>Gegenstueck zu <see cref="StoredAnnotationRotationToDisplay"/>: erst das
-        ''' Ausrichten herausrechnen, dann die Permutation zuruecknehmen - in dieser Reihenfolge,
-        ''' sonst kommt der Winkel bei gespiegeltem Bild mit falschem Vorzeichen an.</summary>
+        ''' <summary>Gegenstueck zu <see cref="StoredAnnotationRotationToDisplay"/>: erst die
+        ''' Permutation zuruecknehmen, DANN das Ausrichten abziehen - genau die Gegenrichtung.</summary>
         Private Function DisplayAnnotationRotationToStored(kind As String, degrees As Double) As Double
             Dim state = AppliedTransformState()
-            Return ImageGeometryMapper.DisplayObjectRotationToSource(NormalizeAnnotationRotation(degrees - state.Straighten),
-                                                                     state.Rotation,
-                                                                     state.FlipHorizontal,
-                                                                     state.FlipVertical)
+            Return NormalizeAnnotationRotation(
+                ImageGeometryMapper.DisplayObjectRotationToSource(NormalizeAnnotationRotation(degrees),
+                                                                  state.Rotation,
+                                                                  state.FlipHorizontal,
+                                                                  state.FlipVertical) - state.Straighten)
         End Function
 
         Private Function DisplayAnnotationFlipHorizontalToStored(displayFlip As Boolean) As Boolean

@@ -34,14 +34,28 @@ Public Class App
         End Get
     End Property
 
+    ''' <summary>Den SQLite-Anbieter scharf schalten. NICHT einbetten lassen: sonst nennt der Typ
+    ''' wieder die aufrufende Methode, und eine fehlende Assembly schlägt dort zu, wo kein Try mehr
+    ''' um sie herum ist.</summary>
+    <Runtime.CompilerServices.MethodImpl(Runtime.CompilerServices.MethodImplOptions.NoInlining)>
+    Private Shared Sub InitializeSqliteProvider()
+        SQLitePCL.Batteries_V2.Init()
+    End Sub
+
     Public Overrides Sub Initialize()
         AvaloniaXamlLoader.Load(Me)
 
         ' Microsoft.Data.Sqlite bringt den SQLitePCL-Provider mit, aktiviert ihn aber nicht
         ' automatisch in jeder Veröffentlichungsart. Ohne diese Initialisierung schlugen
         ' Katalog, Ortsnachträge und Hintergrundindex erst beim ersten Datenbankzugriff fehl.
+        '
+        ' DER AUFRUF STEHT IN EINER EIGENEN METHODE, und das ist der ganze Zweck: eine fehlende
+        ' Assembly meldet sich nicht beim Aufruf, sondern beim Übersetzen der Methode, die ihren
+        ' Typ nennt. Stand die Zeile direkt hier, warf schon der Eintritt in Initialize, und das
+        ' Try darum kam nie zum Zug - die Anwendung ließ sich in einer Umgebung ohne den Provider
+        ' gar nicht mehr hochziehen.
         Try
-            SQLitePCL.Batteries_V2.Init()
+            InitializeSqliteProvider()
         Catch ex As Exception
             DiagnosticLogService.LogException("App.SQLiteInit", ex)
         End Try

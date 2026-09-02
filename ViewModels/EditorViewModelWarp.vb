@@ -437,15 +437,14 @@ Namespace ViewModels
 
         ' ── Gitterverzerrung ────────────────────────────────────────────────────
         '
-        ' Ohne Beschnitt lebt das Raster im Quellraum. Nach einem Beschnitt ist sein Arbeitsraum
-        ' dagegen der SICHTBARE Ausschnitt: ein 4x4-Raster muss dann das sichtbare Bild fuellen,
-        ' statt nur seine (zufaellig noch sichtbaren) Quellknoten in der Mitte zu zeigen. Beim
-        ' Anwenden wird dieser lokale Rasterraum wieder eindeutig in den unbeschnittenen Quellraum
-        ' ueberfuehrt. So bleiben Bild, Overlay-Objekte und gespeichertes Rezept auf derselben
-        ' Geometrie, ohne dass die Bedienung nach einem Crop unbrauchbar wird.
+        ' Das Raster lebt im ANZEIGERAUM des Bildes - dort, wo man es zieht. Genau dort wird es auch
+        ' ausgewertet: eine bestaetigte Verzerrung ist ein eigener Schritt der Geometriekette und
+        ' laeuft HINTER Beschnitt, Drehung, Groesse und Leinwand. Ein 4x4-Raster fuellt damit immer
+        ' das sichtbare Bild, jeder Knoten hat einen Anzeigeort, und ein Zug wirkt an der Achse, an
+        ' der er gezogen wurde. Am markierten OBJEKT ist der Bezugsraum dessen eigenes Rechteck.
         '
         ' Das RASTER selbst ist Sitzungszustand: es sagt nur, wohin gezogen wurde. Beim Anwenden
-        ' wird daraus ein Knotenfeld im REZEPT (ComposeImageWarp, siehe unten) - nichts wird in die
+        ' wird daraus ein Knotenfeld im REZEPT (BuildWarpMesh, siehe unten) - nichts wird in die
         ' Pixel gebacken, und deshalb laesst sich eine zweite Verzerrung auf eine erste setzen.
 
         Private _warpColumns As Integer = 4
@@ -497,9 +496,9 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Das Raster fuer die Anzeige: [spalten, zeilen, x0, y0, ...] in ANZEIGE-Prozent.
-        ''' Gespeichert ist es im Quellraum; hier wird Punkt fuer Punkt umgerechnet. Punkte, die im
-        ''' aktuellen Ausschnitt gar nicht vorkommen (Beschnitt, leere Begradigungsecke), kommen als
-        ''' NaN heraus - die Anzeige laesst sie dann aus.</summary>
+        ''' Am BILD ist das die gespeicherte Lage selbst; am markierten OBJEKT wird jeder Punkt auf
+        ''' dessen Rechteck umgerechnet. Punkte ohne Anzeigeort kommen als NaN heraus - die Anzeige
+        ''' laesst sie dann aus.</summary>
         Public ReadOnly Property WarpGridValues As Double()
             Get
                 PrepareGrid()
@@ -642,9 +641,9 @@ Namespace ViewModels
                 End Sub, Avalonia.Threading.DispatcherPriority.Background)
         End Sub
 
-        ''' <summary>Die Grundlage der Vorschau anlegen: das Anzeigebild ohne Objekte, dazu die Lage
-        ''' des UNVERZERRTEN Rasters im Anzeigeraum. Letztere ist noetig, weil das Raster im
-        ''' Quellraum gleichmaessig ist, im Anzeigeraum nach Beschnitt oder Drehung aber nicht.</summary>
+        ''' <summary>Die Grundlage der Vorschau anlegen: das Anzeigebild, dazu die Lage des
+        ''' UNVERZERRTEN Rasters im Anzeigeraum. Am Bild ist das ein gleichmaessiges Raster; am
+        ''' markierten Objekt liegt es auf dessen Rechteck und ist es nicht.</summary>
         Private Sub PrepareGridPreview()
             PrepareWarpPreview(_warpColumns, _warpRows, AddressOf GridPointToDisplay)
         End Sub
@@ -766,10 +765,10 @@ Namespace ViewModels
         ' Stuetzpunktraster: dort muesste man einer Kante ein Dutzend Punkte einzeln nachfuehren.
         '
         ' Jede Linie liegt zweimal vor: als QUELLE dort, wo sie im Bild liegt, und als ZIEL dort,
-        ' wohin sie gezogen wurde. Beide im QUELLRAUM in Prozent, wie das Raster und aus demselben
-        ' Grund: sonst wanderte die Verzerrung, sobald spaeter zugeschnitten oder gedreht wird.
+        ' wohin sie gezogen wurde. Beide im VERZERRRAUM in Prozent, wie das Raster und aus demselben
+        ' Grund: dort wird die Verzerrung ausgewertet, also gehoert sie auch dorthin.
 
-        ''' <summary>Eine Linie der Verzerrung. Alle Werte in Quell-Prozent.</summary>
+        ''' <summary>Eine Linie der Verzerrung. Alle Werte in Verzerrraum-Prozent.</summary>
         Public Class WarpLine
             Public Property SourceAx As Double
             Public Property SourceAy As Double
@@ -1237,8 +1236,8 @@ Namespace ViewModels
             Return (CDbl(p.X), CDbl(p.Y))
         End Function
 
-        ''' <summary>Die Abbildung des GITTERWERKZEUGS: das Raster liegt im Quellraum in Prozent, ein
-        ''' Punkt wandert also zwischen seinen vier Stuetzpunkten.</summary>
+        ''' <summary>Die Abbildung des GITTERWERKZEUGS: das Raster liegt im Verzerrraum in Prozent,
+        ''' ein Punkt wandert also zwischen seinen vier Stuetzpunkten.</summary>
         Private Function GridMapping() As Func(Of Double, Double, (X As Double, Y As Double))
             PrepareGrid()
             Return NodeMapping(_warpColumns, _warpRows,
@@ -1358,9 +1357,8 @@ Namespace ViewModels
         Private Sub RefreshLinePreview()
             If _linienVorschauBasis Is Nothing Then Return
             Dim bw = _linienVorschauBasis.Width, bh = _linienVorschauBasis.Height
-            ' Die Vorschau rechnet im ANZEIGEraum: die Linien werden dafuer ueber ihre Anzeigelage
-            ' genommen, nicht ueber die Quelllage. Sonst saesse die Verzerrung bei beschnittenem
-            ' oder gedrehtem Bild woanders als der Griff, den man gerade zieht.
+            ' Die Vorschau rechnet im ANZEIGEraum, die Linien werden dafuer ueber ihre Anzeigelage
+            ' genommen. Am Bild ist das ihre Lage selbst, am markierten Objekt dessen Rechteck.
             Dim values = LineValues
             If values Is Nothing OrElse values.Length < 9 Then Return
             Dim count = CInt(values(0))
@@ -1426,8 +1424,9 @@ Namespace ViewModels
         ' Verzerrung, beim Bild als Knotenfeld im Rezept. Neu ist allein der Bedienzustand.
         '
         ' Die zwoelf Punkte liegen im VERZERRRAUM in Prozent, wie Raster und Linien und aus
-        ' demselben Grund: sonst wanderte die Verformung, sobald spaeter zugeschnitten oder gedreht
-        ' wird. Reihenfolge: 0 bis 3 die Ecken links oben, rechts oben, rechts unten, links unten;
+        ' demselben Grund: dort wird die Verformung ausgewertet. Ihre neutrale Lage sitzt deshalb
+        ' immer auf den vollen 0 bis 100 - am Bild ist das der sichtbare Ausschnitt selbst.
+        ' Reihenfolge: 0 bis 3 die Ecken links oben, rechts oben, rechts unten, links unten;
         ' danach je Kante zwei Griffe in Laufrichtung der Kante (oben, rechts, unten, links).
 
         ''' <summary>Feinheit des Auswertungsrasters. Achtundvierzig Felder je Richtung halten die
@@ -1446,109 +1445,20 @@ Namespace ViewModels
         Private _envelopeDragStartX As Double
         Private _envelopeDragStartY As Double
 
-        ''' <summary>Das Rechteck im QUELLRAUM, auf dem die aktuelle Huellkurve neutral aufgesetzt
-        ''' wurde. Ohne Zuschnitt ist das der ganze Quellraum; nach einem Zuschnitt der SICHTBARE
-        ''' Bereich - sonst laegen alle zwoelf Anfasser auf weggeschnittenen Punkten.</summary>
-        Private _envelopeRect As (X As Double, Y As Double, Width As Double, Height As Double) = (0.0, 0.0, 100.0, 100.0)
-        ''' Der beiseitegelegte Bildstand braucht sein Rechteck mit - sonst kaeme er nach einem
-        ''' Abstecher zum Objekt mit dem Bezug des Objekts zurueck.
-        Private _envelopeImageRect As (X As Double, Y As Double, Width As Double, Height As Double) = (0.0, 0.0, 100.0, 100.0)
-
-        ''' <summary>Der sichtbare Bildbereich als achsenparalleles Rechteck in QUELLRAUM-Prozent.
+        ''' <summary>Das Rechteck, auf dem die Huellkurve aufsitzt - immer die vollen 0 bis 100.
         '''
-        ''' NOETIG, WEIL DIE ZWOELF PUNKTE AUF DEM RAND SITZEN. Sie lagen fest auf 0 und 100, also auf
-        ''' dem Rand des UNBESCHNITTENEN Bildes. Nach einem Zuschnitt hat kein einziger davon einen
-        ''' Anzeigeort - das Overlay zeigte dann nur noch sein inneres Hilfsnetz, und greifbar war
-        ''' nichts. Beim Stuetzpunktraster fiel dasselbe nie auf, weil dessen Punkte ueber die FLAECHE
-        ''' verteilt sind und die inneren sichtbar bleiben.
-        '''
-        ''' Die Werte bleiben Quellraum-Prozent, und die Regel "kein Anzeigeort heisst ueberspringen,
-        ''' nicht klemmen" bleibt unangetastet: geaendert wird allein, WO die neutrale Lage liegt.
+        ''' Am OBJEKT ist es dessen eigenes Rechteck. Am BILD ist es der Anzeigeraum, und der IST
+        ''' der sichtbare Bereich: die Verzerrung laeuft als eigener Rezeptschritt hinter Beschnitt,
+        ''' Drehung, Groesse und Leinwand. Solange sie noch im Quellraum gefuehrt wurde, brauchte es
+        ''' hier ein aus der Anzeige zurueckgerechnetes Rechteck, weil sonst nach einem Zuschnitt
+        ''' kein einziger der zwoelf Anfasser einen Anzeigeort hatte.
         '''
         ''' Achsenparallel, und das ist kein Schoenheitsfehler, sondern Bedingung: nur dann ist die
         ''' neutrale Huellkurve die IDENTITAET, auch ausserhalb des Rechtecks (die Coons-Flaeche ist
         ''' dort linear und setzt sich glatt fort). Ein gedrehtes Viereck als Bezug wuerde das Bild
-        ''' schon beim blossen Oeffnen des Werkzeugs verziehen.
-        '''
-        ''' Bei einer BEGRADIGUNG ist der sichtbare Bereich gedreht; das umschliessende Rechteck ragt
-        ''' dann mit seinen Ecken hinaus. Es wird deshalb zur Mitte hin geschrumpft, bis alle vier
-        ''' Ecken einen Anzeigeort haben.</summary>
-        Private Function VisibleSourceRect() As (X As Double, Y As Double, Width As Double, Height As Double)
-            Dim voll = (X:=0.0, Y:=0.0, Width:=100.0, Height:=100.0)
-            ' Knapp innerhalb der Anzeigekanten fragen: genau auf 100 liegt der Punkt auf der ersten
-            ' Stelle AUSSERHALB des halboffenen Bereichs, und die Kette weist ihn ab.
-            Const rand As Double = 0.05
-            Dim corners = New (X As Double, Y As Double)() {
-                (rand, rand), (100.0 - rand, rand), (100.0 - rand, 100.0 - rand), (rand, 100.0 - rand)}
-            Dim minX = Double.MaxValue, maxX = Double.MinValue
-            Dim minY = Double.MaxValue, maxY = Double.MinValue
-            For Each corner In corners
-                Dim source = DisplayPercentToSourcePercent(corner.X, corner.Y)
-                If Not source.HasValue Then Return voll
-                minX = Math.Min(minX, source.Value.X)
-                maxX = Math.Max(maxX, source.Value.X)
-                minY = Math.Min(minY, source.Value.Y)
-                maxY = Math.Max(maxY, source.Value.Y)
-            Next
-            If maxX - minX < 1.0 OrElse maxY - minY < 1.0 Then Return voll
-
-            ' Den Sicherheitsrand wieder herausrechnen: gefragt wurde bei 0,05 statt 0 Prozent, das
-            ' gemessene Rechteck ist also um genau diesen Anteil zu klein. Ohne die Korrektur laege
-            ' die neutrale Lage ohne jeden Zuschnitt bei 0,05 statt 0 - und die neutrale Verformung
-            ' waere nicht mehr die Identitaet.
-            Dim aufblasen = 100.0 / (100.0 - 2.0 * rand)
-            Dim mx = (minX + maxX) / 2.0, my = (minY + maxY) / 2.0
-            minX = Math.Max(0.0, mx - (mx - minX) * aufblasen)
-            maxX = Math.Min(100.0, mx + (maxX - mx) * aufblasen)
-            minY = Math.Max(0.0, my - (my - minY) * aufblasen)
-            maxY = Math.Min(100.0, my + (maxY - my) * aufblasen)
-
-            ' Bei Zuschnitt, Drehung um Vielfache von 90 Grad und Spiegelung ist dieses Rechteck schon
-            ' der sichtbare Bereich selbst. Bei einer Begradigung nicht - dann schrumpfen, bis die
-            ' Ecken tragen. Zwoelf Halbierungsschritte reichen auf ein Viertelprozent genau.
-            Dim mitteX = (minX + maxX) / 2.0, mitteY = (minY + maxY) / 2.0
-            Dim halfW = (maxX - minX) / 2.0, halfH = (maxY - minY) / 2.0
-            Dim untenGut = 0.0, obenOffen = 1.0
-            If EnvelopeRectCornersVisible(mitteX, mitteY, halfW, halfH, 1.0) Then
-                untenGut = 1.0
-            Else
-                For schritt = 1 To 12
-                    Dim mitte = (untenGut + obenOffen) / 2.0
-                    If EnvelopeRectCornersVisible(mitteX, mitteY, halfW, halfH, mitte) Then
-                        untenGut = mitte
-                    Else
-                        obenOffen = mitte
-                    End If
-                Next
-            End If
-            ' Kein tragfaehiges Rechteck gefunden: dann lieber der ganze Quellraum wie bisher, statt
-            ' eines Bezugs, den niemand nachvollziehen kann.
-            If untenGut < 0.05 Then Return voll
-            Return (mitteX - halfW * untenGut, mitteY - halfH * untenGut,
-                    halfW * 2.0 * untenGut, halfH * 2.0 * untenGut)
-        End Function
-
-        ''' <summary>Haben alle vier Ecken des um <paramref name="factor"/> geschrumpften Rechtecks
-        ''' einen Anzeigeort?</summary>
-        Private Function EnvelopeRectCornersVisible(centerX As Double, centerY As Double,
-                                                    halfWidth As Double, halfHeight As Double,
-                                                    factor As Double) As Boolean
-            Dim hw = halfWidth * factor, hh = halfHeight * factor
-            If hw <= 0.001 OrElse hh <= 0.001 Then Return False
-            For Each corner In New (X As Double, Y As Double)() {
-                (centerX - hw, centerY - hh), (centerX + hw, centerY - hh),
-                (centerX + hw, centerY + hh), (centerX - hw, centerY + hh)}
-                If Not SourcePercentToDisplayPercent(corner.X, corner.Y).HasValue Then Return False
-            Next
-            Return True
-        End Function
-
-        ''' <summary>Das Rechteck, auf dem die Huellkurve GERADE aufgesetzt ist. Am OBJEKT ist der
-        ''' Bezug immer dessen eigenes Rechteck, also die vollen 0 bis 100 - ein Zuschnitt des Bildes
-        ''' geht es nichts an.</summary>
-        Private Function CurrentEnvelopeRect() As (X As Double, Y As Double, Width As Double, Height As Double)
-            If WarpsTheObject Then Return (0.0, 0.0, 100.0, 100.0)
-            Return _envelopeRect
+        ''' schon beim blossen Oeffnen des Werkzeugs verziehen.</summary>
+        Private Shared Function CurrentEnvelopeRect() As (X As Double, Y As Double, Width As Double, Height As Double)
+            Return (0.0, 0.0, 100.0, 100.0)
         End Function
 
         ''' <summary>Das unverformte Viereck: die vier Ecken auf dem Rechteck, die Griffe auf den
@@ -1572,22 +1482,11 @@ Namespace ViewModels
             Return p
         End Function
 
+        ''' <summary>Sorgt dafuer, dass zwoelf Punkte dastehen. Ein Nachfuehren des Bezugsrechtecks
+        ''' braucht es nicht mehr: es sind immer die vollen 0 bis 100 des Verzerrraums, und ein
+        ''' Zuschnitt des Bildes verschiebt den nicht (siehe <see cref="CurrentEnvelopeRect"/>).</summary>
         Private Sub PrepareEnvelope()
-            If _envelope Is Nothing OrElse _envelope.Length <> 24 Then
-                ResetEnvelopePoints()
-                Return
-            End If
-            ' Der Zuschnitt kann sich geaendert haben, seit die Huellkurve aufgesetzt wurde. Solange
-            ' sie noch NEUTRAL ist, gehoert sie auf den neuen sichtbaren Bereich - sonst laege sie
-            ' wieder dort, wo man sie nicht sieht. Ist schon gezogen worden, bleibt sie stehen: die
-            ' Punkte sind Quellraum und meinen weiterhin dieselben Stellen im Bild.
-            If WarpsTheObject OrElse _envelopeDragIndex >= 0 Then Return
-            ' NICHT ueber HasEnvelopeChanges: die Eigenschaft ruft ihrerseits hierher, das waere eine
-            ' Schleife ohne Boden.
-            If EnvelopeDiffersFromNeutral() Then Return
-            Dim aktuell = VisibleSourceRect()
-            If EnvelopeRectsMatch(aktuell, _envelopeRect) Then Return
-            ResetEnvelopePoints()
+            If _envelope Is Nothing OrElse _envelope.Length <> 24 Then ResetEnvelopePoints()
         End Sub
 
         ''' <summary>Haelt einen Wert innerhalb des Bezugsrechtecks.</summary>
@@ -1596,14 +1495,7 @@ Namespace ViewModels
             Return Math.Max(start, Math.Min(start + length, value))
         End Function
 
-        Private Shared Function EnvelopeRectsMatch(a As (X As Double, Y As Double, Width As Double, Height As Double),
-                                                   b As (X As Double, Y As Double, Width As Double, Height As Double)) As Boolean
-            Return Math.Abs(a.X - b.X) < 0.01 AndAlso Math.Abs(a.Y - b.Y) < 0.01 AndAlso
-                   Math.Abs(a.Width - b.Width) < 0.01 AndAlso Math.Abs(a.Height - b.Height) < 0.01
-        End Function
-
         Private Sub ResetEnvelopePoints()
-            If Not WarpsTheObject Then _envelopeRect = VisibleSourceRect()
             _envelope = NeutralEnvelope(CurrentEnvelopeRect())
             _envelopeDragIndex = -1
         End Sub
@@ -1655,19 +1547,18 @@ Namespace ViewModels
             Dim n = (steps + 1) * (steps + 1)
             ReDim xs(n - 1)
             ReDim ys(n - 1)
-            ' Das Knotenraster deckt den GANZEN Quellraum ab, auch wenn die Huellkurve nur auf dem
-            ' sichtbaren Ausschnitt sitzt - der gemeinsame Renderweg erwartet genau das (siehe
-            ' ApplyNodeWarp: "Prozent des unbeschnittenen Bildes"). Fuer Knoten ausserhalb laufen u
-            ' und v ueber 0 bis 1 hinaus; die Coons-Flaeche setzt sich dort glatt fort, statt an der
-            ' Schnittkante abzubrechen. Bei neutraler Lage ist diese Fortsetzung exakt die
-            ' Identitaet - sonst verzoege schon das Oeffnen des Werkzeugs das Bild.
+            ' Das Knotenraster deckt den GANZEN Verzerrraum ab. Liegt die Huellkurve einmal nicht auf
+            ' dessen Rand, laufen u und v fuer die aeusseren Knoten ueber 0 bis 1 hinaus; die
+            ' Coons-Flaeche setzt sich dort glatt fort, statt an der Kante abzubrechen. Bei neutraler
+            ' Lage ist diese Fortsetzung exakt die Identitaet - sonst verzoege schon das Oeffnen des
+            ' Werkzeugs das Bild.
             For rowIdx = 0 To steps
-                Dim sourceY = rowIdx / CDbl(steps) * 100.0
-                Dim v = (sourceY - rect.Y) / rect.Height
+                Dim spaceY = rowIdx / CDbl(steps) * 100.0
+                Dim v = (spaceY - rect.Y) / rect.Height
                 For colIdx = 0 To steps
                     Dim i = rowIdx * (steps + 1) + colIdx
-                    Dim sourceX = colIdx / CDbl(steps) * 100.0
-                    Dim u = (sourceX - rect.X) / rect.Width
+                    Dim spaceX = colIdx / CDbl(steps) * 100.0
+                    Dim u = (spaceX - rect.X) / rect.Width
                     Dim z = EnvelopePoint(_envelope, u, v)
                     xs(i) = z.X
                     ys(i) = z.Y
@@ -1798,14 +1689,14 @@ Namespace ViewModels
                                       Optional detachHandles As Boolean = False)
             If _envelopeDragIndex < 0 Then Return
             Dim target = DisplayToWarpSpace(xPercent, yPercent)
-            ' Neben dem Bildinhalt gibt es keinen Quellpunkt - der Zug bleibt dann stehen, statt auf
-            ' einen geratenen Wert zu springen.
+            ' Ohne gueltigen Punkt im Verzerrraum bleibt der Zug stehen, statt auf einen geratenen
+            ' Wert zu springen.
             If Not target.HasValue Then Return
             PrepareEnvelope()
-            ' Beim BILD bleiben die Anfasser im Bild: ausserhalb gibt es keinen Quellpunkt, ein
-            ' herausgezogener Griff waere nicht mehr anzuzeigen und damit auch nicht mehr zu fassen
-            ' (SourcePercentToDisplayPercent weist solche Punkte ab). Beim OBJEKT ist der Bezug das
-            ' Objektrechteck, dort ist Hinauswandern erlaubt und gewollt - die Ebene waechst mit.
+            ' Beim BILD bleiben die Anfasser im Bild: ein herausgezogener Griff laege neben der
+            ' Bildflaeche und waere weder anzuzeigen noch je wieder zu fassen. Beim OBJEKT ist der
+            ' Bezug das Objektrechteck, dort ist Hinauswandern erlaubt und gewollt - die Ebene
+            ' waechst mit.
             Dim nx = CDbl(target.Value.X), ny = CDbl(target.Value.Y)
             ' ACHSENTREU gegen den Beginn des Zuges: die kleinere der beiden Bewegungen faellt weg.
             If axisLock Then
@@ -1815,9 +1706,7 @@ Namespace ViewModels
                     nx = _envelopeDragStartX
                 End If
             End If
-            ' Geklemmt wird auf den SICHTBAREN Bereich, nicht mehr auf den ganzen Quellraum: nach
-            ' einem Zuschnitt liegt zwischen beiden der weggeschnittene Rand, und ein dorthin
-            ' gezogener Griff waere weder anzuzeigen noch je wieder zu fassen.
+            ' Geklemmt wird auf den sichtbaren Bereich - am Bild ist das der Verzerrraum selbst.
             Dim limit = Not WarpsTheObject
             Dim rect = CurrentEnvelopeRect()
             If limit Then
@@ -2042,11 +1931,20 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Der Raum, in dem Gitter und Linien gefuehrt werden, in ANZEIGE-Prozent
-        ''' ausgedrueckt: ohne markiertes Objekt der Quellraum des Bildes, mit markiertem Objekt das
-        ''' Rechteck DES OBJEKTS. So liegt das Raster ueber dem, was es verzerrt.</summary>
+        ''' <summary>Der Raum, in dem Gitter, Linien und Verformen gefuehrt werden, in
+        ''' ANZEIGE-Prozent ausgedrueckt: ohne markiertes Objekt IST es der Anzeigeraum, mit
+        ''' markiertem Objekt das Rechteck DES OBJEKTS. So liegt das Raster ueber dem, was es
+        ''' verzerrt.
+        '''
+        ''' AM BILD IST DAS SEIT DER GEORDNETEN GEOMETRIEKETTE DER ANZEIGERAUM SELBST, nicht mehr
+        ''' der Quellraum. Eine bestaetigte Verzerrung ist heute ein eigener Rezeptschritt und laeuft
+        ''' HINTER Beschnitt, Drehung, Groesse und Leinwand; sie wird also genau in dem Raum
+        ''' ausgewertet, in dem man sie zieht. Ein im Quellraum gefuehrtes Bedienraster passte dazu
+        ''' nicht mehr - nach einer Vierteldrehung wirkte ein Zug an der falschen Achse, nach einem
+        ''' Zuschnitt hatten Anfasser gar keinen Anzeigeort mehr (weder gezeichnet noch greifbar),
+        ''' und die Live-Vorschau stieg bei einem einzigen solchen Punkt ganz aus.</summary>
         Private Function WarpSpaceToDisplay(xPercent As Double, yPercent As Double) As SKPoint?
-            If Not WarpsTheObject Then Return SourcePercentToDisplayPercent(xPercent, yPercent)
+            If Not WarpsTheObject Then Return New SKPoint(CSng(xPercent), CSng(yPercent))
             Dim r = GetSelectedAnnotationDisplayRectPercent()
             If r.Width <= 0 OrElse r.Height <= 0 Then Return Nothing
             Dim point = ObjectWarpPointThroughGeometry(xPercent, yPercent)
@@ -2056,7 +1954,7 @@ Namespace ViewModels
 
         ''' <summary>Gegenrichtung zu <see cref="WarpSpaceToDisplay"/>.</summary>
         Private Function DisplayToWarpSpace(xPercent As Double, yPercent As Double) As SKPoint?
-            If Not WarpsTheObject Then Return DisplayPercentToSourcePercent(xPercent, yPercent)
+            If Not WarpsTheObject Then Return New SKPoint(CSng(xPercent), CSng(yPercent))
             Dim r = GetSelectedAnnotationDisplayRectPercent()
             If r.Width <= 0 OrElse r.Height <= 0 Then Return Nothing
             Dim point = DisplayPointThroughObjectWarpGeometry((xPercent - r.X) / r.Width * 100.0,
@@ -2064,72 +1962,35 @@ Namespace ViewModels
             Return New SKPoint(CSng(point.X), CSng(point.Y))
         End Function
 
-        ''' <summary>Der Beschnitt, auf dem ein neu bedientes Bildraster liegt. Die Werte des
-        ''' Rasters bleiben damit immer 0..100, auch wenn der sichtbare Ausschnitt zum Beispiel bei
-        ''' 18..82 Prozent des Originalbilds liegt.</summary>
-        Private Function GridCropRect() As (Left As Double, Top As Double, Width As Double, Height As Double)
-            ' Nicht die momentane Crop-Ansicht abfragen: RAW/PSD/.fpx zeigen beim Zuschneiden
-            ' absichtlich wieder das ganze Original. Das Verzerren-Werkzeug muss trotzdem immer
-            ' den bestaetigten Rezept-Ausschnitt verwenden.
-            Dim crop = EffectiveCrop(fuerAnzeige:=False)
-            Dim width = Math.Max(0.0001, 100.0 - crop.Left - crop.Right)
-            Dim height = Math.Max(0.0001, 100.0 - crop.Top - crop.Bottom)
-            Return (crop.Left, crop.Top, width, height)
-        End Function
-
-        Private Function GridUsesVisibleCropSpace() As Boolean
-            If WarpsTheObject Then Return False
-            Dim crop = GridCropRect()
-            Return crop.Left > 0.0001 OrElse crop.Top > 0.0001 OrElse
-                   crop.Width < 99.9999 OrElse crop.Height < 99.9999
-        End Function
-
-        ''' <summary>Ein Gitterpunkt des lokalen sichtbaren Ausschnitts in die Anzeige. Ohne Crop
-        ''' ist das exakt dieselbe Abbildung wie der allgemeine Verzerrraum.</summary>
+        ''' <summary>Ein Gitterpunkt in die Anzeige. Der Beschnitt braucht hier keine eigene
+        ''' Umrechnung mehr: das Anzeigebild IST der beschnittene Ausschnitt.</summary>
         Private Function GridPointToDisplay(xPercent As Double, yPercent As Double) As SKPoint?
-            If Not GridUsesVisibleCropSpace() Then Return WarpSpaceToDisplay(xPercent, yPercent)
-            Dim crop = GridCropRect()
-            Return SourcePercentToDisplayPercent(
-                crop.Left + xPercent / 100.0 * crop.Width,
-                crop.Top + yPercent / 100.0 * crop.Height)
+            Return WarpSpaceToDisplay(xPercent, yPercent)
         End Function
 
-        ''' <summary>Gegenrichtung zu <see cref="GridPointToDisplay"/>. Ein Zeiger neben dem
-        ''' sichtbaren Bild hat weiterhin keinen gueltigen Rasterpunkt.</summary>
+        ''' <summary>Gegenrichtung zu <see cref="GridPointToDisplay"/>.</summary>
         Private Function DisplayToGridPoint(xPercent As Double, yPercent As Double) As SKPoint?
-            Dim source = DisplayToWarpSpace(xPercent, yPercent)
-            If Not source.HasValue OrElse Not GridUsesVisibleCropSpace() Then Return source
-            Dim crop = GridCropRect()
-            Dim x = (source.Value.X - crop.Left) / crop.Width * 100.0
-            Dim y = (source.Value.Y - crop.Top) / crop.Height * 100.0
-            If x < -0.01 OrElse x > 100.01 OrElse y < -0.01 OrElse y > 100.01 Then Return Nothing
-            Return New SKPoint(CSng(Math.Max(0.0, Math.Min(100.0, x))),
-                               CSng(Math.Max(0.0, Math.Min(100.0, y))))
+            Return DisplayToWarpSpace(xPercent, yPercent)
         End Function
 
-        ''' <summary>Die sichtbare Lage der Objektanfasser: erst eigene Objekttransformation,
-        ''' danach die Spiegelungen des Bildes.</summary>
+        ''' <summary>Die sichtbare Lage der Objektanfasser: die ENDGUELTIGE Drehung und Spiegelung
+        ''' des Objekts, dieselbe, mit der der Renderer sein Verzerrungsfeld ueber die fertige
+        ''' Ebene legt (ImageProcessor.TransformAnnotationForGeometry, ganz am Ende der Kette).
+        '''
+        ''' Beide Seiten muessen denselben EINEN Winkel nehmen. Hier stand frueher die eigene
+        ''' Drehung mit den eigenen Spiegelungen und danach den Spiegelungen des Bildes, und die
+        ''' Bildspiegelung kam obendrein aus den rohen Feldern statt aus der zusammengesetzten
+        ''' Lage - eine geordnete Schrittfolge fuehrt ihre Spiegelungen aber in den Schritten.</summary>
         Private Function ObjectWarpPointThroughGeometry(xPercent As Double, yPercent As Double) As (X As Double, Y As Double)
-            Dim geometry = BuildAppliedGeometryAdjustments()
-            Dim own = CurrentObject()
-            If own Is Nothing Then Return (xPercent, yPercent)
-            Dim point = TransformObjectWarpPoint(xPercent, yPercent, _annotationRotation,
-                                                 own.FlipHorizontal, own.FlipVertical)
-            Dim x = point.X, y = point.Y
-            If geometry.FlipHorizontal Then x = 100.0 - x
-            If geometry.FlipVertical Then y = 100.0 - y
-            Return (x, y)
+            If CurrentObject() Is Nothing Then Return (xPercent, yPercent)
+            Return TransformObjectWarpPoint(xPercent, yPercent, _annotationRotation,
+                                            AnnotationDisplayFlipHorizontal, AnnotationDisplayFlipVertical)
         End Function
 
         Private Function DisplayPointThroughObjectWarpGeometry(xPercent As Double, yPercent As Double) As (X As Double, Y As Double)
-            Dim geometry = BuildAppliedGeometryAdjustments()
-            Dim x = xPercent, y = yPercent
-            If geometry.FlipHorizontal Then x = 100.0 - x
-            If geometry.FlipVertical Then y = 100.0 - y
-            Dim own = CurrentObject()
-            If own Is Nothing Then Return (x, y)
-            Return InverseTransformObjectWarpPoint(x, y, _annotationRotation,
-                                                   own.FlipHorizontal, own.FlipVertical)
+            If CurrentObject() Is Nothing Then Return (xPercent, yPercent)
+            Return InverseTransformObjectWarpPoint(xPercent, yPercent, _annotationRotation,
+                                                   AnnotationDisplayFlipHorizontal, AnnotationDisplayFlipVertical)
         End Function
 
         Private Shared Function TransformObjectWarpPoint(x As Double, y As Double, rotationDegrees As Double,
@@ -2352,7 +2213,6 @@ Namespace ViewModels
                 _gridImageRows = _warpRows
                 PrepareEnvelope()
                 _envelopeImage = CType(_envelope.Clone(), Double())
-                _envelopeImageRect = _envelopeRect
                 _linienBild.Clear()
                 _linienBild.AddRange(_linien)
             End If
@@ -2384,9 +2244,6 @@ Namespace ViewModels
                 End If
                 If _envelopeImage IsNot Nothing AndAlso _envelopeImage.Length = 24 Then
                     _envelope = CType(_envelopeImage.Clone(), Double())
-                    ' Mit dem Stand kommt sein Bezugsrechteck zurueck - sonst laege der Bildstand
-                    ' danach auf dem Bezug des Objekts.
-                    _envelopeRect = _envelopeImageRect
                 Else
                     ResetEnvelopePoints()
                 End If
@@ -2516,18 +2373,18 @@ Namespace ViewModels
         Public Sub UpdateWarpDrag(xPercent As Double, yPercent As Double,
                                   Optional axisLock As Boolean = False)
             If _warpDragIndex < 0 Then Return
-            Dim source = DisplayToGridPoint(xPercent, yPercent)
-            ' Neben dem Bildinhalt (Leinwandrand, leere Begradigungsecke) gibt es keinen Quellpunkt.
-            ' Der Zug bleibt dann einfach stehen, statt auf einen geratenen Wert zu springen.
-            If Not source.HasValue Then Return
+            Dim target = DisplayToGridPoint(xPercent, yPercent)
+            ' Ohne gueltigen Punkt im Verzerrraum bleibt der Zug einfach stehen, statt auf einen
+            ' geratenen Wert zu springen.
+            If Not target.HasValue Then Return
             ' Die Randpunkte duerfen NICHT ins Bild hinein oder aus ihm heraus wandern: sonst
             ' entstehen an der Bildkante durchsichtige Streifen oder es wird Bildinhalt
             ' abgeschnitten, ohne dass man es beim Ziehen sieht. Sie bleiben auf ihrer Kante und
             ' laufen nur DARAUF entlang.
             Dim column = _warpDragIndex Mod (_warpColumns + 1)
             Dim row = _warpDragIndex \ (_warpColumns + 1)
-            Dim nx = Math.Max(0.0, Math.Min(100.0, CDbl(source.Value.X)))
-            Dim ny = Math.Max(0.0, Math.Min(100.0, CDbl(source.Value.Y)))
+            Dim nx = Math.Max(0.0, Math.Min(100.0, CDbl(target.Value.X)))
+            Dim ny = Math.Max(0.0, Math.Min(100.0, CDbl(target.Value.Y)))
             ' ACHSENTREU: die kleinere der beiden Bewegungen faellt weg. Verglichen wird gegen den
             ' Beginn des Zuges und nicht gegen den letzten Punkt - sonst waere die Achse bei jedem
             ' Mausereignis neu zu haben, und der Punkt wanderte doch in beide Richtungen.
@@ -2596,7 +2453,6 @@ Namespace ViewModels
             PrepareGrid()
             ApplyNodeWarp(_warpColumns, _warpRows,
                           CType(_warpX.Clone(), Double()), CType(_warpY.Clone(), Double()),
-                          gridUsesVisibleCropSpace:=GridUsesVisibleCropSpace(),
                           afterApply:=Sub()
                               DisposeGridPreview()
                               ResetGrid()
@@ -2615,7 +2471,6 @@ Namespace ViewModels
         ''' Geometriestufe mit - beim naechsten Oeffnen also wieder.</summary>
         Private Sub ApplyNodeWarp(columns As Integer, rows As Integer,
                                   xs As Double(), ys As Double(),
-                                  Optional gridUsesVisibleCropSpace As Boolean = False,
                                   Optional afterApply As Action = Nothing)
             If Not HasDocument Then Return
 
@@ -2634,16 +2489,16 @@ Namespace ViewModels
             ' Hin- und Rueckweg ein, wie es die Perspektive bereits tut.
             Dim displayMapping = NodeMapping(columns, rows, xs, ys)
             ApplyWarpToObjects(MapDisplayWarpToObjectSpace(displayMapping))
-            ComposeImageWarp(displayMapping)
             ' Nicht mit einer eventuell früheren Verzerrung zusammenfalten: ihre Reihenfolge
             ' gegenüber Crop, Drehung und Leinwand ist sichtbar. Jede bestätigte Verzerrung wird
-            ' deshalb als eigener Pipeline-Schritt abgelegt.
-            If _imageWarp IsNot Nothing Then
-                _geometryOperations.Add(New GeometryOperation With {
-                    .Kind = "warp", .Adjustments = New ImageAdjustments With {.ImageWarp = _imageWarp.Clone()}})
-                _imageWarp = Nothing
-                RaiseImageWarpChanged()
-            End If
+            ' deshalb als eigener Pipeline-Schritt abgelegt. Ein noch aus einem ALTEN Rezept
+            ' stammendes Feld (_imageWarp) bleibt dabei unangetastet: es gehoert an den Anfang der
+            ' Kette, und es in den neuen Schritt zu falten wuerde es hinter Beschnitt und Drehung
+            ' schieben - das Bild spraenge beim ersten neuen Zug.
+            _geometryOperations.Add(New GeometryOperation With {
+                .Kind = "warp",
+                .Adjustments = New ImageAdjustments With {.ImageWarp = BuildWarpMesh(displayMapping)}})
+            RaiseImageWarpChanged()
             afterApply?.Invoke()
             StatusText = LocalizationService.T("Verzerrung angewendet")
             _hasChanges = True
@@ -2717,41 +2572,29 @@ Namespace ViewModels
                    End Function
         End Function
 
-        ''' <summary>Das neue Feld auf das vorhandene setzen. Ausgewertet wird auf dem FEINEREN der
-        ''' beiden Raster: das gröbere gäbe die Krümmung des feineren nicht wieder.</summary>
-        Private Sub ComposeImageWarp(mapping As Func(Of Double, Double, (X As Double, Y As Double)))
-            Dim old = _imageWarp
-            ' Das Bedienraster darf grob bleiben, das Rezept nicht: Gitter, Linien und Envelope
-            ' werden ausnahmslos in ein 48×48-Auswertungsmesh übernommen. So sieht derselbe
-            ' Zug in Vorschau, nach erneutem Öffnen und beim JPEG-/PNG-Export gleich aus.
+        ''' <summary>Aus einer Abbildung das Knotenfeld eines Rezeptschrittes machen.
+        '''
+        ''' Das Bedienraster darf grob bleiben, das Rezept nicht: Gitter, Linien und Verformen
+        ''' werden ausnahmslos in ein 48x48-Auswertungsmesh uebernommen. So sieht derselbe Zug in
+        ''' Vorschau, nach erneutem Oeffnen und beim JPEG-/PNG-Export gleich aus.
+        '''
+        ''' VERKETTET WIRD HIER NICHTS MEHR. Jede bestaetigte Verzerrung ist ein eigener Schritt der
+        ''' Geometriekette und wird in ihrer Reihenfolge ausgefuehrt; sie zusammenzufalten wuerde die
+        ''' Reihenfolge gegenueber Beschnitt, Drehung und Leinwand einebnen, und die ist sichtbar.</summary>
+        Private Shared Function BuildWarpMesh(mapping As Func(Of Double, Double, (X As Double, Y As Double))) As ObjectWarp
             Dim steps = MaxImageWarpSteps
-
             Dim node((steps + 1) * (steps + 1) * 2 - 1) As Double
             For rowIdx = 0 To steps
                 For colIdx = 0 To steps
                     Dim i = (rowIdx * (steps + 1) + colIdx) * 2
-                    Dim px = colIdx / CDbl(steps) * 100.0
-                    Dim py = rowIdx / CDbl(steps) * 100.0
-                    ' ERST der neue Zug, DANN die vorhandene Verzerrung - und nicht umgekehrt. Der
-                    ' Zug wird im UNVERZERRTEN Quellraum abgelegt: die Trefferpruefung rechnet den
-                    ' Zeiger ueber die Umkehrung der vorhandenen Verzerrung zurueck. Wo ein Punkt am
-                    ' Ende landet, sagt also erst der Zug und dann das, was schon steht. In der
-                    ' anderen Reihenfolge wanderte ein gezogener Punkt neben den Zeiger, sobald
-                    ' schon einmal verzerrt worden war.
-                    Dim n = mapping(px, py)
-                    px = n.X : py = n.Y
-                    If old IsNot Nothing AndAlso Not old.IsEmpty Then
-                        Dim v = ExistingWarp(old, px, py)
-                        px = v.X : py = v.Y
-                    End If
-                    node(i) = px
-                    node(i + 1) = py
+                    Dim n = mapping(colIdx / CDbl(steps) * 100.0, rowIdx / CDbl(steps) * 100.0)
+                    node(i) = n.X
+                    node(i + 1) = n.Y
                 Next
             Next
-            _imageWarp = New ObjectWarp With {
+            Return New ObjectWarp With {
                 .Kind = "Gitter", .Columns = steps, .Rows = steps, .Nodes = node}
-            RaiseImageWarpChanged()
-        End Sub
+        End Function
 
         ''' <summary>Hebt ältere Rezept-Meshes beim Öffnen auf die einheitliche 48×48-Auflösung.
         ''' Die Stützstellen werden über dieselbe Dreiecksabbildung ermittelt; bei Teilern von 48

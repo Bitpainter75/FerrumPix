@@ -4070,8 +4070,37 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                               outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             If annotation Is Nothing Then Return Nothing
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return annotation
-            If GeometrySteps(adj).Count > 0 Then Return TransformAnnotationThroughGeometryPipeline(annotation, adj, outputWidth, outputHeight)
-            Return TransformAnnotationThroughGeometryFields(annotation, adj, outputWidth, outputHeight)
+            Dim result As ImageAnnotation
+            If GeometrySteps(adj).Count > 0 Then
+                result = TransformAnnotationThroughGeometryPipeline(annotation, adj, outputWidth, outputHeight)
+            Else
+                result = TransformAnnotationThroughGeometryFields(annotation, adj, outputWidth, outputHeight)
+            End If
+            If result Is Nothing Then Return Nothing
+
+            ' DIE EIGENE VERZERRUNG WIRD GENAU EINMAL GEDREHT, UND ZWAR HIER AM ENDE.
+            '
+            ' Sie wird ueber die FERTIGE Objektebene gelegt (ImageProcessorObjects.RenderAnnotationToLayer),
+            ' und die ist zu diesem Zeitpunkt schon gedreht und gespiegelt. Ihr Bezugsraum ist also
+            ' die endgueltige Lage des Objekts - nicht die gespeicherte, nicht eine Zwischenstufe.
+            '
+            ' Vorher stand die Rechnung in DREI Teilen: die eigene Drehung des Objekts einmal vor
+            ' der Kette, die Vierteldrehung des Bildes je Schritt, und das Ausrichten ueberhaupt
+            ' nicht. Drei Teile, die nur zusammenfallen, solange hoechstens einer von ihnen
+            ' ungleich null ist. Sobald das BILD und das OBJEKT beide etwas mitbrachten, liefen sie
+            ' auseinander: eine Objektspiegelung samt Vierteldrehung des Bildes um zweimal die
+            ' Vierteldrehung, eine Begradigung um ihren vollen Winkel. Genau das war der Befund
+            ' "bei gedrehtem Bild wirkt ein Verzerren am Objekt in die falsche Richtung".
+            '
+            ' Gerechnet wird vom UNVERAENDERTEN Feld aus, damit keine Zwischenstufe mehr eingeht.
+            Dim conjugated = TransformOwnWarpForGeometry(annotation.OwnWarp, result.RotationDegrees,
+                                                          result.FlipHorizontal, result.FlipVertical)
+            If Object.ReferenceEquals(conjugated, annotation.OwnWarp) Then Return result
+            ' Eine Kette ohne Wirkung gibt das Objekt des Aufrufers unveraendert zurueck - dann darf
+            ' hier nichts hineingeschrieben werden, sonst traegt das Modell die Renderfassung.
+            If Object.ReferenceEquals(result, annotation) Then result = annotation.Clone()
+            result.OwnWarp = conjugated
+            Return result
         End Function
 
         ''' <summary>Die Objektabbildung EINER Feldgruppe - der Weg, den es vor der geordneten
@@ -4086,13 +4115,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' eigenen Verzerrungsfeld, das der Editor beim Bestaetigen fuellt (ApplyWarpToObjects und
         ''' das Gegenstueck fuer die Perspektive); die Punktabbildung fuer Objekte laesst beide
         ''' Stufen deshalb aus (siehe GeometryForAnnotations).</summary>
-        ''' <param name="bakeOwnObjectWarp">Das eigene Verzerrungsfeld eines Objekts traegt die
-        ''' Drehung und Spiegelung DES OBJEKTS; sie wird einmal hineingerechnet. Laeuft die Routine
-        ''' je Schritt einer Kette, darf das nur beim ERSTEN Mal geschehen - sonst dreht sich das
-        ''' Feld mit jedem weiteren Schritt ein weiteres Mal.</param>
         Private Shared Function TransformAnnotationThroughGeometryFields(annotation As ImageAnnotation, adj As ImageAdjustments,
-                                                                        outputWidth As Integer, outputHeight As Integer,
-                                                                        Optional bakeOwnObjectWarp As Boolean = True) As ImageAnnotation
+                                                                        outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             ' DAS AUSRICHTEN IST EINE DREHUNG DES BILDINHALTS, und ein Objekt liegt auf diesem
             ' Inhalt: wer es an einer Linie im Bild ausgerichtet hat, will es nach dem Begradigen
             ' weiter an dieser Linie sehen. Es dreht deshalb mit - um denselben Mittelpunkt, um
@@ -4110,7 +4134,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim beforeHeight = If(turned = 90 OrElse turned = 270, crop.Width, crop.Height)
                 If beforeWidth > 0 AndAlso beforeHeight > 0 Then
                     Dim afterSize = StraightenOutputSize(beforeWidth, beforeHeight, adj.StraightenDegrees, adj.StraightenExpandCanvas)
-                    Dim body = TransformAnnotationThroughGeometryFieldsCore(annotation, adj, beforeWidth, beforeHeight, bakeOwnObjectWarp)
+                    Dim body = TransformAnnotationThroughGeometryFieldsCore(annotation, adj, beforeWidth, beforeHeight)
                     body = StraightenAnnotation(body, beforeWidth, beforeHeight, adj.StraightenDegrees, adj.StraightenExpandCanvas)
                     If body Is Nothing Then Return Nothing
                     If afterSize.Width <= 0 OrElse afterSize.Height <= 0 Then Return body
@@ -4120,7 +4144,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Return ScaleAnnotationForSource(body, outputWidth / CSng(afterSize.Width), outputHeight / CSng(afterSize.Height))
                 End If
             End If
-            Return TransformAnnotationThroughGeometryFieldsCore(annotation, adj, outputWidth, outputHeight, bakeOwnObjectWarp)
+            Return TransformAnnotationThroughGeometryFieldsCore(annotation, adj, outputWidth, outputHeight)
         End Function
 
         ''' <summary>Die Masse nach dem Begradigen. Dieselbe Rechnung wie <see cref="ApplyStraighten"/>
@@ -4192,8 +4216,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         End Function
 
         Private Shared Function TransformAnnotationThroughGeometryFieldsCore(annotation As ImageAnnotation, adj As ImageAdjustments,
-                                                                            outputWidth As Integer, outputHeight As Integer,
-                                                                            Optional bakeOwnObjectWarp As Boolean = True) As ImageAnnotation
+                                                                            outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             Dim rotation = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
             Dim q = rotation \ 90
             Dim preWidth = If(rotation = 90 OrElse rotation = 270, outputHeight, outputWidth)
@@ -4232,11 +4255,6 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                             preHeight / CSng(crop.Height))
             End If
             If renderAnnotation Is Nothing Then Return Nothing
-            If bakeOwnObjectWarp Then
-                renderAnnotation.OwnWarp = TransformOwnWarpForGeometry(renderAnnotation.OwnWarp,
-                                                                        annotation.RotationDegrees,
-                                                                        annotation.FlipHorizontal, annotation.FlipVertical)
-            End If
             If q = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then Return renderAnnotation
 
             Dim transformed = renderAnnotation.Clone()
@@ -4254,15 +4272,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             transformed.RotationDegrees = objectGeometry.RotationDegrees
             If adj.FlipHorizontal Then transformed.FlipHorizontal = Not transformed.FlipHorizontal
             If adj.FlipVertical Then transformed.FlipVertical = Not transformed.FlipVertical
-            ' Die Bilddrehung steckt zwar bereits in der Zeichenroutine, das eigene Warp-Feld wird
-            ' aber ERST DANACH über die fertige Objekt-Ebene gelegt. Es muss daher dieselbe
-            ' Vierteldrehung (und danach dieselben Bildspiegelungen) durchlaufen. Ohne diese Drehung
-            ' blieb etwa ein eingezogenes oberes Feld nach „Bild um 90° drehen" oben, während der
-            ' Objektinhalt nach rechts weiterdrehte.
-            transformed.OwnWarp = TransformOwnWarpForGeometry(renderAnnotation.OwnWarp,
-                                                               ImageGeometryMapper.SourceObjectRotationToDisplay(
-                                                                   0, rotation, adj.FlipHorizontal, adj.FlipVertical),
-                                                               adj.FlipHorizontal, adj.FlipVertical)
+            ' Das eigene Warp-Feld wird hier bewusst NICHT angefasst. Es wird ueber die fertige
+            ' Objektebene gelegt und gehoert deshalb in deren ENDGUELTIGE Lage; gedreht wird es
+            ' genau einmal, am Ende der ganzen Kette (TransformAnnotationForGeometry). Je Schritt
+            ' ein Stueck davon einzurechnen war der Weg, auf dem Bild- und Objektlage auseinander
+            ' liefen.
             If IsPaintKind(transformed.Kind) AndAlso transformed.Strokes IsNot Nothing Then
                 transformed.Strokes = transformed.Strokes.Select(
                     Function(stroke) TransformStrokeForGeometry(stroke, preWidth, preHeight, rotation, adj.FlipHorizontal, adj.FlipVertical)).
@@ -4352,11 +4366,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function TransformAnnotationThroughGeometryPipeline(annotation As ImageAnnotation, adj As ImageAdjustments,
                                                                             outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             Dim steps = GeometrySteps(adj)
-            ' Die EIGENE Drehung des Objekts geht einmal in sein Verzerrungsfeld, vor dem ersten
-            ' Schritt - danach traegt jeder Schritt nur noch die Drehung des BILDES hinein.
+            ' Das eigene Verzerrungsfeld laeuft UNVERAENDERT durch die Kette; gedreht wird es genau
+            ' einmal am Ende (TransformAnnotationForGeometry), wenn die endgueltige Lage feststeht.
             Dim current = annotation.Clone()
-            current.OwnWarp = TransformOwnWarpForGeometry(current.OwnWarp, annotation.RotationDegrees,
-                                                          annotation.FlipHorizontal, annotation.FlipVertical)
             Dim width = adj.SourceWidthPixels, height = adj.SourceHeightPixels
             For Each stepItem In steps
                 Dim size = ComputeGeometryOperationOutputSize(width, height, stepItem)
@@ -4373,8 +4385,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     If fields Is Nothing Then Continue For
                     fields.SourceWidthPixels = width
                     fields.SourceHeightPixels = height
-                    current = TransformAnnotationThroughGeometryFields(current, fields, size.Width, size.Height,
-                                                                      bakeOwnObjectWarp:=False)
+                    current = TransformAnnotationThroughGeometryFields(current, fields, size.Width, size.Height)
                 End If
                 If current Is Nothing Then Return Nothing
                 width = size.Width : height = size.Height

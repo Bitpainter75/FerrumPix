@@ -45,10 +45,12 @@ Namespace ViewModels
             Set(value As Boolean)
                 If HasMultiAnnotationSelection AndAlso Not _isLoadingAnnotation Then
                     Me.RaiseAndSetIfChanged(_annotationFlipV, value)
+                    Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipVertical))
                     FlipSelectionBox(horizontal:=False)
                     Return
                 End If
                 Me.RaiseAndSetIfChanged(_annotationFlipV, value)
+                Me.RaisePropertyChanged(NameOf(AnnotationDisplayFlipVertical))
                 SyncSelectedAnnotation()
                 RaiseEnvelopeChanged()
             End Set
