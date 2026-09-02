@@ -743,6 +743,13 @@
                         <Border x:Name="AfterLabel" Background="#262933" CornerRadius="6" Padding="10,5">
                             <TextBlock Text="Nachher" FontSize="{DynamicResource FP.Font.Small}" Foreground="White" />
                         </Border>
+                        <!-- Der Bereich ausserhalb des Crop-Rahmens fällt beim Anwenden weg. Vier
+                             getrennte, klickdurchlässige Flächen lassen die Mitte frei und funktionieren
+                             auch bei gezoomtem bzw. verschobenem Bild ohne eine komplexe Clip-Geometrie. -->
+                        <Border x:Name="CropDiscardShadeTop" Background="#990B1018" IsHitTestVisible="False" IsVisible="False" />
+                        <Border x:Name="CropDiscardShadeBottom" Background="#990B1018" IsHitTestVisible="False" IsVisible="False" />
+                        <Border x:Name="CropDiscardShadeLeft" Background="#990B1018" IsHitTestVisible="False" IsVisible="False" />
+                        <Border x:Name="CropDiscardShadeRight" Background="#990B1018" IsHitTestVisible="False" IsVisible="False" />
                         <Border x:Name="CropOverlay"
                                 BorderThickness="0"
                                 Background="Transparent"

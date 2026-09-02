@@ -3518,6 +3518,12 @@ Namespace Views
             Dim overlay = Me.FindControl(Of Border)("CropOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay IsNot Nothing Then overlay.IsVisible = vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Transform
+            If vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Transform Then
+                For Each shadeName As String In {"CropDiscardShadeTop", "CropDiscardShadeBottom", "CropDiscardShadeLeft", "CropDiscardShadeRight"}
+                    Dim shade = Me.FindControl(Of Border)(shadeName)
+                    If shade IsNot Nothing Then shade.IsVisible = False
+                Next
+            End If
             UpdateSliderLayout()
         End Sub
 
@@ -4834,7 +4840,10 @@ Namespace Views
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If canvas IsNot Nothing AndAlso vm IsNot Nothing Then
-                UpdateCropSizeBadge(New Avalonia.Rect(left, top, width, height), GetDisplayedImageRect(canvas, vm), vm)
+                Dim imageRect = GetDisplayedImageRect(canvas, vm)
+                Dim cropRect = New Avalonia.Rect(left, top, width, height)
+                UpdateCropDiscardShade(imageRect, cropRect, vm)
+                UpdateCropSizeBadge(cropRect, imageRect, vm)
             End If
         End Sub
 
@@ -4855,9 +4864,44 @@ Namespace Views
             Avalonia.Controls.Canvas.SetTop(overlay, top)
             overlay.Width = Math.Max(1, right - left)
             overlay.Height = Math.Max(1, bottom - top)
-            UpdateCropSizeBadge(New Avalonia.Rect(left, top, right - left, bottom - top),
-                                New Avalonia.Rect(ix, iy, iw, ih),
-                                vm)
+            Dim imageRect = New Avalonia.Rect(ix, iy, iw, ih)
+            Dim cropRect = New Avalonia.Rect(left, top, right - left, bottom - top)
+            UpdateCropDiscardShade(imageRect, cropRect, vm)
+            UpdateCropSizeBadge(cropRect, imageRect, vm)
+        End Sub
+
+        ''' <summary>Legt eine deutliche, aber klickdurchlässige Abdunklung über die Bildteile, die
+        ''' außerhalb des aktuellen Crop-Rahmens liegen und beim Anwenden verworfen werden.</summary>
+        Private Sub UpdateCropDiscardShade(imageRect As Avalonia.Rect, cropRect As Avalonia.Rect, vm As EditorViewModel)
+            Dim names = {"CropDiscardShadeTop", "CropDiscardShadeBottom", "CropDiscardShadeLeft", "CropDiscardShadeRight"}
+            Dim shades = names.Select(Function(name) Me.FindControl(Of Border)(name)).ToArray()
+            If vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Transform OrElse
+               imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then
+                For Each shade In shades
+                    If shade IsNot Nothing Then shade.IsVisible = False
+                Next
+                Return
+            End If
+
+            Dim left = Math.Max(imageRect.Left, Math.Min(imageRect.Right, cropRect.Left))
+            Dim top = Math.Max(imageRect.Top, Math.Min(imageRect.Bottom, cropRect.Top))
+            Dim right = Math.Max(left, Math.Min(imageRect.Right, cropRect.Right))
+            Dim bottom = Math.Max(top, Math.Min(imageRect.Bottom, cropRect.Bottom))
+            Dim rectangles = {
+                New Avalonia.Rect(imageRect.Left, imageRect.Top, imageRect.Width, Math.Max(0, top - imageRect.Top)),
+                New Avalonia.Rect(imageRect.Left, bottom, imageRect.Width, Math.Max(0, imageRect.Bottom - bottom)),
+                New Avalonia.Rect(imageRect.Left, top, Math.Max(0, left - imageRect.Left), Math.Max(0, bottom - top)),
+                New Avalonia.Rect(right, top, Math.Max(0, imageRect.Right - right), Math.Max(0, bottom - top))}
+            For index = 0 To shades.Length - 1
+                Dim shade = shades(index)
+                If shade Is Nothing Then Continue For
+                Dim rectangle = rectangles(index)
+                shade.IsVisible = rectangle.Width > 0.5 AndAlso rectangle.Height > 0.5
+                Avalonia.Controls.Canvas.SetLeft(shade, rectangle.Left)
+                Avalonia.Controls.Canvas.SetTop(shade, rectangle.Top)
+                shade.Width = rectangle.Width
+                shade.Height = rectangle.Height
+            Next
         End Sub
 
         Private Sub UpdateCropSizeBadge(cropRect As Avalonia.Rect, imageRect As Avalonia.Rect, vm As EditorViewModel)

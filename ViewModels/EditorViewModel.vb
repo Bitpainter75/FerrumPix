@@ -11084,6 +11084,16 @@ Namespace ViewModels
             ' Ein altes Rezept hat noch keine Liste: seine Felder sind bereits der bestätigte
             ' Legacy-Schritt und dürfen nicht zusätzlich als offene Transform-Stufe angehängt werden.
             If result.Count = 0 Then Return result
+            AppendOpenGeometryOperations(result)
+            Return result
+        End Function
+
+        ''' <summary>Hängt die nicht übernommenen Geometrie-Regler an eine explizite Rezeptkette.
+        ''' Der offene Crop gehört absichtlich NICHT dazu: er ist bis „Zuschneiden anwenden“ nur
+        ''' ein Rahmen. Drehen, Ausrichten, Perspektive, Bildgröße und Leinwand sind dagegen
+        ''' sichtbare Bearbeitungen und müssen beim FPX-Speichern erhalten bleiben.</summary>
+        Private Sub AppendOpenGeometryOperations(result As List(Of GeometryOperation))
+            If result Is Nothing Then Return
             If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
                _straightenExpandCanvas OrElse _flipH OrElse _flipV Then
                 result.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
@@ -11109,6 +11119,15 @@ Namespace ViewModels
                     .CanvasWidth = _canvasWidth, .CanvasHeight = _canvasHeight,
                     .CanvasAnchor = _canvasAnchor, .CanvasBackgroundColor = _canvasBackgroundColor}})
             End If
+        End Sub
+
+        ''' <summary>Das FPX-Rezept braucht die bestätigten Schritte UND sichtbar offene
+        ''' Geometrie-Regler. Die Vorschau-Variante darf hier nicht verwendet werden: im
+        ''' Zuschneide-Werkzeug blendet sie den bestätigten Crop absichtlich aus, damit das volle
+        ''' Basisbild unter dem Rahmen zu sehen ist.</summary>
+        Private Function GeometryOperationsForFpxSave() As List(Of GeometryOperation)
+            Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
+            AppendOpenGeometryOperations(result)
             Return result
         End Function
 
@@ -16636,9 +16655,10 @@ Namespace ViewModels
                 ' Server ist das der Name auf dem Server, nicht der der Temp-Datei (Asset-Kennung
                 ' bzw. vorangestellte Dateikennung) - unter dem hätte er sein Bild sonst exportiert.
                 Dim name = IO.Path.GetFileNameWithoutExtension(If(fromFpx, _currentFpxPath, CurrentFileName))
-                ' Ein neu angelegtes Dokument wurde nie „bearbeitet" - es heißt schlicht „Unbenannt".
-                ' Ohne diesen Fall schlüge die Anwendung „Unbenannt_bearbeitet" vor.
-                Dim proposedName = If(_isNewDocument, name, name & "_bearbeitet")
+                ' Ein neu angelegtes Dokument bleibt bei seinem bewusst gewählten Namen. Für jede
+                ' bestehende Datei kommt dagegen die nächste freie Versionsnummer aus dem Zielordner
+                ' vor den Dialog - "Foto - 2" statt "Foto_bearbeitet_bearbeitet".
+                Dim proposedName = If(_isNewDocument, name, NextSaveAsBaseName(name, dir))
                 ' FPX als Standard-Vorschlag: das Projektformat erhält
                 ' Regler + Objekte editierbar - der Export in JPG/PNG/WEBP bleibt eine bewusste Wahl.
                 ' NormalizeSaveAsFormat fällt auf JPG zurück, falls FPX deaktiviert ist.
@@ -16693,7 +16713,7 @@ Namespace ViewModels
                 If _retouchStrokeActive Then CommitRetouchStroke()
                 If HasSelectedAnnotation Then SyncSelectedAnnotation()
                 CommitObjectAdjustModeToModel()
-                Dim adj = GetCurrentAdjustments()
+                Dim adj = If(isFpxSave, GetCurrentFpxSaveAdjustments(), GetCurrentAdjustments())
                 Dim preserveMetadata = If(saveAs AndAlso _mainVm?.Settings IsNot Nothing, _mainVm.Settings.PreserveMetadataOnSave, True)
                 Dim ok As Boolean
                 If isFpxSave Then
@@ -16947,6 +16967,68 @@ Namespace ViewModels
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), errorMessage)
             Return False
+        End Function
+
+        ''' <summary>Erzeugt für „Speichern unter“ einen nicht kaskadierenden Namen und orientiert
+        ''' sich an der HÖCHSTEN bereits vorhandenen Versionsnummer im Zielordner. Die Endung spielt
+        ''' dabei keine Rolle: <c>Foto - 2.jpg</c> verhindert ebenso die erneute 2 wie ein bereits
+        ''' vorhandenes <c>Foto - 2.fpx</c>.</summary>
+        Private Shared Function NextSaveAsBaseName(currentName As String, targetDirectory As String) As String
+            Dim root = RemoveLegacyEditedSuffix(If(currentName, "").Trim())
+            Dim currentNumber As Integer = 0
+            Dim parsedRoot As String = Nothing
+            Dim parsedNumber As Integer
+            If TryParseSaveAsVersion(root, parsedRoot, parsedNumber) Then
+                root = RemoveLegacyEditedSuffix(parsedRoot)
+                currentNumber = parsedNumber
+            End If
+            If String.IsNullOrWhiteSpace(root) Then root = "Bild"
+
+            Dim highestNumber = currentNumber
+            Try
+                If Not String.IsNullOrWhiteSpace(targetDirectory) AndAlso Directory.Exists(targetDirectory) Then
+                    For Each filePath In Directory.EnumerateFiles(targetDirectory)
+                        Dim fileRoot = RemoveLegacyEditedSuffix(Path.GetFileNameWithoutExtension(filePath))
+                        If String.Equals(fileRoot, root, StringComparison.OrdinalIgnoreCase) Then
+                            highestNumber = Math.Max(highestNumber, 0)
+                            Continue For
+                        End If
+                        Dim candidateRoot As String = Nothing
+                        Dim candidateNumber As Integer
+                        If TryParseSaveAsVersion(fileRoot, candidateRoot, candidateNumber) AndAlso
+                           String.Equals(RemoveLegacyEditedSuffix(candidateRoot), root, StringComparison.OrdinalIgnoreCase) Then
+                            highestNumber = Math.Max(highestNumber, candidateNumber)
+                        End If
+                    Next
+                End If
+            Catch ex As UnauthorizedAccessException
+                ' Der Dialog bleibt auch in einem nicht lesbaren Ordner benutzbar; die Nummer des
+                ' gerade geöffneten Dokuments ist dann immer noch ein sinnvoller Ausgangspunkt.
+            Catch ex As IOException
+            End Try
+            Return root & " - " & (highestNumber + 1).ToString(Globalization.CultureInfo.InvariantCulture)
+        End Function
+
+        Private Shared Function RemoveLegacyEditedSuffix(value As String) As String
+            Dim result = If(value, "").Trim()
+            Const legacySuffix As String = "_bearbeitet"
+            While result.EndsWith(legacySuffix, StringComparison.OrdinalIgnoreCase)
+                result = result.Substring(0, result.Length - legacySuffix.Length).TrimEnd()
+            End While
+            Return result
+        End Function
+
+        Private Shared Function TryParseSaveAsVersion(value As String, ByRef root As String, ByRef version As Integer) As Boolean
+            root = Nothing
+            version = 0
+            Dim separator = value.LastIndexOf(" - ", StringComparison.Ordinal)
+            If separator <= 0 Then Return False
+            Dim parsed As Integer
+            If Not Integer.TryParse(value.Substring(separator + 3), Globalization.NumberStyles.None,
+                                    Globalization.CultureInfo.InvariantCulture, parsed) OrElse parsed < 1 Then Return False
+            root = value.Substring(0, separator).TrimEnd()
+            version = parsed
+            Return Not String.IsNullOrWhiteSpace(root)
         End Function
 
         ''' <summary>"Speichern" bei einem Immich-Bild (nur mit "Vorhandene Assets aktualisieren"): die
@@ -17279,6 +17361,16 @@ Namespace ViewModels
                 Next
                 adj.CopyPixelAdjustmentsFrom(_selectionImagePixelAdjustments)
             End If
+            Return adj
+        End Function
+
+        ''' <summary>Die FPX-Variante der Momentaufnahme ergänzt die offene, sichtbare Geometrie
+        ''' zur bestätigten Kette. Anders als <see cref="GetCurrentAdjustments"/> nutzt sie nicht
+        ''' den Vorschau-Cropzustand: dieser blendet im Transformieren-Werkzeug den bestehenden
+        ''' Ausschnitt nur für die Bedienung aus.</summary>
+        Private Function GetCurrentFpxSaveAdjustments() As ImageAdjustments
+            Dim adj = GetCurrentAdjustments()
+            adj.GeometryOperations = GeometryOperationsForFpxSave()
             Return adj
         End Function
 
