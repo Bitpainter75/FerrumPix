@@ -36,6 +36,56 @@ Namespace Services
 
     ''' <summary>Ein bestätigter, nicht-destruktiver Schritt der Bildgeometrie. Anders als die
     ''' früheren globalen Regler behält die Liste ihre zeitliche Reihenfolge bei.</summary>
+    ''' <summary>Die Objektabbildung eines Rezepts in ihrer einfachsten Form: Mittelpunkt auf
+    ''' Mittelpunkt, Massstab je Achse, ein Drehwinkel und die beiden Spiegelungen. Mehr braucht
+    ''' sie nicht, denn alles, was ein Objekt mitmacht - Beschnitt, Vierteldrehung, Spiegelung,
+    ''' Ausrichten, Groesse, Leinwand -, ist zusammen genommen eine affine Abbildung.
+    '''
+    ''' Sie wird am HINWEG abgelesen (ImageProcessor.TryAnnotationOutputMapping) und liefert damit
+    ''' den Rueckweg, ohne ihn ein zweites Mal zu schreiben.</summary>
+    Public Class AnnotationMapping
+        ' Die Abbildung als Matrix: (x, y) wird zu (M11*x + M12*y + TX, M21*x + M22*y + TY).
+        ' Bewusst NICHT als Massstab, Winkel und Spiegelungen zerlegt - eine solche Zerlegung
+        ' muesste die Reihenfolge der Stufen erraten, und genau daran waere sie falsch geworden.
+        Public Property M11 As Double = 1
+        Public Property M12 As Double = 0
+        Public Property M21 As Double = 0
+        Public Property M22 As Double = 1
+        Public Property TX As Double
+        Public Property TY As Double
+
+        ''' <summary>Die Laenge, auf die eine waagerechte Strecke der Quelle abgebildet wird.</summary>
+        Public ReadOnly Property ScaleX As Double
+            Get
+                Return Math.Sqrt(M11 * M11 + M21 * M21)
+            End Get
+        End Property
+
+        ''' <summary>Dasselbe fuer eine senkrechte Strecke.</summary>
+        Public ReadOnly Property ScaleY As Double
+            Get
+                Return Math.Sqrt(M12 * M12 + M22 * M22)
+            End Get
+        End Property
+
+        Public Function SourcePointToOutput(x As Double, y As Double) As (X As Double, Y As Double)
+            Return (M11 * x + M12 * y + TX, M21 * x + M22 * y + TY)
+        End Function
+
+        Public Function OutputPointToSource(x As Double, y As Double) As (X As Double, Y As Double)
+            Dim determinant = M11 * M22 - M12 * M21
+            If Math.Abs(determinant) < 0.000000001 Then Return (0, 0)
+            Dim dx = x - TX, dy = y - TY
+            Return ((M22 * dx - M12 * dy) / determinant, (M11 * dy - M21 * dx) / determinant)
+        End Function
+
+        Public ReadOnly Property IsInvertible As Boolean
+            Get
+                Return Math.Abs(M11 * M22 - M12 * M21) >= 0.000000001
+            End Get
+        End Property
+    End Class
+
     Public Class GeometryOperation
         Public Property Kind As String = ""
         Public Property Adjustments As ImageAdjustments = Nothing

@@ -3979,6 +3979,92 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return scaled
         End Function
 
+        ''' <summary>Wie die Objektabbildung ein Rechteck vom Quell- in den Ausgaberaum bringt -
+        ''' abgetastet statt nachgerechnet.
+        '''
+        ''' Die Abbildung ist AFFIN: Beschnitt verschiebt, Vierteldrehung und Spiegelung
+        ''' permutieren, Ausrichten dreht, Groesse und Leinwand skalieren und verschieben. Eine
+        ''' solche Abbildung liegt fest, sobald man EIN Rechteck durch sie schickt - Mittelpunkt,
+        ''' Massstab je Achse, Drehwinkel und Spiegelungen lassen sich daran ablesen.
+        '''
+        ''' Genau das passiert hier, mit einem Probe-Rechteck ueber dem ganzen Bild. Der Gewinn:
+        ''' der Rueckweg (<see cref="TryAnnotationOutputToSource"/>) wird aus dem HINWEG gewonnen
+        ''' und kann per Bauart nicht von ihm abweichen. Eine zweite, rueckwaerts geschriebene
+        ''' Fassung derselben Kette waere die naechste Stelle, an der beide auseinanderlaufen.</summary>
+        Public Shared Function TryAnnotationOutputMapping(adj As ImageAdjustments, outputWidth As Integer, outputHeight As Integer,
+                                                          ByRef mapping As AnnotationMapping) As Boolean
+            mapping = Nothing
+            If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return False
+            If outputWidth <= 0 OrElse outputHeight <= 0 Then Return False
+
+            ' DREI Proben statt einer: eine affine Abbildung liegt durch drei Punkte fest, die nicht
+            ' auf einer Geraden liegen. Ein einzelnes Probe-Rechteck haette zwar Mittelpunkt und
+            ' Masse geliefert, aber nicht, WIE die Achsen liegen - und genau daran (Vierteldrehung
+            ' gegen Spiegelung gegen Ausrichten) waere die Zerlegung falsch geworden.
+            Dim probeSize = CSng(Math.Max(4.0, Math.Min(adj.SourceWidthPixels, adj.SourceHeightPixels) / 8.0))
+            Dim ax = adj.SourceWidthPixels * 0.25, ay = adj.SourceHeightPixels * 0.25
+            Dim bx = adj.SourceWidthPixels * 0.75, by = adj.SourceHeightPixels * 0.25
+            Dim cx = adj.SourceWidthPixels * 0.25, cy = adj.SourceHeightPixels * 0.75
+
+            Dim a As (X As Double, Y As Double) = Nothing, b As (X As Double, Y As Double) = Nothing, c As (X As Double, Y As Double) = Nothing
+            If Not TryMapAnnotationProbe(ax, ay, probeSize, adj, outputWidth, outputHeight, a) Then Return False
+            If Not TryMapAnnotationProbe(bx, by, probeSize, adj, outputWidth, outputHeight, b) Then Return False
+            If Not TryMapAnnotationProbe(cx, cy, probeSize, adj, outputWidth, outputHeight, c) Then Return False
+
+            Dim spanX = bx - ax, spanY = cy - ay
+            If Math.Abs(spanX) < 0.0001 OrElse Math.Abs(spanY) < 0.0001 Then Return False
+            Dim result As New AnnotationMapping With {
+                .M11 = (b.X - a.X) / spanX,
+                .M21 = (b.Y - a.Y) / spanX,
+                .M12 = (c.X - a.X) / spanY,
+                .M22 = (c.Y - a.Y) / spanY
+            }
+            result.TX = a.X - (result.M11 * ax + result.M12 * ay)
+            result.TY = a.Y - (result.M21 * ax + result.M22 * ay)
+            If Not result.IsInvertible Then Return False
+            mapping = result
+            Return True
+        End Function
+
+        ''' <summary>Wohin die Objektabbildung den Punkt (x|y) legt - gemessen an einem kleinen
+        ''' Probe-Rechteck um ihn herum, dessen Mittelpunkt abgelesen wird.</summary>
+        Private Shared Function TryMapAnnotationProbe(x As Double, y As Double, size As Single, adj As ImageAdjustments,
+                                                      outputWidth As Integer, outputHeight As Integer,
+                                                      ByRef point As (X As Double, Y As Double)) As Boolean
+            Dim probe As New ImageAnnotation With {
+                .Kind = "Rectangle",
+                .XPixels = CSng(x - size / 2.0), .YPixels = CSng(y - size / 2.0),
+                .WidthPixels = size, .HeightPixels = size,
+                .IsVisible = True
+            }
+            Dim mapped = TransformAnnotationForGeometry(probe, adj, outputWidth, outputHeight)
+            If mapped Is Nothing Then Return False
+            point = (mapped.XPixels + mapped.WidthPixels / 2.0, mapped.YPixels + mapped.HeightPixels / 2.0)
+            Return True
+        End Function
+
+        ''' <summary>Der Rueckweg der Objektabbildung: aus einem Rechteck im AUSGABEBILD wird das
+        ''' Rechteck im Quellbild. Nutzt die abgetastete Abbildung des Hinwegs und kehrt sie um.</summary>
+        Public Shared Function TryAnnotationOutputToSource(outputRect As SKRect, adj As ImageAdjustments,
+                                                           outputWidth As Integer, outputHeight As Integer,
+                                                           ByRef sourceRect As SKRect) As Boolean
+            sourceRect = SKRect.Empty
+            Dim mapping As AnnotationMapping = Nothing
+            If Not TryAnnotationOutputMapping(adj, outputWidth, outputHeight, mapping) Then Return False
+
+            Dim source = mapping.OutputPointToSource(outputRect.MidX, outputRect.MidY)
+            ' Breite und Hoehe gehoeren dem OBJEKT, nicht dem Bildschirm: eine Vierteldrehung
+            ' tauscht sie NICHT, sie wandert in den Drehwinkel des Objekts (siehe die Pruefung
+            ' "Bilddrehung addiert Rotation, aber backt sie nicht in Bounds"). Zurueck geht deshalb
+            ' jede Kante ueber den Massstab ihrer eigenen Achse.
+            Dim width = outputRect.Width / mapping.ScaleX
+            Dim height = outputRect.Height / mapping.ScaleY
+            If width <= 0 OrElse height <= 0 Then Return False
+            sourceRect = New SKRect(CSng(source.X - width / 2.0), CSng(source.Y - height / 2.0),
+                                    CSng(source.X + width / 2.0), CSng(source.Y + height / 2.0))
+            Return True
+        End Function
+
         Friend Shared Function TransformAnnotationForGeometry(annotation As ImageAnnotation, adj As ImageAdjustments,
                                                               outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             If annotation Is Nothing Then Return Nothing
@@ -3990,10 +4076,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' <summary>Die Objektabbildung EINER Feldgruppe - der Weg, den es vor der geordneten
         ''' Schrittfolge allein gab, und heute die Umsetzung EINES Schrittes.
         '''
-        ''' Sie kennt bewusst nur einen Teil der Geometrie: Beschnitt, Groesse, Vierteldrehung und
-        ''' Spiegelung. Ausrichten, Perspektive und Bildverzerrung fasst sie NICHT an - die traegt
-        ''' ein Objekt in seinem eigenen Feld (siehe GeometryForAnnotations), oder sie gelten fuer
-        ''' das Bild darunter und nicht fuer das, was daraufliegt.</summary>
+        ''' Sie deckt Beschnitt, Groesse, Vierteldrehung, Spiegelung und das Ausrichten ab - alles,
+        ''' was den Bildinhalt bewegt und sich als Rechteck mit Drehwinkel ausdruecken laesst. Ein
+        ''' Objekt liegt AUF diesem Inhalt und geht deshalb mit.
+        '''
+        ''' NICHT hier stehen die beiden projektiven Stufen, Perspektive und Bildverzerrung: sie
+        ''' lassen sich nicht als Rechteck plus Winkel schreiben. Ein Objekt traegt sie in seinem
+        ''' eigenen Verzerrungsfeld, das der Editor beim Bestaetigen fuellt (ApplyWarpToObjects und
+        ''' das Gegenstueck fuer die Perspektive); die Punktabbildung fuer Objekte laesst beide
+        ''' Stufen deshalb aus (siehe GeometryForAnnotations).</summary>
         ''' <param name="bakeOwnObjectWarp">Das eigene Verzerrungsfeld eines Objekts traegt die
         ''' Drehung und Spiegelung DES OBJEKTS; sie wird einmal hineingerechnet. Laeuft die Routine
         ''' je Schritt einer Kette, darf das nur beim ERSTEN Mal geschehen - sonst dreht sich das
@@ -4001,6 +4092,107 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function TransformAnnotationThroughGeometryFields(annotation As ImageAnnotation, adj As ImageAdjustments,
                                                                         outputWidth As Integer, outputHeight As Integer,
                                                                         Optional bakeOwnObjectWarp As Boolean = True) As ImageAnnotation
+            ' DAS AUSRICHTEN IST EINE DREHUNG DES BILDINHALTS, und ein Objekt liegt auf diesem
+            ' Inhalt: wer es an einer Linie im Bild ausgerichtet hat, will es nach dem Begradigen
+            ' weiter an dieser Linie sehen. Es dreht deshalb mit - um denselben Mittelpunkt, um
+            ' denselben Winkel, und sein eigener Drehwinkel waechst um denselben Betrag.
+            '
+            ' Getrennt vom Rumpf, weil der die uebrige Feldgruppe in EINEM Massstab auf die Ausgabe
+            ' bringt. Mit der Begradigung darin waere dieser Massstab falsch: die erweiterte
+            ' Leinwand ist groesser als das Bild, und das Objekt waere um genau diesen Betrag
+            ' mitgewachsen (so war es bis hierher - das Objekt blieb waagerecht stehen und wurde
+            ' dabei auch noch groesser).
+            If Math.Abs(adj.StraightenDegrees) >= 0.01F AndAlso adj.SourceWidthPixels > 0 AndAlso adj.SourceHeightPixels > 0 Then
+                Dim crop = ComputeGeometryCropRect(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
+                Dim turned = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
+                Dim beforeWidth = If(turned = 90 OrElse turned = 270, crop.Height, crop.Width)
+                Dim beforeHeight = If(turned = 90 OrElse turned = 270, crop.Width, crop.Height)
+                If beforeWidth > 0 AndAlso beforeHeight > 0 Then
+                    Dim afterSize = StraightenOutputSize(beforeWidth, beforeHeight, adj.StraightenDegrees, adj.StraightenExpandCanvas)
+                    Dim body = TransformAnnotationThroughGeometryFieldsCore(annotation, adj, beforeWidth, beforeHeight, bakeOwnObjectWarp)
+                    body = StraightenAnnotation(body, beforeWidth, beforeHeight, adj.StraightenDegrees, adj.StraightenExpandCanvas)
+                    If body Is Nothing Then Return Nothing
+                    If afterSize.Width <= 0 OrElse afterSize.Height <= 0 Then Return body
+                    If outputWidth = afterSize.Width AndAlso outputHeight = afterSize.Height Then Return body
+                    Dim finalKind = If(body.Kind, "").Trim().ToLowerInvariant()
+                    If finalKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(body.Anchor) AndAlso Not body.ScaleWithImage Then Return body
+                    Return ScaleAnnotationForSource(body, outputWidth / CSng(afterSize.Width), outputHeight / CSng(afterSize.Height))
+                End If
+            End If
+            Return TransformAnnotationThroughGeometryFieldsCore(annotation, adj, outputWidth, outputHeight, bakeOwnObjectWarp)
+        End Function
+
+        ''' <summary>Die Masse nach dem Begradigen. Dieselbe Rechnung wie <see cref="ApplyStraighten"/>
+        ''' und wie im Punktweg - laufen die drei auseinander, sitzt das Objekt neben dem Bild.</summary>
+        Private Shared Function StraightenOutputSize(width As Double, height As Double,
+                                                     degrees As Single, expandCanvas As Boolean) As SKSizeI
+            If Not expandCanvas Then Return New SKSizeI(CInt(Math.Round(width)), CInt(Math.Round(height)))
+            Dim radians = Math.Abs(degrees) * Math.PI / 180.0
+            Return New SKSizeI(Math.Max(1, CInt(Math.Ceiling(width * Math.Cos(radians) + height * Math.Sin(radians)))),
+                               Math.Max(1, CInt(Math.Ceiling(width * Math.Sin(radians) + height * Math.Cos(radians)))))
+        End Function
+
+        ''' <summary>Dreht ein Objekt mit der Begradigung des Bildes: sein Mittelpunkt wandert um
+        ''' den Bildmittelpunkt, sein eigener Drehwinkel waechst um den Winkel, und ohne erweiterte
+        ''' Leinwand nimmt es dieselbe Vergroesserung mit, mit der die Stufe die gedrehten Ecken
+        ''' wieder in den Rahmen holt.
+        '''
+        ''' AUSGENOMMEN sind das verankerte Wasserzeichen und der Rahmen: die liegen bewusst AUF dem
+        ''' fertigen Bild und loesen ihre Lage gegen die Ausgabe auf. Ein mitgekipptes Wasserzeichen
+        ''' waere kein Wasserzeichen mehr.</summary>
+        Private Shared Function StraightenAnnotation(annotation As ImageAnnotation, width As Double, height As Double,
+                                                    degrees As Single, expandCanvas As Boolean) As ImageAnnotation
+            If annotation Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return annotation
+            Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
+            If kind = "frame" Then Return annotation
+            If kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(annotation.Anchor) Then Return annotation
+
+            Dim radians = degrees * Math.PI / 180.0
+            Dim absRadians = Math.Abs(degrees) * Math.PI / 180.0
+            Dim outWidth = width, outHeight = height, scale = 1.0
+            If expandCanvas Then
+                Dim size = StraightenOutputSize(width, height, degrees, True)
+                outWidth = size.Width : outHeight = size.Height
+            Else
+                scale = Math.Max(width / (width * Math.Cos(absRadians) + height * Math.Sin(absRadians)),
+                                 height / (width * Math.Sin(absRadians) + height * Math.Cos(absRadians)))
+                scale = Math.Max(1.0, scale)
+            End If
+            Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
+            Dim MapPoint = Function(px As Double, py As Double) As (X As Double, Y As Double)
+                               Dim dx = px - width / 2.0, dy = py - height / 2.0
+                               Return (outWidth / 2.0 + scale * (cosA * dx - sinA * dy),
+                                       outHeight / 2.0 + scale * (sinA * dx + cosA * dy))
+                           End Function
+
+            Dim result = annotation.Clone()
+            Dim centre = MapPoint(result.XPixels + result.WidthPixels / 2.0, result.YPixels + result.HeightPixels / 2.0)
+            result.WidthPixels = CSng(Math.Max(1.0, result.WidthPixels * scale))
+            result.HeightPixels = CSng(Math.Max(1.0, result.HeightPixels * scale))
+            result.XPixels = CSng(centre.X - result.WidthPixels / 2.0)
+            result.YPixels = CSng(centre.Y - result.HeightPixels / 2.0)
+            result.RotationDegrees = CSng(NormalizeObjectRotation(result.RotationDegrees + degrees))
+            If IsPaintKind(kind) AndAlso result.Strokes IsNot Nothing Then
+                result.Strokes = result.Strokes.Where(Function(stroke) stroke IsNot Nothing).Select(
+                    Function(stroke) New BrushStroke(stroke.Points.Select(
+                        Function(p)
+                            Dim moved = MapPoint(p.X, p.Y)
+                            Return New StrokePoint(CSng(moved.X), CSng(moved.Y))
+                        End Function).ToList())).ToList()
+            End If
+            Return result
+        End Function
+
+        Private Shared Function NormalizeObjectRotation(degrees As Double) As Double
+            Dim value = degrees Mod 360.0
+            If value > 180.0 Then value -= 360.0
+            If value <= -180.0 Then value += 360.0
+            Return value
+        End Function
+
+        Private Shared Function TransformAnnotationThroughGeometryFieldsCore(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                                            outputWidth As Integer, outputHeight As Integer,
+                                                                            Optional bakeOwnObjectWarp As Boolean = True) As ImageAnnotation
             Dim rotation = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
             Dim q = rotation \ 90
             Dim preWidth = If(rotation = 90 OrElse rotation = 270, outputHeight, outputWidth)

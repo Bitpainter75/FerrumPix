@@ -10818,6 +10818,28 @@ Namespace ViewModels
             Dim dw = width / 100.0 * displaySize.Width
             Dim dh = height / 100.0 * displaySize.Height
             Dim geometry = BuildAppliedGeometryAdjustments()
+            geometry.SourceWidthPixels = baseWidth
+            geometry.SourceHeightPixels = baseHeight
+            ' DER RUECKWEG KOMMT AUS DEM HINWEG. Die Objektabbildung ist affin; ImageProcessor
+            ' liest sie an einem Probe-Rechteck ab und kehrt sie um. Damit deckt der Rueckweg
+            ' automatisch alles ab, was der Hinweg tut - auch das Ausrichten, das ein Objekt seit
+            ' Neuestem mitdreht. Eine zweite, hier von Hand rueckwaerts geschriebene Kette waere
+            ' genau die Stelle, an der beide wieder auseinanderlaufen.
+            '
+            ' Das verankerte Wasserzeichen bleibt aussen vor: es speichert in X/Y keinen Ort,
+            ' sondern den Abstand zu seinem Anker, und folgt dem Bildinhalt bewusst nicht.
+            Dim probeKind = If(kind, "").Trim().ToLowerInvariant()
+            If Not (probeKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(_annotationAnchor)) Then
+                Dim sourceRect As SkiaSharp.SKRect
+                If ImageProcessor.TryAnnotationOutputToSource(
+                        New SkiaSharp.SKRect(CSng(dx), CSng(dy), CSng(dx + dw), CSng(dy + dh)),
+                        geometry, displaySize.Width, displaySize.Height, sourceRect) Then
+                    Return (sourceRect.Left / baseWidth * 100.0,
+                            sourceRect.Top / baseHeight * 100.0,
+                            Math.Max(1.0F, sourceRect.Width) / baseWidth * 100.0,
+                            Math.Max(1.0F, sourceRect.Height) / baseHeight * 100.0)
+                End If
+            End If
             If geometry.GeometryOperations IsNot Nothing AndAlso geometry.GeometryOperations.Count <> 0 Then
                 ' Der Rueckweg muss dieselbe verkuerzte Kette nehmen wie der Hinweg
                 ' (ImageProcessor.GeometryForAnnotations): die Bildverzerrung tragen Objekte in
@@ -11136,23 +11158,31 @@ Namespace ViewModels
         ''' ein. Zwei Spiegelungen sind zusammen eine halbe Drehung und lassen den Drehsinn in Ruhe.
         ''' Innerhalb eines Schrittes steht die Drehung VOR der Spiegelung (ApplyGeometryTransforms);
         ''' die Zusammensetzung liefert wieder genau diese Form und passt damit zu allen Lesern.</summary>
-        Private Function AppliedTransformState() As (Rotation As Integer, FlipHorizontal As Boolean, FlipVertical As Boolean)
+        Private Function AppliedTransformState() As (Rotation As Integer, FlipHorizontal As Boolean, FlipVertical As Boolean,
+                                                    Straighten As Double)
             ' Die offenen Felder sind der Ausgangspunkt und selbst schon ein solcher Schritt:
             ' entweder traegt sie ein Rezept ohne Schrittliste, oder die Liste traegt alles und
             ' sie stehen auf null (siehe die Migration in ApplyAdjustments).
             Dim rotation = _appliedRotationDegrees
             Dim flipH = _appliedFlipH
             Dim flipV = _appliedFlipV
+            ' Das Ausrichten ist eine Drehung wie die Vierteldrehung, nur um einen kleinen Winkel -
+            ' es folgt derselben Regel: eine einzelne Spiegelung kehrt seinen Drehsinn um. Objekte
+            ' machen es mit (siehe ImageProcessor.StraightenAnnotation), also muss es auch in der
+            ' Umrechnung ihres Drehwinkels stehen.
+            Dim straighten As Double = _appliedStraightenDegrees
             For Each operation In _geometryOperations
                 If operation?.Adjustments Is Nothing Then Continue For
                 If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
                    Not String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Continue For
                 Dim a = operation.Adjustments
-                rotation += If(flipH Xor flipV, -a.RotationDegrees, a.RotationDegrees)
+                Dim mirrored = flipH Xor flipV
+                rotation += If(mirrored, -a.RotationDegrees, a.RotationDegrees)
+                straighten += If(mirrored, -a.StraightenDegrees, a.StraightenDegrees)
                 flipH = flipH Xor a.FlipHorizontal
                 flipV = flipV Xor a.FlipVertical
             Next
-            Return (ImageGeometryMapper.NormalizeQuarterTurn(rotation), flipH, flipV)
+            Return (ImageGeometryMapper.NormalizeQuarterTurn(rotation), flipH, flipV, straighten)
         End Function
 
         Public ReadOnly Property DisplayImageWidthPixels As Integer
@@ -11174,19 +11204,28 @@ Namespace ViewModels
             RaiseEnvelopeChanged()
         End Sub
 
+        ''' <summary>Der Drehwinkel, unter dem ein gespeichertes Objekt auf dem Bildschirm steht.
+        ''' Vierteldrehung und Spiegelungen permutieren ihn, das AUSRICHTEN kommt danach obendrauf:
+        ''' ein Objekt dreht mit dem Bildinhalt mit (siehe ImageProcessor.StraightenAnnotation).</summary>
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0.0
-            Return ImageGeometryMapper.SourceObjectRotationToDisplay(annotation.RotationDegrees,
-                                                                     AppliedRotationDegrees,
-                                                                     AppliedFlipHorizontal,
-                                                                     AppliedFlipVertical)
+            Dim state = AppliedTransformState()
+            Return NormalizeAnnotationRotation(
+                ImageGeometryMapper.SourceObjectRotationToDisplay(annotation.RotationDegrees,
+                                                                  state.Rotation,
+                                                                  state.FlipHorizontal,
+                                                                  state.FlipVertical) + state.Straighten)
         End Function
 
+        ''' <summary>Gegenstueck zu <see cref="StoredAnnotationRotationToDisplay"/>: erst das
+        ''' Ausrichten herausrechnen, dann die Permutation zuruecknehmen - in dieser Reihenfolge,
+        ''' sonst kommt der Winkel bei gespiegeltem Bild mit falschem Vorzeichen an.</summary>
         Private Function DisplayAnnotationRotationToStored(kind As String, degrees As Double) As Double
-            Return ImageGeometryMapper.DisplayObjectRotationToSource(degrees,
-                                                                     AppliedRotationDegrees,
-                                                                     AppliedFlipHorizontal,
-                                                                     AppliedFlipVertical)
+            Dim state = AppliedTransformState()
+            Return ImageGeometryMapper.DisplayObjectRotationToSource(NormalizeAnnotationRotation(degrees - state.Straighten),
+                                                                     state.Rotation,
+                                                                     state.FlipHorizontal,
+                                                                     state.FlipVertical)
         End Function
 
         Private Function DisplayAnnotationFlipHorizontalToStored(displayFlip As Boolean) As Boolean
@@ -16329,6 +16368,13 @@ Namespace ViewModels
             If Not HasPerspectiveChanges Then Return
             PushUndo(LocalizationService.T("Perspektive"))
             ClearActiveSelectionForGeometry()
+            ' OBJEKTE GEHEN MIT. Die Perspektive ist projektiv und laesst sich nicht als Rechteck
+            ' mit Drehwinkel schreiben - anders als Beschnitt, Vierteldrehung und Ausrichten, denen
+            ' die Objektabbildung direkt folgt. Sie wird deshalb beim Bestaetigen in das EIGENE
+            ' Verzerrungsfeld jedes Objekts uebernommen, genau wie beim Gitterverzerren; die
+            ' Objektabbildung laesst die Stufe danach bewusst aus (GeometryForAnnotations), sonst
+            ' wirkte sie zweimal.
+            ApplyPerspectiveToObjects()
             _geometryOperations.Add(New GeometryOperation With {
                 .Kind = "perspective",
                 .Adjustments = New ImageAdjustments With {

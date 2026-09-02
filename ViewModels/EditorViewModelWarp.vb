@@ -1140,6 +1140,31 @@ Namespace ViewModels
         '''
         ''' <paramref name="abbildung"/> nimmt einen Punkt in Bildprozent und gibt zurueck, wohin er
         ''' wandert - ebenfalls in Bildprozent.</summary>
+        ''' <summary>Traegt die gerade bestaetigte Perspektive in das eigene Verzerrungsfeld jedes
+        ''' Objekts ein - das Gegenstueck zum Gitterverzerren.
+        '''
+        ''' Gerechnet wird auf der ANZEIGEGROESSE: die Perspektive laesst die Masse unveraendert,
+        ''' und das Feld steht ohnehin in Prozent. Wichtig ist allein, dass es dieselbe Matrix ist,
+        ''' die auch die Pixel verzieht (ImageGeometryMapper.WarpMatrix) - eine zweite Rechnung
+        ''' liefe frueher oder spaeter neben dem Bild her.</summary>
+        Private Sub ApplyPerspectiveToObjects()
+            If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return
+            Dim size = GetAnnotationDisplayPixelSize()
+            If size.Width <= 0 OrElse size.Height <= 0 Then Return
+            Dim corners = New Double() {_perspectiveCorners(0), _perspectiveCorners(1),
+                                        _perspectiveCorners(2), _perspectiveCorners(3),
+                                        _perspectiveCorners(4), _perspectiveCorners(5),
+                                        _perspectiveCorners(6), _perspectiveCorners(7)}
+            Dim matrix = ImageGeometryMapper.WarpMatrix(size.Width, size.Height,
+                                                        _perspectiveHorizontal, _perspectiveVertical,
+                                                        _perspectiveAspect, _perspectiveScale, corners)
+            If matrix.IsIdentity Then Return
+            ApplyWarpToObjects(Function(px, py)
+                                   Dim p = matrix.MapPoint(CSng(px / 100.0 * size.Width), CSng(py / 100.0 * size.Height))
+                                   Return (p.X / size.Width * 100.0, p.Y / size.Height * 100.0)
+                               End Function)
+        End Sub
+
         Private Sub ApplyWarpToObjects(abbildung As Func(Of Double, Double, (X As Double, Y As Double)))
             If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return
             ' Bild und mitwandernde Objekte muessen auf derselben Feinheit ausgewertet werden.
