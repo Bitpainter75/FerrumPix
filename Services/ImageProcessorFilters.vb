@@ -726,11 +726,16 @@ Namespace Services
         ''' Scannerrand darf den Dichtepunkt nicht mehr bestimmen.</summary>
         Public Shared Function AnalyzeFilmNegative(source As SKBitmap, adj As ImageAdjustments) As (BaseColor As SKColor, DensityColor As SKColor)
             If source Is Nothing Then Return (SKColors.White, SKColors.Black)
-            Dim cropped = ApplyGeometryPipeline(source, If(adj, New ImageAdjustments()))
+            ' DIE QUELLE GEHOERT DEM AUFRUFER. Die Geometriekette entsorgt jede Zwischenstufe, die
+            ' sie ersetzt - beim ersten wirksamen Schritt waere das die uebergebene Vorschau-Bitmap
+            ' des Editors gewesen, die danach weiterverwendet wird. Die Owned-Fassung gibt erst ab
+            ' der ersten selbst erzeugten Stufe frei.
+            Dim owned = False
+            Dim cropped = ApplyGeometryPipelineOwned(source, If(adj, New ImageAdjustments()), owned)
             Try
                 Return AnalyzeFilmNegativeCore(cropped)
             Finally
-                If Not Object.ReferenceEquals(cropped, source) Then cropped?.Dispose()
+                If owned Then cropped?.Dispose()
             End Try
         End Function
 

@@ -54,8 +54,13 @@ Namespace ViewModels
         Private Function GetCompositorBlitAdjustments() As ImageAdjustments
             Dim crop = EffectiveCrop(fuerAnzeige:=True)
             Dim geometry = BuildAppliedGeometryAdjustments()
+            ' Das Ausrichten gehoert in den Schluessel UND in die Momentaufnahme. Ohne erweiterte
+            ' Leinwand aendert es die Ausgabegroesse nicht, der Groessenwaechter des Kompositors
+            ' merkt also nichts davon - die Objekte blieben gerade stehen, waehrend das Bild
+            ' darunter schon gekippt war.
             Dim key = String.Join("|", GetBaseWidth(), GetBaseHeight(), ImageProcessor.GeometryOperationsKey(geometry.GeometryOperations),
-                                  _rotationDegrees, _flipH, _flipV, crop.Left, crop.Top, crop.Right, crop.Bottom, _sceneContentVersion)
+                                  _rotationDegrees, _flipH, _flipV, _straightenDegrees, _straightenExpandCanvas,
+                                  crop.Left, crop.Top, crop.Right, crop.Bottom, _sceneContentVersion)
             If _compositorBlitSnapshot IsNot Nothing AndAlso String.Equals(_compositorBlitGeometryKey, key, StringComparison.Ordinal) Then
                 Return _compositorBlitSnapshot
             End If
@@ -66,6 +71,8 @@ Namespace ViewModels
                 .RotationDegrees = _rotationDegrees,
                 .FlipHorizontal = _flipH,
                 .FlipVertical = _flipV,
+                .StraightenDegrees = CSng(_straightenDegrees),
+                .StraightenExpandCanvas = _straightenExpandCanvas,
                 .CropLeftPercent = CSng(crop.Left),
                 .CropTopPercent = CSng(crop.Top),
                 .CropRightPercent = CSng(crop.Right),

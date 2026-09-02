@@ -2457,10 +2457,12 @@ Namespace ViewModels
                     If _annotations(clamped).IsPaintLayer AndAlso Not IsObjectScopeTool(_currentTool) AndAlso
                        _currentTool <> EditorTool.Retouch AndAlso _currentTool <> EditorTool.Selection AndAlso
                        _currentTool <> EditorTool.Mask Then targetTool = EditorTool.Draw
-                    ' Der Rahmen ist davon die Ausnahme: seine Regler stehen NUR in der Rahmengruppe
-                    ' unter Effekte. Bliebe man in Anpassen oder Farbe stehen, waere die Ebene zwar
-                    ' markiert, aber nirgends etwas davon zu sehen.
-                    If String.Equals(_annotations(clamped).Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then
+                    ' Der Rahmen ist nur ausserhalb eines Objekt-Werkzeugs die Ausnahme: seine Regler
+                    ' stehen unter Effekte. In Transformieren und Verzerren ist er dagegen genau wie
+                    ' jedes andere Objekt das Ziel; der nachtraegliche Sprung nach Effekte hebelte
+                    ' dort die Schutzregel von IsObjectScopeTool wieder aus.
+                    If Not IsObjectScopeTool(_currentTool) AndAlso
+                       String.Equals(_annotations(clamped).Kind, "Frame", StringComparison.OrdinalIgnoreCase) Then
                         targetTool = EditorTool.Effects
                     End If
                     If targetTool <> _currentTool Then
@@ -10899,17 +10901,23 @@ Namespace ViewModels
         ''' Pinselstriche neben dem, was man sieht.</summary>
         Private Function BuildAppliedGeometryAdjustments() As ImageAdjustments
             Dim crop = EffectiveCrop(fuerAnzeige:=True)
+            ' DIESELBEN FELDER WIE DIE GERENDERTE VORSCHAU (GetCurrentAdjustments mit forPreview).
+            ' Ein noch OFFENES Ausrichten steht nicht in der Schrittliste und seit der Trennung von
+            ' "Anwenden" auch nicht mehr in den bestaetigten Feldern - das Bild kippte damit sofort,
+            ' die Objekte und ihre Anfasser aber erst beim Bestaetigen. Beim Zuschneiden sprangen
+            ' sie dadurch sichtbar an eine andere Stelle. Was man sieht, ist die Vorschau; also
+            ' rechnet die Objektabbildung gegen genau deren Geometrie.
             Return New ImageAdjustments With {
                 .CropLeftPercent = CSng(crop.Left), .CropTopPercent = CSng(crop.Top),
                 .CropRightPercent = CSng(crop.Right), .CropBottomPercent = CSng(crop.Bottom),
-                .RotationDegrees = _appliedRotationDegrees,
-                .FlipHorizontal = _appliedFlipH, .FlipVertical = _appliedFlipV,
-                .StraightenDegrees = CSng(_appliedStraightenDegrees),
-                .StraightenExpandCanvas = _appliedStraightenExpandCanvas,
-                .ResizeWidth = _appliedResizeWidth, .ResizeHeight = _appliedResizeHeight,
-                .CanvasWidth = _appliedCanvasWidth, .CanvasHeight = _appliedCanvasHeight,
+                .RotationDegrees = _rotationDegrees,
+                .FlipHorizontal = _flipH, .FlipVertical = _flipV,
+                .StraightenDegrees = CSng(_straightenDegrees),
+                .StraightenExpandCanvas = _straightenExpandCanvas,
+                .ResizeWidth = _resizeWidth, .ResizeHeight = _resizeHeight,
+                .CanvasWidth = _canvasWidth, .CanvasHeight = _canvasHeight,
                 .CanvasAnchor = _canvasAnchor,
-                .GeometryOperations = GeometryOperationsForDisplay(),
+                .GeometryOperations = GeometryOperationsForRender(forPreview:=True),
                 .ImageWarp = _imageWarp
             }
         End Function
@@ -11160,18 +11168,27 @@ Namespace ViewModels
         ''' die Zusammensetzung liefert wieder genau diese Form und passt damit zu allen Lesern.</summary>
         Private Function AppliedTransformState() As (Rotation As Integer, FlipHorizontal As Boolean, FlipVertical As Boolean,
                                                     Straighten As Double)
-            ' Die offenen Felder sind der Ausgangspunkt und selbst schon ein solcher Schritt:
-            ' entweder traegt sie ein Rezept ohne Schrittliste, oder die Liste traegt alles und
-            ' sie stehen auf null (siehe die Migration in ApplyAdjustments).
-            Dim rotation = _appliedRotationDegrees
-            Dim flipH = _appliedFlipH
-            Dim flipV = _appliedFlipV
+            ' GERECHNET WIRD AUF DER VORSCHAU, nicht auf dem bestaetigten Stand: ein noch offenes
+            ' Ausrichten kippt das Bild bereits, und die Objekte kippen im selben Render mit. Die
+            ' Schrittliste der Vorschau haengt ihn als letzten Schritt an; ist sie leer, tragen ihn
+            ' die offenen Felder allein (siehe GeometryOperationsForRender).
+            Dim steps = GeometryOperationsForRender(forPreview:=True)
+            Dim rotation As Integer = 0
+            Dim flipH As Boolean = False
+            Dim flipV As Boolean = False
             ' Das Ausrichten ist eine Drehung wie die Vierteldrehung, nur um einen kleinen Winkel -
             ' es folgt derselben Regel: eine einzelne Spiegelung kehrt seinen Drehsinn um. Objekte
             ' machen es mit (siehe ImageProcessor.StraightenAnnotation), also muss es auch in der
             ' Umrechnung ihres Drehwinkels stehen.
-            Dim straighten As Double = _appliedStraightenDegrees
-            For Each operation In _geometryOperations
+            Dim straighten As Double = 0
+            If steps.Count = 0 Then
+                rotation = _rotationDegrees
+                flipH = _flipH
+                flipV = _flipV
+                straighten = _straightenDegrees
+                Return (ImageGeometryMapper.NormalizeQuarterTurn(rotation), flipH, flipV, straighten)
+            End If
+            For Each operation In steps
                 If operation?.Adjustments Is Nothing Then Continue For
                 If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
                    Not String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Continue For
@@ -12258,8 +12275,14 @@ Namespace ViewModels
         ''' Zoom muessen das mitbekommen, sonst bliebe ein Bild in der alten Groesse stehen.</summary>
         Private Sub NotifyCropDisplayChanged()
             If Not ShowsFullImageWhileCropping Then Return
-            If Math.Abs(_appliedCropLeft) < 0.0001 AndAlso Math.Abs(_appliedCropTop) < 0.0001 AndAlso
-               Math.Abs(_appliedCropRight) < 0.0001 AndAlso Math.Abs(_appliedCropBottom) < 0.0001 Then Return
+            ' DER BESTAETIGTE ZUSCHNITT STEHT IM REZEPT, nicht mehr in den Feldern: die stehen
+            ' seit der Schrittfolge auf null. Gegen sie geprueft fiel diese Meldung immer aus, und
+            ' das Betreten wie das Verlassen des Werkzeugs plante keine Vorschau mehr - die Buehne
+            ' blieb beim ganzen Bild stehen, waehrend Auswahlbox und Treffertest schon im
+            ' Ausschnitt rechneten.
+            Dim applied = AppliedCropValues()
+            If Math.Abs(applied.Left) < 0.0001 AndAlso Math.Abs(applied.Top) < 0.0001 AndAlso
+               Math.Abs(applied.Right) < 0.0001 AndAlso Math.Abs(applied.Bottom) < 0.0001 Then Return
             RaiseDisplayImageGeometryProperties()
             SchedulePreviewUpdate(markDirty:=False)
             RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
@@ -19393,21 +19416,30 @@ Namespace ViewModels
         ''' Gerechnet wird kantenweise in ganzen Pixeln - exakt so, wie ImageProcessor.ApplyCrop das
         ''' Original beschneidet. Ein "remaining"-Prozentsatz auf die Gesamtbreite kann davon um ein
         ''' Pixel abweichen, und dann zeigte das Panel eine andere Größe an, als die Datei bekommt.</summary>
+        ''' <summary>Die Maße des aktuell sichtbaren Bildes, entlang der QUELL-Achsen gelesen (bei
+        ''' 90 und 270 Grad sind sie gegenüber dem Bildschirm getauscht, siehe
+        ''' <see cref="EffectiveDisplayImageWidthPixels"/>).
+        '''
+        ''' Sie kommen aus DERSELBEN Rechnung wie das Bild (ComputeGeometryOutputSize). Die frühere
+        ''' Kurzform "Basisbreite minus bestätigter Beschnitt" kannte nur die alten Felder: seit der
+        ''' Zuschnitt, die Größenänderung und die Leinwand als Schritte im Rezept stehen, meldete sie
+        ''' nach dem ersten Anwenden weiter die volle Originalgröße - das Zuschnitt-Panel zeigte
+        ''' danach die Maße des ungeschnittenen Bildes, und der Rahmen rechnete gegen sie.</summary>
         Public ReadOnly Property EffectiveImageWidthPixels As Integer
             Get
-                Dim width = GetBaseWidth()
-                If width <= 0 Then Return 0
-                Dim crop = EffectiveCrop(fuerAnzeige:=True)
-                Return Math.Max(1, width - PercentToPixels(crop.Left, width) - PercentToPixels(crop.Right, width))
+                Dim size = GetAnnotationDisplayPixelSize()
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return 0
+                Dim q = AppliedRotationDegrees
+                Return Math.Max(1, If(q = 90 OrElse q = 270, size.Height, size.Width))
             End Get
         End Property
 
         Public ReadOnly Property EffectiveImageHeightPixels As Integer
             Get
-                Dim height = GetBaseHeight()
-                If height <= 0 Then Return 0
-                Dim crop = EffectiveCrop(fuerAnzeige:=True)
-                Return Math.Max(1, height - PercentToPixels(crop.Top, height) - PercentToPixels(crop.Bottom, height))
+                Dim size = GetAnnotationDisplayPixelSize()
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return 0
+                Dim q = AppliedRotationDegrees
+                Return Math.Max(1, If(q = 90 OrElse q = 270, size.Width, size.Height))
             End Get
         End Property
 
@@ -21267,12 +21299,6 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_selectedAnnotationIndex)
             If annotation Is Nothing Then Return False
-            ' TRANSFORMIEREN: dort wirken Drehen und Spiegeln auf das markierte Objekt. Wer mit
-            ' einem markierten Objekt hierher wechselt, will genau das - waere die Markierung beim
-            ' Wechsel weg, gaebe es nie ein Objekt zu drehen. Anders als bei den Werkzeugen in
-            ' IsObjectTransformTool springt ein KLICK hier aber weiter ins Werkzeug des Objekts:
-            ' die andere Haelfte dieses Werkzeugs ist der Zuschnitt.
-            If tool = EditorTool.Transform Then Return True
             ' Text auf einem freien Pfad ist beim Wechsel in das Pfad-Werkzeug das ZIEL der
             ' Punktbearbeitung. Wurde er hier abgewählt, konnte PathEditTarget ihn zwar korrekt
             ' erkennen, bekam aber nie eine selektierte Ebene zu sehen - nach der Umwandlung war
@@ -21305,15 +21331,15 @@ Namespace ViewModels
         ''' Markierung verlieren (Werkzeugwechsel) noch beim Anklicken eines Objekts in dessen Werkzeug
         ''' springen - sonst könnte man ein Objekt dort gar nicht auswählen.</summary>
         Public Shared Function IsObjectTransformTool(tool As EditorTool) As Boolean
-            ' TRANSFORMIEREN steht hier BEWUSST NICHT, obwohl seine vier Knoepfe (90 Grad links und
-            ' rechts, zweimal spiegeln) auf das markierte Objekt wirken. Diese Liste sagt zweierlei
-            ' auf einmal: Markierung beim Betreten behalten UND beim Klick nicht ins Werkzeug des
-            ' Objekts springen. Fuer das zusammengelegte Werkzeug gilt nur das Erste - dafuer steht
-            ' es in ToolKeepsSelectedAnnotationOnEnter. Der Klick soll weiter springen, denn die
-            ' andere Haelfte des Werkzeugs ist der Zuschnitt, und dort war der Sprung immer richtig.
+            ' TRANSFORMIEREN gehoert dazu, seit Zuschnitt und Drehen ein Werkzeug sind: seine vier
+            ' Knoepfe (90 Grad links und rechts, zweimal spiegeln) wirken auf das markierte Objekt.
+            ' Es hier auszulassen kostete beides auf einmal - ein Klick auf ein Objekt sprang ins
+            ' Einfuegewerkzeug seiner Art, und dieselbe Auswahl ueber das Ebenenpanel ebenso; im
+            ' Werkzeug selbst liess sich damit kein Objekt anfassen. Der Zuschnitt verliert dadurch
+            ' nichts: sein Zeiger sucht erst ein Objekt und zieht nur ohne Treffer einen Rahmen auf.
             ' Der PFAD gehoert dazu: wer in das Werkzeug wechselt, will an den markierten Pfad heran -
             ' ihn beim Wechsel abzuwaehlen waere genau das Gegenteil.
-            Return tool = EditorTool.Warp OrElse
+            Return tool = EditorTool.Transform OrElse tool = EditorTool.Warp OrElse
                    tool = EditorTool.Move OrElse tool = EditorTool.Path
         End Function
 

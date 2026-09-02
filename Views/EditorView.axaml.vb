@@ -2029,11 +2029,11 @@ Namespace Views
                 Dim rawPos = e.GetPosition(canvas)
                 Dim pos = ClampPointToRect(rawPos, imageRect)
                 _cropDragMode = GetCropDragMode(rawPos)
-                If _cropDragMode = CropDragMode.None Then
-                    ' Ein Klick auf ein vorhandenes Objekt soll dieses selektieren (und dabei automatisch
-                    ' ins passende Werkzeug wechseln, siehe SelectedAnnotationIndex-Setter im ViewModel)
-                    ' statt sofort eine neue Freistellungsauswahl aufzuziehen - sonst lässt sich ein Objekt
-                    ' nie per Klick anwählen, solange noch "Zuschneiden" (der Standard-Werkzeug) aktiv ist.
+                If _cropDragMode = CropDragMode.None OrElse _cropDragMode = CropDragMode.Move Then
+                    ' Die Crop-Flaeche ist nur eine visuelle Überlagerung. Ein Objekt INNERHALB des
+                    ' Rahmens muss daher vor dessen Verschieben getroffen werden, sonst verdeckt die
+                    ' Box alle Objekte, die sie umschliesst. Kanten und Ecken bleiben absichtlich
+                    ' vorrangig: dort erwartet man den jeweiligen Crop-Griff.
                     Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                     Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                     Const hitSlopPixels As Double = 10.0
@@ -2057,9 +2057,19 @@ Namespace Views
                         e.Handled = True
                         Return
                     End If
-                    _cropDragMode = CropDragMode.NewSelection
-                    _cropStart = pos
-                    _cropEnd = pos
+                    If _cropDragMode = CropDragMode.Move Then
+                        _cropDragInitialRect = GetCropOverlayRect()
+                        _cropDragPointerStart = rawPos
+                        RectToCropPoints(_cropDragInitialRect, _cropStart, _cropEnd)
+                    Else
+                        ' KEIN Objekt getroffen: die Markierung fällt, und das Werkzeug gehört wieder
+                        ' dem Zuschnitt. Ohne diese Zeile blieb der Objektrahmen samt Griffen über dem
+                        ' Bild stehen, während darunter schon ein neuer Ausschnitt aufgezogen wurde.
+                        If vm.HasSelectedAnnotation Then vm.SelectedAnnotationIndex = -1
+                        _cropDragMode = CropDragMode.NewSelection
+                        _cropStart = pos
+                        _cropEnd = pos
+                    End If
                 Else
                     _cropDragInitialRect = GetCropOverlayRect()
                     _cropDragPointerStart = rawPos

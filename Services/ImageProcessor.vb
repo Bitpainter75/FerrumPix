@@ -2846,12 +2846,13 @@ Namespace Services
                 w = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Cos(radians) + oldH * Math.Sin(radians))))
                 h = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Sin(radians) + oldH * Math.Cos(radians))))
             End If
-            Dim resizeW = adj.ResizeWidth, resizeH = adj.ResizeHeight
-            If resizeW > 0 OrElse resizeH > 0 Then
-                If resizeW <= 0 Then resizeW = CInt(Math.Round(w * (resizeH / CDbl(h))))
-                If resizeH <= 0 Then resizeH = CInt(Math.Round(h * (resizeW / CDbl(w))))
-                w = Math.Max(1, resizeW) : h = Math.Max(1, resizeH)
-            End If
+            ' DIESELBE RECHNUNG WIE ApplyResize und wie der Punktweg. Die frueher hier stehende
+            ' Kurzform kannte nur Zielbreite und Zielhoehe: eine prozentuale Groesse, der
+            ' Kasten-Modus und "nicht vergroessern" liefen an ihr vorbei (Stapel und Export setzen
+            ' genau diese drei). Die gemeldete Ausgabegroesse wich damit von den Pixeln ab, und
+            ' Masken wie Objekte wurden gegen ein Mass gerechnet, das es nicht gab.
+            Dim resized = ComputeResizeOutputSize(w, h, adj)
+            w = resized.Width : h = resized.Height
             If adj.CanvasWidth > 0 Then w = adj.CanvasWidth
             If adj.CanvasHeight > 0 Then h = adj.CanvasHeight
             Return New SKSizeI(Math.Max(1, w), Math.Max(1, h))

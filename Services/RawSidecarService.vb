@@ -234,14 +234,23 @@ Namespace Services
             Dim adjustments = TryRead(rawPath)
             Dim degrees As Integer = 0
             If adjustments IsNot Nothing Then
+                ' DIESELBE REGEL WIE IM EDITOR (EditorViewModel.AppliedTransformState): Drehung und
+                ' Spiegelung sind nicht vertauschbar. Eine einzelne Spiegelung kehrt den Drehsinn
+                ' um, also geht die Drehung eines Schrittes mit umgekehrtem Vorzeichen ein, wenn
+                ' vor ihm eine ungerade Zahl von Spiegelungen steht. Blosses Aufsummieren gab
+                ' "spiegeln, dann 90 Grad" dieselbe Zahl wie "90 Grad, dann spiegeln", und die
+                ' Kachel lag danach quer.
                 degrees = adjustments.RotationDegrees
+                Dim flipH = adjustments.FlipHorizontal, flipV = adjustments.FlipVertical
                 If adjustments.GeometryOperations IsNot Nothing Then
                     For Each operation In adjustments.GeometryOperations
-                        If operation IsNot Nothing AndAlso
-                           (String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) OrElse
-                            String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase)) Then
-                            If operation.Adjustments IsNot Nothing Then degrees += operation.Adjustments.RotationDegrees
-                        End If
+                        If operation Is Nothing OrElse operation.Adjustments Is Nothing Then Continue For
+                        If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
+                           Not String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Continue For
+                        Dim a = operation.Adjustments
+                        degrees += If(flipH Xor flipV, -a.RotationDegrees, a.RotationDegrees)
+                        flipH = flipH Xor a.FlipHorizontal
+                        flipV = flipV Xor a.FlipVertical
                     Next
                 End If
                 degrees = ImageOrientationService.NormalizeQuarterTurn(degrees)
