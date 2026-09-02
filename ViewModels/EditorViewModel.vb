@@ -11072,17 +11072,6 @@ Namespace ViewModels
             Return -1
         End Function
 
-        Private Shared Function HasLegacyGeometryValues(adj As ImageAdjustments) As Boolean
-            If adj Is Nothing Then Return False
-            Return adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 OrElse
-                   adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse adj.StraightenExpandCanvas OrElse adj.FlipHorizontal OrElse adj.FlipVertical OrElse
-                   adj.PerspectiveHorizontal <> 0 OrElse adj.PerspectiveVertical <> 0 OrElse adj.PerspectiveAspect <> 0 OrElse adj.PerspectiveScale <> 0 OrElse
-                   adj.PerspectiveCorner0X <> 0 OrElse adj.PerspectiveCorner0Y <> 0 OrElse adj.PerspectiveCorner1X <> 0 OrElse adj.PerspectiveCorner1Y <> 0 OrElse
-                   adj.PerspectiveCorner2X <> 0 OrElse adj.PerspectiveCorner2Y <> 0 OrElse adj.PerspectiveCorner3X <> 0 OrElse adj.PerspectiveCorner3Y <> 0 OrElse
-                   (adj.ImageWarp IsNot Nothing AndAlso Not adj.ImageWarp.IsEmpty) OrElse adj.ResizeWidth > 0 OrElse adj.ResizeHeight > 0 OrElse
-                   adj.ResizeScalePercent > 0 OrElse adj.CanvasWidth > 0 OrElse adj.CanvasHeight > 0
-        End Function
-
         ''' <summary>Bestätigte Schritte plus den momentan offenen Transform-Schritt für die
         ''' Vorschau. Der offene Crop bleibt bewusst ein Overlay und wird erst mit Anwenden Teil
         ''' des Rezepts.</summary>
@@ -18670,15 +18659,9 @@ Namespace ViewModels
             _colorGradeGlobalLuminance = adj.ColorGradeGlobalLuminance
             _colorGradeBlending = adj.ColorGradeBlending
             _geometryOperations.Clear()
-            Dim migratedLegacyGeometry = False
             If adj.GeometryOperations IsNot Nothing Then
                 _geometryOperations.AddRange(adj.GeometryOperations.Where(Function(operation) operation IsNot Nothing).
                                              Select(Function(operation) operation.Clone()))
-            End If
-            If _geometryOperations.Count = 0 AndAlso HasLegacyGeometryValues(adj) Then
-                Dim legacy = GeometryOperation.CloneGeometryAdjustments("legacy", adj)
-                _geometryOperations.Add(New GeometryOperation With {.Kind = "legacy", .Adjustments = legacy})
-                migratedLegacyGeometry = True
             End If
             _rotationDegrees = adj.RotationDegrees
             ' Verzerren gehoert zur Geometrie und muss aus dem Rezept zurueck in die Felder: die
@@ -18739,21 +18722,6 @@ Namespace ViewModels
             ' (ApplyDocumentBackground laesst ein leeres Feld unberuehrt). Ein Ersatzwert Schwarz
             ' haette hier eine Farbe erfunden, die niemand gewaehlt hat.
             _canvasBackgroundColor = If(String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor), "#00000000", adj.CanvasBackgroundColor)
-            If migratedLegacyGeometry Then
-                ' Ab jetzt ist die Liste die einzige Wahrheit. Die UI-Felder sind offenere, noch
-                ' nicht bestätigte Werte; ließen wir die alten Werte darin, würde ein späterer
-                ' Apply-Schritt das alte Rezept neben der neuen Stufe erneut interpretieren.
-                _rotationDegrees = 0 : _straightenDegrees = 0 : _straightenExpandCanvas = False
-                _flipH = False : _flipV = False
-                _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0 : _appliedStraightenExpandCanvas = False
-                _appliedFlipH = False : _appliedFlipV = False
-                _perspectiveHorizontal = 0 : _perspectiveVertical = 0 : _perspectiveAspect = 0 : _perspectiveScale = 0
-                Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
-                _appliedCropLeft = 0 : _appliedCropTop = 0 : _appliedCropRight = 0 : _appliedCropBottom = 0
-                _resizeWidth = 0 : _resizeHeight = 0 : _appliedResizeWidth = 0 : _appliedResizeHeight = 0
-                _canvasWidth = 0 : _canvasHeight = 0 : _appliedCanvasWidth = 0 : _appliedCanvasHeight = 0
-                _imageWarp = Nothing
-            End If
             _filterPreset = adj.FilterPreset
             _filterStrength = If(adj.FilterStrength <= 0, 100, adj.FilterStrength)
             _lutPath = adj.LutPath

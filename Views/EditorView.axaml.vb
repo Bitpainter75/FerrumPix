@@ -5196,47 +5196,21 @@ Namespace Views
                                       End Sub, DispatcherPriority.Background)
         End Sub
 
-        ''' <summary>Die Lage des Auswahlrahmens: Drehung UND Spiegelung, so wie der Renderer das
-        ''' Objekt zeichnet.
+        ''' <summary>Die Lage des Auswahlrahmens: NUR die Drehung.
         '''
-        ''' DIE SPIEGELUNG GEHOERT MIT HINEIN. Der Renderer dreht das Objekt erst und spiegelt es
-        ''' danach um die eigene Mitte (ImageProcessorObjects), und gespiegelt wird um die EIGENE
-        ''' Spiegelung des Objekts zusammen mit der des Grundbilds - eine Bildspiegelung klappt die
-        ''' Objekte mit um (TransformAnnotationForGeometry). Der Rahmen trug bisher nur die Drehung:
-        ''' bei gespiegeltem Bild sass sein Dreh-Anfasser auf der Seite, die der Bildinhalt gerade
-        ''' verlassen hatte.
+        ''' DIE SPIEGELUNG GEHOERT AUSDRUECKLICH NICHT HINEIN, und das ist gemessen: der Rahmen ist
+        ''' ein achsenparalleles Rechteck, eine Spiegelung um seine eigene Mitte laesst ihn also
+        ''' unveraendert. Alles, was sie bewegt, sind seine GRIFFE - und da sitzt der Dreh-Anfasser
+        ''' als einziger unsymmetrisch, oben ueber der Mitte. Ein gespiegelter Rahmen klappte ihn
+        ''' nach unten, waehrend die Trefferpruefung (GetTextDragMode) ihn weiter oben suchte: er
+        ''' war zu sehen und nicht zu fassen (Befund an einem Textobjekt mit eigener senkrechter
+        ''' Spiegelung).
         '''
-        ''' SKALIEREN VOR DREHEN, in genau dieser Reihenfolge: Avalonia wendet die Glieder einer
-        ''' TransformGroup der Reihe nach an, und die beiden sind nicht vertauschbar - andersherum
-        ''' bekaeme ein gedrehtes und gespiegeltes Objekt den Rahmen mit umgekehrtem Drehsinn.
-        '''
-        ''' Eine MEHRFACHAUSWAHL bleibt achsenparallel und ungespiegelt: ihre Mitglieder koennen
-        ''' verschieden gedreht und gespiegelt sein, die gemeinsame Box hat davon nichts.</summary>
-        Private Shared Function BuildSelectionFrameTransform(vm As EditorViewModel, rotationDegrees As Double) As Transform
-            Dim flip = SelectionFrameFlip(vm)
-            If Not flip.Horizontal AndAlso Not flip.Vertical Then Return New RotateTransform(rotationDegrees)
-            Dim group As New TransformGroup()
-            group.Children.Add(New ScaleTransform(If(flip.Horizontal, -1.0, 1.0), If(flip.Vertical, -1.0, 1.0)))
-            group.Children.Add(New RotateTransform(rotationDegrees))
-            Return group
-        End Function
-
-        ''' <summary>Die Umkehrung von <see cref="BuildSelectionFrameTransform"/> - fuer alles, was
-        ''' IM Rahmen liegt und trotzdem aufrecht und seitenrichtig bleiben muss.</summary>
-        Private Shared Function BuildSelectionFrameCounterTransform(vm As EditorViewModel, rotationDegrees As Double) As Transform
-            Dim flip = SelectionFrameFlip(vm)
-            If Not flip.Horizontal AndAlso Not flip.Vertical Then Return New RotateTransform(-rotationDegrees)
-            ' Umgekehrte Reihenfolge und umgekehrte Vorzeichen: erst die Drehung heraus, dann die
-            ' Spiegelung.
-            Dim group As New TransformGroup()
-            group.Children.Add(New RotateTransform(-rotationDegrees))
-            group.Children.Add(New ScaleTransform(If(flip.Horizontal, -1.0, 1.0), If(flip.Vertical, -1.0, 1.0)))
-            Return group
-        End Function
-
-        Private Shared Function SelectionFrameFlip(vm As EditorViewModel) As (Horizontal As Boolean, Vertical As Boolean)
-            If vm Is Nothing OrElse vm.HasMultiAnnotationSelection Then Return (False, False)
-            Return (vm.AnnotationDisplayFlipHorizontal, vm.AnnotationDisplayFlipVertical)
+        ''' Wer das aendern will, muss GetTextDragMode mitaendern - und dabei bedenken, dass die
+        ''' Groessengriffe NICHT mitgespiegelt werden duerfen: das Rechteck liegt im Anzeigeraum,
+        ''' wer seine sichtbar obere Kante zieht, meint dort auch die obere.</summary>
+        Private Shared Function BuildSelectionFrameTransform(rotationDegrees As Double) As Transform
+            Return New RotateTransform(rotationDegrees)
         End Function
 
         Private Sub PositionTextOverlayFromViewModel(ix As Double, iy As Double, iw As Double, ih As Double, scale As Double)
@@ -5276,7 +5250,7 @@ Namespace Views
             overlay.Width = width
             overlay.Height = height
             overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-            overlay.RenderTransform = BuildSelectionFrameTransform(vm, If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation))
+            overlay.RenderTransform = BuildSelectionFrameTransform(If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation))
             overlay.IsVisible = True
             ' Der Selektionsrahmen folgt bewusst der Objekt-Konturfarbe (
             ' "so wie frueher darstellen", nicht Akzentfarbe). Genau deshalb braucht er einen
@@ -5731,7 +5705,7 @@ Namespace Views
                     ' sie wird beim Loslassen aus den gedrehten Mitgliedern neu eingepasst).
                     _textRotateBoxAngle = newRotation - _textRotateStartRotation
                     overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-                    overlay.RenderTransform = BuildSelectionFrameTransform(vm, _textRotateBoxAngle)
+                    overlay.RenderTransform = BuildSelectionFrameTransform(_textRotateBoxAngle)
                     e.Handled = True
                     Return
                 End If
@@ -5739,7 +5713,7 @@ Namespace Views
                 overlay.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
                 ' Dieselbe Lage wie im Layoutdurchlauf - sonst verloere der Rahmen waehrend des
                 ' Drehens seine Spiegelung und bekaeme sie beim Loslassen wieder.
-                overlay.RenderTransform = BuildSelectionFrameTransform(vm, newRotation)
+                overlay.RenderTransform = BuildSelectionFrameTransform(newRotation)
                 e.Handled = True
                 Return
             End If
@@ -6082,9 +6056,9 @@ Namespace Views
             If badgeText Is Nothing OrElse vm Is Nothing OrElse imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
             If badge IsNot Nothing Then
                 badge.RenderTransformOrigin = New RelativePoint(0.5, 0.5, RelativeUnit.Relative)
-                ' Die Anzeige liegt IM Rahmen und traegt dessen Lage mit. Sie muss sie deshalb genau
-                ' zuruecknehmen, sonst steht die Zahl bei einem gespiegelten Objekt seitenverkehrt.
-                badge.RenderTransform = BuildSelectionFrameCounterTransform(vm, vm.AnnotationRotation)
+                ' Die Anzeige liegt IM Rahmen und traegt dessen Drehung mit; sie nimmt sie zurueck,
+                ' damit die Zahl aufrecht steht.
+                badge.RenderTransform = New RotateTransform(-vm.AnnotationRotation)
             End If
             Dim visualBounds = RotatedBoundsSize(rect.Width, rect.Height, vm.AnnotationRotation)
             Dim visualRect = New Avalonia.Rect(rect.Center.X - visualBounds.Width / 2.0,

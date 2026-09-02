@@ -9870,6 +9870,32 @@ Namespace ViewModels
             Return New ImageAdjustments()
         End Function
 
+        ''' <summary>Die Ausgabegroesse des Stapels als eigenen Geometrieschritt anhaengen.
+        '''
+        ''' NICHT MEHR ALS OBERES FELD, und das war ein echter Fehler: die Kette wertet die oberen
+        ''' Groessenfelder nur aus, solange das Rezept GAR KEINE Schrittliste hat. Traegt die Quelle
+        ''' eine Beistelldatei mit Schritten - also jedes im Editor bearbeitete Bild -, blieben die
+        ''' Stapelfelder wirkungslos und das Bild kam in Originalgroesse heraus, obwohl der
+        ''' Kommentar an Ort und Stelle das Gegenteil versprach.
+        '''
+        ''' Ein vorhandener Groessenschritt aus dem Rezept wird dabei ENTFERNT: die Ausgabegroesse
+        ''' gehoert dem Stapel, sonst wirkten beide nacheinander. Angehaengt wird hinten, wo eine
+        ''' Groessenaenderung ohnehin hingehoert - nach Beschnitt, Drehung und Leinwand.
+        '''
+        ''' Die Feldliste kommt aus <c>GeometryOperation.CloneGeometryAdjustments</c>, damit hier
+        ''' keine zweite entsteht; zwei Listen derselben Sache laufen frueher oder spaeter
+        ''' auseinander.</summary>
+        Private Shared Sub SetBatchResizeStep(adj As ImageAdjustments, resizeFields As ImageAdjustments)
+            If adj Is Nothing OrElse resizeFields Is Nothing Then Return
+            If adj.GeometryOperations Is Nothing Then adj.GeometryOperations = New List(Of GeometryOperation)()
+            adj.GeometryOperations.RemoveAll(Function(operation) String.Equals(operation?.Kind, "resize", StringComparison.OrdinalIgnoreCase))
+            If resizeFields.ResizeWidth <= 0 AndAlso resizeFields.ResizeHeight <= 0 AndAlso
+               resizeFields.ResizeScalePercent <= 0 Then Return
+            adj.GeometryOperations.Add(New GeometryOperation With {
+                .Kind = "resize",
+                .Adjustments = GeometryOperation.CloneGeometryAdjustments("resize", resizeFields)})
+        End Sub
+
         ''' <summary>Darf diese Quelle im Stapel voll entwickelt werden? Mit Rezept IMMER - die
         ''' eingebettete Vorschau waere dort schlicht das falsche Bild. Ohne Rezept entscheidet die
         ''' Einstellung; da geht es um Geschwindigkeit gegen Aufloesung.</summary>
@@ -10014,13 +10040,14 @@ Namespace ViewModels
                              ' Auf dem .fpxmp-Rezept aufsetzen, falls es eines gibt - die
                              ' Groessenfelder gehoeren dem Stapel und ueberschreiben es dort.
                              Dim adj = BatchBaseAdjustments(source)
-                             adj.ResizeWidth = resize.Width
-                             adj.ResizeHeight = resize.Height
-                             adj.ResizeScalePercent = resize.ScalePercent
-                             adj.ResizeFitInsideBox = True
-                             adj.LockResizeAspect = resize.LockAspect
-                             adj.NoResizeUpscale = resize.NoUpscale
-                             adj.ResizeInterpolation = resize.Interpolation
+                             SetBatchResizeStep(adj, New ImageAdjustments With {
+                                 .ResizeWidth = resize.Width,
+                                 .ResizeHeight = resize.Height,
+                                 .ResizeScalePercent = resize.ScalePercent,
+                                 .ResizeFitInsideBox = True,
+                                 .LockResizeAspect = resize.LockAspect,
+                                 .NoResizeUpscale = resize.NoUpscale,
+                                 .ResizeInterpolation = resize.Interpolation})
                              ' Das Vergroessern laeuft im Speicherweg VOR der Reglerkette, also vor
                              ' den Groessenfeldern darueber. Beides zusammen ist damit sinnvoll:
                              ' erst vierfach durch das Modell, dann auf das eingetragene Zielmass
@@ -11250,13 +11277,7 @@ Namespace ViewModels
                              ' zusammengefuehrt.
                              Dim adj = BatchBaseAdjustments(source)
                              adj.MergeNonDefaultPixelAdjustmentsFrom(template)
-                             adj.ResizeWidth = template.ResizeWidth
-                             adj.ResizeHeight = template.ResizeHeight
-                             adj.ResizeScalePercent = template.ResizeScalePercent
-                             adj.ResizeFitInsideBox = template.ResizeFitInsideBox
-                             adj.LockResizeAspect = template.LockResizeAspect
-                             adj.NoResizeUpscale = template.NoResizeUpscale
-                             adj.ResizeInterpolation = template.ResizeInterpolation
+                             Dim resizeFields = GeometryOperation.CloneGeometryAdjustments("resize", template)
                              ' Gehoert zur GROESSE und wird deshalb gesetzt wie die Felder darueber,
                              ' nicht zusammengefuehrt. Frueher kam es allein ueber
                              ' MergeNonDefaultPixelAdjustmentsFrom an - das war ein Zufall und haette
@@ -11271,10 +11292,11 @@ Namespace ViewModels
                              If result.ResizeScalePercent > 0 Then
                                  Dim size = ImageProcessor.GetImageSize(source)
                                  If size.Width > 0 AndAlso size.Height > 0 Then
-                                     adj.ResizeWidth = Math.Max(1, CInt(Math.Round(size.Width * result.ResizeScalePercent / 100.0)))
-                                     adj.ResizeHeight = Math.Max(1, CInt(Math.Round(size.Height * result.ResizeScalePercent / 100.0)))
+                                     resizeFields.ResizeWidth = Math.Max(1, CInt(Math.Round(size.Width * result.ResizeScalePercent / 100.0)))
+                                     resizeFields.ResizeHeight = Math.Max(1, CInt(Math.Round(size.Height * result.ResizeScalePercent / 100.0)))
                                  End If
                              End If
+                             SetBatchResizeStep(adj, resizeFields)
                              Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,

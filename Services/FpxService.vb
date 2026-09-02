@@ -150,8 +150,66 @@ Namespace Services
                 End If
             End If
             StripTransientSelectionState(adj)
+            DropRecipeGeometryFields(adj)
             Return adj
         End Function
+
+        ''' <summary>Nach dem Laden lebt die Geometrie AUSSCHLIESSLICH in der Schrittliste.
+        '''
+        ''' Ein Rezept aus der Zeit vor der geordneten Schrittfolge trug sie stattdessen in oberen
+        ''' Feldern. Die wurden bisher beim Oeffnen in einen einzigen Schritt der Art "legacy"
+        ''' ueberfuehrt - eine ganze Feldgruppe in einem Klumpen, waehrend jeder andere Schritt genau
+        ''' eine Sache traegt. Damit gab es zwei Wege durch dieselbe Kette, und zwei Wege laufen
+        ''' frueher oder spaeter auseinander.
+        '''
+        ''' DIE ALTE GEOMETRIE WIRD DESHALB VERWORFEN (Entscheidung vom 2026-09-03). Regler, Objekte,
+        ''' Masken, Retusche und Pinselstriche bleiben vollstaendig erhalten; weg sind Beschnitt,
+        ''' Drehung, Ausrichten, Spiegelung, Perspektive, Bildverzerrung, Groesse und Leinwand eines
+        ''' Dokuments, das noch keine Schrittliste hat.
+        '''
+        ''' Die Stelle ist mit Absicht die Deserialisierung: hier kommen BEIDE Sorten Dokument
+        ''' vorbei, das Buendel und die Beistelldatei neben einer RAW-Datei (RawSidecarService liest
+        ''' ueber dieselbe Funktion). Im Editor allein zu verwerfen hiesse, dass der Stapel dasselbe
+        ''' Rezept weiterhin mit seiner alten Geometrie rendert.
+        '''
+        ''' GERAEUMT WIRD IMMER, nicht nur ohne Schrittliste: so gilt die Regel "Geometrie steht in
+        ''' Schritten" ohne Ausnahme, und ein stehengebliebenes Feld kann nicht spaeter still
+        ''' mitwirken.</summary>
+        Private Shared Sub DropRecipeGeometryFields(adj As ImageAdjustments)
+            If adj Is Nothing Then Return
+            Dim hatte = adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse
+                        adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 OrElse
+                        adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse
+                        adj.StraightenExpandCanvas OrElse adj.FlipHorizontal OrElse adj.FlipVertical OrElse
+                        adj.PerspectiveHorizontal <> 0 OrElse adj.PerspectiveVertical <> 0 OrElse
+                        adj.PerspectiveAspect <> 0 OrElse adj.PerspectiveScale <> 0 OrElse
+                        adj.PerspectiveCorner0X <> 0 OrElse adj.PerspectiveCorner0Y <> 0 OrElse
+                        adj.PerspectiveCorner1X <> 0 OrElse adj.PerspectiveCorner1Y <> 0 OrElse
+                        adj.PerspectiveCorner2X <> 0 OrElse adj.PerspectiveCorner2Y <> 0 OrElse
+                        adj.PerspectiveCorner3X <> 0 OrElse adj.PerspectiveCorner3Y <> 0 OrElse
+                        (adj.ImageWarp IsNot Nothing AndAlso Not adj.ImageWarp.IsEmpty) OrElse
+                        adj.ResizeWidth > 0 OrElse adj.ResizeHeight > 0 OrElse adj.ResizeScalePercent > 0 OrElse
+                        adj.CanvasWidth > 0 OrElse adj.CanvasHeight > 0
+
+            adj.CropLeftPercent = 0 : adj.CropTopPercent = 0
+            adj.CropRightPercent = 0 : adj.CropBottomPercent = 0
+            adj.RotationDegrees = 0 : adj.StraightenDegrees = 0 : adj.StraightenExpandCanvas = False
+            adj.FlipHorizontal = False : adj.FlipVertical = False
+            adj.PerspectiveHorizontal = 0 : adj.PerspectiveVertical = 0
+            adj.PerspectiveAspect = 0 : adj.PerspectiveScale = 0
+            adj.PerspectiveCorner0X = 0 : adj.PerspectiveCorner0Y = 0
+            adj.PerspectiveCorner1X = 0 : adj.PerspectiveCorner1Y = 0
+            adj.PerspectiveCorner2X = 0 : adj.PerspectiveCorner2Y = 0
+            adj.PerspectiveCorner3X = 0 : adj.PerspectiveCorner3Y = 0
+            adj.ImageWarp = Nothing
+            adj.ResizeWidth = 0 : adj.ResizeHeight = 0 : adj.ResizeScalePercent = 0
+            adj.CanvasWidth = 0 : adj.CanvasHeight = 0
+
+            If hatte AndAlso (adj.GeometryOperations Is Nothing OrElse adj.GeometryOperations.Count = 0) Then
+                DiagnosticLogService.LogAlways("Fpx.LegacyGeometryDropped",
+                                               "Ein Rezept ohne Schrittliste trug Geometrie in den alten Feldern - sie wurde beim Laden verworfen.")
+            End If
+        End Sub
 
         ''' <summary>Raeumt den TRANSIENTEN Auswahlzustand aus einem Dokumentrezept: ob gerade eine
         ''' Auswahl lief (<c>HasActiveSelection</c>), welcher ART sie war (<c>ActiveSelectionIsMask</c>)
