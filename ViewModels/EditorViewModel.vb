@@ -14918,7 +14918,9 @@ Namespace ViewModels
         ''' Adjustments) - kein Klonen der Objektlisten je Mausbewegung.</summary>
         Private Sub CompositorBlitOrSchedule(rect As SKRectI)
             Dim source = GetPreviewSource()
-            If source Is Nothing OrElse Not SceneMatchesCurrentGeometry(source, BuildAppliedGeometryAdjustments()) Then
+            ' Die Szene entsteht aus dem Live-Rezept. Ein noch offener Dreh-/Begradigungsschritt
+            ' darf daher nicht gegen die ausschließlich bestätigte Geometrie geprüft werden.
+            If source Is Nothing OrElse Not SceneMatchesCurrentGeometry(source, GetSceneAdjustments()) Then
                 _compositorPreviousBlitRect = SKRectI.Empty
                 DiagnosticLogService.LogAlways("Editor.Compositor",
                     $"blitGuard=schedule tool={_currentTool} crop={_cropLeft:F1}/{_cropTop:F1}/{_cropRight:F1}/{_cropBottom:F1} szene={_sceneSk?.Width}x{_sceneSk?.Height}")
@@ -16143,6 +16145,30 @@ Namespace ViewModels
             PushUndo(LocalizationService.T("Zugeschnitten"))
             ClearActiveSelectionForGeometry()
 
+            ' Der Rahmen liegt auf der aktuellen Vorschau. Enthält diese noch eine offene
+            ' Drehung/Begradigung, muss sie VOR dem neuen Crop-Schritt Teil der Kette werden:
+            ' ein achsenparalleler Crop nach einer beliebigen Drehung kann nicht als Crop vor
+            ' dieser Drehung dargestellt werden. Bisher wurde der Schritt davor eingefügt; der
+            ' sichtbare Rahmen (besonders bei "Leinwand automatisch vergrößern") und das Ergebnis
+            ' bezeichneten dann unterschiedliche Bildbereiche. Das Übernehmen gehört bewusst zum
+            ' selben Undo-Schritt wie das Zuschneiden.
+            If HasRotateChanges Then
+                _geometryOperations.Add(New GeometryOperation With {
+                    .Kind = "transform",
+                    .Adjustments = New ImageAdjustments With {
+                        .RotationDegrees = _rotationDegrees,
+                        .StraightenDegrees = CSng(_straightenDegrees),
+                        .StraightenExpandCanvas = _straightenExpandCanvas,
+                        .FlipHorizontal = _flipH,
+                        .FlipVertical = _flipV}})
+                _rotationDegrees = 0 : _straightenDegrees = 0 : _straightenExpandCanvas = False
+                _flipH = False : _flipV = False
+                _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
+                _appliedStraightenExpandCanvas = False : _appliedFlipH = False : _appliedFlipV = False
+                Me.RaisePropertyChanged(NameOf(StraightenDegrees))
+                Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            End If
+
             Dim replacesAppliedCrop = ShowsFullImageWhileCropping
             Dim sourceWidth = GetBaseWidth()
             Dim sourceHeight = GetBaseHeight()
@@ -16151,10 +16177,23 @@ Namespace ViewModels
             Dim baseWidth = currentSize.Width
             Dim baseHeight = currentSize.Height
             If baseWidth > 0 AndAlso baseHeight > 0 Then
-                Dim leftPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropLeft, baseWidth)) + CropLeftPixels
-                Dim rightPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropRight, baseWidth)) + CropRightPixels
-                Dim topPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropTop, baseHeight)) + CropTopPixels
-                Dim bottomPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropBottom, baseHeight)) + CropBottomPixels
+                ' Der offene Rahmen wird intern im Quellraum gehalten, damit er bei einer
+                ' bestaetigten Vierteldrehung oder Spiegelung auf dieselbe Bildstelle zeigt.
+                ' Der neue Crop-Schritt kommt aber HINTER dieser Geometrie in die Pipeline und
+                ' erwartet deshalb Kanten im aktuell sichtbaren Ausgaberaum. Crop*Pixels waeren
+                ' hier noch die ungedrehten Quellkanten: "Rahmen ziehen -> drehen -> Anwenden"
+                ' schnitt damit eine andere Bildregion aus. Die Anzeige-Ränder sind die einzige
+                ' Darstellung, die sowohl zum sichtbaren Rahmen als auch zu dieser Pipeline-Stufe
+                ' passt.
+                Dim pending = GetPendingCropDisplayMargins()
+                Dim leftPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropLeft, baseWidth)) +
+                             PercentToPixels(pending.Left, baseWidth)
+                Dim rightPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropRight, baseWidth)) +
+                              PercentToPixels(pending.Right, baseWidth)
+                Dim topPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropTop, baseHeight)) +
+                            PercentToPixels(pending.Top, baseHeight)
+                Dim bottomPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropBottom, baseHeight)) +
+                               PercentToPixels(pending.Bottom, baseHeight)
 
                 ' Ein Pixel muss stehen bleiben, sonst hätte das Ergebnis keine Fläche mehr.
                 rightPx = Math.Min(rightPx, Math.Max(0, baseWidth - 1 - leftPx))
@@ -16393,14 +16432,30 @@ Namespace ViewModels
                 ' erschien ploetzlich der weggeschnittene Bereich wieder. Verwerfen und neu planen;
                 ' der Massvergleich laeuft wie beim Region-Waechter ueber das reine Geometrie-Rezept.
                 If result.SceneSk IsNot Nothing Then
+                    ' Die Vorschau enthält auch eine noch nicht bestätigte Drehung/Begradigung.
+                    ' Gegen das bestätigte Rezept geprüft würde ihr korrektes Bild stets als
+                    ' veraltet gelten und sich selbst erneut anfordern.
                     Dim expectedSize = ImageProcessor.ComputeGeometryOutputSize(previewSource.Width, previewSource.Height,
-                                                                                BuildAppliedGeometryAdjustments())
+                                                                                GetSceneAdjustments())
                     If result.SceneSk.Width <> expectedSize.Width OrElse result.SceneSk.Height <> expectedSize.Height Then
+                        ' Der Wächter darf nur einen Render verwerfen, der WIRKLICH gegen eine
+                        ' inzwischen andere Geometrie gelaufen ist. Bei Begradigung mit erweiterter
+                        ' Leinwand können Modellrechnung und Skias Pixelraster an einer Kante um
+                        ' einen Pixel differieren. Der bisherige Weg erklärte diese stabile
+                        ' Abweichung fälschlich zum "stale" Render, plante denselben Auftrag erneut
+                        ' und pendelte dadurch dauerhaft zwischen "aktualisiert" und "berechnet".
+                        ' Der beim Start aufgenommene Satz trennt beide Fälle: nur wenn die aktuelle
+                        ' Rechnung inzwischen von ihm abweicht, ist eine neue Vorschau nötig.
+                        Dim snapshotSize = ImageProcessor.ComputeGeometryOutputSize(previewSource.Width, previewSource.Height, adj)
+                        If snapshotSize.Width <> expectedSize.Width OrElse snapshotSize.Height <> expectedSize.Height Then
+                            DiagnosticLogService.LogAlways("Editor.FullPreviewRender",
+                                $"verworfen=geometryStale scene={result.SceneSk.Width}x{result.SceneSk.Height} erwartet={expectedSize.Width}x{expectedSize.Height}")
+                            result.Dispose()
+                            SchedulePreviewUpdate(markDirty:=False)
+                            Return
+                        End If
                         DiagnosticLogService.LogAlways("Editor.FullPreviewRender",
-                            $"verworfen=geometryStale scene={result.SceneSk.Width}x{result.SceneSk.Height} erwartet={expectedSize.Width}x{expectedSize.Height}")
-                        result.Dispose()
-                        SchedulePreviewUpdate(markDirty:=False)
-                        Return
+                            $"accepted=geometrySizeDeviation scene={result.SceneSk.Width}x{result.SceneSk.Height} modell={expectedSize.Width}x{expectedSize.Height}")
                     End If
                 End If
                 SetSceneBitmap(result.SceneSk)

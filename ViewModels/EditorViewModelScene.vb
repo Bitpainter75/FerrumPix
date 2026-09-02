@@ -384,7 +384,15 @@ Namespace ViewModels
         Private Function SceneMatchesCurrentGeometry(previewSource As SKBitmap, adj As ImageAdjustments) As Boolean
             If _sceneSk Is Nothing OrElse previewSource Is Nothing OrElse adj Is Nothing Then Return False
             Dim expected = ImageProcessor.ComputeGeometryOutputSize(previewSource.Width, previewSource.Height, adj)
-            Return _sceneSk.Width = expected.Width AndAlso _sceneSk.Height = expected.Height
+            ' Skia rastert die Grenzen einer gedrehten, automatisch erweiterten Leinwand an der
+            ' Pixelkante. Das kann bei derselben Geometrie einen Randpixel mehr oder weniger
+            ' ergeben als die reine Modellrechnung oben. Ein exakter Vergleich machte daraus
+            ' fälschlich einen Geometriewechsel: der Region-Pfad plante einen Vollrender, dessen
+            ' Ergebnis beim nächsten Layout wieder verworfen wurde – die Statusleiste pendelte
+            ' endlos zwischen „aktualisiert“ und „berechnet“. Eine echte Änderung (Crop,
+            ' Vierteldrehung, Resize usw.) weicht deutlich stärker ab und bleibt abgesichert.
+            Return Math.Abs(_sceneSk.Width - expected.Width) <= 1 AndAlso
+                   Math.Abs(_sceneSk.Height - expected.Height) <= 1
         End Function
 
         Private Function TryRenderSceneRegionSync(dirtyRect As SKRectI) As Boolean
