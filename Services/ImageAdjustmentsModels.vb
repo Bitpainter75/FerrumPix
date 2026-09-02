@@ -34,6 +34,72 @@ Namespace Services
         Median
     End Enum
 
+    ''' <summary>Ein bestätigter, nicht-destruktiver Schritt der Bildgeometrie. Anders als die
+    ''' früheren globalen Regler behält die Liste ihre zeitliche Reihenfolge bei.</summary>
+    Public Class GeometryOperation
+        Public Property Kind As String = ""
+        Public Property Adjustments As ImageAdjustments = Nothing
+
+        Public Function Clone() As GeometryOperation
+            ' Ein Geometrieschritt braucht nie das gesamte Rezept (Masken, Objekte, Pixelregler
+            ' usw.). Das war beim Legacy-Umbau versehentlich anders und vervielfachte sowohl den
+            ' Speicher als auch jede Rezeptdatei pro Schritt.
+            Return New GeometryOperation With {.Kind = Kind, .Adjustments = CloneGeometryAdjustments(Kind, Adjustments)}
+        End Function
+
+        ''' <summary>Kopiert ausschließlich Felder, die der jeweilige Geometriezweig tatsächlich
+        ''' auswertet. Fehlende Werte bleiben beim JSON-Laden bei ihren neutralen Defaults.</summary>
+        Public Shared Function CloneGeometryAdjustments(kind As String, source As ImageAdjustments) As ImageAdjustments
+            If source Is Nothing Then Return Nothing
+            Dim result As New ImageAdjustments()
+            Select Case If(kind, "").Trim().ToLowerInvariant()
+                Case "crop"
+                    result.CropLeftPercent = source.CropLeftPercent : result.CropTopPercent = source.CropTopPercent
+                    result.CropRightPercent = source.CropRightPercent : result.CropBottomPercent = source.CropBottomPercent
+                Case "transform"
+                    result.RotationDegrees = source.RotationDegrees : result.StraightenDegrees = source.StraightenDegrees
+                    result.StraightenExpandCanvas = source.StraightenExpandCanvas
+                    result.FlipHorizontal = source.FlipHorizontal : result.FlipVertical = source.FlipVertical
+                Case "perspective"
+                    CopyPerspective(source, result)
+                Case "warp"
+                    result.ImageWarp = source.ImageWarp?.Clone()
+                Case "resize"
+                    result.ResizeWidth = source.ResizeWidth : result.ResizeHeight = source.ResizeHeight
+                    result.ResizeScalePercent = source.ResizeScalePercent : result.ResizeFitInsideBox = source.ResizeFitInsideBox
+                    result.LockResizeAspect = source.LockResizeAspect : result.NoResizeUpscale = source.NoResizeUpscale
+                    result.ResizeInterpolation = source.ResizeInterpolation
+                Case "canvas"
+                    result.CanvasWidth = source.CanvasWidth : result.CanvasHeight = source.CanvasHeight
+                    result.CanvasAnchor = source.CanvasAnchor : result.CanvasBackgroundColor = source.CanvasBackgroundColor
+                Case Else ' legacy: die frühere feste Kette braucht alle Geometriefelder, aber sonst nichts.
+                    result.CropLeftPercent = source.CropLeftPercent : result.CropTopPercent = source.CropTopPercent
+                    result.CropRightPercent = source.CropRightPercent : result.CropBottomPercent = source.CropBottomPercent
+                    result.RotationDegrees = source.RotationDegrees : result.StraightenDegrees = source.StraightenDegrees
+                    result.StraightenExpandCanvas = source.StraightenExpandCanvas
+                    result.FlipHorizontal = source.FlipHorizontal : result.FlipVertical = source.FlipVertical
+                    CopyPerspective(source, result)
+                    result.ImageWarp = source.ImageWarp?.Clone()
+                    result.ResizeWidth = source.ResizeWidth : result.ResizeHeight = source.ResizeHeight
+                    result.ResizeScalePercent = source.ResizeScalePercent : result.ResizeFitInsideBox = source.ResizeFitInsideBox
+                    result.LockResizeAspect = source.LockResizeAspect : result.NoResizeUpscale = source.NoResizeUpscale
+                    result.ResizeInterpolation = source.ResizeInterpolation
+                    result.CanvasWidth = source.CanvasWidth : result.CanvasHeight = source.CanvasHeight
+                    result.CanvasAnchor = source.CanvasAnchor : result.CanvasBackgroundColor = source.CanvasBackgroundColor
+            End Select
+            Return result
+        End Function
+
+        Private Shared Sub CopyPerspective(source As ImageAdjustments, target As ImageAdjustments)
+            target.PerspectiveHorizontal = source.PerspectiveHorizontal : target.PerspectiveVertical = source.PerspectiveVertical
+            target.PerspectiveAspect = source.PerspectiveAspect : target.PerspectiveScale = source.PerspectiveScale
+            target.PerspectiveCorner0X = source.PerspectiveCorner0X : target.PerspectiveCorner0Y = source.PerspectiveCorner0Y
+            target.PerspectiveCorner1X = source.PerspectiveCorner1X : target.PerspectiveCorner1Y = source.PerspectiveCorner1Y
+            target.PerspectiveCorner2X = source.PerspectiveCorner2X : target.PerspectiveCorner2Y = source.PerspectiveCorner2Y
+            target.PerspectiveCorner3X = source.PerspectiveCorner3X : target.PerspectiveCorner3Y = source.PerspectiveCorner3Y
+        End Sub
+    End Class
+
     ''' <summary>Wie eine dunkelnde Vignette auf die Pixel wirkt (angelehnt an Adobes
     ''' PostCropVignetteStyle). ColorPriority = 0 ist bewusst der erste Wert: es ist das bisherige
     ''' Verhalten (multiplikatives Abdunkeln, Farbton bleibt), damit ein fehlendes Feld in alten
@@ -114,6 +180,9 @@ Namespace Services
 
         Public Property SourceWidthPixels As Integer = 0
         Public Property SourceHeightPixels As Integer = 0
+        ''' <summary>Bestätigte Geometrie in Bearbeitungsreihenfolge. Ist die Liste leer, gilt für
+        ''' ältere Rezepte weiterhin die bisherige, feste Geometriekette.</summary>
+        Public Property GeometryOperations As List(Of GeometryOperation) = New List(Of GeometryOperation)()
         Public Property RecipeCoordinateVersion As Integer = 2
         Public Property Exposure As Single = 0
         Public Property Brightness As Single = 0
@@ -525,6 +594,7 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WorkingImageVersion", "WorkingImageHasTransparency",
+            "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
             "RotationDegrees", "StraightenDegrees", "StraightenExpandCanvas", "FlipHorizontal", "FlipVertical",
             "PerspectiveHorizontal", "PerspectiveVertical", "PerspectiveAspect", "PerspectiveScale",
@@ -854,6 +924,8 @@ Namespace Services
             ' Die explizite Liste oben hält die strukturellen/deep-copy-Felder lesbar. Pixelwerte werden
             ' zusätzlich zentral kopiert, damit ein neu ergänzter Regler nicht in Undo/FPX/Layern fehlt.
             result.CopyPixelAdjustmentsFrom(Me)
+            result.GeometryOperations = If(GeometryOperations, New List(Of GeometryOperation)()).
+                Where(Function(operation) operation IsNot Nothing).Select(Function(operation) operation.Clone()).ToList()
             Return result
         End Function
     End Class

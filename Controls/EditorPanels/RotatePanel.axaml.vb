@@ -3,7 +3,7 @@ Imports Avalonia.Markup.Xaml
 
 Namespace Controls.EditorPanels
 
-    Public Class TransformPanel
+    Public Class RotatePanel
         Inherits UserControl
 
         Public Sub New()

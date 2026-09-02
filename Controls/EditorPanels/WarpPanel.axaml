@@ -1,105 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
-             x:Class="FerrumPix.Controls.EditorPanels.TransformPanel">
+             x:Class="FerrumPix.Controls.EditorPanels.WarpPanel">
     <StackPanel Spacing="7">
-        <Border Classes="adjustment-group">
-            <Expander Header="Drehen" icons:ExpanderState.Key="transform">
-                <Expander.HeaderTemplate>
-                    <DataTemplate>
-                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="8"
-                                        VerticalAlignment="Center">
-                                <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
-                                    Width="14" Height="14" />
-                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
-                            </StackPanel>
-                            <Button Grid.Column="1"
-                                    Classes="icon-btn group-reset"
-                                    Width="28"
-                                    Height="28"
-                                    Padding="0"
-                                    Command="{Binding DataContext.ResetTransformCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    ToolTip.Tip="Drehen zurücksetzen">
-                                <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
-                            </Button>
-                        </Grid>
-                    </DataTemplate>
-                </Expander.HeaderTemplate>
-                <StackPanel Spacing="8" Margin="0,8,0,0">
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                        <Button Classes="ghost" Height="44" Padding="8,6"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Command="{Binding RotateLeftCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
-                                    Width="20" Height="20" />
-                                <TextBlock Text="Links" />
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="1" Classes="ghost" Height="44" Padding="8,6"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Command="{Binding RotateRightCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
-                                    Width="20" Height="20" />
-                                <TextBlock Text="Rechts" />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Ausrichten"
-                                   Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                        <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180"
-                                           DefaultValue="0"
-                                           Value="{Binding StraightenDegrees}"
-                                           WheelIncrement="0.1"
-                                           Margin="0,0" />
-                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding StraightenDegrees, Mode=TwoWay}"
-                                                 Minimum="-180" Maximum="180" Increment="0.1"
-                                                 FormatString="F1" />
-                    </Grid>
-                    <CheckBox Content="Leinwand automatisch vergrößern"
-                              IsChecked="{Binding StraightenExpandCanvas}"
-                              FontSize="{DynamicResource FP.Font.Small}"
-                              ToolTip.Tip="Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden, statt das Bild zum Ausgleich hineinzuzoomen" />
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                        <Button Classes="ghost" Height="44" Padding="8,6"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Command="{Binding FlipHorizontalCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/flip-horizontal.svg"
-                                    Width="20" Height="20" />
-                                <TextBlock Text="Horizontal" />
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="1" Classes="ghost" Height="44" Padding="8,6"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center"
-                                Command="{Binding FlipVerticalCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/flip-vertical.svg"
-                                    Width="20" Height="20" />
-                                <TextBlock Text="Vertikal" />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                </StackPanel>
-            </Expander>
-        </Border>
-
         <!-- ERST WAEHLEN, dann erscheint das Overlay. Beide gleichzeitig ueber dem Bild war ein
              Fehler: Eck-Anfasser und Rasterpunkte liegen teils uebereinander, und man sieht zwei
              Werkzeuge, von denen man eines meint. Nochmal auf denselben Knopf waehlt wieder ab. -->
@@ -283,6 +186,21 @@
                                FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
                                Margin="0,4,0,0"
                                IsVisible="{Binding HasPerspectiveWarning}"/>
+                    <!-- EIGENES ANWENDEN, wie bei Gitter, Linien und Verformen. Solange die
+                         Perspektive nur ein Reglerstand ist, steht sie in der Vorschau, aber
+                         nicht im Rezept - beim Speichern und beim naechsten Oeffnen waere sie
+                         weg. Frueher nahm sie ein Vierteldreh nebenbei mit; seit Drehen im
+                         Werkzeug "Transformieren" steht, braucht sie ihren eigenen Weg. -->
+                    <TextBlock Text="Anwenden übernimmt die Perspektive ins Rezept: Masken gehen mit, und beim nächsten Öffnen steht sie wieder da."
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap"
+                               Margin="0,6,0,0"/>
+                    <Button Classes="accent" HorizontalAlignment="Stretch" Padding="10,5"
+                            IsEnabled="{Binding HasPerspectiveChanges}"
+                            Command="{Binding ApplyPerspectiveCommand}">
+                        <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
                 </StackPanel>
             </Expander>
         </Border>

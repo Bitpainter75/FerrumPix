@@ -1473,6 +1473,20 @@ Namespace ViewModels
             Dim xs As Double() = Nothing, ys As Double() = Nothing
             If Not TryBuildSelectedPathPolygon(xs, ys) Then Return
 
+            ' SetSelectionLasso kann bei einer ausserhalb liegenden oder flachen Kontur ohne
+            ' Auswahl zurückkehren. Erst dieselben billigen Vorbedingungen pruefen, DANN den
+            ' Undo-Schnappschuss anlegen - sonst blieb ein leerer Verlaufsschritt zurueck.
+            Dim minX = xs.Min(), maxX = xs.Max(), minY = ys.Min(), maxY = ys.Max()
+            If (maxX - minX) < 0.5 OrElse (maxY - minY) < 0.5 Then Return
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            If selectionSize.Width <= 0 OrElse selectionSize.Height <= 0 Then Return
+            Dim selectionRect = New SKRectI(
+                Math.Max(0, CInt(Math.Round(selectionSize.Width * minX / 100.0))),
+                Math.Max(0, CInt(Math.Round(selectionSize.Height * minY / 100.0))),
+                Math.Min(selectionSize.Width, CInt(Math.Round(selectionSize.Width * maxX / 100.0))),
+                Math.Min(selectionSize.Height, CInt(Math.Round(selectionSize.Height * maxY / 100.0))))
+            If selectionRect.Width <= 0 OrElse selectionRect.Height <= 0 Then Return
+
             PushUndo(LocalizationService.T("Maskenebene aus Pfad erstellt"))
             SetSelectionLasso(xs, ys, captureUndo:=False)
             If Not _hasActiveSelection Then Return

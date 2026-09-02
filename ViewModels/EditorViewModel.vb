@@ -123,7 +123,7 @@ Namespace ViewModels
         Private _comparisonImage As Bitmap
         Private _isDocumentLoading As Boolean = False
         Private _retouchLivePatchImage As Bitmap
-        Private _currentTool As EditorTool = EditorTool.Crop
+        Private _currentTool As EditorTool = EditorTool.Transform
         Private _maskMode As String = "Brush"
         Private _brightness As Double = 0
         Private _contrast As Double = 0
@@ -393,6 +393,9 @@ Namespace ViewModels
         Private _appliedStraightenExpandCanvas As Boolean = False
         Private _appliedFlipH As Boolean = False
         Private _appliedFlipV As Boolean = False
+        ' Die bestätigten Geometrieschritte sind nicht vertauschbar: ihr Eintrag hier ist die
+        ' Reihenfolge, in der Vorschau und Export sie ausführen.
+        Private ReadOnly _geometryOperations As New List(Of GeometryOperation)()
         Private _isUpdatingCanvas As Boolean
         Private _annotationText As String = "Text"
         Private _annotationFillColor As String = "#00FFFFFF"
@@ -1964,18 +1967,49 @@ Namespace ViewModels
 
             _annotationText = If(String.IsNullOrWhiteSpace(preset.Text), "FerrumPix", preset.Text)
             _watermarkImagePath = If(preset.ImagePath, "")
-            Dim baseWidth = Math.Max(1, GetBaseWidth())
-            Dim baseHeight = Math.Max(1, GetBaseHeight())
+            ' Die Werte einer Vorlage sind Pixel im aktuellen ANZEIGERAUM. Nach Zuschnitt,
+            ' Drehung oder einer anderen Leinwandgröße unterscheiden sich dessen Maße von denen
+            ' des Originals; gegen GetBaseWidth/Height umzurechnen versetzte das Wasserzeichen
+            ' daher beim erneuten Anwenden deutlich vom gespeicherten Anker.
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            Dim displayWidth = Math.Max(1, displaySize.Width)
+            Dim displayHeight = Math.Max(1, displaySize.Height)
             _annotationAnchor = NormalizeAnnotationAnchor(preset.Anchor)
-            _annotationXPercent = ClampAnnotationOffsetPercent(preset.OffsetXPixels / CDbl(baseWidth) * 100.0)
-            _annotationYPercent = ClampAnnotationOffsetPercent(preset.OffsetYPixels / CDbl(baseHeight) * 100.0)
-            _annotationWidthPercent = Math.Max(1.0, Math.Min(100.0, preset.WidthPixels / CDbl(baseWidth) * 100.0))
-            _annotationHeightPercent = Math.Max(1.0, Math.Min(100.0, preset.HeightPixels / CDbl(baseHeight) * 100.0))
+            _annotationXPercent = ClampAnnotationOffsetPercent(preset.OffsetXPixels / CDbl(displayWidth) * 100.0)
+            _annotationYPercent = ClampAnnotationOffsetPercent(preset.OffsetYPixels / CDbl(displayHeight) * 100.0)
+            _annotationWidthPercent = Math.Max(1.0, Math.Min(100.0, preset.WidthPixels / CDbl(displayWidth) * 100.0))
+            _annotationHeightPercent = Math.Max(1.0, Math.Min(100.0, preset.HeightPixels / CDbl(displayHeight) * 100.0))
             _annotationRotation = Math.Max(-180, Math.Min(180, preset.RotationDegrees))
             _annotationOpacity = Math.Max(0, Math.Min(100, preset.Opacity))
             _annotationFontFamily = If(String.IsNullOrWhiteSpace(preset.FontFamily), "Arial", preset.FontFamily)
             _annotationFontSize = Math.Max(8, Math.Min(5000, preset.FontSizePixels))
             _annotationFillColor = NormalizeAvaloniaColor(preset.FillColor, "#FFFFFFFF")
+            _annotationStrokeColor = NormalizeAvaloniaColor(preset.StrokeColor, "#FF000000")
+            _annotationStrokeWidth = Math.Max(0, Math.Min(200, preset.StrokeWidth))
+            _annotationFillKind = preset.FillKind
+            _annotationFillColor2 = NormalizeAvaloniaColor(preset.FillColor2, "#FFFFFFFF")
+            _annotationGradientAngle = preset.GradientAngleDegrees
+            _annotationGradientInverted = preset.GradientInverted
+            _annotationBlendMode = NormalizeAnnotationBlendMode(preset.BlendMode)
+            _annotationBlendIncludesStroke = preset.BlendIncludesStroke
+            _annotationBold = preset.Bold
+            _annotationItalic = preset.Italic
+            _annotationLetterSpacingPercent = preset.LetterSpacingPercent
+            _annotationFlipH = preset.FlipHorizontal
+            _annotationFlipV = preset.FlipVertical
+            _annotationShadowEnabled = preset.ShadowEnabled
+            _annotationShadowOffsetX = preset.ShadowOffsetXPercent
+            _annotationShadowOffsetY = preset.ShadowOffsetYPercent
+            _annotationShadowBlur = preset.ShadowBlur
+            _annotationShadowStrength = preset.ShadowStrength
+            _annotationShadowColor = NormalizeAvaloniaColor(preset.ShadowColor, "#80000000")
+            _annotationShadowRounded = preset.ShadowRounded
+            _annotationShadowCornerRadius = preset.ShadowCornerRadiusPercent
+            _annotationShadowSize = preset.ShadowSizePercent
+            _annotationGlowEnabled = preset.GlowEnabled
+            _annotationGlowBlur = preset.GlowBlur
+            _annotationGlowStrength = preset.GlowStrength
+            _annotationGlowColor = NormalizeAvaloniaColor(preset.GlowColor, "#FFFFFF00")
 
             Me.RaisePropertyChanged(NameOf(AnnotationText))
             Me.RaisePropertyChanged(NameOf(AnnotationAnchor))
@@ -1995,6 +2029,44 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationFontSizePixels))
             Me.RaisePropertyChanged(NameOf(AnnotationFillColor))
             Me.RaisePropertyChanged(NameOf(AnnotationFillColorValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeColorValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationStrokeWidth))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillKind))
+            Me.RaisePropertyChanged(NameOf(ShowFillColorControls))
+            Me.RaisePropertyChanged(NameOf(ShowFillColorPicker))
+            Me.RaisePropertyChanged(NameOf(ShowGradientFillControls))
+            Me.RaisePropertyChanged(NameOf(ShowLinearGradientAngleControl))
+            Me.RaisePropertyChanged(NameOf(ShowRadialGradientControl))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColor2))
+            Me.RaisePropertyChanged(NameOf(AnnotationFillColor2Value))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientAngleDegrees))
+            Me.RaisePropertyChanged(NameOf(AnnotationGradientInverted))
+            Me.RaisePropertyChanged(NameOf(AnnotationBlendMode))
+            Me.RaisePropertyChanged(NameOf(SelectedAnnotationBlendModeOption))
+            Me.RaisePropertyChanged(NameOf(AnnotationBlendIncludesStroke))
+            Me.RaisePropertyChanged(NameOf(UsesAnnotationBlendMode))
+            Me.RaisePropertyChanged(NameOf(AnnotationBold))
+            Me.RaisePropertyChanged(NameOf(AnnotationItalic))
+            Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
+            Me.RaisePropertyChanged(NameOf(AnnotationFlipHorizontal))
+            Me.RaisePropertyChanged(NameOf(AnnotationFlipVertical))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowEnabled))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetX))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowOffsetY))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowLightAngle))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowBlur))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowStrength))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowColorValue))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowRounded))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowCornerRadius))
+            Me.RaisePropertyChanged(NameOf(AnnotationShadowSize))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowEnabled))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowBlur))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowStrength))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowColor))
+            Me.RaisePropertyChanged(NameOf(AnnotationGlowColorValue))
             Me.RaisePropertyChanged(NameOf(SelectedAnnotationImagePath))
             RaiseWatermarkUiChanged()
             If HasSelectedAnnotation AndAlso EffectiveAnnotationKind = "Watermark" Then SyncSelectedAnnotation()
@@ -2057,6 +2129,32 @@ Namespace ViewModels
             existing.FontFamily = _annotationFontFamily
             existing.FontSizePixels = _annotationFontSize
             existing.FillColor = _annotationFillColor
+            existing.StrokeColor = _annotationStrokeColor
+            existing.StrokeWidth = _annotationStrokeWidth
+            existing.FillKind = _annotationFillKind
+            existing.FillColor2 = _annotationFillColor2
+            existing.GradientAngleDegrees = _annotationGradientAngle
+            existing.GradientInverted = _annotationGradientInverted
+            existing.BlendMode = _annotationBlendMode
+            existing.BlendIncludesStroke = _annotationBlendIncludesStroke
+            existing.Bold = _annotationBold
+            existing.Italic = _annotationItalic
+            existing.LetterSpacingPercent = _annotationLetterSpacingPercent
+            existing.FlipHorizontal = _annotationFlipH
+            existing.FlipVertical = _annotationFlipV
+            existing.ShadowEnabled = _annotationShadowEnabled
+            existing.ShadowOffsetXPercent = _annotationShadowOffsetX
+            existing.ShadowOffsetYPercent = _annotationShadowOffsetY
+            existing.ShadowBlur = _annotationShadowBlur
+            existing.ShadowStrength = _annotationShadowStrength
+            existing.ShadowColor = _annotationShadowColor
+            existing.ShadowRounded = _annotationShadowRounded
+            existing.ShadowCornerRadiusPercent = _annotationShadowCornerRadius
+            existing.ShadowSizePercent = _annotationShadowSize
+            existing.GlowEnabled = _annotationGlowEnabled
+            existing.GlowBlur = _annotationGlowBlur
+            existing.GlowStrength = _annotationGlowStrength
+            existing.GlowColor = _annotationGlowColor
             PersistWatermarkPresets()
             SelectedWatermarkPresetName = name
             ' Überschreibt der Nutzer die bereits gewählte Vorlage, ändert sich der Name nicht - der
@@ -4387,10 +4485,9 @@ Namespace ViewModels
         ''' der Regler abfängt, ist ein Stützpunkt, der nicht ankommt.
         Public ReadOnly Property CanShowBeforeAfter As Boolean
             Get
-                Return _currentTool <> EditorTool.Crop AndAlso
+                Return _currentTool <> EditorTool.Transform AndAlso
                        _currentTool <> EditorTool.Resize AndAlso
-                       _currentTool <> EditorTool.Rotate AndAlso
-                       _currentTool <> EditorTool.Transform AndAlso
+                       _currentTool <> EditorTool.Warp AndAlso
                        _currentTool <> EditorTool.Move AndAlso
                        _currentTool <> EditorTool.Selection AndAlso
                        _currentTool <> EditorTool.Mask AndAlso
@@ -4536,17 +4633,17 @@ Namespace ViewModels
                 End If
                 ' Rezept-Dokumente zeigen im Zuschneide-Werkzeug das GANZE Bild und sonst nur den
                 ' Ausschnitt - beim Betreten wie beim Verlassen wechselt also die Anzeigegroesse.
-                If (value = EditorTool.Crop) <> (previousTool = EditorTool.Crop) Then
+                If (value = EditorTool.Transform) <> (previousTool = EditorTool.Transform) Then
                     NotifyCropDisplayChanged()
                     ' Beim VERLASSEN wechselt die Anzeige vom ganzen Bild auf den Ausschnitt, also auf
                     ' eine andere Groesse. Ohne dieses Signal behielt die Ansicht den Zoom des ganzen
                     ' Bildes bei, und der Ausschnitt blieb klein stehen. Der Zoom-MODUS entscheidet
                     ' dann, was passiert - ein selbst gewaehlter Zoom bleibt also erhalten.
-                    If value <> EditorTool.Crop Then RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
+                    If value <> EditorTool.Transform Then RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
                 End If
                 ' Ins Zuschneiden: das Bild einpassen, sonst zieht man an Anfassern, die neben der
                 ' Flaeche liegen. Gilt fuer JEDEN Dateityp.
-                If value = EditorTool.Crop AndAlso previousTool <> EditorTool.Crop Then
+                If value = EditorTool.Transform AndAlso previousTool <> EditorTool.Transform Then
                     ' Wo das ganze Bild zu sehen ist, legt sich der Rahmen auf den bereits
                     ' bestaetigten Ausschnitt. Sonst stuende er um das ganze Bild, und ein
                     ' vorhandener Zuschnitt saehe aus, als waere er weg.
@@ -4577,15 +4674,14 @@ Namespace ViewModels
                     Return LocalizationService.T("Mehrfachauswahl")
                 End If
                 Select Case _currentTool
-                    Case EditorTool.Crop : Return LocalizationService.T("Zuschneiden")
+                    Case EditorTool.Transform : Return LocalizationService.T("Transformieren")
                     Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
-                    Case EditorTool.Rotate : Return LocalizationService.T("Drehen und Verzerren")
+                    Case EditorTool.Warp : Return LocalizationService.T("Verzerren")
                     Case EditorTool.Adjust : Return LocalizationService.T("Anpassen")
                     Case EditorTool.Color : Return LocalizationService.T("Farbe")
                     Case EditorTool.Details : Return LocalizationService.T("Details")
                     Case EditorTool.Effects, EditorTool.Frame : Return LocalizationService.T("Effekte")
                     Case EditorTool.Filters : Return LocalizationService.T("Filter")
-                    Case EditorTool.Transform : Return LocalizationService.T("Drehen und Verzerren")
                     Case EditorTool.Move : Return LocalizationService.T("Verschieben")
                     Case EditorTool.Selection : Return LocalizationService.T("Auswahl")
                     Case EditorTool.Mask : Return LocalizationService.T("Maske")
@@ -4689,7 +4785,16 @@ Namespace ViewModels
 
         Public ReadOnly Property ShowCropAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Crop
+                Return _currentTool = EditorTool.Transform
+            End Get
+        End Property
+
+        ''' <summary>Drehen, Ausrichten und Spiegeln - im selben Werkzeug wie der Zuschnitt.
+        ''' Eigene Eigenschaft statt <see cref="ShowCropAdjustments"/> mitzubenutzen, damit an der
+        ''' Bindung im XAML zu lesen ist, welche Gruppe gemeint ist.</summary>
+        Public ReadOnly Property ShowRotateAdjustments As Boolean
+            Get
+                Return _currentTool = EditorTool.Transform
             End Get
         End Property
 
@@ -4941,9 +5046,11 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property ShowTransformAdjustments As Boolean
+        ''' <summary>Das Verzerren-Panel: Perspektive, Gitter, Linien und Verformen. Seit der
+        ''' Zusammenlegung ein eigenes Werkzeug - das Drehen steht nebenan bei "Transformieren".</summary>
+        Public ReadOnly Property ShowWarpAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Rotate OrElse _currentTool = EditorTool.Transform
+                Return _currentTool = EditorTool.Warp
             End Get
         End Property
 
@@ -6896,14 +7003,14 @@ Namespace ViewModels
         Public ReadOnly Property SelectedHslBandLabel As String
             Get
                 Select Case _selectedHslBand
-                    Case "Orange" : Return "Orange"
-                    Case "Yellow" : Return "Gelb"
-                    Case "Green" : Return "Grün"
-                    Case "Aqua" : Return "Aqua"
-                    Case "Blue" : Return "Blau"
-                    Case "Purple" : Return "Lila"
-                    Case "Magenta" : Return "Magenta"
-                    Case Else : Return "Rot"
+                    Case "Orange" : Return LocalizationService.T("Orange")
+                    Case "Yellow" : Return LocalizationService.T("Gelb")
+                    Case "Green" : Return LocalizationService.T("Grün")
+                    Case "Aqua" : Return LocalizationService.T("Aqua")
+                    Case "Blue" : Return LocalizationService.T("Blau")
+                    Case "Purple" : Return LocalizationService.T("Lila")
+                    Case "Magenta" : Return LocalizationService.T("Magenta")
+                    Case Else : Return LocalizationService.T("Rot")
                 End Select
             End Get
         End Property
@@ -10710,10 +10817,24 @@ Namespace ViewModels
             Dim dy = y / 100.0 * displaySize.Height
             Dim dw = width / 100.0 * displaySize.Width
             Dim dh = height / 100.0 * displaySize.Height
+            Dim geometry = BuildAppliedGeometryAdjustments()
+            If geometry.GeometryOperations IsNot Nothing AndAlso geometry.GeometryOperations.Count <> 0 Then
+                Dim sourcePoints As New List(Of SkiaSharp.SKPoint)()
+                For Each point In {New SkiaSharp.SKPoint(CSng(dx), CSng(dy)), New SkiaSharp.SKPoint(CSng(dx + dw), CSng(dy)),
+                                   New SkiaSharp.SKPoint(CSng(dx + dw), CSng(dy + dh)), New SkiaSharp.SKPoint(CSng(dx), CSng(dy + dh))}
+                    Dim sourcePoint As SkiaSharp.SKPoint
+                    If ImageProcessor.TryGeometryOutputToSourcePoint(point.X, point.Y, baseWidth, baseHeight, geometry, sourcePoint) Then sourcePoints.Add(sourcePoint)
+                Next
+                If sourcePoints.Count > 0 Then
+                    Dim left = sourcePoints.Min(Function(point) point.X), top = sourcePoints.Min(Function(point) point.Y)
+                    Dim right = sourcePoints.Max(Function(point) point.X), bottom = sourcePoints.Max(Function(point) point.Y)
+                    Return (left / baseWidth * 100.0, top / baseHeight * 100.0,
+                            Math.Max(1.0F, right - left) / baseWidth * 100.0, Math.Max(1.0F, bottom - top) / baseHeight * 100.0)
+                End If
+            End If
             ' Die sichtbare Objektposition bezieht sich auf den bereits beschnittenen Ausschnitt.
             ' Zurueckgespeichert wird weiterhin im stabilen Pixelraum des Originalbilds: erst die
             ' Anzeigeabbildung gegen die Crop-Groesse aufloesen, dann den Crop-Ursprung addieren.
-            Dim geometry = BuildAppliedGeometryAdjustments()
             Dim crop = ImageProcessor.ComputeGeometryCropRect(baseWidth, baseHeight, geometry)
             Dim sourceGeometry = ImageGeometryMapper.DisplayObjectToSource(
                 New SkiaSharp.SKRect(CSng(dx), CSng(dy), CSng(dx + dw), CSng(dy + dh)),
@@ -10761,8 +10882,199 @@ Namespace ViewModels
                 .ResizeWidth = _appliedResizeWidth, .ResizeHeight = _appliedResizeHeight,
                 .CanvasWidth = _appliedCanvasWidth, .CanvasHeight = _appliedCanvasHeight,
                 .CanvasAnchor = _canvasAnchor,
+                .GeometryOperations = GeometryOperationsForDisplay(),
                 .ImageWarp = _imageWarp
             }
+        End Function
+
+        ''' <summary>Im Zuschneide-Werkzeug eines Bündels bleibt der zuletzt bestätigte Crop
+        ''' vorübergehend aus der Anzeige-Pipeline heraus. So steht wieder das volle Bild unter
+        ''' dem Rahmen, ohne das gespeicherte Rezept zu verändern.</summary>
+        Private Function GeometryOperationsForDisplay() As List(Of GeometryOperation)
+            Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
+            If _currentTool = EditorTool.Transform AndAlso ShowsFullImageWhileCropping Then
+                Dim cropIndex = LastCropBearingGeometryOperationIndex()
+                If cropIndex >= 0 Then
+                    If String.Equals(result(cropIndex).Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then
+                        ' Ein migriertes Alt-Rezept ist eine zusammenhängende feste Kette. Für die
+                        ' Bearbeitung des Crops wird darin nur dessen Anteil neutralisiert.
+                        Dim crop = result(cropIndex).Adjustments
+                        crop.CropLeftPercent = 0 : crop.CropTopPercent = 0
+                        crop.CropRightPercent = 0 : crop.CropBottomPercent = 0
+                    Else
+                        result.RemoveAt(cropIndex)
+                    End If
+                End If
+            End If
+            Return result
+        End Function
+
+        Private Function LastGeometryOperationIndex(kind As String) As Integer
+            For index = _geometryOperations.Count - 1 To 0 Step -1
+                If String.Equals(_geometryOperations(index)?.Kind, kind, StringComparison.OrdinalIgnoreCase) Then Return index
+            Next
+            Return -1
+        End Function
+
+        ''' <summary>Entfernt bestätigte Schritte eines Typs. Die früheren globalen Felder sind
+        ''' nur noch Kompatibilitätswerte; ein Reset muss deshalb die Rezeptschritte ändern.</summary>
+        Private Function RemoveGeometryOperations(kind As String) As Boolean
+            Dim removed = False
+            For index = _geometryOperations.Count - 1 To 0 Step -1
+                If String.Equals(_geometryOperations(index)?.Kind, kind, StringComparison.OrdinalIgnoreCase) Then
+                    _geometryOperations.RemoveAt(index)
+                    removed = True
+                End If
+            Next
+            Return removed
+        End Function
+
+        Private Function HasGeometryOperation(kind As String) As Boolean
+            Return LastGeometryOperationIndex(kind) >= 0
+        End Function
+
+        Private Sub ResetCommittedCrop()
+            RemoveGeometryOperations("crop")
+            For Each operation In _geometryOperations
+                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
+                    operation.Adjustments.CropLeftPercent = 0 : operation.Adjustments.CropTopPercent = 0
+                    operation.Adjustments.CropRightPercent = 0 : operation.Adjustments.CropBottomPercent = 0
+                End If
+            Next
+        End Sub
+
+        Private Sub ResetCommittedTransform()
+            RemoveGeometryOperations("transform")
+            For Each operation In _geometryOperations
+                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
+                    Dim a = operation.Adjustments
+                    a.RotationDegrees = 0 : a.StraightenDegrees = 0 : a.StraightenExpandCanvas = False
+                    a.FlipHorizontal = False : a.FlipVertical = False
+                End If
+            Next
+        End Sub
+
+        Private Function HasCommittedPerspective() As Boolean
+            Return HasGeometryOperation("perspective") OrElse _geometryOperations.Any(
+                Function(operation) String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso
+                                    operation.Adjustments IsNot Nothing AndAlso
+                                    (Math.Abs(operation.Adjustments.PerspectiveHorizontal) > 0.0001 OrElse
+                                     Math.Abs(operation.Adjustments.PerspectiveVertical) > 0.0001 OrElse
+                                     Math.Abs(operation.Adjustments.PerspectiveAspect) > 0.0001 OrElse
+                                     Math.Abs(operation.Adjustments.PerspectiveScale) > 0.0001 OrElse
+                                     operation.Adjustments.PerspectiveCorner0X <> 0 OrElse operation.Adjustments.PerspectiveCorner0Y <> 0 OrElse
+                                     operation.Adjustments.PerspectiveCorner1X <> 0 OrElse operation.Adjustments.PerspectiveCorner1Y <> 0 OrElse
+                                     operation.Adjustments.PerspectiveCorner2X <> 0 OrElse operation.Adjustments.PerspectiveCorner2Y <> 0 OrElse
+                                     operation.Adjustments.PerspectiveCorner3X <> 0 OrElse operation.Adjustments.PerspectiveCorner3Y <> 0))
+        End Function
+
+        Private Sub ResetCommittedPerspective()
+            RemoveGeometryOperations("perspective")
+            For Each operation In _geometryOperations
+                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
+                    Dim a = operation.Adjustments
+                    a.PerspectiveHorizontal = 0 : a.PerspectiveVertical = 0 : a.PerspectiveAspect = 0 : a.PerspectiveScale = 0
+                    a.PerspectiveCorner0X = 0 : a.PerspectiveCorner0Y = 0 : a.PerspectiveCorner1X = 0 : a.PerspectiveCorner1Y = 0
+                    a.PerspectiveCorner2X = 0 : a.PerspectiveCorner2Y = 0 : a.PerspectiveCorner3X = 0 : a.PerspectiveCorner3Y = 0
+                End If
+            Next
+        End Sub
+
+        Private Function HasCommittedImageWarp() As Boolean
+            Return HasGeometryOperation("warp") OrElse _geometryOperations.Any(
+                Function(operation) String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso
+                                    operation.Adjustments?.ImageWarp IsNot Nothing AndAlso Not operation.Adjustments.ImageWarp.IsEmpty)
+        End Function
+
+        Private Sub ResetCommittedImageWarp()
+            RemoveGeometryOperations("warp")
+            For Each operation In _geometryOperations
+                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then operation.Adjustments.ImageWarp = Nothing
+            Next
+        End Sub
+
+        Private Sub ResetCommittedResize()
+            RemoveGeometryOperations("resize")
+            For Each operation In _geometryOperations
+                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
+                    operation.Adjustments.ResizeWidth = 0 : operation.Adjustments.ResizeHeight = 0 : operation.Adjustments.ResizeScalePercent = 0
+                End If
+            Next
+        End Sub
+
+        Private Sub ResetCommittedCanvas()
+            RemoveGeometryOperations("canvas")
+            For Each operation In _geometryOperations
+                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
+                    operation.Adjustments.CanvasWidth = 0 : operation.Adjustments.CanvasHeight = 0
+                End If
+            Next
+        End Sub
+
+        Private Function AppliedCropValues() As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            Dim cropIndex = LastCropBearingGeometryOperationIndex()
+            If cropIndex >= 0 Then
+                Dim crop = _geometryOperations(cropIndex).Adjustments
+                If crop IsNot Nothing Then Return (crop.CropLeftPercent, crop.CropTopPercent, crop.CropRightPercent, crop.CropBottomPercent)
+            End If
+            Return (_appliedCropLeft, _appliedCropTop, _appliedCropRight, _appliedCropBottom)
+        End Function
+
+        Private Function LastCropBearingGeometryOperationIndex() As Integer
+            For index = _geometryOperations.Count - 1 To 0 Step -1
+                Dim operation = _geometryOperations(index)
+                If String.Equals(operation?.Kind, "crop", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Return index
+            Next
+            Return -1
+        End Function
+
+        Private Shared Function HasLegacyGeometryValues(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing Then Return False
+            Return adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 OrElse
+                   adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse adj.StraightenExpandCanvas OrElse adj.FlipHorizontal OrElse adj.FlipVertical OrElse
+                   adj.PerspectiveHorizontal <> 0 OrElse adj.PerspectiveVertical <> 0 OrElse adj.PerspectiveAspect <> 0 OrElse adj.PerspectiveScale <> 0 OrElse
+                   adj.PerspectiveCorner0X <> 0 OrElse adj.PerspectiveCorner0Y <> 0 OrElse adj.PerspectiveCorner1X <> 0 OrElse adj.PerspectiveCorner1Y <> 0 OrElse
+                   adj.PerspectiveCorner2X <> 0 OrElse adj.PerspectiveCorner2Y <> 0 OrElse adj.PerspectiveCorner3X <> 0 OrElse adj.PerspectiveCorner3Y <> 0 OrElse
+                   (adj.ImageWarp IsNot Nothing AndAlso Not adj.ImageWarp.IsEmpty) OrElse adj.ResizeWidth > 0 OrElse adj.ResizeHeight > 0 OrElse
+                   adj.ResizeScalePercent > 0 OrElse adj.CanvasWidth > 0 OrElse adj.CanvasHeight > 0
+        End Function
+
+        ''' <summary>Bestätigte Schritte plus den momentan offenen Transform-Schritt für die
+        ''' Vorschau. Der offene Crop bleibt bewusst ein Overlay und wird erst mit Anwenden Teil
+        ''' des Rezepts.</summary>
+        Private Function GeometryOperationsForRender(forPreview As Boolean) As List(Of GeometryOperation)
+            Dim result = If(forPreview, GeometryOperationsForDisplay(), _geometryOperations.Select(Function(operation) operation.Clone()).ToList())
+            If Not forPreview Then Return result
+            ' Ein altes Rezept hat noch keine Liste: seine Felder sind bereits der bestätigte
+            ' Legacy-Schritt und dürfen nicht zusätzlich als offene Transform-Stufe angehängt werden.
+            If result.Count = 0 Then Return result
+            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
+               _straightenExpandCanvas OrElse _flipH OrElse _flipV Then
+                result.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
+                    .RotationDegrees = _rotationDegrees, .StraightenDegrees = CSng(_straightenDegrees),
+                    .StraightenExpandCanvas = _straightenExpandCanvas, .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
+            End If
+            If HasPerspectiveChanges Then
+                result.Add(New GeometryOperation With {.Kind = "perspective", .Adjustments = New ImageAdjustments With {
+                    .PerspectiveHorizontal = CSng(_perspectiveHorizontal), .PerspectiveVertical = CSng(_perspectiveVertical),
+                    .PerspectiveAspect = CSng(_perspectiveAspect), .PerspectiveScale = CSng(_perspectiveScale),
+                    .PerspectiveCorner0X = CSng(_perspectiveCorners(0)), .PerspectiveCorner0Y = CSng(_perspectiveCorners(1)),
+                    .PerspectiveCorner1X = CSng(_perspectiveCorners(2)), .PerspectiveCorner1Y = CSng(_perspectiveCorners(3)),
+                    .PerspectiveCorner2X = CSng(_perspectiveCorners(4)), .PerspectiveCorner2Y = CSng(_perspectiveCorners(5)),
+                    .PerspectiveCorner3X = CSng(_perspectiveCorners(6)), .PerspectiveCorner3Y = CSng(_perspectiveCorners(7))}})
+            End If
+            If _resizeWidth > 0 OrElse _resizeHeight > 0 Then
+                result.Add(New GeometryOperation With {.Kind = "resize", .Adjustments = New ImageAdjustments With {
+                    .ResizeWidth = _resizeWidth, .ResizeHeight = _resizeHeight,
+                    .LockResizeAspect = _lockResizeAspect, .ResizeInterpolation = _resizeInterpolation}})
+            End If
+            If _canvasWidth > 0 OrElse _canvasHeight > 0 Then
+                result.Add(New GeometryOperation With {.Kind = "canvas", .Adjustments = New ImageAdjustments With {
+                    .CanvasWidth = _canvasWidth, .CanvasHeight = _canvasHeight,
+                    .CanvasAnchor = _canvasAnchor, .CanvasBackgroundColor = _canvasBackgroundColor}})
+            End If
+            Return result
         End Function
 
         Private Function GetAnnotationDisplayPixelSize() As (Width As Integer, Height As Integer)
@@ -10788,9 +11100,55 @@ Namespace ViewModels
         ''' waagerecht.</summary>
         Public ReadOnly Property AppliedRotationDegrees As Integer
             Get
-                Return _appliedRotationDegrees
+                Return AppliedTransformState().Rotation
             End Get
         End Property
+
+        Private ReadOnly Property AppliedFlipHorizontal As Boolean
+            Get
+                Return AppliedTransformState().FlipHorizontal
+            End Get
+        End Property
+
+        Private ReadOnly Property AppliedFlipVertical As Boolean
+            Get
+                Return AppliedTransformState().FlipVertical
+            End Get
+        End Property
+
+        ''' <summary>Drehung und Spiegelung aller bestaetigten Schritte zu EINER Lage
+        ''' zusammengesetzt - nicht aufsummiert.
+        '''
+        ''' Vierteldrehung und Spiegelung sind nicht vertauschbar: "erst spiegeln, dann drehen"
+        ''' liegt anders als "erst drehen, dann spiegeln". Wer die Winkel bloss addiert und die
+        ''' Spiegelungen einzeln durch XOR fuehrt, bekommt fuer beide Reihenfolgen dasselbe
+        ''' Ergebnis - die Bildkette fuehrt die Schritte aber der Reihe nach aus. Der Zuschnitt-
+        ''' Rahmen, die Objektdrehung und die Achsvertauschung der Lineale landeten dadurch nach
+        ''' "spiegeln, dann drehen" auf der falschen Bildseite.
+        '''
+        ''' DIE REGEL: eine einzelne Spiegelung kehrt den Drehsinn um. Steht vor einem Schritt eine
+        ''' ungerade Zahl von Spiegelungen, geht dessen Drehung deshalb mit umgekehrtem Vorzeichen
+        ''' ein. Zwei Spiegelungen sind zusammen eine halbe Drehung und lassen den Drehsinn in Ruhe.
+        ''' Innerhalb eines Schrittes steht die Drehung VOR der Spiegelung (ApplyGeometryTransforms);
+        ''' die Zusammensetzung liefert wieder genau diese Form und passt damit zu allen Lesern.</summary>
+        Private Function AppliedTransformState() As (Rotation As Integer, FlipHorizontal As Boolean, FlipVertical As Boolean)
+            ' Die offenen Felder sind der Ausgangspunkt und selbst schon ein solcher Schritt:
+            ' entweder traegt sie ein Rezept ohne Schrittliste, oder die Liste traegt alles und
+            ' sie stehen auf null (siehe die Migration in ApplyAdjustments).
+            Dim rotation = _appliedRotationDegrees
+            Dim flipH = _appliedFlipH
+            Dim flipV = _appliedFlipV
+            For Each operation In _geometryOperations
+                If operation?.Adjustments Is Nothing Then Continue For
+                If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
+                   Not String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Continue For
+                Dim a = operation.Adjustments
+                rotation += If(flipH Xor flipV, -a.RotationDegrees, a.RotationDegrees)
+                flipH = flipH Xor a.FlipHorizontal
+                flipV = flipV Xor a.FlipVertical
+            Next
+            Return (ImageGeometryMapper.NormalizeQuarterTurn(rotation), flipH, flipV)
+        End Function
 
         Public ReadOnly Property DisplayImageWidthPixels As Integer
             Get
@@ -10814,24 +11172,24 @@ Namespace ViewModels
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0.0
             Return ImageGeometryMapper.SourceObjectRotationToDisplay(annotation.RotationDegrees,
-                                                                     _appliedRotationDegrees,
-                                                                     _appliedFlipH,
-                                                                     _appliedFlipV)
+                                                                     AppliedRotationDegrees,
+                                                                     AppliedFlipHorizontal,
+                                                                     AppliedFlipVertical)
         End Function
 
         Private Function DisplayAnnotationRotationToStored(kind As String, degrees As Double) As Double
             Return ImageGeometryMapper.DisplayObjectRotationToSource(degrees,
-                                                                     _appliedRotationDegrees,
-                                                                     _appliedFlipH,
-                                                                     _appliedFlipV)
+                                                                     AppliedRotationDegrees,
+                                                                     AppliedFlipHorizontal,
+                                                                     AppliedFlipVertical)
         End Function
 
         Private Function DisplayAnnotationFlipHorizontalToStored(displayFlip As Boolean) As Boolean
-            Return displayFlip Xor _appliedFlipH
+            Return displayFlip Xor AppliedFlipHorizontal
         End Function
 
         Private Function DisplayAnnotationFlipVerticalToStored(displayFlip As Boolean) As Boolean
-            Return displayFlip Xor _appliedFlipV
+            Return displayFlip Xor AppliedFlipVertical
         End Function
 
         Private Shared Function NormalizeAnnotationRotation(degrees As Double) As Double
@@ -10925,7 +11283,6 @@ Namespace ViewModels
                 If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
                 CaptureUndoState(NameOf(StraightenDegrees))
                 Me.RaiseAndSetIfChanged(_straightenDegrees, clamped)
-                _appliedStraightenDegrees = clamped
                 RaiseResetButtonStateChanged()
                 SchedulePreviewUpdate()
             End Set
@@ -10939,7 +11296,6 @@ Namespace ViewModels
                 If _straightenExpandCanvas = value Then Return
                 CaptureUndoState(NameOf(StraightenExpandCanvas))
                 Me.RaiseAndSetIfChanged(_straightenExpandCanvas, value)
-                _appliedStraightenExpandCanvas = value
                 RaiseResetButtonStateChanged()
                 SchedulePreviewUpdate()
             End Set
@@ -11847,7 +12203,7 @@ Namespace ViewModels
         ''' Zuschneide-Werkzeug eines Rezept-Dokuments der Ausschnitt weg (ganzes Bild sichtbar);
         ''' fuer das Speichern und fuer die Maskengeometrie gilt immer der echte Ausschnitt.</summary>
         Private Function EffectiveCrop(fuerAnzeige As Boolean) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
-            If fuerAnzeige AndAlso _currentTool = EditorTool.Crop AndAlso ShowsFullImageWhileCropping Then
+            If fuerAnzeige AndAlso _currentTool = EditorTool.Transform AndAlso ShowsFullImageWhileCropping Then
                 Return (0.0, 0.0, 0.0, 0.0)
             End If
             Return (_appliedCropLeft, _appliedCropTop, _appliedCropRight, _appliedCropBottom)
@@ -11871,10 +12227,11 @@ Namespace ViewModels
         '''
         ''' Ohne Klemmen: beide Seiten messen hier am ganzen Bild, es gibt nichts zu begrenzen.</summary>
         Private Sub SyncCropFrameToApplied()
-            _cropLeft = _appliedCropLeft
-            _cropTop = _appliedCropTop
-            _cropRight = _appliedCropRight
-            _cropBottom = _appliedCropBottom
+            Dim crop = AppliedCropValues()
+            _cropLeft = crop.Left
+            _cropTop = crop.Top
+            _cropRight = crop.Right
+            _cropBottom = crop.Bottom
             Me.RaisePropertyChanged(NameOf(CropLeft))
             Me.RaisePropertyChanged(NameOf(CropTop))
             Me.RaisePropertyChanged(NameOf(CropRight))
@@ -11890,10 +12247,11 @@ Namespace ViewModels
         Public ReadOnly Property HasCropChanges As Boolean
             Get
                 If ShowsFullImageWhileCropping Then
-                    Return Math.Abs(_cropLeft - _appliedCropLeft) > 0.0001 OrElse
-                           Math.Abs(_cropTop - _appliedCropTop) > 0.0001 OrElse
-                           Math.Abs(_cropRight - _appliedCropRight) > 0.0001 OrElse
-                           Math.Abs(_cropBottom - _appliedCropBottom) > 0.0001
+                    Dim applied = AppliedCropValues()
+                    Return Math.Abs(_cropLeft - applied.Left) > 0.0001 OrElse
+                           Math.Abs(_cropTop - applied.Top) > 0.0001 OrElse
+                           Math.Abs(_cropRight - applied.Right) > 0.0001 OrElse
+                           Math.Abs(_cropBottom - applied.Bottom) > 0.0001
                 End If
                 Return _cropLeft > 0.0001 OrElse _cropTop > 0.0001 OrElse
                        _cropRight > 0.0001 OrElse _cropBottom > 0.0001
@@ -11939,12 +12297,27 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property HasTransformChanges As Boolean
+        ''' <summary>Nur die Vierteldrehung, das Ausrichten und die Spiegelungen - das, was im
+        ''' Werkzeug "Transformieren" neben dem Zuschnitt steht.
+        '''
+        ''' GETRENNT VON DER PERSPEKTIVE, seit Zuschneiden und Drehen ein Werkzeug sind und das
+        ''' Verzerren ein eigenes: waeren beide weiter in einer Pruefung, wuerde ein Vierteldreh
+        ''' im einen Werkzeug eine noch offene Perspektive aus dem anderen mitbestaetigen und
+        ''' deren Felder leeren.</summary>
+        Public ReadOnly Property HasRotateChanges As Boolean
             Get
                 Return _rotationDegrees <> _appliedRotationDegrees OrElse
                        Math.Abs(_straightenDegrees - _appliedStraightenDegrees) > 0.0001 OrElse
                        _straightenExpandCanvas <> _appliedStraightenExpandCanvas OrElse
                        _flipH <> _appliedFlipH OrElse _flipV <> _appliedFlipV
+            End Get
+        End Property
+
+        ''' <summary>Drehen ODER Perspektive - fuer den gemeinsamen Zustand der Zuruecksetzer.
+        ''' Angewendet werden beide getrennt, siehe <see cref="HasRotateChanges"/>.</summary>
+        Public ReadOnly Property HasTransformChanges As Boolean
+            Get
+                Return HasRotateChanges OrElse HasPerspectiveChanges
             End Get
         End Property
 
@@ -12162,7 +12535,8 @@ Namespace ViewModels
         Public ReadOnly Property ApplyCropCommand As ICommand
         Public ReadOnly Property ApplyResizeCommand As ICommand
         Public ReadOnly Property ApplyCanvasCommand As ICommand
-        Public ReadOnly Property ApplyTransformCommand As ICommand
+        Public ReadOnly Property ApplyRotateCommand As ICommand
+        Public ReadOnly Property ApplyPerspectiveCommand As ICommand
         Public ReadOnly Property ResetCropCommand As ICommand
         Public ReadOnly Property SetCropPresetCommand As ICommand
         ''' Wird ausgelöst, wenn sich die Maße des angezeigten Bildes geändert haben (z.B. nach dem
@@ -12486,16 +12860,24 @@ Namespace ViewModels
             ApplyCanvasCommand = ReactiveCommand.Create(Async Function() As Task
                                                             Await ApplyCanvasAsync()
                                                         End Function)
-            ApplyTransformCommand = ReactiveCommand.Create(Async Function() As Task
-                                                               Await ApplyTransformAsync()
-                                                           End Function)
+            ApplyRotateCommand = ReactiveCommand.Create(Async Function() As Task
+                                                            Await ApplyRotateAsync()
+                                                        End Function)
+            ApplyPerspectiveCommand = ReactiveCommand.Create(Async Function() As Task
+                                                                 Await ApplyPerspectiveAsync()
+                                                             End Function)
             ResetCropCommand = ReactiveCommand.Create(Sub()
                                                           PushUndo(ResetHistoryLabel("Zuschneiden"))
+                                                          ResetCommittedCrop()
                                                           SetCropValues(0, 0, 0, 0)
                                                           _appliedCropLeft = 0
                                                           _appliedCropTop = 0
                                                           _appliedCropRight = 0
                                                           _appliedCropBottom = 0
+                                                          ' Ein Zuruecksetzen aendert das Rezept wie jeder andere Griff
+                                                          ' auch - ohne diesen Merker liesse sich das Bild danach ohne
+                                                          ' Nachfrage schliessen, und der Zuschnitt waere wieder da.
+                                                          _hasChanges = True
                                                           RaiseResetButtonStateChanged()
                                                           SchedulePreviewUpdate()
                                                       End Sub)
@@ -12504,6 +12886,7 @@ Namespace ViewModels
                                                                      End Sub)
             ResetResizeCommand = ReactiveCommand.Create(Sub()
                                                             PushUndo(ResetHistoryLabel("Bildgröße"))
+                                                            ResetCommittedResize()
                                                             _appliedResizeWidth = 0
                                                             _appliedResizeHeight = 0
                                                             _hasChanges = True
@@ -12514,6 +12897,7 @@ Namespace ViewModels
                                                                       End Sub)
             ResetCanvasCommand = ReactiveCommand.Create(Sub()
                                                             PushUndo(ResetHistoryLabel("Leinwandgröße"))
+                                                            ResetCommittedCanvas()
                                                             _appliedCanvasWidth = 0
                                                             _appliedCanvasHeight = 0
                                                             _hasChanges = True
@@ -12699,8 +13083,11 @@ Namespace ViewModels
             SetAnnotationFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationFillKind(kind))
             SetFrameFillKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) FrameFillKind = kind)
             SetAnnotationTextPathKindCommand = ReactiveCommand.Create(Of String)(Sub(kind) SetAnnotationTextPathKind(kind))
+            ' Der Zuruecksetzer der Gruppe "Drehen". Sein Eintrag hiess bis zur Trennung noch
+            ' "Drehen und Verzerren" - das Verzerren hat seit dem ein eigenes Werkzeug mit eigenem
+            ' Zuruecksetzer, und dieser hier ruehrt es nicht an.
             ResetTransformCommand = ReactiveCommand.Create(Sub()
-                                                               PushUndo(ResetHistoryLabel("Drehen und Verzerren"))
+                                                               PushUndo(ResetHistoryLabel("Drehen"))
                                                                ResetTransformInternal()
                                                            End Sub)
             SetBrushPresetCommand = ReactiveCommand.Create(Of String)(AddressOf SelectBrushPreset)
@@ -15757,8 +16144,12 @@ Namespace ViewModels
             ClearActiveSelectionForGeometry()
 
             Dim replacesAppliedCrop = ShowsFullImageWhileCropping
-            Dim baseWidth = GetBaseWidth()
-            Dim baseHeight = GetBaseHeight()
+            Dim sourceWidth = GetBaseWidth()
+            Dim sourceHeight = GetBaseHeight()
+            Dim currentGeometry = BuildAppliedGeometryAdjustments()
+            Dim currentSize = ImageProcessor.ComputeGeometryOutputSize(sourceWidth, sourceHeight, currentGeometry)
+            Dim baseWidth = currentSize.Width
+            Dim baseHeight = currentSize.Height
             If baseWidth > 0 AndAlso baseHeight > 0 Then
                 Dim leftPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropLeft, baseWidth)) + CropLeftPixels
                 Dim rightPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropRight, baseWidth)) + CropRightPixels
@@ -15775,19 +16166,36 @@ Namespace ViewModels
                 _appliedCropBottom = PixelsToPercent(bottomPx, baseHeight)
             End If
 
-            ' Wo das ganze Bild zu sehen bleibt, bleibt auch der Rahmen liegen - er zeigt jetzt genau
-            ' den bestaetigten Ausschnitt. Ihn dort auf null zu setzen hiesse, den eben bestaetigten
-            ' Zuschnitt sofort wieder aufzuziehen.
-            If replacesAppliedCrop Then
-                _cropLeft = _appliedCropLeft
-                _cropTop = _appliedCropTop
-                _cropRight = _appliedCropRight
-                _cropBottom = _appliedCropBottom
+            Dim cropOperation = New GeometryOperation With {
+                .Kind = "crop",
+                .Adjustments = New ImageAdjustments With {
+                    .CropLeftPercent = CSng(_appliedCropLeft), .CropTopPercent = CSng(_appliedCropTop),
+                    .CropRightPercent = CSng(_appliedCropRight), .CropBottomPercent = CSng(_appliedCropBottom)}}
+            Dim existingCropIndex = If(replacesAppliedCrop, LastCropBearingGeometryOperationIndex(), -1)
+            If existingCropIndex >= 0 Then
+                ' Der Rahmen bearbeitet im Bündel den bestehenden Schritt, statt einen zweiten
+                ' Zuschnitt hinter ihn zu hängen. Genau dadurch bleibt der Ausschnitt aufziehbar.
+                If String.Equals(_geometryOperations(existingCropIndex).Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then
+                    Dim legacy = _geometryOperations(existingCropIndex).Adjustments
+                    legacy.CropLeftPercent = cropOperation.Adjustments.CropLeftPercent
+                    legacy.CropTopPercent = cropOperation.Adjustments.CropTopPercent
+                    legacy.CropRightPercent = cropOperation.Adjustments.CropRightPercent
+                    legacy.CropBottomPercent = cropOperation.Adjustments.CropBottomPercent
+                Else
+                    _geometryOperations(existingCropIndex) = cropOperation
+                End If
             Else
-                _cropLeft = 0
-                _cropTop = 0
-                _cropRight = 0
-                _cropBottom = 0
+                _geometryOperations.Add(cropOperation)
+            End If
+            _appliedCropLeft = 0 : _appliedCropTop = 0 : _appliedCropRight = 0 : _appliedCropBottom = 0
+
+            ' Im Bündelmodus bleibt der Rahmen auf dem gerade ersetzten Crop-Schritt liegen; dort
+            ' ist das volle Bild sichtbar und der Nutzer muss den Ausschnitt sofort weiterziehen
+            ' können. Bei normalen Dateien startet ein weiterer Crop dagegen auf dem Restbild.
+            If replacesAppliedCrop Then
+                SyncCropFrameToApplied()
+            Else
+                _cropLeft = 0 : _cropTop = 0 : _cropRight = 0 : _cropBottom = 0
             End If
             Me.RaisePropertyChanged(NameOf(CropLeft))
             Me.RaisePropertyChanged(NameOf(CropTop))
@@ -15811,8 +16219,11 @@ Namespace ViewModels
             If Not HasImageResizeChanges Then Return
             PushUndo(LocalizationService.T("Bildgröße geändert"))
             ClearActiveSelectionForGeometry()
-            _appliedResizeWidth = _resizeWidth
-            _appliedResizeHeight = _resizeHeight
+            _geometryOperations.Add(New GeometryOperation With {.Kind = "resize", .Adjustments = New ImageAdjustments With {
+                .ResizeWidth = _resizeWidth, .ResizeHeight = _resizeHeight,
+                .LockResizeAspect = _lockResizeAspect, .ResizeInterpolation = _resizeInterpolation}})
+            _resizeWidth = 0 : _resizeHeight = 0
+            _appliedResizeWidth = 0 : _appliedResizeHeight = 0
             _hasChanges = True
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
@@ -15823,23 +16234,69 @@ Namespace ViewModels
             If Not HasCanvasSizeChanges Then Return
             PushUndo(LocalizationService.T("Leinwandgröße geändert"))
             ClearActiveSelectionForGeometry()
-            _appliedCanvasWidth = _canvasWidth
-            _appliedCanvasHeight = _canvasHeight
+            _geometryOperations.Add(New GeometryOperation With {.Kind = "canvas", .Adjustments = New ImageAdjustments With {
+                .CanvasWidth = _canvasWidth, .CanvasHeight = _canvasHeight, .CanvasAnchor = _canvasAnchor,
+                .CanvasBackgroundColor = _canvasBackgroundColor}})
+            _canvasWidth = 0 : _canvasHeight = 0
+            _appliedCanvasWidth = 0 : _appliedCanvasHeight = 0
             _hasChanges = True
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
         End Function
 
-        Private Async Function ApplyTransformAsync() As Task
-            If Not HasTransformChanges Then Return
-            PushUndo(LocalizationService.T("Drehen und Verzerren"))
+        ''' <summary>Bestaetigt Drehung, Ausrichten und Spiegelung als EIGENEN Geometrieschritt.
+        '''
+        ''' Die Perspektive hat ihren eigenen Schritt und ihren eigenen Anwenden-Weg
+        ''' (<see cref="ApplyPerspectiveAsync"/>): sie steht im Werkzeug "Verzerren", die Drehung
+        ''' im Werkzeug "Transformieren". Beides in einem Aufruf zu bestaetigen hiesse, dass ein
+        ''' Vierteldreh eine noch offene Perspektive mitnimmt und ihre Regler leert.</summary>
+        Private Async Function ApplyRotateAsync() As Task
+            If Not HasRotateChanges Then Return
+            PushUndo(LocalizationService.T("Drehen"))
             ClearActiveSelectionForGeometry()
-            _appliedRotationDegrees = _rotationDegrees
-            _appliedStraightenDegrees = _straightenDegrees
-            _appliedStraightenExpandCanvas = _straightenExpandCanvas
-            _appliedFlipH = _flipH
-            _appliedFlipV = _flipV
+            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
+               _straightenExpandCanvas OrElse _flipH OrElse _flipV Then
+                _geometryOperations.Add(New GeometryOperation With {
+                    .Kind = "transform",
+                    .Adjustments = New ImageAdjustments With {
+                    .RotationDegrees = _rotationDegrees,
+                    .StraightenDegrees = CSng(_straightenDegrees),
+                    .StraightenExpandCanvas = _straightenExpandCanvas,
+                    .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
+            End If
+            _rotationDegrees = 0 : _straightenDegrees = 0 : _straightenExpandCanvas = False
+            _flipH = False : _flipV = False
+            _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
+            _appliedStraightenExpandCanvas = False : _appliedFlipH = False : _appliedFlipV = False
+            Me.RaisePropertyChanged(NameOf(StraightenDegrees))
+            Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            RaiseDisplayImageGeometryProperties()
+            Await UpdatePreviewAsync()
+        End Function
+
+        ''' <summary>Bestaetigt die Perspektive als eigenen Geometrieschritt - das Gegenstueck zu
+        ''' den Anwenden-Knoepfen von Gitter, Linien und Verformen im selben Werkzeug. Ohne diesen
+        ''' Weg blieb die Perspektive ein reiner Vorschauwert: das kanonische Rezept liest nur
+        ''' bestaetigte Schritte, sie waere also beim Speichern und beim naechsten Oeffnen weg.</summary>
+        Private Async Function ApplyPerspectiveAsync() As Task
+            If Not HasPerspectiveChanges Then Return
+            PushUndo(LocalizationService.T("Perspektive"))
+            ClearActiveSelectionForGeometry()
+            _geometryOperations.Add(New GeometryOperation With {
+                .Kind = "perspective",
+                .Adjustments = New ImageAdjustments With {
+                .PerspectiveHorizontal = CSng(_perspectiveHorizontal), .PerspectiveVertical = CSng(_perspectiveVertical),
+                .PerspectiveAspect = CSng(_perspectiveAspect), .PerspectiveScale = CSng(_perspectiveScale),
+                .PerspectiveCorner0X = CSng(_perspectiveCorners(0)), .PerspectiveCorner0Y = CSng(_perspectiveCorners(1)),
+                .PerspectiveCorner1X = CSng(_perspectiveCorners(2)), .PerspectiveCorner1Y = CSng(_perspectiveCorners(3)),
+                .PerspectiveCorner2X = CSng(_perspectiveCorners(4)), .PerspectiveCorner2Y = CSng(_perspectiveCorners(5)),
+                .PerspectiveCorner3X = CSng(_perspectiveCorners(6)), .PerspectiveCorner3Y = CSng(_perspectiveCorners(7))}})
+            _perspectiveHorizontal = 0 : _perspectiveVertical = 0 : _perspectiveAspect = 0 : _perspectiveScale = 0
+            Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+            RaiseCornersChanged()
             _hasChanges = True
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
@@ -16827,6 +17284,7 @@ Namespace ViewModels
                 .LockCanvasAspect = _lockCanvasAspect,
                 .CanvasAnchor = _canvasAnchor,
                 .CanvasBackgroundColor = _canvasBackgroundColor,
+                .GeometryOperations = GeometryOperationsForRender(forPreview),
                 .SourceWidthPixels = GetBaseWidth(),
                 .SourceHeightPixels = GetBaseHeight(),
                 .WorkingImageVersion = _workingImage.Version,
@@ -17029,7 +17487,7 @@ Namespace ViewModels
             Dim discarded As New List(Of String)()
             Dim reverted = False
             Select Case previousTool
-                Case EditorTool.Crop
+                Case EditorTool.Transform
                     ' OHNE AUSNAHME, auch bei RAW/PSD/.fpx: wer den Rahmen nur angefasst und nicht
                     ' bestaetigt hat, will nicht beschnitten werden. Dort galt der Rahmen frueher
                     ' selbst als Ausschnitt - ein Werkzeugwechsel schnitt das Bild, ohne dass es je
@@ -17045,6 +17503,20 @@ Namespace ViewModels
                         End If
                         reverted = True
                         discarded.Add(LocalizationService.T("Zuschnitt"))
+                    End If
+                    ' Drehen und Ausrichten stehen seit der Zusammenlegung IN DIESEM Werkzeug.
+                    ' Ein Vierteldreh bestaetigt sich zwar selbst, ein angefasster Ausricht-Regler
+                    ' aber nicht - der gehoert beim Verlassen zurueck auf den bestaetigten Stand.
+                    If HasRotateChanges Then
+                        _rotationDegrees = _appliedRotationDegrees
+                        _straightenDegrees = _appliedStraightenDegrees
+                        _straightenExpandCanvas = _appliedStraightenExpandCanvas
+                        _flipH = _appliedFlipH
+                        _flipV = _appliedFlipV
+                        Me.RaisePropertyChanged(NameOf(StraightenDegrees))
+                        Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+                        reverted = True
+                        discarded.Add(LocalizationService.T("Drehen"))
                     End If
                 Case EditorTool.Resize
                     If HasImageResizeChanges Then
@@ -17065,17 +17537,16 @@ Namespace ViewModels
                         Me.RaisePropertyChanged(NameOf(OutputSizeText))
                         discarded.Add(LocalizationService.T("Bildgröße"))
                     End If
-                Case EditorTool.Rotate, EditorTool.Transform
-                    If HasTransformChanges Then
-                        _rotationDegrees = _appliedRotationDegrees
-                        _straightenDegrees = _appliedStraightenDegrees
-                        _straightenExpandCanvas = _appliedStraightenExpandCanvas
-                        _flipH = _appliedFlipH
-                        _flipV = _appliedFlipV
-                        Me.RaisePropertyChanged(NameOf(StraightenDegrees))
-                        Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+                Case EditorTool.Warp
+                    ' Eine nicht bestaetigte Perspektive ist wie ein nicht bestaetigter Rahmen:
+                    ' eine Absicht, kein Schnitt. Gitter, Linien und Verformen haben ihren eigenen
+                    ' Anwenden-Knopf und raeumen sich dort selbst auf.
+                    If HasPerspectiveChanges Then
+                        _perspectiveHorizontal = 0 : _perspectiveVertical = 0 : _perspectiveAspect = 0 : _perspectiveScale = 0
+                        Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+                        RaiseCornersChanged()
                         reverted = True
-                        discarded.Add(LocalizationService.T("Drehen und Verzerren"))
+                        discarded.Add(LocalizationService.T("Perspektive"))
                     End If
             End Select
             If reverted Then
@@ -17555,9 +18026,12 @@ Namespace ViewModels
         Private Function HistoryIconForTool(tool As EditorTool) As String
             Const outline = "avares://FerrumPix/Assets/Icons/outline/"
             Select Case tool
-                Case EditorTool.Crop : Return outline & "crop.svg"
+                Case EditorTool.Transform : Return outline & "frame.svg"
                 Case EditorTool.Resize : Return outline & "aspect-ratio.svg"
-                Case EditorTool.Rotate, EditorTool.Transform : Return outline & "rotate-2.svg"
+                ' Ein aus dem Winkel gekipptes Rechteck. Der Drehpfeil sass hier nur so lange
+                ' richtig, wie Drehen und Verzerren ein Werkzeug waren - seit das Drehen bei
+                ' "Transformieren" steht, zeigte er auf die falsche Haelfte.
+                Case EditorTool.Warp : Return outline & "perspective.svg"
                 Case EditorTool.Adjust : Return outline & "exposure.svg"
                 Case EditorTool.Color : Return outline & "color-filter.svg"
                 Case EditorTool.Details : Return outline & "adjustments.svg"
@@ -17864,6 +18338,17 @@ Namespace ViewModels
             _colorGradeGlobalSaturation = adj.ColorGradeGlobalSaturation
             _colorGradeGlobalLuminance = adj.ColorGradeGlobalLuminance
             _colorGradeBlending = adj.ColorGradeBlending
+            _geometryOperations.Clear()
+            Dim migratedLegacyGeometry = False
+            If adj.GeometryOperations IsNot Nothing Then
+                _geometryOperations.AddRange(adj.GeometryOperations.Where(Function(operation) operation IsNot Nothing).
+                                             Select(Function(operation) operation.Clone()))
+            End If
+            If _geometryOperations.Count = 0 AndAlso HasLegacyGeometryValues(adj) Then
+                Dim legacy = GeometryOperation.CloneGeometryAdjustments("legacy", adj)
+                _geometryOperations.Add(New GeometryOperation With {.Kind = "legacy", .Adjustments = legacy})
+                migratedLegacyGeometry = True
+            End If
             _rotationDegrees = adj.RotationDegrees
             ' Verzerren gehoert zur Geometrie und muss aus dem Rezept zurueck in die Felder: die
             ' Vorschau wird aus den FELDERN gebaut, ein nur im Rezept stehender Wert waere beim
@@ -17894,7 +18379,7 @@ Namespace ViewModels
             _appliedCropTop = adj.CropTopPercent
             _appliedCropRight = adj.CropRightPercent
             _appliedCropBottom = adj.CropBottomPercent
-            If _currentTool = EditorTool.Crop AndAlso ShowsFullImageWhileCropping Then
+            If _currentTool = EditorTool.Transform AndAlso ShowsFullImageWhileCropping Then
                 ' Rueckgaengig, Vorgabe, Rezeptwechsel BEI OFFENEM Werkzeug: der Rahmen muss dem
                 ' neuen Stand folgen, sonst zeigte er den vorigen Ausschnitt als "unbestaetigt".
                 _cropLeft = _appliedCropLeft
@@ -17923,6 +18408,21 @@ Namespace ViewModels
             ' (ApplyDocumentBackground laesst ein leeres Feld unberuehrt). Ein Ersatzwert Schwarz
             ' haette hier eine Farbe erfunden, die niemand gewaehlt hat.
             _canvasBackgroundColor = If(String.IsNullOrWhiteSpace(adj.CanvasBackgroundColor), "#00000000", adj.CanvasBackgroundColor)
+            If migratedLegacyGeometry Then
+                ' Ab jetzt ist die Liste die einzige Wahrheit. Die UI-Felder sind offenere, noch
+                ' nicht bestätigte Werte; ließen wir die alten Werte darin, würde ein späterer
+                ' Apply-Schritt das alte Rezept neben der neuen Stufe erneut interpretieren.
+                _rotationDegrees = 0 : _straightenDegrees = 0 : _straightenExpandCanvas = False
+                _flipH = False : _flipV = False
+                _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0 : _appliedStraightenExpandCanvas = False
+                _appliedFlipH = False : _appliedFlipV = False
+                _perspectiveHorizontal = 0 : _perspectiveVertical = 0 : _perspectiveAspect = 0 : _perspectiveScale = 0
+                Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+                _appliedCropLeft = 0 : _appliedCropTop = 0 : _appliedCropRight = 0 : _appliedCropBottom = 0
+                _resizeWidth = 0 : _resizeHeight = 0 : _appliedResizeWidth = 0 : _appliedResizeHeight = 0
+                _canvasWidth = 0 : _canvasHeight = 0 : _appliedCanvasWidth = 0 : _appliedCanvasHeight = 0
+                _imageWarp = Nothing
+            End If
             _filterPreset = adj.FilterPreset
             _filterStrength = If(adj.FilterStrength <= 0, 100, adj.FilterStrength)
             _lutPath = adj.LutPath
@@ -18123,7 +18623,7 @@ Namespace ViewModels
             ' und das Bild häufig abschneiden. Nach einer Ganzbild-Drehung deshalb bewusst wieder
             ' vollständig in die verfügbare Editorfläche einpassen.
             ActiveZoomPreset = ZoomPresetMode.Fit
-            Await ApplyTransformAsync()
+            Await ApplyRotateAsync()
             RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
         End Function
 
@@ -18150,7 +18650,7 @@ Namespace ViewModels
                 Return
             End If
             _flipH = Not _flipH
-            Await ApplyTransformAsync()
+            Await ApplyRotateAsync()
         End Function
 
         Private Async Function DoFlipVAsync() As Task
@@ -18161,7 +18661,7 @@ Namespace ViewModels
                 Return
             End If
             _flipV = Not _flipV
-            Await ApplyTransformAsync()
+            Await ApplyRotateAsync()
         End Function
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)
@@ -18259,6 +18759,7 @@ Namespace ViewModels
             ' EIGENEN Feld statt in den Pixeln - ohne diese Zeile ueberlebte sie ein
             ' "Zuruecksetzen" und wanderte beim Oeffnen des naechsten Bildes sogar mit.
             _imageWarp = Nothing
+            _geometryOperations.Clear()
             RaiseImageWarpChanged()
             _whiteBalance = "Wie Aufnahme"
             _calibrationRedHue = 0
@@ -18411,7 +18912,7 @@ Namespace ViewModels
         Private Sub ResetEditorUiStateForNewImage(Optional resetTool As Boolean = False)
             ' Gemessene Werte gehören zu GENAU DIESEM Bild - beim Bildwechsel gilt keine Automatik mehr.
             ClearAutoAdjustState()
-            If resetTool Then _currentTool = EditorTool.Crop
+            If resetTool Then _currentTool = EditorTool.Transform
             _pendingInsertKind = ""
             _selectedWatermarkPresetName = ""
             _watermarkPresetNameDraft = ""
@@ -18899,7 +19400,7 @@ Namespace ViewModels
             ' Source-Raster, dessen Achsen bei 90°/270° vertauscht sind - dort mit dem Kehrwert
             ' rechnen, sonst ergab "16:9" auf gedrehten Bildern 9:16 am Bildschirm.
             ' Mittig bleibt mittig: die zentrierten Ränder überstehen jede Dreh-/Spiegel-Permutation.
-            Dim q = ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+            Dim q = AppliedRotationDegrees
             If q = 90 OrElse q = 270 Then targetAspect = 1.0 / targetAspect
 
             Dim targetWidth = width
@@ -19467,6 +19968,13 @@ Namespace ViewModels
         ''' Begradigung, Resize, Canvas) - dann ist die Anzeige-Szene nicht mehr die skalierte
         ''' Basis, und Abkürzungen wie die Strich-Sofortbrücke müssen aussetzen.
         Private Function HasAppliedNonRotationGeometry() As Boolean
+            If _geometryOperations.Any(Function(operation) operation IsNot Nothing AndAlso
+                                       Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase)) Then Return True
+            If _geometryOperations.Any(Function(operation) operation?.Adjustments IsNot Nothing AndAlso
+                                       String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
+                                       (Math.Abs(operation.Adjustments.StraightenDegrees) >= 0.01 OrElse
+                                        operation.Adjustments.PerspectiveHorizontal <> 0 OrElse operation.Adjustments.PerspectiveVertical <> 0 OrElse
+                                        operation.Adjustments.PerspectiveAspect <> 0 OrElse operation.Adjustments.PerspectiveScale <> 0)) Then Return True
             Return _appliedCropLeft > 0 OrElse _appliedCropTop > 0 OrElse
                    _appliedCropRight > 0 OrElse _appliedCropBottom > 0 OrElse
                    Math.Abs(_appliedStraightenDegrees) >= 0.01 OrElse
@@ -19495,8 +20003,7 @@ Namespace ViewModels
             ' Gleiches gilt für Flip UND jede angewendete Crop-/Begradigungs-/Resize-/Canvas-Geometrie
             ': ScaleRectBetweenSpaces setzt "Szene = skalierte Basis" voraus, was
             ' dann nicht mehr stimmt - der Strich erschiene gespiegelt/versetzt.
-            If (((_appliedRotationDegrees Mod 360) + 360) Mod 360) <> 0 OrElse
-               _appliedFlipH OrElse _appliedFlipV OrElse HasAppliedNonRotationGeometry() Then Return
+            If AppliedRotationDegrees <> 0 OrElse AppliedFlipHorizontal OrElse AppliedFlipVertical OrElse HasAppliedNonRotationGeometry() Then Return
             Dim previewRect = ImageProcessor.ScaleRectBetweenSpaces(dirtyFull, baseW, baseH, _sceneSk.Width, _sceneSk.Height)
             If previewRect.Width <= 0 OrElse previewRect.Height <= 0 Then Return
             Try
@@ -20529,17 +21036,19 @@ Namespace ViewModels
             Return normalized = "Brush" OrElse normalized = "Eraser"
         End Function
 
-        ''' <summary>Werkzeuge, in denen ein markiertes Objekt markiert BLEIBT. Das Drehen-Werkzeug gehört
-        ''' dazu, seit seine vier Knöpfe (90° links/rechts, Spiegeln) auf das markierte Objekt wirken - würde
-        ''' der Wechsel dorthin die Markierung aufheben, gäbe es nie ein Objekt zu drehen.</summary>
         ''' <summary>Werkzeuge, in denen das rote Masken-Overlay SOFORT verschwindet: dort arbeitet man
         ''' am Bild oder an einem Objekt, und eine rote Flaeche darueber verdeckt genau das, was man
         ''' beurteilen will. Anpassungswerkzeuge gehoeren NICHT dazu - dort bleibt es stehen, bis der
         ''' erste Regler bewegt wird (siehe VerbergeMaskenOverlayNachAenderung).</summary>
         Private Shared Function CoversMaskOverlay(tool As EditorTool) As Boolean
+            ' Transformieren UND Verzerren: in beiden beurteilt man die Lage bzw. die Form des
+            ' Bildes, und genau darauf laege die rote Flaeche. Frueher stand hier nur eines von
+            ' beiden, weil Zuschneiden und Drehen getrennte Werkzeuge waren und der Zuschnitt
+            ' dabei vergessen wurde.
             Return tool = EditorTool.Insert OrElse tool = EditorTool.Text OrElse
                    tool = EditorTool.Draw OrElse tool = EditorTool.Geometry OrElse
-                   tool = EditorTool.Retouch OrElse tool = EditorTool.Transform
+                   tool = EditorTool.Retouch OrElse tool = EditorTool.Warp OrElse
+                   tool = EditorTool.Transform
         End Function
 
         ''' <summary>Das rote Overlay ausblenden - eine Stelle fuer alle Anlaesse. Die Maske selbst
@@ -20640,6 +21149,12 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_selectedAnnotationIndex)
             If annotation Is Nothing Then Return False
+            ' TRANSFORMIEREN: dort wirken Drehen und Spiegeln auf das markierte Objekt. Wer mit
+            ' einem markierten Objekt hierher wechselt, will genau das - waere die Markierung beim
+            ' Wechsel weg, gaebe es nie ein Objekt zu drehen. Anders als bei den Werkzeugen in
+            ' IsObjectTransformTool springt ein KLICK hier aber weiter ins Werkzeug des Objekts:
+            ' die andere Haelfte dieses Werkzeugs ist der Zuschnitt.
+            If tool = EditorTool.Transform Then Return True
             ' Text auf einem freien Pfad ist beim Wechsel in das Pfad-Werkzeug das ZIEL der
             ' Punktbearbeitung. Wurde er hier abgewählt, konnte PathEditTarget ihn zwar korrekt
             ' erkennen, bekam aber nie eine selektierte Ebene zu sehen - nach der Umwandlung war
@@ -20668,13 +21183,19 @@ Namespace ViewModels
             Return False
         End Function
 
-        ''' <summary>Das Drehen-Werkzeug: hier wirken Drehen/Spiegeln auf das markierte Objekt. Es darf weder
-        ''' die Markierung verlieren (Werkzeugwechsel) noch beim Anklicken eines Objekts in dessen Werkzeug
-        ''' springen - sonst könnte man ein Objekt hier gar nicht auswählen.</summary>
+        ''' <summary>Werkzeuge, deren Griffe auf das markierte OBJEKT wirken. Sie duerfen weder die
+        ''' Markierung verlieren (Werkzeugwechsel) noch beim Anklicken eines Objekts in dessen Werkzeug
+        ''' springen - sonst könnte man ein Objekt dort gar nicht auswählen.</summary>
         Public Shared Function IsObjectTransformTool(tool As EditorTool) As Boolean
+            ' TRANSFORMIEREN steht hier BEWUSST NICHT, obwohl seine vier Knoepfe (90 Grad links und
+            ' rechts, zweimal spiegeln) auf das markierte Objekt wirken. Diese Liste sagt zweierlei
+            ' auf einmal: Markierung beim Betreten behalten UND beim Klick nicht ins Werkzeug des
+            ' Objekts springen. Fuer das zusammengelegte Werkzeug gilt nur das Erste - dafuer steht
+            ' es in ToolKeepsSelectedAnnotationOnEnter. Der Klick soll weiter springen, denn die
+            ' andere Haelfte des Werkzeugs ist der Zuschnitt, und dort war der Sprung immer richtig.
             ' Der PFAD gehoert dazu: wer in das Werkzeug wechselt, will an den markierten Pfad heran -
             ' ihn beim Wechsel abzuwaehlen waere genau das Gegenteil.
-            Return tool = EditorTool.Rotate OrElse tool = EditorTool.Transform OrElse
+            Return tool = EditorTool.Warp OrElse
                    tool = EditorTool.Move OrElse tool = EditorTool.Path
         End Function
 
@@ -21477,13 +21998,13 @@ Namespace ViewModels
         ''' falsche Bildregion (Anzeige-links = Source-unten bei 90° im UZS).</summary>
         Private Function DisplayCropMarginsToSource(left As Double, top As Double,
                                                     right As Double, bottom As Double) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
-            If _appliedFlipH Then
+            If AppliedFlipHorizontal Then
                 Dim swapH = left : left = right : right = swapH
             End If
-            If _appliedFlipV Then
+            If AppliedFlipVertical Then
                 Dim swapV = top : top = bottom : bottom = swapV
             End If
-            Select Case ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+            Select Case AppliedRotationDegrees
                 Case 90 : Return (top, right, bottom, left)
                 Case 180 : Return (right, bottom, left, top)
                 Case 270 : Return (bottom, left, top, right)
@@ -21496,15 +22017,15 @@ Namespace ViewModels
         Private Function SourceCropMarginsToDisplay(left As Double, top As Double,
                                                     right As Double, bottom As Double) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
             Dim l = left, t = top, r = right, b = bottom
-            Select Case ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+            Select Case AppliedRotationDegrees
                 Case 90 : l = bottom : t = left : r = top : b = right
                 Case 180 : l = right : t = bottom : r = left : b = top
                 Case 270 : l = top : t = right : r = bottom : b = left
             End Select
-            If _appliedFlipH Then
+            If AppliedFlipHorizontal Then
                 Dim swapH = l : l = r : r = swapH
             End If
-            If _appliedFlipV Then
+            If AppliedFlipVertical Then
                 Dim swapV = t : t = b : b = swapV
             End If
             Return (l, t, r, b)
@@ -21527,14 +22048,14 @@ Namespace ViewModels
         ''' für die Größen-Plakette des Crop-Overlays, die am Bildschirm-Rechteck misst.</summary>
         Public ReadOnly Property EffectiveDisplayImageWidthPixels As Integer
             Get
-                Dim q = ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+                Dim q = AppliedRotationDegrees
                 Return If(q = 90 OrElse q = 270, EffectiveImageHeightPixels, EffectiveImageWidthPixels)
             End Get
         End Property
 
         Public ReadOnly Property EffectiveDisplayImageHeightPixels As Integer
             Get
-                Dim q = ImageGeometryMapper.NormalizeQuarterTurn(_appliedRotationDegrees)
+                Dim q = AppliedRotationDegrees
                 Return If(q = 90 OrElse q = 270, EffectiveImageWidthPixels, EffectiveImageHeightPixels)
             End Get
         End Property
@@ -21738,7 +22259,9 @@ Namespace ViewModels
 
         Private Sub ResetCurrentToolInternal()
             Select Case _currentTool
-                Case EditorTool.Crop
+                Case EditorTool.Transform
+                    ResetCommittedCrop()
+                    ResetCommittedTransform()
                     SetCropValues(0, 0, 0, 0)
                     _appliedCropLeft = 0
                     _appliedCropTop = 0
@@ -21747,12 +22270,35 @@ Namespace ViewModels
                     RaiseResetButtonStateChanged()
                     SchedulePreviewUpdate()
                 Case EditorTool.Resize
+                    ResetCommittedResize()
+                    ResetCommittedCanvas()
                     _appliedResizeWidth = 0
                     _appliedResizeHeight = 0
                     _hasChanges = True
                     SetResizeValues(0, 0)
-                Case EditorTool.Rotate, EditorTool.Transform
-                    ResetTransformInternal()
+                Case EditorTool.Warp
+                    ' Das Verzerren-Werkzeug besitzt Perspektive und Raster-/Linien-/Envelope-
+                    ' Verzerrungen. Drehung, Ausrichten und Spiegeln gehoeren dagegen zum
+                    ' Transformieren-Werkzeug und duerfen hier nicht angefasst werden.
+                    ResetCommittedImageWarp()
+                    ResetCommittedPerspective()
+                    _imageWarp = Nothing
+                    RaiseImageWarpChanged()
+                    DisposeGridPreview()
+                    DisposeLinePreview()
+                    _perspectiveHorizontal = 0
+                    _perspectiveVertical = 0
+                    _perspectiveAspect = 0
+                    _perspectiveScale = 0
+                    Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
+                    For Each name In {NameOf(PerspectiveHorizontal), NameOf(PerspectiveVertical),
+                                      NameOf(PerspectiveAspect), NameOf(PerspectiveScale)}
+                        Me.RaisePropertyChanged(name)
+                    Next
+                    RaiseCornersChanged()
+                    _hasChanges = True
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
                 Case EditorTool.Adjust
                     ResetLightInternal()
                     ResetCurvePoints()
@@ -22069,6 +22615,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetTransformInternal()
+            ResetCommittedTransform()
             _rotationDegrees = 0
             _straightenDegrees = 0
             _straightenExpandCanvas = False
@@ -22081,6 +22628,9 @@ Namespace ViewModels
             _appliedFlipV = False
             Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            ' Wie bei Bildgroesse und Leinwand: das Zuruecksetzen nimmt bestaetigte Schritte aus
+            ' dem Rezept und ist damit eine Aenderung am Dokument.
+            _hasChanges = True
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
@@ -22238,6 +22788,7 @@ Namespace ViewModels
             ' es richtig, weil genau diese Stelle die Sichtbarkeit der Werkzeugfelder neu bewertet.
             If ShowSymbolControls Then EnsureShapeIconsLoaded()
             Me.RaisePropertyChanged(NameOf(ShowCropAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowRotateAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowResizeAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowLightAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowColorAdjustments))
@@ -22280,7 +22831,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowGeometryControls))
             Me.RaisePropertyChanged(NameOf(ShowShapeControls))
             Me.RaisePropertyChanged(NameOf(ShowSymbolControls))
-            Me.RaisePropertyChanged(NameOf(ShowTransformAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowWarpAdjustments))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
             Me.RaisePropertyChanged(NameOf(IsGeometryToolSelected))
         End Sub
@@ -22501,21 +23052,36 @@ Namespace ViewModels
             Dim changed = False
             Dim merged = GetCurrentAdjustments()
             If ImportXmpTransform AndAlso extras.HasTransform Then
-                merged.StraightenDegrees = extras.Geometry.StraightenDegrees
-                merged.PerspectiveHorizontal = extras.Geometry.PerspectiveHorizontal
-                merged.PerspectiveVertical = extras.Geometry.PerspectiveVertical
-                merged.PerspectiveAspect = extras.Geometry.PerspectiveAspect
-                merged.PerspectiveScale = extras.Geometry.PerspectiveScale
+                ' Ausrichten und Perspektive sind verschiedene Geometrieschritte. Sie duerfen
+                ' nicht gemeinsam als "transform" gespeichert werden: dessen kompakter Clone
+                ' traegt absichtlich nur Vierteldrehung/Ausrichten/Spiegeln, waehrend die
+                ' Perspektivwerte sonst beim Uebernehmen des Rezepts verloren gingen.
+                If Math.Abs(extras.Geometry.StraightenDegrees) >= 0.0001 Then
+                    merged.GeometryOperations.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
+                        .StraightenDegrees = extras.Geometry.StraightenDegrees}})
+                End If
+                If Math.Abs(extras.Geometry.PerspectiveHorizontal) >= 0.0001 OrElse
+                   Math.Abs(extras.Geometry.PerspectiveVertical) >= 0.0001 OrElse
+                   Math.Abs(extras.Geometry.PerspectiveAspect) >= 0.0001 OrElse
+                   Math.Abs(extras.Geometry.PerspectiveScale) >= 0.0001 Then
+                    merged.GeometryOperations.Add(New GeometryOperation With {.Kind = "perspective", .Adjustments = New ImageAdjustments With {
+                    .PerspectiveHorizontal = extras.Geometry.PerspectiveHorizontal,
+                    .PerspectiveVertical = extras.Geometry.PerspectiveVertical,
+                    .PerspectiveAspect = extras.Geometry.PerspectiveAspect,
+                    .PerspectiveScale = extras.Geometry.PerspectiveScale}})
+                End If
                 changed = True
             End If
             If ImportXmpCrop AndAlso extras.HasCrop Then
                 ' NUR die Kanten, die im Preset wirklich stehen. Ein Preset mit einer einzelnen
                 ' Kante fuehrt die uebrigen drei als 0 - wer sie mit uebernimmt, loescht damit den
                 ' Zuschnitt, den der Nutzer am Bild bereits gesetzt hat.
-                If extras.HasCropLeft Then merged.CropLeftPercent = extras.Geometry.CropLeftPercent
-                If extras.HasCropTop Then merged.CropTopPercent = extras.Geometry.CropTopPercent
-                If extras.HasCropRight Then merged.CropRightPercent = extras.Geometry.CropRightPercent
-                If extras.HasCropBottom Then merged.CropBottomPercent = extras.Geometry.CropBottomPercent
+                Dim crop As New ImageAdjustments()
+                If extras.HasCropLeft Then crop.CropLeftPercent = extras.Geometry.CropLeftPercent
+                If extras.HasCropTop Then crop.CropTopPercent = extras.Geometry.CropTopPercent
+                If extras.HasCropRight Then crop.CropRightPercent = extras.Geometry.CropRightPercent
+                If extras.HasCropBottom Then crop.CropBottomPercent = extras.Geometry.CropBottomPercent
+                merged.GeometryOperations.Add(New GeometryOperation With {.Kind = "crop", .Adjustments = crop})
                 changed = True
             End If
             If changed Then ApplyAdjustments(merged, scheduleRender:=False)
@@ -23062,9 +23628,7 @@ Namespace ViewModels
 
     Public Enum EditorTool
         None
-        Crop
         Resize
-        Rotate
         Adjust
         Filters
         Color
@@ -23075,7 +23639,16 @@ Namespace ViewModels
         Details
         ''' <summary>EFFEKTE: Vignette, Koernung und Rahmen - was dem Bild hinzugefuegt wird.</summary>
         Effects
+        ''' <summary>TRANSFORMIEREN: Zuschnitt, Vierteldrehung, Ausrichten und Spiegeln in EINEM
+        ''' Werkzeug. Frueher waren das zwei ("Zuschneiden" und "Drehen und Verzerren"), und der
+        ''' Rahmen lag im einen, seine Lage im anderen - man musste zwischen beiden hin und her,
+        ''' um einen geraden Ausschnitt zu bekommen.</summary>
         Transform
+        ''' <summary>VERZERREN: Perspektive, Gitter, Linien und Verformen. Steht seit der
+        ''' Zusammenlegung fuer sich, weil es nicht um die LAGE des Bildes geht, sondern um seine
+        ''' FORM - und weil jede der vier Arten ihr eigenes Overlay und ihr eigenes "Anwenden"
+        ''' hat.</summary>
+        Warp
         Retouch
         Text
         Draw

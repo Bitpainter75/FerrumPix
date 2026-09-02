@@ -104,8 +104,10 @@ Namespace ViewModels
         End Property
 
         Private Sub ResetPerspectiveInternal()
-            If Not HasPerspectiveChanges Then Return
+            Dim hasCommitted = HasCommittedPerspective()
+            If Not HasPerspectiveChanges AndAlso Not hasCommitted Then Return
             CaptureUndoState("Verzerren")
+            ResetCommittedPerspective()
             _perspectiveHorizontal = 0
             _perspectiveVertical = 0
             _perspectiveAspect = 0
@@ -1888,7 +1890,7 @@ Namespace ViewModels
         ''' bleibt alles wie bisher: die Verzerrung trifft das Bild.</summary>
         Public ReadOnly Property WarpsTheObject As Boolean
             Get
-                Return ShowTransformAdjustments AndAlso HasSelectedAnnotation AndAlso
+                Return ShowWarpAdjustments AndAlso HasSelectedAnnotation AndAlso
                        Not String.IsNullOrEmpty(_warpMode)
             End Get
         End Property
@@ -2566,6 +2568,15 @@ Namespace ViewModels
             Dim imageMapping = MapGridToImageSpace(mapping, gridUsesVisibleCropSpace)
             ApplyWarpToObjects(imageMapping)
             ComposeImageWarp(imageMapping)
+            ' Nicht mit einer eventuell früheren Verzerrung zusammenfalten: ihre Reihenfolge
+            ' gegenüber Crop, Drehung und Leinwand ist sichtbar. Jede bestätigte Verzerrung wird
+            ' deshalb als eigener Pipeline-Schritt abgelegt.
+            If _imageWarp IsNot Nothing Then
+                _geometryOperations.Add(New GeometryOperation With {
+                    .Kind = "warp", .Adjustments = New ImageAdjustments With {.ImageWarp = _imageWarp.Clone()}})
+                _imageWarp = Nothing
+                RaiseImageWarpChanged()
+            End If
             afterApply?.Invoke()
             StatusText = LocalizationService.T("Verzerrung angewendet")
             _hasChanges = True
@@ -2597,7 +2608,8 @@ Namespace ViewModels
         ''' mehr zuruecknehmen, ohne erst wieder in den Perspektive-Modus zu wechseln.</summary>
         Public ReadOnly Property HasAnyImageWarp As Boolean
             Get
-                Return HasImageWarp OrElse HasPerspectiveChanges
+                Return HasImageWarp OrElse HasPerspectiveChanges OrElse
+                       HasCommittedImageWarp() OrElse HasCommittedPerspective()
             End Get
         End Property
 
@@ -2702,6 +2714,8 @@ Namespace ViewModels
         Public Sub ResetImageWarp()
             If Not HasAnyImageWarp Then Return
             PushUndo(ResetHistoryLabel("Verzerren"))
+            ResetCommittedImageWarp()
+            ResetCommittedPerspective()
             _imageWarp = Nothing
             RaiseImageWarpChanged()
             ' Eine stehende Vorschau MUSS mit weg. Sie liegt ueber dem Bild und zeigte sonst den

@@ -335,6 +335,7 @@ Namespace Services
             ' Dieselben Felder, durch die auch eine Maske auf dem Weg in die Ausgabe laeuft
             ' (BuildMaskGeometry) - dazu das Hochskalier-Modell, das die Ausgabegroesse aendert.
             Dim geometryActive =
+                (adj.GeometryOperations IsNot Nothing AndAlso adj.GeometryOperations.Count <> 0) OrElse
                 adj.CropLeftPercent <> 0 OrElse adj.CropTopPercent <> 0 OrElse
                 adj.CropRightPercent <> 0 OrElse adj.CropBottomPercent <> 0 OrElse
                 adj.RotationDegrees <> 0 OrElse adj.StraightenDegrees <> 0 OrElse

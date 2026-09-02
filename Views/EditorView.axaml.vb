@@ -1187,7 +1187,7 @@ Namespace Views
             ' "Zuschneiden anwenden". Auch das gehoert in den Tunnel: nach einem Klick auf ein
             ' Seitenverhaeltnis im Panel liegt der Fokus auf diesem Knopf, und der schluckt die Taste.
             If tunnelVm IsNot Nothing AndAlso e.Key = Key.Enter AndAlso
-               tunnelVm.CurrentTool = EditorTool.Crop AndAlso tunnelVm.HasCropChanges AndAlso
+               tunnelVm.CurrentTool = EditorTool.Transform AndAlso tunnelVm.HasCropChanges AndAlso
                Not _isCropDragging AndAlso Not TypeOf e.Source Is TextBox Then
                 tunnelVm.ApplyCropCommand.Execute(Nothing)
                 e.Handled = True
@@ -1391,7 +1391,7 @@ Namespace Views
                     ' Terminiert: der Folge-Durchlauf trifft einen passenden Cache und loest nichts aus.
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.CurrentTool)
-                    If TryCast(sender, EditorViewModel)?.CurrentTool <> EditorTool.Crop Then _fitAfterNextDisplayImage = False
+                    If TryCast(sender, EditorViewModel)?.CurrentTool <> EditorTool.Transform Then _fitAfterNextDisplayImage = False
                     UpdateCropOverlayVisibility()
                     UpdateTextOverlayVisibility()
                     UpdateSelectionOverlayVisibility()
@@ -1903,7 +1903,7 @@ Namespace Views
                     ' Normalfall am Rand steht, war das die AEUSSERE HAELFTE JEDES RANDGRIFFS. Das
                     ' erklaert das Muster "mal geht es, mal nicht": innen liegende Rahmen liessen
                     ' sich greifen, randbuendige nur von innen. Nicht die Griffgroesse war zu klein.
-                    Dim startsCropHandleOutside = vm.CurrentTool = EditorTool.Crop AndAlso
+                    Dim startsCropHandleOutside = vm.CurrentTool = EditorTool.Transform AndAlso
                                                   GetCropDragMode(e.GetPosition(canvas)) <> CropDragMode.None
                     ' VERZERREN: dieselbe Falle wie beim Zuschnitt darueber. Die vier Ecken liegen
                     ' bei unbenutztem Werkzeug GENAU auf dem Bildrand, ihre aeussere Haelfte also
@@ -2023,7 +2023,7 @@ Namespace Views
                 End If
             End If
 
-            If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Crop Then
+            If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Transform Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 Dim rawPos = e.GetPosition(canvas)
@@ -3507,7 +3507,7 @@ Namespace Views
         Private Sub UpdateCropOverlayVisibility()
             Dim overlay = Me.FindControl(Of Border)("CropOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If overlay IsNot Nothing Then overlay.IsVisible = vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Crop
+            If overlay IsNot Nothing Then overlay.IsVisible = vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Transform
             UpdateSliderLayout()
         End Sub
 
@@ -4352,12 +4352,12 @@ Namespace Views
         End Function
 
         ''' <summary>Zeigt das Werkzeug gerade die Verzerren-Gruppen? Es MUSS dieselbe Bedingung
-        ''' sein wie die des Panels (ShowTransformAdjustments), sonst liegen Regler und Anfasser
-        ''' nicht zusammen. Genau das war der Fall: die Anfasser hingen an EditorTool.Transform, der
-        ''' Knopf in der Leiste schaltet aber auf EditorTool.Rotate - das Panel erschien, im Bild war
-        ''' nichts zu sehen.</summary>
+        ''' sein wie die des Panels (ShowWarpAdjustments), sonst liegen Regler und Anfasser
+        ''' nicht zusammen. Genau das war der Fall, als es die Werkzeuge noch getrennt gab: die
+        ''' Anfasser hingen am einen Werkzeug, der Knopf in der Leiste schaltete auf das andere -
+        ''' das Panel erschien, im Bild war nichts zu sehen.</summary>
         Private Shared Function IsWarpTool(vm As EditorViewModel) As Boolean
-            Return vm IsNot Nothing AndAlso vm.ShowTransformAdjustments
+            Return vm IsNot Nothing AndAlso vm.ShowWarpAdjustments
         End Function
 
         ''' <summary>Liegt gerade das Perspektiv-Viereck ueber dem Bild? Nur wenn das Werkzeug offen
@@ -4831,7 +4831,7 @@ Namespace Views
         Private Sub PositionCropOverlayFromViewModel(ix As Double, iy As Double, iw As Double, ih As Double)
             Dim overlay = Me.FindControl(Of Border)("CropOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
-            If overlay Is Nothing OrElse vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Crop Then Return
+            If overlay Is Nothing OrElse vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Transform Then Return
             ' Gegenstück zu SetCropPercentagesFromDisplay: die gespeicherten Source-Ränder für das
             ' gedrehte/gespiegelte Anzeigebild permutieren, sonst zeigt das Overlay-Rechteck eine
             ' andere Region, als tatsächlich fällt.

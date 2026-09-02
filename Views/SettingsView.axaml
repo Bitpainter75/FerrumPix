@@ -2599,7 +2599,7 @@
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="ESC" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                <TextBlock Grid.Column="1" Text="Zurück zur Galerie (im Vollbild: Vollbild verlassen; auch mit Leertaste)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="Zurück zur Galerie (im Vollbild: Vollbild verlassen; auch mit SPACE)" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </Grid>
                             <Grid ColumnDefinitions="230,*" ColumnSpacing="12">
                                 <TextBlock Text="STRG+Mausrad oder Rechtsklick+Mausrad" Tag="Application" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

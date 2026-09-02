@@ -314,14 +314,18 @@
                     <TextBlock Text="TRANSFORMIEREN" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Caption}"
                                FontWeight="SemiBold" Margin="10,10,0,4" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Zuschneiden"
+                            ToolTip.Tip="Transformieren"
                             Command="{Binding SetToolCommand}"
-                            CommandParameter="Crop"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Crop}">
+                            CommandParameter="Transform"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Transform}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/crop.svg"
+                            <!-- Der Rahmen steht fuer das ganze Werkzeug: Zuschneiden, Drehen,
+                                 Ausrichten und Spiegeln. Die Schere allein zeigte nur die
+                                 Haelfte, seit das Drehen hier steht. Das Zuschneiden selbst
+                                 behaelt sein eigenes Symbol im Aufklappbereich. -->
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Zuschneiden" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <TextBlock Text="Transformieren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -336,14 +340,14 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Drehen und Verzerren"
+                            ToolTip.Tip="Verzerren"
                             Command="{Binding SetToolCommand}"
-                            CommandParameter="Rotate"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Rotate}">
+                            CommandParameter="Warp"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Warp}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Drehen und Verzerren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <TextBlock Text="Verzerren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     </StackPanel>
@@ -1105,10 +1109,10 @@
                                 <panels:ScopePanel />
                             </Border>
 
-                            <!-- OHNE aeusseren Rahmen: das Panel bringt seit dem Verzerren ZWEI
-                                 Gruppen mit und rahmt jede selbst (siehe DetailsPanel). -->
-                            <panels:TransformPanel Margin="0,7,0,0"
-                                                   IsVisible="{Binding ShowTransformAdjustments}" />
+                            <!-- OHNE aeusseren Rahmen: das Panel bringt mehrere Gruppen mit und
+                                 rahmt jede selbst (siehe DetailsPanel). -->
+                            <panels:WarpPanel Margin="0,7,0,0"
+                                              IsVisible="{Binding ShowWarpAdjustments}" />
 
                             <!-- DrawPanel bringt seine eigenen adjustment-group-Rahmen mit (Farbe, Pinsel,
                                  Werkzeug getrennt), daher hier kein umschließender Rahmen. -->
@@ -1149,6 +1153,12 @@
                                     IsVisible="{Binding ShowCropAdjustments}">
                                 <panels:CropPanel />
                             </Border>
+
+                            <!-- DREHEN steht seit der Zusammenlegung UNTER dem Zuschnitt im selben
+                                 Werkzeug: erst waehlt man den Ausschnitt, dann seine Lage. Eigener
+                                 Rahmen im Panel selbst, deshalb hier keiner. -->
+                            <panels:RotatePanel Margin="0,7,0,0"
+                                                IsVisible="{Binding ShowRotateAdjustments}" />
 
                             <panels:ResizePanel Margin="0,7,0,0"
                                                 IsVisible="{Binding ShowResizeAdjustments}" />

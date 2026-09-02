@@ -1646,13 +1646,7 @@ Namespace Services
                 If original Is Nothing Then Return Nothing
 
                 Dim processed As SKBitmap = CloneBitmap(original)
-                processed = ReplaceBitmap(processed, ApplyImageWarp(processed, adj))
-                processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
-                processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
-                processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
-                processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
-                processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+                processed = ApplyGeometryPipeline(processed, adj)
                 processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
 
                 Using processedBitmap = processed
@@ -1673,13 +1667,7 @@ Namespace Services
 
             Dim processed As SKBitmap = CloneBitmap(workingSource)
             If Not Object.ReferenceEquals(workingSource, source) Then workingSource.Dispose()
-            processed = ReplaceBitmap(processed, ApplyImageWarp(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+            processed = ApplyGeometryPipeline(processed, adj)
             processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
 
             Using processedBitmap = processed
@@ -1694,13 +1682,7 @@ Namespace Services
             If source Is Nothing Then Return Nothing
 
             Dim processed As SKBitmap = CloneBitmap(source)
-            processed = ReplaceBitmap(processed, ApplyImageWarp(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyCrop(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyGeometryTransforms(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyStraighten(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyPerspective(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyResize(processed, adj))
-            processed = ReplaceBitmap(processed, ApplyCanvasResize(processed, adj))
+            processed = ApplyGeometryPipeline(processed, adj)
             processed = ReplaceBitmap(processed, ApplyDocumentBackground(processed, adj))
             Return processed
         End Function
@@ -2016,13 +1998,7 @@ Namespace Services
             ' das muss man wissen, bevor man einen Zwischenspeicher dafuer baut.
             PerformanceTraceService.Measure("Pixel: Geometrie",
                 Sub()
-                    processed = ReplaceBitmapOwned(processed, ApplyImageWarp(processed, adj), owned)
-                    processed = ReplaceBitmapOwned(processed, ApplyCrop(processed, adj), owned)
-                    processed = ReplaceBitmapOwned(processed, ApplyGeometryTransforms(processed, adj), owned)
-                    processed = ReplaceBitmapOwned(processed, ApplyStraighten(processed, adj), owned)
-                    processed = ReplaceBitmapOwned(processed, ApplyPerspective(processed, adj), owned)
-                    processed = ReplaceBitmapOwned(processed, ApplyResize(processed, adj), owned)
-                    processed = ReplaceBitmapOwned(processed, ApplyCanvasResize(processed, adj), owned)
+                    processed = ApplyGeometryPipelineOwned(processed, adj, owned)
                     processed = ReplaceBitmapOwned(processed, ApplyDocumentBackground(processed, adj), owned)
                 End Sub)
 
@@ -2731,6 +2707,133 @@ Namespace Services
         Public Shared Function ComputeGeometryOutputSize(sourceWidth As Integer, sourceHeight As Integer,
                                                          adj As ImageAdjustments) As SKSizeI
             If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return New SKSizeI(0, 0)
+            Dim steps = GeometrySteps(adj)
+            If steps.Count = 0 Then Return ComputeLegacyGeometryOutputSize(sourceWidth, sourceHeight, adj)
+
+            Dim size = New SKSizeI(sourceWidth, sourceHeight)
+            For Each stepItem In steps
+                If stepItem?.Adjustments Is Nothing Then Continue For
+                size = ComputeGeometryOperationOutputSize(size.Width, size.Height, stepItem)
+            Next
+            Return size
+        End Function
+
+        Private Shared Function ComputeGeometryOperationOutputSize(width As Integer, height As Integer,
+                                                                    operation As GeometryOperation) As SKSizeI
+            If operation?.Adjustments Is Nothing Then Return New SKSizeI(width, height)
+            Dim a = operation.Adjustments
+            Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
+                Case "crop"
+                    Dim crop = ComputeGeometryCropRect(width, height, a)
+                    Return New SKSizeI(crop.Width, crop.Height)
+                Case "transform"
+                    Dim w = width, h = height
+                    Dim q = ImageGeometryMapper.NormalizeQuarterTurn(a.RotationDegrees)
+                    If q = 90 OrElse q = 270 Then
+                        Dim swap = w : w = h : h = swap
+                    End If
+                    If Math.Abs(a.StraightenDegrees) >= 0.01F AndAlso a.StraightenExpandCanvas Then
+                        Dim radians = Math.Abs(a.StraightenDegrees) * Math.PI / 180.0
+                        Dim oldW = w, oldH = h
+                        w = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Cos(radians) + oldH * Math.Sin(radians))))
+                        h = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Sin(radians) + oldH * Math.Cos(radians))))
+                    End If
+                    Return New SKSizeI(w, h)
+                Case "resize"
+                    Return ComputeResizeOutputSize(width, height, a)
+                Case "canvas"
+                    Return New SKSizeI(If(a.CanvasWidth > 0, a.CanvasWidth, width), If(a.CanvasHeight > 0, a.CanvasHeight, height))
+                Case "warp", "perspective"
+                    Return New SKSizeI(width, height)
+                Case Else
+                    ' Die historische feste Kette behaelt bewusst ihre alte Groessenrechnung.
+                    Return ComputeLegacyGeometryOutputSize(width, height, a)
+            End Select
+        End Function
+
+        Private Shared Function ComputeResizeOutputSize(width As Integer, height As Integer, adj As ImageAdjustments) As SKSizeI
+            If width <= 0 OrElse height <= 0 Then Return New SKSizeI(0, 0)
+            Dim targetWidth = adj.ResizeWidth, targetHeight = adj.ResizeHeight
+            If adj.ResizeScalePercent > 0 Then
+                targetWidth = Math.Max(1, CInt(Math.Round(width * adj.ResizeScalePercent / 100.0)))
+                targetHeight = Math.Max(1, CInt(Math.Round(height * adj.ResizeScalePercent / 100.0)))
+            End If
+            If targetWidth <= 0 AndAlso targetHeight <= 0 Then Return New SKSizeI(width, height)
+            If adj.ResizeFitInsideBox AndAlso adj.LockResizeAspect Then
+                If targetWidth <= 0 Xor targetHeight <= 0 Then
+                    Dim longest = Math.Max(targetWidth, targetHeight)
+                    If width >= height Then
+                        targetWidth = longest
+                        targetHeight = 0
+                    Else
+                        targetHeight = longest
+                        targetWidth = 0
+                    End If
+                Else
+                    Dim factor = Math.Min(targetWidth / CDbl(width), targetHeight / CDbl(height))
+                    targetWidth = Math.Max(1, CInt(Math.Round(width * factor)))
+                    targetHeight = Math.Max(1, CInt(Math.Round(height * factor)))
+                End If
+            End If
+            If targetWidth <= 0 Then targetWidth = CInt(Math.Round(width * (targetHeight / CDbl(height))))
+            If targetHeight <= 0 Then targetHeight = CInt(Math.Round(height * (targetWidth / CDbl(width))))
+            If adj.NoResizeUpscale Then
+                If adj.LockResizeAspect Then
+                    Dim cap = Math.Min(1.0, Math.Min(targetWidth / CDbl(width), targetHeight / CDbl(height)))
+                    targetWidth = Math.Max(1, CInt(Math.Round(width * cap)))
+                    targetHeight = Math.Max(1, CInt(Math.Round(height * cap)))
+                Else
+                    targetWidth = Math.Min(targetWidth, width) : targetHeight = Math.Min(targetHeight, height)
+                End If
+            End If
+            Return New SKSizeI(Math.Max(1, targetWidth), Math.Max(1, targetHeight))
+        End Function
+
+        ' Die alte Punktabbildung rechnet eine VOLLSTAENDIGE feste Kette. Ein gespeicherter Schritt
+        ' gibt hier deshalb nur die Felder heraus, die sein Zweig im Pixelweg auch benutzt: sonst
+        ' koennte ein stehengebliebenes fremdes Feld einen Anfasser verschieben, ohne die Pixel
+        ' mitzunehmen - Regler und Bild liefen still auseinander.
+        Private Shared Function GeometryMappingAdjustments(operation As GeometryOperation) As ImageAdjustments
+            Dim source = operation.Adjustments
+            If String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Return source
+            Dim a As New ImageAdjustments()
+            Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
+                Case "crop"
+                    a.CropLeftPercent = source.CropLeftPercent : a.CropTopPercent = source.CropTopPercent
+                    a.CropRightPercent = source.CropRightPercent : a.CropBottomPercent = source.CropBottomPercent
+                Case "transform"
+                    CopyTransformGeometry(source, a)
+                Case "perspective"
+                    CopyPerspectiveGeometry(source, a)
+                Case "warp"
+                    a.ImageWarp = source.ImageWarp
+                Case "resize"
+                    a.ResizeWidth = source.ResizeWidth : a.ResizeHeight = source.ResizeHeight
+                    a.ResizeScalePercent = source.ResizeScalePercent : a.ResizeFitInsideBox = source.ResizeFitInsideBox
+                    a.LockResizeAspect = source.LockResizeAspect : a.NoResizeUpscale = source.NoResizeUpscale
+                Case "canvas"
+                    a.CanvasWidth = source.CanvasWidth : a.CanvasHeight = source.CanvasHeight : a.CanvasAnchor = source.CanvasAnchor
+            End Select
+            Return a
+        End Function
+
+        Private Shared Sub CopyTransformGeometry(source As ImageAdjustments, target As ImageAdjustments)
+            target.RotationDegrees = source.RotationDegrees : target.StraightenDegrees = source.StraightenDegrees
+            target.StraightenExpandCanvas = source.StraightenExpandCanvas : target.FlipHorizontal = source.FlipHorizontal : target.FlipVertical = source.FlipVertical
+        End Sub
+
+        Private Shared Sub CopyPerspectiveGeometry(source As ImageAdjustments, target As ImageAdjustments)
+            target.PerspectiveHorizontal = source.PerspectiveHorizontal : target.PerspectiveVertical = source.PerspectiveVertical
+            target.PerspectiveAspect = source.PerspectiveAspect : target.PerspectiveScale = source.PerspectiveScale
+            target.PerspectiveCorner0X = source.PerspectiveCorner0X : target.PerspectiveCorner0Y = source.PerspectiveCorner0Y
+            target.PerspectiveCorner1X = source.PerspectiveCorner1X : target.PerspectiveCorner1Y = source.PerspectiveCorner1Y
+            target.PerspectiveCorner2X = source.PerspectiveCorner2X : target.PerspectiveCorner2Y = source.PerspectiveCorner2Y
+            target.PerspectiveCorner3X = source.PerspectiveCorner3X : target.PerspectiveCorner3Y = source.PerspectiveCorner3Y
+        End Sub
+
+        Private Shared Function ComputeLegacyGeometryOutputSize(sourceWidth As Integer, sourceHeight As Integer,
+                                                               adj As ImageAdjustments) As SKSizeI
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return New SKSizeI(0, 0)
             Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
             Dim w = crop.Width, h = crop.Height
             Dim q = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
@@ -2771,13 +2874,51 @@ Namespace Services
         Public Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
                                                               sourceWidth As Integer, sourceHeight As Integer,
                                                               adj As ImageAdjustments, ByRef output As SKPoint) As Boolean
+            Return TrySourcePointToGeometryOutput(sourceX, sourceY, sourceWidth, sourceHeight, adj, output, clipToOutput:=True)
+        End Function
+
+        ''' <summary>Wie oben, aber OHNE die Frage, ob der Punkt am Ende noch im sichtbaren Bild
+        ''' liegt. Fuer ein OBJEKT-Rechteck ist das der richtige Weg: seine Ecken sollen abgebildet
+        ''' und erst beim Zeichnen beschnitten werden.
+        '''
+        ''' Der Unterschied faellt an einem Objekt auf, das die Schnittkante beruehrt: seine beiden
+        ''' unteren Ecken liegen genau auf der Kante, werden abgewiesen, und aus dem umschliessenden
+        ''' Rechteck der uebrigen Ecken wird ein ein Pixel hoher Strich. Der alte Feldweg kannte das
+        ''' Problem nicht - er zog den Crop-Ursprung ab, und ein Punkt ausserhalb bekam dabei
+        ''' einfach eine negative Koordinate.</summary>
+        Friend Shared Function TrySourcePointToGeometryOutputUnclipped(sourceX As Double, sourceY As Double,
+                                                                      sourceWidth As Integer, sourceHeight As Integer,
+                                                                      adj As ImageAdjustments, ByRef output As SKPoint) As Boolean
+            Return TrySourcePointToGeometryOutput(sourceX, sourceY, sourceWidth, sourceHeight, adj, output, clipToOutput:=False)
+        End Function
+
+        Private Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
+                                                              sourceWidth As Integer, sourceHeight As Integer,
+                                                              adj As ImageAdjustments, ByRef output As SKPoint,
+                                                              clipToOutput As Boolean) As Boolean
+            Dim steps = GeometrySteps(adj)
+            If steps.Count > 0 Then
+                Dim operationX = sourceX, operationY = sourceY, width = sourceWidth, height = sourceHeight
+                For Each stepItem In steps
+                    If stepItem?.Adjustments Is Nothing Then Continue For
+                    Dim mapped As SKPoint
+                    If Not TrySourcePointToGeometryOutput(operationX, operationY, width, height,
+                                                          GeometryMappingAdjustments(stepItem), mapped, clipToOutput) Then Return False
+                    operationX = mapped.X : operationY = mapped.Y
+                    Dim size = ComputeGeometryOperationOutputSize(width, height, stepItem)
+                    width = size.Width : height = size.Height
+                Next
+                output = New SKPoint(CSng(operationX), CSng(operationY))
+                Return True
+            End If
             ' --- Verzerren (Knotenraster) --- ZUERST, wie in der Bildkette: das Raster liegt im
             ' unbeschnittenen Quellraum, der Beschnitt greift erst auf dem verzogenen Bild.
             Dim warpedSource = WarpSourcePoint(sourceX, sourceY, sourceWidth, sourceHeight, adj)
             sourceX = warpedSource.X : sourceY = warpedSource.Y
 
             Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
-            If sourceX < crop.Left OrElse sourceY < crop.Top OrElse sourceX >= crop.Right OrElse sourceY >= crop.Bottom Then Return False
+            If clipToOutput AndAlso
+               (sourceX < crop.Left OrElse sourceY < crop.Top OrElse sourceX >= crop.Right OrElse sourceY >= crop.Bottom) Then Return False
             Dim x = sourceX - crop.Left, y = sourceY - crop.Top
             Dim w As Double = crop.Width, h As Double = crop.Height
 
@@ -2810,7 +2951,7 @@ Namespace Services
                 ' ab. Der Hinweg darf sie nicht als Anzeigeort ausgeben: der Rueckweg
                 ' weist denselben Punkt sonst zu Recht ab, und Verlauf-/Maskengriffe
                 ' erscheinen neben dem Bild.
-                If Not TryClampToRange(x, w) OrElse Not TryClampToRange(y, h) Then Return False
+                If clipToOutput AndAlso (Not TryClampToRange(x, w) OrElse Not TryClampToRange(y, h)) Then Return False
             End If
 
             ' --- Verzerren --- (dieselbe Stelle wie im Bildweg: nach der Begradigung, vor dem
@@ -2826,16 +2967,13 @@ Namespace Services
                 ' Was aus dem Rahmen kippt, wird von der Stufe abgeschnitten - fuer so einen Punkt
                 ' gibt es im Ausgabebild keine Stelle. Ohne diese Pruefung meldete der Hinweg einen
                 ' Punkt ausserhalb des Bildes als gueltig, und der Rueckweg wiese ihn ab.
-                If Not TryClampToRange(x, w) OrElse Not TryClampToRange(y, h) Then Return False
+                If clipToOutput AndAlso (Not TryClampToRange(x, w) OrElse Not TryClampToRange(y, h)) Then Return False
             End If
 
-            Dim resizeW = adj.ResizeWidth, resizeH = adj.ResizeHeight
-            If resizeW > 0 OrElse resizeH > 0 Then
-                If resizeW <= 0 Then resizeW = CInt(Math.Round(w * (resizeH / h)))
-                If resizeH <= 0 Then resizeH = CInt(Math.Round(h * (resizeW / w)))
-                resizeW = Math.Max(1, resizeW) : resizeH = Math.Max(1, resizeH)
-                x *= resizeW / w : y *= resizeH / h
-                w = resizeW : h = resizeH
+            Dim resizeSize = ComputeResizeOutputSize(CInt(Math.Round(w)), CInt(Math.Round(h)), adj)
+            If resizeSize.Width <> CInt(Math.Round(w)) OrElse resizeSize.Height <> CInt(Math.Round(h)) Then
+                x *= resizeSize.Width / w : y *= resizeSize.Height / h
+                w = resizeSize.Width : h = resizeSize.Height
             End If
 
             Dim canvasW = If(adj.CanvasWidth > 0, adj.CanvasWidth, CInt(Math.Round(w)))
@@ -2858,7 +2996,7 @@ Namespace Services
             ' Eine kleinere Leinwand ist ein weiterer Beschnitt. Erst hier sind die
             ' endgueltigen Ausgabemasse bekannt; Punkte ausserhalb haben im sichtbaren
             ' Bild keinen Ort und muessen wie beim Rueckweg abgewiesen werden.
-            If Not TryClampToRange(x, canvasW) OrElse Not TryClampToRange(y, canvasH) Then Return False
+            If clipToOutput AndAlso (Not TryClampToRange(x, canvasW) OrElse Not TryClampToRange(y, canvasH)) Then Return False
             output = New SKPoint(CSng(x), CSng(y))
             Return True
         End Function
@@ -2876,6 +3014,24 @@ Namespace Services
                                                               sourceWidth As Integer, sourceHeight As Integer,
                                                               adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse adj Is Nothing Then Return False
+            Dim steps = GeometrySteps(adj)
+            If steps.Count > 0 Then
+                Dim sizes As New List(Of SKSizeI) From {New SKSizeI(sourceWidth, sourceHeight)}
+                For Each stepItem In steps
+                    Dim previous = sizes(sizes.Count - 1)
+                    sizes.Add(ComputeGeometryOperationOutputSize(previous.Width, previous.Height, stepItem))
+                Next
+                Dim operationX = outputX, operationY = outputY
+                For index = steps.Count - 1 To 0 Step -1
+                    Dim stepItem = steps(index)
+                    If stepItem?.Adjustments Is Nothing Then Continue For
+                    Dim before = sizes(index), mapped As SKPoint
+                    If Not TryGeometryOutputToSourcePoint(operationX, operationY, before.Width, before.Height, GeometryMappingAdjustments(stepItem), mapped) Then Return False
+                    operationX = mapped.X : operationY = mapped.Y
+                Next
+                source = New SKPoint(CSng(operationX), CSng(operationY))
+                Return True
+            End If
             Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
             Dim w As Double = crop.Width, h As Double = crop.Height
 
@@ -2899,16 +3055,10 @@ Namespace Services
                 End If
             End If
 
-            Dim resizeW = adj.ResizeWidth, resizeH = adj.ResizeHeight
-            If resizeW > 0 OrElse resizeH > 0 Then
-                If resizeW <= 0 Then resizeW = CInt(Math.Round(outW * (resizeH / outH)))
-                If resizeH <= 0 Then resizeH = CInt(Math.Round(outH * (resizeW / outW)))
-                resizeW = Math.Max(1, resizeW) : resizeH = Math.Max(1, resizeH)
-            Else
-                resizeW = 0 : resizeH = 0
-            End If
-            Dim afterResizeW = If(resizeW > 0, CDbl(resizeW), outW)
-            Dim afterResizeH = If(resizeH > 0, CDbl(resizeH), outH)
+            Dim resizeSize = ComputeResizeOutputSize(CInt(Math.Round(outW)), CInt(Math.Round(outH)), adj)
+            Dim resized = resizeSize.Width <> CInt(Math.Round(outW)) OrElse resizeSize.Height <> CInt(Math.Round(outH))
+            Dim afterResizeW = If(resized, CDbl(resizeSize.Width), outW)
+            Dim afterResizeH = If(resized, CDbl(resizeSize.Height), outH)
 
             Dim x = outputX, y = outputY
 
@@ -2933,7 +3083,7 @@ Namespace Services
             If Not TryClampToRange(x, afterResizeW) OrElse Not TryClampToRange(y, afterResizeH) Then Return False
 
             ' --- Resize zurück ---
-            If resizeW > 0 Then
+            If resized Then
                 x *= outW / afterResizeW
                 y *= outH / afterResizeH
             End If
@@ -3122,12 +3272,48 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CropLeftPercent, adj.CropTopPercent, adj.CropRightPercent, adj.CropBottomPercent,
                 adj.ResizeWidth, adj.ResizeHeight, adj.LockResizeAspect, adj.ResizeFitInsideBox, adj.ResizeScalePercent, adj.NoResizeUpscale, adj.ResizeInterpolation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
+                GeometryOperationsKey(adj.GeometryOperations),
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
                 adj.SelectionScopeEnabled, selectionScopeKey,
                 adj.GlobalAdjustmentsHidden,
                 PersistentMasksFingerprint(adj),
                 adj.WorkingImageVersion
             }.Select(AddressOf KeyPart))
+        End Function
+
+        ' GeometryOperations ist das Rezept. Die alte Feldgruppe bleibt nur als Einlese- und
+        ' Live-Vorschauformat bestehen; sie darf den Cache niemals unsichtbar umgehen.
+        '
+        ' JEDES Feld, das eine Stufe der Kette liest, gehoert hier hinein - auch die drei Schalter
+        ' der Groessenaenderung (Verhaeltnis halten, in den Kasten einpassen, nicht vergroessern).
+        ' Sie aendern das Ausgabemass (ApplyResize, ComputeResizeOutputSize); zwei Rezepte mit
+        ' gleichem Zielmass, aber unterschiedlichen Schaltern bekaemen sonst denselben Schluessel
+        ' und damit das Bild des jeweils anderen aus dem Zwischenspeicher.
+        Friend Shared Function GeometryOperationsKey(operations As List(Of GeometryOperation)) As String
+            If operations Is Nothing OrElse operations.Count = 0 Then Return ""
+            Return String.Join(";", operations.Where(Function(operation) operation IsNot Nothing).Select(
+                Function(operation)
+                    Dim a = operation.Adjustments
+                    If a Is Nothing Then Return If(operation.Kind, "")
+                    Return String.Join(",", If(operation.Kind, ""), a.CropLeftPercent, a.CropTopPercent, a.CropRightPercent, a.CropBottomPercent,
+                                       a.RotationDegrees, a.StraightenDegrees, a.StraightenExpandCanvas, a.FlipHorizontal, a.FlipVertical,
+                                       a.PerspectiveHorizontal, a.PerspectiveVertical, a.PerspectiveAspect, a.PerspectiveScale,
+                                       a.PerspectiveCorner0X, a.PerspectiveCorner0Y, a.PerspectiveCorner1X, a.PerspectiveCorner1Y,
+                                       a.PerspectiveCorner2X, a.PerspectiveCorner2Y, a.PerspectiveCorner3X, a.PerspectiveCorner3Y,
+                                       ImageWarpSignature(a.ImageWarp), a.ResizeWidth, a.ResizeHeight, a.ResizeScalePercent,
+                                       a.LockResizeAspect, a.ResizeFitInsideBox, a.NoResizeUpscale,
+                                       a.ResizeInterpolation, a.CanvasWidth, a.CanvasHeight, a.CanvasAnchor, a.CanvasBackgroundColor)
+                End Function))
+        End Function
+
+        ' Persistierte Schritte. Alte Feld-Rezepte werden beim Laden im Editor in eine explizite
+        ' "legacy"-Stufe überführt; ohne diese Liste bleibt der historische feste Pfad aktiv.
+        Private Shared Function GeometrySteps(adj As ImageAdjustments) As List(Of GeometryOperation)
+            Dim result As New List(Of GeometryOperation)()
+            If adj?.GeometryOperations IsNot Nothing Then
+                result.AddRange(adj.GeometryOperations.Where(Function(operation) operation IsNot Nothing AndAlso operation.Adjustments IsNot Nothing))
+            End If
+            Return result
         End Function
 
         ''' <summary>Fingerabdruck EINER Maske. Ausgelagert, weil neben dem Basis-Schlüssel auch der
@@ -3491,6 +3677,88 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return clone
         End Function
 
+        ''' <summary>Führt bestätigte Geometrieschritte in ihrer Bearbeitungsreihenfolge aus.
+        ''' Eine leere Liste bewahrt die feste Reihenfolge bestehender Rezepte.</summary>
+        Private Shared Function ApplyGeometryPipeline(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            Dim result = source
+            Dim steps = GeometrySteps(adj)
+            If steps.Count = 0 Then
+                result = ReplaceBitmap(result, ApplyImageWarp(result, adj))
+                result = ReplaceBitmap(result, ApplyCrop(result, adj))
+                result = ReplaceBitmap(result, ApplyGeometryTransforms(result, adj))
+                result = ReplaceBitmap(result, ApplyStraighten(result, adj))
+                result = ReplaceBitmap(result, ApplyPerspective(result, adj))
+                result = ReplaceBitmap(result, ApplyResize(result, adj))
+                Return ReplaceBitmap(result, ApplyCanvasResize(result, adj))
+            End If
+
+            For Each stepItem In steps
+                Dim stepAdj = stepItem?.Adjustments
+                If stepAdj Is Nothing Then Continue For
+                Select Case If(stepItem.Kind, "").ToLowerInvariant()
+                    Case "legacy"
+                        result = ReplaceBitmap(result, ApplyImageWarp(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyCrop(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyGeometryTransforms(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyStraighten(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyPerspective(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyResize(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyCanvasResize(result, stepAdj))
+                    Case "crop" : result = ReplaceBitmap(result, ApplyCrop(result, stepAdj))
+                    Case "transform"
+                        result = ReplaceBitmap(result, ApplyGeometryTransforms(result, stepAdj))
+                        result = ReplaceBitmap(result, ApplyStraighten(result, stepAdj))
+                    Case "perspective" : result = ReplaceBitmap(result, ApplyPerspective(result, stepAdj))
+                    Case "warp" : result = ReplaceBitmap(result, ApplyImageWarp(result, stepAdj))
+                    Case "resize" : result = ReplaceBitmap(result, ApplyResize(result, stepAdj))
+                    Case "canvas" : result = ReplaceBitmap(result, ApplyCanvasResize(result, stepAdj))
+                End Select
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Gleicher Weg wie <see cref="ApplyGeometryPipeline"/>, aber für den
+        ''' Copy-on-write-Hauptrenderer: die Eingangsbitmap gehört dem Aufrufer möglicherweise
+        ''' nicht und darf erst nach der ersten tatsächlich wirksamen Stufe freigegeben werden.</summary>
+        Private Shared Function ApplyGeometryPipelineOwned(source As SKBitmap, adj As ImageAdjustments,
+                                                            ByRef owned As Boolean) As SKBitmap
+            Dim result = source
+            Dim steps = GeometrySteps(adj)
+            If steps.Count = 0 Then
+                result = ReplaceBitmapOwned(result, ApplyImageWarp(result, adj), owned)
+                result = ReplaceBitmapOwned(result, ApplyCrop(result, adj), owned)
+                result = ReplaceBitmapOwned(result, ApplyGeometryTransforms(result, adj), owned)
+                result = ReplaceBitmapOwned(result, ApplyStraighten(result, adj), owned)
+                result = ReplaceBitmapOwned(result, ApplyPerspective(result, adj), owned)
+                result = ReplaceBitmapOwned(result, ApplyResize(result, adj), owned)
+                Return ReplaceBitmapOwned(result, ApplyCanvasResize(result, adj), owned)
+            End If
+            For Each stepItem In steps
+                Dim stepAdj = stepItem?.Adjustments
+                If stepAdj Is Nothing Then Continue For
+                Select Case If(stepItem.Kind, "").ToLowerInvariant()
+                    Case "legacy"
+                        result = ReplaceBitmapOwned(result, ApplyImageWarp(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, ApplyCrop(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, ApplyGeometryTransforms(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, ApplyStraighten(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, ApplyPerspective(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, ApplyResize(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, ApplyCanvasResize(result, stepAdj), owned)
+                    Case "crop" : result = ReplaceBitmapOwned(result, ApplyCrop(result, stepAdj), owned)
+                    Case "transform"
+                        result = ReplaceBitmapOwned(result, ApplyGeometryTransforms(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, ApplyStraighten(result, stepAdj), owned)
+                    Case "perspective" : result = ReplaceBitmapOwned(result, ApplyPerspective(result, stepAdj), owned)
+                    Case "warp" : result = ReplaceBitmapOwned(result, ApplyImageWarp(result, stepAdj), owned)
+                    Case "resize" : result = ReplaceBitmapOwned(result, ApplyResize(result, stepAdj), owned)
+                    Case "canvas" : result = ReplaceBitmapOwned(result, ApplyCanvasResize(result, stepAdj), owned)
+                End Select
+            Next
+            Return result
+        End Function
+
         Private Shared Function ApplyCrop(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim leftPct = Clamp(adj.CropLeftPercent, 0, 100) / 100.0F
             Dim topPct = Clamp(adj.CropTopPercent, 0, 100) / 100.0F
@@ -3701,6 +3969,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                               outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             If annotation Is Nothing Then Return Nothing
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return annotation
+            If GeometrySteps(adj).Count > 0 Then Return TransformAnnotationThroughGeometryPipeline(annotation, adj, outputWidth, outputHeight)
 
             Dim rotation = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
             Dim q = rotation \ 90
@@ -3774,6 +4043,50 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                     Function(stroke) TransformStrokeForGeometry(stroke, preWidth, preHeight, rotation, adj.FlipHorizontal, adj.FlipVertical)).
                     Where(Function(stroke) stroke IsNot Nothing).
                     ToList()
+            End If
+            Return transformed
+        End Function
+
+        ' Object coordinates are source-space coordinates. A confirmed geometry recipe may contain
+        ' several crops/turns/resizes, so the old one-crop/one-quarter-turn shortcut is invalid.
+        Private Shared Function TransformAnnotationThroughGeometryPipeline(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                                            outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
+            Dim transformed = annotation.Clone()
+            Dim kind = If(transformed.Kind, "").Trim().ToLowerInvariant()
+            Dim anchored = kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(transformed.Anchor) AndAlso Not transformed.ScaleWithImage
+            If anchored Then Return transformed
+
+            Dim corners = {New SKPoint(transformed.XPixels, transformed.YPixels),
+                           New SKPoint(transformed.XPixels + transformed.WidthPixels, transformed.YPixels),
+                           New SKPoint(transformed.XPixels + transformed.WidthPixels, transformed.YPixels + transformed.HeightPixels),
+                           New SKPoint(transformed.XPixels, transformed.YPixels + transformed.HeightPixels)}
+            ' UNBESCHNITTEN abbilden: ein Objekt, das ueber die Schnittkante hinausragt, behaelt
+            ' seine Masse und wird erst beim Zeichnen beschnitten. Wurden die abgewiesenen Ecken
+            ' hier weggelassen, schrumpfte das umschliessende Rechteck auf die uebrigen zusammen -
+            ' bei einem Objekt genau AUF der Kante auf einen ein Pixel hohen Strich.
+            Dim mapped As New List(Of SKPoint)()
+            For Each corner In corners
+                Dim p As SKPoint
+                If TrySourcePointToGeometryOutputUnclipped(corner.X, corner.Y, adj.SourceWidthPixels, adj.SourceHeightPixels, adj, p) Then mapped.Add(p)
+            Next
+            If mapped.Count < corners.Length Then Return Nothing
+            Dim left = mapped.Min(Function(p) p.X), top = mapped.Min(Function(p) p.Y)
+            Dim right = mapped.Max(Function(p) p.X), bottom = mapped.Max(Function(p) p.Y)
+            transformed.XPixels = left : transformed.YPixels = top
+            transformed.WidthPixels = Math.Max(1.0F, right - left) : transformed.HeightPixels = Math.Max(1.0F, bottom - top)
+            If IsPaintKind(kind) AndAlso transformed.Strokes IsNot Nothing Then
+                transformed.Strokes = transformed.Strokes.Select(Function(stroke)
+                    If stroke Is Nothing Then Return Nothing
+                    Dim points = stroke.Points.Select(Function(point)
+                        Dim p As SKPoint
+                        If TrySourcePointToGeometryOutputUnclipped(point.X, point.Y, adj.SourceWidthPixels, adj.SourceHeightPixels, adj, p) Then
+                            Return New StrokePoint(p.X, p.Y)
+                        End If
+                        ' Ein weggeschnittener Punkt darf nicht als Strichpunkt auf (0,0) landen.
+                        Return New StrokePoint(point.X, point.Y)
+                    End Function).ToList()
+                    Return If(points.Count = 0, Nothing, New BrushStroke(points))
+                End Function).Where(Function(stroke) stroke IsNot Nothing).ToList()
             End If
             Return transformed
         End Function

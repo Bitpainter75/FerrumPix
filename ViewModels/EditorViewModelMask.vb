@@ -2050,6 +2050,7 @@ Namespace ViewModels
         Private Function ProjectedMaskScopeKey(adj As ImageAdjustments, ow As Integer, oh As Integer,
                                                bw As Integer, bh As Integer) As String
             Return String.Join("|", ow, oh, bw, bh,
+                               ImageProcessor.GeometryOperationsKey(adj.GeometryOperations),
                                adj.RotationDegrees, adj.StraightenDegrees,
                                adj.FlipHorizontal, adj.FlipVertical,
                                adj.CropLeftPercent, adj.CropTopPercent,

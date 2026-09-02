@@ -274,6 +274,11 @@ Namespace Services
             If clipRect.IsEmpty OrElse annotation Is Nothing OrElse adj Is Nothing Then Return True
             If sceneWidth <= 0 OrElse sceneHeight <= 0 OrElse
                adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return True
+            ' Die knappe Abkuerzung ueber Zuschnitt und Vierteldrehung weiter unten kennt keine
+            ' geordnete Schrittfolge. Ein moeglicherweise sichtbares Objekt darf sie deshalb nicht
+            ' wegwerfen; massgeblich ist der Renderer selbst mit
+            ' ImageProcessor.TransformAnnotationForGeometry.
+            If adj.GeometryOperations IsNot Nothing AndAlso adj.GeometryOperations.Count <> 0 Then Return True
 
             Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
             ' Im Kompositor liegen Pinsel zwar ohnehin nicht, Pfade und verankerte Wasserzeichen

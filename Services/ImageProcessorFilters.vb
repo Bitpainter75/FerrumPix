@@ -726,7 +726,7 @@ Namespace Services
         ''' Scannerrand darf den Dichtepunkt nicht mehr bestimmen.</summary>
         Public Shared Function AnalyzeFilmNegative(source As SKBitmap, adj As ImageAdjustments) As (BaseColor As SKColor, DensityColor As SKColor)
             If source Is Nothing Then Return (SKColors.White, SKColors.Black)
-            Dim cropped = ApplyCrop(source, If(adj, New ImageAdjustments()))
+            Dim cropped = ApplyGeometryPipeline(source, If(adj, New ImageAdjustments()))
             Try
                 Return AnalyzeFilmNegativeCore(cropped)
             Finally

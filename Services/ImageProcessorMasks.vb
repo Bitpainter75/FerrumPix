@@ -453,13 +453,7 @@ Namespace Services
                         End Sub)
                     Marshal.Copy(pBuf, 0, maskPixels.GetPixels(), pBuf.Length)
 
-                    maskPixels = ReplaceBitmap(maskPixels, ApplyImageWarp(maskPixels, maskGeometry))
-                    maskPixels = ReplaceBitmap(maskPixels, ApplyCrop(maskPixels, maskGeometry))
-                    maskPixels = ReplaceBitmap(maskPixels, ApplyGeometryTransforms(maskPixels, maskGeometry))
-                    maskPixels = ReplaceBitmap(maskPixels, ApplyStraighten(maskPixels, maskGeometry))
-                    maskPixels = ReplaceBitmap(maskPixels, ApplyPerspective(maskPixels, maskGeometry))
-                    maskPixels = ReplaceBitmap(maskPixels, ApplyResize(maskPixels, maskGeometry))
-                    maskPixels = ReplaceBitmap(maskPixels, ApplyCanvasResize(maskPixels, maskGeometry))
+                    maskPixels = ApplyGeometryPipeline(maskPixels, maskGeometry)
 
                     ' Derselbe Pfad sollte dieselbe Größe liefern. Der Fallback schützt dennoch vor
                     ' alten/inkonsistenten Rezeptmaßen, ohne die Korrektur global werden zu lassen.
@@ -871,6 +865,8 @@ Namespace Services
                 .PerspectiveCorner1X = geometry.PerspectiveCorner1X, .PerspectiveCorner1Y = geometry.PerspectiveCorner1Y,
                 .PerspectiveCorner2X = geometry.PerspectiveCorner2X, .PerspectiveCorner2Y = geometry.PerspectiveCorner2Y,
                 .PerspectiveCorner3X = geometry.PerspectiveCorner3X, .PerspectiveCorner3Y = geometry.PerspectiveCorner3Y,
+                .GeometryOperations = If(geometry.GeometryOperations, New List(Of GeometryOperation)()).
+                    Where(Function(operation) operation IsNot Nothing).Select(Function(operation) operation.Clone()).ToList(),
                 .ImageWarp = geometry.ImageWarp,
                 .ResizeWidth = geometry.ResizeWidth, .ResizeHeight = geometry.ResizeHeight,
                 .ResizeInterpolation = geometry.ResizeInterpolation,
@@ -912,11 +908,20 @@ Namespace Services
                 KeyPart(geometry.PerspectiveCorner1X), KeyPart(geometry.PerspectiveCorner1Y),
                 KeyPart(geometry.PerspectiveCorner2X), KeyPart(geometry.PerspectiveCorner2Y),
                 KeyPart(geometry.PerspectiveCorner3X), KeyPart(geometry.PerspectiveCorner3Y),
+                GeometryOperationsSignature(geometry.GeometryOperations),
                 ImageWarpSignature(geometry.ImageWarp),
                 KeyPart(geometry.ResizeWidth), KeyPart(geometry.ResizeHeight),
                 KeyPart(geometry.ResizeInterpolation),
                 KeyPart(geometry.CanvasWidth), KeyPart(geometry.CanvasHeight),
                 KeyPart(geometry.CanvasAnchor))
+        End Function
+
+        ''' <summary>Die Schritte gehen ueber DENSELBEN Fingerabdruck in den Maskenschluessel wie in
+        ''' den Bildschluessel. Eine zweite Feldliste hier war eine Feldliste zu viel: sie fuehrte die
+        ''' drei Schalter der Groessenaenderung nicht mit, waehrend die Maske durch dieselbe
+        ''' Geometriekette laeuft wie das Bild.</summary>
+        Private Shared Function GeometryOperationsSignature(operations As List(Of GeometryOperation)) As String
+            Return GeometryOperationsKey(operations)
         End Function
 
         ''' <summary>Trägt dieses Objekt eine eigene Deckung, muss also über eine Ebene gezeichnet
@@ -1798,6 +1803,7 @@ Namespace Services
         ''' Pruefung ist absichtlich konservativ: im Zweifel nutzt der Aufrufer die vollstaendige
         ''' Projektion, nie eine falsch platzierte Maske.</summary>
         Private Shared Function HasIdentityMaskGeometry(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse GeometrySteps(adj).Count <> 0 Then Return False
             Return adj.CropLeftPercent = 0 AndAlso adj.CropTopPercent = 0 AndAlso
                    adj.CropRightPercent = 0 AndAlso adj.CropBottomPercent = 0 AndAlso
                    adj.RotationDegrees = 0 AndAlso adj.StraightenDegrees = 0 AndAlso
@@ -1972,7 +1978,7 @@ Namespace Services
             ' SelectionMaskSoftBaked) - dann NICHT erneut weichzeichnen, sonst doppelt weiche Kante.
             If mask Is Nothing OrElse adj.SelectionMaskSoftBaked OrElse adj.SelectionFeatherPixels <= 0.05F Then Return mask
 
-            Dim referenceSize = ImageGeometryMapper.DisplaySize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj.RotationDegrees)
+            Dim referenceSize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
             Dim scaleX = If(referenceSize.Width > 0, targetW / CSng(referenceSize.Width), 1.0F)
             Dim scaleY = If(referenceSize.Height > 0, targetH / CSng(referenceSize.Height), 1.0F)
             Dim scale = (scaleX + scaleY) / 2.0F
@@ -1991,7 +1997,7 @@ Namespace Services
             ' Maskenpixel und Masken-Rechteck werden vom Editor im sichtbaren Display-Raum gespeichert.
             ' Bei 90/270 Grad ist dessen Breite die Source-Hoehe; eine Skalierung ueber SourceWidth
             ' verschob bzw. leerte Lasso-/Zauberstabmasken in der Vorschau.
-            Dim referenceSize = ImageGeometryMapper.DisplaySize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj.RotationDegrees)
+            Dim referenceSize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
             Dim scaleX = If(referenceSize.Width > 0, targetW / CDbl(referenceSize.Width), 1.0)
             Dim scaleY = If(referenceSize.Height > 0, targetH / CDbl(referenceSize.Height), 1.0)
 

@@ -53,8 +53,9 @@ Namespace ViewModels
 
         Private Function GetCompositorBlitAdjustments() As ImageAdjustments
             Dim crop = EffectiveCrop(fuerAnzeige:=True)
-            Dim key = String.Join("|", GetBaseWidth(), GetBaseHeight(), _rotationDegrees, _flipH, _flipV,
-                                  crop.Left, crop.Top, crop.Right, crop.Bottom, _sceneContentVersion)
+            Dim geometry = BuildAppliedGeometryAdjustments()
+            Dim key = String.Join("|", GetBaseWidth(), GetBaseHeight(), ImageProcessor.GeometryOperationsKey(geometry.GeometryOperations),
+                                  _rotationDegrees, _flipH, _flipV, crop.Left, crop.Top, crop.Right, crop.Bottom, _sceneContentVersion)
             If _compositorBlitSnapshot IsNot Nothing AndAlso String.Equals(_compositorBlitGeometryKey, key, StringComparison.Ordinal) Then
                 Return _compositorBlitSnapshot
             End If
@@ -69,6 +70,7 @@ Namespace ViewModels
                 .CropTopPercent = CSng(crop.Top),
                 .CropRightPercent = CSng(crop.Right),
                 .CropBottomPercent = CSng(crop.Bottom),
+                .GeometryOperations = geometry.GeometryOperations.Select(Function(operation) operation.Clone()).ToList(),
                 .Annotations = _annotations.ToList(),
                 .AnnotationGroups = _annotationGroups,
                 .MaskedAdjustmentLayers = _maskedAdjustmentLayers

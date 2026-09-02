@@ -397,9 +397,16 @@ Namespace Services
                 Catch
                 End Try
                 ' mpv_terminate_destroy kann bei einem noch aktiven Cocoa-Ausgabeziel warten.
-                ' Auf dem UI-Thread würde das das gesamte Fenster einfrieren. Der Worker wartet
-                ' stattdessen auf die Ereignisschleife und zerstört den Handle erst danach.
-                ThreadPool.QueueUserWorkItem(Sub() DisposeNativeAfterEventLoop(handleToDestroy, eventThread))
+                ' Auf dem UI-Thread würde das das gesamte Fenster einfrieren, und ein Thread aus
+                ' dem Pool ist dafür ebenso wenig der richtige Ort: der Pool ist eine gemeinsame,
+                ' begrenzte Ressource, und jedes geöffnete Video hinterließe im Zweifel einen
+                ' blockierten Thread darin. Ein EIGENER Hintergrundthread wartet, so lange es
+                ' dauert, und hält den Prozess beim Beenden trotzdem nicht auf.
+                Dim cleanup As New Thread(Sub() DisposeNativeAfterEventLoop(handleToDestroy, eventThread)) With {
+                    .IsBackground = True,
+                    .Name = "mpv-dispose"
+                }
+                cleanup.Start()
             End If
         End Sub
 
@@ -407,7 +414,17 @@ Namespace Services
             Try
                 If eventThread IsNot Nothing AndAlso eventThread.IsAlive AndAlso
                    Not Object.ReferenceEquals(Thread.CurrentThread, eventThread) Then
-                    eventThread.Join()
+                    ' Erst kurz warten, damit der Normalfall (die Schleife endet nach "quit"
+                    ' sofort) nichts protokolliert. Danach wird der Nachzügler GEMELDET, aber
+                    ' nicht aufgegeben: den Handle einfach stehen zu lassen hieße, ihn samt
+                    ' seiner nativen Puffer bis zum Programmende zu verlieren - bei wiederholtem
+                    ' Öffnen und Schließen von Videos summiert sich das. Zerstören darf ihn nur,
+                    ' wer sicher ist, dass die Ereignisschleife ihn nicht mehr anfasst.
+                    If Not eventThread.Join(2000) Then
+                        DiagnosticLogService.LogException("VideoPlayback.Dispose",
+                                                          New TimeoutException("mpv event loop did not stop within two seconds; waiting on a background thread."))
+                        eventThread.Join()
+                    End If
                 End If
                 MpvInterop.TerminateDestroy(handle)
             Catch ex As Exception

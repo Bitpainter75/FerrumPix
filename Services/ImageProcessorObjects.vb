@@ -850,6 +850,28 @@ Namespace Services
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return warp
             If outputWidth <= 0 OrElse outputHeight <= 0 Then Return warp
 
+            If adj.GeometryOperations IsNot Nothing AndAlso adj.GeometryOperations.Count <> 0 Then
+                Dim piped = New ObjectWarp With {.Kind = "Gitter", .Columns = warp.Columns, .Rows = warp.Rows,
+                    .Nodes = New Double((warp.Columns + 1) * (warp.Rows + 1) * 2 - 1) {}}
+                For rowIdx = 0 To warp.Rows
+                    For colIdx = 0 To warp.Columns
+                        Dim i = (rowIdx * (warp.Columns + 1) + colIdx) * 2
+                        Dim sourcePoint As SKPoint
+                        If Not TryGeometryOutputToSourcePoint(colIdx / CDbl(warp.Columns) * outputWidth,
+                                                              rowIdx / CDbl(warp.Rows) * outputHeight,
+                                                              adj.SourceWidthPixels, adj.SourceHeightPixels, adj, sourcePoint) Then Continue For
+                        Dim moved = ImageGeometryMapper.MeshPoint(warp.Nodes, warp.Columns, warp.Rows, sourcePoint.X, sourcePoint.Y,
+                                                                  adj.SourceWidthPixels, adj.SourceHeightPixels)
+                        Dim outputPoint As SKPoint
+                        If TrySourcePointToGeometryOutput(moved.X, moved.Y, adj.SourceWidthPixels, adj.SourceHeightPixels, adj, outputPoint) Then
+                            piped.Nodes(i) = outputPoint.X / outputWidth * 100.0
+                            piped.Nodes(i + 1) = outputPoint.Y / outputHeight * 100.0
+                        End If
+                    Next
+                Next
+                Return piped
+            End If
+
             Dim rotation = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
             Dim crop = ComputeGeometryCropRect(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
             If crop.Width <= 0 OrElse crop.Height <= 0 Then Return warp

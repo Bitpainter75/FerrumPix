@@ -1985,7 +1985,7 @@ Namespace ViewModels
                 If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
                 Await OpenCurrentInEditorAsync()
                 If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, StringComparison.OrdinalIgnoreCase) Then Return
-                _mainVm.Editor.CurrentTool = EditorTool.Crop
+                _mainVm.Editor.CurrentTool = EditorTool.Transform
                 _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher

@@ -3,6 +3,7 @@ Imports System.IO.Compression
 Imports System.Linq
 Imports System.Text.Json
 Imports System.Text.Json.Serialization
+Imports System.Text.Json.Nodes
 
 Namespace Services
 
@@ -75,7 +76,46 @@ Namespace Services
         ''' <summary>Rezept-JSON fuer den RAW-Sidecar (RawSidecarService): exakt dieselben
         ''' Serialisierungsregeln wie im .fpx-Buendel, damit beide Formate nie auseinanderdriften.</summary>
         Friend Shared Function SerializeAdjustments(adjustments As ImageAdjustments) As String
-            Return JsonSerializer.Serialize(adjustments, JsonOptions)
+            ' Die globalen Regler bleiben absichtlich vollständig serialisiert (die Datei ist
+            ' zugleich ein stabiles Rezeptformat). Ein Geometrieschritt benötigt dagegen nur seine
+            ' wenigen Eingabefelder. Json.NET kann das pro verschachteltem Typ nicht ohne Converter
+            ' ausdrücken; deshalb wird genau dieser Teil nach der normalen Serialisierung verdichtet.
+            Dim root = JsonNode.Parse(JsonSerializer.Serialize(adjustments, JsonOptions))?.AsObject()
+            Dim operations = root?("GeometryOperations")?.AsArray()
+            If operations IsNot Nothing Then
+                For Each item In operations
+                    Dim operation = TryCast(item, JsonObject)
+                    Dim source = TryCast(operation?("Adjustments"), JsonObject)
+                    If source Is Nothing Then Continue For
+                    Dim compact As New JsonObject()
+                    For Each name In GeometryJsonFields(operation?("Kind")?.GetValue(Of String)())
+                        Dim value As JsonNode = Nothing
+                        If source.TryGetPropertyValue(name, value) Then compact(name) = value?.DeepClone()
+                    Next
+                    operation("Adjustments") = compact
+                Next
+            End If
+            Return If(root Is Nothing, "{}", root.ToJsonString(New JsonSerializerOptions With {.WriteIndented = True}))
+        End Function
+
+        Private Shared Function GeometryJsonFields(kind As String) As String()
+            Const crop = "CropLeftPercent|CropTopPercent|CropRightPercent|CropBottomPercent"
+            Const transform = "RotationDegrees|StraightenDegrees|StraightenExpandCanvas|FlipHorizontal|FlipVertical"
+            Const perspective = "PerspectiveHorizontal|PerspectiveVertical|PerspectiveAspect|PerspectiveScale|PerspectiveCorner0X|PerspectiveCorner0Y|PerspectiveCorner1X|PerspectiveCorner1Y|PerspectiveCorner2X|PerspectiveCorner2Y|PerspectiveCorner3X|PerspectiveCorner3Y"
+            Const warp = "ImageWarp"
+            Const resize = "ResizeWidth|ResizeHeight|ResizeScalePercent|ResizeFitInsideBox|LockResizeAspect|NoResizeUpscale|ResizeInterpolation"
+            Const canvas = "CanvasWidth|CanvasHeight|CanvasAnchor|CanvasBackgroundColor"
+            Dim names As String
+            Select Case If(kind, "").Trim().ToLowerInvariant()
+                Case "crop" : names = crop
+                Case "transform" : names = transform
+                Case "perspective" : names = perspective
+                Case "warp" : names = warp
+                Case "resize" : names = resize
+                Case "canvas" : names = canvas
+                Case Else : names = String.Join("|", {crop, transform, perspective, warp, resize, canvas})
+            End Select
+            Return names.Split("|"c)
         End Function
 
         Friend Shared Function DeserializeAdjustments(json As String) As ImageAdjustments

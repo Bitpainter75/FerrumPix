@@ -232,7 +232,20 @@ Namespace Services
             If _rotationCache.TryGetValue(sidecar, cached) AndAlso cached.StampTicks = stampTicks Then Return cached.Degrees
 
             Dim adjustments = TryRead(rawPath)
-            Dim degrees = If(adjustments Is Nothing, 0, ImageOrientationService.NormalizeQuarterTurn(adjustments.RotationDegrees))
+            Dim degrees As Integer = 0
+            If adjustments IsNot Nothing Then
+                degrees = adjustments.RotationDegrees
+                If adjustments.GeometryOperations IsNot Nothing Then
+                    For Each operation In adjustments.GeometryOperations
+                        If operation IsNot Nothing AndAlso
+                           (String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) OrElse
+                            String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase)) Then
+                            If operation.Adjustments IsNot Nothing Then degrees += operation.Adjustments.RotationDegrees
+                        End If
+                    Next
+                End If
+                degrees = ImageOrientationService.NormalizeQuarterTurn(degrees)
+            End If
             _rotationCache(sidecar) = New CachedRotation(stampTicks, degrees)
             Return degrees
         End Function

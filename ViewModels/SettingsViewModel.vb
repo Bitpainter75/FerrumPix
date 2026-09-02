@@ -1689,7 +1689,7 @@ Namespace ViewModels
 
         Private Shared Function EditorToolGroupLabel(key As String) As String
             Select Case If(key, "").Trim()
-                Case "Transform" : Return LocalizationService.T("Drehen und Verzerren")
+                Case "Transform" : Return LocalizationService.T("Transformieren")
                 Case "Tools" : Return LocalizationService.T("Werkzeuge")
                 Case Else : Return LocalizationService.T("Anpassungen")
             End Select
