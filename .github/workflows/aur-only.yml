@@ -26,6 +26,19 @@ jobs:
           path: packaging
           ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
 
+      # Das AUR-Paket verweist auf das Quell-ZIP im Versionsrelease. Vor dem allgemeinen
+      # Release existiert dieses Asset noch nicht; ein vorgezogener PKGBUILD waere damit fuer
+      # Nutzer nicht installierbar. Derselbe Riegel steht auch im Flatpak-Einzellauf.
+      - name: Reihenfolge pruefen
+        run: |
+          version="$(cat VERSION)"
+          published="$(head -1 packaging/PUBLISHED-VERSION 2>/dev/null | tr -d '[:space:]')"
+          echo "VERSION=$version  PUBLISHED-VERSION=$published"
+          if [ "$version" != "$published" ]; then
+            echo "::error::Das Versionsrelease steht auf '$published', gebaut wird '$version'. Erst den Release-Lauf, dann diesen."
+            exit 1
+          fi
+
       # libmpv-2.dll liegt im Repo nur komprimiert; package.sh erwartet sie ausgepackt.
       - name: Fremdbinaerdateien bereitlegen
         run: packaging/ci/ensure-binaries.sh
