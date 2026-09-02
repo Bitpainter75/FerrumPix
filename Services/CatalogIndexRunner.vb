@@ -229,7 +229,7 @@ Namespace Services
                 ' sobald EINER von beiden es verlangt.
                 Using linked = CancellationTokenSource.CreateLinkedTokenSource(token, stopSource.Token)
                     Dim runToken = linked.Token
-                    Await Task.Run(Sub() IndexLoop(roots, result, progress, runToken, force), runToken).ConfigureAwait(False)
+                    Dim filesSeen = Await Task.Run(Function() IndexLoop(roots, result, progress, runToken, force), runToken).ConfigureAwait(False)
 
                     ' Die Ortsnamen NACH dem Lauf und in einem Rutsch: FillMissingPlaces liest die
                     ' offenen Koordinaten in einer Abfrage und schreibt sie in einer Transaktion
@@ -242,7 +242,7 @@ Namespace Services
                         ' CatalogIndexResult.Orphaned). Nur nach einem vollstaendigen Durchlauf:
                         ' nach einem Abbruch fehlt die halbe Wahrheit, und eine Zahl, die zu hoch
                         ' ist, waere schlimmer als keine.
-                        result.Orphaned = Await Task.Run(Function() LibraryService.Instance.CountOrphanedRecordsUnder(roots),
+                        result.Orphaned = Await Task.Run(Function() LibraryService.Instance.CountOrphanedRecordsUnder(roots, filesSeen),
                                                          runToken).ConfigureAwait(False)
                     End If
                 End Using
@@ -269,24 +269,24 @@ Namespace Services
 
         ''' <summary>Der Gang ueber die Ordner. Eigene Methode und keine lange Lambda, damit der
         ''' Rahmen darueber - ein Lauf, Abbruch, Orte nachtragen - auf einen Blick lesbar bleibt.</summary>
-        Private Shared Sub IndexLoop(roots As IReadOnlyList(Of String),
+        Private Shared Function IndexLoop(roots As IReadOnlyList(Of String),
                                      result As CatalogIndexResult,
                                      progress As IProgress(Of CatalogIndexProgress),
                                      token As CancellationToken,
-                                     force As Boolean)
+                                     force As Boolean) As ISet(Of String)
             ' ZUERST ZAEHLEN, dann arbeiten. Ohne Gesamtzahl gaebe es keinen Fortschritt, sondern nur
             ' eine Zahl, die hochlaeuft - und bei einem grossen Bestand weiss dann niemand, ob noch
             ' zehn Bilder kommen oder zehntausend. Das Aufzaehlen selbst ist billig gegen das Lesen.
             If token.IsCancellationRequested Then
                 result.Cancelled = True
-                Return
+                Return Nothing
             End If
             Dim files = CollectFromRoots(roots, token)
             If token.IsCancellationRequested Then
                 result.Cancelled = True
-                Return
+                Return Nothing
             End If
-            If files.Count = 0 Then Return
+            If files.Count = 0 Then Return New HashSet(Of String)(PathIdentity.Comparer)
 
             ' Die Stempel je WURZEL in einer Abfrage, nicht je Datei. Eine Abfrage pro Bild waere
             ' bei zehntausend Fotos zehntausend Plattenzugriffe, bevor ueberhaupt etwas geschieht.
@@ -302,10 +302,14 @@ Namespace Services
             Dim summaryFormat = ExifService.CurrentSummaryFormat
             Dim lastFolder = ""
             Dim done = 0
+            ' Nicht die rohe Directory-Aufzählung zurückgeben: zwischen Aufzählen und dem
+            ' Bearbeiten kann eine Datei verschwinden. Nur ein erfolgreich bestätigtes Exists
+            ' darf den späteren Orphan-Check ohne erneuten Dateisystemzugriff überspringen.
+            Dim filesSeen As New HashSet(Of String)(PathIdentity.Comparer)
             For Each filePath In files
                 If token.IsCancellationRequested Then
                     result.Cancelled = True
-                    Return
+                    Return Nothing
                 End If
                 done += 1
 
@@ -317,6 +321,7 @@ Namespace Services
                             result.Failed += 1
                             Continue For
                         End If
+                        filesSeen.Add(filePath)
                     Catch ex As Exception
                         ' Zwischen Aufzaehlen und Bearbeiten kann die Datei weg sein, und ein Pfad
                         ' kann fuer das Dateisystem zu lang oder gesperrt sein.
@@ -340,7 +345,7 @@ Namespace Services
                     IndexOne(filePath, result, token)
                 Catch ex As OperationCanceledException
                     result.Cancelled = True
-                    Return
+                    Return Nothing
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Katalogindex.Datei", ex)
                     result.Failed += 1
@@ -349,7 +354,8 @@ Namespace Services
                         .Done = done, .Total = files.Count, .CurrentFolder = lastFolder})
                 End Try
             Next
-        End Sub
+            Return filesSeen
+        End Function
 
         ''' <summary>Eine Datei in den Katalog und ihre Kachel in den Zwischenspeicher.</summary>
         Private Shared Sub IndexOne(filePath As String, result As CatalogIndexResult, token As CancellationToken)

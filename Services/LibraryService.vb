@@ -1401,7 +1401,8 @@ Namespace Services
         '''
         ''' Auf die Ordner eingegrenzt und nicht ueber den ganzen Katalog: der Lauf hat nur diese
         ''' Ordner angesehen, und ueber alles andere kann er nichts sagen.</summary>
-        Public Function CountOrphanedRecordsUnder(folders As IReadOnlyList(Of String)) As Integer
+        Public Function CountOrphanedRecordsUnder(folders As IReadOnlyList(Of String),
+                                                  Optional filesSeenByIndex As ISet(Of String) = Nothing) As Integer
             If folders Is Nothing OrElse folders.Count = 0 Then Return 0
             Dim orphans = 0
             Using conn = New SqliteConnection(_connectionString)
@@ -1427,6 +1428,9 @@ Namespace Services
                                 ' Bestand zeigen - ohne diese Liste zaehlte dieselbe Zeile zweimal.
                                 If Not seen.Add(p) Then Continue While
                                 If IsServerPseudoPath(p) Then Continue While
+                                ' A completed enumeration already proved that this image exists.
+                                ' Avoid a second network metadata roundtrip for every unchanged row.
+                                If filesSeenByIndex IsNot Nothing AndAlso filesSeenByIndex.Contains(p) Then Continue While
                                 If Not File.Exists(p) Then orphans += 1
                             End While
                         End Using
