@@ -50,6 +50,16 @@ Namespace Services
             For Each candidate In LibraryNames()
                 If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then Return True
             Next
+
+            ' Eine aus dem Finder gestartete .app erbt weder die Shell-Umgebung noch einen
+            ' Homebrew-Pfad. Apple Silicon installiert Homebrew unter /opt/homebrew, Intel-Macs
+            ' ueblicherweise unter /usr/local; beide liegen ausserhalb der Standard-Suchwege des
+            ' .NET-Loaders. Die expliziten Pfade gehoeren noch zur Systembibliothek und haben
+            ' deshalb Vorrang vor einer allenfalls mitgelieferten Runtime.
+            For Each path In HomebrewLibraryCandidates()
+                If NativeLibrary.TryLoad(path, handle) Then Return True
+            Next
+
             Return TryLoadBundledLibrary(handle)
         End Function
 
@@ -60,6 +70,16 @@ Namespace Services
                 Return {"libmpv.2.dylib", "libmpv.dylib"}
             End If
             Return {"libmpv.so.2", "libmpv.so"}
+        End Function
+
+        Private Shared Iterator Function HomebrewLibraryCandidates() As IEnumerable(Of String)
+            If Not OperatingSystem.IsMacOS() Then Return
+
+            For Each prefix In {"/opt/homebrew/lib", "/usr/local/lib"}
+                For Each name In LibraryNames()
+                    Yield Path.Combine(prefix, name)
+                Next
+            Next
         End Function
 
         Private Shared Function TryLoadBundledLibrary(ByRef handle As IntPtr) As Boolean
