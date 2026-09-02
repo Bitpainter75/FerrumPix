@@ -3308,12 +3308,26 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ' Persistierte Schritte. Alte Feld-Rezepte werden beim Laden im Editor in eine explizite
         ' "legacy"-Stufe überführt; ohne diese Liste bleibt der historische feste Pfad aktiv.
+        ' Leere Liste EINMAL statt je Aufruf: die Punktabbildung fragt hier fuer JEDEN Punkt an, und
+        ' bei einer projizierten Maske sind das Millionen. Eine neue Liste je Punkt war reiner
+        ' Speicherdurchsatz - der haeufigste Fall (kein einziger Schritt) kommt jetzt ohne aus.
+        Private Shared ReadOnly NoGeometrySteps As New List(Of GeometryOperation)()
+
         Private Shared Function GeometrySteps(adj As ImageAdjustments) As List(Of GeometryOperation)
-            Dim result As New List(Of GeometryOperation)()
-            If adj?.GeometryOperations IsNot Nothing Then
-                result.AddRange(adj.GeometryOperations.Where(Function(operation) operation IsNot Nothing AndAlso operation.Adjustments IsNot Nothing))
-            End If
-            Return result
+            Dim operations = adj?.GeometryOperations
+            If operations Is Nothing OrElse operations.Count = 0 Then Return NoGeometrySteps
+            ' Der Normalfall ist eine Liste ohne Luecken; dann wird sie unveraendert
+            ' weitergereicht. Gefiltert - und damit kopiert - wird nur, wenn wirklich ein
+            ' unvollstaendiger Eintrag darin steht. Die Aufrufer lesen sie ausschliesslich.
+            Dim usable = True
+            For Each operation In operations
+                If operation Is Nothing OrElse operation.Adjustments Is Nothing Then
+                    usable = False
+                    Exit For
+                End If
+            Next
+            If usable Then Return operations
+            Return operations.Where(Function(operation) operation IsNot Nothing AndAlso operation.Adjustments IsNot Nothing).ToList()
         End Function
 
         ''' <summary>Fingerabdruck EINER Maske. Ausgelagert, weil neben dem Basis-Schlüssel auch der
@@ -3970,7 +3984,23 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If annotation Is Nothing Then Return Nothing
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return annotation
             If GeometrySteps(adj).Count > 0 Then Return TransformAnnotationThroughGeometryPipeline(annotation, adj, outputWidth, outputHeight)
+            Return TransformAnnotationThroughGeometryFields(annotation, adj, outputWidth, outputHeight)
+        End Function
 
+        ''' <summary>Die Objektabbildung EINER Feldgruppe - der Weg, den es vor der geordneten
+        ''' Schrittfolge allein gab, und heute die Umsetzung EINES Schrittes.
+        '''
+        ''' Sie kennt bewusst nur einen Teil der Geometrie: Beschnitt, Groesse, Vierteldrehung und
+        ''' Spiegelung. Ausrichten, Perspektive und Bildverzerrung fasst sie NICHT an - die traegt
+        ''' ein Objekt in seinem eigenen Feld (siehe GeometryForAnnotations), oder sie gelten fuer
+        ''' das Bild darunter und nicht fuer das, was daraufliegt.</summary>
+        ''' <param name="bakeOwnObjectWarp">Das eigene Verzerrungsfeld eines Objekts traegt die
+        ''' Drehung und Spiegelung DES OBJEKTS; sie wird einmal hineingerechnet. Laeuft die Routine
+        ''' je Schritt einer Kette, darf das nur beim ERSTEN Mal geschehen - sonst dreht sich das
+        ''' Feld mit jedem weiteren Schritt ein weiteres Mal.</param>
+        Private Shared Function TransformAnnotationThroughGeometryFields(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                                        outputWidth As Integer, outputHeight As Integer,
+                                                                        Optional bakeOwnObjectWarp As Boolean = True) As ImageAnnotation
             Dim rotation = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
             Dim q = rotation \ 90
             Dim preWidth = If(rotation = 90 OrElse rotation = 270, outputHeight, outputWidth)
@@ -4009,9 +4039,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                             preHeight / CSng(crop.Height))
             End If
             If renderAnnotation Is Nothing Then Return Nothing
-            renderAnnotation.OwnWarp = TransformOwnWarpForGeometry(renderAnnotation.OwnWarp,
-                                                                    annotation.RotationDegrees,
-                                                                    annotation.FlipHorizontal, annotation.FlipVertical)
+            If bakeOwnObjectWarp Then
+                renderAnnotation.OwnWarp = TransformOwnWarpForGeometry(renderAnnotation.OwnWarp,
+                                                                        annotation.RotationDegrees,
+                                                                        annotation.FlipHorizontal, annotation.FlipVertical)
+            End If
             If q = 0 AndAlso Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then Return renderAnnotation
 
             Dim transformed = renderAnnotation.Clone()
@@ -4049,46 +4081,161 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ' Object coordinates are source-space coordinates. A confirmed geometry recipe may contain
         ' several crops/turns/resizes, so the old one-crop/one-quarter-turn shortcut is invalid.
+        ''' <summary>Die Geometrie, wie ein OBJEKT sie sieht: dieselbe Schrittfolge, aber ohne
+        ''' Bildverzerrung und Perspektive.
+        '''
+        ''' Sie ist das Gegenstueck zur Objektabbildung selbst
+        ''' (<see cref="TransformAnnotationThroughGeometryFields"/>): die fasst genau diese beiden
+        ''' Stufen nicht an. Wer einen Punkt fuer ein Objekt hin- oder zurueckrechnet, muss
+        ''' dieselbe verkuerzte Kette nehmen, sonst laufen Hinweg und Rueckweg auseinander - ein
+        ''' Zug am Objekt schriebe dann eine versetzte Lage zurueck. An den AUSGABEMASSEN aendert
+        ''' das Weglassen nichts: beide Stufen geben die Groesse unveraendert weiter.
+        '''
+        ''' Objekte machen ein Gitterverzerren nicht ueber ihre Lage mit, sondern ueber ihr eigenes
+        ''' Feld: beim Bestaetigen traegt der Editor die Verformung in ImageAnnotation.Warp ein
+        ''' (ApplyWarpToObjects), und der Zeichenweg legt sie ueber den fertigen Objektinhalt. Wer
+        ''' das Rechteck zusaetzlich durch den Verzerren-Schritt schickt, verschiebt es ein zweites
+        ''' Mal - der Inhalt liefe sichtbar vom Bild darunter weg, am staerksten abseits der Mitte.
+        ''' Die feste Kette macht es genauso: dort lief die Objektabbildung immer nur ueber
+        ''' Beschnitt, Groesse, Vierteldrehung und Spiegelung.
+        '''
+        ''' An den AUSGABEMASSEN aendert das Weglassen nichts - ein Verzerren-Schritt gibt die
+        ''' Groesse unveraendert weiter (siehe ComputeGeometryOperationOutputSize). Die verkuerzte
+        ''' Kette ist also massgleich mit der vollen, und beide Richtungen bleiben zueinander
+        ''' invers.</summary>
+        Friend Shared Function GeometryForAnnotations(adj As ImageAdjustments) As ImageAdjustments
+            If adj Is Nothing Then Return adj
+            Dim steps = GeometrySteps(adj)
+            If steps.Count = 0 Then Return adj
+            Dim result As New ImageAdjustments With {
+                .SourceWidthPixels = adj.SourceWidthPixels,
+                .SourceHeightPixels = adj.SourceHeightPixels
+            }
+            For Each stepItem In steps
+                Dim kind = If(stepItem.Kind, "").Trim().ToLowerInvariant()
+                If kind = "warp" OrElse kind = "perspective" Then Continue For
+                If kind = "legacy" AndAlso
+                   (stepItem.Adjustments.ImageWarp IsNot Nothing OrElse HasPerspectiveValues(stepItem.Adjustments)) Then
+                    ' Ein migriertes Alt-Rezept traegt Verzerrung und Perspektive in derselben Stufe
+                    ' wie alles andere; hier fallen nur die beiden heraus, der Rest bleibt stehen.
+                    Dim withoutWarp = GeometryOperation.CloneGeometryAdjustments("legacy", stepItem.Adjustments)
+                    withoutWarp.ImageWarp = Nothing
+                    withoutWarp.PerspectiveHorizontal = 0 : withoutWarp.PerspectiveVertical = 0
+                    withoutWarp.PerspectiveAspect = 0 : withoutWarp.PerspectiveScale = 0
+                    withoutWarp.PerspectiveCorner0X = 0 : withoutWarp.PerspectiveCorner0Y = 0
+                    withoutWarp.PerspectiveCorner1X = 0 : withoutWarp.PerspectiveCorner1Y = 0
+                    withoutWarp.PerspectiveCorner2X = 0 : withoutWarp.PerspectiveCorner2Y = 0
+                    withoutWarp.PerspectiveCorner3X = 0 : withoutWarp.PerspectiveCorner3Y = 0
+                    result.GeometryOperations.Add(New GeometryOperation With {.Kind = stepItem.Kind, .Adjustments = withoutWarp})
+                Else
+                    result.GeometryOperations.Add(stepItem)
+                End If
+            Next
+            Return result
+        End Function
+
+        Private Shared Function HasPerspectiveValues(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing Then Return False
+            Return adj.PerspectiveHorizontal <> 0 OrElse adj.PerspectiveVertical <> 0 OrElse
+                   adj.PerspectiveAspect <> 0 OrElse adj.PerspectiveScale <> 0 OrElse
+                   adj.PerspectiveCorner0X <> 0 OrElse adj.PerspectiveCorner0Y <> 0 OrElse
+                   adj.PerspectiveCorner1X <> 0 OrElse adj.PerspectiveCorner1Y <> 0 OrElse
+                   adj.PerspectiveCorner2X <> 0 OrElse adj.PerspectiveCorner2Y <> 0 OrElse
+                   adj.PerspectiveCorner3X <> 0 OrElse adj.PerspectiveCorner3Y <> 0
+        End Function
+
+        ''' <summary>Ein Objekt durch die geordnete Schrittfolge - SCHRITT FUER SCHRITT durch
+        ''' dieselbe Routine, die auch die feste Feldgruppe abbildet.
+        '''
+        ''' Warum nicht einfach die vier Ecken durch die ganze Kette schicken: die Punktabbildung
+        ''' kennt nur Orte. Ein Objekt hat darueber hinaus eine eigene DREHUNG, eigene
+        ''' SPIEGELUNGEN und ein eigenes Verzerrungsfeld, die eine Vierteldrehung des Bildes
+        ''' mitmachen muessen, und ein verankertes Wasserzeichen speichert in X/Y ueberhaupt
+        ''' keinen Ort, sondern den Abstand zu seinem Anker. All das steht bereits in
+        ''' <see cref="TransformAnnotationThroughGeometryFields"/>; sie je Schritt aufzurufen
+        ''' spart die zweite Fassung derselben Regeln - und ein migriertes Alt-Rezept
+        ''' (ein einziger Schritt der Art "legacy") laeuft damit ueber genau denselben Code wie
+        ''' vor der Schrittfolge.</summary>
         Private Shared Function TransformAnnotationThroughGeometryPipeline(annotation As ImageAnnotation, adj As ImageAdjustments,
                                                                             outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
-            Dim transformed = annotation.Clone()
-            Dim kind = If(transformed.Kind, "").Trim().ToLowerInvariant()
-            Dim anchored = kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(transformed.Anchor) AndAlso Not transformed.ScaleWithImage
-            If anchored Then Return transformed
-
-            Dim corners = {New SKPoint(transformed.XPixels, transformed.YPixels),
-                           New SKPoint(transformed.XPixels + transformed.WidthPixels, transformed.YPixels),
-                           New SKPoint(transformed.XPixels + transformed.WidthPixels, transformed.YPixels + transformed.HeightPixels),
-                           New SKPoint(transformed.XPixels, transformed.YPixels + transformed.HeightPixels)}
-            ' UNBESCHNITTEN abbilden: ein Objekt, das ueber die Schnittkante hinausragt, behaelt
-            ' seine Masse und wird erst beim Zeichnen beschnitten. Wurden die abgewiesenen Ecken
-            ' hier weggelassen, schrumpfte das umschliessende Rechteck auf die uebrigen zusammen -
-            ' bei einem Objekt genau AUF der Kante auf einen ein Pixel hohen Strich.
-            Dim mapped As New List(Of SKPoint)()
-            For Each corner In corners
-                Dim p As SKPoint
-                If TrySourcePointToGeometryOutputUnclipped(corner.X, corner.Y, adj.SourceWidthPixels, adj.SourceHeightPixels, adj, p) Then mapped.Add(p)
+            Dim steps = GeometrySteps(adj)
+            ' Die EIGENE Drehung des Objekts geht einmal in sein Verzerrungsfeld, vor dem ersten
+            ' Schritt - danach traegt jeder Schritt nur noch die Drehung des BILDES hinein.
+            Dim current = annotation.Clone()
+            current.OwnWarp = TransformOwnWarpForGeometry(current.OwnWarp, annotation.RotationDegrees,
+                                                          annotation.FlipHorizontal, annotation.FlipVertical)
+            Dim width = adj.SourceWidthPixels, height = adj.SourceHeightPixels
+            For Each stepItem In steps
+                Dim size = ComputeGeometryOperationOutputSize(width, height, stepItem)
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return Nothing
+                Dim kind = If(stepItem.Kind, "").Trim().ToLowerInvariant()
+                If kind = "canvas" Then
+                    ' Eine groessere Leinwand VERSCHIEBT das Bild in ihr, sie vergroessert es nicht.
+                    ' Die Feldroutine wuerde hier skalieren (so tat es die feste Kette, und ein
+                    ' Objekt wuchs mit der Leinwand mit) - fuer einen eigenen Leinwandschritt ist
+                    ' das Verschieben um den Ankerversatz das Richtige.
+                    current = TranslateAnnotationForCanvasStep(current, stepItem.Adjustments, width, height, size.Width, size.Height)
+                Else
+                    Dim fields = GeometryOperation.CloneGeometryAdjustments(stepItem.Kind, stepItem.Adjustments)
+                    If fields Is Nothing Then Continue For
+                    fields.SourceWidthPixels = width
+                    fields.SourceHeightPixels = height
+                    current = TransformAnnotationThroughGeometryFields(current, fields, size.Width, size.Height,
+                                                                      bakeOwnObjectWarp:=False)
+                End If
+                If current Is Nothing Then Return Nothing
+                width = size.Width : height = size.Height
             Next
-            If mapped.Count < corners.Length Then Return Nothing
-            Dim left = mapped.Min(Function(p) p.X), top = mapped.Min(Function(p) p.Y)
-            Dim right = mapped.Max(Function(p) p.X), bottom = mapped.Max(Function(p) p.Y)
-            transformed.XPixels = left : transformed.YPixels = top
-            transformed.WidthPixels = Math.Max(1.0F, right - left) : transformed.HeightPixels = Math.Max(1.0F, bottom - top)
-            If IsPaintKind(kind) AndAlso transformed.Strokes IsNot Nothing Then
-                transformed.Strokes = transformed.Strokes.Select(Function(stroke)
-                    If stroke Is Nothing Then Return Nothing
-                    Dim points = stroke.Points.Select(Function(point)
-                        Dim p As SKPoint
-                        If TrySourcePointToGeometryOutputUnclipped(point.X, point.Y, adj.SourceWidthPixels, adj.SourceHeightPixels, adj, p) Then
-                            Return New StrokePoint(p.X, p.Y)
-                        End If
-                        ' Ein weggeschnittener Punkt darf nicht als Strichpunkt auf (0,0) landen.
-                        Return New StrokePoint(point.X, point.Y)
-                    End Function).ToList()
-                    Return If(points.Count = 0, Nothing, New BrushStroke(points))
-                End Function).Where(Function(stroke) stroke IsNot Nothing).ToList()
+
+            ' Die Vorschau rechnet auf einer kleineren Ausgabe als das Rezept. Der letzte Schritt
+            ' bringt das Objekt deshalb auf die TATSAECHLICHEN Ausgabemasse - ein verankertes
+            ' Wasserzeichen, das nicht mitwachsen soll, ausgenommen.
+            If current Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return current
+            If width = outputWidth AndAlso height = outputHeight Then Return current
+            Dim finalKind = If(current.Kind, "").Trim().ToLowerInvariant()
+            If finalKind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(current.Anchor) AndAlso Not current.ScaleWithImage Then Return current
+            Return ScaleAnnotationForSource(current, outputWidth / CSng(width), outputHeight / CSng(height))
+        End Function
+
+        ''' <summary>Der Leinwandschritt fuer ein Objekt: es bleibt, wo es im Bild sitzt, und
+        ''' wandert mit dem Bild um den Ankerversatz der neuen Leinwand. Dieselben Ankernamen und
+        ''' dieselbe Rechnung wie <see cref="ApplyCanvasResize"/> - laufen die beiden auseinander,
+        ''' sitzt das Objekt neben dem Bildinhalt, auf den es zeigt.</summary>
+        Private Shared Function TranslateAnnotationForCanvasStep(annotation As ImageAnnotation, adj As ImageAdjustments,
+                                                                 sourceWidth As Integer, sourceHeight As Integer,
+                                                                 targetWidth As Integer, targetHeight As Integer) As ImageAnnotation
+            If annotation Is Nothing Then Return Nothing
+            If targetWidth = sourceWidth AndAlso targetHeight = sourceHeight Then Return annotation
+            Dim kind = If(annotation.Kind, "").Trim().ToLowerInvariant()
+            ' Ein verankertes Wasserzeichen loest seine Lage beim Zeichnen gegen die AUSGABE auf -
+            ' eine neue Leinwand versetzt es damit von selbst richtig.
+            If kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(annotation.Anchor) Then Return annotation
+
+            Dim offsetX As Single = 0, offsetY As Single = 0
+            Select Case If(adj?.CanvasAnchor, "Center").Trim().ToLowerInvariant()
+                Case "top-left", "left-top" : offsetX = 0 : offsetY = 0
+                Case "top", "top-center" : offsetX = (targetWidth - sourceWidth) / 2.0F : offsetY = 0
+                Case "top-right", "right-top" : offsetX = targetWidth - sourceWidth : offsetY = 0
+                Case "left", "middle-left" : offsetX = 0 : offsetY = (targetHeight - sourceHeight) / 2.0F
+                Case "right", "middle-right" : offsetX = targetWidth - sourceWidth : offsetY = (targetHeight - sourceHeight) / 2.0F
+                Case "bottom-left", "left-bottom" : offsetX = 0 : offsetY = targetHeight - sourceHeight
+                Case "bottom", "bottom-center" : offsetX = (targetWidth - sourceWidth) / 2.0F : offsetY = targetHeight - sourceHeight
+                Case "bottom-right", "right-bottom" : offsetX = targetWidth - sourceWidth : offsetY = targetHeight - sourceHeight
+                Case Else
+                    offsetX = (targetWidth - sourceWidth) / 2.0F
+                    offsetY = (targetHeight - sourceHeight) / 2.0F
+            End Select
+            If offsetX = 0 AndAlso offsetY = 0 Then Return annotation
+
+            Dim moved = annotation.Clone()
+            moved.XPixels += offsetX
+            moved.YPixels += offsetY
+            If IsPaintKind(kind) AndAlso moved.Strokes IsNot Nothing Then
+                moved.Strokes = moved.Strokes.Where(Function(stroke) stroke IsNot Nothing).Select(
+                    Function(stroke) New BrushStroke(stroke.Points.Select(
+                        Function(p) New StrokePoint(p.X + offsetX, p.Y + offsetY)).ToList())).ToList()
             End If
-            Return transformed
+            Return moved
         End Function
 
         ''' <summary>Überträgt eine Drehung oder Spiegelung des Objekts auf dessen lokales

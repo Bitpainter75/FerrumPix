@@ -118,6 +118,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(n)
             Next
             RaiseCornersChanged()
+            ' Eine bestaetigte Perspektive steht im Rezept; sie herauszunehmen ist eine Aenderung
+            ' am Dokument und muss wie jede andere zum Speichern auffordern.
+            _hasChanges = True
             SchedulePreviewUpdate()
         End Sub
 

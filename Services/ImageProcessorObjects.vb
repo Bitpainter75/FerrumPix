@@ -851,6 +851,11 @@ Namespace Services
             If outputWidth <= 0 OrElse outputHeight <= 0 Then Return warp
 
             If adj.GeometryOperations IsNot Nothing AndAlso adj.GeometryOperations.Count <> 0 Then
+                ' DIESELBE verkuerzte Kette wie fuer das Objektrechteck (GeometryForAnnotations):
+                ' das Knotenraster IST die Bildverzerrung. Liefe der Wechsel des Bezugsraums durch
+                ' den Verzerren-Schritt, ginge sie zusaetzlich in die Umrechnung ein - einmal beim
+                ' Hinweg und einmal beim Rueckweg.
+                Dim objectAdj = GeometryForAnnotations(adj)
                 Dim piped = New ObjectWarp With {.Kind = "Gitter", .Columns = warp.Columns, .Rows = warp.Rows,
                     .Nodes = New Double((warp.Columns + 1) * (warp.Rows + 1) * 2 - 1) {}}
                 For rowIdx = 0 To warp.Rows
@@ -859,11 +864,11 @@ Namespace Services
                         Dim sourcePoint As SKPoint
                         If Not TryGeometryOutputToSourcePoint(colIdx / CDbl(warp.Columns) * outputWidth,
                                                               rowIdx / CDbl(warp.Rows) * outputHeight,
-                                                              adj.SourceWidthPixels, adj.SourceHeightPixels, adj, sourcePoint) Then Continue For
+                                                              adj.SourceWidthPixels, adj.SourceHeightPixels, objectAdj, sourcePoint) Then Continue For
                         Dim moved = ImageGeometryMapper.MeshPoint(warp.Nodes, warp.Columns, warp.Rows, sourcePoint.X, sourcePoint.Y,
                                                                   adj.SourceWidthPixels, adj.SourceHeightPixels)
                         Dim outputPoint As SKPoint
-                        If TrySourcePointToGeometryOutput(moved.X, moved.Y, adj.SourceWidthPixels, adj.SourceHeightPixels, adj, outputPoint) Then
+                        If TrySourcePointToGeometryOutput(moved.X, moved.Y, adj.SourceWidthPixels, adj.SourceHeightPixels, objectAdj, outputPoint) Then
                             piped.Nodes(i) = outputPoint.X / outputWidth * 100.0
                             piped.Nodes(i + 1) = outputPoint.Y / outputHeight * 100.0
                         End If
@@ -1183,7 +1188,10 @@ Namespace Services
                         ' Pfad-Parameter durchreichen wie beim normalen Text: der Renderer kann
                         ' das laengst, hier wurden sie nur nicht weitergegeben - das Wasserzeichen
                         ' blieb dadurch immer gerade.
-                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, WithAlpha(fill, If(fill.Alpha = 255, CByte(130), fill.Alpha)), stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
+                        ' Ein Text-Wasserzeichen verwendet dieselbe Deckkraft wie jedes andere
+                        ' Textobjekt. Die frühere Sonderregel begrenzte eine volle Füllfarbe hier
+                        ' auf Alpha 130 (ca. 51 %) – unabhängig von der Deckkraft-Einstellung.
+                        DrawAnnotationText(canvas, watermark, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, annotation.FillKind, fill2, annotation.GradientAngleDegrees, annotation.GradientInverted, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.PathPoints, annotation.PathClosed)
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then

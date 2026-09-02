@@ -10819,11 +10819,16 @@ Namespace ViewModels
             Dim dh = height / 100.0 * displaySize.Height
             Dim geometry = BuildAppliedGeometryAdjustments()
             If geometry.GeometryOperations IsNot Nothing AndAlso geometry.GeometryOperations.Count <> 0 Then
+                ' Der Rueckweg muss dieselbe verkuerzte Kette nehmen wie der Hinweg
+                ' (ImageProcessor.GeometryForAnnotations): die Bildverzerrung tragen Objekte in
+                ' ihrem eigenen Feld, nicht in ihrer Lage. Sonst schriebe ein Zug am Objekt nach
+                ' einer bestaetigten Verzerrung eine um deren Betrag versetzte Position zurueck.
+                Dim objectGeometry = ImageProcessor.GeometryForAnnotations(geometry)
                 Dim sourcePoints As New List(Of SkiaSharp.SKPoint)()
                 For Each point In {New SkiaSharp.SKPoint(CSng(dx), CSng(dy)), New SkiaSharp.SKPoint(CSng(dx + dw), CSng(dy)),
                                    New SkiaSharp.SKPoint(CSng(dx + dw), CSng(dy + dh)), New SkiaSharp.SKPoint(CSng(dx), CSng(dy + dh))}
                     Dim sourcePoint As SkiaSharp.SKPoint
-                    If ImageProcessor.TryGeometryOutputToSourcePoint(point.X, point.Y, baseWidth, baseHeight, geometry, sourcePoint) Then sourcePoints.Add(sourcePoint)
+                    If ImageProcessor.TryGeometryOutputToSourcePoint(point.X, point.Y, baseWidth, baseHeight, objectGeometry, sourcePoint) Then sourcePoints.Add(sourcePoint)
                 Next
                 If sourcePoints.Count > 0 Then
                     Dim left = sourcePoints.Min(Function(point) point.X), top = sourcePoints.Min(Function(point) point.Y)
@@ -19536,6 +19541,18 @@ Namespace ViewModels
             Dim y = If(normalizedKind = "Watermark",
                        ClampAnnotationOffsetPercent(_annotationYPercent),
                        Math.Max(-height + 1, Math.Min(100 - 1, yPercent)))
+            ' ABSTAND ZUERST AUFLOESEN, wie beim Zurueckschreiben eines vorhandenen Objekts
+            ' (SyncSelectedAnnotation): beim verankerten Wasserzeichen tragen die Puffer den ABSTAND
+            ' zum Anker, DisplayAnnotationRectToStoredPercent erwartet dagegen die LAGE. Ohne diese
+            ' Zeile las sie den Abstand als Lage - das neue Wasserzeichen landete an den
+            ' Abstandswerten (also oben links), waehrend sein Auswahlrahmen ueber dieselbe
+            ' Anker-Formel wie der Renderer schon am Anker stand. Rahmen und Objekt lagen also
+            ' auseinander, bis das erste Ziehen den Stand geradezog.
+            If normalizedKind = "Watermark" Then
+                Dim origin = ComputeAnnotationOriginPercent(normalizedKind, x, y, width, height, _annotationAnchor)
+                x = origin.X
+                y = origin.Y
+            End If
             Dim storedRect = DisplayAnnotationRectToStoredPercent(normalizedKind, x, y, width, height)
             Dim storedX = PercentXToPixels(storedRect.X)
             Dim storedY = PercentYToPixels(storedRect.Y)
@@ -22322,6 +22339,7 @@ Namespace ViewModels
                     _appliedCropTop = 0
                     _appliedCropRight = 0
                     _appliedCropBottom = 0
+                    _hasChanges = True
                     RaiseResetButtonStateChanged()
                     SchedulePreviewUpdate()
                 Case EditorTool.Resize
