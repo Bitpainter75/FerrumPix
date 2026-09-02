@@ -2794,7 +2794,10 @@ Namespace ViewModels
 
             Try
                 ok = Await Task.Run(Function()
-                                        Dim adj = New ImageAdjustments With {.RotationDegrees = angle}
+                                        ' Die Drehung als SCHRITT: die Geometriekette wertet die
+                                        ' oberen Felder nicht mehr aus, dort steht sie wirkungslos.
+                                        Dim adj As New ImageAdjustments()
+                                        AppendRotationStep(adj, angle)
                                         Return ImageProcessor.SaveImage(source, temp, adj, 95, preserveMetadata)
                                     End Function)
                 If ok AndAlso File.Exists(temp) Then
@@ -2819,16 +2822,45 @@ Namespace ViewModels
             Return False
         End Function
 
+        ''' <summary>Haengt eine Vierteldrehung als Geometrieschritt an.
+        '''
+        ''' NICHT als oberes Feld: die Geometriekette liest ausschliesslich die Schrittliste, ein
+        ''' dort abgelegter Winkel bliebe wirkungslos. Ist der LETZTE Schritt schon eine reine
+        ''' Drehung, waechst deren Winkel - sonst sammelte jedes Drehen einen weiteren Schritt an,
+        ''' und viermal drehen ergaebe vier Schritte statt keinem.</summary>
+        Private Shared Sub AppendRotationStep(adj As ImageAdjustments, angle As Integer)
+            If adj Is Nothing Then Return
+            Dim quarter = ImageGeometryMapper.NormalizeQuarterTurn(angle)
+            If quarter = 0 Then Return
+            If adj.GeometryOperations Is Nothing Then adj.GeometryOperations = New List(Of GeometryOperation)()
+            Dim last = adj.GeometryOperations.LastOrDefault()
+            If last IsNot Nothing AndAlso last.Adjustments IsNot Nothing AndAlso
+               String.Equals(last.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
+               Math.Abs(last.Adjustments.StraightenDegrees) < 0.0001F AndAlso
+               Not last.Adjustments.FlipHorizontal AndAlso Not last.Adjustments.FlipVertical Then
+                Dim summe = ImageGeometryMapper.NormalizeQuarterTurn(last.Adjustments.RotationDegrees + quarter)
+                If summe = 0 Then
+                    adj.GeometryOperations.Remove(last)
+                Else
+                    last.Adjustments.RotationDegrees = summe
+                End If
+                Return
+            End If
+            adj.GeometryOperations.Add(New GeometryOperation With {
+                .Kind = "transform",
+                .Adjustments = New ImageAdjustments With {.RotationDegrees = quarter}})
+        End Sub
+
         ''' <summary>Legt die Drehung einer RAW-Datei im Rezept-Sidecar ab (foto.cr2.fpxmp) statt sie
         ''' in Pixel zu backen. Ein schon vorhandenes Rezept (aus dem Editor) bleibt vollständig
-        ''' erhalten - nur RotationDegrees wird um den neuen Winkel weitergedreht.</summary>
+        ''' erhalten - es kommt nur ein Drehschritt dazu.</summary>
         Private Async Function SaveRotationToSidecarAsync(source As String, angle As Integer) As Task(Of Boolean)
             Dim ok = False
             Dim errorMessage As String = Nothing
             Try
                 ok = Await Task.Run(Function()
                                         Dim adj = If(RawSidecarService.TryRead(source), New ImageAdjustments())
-                                        adj.RotationDegrees = CInt(NormalizeRotationAngle(adj.RotationDegrees + angle))
+                                        AppendRotationStep(adj, angle)
                                         Return RawSidecarService.TryWrite(source, adj)
                                     End Function)
                 If ok Then

@@ -11078,9 +11078,12 @@ Namespace ViewModels
         Private Function GeometryOperationsForRender(forPreview As Boolean) As List(Of GeometryOperation)
             Dim result = If(forPreview, GeometryOperationsForDisplay(), _geometryOperations.Select(Function(operation) operation.Clone()).ToList())
             If Not forPreview Then Return result
-            ' Ein altes Rezept hat noch keine Liste: seine Felder sind bereits der bestätigte
-            ' Legacy-Schritt und dürfen nicht zusätzlich als offene Transform-Stufe angehängt werden.
-            If result.Count = 0 Then Return result
+            ' AUCH BEI LEERER LISTE. Frueher stieg die Routine hier aus: ein altes Rezept hatte noch
+            ' keine Schritte, seine oberen Felder WAREN der bestaetigte Stand, und ein offener
+            ' Transform-Schritt haette sie doppelt gerechnet. Alte Feldgeometrie wird inzwischen beim
+            ' Laden verworfen (FpxService.DropRecipeGeometryFields), es gibt also nichts mehr, was
+            ' doppelt zaehlen koennte - und ohne das Anhaengen hing die Vorschau eines frischen
+            ' Bildes am schrittlosen Feldweg, den es nicht mehr geben soll.
             AppendOpenGeometryOperations(result)
             Return result
         End Function

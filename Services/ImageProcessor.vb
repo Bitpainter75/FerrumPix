@@ -2707,10 +2707,11 @@ Namespace Services
         Public Shared Function ComputeGeometryOutputSize(sourceWidth As Integer, sourceHeight As Integer,
                                                          adj As ImageAdjustments) As SKSizeI
             If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return New SKSizeI(0, 0)
-            Dim steps = GeometrySteps(adj)
-            If steps.Count = 0 Then Return ComputeLegacyGeometryOutputSize(sourceWidth, sourceHeight, adj)
-
+            ' KEINE Schritte heisst KEINE Geometrie. Die oberen Felder werden nicht mehr gelesen:
+            ' alte Rezepte verlieren sie beim Laden, und alles, was heute Geometrie erzeugt - Editor,
+            ' Stapel, Betrachter, XMP-Import - legt Schritte an.
             Dim size = New SKSizeI(sourceWidth, sourceHeight)
+            Dim steps = GeometrySteps(adj)
             For Each stepItem In steps
                 If stepItem?.Adjustments Is Nothing Then Continue For
                 size = ComputeGeometryOperationOutputSize(size.Width, size.Height, stepItem)
@@ -2746,8 +2747,9 @@ Namespace Services
                 Case "warp", "perspective"
                     Return New SKSizeI(width, height)
                 Case Else
-                    ' Die historische feste Kette behaelt bewusst ihre alte Groessenrechnung.
-                    Return ComputeLegacyGeometryOutputSize(width, height, a)
+                    ' Eine unbekannte Art aendert die Groesse nicht. Frueher stand hier die alte
+                    ' Sammelrechnung fuer den Schritt "legacy"; den gibt es nicht mehr.
+                    Return New SKSizeI(width, height)
             End Select
         End Function
 
@@ -2789,13 +2791,13 @@ Namespace Services
             Return New SKSizeI(Math.Max(1, targetWidth), Math.Max(1, targetHeight))
         End Function
 
-        ' Die alte Punktabbildung rechnet eine VOLLSTAENDIGE feste Kette. Ein gespeicherter Schritt
-        ' gibt hier deshalb nur die Felder heraus, die sein Zweig im Pixelweg auch benutzt: sonst
-        ' koennte ein stehengebliebenes fremdes Feld einen Anfasser verschieben, ohne die Pixel
-        ' mitzunehmen - Regler und Bild liefen still auseinander.
+        ' Der Rumpf der Punktabbildung rechnet eine VOLLSTAENDIGE feste Kette; die Schrittschleife
+        ' ruft ihn fuer jeden Schritt einzeln auf. Ein Schritt gibt deshalb nur die Felder heraus,
+        ' die seine Art im Pixelweg auch benutzt: sonst koennte ein stehengebliebenes fremdes Feld
+        ' einen Anfasser verschieben, ohne die Pixel mitzunehmen - Regler und Bild liefen still
+        ' auseinander.
         Private Shared Function GeometryMappingAdjustments(operation As GeometryOperation) As ImageAdjustments
             Dim source = operation.Adjustments
-            If String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Return source
             Dim a As New ImageAdjustments()
             Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
                 Case "crop"
@@ -2830,33 +2832,6 @@ Namespace Services
             target.PerspectiveCorner2X = source.PerspectiveCorner2X : target.PerspectiveCorner2Y = source.PerspectiveCorner2Y
             target.PerspectiveCorner3X = source.PerspectiveCorner3X : target.PerspectiveCorner3Y = source.PerspectiveCorner3Y
         End Sub
-
-        Private Shared Function ComputeLegacyGeometryOutputSize(sourceWidth As Integer, sourceHeight As Integer,
-                                                               adj As ImageAdjustments) As SKSizeI
-            If sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return New SKSizeI(0, 0)
-            Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
-            Dim w = crop.Width, h = crop.Height
-            Dim q = ImageGeometryMapper.NormalizeQuarterTurn(adj.RotationDegrees)
-            If q = 90 OrElse q = 270 Then
-                Dim swap = w : w = h : h = swap
-            End If
-            If Math.Abs(adj.StraightenDegrees) >= 0.01F AndAlso adj.StraightenExpandCanvas Then
-                Dim radians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
-                Dim oldW = w, oldH = h
-                w = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Cos(radians) + oldH * Math.Sin(radians))))
-                h = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Sin(radians) + oldH * Math.Cos(radians))))
-            End If
-            ' DIESELBE RECHNUNG WIE ApplyResize und wie der Punktweg. Die frueher hier stehende
-            ' Kurzform kannte nur Zielbreite und Zielhoehe: eine prozentuale Groesse, der
-            ' Kasten-Modus und "nicht vergroessern" liefen an ihr vorbei (Stapel und Export setzen
-            ' genau diese drei). Die gemeldete Ausgabegroesse wich damit von den Pixeln ab, und
-            ' Masken wie Objekte wurden gegen ein Mass gerechnet, das es nicht gab.
-            Dim resized = ComputeResizeOutputSize(w, h, adj)
-            w = resized.Width : h = resized.Height
-            If adj.CanvasWidth > 0 Then w = adj.CanvasWidth
-            If adj.CanvasHeight > 0 Then h = adj.CanvasHeight
-            Return New SKSizeI(Math.Max(1, w), Math.Max(1, h))
-        End Function
 
         Friend Shared Function ComputeGeometryCropRect(sourceWidth As Integer, sourceHeight As Integer,
                                                         adj As ImageAdjustments) As SKRectI
@@ -2893,25 +2868,35 @@ Namespace Services
             Return TrySourcePointToGeometryOutput(sourceX, sourceY, sourceWidth, sourceHeight, adj, output, clipToOutput:=False)
         End Function
 
+        ''' <summary>Der Punkt durch die SCHRITTFOLGE, Schritt fuer Schritt. Ohne Schritte ist das die
+        ''' Identitaet - die oberen Geometriefelder werden hier so wenig gelesen wie im Pixelweg.
+        ''' Frueher rechnete diese Stelle bei leerer Liste die ganze alte Feldkette; damit bewegten
+        ''' die Felder Anfasser und Masken weiter, obwohl die Pixel sich nicht mehr ruehrten.</summary>
         Private Shared Function TrySourcePointToGeometryOutput(sourceX As Double, sourceY As Double,
                                                               sourceWidth As Integer, sourceHeight As Integer,
                                                               adj As ImageAdjustments, ByRef output As SKPoint,
                                                               clipToOutput As Boolean) As Boolean
-            Dim steps = GeometrySteps(adj)
-            If steps.Count > 0 Then
-                Dim operationX = sourceX, operationY = sourceY, width = sourceWidth, height = sourceHeight
-                For Each stepItem In steps
-                    If stepItem?.Adjustments Is Nothing Then Continue For
-                    Dim mapped As SKPoint
-                    If Not TrySourcePointToGeometryOutput(operationX, operationY, width, height,
-                                                          GeometryMappingAdjustments(stepItem), mapped, clipToOutput) Then Return False
-                    operationX = mapped.X : operationY = mapped.Y
-                    Dim size = ComputeGeometryOperationOutputSize(width, height, stepItem)
-                    width = size.Width : height = size.Height
-                Next
-                output = New SKPoint(CSng(operationX), CSng(operationY))
-                Return True
-            End If
+            Dim operationX = sourceX, operationY = sourceY, width = sourceWidth, height = sourceHeight
+            For Each stepItem In GeometrySteps(adj)
+                If stepItem?.Adjustments Is Nothing Then Continue For
+                Dim mapped As SKPoint
+                If Not TryStepPointToOutput(operationX, operationY, width, height,
+                                            GeometryMappingAdjustments(stepItem), mapped, clipToOutput) Then Return False
+                operationX = mapped.X : operationY = mapped.Y
+                Dim size = ComputeGeometryOperationOutputSize(width, height, stepItem)
+                width = size.Width : height = size.Height
+            Next
+            output = New SKPoint(CSng(operationX), CSng(operationY))
+            Return True
+        End Function
+
+        ''' <summary>Die Feldgruppe EINES Schrittes auf einen Punkt anwenden. Der Rumpf rechnet die
+        ''' vollstaendige alte Kette; <see cref="GeometryMappingAdjustments"/> gibt ihm nur die Felder
+        ''' der jeweiligen Art heraus, alles andere laeuft neutral durch.</summary>
+        Private Shared Function TryStepPointToOutput(sourceX As Double, sourceY As Double,
+                                                     sourceWidth As Integer, sourceHeight As Integer,
+                                                     adj As ImageAdjustments, ByRef output As SKPoint,
+                                                     clipToOutput As Boolean) As Boolean
             ' --- Verzerren (Knotenraster) --- ZUERST, wie in der Bildkette: das Raster liegt im
             ' unbeschnittenen Quellraum, der Beschnitt greift erst auf dem verzogenen Bild.
             Dim warpedSource = WarpSourcePoint(sourceX, sourceY, sourceWidth, sourceHeight, adj)
@@ -3015,24 +3000,33 @@ Namespace Services
                                                               sourceWidth As Integer, sourceHeight As Integer,
                                                               adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse adj Is Nothing Then Return False
+            ' Rueckwaerts durch die SCHRITTFOLGE. Ohne Schritte ist das die Identitaet - dieselbe
+            ' Regel wie auf dem Hinweg und im Pixelweg.
             Dim steps = GeometrySteps(adj)
-            If steps.Count > 0 Then
-                Dim sizes As New List(Of SKSizeI) From {New SKSizeI(sourceWidth, sourceHeight)}
-                For Each stepItem In steps
-                    Dim previous = sizes(sizes.Count - 1)
-                    sizes.Add(ComputeGeometryOperationOutputSize(previous.Width, previous.Height, stepItem))
-                Next
-                Dim operationX = outputX, operationY = outputY
-                For index = steps.Count - 1 To 0 Step -1
-                    Dim stepItem = steps(index)
-                    If stepItem?.Adjustments Is Nothing Then Continue For
-                    Dim before = sizes(index), mapped As SKPoint
-                    If Not TryGeometryOutputToSourcePoint(operationX, operationY, before.Width, before.Height, GeometryMappingAdjustments(stepItem), mapped) Then Return False
-                    operationX = mapped.X : operationY = mapped.Y
-                Next
-                source = New SKPoint(CSng(operationX), CSng(operationY))
-                Return True
-            End If
+            Dim sizes As New List(Of SKSizeI) From {New SKSizeI(sourceWidth, sourceHeight)}
+            For Each stepItem In steps
+                Dim previous = sizes(sizes.Count - 1)
+                sizes.Add(ComputeGeometryOperationOutputSize(previous.Width, previous.Height, stepItem))
+            Next
+            Dim operationX = outputX, operationY = outputY
+            For index = steps.Count - 1 To 0 Step -1
+                Dim stepItem = steps(index)
+                If stepItem?.Adjustments Is Nothing Then Continue For
+                Dim before = sizes(index), mapped As SKPoint
+                If Not TryStepOutputToSourcePoint(operationX, operationY, before.Width, before.Height,
+                                                  GeometryMappingAdjustments(stepItem), mapped) Then Return False
+                operationX = mapped.X : operationY = mapped.Y
+            Next
+            source = New SKPoint(CSng(operationX), CSng(operationY))
+            Return True
+        End Function
+
+        ''' <summary>Die Feldgruppe EINES Schrittes rueckwaerts auf einen Punkt anwenden - das
+        ''' Gegenstueck zu <see cref="TryStepPointToOutput"/>.</summary>
+        Private Shared Function TryStepOutputToSourcePoint(outputX As Double, outputY As Double,
+                                                           sourceWidth As Integer, sourceHeight As Integer,
+                                                           adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
+            If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse adj Is Nothing Then Return False
             Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
             Dim w As Double = crop.Width, h As Double = crop.Height
 
@@ -3697,29 +3691,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function ApplyGeometryPipeline(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing Then Return Nothing
             Dim result = source
-            Dim steps = GeometrySteps(adj)
-            If steps.Count = 0 Then
-                result = ReplaceBitmap(result, ApplyImageWarp(result, adj))
-                result = ReplaceBitmap(result, ApplyCrop(result, adj))
-                result = ReplaceBitmap(result, ApplyGeometryTransforms(result, adj))
-                result = ReplaceBitmap(result, ApplyStraighten(result, adj))
-                result = ReplaceBitmap(result, ApplyPerspective(result, adj))
-                result = ReplaceBitmap(result, ApplyResize(result, adj))
-                Return ReplaceBitmap(result, ApplyCanvasResize(result, adj))
-            End If
-
-            For Each stepItem In steps
+            ' KEINE Schritte heisst KEINE Geometrie - die oberen Felder werden nicht mehr gelesen.
+            For Each stepItem In GeometrySteps(adj)
                 Dim stepAdj = stepItem?.Adjustments
                 If stepAdj Is Nothing Then Continue For
                 Select Case If(stepItem.Kind, "").ToLowerInvariant()
-                    Case "legacy"
-                        result = ReplaceBitmap(result, ApplyImageWarp(result, stepAdj))
-                        result = ReplaceBitmap(result, ApplyCrop(result, stepAdj))
-                        result = ReplaceBitmap(result, ApplyGeometryTransforms(result, stepAdj))
-                        result = ReplaceBitmap(result, ApplyStraighten(result, stepAdj))
-                        result = ReplaceBitmap(result, ApplyPerspective(result, stepAdj))
-                        result = ReplaceBitmap(result, ApplyResize(result, stepAdj))
-                        result = ReplaceBitmap(result, ApplyCanvasResize(result, stepAdj))
                     Case "crop" : result = ReplaceBitmap(result, ApplyCrop(result, stepAdj))
                     Case "transform"
                         result = ReplaceBitmap(result, ApplyGeometryTransforms(result, stepAdj))
@@ -3739,28 +3715,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function ApplyGeometryPipelineOwned(source As SKBitmap, adj As ImageAdjustments,
                                                             ByRef owned As Boolean) As SKBitmap
             Dim result = source
-            Dim steps = GeometrySteps(adj)
-            If steps.Count = 0 Then
-                result = ReplaceBitmapOwned(result, ApplyImageWarp(result, adj), owned)
-                result = ReplaceBitmapOwned(result, ApplyCrop(result, adj), owned)
-                result = ReplaceBitmapOwned(result, ApplyGeometryTransforms(result, adj), owned)
-                result = ReplaceBitmapOwned(result, ApplyStraighten(result, adj), owned)
-                result = ReplaceBitmapOwned(result, ApplyPerspective(result, adj), owned)
-                result = ReplaceBitmapOwned(result, ApplyResize(result, adj), owned)
-                Return ReplaceBitmapOwned(result, ApplyCanvasResize(result, adj), owned)
-            End If
-            For Each stepItem In steps
+            ' KEINE Schritte heisst KEINE Geometrie - siehe ApplyGeometryPipeline.
+            For Each stepItem In GeometrySteps(adj)
                 Dim stepAdj = stepItem?.Adjustments
                 If stepAdj Is Nothing Then Continue For
                 Select Case If(stepItem.Kind, "").ToLowerInvariant()
-                    Case "legacy"
-                        result = ReplaceBitmapOwned(result, ApplyImageWarp(result, stepAdj), owned)
-                        result = ReplaceBitmapOwned(result, ApplyCrop(result, stepAdj), owned)
-                        result = ReplaceBitmapOwned(result, ApplyGeometryTransforms(result, stepAdj), owned)
-                        result = ReplaceBitmapOwned(result, ApplyStraighten(result, stepAdj), owned)
-                        result = ReplaceBitmapOwned(result, ApplyPerspective(result, stepAdj), owned)
-                        result = ReplaceBitmapOwned(result, ApplyResize(result, stepAdj), owned)
-                        result = ReplaceBitmapOwned(result, ApplyCanvasResize(result, stepAdj), owned)
                     Case "crop" : result = ReplaceBitmapOwned(result, ApplyCrop(result, stepAdj), owned)
                     Case "transform"
                         result = ReplaceBitmapOwned(result, ApplyGeometryTransforms(result, stepAdj), owned)
@@ -4070,12 +4029,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                                               outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             If annotation Is Nothing Then Return Nothing
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return annotation
-            Dim result As ImageAnnotation
-            If GeometrySteps(adj).Count > 0 Then
-                result = TransformAnnotationThroughGeometryPipeline(annotation, adj, outputWidth, outputHeight)
-            Else
-                result = TransformAnnotationThroughGeometryFields(annotation, adj, outputWidth, outputHeight)
-            End If
+            ' Die Schrittfolge ist der einzige Weg. Ohne Schritte laeuft sie durch, ohne etwas zu
+            ' tun - die oberen Geometriefelder werden nicht mehr gelesen.
+            Dim result = TransformAnnotationThroughGeometryPipeline(annotation, adj, outputWidth, outputHeight)
             If result Is Nothing Then Return Nothing
 
             ' DIE EIGENE VERZERRUNG WIRD GENAU EINMAL GEDREHT, UND ZWAR HIER AM ENDE.
@@ -4318,25 +4274,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 .SourceWidthPixels = adj.SourceWidthPixels,
                 .SourceHeightPixels = adj.SourceHeightPixels
             }
+            ' Jeder Schritt traegt genau eine Sache, es reicht also, die beiden Arten wegzulassen.
             For Each stepItem In steps
                 Dim kind = If(stepItem.Kind, "").Trim().ToLowerInvariant()
                 If kind = "warp" OrElse kind = "perspective" Then Continue For
-                If kind = "legacy" AndAlso
-                   (stepItem.Adjustments.ImageWarp IsNot Nothing OrElse HasPerspectiveValues(stepItem.Adjustments)) Then
-                    ' Ein migriertes Alt-Rezept traegt Verzerrung und Perspektive in derselben Stufe
-                    ' wie alles andere; hier fallen nur die beiden heraus, der Rest bleibt stehen.
-                    Dim withoutWarp = GeometryOperation.CloneGeometryAdjustments("legacy", stepItem.Adjustments)
-                    withoutWarp.ImageWarp = Nothing
-                    withoutWarp.PerspectiveHorizontal = 0 : withoutWarp.PerspectiveVertical = 0
-                    withoutWarp.PerspectiveAspect = 0 : withoutWarp.PerspectiveScale = 0
-                    withoutWarp.PerspectiveCorner0X = 0 : withoutWarp.PerspectiveCorner0Y = 0
-                    withoutWarp.PerspectiveCorner1X = 0 : withoutWarp.PerspectiveCorner1Y = 0
-                    withoutWarp.PerspectiveCorner2X = 0 : withoutWarp.PerspectiveCorner2Y = 0
-                    withoutWarp.PerspectiveCorner3X = 0 : withoutWarp.PerspectiveCorner3Y = 0
-                    result.GeometryOperations.Add(New GeometryOperation With {.Kind = stepItem.Kind, .Adjustments = withoutWarp})
-                Else
-                    result.GeometryOperations.Add(stepItem)
-                End If
+                result.GeometryOperations.Add(stepItem)
             Next
             Return result
         End Function
