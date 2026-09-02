@@ -4485,17 +4485,21 @@ Namespace Views
                 overlay.IsVisible = False
                 Return
             End If
+            ' Knoten folgen bei einer gedrehten bzw. verzerrten Ebene dem Bildraum und können
+            ' außerhalb des sichtbaren Bildrechtecks landen. Der Overlay-Rand darf sie nicht
+            ' abschneiden; die Koordinaten bleiben dabei weiterhin auf den Bildursprung bezogen.
+            Const border As Double = 400.0
             Dim values(g.Length - 1) As Double
             values(0) = g(0) : values(1) = g(1)
             For i = 2 To g.Length - 2 Step 2
-                values(i) = g(i) / 100.0 * iw
-                values(i + 1) = g(i + 1) / 100.0 * ih
+                values(i) = g(i) / 100.0 * iw + border
+                values(i + 1) = g(i + 1) / 100.0 * ih + border
             Next
             overlay.GridValues = values
-            Avalonia.Controls.Canvas.SetLeft(overlay, ix)
-            Avalonia.Controls.Canvas.SetTop(overlay, iy)
-            overlay.Width = iw
-            overlay.Height = ih
+            Avalonia.Controls.Canvas.SetLeft(overlay, ix - border)
+            Avalonia.Controls.Canvas.SetTop(overlay, iy - border)
+            overlay.Width = iw + border * 2
+            overlay.Height = ih + border * 2
             overlay.IsVisible = True
             overlay.InvalidateVisual()
         End Sub
@@ -4517,17 +4521,18 @@ Namespace Views
                 overlay.IsVisible = False
                 Return
             End If
+            Const border As Double = 400.0
             Dim values(g.Length - 1) As Double
             values(0) = g(0)
             For i = 1 To g.Length - 2 Step 2
-                values(i) = g(i) / 100.0 * iw
-                values(i + 1) = g(i + 1) / 100.0 * ih
+                values(i) = g(i) / 100.0 * iw + border
+                values(i + 1) = g(i + 1) / 100.0 * ih + border
             Next
             overlay.LineValues = values
-            Avalonia.Controls.Canvas.SetLeft(overlay, ix)
-            Avalonia.Controls.Canvas.SetTop(overlay, iy)
-            overlay.Width = iw
-            overlay.Height = ih
+            Avalonia.Controls.Canvas.SetLeft(overlay, ix - border)
+            Avalonia.Controls.Canvas.SetTop(overlay, iy - border)
+            overlay.Width = iw + border * 2
+            overlay.Height = ih + border * 2
             overlay.IsVisible = True
             overlay.InvalidateVisual()
         End Sub

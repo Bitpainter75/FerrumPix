@@ -11367,6 +11367,8 @@ Namespace ViewModels
                 If Math.Abs(_straightenDegrees - clamped) < 0.0001 Then Return
                 CaptureUndoState(NameOf(StraightenDegrees))
                 Me.RaiseAndSetIfChanged(_straightenDegrees, clamped)
+                Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+                Me.RaisePropertyChanged(NameOf(HasTransformChanges))
                 RaiseResetButtonStateChanged()
                 SchedulePreviewUpdate()
             End Set
@@ -11380,6 +11382,8 @@ Namespace ViewModels
                 If _straightenExpandCanvas = value Then Return
                 CaptureUndoState(NameOf(StraightenExpandCanvas))
                 Me.RaiseAndSetIfChanged(_straightenExpandCanvas, value)
+                Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+                Me.RaisePropertyChanged(NameOf(HasTransformChanges))
                 RaiseResetButtonStateChanged()
                 SchedulePreviewUpdate()
             End Set
@@ -16410,6 +16414,8 @@ Namespace ViewModels
             _appliedStraightenExpandCanvas = False : _appliedFlipH = False : _appliedFlipV = False
             Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+            Me.RaisePropertyChanged(NameOf(HasTransformChanges))
             _hasChanges = True
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
@@ -18904,13 +18910,18 @@ Namespace ViewModels
                 NameHistoryStep(LocalizationService.T(If(degrees < 0, "Objekt links gedreht", "Objekt rechts gedreht")))
                 Return
             End If
+            CaptureUndoState(LocalizationService.T("Drehen"))
             _rotationDegrees = ((_rotationDegrees + degrees) Mod 360 + 360) Mod 360
             ' Ein Vierteldreh vertauscht Breite und Höhe des sichtbaren Bildes. Ein manueller
             ' Zoom würde dadurch denselben Maßstab/Ausschnitt auf die neue Geometrie übertragen
             ' und das Bild häufig abschneiden. Nach einer Ganzbild-Drehung deshalb bewusst wieder
             ' vollständig in die verfügbare Editorfläche einpassen.
             ActiveZoomPreset = ZoomPresetMode.Fit
-            Await ApplyRotateAsync()
+            Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+            Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            RaiseResetButtonStateChanged()
+            RaiseDisplayImageGeometryProperties()
+            Await UpdatePreviewAsync()
             RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
         End Function
 
@@ -18936,8 +18947,13 @@ Namespace ViewModels
                 NameHistoryStep(LocalizationService.T("Objekt horizontal gespiegelt"))
                 Return
             End If
+            CaptureUndoState(LocalizationService.T("Horizontal spiegeln"))
             _flipH = Not _flipH
-            Await ApplyRotateAsync()
+            Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+            Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            RaiseResetButtonStateChanged()
+            RaiseDisplayImageGeometryProperties()
+            Await UpdatePreviewAsync()
         End Function
 
         Private Async Function DoFlipVAsync() As Task
@@ -18947,8 +18963,13 @@ Namespace ViewModels
                 NameHistoryStep(LocalizationService.T("Objekt vertikal gespiegelt"))
                 Return
             End If
+            CaptureUndoState(LocalizationService.T("Vertikal spiegeln"))
             _flipV = Not _flipV
-            Await ApplyRotateAsync()
+            Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+            Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            RaiseResetButtonStateChanged()
+            RaiseDisplayImageGeometryProperties()
+            Await UpdatePreviewAsync()
         End Function
 
         Private Sub ResetAdjustmentsInternal(Optional resetEditorUi As Boolean = False)

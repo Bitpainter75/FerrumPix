@@ -2623,10 +2623,18 @@ Namespace ViewModels
             ' Die OBJEKTE gehen mit: sie bekommen die Verzerrung als eigene Angabe und bleiben damit
             ' aenderbar - Text laesst sich weiter tippen. Das Bild darunter braucht das nicht mehr,
             ' seine Verzerrung steht ab jetzt im Rezept.
-            Dim mapping = NodeMapping(columns, rows, xs, ys)
-            Dim imageMapping = MapGridToImageSpace(mapping, gridUsesVisibleCropSpace)
-            ApplyWarpToObjects(imageMapping)
-            ComposeImageWarp(imageMapping)
+            ' Das Bedienraster liegt auf dem bereits gerenderten Bild. Ein neuer Warp-Schritt
+            ' kommt aber HINTER die vorhandene Geometriekette (Drehung, Crop, Groesse, ...)
+            ' und muss deshalb genau in DIESEM Anzeigeraum abgelegt werden. Die alte Rueckrechnung
+            ' in den Ursprungsraum liess einen Zug nach 90 Grad an der falschen Achse wirken - bei
+            ' symmetrischen Punkten sogar scheinbar gar nicht.
+            '
+            ' Die eigenen Verzerrungsfelder der Objekte werden hingegen im Quellraum gespeichert.
+            ' Fuer sie rahmt MapDisplayWarpToObjectSpace die sichtbare Abbildung mit dem passenden
+            ' Hin- und Rueckweg ein, wie es die Perspektive bereits tut.
+            Dim displayMapping = NodeMapping(columns, rows, xs, ys)
+            ApplyWarpToObjects(MapDisplayWarpToObjectSpace(displayMapping))
+            ComposeImageWarp(displayMapping)
             ' Nicht mit einer eventuell früheren Verzerrung zusammenfalten: ihre Reihenfolge
             ' gegenüber Crop, Drehung und Leinwand ist sichtbar. Jede bestätigte Verzerrung wird
             ' deshalb als eigener Pipeline-Schritt abgelegt.
@@ -2677,23 +2685,35 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
         End Sub
 
-        ''' <summary>Hebt die Bedienkoordinaten eines nach dem Crop geoeffneten Gitters in den
-        ''' unbeschnittenen Bildraum. Ausserhalb des sichtbaren Ausschnitts bleibt die neue
-        ''' Abbildung identisch; dort darf ein Zug im sichtbaren Bild nichts veraendern. Bild und
-        ''' alle mitwandernden Overlay-Objekte erhalten genau diese eine globale Abbildung.</summary>
-        Private Function MapGridToImageSpace(mapping As Func(Of Double, Double, (X As Double, Y As Double)),
-                                              gridUsesVisibleCropSpace As Boolean) As Func(Of Double, Double, (X As Double, Y As Double))
-            If Not gridUsesVisibleCropSpace Then Return mapping
-            Dim crop = GridCropRect()
-            Return Function(x As Double, y As Double) As (X As Double, Y As Double)
-                       Dim localX = (x - crop.Left) / crop.Width * 100.0
-                       Dim localY = (y - crop.Top) / crop.Height * 100.0
-                       If localX < 0 OrElse localX > 100 OrElse localY < 0 OrElse localY > 100 Then
-                           Return (x, y)
-                       End If
-                       Dim target = mapping(localX, localY)
-                       Return (crop.Left + target.X / 100.0 * crop.Width,
-                               crop.Top + target.Y / 100.0 * crop.Height)
+        ''' <summary>Uebersetzt einen im sichtbaren Bild bedienten Warp in den Quellraum eines
+        ''' Objekts. Der Bild-Warp selbst bleibt im sichtbaren Raum, weil sein Pipeline-Schritt
+        ''' erst NACH den schon bestaetigten Geometrieschritten ausgefuehrt wird.</summary>
+        Private Function MapDisplayWarpToObjectSpace(mapping As Func(Of Double, Double, (X As Double, Y As Double))) As Func(Of Double, Double, (X As Double, Y As Double))
+            Dim baseWidth = GetBaseWidth(), baseHeight = GetBaseHeight()
+            Dim displaySize = GetAnnotationDisplayPixelSize()
+            If mapping Is Nothing OrElse baseWidth <= 0 OrElse baseHeight <= 0 OrElse
+               displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return mapping
+
+            Dim geometry = BuildAppliedGeometryAdjustments()
+            geometry.SourceWidthPixels = baseWidth
+            geometry.SourceHeightPixels = baseHeight
+            ' Bestaetigte Bild-Warps und Perspektiven stehen bereits in OwnWarp der Objekte. Die
+            ' Lagekette darf sie hier nicht noch einmal anwenden.
+            Dim objectGeometry = ImageProcessor.GeometryForAnnotations(geometry)
+            Return Function(px As Double, py As Double) As (X As Double, Y As Double)
+                       Dim shown As SkiaSharp.SKPoint
+                       If Not ImageProcessor.TrySourcePointToGeometryOutput(px / 100.0 * baseWidth,
+                                                                            py / 100.0 * baseHeight,
+                                                                            baseWidth, baseHeight,
+                                                                            objectGeometry, shown) Then Return (px, py)
+                       Dim moved = mapping(shown.X / displaySize.Width * 100.0,
+                                           shown.Y / displaySize.Height * 100.0)
+                       Dim back As SkiaSharp.SKPoint
+                       If Not ImageProcessor.TryGeometryOutputToSourcePoint(moved.X / 100.0 * displaySize.Width,
+                                                                            moved.Y / 100.0 * displaySize.Height,
+                                                                            baseWidth, baseHeight,
+                                                                            objectGeometry, back) Then Return (px, py)
+                       Return (back.X / baseWidth * 100.0, back.Y / baseHeight * 100.0)
                    End Function
         End Function
 
