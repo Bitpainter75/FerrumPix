@@ -1781,7 +1781,7 @@
     <value>The selected images will be saved as a collage in the current folder.</value>
   </data>
   <data name="Dramatisch_35e38c2b" xml:space="preserve">
-    <value>Dramatisch</value>
+    <value>Dramatic</value>
   </data>
   <data name="Drehung_bb151d57" xml:space="preserve">
     <value>Rotation</value>
@@ -1793,7 +1793,7 @@
     <value>Apply rotation to the preview</value>
   </data>
   <data name="Duoton_63f5b65d" xml:space="preserve">
-    <value>Duoton</value>
+    <value>Duotone</value>
   </data>
   <data name="EINF_GEN_a58d212b" xml:space="preserve">
     <value>INSERT</value>
@@ -1892,7 +1892,7 @@
     <value>Paint</value>
   </data>
   <data name="Matt_0f9fe690" xml:space="preserve">
-    <value>Matt</value>
+    <value>Matte</value>
   </data>
   <data name="Methode_5dcc6d55" xml:space="preserve">
     <value>Method</value>
@@ -7827,8 +7827,8 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Aqua</value>
   </data>
-  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
-    <value>Back to gallery (in full screen: exit full screen; also with Space)</value>
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
+    <value>Back to gallery (in full screen: exit full screen; also with SPACE)</value>
   </data>
   <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
     <value>Show markers in filmstrip</value>
@@ -7845,9 +7845,27 @@
   <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
     <value>Trackpad mode</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Enables trackpad gestures: two-finger zoom in the viewer, swipe horizontally to browse, and drag to pan a zoomed image. In the viewer, hold SHIFT while dragging to select a crop. Mouse controls remain unchanged while this mode is off.</value>
-  </data>
   <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Invert path</value></data>
   <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Place text on the other side of the path line</value></data>
+  <data name="Anwenden_bernimmt_die_Perspektive_ins_Rezept_Mas_3b171a53" xml:space="preserve">
+    <value>Applying takes the perspective into the recipe: masks go along, and it is there again next time you open the picture.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_df83a6c6" xml:space="preserve">
+    <value>Mask layer from path</value>
+  </data>
+  <data name="In_Text_umwandeln_70072158" xml:space="preserve">
+    <value>Convert to text</value>
+  </data>
+  <data name="Erzeugt_eine_neue_eigenst_ndige_Maskenebene_aus__03cc9a86" xml:space="preserve">
+    <value>Creates a new, independent mask layer from this path. The path stays for later adjustments.</value>
+  </data>
+  <data name="Wandelt_diesen_Pfad_in_ein_Textobjekt_um_Seine_G_3c801d50" xml:space="preserve">
+    <value>Turns this path into a text layer. Its baseline stays editable with the path tool.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
+    <value>Mask layer created from path</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
+    <value>Enables trackpad gestures: two-finger zoom in the viewer, swipe horizontally to browse, and drag to pan a zoomed image. In the viewer, hold SHIFT while dragging to select a crop. Mouse controls remain unchanged while this mode is off.</value>
+  </data>
 </root>

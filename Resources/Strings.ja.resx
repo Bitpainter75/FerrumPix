@@ -7866,7 +7866,7 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>アクア</value>
   </data>
-  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
     <value>ギャラリーに戻る（全画面では全画面を終了。スペースキーでも可能）</value>
   </data>
   <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
@@ -7884,9 +7884,27 @@
   <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
     <value>トラックパッドモード</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>トラックパッドのジェスチャーを有効にします。ビューアーでは二本指でズーム、横方向のスワイプで移動、ドラッグで拡大画像をパンできます。ビューアーでは SHIFT+ドラッグで切り抜きを選択します。このモードがオフの間はマウス操作は変わりません。</value>
-  </data>
   <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>パスを反転</value></data>
   <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>テキストをパス線の反対側に配置</value></data>
+  <data name="Anwenden_bernimmt_die_Perspektive_ins_Rezept_Mas_3b171a53" xml:space="preserve">
+    <value>適用するとパースが調整内容に入ります。マスクも一緒に動き、次に画像を開いたときにもそのまま残ります。</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_df83a6c6" xml:space="preserve">
+    <value>パスからマスクレイヤーを作成</value>
+  </data>
+  <data name="In_Text_umwandeln_70072158" xml:space="preserve">
+    <value>テキストに変換</value>
+  </data>
+  <data name="Erzeugt_eine_neue_eigenst_ndige_Maskenebene_aus__03cc9a86" xml:space="preserve">
+    <value>このパスから独立した新しいマスクレイヤーを作ります。パスは後で調整できるように残ります。</value>
+  </data>
+  <data name="Wandelt_diesen_Pfad_in_ein_Textobjekt_um_Seine_G_3c801d50" xml:space="preserve">
+    <value>このパスをテキストレイヤーに変換します。ベースラインはパスツールで編集できます。</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
+    <value>パスからマスクレイヤーを作成しました</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
+    <value>トラックパッドのジェスチャーを有効にします。ビューアーでは二本指でズーム、横方向のスワイプで移動、ドラッグで拡大画像をパンできます。ビューアーでは SHIFT+ドラッグで切り抜きを選択します。このモードがオフの間はマウス操作は変わりません。</value>
+  </data>
 </root>

@@ -38,6 +38,14 @@ Namespace Views
         Private _lastFullscreenCursorPosition As PixelPoint?
         Private ReadOnly _filmstripController As FilmstripInteractionController
 
+        ' Das macOS-Trackpad liefert pro Geste mehrere Wheel-Events. 20 % bleibt dort noch gut
+        ' steuerbar, ohne die Eingabe künstlich zu verzögern; die anderen Plattformen behalten
+        ' ihren bisherigen 25-%-Schritt.
+        Private Shared ReadOnly Property WheelZoomFactor As Double
+            Get
+                Return If(OperatingSystem.IsMacOS(), 1.2, 1.25)
+            End Get
+        End Property
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             _fullscreenVideoControlsHideTimer = New DispatcherTimer With {
@@ -480,10 +488,10 @@ Namespace Views
                     _suppressNextImageContextMenu = True
                     Dim underMouse = ComparePaneUnder(e)
                     If underMouse IsNot Nothing Then
-                        ZoomCompareAtPoint(underMouse, e.GetPosition(underMouse), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                        ZoomCompareAtPoint(underMouse, e.GetPosition(underMouse), If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor))
                     Else
                         vm.ActiveZoomPreset = ZoomPresetMode.Manual
-                        vm.ZoomLevel = Math.Max(0.05, vm.ZoomLevel) * If(e.Delta.Y > 0, 1.25, 1.0 / 1.25)
+                        vm.ZoomLevel = Math.Max(0.05, vm.ZoomLevel) * If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor)
                     End If
                 Else
                     ' Wie in der Einzelansicht blaettert das blanke Rad weiter - im Vergleich trifft
@@ -500,7 +508,7 @@ Namespace Views
 
             If IsTrackpadMode() Then
                 If scrollViewer IsNot Nothing Then
-                    ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                    ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor))
                 ElseIf e.Delta.Y < 0 Then
                     vm.ZoomOut()
                     ApplyImageFitMode()
@@ -510,10 +518,10 @@ Namespace Views
                 End If
             ElseIf rightButtonZoom Then
                 _suppressNextImageContextMenu = True
-                ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor))
             ElseIf e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                 If scrollViewer IsNot Nothing Then
-                    ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, 1.25, 1.0 / 1.25))
+                    ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor))
                 ElseIf e.Delta.Y < 0 Then
                     vm.ZoomOut()
                     ApplyImageFitMode()

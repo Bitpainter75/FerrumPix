@@ -71,6 +71,11 @@ Namespace Services
                     Case "ru" : Return "Russian"
                     Case "zh" : Return "Chinese"
                     Case "ja" : Return "Japanese"
+                    Case "ko" : Return "Korean"
+                    Case "id" : Return "Indonesian"
+                    Case "tr" : Return "Turkish"
+                    Case "th" : Return "Thai"
+                    Case "hi" : Return "Hindi"
                     Case Else : Return "English"
                 End Select
             End Get
@@ -104,7 +109,12 @@ Namespace Services
                     ("Czech", "Čeština"),
                     ("Russian", "Русский"),
                     ("Chinese", "简体中文"),
-                    ("Japanese", "日本語")}
+                    ("Japanese", "日本語"),
+                    ("Korean", "한국어"),
+                    ("Indonesian", "Bahasa Indonesia"),
+                    ("Turkish", "Türkçe"),
+                    ("Thai", "ไทย"),
+                    ("Hindi", "हिन्दी")}
             End Get
         End Property
 
@@ -197,6 +207,11 @@ Namespace Services
                 ' ein blosses "zh" wuerde sie nicht finden.
                 Case "Chinese" : Return "zh-CN"
                 Case "Japanese" : Return "ja"
+                Case "Korean" : Return "ko"
+                Case "Indonesian" : Return "id"
+                Case "Turkish" : Return "tr"
+                Case "Thai" : Return "th"
+                Case "Hindi" : Return "hi"
                 Case "English" : Return ""
                 Case Else
                     Return ResolveSystemCultureCode()
@@ -232,7 +247,8 @@ Namespace Services
         Private Shared Function IsSupportedCultureCode(code As String) As Boolean
             Select Case If(code, "").ToLowerInvariant()
                 Case "de", "nl", "sv", "da", "nb", "nn", "no", "fi",
-                     "es", "fr", "it", "pt", "pl", "cs", "ru", "zh", "ja"
+                     "es", "fr", "it", "pt", "pl", "cs", "ru", "zh", "ja", "ko",
+                     "id", "tr", "th", "hi"
                     Return True
                 Case Else
                     Return False

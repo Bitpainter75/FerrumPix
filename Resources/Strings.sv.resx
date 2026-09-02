@@ -7866,7 +7866,7 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Akvamarin</value>
   </data>
-  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
     <value>Tillbaka till galleriet (i helskärm: avsluta helskärm; även med mellanslag)</value>
   </data>
   <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
@@ -7884,9 +7884,27 @@
   <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
     <value>Styrplatte-läge</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. I visaren väljer SHIFT+dra en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
-  </data>
   <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Vänd på banan</value></data>
   <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Placera texten på andra sidan av banlinjen</value></data>
+  <data name="Anwenden_bernimmt_die_Perspektive_ins_Rezept_Mas_3b171a53" xml:space="preserve">
+    <value>Använd tar perspektivet in i receptet: masker följer med, och det står där igen nästa gång du öppnar bilden.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_df83a6c6" xml:space="preserve">
+    <value>Masklager ur banan</value>
+  </data>
+  <data name="In_Text_umwandeln_70072158" xml:space="preserve">
+    <value>Omvandla till text</value>
+  </data>
+  <data name="Erzeugt_eine_neue_eigenst_ndige_Maskenebene_aus__03cc9a86" xml:space="preserve">
+    <value>Skapar ett nytt, fristående masklager ur den här banan. Banan finns kvar för senare justering.</value>
+  </data>
+  <data name="Wandelt_diesen_Pfad_in_ein_Textobjekt_um_Seine_G_3c801d50" xml:space="preserve">
+    <value>Omvandlar den här banan till ett textobjekt. Baslinjen går fortfarande att redigera med banverktyget.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
+    <value>Masklager skapat ur banan</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
+    <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. I visaren väljer SHIFT+dra en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
+  </data>
 </root>

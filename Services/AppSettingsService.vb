@@ -36,6 +36,32 @@ Namespace Services
         Public Property FontFamily As String = "Arial"
         Public Property FontSizePixels As Double = 48
         Public Property FillColor As String = "#FFFFFFFF"
+        Public Property StrokeColor As String = "#FF000000"
+        Public Property StrokeWidth As Double = 0
+        Public Property FillKind As String = "Solid"
+        Public Property FillColor2 As String = "#FFFFFFFF"
+        Public Property GradientAngleDegrees As Double = 0
+        Public Property GradientInverted As Boolean = False
+        Public Property BlendMode As String = "Normal"
+        Public Property BlendIncludesStroke As Boolean = True
+        Public Property Bold As Boolean = False
+        Public Property Italic As Boolean = False
+        Public Property LetterSpacingPercent As Double = 0
+        Public Property FlipHorizontal As Boolean = False
+        Public Property FlipVertical As Boolean = False
+        Public Property ShadowEnabled As Boolean = False
+        Public Property ShadowOffsetXPercent As Double = 4
+        Public Property ShadowOffsetYPercent As Double = 4
+        Public Property ShadowBlur As Double = 6
+        Public Property ShadowStrength As Double = 100
+        Public Property ShadowColor As String = "#80000000"
+        Public Property ShadowRounded As Boolean = False
+        Public Property ShadowCornerRadiusPercent As Double = 20
+        Public Property ShadowSizePercent As Double = 100
+        Public Property GlowEnabled As Boolean = False
+        Public Property GlowBlur As Double = 10
+        Public Property GlowStrength As Double = 100
+        Public Property GlowColor As String = "#FFFFFF00"
     End Class
 
     ''' <summary>Eine gespeicherte Regler-Zusammenstellung („Vorlage") aus dem Anpassen-Werkzeug.
@@ -1593,10 +1619,49 @@ Namespace Services
                     .Opacity = Math.Max(0, Math.Min(100, preset.Opacity)),
                     .FontFamily = If(preset.FontFamily, "Arial").Trim(),
                     .FontSizePixels = Math.Max(8, Math.Min(5000, preset.FontSizePixels)),
-                    .FillColor = NormalizeHexColor(preset.FillColor, "#FFFFFFFF")
+                    .FillColor = NormalizeHexColor(preset.FillColor, "#FFFFFFFF"),
+                    .StrokeColor = NormalizeHexColor(preset.StrokeColor, "#FF000000"),
+                    .StrokeWidth = Math.Max(0, Math.Min(200, preset.StrokeWidth)),
+                    .FillKind = NormalizeWatermarkFillKind(preset.FillKind),
+                    .FillColor2 = NormalizeHexColor(preset.FillColor2, "#FFFFFFFF"),
+                    .GradientAngleDegrees = Math.Max(0, Math.Min(360, preset.GradientAngleDegrees)),
+                    .GradientInverted = preset.GradientInverted,
+                    .BlendMode = NormalizeWatermarkBlendMode(preset.BlendMode),
+                    .BlendIncludesStroke = preset.BlendIncludesStroke,
+                    .Bold = preset.Bold,
+                    .Italic = preset.Italic,
+                    .LetterSpacingPercent = Math.Max(-100, Math.Min(500, preset.LetterSpacingPercent)),
+                    .FlipHorizontal = preset.FlipHorizontal,
+                    .FlipVertical = preset.FlipVertical,
+                    .ShadowEnabled = preset.ShadowEnabled,
+                    .ShadowOffsetXPercent = Math.Max(-100, Math.Min(100, preset.ShadowOffsetXPercent)),
+                    .ShadowOffsetYPercent = Math.Max(-100, Math.Min(100, preset.ShadowOffsetYPercent)),
+                    .ShadowBlur = Math.Max(0, Math.Min(100, preset.ShadowBlur)),
+                    .ShadowStrength = Math.Max(0, Math.Min(100, preset.ShadowStrength)),
+                    .ShadowColor = NormalizeHexColor(preset.ShadowColor, "#80000000"),
+                    .ShadowRounded = preset.ShadowRounded,
+                    .ShadowCornerRadiusPercent = Math.Max(0, Math.Min(100, preset.ShadowCornerRadiusPercent)),
+                    .ShadowSizePercent = Math.Max(0, Math.Min(200, preset.ShadowSizePercent)),
+                    .GlowEnabled = preset.GlowEnabled,
+                    .GlowBlur = Math.Max(0, Math.Min(100, preset.GlowBlur)),
+                    .GlowStrength = Math.Max(0, Math.Min(100, preset.GlowStrength)),
+                    .GlowColor = NormalizeHexColor(preset.GlowColor, "#FFFFFF00")
                 })
             Next
             Return result.OrderBy(Function(p) p.Name, StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        Private Shared Function NormalizeWatermarkFillKind(value As String) As String
+            Select Case If(value, "").Trim().ToLowerInvariant()
+                Case "lineargradient" : Return "LinearGradient"
+                Case "radialgradient" : Return "RadialGradient"
+                Case Else : Return "Solid"
+            End Select
+        End Function
+
+        Private Shared Function NormalizeWatermarkBlendMode(value As String) As String
+            Dim candidate = If(value, "").Trim()
+            Return If(String.IsNullOrWhiteSpace(candidate), "Normal", candidate)
         End Function
 
         Public Shared Function NormalizeAnnotationAnchorName(value As String) As String

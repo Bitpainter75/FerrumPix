@@ -203,6 +203,14 @@ Namespace Services
         Friend Shared Function Command(handle As IntPtr, args As IntPtr) As Integer
         End Function
 
+        ''' <summary>Reiht einen Befehl bei mpv ein, ohne auf dessen Core-Thread zu warten.
+        ''' Das ist für Stop/Load/Quit wichtig: diese Aufrufe entstehen häufig aus einer
+        ''' UI-Geste, und ein synchrones mpv_command kann während eines nativen macOS-Redraws
+        ''' auf eben diesen UI-Thread zurückwarten.</summary>
+        <DllImport("libmpv", EntryPoint:="mpv_command_async", CallingConvention:=CallingConvention.Cdecl)>
+        Friend Shared Function CommandAsync(handle As IntPtr, replyUserData As ULong, args As IntPtr) As Integer
+        End Function
+
         <DllImport("libmpv", EntryPoint:="mpv_wait_event", CallingConvention:=CallingConvention.Cdecl)>
         Friend Shared Function WaitEvent(handle As IntPtr, timeout As Double) As IntPtr
         End Function

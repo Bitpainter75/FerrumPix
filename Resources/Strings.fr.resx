@@ -1781,7 +1781,7 @@
     <value>Les images sélectionnées seront enregistrées sous forme de collage dans le dossier actuel.</value>
   </data>
   <data name="Dramatisch_35e38c2b" xml:space="preserve">
-    <value>Dramatisch</value>
+    <value>Dramatique</value>
   </data>
   <data name="Drehung_bb151d57" xml:space="preserve">
     <value>Rotation</value>
@@ -1793,7 +1793,7 @@
     <value>Appliquer la rotation à l'aperçu</value>
   </data>
   <data name="Duoton_63f5b65d" xml:space="preserve">
-    <value>Duoton</value>
+    <value>Bichromie</value>
   </data>
   <data name="EINF_GEN_a58d212b" xml:space="preserve">
     <value>INSÉRER</value>
@@ -1892,7 +1892,7 @@
     <value>Peindre</value>
   </data>
   <data name="Matt_0f9fe690" xml:space="preserve">
-    <value>Matt</value>
+    <value>Mat</value>
   </data>
   <data name="Methode_5dcc6d55" xml:space="preserve">
     <value>Méthode</value>
@@ -7826,7 +7826,7 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Aigue-marine</value>
   </data>
-  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
     <value>Retour à la galerie (en plein écran : quitter le plein écran ; également avec Espace)</value>
   </data>
   <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
@@ -7844,9 +7844,27 @@
   <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
     <value>Mode pavé tactile</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Dans le visualiseur, SHIFT+glisser sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
-  </data>
   <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Inverser le tracé</value></data>
   <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Placer le texte de l’autre côté de la ligne du tracé</value></data>
+  <data name="Anwenden_bernimmt_die_Perspektive_ins_Rezept_Mas_3b171a53" xml:space="preserve">
+    <value>Appliquer intègre la perspective à la recette : les masques suivent, et elle est de nouveau là à la prochaine ouverture de l'image.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_df83a6c6" xml:space="preserve">
+    <value>Calque de masque à partir du tracé</value>
+  </data>
+  <data name="In_Text_umwandeln_70072158" xml:space="preserve">
+    <value>Convertir en texte</value>
+  </data>
+  <data name="Erzeugt_eine_neue_eigenst_ndige_Maskenebene_aus__03cc9a86" xml:space="preserve">
+    <value>Crée un calque de masque autonome à partir de ce tracé. Le tracé est conservé pour des retouches ultérieures.</value>
+  </data>
+  <data name="Wandelt_diesen_Pfad_in_ein_Textobjekt_um_Seine_G_3c801d50" xml:space="preserve">
+    <value>Convertit ce tracé en objet texte. Sa ligne de base reste modifiable avec l'outil Tracé.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
+    <value>Calque de masque créé à partir du tracé</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
+    <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Dans le visualiseur, SHIFT+glisser sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
+  </data>
 </root>

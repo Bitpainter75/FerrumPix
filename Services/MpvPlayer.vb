@@ -73,7 +73,7 @@ Namespace Services
                 _pendingPath = path
                 If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
                 SetPauseLocked(True)
-                Dim result = CommandLocked("loadfile", path, "replace")
+                Dim result = CommandAsyncLocked("loadfile", path, "replace")
                 If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
             End SyncLock
         End Sub
@@ -83,7 +83,7 @@ Namespace Services
                 If String.IsNullOrWhiteSpace(_pendingPath) Then Return
                 If _initializationFailed OrElse Not _initialized OrElse _windowHandle = IntPtr.Zero Then Return
                 SetPauseLocked(True)
-                Dim result = CommandLocked("loadfile", _pendingPath, "replace")
+                Dim result = CommandAsyncLocked("loadfile", _pendingPath, "replace")
                 If result >= 0 AndAlso _pendingPlay Then SetPauseLocked(False)
             End SyncLock
         End Sub
@@ -118,7 +118,10 @@ Namespace Services
         Public Sub [Stop]()
             SyncLock _syncRoot
                 _pendingPlay = False
-                If _initialized AndAlso Not _initializationFailed Then CommandLocked("stop")
+                ' Nie mpv_command auf dem UI-Thread: auf macOS kann Stop während eines nativen
+                ' Video-Redraws auf den Window-Server warten und die gesamte Avalonia-Schleife
+                ' festhalten. Die asynchrone Variante bestätigt nur das Einreihen des Befehls.
+                If _initialized AndAlso Not _initializationFailed Then CommandAsyncLocked("stop")
             End SyncLock
         End Sub
 
@@ -279,6 +282,10 @@ Namespace Services
             Return CommandRaw(_handle, args)
         End Function
 
+        Private Function CommandAsyncLocked(ParamArray args As String()) As Integer
+            Return CommandAsyncRaw(_handle, args)
+        End Function
+
         Private Shared Function CommandRaw(handle As IntPtr, ParamArray args As String()) As Integer
             If handle = IntPtr.Zero Then Return -1
 
@@ -298,6 +305,34 @@ Namespace Services
                         Marshal.WriteIntPtr(arrayPtr, i * IntPtr.Size, ptrs(i))
                     Next
                     Return MpvInterop.Command(handle, arrayPtr)
+                Finally
+                    Marshal.FreeHGlobal(arrayPtr)
+                End Try
+            Finally
+                For Each allocation In allocations
+                    allocation.Dispose()
+                Next
+            End Try
+        End Function
+
+        Private Shared Function CommandAsyncRaw(handle As IntPtr, ParamArray args As String()) As Integer
+            If handle = IntPtr.Zero Then Return -1
+
+            Dim allocations As New List(Of Utf8String)()
+            Dim ptrs As New List(Of IntPtr)()
+            Try
+                For Each arg In args
+                    Dim utf8 = New Utf8String(arg)
+                    allocations.Add(utf8)
+                    ptrs.Add(utf8.Pointer)
+                Next
+                ptrs.Add(IntPtr.Zero)
+                Dim arrayPtr = Marshal.AllocHGlobal(IntPtr.Size * ptrs.Count)
+                Try
+                    For i = 0 To ptrs.Count - 1
+                        Marshal.WriteIntPtr(arrayPtr, i * IntPtr.Size, ptrs(i))
+                    Next
+                    Return MpvInterop.CommandAsync(handle, 0UL, arrayPtr)
                 Finally
                     Marshal.FreeHGlobal(arrayPtr)
                 End Try
@@ -351,27 +386,33 @@ Namespace Services
                 _initialized = False
             End SyncLock
 
-            If handleToDestroy <> IntPtr.Zero Then
-                Try
-                    CommandRaw(handleToDestroy, "quit")
-                Catch
-                End Try
-            End If
-
-            If eventThread IsNot Nothing AndAlso
-               eventThread.IsAlive AndAlso
-               Not Object.ReferenceEquals(Thread.CurrentThread, eventThread) Then
-                eventThread.Join(2000)
-            End If
-
             SyncLock _syncRoot
                 _handle = IntPtr.Zero
                 _eventThread = Nothing
             End SyncLock
 
-            If handleToDestroy <> IntPtr.Zero AndAlso (eventThread Is Nothing OrElse Not eventThread.IsAlive) Then
-                MpvInterop.TerminateDestroy(handleToDestroy)
+            If handleToDestroy <> IntPtr.Zero Then
+                Try
+                    CommandAsyncRaw(handleToDestroy, "quit")
+                Catch
+                End Try
+                ' mpv_terminate_destroy kann bei einem noch aktiven Cocoa-Ausgabeziel warten.
+                ' Auf dem UI-Thread würde das das gesamte Fenster einfrieren. Der Worker wartet
+                ' stattdessen auf die Ereignisschleife und zerstört den Handle erst danach.
+                ThreadPool.QueueUserWorkItem(Sub() DisposeNativeAfterEventLoop(handleToDestroy, eventThread))
             End If
+        End Sub
+
+        Private Shared Sub DisposeNativeAfterEventLoop(handle As IntPtr, eventThread As Thread)
+            Try
+                If eventThread IsNot Nothing AndAlso eventThread.IsAlive AndAlso
+                   Not Object.ReferenceEquals(Thread.CurrentThread, eventThread) Then
+                    eventThread.Join()
+                End If
+                MpvInterop.TerminateDestroy(handle)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("VideoPlayback.Dispose", ex)
+            End Try
         End Sub
 
         Private NotInheritable Class Utf8String

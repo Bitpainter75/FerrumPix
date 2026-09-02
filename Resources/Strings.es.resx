@@ -1781,7 +1781,7 @@
     <value>Las imágenes seleccionadas se guardarán como un collage en la carpeta actual.</value>
   </data>
   <data name="Dramatisch_35e38c2b" xml:space="preserve">
-    <value>Dramatisch</value>
+    <value>Dramático</value>
   </data>
   <data name="Drehung_bb151d57" xml:space="preserve">
     <value>Rotación</value>
@@ -1793,7 +1793,7 @@
     <value>Aplicar la rotación a la vista previa</value>
   </data>
   <data name="Duoton_63f5b65d" xml:space="preserve">
-    <value>Duoton</value>
+    <value>Duotono</value>
   </data>
   <data name="EINF_GEN_a58d212b" xml:space="preserve">
     <value>INSERTAR</value>
@@ -1892,7 +1892,7 @@
     <value>Pintar</value>
   </data>
   <data name="Matt_0f9fe690" xml:space="preserve">
-    <value>Matt</value>
+    <value>Mate</value>
   </data>
   <data name="Methode_5dcc6d55" xml:space="preserve">
     <value>Método</value>
@@ -7826,7 +7826,7 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Aguamarina</value>
   </data>
-  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
     <value>Volver a la galería (en pantalla completa: salir de pantalla completa; también con Espacio)</value>
   </data>
   <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
@@ -7844,9 +7844,27 @@
   <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
     <value>Modo de trackpad</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. En el visor, SHIFT+arrastrar selecciona un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
-  </data>
   <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Invertir trazado</value></data>
   <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Colocar el texto al otro lado de la línea del trazado</value></data>
+  <data name="Anwenden_bernimmt_die_Perspektive_ins_Rezept_Mas_3b171a53" xml:space="preserve">
+    <value>Aplicar incorpora la perspectiva a la receta: las máscaras la acompañan y vuelve a estar ahí la próxima vez que abras la imagen.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_df83a6c6" xml:space="preserve">
+    <value>Capa de máscara a partir del trazado</value>
+  </data>
+  <data name="In_Text_umwandeln_70072158" xml:space="preserve">
+    <value>Convertir en texto</value>
+  </data>
+  <data name="Erzeugt_eine_neue_eigenst_ndige_Maskenebene_aus__03cc9a86" xml:space="preserve">
+    <value>Crea una capa de máscara nueva e independiente a partir de este trazado. El trazado se conserva para ajustarlo más tarde.</value>
+  </data>
+  <data name="Wandelt_diesen_Pfad_in_ein_Textobjekt_um_Seine_G_3c801d50" xml:space="preserve">
+    <value>Convierte este trazado en un objeto de texto. Su línea base sigue siendo editable con la herramienta de trazado.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
+    <value>Capa de máscara creada a partir del trazado</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
+    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. En el visor, SHIFT+arrastrar selecciona un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
+  </data>
 </root>

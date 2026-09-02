@@ -7866,7 +7866,7 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>Аквамарин</value>
   </data>
-  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
     <value>Вернуться в галерею (в полноэкранном режиме: выйти из полноэкранного режима; также клавишей пробела)</value>
   </data>
   <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
@@ -7884,9 +7884,27 @@
   <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
     <value>Режим трекпада</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>Включает жесты трекпада: масштабирование двумя пальцами в просмотрщике, горизонтальный свайп для листания и перетаскивание для панорамирования увеличенного изображения. В просмотрщике SHIFT+перетаскивание выделяет кадрирование. Управление мышью не меняется, пока режим выключен.</value>
-  </data>
   <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>Инвертировать контур</value></data>
   <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>Разместить текст по другую сторону линии контура</value></data>
+  <data name="Anwenden_bernimmt_die_Perspektive_ins_Rezept_Mas_3b171a53" xml:space="preserve">
+    <value>Применение переносит перспективу в рецепт: маски идут вместе с ней, и при следующем открытии снимка она снова на месте.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_df83a6c6" xml:space="preserve">
+    <value>Слой маски из контура</value>
+  </data>
+  <data name="In_Text_umwandeln_70072158" xml:space="preserve">
+    <value>Преобразовать в текст</value>
+  </data>
+  <data name="Erzeugt_eine_neue_eigenst_ndige_Maskenebene_aus__03cc9a86" xml:space="preserve">
+    <value>Создаёт новый самостоятельный слой маски из этого контура. Контур сохраняется для последующей правки.</value>
+  </data>
+  <data name="Wandelt_diesen_Pfad_in_ein_Textobjekt_um_Seine_G_3c801d50" xml:space="preserve">
+    <value>Превращает этот контур в текстовый объект. Его базовая линия остаётся доступной для правки инструментом контура.</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
+    <value>Слой маски создан из контура</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
+    <value>Включает жесты трекпада: масштабирование двумя пальцами в просмотрщике, горизонтальный свайп для листания и перетаскивание для панорамирования увеличенного изображения. В просмотрщике SHIFT+перетаскивание выделяет кадрирование. Управление мышью не меняется, пока режим выключен.</value>
+  </data>
 </root>

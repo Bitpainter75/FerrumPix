@@ -7824,7 +7824,7 @@
   <data name="Aqua_644abaa7" xml:space="preserve">
     <value>青绿</value>
   </data>
-  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_09e3ae02" xml:space="preserve">
+  <data name="Zur_ck_zur_Galerie_im_Vollbild_Vollbild_verlasse_dc1ff308" xml:space="preserve">
     <value>返回图库（全屏时：退出全屏；也可按空格键）</value>
   </data>
   <data name="Markierungen_im_Filmstrip_anzeigen_4861434e" xml:space="preserve">
@@ -7842,9 +7842,27 @@
   <data name="Trackpad_Modus_9bc9783c" xml:space="preserve">
     <value>触控板模式</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_68d97057" xml:space="preserve">
-    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
-  </data>
   <data name="Pfad_invertieren_f134b76d" xml:space="preserve"><value>反转路径</value></data>
   <data name="Text_auf_die_andere_Seite_der_Pfadlinie_setzen_fa957ffd" xml:space="preserve"><value>将文本放置在路径线的另一侧</value></data>
+  <data name="Anwenden_bernimmt_die_Perspektive_ins_Rezept_Mas_3b171a53" xml:space="preserve">
+    <value>应用会把透视写入调整方案：蒙版随之变换，下次打开图片时它依然在。</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_df83a6c6" xml:space="preserve">
+    <value>从路径创建蒙版图层</value>
+  </data>
+  <data name="In_Text_umwandeln_70072158" xml:space="preserve">
+    <value>转换为文字</value>
+  </data>
+  <data name="Erzeugt_eine_neue_eigenst_ndige_Maskenebene_aus__03cc9a86" xml:space="preserve">
+    <value>从此路径创建一个新的独立蒙版图层。路径会保留，便于以后调整。</value>
+  </data>
+  <data name="Wandelt_diesen_Pfad_in_ein_Textobjekt_um_Seine_G_3c801d50" xml:space="preserve">
+    <value>把此路径转换为文字对象。其基线仍可用路径工具编辑。</value>
+  </data>
+  <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
+    <value>已从路径创建蒙版图层</value>
+  </data>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
+    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
+  </data>
 </root>
