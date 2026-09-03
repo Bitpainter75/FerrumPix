@@ -186,17 +186,9 @@ Namespace Services
             Dim container = description.Element(name)
             If container Is Nothing Then Return
             For Each li In container.Descendants(RdfNs + "li")
-                Dim value = If(li.Value, "").Trim()
-                If value.Length = 0 Then Continue For
-
-                ' Hierarchische Stichworte kommen als "Reise|Italien|Rom". Unsere Stichworte sind flach,
-                ' deshalb nur das letzte Glied - der ganze Pfad wäre als ein Wort unbrauchbar.
-                Dim leaf = value.Split("|"c).Last().Trim()
-                If leaf.Length = 0 Then Continue For
-
-                ' KOMMA IST UNSER TRENNZEICHEN: LibraryService.SetTags fügt mit Komma zusammen und
-                ' ParseTags trennt daran. Ein Stichwort mit Komma zerfiele beim nächsten Lesen in zwei.
-                leaf = leaf.Replace(","c, " "c).Trim()
+                ' Hierarchie zum Blatt, Komma raus - beides steht in LibraryService.NormalizeKeyword,
+                ' weil dieselben Regeln auch für die eingebetteten Stichwörter gelten.
+                Dim leaf = LibraryService.NormalizeKeyword(li.Value)
                 If leaf.Length = 0 Then Continue For
 
                 If Not target.Any(Function(t) String.Equals(t, leaf, StringComparison.OrdinalIgnoreCase)) Then

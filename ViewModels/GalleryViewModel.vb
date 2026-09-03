@@ -5950,17 +5950,22 @@ Namespace ViewModels
             End Try
         End Function
 
-        ''' <summary>Übernimmt Bewertung, Farbetikett und Stichworte aus einer XMP-Beistelldatei (und die
-        ''' Bewertung aus eingebettetem XMP) in die Bibliothek. Liefert zurück, was sich geändert hat,
-        ''' damit der Aufrufer die Anzeige nachziehen kann - Nothing/leer heißt „nichts angefasst".
+        ''' <summary>Übernimmt Bewertung, Farbetikett und Stichworte aus einer XMP-Beistelldatei (und
+        ''' Bewertung wie Stichworte aus der Bilddatei selbst) in die Bibliothek. Liefert zurück, was
+        ''' sich geändert hat, damit der Aufrufer die Anzeige nachziehen kann - Nothing/leer heißt
+        ''' „nichts angefasst".
         '''
         ''' REGEL: Es wird nur gefüllt, was in FerrumPix leer ist. Eine selbst vergebene Bewertung oder
         ''' Markierung darf ein Scan niemals überschreiben - genau das tat der Import des eingebetteten
         ''' Ratings vorher bedingungslos, sodass eigene Bewertungen bei jedem erneuten Einlesen verloren
         ''' gingen. Stichworte sind der Sonderfall: dort ist Vereinigen richtig, nicht Ersetzen, weil
         ''' beide Seiten unabhängig voneinander sinnvolle Einträge haben können.</summary>
+        ''' <param name="embeddedKeywords">Die Stichworte AUS der Bilddatei (IPTC 2:25, dc:subject,
+        ''' lr:hierarchicalSubject), siehe ExifData.EmbeddedKeywords. Sie sind die schwächste der drei
+        ''' Quellen und kommen deshalb zuletzt.</param>
         Private Shared Function ImportSidecarCatalogData(filePath As String,
                                                         embeddedRating As Integer?,
+                                                        embeddedKeywords As List(Of String),
                                                         currentRating As Integer,
                                                         currentColorLabel As String,
                                                         currentTags As List(Of String)) _
@@ -6006,21 +6011,6 @@ Namespace ViewModels
                         result.HasColorLabel = True
                     End If
 
-                    If (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.HasKeywords) AndAlso sidecar.Keywords.Count > 0 Then
-                        Dim merged As New List(Of String)(If(currentTags, New List(Of String)()))
-                        Dim added = False
-                        For Each keyword In sidecar.Keywords
-                            If Not merged.Any(Function(t) String.Equals(t, keyword, StringComparison.OrdinalIgnoreCase)) Then
-                                merged.Add(keyword)
-                                added = True
-                            End If
-                        Next
-                        If added Then
-                            LibraryService.Instance.SetTags(filePath, merged)
-                            result.Tags = merged
-                        End If
-                    End If
-
                     ' Und die Gesichtsregionen: sie stehen in derselben Beistelldatei und tragen,
                     ' WER und WO. Ohne diesen Weg käme eine Zuordnung, die in einem anderen Programm
                     ' entstanden ist, nie an - und wer FerrumPix neu aufsetzt, finge bei null an,
@@ -6029,6 +6019,13 @@ Namespace ViewModels
                         LibraryService.Instance.ImportFaceRegionsFromXmp(filePath, sidecarPath)
                     End If
                 End If
+
+                ' ZULETZT die Stichworte aus Beistelldatei und Bilddatei, ueber denselben Weg wie im
+                ' Katalogindex. Sie werden VEREINIGT und nicht vom Stichwortblock der .fpxmp
+                ' verdraengt - der entstuende sonst beim ersten Import selbst und sperrte danach
+                ' jedes spaeter extern ergaenzte Stichwort aus (siehe KeywordImportService).
+                Dim withFileKeywords = KeywordImportService.Import(filePath, embeddedKeywords, sidecar?.Keywords)
+                If withFileKeywords IsNot Nothing Then result.Tags = withFileKeywords
             Catch
             End Try
             Return result
@@ -6046,7 +6043,8 @@ Namespace ViewModels
                 Dim xmpRating = ExifService.GetXmpRating(data)
                 Dim catalogSummary = ExifService.BuildCatalogSummary(data, fields)
                 ' Erst importieren, dann den Schnappschuss schreiben - siehe QueueBackgroundMetaRefresh.
-                Dim imported = ImportSidecarCatalogData(meta.FilePath, xmpRating, meta.Rating, meta.ColorLabel, meta.Tags)
+                Dim imported = ImportSidecarCatalogData(meta.FilePath, xmpRating, data?.EmbeddedKeywords,
+                                                       meta.Rating, meta.ColorLabel, meta.Tags)
                 LibraryService.Instance.SyncExifData(meta.FilePath, fields, catalogSummary)
                 If imported.Rating.HasValue Then meta.Rating = imported.Rating.Value
                 If imported.Favorite.HasValue Then meta.IsFavorite = imported.Favorite.Value
@@ -6148,6 +6146,10 @@ Namespace ViewModels
             Dim detail = ImmichIndexService.Instance.TryGet(serverKey, asset.Id, asset.UpdatedAt)
             Dim taken = If(asset.ExifDateTaken, asset.FileCreatedAt)
             If detail IsNot Nothing Then taken = If(detail.ExifDateTaken, taken)
+            ' Objektiv, Brennweite, Belichtungszeit und Koordinaten stehen hier aus demselben Grund
+            ' wie Kamera und ISO: es ist dasselbe Suchmodell wie fuer eine lokale Datei. Ohne sie
+            ' blieb das Feld Nothing, und eine Bedingung auf die BRENNWEITE konnte bei einem
+            ' Serverbild nie greifen - sie steht in der Auswahlliste, der Wert kam aber nirgends an.
             Return New LibraryImageMeta With {
                 .FilePath = ImmichService.MakePseudoPath(asset.Id, asset.FileName),
                 .IsFavorite = If(detail IsNot Nothing, detail.IsFavorite, asset.IsFavorite),
@@ -6160,7 +6162,12 @@ Namespace ViewModels
                 .ImageWidth = If(asset.Width > 0, asset.Width, If(detail Is Nothing, 0, detail.Width)),
                 .ImageHeight = If(asset.Height > 0, asset.Height, If(detail Is Nothing, 0, detail.Height)),
                 .City = If(Not String.IsNullOrWhiteSpace(asset.City), asset.City, If(detail Is Nothing, "", detail.City)),
-                .Country = If(Not String.IsNullOrWhiteSpace(asset.Country), asset.Country, If(detail Is Nothing, "", detail.Country))
+                .Country = If(Not String.IsNullOrWhiteSpace(asset.Country), asset.Country, If(detail Is Nothing, "", detail.Country)),
+                .Lens = If(detail IsNot Nothing, detail.Lens, ""),
+                .FocalLengthMm = If(detail IsNot Nothing, detail.FocalLengthMm, Nothing),
+                .ShutterSpeed = If(detail IsNot Nothing, detail.ShutterSpeed, ""),
+                .GpsLatitude = If(detail IsNot Nothing, detail.GpsLatitude, Nothing),
+                .GpsLongitude = If(detail IsNot Nothing, detail.GpsLongitude, Nothing)
             }
         End Function
 
@@ -7393,6 +7400,7 @@ Namespace ViewModels
                                                                ' Zustand von davor und der Ordner gaelte beim naechsten Wechsel
                                                                ' erneut als veraltet.
                                                                Dim imported = ImportSidecarCatalogData(item.FilePath, xmpRating,
+                                                                                                       data?.EmbeddedKeywords,
                                                                                                        item.Rating, item.ColorLabel, item.Tags)
                                                                LibraryService.Instance.SyncExifData(item.FilePath, fields, catalogSummary)
                                                                Dim width = If(fields.ImageWidth, 0)

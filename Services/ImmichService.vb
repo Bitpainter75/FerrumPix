@@ -39,6 +39,15 @@ Namespace Services
         Public Property Description As String = ""
         Public Property Iso As Integer?
         Public Property Aperture As Double?
+        ''' <summary>Objektiv, Brennweite in Millimetern, Belichtungszeit und Koordinaten - dieselben
+        ''' Felder, die der lokale Katalog fuehrt (siehe LibraryService.ExifColumns). Sie kommen aus
+        ''' demselben Detail-Abruf wie Kamera und ISO; ohne sie blieb ein Serverbild bei jeder
+        ''' Bedingung darauf aussen vor.</summary>
+        Public Property Lens As String = ""
+        Public Property FocalLengthMm As Double?
+        Public Property ShutterSpeed As String = ""
+        Public Property GpsLatitude As Double?
+        Public Property GpsLongitude As Double?
         Public Property IsFavorite As Boolean
         Public Property FileSizeBytes As Long
         ''' Immichs Änderungszeitstempel - Invalidierungsschlüssel für den lokalen Metadaten-Index.
@@ -1260,6 +1269,15 @@ Namespace Services
                 item.Camera = String.Join(" ", {make, model}.Where(Function(s) Not String.IsNullOrEmpty(s))).Trim()
                 item.City = If(a.ExifInfo.City, "").Trim()
                 item.Country = If(a.ExifInfo.Country, "").Trim()
+                item.Lens = If(a.ExifInfo.LensModel, "").Trim()
+                item.FocalLengthMm = a.ExifInfo.FocalLength
+                item.ShutterSpeed = If(a.ExifInfo.ExposureTime, "").Trim()
+                ' Nur als PAAR: eine halbe Koordinate zeigt auf den Nullmeridian und damit auf
+                ' einen Ort, den es nicht gibt.
+                If a.ExifInfo.Latitude.HasValue AndAlso a.ExifInfo.Longitude.HasValue Then
+                    item.GpsLatitude = a.ExifInfo.Latitude
+                    item.GpsLongitude = a.ExifInfo.Longitude
+                End If
             End If
             If a.Tags IsNot Nothing Then
                 item.Tags = a.Tags.
@@ -1995,6 +2013,16 @@ Namespace Services
             Public Property Description As String
             Public Property Rating As Double?
             Public Property FileSizeInByte As Double?
+            ' Objektiv, Brennweite, Belichtungszeit und Koordinaten liefert derselbe Abruf mit; sie
+            ' standen nur nicht im Modell. Ohne sie fehlten dem Serverbild genau die Felder, die der
+            ' lokale Katalog fuehrt - eine Bedingung auf die Brennweite konnte bei Immich nie
+            ' greifen, weil der Wert nirgends ankam.
+            Public Property LensModel As String
+            Public Property FocalLength As Double?
+            ''' Immich schreibt sie als Text ("1/250"), nicht als Zahl.
+            Public Property ExposureTime As String
+            Public Property Latitude As Double?
+            Public Property Longitude As Double?
             ' Der Server benennt den Aufnahmeort selbst (Rückwärtssuche aus den Koordinaten) und
             ' liefert ihn in der Metadaten-Suche wie im Detail-Abruf mit.
             Public Property City As String

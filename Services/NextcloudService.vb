@@ -417,9 +417,24 @@ Namespace Services
             ''' <see cref="TagsRaw"/> zusammen. Das wirft beim ERSTEN Deserialisieren des Typs, also
             ''' zur Laufzeit und nicht beim Bauen. Dasselbe gilt fuer jede weitere abgeleitete
             ''' Eigenschaft in diesen Datentypen.</summary>
+            ''' <summary>Die Stichwoerter aus dem Index, wenn dieser Eintrag von dort kommt.
+            '''
+            ''' Sie MUESSEN neben TagsRaw stehen und duerfen es nicht ersetzen: ein JsonElement gilt
+            ''' nur, solange sein JsonDocument lebt, und ein aus der Datenbank zusammengebautes waere
+            ''' nach dem Lesen ungueltig. Nothing heisst "kein Indexeintrag", eine leere Liste heisst
+            ''' "der Server hat keine Stichwoerter gemeldet" - das ist nicht dasselbe.</summary>
+            <JsonIgnore>
+            Private Property CachedTags As List(Of String)
+
+            ''' <summary>Setzt die Stichwoerter aus dem Index. Nur fuer den Index gedacht.</summary>
+            Public Sub SetCachedTags(tags As List(Of String))
+                CachedTags = tags
+            End Sub
+
             <JsonIgnore>
             Public ReadOnly Property Tags As List(Of String)
                 Get
+                    If CachedTags IsNot Nothing Then Return CachedTags
                     Dim result = New List(Of String)()
                     Select Case TagsRaw.ValueKind
                         Case JsonValueKind.Array
@@ -1356,7 +1371,11 @@ Namespace Services
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(fileId) Then Return False
             Dim tagId = Await EnsureSystemTagAsync(tagName, cancellationToken).ConfigureAwait(False)
             If String.IsNullOrEmpty(tagId) Then Return False
-            Return Await SendDavAsync("PUT", TagRelationUrl(fileId, tagId), cancellationToken:=cancellationToken).ConfigureAwait(False)
+            Dim ok = Await SendDavAsync("PUT", TagRelationUrl(fileId, tagId), cancellationToken:=cancellationToken).ConfigureAwait(False)
+            ' Auch in den Index, wie bei Immich: eine Stichwortaenderung hebt den Etag der Datei
+            ' NICHT an, der gespeicherte Eintrag gaelte sonst weiter mit der alten Liste.
+            If ok Then NextcloudIndexService.Instance.UpdateTag(ServerKey, fileId, tagName, add:=True)
+            Return ok
         End Function
 
         ''' <summary>Loest ein Stichwort von einer Datei. Der Tag selbst bleibt auf dem Server - ihn
@@ -1369,7 +1388,9 @@ Namespace Services
             Dim tagId As String = Nothing
             ' Kennt der Server das Stichwort gar nicht, ist es an der Datei auch nicht dran.
             If Not alle.TryGetValue(If(tagName, "").Trim(), tagId) Then Return True
-            Return Await SendDavAsync("DELETE", TagRelationUrl(fileId, tagId), cancellationToken:=cancellationToken).ConfigureAwait(False)
+            Dim ok = Await SendDavAsync("DELETE", TagRelationUrl(fileId, tagId), cancellationToken:=cancellationToken).ConfigureAwait(False)
+            If ok Then NextcloudIndexService.Instance.UpdateTag(ServerKey, fileId, tagName, add:=False)
+            Return ok
         End Function
 
         ''' <summary>Die Dateikennung zu einem Pfad im Dateibaum. Gebraucht dort, wo nur der Pfad
@@ -1851,6 +1872,30 @@ Namespace Services
                                                           cancellationToken).ConfigureAwait(False)
         End Function
 
+        ''' <summary>Dieselben Einzelheiten, aber ZUERST aus dem lokalen Index (siehe
+        ''' <see cref="NextcloudIndexService"/>). Das Gegenstueck zu
+        ''' <c>ImmichService.GetAssetDetailCachedAsync</c>.
+        '''
+        ''' Ohne ihn holte jede Sitzung dieselben Angaben erneut, je Aufnahme eine Anfrage. Der Etag
+        ''' entscheidet: passt er, gilt der gespeicherte Stand; sonst wird geholt und ueberschrieben.
+        ''' OHNE Etag geht der Weg direkt zum Server - ein Eintrag, den nichts veralten laesst, waere
+        ''' schlimmer als gar keiner.</summary>
+        Public Shared Async Function GetInfoCachedAsync(fileId As String, etag As String,
+                                                        Optional cancellationToken As CancellationToken = Nothing) As Task(Of NextcloudPhoto)
+            If String.IsNullOrWhiteSpace(fileId) Then Return Nothing
+            Dim key = ServerKey
+            If Not String.IsNullOrEmpty(etag) Then
+                Dim cached = NextcloudIndexService.Instance.TryGet(key, fileId, etag)
+                If cached IsNot Nothing Then Return cached
+            End If
+
+            Dim info = Await GetInfoAsync(fileId, cancellationToken).ConfigureAwait(False)
+            If info IsNot Nothing AndAlso Not String.IsNullOrEmpty(etag) Then
+                NextcloudIndexService.Instance.Put(key, fileId, etag, info)
+            End If
+            Return info
+        End Function
+
         ' ── Plattenzwischenspeicher der Vorschaubilder ──────────────────────────
 
         Private Shared ReadOnly CacheRoot As String =
@@ -1913,6 +1958,11 @@ Namespace Services
                 Return 0
             End Try
         End Function
+
+        ' "Cache leeren" laesst den Metadaten-Index BEWUSST stehen - dieselbe Entscheidung wie bei
+        ' Immich: er ist teuer neu aufzubauen und ueber den Etag selbst-invalidierend. Ein
+        ' Serverwechsel braucht kein Loeschen, weil der Serverschluessel Teil des Primaerschluessels
+        ' ist und fremde Eintraege damit nie gelesen werden.
 
         ''' <summary>Kantenlaenge der Kachelvorschau. Memories rechnet die Vorschau selbst zurecht,
         ''' angefragt wird also gleich die Groesse, die die Kachel braucht.</summary>

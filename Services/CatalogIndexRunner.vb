@@ -374,6 +374,15 @@ Namespace Services
             ' XMP-Beistelldatei zusaetzlich in eine .fpxmp uebersetzt.
             LibraryService.Instance.ImportFpxmpCatalogData(filePath)
 
+            ' Und die Stichwoerter aus der Beistelldatei UND aus der Bilddatei selbst - derselbe Weg,
+            ' den auch der Ordnerlauf der Galerie nimmt. Ohne ihn faende die Suche sie erst, wenn
+            ' jemand den Ordner einmal angesehen hat, bei einem Archiv auf einem Netzlaufwerk also
+            ' nie; und eine geaenderte .xmp loeste hier zwar einen neuen Durchlauf aus (sie steht im
+            ' Frische-Stempel), der ihre Stichwoerter dann nicht ansah.
+            ' Der Import legt NICHTS neben dem Foto an; das ist die Bedingung, unter der er hier
+            ' ueberhaupt stehen darf (siehe LibraryService.ImportFileKeywords).
+            KeywordImportService.Import(filePath, data?.EmbeddedKeywords)
+
             Dim rating = ExifService.GetXmpRating(data)
             If rating.HasValue AndAlso rating.Value > 0 AndAlso
                LibraryService.Instance.GetRating(filePath) = 0 Then

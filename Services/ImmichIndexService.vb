@@ -110,6 +110,18 @@ Namespace Services
                 ' nächste Detail-Abruf.
                 If EnsureColumn(conn, "AssetMeta", "City", "TEXT") Then ClearAssetMeta(conn)
                 EnsureColumn(conn, "AssetMeta", "Country", "TEXT")
+                ' Dieselben Felder wie im lokalen Katalog. Aus demselben Grund wie bei den
+                ' Ortsspalten wird der Altbestand geleert und nicht nur die Spalte angehaengt: ein
+                ' alter Eintrag gilt so lange als gueltig, wie sein UpdatedAt passt, und saehe sonst
+                ' fuer immer aus wie "dieses Bild hat kein Objektiv".
+                Dim addedExtras = EnsureColumn(conn, "AssetMeta", "Lens", "TEXT")
+                addedExtras = EnsureColumn(conn, "AssetMeta", "FocalLengthMm", "REAL") OrElse addedExtras
+                addedExtras = EnsureColumn(conn, "AssetMeta", "ShutterSpeed", "TEXT") OrElse addedExtras
+                addedExtras = EnsureColumn(conn, "AssetMeta", "GpsLatitude", "REAL") OrElse addedExtras
+                addedExtras = EnsureColumn(conn, "AssetMeta", "GpsLongitude", "REAL") OrElse addedExtras
+                ' KEIN OrElse-Kurzschluss ueber die Aufrufe selbst: jede Spalte muss angelegt
+                ' werden, auch wenn eine fruehere schon gemeldet hat, dass sie neu war.
+                If addedExtras Then ClearAssetMeta(conn)
             End Using
         End Sub
 
@@ -252,7 +264,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite,City,Country " &
+                        cmd.CommandText = "SELECT UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite,City,Country,Lens,FocalLengthMm,ShutterSpeed,GpsLatitude,GpsLongitude " &
                                           "FROM AssetMeta WHERE ServerKey=$s AND AssetId=$a"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", assetId)
@@ -279,7 +291,12 @@ Namespace Services
                                 .Height = If(r.IsDBNull(12), 0, r.GetInt32(12)),
                                 .IsFavorite = Not r.IsDBNull(13) AndAlso r.GetInt32(13) <> 0,
                                 .City = If(r.IsDBNull(14), "", r.GetString(14)),
-                                .Country = If(r.IsDBNull(15), "", r.GetString(15))
+                                .Country = If(r.IsDBNull(15), "", r.GetString(15)),
+                                .Lens = If(r.IsDBNull(16), "", r.GetString(16)),
+                                .FocalLengthMm = If(r.IsDBNull(17), CType(Nothing, Double?), r.GetDouble(17)),
+                                .ShutterSpeed = If(r.IsDBNull(18), "", r.GetString(18)),
+                                .GpsLatitude = If(r.IsDBNull(19), CType(Nothing, Double?), r.GetDouble(19)),
+                                .GpsLongitude = If(r.IsDBNull(20), CType(Nothing, Double?), r.GetDouble(20))
                             }
                             Return asset
                         End Using
@@ -333,10 +350,10 @@ Namespace Services
                     conn.Open()
                     Using cmd = conn.CreateCommand()
                         cmd.CommandText =
-                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite,City,Country) " &
-                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$fc,$fm,$dt,$dm,$tags,$w,$h,$fav,$city,$country) " &
+                            "INSERT INTO AssetMeta(ServerKey,AssetId,UpdatedAt,FileSize,Rating,Camera,Iso,Aperture,FileCreatedAt,FileModifiedAt,DateTaken,DateModified,Tags,Width,Height,IsFavorite,City,Country,Lens,FocalLengthMm,ShutterSpeed,GpsLatitude,GpsLongitude) " &
+                            "VALUES($s,$a,$u,$fs,$r,$cam,$iso,$ap,$fc,$fm,$dt,$dm,$tags,$w,$h,$fav,$city,$country,$lens,$focal,$shutter,$lat,$lon) " &
                             "ON CONFLICT(ServerKey,AssetId) DO UPDATE SET " &
-                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,FileCreatedAt=$fc,FileModifiedAt=$fm,DateTaken=$dt,DateModified=$dm,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav,City=$city,Country=$country"
+                            "UpdatedAt=$u,FileSize=$fs,Rating=$r,Camera=$cam,Iso=$iso,Aperture=$ap,FileCreatedAt=$fc,FileModifiedAt=$fm,DateTaken=$dt,DateModified=$dm,Tags=$tags,Width=$w,Height=$h,IsFavorite=$fav,City=$city,Country=$country,Lens=$lens,FocalLengthMm=$focal,ShutterSpeed=$shutter,GpsLatitude=$lat,GpsLongitude=$lon"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", asset.Id)
                         cmd.Parameters.AddWithValue("$u", If(asset.UpdatedAt, ""))
@@ -350,6 +367,11 @@ Namespace Services
                         cmd.Parameters.AddWithValue("$dt", If(asset.ExifDateTaken.HasValue, CObj(asset.ExifDateTaken.Value.ToString("o", CultureInfo.InvariantCulture)), DBNull.Value))
                         cmd.Parameters.AddWithValue("$dm", If(asset.ExifDateModified.HasValue, CObj(asset.ExifDateModified.Value.ToString("o", CultureInfo.InvariantCulture)), DBNull.Value))
                         cmd.Parameters.AddWithValue("$tags", JoinTags(asset.Tags))
+                        cmd.Parameters.AddWithValue("$lens", If(CObj(asset.Lens), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$focal", If(asset.FocalLengthMm.HasValue, CObj(asset.FocalLengthMm.Value), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$shutter", If(CObj(asset.ShutterSpeed), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$lat", If(asset.GpsLatitude.HasValue, CObj(asset.GpsLatitude.Value), DBNull.Value))
+                        cmd.Parameters.AddWithValue("$lon", If(asset.GpsLongitude.HasValue, CObj(asset.GpsLongitude.Value), DBNull.Value))
                         cmd.Parameters.AddWithValue("$w", asset.Width)
                         cmd.Parameters.AddWithValue("$h", asset.Height)
                         cmd.Parameters.AddWithValue("$fav", If(asset.IsFavorite, 1, 0))

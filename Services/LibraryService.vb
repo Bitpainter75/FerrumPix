@@ -583,6 +583,82 @@ Namespace Services
             If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
         End Sub
 
+        ''' <summary>Ein Stichwort aus einer fremden Quelle so, wie es in der Tags-Spalte stehen darf.
+        ''' Leer heisst: nicht uebernehmen.
+        '''
+        ''' Zwei Regeln, beide zwingend. HIERARCHIE WIRD ZUM BLATT: Lightroom schreibt
+        ''' "Produkt|Projektion", unsere Stichworte sind flach, und der ganze Pfad als ein Wort waere
+        ''' unbrauchbar. KOMMA IST UNSER TRENNZEICHEN: SetTags fuegt mit Komma zusammen und ParseTags
+        ''' trennt daran, ein Stichwort mit Komma zerfiele beim naechsten Lesen in zwei.
+        '''
+        ''' EINE Stelle fuer beide Regeln, weil es inzwischen drei Quellen gibt: die XMP-Beistelldatei,
+        ''' die eingebetteten IPTC-Stichwoerter und das eingebettete XMP. Je Quelle eine eigene Fassung
+        ''' hiesse, dass dasselbe Stichwort je nach Herkunft anders in der Spalte landet - und damit
+        ''' beim genauen Vergleich (MatchesTagQuery) einmal trifft und einmal nicht.</summary>
+        Public Shared Function NormalizeKeyword(value As String) As String
+            Dim text = If(value, "").Trim()
+            If text.Length = 0 Then Return ""
+            Dim leaf = text.Split("|"c).Last().Trim()
+            If leaf.Length = 0 Then Return ""
+            ' Das Komma wird zum Leerzeichen, und aus "Studio, Berlin" wuerde damit "Studio  Berlin"
+            ' mit zwei davon - deshalb gleich zusammenziehen.
+            Return Regex.Replace(leaf.Replace(","c, " "c), "\s{2,}", " ").Trim()
+        End Function
+
+        ''' <summary>Vereinigt Stichwoerter AUS DER DATEI UND IHRER BEISTELLDATEI mit denen im Katalog.
+        ''' Gibt die neue Liste zurueck, wenn etwas dazugekommen ist, sonst Nothing.
+        '''
+        ''' VEREINIGEN, NICHT ERSETZEN: beide Seiten koennen unabhaengig voneinander sinnvolle
+        ''' Eintraege tragen, und was jemand in FerrumPix selbst vergeben hat, darf ein Scan nie
+        ''' wegnehmen. Der Preis steht dagegen: ein Stichwort, das in der Datei steht und hier von
+        ''' Hand entfernt wurde, kommt beim naechsten Lauf zurueck. Sauber trennen liesse sich das
+        ''' erst mit einer Herkunft je Stichwort - siehe OFFENE_PUNKTE.md.
+        '''
+        ''' SCHREIBARM: ohne Zuwachs wird gar nicht geschrieben. Der Weg laeuft ueber jedes Bild jedes
+        ''' Ordnerwechsels und jedes Indexlaufs.
+        '''
+        ''' NICHT ueber SetTags, sondern direkt in die Datenbank - genau wie ImportFpxmpCatalogData.
+        ''' SetTags spiegelt jede Aenderung ueber SyncCatalogToFpxmp in eine .fpxmp und LEGT SIE BEI
+        ''' RAW UND PSD AN. Zwei Gruende sprechen dagegen: der Katalogindex geht durch diesen Weg und
+        ''' darf neben den Fotos nichts anlegen, und eine so entstandene .fpxmp sperrte anschliessend
+        ''' den Nachschub aus der Beistelldatei aus (ihr HasKeywords gilt als bewusste Liste) - in
+        ''' Lightroom oder Bridge spaeter ergaenzte Stichwoerter kamen damit nie mehr an.</summary>
+        Public Function ImportFileKeywords(filePath As String, keywords As IEnumerable(Of String)) As List(Of String)
+            If Not IsCatalogWritable(filePath) Then Return Nothing
+            Dim incoming = If(keywords, Enumerable.Empty(Of String)()).
+                Select(AddressOf NormalizeKeyword).
+                Where(Function(t) t.Length > 0).
+                ToList()
+            If incoming.Count = 0 Then Return Nothing
+
+            Try
+                Dim merged = GetTags(filePath)
+                Dim added = False
+                For Each keyword In incoming
+                    If merged.Any(Function(t) String.Equals(t, keyword, StringComparison.OrdinalIgnoreCase)) Then Continue For
+                    merged.Add(keyword)
+                    added = True
+                Next
+                If Not added Then Return Nothing
+
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText =
+                            "INSERT INTO ImageMeta(FilePath,Tags) VALUES($p,$t) " &
+                            "ON CONFLICT(FilePath) DO UPDATE SET Tags=$t"
+                        cmd.Parameters.AddWithValue("$p", filePath)
+                        cmd.Parameters.AddWithValue("$t", String.Join(",", merged))
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+                Return merged
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.ImportFileKeywords", ex)
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Importiert den Katalogblock einer vorhandenen .fpxmp exakt in SQLite. Die
         ''' Sidecar ist fuer RAW/PSD die portable Quelle; fehlende Felder alter Zwischenversionen
         ''' lassen den jeweiligen Katalogwert unangetastet. Es wird absichtlich direkt geschrieben,

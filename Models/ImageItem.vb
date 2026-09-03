@@ -1836,10 +1836,13 @@ Namespace Models
             If Interlocked.CompareExchange(_nextcloudDetailState, 1, 0) <> 0 Then Return
             Dim token = _thumbnailCancellationToken
             Dim fileId = _nextcloudFileId
+            ' MIT dem Etag: er entscheidet, ob der gespeicherte Stand noch gilt. Es ist derselbe
+            ' Wert, der schon den Namen der abgelegten Kachel bestimmt.
+            Dim etag = _nextcloudETag
             Dim ignored = Task.Run(Async Function()
                                        Try
                                            If token.IsCancellationRequested Then Return
-                                           Dim detail = Await NextcloudService.GetInfoAsync(fileId, token).ConfigureAwait(False)
+                                           Dim detail = Await NextcloudService.GetInfoCachedAsync(fileId, etag, token).ConfigureAwait(False)
                                            If detail Is Nothing OrElse token.IsCancellationRequested Then Return
                                            Await Dispatcher.UIThread.InvokeAsync(Sub() ApplyNextcloudMetadata(detail))
                                        Catch

@@ -2838,11 +2838,11 @@ Namespace ViewModels
                String.Equals(last.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
                Math.Abs(last.Adjustments.StraightenDegrees) < 0.0001F AndAlso
                Not last.Adjustments.FlipHorizontal AndAlso Not last.Adjustments.FlipVertical Then
-                Dim summe = ImageGeometryMapper.NormalizeQuarterTurn(last.Adjustments.RotationDegrees + quarter)
-                If summe = 0 Then
+                Dim combined = ImageGeometryMapper.NormalizeQuarterTurn(last.Adjustments.RotationDegrees + quarter)
+                If combined = 0 Then
                     adj.GeometryOperations.Remove(last)
                 Else
-                    last.Adjustments.RotationDegrees = summe
+                    last.Adjustments.RotationDegrees = combined
                 End If
                 Return
             End If

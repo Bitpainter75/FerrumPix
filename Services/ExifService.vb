@@ -11,6 +11,7 @@ Imports System.Text
 Imports System.Xml.Linq
 Imports MetadataExtractor
 Imports MetadataExtractor.Formats.Exif
+Imports MetadataExtractor.Formats.Iptc
 
 Namespace Services
 
@@ -112,6 +113,17 @@ Namespace Services
         ''' <summary>True, wenn die Datei ein eingebettetes ICC-Farbprofil trägt (MetadataExtractor
         ''' IccDirectory). Steuert das ICC-Badge in der Galerie - analog zu den EXIF/IPTC/XMP-Badges.</summary>
         Public Property HasIccProfile As Boolean
+
+        ''' <summary>Die Stichwörter, die IN der Datei stehen: IPTC 2:25 Keywords, dc:subject und
+        ''' lr:hierarchicalSubject. Flach, entdoppelt und schon auf die Schreibweise der Tags-Spalte
+        ''' gebracht (siehe LibraryService.NormalizeKeyword).
+        '''
+        ''' Sie stehen NEBEN IptcTags/XmpTags und nicht darin: dort liegt der Anzeigetext, bei IPTC
+        ''' sogar als eine mit Semikolon zusammengefügte Zeile (MetadataExtractor
+        ''' IptcDescriptor.GetKeywordsDescription). Ein Stichwort darf selbst ein Semikolon tragen,
+        ''' und aus dieser Zeile wäre es nicht mehr herauszutrennen - deshalb die Einzelwerte aus
+        ''' IptcDirectory.GetKeywords().</summary>
+        Public Property EmbeddedKeywords As New List(Of String)()
     End Class
 
     Public Class ExifService
@@ -293,7 +305,8 @@ Namespace Services
                 .IptcTags = source.IptcTags,
                 .XmpTags = source.XmpTags,
                 .IccTags = source.IccTags,
-                .HasIccProfile = source.HasIccProfile
+                .HasIccProfile = source.HasIccProfile,
+                .EmbeddedKeywords = source.EmbeddedKeywords
             }
         End Function
 
@@ -452,6 +465,7 @@ Namespace Services
                                 data.IptcTags.Add(New ExifTag(metaTag.Name, metaTag.Description))
                             End If
                         Next
+                        CollectIptcKeywords(metaDir, data)
                     End If
                     Continue For
                 ElseIf isXmp Then
@@ -467,6 +481,35 @@ Namespace Services
                     Next
                 End If
             Next
+        End Sub
+
+        ''' <summary>Die IPTC-Stichwoerter als EINZELWERTE.
+        '''
+        ''' Ueber GetKeywords() und nicht ueber den Anzeigetext des Tags: 2:25 ist ein WIEDERHOLBARES
+        ''' Feld, und MetadataExtractor fuegt die Werte fuer die Anzeige mit Semikolon zu einer Zeile
+        ''' zusammen (IptcDescriptor.GetKeywordsDescription). Ein Stichwort darf ein Semikolon
+        ''' enthalten - aus der Zeile liesse es sich dann nicht mehr sicher zurueckgewinnen.</summary>
+        Private Shared Sub CollectIptcKeywords(metaDir As MetadataExtractor.Directory, data As ExifData)
+            Try
+                Dim iptc = TryCast(metaDir, IptcDirectory)
+                If iptc Is Nothing Then Return
+                For Each keyword In If(iptc.GetKeywords(), CType(New List(Of String)(), IList(Of String)))
+                    AddEmbeddedKeyword(data, keyword)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.IptcStichwoerter", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Ein Stichwort aus der Bilddatei in die Liste, entdoppelt und in der Schreibweise
+        ''' der Tags-Spalte. Doppelte sind der Normalfall und kein Fehler: Photoshop und Bridge
+        ''' schreiben dasselbe Wort nach IPTC UND nach dc:subject, Lightroom zusaetzlich als Blatt
+        ''' eines Pfades in lr:hierarchicalSubject.</summary>
+        Private Shared Sub AddEmbeddedKeyword(data As ExifData, value As String)
+            Dim keyword = LibraryService.NormalizeKeyword(value)
+            If keyword.Length = 0 Then Return
+            If data.EmbeddedKeywords.Any(Function(t) String.Equals(t, keyword, StringComparison.OrdinalIgnoreCase)) Then Return
+            data.EmbeddedKeywords.Add(keyword)
         End Sub
 
         ''' <summary>Fallback fuer Container ohne EXIF-Pixeldimensionen. Es werden nur Tags wie
@@ -550,7 +593,10 @@ Namespace Services
         ''' Texte kleben, weil unveränderte Dateien nie erneut eingelesen werden.</summary>
         ' Version 3 invalidiert auch bereits als "leer" gecachte FPX-Eintraege: seit dieser Version
         ' kommen ihre technischen Daten aus composite.png und EXIF/IPTC/XMP/ICC aus base.*.
-        Public Const SummaryFormatVersion As Integer = 3
+        ' Version 4 holt die eingebetteten Stichwoerter nach. Sie sind kein Summary-Text, haengen aber
+        ' an genau demselben Stempel: ohne die Erhoehung gilt jede schon eingelesene Datei weiter als
+        ' unveraendert, und ein bestehender Katalog bekaeme die Stichwoerter NIE - nur neue Fotos.
+        Public Const SummaryFormatVersion As Integer = 4
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
@@ -854,6 +900,15 @@ Namespace Services
             If Not data.XmpRating.HasValue Then
                 Dim rating = TryParseXmpRating(tagName, tagValue)
                 If rating.HasValue Then data.XmpRating = rating
+            End If
+
+            ' Die beiden Stichwortfelder des Schemas. Beide sind rdf:Bag, und GetXmpProperties liefert
+            ' je Eintrag eine eigene Zeile mit laufender Nummer im Namen ("dc:subject[1]") - deshalb
+            ' die Nummer abschneiden, wie es GroupTags fuer die Zusammenfassung auch tut.
+            Dim bareName = Regex.Replace(tagName, "\[\d+\]$", "")
+            If String.Equals(bareName, "dc:subject", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(bareName, "lr:hierarchicalSubject", StringComparison.OrdinalIgnoreCase) Then
+                AddEmbeddedKeyword(data, tagValue)
             End If
         End Sub
 

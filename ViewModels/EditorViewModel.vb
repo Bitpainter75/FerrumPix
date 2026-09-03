@@ -11036,8 +11036,10 @@ Namespace ViewModels
         ''' sichtbare Bearbeitungen und müssen beim FPX-Speichern erhalten bleiben.</summary>
         Private Sub AppendOpenGeometryOperations(result As List(Of GeometryOperation))
             If result Is Nothing Then Return
+            ' Der Haken allein ergibt KEINEN Schritt - siehe HasRotateChanges. Ein Schritt aus
+            ' 0 Grad und Haken vergroessert nichts und stuende nur als Altlast im Rezept.
             If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
-               _straightenExpandCanvas OrElse _flipH OrElse _flipV Then
+               _flipH OrElse _flipV Then
                 result.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
                     .RotationDegrees = _rotationDegrees, .StraightenDegrees = CSng(_straightenDegrees),
                     .StraightenExpandCanvas = _straightenExpandCanvas, .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
@@ -11345,6 +11347,10 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Wie gedreht wird, nicht wie weit: der Haken ist eine OPTION der Drehung und
+        ''' hat deshalb KEINEN eigenen bestaetigten Stand mehr. Der Spiegel wird mitgezogen, damit
+        ''' jeder Weg, der offene Regler auf den bestaetigten Stand zuruecknimmt, ihn in Ruhe laesst
+        ''' - er gehoert zu keiner einzelnen Drehung, sondern gilt fuer die naechste.</summary>
         Public Property StraightenExpandCanvas As Boolean
             Get
                 Return _straightenExpandCanvas
@@ -11353,6 +11359,7 @@ Namespace ViewModels
                 If _straightenExpandCanvas = value Then Return
                 CaptureUndoState(NameOf(StraightenExpandCanvas))
                 Me.RaiseAndSetIfChanged(_straightenExpandCanvas, value)
+                _appliedStraightenExpandCanvas = value
                 Me.RaisePropertyChanged(NameOf(HasRotateChanges))
                 Me.RaisePropertyChanged(NameOf(HasTransformChanges))
                 RaiseResetButtonStateChanged()
@@ -12368,12 +12375,19 @@ Namespace ViewModels
         ''' GETRENNT VON DER PERSPEKTIVE, seit Zuschneiden und Drehen ein Werkzeug sind und das
         ''' Verzerren ein eigenes: waeren beide weiter in einer Pruefung, wuerde ein Vierteldreh
         ''' im einen Werkzeug eine noch offene Perspektive aus dem anderen mitbestaetigen und
-        ''' deren Felder leeren.</summary>
+        ''' deren Felder leeren.
+        '''
+        ''' OHNE "Leinwand automatisch vergroessern": der Haken ist eine OPTION der Drehung und
+        ''' keine Aenderung fuer sich. Stand er hier mit drin, war schon sein Setzen anwendbar, und
+        ''' das Anwenden legte einen Transform-Schritt aus 0 Grad und dem Haken an - der vergroessert
+        ''' nichts (ComputeGeometryOperationOutputSize verlangt beides zusammen) und verbrauchte den
+        ''' Haken trotzdem. Die naechste ECHTE Drehung lief dann ohne ihn und schnitt die Ecken ab
+        ''' (Nutzerbefund: im Rezept standen 50 Grad ohne Haken, 0 Grad mit Haken, 56,8 Grad ohne
+        ''' Haken).</summary>
         Public ReadOnly Property HasRotateChanges As Boolean
             Get
                 Return _rotationDegrees <> _appliedRotationDegrees OrElse
                        Math.Abs(_straightenDegrees - _appliedStraightenDegrees) > 0.0001 OrElse
-                       _straightenExpandCanvas <> _appliedStraightenExpandCanvas OrElse
                        _flipH <> _appliedFlipH OrElse _flipV <> _appliedFlipV
             End Get
         End Property
@@ -16236,12 +16250,12 @@ Namespace ViewModels
                         .StraightenExpandCanvas = _straightenExpandCanvas,
                         .FlipHorizontal = _flipH,
                         .FlipVertical = _flipV}})
-                _rotationDegrees = 0 : _straightenDegrees = 0 : _straightenExpandCanvas = False
+                ' Der Haken bleibt stehen - siehe ApplyRotateAsync.
+                _rotationDegrees = 0 : _straightenDegrees = 0
                 _flipH = False : _flipV = False
                 _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
-                _appliedStraightenExpandCanvas = False : _appliedFlipH = False : _appliedFlipV = False
+                _appliedFlipH = False : _appliedFlipV = False
                 Me.RaisePropertyChanged(NameOf(StraightenDegrees))
-                Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
             End If
 
             Dim replacesAppliedCrop = ShowsFullImageWhileCropping
@@ -16362,7 +16376,7 @@ Namespace ViewModels
             PushUndo(LocalizationService.T("Drehen"))
             ClearActiveSelectionForGeometry()
             If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
-               _straightenExpandCanvas OrElse _flipH OrElse _flipV Then
+               _flipH OrElse _flipV Then
                 _geometryOperations.Add(New GeometryOperation With {
                     .Kind = "transform",
                     .Adjustments = New ImageAdjustments With {
@@ -16371,10 +16385,13 @@ Namespace ViewModels
                     .StraightenExpandCanvas = _straightenExpandCanvas,
                     .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
             End If
-            _rotationDegrees = 0 : _straightenDegrees = 0 : _straightenExpandCanvas = False
+            ' Der Winkel ist verbraucht, der HAKEN NICHT: er sagt, WIE gedreht wird, und gilt
+            ' weiter fuer die naechste Drehung. Ihn hier zu leeren war der eigentliche Fehler -
+            ' wer ihn setzte und zweimal drehte, drehte beim zweiten Mal ohne ihn.
+            _rotationDegrees = 0 : _straightenDegrees = 0
             _flipH = False : _flipV = False
             _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
-            _appliedStraightenExpandCanvas = False : _appliedFlipH = False : _appliedFlipV = False
+            _appliedFlipH = False : _appliedFlipV = False
             Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
