@@ -379,7 +379,9 @@ Namespace Services
         Public ReadOnly Property HasPrimaryComponent As Boolean
             Get
                 If IsGradient Then Return True
-                Return Right > Left AndAlso Bottom > Top AndAlso Not String.IsNullOrWhiteSpace(PngBase64)
+                ' HasPixelData und NICHT die Speicherform: diese Frage stellt GetComponents bei
+                ' jedem Rastern, und ein Blick auf PngBase64 packt die Maske dabei jedesmal neu.
+                Return Right > Left AndAlso Bottom > Top AndAlso HasPixelData
             End Get
         End Property
 

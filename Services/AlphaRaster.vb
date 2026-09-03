@@ -1,5 +1,6 @@
 Imports System
 Imports System.Runtime.InteropServices
+Imports System.Threading
 Imports SkiaSharp
 
 ' Das Alpha-Raster im Speicher: die Form, in der Masken und Auswahl INNERHALB des Programms
@@ -25,6 +26,17 @@ Namespace Services
 
         Private ReadOnly _pixels As Byte()
         Private _fingerprint As String
+        Private Shared _packCount As Long
+
+        ''' <summary>Wie oft in diesem Lauf ueberhaupt gepackt wurde. Fuer die Diagnose: sie haelt
+        ''' damit fest, dass beim ARBEITEN mit Masken keine Speicherform entsteht - genau darum ging
+        ''' es beim Umbau. Ein Zaehler statt einer Vermutung: wer irgendwo wieder ueber die
+        ''' Speicherform liest, faellt auf, ohne dass jemand die Stelle erraten muss.</summary>
+        Public Shared ReadOnly Property PackCount As Long
+            Get
+                Return Interlocked.Read(_packCount)
+            End Get
+        End Property
 
         Public ReadOnly Property Width As Integer
         Public ReadOnly Property Height As Integer
@@ -99,6 +111,7 @@ Namespace Services
 
         ''' <summary>Als PNG fuer die Datei. Nur hier wird gepackt.</summary>
         Public Function ToPngBase64() As String
+            Interlocked.Increment(_packCount)
             Try
                 Using bitmap = ToBitmap()
                     Using image = SKImage.FromBitmap(bitmap)

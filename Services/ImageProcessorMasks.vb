@@ -263,11 +263,40 @@ Namespace Services
                 Dim inputMask = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Alpha8, SKAlphaType.Premul)
                 Dim iStride = inputMask.RowBytes
                 Dim iBuf = New Byte(iStride * pipelineInputHeight - 1) {}
-                For y = 0 To pipelineInputHeight - 1
+
+                ' NUR IM MASKENRECHTECK RASTERN. Der Puffer ist ueberall 0, und ausserhalb des
+                ' Rechtecks kann auch nichts anderes herauskommen: die Abtastung faellt dort ins
+                ' Leere. ZWEI Ausnahmen, und nur die beiden - ein VERLAUF gilt fuer das ganze Bild
+                ' (er wird geklemmt, nicht begrenzt), und eine UMKEHRUNG macht aus der 0 eine 255.
+                ' Eine Pinselkorrektur bringt ihr eigenes Rechteck mit; es geht in die Vereinigung.
+                '
+                ' WARUM: die Schleife lief ueber das ganze Bild, je Ebene und je Render. Gemessen
+                ' kostete eine Maskenebene damit bei 24 MP rund 340 ms - unabhaengig davon, ob ihre
+                ' Maske 240x240 gross war oder bildfuellend.
+                Dim yFrom = 0, yTo = pipelineInputHeight - 1
+                Dim xFrom = 0, xTo = pipelineInputWidth - 1
+                If Not maskData.IsGradient AndAlso Not maskData.Inverted Then
+                    Dim scopeLeft = maskData.Left, scopeTop = maskData.Top
+                    Dim scopeRight = maskData.Right, scopeBottom = maskData.Bottom
+                    If corrWidth > 0 Then
+                        scopeLeft = Math.Min(scopeLeft, maskData.BrushLeft)
+                        scopeTop = Math.Min(scopeTop, maskData.BrushTop)
+                        scopeRight = Math.Max(scopeRight, maskData.BrushRight)
+                        scopeBottom = Math.Max(scopeBottom, maskData.BrushBottom)
+                    End If
+                    ' Zwei Bildpunkte Zugabe an jeder Kante: die Abtastung rundet, und ein zu enger
+                    ' Rand waere an der Kante sichtbar. Zwei kosten nichts und decken jede Rundung.
+                    xFrom = Math.Max(0, CInt(Math.Floor(scopeLeft * pipelineInputWidth / CDbl(sourceWidth))) - 2)
+                    xTo = Math.Min(pipelineInputWidth - 1, CInt(Math.Ceiling(scopeRight * pipelineInputWidth / CDbl(sourceWidth))) + 2)
+                    yFrom = Math.Max(0, CInt(Math.Floor(scopeTop * pipelineInputHeight / CDbl(sourceHeight))) - 2)
+                    yTo = Math.Min(pipelineInputHeight - 1, CInt(Math.Ceiling(scopeBottom * pipelineInputHeight / CDbl(sourceHeight))) + 2)
+                End If
+
+                For y = yFrom To yTo
                     Dim sySource = CInt(Math.Floor((y + 0.5) * sourceHeight / pipelineInputHeight))
                     Dim sy = sySource - maskData.Top
                     Dim iRow = y * iStride
-                    For x = 0 To pipelineInputWidth - 1
+                    For x = xFrom To xTo
                         Dim sx = CInt(Math.Floor((x + 0.5) * sourceWidth / pipelineInputWidth)) - maskData.Left
                         Dim alpha = 0
                         If maskData.IsRadialGradient Then
@@ -3117,13 +3146,15 @@ Namespace Services
         ''' (<see cref="TransformBrushCorrections"/>).</summary>
         Private Shared Sub ShiftBrushCorrections(mask As ImageMask, offsetX As Integer, offsetY As Integer)
             If mask Is Nothing OrElse (offsetX = 0 AndAlso offsetY = 0) Then Return
+            ' HasBrushCorrectionData und NICHT die Speicherform: hier wird NUR das Rechteck
+            ' versetzt, die Bildpunkte bleiben unangetastet. Ein Blick auf das PNG packte die
+            ' Korrektur beim blossen Verschieben - fuer nichts.
             Dim shift = Sub(c As MaskComponent)
-                            If c Is Nothing Then Return
-                            If String.IsNullOrEmpty(c.BrushAddPngBase64) AndAlso String.IsNullOrEmpty(c.BrushSubtractPngBase64) Then Return
+                            If c Is Nothing OrElse Not c.HasBrushCorrectionData Then Return
                             c.BrushLeft += offsetX : c.BrushRight += offsetX
                             c.BrushTop += offsetY : c.BrushBottom += offsetY
                         End Sub
-            If Not String.IsNullOrEmpty(mask.BrushAddPngBase64) OrElse Not String.IsNullOrEmpty(mask.BrushSubtractPngBase64) Then
+            If mask.HasBrushCorrectionData Then
                 mask.BrushLeft += offsetX : mask.BrushRight += offsetX
                 mask.BrushTop += offsetY : mask.BrushBottom += offsetY
             End If
@@ -3351,12 +3382,12 @@ Namespace Services
                     Dim h = Math.Max(1, CInt(Math.Ceiling(maxY)) - t)
 
                     Dim oldRect = New SKRect(c.BrushLeft, c.BrushTop, c.BrushRight, c.BrushBottom)
-                    Dim newAdd As String = Nothing
-                    Dim newSubtract As String = Nothing
-                    If Not RerasterBrushAlpha(c.BrushAddPngBase64, oldRect, l, t, w, h, canvasSetup, sampling, newAdd) Then Return False
-                    If Not RerasterBrushAlpha(c.BrushSubtractPngBase64, oldRect, l, t, w, h, canvasSetup, sampling, newSubtract) Then Return False
-                    c.BrushAddPngBase64 = newAdd
-                    c.BrushSubtractPngBase64 = newSubtract
+                    Dim newAdd As AlphaRaster = Nothing
+                    Dim newSubtract As AlphaRaster = Nothing
+                    If Not RerasterBrushAlpha(c.BrushAddRaster, oldRect, l, t, w, h, canvasSetup, sampling, newAdd) Then Return False
+                    If Not RerasterBrushAlpha(c.BrushSubtractRaster, oldRect, l, t, w, h, canvasSetup, sampling, newSubtract) Then Return False
+                    c.BrushAddRaster = newAdd
+                    c.BrushSubtractRaster = newSubtract
                     c.BrushLeft = l : c.BrushTop = t : c.BrushRight = l + w : c.BrushBottom = t + h
                     Return True
                 End Function)
@@ -3365,17 +3396,17 @@ Namespace Services
         ''' <summary>Ein einzelnes Alpha8-Korrekturraster an seine neue Stelle zeichnen. Leerer
         ''' Eingang bleibt leer (einseitige Korrekturen sind normal); ein nicht lesbares Raster
         ''' heißt False, und der Träger bleibt dann unangetastet.</summary>
-        Private Shared Function RerasterBrushAlpha(png As String, oldRect As SKRect,
+        Private Shared Function RerasterBrushAlpha(source As AlphaRaster, oldRect As SKRect,
                                                    l As Integer, t As Integer, w As Integer, h As Integer,
                                                    canvasSetup As Action(Of SKCanvas),
                                                    sampling As SKSamplingOptions,
-                                                   ByRef result As String) As Boolean
-            result = ""
-            If String.IsNullOrEmpty(png) Then Return True
+                                                   ByRef result As AlphaRaster) As Boolean
+            result = Nothing
+            If source Is Nothing Then Return True
             Dim decoded As SKBitmap = Nothing
             Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(png))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                decoded = source.ToBitmap()
+                If decoded Is Nothing Then Return False
                 Using neu = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(neu)
                         canvas.Clear(SKColors.Transparent)
@@ -3390,12 +3421,8 @@ Namespace Services
                             End Using
                         End Using
                     End Using
-                    Using img = SKImage.FromPixels(neu.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return False
-                            result = Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
+                    result = AlphaRaster.FromBitmap(neu)
+                    If result Is Nothing Then Return False
                 End Using
                 Return True
             Catch
@@ -3411,11 +3438,14 @@ Namespace Services
         Private Shared Function FlipBrushCorrections(mask As ImageMask, horizontal As Boolean, axis As Double) As Boolean
             Return ForEachBrushCarrier(mask,
                 Function(c)
-                    Dim newAdd = MirrorAlphaRaster(c.BrushAddPngBase64, horizontal)
-                    Dim newSubtract = MirrorAlphaRaster(c.BrushSubtractPngBase64, horizontal)
-                    If newAdd Is Nothing OrElse newSubtract Is Nothing Then Return False
-                    c.BrushAddPngBase64 = newAdd
-                    c.BrushSubtractPngBase64 = newSubtract
+                    ' Leer bleibt leer: eine einseitige Korrektur ist der Normalfall. Ein
+                    ' Fehlschlag meldet sich ueber das Kennzeichen, nicht ueber Nothing.
+                    Dim addOk = True, subtractOk = True
+                    Dim newAdd = MirrorAlphaRaster(c.BrushAddRaster, horizontal, addOk)
+                    Dim newSubtract = MirrorAlphaRaster(c.BrushSubtractRaster, horizontal, subtractOk)
+                    If Not addOk OrElse Not subtractOk Then Return False
+                    c.BrushAddRaster = newAdd
+                    c.BrushSubtractRaster = newSubtract
                     Dim width = c.BrushRight - c.BrushLeft
                     Dim height = c.BrushBottom - c.BrushTop
                     If horizontal Then
@@ -3430,12 +3460,17 @@ Namespace Services
         End Function
 
         ''' <summary>Ein Alpha8-Raster in sich spiegeln. Leer bleibt leer; Nothing heißt Fehler.</summary>
-        Private Shared Function MirrorAlphaRaster(png As String, horizontal As Boolean) As String
-            If String.IsNullOrEmpty(png) Then Return ""
+        Private Shared Function MirrorAlphaRaster(source As AlphaRaster, horizontal As Boolean,
+                                                   ByRef succeeded As Boolean) As AlphaRaster
+            succeeded = True
+            If source Is Nothing Then Return Nothing
             Dim decoded As SKBitmap = Nothing
             Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(png))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
+                decoded = source.ToBitmap()
+                If decoded Is Nothing Then
+                    succeeded = False
+                    Return Nothing
+                End If
                 Using gespiegelt = New SKBitmap(decoded.Width, decoded.Height, SKColorType.Alpha8, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(gespiegelt)
                         canvas.Clear(SKColors.Transparent)
@@ -3446,14 +3481,12 @@ Namespace Services
                         End If
                         canvas.DrawBitmap(decoded, 0.0F, 0.0F)
                     End Using
-                    Using img = SKImage.FromPixels(gespiegelt.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return Nothing
-                            Return Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
+                    Dim mirrored = AlphaRaster.FromBitmap(gespiegelt)
+                    If mirrored Is Nothing Then succeeded = False
+                    Return mirrored
                 End Using
             Catch
+                succeeded = False
                 Return Nothing
             Finally
                 decoded?.Dispose()

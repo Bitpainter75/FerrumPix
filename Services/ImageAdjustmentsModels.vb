@@ -94,7 +94,36 @@ Namespace Services
             ' Ein Geometrieschritt braucht nie das gesamte Rezept (Masken, Objekte, Pixelregler
             ' usw.). Das war beim Legacy-Umbau versehentlich anders und vervielfachte sowohl den
             ' Speicher als auch jede Rezeptdatei pro Schritt.
-            Return New GeometryOperation With {.Kind = Kind, .Adjustments = CloneGeometryAdjustments(Kind, Adjustments)}
+            '
+            ' EINE UNBEKANNTE ART IST DIE AUSNAHME: bei ihr wissen wir nicht, welche Felder sie
+            ' braucht, also bleiben ALLE erhalten. Sonst kaeme ein Rezept aus einer neueren Fassung
+            ' hier durch und verloere die Werte seines Schritts - der Name stuende noch da, die
+            ' Zahlen dahinter waeren weg. Das ist die teurere, aber die einzige verlustfreie Wahl,
+            ' und sie trifft nur Schritte, die diese Fassung ohnehin nicht ausfuehrt.
+            Return New GeometryOperation With {.Kind = Kind, .Adjustments = CloneGeometryAdjustmentsForRecipe(Kind, Adjustments)}
+        End Function
+
+        ''' <summary>Die Abschrift fuer das REZEPT: bei bekannter Art die Felder dieser Art, bei
+        ''' unbekannter alles. Getrennt von <see cref="CloneGeometryAdjustments"/>, weil deren
+        ''' Aufrufer das Gegenteil brauchen - der Objektdurchlauf etwa bildet Objekte durch die
+        ''' Geometriefelder ab und darf die Werte einer Art, die er nicht kennt, NICHT anwenden.</summary>
+        Public Shared Function CloneGeometryAdjustmentsForRecipe(kind As String, source As ImageAdjustments) As ImageAdjustments
+            If source Is Nothing Then Return Nothing
+            If IsKnownGeometryKind(kind) Then Return CloneGeometryAdjustments(kind, source)
+            Return source.Clone()
+        End Function
+
+        ''' <summary>Kennt diese Fassung die Schrittart? Wer hier eine neue vergisst, verliert
+        ''' nichts: sie wird dann vollstaendig abgeschrieben statt feldweise - groesser, aber nie
+        ''' falsch. Die Liste steht bewusst neben dem Select in
+        ''' <see cref="CloneGeometryAdjustments"/>; beide zusammen zu lesen ist die Probe.</summary>
+        Public Shared Function IsKnownGeometryKind(kind As String) As Boolean
+            Select Case If(kind, "").Trim().ToLowerInvariant()
+                Case "crop", "transform", "perspective", "warp", "resize", "canvas"
+                    Return True
+                Case Else
+                    Return False
+            End Select
         End Function
 
         ''' <summary>Kopiert ausschließlich Felder, die der jeweilige Geometriezweig tatsächlich

@@ -90,6 +90,10 @@ Namespace Services
         ''' und der Cache gilt nur fuer den Stand, mit dem er gebaut wurde.</summary>
         Private Shared _baseSourceStamp As Long = 0
         Private Shared _baseCacheSourceStamp As Long = -1
+        ' Der Zwischenstand VOR den Maskenebenen, mit eigenem Schluessel (derselbe Bauplan ohne den
+        ' Maskenanteil). Er haengt an derselben Quelle und demselben Stempel wie der Basis-Cache.
+        Private Shared _preMaskBitmap As SKBitmap = Nothing
+        Private Shared _preMaskKey As String = Nothing
 
         ''' <summary>Meldet, dass die Bildpunkte der Vorschauquelle sich geaendert haben, ohne dass
         ''' eine neue Bitmap entstanden ist.</summary>
@@ -1984,7 +1988,21 @@ Namespace Services
         ''' <summary>Schaltet zwischen der alten Stufenkette und der verschmolzenen
         ''' Gleitkomma-Kette um. Waehrend der Umstellung laufen beide nebeneinander, damit
         ''' der Aequivalenztest der Diagnose sie vergleichen kann.</summary>
+        ''' <summary>Die ganze Basisstufe: alles vor den Maskenebenen, danach die Maskenebenen.
+        ''' Beide Haelften gibt es einzeln, weil der Zwischenspeicher sie getrennt haelt - hier
+        ''' bleiben sie zusammen, damit jeder vorhandene Aufrufer bekommt, was er immer bekam.</summary>
         Private Shared Function ProcessBitmapBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            Dim preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj)
+            ' Der Zwischenstand gehoert uns, die Ebenen duerfen also direkt hineinschreiben.
+            Dim withLayers = ProcessBitmapMaskedLayers(preMask, adj, source.Width, source.Height, ownsInput:=True)
+            If withLayers Is Nothing Then Return preMask
+            preMask.Dispose()
+            Return withLayers
+        End Function
+
+        ''' <summary>Geometrie, globale Pixelkette und Auswahl-Skopus - alles, was NICHT an den
+        ''' Masken haengt. Das Ergebnis gehoert dem Aufrufer.</summary>
+        Private Shared Function ProcessBitmapBaseBeforeMaskedLayers(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             ' Copy-on-write: die Kette startet auf der FREMDEN Quelle und kopiert erst, wenn eine Stufe
             ' wirklich ein neues Bild liefert. Siehe ReplaceBitmapOwned.
             Dim processed As SKBitmap = source
@@ -2029,8 +2047,38 @@ Namespace Services
                 End If
             End If
 
-            processed = ApplyMaskedAdjustmentLayersCore(processed, adj, source.Width, source.Height, Nothing, owned)
             Return TakeOwnership(processed, owned)
+        End Function
+
+        ''' <summary>Die Maskenebenen auf einen fertigen Zwischenstand. Getrennt, weil sie die
+        ''' LETZTE Stufe sind und als einzige an den Masken haengen: ein Pinselstrich in einer Maske
+        ''' laesst damit alles davor stehen. Der Zwischenstand gehoert dem Aufrufer und bleibt
+        ''' unveraendert - die Kette kopiert bei der ersten wirksamen Stufe (Copy-on-write).</summary>
+        ''' <param name="ownsInput">Gehoert der Zwischenstand dem Aufrufer? NUR dann darf die Kette
+        ''' direkt hineinschreiben - und genau das setzt der Ausschnittweg der Ebenen voraus, der
+        ''' die Anpassung auf das Maskenrechteck begrenzt. Ohne Besitz faellt er auf den Weg ueber
+        ''' das ganze Bild zurueck; die Diagnose misst das („Ebenen-Ausschnitt: kein Regler rutscht
+        ''' durch die Whitelist").</param>
+        ''' <returns>Ein NEUES Bild, oder Nothing - dann steht das Ergebnis bereits im
+        ''' uebergebenen Zwischenstand (direkt hineingeschrieben oder unveraendert).</returns>
+        Private Shared Function ProcessBitmapMaskedLayers(preMask As SKBitmap, adj As ImageAdjustments,
+                                                          sourceWidth As Integer, sourceHeight As Integer,
+                                                          ownsInput As Boolean) As SKBitmap
+            Dim owned = ownsInput
+            Dim processed = ApplyMaskedAdjustmentLayersCore(preMask, adj, sourceWidth, sourceHeight, Nothing, owned)
+            If Object.ReferenceEquals(processed, preMask) Then Return Nothing
+            Return TakeOwnership(processed, owned)
+        End Function
+
+        ''' <summary>Wirkt in der BASISSTUFE ueberhaupt eine Maskenebene? Absichtlich grosszuegig:
+        ''' ein True zu viel kostet eine Abschrift, ein False zu viel waere ein falsches Bild.</summary>
+        Private Shared Function HasBaseMaskedLayers(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse adj.MaskedAdjustmentLayers Is Nothing OrElse adj.Masks Is Nothing Then Return False
+            For Each layer In adj.MaskedAdjustmentLayers
+                If layer Is Nothing OrElse Not String.IsNullOrEmpty(layer.StackAboveAnnotationId) Then Continue For
+                If adj.IsMaskedLayerRenderVisible(layer) Then Return True
+            Next
+            Return False
         End Function
 
         ''' <summary>Die wiederverwendbare Pixelkette ohne Geometrie, Objekte und Auswahl-Compositing.
@@ -3165,6 +3213,9 @@ Namespace Services
         ''' bis zum Programmende fest.</summary>
         Public Shared Sub ClearBaseCache()
             SyncLock _baseCacheLock
+                If _preMaskBitmap IsNot Nothing AndAlso Not Object.ReferenceEquals(_preMaskBitmap, _baseCacheBitmap) Then _preMaskBitmap.Dispose()
+                _preMaskBitmap = Nothing
+                _preMaskKey = Nothing
                 _baseCacheBitmap?.Dispose()
                 _baseCacheBitmap = Nothing
                 _baseCacheKey = Nothing
@@ -3182,19 +3233,62 @@ Namespace Services
         Private Shared Function GetOrComputeBaseLocked(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim key = ComputeBaseKey(adj)
             Dim stamp = Interlocked.Read(_baseSourceStamp)
-            If Object.ReferenceEquals(_baseCacheSourceRef, source) AndAlso
+            Dim sameSource = Object.ReferenceEquals(_baseCacheSourceRef, source) AndAlso stamp = _baseCacheSourceStamp
+            If sameSource AndAlso
                String.Equals(_baseCacheKey, key, StringComparison.Ordinal) AndAlso
-               stamp = _baseCacheSourceStamp AndAlso
                _baseCacheBitmap IsNot Nothing Then
                 Return _baseCacheBitmap
             End If
 
-            Dim computed = ProcessBitmapBase(source, adj)
-            _baseCacheBitmap?.Dispose()
+            ' ZWEI EBENEN. Die Maskenebenen sind die letzte Stufe und haengen als einzige an den
+            ' Masken; alles davor bleibt bei einem Pinselstrich unveraendert. Gemessen kostete ein
+            ' Strich bei 24 MP sonst die ganze Kette, obwohl nur die Maske anders war.
+            Dim preKey = ComputeBaseKeyBeforeMasks(adj)
+            Dim preMask As SKBitmap = Nothing
+            Dim preMaskIsCached = False
+            If sameSource AndAlso _preMaskBitmap IsNot Nothing AndAlso
+               String.Equals(_preMaskKey, preKey, StringComparison.Ordinal) Then
+                preMask = _preMaskBitmap
+                preMaskIsCached = True
+            Else
+                preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj)
+            End If
+
+            ' Der Zwischenstand BLEIBT im Speicher stehen, die Ebenen duerfen ihn also nicht
+            ' anfassen. Sie bekommen eine Abschrift - dieselbe, die die Kette sonst selbst anlegte,
+            ' nur diesmal in unserem Besitz: damit greift der Ausschnittweg, der die Anpassung auf
+            ' das Maskenrechteck begrenzt.
+            Dim computed As SKBitmap = Nothing
+            If HasBaseMaskedLayers(adj) Then
+                Dim arbeit = CloneBitmap(preMask)
+                computed = ProcessBitmapMaskedLayers(arbeit, adj, source.Width, source.Height, ownsInput:=True)
+                If computed Is Nothing Then computed = arbeit
+            Else
+                computed = ProcessBitmapMaskedLayers(preMask, adj, source.Width, source.Height, ownsInput:=False)
+            End If
+            If computed Is Nothing Then
+                ' Keine Ebene hat gewirkt: der Zwischenstand IST das Ergebnis. Dann gibt es nichts
+                ' zu trennen - zwei Verweise auf dasselbe Bild waeren nur eine doppelte Entsorgung.
+                computed = preMask
+                If preMaskIsCached Then
+                    _preMaskBitmap = Nothing
+                    _preMaskKey = Nothing
+                End If
+                preMaskIsCached = False
+                preMask = Nothing
+            End If
+
+            If _baseCacheBitmap IsNot Nothing AndAlso Not Object.ReferenceEquals(_baseCacheBitmap, preMask) Then _baseCacheBitmap.Dispose()
             _baseCacheBitmap = computed
             _baseCacheKey = key
             _baseCacheSourceRef = source
             _baseCacheSourceStamp = stamp
+
+            If preMask IsNot Nothing AndAlso Not preMaskIsCached Then
+                If _preMaskBitmap IsNot Nothing Then _preMaskBitmap.Dispose()
+                _preMaskBitmap = preMask
+                _preMaskKey = preKey
+            End If
             Return computed
         End Function
 
@@ -3214,6 +3308,17 @@ Namespace Services
         End Function
 
         Friend Shared Function ComputeBaseKey(adj As ImageAdjustments) As String
+            Return ComputeBaseKeyCore(adj, includeMasks:=True)
+        End Function
+
+        ''' <summary>Derselbe Schluessel OHNE den Maskenanteil - fuer den Zwischenstand vor den
+        ''' Maskenebenen. Beide kommen aus DEMSELBEN Bauplan, damit sie nicht auseinanderlaufen
+        ''' koennen: ein neues Feld steht sofort in beiden.</summary>
+        Private Shared Function ComputeBaseKeyBeforeMasks(adj As ImageAdjustments) As String
+            Return ComputeBaseKeyCore(adj, includeMasks:=False)
+        End Function
+
+        Private Shared Function ComputeBaseKeyCore(adj As ImageAdjustments, includeMasks As Boolean) As String
             ' HasActiveSelection und ihre editierbare Display-Maske sind reine UI-Zustände. Seit
             ' Auswahlkorrekturen als persistente MaskedAdjustmentLayers gespeichert werden, wirken
             ' sie nur noch dann direkt auf die globale Pixelpipeline, wenn der explizite Legacy-
@@ -3271,7 +3376,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
                 adj.SelectionScopeEnabled, selectionScopeKey,
                 adj.GlobalAdjustmentsHidden,
-                PersistentMasksFingerprint(adj),
+                If(includeMasks, PersistentMasksFingerprint(adj), "-"),
                 adj.WorkingImageVersion
             }.Select(AddressOf KeyPart))
         End Function
@@ -3361,6 +3466,18 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' gibt; sonst ueber die gespeicherte Zeichenkette. Der zweite Fall ist NICHT nur Theorie:
         ''' ein PNG, das nicht als Alpha-Raster lesbar ist, ergaebe sonst fuer jede Maske denselben
         ''' Wert - und der Zwischenspeicher gaebe reihenweise das falsche Bild zurueck.</summary>
+        ''' <summary>Wie <see cref="ComponentRasterFingerprint"/>, aber fuer die beiden Raster der
+        ''' Pinselkorrektur. Der Schluessel entsteht bei JEDEM Render - ueber die Speicherform
+        ''' gelesen packte er die Korrektur dabei jedesmal neu.
+        '''
+        ''' Die Speicherform kommt deshalb ueber Stored* herein und NICHT ueber die Eigenschaft:
+        ''' VB wertet beide Argumente aus, bevor es hierher springt - ein Aufruf mit
+        ''' <c>c.BrushAddPngBase64</c> haette also genau das gepackt, was hier vermieden wird.</summary>
+        Private Shared Function BrushRasterFingerprint(raster As AlphaRaster, storedPng As String) As String
+            If raster IsNot Nothing Then Return raster.Fingerprint
+            Return SelectionMaskFingerprint(storedPng)
+        End Function
+
         Private Shared Function ComponentRasterFingerprint(c As MaskComponent) As String
             If c Is Nothing Then Return "0"
             Dim raster = c.Raster
@@ -3387,8 +3504,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                                KeyPart(c.GradientEndXPercent), KeyPart(c.GradientEndYPercent),
                                KeyPart(c.GradientRadiusRatio), KeyPart(c.GradientFeatherPercent),
                                c.BrushLeft, c.BrushTop, c.BrushRight, c.BrushBottom,
-                               SelectionMaskFingerprint(c.BrushAddPngBase64),
-                               SelectionMaskFingerprint(c.BrushSubtractPngBase64))
+                               BrushRasterFingerprint(c.BrushAddRaster, c.StoredBrushAddPng),
+                               BrushRasterFingerprint(c.BrushSubtractRaster, c.StoredBrushSubtractPng))
         End Function
 
         Private Shared Function PersistentMasksFingerprint(adj As ImageAdjustments) As String
@@ -3703,8 +3820,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function CloneBitmapForAnnotationComposite(source As SKBitmap) As SKBitmap
             Dim clone = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
             Using canvas = New SKCanvas(clone)
-                canvas.Clear(SKColors.Transparent)
-                canvas.DrawBitmap(source, 0, 0)
+                ' Src statt Leeren und Darueberzeichnen: das Ziel wird ohnehin vollstaendig
+                ' beschrieben, ein vorheriges Loeschen ist eine zweite Fahrt ueber dieselben Bytes.
+                ' Bei 24 MP gemessen 143 auf 130 ms - dieselben Bildpunkte, eine Fahrt weniger.
+                Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                    canvas.DrawBitmap(source, 0, 0, paint)
+                End Using
             End Using
             Return clone
         End Function
