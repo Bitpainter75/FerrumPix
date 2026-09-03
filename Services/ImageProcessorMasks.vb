@@ -1533,27 +1533,6 @@ Namespace Services
             }
         End Function
 
-        ''' <summary>Schneidet ein Alpha-Raster auf das angegebene Rechteck und kodiert es als PNG.</summary>
-        ''' Der Puffer heisst bewusst NICHT "buffer": ein lokaler Name verdeckt in VB die Klasse
-        ''' <c>System.Buffer</c>, und <c>Buffer.BlockCopy</c> darunter uebersetzt nicht mehr.
-        Private Shared Function EncodeCroppedAlphaRaster(raster As Byte(), stride As Integer,
-                                                          left As Integer, top As Integer,
-                                                          right As Integer, bottom As Integer) As String
-            Using cropped = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
-                Dim cStride = cropped.RowBytes
-                Dim cBuf = New Byte(cStride * cropped.Height - 1) {}
-                For y = 0 To cropped.Height - 1
-                    Buffer.BlockCopy(raster, (top + y) * stride + left, cBuf, y * cStride, cropped.Width)
-                Next
-                Marshal.Copy(cBuf, 0, cropped.GetPixels(), cBuf.Length)
-                Using image = SKImage.FromBitmap(cropped)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
-                        Return Convert.ToBase64String(data.ToArray())
-                    End Using
-                End Using
-            End Using
-        End Function
-
         ''' <summary>Eine Maske, die ueberall voll deckt. Ausgangspunkt fuer "Ebenenmaske hinzufuegen"
         ''' ohne aktive Auswahl: erst deckt sie alles, dann nimmt der Masken-Pinsel weg.
         '''

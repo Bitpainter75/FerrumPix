@@ -56,12 +56,6 @@ Namespace Services
             _pixels = pixels
         End Sub
 
-        ''' <summary>Ein leeres Raster derselben Groesse - alle Bildpunkte ohne Deckung.</summary>
-        Public Shared Function CreateEmpty(width As Integer, height As Integer) As AlphaRaster
-            If width <= 0 OrElse height <= 0 Then Return Nothing
-            Return New AlphaRaster(width, height, New Byte(width * height - 1) {})
-        End Function
-
         ''' <summary>Aus einem Alpha8-Bild. Der Zeilensprung des Bildes kann groesser sein als seine
         ''' Breite; hier wird dicht gepackt.</summary>
         Public Shared Function FromBitmap(bitmap As SKBitmap) As AlphaRaster
@@ -207,6 +201,87 @@ Namespace Services
                 Return _fingerprint
             End Get
         End Property
+    End Class
+
+    ''' <summary>Ein Paar aus Arbeitsform und Speicherform fuer DIESELBEN Bildpunkte: das Raster
+    ''' zum Rechnen, das PNG fuer die Datei. Umgewandelt wird erst, wenn eine Seite gebraucht wird,
+    ''' und wer eine Seite setzt, macht die andere ungueltig.
+    '''
+    ''' WARUM ALS EIGENE KLASSE: Maske, Maskenbestandteil und Auswahl fuehren zusammen sieben
+    ''' solcher Paare. Als Feldergruppen ausgeschrieben stand dieselbe Regel siebenmal da - und lief
+    ''' prompt auseinander: fuer den Renderschluessel wurde an einer Stelle die Eigenschaft gelesen
+    ''' (die wandelt um) und an der anderen der rohe Wert (der nicht). Hier gibt es die Regel EINMAL,
+    ''' und <see cref="StoredPng"/>/<see cref="StoredRaster"/> sind der eine Weg daran vorbei.</summary>
+    Friend NotInheritable Class AlphaPixels
+        Private _png As String = ""
+        Private _raster As AlphaRaster
+        ' EIN FEHLSCHLAG WIRD GEMERKT. FromPngBase64 gibt Nothing zurueck, wenn die Zeichenkette
+        ' kein Alpha-Raster hergibt - ohne diesen Merker versuchte JEDER weitere Zugriff es erneut,
+        ' und einer davon ist der Renderschluessel. Ein unlesbares PNG kostete damit bei jedem Bild
+        ' einen vollen Dekodierversuch.
+        Private _unpackFailed As Boolean
+
+        ''' <summary>Die Speicherform. Sie entsteht erst, wenn jemand sie liest.</summary>
+        Public Property Png As String
+            Get
+                If String.IsNullOrEmpty(_png) AndAlso _raster IsNot Nothing Then _png = _raster.ToPngBase64()
+                Return _png
+            End Get
+            Set(value As String)
+                _png = If(value, "")
+                _raster = Nothing
+                _unpackFailed = False
+            End Set
+        End Property
+
+        ''' <summary>Die Arbeitsform. Nothing heisst: es gibt keine, und es laesst sich auch keine
+        ''' aus der Speicherform gewinnen.</summary>
+        Public Property Raster As AlphaRaster
+            Get
+                If _raster Is Nothing AndAlso Not _unpackFailed AndAlso Not String.IsNullOrEmpty(_png) Then
+                    _raster = AlphaRaster.FromPngBase64(_png)
+                    _unpackFailed = _raster Is Nothing
+                End If
+                Return _raster
+            End Get
+            Set(value As AlphaRaster)
+                _raster = value
+                _png = ""
+                _unpackFailed = False
+            End Set
+        End Property
+
+        ''' <summary>Was VORLIEGT, ohne eine Umwandlung auszuloesen. Fuer die Wege, die je Render
+        ''' oder je Mausbewegung laufen - vor allem den Renderschluessel.</summary>
+        Public ReadOnly Property StoredPng As String
+            Get
+                Return _png
+            End Get
+        End Property
+
+        Public ReadOnly Property StoredRaster As AlphaRaster
+            Get
+                Return _raster
+            End Get
+        End Property
+
+        ''' <summary>Liegen ueberhaupt Bildpunkte vor? Antwortet OHNE zu packen oder zu
+        ''' entpacken - die Frage stellen mehrere Wege sehr oft.</summary>
+        Public ReadOnly Property HasData As Boolean
+            Get
+                Return _raster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_png)
+            End Get
+        End Property
+
+        ''' <summary>Uebernimmt ein anderes Paar SO WIE ES VORLIEGT - ein PNG bleibt PNG, ein Raster
+        ''' bleibt Raster. Eine Abschrift ueber die Eigenschaften wuerde genau das Packen ausloesen,
+        ''' das dieser Weg vermeidet.</summary>
+        Public Sub CopyFrom(other As AlphaPixels)
+            If other Is Nothing Then Return
+            _png = other._png
+            _raster = other._raster
+            _unpackFailed = other._unpackFailed
+        End Sub
     End Class
 
 End Namespace

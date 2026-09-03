@@ -1468,11 +1468,11 @@ Namespace ViewModels
             NameHistoryStep(LocalizationService.T("Auswahl aus dem Pfad erstellt"))
         End Sub
 
-        ''' <summary>Erzeugt direkt eine neue, unabhängige Maskenebene aus dem markierten Pfad.
-        ''' Der Pfad bleibt als editierbare Vorlage erhalten und kann nach einer Änderung erneut
-        ''' in eine Maskenebene überführt werden.</summary>
-        ''' <summary>Erzeugt die Auswahl aus dem Pfad und friert sie dann wie jede andere
-        ''' bildgrosse Auswahl im Hintergrund als Ebenenmaske ein.</summary>
+        ''' <summary>Erzeugt direkt eine neue, unabhängige Maskenebene aus dem markierten Pfad: die
+        ''' Auswahl entsteht aus dem Pfad und wird dann wie jede andere bildgrosse Auswahl im
+        ''' Hintergrund als Ebenenmaske eingefroren. Der Pfad bleibt als editierbare Vorlage
+        ''' erhalten und kann nach einer Änderung erneut in eine Maskenebene überführt
+        ''' werden.</summary>
         Private Async Function CreateMaskLayerFromSelectedPathAsync() As Task
             Dim xs As Double() = Nothing, ys As Double() = Nothing
             If Not TryBuildSelectedPathPolygon(xs, ys) Then Return

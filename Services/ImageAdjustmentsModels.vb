@@ -605,8 +605,9 @@ Namespace Services
         Public Property SelectionMaskTop As Integer = 0
         Public Property SelectionMaskRight As Integer = 0
         Public Property SelectionMaskBottom As Integer = 0
-        Private _selectionMaskPngBase64 As String = ""
-        Private _selectionMaskRaster As AlphaRaster
+        ' Arbeitsform und Speicherform der Auswahlmaske, dieselbe Regel wie an der Maske: sie steht
+        ' EINMAL in AlphaPixels.
+        Private ReadOnly _selectionMaskPixels As New AlphaPixels()
 
         ''' <summary>Die Auswahlmaske als PNG - die SPEICHERFORM. Sie entsteht erst, wenn jemand
         ''' sie liest (Rezept schreiben), und wird beim Laden gesetzt. Wer im Programm mit der
@@ -614,14 +615,10 @@ Namespace Services
         ''' Pinselstrich einmal voll gepackt und beim naechsten Leser wieder entpackt.</summary>
         Public Property SelectionMaskPngBase64 As String
             Get
-                If String.IsNullOrEmpty(_selectionMaskPngBase64) AndAlso _selectionMaskRaster IsNot Nothing Then
-                    _selectionMaskPngBase64 = _selectionMaskRaster.ToPngBase64()
-                End If
-                Return _selectionMaskPngBase64
+                Return _selectionMaskPixels.Png
             End Get
             Set(value As String)
-                _selectionMaskPngBase64 = If(value, "")
-                _selectionMaskRaster = Nothing
+                _selectionMaskPixels.Png = value
             End Set
         End Property
 
@@ -630,14 +627,10 @@ Namespace Services
         <JsonIgnore>
         Public Property SelectionMaskRaster As AlphaRaster
             Get
-                If _selectionMaskRaster Is Nothing AndAlso Not String.IsNullOrEmpty(_selectionMaskPngBase64) Then
-                    _selectionMaskRaster = AlphaRaster.FromPngBase64(_selectionMaskPngBase64)
-                End If
-                Return _selectionMaskRaster
+                Return _selectionMaskPixels.Raster
             End Get
             Set(value As AlphaRaster)
-                _selectionMaskRaster = value
-                _selectionMaskPngBase64 = ""
+                _selectionMaskPixels.Raster = value
             End Set
         End Property
 
@@ -645,15 +638,30 @@ Namespace Services
         <JsonIgnore>
         Public ReadOnly Property HasSelectionMaskData As Boolean
             Get
-                Return _selectionMaskRaster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_selectionMaskPngBase64)
+                Return _selectionMaskPixels.HasData
+            End Get
+        End Property
+
+        ''' <summary>Die Auswahlmaske SO WIE SIE LIEGT, ohne eine Umwandlung auszuloesen - das
+        ''' Gegenstueck zu <c>ImageMask.StoredRaster</c>/<c>StoredPng</c>. Der Fingerabdruck des
+        ''' Renderschluessels liest darueber: er entsteht bei JEDEM Bild, und ueber die
+        ''' Eigenschaften gelesen entpackte bzw. packte er die Auswahl dabei jedes Mal neu.</summary>
+        Friend ReadOnly Property StoredSelectionMaskRaster As AlphaRaster
+            Get
+                Return _selectionMaskPixels.StoredRaster
+            End Get
+        End Property
+
+        Friend ReadOnly Property StoredSelectionMaskPng As String
+            Get
+                Return _selectionMaskPixels.StoredPng
             End Get
         End Property
 
         ''' <summary>Uebernimmt die Auswahlmaske eines anderen Rezepts SO WIE SIE VORLIEGT.</summary>
         Friend Sub CopySelectionMaskDataFrom(other As ImageAdjustments)
             If other Is Nothing Then Return
-            _selectionMaskPngBase64 = other._selectionMaskPngBase64
-            _selectionMaskRaster = other._selectionMaskRaster
+            _selectionMaskPixels.CopyFrom(other._selectionMaskPixels)
         End Sub
 
         ''' <summary>Weiche Kante der Auswahl in BILDpixeln. Die gespeicherte Maske bleibt hart und

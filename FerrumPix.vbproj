@@ -29,10 +29,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.1" />
+    <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.2" />
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.28.0" />
     <!-- Die Grafikbeschleunigung fuer die gelernten Modelle: EINE Bibliothek je System, die

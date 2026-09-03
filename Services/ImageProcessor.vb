@@ -1985,19 +1985,19 @@ Namespace Services
         ' ProcessBitmap sowie vom Basis-Cache in ApplyAdjustments(source As SKBitmap, ...) genutzt.
         ' ARBEITSBILD (Stufe E): Retusche ist KEIN Pipeline-Schritt mehr - sie steckt bereits im
         ' Eingangsbild (Arbeitsbild); die Pipeline beginnt direkt mit der Geometrie.
-        ''' <summary>Schaltet zwischen der alten Stufenkette und der verschmolzenen
-        ''' Gleitkomma-Kette um. Waehrend der Umstellung laufen beide nebeneinander, damit
-        ''' der Aequivalenztest der Diagnose sie vergleichen kann.</summary>
         ''' <summary>Die ganze Basisstufe: alles vor den Maskenebenen, danach die Maskenebenen.
         ''' Beide Haelften gibt es einzeln, weil der Zwischenspeicher sie getrennt haelt - hier
         ''' bleiben sie zusammen, damit jeder vorhandene Aufrufer bekommt, was er immer bekam.</summary>
         Private Shared Function ProcessBitmapBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj)
-            ' Der Zwischenstand gehoert uns, die Ebenen duerfen also direkt hineinschreiben.
+            ' Der Zwischenstand gehoert uns, die Ebenen duerfen also direkt hineinschreiben - und
+            ' genau deshalb wird er hier NICHT noch einmal entsorgt. Liefert die Ebenenkette ein
+            ' neues Bild, hat sie den Zwischenstand beim ersten Ersetzen selbst entsorgt
+            ' (ReplaceBitmapOwned mit owned = True); liefert sie Nothing, steht das Ergebnis darin
+            ' und er wird zurueckgegeben. Ein Dispose an dieser Stelle traf also immer entweder ein
+            ' bereits entsorgtes oder das gerade zurueckgegebene Bild.
             Dim withLayers = ProcessBitmapMaskedLayers(preMask, adj, source.Width, source.Height, ownsInput:=True)
-            If withLayers Is Nothing Then Return preMask
-            preMask.Dispose()
-            Return withLayers
+            Return If(withLayers, preMask)
         End Function
 
         ''' <summary>Geometrie, globale Pixelkette und Auswahl-Skopus - alles, was NICHT an den
@@ -3454,58 +3454,45 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                    String.Join("/", m.GetComponents().Select(AddressOf MaskComponentFingerprint))
         End Function
 
-        ''' <summary>Der Fingerabdruck eines Rasters - er haengt an den BILDPUNKTEN, nicht an den
-        ''' Bytes einer Speicherform. Zwei Wege, die dieselbe Form erzeugen, bekommen damit
-        ''' dieselbe Antwort, auch wenn ihre PNG-Bytes verschieden waeren.</summary>
-        Private Shared Function RasterFingerprint(raster As AlphaRaster) As String
-            If raster Is Nothing Then Return "0"
-            Return raster.Fingerprint
-        End Function
-
-        ''' <summary>Der Fingerabdruck eines Maskenbestandteils. Ueber sein Raster, wo es eines
-        ''' gibt; sonst ueber die gespeicherte Zeichenkette. Der zweite Fall ist NICHT nur Theorie:
-        ''' ein PNG, das nicht als Alpha-Raster lesbar ist, ergaebe sonst fuer jede Maske denselben
-        ''' Wert - und der Zwischenspeicher gaebe reihenweise das falsche Bild zurueck.</summary>
-        ''' <summary>Wie <see cref="ComponentRasterFingerprint"/>, aber fuer die beiden Raster der
-        ''' Pinselkorrektur. Der Schluessel entsteht bei JEDEM Render - ueber die Speicherform
-        ''' gelesen packte er die Korrektur dabei jedesmal neu.
+        ''' <summary>Der Fingerabdruck von Bildpunkten, die als Raster ODER als Speicherform
+        ''' vorliegen - er haengt am INHALT, nicht an den Bytes einer Speicherform. Zwei Wege, die
+        ''' dieselbe Form erzeugen, bekommen damit dieselbe Antwort, auch wenn ihre PNG-Bytes
+        ''' verschieden waeren.
         '''
-        ''' Die Speicherform kommt deshalb ueber Stored* herein und NICHT ueber die Eigenschaft:
-        ''' VB wertet beide Argumente aus, bevor es hierher springt - ein Aufruf mit
-        ''' <c>c.BrushAddPngBase64</c> haette also genau das gepackt, was hier vermieden wird.</summary>
-        Private Shared Function BrushRasterFingerprint(raster As AlphaRaster, storedPng As String) As String
+        ''' BEIDE Seiten kommen SO HEREIN, WIE SIE LIEGEN, und keine der beiden wird hier erzeugt.
+        ''' Das ist der ganze Sinn dieser Funktion: der Schluessel entsteht bei JEDEM Render, und
+        ''' auf den Schnellwegen (<see cref="TryCloneBaseCachedBitmap"/>, der Bereichsrender beim
+        ''' Objektschieben) sogar je Mausbewegung, OHNE dass danach ueberhaupt gerechnet wird. Wer
+        ''' hier die Eigenschaft <c>Raster</c> statt <c>StoredRaster</c> uebergibt, entpackt bei
+        ''' jedem dieser Aufrufe das ganze PNG - bei 50 MP sind das rund 90 ms fuer einen Wert, der
+        ''' auch aus der Zeichenkette zu haben ist. Und weil VB alle Argumente auswertet, bevor es
+        ''' hierher springt, entscheidet allein die AUFRUFSTELLE darueber.
+        '''
+        ''' Liegt nur die Speicherform vor, zaehlt sie - ueber denselben gepufferten Weg wie
+        ''' bisher. Zwei Masken mit gleichen Bildpunkten, von denen eine als Raster und eine als
+        ''' PNG vorliegt, bekommen dabei verschiedene Werte; das kostet einen Neuaufbau zu viel,
+        ''' nie ein falsches Bild.</summary>
+        Private Shared Function StoredPixelsFingerprint(raster As AlphaRaster, storedPng As String) As String
             If raster IsNot Nothing Then Return raster.Fingerprint
             Return SelectionMaskFingerprint(storedPng)
         End Function
 
-        Private Shared Function ComponentRasterFingerprint(c As MaskComponent) As String
-            If c Is Nothing Then Return "0"
-            Dim raster = c.Raster
-            If raster IsNot Nothing Then Return raster.Fingerprint
-            Return SelectionMaskFingerprint(c.PngBase64)
-        End Function
-
-        ''' <summary>Der Fingerabdruck der aktiven Auswahlmaske. Ueber das Raster, damit der
-        ''' Schluessel eines Vorschau-Renders die Maske nicht erst packen muss - er wird bei jedem
-        ''' Bild gebraucht.</summary>
+        ''' <summary>Der Fingerabdruck der aktiven Auswahlmaske - aus dem, was vorliegt, siehe
+        ''' <see cref="StoredPixelsFingerprint"/>.</summary>
         Private Shared Function SelectionRasterFingerprint(adj As ImageAdjustments) As String
             If adj Is Nothing OrElse Not adj.HasSelectionMaskData Then Return "0"
-            Dim raster = adj.SelectionMaskRaster
-            If raster IsNot Nothing Then Return raster.Fingerprint
-            ' Kein lesbares Raster - dann zaehlt die Speicherform. Sie liegt in diesem Fall vor,
-            ' es wird also nichts gepackt.
-            Return SelectionMaskFingerprint(adj.SelectionMaskPngBase64)
+            Return StoredPixelsFingerprint(adj.StoredSelectionMaskRaster, adj.StoredSelectionMaskPng)
         End Function
 
         Private Shared Function MaskComponentFingerprint(c As MaskComponent) As String
             Return String.Join(":", c.Mode, c.IsVisible, c.Left, c.Top, c.Right, c.Bottom, c.FeatherPixels,
-                               c.Inverted, ComponentRasterFingerprint(c),
+                               c.Inverted, StoredPixelsFingerprint(c.StoredRaster, c.StoredPng),
                                c.Kind, KeyPart(c.GradientStartXPercent), KeyPart(c.GradientStartYPercent),
                                KeyPart(c.GradientEndXPercent), KeyPart(c.GradientEndYPercent),
                                KeyPart(c.GradientRadiusRatio), KeyPart(c.GradientFeatherPercent),
                                c.BrushLeft, c.BrushTop, c.BrushRight, c.BrushBottom,
-                               BrushRasterFingerprint(c.BrushAddRaster, c.StoredBrushAddPng),
-                               BrushRasterFingerprint(c.BrushSubtractRaster, c.StoredBrushSubtractPng))
+                               StoredPixelsFingerprint(c.StoredBrushAddRaster, c.StoredBrushAddPng),
+                               StoredPixelsFingerprint(c.StoredBrushSubtractRaster, c.StoredBrushSubtractPng))
         End Function
 
         Private Shared Function PersistentMasksFingerprint(adj As ImageAdjustments) As String

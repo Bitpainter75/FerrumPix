@@ -771,9 +771,12 @@ Namespace ViewModels
                 ' SOFORT weg. Eine Verzoegerung beim Ausschalten liesse die Sperre stehen, obwohl
                 ' laengst nichts mehr laeuft - und das ist schlimmer als eine spaete Anzeige.
                 _busyRun += 1
+                ' Der Grund geht AUSSERHALB der Abfrage weg. Endet ein Vorgang vor der Sperrfrist,
+                ' wurde die Sperre nie sichtbar - der Text blieb dann als Grund stehen und der
+                ' naechste Vorgang ohne eigenen Grund zeigte ihn an.
+                SetBusyReason("")
                 If _showsBusy Then
                     _showsBusy = False
-                    SetBusyReason("")
                     Me.RaisePropertyChanged(NameOf(ShowsBusy))
                     Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
                     Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
@@ -4683,6 +4686,20 @@ Namespace ViewModels
                 ' Ins Zuschneiden: das Bild einpassen, sonst zieht man an Anfassern, die neben der
                 ' Flaeche liegen. Gilt fuer JEDEN Dateityp.
                 If value = EditorTool.Transform AndAlso previousTool <> EditorTool.Transform Then
+                    ' WER HAT ENTSCHIEDEN, dass der Verschnitt sichtbar ist? Die Frage stellt sich
+                    ' genau hier, und die Antwort haengt an zwei Eigenschaften, die man einzeln nicht
+                    ' sieht. Faellt sie falsch aus, laesst sich der Ausschnitt nicht wieder aufziehen -
+                    ' das sieht wie ein zerstoerender Zuschnitt aus, obwohl das Basisbild unangetastet
+                    ' ist. Eine Zeile hier sagt, WELCHE der beiden Haelften gefehlt hat.
+                    DiagnosticLogService.LogAlways("Editor.CropTool",
+                        $"betreten verschnittSichtbar={ShowsFullImageWhileCropping} " &
+                        $"sidecar={IsCurrentImageSidecarFormat} buendel={IsCurrentDocumentFpx} " &
+                        $"buendelpfad={Not String.IsNullOrEmpty(_currentFpxPath)} " &
+                        $"buendelordner={Not String.IsNullOrEmpty(_currentFpxTempDir)} " &
+                        $"renderquelle={IO.Path.GetFileName(RenderSourcePath)} " &
+                        $"dokument={IO.Path.GetFileName(_currentImagePath)} " &
+                        $"cropSchritt={LastCropBearingGeometryOperationIndex()} " &
+                        $"schritte={_geometryOperations.Count}")
                     ' Wo das ganze Bild zu sehen ist, legt sich der Rahmen auf den bereits
                     ' bestaetigten Ausschnitt. Sonst stuende er um das ganze Bild, und ein
                     ' vorhandener Zuschnitt saehe aus, als waere er weg.
@@ -12422,11 +12439,24 @@ Namespace ViewModels
         ' weil das Weggeschnittene gar nicht mehr auf dem Schirm ist), in JEDEM ANDEREN Werkzeug
         ' zeigt die Vorschau nur noch den Ausschnitt.
 
-        ''' <summary>Ein .fpx-Buendel ist offen - entweder frisch geladen (_currentFpxPath) oder als
-        ''' Datei mit dieser Endung.</summary>
+        ''' <summary>Ein .fpx-Buendel ist offen - erkannt am Pfad des Buendels, an der Endung des
+        ''' Dokuments ODER am ausgepackten Ordner.
+        '''
+        ''' DREI KENNZEICHEN, weil die Antwort in ein Werkzeug geht: faellt sie falsch aus, zeigt das
+        ''' Zuschneide-Werkzeug den Verschnitt nicht mehr (siehe
+        ''' <see cref="ShowsFullImageWhileCropping"/>) und der Ausschnitt laesst sich nicht wieder
+        ''' aufziehen. Das SIEHT wie ein zerstoerender Zuschnitt aus, obwohl das Basisbild
+        ''' unangetastet im Buendel liegt und nur die Zahlen im Rezept stehen.
+        '''
+        ''' Und es faellt nur bei einem Buendel mit JPG/PNG als Basis auf: liegt darin ein RAW oder
+        ''' PSD, faengt IsCurrentImageSidecarFormat denselben Fall ohnehin auf - die prueft die
+        ''' AUSGEPACKTE Basis und ist bei einem JPG darin falsch. Ein Kennzeichen allein hat diese
+        ''' Luecke also offen gelassen.</summary>
         Public ReadOnly Property IsCurrentDocumentFpx As Boolean
             Get
-                Return Not String.IsNullOrEmpty(_currentFpxPath) OrElse FpxService.IsFpx(_currentImagePath)
+                Return Not String.IsNullOrEmpty(_currentFpxPath) OrElse
+                       FpxService.IsFpx(_currentImagePath) OrElse
+                       Not String.IsNullOrEmpty(_currentFpxTempDir)
             End Get
         End Property
 

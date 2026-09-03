@@ -1,5 +1,12 @@
 # Veroeffentlicht ausschliesslich das AUR-Paket. Dieser Lauf ist absichtlich vom allgemeinen
 # Release getrennt: dessen Auswahl "alle" umfasst weder AUR noch Flatpak.
+#
+# HIER STEHT ABSICHTLICH KEINE REIHENFOLGE-PRUEFUNG gegen PUBLISHED-VERSION. Ein Hotfix geht
+# nur ins AUR und laeuft nicht durch den allgemeinen Release - eine solche Pruefung wuerde
+# genau diesen Fall abweisen, weil PUBLISHED-VERSION dann noch die vorige Ausgabe nennt. Sie
+# waere ausserdem gegenstandslos: der Schritt "AUR-ZIP ins Versionsrelease" legt das
+# Quell-ZIP, auf das der PKGBUILD zeigt, selbst dorthin. Im Flatpak-Einzellauf bleibt der
+# Riegel dagegen stehen.
 name: AUR veroeffentlichen
 
 on:

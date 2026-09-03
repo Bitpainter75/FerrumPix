@@ -33,20 +33,19 @@ Namespace Services
         Public Property Right As Integer
         Public Property Bottom As Integer
 
-        Private _pngBase64 As String = ""
-        Private _raster As AlphaRaster
+        ' Arbeitsform und Speicherform der Maskenpixel - die Regel dahinter steht EINMAL in
+        ' AlphaPixels, nicht hier und in MaskComponent nebeneinander.
+        Private ReadOnly _pixels As New AlphaPixels()
 
         ''' <summary>Die Bildpunkte als PNG - die SPEICHERFORM, nicht die Arbeitsform. Sie entsteht
         ''' erst, wenn jemand sie liest (Rezept schreiben), und wird beim Laden gesetzt. Wer im
         ''' Programm mit der Maske rechnet, nimmt <see cref="Raster"/>.</summary>
         Public Property PngBase64 As String
             Get
-                If String.IsNullOrEmpty(_pngBase64) AndAlso _raster IsNot Nothing Then _pngBase64 = _raster.ToPngBase64()
-                Return _pngBase64
+                Return _pixels.Png
             End Get
             Set(value As String)
-                _pngBase64 = If(value, "")
-                _raster = Nothing
+                _pixels.Png = value
             End Set
         End Property
 
@@ -55,12 +54,10 @@ Namespace Services
         <JsonIgnore>
         Public Property Raster As AlphaRaster
             Get
-                If _raster Is Nothing AndAlso Not String.IsNullOrEmpty(_pngBase64) Then _raster = AlphaRaster.FromPngBase64(_pngBase64)
-                Return _raster
+                Return _pixels.Raster
             End Get
             Set(value As AlphaRaster)
-                _raster = value
-                _pngBase64 = ""
+                _pixels.Raster = value
             End Set
         End Property
 
@@ -69,12 +66,9 @@ Namespace Services
         ''' sonst genau das Packen ausloesen, das dieser Weg vermeidet.</summary>
         Friend Sub CopyPixelDataFrom(other As ImageMask)
             If other Is Nothing Then Return
-            _pngBase64 = other._pngBase64
-            _raster = other._raster
-            _brushAddPng = other._brushAddPng
-            _brushAddRaster = other._brushAddRaster
-            _brushSubtractPng = other._brushSubtractPng
-            _brushSubtractRaster = other._brushSubtractRaster
+            _pixels.CopyFrom(other._pixels)
+            _brushAdd.CopyFrom(other._brushAdd)
+            _brushSubtract.CopyFrom(other._brushSubtract)
         End Sub
 
         ''' <summary>Dasselbe von einem Bestandteil her. Ohne diesen Weg liefe jede Zerlegung in
@@ -82,58 +76,73 @@ Namespace Services
         ''' Rastern und bei jeder Zaehlung der Bestandteile.</summary>
         Friend Sub CopyPixelDataFrom(other As MaskComponent)
             If other Is Nothing Then Return
-            _pngBase64 = other.StoredPng
-            _raster = other.StoredRaster
-            _brushAddPng = other.StoredBrushAddPng
-            _brushAddRaster = other.StoredBrushAddRaster
-            _brushSubtractPng = other.StoredBrushSubtractPng
-            _brushSubtractRaster = other.StoredBrushSubtractRaster
+            _pixels.CopyFrom(other.PixelSlot)
+            _brushAdd.CopyFrom(other.BrushAddSlot)
+            _brushSubtract.CopyFrom(other.BrushSubtractSlot)
         End Sub
 
         ''' <summary>Die Bilddaten SO WIE SIE LIEGEN, ohne eine Umwandlung auszuloesen. Nur fuer
-        ''' die Uebergabe zwischen Maske und Bestandteil.</summary>
+        ''' die Uebergabe zwischen Maske und Bestandteil sowie fuer den Renderschluessel.</summary>
+        Friend ReadOnly Property PixelSlot As AlphaPixels
+            Get
+                Return _pixels
+            End Get
+        End Property
+
+        Friend ReadOnly Property BrushAddSlot As AlphaPixels
+            Get
+                Return _brushAdd
+            End Get
+        End Property
+
+        Friend ReadOnly Property BrushSubtractSlot As AlphaPixels
+            Get
+                Return _brushSubtract
+            End Get
+        End Property
+
         Friend ReadOnly Property StoredPng As String
             Get
-                Return _pngBase64
+                Return _pixels.StoredPng
             End Get
         End Property
 
         Friend ReadOnly Property StoredRaster As AlphaRaster
             Get
-                Return _raster
+                Return _pixels.StoredRaster
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushAddPng As String
             Get
-                Return _brushAddPng
+                Return _brushAdd.StoredPng
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushAddRaster As AlphaRaster
             Get
-                Return _brushAddRaster
+                Return _brushAdd.StoredRaster
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushSubtractPng As String
             Get
-                Return _brushSubtractPng
+                Return _brushSubtract.StoredPng
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushSubtractRaster As AlphaRaster
             Get
-                Return _brushSubtractRaster
+                Return _brushSubtract.StoredRaster
             End Get
         End Property
 
-        ''' <summary>Trägt dieser Bestandteil Bildpunkte? Antwortet OHNE zu packen oder zu
-        ''' entpacken - die Frage stellen mehrere Wege sehr oft.</summary>
+        ''' <summary>Trägt diese Maske Bildpunkte? Antwortet OHNE zu packen oder zu entpacken -
+        ''' die Frage stellen mehrere Wege sehr oft.</summary>
         <JsonIgnore>
         Public ReadOnly Property HasPixelData As Boolean
             Get
-                Return _raster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_pngBase64)
+                Return _pixels.HasData
             End Get
         End Property
 
@@ -239,64 +248,53 @@ Namespace Services
         ''' waeren zwei weitere Feldergruppen fuer einen Fall, den es praktisch nicht gibt.
         ''' Bei einer GEMALTEN Maske bleiben diese Felder leer; dort verrechnet der Pinsel direkt
         ''' die Maske selbst (siehe WriteSelectionMaskBackToLayer im EditorViewModel).</summary>
-        Private _brushAddPng As String = ""
-        Private _brushAddRaster As AlphaRaster
-        Private _brushSubtractPng As String = ""
-        Private _brushSubtractRaster As AlphaRaster
+        Private ReadOnly _brushAdd As New AlphaPixels()
+        Private ReadOnly _brushSubtract As New AlphaPixels()
 
         ''' <summary>Die Pinselkorrektur als PNG - Speicherform wie <see cref="PngBase64"/>. Beim
         ''' Malen wird das RASTER gesetzt; gepackt wird erst fuer die Datei.</summary>
         Public Property BrushAddPngBase64 As String
             Get
-                If String.IsNullOrEmpty(_brushAddPng) AndAlso _brushAddRaster IsNot Nothing Then _brushAddPng = _brushAddRaster.ToPngBase64()
-                Return _brushAddPng
+                Return _brushAdd.Png
             End Get
             Set(value As String)
-                _brushAddPng = If(value, "")
-                _brushAddRaster = Nothing
+                _brushAdd.Png = value
             End Set
         End Property
 
         Public Property BrushSubtractPngBase64 As String
             Get
-                If String.IsNullOrEmpty(_brushSubtractPng) AndAlso _brushSubtractRaster IsNot Nothing Then _brushSubtractPng = _brushSubtractRaster.ToPngBase64()
-                Return _brushSubtractPng
+                Return _brushSubtract.Png
             End Get
             Set(value As String)
-                _brushSubtractPng = If(value, "")
-                _brushSubtractRaster = Nothing
+                _brushSubtract.Png = value
             End Set
         End Property
 
         <JsonIgnore>
         Public Property BrushAddRaster As AlphaRaster
             Get
-                If _brushAddRaster Is Nothing AndAlso Not String.IsNullOrEmpty(_brushAddPng) Then _brushAddRaster = AlphaRaster.FromPngBase64(_brushAddPng)
-                Return _brushAddRaster
+                Return _brushAdd.Raster
             End Get
             Set(value As AlphaRaster)
-                _brushAddRaster = value
-                _brushAddPng = ""
+                _brushAdd.Raster = value
             End Set
         End Property
 
         <JsonIgnore>
         Public Property BrushSubtractRaster As AlphaRaster
             Get
-                If _brushSubtractRaster Is Nothing AndAlso Not String.IsNullOrEmpty(_brushSubtractPng) Then _brushSubtractRaster = AlphaRaster.FromPngBase64(_brushSubtractPng)
-                Return _brushSubtractRaster
+                Return _brushSubtract.Raster
             End Get
             Set(value As AlphaRaster)
-                _brushSubtractRaster = value
-                _brushSubtractPng = ""
+                _brushSubtract.Raster = value
             End Set
         End Property
 
         <JsonIgnore>
         Public ReadOnly Property HasBrushCorrectionData As Boolean
             Get
-                Return _brushAddRaster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_brushAddPng) OrElse
-                       _brushSubtractRaster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_brushSubtractPng)
+                Return _brushAdd.HasData OrElse _brushSubtract.HasData
             End Get
         End Property
         Public Property BrushLeft As Integer
@@ -475,18 +473,15 @@ Namespace Services
         Public Property Right As Integer
         Public Property Bottom As Integer
 
-        Private _pngBase64 As String = ""
-        Private _raster As AlphaRaster
+        Private ReadOnly _pixels As New AlphaPixels()
 
         ''' <summary>Speicherform, siehe <see cref="ImageMask.PngBase64"/>.</summary>
         Public Property PngBase64 As String
             Get
-                If String.IsNullOrEmpty(_pngBase64) AndAlso _raster IsNot Nothing Then _pngBase64 = _raster.ToPngBase64()
-                Return _pngBase64
+                Return _pixels.Png
             End Get
             Set(value As String)
-                _pngBase64 = If(value, "")
-                _raster = Nothing
+                _pixels.Png = value
             End Set
         End Property
 
@@ -494,75 +489,89 @@ Namespace Services
         <JsonIgnore>
         Public Property Raster As AlphaRaster
             Get
-                If _raster Is Nothing AndAlso Not String.IsNullOrEmpty(_pngBase64) Then _raster = AlphaRaster.FromPngBase64(_pngBase64)
-                Return _raster
+                Return _pixels.Raster
             End Get
             Set(value As AlphaRaster)
-                _raster = value
-                _pngBase64 = ""
+                _pixels.Raster = value
             End Set
         End Property
 
         Friend Sub CopyPixelDataFrom(other As MaskComponent)
             If other Is Nothing Then Return
-            _pngBase64 = other._pngBase64
-            _raster = other._raster
-            _brushAddPng = other._brushAddPng
-            _brushAddRaster = other._brushAddRaster
-            _brushSubtractPng = other._brushSubtractPng
-            _brushSubtractRaster = other._brushSubtractRaster
+            _pixels.CopyFrom(other._pixels)
+            _brushAdd.CopyFrom(other._brushAdd)
+            _brushSubtract.CopyFrom(other._brushSubtract)
         End Sub
 
         Friend Sub CopyPixelDataFrom(other As ImageMask)
             If other Is Nothing Then Return
-            _pngBase64 = other.StoredPng
-            _raster = other.StoredRaster
-            _brushAddPng = other.StoredBrushAddPng
-            _brushAddRaster = other.StoredBrushAddRaster
-            _brushSubtractPng = other.StoredBrushSubtractPng
-            _brushSubtractRaster = other.StoredBrushSubtractRaster
+            _pixels.CopyFrom(other.PixelSlot)
+            _brushAdd.CopyFrom(other.BrushAddSlot)
+            _brushSubtract.CopyFrom(other.BrushSubtractSlot)
         End Sub
+
+        ''' <summary>Die Bilddaten SO WIE SIE LIEGEN, ohne eine Umwandlung auszuloesen. Nur fuer
+        ''' die Uebergabe zwischen Maske und Bestandteil sowie fuer den Renderschluessel.</summary>
+        Friend ReadOnly Property PixelSlot As AlphaPixels
+            Get
+                Return _pixels
+            End Get
+        End Property
+
+        Friend ReadOnly Property BrushAddSlot As AlphaPixels
+            Get
+                Return _brushAdd
+            End Get
+        End Property
+
+        Friend ReadOnly Property BrushSubtractSlot As AlphaPixels
+            Get
+                Return _brushSubtract
+            End Get
+        End Property
 
         Friend ReadOnly Property StoredPng As String
             Get
-                Return _pngBase64
+                Return _pixels.StoredPng
             End Get
         End Property
 
         Friend ReadOnly Property StoredRaster As AlphaRaster
             Get
-                Return _raster
+                Return _pixels.StoredRaster
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushAddPng As String
             Get
-                Return _brushAddPng
+                Return _brushAdd.StoredPng
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushAddRaster As AlphaRaster
             Get
-                Return _brushAddRaster
+                Return _brushAdd.StoredRaster
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushSubtractPng As String
             Get
-                Return _brushSubtractPng
+                Return _brushSubtract.StoredPng
             End Get
         End Property
 
         Friend ReadOnly Property StoredBrushSubtractRaster As AlphaRaster
             Get
-                Return _brushSubtractRaster
+                Return _brushSubtract.StoredRaster
             End Get
         End Property
 
+        ''' <summary>Trägt dieser Bestandteil Bildpunkte? Antwortet OHNE zu packen oder zu
+        ''' entpacken - die Frage stellen mehrere Wege sehr oft.</summary>
         <JsonIgnore>
         Public ReadOnly Property HasPixelData As Boolean
             Get
-                Return _raster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_pngBase64)
+                Return _pixels.HasData
             End Get
         End Property
 
@@ -574,63 +583,52 @@ Namespace Services
         Public Property GradientEndYPercent As Double
         Public Property GradientRadiusRatio As Double = 1.0
         Public Property GradientFeatherPercent As Double = 50.0
-        Private _brushAddPng As String = ""
-        Private _brushAddRaster As AlphaRaster
-        Private _brushSubtractPng As String = ""
-        Private _brushSubtractRaster As AlphaRaster
+        Private ReadOnly _brushAdd As New AlphaPixels()
+        Private ReadOnly _brushSubtract As New AlphaPixels()
 
         ''' <summary>Speicherform der Pinselkorrektur, siehe <see cref="ImageMask.BrushAddPngBase64"/>.</summary>
         Public Property BrushAddPngBase64 As String
             Get
-                If String.IsNullOrEmpty(_brushAddPng) AndAlso _brushAddRaster IsNot Nothing Then _brushAddPng = _brushAddRaster.ToPngBase64()
-                Return _brushAddPng
+                Return _brushAdd.Png
             End Get
             Set(value As String)
-                _brushAddPng = If(value, "")
-                _brushAddRaster = Nothing
+                _brushAdd.Png = value
             End Set
         End Property
 
         Public Property BrushSubtractPngBase64 As String
             Get
-                If String.IsNullOrEmpty(_brushSubtractPng) AndAlso _brushSubtractRaster IsNot Nothing Then _brushSubtractPng = _brushSubtractRaster.ToPngBase64()
-                Return _brushSubtractPng
+                Return _brushSubtract.Png
             End Get
             Set(value As String)
-                _brushSubtractPng = If(value, "")
-                _brushSubtractRaster = Nothing
+                _brushSubtract.Png = value
             End Set
         End Property
 
         <JsonIgnore>
         Public Property BrushAddRaster As AlphaRaster
             Get
-                If _brushAddRaster Is Nothing AndAlso Not String.IsNullOrEmpty(_brushAddPng) Then _brushAddRaster = AlphaRaster.FromPngBase64(_brushAddPng)
-                Return _brushAddRaster
+                Return _brushAdd.Raster
             End Get
             Set(value As AlphaRaster)
-                _brushAddRaster = value
-                _brushAddPng = ""
+                _brushAdd.Raster = value
             End Set
         End Property
 
         <JsonIgnore>
         Public Property BrushSubtractRaster As AlphaRaster
             Get
-                If _brushSubtractRaster Is Nothing AndAlso Not String.IsNullOrEmpty(_brushSubtractPng) Then _brushSubtractRaster = AlphaRaster.FromPngBase64(_brushSubtractPng)
-                Return _brushSubtractRaster
+                Return _brushSubtract.Raster
             End Get
             Set(value As AlphaRaster)
-                _brushSubtractRaster = value
-                _brushSubtractPng = ""
+                _brushSubtract.Raster = value
             End Set
         End Property
 
         <JsonIgnore>
         Public ReadOnly Property HasBrushCorrectionData As Boolean
             Get
-                Return _brushAddRaster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_brushAddPng) OrElse
-                       _brushSubtractRaster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_brushSubtractPng)
+                Return _brushAdd.HasData OrElse _brushSubtract.HasData
             End Get
         End Property
         Public Property BrushLeft As Integer
