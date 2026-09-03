@@ -1364,7 +1364,8 @@ Namespace Services
         ''' STRICH; mit Grenze ist er vernachlaessigbar. Ohne den Parameter bleibt alles wie bisher.
         Public Shared Function CreateSourceMaskFromSelection(adj As ImageAdjustments,
                                                              Optional name As String = "Auswahlmaske",
-                                                             Optional displayBounds As SKRectI? = Nothing) As ImageMask
+                                                             Optional displayBounds As SKRectI? = Nothing,
+                                                             Optional progress As IProgress(Of Double) = Nothing) As ImageMask
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
             Dim displaySize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
             Dim decoded As SKBitmap = Nothing
@@ -1425,6 +1426,8 @@ Namespace Services
                         bisY = Math.Min(sourceH - 1, CInt(Math.Ceiling(maxSy)) + 2)
                     End If
                 End If
+                Dim totalRows = Math.Max(1, bisY - vonY + 1)
+                Dim lastReportedPercent = -1
                 For sy = vonY To bisY
                     For sx = vonX To bisX
                         Dim dp As SKPoint
@@ -1450,6 +1453,14 @@ Namespace Services
                             right = Math.Max(right, sx + 1) : bottom = Math.Max(bottom, sy + 1)
                         End If
                     Next
+                    ' Diese Umrechnung kann bei einer bildgrossen Tiefenmaske mehrere Sekunden
+                    ' dauern. Nicht jede Zeile melden: der UI-Faden soll Fortschritt zeigen, nicht
+                    ' von zehntausenden Dispatcher-Auftraegen beschaeftigt sein.
+                    Dim percent = CInt((CLng(sy - vonY + 1) * 100L) \ totalRows)
+                    If percent > lastReportedPercent Then
+                        lastReportedPercent = percent
+                        progress?.Report(percent / 100.0)
+                    End If
                 Next
                 If right <= left OrElse bottom <= top Then Return Nothing
 

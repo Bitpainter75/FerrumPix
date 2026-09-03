@@ -1062,7 +1062,9 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                                <ProgressBar IsIndeterminate="True" Width="120" Height="4"
+                                <ProgressBar IsIndeterminate="{Binding IsBusyProgressIndeterminate}"
+                                             Minimum="0" Maximum="100" Value="{Binding BusyProgress}"
+                                             Width="120" Height="4"
                                              VerticalAlignment="Center" />
                                 <TextBlock Classes="no-translate"
                                            Text="{Binding BusyText}"

@@ -576,6 +576,8 @@ Namespace ViewModels
         Private _busyReason As String = ""
         Private _showsBusy As Boolean = False
         Private _busyRun As Integer = 0
+        ' -1 steht fuer einen Vorgang ohne messbaren Fortschritt; dann bleibt der Balken animiert.
+        Private _busyProgress As Double = -1.0
 
         ''' <summary>Rechnet gerade etwas, das eine Aenderung verdirbt? Das sind die Vorgaenge, die
         ''' in die PIXEL gehen, und die Modelllaeufe. Der laufende Vorschau-Render gehoert
@@ -589,6 +591,7 @@ Namespace ViewModels
         Public ReadOnly Property IsBusy As Boolean
             Get
                 Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
+                       _creatingAdjustmentLayer OrElse
                        _pendingLayerModelRuns > 0
             End Get
         End Property
@@ -636,6 +639,28 @@ Namespace ViewModels
                 Return LocalizationService.T("Wird berechnet…")
             End Get
         End Property
+
+        ''' <summary>0 bis 100 fuer Vorgänge, die ihre Arbeit sinnvoll zaehlen koennen; negativ
+        ''' bedeutet unbestimmt und behaelt den bisherigen animierten Balken bei.</summary>
+        Public ReadOnly Property BusyProgress As Double
+            Get
+                Return Math.Max(0.0, _busyProgress)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsBusyProgressIndeterminate As Boolean
+            Get
+                Return _busyProgress < 0.0
+            End Get
+        End Property
+
+        Private Sub SetBusyProgress(value As Double)
+            Dim normalized = If(value < 0.0, -1.0, Math.Max(0.0, Math.Min(100.0, value)))
+            If Math.Abs(_busyProgress - normalized) < 0.0001 Then Return
+            _busyProgress = normalized
+            Me.RaisePropertyChanged(NameOf(BusyProgress))
+            Me.RaisePropertyChanged(NameOf(IsBusyProgressIndeterminate))
+        End Sub
 
         ' ── Abbrechen eines langen Vorgangs ─────────────────────────────────────
         '
@@ -13100,7 +13125,8 @@ Namespace ViewModels
             TogglePathNodeSmoothCommand = ReactiveCommand.Create(Sub() ToggleLastPathNodeSmooth())
             CreateTextOnPathCommand = ReactiveCommand.Create(Sub() CreateTextOnSelectedPath())
             CreateSelectionFromPathCommand = ReactiveCommand.Create(Sub() CreateSelectionFromSelectedPath())
-            CreateMaskLayerFromPathCommand = ReactiveCommand.Create(Sub() CreateMaskLayerFromSelectedPath())
+            CreateMaskLayerFromPathCommand = ReactiveCommand.CreateFromTask(
+                Function() CreateMaskLayerFromSelectedPathAsync())
             JoinPathsCommand = ReactiveCommand.Create(Sub() JoinSelectedPaths())
             InvertCurrentMaskCommand = ReactiveCommand.Create(Sub() InvertCurrentMask())
             DiscardCurrentMaskCommand = ReactiveCommand.Create(Sub() DiscardCurrentMask())
@@ -13233,7 +13259,8 @@ Namespace ViewModels
             ToggleLayerAdjustmentsCommand = ReactiveCommand.Create(Of LayerPanelRow)(
                 Sub(row) ToggleLayerAdjustments(row))
             ClearLayerAdjustmentsCommand = ReactiveCommand.Create(Sub() ClearLayerAdjustments(Nothing))
-            CreateAdjustmentLayerFromSelectionCommand = ReactiveCommand.Create(Sub() CreateAdjustmentLayerFromSelection())
+            CreateAdjustmentLayerFromSelectionCommand = ReactiveCommand.CreateFromTask(
+                Function() CreateAdjustmentLayerFromSelectionAsync())
             FillSelectionCommand = ReactiveCommand.Create(Sub() FillSelection())
             SetSelectionModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) SetSelectionMode(mode))
             SetMaskModeCommand = ReactiveCommand.Create(Of String)(Sub(mode) MaskMode = mode)

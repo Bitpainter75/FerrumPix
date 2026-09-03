@@ -4408,6 +4408,85 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ' Der Knopf im Panel nimmt diesen Weg. Eine Tiefenmaske ist als Auswahl bereits sichtbar,
+        ' muss fuer die dauerhafte Ebene aber noch einmal pixelweise in den Quellraum gelegt und
+        ' als PNG gespeichert werden. Das kann bei grossen Bildern dauern; es darf nie den UI-Faden
+        ' blockieren. Interne Aufrufer behalten die synchrone Methode oben, wenn sie unmittelbar
+        ' danach zwingend auf der neuen Ebene weiterarbeiten (z. B. Pfad -> Maske).
+        Private _creatingAdjustmentLayer As Boolean
+
+        Private Async Function CreateAdjustmentLayerFromSelectionAsync(Optional captureUndo As Boolean = True) As Task
+            If _creatingAdjustmentLayer OrElse Not _hasActiveSelection Then Return
+
+            ' Bereits bearbeitete bzw. gerade erst promotete Masken brauchen keine Vollbild-
+            ' Umrechnung. Fuer sie bleibt das Verhalten des Knopfs (unabhaengige Kopie) identisch.
+            If LayerForEditedMask() IsNot Nothing OrElse _selectionPromotedLayerId <> "" Then
+                CreateAdjustmentLayerFromSelection()
+                Return
+            End If
+
+            TraceMask(Function() $"„Neue Masken-/Auswahlebene"" im Hintergrund: Auswahl aktiv={_hasActiveSelection}")
+            If captureUndo Then PushUndo(LocalizationService.T("Ebenenmaske hinzugefügt"))
+            Dim snapshot = BuildAdjustmentsFromFields()
+            Dim isMask = _activeSelectionIsMask
+            Dim name = LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString()
+            _creatingAdjustmentLayer = True
+            SetBusyProgress(0)
+            SetBusyReason(LocalizationService.T("Ebenenmaske wird erstellt (0 %)…"))
+            RefreshBusyState()
+            Try
+                ' Progress(Of T) wird auf dem UI-Faden erzeugt. Report aus Task.Run stellt die
+                ' Aktualisierung deshalb sauber in die Dispatcher-Warteschlange, statt das
+                ' ViewModel aus dem Worker heraus anzufassen.
+                Dim progress As New Progress(Of Double)(
+                    Sub(fraction)
+                        Dim percent = CInt(Math.Round(Math.Max(0.0, Math.Min(1.0, fraction)) * 100.0))
+                        SetBusyProgress(percent)
+                        SetBusyReason(String.Format(LocalizationService.T("Ebenenmaske wird erstellt ({0} %)…"), percent))
+                    End Sub)
+                Dim mask = Await Task.Run(Function() ImageProcessor.CreateSourceMaskFromSelection(snapshot, name, Nothing, progress))
+                If mask Is Nothing Then
+                    StatusText = LocalizationService.T("Ebenenmaske konnte nicht erstellt werden")
+                    Return
+                End If
+
+                ' Ab hier nur noch Modellzustand: die teure Raster- und PNG-Arbeit ist beendet.
+                Dim existingMask = _imageMasks.LastOrDefault(Function(m) m IsNot Nothing AndAlso
+                    m.SourceWidthPixels = mask.SourceWidthPixels AndAlso m.SourceHeightPixels = mask.SourceHeightPixels AndAlso
+                    m.Left = mask.Left AndAlso m.Top = mask.Top AndAlso m.Right = mask.Right AndAlso m.Bottom = mask.Bottom AndAlso
+                    m.PngBase64 = mask.PngBase64)
+                Dim layer As MaskedAdjustmentLayer = Nothing
+                If existingMask IsNot Nothing Then
+                    layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)
+                End If
+                If layer Is Nothing Then
+                    _imageMasks.Add(mask)
+                    ApplyPendingRangeMetadata(mask)
+                    layer = New MaskedAdjustmentLayer With {
+                        .Name = If(isMask, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) &
+                                " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
+                        .MaskId = mask.Id,
+                        .Adjustments = New ImageAdjustments(),
+                        .IsMaskLayer = isMask
+                    }
+                    PlaceNewCorrectionLayerInBaseImage(layer)
+                    _maskedAdjustmentLayers.Add(layer)
+                Else
+                    mask = Nothing ' Die vorhandene, identische Maske bleibt Eigentümerin der Daten.
+                End If
+                _selectedMaskedAdjustmentLayerId = layer.Id
+                _selectionPromotedLayerId = layer.Id
+                RebuildLayerRows()
+                _hasChanges = True
+                TraceLayerInventory("„Neue Masken-/Auswahlebene""")
+                SchedulePreviewUpdate()
+            Finally
+                _creatingAdjustmentLayer = False
+                SetBusyProgress(-1)
+                RefreshBusyState()
+            End Try
+        End Function
+
         ''' <summary>Löst die Verknüpfung "diese Auswahl gehört bereits zu Ebene X". MUSS bei jeder
         ''' Auswahl-/Maskenänderung laufen, damit eine NEUE Auswahl eine eigene Ebene bekommt.</summary>
         Private Sub InvalidateSelectionLayerLink()

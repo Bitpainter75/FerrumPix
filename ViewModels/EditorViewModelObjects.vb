@@ -1471,7 +1471,9 @@ Namespace ViewModels
         ''' <summary>Erzeugt direkt eine neue, unabhängige Maskenebene aus dem markierten Pfad.
         ''' Der Pfad bleibt als editierbare Vorlage erhalten und kann nach einer Änderung erneut
         ''' in eine Maskenebene überführt werden.</summary>
-        Public Sub CreateMaskLayerFromSelectedPath()
+        ''' <summary>Erzeugt die Auswahl aus dem Pfad und friert sie dann wie jede andere
+        ''' bildgrosse Auswahl im Hintergrund als Ebenenmaske ein.</summary>
+        Private Async Function CreateMaskLayerFromSelectedPathAsync() As Task
             Dim xs As Double() = Nothing, ys As Double() = Nothing
             If Not TryBuildSelectedPathPolygon(xs, ys) Then Return
 
@@ -1493,7 +1495,7 @@ Namespace ViewModels
             SetSelectionLasso(xs, ys, captureUndo:=False)
             If Not _hasActiveSelection Then Return
             SetActiveSelectionIsMask(True)
-            CreateAdjustmentLayerFromSelection(captureUndo:=False)
+            Await CreateAdjustmentLayerFromSelectionAsync(captureUndo:=False)
 
             Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
                                                                   String.Equals(l.Id, _selectedMaskedAdjustmentLayerId, StringComparison.Ordinal))
@@ -1503,7 +1505,7 @@ Namespace ViewModels
             LoadMaskIntoSelection(layer.MaskId, showAsMask:=True)
             StatusText = LocalizationService.T("Maskenebene aus Pfad erstellt")
             NameHistoryStep(LocalizationService.T("Maskenebene aus Pfad erstellt"))
-        End Sub
+        End Function
 
         ''' <summary>Dreht einen Punkt in ANZEIGE-Prozent um einen Mittelpunkt.
         '''
