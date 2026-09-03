@@ -7932,9 +7932,6 @@
   <data name="XmpCore_6_1_867049bb" xml:space="preserve">
     <value>XmpCore 6.1</value>
   </data>
-  <data name="Adobe_XMP_2167da4f" xml:space="preserve">
-    <value>Adobe XMP</value>
-  </data>
   <data name="Aufnahmedaten_vollst_ndig_laden_56ba1ac8" xml:space="preserve">
     <value>Muat semua data pemotretan</value>
   </data>
@@ -7955,5 +7952,35 @@
   </data>
   <data name="0_Katalogeintr_ge_und_1_Indexeintr_ge_entfernt_757d7c4c" xml:space="preserve">
     <value>{0} entri katalog dan {1} entri indeks dihapus</value>
+  </data>
+  <data name="L_scht_die_lokal_zwischengespeicherten_Immich_Vo_aa6d0b47" xml:space="preserve">
+    <value>Menghapus gambar mini Immich yang tersimpan lokal. Akan diambil lagi bila diperlukan.</value>
+  </data>
+  <data name="Holt_Kamera_Objektiv_Brennweite_ISO_Blende_und_S_b7a93595" xml:space="preserve">
+    <value>Mengambil kamera, lensa, panjang fokus, ISO, bukaan, dan kata kunci untuk semua foto di server, sehingga pencarian menemukannya bahkan di tempat yang belum Anda buka. Hanya berjalan lewat tombol ini dan tidak mengubah apa pun di server.</value>
+  </data>
+  <data name="Holt_Stichw_rter_Gr_e_und_Aufnahmezeit_f_r_alle__6e56cdb8" xml:space="preserve">
+    <value>Mengambil kata kunci, ukuran, dan waktu pengambilan untuk semua foto di server, sehingga pencarian menemukannya bahkan di tempat yang belum Anda buka. Hanya berjalan lewat tombol ini dan tidak mengubah apa pun di server.</value>
+  </data>
+  <data name="Farbst_rke_61e7d0a8" xml:space="preserve">
+    <value>Kekuatan warna</value>
+  </data>
+  <data name="Wie_kr_ftig_der_Akzent_wirkt_Bei_0_bleibt_die_He_0e467c0f" xml:space="preserve">
+    <value>Seberapa kuat aksen tampil. Pada 0 % penyorotan tetap ada, hanya tanpa warna.</value>
+  </data>
+  <data name="100_ff376401" xml:space="preserve">
+    <value>100 %</value>
+  </data>
+  <data name="75_f6b4513c" xml:space="preserve">
+    <value>75 %</value>
+  </data>
+  <data name="50_4bd3acba" xml:space="preserve">
+    <value>50 %</value>
+  </data>
+  <data name="25_4d04d593" xml:space="preserve">
+    <value>25 %</value>
+  </data>
+  <data name="0_065d0ebd" xml:space="preserve">
+    <value>0 %</value>
   </data>
 </root>

@@ -34,9 +34,9 @@ Folder tree, grid, list and group view, fast thumbnails, file operations, rating
 
 The group view puts a heading above each block of pictures, following whatever you sort by: one block per day when sorting by date, or by month or year, and by name, camera, file type or rating just as well. A circle in front of the heading selects a whole block at once.
 
-Ratings, colour labels and keywords are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact.
+Ratings, colour labels and keywords are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact. Keywords stored inside the picture itself, in its IPTC or XMP data, are picked up as well and can be searched like any other keyword.
 
-Name the folders your photos live in and FerrumPix reads them in the background, subfolders included, so search and filters cover your whole collection instead of only the folders you happened to open. It runs shortly after startup if you want it to, and it can be stopped at any time. Later runs only look at what has changed, and nothing is ever written next to your photos.
+Name the folders your photos live in and FerrumPix reads them in the background, subfolders included, so search and filters cover your whole collection instead of only the folders you happened to open. It runs shortly after startup if you want it to, and it can be stopped at any time. Later runs only look at what has changed, and nothing is ever written next to your photos. Renaming or moving a folder in FerrumPix takes its ratings, labels, keywords, people and thumbnails along; if you moved it outside FerrumPix, you can point the settings at its new location.
 
 One list in the settings shows every folder FerrumPix knows, grouped under the ones you watch. Search it, then clean up the catalogue data or the thumbnails of whatever the search leaves, or send the people search over them - on a whole tree or on a single folder.
 
@@ -247,7 +247,7 @@ dotnet run --project FerrumPix.vbproj
 
 ## Licence
 
-FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), [Tabler Icons](https://github.com/tabler/tabler-icons) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe.
+FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), [Tabler Icons](https://github.com/tabler/tabler-icons) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe.
 
 
 [Share your FerrumPix experience](https://github.com/Bitpainter75/FerrumPix/discussions/29)

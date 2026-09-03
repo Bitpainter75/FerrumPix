@@ -238,6 +238,13 @@ Namespace Services
         Public Property DeleteSkipConfirmation As Boolean = False
         Public Property ThemeMode As String = "Dark"
         Public Property AccentColor As String = "#F08A1A"
+
+        ''' <summary>Wie kräftig die Akzentfarbe wirkt, in Prozent: 100 ist die Farbe selbst, 0 ein
+        ''' Grau DERSELBEN HELLIGKEIT. Für alle, denen die Oberfläche zu bunt ist, ohne dass sie auf
+        ''' die Hervorhebung als solche verzichten müssen - bei 0 bleibt der Kontrast erhalten, nur
+        ''' die Farbigkeit ist weg.</summary>
+        Public Property AccentStrength As Integer = 100
+
         Public Property StartupImageMode As String = "Viewer"
         ''' Womit ein Bild aus der Galerie geoeffnet wird: "Viewer" oder "Editor".
         Public Property GalleryOpenTarget As String = "Viewer"
@@ -1410,6 +1417,23 @@ Namespace Services
                 Case Else
                     Return "Dark"
             End Select
+        End Function
+
+        ''' <summary>Die Farbstärke auf eine der fünf angebotenen Stufen. Alles Dazwischen wird auf
+        ''' die NÄCHSTGELEGENE gezogen, nicht auf die volle Stärke zurückgesetzt: eine krumme Zahl
+        ''' kommt aus einer von Hand bearbeiteten Einstellungsdatei, und dort war etwas gemeint.</summary>
+        Public Shared Function NormalizeAccentStrength(value As Integer) As Integer
+            Dim levels = {0, 25, 50, 75, 100}
+            Dim best = 100
+            Dim distance = Integer.MaxValue
+            For Each level In levels
+                Dim d = Math.Abs(level - value)
+                If d < distance Then
+                    distance = d
+                    best = level
+                End If
+            Next
+            Return best
         End Function
 
         Public Shared Function NormalizeAccentColor(value As String) As String

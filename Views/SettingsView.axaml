@@ -465,6 +465,21 @@
                             <Button Classes="swatch" Classes.active="{Binding IsGreenAccent}" Background="#22C55E" Command="{Binding SetAccentColorCommand}" CommandParameter="#22C55E"/>
                             <Button Classes="swatch" Classes.active="{Binding IsYellowAccent}" Background="#FACC15" Command="{Binding SetAccentColorCommand}" CommandParameter="#FACC15"/>
                         </StackPanel>
+
+                        <!-- Die Staerke steht NEBEN der Farbwahl und ersetzt sie nicht: welche Farbe
+                             hervorhebt, ist eine andere Frage als wie laut sie das tut. Bei 0 bleibt
+                             die Hervorhebung als Helligkeit bestehen, nur die Farbigkeit ist weg. -->
+                        <StackPanel Spacing="2" Margin="0,8,0,0">
+                            <TextBlock Text="Farbstärke" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wie kräftig der Akzent wirkt. Bei 0 % bleibt die Hervorhebung erhalten, nur ohne Farbe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength100}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="100">100 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength75}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="75">75 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength50}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="50">50 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength25}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="25">25 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength0}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="0">0 %</Button>
+                        </StackPanel>
                         </StackPanel>
 
                         <StackPanel Spacing="12" Margin="0,4,0,0">
@@ -2969,8 +2984,8 @@
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/xmp-core-dotnet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
                                     </Button>
-                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/xmp-core-dotnet/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                        <TextBlock Text="Adobe XMP" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/adobe/XMP-Toolkit-SDK/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">

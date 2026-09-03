@@ -21,6 +21,7 @@ Namespace ViewModels
         Private ReadOnly _appSettings As AppSettings
         Private _themeMode As String = "Dark"
         Private _accentColor As String = "#F08A1A"
+        Private _accentStrength As Integer = 100
         Private _thumbnailQuality As Integer = 82
         Private _thumbnailMemoryCacheCapacity As Integer = 250
         Private _jpgSaveQuality As Integer = 90
@@ -140,6 +141,7 @@ Namespace ViewModels
 
         Private _savedThemeMode As String = "Dark"
         Private _savedAccentColor As String = "#F08A1A"
+        Private _savedAccentStrength As Integer = 100
         Private _savedViewerOpenFitToWindow As Boolean = True
         Private _savedViewerFitBehavior As String = "Always"
         Private _savedEditorFitBehavior As String = "Always"
@@ -210,7 +212,7 @@ Namespace ViewModels
                 If _themeMode = value Then Return
                 Me.RaiseAndSetIfChanged(_themeMode, value)
                 RaiseThemeModeProperties()
-                ApplyTheme(_themeMode, _accentColor)
+                ApplyTheme(_themeMode, _accentColor, _accentStrength)
                 _mainVm?.RefreshThemeBindings()
                 SaveAppearanceSettings()
             End Set
@@ -225,7 +227,7 @@ Namespace ViewModels
                 If _accentColor = value Then Return
                 Me.RaiseAndSetIfChanged(_accentColor, value)
                 RaiseAccentProperties()
-                ApplyTheme(_themeMode, _accentColor)
+                ApplyTheme(_themeMode, _accentColor, _accentStrength)
                 SaveAppearanceSettings()
             End Set
         End Property
@@ -321,6 +323,63 @@ Namespace ViewModels
                 Return Not IsLightOrGrayLightThemeMode
             End Get
         End Property
+
+        ''' <summary>Wie kräftig die Akzentfarbe wirkt, in fünf Stufen von 100 bis 0.
+        '''
+        ''' Sie steht NEBEN der Farbwahl und ersetzt sie nicht: welche Farbe hervorhebt, ist eine
+        ''' andere Frage als wie laut sie das tut. Bei 0 bleibt die Hervorhebung als Helligkeit
+        ''' bestehen, nur die Farbigkeit ist weg - siehe WithAccentStrength.</summary>
+        Public Property AccentStrength As Integer
+            Get
+                Return _accentStrength
+            End Get
+            Set(value As Integer)
+                value = AppSettingsService.NormalizeAccentStrength(value)
+                If _accentStrength = value Then Return
+                Me.RaiseAndSetIfChanged(_accentStrength, value)
+                RaiseAccentStrengthProperties()
+                ApplyTheme(_themeMode, _accentColor, _accentStrength)
+                SaveAppearanceSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsAccentStrength100 As Boolean
+            Get
+                Return _accentStrength = 100
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAccentStrength75 As Boolean
+            Get
+                Return _accentStrength = 75
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAccentStrength50 As Boolean
+            Get
+                Return _accentStrength = 50
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAccentStrength25 As Boolean
+            Get
+                Return _accentStrength = 25
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAccentStrength0 As Boolean
+            Get
+                Return _accentStrength = 0
+            End Get
+        End Property
+
+        Private Sub RaiseAccentStrengthProperties()
+            For Each name In {NameOf(IsAccentStrength100), NameOf(IsAccentStrength75),
+                              NameOf(IsAccentStrength50), NameOf(IsAccentStrength25),
+                              NameOf(IsAccentStrength0)}
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
 
         Public ReadOnly Property IsOrangeAccent As Boolean
             Get
@@ -2474,6 +2533,7 @@ Namespace ViewModels
         Public ReadOnly Property CancelCommand As ICommand
         Public ReadOnly Property SetThemeModeCommand As ICommand
         Public ReadOnly Property SetAccentColorCommand As ICommand
+        Public ReadOnly Property SetAccentStrengthCommand As ICommand
         Public ReadOnly Property SetStartupImageModeCommand As ICommand
         Public ReadOnly Property SetFontSizeOffsetCommand As ICommand
         Public ReadOnly Property SetGalleryOpenTargetCommand As ICommand
@@ -2852,6 +2912,7 @@ Namespace ViewModels
             _catalogIndexOnStartup = _appSettings.CatalogIndexOnStartup
             _themeMode = _appSettings.ThemeMode
             _accentColor = _appSettings.AccentColor
+            _accentStrength = AppSettingsService.NormalizeAccentStrength(_appSettings.AccentStrength)
             _startupImageMode = _appSettings.StartupImageMode
             _galleryOpenTarget = _appSettings.GalleryOpenTarget
             _startupNoImageMode = _appSettings.StartupNoImageMode
@@ -2971,6 +3032,13 @@ Namespace ViewModels
                                                    End Sub)
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
             SetAccentColorCommand = ReactiveCommand.Create(Of String)(Sub(c) AccentColor = c)
+            ' Der Parameter kommt als Zeichenkette aus dem AXAML, wie bei den uebrigen
+            ' Auswahl-Befehlen; was sich nicht lesen laesst, laesst den Stand, wie er ist.
+            SetAccentStrengthCommand = ReactiveCommand.Create(Of String)(
+                Sub(v)
+                    Dim parsed As Integer
+                    If Integer.TryParse(v, parsed) Then AccentStrength = parsed
+                End Sub)
             SetStartupImageModeCommand = ReactiveCommand.Create(Of String)(Sub(m) StartupImageMode = m)
             ' Der Parameter kommt als Zeichenkette aus dem AXAML, wie bei den uebrigen
             ' Auswahl-Befehlen auch; eine unlesbare Angabe laesst den Stand, wie er ist.
@@ -3067,7 +3135,7 @@ Namespace ViewModels
             CancelServerScanCommand = ReactiveCommand.Create(Sub() _serverScanCancellation?.Cancel())
             CleanImmichCatalogCommand = ReactiveCommand.Create(Sub() CleanServerCatalog(immich:=True))
             CleanNextcloudCatalogCommand = ReactiveCommand.Create(Sub() CleanServerCatalog(immich:=False))
-            ApplyTheme(_themeMode, _accentColor)
+            ApplyTheme(_themeMode, _accentColor, _accentStrength)
             FontScaleService.Apply(_fontSizeOffset)
             LocalizationService.LanguageMode = _languageMode
             SnapshotSettings()
@@ -3183,6 +3251,7 @@ Namespace ViewModels
         Private Sub SnapshotSettings()
             _savedThemeMode = _themeMode
             _savedAccentColor = _accentColor
+            _savedAccentStrength = _accentStrength
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
             _savedViewerFitBehavior = _viewerFitBehavior
             _savedEditorFitBehavior = _editorFitBehavior
@@ -3258,6 +3327,9 @@ Namespace ViewModels
         Private Sub RestoreSnapshot()
             ThemeMode = _savedThemeMode
             AccentColor = _savedAccentColor
+            ' Auch die Staerke zurueck: sie wirkt sofort beim Antippen, ein Abbrechen muss sie
+            ' genauso zuruecknehmen wie die Farbe selbst.
+            AccentStrength = _savedAccentStrength
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
             ViewerFitBehavior = _savedViewerFitBehavior
             EditorFitBehavior = _savedEditorFitBehavior
@@ -3442,6 +3514,7 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s)
                                           s.ThemeMode = _themeMode
                                           s.AccentColor = _accentColor
+                                          s.AccentStrength = _accentStrength
                                           s.FontSizeOffset = _fontSizeOffset
                                       End Sub)
         End Sub
@@ -4014,12 +4087,17 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(FontSizeOffsetOptions))
         End Sub
 
-        Private Shared Sub ApplyTheme(themeMode As String, accentColor As String)
+        Private Shared Sub ApplyTheme(themeMode As String, accentColor As String, accentStrength As Integer)
             Dim app = Application.Current
             If app Is Nothing Then Return
 
             themeMode = AppSettingsService.NormalizeThemeMode(themeMode)
             accentColor = AppSettingsService.NormalizeAccentColor(accentColor)
+            ' EINMAL hier, nicht an jeder Verwendung: unter dieser Zeile ist "accentColor" die Farbe,
+            ' wie sie wirken soll, und alles Abgeleitete (Text.Accent und die vier Akzentpinsel)
+            ' erbt die Abschwaechung von selbst. Eine zweite Stelle waere eine, die man vergisst.
+            accentColor = ToHex(WithAccentStrength(Color.Parse(accentColor),
+                                                   AppSettingsService.NormalizeAccentStrength(accentStrength)))
 
             Select Case themeMode
                 Case "Light"
@@ -4193,6 +4271,26 @@ Namespace ViewModels
             SetBrush("FP.Accent.Dark", ToHex(Mix(baseColor, Colors.Black, If(isDark, 0.24, 0.18))))
             SetBrush("FP.Accent.Dim", ToHex(Mix(baseColor, If(isDark, Color.Parse("#0B0E11"), Color.Parse("#E9EDF2")), If(isDark, 0.78, 0.82))))
         End Sub
+
+        ''' <summary>Nimmt einer Farbe die Farbigkeit, ohne ihre HELLIGKEIT anzutasten. 100 lässt sie,
+        ''' wie sie ist, 0 macht ein Grau daraus.
+        '''
+        ''' Gemischt wird gegen das Grau DERSELBEN Helligkeit und nicht gegen den Hintergrund: nur so
+        ''' bleibt der Kontrast erhalten. Wer die Farbe zurücknimmt, will eine ruhigere Oberfläche -
+        ''' nicht eine, auf der die Hervorhebung verschwindet.
+        '''
+        ''' Die Gewichte sind die der wahrgenommenen Helligkeit (Rec. 601). Ein einfacher Mittelwert
+        ''' der drei Kanäle macht Blau zu hell und Grün zu dunkel, und ein blauer Akzent bei 0 sähe
+        ''' dann heller aus als der orange daneben.</summary>
+        Private Shared Function WithAccentStrength(color As Color, strength As Integer) As Color
+            Dim amount = Math.Max(0, Math.Min(100, strength)) / 100.0
+            If amount >= 1.0 Then Return color
+            Dim luminance = CByte(Math.Round(Math.Max(0, Math.Min(255,
+                0.299 * color.R + 0.587 * color.G + 0.114 * color.B))))
+            Dim gray = Color.FromArgb(color.A, luminance, luminance, luminance)
+            ' Von GRAU in Richtung Farbe: bei amount = 0 bleibt das Grau stehen.
+            Return Mix(gray, color, amount)
+        End Function
 
         Private Shared Function Mix(color As Color, target As Color, amount As Double) As Color
             amount = Math.Max(0, Math.Min(1, amount))

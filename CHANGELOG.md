@@ -1,89 +1,95 @@
-## FerrumPix 0.9.35
+## FerrumPix 0.9.36
 
 ### What's new
 
-- **A trackpad mode, without changing the mouse controls.** Switch it on below the drawing tablet
-  setting and two fingers zoom in Viewer and Editor, a clear horizontal swipe moves through the
-  filmstrip, and dragging a zoomed picture pans it. In the Viewer, hold SHIFT while dragging to
-  draw a crop instead.
+- **Geometry is now a sequence of editable steps.** Crop, rotate, straighten, perspective,
+  grid and line warps, resize and canvas size keep the order in which you used them. You can
+  return to an earlier crop in RAW, PSD and `.fpx` projects, pull its frame out again, and keep
+  working instead of relying on history alone. Geometry recipes are also much smaller: each step
+  stores only what it needs.
 
-- **Ratings, favourites and colour labels can appear on filmstrip pictures.** They are off by
-  default and can be enabled in Settings. Their badges update straight away, whether you set them
-  in the info sidebar, with a shortcut or from a menu.
+- **Crop, rotate and straighten now live together under Transform.** Perspective, grid, lines
+  and envelope distortion have their own Warp tool. Each group has an explicit Apply action where
+  needed, so an unfinished adjustment cannot quietly become part of the recipe.
 
-- **Saved LUTs and XMP presets ask before they are removed.** The question names the preset and
-  makes clear that only the saved entry is removed; the file itself stays where it is.
+- **A path can become a mask layer or a text layer.** Turn a selected path directly into a new,
+  independent mask layer, or turn it into editable text on that path without leaving a duplicate
+  path layer behind. Text can also be inverted to the other side of any path, including free paths
+  and text watermarks.
 
-- **The history of a picture, in the layers panel.** A second tab lists every step you have taken,
-  from the original onwards, each in a row of its own with the icon of the tool it came from and its
-  number: Exposure, Temperature, Crop, Brush, Mask. Every slider names itself, down to Colour
-  mixer: Aqua saturation and Calibration: Red hue, so you can see which one you moved. Objects say what
-  you changed on which of them, Text: Shadow strength or Image: Opacity, and so do the actions
-  behind them: Grouped, Layer moved, Path point added, Added: Text. Click a step and
-  the picture goes back to it, as far back as the original and forward again. Steps you have moved
-  back past stay in the list, greyed out, until you change something - then the way forward from
-  there is gone, as you would expect.
+- **Fullscreen from the editor shows your current work.** It now opens a safe snapshot of the
+  rendered editor scene, including unsaved adjustments, rather than reopening the original file.
 
-- **One drag on a slider is one step.** A long drag used to leave a pile of identical rows behind,
-  and CTRL+Z then took the move back in pieces. The step is now written when you let go of the
-  slider, and taking it back returns to where the slider stood before you touched it. A click that
-  changes nothing leaves nothing behind.
+- **Keywords stored inside your photos can be searched.** FerrumPix now reads the keywords written
+  into a picture itself, not only those in a sidecar file, so an archive tagged in Photoshop, Bridge
+  or Lightroom can be searched by keyword straight away. The background scan picks up both kinds, so
+  keywords are found across your whole collection instead of only in folders you have opened. An
+  existing catalogue takes them in the next time that scan runs over it.
 
-- **Icons on the buttons of the editor sidebar.** Fill type under Object, Selection and Frame, the
-  path a text runs along, the watermark templates, the saved adjustments, the background of the
-  picture, and inverting, discarding, copying and pasting a mask or a selection: every one of those
-  buttons now carries a small picture beside its word, the way the other panels already did.
+- **You can load all shot data from a server in one go.** Immich and Nextcloud have a new button in
+  their own settings section that fetches camera, lens, focal length, ISO, aperture and keywords for
+  every photo on the server, so search finds them even where you have never scrolled. It only ever
+  runs on that button, never on startup, and it never removes anything. Clearing the catalogue data
+  or the thumbnails of a server is a separate button next to it.
 
-  
+- **The accent colour can be toned down.** Settings has a colour strength next to the colour
+  choice, in five steps from 100 to 0 per cent. At 0 the highlight is still there, just without
+  colour: it turns into a grey of the same brightness, so nothing loses its contrast.
+
+- **Five more interface languages.** Korean, Indonesian, Turkish, Thai and Hindi are available
+  in Settings. Text rendering also asks the operating system for a suitable fallback font when a
+  chosen font does not contain a character.
+
 ### Fixes
 
-- **Fullscreen is easier to leave and safer while editing.** SPACE now returns from fullscreen as
-  well as ESC. You can enter fullscreen with unsaved edits; while it is open the picture cannot be
-  changed, so those edits cannot accidentally be left behind.
+- **Renaming or moving keeps your ratings, labels and keywords.** They are tied to the path, and
+  until now renaming a folder or a file quietly lost all of them, along with the people you had
+  named. Thumbnails move along too, so a renamed folder no longer has to be rendered again. If you
+  renamed or moved a folder outside FerrumPix, Settings now has "New location for this folder" on
+  the folder itself to bring everything across.
 
-- **Touching a path point is not a change.** Clicking a point or a handle in the path tool, without
-  moving it, marked the picture as edited, and closing then asked whether to save something that was
-  never altered. Only an actual drag counts now.
+- **Enlarge canvas automatically stays on for the next rotation.** The setting was used up by the
+  first Apply, so a second rotation ran without it and cut off the corners.
 
-- **A path drag ends when the pointer does.** If the pointer was taken away mid-drag, by a window
-  change, a popup or a tablet that stopped reporting, the drag stayed on inside and only ended at
-  some later movement.
+- **Immich photos can be searched by focal length, lens and shutter speed.** Those values were
+  already in what the server sends, but FerrumPix did not keep them, so a condition on focal length
+  never matched an Immich photo.
 
-- **The history stays open while you work.** Picking another tool used to close the history tab and
-  put the layer stack back, so you had to open it again after every tool.
+- **Nextcloud remembers what it has already looked up.** Keywords, size and capture time of a photo
+  were fetched again in every session, one request per picture. They are now kept locally like the
+  Immich ones and are there the moment you open the gallery.
 
-- **The tone curve now sits on the picture you are working on.** The histogram behind the curve
-  stayed at the state of the file, so after the first slider it no longer answered the question you
-  were asking it.
+- **A keyword added later in another program now arrives.** For RAW and Photoshop files, keywords
+  from a sidecar could stop coming through once FerrumPix had taken them in once, so anything you
+  added afterwards in Lightroom or Bridge never showed up.
 
-- **The copyright field is back in the batch dialogs that overwrite.** Resize, Apply filter and
-  Watermark hid it together with the target settings when you kept the originals - the very runs
-  where you are most likely to set it.
+- **Confirmed geometry can be reset again.** Resetting Crop, Transform, Perspective, Warp, Image
+  size or Canvas size now changes the confirmed recipe steps as well as the visible controls.
 
-- **The Save button only lights up when there is something to save.** It carried the accent colour
-  at all times, and a button that is always bright says nothing.
+- **A straightened picture stays straight.** Applying a later crop, perspective correction,
+  resize or canvas change no longer drops an earlier straighten setting or its expanded canvas.
 
-- **Apply looks the same everywhere.** In the three warp tools - grid, envelope and lines - the
-  button that makes the work stick was a plain one and went unnoticed among the sliders. It now
-  carries the accent colour, as it does under Crop and Image size.
+- **Path handles outside the picture can be grabbed.** They used to be cleared as if you had
+  clicked beside the stage, or were clamped back to the image edge before hit testing.
 
-- **The clipping warning ends with the tool.** It used to stay on after you switched away from the
-  adjustment sliders, marking a picture you were working on in a different way, with its tick box
-  out of sight.
+- **The catalogue cleanup count avoids redundant network checks.** A completed index run now
+  reuses the files it has already confirmed instead of querying their metadata location again.
 
-- **The calibration sliders can be undone.** The seven sliders under Calibration wrote their value
-  and nothing else: CTRL+Z went straight past them and took back the step before instead. They now
-  go the same way as every other slider.
+- **Video playback no longer blocks the application while stopping.** libmpv stop, load and quit
+  requests are queued asynchronously, and its native cleanup runs away from the UI thread. This
+  covers local videos as well as Immich and Nextcloud downloads, particularly on macOS.
 
-- **Cleaning the database now also clears faces.** Deleting a picture left its faces behind, so a
-  person kept counting photos that were no longer there, and Clean database did not help: it only
-  ever cleared ratings, labels and keywords. It now clears faces and scan marks with them, including
-  those of pictures that only ever went through the face search. Indexing your watched folders tells
-  you how many entries point at files that are gone, so you know when it is worth running.
+- **macOS also finds a Homebrew libmpv when started from Finder.** Both Apple Silicon and Intel
+  Homebrew library locations are checked explicitly.
 
-- **Sliders no longer stick to the pen.** Lift a pen off the tablet and the letting go often never
-  reaches the application. A slider you had just touched then followed the pen around and changed
-  its value as you passed over it, and only a click somewhere else set it free. Sliders, curves, the
-  timeline, brush strokes and every drag on the editor stage now end as soon as the pointer moves
-  with no button held. Anything you had drawn or dragged is kept.
+- **A few buttons and hints stayed German.** The path buttons for a mask layer and for text, their
+  hints, the trackpad hint in Settings and three of the filter names now follow the chosen language.
 
+- **A new watermark appears where its frame is.** Placing a text or image watermark read its
+  anchor distances as if they were a position, so watermark and selection frame sat in different
+  places until the first drag pulled them together.
+
+- **Objects stay on the picture when you straighten or correct perspective.** A text, shape or
+  drawing placed on a detail used to stay put while the picture under it tilted. It now turns with
+  the picture, and perspective is carried into the object as well. Anchored watermarks and the
+  frame keep sitting where they are, as before.

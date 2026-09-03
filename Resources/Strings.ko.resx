@@ -7932,9 +7932,6 @@
   <data name="XmpCore_6_1_867049bb" xml:space="preserve">
     <value>XmpCore 6.1</value>
   </data>
-  <data name="Adobe_XMP_2167da4f" xml:space="preserve">
-    <value>Adobe XMP</value>
-  </data>
   <data name="Aufnahmedaten_vollst_ndig_laden_56ba1ac8" xml:space="preserve">
     <value>촬영 데이터를 모두 불러오기</value>
   </data>
@@ -7955,5 +7952,35 @@
   </data>
   <data name="0_Katalogeintr_ge_und_1_Indexeintr_ge_entfernt_757d7c4c" xml:space="preserve">
     <value>카탈로그 항목 {0}개와 색인 항목 {1}개를 제거했습니다</value>
+  </data>
+  <data name="L_scht_die_lokal_zwischengespeicherten_Immich_Vo_aa6d0b47" xml:space="preserve">
+    <value>로컬에 저장된 Immich 축소판을 삭제합니다. 필요하면 다시 가져옵니다.</value>
+  </data>
+  <data name="Holt_Kamera_Objektiv_Brennweite_ISO_Blende_und_S_b7a93595" xml:space="preserve">
+    <value>서버의 모든 사진에 대해 카메라, 렌즈, 초점 거리, ISO, 조리개, 키워드를 가져옵니다. 아직 가보지 않은 곳에서도 검색이 찾아냅니다. 이 버튼으로만 실행되며 서버의 내용은 바꾸지 않습니다.</value>
+  </data>
+  <data name="Holt_Stichw_rter_Gr_e_und_Aufnahmezeit_f_r_alle__6e56cdb8" xml:space="preserve">
+    <value>서버의 모든 사진에 대해 키워드, 크기, 촬영 시각을 가져옵니다. 아직 가보지 않은 곳에서도 검색이 찾아냅니다. 이 버튼으로만 실행되며 서버의 내용은 바꾸지 않습니다.</value>
+  </data>
+  <data name="Farbst_rke_61e7d0a8" xml:space="preserve">
+    <value>색상 강도</value>
+  </data>
+  <data name="Wie_kr_ftig_der_Akzent_wirkt_Bei_0_bleibt_die_He_0e467c0f" xml:space="preserve">
+    <value>강조 색이 얼마나 강하게 보이는지입니다. 0 %에서도 강조는 남고 색만 사라집니다.</value>
+  </data>
+  <data name="100_ff376401" xml:space="preserve">
+    <value>100 %</value>
+  </data>
+  <data name="75_f6b4513c" xml:space="preserve">
+    <value>75 %</value>
+  </data>
+  <data name="50_4bd3acba" xml:space="preserve">
+    <value>50 %</value>
+  </data>
+  <data name="25_4d04d593" xml:space="preserve">
+    <value>25 %</value>
+  </data>
+  <data name="0_065d0ebd" xml:space="preserve">
+    <value>0 %</value>
   </data>
 </root>
