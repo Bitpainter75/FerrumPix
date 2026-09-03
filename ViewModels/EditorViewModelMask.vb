@@ -432,10 +432,13 @@ Namespace ViewModels
             If _selectionMask IsNot Nothing AndAlso Not Object.ReferenceEquals(_selectionMask, mask) Then _selectionMask.Dispose()
             _selectionMask = mask
             _selectionMaskRect = rectPx
-            _selectionMaskBytesStride = If(mask Is Nothing, 0, mask.RowBytes)
-            _selectionMaskBytes = If(mask Is Nothing, Nothing, New Byte(_selectionMaskBytesStride * mask.Height - 1) {})
-            If mask IsNot Nothing Then Marshal.Copy(mask.GetPixels(), _selectionMaskBytes, 0, _selectionMaskBytes.Length)
-            _selectionMaskBase64 = EncodeMaskBitmapToBase64(mask)
+            ' EINMAL abschreiben, und zwar in das Raster - es ist zugleich der Puffer, aus dem
+            ' hier gelesen wird, und die Form, in der die Auswahl ins Rezept geht. Vorher stand
+            ' hier ein zweiter Puffer und darunter ein VOLLES PNG, gepackt bei JEDEM Strich.
+            Dim raster = AlphaRaster.FromBitmap(mask)
+            _selectionMaskRaster = raster
+            _selectionMaskBytesStride = If(raster Is Nothing, 0, raster.Width)
+            _selectionMaskBytes = If(raster Is Nothing, Nothing, raster.Pixels)
             RefreshSelectionMaskEdgePoints()
             Me.RaisePropertyChanged(NameOf(HasSelectionMask))
             ' DER Engpass: hier laeuft JEDE Aenderung der committeten Auswahlmaske durch - Zauberstab,
@@ -454,7 +457,7 @@ Namespace ViewModels
             _selectionMaskRect = SKRectI.Empty
             _selectionMaskBytes = Nothing
             _selectionMaskBytesStride = 0
-            _selectionMaskBase64 = ""
+            _selectionMaskRaster = Nothing
             ' Zurück auf harte Kante: der Masken-Pinsel-Commit setzt das Flag danach wieder, wenn nötig.
             _selectionMaskSoftBaked = False
             _selectionMaskEdgePointsX = Nothing
@@ -1096,18 +1099,16 @@ Namespace ViewModels
         Private Function BuildSourceMaskFromStamp(stamp As SKBitmap, rectPx As SKRectI, name As String) As ImageMask
             If stamp Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return Nothing
             Try
-                Using image = SKImage.FromBitmap(stamp)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        Dim adj = BuildAdjustmentsFromFields()
-                        adj.SelectionMaskPngBase64 = Convert.ToBase64String(data.ToArray())
-                        adj.SelectionMaskLeft = rectPx.Left
-                        adj.SelectionMaskTop = rectPx.Top
-                        adj.SelectionFeatherPixels = 0
-                        ' Nur den Stempelbereich abtasten statt das ganze Bild - bei 20 MP sind das
-                        ' gemessen 2,3 Sekunden Unterschied JE STRICH.
-                        Return ImageProcessor.CreateSourceMaskFromSelection(adj, name, rectPx)
-                    End Using
-                End Using
+                Dim adj = BuildAdjustmentsFromFields()
+                adj.SelectionMaskRaster = AlphaRaster.FromBitmap(stamp)
+                adj.SelectionMaskLeft = rectPx.Left
+                adj.SelectionMaskTop = rectPx.Top
+                adj.SelectionMaskRight = rectPx.Left + stamp.Width
+                adj.SelectionMaskBottom = rectPx.Top + stamp.Height
+                adj.SelectionFeatherPixels = 0
+                ' Nur den Stempelbereich abtasten statt das ganze Bild - bei 20 MP sind das
+                ' gemessen 2,3 Sekunden Unterschied JE STRICH.
+                Return ImageProcessor.CreateSourceMaskFromSelection(adj, name, rectPx)
             Catch
                 Return Nothing
             End Try
@@ -1411,7 +1412,7 @@ Namespace ViewModels
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso
                                                       String.Equals(m.Id, maskId, StringComparison.Ordinal))
             If mask Is Nothing Then Return $"Maske={Kurz(maskId)}(FEHLT)"
-            Return $"Maske={Kurz(maskId)} Form={FormKurz(mask.PngBase64)} Rand={mask.Left},{mask.Top},{mask.Right},{mask.Bottom}" &
+            Return $"Maske={Kurz(maskId)} Form={FormKurz(mask.Raster)} Rand={mask.Left},{mask.Top},{mask.Right},{mask.Bottom}" &
                    $" Umgekehrt={mask.Inverted} Teile={mask.ComponentCount}"
         End Function
 
@@ -1421,15 +1422,15 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Fingerabdruck der Maskenpixel: Laenge plus Kurzhash. Gleicher Wert = gleiche Form.</summary>
-        Private Shared Function FormKurz(pngBase64 As String) As String
-            If String.IsNullOrEmpty(pngBase64) Then Return "leer"
+        ''' <summary>Die Form einer Maske kurz, fuer die Ablaufspur. UEBER DAS RASTER: die
+        ''' Speicherform dafuer zu packen kostete bei einer grossen Maske mehr als der Vorgang,
+        ''' der protokolliert werden soll.</summary>
+        Private Shared Function FormKurz(raster As AlphaRaster) As String
+            If raster Is Nothing Then Return "leer"
             Try
-                Using sha = System.Security.Cryptography.SHA1.Create()
-                    Dim hash = sha.ComputeHash(System.Text.Encoding.ASCII.GetBytes(pngBase64))
-                    Return $"{pngBase64.Length}/{BitConverter.ToString(hash).Replace("-", "").Substring(0, 8).ToLowerInvariant()}"
-                End Using
+                Return $"{raster.Width}x{raster.Height}/{raster.Fingerprint.Substring(0, 8)}"
             Catch
-                Return pngBase64.Length.ToString()
+                Return $"{raster.Width}x{raster.Height}"
             End Try
         End Function
 
@@ -1501,7 +1502,7 @@ Namespace ViewModels
             Dim clone = original.Clone()
             clone.Id = Guid.NewGuid().ToString("N")
             _imageMasks.Add(clone)
-            TraceMask(Function() $"Abschrift der Maske: {Kurz(maskId)} -> {Kurz(clone.Id)} Form={FormKurz(clone.PngBase64)}")
+            TraceMask(Function() $"Abschrift der Maske: {Kurz(maskId)} -> {Kurz(clone.Id)} Form={FormKurz(clone.Raster)}")
             Return clone.Id
         End Function
 
@@ -2070,19 +2071,20 @@ Namespace ViewModels
         ''' 218 ms je Mausbewegung. Ein reiner Versatz lässt sich im Anzeigeraum nachziehen (eine
         ''' affine Abbildung macht aus einer Verschiebung wieder eine Verschiebung), deshalb liefert
         ''' die Funktion den Versatz zurück und der Aufrufer tastet verschoben ab.</summary>
-        Private Function ProjectMaskRasterCached(mask As ImageMask, pngBase64 As String,
+        Private Function ProjectMaskRasterCached(mask As ImageMask, raster As AlphaRaster,
                                                  srcLeft As Integer, srcTop As Integer,
                                                  srcRight As Integer, srcBottom As Integer,
                                                  adj As ImageAdjustments,
                                                  ow As Integer, oh As Integer, bw As Integer, bh As Integer,
                                                  ByRef offsetX As Integer, ByRef offsetY As Integer) As Byte()
             offsetX = 0 : offsetY = 0
-            If mask Is Nothing OrElse String.IsNullOrWhiteSpace(pngBase64) Then Return Nothing
+            If mask Is Nothing OrElse raster Is Nothing Then Return Nothing
             If srcRight <= srcLeft OrElse srcBottom <= srcTop Then Return Nothing
             If mask.SourceWidthPixels <= 0 OrElse mask.SourceHeightPixels <= 0 Then Return Nothing
 
-            Dim key = String.Join("|", ImageProcessor.MaskRasterFingerprint(pngBase64),
-                                  srcRight - srcLeft, srcBottom - srcTop)
+            ' Der Schluessel haengt am INHALT des Rasters: eine Zeichenkette dafuer zu packen waere
+            ' teurer als die Projektion, die hier gespart werden soll.
+            Dim key = String.Join("|", raster.Fingerprint, srcRight - srcLeft, srcBottom - srcTop)
             Dim entry As ProjectedMaskRaster = Nothing
             If _projectedMaskRasters.TryGetValue(key, entry) AndAlso entry IsNot Nothing Then
                 If entry.SourceLeft <> srcLeft OrElse entry.SourceTop <> srcTop Then
@@ -2098,7 +2100,7 @@ Namespace ViewModels
                 Return entry.Data
             End If
 
-            Dim data = ProjectSourceRasterToDisplay(mask, pngBase64, srcLeft, srcTop, srcRight, srcBottom,
+            Dim data = ProjectSourceRasterToDisplay(mask, raster, srcLeft, srcTop, srcRight, srcBottom,
                                                     adj, ow, oh, bw, bh)
             If data Is Nothing Then Return Nothing
             If _projectedMaskRasters.Count >= ProjectedMaskRasterSlots Then _projectedMaskRasters.Clear()
@@ -2129,14 +2131,14 @@ Namespace ViewModels
             Dim added As Byte() = Nothing, removed As Byte() = Nothing
             For Each c In carriers
                 Dim dx As Integer, dy As Integer
-                Dim addRaster = ProjectMaskRasterCached(mask, c.BrushAddPngBase64, c.BrushLeft, c.BrushTop,
+                Dim addRaster = ProjectMaskRasterCached(mask, c.BrushAddRaster, c.BrushLeft, c.BrushTop,
                                                         c.BrushRight, c.BrushBottom, adj,
                                                         overlay.Width, overlay.Height, displayWidth, displayHeight, dx, dy)
                 If addRaster IsNot Nothing Then
                     If added Is Nothing Then added = New Byte(pixelCount - 1) {}
                     AccumulateShiftedMaximum(added, addRaster, overlay.Width, overlay.Height, dx, dy)
                 End If
-                Dim removeRaster = ProjectMaskRasterCached(mask, c.BrushSubtractPngBase64, c.BrushLeft, c.BrushTop,
+                Dim removeRaster = ProjectMaskRasterCached(mask, c.BrushSubtractRaster, c.BrushLeft, c.BrushTop,
                                                            c.BrushRight, c.BrushBottom, adj,
                                                            overlay.Width, overlay.Height, displayWidth, displayHeight, dx, dy)
                 If removeRaster IsNot Nothing Then
@@ -2195,18 +2197,18 @@ Namespace ViewModels
         ''' Maske verpackt und durch <see cref="ImageProcessor.BuildSelectionMaskFromLayerMask"/>
         ''' geschickt - denselben Weg, über den eine Ebenenmaske zum Bearbeiten in den Anzeigeraum
         ''' kommt. Zuschnitt, Drehung und Begradigung stimmen damit automatisch.</summary>
-        Private Function ProjectSourceRasterToDisplay(mask As ImageMask, pngBase64 As String,
+        Private Function ProjectSourceRasterToDisplay(mask As ImageMask, raster As AlphaRaster,
                                                       srcLeft As Integer, srcTop As Integer,
                                                       srcRight As Integer, srcBottom As Integer,
                                                       adj As ImageAdjustments,
                                                       overlayWidth As Integer, overlayHeight As Integer,
                                                       displayWidth As Integer, displayHeight As Integer) As Byte()
-            If String.IsNullOrWhiteSpace(pngBase64) Then Return Nothing
+            If raster Is Nothing Then Return Nothing
             Dim helperMask = New ImageMask With {
                 .SourceWidthPixels = mask.SourceWidthPixels, .SourceHeightPixels = mask.SourceHeightPixels,
                 .Left = srcLeft, .Top = srcTop,
                 .Right = srcRight, .Bottom = srcBottom,
-                .PngBase64 = pngBase64
+                .Raster = raster
             }
             Dim rectPx As SKRectI
             Using imDisplay = ImageProcessor.BuildSelectionMaskFromLayerMask(helperMask, adj, rectPx)
@@ -2357,9 +2359,9 @@ Namespace ViewModels
                 Dim part As Byte() = Nothing
                 If component.IsGradient Then
                     part = BuildGradientComponentCoverage(component, ow, oh)
-                ElseIf Not String.IsNullOrWhiteSpace(component.PngBase64) Then
+                ElseIf component.HasPixelData Then
                     Dim dx As Integer, dy As Integer
-                    Dim projected = ProjectMaskRasterCached(mask, component.PngBase64,
+                    Dim projected = ProjectMaskRasterCached(mask, component.Raster,
                                                             component.Left, component.Top,
                                                             component.Right, component.Bottom,
                                                             adj, ow, oh, bw, bh, dx, dy)
@@ -2775,6 +2777,7 @@ Namespace ViewModels
         ''' Korrekturebene, nur die Maskenkennung. <paramref name="showAsMask"/> entscheidet ueber
         ''' rotes Overlay (Maske) oder Laufameisen (Auswahl).</summary>
         Private Sub LoadMaskIntoSelection(maskId As String, showAsMask As Boolean)
+            Dim profile = Diagnostics.Stopwatch.StartNew()
             TraceMask(Function() $"Maske wird zum Bearbeiten geöffnet: {MaskTrace(maskId)}" &
                                  $" (vorher bearbeitet={Kurz(_editingLayerMaskId)})")
             _editingLayerMaskId = ""
@@ -2792,6 +2795,9 @@ Namespace ViewModels
                 RaiseMaskComponentsChanged()
                 Return
             End If
+            DiagnosticLogService.LogAlways("Maskenprofil",
+                                           $"Start id={Kurz(mask.Id)} form={FormKurz(mask.Raster)} " &
+                                           $"bestandteile={mask.ComponentCount} gradient={mask.IsGradient}")
             ' Bereichsmasken bleiben intern ein Alpha-Raster, tragen aber ihre Ursprungswerte.
             ' Beim erneuten Öffnen stehen damit wieder dieselben Regler bereit statt nur der
             ' Pinsel; die folgende Standardstrecke lädt zusätzlich die aktuelle Form als Overlay.
@@ -2821,8 +2827,16 @@ Namespace ViewModels
                                   NameOf(DepthFrom), NameOf(DepthTo), NameOf(DepthFeather)}
                     Me.RaisePropertyChanged(prop)
                 Next
-                MaskMode = If(String.Equals(mask.RangeKind, "Color", StringComparison.OrdinalIgnoreCase), "Farbe",
-                              If(String.Equals(mask.RangeKind, "Depth", StringComparison.OrdinalIgnoreCase), "Tiefe", "Luminanz"))
+                ' Der Moduswechsel darf hier NUR die Bedienelemente umstellen. Insbesondere beim
+                ' Tiefenmodus wuerde er sonst RedrawDepthMask asynchron starten; nach dem Laden
+                ' ueberschriebe dessen neu berechnete Auswahl das gespeicherte Maskenraster.
+                _suppressMaskModeRangeBuildDepth += 1
+                Try
+                    MaskMode = If(String.Equals(mask.RangeKind, "Color", StringComparison.OrdinalIgnoreCase), "Farbe",
+                                  If(String.Equals(mask.RangeKind, "Depth", StringComparison.OrdinalIgnoreCase), "Tiefe", "Luminanz"))
+                Finally
+                    _suppressMaskModeRangeBuildDepth = Math.Max(0, _suppressMaskModeRangeBuildDepth - 1)
+                End Try
             End If
             ' Ein Verlauf ist gerechnet, nicht gemalt: er wird NICHT in die Auswahlmaske geladen (das
             ' machte aus zwei Punkten ein PNG und nahm ihm die Aenderbarkeit). Eine noch laufende
@@ -2839,14 +2853,20 @@ Namespace ViewModels
                 If showAsMask Then PublishGradientOverlay(mask)
                 Return
             End If
+            Dim phase = Diagnostics.Stopwatch.StartNew()
             Dim adj = BuildAdjustmentsFromFields()
+            Dim recipeMs = phase.ElapsedMilliseconds
             Dim rectPx As SKRectI
+            phase.Restart()
             Dim bmp = ImageProcessor.BuildSelectionMaskFromLayerMask(mask, adj, rectPx)
+            Dim composeMs = phase.ElapsedMilliseconds
             If bmp Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return
+            phase.Restart()
             ClearSelectionMask()
             SetSelectionBoundsFromPixels(rectPx)
             SetSelectionShape("MagicWand", Nothing, Nothing)
             SetSelectionMaskData(bmp, rectPx)
+            Dim selectionMs = phase.ElapsedMilliseconds
             _selectionMaskSoftBaked = False
             _selectionFeather = Math.Max(0, Math.Min(200, mask.FeatherPixels))
             Me.RaisePropertyChanged(NameOf(SelectionFeather))
@@ -2858,11 +2878,17 @@ Namespace ViewModels
             ' SetActiveSelectionIsMask baut das Overlay NUR bei einem Artwechsel neu. Beim Wechsel von einer
             ' Masken-Ebene zur nächsten (beide True) bliebe sonst das ROT DER VORIGEN Maske stehen - es sähe
             ' aus, als färbe die neue Maske fremde Bereiche/Ebenen rot. Deshalb hier immer neu aufbauen.
+            phase.Restart()
             If showAsMask Then PublishSelectionRedOverlay()
+            Dim overlayMs = phase.ElapsedMilliseconds
             ' Und die Liste der Bestandteile gehoert ZU DIESER Maske. Sie wurde bisher nur von den
             ' Verlaufs- und Bestandteilwegen neu gebaut; wer eine Ebenenmaske einfach wieder oeffnete,
             ' sah die Liste des letzten Aufbaus - oder gar keine.
             RaiseMaskComponentsChanged()
+            DiagnosticLogService.LogAlways("Maskenprofil",
+                                           $"Fertig id={Kurz(mask.Id)} raster={rectPx.Width}x{rectPx.Height} " &
+                                           $"rezept={recipeMs}ms zusammensetzen={composeMs}ms " &
+                                           $"auswahl={selectionMs}ms overlay={overlayMs}ms gesamt={profile.ElapsedMilliseconds}ms")
         End Sub
 
         ''' <summary>Die gerade bearbeitete Ebenenmaske - oder Nothing.</summary>
@@ -2955,14 +2981,14 @@ Namespace ViewModels
             If rebuilt Is Nothing Then Return False
             ' WER schreibt WOHIN: die haeufigste Ursache fuer "die falsche Ebene hat sich geaendert".
             TraceMask(Function() $"Auswahl wird in die bearbeitete Maske zurückgeschrieben: {MaskTrace(mask.Id)}" &
-                                 $" -> Form={FormKurz(rebuilt.PngBase64)}")
+                                 $" -> Form={FormKurz(rebuilt.Raster)}")
             mask.SourceWidthPixels = rebuilt.SourceWidthPixels
             mask.SourceHeightPixels = rebuilt.SourceHeightPixels
             mask.Left = rebuilt.Left
             mask.Top = rebuilt.Top
             mask.Right = rebuilt.Right
             mask.Bottom = rebuilt.Bottom
-            mask.PngBase64 = rebuilt.PngBase64
+            mask.CopyPixelDataFrom(rebuilt)
             mask.Inverted = False
             ' Die Auswahl zeigt das FERTIGE Ergebnis, eine Umkehrung darin ist also schon in diesen
             ' Bildpunkten. Bliebe der Schalter stehen, kehrte er sie ein zweites Mal um.
@@ -4379,15 +4405,22 @@ Namespace ViewModels
         ''' GEHOERT DIE AUSWAHL SCHON ZU EINER EBENE, legt ein weiterer Druck eine unabhaengige
         ''' Kopie derselben Form an. So kann man dieselbe Auswahl direkt fuer mehrere, getrennt
         ''' bearbeitbare Korrekturebenen verwenden.</summary>
-        Public Sub CreateAdjustmentLayerFromSelection(Optional captureUndo As Boolean = True)
+        ''' <param name="preparedMask">Eine bereits im Hintergrund gerechnete Maske derselben
+        ''' Auswahl. Nur der teure Weg gibt sie mit; der ganze Rest - Dedup, Kopie, Benennung,
+        ''' Reihenfolge - bleibt damit an EINER Stelle.</param>
+        ''' <returns>Die entstandene bzw. weiterbenutzte Ebene, oder Nothing, wenn keine entstanden
+        ''' ist. Wer danach auf ihr weiterarbeitet, MUSS das prüfen: sonst greift er auf die zuvor
+        ''' markierte Ebene zu und meldet einen Erfolg, den es nicht gab.</returns>
+        Public Function CreateAdjustmentLayerFromSelection(Optional captureUndo As Boolean = True,
+                                                           Optional preparedMask As ImageMask = Nothing) As MaskedAdjustmentLayer
             TraceMask(Function() $"„Neue Masken-/Auswahlebene"" gedrückt: Auswahl aktiv={_hasActiveSelection}" &
                                  $" bearbeitet={Kurz(_editingLayerMaskId)} markiert={Kurz(_selectedMaskedAdjustmentLayerId)}" &
                                  $" promotet={Kurz(_selectionPromotedLayerId)}")
-            If Not _hasActiveSelection Then Return
+            If Not _hasActiveSelection Then Return Nothing
             If captureUndo Then PushUndo(LocalizationService.T("Ebenenmaske hinzugefügt"))
             Dim countBefore = _maskedAdjustmentLayers.Count
-            Dim layer = PromoteActiveSelectionToLayer()
-            If layer Is Nothing Then Return
+            Dim layer = PromoteActiveSelectionToLayer(preparedMask)
+            If layer Is Nothing Then Return Nothing
             ' PromoteActiveSelectionToLayer findet bei einer offenen Ebenenmaske absichtlich deren
             ' vorhandene Ebene. Der ausdrueckliche Neu-Befehl bedeutet dort jedoch: eine zweite,
             ' unabhaengige Ebene mit derselben Maskenform.
@@ -4395,7 +4428,7 @@ Namespace ViewModels
                 Dim name = If(layer.IsMaskLayer, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) &
                            " " & (_maskedAdjustmentLayers.Count + 1).ToString()
                 Dim copy = DuplicateAdjustmentLayer(layer, name)
-                If copy Is Nothing Then Return
+                If copy Is Nothing Then Return Nothing
                 TraceMask(Function() $"Kopie angelegt: aus Ebene={Kurz(layer.Id)} ({MaskTrace(layer.MaskId)})" &
                                      $" wurde Ebene={Kurz(copy.Id)} ({MaskTrace(copy.MaskId)})")
                 layer = copy
@@ -4406,7 +4439,8 @@ Namespace ViewModels
             _hasChanges = True
             TraceLayerInventory("„Neue Masken-/Auswahlebene""")
             SchedulePreviewUpdate()
-        End Sub
+            Return layer
+        End Function
 
         ' Der Knopf im Panel nimmt diesen Weg. Eine Tiefenmaske ist als Auswahl bereits sichtbar,
         ' muss fuer die dauerhafte Ebene aber noch einmal pixelweise in den Quellraum gelegt und
@@ -4415,24 +4449,31 @@ Namespace ViewModels
         ' danach zwingend auf der neuen Ebene weiterarbeiten (z. B. Pfad -> Maske).
         Private _creatingAdjustmentLayer As Boolean
 
-        Private Async Function CreateAdjustmentLayerFromSelectionAsync(Optional captureUndo As Boolean = True) As Task
-            If _creatingAdjustmentLayer OrElse Not _hasActiveSelection Then Return
+        ''' <returns>Die entstandene Ebene, oder Nothing. Der Hintergrundlauf kann fehlschlagen, und
+        ''' ein zwischenzeitlicher Bild- oder Auswahlwechsel verwirft sein Ergebnis; wer danach auf
+        ''' der Ebene weiterarbeitet, MUSS das prüfen.</returns>
+        Private Async Function CreateAdjustmentLayerFromSelectionAsync(Optional captureUndo As Boolean = True) As Task(Of MaskedAdjustmentLayer)
+            If _creatingAdjustmentLayer OrElse Not _hasActiveSelection Then Return Nothing
 
             ' Bereits bearbeitete bzw. gerade erst promotete Masken brauchen keine Vollbild-
             ' Umrechnung. Fuer sie bleibt das Verhalten des Knopfs (unabhaengige Kopie) identisch.
             If LayerForEditedMask() IsNot Nothing OrElse _selectionPromotedLayerId <> "" Then
-                CreateAdjustmentLayerFromSelection()
-                Return
+                Return CreateAdjustmentLayerFromSelection(captureUndo)
             End If
 
             TraceMask(Function() $"„Neue Masken-/Auswahlebene"" im Hintergrund: Auswahl aktiv={_hasActiveSelection}")
-            If captureUndo Then PushUndo(LocalizationService.T("Ebenenmaske hinzugefügt"))
             Dim snapshot = BuildAdjustmentsFromFields()
-            Dim isMask = _activeSelectionIsMask
             Dim name = LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString()
+            Dim bounds = SelectionMaskSampleBounds()
+            ' WORAN DER VORGANG HAENGT. Der Sperrschirm erscheint erst nach einer kurzen Frist, es
+            ' laesst sich also weiterarbeiten, waehrend gerechnet wird. Wechselt dabei das Bild oder
+            ' die Auswahl, gehoert das Ergebnis nirgendwohin mehr.
+            Dim ownerPath = _currentImagePath
+            Dim ownerRect = _selectionMaskRect
+            Dim mask As ImageMask = Nothing
             _creatingAdjustmentLayer = True
             SetBusyProgress(0)
-            SetBusyReason(LocalizationService.T("Ebenenmaske wird erstellt (0 %)…"))
+            SetBusyReason(String.Format(LocalizationService.T("Ebenenmaske wird erstellt ({0} %)…"), 0))
             RefreshBusyState()
             Try
                 ' Progress(Of T) wird auf dem UI-Faden erzeugt. Report aus Task.Run stellt die
@@ -4444,47 +4485,27 @@ Namespace ViewModels
                         SetBusyProgress(percent)
                         SetBusyReason(String.Format(LocalizationService.T("Ebenenmaske wird erstellt ({0} %)…"), percent))
                     End Sub)
-                Dim mask = Await Task.Run(Function() ImageProcessor.CreateSourceMaskFromSelection(snapshot, name, Nothing, progress))
-                If mask Is Nothing Then
-                    StatusText = LocalizationService.T("Ebenenmaske konnte nicht erstellt werden")
-                    Return
-                End If
-
-                ' Ab hier nur noch Modellzustand: die teure Raster- und PNG-Arbeit ist beendet.
-                Dim existingMask = _imageMasks.LastOrDefault(Function(m) m IsNot Nothing AndAlso
-                    m.SourceWidthPixels = mask.SourceWidthPixels AndAlso m.SourceHeightPixels = mask.SourceHeightPixels AndAlso
-                    m.Left = mask.Left AndAlso m.Top = mask.Top AndAlso m.Right = mask.Right AndAlso m.Bottom = mask.Bottom AndAlso
-                    m.PngBase64 = mask.PngBase64)
-                Dim layer As MaskedAdjustmentLayer = Nothing
-                If existingMask IsNot Nothing Then
-                    layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)
-                End If
-                If layer Is Nothing Then
-                    _imageMasks.Add(mask)
-                    ApplyPendingRangeMetadata(mask)
-                    layer = New MaskedAdjustmentLayer With {
-                        .Name = If(isMask, LocalizationService.T("Maskenebene"), LocalizationService.T("Auswahlebene")) &
-                                " " & (_maskedAdjustmentLayers.Count + 1).ToString(),
-                        .MaskId = mask.Id,
-                        .Adjustments = New ImageAdjustments(),
-                        .IsMaskLayer = isMask
-                    }
-                    PlaceNewCorrectionLayerInBaseImage(layer)
-                    _maskedAdjustmentLayers.Add(layer)
-                Else
-                    mask = Nothing ' Die vorhandene, identische Maske bleibt Eigentümerin der Daten.
-                End If
-                _selectedMaskedAdjustmentLayerId = layer.Id
-                _selectionPromotedLayerId = layer.Id
-                RebuildLayerRows()
-                _hasChanges = True
-                TraceLayerInventory("„Neue Masken-/Auswahlebene""")
-                SchedulePreviewUpdate()
+                mask = Await Task.Run(Function() ImageProcessor.CreateSourceMaskFromSelection(snapshot, name, bounds, progress))
             Finally
                 _creatingAdjustmentLayer = False
                 SetBusyProgress(-1)
                 RefreshBusyState()
             End Try
+
+            If Not String.Equals(ownerPath, _currentImagePath, StringComparison.Ordinal) OrElse
+               Not _hasActiveSelection OrElse Not _selectionMaskRect.Equals(ownerRect) Then
+                TraceMask(Function() "Fertige Ebenenmaske verworfen: Bild oder Auswahl haben inzwischen gewechselt")
+                Return Nothing
+            End If
+            If mask Is Nothing Then
+                StatusText = LocalizationService.T("Ebenenmaske konnte nicht erstellt werden")
+                Return Nothing
+            End If
+
+            ' Der Modellteil ist WORTGLEICH der des synchronen Knopfs - einschliesslich der
+            ' unabhaengigen Kopie, wenn dieselbe Form bereits eine Ebene hat. Der Rueckgaengig-Punkt
+            ' entsteht erst hier: bis das Ergebnis da ist, hat sich am Dokument nichts geaendert.
+            Return CreateAdjustmentLayerFromSelection(captureUndo, preparedMask:=mask)
         End Function
 
         ''' <summary>Löst die Verknüpfung "diese Auswahl gehört bereits zu Ebene X". MUSS bei jeder
@@ -4492,6 +4513,31 @@ Namespace ViewModels
         Private Sub InvalidateSelectionLayerLink()
             _selectionPromotedLayerId = ""
         End Sub
+
+        ''' <summary>Tragen zwei Masken DIESELBE FORM? Verglichen werden die Bildpunkte über ihren
+        ''' Fingerabdruck, nicht die Bytes einer Speicherform: dieselbe Form über zwei Wege erzeugt
+        ''' ergab sonst zwei Zeichenketten, und die Antwort hing daran, welcher Weg sie gebaut
+        ''' hatte. Die Maße und das Rechteck prüft der Aufrufer.</summary>
+        Private Shared Function SameMaskContent(a As ImageMask, b As ImageMask) As Boolean
+            If a Is Nothing OrElse b Is Nothing Then Return False
+            Dim rasterA = a.Raster, rasterB = b.Raster
+            If rasterA Is Nothing OrElse rasterB Is Nothing Then Return rasterA Is Nothing AndAlso rasterB Is Nothing
+            If rasterA.Width <> rasterB.Width OrElse rasterA.Height <> rasterB.Height Then Return False
+            Return String.Equals(rasterA.Fingerprint, rasterB.Fingerprint, StringComparison.Ordinal)
+        End Function
+
+        ''' <summary>Die Abtastgrenze für <c>CreateSourceMaskFromSelection</c>: das Rechteck der
+        ''' Auswahlmaske - oder KEINE Grenze, wenn die Auswahl gar kein Raster hat (Rechteck,
+        ''' Ellipse, frisch gezogenes Lasso).
+        '''
+        ''' NICHT als <c>If(bedingung, _selectionMaskRect, Nothing)</c> schreiben. Bei einem
+        ''' WERTETYP ist Nothing dort nicht „kein Wert", sondern der LEERE Wert: das Ergebnis trug
+        ''' eine Grenze von 0x0, die Abtastung fand keinen einzigen Bildpunkt, und aus einer
+        ''' Rechteckauswahl entstand überhaupt keine Ebene mehr.</summary>
+        Private Function SelectionMaskSampleBounds() As SKRectI?
+            If _selectionMaskRect.Width > 0 AndAlso _selectionMaskRect.Height > 0 Then Return _selectionMaskRect
+            Return Nothing
+        End Function
 
         ''' <summary>Die Ebene, deren Maske gerade als Auswahl bearbeitet wird - oder Nothing.
         ''' Entschieden wird über die im Panel GEWÄHLTE Ebene; ein blindes LastOrDefault über die
@@ -4508,7 +4554,10 @@ Namespace ViewModels
         ''' zurück - OHNE Undo, Neuaufbau und Vorschau (der Aufrufer steuert das). Dedup gegen den
         ''' automatischen Weg, also legt eine spätere Anpassung KEINE zweite Ebene an. Setzt
         ''' _editingLayerMaskId, damit Füllung und Anpassung anschließend auf DIESER Ebene landen.</summary>
-        Private Function PromoteActiveSelectionToLayer() As MaskedAdjustmentLayer
+        ''' <param name="preparedMask">Wurde die Maske schon im Hintergrund gerechnet, kommt sie
+        ''' hier herein statt hier zu entstehen. Die beiden Kurzwege darueber gehen vor: gehoert die
+        ''' Auswahl bereits zu einer Ebene, ist die fertige Maske gegenstandslos.</param>
+        Private Function PromoteActiveSelectionToLayer(Optional preparedMask As ImageMask = Nothing) As MaskedAdjustmentLayer
             If Not _hasActiveSelection Then Return Nothing
             ' 1. Bewusst im Panel gewählte Ebene (deren Maske gerade bearbeitet wird).
             Dim edited = LayerForEditedMask()
@@ -4525,14 +4574,18 @@ Namespace ViewModels
                     Return linked
                 End If
             End If
-            Dim snapshot = BuildAdjustmentsFromFields()
-            Dim mask = ImageProcessor.CreateSourceMaskFromSelection(snapshot,
-                LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString())
+            Dim mask = preparedMask
+            If mask Is Nothing Then
+                Dim snapshot = BuildAdjustmentsFromFields()
+                Dim bounds = SelectionMaskSampleBounds()
+                mask = ImageProcessor.CreateSourceMaskFromSelection(snapshot,
+                    LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString(), bounds)
+            End If
             If mask Is Nothing Then Return Nothing
             Dim existingMask = _imageMasks.LastOrDefault(Function(m) m IsNot Nothing AndAlso
                 m.SourceWidthPixels = mask.SourceWidthPixels AndAlso m.SourceHeightPixels = mask.SourceHeightPixels AndAlso
                 m.Left = mask.Left AndAlso m.Top = mask.Top AndAlso m.Right = mask.Right AndAlso m.Bottom = mask.Bottom AndAlso
-                m.PngBase64 = mask.PngBase64)
+                SameMaskContent(m, mask))
             Dim layer As MaskedAdjustmentLayer = Nothing
             If existingMask IsNot Nothing Then
                 layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)

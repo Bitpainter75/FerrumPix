@@ -928,6 +928,10 @@ Namespace ViewModels
         ''' Dutzende Auftraege, und jeder rechnet einen VOLLEN Renderlauf - ohne diese Nummer stehen
         ''' sie alle in der Schlange und werden auch nach dem Loslassen noch abgearbeitet.</summary>
         Private _rangeMaskGeneration As Integer
+        ' Beim Oeffnen einer gespeicherten Bereichsmaske werden nur Modus und Regler angezeigt.
+        ' Der gespeicherte Raster ist bereits die verbindliche Form und darf nicht durch einen
+        ' nebenlaeufig gestarteten Neuaufbau ersetzt werden.
+        Private _suppressMaskModeRangeBuildDepth As Integer
         Private _colorRangeTolerance As Double = 18.0
         Private _colorRangeFeather As Double = 14.0
         Private _colorRangeContiguous As Boolean = False
@@ -1037,7 +1041,7 @@ Namespace ViewModels
             Dim fresh = ImageProcessor.CreateSourceMaskFromSelection(BuildAdjustmentsFromFields(), target.Name)
             If fresh Is Nothing Then Return
             target.Left = fresh.Left : target.Top = fresh.Top : target.Right = fresh.Right : target.Bottom = fresh.Bottom
-            target.PngBase64 = fresh.PngBase64 : target.FeatherPixels = fresh.FeatherPixels
+            target.CopyPixelDataFrom(fresh) : target.FeatherPixels = fresh.FeatherPixels
             target.RangeKind = _pendingRangeKind
             target.RangeTolerance = _colorRangeTolerance
             target.RangeFeather = If(_pendingRangeKind = "Luminance", _luminanceRangeFeather,

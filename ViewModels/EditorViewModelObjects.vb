@@ -1495,11 +1495,12 @@ Namespace ViewModels
             SetSelectionLasso(xs, ys, captureUndo:=False)
             If Not _hasActiveSelection Then Return
             SetActiveSelectionIsMask(True)
-            Await CreateAdjustmentLayerFromSelectionAsync(captureUndo:=False)
-
-            Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso
-                                                                  String.Equals(l.Id, _selectedMaskedAdjustmentLayerId, StringComparison.Ordinal))
-            If layer Is Nothing Then Return
+            ' NUR die zurueckgegebene Ebene zaehlt. Der Hintergrundlauf kann fehlschlagen, und ein
+            ' Bild- oder Auswahlwechsel waehrenddessen verwirft sein Ergebnis; die zuletzt MARKIERTE
+            ' Ebene ist dann noch die von vorher. Wer die nimmt, oeffnet eine fremde Maske und
+            ' schreibt einen Erfolg in den Verlauf, den es nicht gab.
+            Dim layer = Await CreateAdjustmentLayerFromSelectionAsync(captureUndo:=False)
+            If layer Is Nothing OrElse String.IsNullOrEmpty(layer.MaskId) Then Return
             If _currentTool <> EditorTool.Mask Then CurrentTool = EditorTool.Mask
             MaskMode = "Brush"
             LoadMaskIntoSelection(layer.MaskId, showAsMask:=True)

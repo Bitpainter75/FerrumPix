@@ -489,8 +489,9 @@ Namespace ViewModels
         Private _selectionMaskRect As SKRectI = SKRectI.Empty
         Private _selectionMaskBytes As Byte() = Nothing
         Private _selectionMaskBytesStride As Integer = 0
-        ' Gecachte PNG/Base64-Kodierung von _selectionMask (siehe EncodeSelectionMaskBase64).
-        Private _selectionMaskBase64 As String = ""
+        ' Dieselben Bildpunkte wie _selectionMaskBytes, als Raster fuer das Rezept. KEIN PNG mehr:
+        ' das entstand frueher bei jedem Strich neu und wurde von jedem Leser wieder entpackt.
+        Private _selectionMaskRaster As AlphaRaster = Nothing
         Private _selectionMaskPreviewImage As Bitmap = Nothing
         ' True, sobald die Auswahlmaske Masken-Pinsel-Striche enthält: die weiche Kante steckt dann in den
         ' Alpha-Werten, der globale Feather darf NICHT erneut weichzeichnen (siehe SelectionMaskSoftBaked).
@@ -4952,12 +4953,16 @@ Namespace ViewModels
                     SelectionMode = "Brush"
                 ElseIf String.Equals(normalized, "Tiefe", StringComparison.Ordinal) Then
                     ' Beim Betreten gleich rechnen - ohne Klick gibt es hier nichts anzustossen.
-                    Dim ignoriertT = RedrawDepthMask()
+                    If _suppressMaskModeRangeBuildDepth = 0 Then
+                        Dim ignoriertT = RedrawDepthMask()
+                    End If
                 ElseIf String.Equals(normalized, "Luminanz", StringComparison.Ordinal) Then
                     ' Das Betreten ERZEUGT die Maske - das ist die Geste, die sich zurueckziehen
                     ' laesst. Die Regler danach ziehen dieselbe Maske nur nach und legen deshalb
                     ' keinen weiteren Schritt an.
-                    Dim ignoriertL = RedrawLuminanceRangeMask(captureUndo:=True)
+                    If _suppressMaskModeRangeBuildDepth = 0 Then
+                        Dim ignoriertL = RedrawLuminanceRangeMask(captureUndo:=True)
+                    End If
                 ElseIf String.Equals(normalized, "Objekt", StringComparison.Ordinal) Then
                     ' Die Objektauswahl sammelt Punkte fuer GENAU EIN Objekt. Beim Betreten des
                     ' Modus faengt sie frisch an - sonst haetten die Klicks des vorigen Objekts
@@ -9626,34 +9631,11 @@ Namespace ViewModels
             Return False
         End Function
 
-        ' Gecacht, weil GetCurrentAdjustments (und damit dies) bei aktivem Auswahl-Skopus pro Vorschau-Frame
-        ' läuft - ohne Cache würde die Maske jedes Frame neu als PNG kodiert. Wird nur bei Masken-Änderung
-        ' in SetSelectionMaskData/ClearSelectionMask neu befüllt.
-        Private Function EncodeSelectionMaskBase64() As String
-            Return _selectionMaskBase64
-        End Function
-
-        Private Shared Function EncodeMaskBitmapToBase64(mask As SKBitmap) As String
-            If mask Is Nothing Then Return ""
-            Try
-                Using image = SKImage.FromBitmap(mask)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, 100)
-                        Return Convert.ToBase64String(data.ToArray())
-                    End Using
-                End Using
-            Catch
-                Return ""
-            End Try
-        End Function
-
-        Private Shared Function DecodeSelectionMaskBase64(value As String) As SKBitmap
-            If String.IsNullOrWhiteSpace(value) Then Return Nothing
-            Try
-                Dim bytes = Convert.FromBase64String(value)
-                Return SKBitmap.Decode(bytes)
-            Catch
-                Return Nothing
-            End Try
+        ' Das Raster der aktiven Auswahl - gefuellt in SetSelectionMaskData, geleert in
+        ' ClearSelectionMask. Es geht unveraendert ins Rezept: gepackt wird erst, wenn das Rezept
+        ' in eine Datei geht.
+        Private Function CurrentSelectionMaskRaster() As AlphaRaster
+            Return _selectionMaskRaster
         End Function
 
         Public Sub MoveSelection(deltaXPercent As Double, deltaYPercent As Double)
@@ -11063,6 +11045,15 @@ Namespace ViewModels
             _appliedFlipH = False : _appliedFlipV = False
         End Sub
 
+        ''' <summary>Die Bedienelemente des Drehwerkzeugs nachziehen, nachdem die Felder ohne
+        ''' Reglerbewegung geändert wurden.</summary>
+        Private Sub RaiseRotateFieldsChanged()
+            Me.RaisePropertyChanged(NameOf(StraightenDegrees))
+            Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+            Me.RaisePropertyChanged(NameOf(HasRotateChanges))
+            Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+        End Sub
+
         ''' <summary>Schließt die beim FPX-Laden wieder editierbar gemachte Enddrehung, bevor ein
         ''' anderer Geometrieschritt dahinterkommt. Unverändert bleibt ihr vorhandener Schritt
         ''' stehen; verändert ersetzt <see cref="CommitOpenTransform"/> ihn. In beiden Fällen dürfen
@@ -11071,6 +11062,7 @@ Namespace ViewModels
             If Not _editingCommittedTransformTail Then Return
             If HasRotateChanges Then
                 CommitOpenTransform()
+                RaiseRotateFieldsChanged()
                 Return
             End If
             _editingCommittedTransformTail = False
@@ -11078,6 +11070,10 @@ Namespace ViewModels
             _flipH = False : _flipV = False
             _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
             _appliedFlipH = False : _appliedFlipV = False
+            ' DIE ANZEIGE MUSS MIT. Die Regler standen bis eben auf den Werten des wieder
+            ' geoeffneten Schritts; ohne diese Meldung zeigte das Werkzeug danach weiter einen
+            ' Winkel, den das Modell nicht mehr kennt.
+            RaiseRotateFieldsChanged()
         End Sub
 
         Private Function HasCommittedPerspective() As Boolean
@@ -11122,7 +11118,17 @@ Namespace ViewModels
         ''' des Rezepts.</summary>
         Private Function GeometryOperationsForRender(forPreview As Boolean) As List(Of GeometryOperation)
             Dim result = If(forPreview, GeometryOperationsForDisplay(), _geometryOperations.Select(Function(operation) operation.Clone()).ToList())
-            If Not forPreview Then Return result
+            If Not forPreview Then
+                ' EIN WIEDER GEOEFFNETER TRANSFORM-SCHRITT IST KEINE OFFENE GEOMETRIE. Er ist ein
+                ' bestaetigter Schritt in Bearbeitung, und die Regler ERSETZEN ihn - in der
+                ' Vorschau wie in der Ausgabe. Ohne das zeigte die Vorschau die zurueckgedrehte
+                ' Fassung, waehrend Export und Stapel weiter die alte Drehung rechneten.
+                If _editingCommittedTransformTail Then
+                    RemoveEditableTransformTail(result)
+                    AppendOpenTransformOperation(result)
+                End If
+                Return NormalizeGeometryOperations(result)
+            End If
             ' AUCH BEI LEERER LISTE. Frueher stieg die Routine hier aus: ein altes Rezept hatte noch
             ' keine Schritte, seine oberen Felder WAREN der bestaetigte Stand, und ein offener
             ' Transform-Schritt haette sie doppelt gerechnet. Alte Feldgeometrie wird inzwischen beim
@@ -11131,7 +11137,7 @@ Namespace ViewModels
             ' Bildes am schrittlosen Feldweg, den es nicht mehr geben soll.
             RemoveEditableTransformTail(result)
             AppendOpenGeometryOperations(result)
-            Return result
+            Return NormalizeGeometryOperations(result)
         End Function
 
         ''' <summary>Hängt die nicht übernommenen Geometrie-Regler an eine explizite Rezeptkette.
@@ -11140,14 +11146,7 @@ Namespace ViewModels
         ''' sichtbare Bearbeitungen und müssen beim FPX-Speichern erhalten bleiben.</summary>
         Private Sub AppendOpenGeometryOperations(result As List(Of GeometryOperation))
             If result Is Nothing Then Return
-            ' Der Haken allein ergibt KEINEN Schritt - siehe HasRotateChanges. Ein Schritt aus
-            ' 0 Grad und Haken vergroessert nichts und stuende nur als Altlast im Rezept.
-            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
-               _flipH OrElse _flipV Then
-                result.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
-                    .RotationDegrees = _rotationDegrees, .StraightenDegrees = CSng(_straightenDegrees),
-                    .StraightenExpandCanvas = _straightenExpandCanvas, .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
-            End If
+            AppendOpenTransformOperation(result)
             If HasPerspectiveChanges Then
                 result.Add(New GeometryOperation With {.Kind = "perspective", .Adjustments = New ImageAdjustments With {
                     .PerspectiveHorizontal = CSng(_perspectiveHorizontal), .PerspectiveVertical = CSng(_perspectiveVertical),
@@ -11169,6 +11168,21 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Die offene Drehbedienung als Schritt - der Teil von
+        ''' <see cref="AppendOpenGeometryOperations"/>, den auch die Ausgabe braucht, wenn die
+        ''' Regler einen wieder geöffneten Schritt ersetzen.</summary>
+        Private Sub AppendOpenTransformOperation(result As List(Of GeometryOperation))
+            If result Is Nothing Then Return
+            ' Der Haken allein ergibt KEINEN Schritt - siehe HasRotateChanges. Ein Schritt aus
+            ' 0 Grad und Haken vergroessert nichts und stuende nur als Altlast im Rezept.
+            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
+               _flipH OrElse _flipV Then
+                result.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
+                    .RotationDegrees = _rotationDegrees, .StraightenDegrees = CSng(_straightenDegrees),
+                    .StraightenExpandCanvas = _straightenExpandCanvas, .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
+            End If
+        End Sub
+
         ''' <summary>Das FPX-Rezept braucht die bestätigten Schritte UND sichtbar offene
         ''' Geometrie-Regler. Die Vorschau-Variante darf hier nicht verwendet werden: im
         ''' Zuschneide-Werkzeug blendet sie den bestätigten Crop absichtlich aus, damit das volle
@@ -11177,7 +11191,76 @@ Namespace ViewModels
             Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
             RemoveEditableTransformTail(result)
             AppendOpenGeometryOperations(result)
+            Return NormalizeGeometryOperations(result)
+        End Function
+
+        ''' <summary>Entfernt folgenlose Geometrieschritte und fasst direkt aufeinanderfolgende,
+        ''' verlustlose Vierteldrehungen zusammen. Das Rezept bleibt damit klein und ein Paar wie
+        ''' 90° gefolgt von 270° wird nicht als teure Schein-Transformation gespeichert.</summary>
+        Private Shared Function NormalizeGeometryOperations(operations As List(Of GeometryOperation)) As List(Of GeometryOperation)
+            Dim result As New List(Of GeometryOperation)()
+            If operations Is Nothing Then Return result
+
+            For Each operation In operations
+                If operation Is Nothing OrElse operation.Adjustments Is Nothing OrElse IsNoOpGeometryOperation(operation) Then Continue For
+
+                Dim quarter As Integer
+                If TryGetPureQuarterRotation(operation, quarter) AndAlso result.Count > 0 Then
+                    Dim previous = result(result.Count - 1)
+                    Dim previousQuarter As Integer
+                    If TryGetPureQuarterRotation(previous, previousQuarter) Then
+                        Dim combined = ImageGeometryMapper.NormalizeQuarterTurn(previousQuarter + quarter)
+                        If combined = 0 Then
+                            result.RemoveAt(result.Count - 1)
+                        Else
+                            previous.Adjustments.RotationDegrees = combined
+                        End If
+                        Continue For
+                    End If
+                End If
+                result.Add(operation)
+            Next
             Return result
+        End Function
+
+        Private Shared Function TryGetPureQuarterRotation(operation As GeometryOperation, ByRef quarter As Integer) As Boolean
+            quarter = 0
+            Dim a = operation?.Adjustments
+            If a Is Nothing OrElse Not String.Equals(If(operation.Kind, "").Trim(), "transform", StringComparison.OrdinalIgnoreCase) OrElse
+               Math.Abs(a.StraightenDegrees) >= 0.0001 OrElse a.FlipHorizontal OrElse a.FlipVertical Then Return False
+            Dim rounded = CInt(Math.Round(a.RotationDegrees / 90.0))
+            If Math.Abs(a.RotationDegrees - rounded * 90.0) >= 0.0001 Then Return False
+            quarter = ImageGeometryMapper.NormalizeQuarterTurn(rounded * 90)
+            Return quarter <> 0
+        End Function
+
+        Private Shared Function IsNoOpGeometryOperation(operation As GeometryOperation) As Boolean
+            Dim a = operation?.Adjustments
+            If a Is Nothing Then Return True
+            Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
+                Case "crop"
+                    Return a.CropLeftPercent = 0 AndAlso a.CropTopPercent = 0 AndAlso a.CropRightPercent = 0 AndAlso a.CropBottomPercent = 0
+                Case "transform"
+                    Return a.RotationDegrees = 0 AndAlso Math.Abs(a.StraightenDegrees) < 0.0001 AndAlso Not a.FlipHorizontal AndAlso Not a.FlipVertical
+                Case "perspective"
+                    Return a.PerspectiveHorizontal = 0 AndAlso a.PerspectiveVertical = 0 AndAlso a.PerspectiveAspect = 0 AndAlso a.PerspectiveScale = 0 AndAlso
+                           a.PerspectiveCorner0X = 0 AndAlso a.PerspectiveCorner0Y = 0 AndAlso a.PerspectiveCorner1X = 0 AndAlso a.PerspectiveCorner1Y = 0 AndAlso
+                           a.PerspectiveCorner2X = 0 AndAlso a.PerspectiveCorner2Y = 0 AndAlso a.PerspectiveCorner3X = 0 AndAlso a.PerspectiveCorner3Y = 0
+                Case "warp"
+                    Return a.ImageWarp Is Nothing OrElse a.ImageWarp.IsEmpty
+                Case "resize"
+                    Return a.ResizeWidth <= 0 AndAlso a.ResizeHeight <= 0 AndAlso a.ResizeScalePercent <= 0
+                Case "canvas"
+                    Return a.CanvasWidth <= 0 AndAlso a.CanvasHeight <= 0
+                Case Else
+                    ' EINE UNBEKANNTE SCHRITTART BLEIBT STEHEN. Die heutige Pipeline überspringt
+                    ' sie zwar, aber dieses Rezept wird auch GESPEICHERT: käme es aus einer neueren
+                    ' Programmfassung, verlöre das Speichern hier deren Schritte endgültig. Für die
+                    ' Frage "ist die Geometrie die Identität" gilt das Gegenteil, siehe
+                    ' ImageProcessorMasks.IsIdentityMaskGeometryOperation - dort zählt, was die
+                    ' Ausführung tatsächlich tut.
+                    Return False
+            End Select
         End Function
 
         Private Function GetAnnotationDisplayPixelSize() As (Width As Integer, Height As Integer)
@@ -15476,7 +15559,7 @@ Namespace ViewModels
             Dim c = m.GetComponents()
             Dim parts = String.Join(" | ", c.Select(Function(k, i) _
                 $"[{i}] {If(String.IsNullOrEmpty(k.Kind), "gemalt", k.Kind)} " &
-                $"raster={If(String.IsNullOrEmpty(k.PngBase64), "-", "ja")} " &
+                $"raster={If(k.HasPixelData, "ja", "-")} " &
                 $"rect={k.Left},{k.Top},{k.Right},{k.Bottom} " &
                 $"verlauf={k.GradientStartXPercent:F2}/{k.GradientStartYPercent:F2}->{k.GradientEndXPercent:F2}/{k.GradientEndYPercent:F2}"))
             Return $"Maske {m.Id.Substring(0, Math.Min(8, m.Id.Length))} {c.Count} Bestandteil(e): {parts}"
@@ -17662,7 +17745,7 @@ Namespace ViewModels
                 .SelectionMaskTop = _selectionMaskRect.Top,
                 .SelectionMaskRight = _selectionMaskRect.Right,
                 .SelectionMaskBottom = _selectionMaskRect.Bottom,
-                .SelectionMaskPngBase64 = EncodeSelectionMaskBase64(),
+                .SelectionMaskRaster = CurrentSelectionMaskRaster(),
                 .SelectionFeatherPixels = CSng(_selectionFeather),
                 .SelectionMaskSoftBaked = _selectionMaskSoftBaked
             }
@@ -18699,8 +18782,12 @@ Namespace ViewModels
             _colorGradeBlending = adj.ColorGradeBlending
             _geometryOperations.Clear()
             If adj.GeometryOperations IsNot Nothing Then
-                _geometryOperations.AddRange(adj.GeometryOperations.Where(Function(operation) operation IsNot Nothing).
-                                             Select(Function(operation) operation.Clone()))
+                ' Undo/Redo stellt komplette, auch aeltere Rezept-Schnappschuesse wieder her.
+                ' Sie muessen durch dieselbe Bereinigung wie Rendern und Speichern, sonst kann ein
+                ' historisches Paar 90°/270° nach einem Undo wieder als echte Geometrie auftauchen.
+                Dim restoredGeometry = adj.GeometryOperations.Where(Function(operation) operation IsNot Nothing).
+                    Select(Function(operation) operation.Clone()).ToList()
+                _geometryOperations.AddRange(NormalizeGeometryOperations(restoredGeometry))
             End If
             _rotationDegrees = adj.RotationDegrees
             ' Verzerren gehoert zur Geometrie und muss aus dem Rezept zurueck in die Felder: die
@@ -18847,7 +18934,7 @@ Namespace ViewModels
             _selectionShapeMode = If(String.IsNullOrWhiteSpace(adj.SelectionShapeMode), "Rectangle", adj.SelectionShapeMode)
             _selectionShapePointsX = If(adj.SelectionShapePointsX Is Nothing, Nothing, adj.SelectionShapePointsX.ToArray())
             _selectionShapePointsY = If(adj.SelectionShapePointsY Is Nothing, Nothing, adj.SelectionShapePointsY.ToArray())
-            Dim restoredMask = DecodeSelectionMaskBase64(adj.SelectionMaskPngBase64)
+            Dim restoredMask = If(adj.SelectionMaskRaster Is Nothing, Nothing, adj.SelectionMaskRaster.ToBitmap())
             If restoredMask IsNot Nothing Then
                 SetSelectionMaskData(restoredMask, New SKRectI(adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom))
             End If
@@ -21765,8 +21852,9 @@ Namespace ViewModels
                     Return
                 End If
 
+                Dim bounds = SelectionMaskSampleBounds()
                 Dim mask = ImageProcessor.CreateSourceMaskFromSelection(snapshot,
-                    LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString())
+                    LocalizationService.T("Auswahlmaske") & " " & (_imageMasks.Count + 1).ToString(), bounds)
                 If mask Is Nothing Then Return
 
                 _selectionImagePixelAdjustments = snapshot.ExtractPixelAdjustments()
@@ -21776,7 +21864,7 @@ Namespace ViewModels
                 Dim existingMask = _imageMasks.LastOrDefault(Function(m) m IsNot Nothing AndAlso
                     m.SourceWidthPixels = mask.SourceWidthPixels AndAlso m.SourceHeightPixels = mask.SourceHeightPixels AndAlso
                     m.Left = mask.Left AndAlso m.Top = mask.Top AndAlso m.Right = mask.Right AndAlso m.Bottom = mask.Bottom AndAlso
-                    m.PngBase64 = mask.PngBase64)
+                    SameMaskContent(m, mask))
                 Dim layer As MaskedAdjustmentLayer = Nothing
                 If existingMask IsNot Nothing Then
                     layer = _maskedAdjustmentLayers.LastOrDefault(Function(l) l IsNot Nothing AndAlso l.MaskId = existingMask.Id)

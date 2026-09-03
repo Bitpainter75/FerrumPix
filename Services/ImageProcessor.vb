@@ -427,14 +427,14 @@ Namespace Services
             If m.ComponentCount > 1 OrElse m.IsGradient OrElse m.InvertResult Then
                 Return BuildCombinedMaskRaster(m, width, height)
             End If
-            If String.IsNullOrWhiteSpace(m.PngBase64) Then Return Nothing
+            If Not m.HasPixelData Then Return Nothing
             Dim w = m.Right - m.Left, h = m.Bottom - m.Top
             If w <= 0 OrElse h <= 0 Then Return Nothing
             Dim target = New SKBitmap(New SKImageInfo(width, height, SKColorType.Alpha8, SKAlphaType.Premul))
             Try
                 Dim sx = If(m.SourceWidthPixels > 0, width / CDbl(m.SourceWidthPixels), 1.0)
                 Dim sy = If(m.SourceHeightPixels > 0, height / CDbl(m.SourceHeightPixels), 1.0)
-                Using roh = SKBitmap.Decode(Convert.FromBase64String(m.PngBase64))
+                Using roh = If(m.Raster Is Nothing, Nothing, m.Raster.ToBitmap())
                     If roh Is Nothing Then
                         target.Dispose()
                         Return Nothing
@@ -3226,7 +3226,7 @@ Namespace Services
                     adj.SelectionXPercent, adj.SelectionYPercent,
                     adj.SelectionWidthPercent, adj.SelectionHeightPercent, adj.SelectionShapeMode,
                     adj.SelectionMaskLeft, adj.SelectionMaskTop, adj.SelectionMaskRight, adj.SelectionMaskBottom,
-                    SelectionMaskFingerprint(adj.SelectionMaskPngBase64), adj.SelectionFeatherPixels
+                    SelectionRasterFingerprint(adj), adj.SelectionFeatherPixels
                 }.Select(AddressOf KeyPart)), "")
             ' JEDES Feld, das ProcessBitmapBase liest, MUSS hier stehen: die
             ' Untergruppen-Regler SharpenRadius/SharpenDetail, NoiseReductionDetail, GrainSize/
@@ -3349,17 +3349,40 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                    String.Join("/", m.GetComponents().Select(AddressOf MaskComponentFingerprint))
         End Function
 
-        ''' <summary>Der Fingerabdruck EINES Rasters - fuer Zwischenspeicher ausserhalb des
-        ''' Prozessors, die ein einzelnes Raster wiedererkennen muessen (das rote Overlay). Sie
-        ''' benutzten dafuer <c>String.GetHashCode</c>, und der kollidiert grundsaetzlich; hier
-        ''' laeuft derselbe gepufferte SHA-Weg wie im Rendercache.</summary>
-        Public Shared Function MaskRasterFingerprint(base64 As String) As String
-            Return SelectionMaskFingerprint(base64)
+        ''' <summary>Der Fingerabdruck eines Rasters - er haengt an den BILDPUNKTEN, nicht an den
+        ''' Bytes einer Speicherform. Zwei Wege, die dieselbe Form erzeugen, bekommen damit
+        ''' dieselbe Antwort, auch wenn ihre PNG-Bytes verschieden waeren.</summary>
+        Private Shared Function RasterFingerprint(raster As AlphaRaster) As String
+            If raster Is Nothing Then Return "0"
+            Return raster.Fingerprint
+        End Function
+
+        ''' <summary>Der Fingerabdruck eines Maskenbestandteils. Ueber sein Raster, wo es eines
+        ''' gibt; sonst ueber die gespeicherte Zeichenkette. Der zweite Fall ist NICHT nur Theorie:
+        ''' ein PNG, das nicht als Alpha-Raster lesbar ist, ergaebe sonst fuer jede Maske denselben
+        ''' Wert - und der Zwischenspeicher gaebe reihenweise das falsche Bild zurueck.</summary>
+        Private Shared Function ComponentRasterFingerprint(c As MaskComponent) As String
+            If c Is Nothing Then Return "0"
+            Dim raster = c.Raster
+            If raster IsNot Nothing Then Return raster.Fingerprint
+            Return SelectionMaskFingerprint(c.PngBase64)
+        End Function
+
+        ''' <summary>Der Fingerabdruck der aktiven Auswahlmaske. Ueber das Raster, damit der
+        ''' Schluessel eines Vorschau-Renders die Maske nicht erst packen muss - er wird bei jedem
+        ''' Bild gebraucht.</summary>
+        Private Shared Function SelectionRasterFingerprint(adj As ImageAdjustments) As String
+            If adj Is Nothing OrElse Not adj.HasSelectionMaskData Then Return "0"
+            Dim raster = adj.SelectionMaskRaster
+            If raster IsNot Nothing Then Return raster.Fingerprint
+            ' Kein lesbares Raster - dann zaehlt die Speicherform. Sie liegt in diesem Fall vor,
+            ' es wird also nichts gepackt.
+            Return SelectionMaskFingerprint(adj.SelectionMaskPngBase64)
         End Function
 
         Private Shared Function MaskComponentFingerprint(c As MaskComponent) As String
             Return String.Join(":", c.Mode, c.IsVisible, c.Left, c.Top, c.Right, c.Bottom, c.FeatherPixels,
-                               c.Inverted, SelectionMaskFingerprint(c.PngBase64),
+                               c.Inverted, ComponentRasterFingerprint(c),
                                c.Kind, KeyPart(c.GradientStartXPercent), KeyPart(c.GradientStartYPercent),
                                KeyPart(c.GradientEndXPercent), KeyPart(c.GradientEndYPercent),
                                KeyPart(c.GradientRadiusRatio), KeyPart(c.GradientFeatherPercent),

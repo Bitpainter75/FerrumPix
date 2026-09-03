@@ -424,8 +424,8 @@ Namespace ViewModels
             adj.SelectionMaskTop = rectPx.Top
             adj.SelectionMaskRight = rectPx.Right
             adj.SelectionMaskBottom = rectPx.Bottom
-            adj.SelectionMaskPngBase64 = EncodeMaskBitmapToBase64(stamp)
-            If String.IsNullOrEmpty(adj.SelectionMaskPngBase64) Then Return Nothing
+            adj.SelectionMaskRaster = AlphaRaster.FromBitmap(stamp)
+            If Not adj.HasSelectionMaskData Then Return Nothing
             Return ImageProcessor.CreateSourceMaskFromSelection(adj, LocalizationService.T("Radierer"), rectPx)
         End Function
 

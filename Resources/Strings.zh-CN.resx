@@ -7937,4 +7937,10 @@
   <data name="0_065d0ebd" xml:space="preserve">
     <value>0 %</value>
   </data>
+  <data name="Ebenenmaske_wird_erstellt_0_7be810a7" xml:space="preserve">
+    <value>正在创建图层蒙版 ({0} %)…</value>
+  </data>
+  <data name="Ebenenmaske_konnte_nicht_erstellt_werden_90dcbf29" xml:space="preserve">
+    <value>无法创建图层蒙版</value>
+  </data>
 </root>

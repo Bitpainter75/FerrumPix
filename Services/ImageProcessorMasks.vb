@@ -173,12 +173,11 @@ Namespace Services
             ' Ein VERLAUF traegt weder PNG noch Bounding-Box - er wird gleich gerechnet.
             If Not maskData.IsGradient AndAlso
                (maskData.Right <= maskData.Left OrElse maskData.Bottom <= maskData.Top OrElse
-                String.IsNullOrWhiteSpace(maskData.PngBase64)) Then Return Nothing
+                Not maskData.HasPixelData) Then Return Nothing
             Try
-                ' Beim Verlauf gibt es nichts zu dekodieren; die Deckung entsteht pro Pixel aus der
+                ' Beim Verlauf gibt es gar kein Raster; die Deckung entsteht pro Pixel aus der
                 ' Projektion auf die Verlaufsachse (siehe unten). Das spart bei 45 MP rund 45 MB
                 ' Zwischenpuffer und haelt den Verlauf ausserdem verlustfrei aenderbar.
-                Dim raw = If(maskData.IsGradient, Nothing, Convert.FromBase64String(maskData.PngBase64))
                 ' Pinselkorrektur eines Verlaufs: die beiden Raster einmal auspacken, danach kostet
                 ' der Zugriff je Pixel nur noch einen Indexzugriff.
                 Dim korrHinzu As Byte() = Nothing, korrWeg As Byte() = Nothing
@@ -186,158 +185,162 @@ Namespace Services
                 If maskData.IsGradient AndAlso maskData.HasBrushCorrection Then
                     corrWidth = maskData.BrushRight - maskData.BrushLeft
                     korrHoehe = maskData.BrushBottom - maskData.BrushTop
-                    korrHinzu = DecodeAlphaRaster(maskData.BrushAddPngBase64, corrWidth, korrHoehe)
-                    korrWeg = DecodeAlphaRaster(maskData.BrushSubtractPngBase64, corrWidth, korrHoehe)
+                    korrHinzu = PixelsOfSize(maskData.BrushAddRaster, corrWidth, korrHoehe)
+                    korrWeg = PixelsOfSize(maskData.BrushSubtractRaster, corrWidth, korrHoehe)
                     If korrHinzu Is Nothing AndAlso korrWeg Is Nothing Then corrWidth = 0
                 End If
-                Using decoded = If(raw Is Nothing, Nothing, SKBitmap.Decode(raw))
-                    If Not maskData.IsGradient AndAlso (decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8) Then Return Nothing
-                    Dim dStride = If(decoded Is Nothing, 0, decoded.RowBytes)
-                    Dim dBuf As Byte() = Nothing
-                    If decoded IsNot Nothing Then
-                        dBuf = New Byte(dStride * decoded.Height - 1) {}
-                        Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
-                    End If
+                ' DAS RASTER DER MASKE, nicht ihr PNG: es liegt bereits im Speicher, und wo nur
+                ' die Speicherform da ist, entpackt die Maske sie EINMAL und behaelt sie.
+                Dim maskRaster As AlphaRaster = If(maskData.IsGradient, Nothing, maskData.Raster)
+                If Not maskData.IsGradient AndAlso maskRaster Is Nothing Then Return Nothing
+                Dim dWidth = If(maskRaster Is Nothing, 0, maskRaster.Width)
+                Dim dHeight = If(maskRaster Is Nothing, 0, maskRaster.Height)
+                Dim dStride = dWidth
+                ' Der Puffer GEHOERT DER MASKE und ist unveraenderlich. Wer hineinschreiben will
+                ' (nur die Fuellung tut das), legt sich vorher eine eigene Abschrift an.
+                Dim dBuf As Byte() = If(maskRaster Is Nothing, Nothing, maskRaster.Pixels)
 
-                    ' Verlaufsachse EINMAL vorbereiten: Start- und Endpunkt in Quellpixeln, dazu
-                    ' der Kehrwert des Achsenquadrats fuer die Projektion je Pixel.
-                    Dim gx0, gy0, gAchseX, gAchseY, gInvLen2 As Double
-                    Dim gRadius, gEx, gEy, gRatio, gInner As Double
-                    If maskData.IsGradient Then
-                        gx0 = maskData.GradientStartXPercent / 100.0 * sourceWidth
-                        gy0 = maskData.GradientStartYPercent / 100.0 * sourceHeight
-                        gAchseX = maskData.GradientEndXPercent / 100.0 * sourceWidth - gx0
-                        gAchseY = maskData.GradientEndYPercent / 100.0 * sourceHeight - gy0
-                        Dim len2 = gAchseX * gAchseX + gAchseY * gAchseY
-                        ' Beide Punkte aufeinander = keine Achse bzw. kein Radius: dann waere die
-                        ' Maske ueberall halb gedeckt statt eines Verlaufs. Lieber gar keine Maske.
-                        If len2 < 0.000001 Then Return Nothing
-                        gInvLen2 = 1.0 / len2
-                        If maskData.IsLinearGradient Then
-                            ' Der Regler "Weiche Kante" bekommt beim linearen Verlauf eine
-                            ' Bedeutung, statt wirkungslos zu bleiben: er staucht den Uebergang um
-                            ' die MITTE der Achse zusammen. 100 % = voller Weg zwischen den beiden
-                            ' Punkten (Standard), 0 % = harte Kante genau in der Mitte. Ein Weichzeichner
-                            ' waere hier der falsche Weg - die Rampe ist schon glatt, und Blur kostet
-                            ' bei 45 MP echte Zeit, ohne etwas zu aendern.
-                            gInner = Math.Max(0.02, Math.Min(1.0, maskData.GradientFeatherPercent / 100.0))
-                        End If
-                        If maskData.IsRadialGradient Then
-                            ' Radial: die Achse ist die erste Halbachse. Ihre Richtung ist zugleich
-                            ' die Drehung der Ellipse, deshalb wird jeder Punkt in dieses gedrehte
-                            ' System gerechnet und die zweite Achse ueber das Verhaeltnis skaliert.
-                            gRadius = Math.Sqrt(len2)
-                            gEx = gAchseX / gRadius
-                            gEy = gAchseY / gRadius
-                            gRatio = Math.Max(0.05, maskData.GradientRadiusRatio)
-                            ' Innerer Anteil mit voller Deckung; der Rest ist der weiche Uebergang.
-                            gInner = Math.Max(0.0, Math.Min(1.0, 1.0 - maskData.GradientFeatherPercent / 100.0))
-                        End If
+                ' Verlaufsachse EINMAL vorbereiten: Start- und Endpunkt in Quellpixeln, dazu
+                ' der Kehrwert des Achsenquadrats fuer die Projektion je Pixel.
+                Dim gx0, gy0, gAchseX, gAchseY, gInvLen2 As Double
+                Dim gRadius, gEx, gEy, gRatio, gInner As Double
+                If maskData.IsGradient Then
+                    gx0 = maskData.GradientStartXPercent / 100.0 * sourceWidth
+                    gy0 = maskData.GradientStartYPercent / 100.0 * sourceHeight
+                    gAchseX = maskData.GradientEndXPercent / 100.0 * sourceWidth - gx0
+                    gAchseY = maskData.GradientEndYPercent / 100.0 * sourceHeight - gy0
+                    Dim len2 = gAchseX * gAchseX + gAchseY * gAchseY
+                    ' Beide Punkte aufeinander = keine Achse bzw. kein Radius: dann waere die
+                    ' Maske ueberall halb gedeckt statt eines Verlaufs. Lieber gar keine Maske.
+                    If len2 < 0.000001 Then Return Nothing
+                    gInvLen2 = 1.0 / len2
+                    If maskData.IsLinearGradient Then
+                        ' Der Regler "Weiche Kante" bekommt beim linearen Verlauf eine
+                        ' Bedeutung, statt wirkungslos zu bleiben: er staucht den Uebergang um
+                        ' die MITTE der Achse zusammen. 100 % = voller Weg zwischen den beiden
+                        ' Punkten (Standard), 0 % = harte Kante genau in der Mitte. Ein Weichzeichner
+                        ' waere hier der falsche Weg - die Rampe ist schon glatt, und Blur kostet
+                        ' bei 45 MP echte Zeit, ohne etwas zu aendern.
+                        gInner = Math.Max(0.02, Math.Min(1.0, maskData.GradientFeatherPercent / 100.0))
                     End If
+                    If maskData.IsRadialGradient Then
+                        ' Radial: die Achse ist die erste Halbachse. Ihre Richtung ist zugleich
+                        ' die Drehung der Ellipse, deshalb wird jeder Punkt in dieses gedrehte
+                        ' System gerechnet und die zweite Achse ueber das Verhaeltnis skaliert.
+                        gRadius = Math.Sqrt(len2)
+                        gEx = gAchseX / gRadius
+                        gEy = gAchseY / gRadius
+                        gRatio = Math.Max(0.05, maskData.GradientRadiusRatio)
+                        ' Innerer Anteil mit voller Deckung; der Rest ist der weiche Uebergang.
+                        gInner = Math.Max(0.0, Math.Min(1.0, 1.0 - maskData.GradientFeatherPercent / 100.0))
+                    End If
+                End If
 
-                    ' MASKEN-Ebene mit deklarativer Füllung: die LUMINANZ der Füllung stuft die Maskenform ab
-                    ' (Schwarz→0, Weiß→voll, Verlauf→Rampe), bevor sie durch die Geometrie läuft. So bestimmt
-                    ' die Füllung, WIE STARK die Anpassung je Bereich wirkt - ohne die Maskenform zu verlieren.
-                    ' decoded ist bei einem Verlauf Nothing - eine Fuellung hat dort nichts zu
-                    ' stufen, die Rampe IST schon die Abstufung.
-                    If decoded IsNot Nothing AndAlso fillLayer IsNot Nothing AndAlso fillLayer.HasFill() Then
-                        Dim lum = ComputeFillLuminance(decoded.Width, decoded.Height, fillLayer.FillKind,
-                            fillLayer.FillColor, fillLayer.FillColor2, CSng(fillLayer.FillAngle), fillLayer.FillInverted)
-                        If lum IsNot Nothing Then
-                            For y = 0 To decoded.Height - 1
-                                Dim dRow = y * dStride, lRow = y * decoded.Width
-                                For x = 0 To decoded.Width - 1
-                                    dBuf(dRow + x) = CByte(CInt(dBuf(dRow + x)) * CInt(lum(lRow + x)) \ 255)
-                                Next
+                ' MASKEN-Ebene mit deklarativer Füllung: die LUMINANZ der Füllung stuft die Maskenform ab
+                ' (Schwarz→0, Weiß→voll, Verlauf→Rampe), bevor sie durch die Geometrie läuft. So bestimmt
+                ' die Füllung, WIE STARK die Anpassung je Bereich wirkt - ohne die Maskenform zu verlieren.
+                ' Bei einem Verlauf gibt es kein Raster - eine Fuellung hat dort nichts zu
+                ' stufen, die Rampe IST schon die Abstufung.
+                If dBuf IsNot Nothing AndAlso fillLayer IsNot Nothing AndAlso fillLayer.HasFill() Then
+                    Dim lum = ComputeFillLuminance(dWidth, dHeight, fillLayer.FillKind,
+                        fillLayer.FillColor, fillLayer.FillColor2, CSng(fillLayer.FillAngle), fillLayer.FillInverted)
+                    If lum IsNot Nothing Then
+                        ' EIGENE ABSCHRIFT: der Puffer darueber gehoert der Maske und wird von
+                        ' anderen Wegen gleichzeitig gelesen.
+                        dBuf = CType(dBuf.Clone(), Byte())
+                        For y = 0 To dHeight - 1
+                            Dim dRow = y * dStride, lRow = y * dWidth
+                            For x = 0 To dWidth - 1
+                                dBuf(dRow + x) = CByte(CInt(dBuf(dRow + x)) * CInt(lum(lRow + x)) \ 255)
                             Next
-                        End If
-                    End If
-
-                    ' Zunächst in die tatsächliche Pipeline-Eingangsgröße (Vollbild oder Preview)
-                    ' rasterisieren. Dadurch benutzt die anschließende Geometrie exakt dieselben
-                    ' Pixelrundungen wie das Bild und braucht keine zweite, leicht abweichende Matrix.
-                    Dim inputMask = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Alpha8, SKAlphaType.Premul)
-                    Dim iStride = inputMask.RowBytes
-                    Dim iBuf = New Byte(iStride * pipelineInputHeight - 1) {}
-                    For y = 0 To pipelineInputHeight - 1
-                        Dim sySource = CInt(Math.Floor((y + 0.5) * sourceHeight / pipelineInputHeight))
-                        Dim sy = sySource - maskData.Top
-                        Dim iRow = y * iStride
-                        For x = 0 To pipelineInputWidth - 1
-                            Dim sx = CInt(Math.Floor((x + 0.5) * sourceWidth / pipelineInputWidth)) - maskData.Left
-                            Dim alpha = 0
-                            If maskData.IsRadialGradient Then
-                                ' Abstand im gedrehten Ellipsensystem: 0 = Mittelpunkt, 1 = Rand.
-                                Dim dx = sx + maskData.Left - gx0
-                                Dim dy = sySource - gy0
-                                Dim laengs = (dx * gEx + dy * gEy) / gRadius
-                                Dim quer = (-dx * gEy + dy * gEx) / (gRadius * gRatio)
-                                Dim d = Math.Sqrt(laengs * laengs + quer * quer)
-                                If d <= gInner Then
-                                    alpha = 255
-                                ElseIf d >= 1.0 Then
-                                    alpha = 0
-                                Else
-                                    Dim t2 = (d - gInner) / Math.Max(0.000001, 1.0 - gInner)
-                                    Dim s2 = t2 * t2 * (3.0 - 2.0 * t2)
-                                    alpha = CInt(Math.Round((1.0 - s2) * 255.0))
-                                End If
-                            ElseIf maskData.IsGradient Then
-                                ' Projektion des Pixels auf die Verlaufsachse: t = 0 am Startpunkt
-                                ' (volle Deckung), t = 1 am Endpunkt (keine). Ausserhalb wird
-                                ' geklemmt, der Verlauf gilt also fuer das GANZE Bild.
-                                Dim t = ((sx + maskData.Left - gx0) * gAchseX + (sySource - gy0) * gAchseY) * gInvLen2
-                                ' Weichheit um die Mitte: t=0,5 bleibt der Wendepunkt, gInnen ist die
-                                ' Breite des Uebergangs (siehe oben).
-                                t = 0.5 + (t - 0.5) / gInner
-                                If t <= 0.0 Then
-                                    alpha = 255
-                                ElseIf t >= 1.0 Then
-                                    alpha = 0
-                                Else
-                                    ' Smoothstep statt linear: eine lineare Rampe zeigt an ihren
-                                    ' beiden Enden eine sichtbare Kante (Mach-Band), gerade in
-                                    ' Himmelsflaechen. Der weiche Ein- und Ausstieg ist das, was
-                                    ' einen Verlaufsfilter unauffaellig macht.
-                                    Dim s = t * t * (3.0 - 2.0 * t)
-                                    alpha = CInt(Math.Round((1.0 - s) * 255.0))
-                                End If
-                            ElseIf sx >= 0 AndAlso sy >= 0 AndAlso sx < decoded.Width AndAlso sy < decoded.Height Then
-                                alpha = dBuf(sy * dStride + sx)
-                            End If
-                            ' Pinselkorrektur NACH dem Verlauf und VOR dem Umkehren: "Umkehren"
-                            ' soll das fertige Ergebnis spiegeln, nicht nur den Verlaufsanteil -
-                            ' sonst kaeme ein weggepinselter Bereich beim Umkehren zurueck.
-                            If corrWidth > 0 Then
-                                Dim kx = sx + maskData.Left - maskData.BrushLeft
-                                Dim ky = sySource - maskData.BrushTop
-                                If kx >= 0 AndAlso ky >= 0 AndAlso kx < corrWidth AndAlso ky < korrHoehe Then
-                                    Dim ki = ky * corrWidth + kx
-                                    If korrHinzu IsNot Nothing Then alpha += korrHinzu(ki)
-                                    If korrWeg IsNot Nothing Then alpha -= korrWeg(ki)
-                                    If alpha < 0 Then
-                                        alpha = 0
-                                    ElseIf alpha > 255 Then
-                                        alpha = 255
-                                    End If
-                                End If
-                            End If
-                            If maskData.Inverted Then alpha = 255 - alpha
-                            iBuf(iRow + x) = CByte(alpha)
                         Next
-                    Next
-                    Marshal.Copy(iBuf, 0, inputMask.GetPixels(), iBuf.Length)
-
-                    ' Verlaeufe sind bereits glatt - ihr Weichheits-Regler sitzt in der Geometrie
-                    ' (GradientFeatherPercent), nicht in einem nachgeschalteten Weichzeichner.
-                    If maskData.FeatherPixels > 0.05F AndAlso Not maskData.IsGradient Then
-                        Dim initialScale = (pipelineInputWidth / CSng(sourceWidth) +
-                                            pipelineInputHeight / CSng(sourceHeight)) / 2.0F
-                        Dim blurred = BlurAlphaMask(inputMask, maskData.FeatherPixels * initialScale)
-                        If blurred IsNot Nothing Then inputMask = ReplaceBitmap(inputMask, blurred)
                     End If
-                    Return inputMask
-                End Using
+                End If
+
+                ' Zunächst in die tatsächliche Pipeline-Eingangsgröße (Vollbild oder Preview)
+                ' rasterisieren. Dadurch benutzt die anschließende Geometrie exakt dieselben
+                ' Pixelrundungen wie das Bild und braucht keine zweite, leicht abweichende Matrix.
+                Dim inputMask = New SKBitmap(pipelineInputWidth, pipelineInputHeight, SKColorType.Alpha8, SKAlphaType.Premul)
+                Dim iStride = inputMask.RowBytes
+                Dim iBuf = New Byte(iStride * pipelineInputHeight - 1) {}
+                For y = 0 To pipelineInputHeight - 1
+                    Dim sySource = CInt(Math.Floor((y + 0.5) * sourceHeight / pipelineInputHeight))
+                    Dim sy = sySource - maskData.Top
+                    Dim iRow = y * iStride
+                    For x = 0 To pipelineInputWidth - 1
+                        Dim sx = CInt(Math.Floor((x + 0.5) * sourceWidth / pipelineInputWidth)) - maskData.Left
+                        Dim alpha = 0
+                        If maskData.IsRadialGradient Then
+                            ' Abstand im gedrehten Ellipsensystem: 0 = Mittelpunkt, 1 = Rand.
+                            Dim dx = sx + maskData.Left - gx0
+                            Dim dy = sySource - gy0
+                            Dim laengs = (dx * gEx + dy * gEy) / gRadius
+                            Dim quer = (-dx * gEy + dy * gEx) / (gRadius * gRatio)
+                            Dim d = Math.Sqrt(laengs * laengs + quer * quer)
+                            If d <= gInner Then
+                                alpha = 255
+                            ElseIf d >= 1.0 Then
+                                alpha = 0
+                            Else
+                                Dim t2 = (d - gInner) / Math.Max(0.000001, 1.0 - gInner)
+                                Dim s2 = t2 * t2 * (3.0 - 2.0 * t2)
+                                alpha = CInt(Math.Round((1.0 - s2) * 255.0))
+                            End If
+                        ElseIf maskData.IsGradient Then
+                            ' Projektion des Pixels auf die Verlaufsachse: t = 0 am Startpunkt
+                            ' (volle Deckung), t = 1 am Endpunkt (keine). Ausserhalb wird
+                            ' geklemmt, der Verlauf gilt also fuer das GANZE Bild.
+                            Dim t = ((sx + maskData.Left - gx0) * gAchseX + (sySource - gy0) * gAchseY) * gInvLen2
+                            ' Weichheit um die Mitte: t=0,5 bleibt der Wendepunkt, gInnen ist die
+                            ' Breite des Uebergangs (siehe oben).
+                            t = 0.5 + (t - 0.5) / gInner
+                            If t <= 0.0 Then
+                                alpha = 255
+                            ElseIf t >= 1.0 Then
+                                alpha = 0
+                            Else
+                                ' Smoothstep statt linear: eine lineare Rampe zeigt an ihren
+                                ' beiden Enden eine sichtbare Kante (Mach-Band), gerade in
+                                ' Himmelsflaechen. Der weiche Ein- und Ausstieg ist das, was
+                                ' einen Verlaufsfilter unauffaellig macht.
+                                Dim s = t * t * (3.0 - 2.0 * t)
+                                alpha = CInt(Math.Round((1.0 - s) * 255.0))
+                            End If
+                        ElseIf sx >= 0 AndAlso sy >= 0 AndAlso sx < dWidth AndAlso sy < dHeight Then
+                            alpha = dBuf(sy * dStride + sx)
+                        End If
+                        ' Pinselkorrektur NACH dem Verlauf und VOR dem Umkehren: "Umkehren"
+                        ' soll das fertige Ergebnis spiegeln, nicht nur den Verlaufsanteil -
+                        ' sonst kaeme ein weggepinselter Bereich beim Umkehren zurueck.
+                        If corrWidth > 0 Then
+                            Dim kx = sx + maskData.Left - maskData.BrushLeft
+                            Dim ky = sySource - maskData.BrushTop
+                            If kx >= 0 AndAlso ky >= 0 AndAlso kx < corrWidth AndAlso ky < korrHoehe Then
+                                Dim ki = ky * corrWidth + kx
+                                If korrHinzu IsNot Nothing Then alpha += korrHinzu(ki)
+                                If korrWeg IsNot Nothing Then alpha -= korrWeg(ki)
+                                If alpha < 0 Then
+                                    alpha = 0
+                                ElseIf alpha > 255 Then
+                                    alpha = 255
+                                End If
+                            End If
+                        End If
+                        If maskData.Inverted Then alpha = 255 - alpha
+                        iBuf(iRow + x) = CByte(alpha)
+                    Next
+                Next
+                Marshal.Copy(iBuf, 0, inputMask.GetPixels(), iBuf.Length)
+
+                ' Verlaeufe sind bereits glatt - ihr Weichheits-Regler sitzt in der Geometrie
+                ' (GradientFeatherPercent), nicht in einem nachgeschalteten Weichzeichner.
+                If maskData.FeatherPixels > 0.05F AndAlso Not maskData.IsGradient Then
+                    Dim initialScale = (pipelineInputWidth / CSng(sourceWidth) +
+                                        pipelineInputHeight / CSng(sourceHeight)) / 2.0F
+                    Dim blurred = BlurAlphaMask(inputMask, maskData.FeatherPixels * initialScale)
+                    If blurred IsNot Nothing Then inputMask = ReplaceBitmap(inputMask, blurred)
+                End If
+                Return inputMask
             Catch
                 Return Nothing
             End Try
@@ -1035,50 +1038,11 @@ Namespace Services
         ''' <summary>Packt ein Alpha8-PNG in einen dichten Bytepuffer der erwarteten Groesse aus.
         ''' Nothing bei leerem String, unlesbaren Daten, falschem Farbtyp oder abweichender Groesse -
         ''' ein stiller Rueckfall auf halbe Deckung waere hier schlimmer als gar keine Korrektur.</summary>
-        Private Shared Function DecodeAlphaRaster(base64 As String, width As Integer, height As Integer) As Byte()
-            If String.IsNullOrWhiteSpace(base64) OrElse width <= 0 OrElse height <= 0 Then Return Nothing
-            Try
-                Using bmp = SKBitmap.Decode(Convert.FromBase64String(base64))
-                    If bmp Is Nothing OrElse bmp.ColorType <> SKColorType.Alpha8 Then Return Nothing
-                    If bmp.Width <> width OrElse bmp.Height <> height Then Return Nothing
-                    Dim stride = bmp.RowBytes
-                    Dim source = New Byte(stride * height - 1) {}
-                    Marshal.Copy(bmp.GetPixels(), source, 0, source.Length)
-                    If stride = width Then Return source
-                    Dim dense = New Byte(width * height - 1) {}
-                    For y = 0 To height - 1
-                        Buffer.BlockCopy(source, y * stride, dense, y * width, width)
-                    Next
-                    Return dense
-                End Using
-            Catch
-                Return Nothing
-            End Try
-        End Function
-
-        Private Shared Function EncodeAlphaRaster(puffer As Byte(), width As Integer, height As Integer) As String
-            If puffer Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return ""
-            Dim empty = True
-            For i = 0 To puffer.Length - 1
-                If puffer(i) <> 0 Then
-                    empty = False
-                    Exit For
-                End If
-            Next
-            If empty Then Return ""
-            Using bmp = New SKBitmap(width, height, SKColorType.Alpha8, SKAlphaType.Premul)
-                Dim stride = bmp.RowBytes
-                Dim target = New Byte(stride * height - 1) {}
-                For y = 0 To height - 1
-                    Buffer.BlockCopy(puffer, y * width, target, y * stride, width)
-                Next
-                Marshal.Copy(target, 0, bmp.GetPixels(), target.Length)
-                Using image = SKImage.FromBitmap(bmp)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
-                        Return Convert.ToBase64String(data.ToArray())
-                    End Using
-                End Using
-            End Using
+        ''' <summary>Die Bildpunkte eines Rasters, aber nur wenn es die erwarteten Masse hat.
+        ''' Sonst Nothing - der Aufrufer behandelt das wie ein fehlendes Raster.</summary>
+        Private Shared Function PixelsOfSize(raster As AlphaRaster, width As Integer, height As Integer) As Byte()
+            If raster Is Nothing OrElse raster.Width <> width OrElse raster.Height <> height Then Return Nothing
+            Return raster.Pixels
         End Function
 
         ''' <summary>EINE Stelle, an der ein Maskenpinsel-Strich sein Ziel kennt. Die drei Fälle -
@@ -1185,12 +1149,21 @@ Namespace Services
             Dim isIntersect = String.Equals(effective, "Intersect", StringComparison.Ordinal)
             subtract = String.Equals(effective, "Subtract", StringComparison.Ordinal)
             Dim sWidth = stroke.Right - stroke.Left, sHeight = stroke.Bottom - stroke.Top
-            Dim strokeBuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
-            If strokeBuffer Is Nothing Then Return False
+            ' BEIDE Seiten kommen als Raster herein und gehen als Raster hinaus. Frueher wurde je
+            ' Strich die ganze Maske entpackt, verrechnet und wieder gepackt - bei einer bildgrossen
+            ' Maske ein halbe Sekunde, fuer einen Strich von wenigen Bildpunkten.
+            Dim strokeRaster = stroke.Raster
+            If strokeRaster Is Nothing OrElse strokeRaster.Width <> sWidth OrElse strokeRaster.Height <> sHeight Then Return False
+            Dim strokeBuffer = strokeRaster.Pixels
 
             Dim oldWidth = mask.Right - mask.Left, oldHeight = mask.Bottom - mask.Top
             Dim oldBuffer As Byte() = Nothing
-            If oldWidth > 0 AndAlso oldHeight > 0 Then oldBuffer = DecodeAlphaRaster(mask.PngBase64, oldWidth, oldHeight)
+            If oldWidth > 0 AndAlso oldHeight > 0 Then
+                Dim oldRaster = mask.Raster
+                If oldRaster IsNot Nothing AndAlso oldRaster.Width = oldWidth AndAlso oldRaster.Height = oldHeight Then
+                    oldBuffer = oldRaster.Pixels
+                End If
+            End If
 
             ' Ohne bisherige Maske ist ein ABZIEHEN gegenstandslos - sonst entstünde aus dem ersten
             ' Radiergummi-Strich eine leere Maske, die als "es gibt eine Maske" gilt. Fuer das
@@ -1201,7 +1174,7 @@ Namespace Services
                 mask.SourceHeightPixels = stroke.SourceHeightPixels
                 mask.Left = stroke.Left : mask.Top = stroke.Top
                 mask.Right = stroke.Right : mask.Bottom = stroke.Bottom
-                mask.PngBase64 = stroke.PngBase64
+                mask.CopyPixelDataFrom(stroke)
                 Return True
             End If
 
@@ -1225,11 +1198,11 @@ Namespace Services
                             clipped(targetRow + x) = Math.Min(oldBuffer(maskRow + x), strokeBuffer(strokeRow + x))
                         Next
                     Next
-                    Dim clippedEncoded = EncodeAlphaRaster(clipped, clipWidth, clipHeight)
-                    If Not String.IsNullOrEmpty(clippedEncoded) Then
+                    Dim clippedRaster = New AlphaRaster(clipWidth, clipHeight, clipped)
+                    If clippedRaster.HasCoverage() Then
                         mask.Left = clipLeft : mask.Top = clipTop
                         mask.Right = clipRight : mask.Bottom = clipBottom
-                        mask.PngBase64 = clippedEncoded
+                        mask.Raster = clippedRaster
                         Return True
                     End If
                 End If
@@ -1271,15 +1244,15 @@ Namespace Services
                 Next
             Next
 
-            Dim kodiert = EncodeAlphaRaster(target, width, height)
-            If String.IsNullOrEmpty(kodiert) Then
+            Dim merged = New AlphaRaster(width, height, target)
+            If Not merged.HasCoverage() Then
                 ' Alles weggeradiert: die Maske ist leer, nicht "unverändert".
                 mask.PngBase64 = ""
                 mask.Left = 0 : mask.Top = 0 : mask.Right = 0 : mask.Bottom = 0
                 Return True
             End If
             mask.Left = left : mask.Top = top : mask.Right = right : mask.Bottom = bottom
-            mask.PngBase64 = kodiert
+            mask.Raster = merged
             Return True
         End Function
 
@@ -1300,14 +1273,14 @@ Namespace Services
             If mask Is Nothing OrElse stroke Is Nothing OrElse Not mask.IsGradient Then Return False
             If stroke.Right <= stroke.Left OrElse stroke.Bottom <= stroke.Top Then Return False
             Dim sWidth = stroke.Right - stroke.Left, sHeight = stroke.Bottom - stroke.Top
-            Dim strokeBuffer = DecodeAlphaRaster(stroke.PngBase64, sWidth, sHeight)
+            Dim strokeBuffer = PixelsOfSize(stroke.Raster, sWidth, sHeight)
             If strokeBuffer Is Nothing Then Return False
 
             Dim oldWidth = mask.BrushRight - mask.BrushLeft, oldHeight = mask.BrushBottom - mask.BrushTop
             Dim altHinzu As Byte() = Nothing, altWeg As Byte() = Nothing
             If mask.HasBrushCorrection Then
-                altHinzu = DecodeAlphaRaster(mask.BrushAddPngBase64, oldWidth, oldHeight)
-                altWeg = DecodeAlphaRaster(mask.BrushSubtractPngBase64, oldWidth, oldHeight)
+                altHinzu = PixelsOfSize(mask.BrushAddRaster, oldWidth, oldHeight)
+                altWeg = PixelsOfSize(mask.BrushSubtractRaster, oldWidth, oldHeight)
             End If
             Dim hasOld = altHinzu IsNot Nothing OrElse altWeg IsNot Nothing
 
@@ -1348,9 +1321,13 @@ Namespace Services
             mask.BrushTop = top
             mask.BrushRight = right
             mask.BrushBottom = bottom
-            mask.BrushAddPngBase64 = EncodeAlphaRaster(hinzu, width, height)
-            mask.BrushSubtractPngBase64 = EncodeAlphaRaster(weg, width, height)
-            If String.IsNullOrEmpty(mask.BrushAddPngBase64) AndAlso String.IsNullOrEmpty(mask.BrushSubtractPngBase64) Then
+            ' Ein Raster ohne jede Deckung ist KEINE Korrektur - sonst zaehlte ein leeres Paar
+            ' weiter als "diese Maske traegt eine Pinselkorrektur".
+            Dim addRaster = New AlphaRaster(width, height, hinzu)
+            Dim subtractRaster = New AlphaRaster(width, height, weg)
+            mask.BrushAddRaster = If(addRaster.HasCoverage(), addRaster, Nothing)
+            mask.BrushSubtractRaster = If(subtractRaster.HasCoverage(), subtractRaster, Nothing)
+            If Not mask.HasBrushCorrectionData Then
                 mask.BrushLeft = 0 : mask.BrushTop = 0 : mask.BrushRight = 0 : mask.BrushBottom = 0
             End If
             Return True
@@ -1368,19 +1345,22 @@ Namespace Services
                                                              Optional progress As IProgress(Of Double) = Nothing) As ImageMask
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
             Dim displaySize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
-            Dim decoded As SKBitmap = Nothing
+            Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
+            ' Der haeufigste Editorfall: die Auswahl stammt schon aus genau diesem Bildraum. Ihr
+            ' Raster IST dann bereits das dauerhafte Maskenformat und braucht die Rueckprojektion
+            ' ueber jeden Bildpunkt nicht. Gespart wird dabei vor allem das NEU SCHREIBEN des PNG -
+            ' der teure Teil; gelesen wird es weiterhin, denn nur so bleiben leere Auswahl und
+            ' enges Rechteck genauso behandelt wie auf dem langen Weg.
+            Dim reuseHandled = False
+            Dim reused = TryReuseSelectionMaskAsSourceMask(adj, name, reuseHandled)
+            If reuseHandled Then Return reused
             Try
-                If Not String.IsNullOrWhiteSpace(adj.SelectionMaskPngBase64) Then
-                    decoded = SKBitmap.Decode(Convert.FromBase64String(adj.SelectionMaskPngBase64))
-                    If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
-                End If
-                Dim dStride = If(decoded Is Nothing, 0, decoded.RowBytes)
-                Dim dBuf As Byte() = Nothing
-                If decoded IsNot Nothing Then
-                    dBuf = New Byte(dStride * decoded.Height - 1) {}
-                    Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
-                End If
-                Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
+                ' Ohne Raster ist die Auswahl eine reine Geometrie (Rechteck) - dann sagen die
+                ' Prozentfelder weiter unten, was drin liegt.
+                Dim selectionRaster = If(adj.HasSelectionMaskData, adj.SelectionMaskRaster, Nothing)
+                If adj.HasSelectionMaskData AndAlso selectionRaster Is Nothing Then Return Nothing
+                Dim dStride = If(selectionRaster Is Nothing, 0, selectionRaster.Width)
+                Dim dBuf As Byte() = If(selectionRaster Is Nothing, Nothing, selectionRaster.Pixels)
                 Dim full = New Byte(sourceW * sourceH - 1) {}
                 Dim left = sourceW, top = sourceH, right = 0, bottom = 0
                 ' Abtastgrenzen: den RAND des Anzeige-Rechtecks in Schritten in den Quellraum
@@ -1435,9 +1415,9 @@ Namespace Services
                         Dim dx = CInt(Math.Floor(dp.X)), dy = CInt(Math.Floor(dp.Y))
                         If dx < 0 OrElse dy < 0 OrElse dx >= displaySize.Width OrElse dy >= displaySize.Height Then Continue For
                         Dim alpha As Byte
-                        If decoded IsNot Nothing Then
+                        If selectionRaster IsNot Nothing Then
                             Dim lx = dx - adj.SelectionMaskLeft, ly = dy - adj.SelectionMaskTop
-                            If lx < 0 OrElse ly < 0 OrElse lx >= decoded.Width OrElse ly >= decoded.Height Then Continue For
+                            If lx < 0 OrElse ly < 0 OrElse lx >= selectionRaster.Width OrElse ly >= selectionRaster.Height Then Continue For
                             alpha = dBuf(ly * dStride + lx)
                         Else
                             Dim inside = dx >= displaySize.Width * adj.SelectionXPercent / 100.0 AndAlso
@@ -1464,30 +1444,85 @@ Namespace Services
                 Next
                 If right <= left OrElse bottom <= top Then Return Nothing
 
-                Using cropped = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
-                    Dim cStride = cropped.RowBytes
-                    Dim cBuf = New Byte(cStride * cropped.Height - 1) {}
-                    For y = 0 To cropped.Height - 1
-                        Buffer.BlockCopy(full, (top + y) * sourceW + left, cBuf, y * cStride, cropped.Width)
-                    Next
-                    Marshal.Copy(cBuf, 0, cropped.GetPixels(), cBuf.Length)
-                    Using image = SKImage.FromBitmap(cropped)
-                        Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
-                            Return New ImageMask With {
-                                .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Auswahlmaske"), name),
-                                .SourceWidthPixels = sourceW, .SourceHeightPixels = sourceH,
-                                .Left = left, .Top = top, .Right = right, .Bottom = bottom,
-                                .PngBase64 = Convert.ToBase64String(data.ToArray()),
-                                .FeatherPixels = adj.SelectionFeatherPixels
-                            }
-                        End Using
-                    End Using
-                End Using
+                ' Das Ergebnis bleibt ein RASTER. Gepackt wird es erst, wenn das Rezept in die
+                ' Datei geht - siehe ImageMask.PngBase64.
+                Dim fullRaster = New AlphaRaster(sourceW, sourceH, full)
+                Return New ImageMask With {
+                    .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Auswahlmaske"), name),
+                    .SourceWidthPixels = sourceW, .SourceHeightPixels = sourceH,
+                    .Left = left, .Top = top, .Right = right, .Bottom = bottom,
+                    .Raster = fullRaster.Crop(New SKRectI(left, top, right, bottom)),
+                    .FeatherPixels = adj.SelectionFeatherPixels
+                }
             Catch
                 Return Nothing
-            Finally
-                decoded?.Dispose()
             End Try
+        End Function
+
+        ''' <summary>Der Kurzweg von <see cref="CreateSourceMaskFromSelection"/>: liegt die Auswahl
+        ''' bereits im Quellraum, entsteht die Maske direkt aus ihrem Raster statt aus der
+        ''' Rueckprojektion. <paramref name="handled"/> sagt, ob dieser Weg zustaendig war - NUR
+        ''' dann ist sein Ergebnis verbindlich, ein Nothing also die Antwort "diese Auswahl deckt
+        ''' nichts" und nicht "bitte den langen Weg nehmen".
+        '''
+        ''' Die Grenzen werden dabei genau wie auf dem langen Weg auf die tatsaechlich gedeckten
+        ''' Bildpunkte gezogen. Ohne das truege die Maske das (moeglicherweise viel weitere)
+        ''' Auswahlrechteck, und der Abgleich gegen vorhandene Masken - er vergleicht Rechteck UND
+        ''' Inhalt - fande dieselbe Form nicht wieder.</summary>
+        Private Shared Function TryReuseSelectionMaskAsSourceMask(adj As ImageAdjustments, name As String,
+                                                                   ByRef handled As Boolean) As ImageMask
+            handled = False
+            Dim sourceW = adj.SourceWidthPixels, sourceH = adj.SourceHeightPixels
+            If Not adj.HasSelectionMaskData OrElse
+               adj.SelectionMaskLeft < 0 OrElse adj.SelectionMaskTop < 0 OrElse
+               adj.SelectionMaskRight <= adj.SelectionMaskLeft OrElse
+               adj.SelectionMaskBottom <= adj.SelectionMaskTop OrElse
+               adj.SelectionMaskRight > sourceW OrElse adj.SelectionMaskBottom > sourceH Then Return Nothing
+            If Not HasIdentityMaskGeometry(adj) Then Return Nothing
+
+            Dim width = adj.SelectionMaskRight - adj.SelectionMaskLeft
+            Dim height = adj.SelectionMaskBottom - adj.SelectionMaskTop
+            Dim raster = adj.SelectionMaskRaster
+            If raster Is Nothing OrElse raster.Width <> width OrElse raster.Height <> height Then Return Nothing
+
+            ' AB HIER ist der Kurzweg zustaendig: das Raster liegt vor und passt zum Rechteck.
+            handled = True
+            Dim bounds = raster.CoverageBounds()
+            If bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return Nothing
+            Dim cut = raster.Crop(bounds)
+            If cut Is Nothing Then
+                handled = False
+                Return Nothing
+            End If
+            Return New ImageMask With {
+                .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Auswahlmaske"), name),
+                .SourceWidthPixels = sourceW, .SourceHeightPixels = sourceH,
+                .Left = adj.SelectionMaskLeft + bounds.Left, .Top = adj.SelectionMaskTop + bounds.Top,
+                .Right = adj.SelectionMaskLeft + bounds.Right, .Bottom = adj.SelectionMaskTop + bounds.Bottom,
+                .Raster = cut,
+                .FeatherPixels = adj.SelectionFeatherPixels
+            }
+        End Function
+
+        ''' <summary>Schneidet ein Alpha-Raster auf das angegebene Rechteck und kodiert es als PNG.</summary>
+        ''' Der Puffer heisst bewusst NICHT "buffer": ein lokaler Name verdeckt in VB die Klasse
+        ''' <c>System.Buffer</c>, und <c>Buffer.BlockCopy</c> darunter uebersetzt nicht mehr.
+        Private Shared Function EncodeCroppedAlphaRaster(raster As Byte(), stride As Integer,
+                                                          left As Integer, top As Integer,
+                                                          right As Integer, bottom As Integer) As String
+            Using cropped = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
+                Dim cStride = cropped.RowBytes
+                Dim cBuf = New Byte(cStride * cropped.Height - 1) {}
+                For y = 0 To cropped.Height - 1
+                    Buffer.BlockCopy(raster, (top + y) * stride + left, cBuf, y * cStride, cropped.Width)
+                Next
+                Marshal.Copy(cBuf, 0, cropped.GetPixels(), cBuf.Length)
+                Using image = SKImage.FromBitmap(cropped)
+                    Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
+                        Return Convert.ToBase64String(data.ToArray())
+                    End Using
+                End Using
+            End Using
         End Function
 
         ''' <summary>Eine Maske, die ueberall voll deckt. Ausgangspunkt fuer "Ebenenmaske hinzufuegen"
@@ -1501,21 +1536,14 @@ Namespace Services
             If adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
             Dim w = adj.SourceWidthPixels, h = adj.SourceHeightPixels
             Try
-                Using bitmap = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
-                    Dim buffer = New Byte(bitmap.RowBytes * h - 1) {}
-                    Array.Fill(buffer, CByte(255))
-                    Marshal.Copy(buffer, 0, bitmap.GetPixels(), buffer.Length)
-                    Using image = SKImage.FromBitmap(bitmap)
-                        Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
-                            Return New ImageMask With {
-                                .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Ebenenmaske"), name),
-                                .SourceWidthPixels = w, .SourceHeightPixels = h,
-                                .Left = 0, .Top = 0, .Right = w, .Bottom = h,
-                                .PngBase64 = Convert.ToBase64String(data.ToArray())
-                            }
-                        End Using
-                    End Using
-                End Using
+                Dim pixels = New Byte(w * h - 1) {}
+                Array.Fill(pixels, CByte(255))
+                Return New ImageMask With {
+                    .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Ebenenmaske"), name),
+                    .SourceWidthPixels = w, .SourceHeightPixels = h,
+                    .Left = 0, .Top = 0, .Right = w, .Bottom = h,
+                    .Raster = New AlphaRaster(w, h, pixels)
+                }
             Catch
                 Return Nothing
             End Try
@@ -1719,6 +1747,7 @@ Namespace Services
                                                                ByRef rectPx As SKRectI) As SKBitmap
             rectPx = SKRectI.Empty
             If mask Is Nothing OrElse adj Is Nothing OrElse adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 Then Return Nothing
+            Dim profile = Diagnostics.Stopwatch.StartNew()
 
             ' Der bei weitem haeufigste Fall: eine einzige, gemalte Pinselmaske auf einem Bild ohne
             ' Geometrieaenderung. Das PNG liegt bereits exakt im Anzeige- (= Quell-)raum und ist
@@ -1728,15 +1757,22 @@ Namespace Services
             ' sekundenlang. Die Anzahl der Striche ist fuer die fertige Alpha-Maske unerheblich;
             ' entscheidend ist, dass wir ihren kompakten Raster direkt weiterreichen.
             Dim direct = TryDecodeDirectSelectionMask(mask, adj, rectPx)
-            If direct IsNot Nothing Then Return direct
+            If direct IsNot Nothing Then
+                Dim directRect = rectPx
+                TraceMaskProfile(Function() $"Raster direkt id={ShortMaskId(mask.Id)} " &
+                                            $"{directRect.Width}x{directRect.Height} in {profile.ElapsedMilliseconds}ms")
+                Return direct
+            End If
 
             Dim displaySize = ComputeGeometryOutputSize(adj.SourceWidthPixels, adj.SourceHeightPixels, adj)
             If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
 
             Dim decoded As SKBitmap = Nothing
             Try
+                Dim phase = Diagnostics.Stopwatch.StartNew()
                 decoded = BuildCombinedMaskRaster(mask)
                 If decoded Is Nothing Then Return Nothing
+                Dim combineMs = phase.ElapsedMilliseconds
                 Dim mStride = decoded.RowBytes
                 Dim mBuf = New Byte(mStride * decoded.Height - 1) {}
                 Marshal.Copy(decoded.GetPixels(), mBuf, 0, mBuf.Length)
@@ -1764,6 +1800,7 @@ Namespace Services
                         right = Math.Max(right, dx + 1) : bottom = Math.Max(bottom, dy + 1)
                     Next
                 Next
+                Dim projectMs = phase.ElapsedMilliseconds - combineMs
                 If right <= left OrElse bottom <= top Then Return Nothing
 
                 Dim result = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
@@ -1774,6 +1811,12 @@ Namespace Services
                 Next
                 Marshal.Copy(cBuf, 0, result.GetPixels(), cBuf.Length)
                 rectPx = New SKRectI(left, top, right, bottom)
+                Dim resultRect = rectPx
+                Dim sourceRaster = $"{decoded.Width}x{decoded.Height}"
+                TraceMaskProfile(Function() $"Raster projiziert id={ShortMaskId(mask.Id)} " &
+                                            $"quelle={sourceRaster} anzeige={dw}x{dh} " &
+                                            $"ergebnis={resultRect.Width}x{resultRect.Height} kombiniert={combineMs}ms " &
+                                            $"projektion={projectMs}ms gesamt={profile.ElapsedMilliseconds}ms")
                 Return result
             Catch
                 Return Nothing
@@ -1788,47 +1831,133 @@ Namespace Services
         Private Shared Function TryDecodeDirectSelectionMask(mask As ImageMask, adj As ImageAdjustments,
                                                               ByRef rectPx As SKRectI) As SKBitmap
             If mask Is Nothing OrElse adj Is Nothing Then Return Nothing
-            If mask.IsDisabled OrElse mask.Inverted OrElse mask.InvertResult OrElse Not mask.PrimaryVisible Then Return Nothing
-            If Not String.IsNullOrWhiteSpace(mask.Kind) OrElse mask.HasBrushCorrection Then Return Nothing
-            If mask.ExtraComponents IsNot Nothing AndAlso mask.ExtraComponents.Count <> 0 Then Return Nothing
-            If String.IsNullOrWhiteSpace(mask.PngBase64) OrElse mask.Right <= mask.Left OrElse mask.Bottom <= mask.Top Then Return Nothing
-            If mask.SourceWidthPixels <> adj.SourceWidthPixels OrElse mask.SourceHeightPixels <> adj.SourceHeightPixels Then Return Nothing
-            If Not HasIdentityMaskGeometry(adj) Then Return Nothing
+            If mask.IsDisabled OrElse mask.Inverted OrElse mask.InvertResult OrElse Not mask.PrimaryVisible Then
+                TraceMaskProfile(Function() $"Direktpfad aus: zustand disabled={mask.IsDisabled} inverted={mask.Inverted} resultInvert={mask.InvertResult} sichtbar={mask.PrimaryVisible}")
+                Return Nothing
+            End If
+            ' Nur ein echter VERLAUF braucht den allgemeinen Rasterisierer - er hat kein Raster,
+            ' sondern wird gerechnet. Alles andere ist ein fertiges Alpha-Raster, auch eine
+            ' Bereichs- oder Tiefenmaske: deren Herkunft steht in RangeKind, nicht in Kind. Die
+            ' fruehere Pruefung auf jedes nichtleere Kind war der Grund, warum eine 5.784x8.660
+            ' grosse Tiefenmaske trotz identischem Bildraum 91 Sekunden rueckprojiziert wurde.
+            If mask.IsGradient OrElse mask.HasBrushCorrection Then
+                TraceMaskProfile(Function() $"Direktpfad aus: gradient={mask.IsGradient} pinselkorrektur={mask.HasBrushCorrection}")
+                Return Nothing
+            End If
+            If mask.ExtraComponents IsNot Nothing AndAlso mask.ExtraComponents.Count <> 0 Then
+                TraceMaskProfile(Function() $"Direktpfad aus: zusatzbestandteile={mask.ExtraComponents.Count}")
+                Return Nothing
+            End If
+            If Not mask.HasPixelData OrElse mask.Right <= mask.Left OrElse mask.Bottom <= mask.Top Then
+                TraceMaskProfile(Function() "Direktpfad aus: kein gueltiges Rasterrechteck")
+                Return Nothing
+            End If
+            If mask.SourceWidthPixels <> adj.SourceWidthPixels OrElse mask.SourceHeightPixels <> adj.SourceHeightPixels Then
+                TraceMaskProfile(Function() $"Direktpfad aus: mask={mask.SourceWidthPixels}x{mask.SourceHeightPixels} rezept={adj.SourceWidthPixels}x{adj.SourceHeightPixels}")
+                Return Nothing
+            End If
+            If Not HasIdentityMaskGeometry(adj) Then
+                TraceMaskProfile(Function() "Direktpfad aus: Bildgeometrie nicht identisch")
+                Return Nothing
+            End If
 
             Try
-                Dim decoded = SKBitmap.Decode(Convert.FromBase64String(mask.PngBase64))
-                If decoded Is Nothing Then Return Nothing
-                If decoded.ColorType <> SKColorType.Alpha8 OrElse decoded.Width <> mask.Right - mask.Left OrElse
-                   decoded.Height <> mask.Bottom - mask.Top Then
-                    decoded.Dispose()
+                Dim raster = mask.Raster
+                If raster Is Nothing Then
+                    TraceMaskProfile(Function() "Direktpfad aus: das Raster liess sich nicht lesen")
+                    Return Nothing
+                End If
+                If raster.Width <> mask.Right - mask.Left OrElse raster.Height <> mask.Bottom - mask.Top Then
+                    TraceMaskProfile(Function() $"Direktpfad aus: Raster={raster.Width}x{raster.Height}, " &
+                                                $"erwartet={mask.Right - mask.Left}x{mask.Bottom - mask.Top}")
                     Return Nothing
                 End If
                 rectPx = New SKRectI(mask.Left, mask.Top, mask.Right, mask.Bottom)
-                Return decoded
+                Return raster.ToBitmap()
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Eine Zeile des Maskenprofils. Die Zeichenkette entsteht NUR bei
+        ''' eingeschalteter Diagnose - diese Wege laufen je Render und je Maske, und ein
+        ''' zusammengebauter Text waere dort auch dann bezahlt, wenn niemand mitschreibt.</summary>
+        Private Shared Sub TraceMaskProfile(text As Func(Of String))
+            If Not DiagnosticLogService.IsVerboseEnabled Then Return
+            DiagnosticLogService.LogAlways("Maskenprofil", text())
+        End Sub
+
+        ''' <summary>Der Anfang einer Kennung fuer das Protokoll - auch wenn sie fehlt oder kuerzer
+        ''' ist als die acht Zeichen.</summary>
+        Private Shared Function ShortMaskId(id As String) As String
+            Dim value = If(id, "")
+            Return If(value.Length <= 8, value, value.Substring(0, 8))
         End Function
 
         ''' <summary>Bei identischer Geometrie sind Quell- und Anzeige-Pixel gleich. Diese enge
         ''' Pruefung ist absichtlich konservativ: im Zweifel nutzt der Aufrufer die vollstaendige
         ''' Projektion, nie eine falsch platzierte Maske.</summary>
         Private Shared Function HasIdentityMaskGeometry(adj As ImageAdjustments) As Boolean
-            If adj Is Nothing OrElse GeometrySteps(adj).Count <> 0 Then Return False
-            Return adj.CropLeftPercent = 0 AndAlso adj.CropTopPercent = 0 AndAlso
-                   adj.CropRightPercent = 0 AndAlso adj.CropBottomPercent = 0 AndAlso
-                   adj.RotationDegrees = 0 AndAlso adj.StraightenDegrees = 0 AndAlso
-                   Not adj.FlipHorizontal AndAlso Not adj.FlipVertical AndAlso
-                   adj.PerspectiveHorizontal = 0 AndAlso adj.PerspectiveVertical = 0 AndAlso
-                   adj.PerspectiveAspect = 0 AndAlso adj.PerspectiveScale = 0 AndAlso
-                   adj.PerspectiveCorner0X = 0 AndAlso adj.PerspectiveCorner0Y = 0 AndAlso
-                   adj.PerspectiveCorner1X = 0 AndAlso adj.PerspectiveCorner1Y = 0 AndAlso
-                   adj.PerspectiveCorner2X = 0 AndAlso adj.PerspectiveCorner2Y = 0 AndAlso
-                   adj.PerspectiveCorner3X = 0 AndAlso adj.PerspectiveCorner3Y = 0 AndAlso
-                   (adj.ImageWarp Is Nothing OrElse adj.ImageWarp.IsEmpty) AndAlso
-                   adj.ResizeWidth <= 0 AndAlso adj.ResizeHeight <= 0 AndAlso adj.ResizeScalePercent <= 0 AndAlso
-                   adj.CanvasWidth <= 0 AndAlso adj.CanvasHeight <= 0 AndAlso
-                   String.IsNullOrEmpty(adj.UpscaleModel)
+            If adj Is Nothing Then Return False
+            ' Ein Hochskalier-Modell aendert die Bildmasse - beim Speichern, nicht in der Vorschau.
+            ' Der Riegel bleibt trotzdem stehen: er kostet nichts, und eine Maske, die im
+            ' hochskalierten Raum daneben liegt, waere teuer.
+            If Not String.IsNullOrEmpty(adj.UpscaleModel) Then Return False
+            ' Eine nichtleere Schrittfolge ist nicht automatisch eine Transformation. Nach
+            ' "Zuruecksetzen" bleiben beispielsweise leere Crop-/Transform-Schritte im Rezept,
+            ' deren Ausfuehrung pixelgenau die Identitaet ist. Sie bisher pauschal abzulehnen
+            ' zwang eine 50-MP-Maske trotzdem durch die Rueckprojektion.
+            Dim quarterTurns = 0
+            For Each operation In GeometrySteps(adj)
+                If IsIdentityMaskGeometryOperation(operation) Then Continue For
+
+                ' Vierteldrehungen sind verlustlose Pixelumordnungen. Zwei gespeicherte Schritte
+                ' 90° + 270° (so liegt dieses Bild in der fpxmp vor) heben sich exakt auf, auch bei
+                ' nicht quadratischen Bildern. Die allgemeine Projektion behandelte sie bisher als
+                ' zwei Transformationen und lief dadurch ueber jeden einzelnen Bildpunkt.
+                Dim a = operation?.Adjustments
+                If String.Equals(If(operation?.Kind, "").Trim(), "transform", StringComparison.OrdinalIgnoreCase) AndAlso
+                   a IsNot Nothing AndAlso a.StraightenDegrees = 0 AndAlso
+                   Not a.FlipHorizontal AndAlso Not a.FlipVertical Then
+                    Dim quarter = CInt(Math.Round(a.RotationDegrees / 90.0))
+                    If Math.Abs(a.RotationDegrees - quarter * 90.0) < 0.0001 Then
+                        quarterTurns = (quarterTurns + quarter) Mod 4
+                        Continue For
+                    End If
+                End If
+                Return False
+            Next
+            Return quarterTurns = 0
+        End Function
+
+        ''' <summary>Prueft exakt die Felder, welche die jeweilige Pipeline-Stufe liest. Unbekannte
+        ''' Schrittarten sind ebenfalls neutral: die Ausfuehrungspipeline ignoriert sie.</summary>
+        Private Shared Function IsIdentityMaskGeometryOperation(operation As GeometryOperation) As Boolean
+            If operation?.Adjustments Is Nothing Then Return True
+            Dim a = operation.Adjustments
+            Select Case If(operation.Kind, "").Trim().ToLowerInvariant()
+                Case "crop"
+                    Return a.CropLeftPercent = 0 AndAlso a.CropTopPercent = 0 AndAlso
+                           a.CropRightPercent = 0 AndAlso a.CropBottomPercent = 0
+                Case "transform"
+                    Return a.RotationDegrees = 0 AndAlso a.StraightenDegrees = 0 AndAlso
+                           Not a.FlipHorizontal AndAlso Not a.FlipVertical
+                Case "perspective"
+                    Return a.PerspectiveHorizontal = 0 AndAlso a.PerspectiveVertical = 0 AndAlso
+                           a.PerspectiveAspect = 0 AndAlso a.PerspectiveScale = 0 AndAlso
+                           a.PerspectiveCorner0X = 0 AndAlso a.PerspectiveCorner0Y = 0 AndAlso
+                           a.PerspectiveCorner1X = 0 AndAlso a.PerspectiveCorner1Y = 0 AndAlso
+                           a.PerspectiveCorner2X = 0 AndAlso a.PerspectiveCorner2Y = 0 AndAlso
+                           a.PerspectiveCorner3X = 0 AndAlso a.PerspectiveCorner3Y = 0
+                Case "warp"
+                    Return a.ImageWarp Is Nothing OrElse a.ImageWarp.IsEmpty
+                Case "resize"
+                    Return a.ResizeWidth <= 0 AndAlso a.ResizeHeight <= 0 AndAlso a.ResizeScalePercent <= 0
+                Case "canvas"
+                    Return a.CanvasWidth <= 0 AndAlso a.CanvasHeight <= 0
+                Case Else
+                    Return True
+            End Select
         End Function
 
         ''' <summary>Baut eine ImageMask (Quellraum) aus einem vollbildgroßen Alpha-Puffer: schneidet auf
@@ -1847,25 +1976,14 @@ Namespace Services
                 Next
             Next
             If right <= left OrElse bottom <= top Then Return Nothing
-            Using cropped = New SKBitmap(right - left, bottom - top, SKColorType.Alpha8, SKAlphaType.Premul)
-                Dim cStride = cropped.RowBytes
-                Dim cBuf = New Byte(cStride * cropped.Height - 1) {}
-                For y = 0 To cropped.Height - 1
-                    Buffer.BlockCopy(full, (top + y) * sourceW + left, cBuf, y * cStride, cropped.Width)
-                Next
-                Marshal.Copy(cBuf, 0, cropped.GetPixels(), cBuf.Length)
-                Using image = SKImage.FromBitmap(cropped)
-                    Using data = image.Encode(SKEncodedImageFormat.Png, FastPngCompressionQuality)
-                        Return New ImageMask With {
-                            .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Auswahlmaske"), name),
-                            .SourceWidthPixels = sourceW, .SourceHeightPixels = sourceH,
-                            .Left = left, .Top = top, .Right = right, .Bottom = bottom,
-                            .PngBase64 = Convert.ToBase64String(data.ToArray()),
-                            .FeatherPixels = 0
-                        }
-                    End Using
-                End Using
-            End Using
+            Dim fullRaster = New AlphaRaster(sourceW, sourceH, full)
+            Return New ImageMask With {
+                .Name = If(String.IsNullOrWhiteSpace(name), LocalizationService.T("Auswahlmaske"), name),
+                .SourceWidthPixels = sourceW, .SourceHeightPixels = sourceH,
+                .Left = left, .Top = top, .Right = right, .Bottom = bottom,
+                .Raster = fullRaster.Crop(New SKRectI(left, top, right, bottom)),
+                .FeatherPixels = 0
+            }
         End Function
 
         ''' <summary>Rastert eine LINEARE Verlaufsmaske (crs "Mask/Gradient") in den Quellraum.
@@ -2012,38 +2130,34 @@ Namespace Services
             Dim scaleX = If(referenceSize.Width > 0, targetW / CDbl(referenceSize.Width), 1.0)
             Dim scaleY = If(referenceSize.Height > 0, targetH / CDbl(referenceSize.Height), 1.0)
 
-            If Not String.IsNullOrEmpty(adj.SelectionMaskPngBase64) Then
+            If adj.HasSelectionMaskData Then
                 Dim boundsW = adj.SelectionMaskRight - adj.SelectionMaskLeft
                 Dim boundsH = adj.SelectionMaskBottom - adj.SelectionMaskTop
                 If boundsW <= 0 OrElse boundsH <= 0 Then Return Nothing
                 Try
-                    Dim raw = Convert.FromBase64String(adj.SelectionMaskPngBase64)
-                    Using decoded = SKBitmap.Decode(raw)
-                        ' Empirisch: SKBitmap.Decode dieser PNGs liefert Alpha8 (1 Byte/Pixel).
-                        If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return Nothing
-                        Dim dStride = decoded.RowBytes
-                        Dim dBuf = New Byte(dStride * decoded.Height - 1) {}
-                        Marshal.Copy(decoded.GetPixels(), dBuf, 0, dBuf.Length)
-                        Dim dW = decoded.Width, dH = decoded.Height
+                    Dim selectionRaster = adj.SelectionMaskRaster
+                    If selectionRaster Is Nothing Then Return Nothing
+                    Dim dStride = selectionRaster.Width
+                    Dim dBuf = selectionRaster.Pixels
+                    Dim dW = selectionRaster.Width, dH = selectionRaster.Height
 
-                        Dim mask = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
-                        Dim mStride = mask.RowBytes
-                        Dim mBuf = New Byte(mStride * targetH - 1) {}
-                        For ty = 0 To targetH - 1
-                            Dim baseY = If(scaleY > 0, CInt(ty / scaleY), ty)
-                            Dim ly = baseY - adj.SelectionMaskTop
-                            If ly < 0 OrElse ly >= dH Then Continue For
-                            Dim mRow = ty * mStride, dRow = ly * dStride
-                            For tx = 0 To targetW - 1
-                                Dim baseX = If(scaleX > 0, CInt(tx / scaleX), tx)
-                                Dim lx = baseX - adj.SelectionMaskLeft
-                                If lx < 0 OrElse lx >= dW Then Continue For
-                                mBuf(mRow + tx) = dBuf(dRow + lx)
-                            Next
+                    Dim mask = New SKBitmap(targetW, targetH, SKColorType.Alpha8, SKAlphaType.Premul)
+                    Dim mStride = mask.RowBytes
+                    Dim mBuf = New Byte(mStride * targetH - 1) {}
+                    For ty = 0 To targetH - 1
+                        Dim baseY = If(scaleY > 0, CInt(ty / scaleY), ty)
+                        Dim ly = baseY - adj.SelectionMaskTop
+                        If ly < 0 OrElse ly >= dH Then Continue For
+                        Dim mRow = ty * mStride, dRow = ly * dStride
+                        For tx = 0 To targetW - 1
+                            Dim baseX = If(scaleX > 0, CInt(tx / scaleX), tx)
+                            Dim lx = baseX - adj.SelectionMaskLeft
+                            If lx < 0 OrElse lx >= dW Then Continue For
+                            mBuf(mRow + tx) = dBuf(dRow + lx)
                         Next
-                        Marshal.Copy(mBuf, 0, mask.GetPixels(), mBuf.Length)
-                        Return mask
-                    End Using
+                    Next
+                    Marshal.Copy(mBuf, 0, mask.GetPixels(), mBuf.Length)
+                    Return mask
                 Catch
                     Return Nothing
                 End Try
@@ -3023,7 +3137,7 @@ Namespace Services
         ''' hat keines; ein leeres oder entartetes Rechteck zählt nicht.</summary>
         Private Shared Function HasPaintedRaster(c As MaskComponent) As Boolean
             Return c IsNot Nothing AndAlso Not c.IsGradient AndAlso
-                   Not String.IsNullOrWhiteSpace(c.PngBase64) AndAlso
+                   c.HasPixelData AndAlso
                    c.Right > c.Left AndAlso c.Bottom > c.Top
         End Function
 
@@ -3070,8 +3184,8 @@ Namespace Services
 
             Dim decoded As SKBitmap = Nothing
             Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(c.PngBase64))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                decoded = If(c.Raster Is Nothing, Nothing, c.Raster.ToBitmap())
+                If decoded Is Nothing Then Return False
                 Using rotated = New SKBitmap(w, h, SKColorType.Alpha8, SKAlphaType.Premul)
                     Using canvas = New SKCanvas(rotated)
                         canvas.Clear(SKColors.Transparent)
@@ -3089,12 +3203,10 @@ Namespace Services
                             End Using
                         End Using
                     End Using
-                    Using img = SKImage.FromPixels(rotated.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return False
-                            c.PngBase64 = Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
+                    ' Das Ergebnis bleibt ein Raster; gepackt wird erst beim Schreiben.
+                    Dim transformed = AlphaRaster.FromBitmap(rotated)
+                    If transformed Is Nothing Then Return False
+                    c.Raster = transformed
                 End Using
                 c.Left = l : c.Top = t : c.Right = l + w : c.Bottom = t + h
                 Return True
@@ -3110,8 +3222,8 @@ Namespace Services
         Private Shared Function FlipComponentRaster(c As MaskComponent, horizontal As Boolean, axis As Double) As Boolean
             Dim decoded As SKBitmap = Nothing
             Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(c.PngBase64))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                decoded = If(c.Raster Is Nothing, Nothing, c.Raster.ToBitmap())
+                If decoded Is Nothing Then Return False
                 Dim w = decoded.Width, h = decoded.Height
                 Dim l = c.Left, t = c.Top
                 If horizontal Then
@@ -3130,12 +3242,10 @@ Namespace Services
                         End If
                         canvas.DrawBitmap(decoded, 0.0F, 0.0F)
                     End Using
-                    Using img = SKImage.FromPixels(mirrored.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return False
-                            c.PngBase64 = Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
+                    ' Das Ergebnis bleibt ein Raster; gepackt wird erst beim Schreiben.
+                    Dim transformed = AlphaRaster.FromBitmap(mirrored)
+                    If transformed Is Nothing Then Return False
+                    c.Raster = transformed
                 End Using
                 c.Left = l : c.Top = t : c.Right = l + w : c.Bottom = t + h
                 Return True
@@ -3164,8 +3274,8 @@ Namespace Services
 
             Dim decoded As SKBitmap = Nothing
             Try
-                decoded = SKBitmap.Decode(Convert.FromBase64String(c.PngBase64))
-                If decoded Is Nothing OrElse decoded.ColorType <> SKColorType.Alpha8 Then Return False
+                decoded = If(c.Raster Is Nothing, Nothing, c.Raster.ToBitmap())
+                If decoded Is Nothing Then Return False
                 If w = decoded.Width AndAlso h = decoded.Height Then
                     ' Reine Verschiebung: die Pixel bleiben, nur das Rechteck wandert.
                     c.Left = l : c.Top = t : c.Right = l + decoded.Width : c.Bottom = t + decoded.Height
@@ -3181,12 +3291,10 @@ Namespace Services
                             End Using
                         End Using
                     End Using
-                    Using img = SKImage.FromPixels(scaled.PeekPixels())
-                        Using data = img.Encode(SKEncodedImageFormat.Png, 100)
-                            If data Is Nothing Then Return False
-                            c.PngBase64 = Convert.ToBase64String(data.ToArray())
-                        End Using
-                    End Using
+                    ' Das Ergebnis bleibt ein Raster; gepackt wird erst beim Schreiben.
+                    Dim transformed = AlphaRaster.FromBitmap(scaled)
+                    If transformed Is Nothing Then Return False
+                    c.Raster = transformed
                 End Using
                 c.Left = l : c.Top = t : c.Right = l + w : c.Bottom = t + h
                 Return True
@@ -3362,14 +3470,14 @@ Namespace Services
         ''' abgewiesen.</summary>
         Private Shared Function HasMovableMaskContent(mask As ImageMask) As Boolean
             If mask Is Nothing Then Return False
-            If Not String.IsNullOrWhiteSpace(mask.PngBase64) Then Return True
+            If mask.HasPixelData Then Return True
             If IsGradientMaskKind(mask.Kind) Then Return True
             If mask.ExtraComponents IsNot Nothing Then
                 For Each c In mask.ExtraComponents
                     If c Is Nothing Then Continue For
                     ' Ein GEMALTER Zusatzbestandteil zaehlt genauso: eine Maske mit leerem ersten und
                     ' nur gemaltem zweiten Bestandteil galt vorher als unbeweglich und blieb liegen.
-                    If IsGradientMaskKind(c.Kind) OrElse Not String.IsNullOrWhiteSpace(c.PngBase64) Then Return True
+                    If IsGradientMaskKind(c.Kind) OrElse c.HasPixelData Then Return True
                 Next
             End If
             Return False

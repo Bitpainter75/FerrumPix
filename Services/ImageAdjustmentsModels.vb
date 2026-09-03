@@ -576,7 +576,56 @@ Namespace Services
         Public Property SelectionMaskTop As Integer = 0
         Public Property SelectionMaskRight As Integer = 0
         Public Property SelectionMaskBottom As Integer = 0
-        Public Property SelectionMaskPngBase64 As String = ""
+        Private _selectionMaskPngBase64 As String = ""
+        Private _selectionMaskRaster As AlphaRaster
+
+        ''' <summary>Die Auswahlmaske als PNG - die SPEICHERFORM. Sie entsteht erst, wenn jemand
+        ''' sie liest (Rezept schreiben), und wird beim Laden gesetzt. Wer im Programm mit der
+        ''' Auswahl rechnet, nimmt <see cref="SelectionMaskRaster"/>: sonst wuerde bei jedem
+        ''' Pinselstrich einmal voll gepackt und beim naechsten Leser wieder entpackt.</summary>
+        Public Property SelectionMaskPngBase64 As String
+            Get
+                If String.IsNullOrEmpty(_selectionMaskPngBase64) AndAlso _selectionMaskRaster IsNot Nothing Then
+                    _selectionMaskPngBase64 = _selectionMaskRaster.ToPngBase64()
+                End If
+                Return _selectionMaskPngBase64
+            End Get
+            Set(value As String)
+                _selectionMaskPngBase64 = If(value, "")
+                _selectionMaskRaster = Nothing
+            End Set
+        End Property
+
+        ''' <summary>Die Auswahlmaske im Speicher. Steht in StructuralPropertyNames, gehoert also
+        ''' nicht zu den Pixelreglern, und wird nicht mitserialisiert - im Rezept steht das PNG.</summary>
+        <JsonIgnore>
+        Public Property SelectionMaskRaster As AlphaRaster
+            Get
+                If _selectionMaskRaster Is Nothing AndAlso Not String.IsNullOrEmpty(_selectionMaskPngBase64) Then
+                    _selectionMaskRaster = AlphaRaster.FromPngBase64(_selectionMaskPngBase64)
+                End If
+                Return _selectionMaskRaster
+            End Get
+            Set(value As AlphaRaster)
+                _selectionMaskRaster = value
+                _selectionMaskPngBase64 = ""
+            End Set
+        End Property
+
+        ''' <summary>Traegt die Auswahl ueberhaupt ein Raster? Antwortet OHNE zu packen.</summary>
+        <JsonIgnore>
+        Public ReadOnly Property HasSelectionMaskData As Boolean
+            Get
+                Return _selectionMaskRaster IsNot Nothing OrElse Not String.IsNullOrWhiteSpace(_selectionMaskPngBase64)
+            End Get
+        End Property
+
+        ''' <summary>Uebernimmt die Auswahlmaske eines anderen Rezepts SO WIE SIE VORLIEGT.</summary>
+        Friend Sub CopySelectionMaskDataFrom(other As ImageAdjustments)
+            If other Is Nothing Then Return
+            _selectionMaskPngBase64 = other._selectionMaskPngBase64
+            _selectionMaskRaster = other._selectionMaskRaster
+        End Sub
 
         ''' <summary>Weiche Kante der Auswahl in BILDpixeln. Die gespeicherte Maske bleibt hart und
         ''' pixelgenau - weich wird die Kante erst bei der Verwendung (Anpassungs-Skopus, Kopieren, Füllen).
@@ -649,7 +698,7 @@ Namespace Services
             "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
             "SelectionMaskLeft", "SelectionMaskTop", "SelectionMaskRight", "SelectionMaskBottom",
-            "SelectionMaskPngBase64", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
+            "SelectionMaskPngBase64", "SelectionMaskRaster", "HasSelectionMaskData", "SelectionFeatherPixels", "SelectionMaskSoftBaked", "GlobalAdjustmentsHidden", "BackgroundHidden", "PixelLayerHidden"
         }
 
         Private Shared _pixelProperties As Reflection.PropertyInfo() = Nothing
@@ -953,13 +1002,15 @@ Namespace Services
                 .SelectionMaskTop = SelectionMaskTop,
                 .SelectionMaskRight = SelectionMaskRight,
                 .SelectionMaskBottom = SelectionMaskBottom,
-                .SelectionMaskPngBase64 = SelectionMaskPngBase64,
                 .SelectionFeatherPixels = SelectionFeatherPixels,
                 .SelectionMaskSoftBaked = SelectionMaskSoftBaked,
                 .GlobalAdjustmentsHidden = GlobalAdjustmentsHidden,
                 .BackgroundHidden = BackgroundHidden,
                 .PixelLayerHidden = PixelLayerHidden
             }
+            ' Die Auswahlmaske wandert unveraendert mit: als Raster, wenn eines da ist, sonst als
+            ' PNG. Ueber die Eigenschaft kopiert wuerde jede Abschrift einmal packen.
+            result.CopySelectionMaskDataFrom(Me)
             ' Die explizite Liste oben hält die strukturellen/deep-copy-Felder lesbar. Pixelwerte werden
             ' zusätzlich zentral kopiert, damit ein neu ergänzter Regler nicht in Undo/FPX/Layern fehlt.
             result.CopyPixelAdjustmentsFrom(Me)
