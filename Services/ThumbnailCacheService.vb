@@ -1190,8 +1190,12 @@ Namespace Services
         ''' Verzeichnisses ließe alles darunter zurück.</summary>
         Public Shared Function MoveCachedThumbnails(oldPath As String, newPath As String) As Integer
             If String.IsNullOrWhiteSpace(oldPath) OrElse String.IsNullOrWhiteSpace(newPath) Then Return 0
+            ' Die Wurzel wird abgewiesen, wie beim Katalog: von dort aus wuerde der Weg ueber JEDEN
+            ' Ordner des Datentraegers steigen (siehe LibraryService.MoveCatalogEntries).
+            If PathIdentity.IsFilesystemRoot(oldPath) OrElse PathIdentity.IsFilesystemRoot(newPath) Then Return 0
             Dim source = oldPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
             Dim target = newPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+            If source.Length = 0 OrElse target.Length = 0 Then Return 0
             If String.Equals(source, target, StringComparison.Ordinal) Then Return 0
 
             Try

@@ -7926,4 +7926,34 @@
   <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
     <value>파일을 저장하지 못했습니다. 자세한 내용은 상태 표시줄이나 진단 로그에 있습니다.</value>
   </data>
+  <data name="XMP_Daten_lesen_29beb159" xml:space="preserve">
+    <value>XMP 데이터 읽기</value>
+  </data>
+  <data name="XmpCore_6_1_867049bb" xml:space="preserve">
+    <value>XmpCore 6.1</value>
+  </data>
+  <data name="Adobe_XMP_2167da4f" xml:space="preserve">
+    <value>Adobe XMP</value>
+  </data>
+  <data name="Aufnahmedaten_vollst_ndig_laden_56ba1ac8" xml:space="preserve">
+    <value>촬영 데이터를 모두 불러오기</value>
+  </data>
+  <data name="Jetzt_laden_13432c80" xml:space="preserve">
+    <value>지금 불러오기</value>
+  </data>
+  <data name="Der_Server_hat_keine_Aufnahmen_genannt_Es_wurde__6f37486f" xml:space="preserve">
+    <value>서버가 사진을 하나도 알려주지 않았습니다. 아무것도 바꾸지 않았습니다.</value>
+  </data>
+  <data name="Es_l_uft_bereits_ein_Serverdurchlauf_86742ef4" xml:space="preserve">
+    <value>서버 실행이 이미 진행 중입니다.</value>
+  </data>
+  <data name="0_von_1_Aufnahmen_2a211364" xml:space="preserve">
+    <value>{1}장 중 {0}장</value>
+  </data>
+  <data name="0_geladen_1_waren_aktuell_2_fehlgeschlagen_8862aa70" xml:space="preserve">
+    <value>{0}개 불러옴, {1}개는 최신, {2}개 실패</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Indexeintr_ge_entfernt_757d7c4c" xml:space="preserve">
+    <value>카탈로그 항목 {0}개와 색인 항목 {1}개를 제거했습니다</value>
+  </data>
 </root>

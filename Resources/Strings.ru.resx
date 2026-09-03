@@ -7922,4 +7922,34 @@
   <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
     <value>Не удалось сохранить файл. Подробности в строке состояния или в журнале диагностики.</value>
   </data>
+  <data name="XMP_Daten_lesen_29beb159" xml:space="preserve">
+    <value>Чтение данных XMP</value>
+  </data>
+  <data name="XmpCore_6_1_867049bb" xml:space="preserve">
+    <value>XmpCore 6.1</value>
+  </data>
+  <data name="Adobe_XMP_2167da4f" xml:space="preserve">
+    <value>Adobe XMP</value>
+  </data>
+  <data name="Aufnahmedaten_vollst_ndig_laden_56ba1ac8" xml:space="preserve">
+    <value>Загрузить все данные съёмки</value>
+  </data>
+  <data name="Jetzt_laden_13432c80" xml:space="preserve">
+    <value>Загрузить сейчас</value>
+  </data>
+  <data name="Der_Server_hat_keine_Aufnahmen_genannt_Es_wurde__6f37486f" xml:space="preserve">
+    <value>Сервер не назвал ни одной фотографии. Ничего не изменено.</value>
+  </data>
+  <data name="Es_l_uft_bereits_ein_Serverdurchlauf_86742ef4" xml:space="preserve">
+    <value>Обход сервера уже выполняется.</value>
+  </data>
+  <data name="0_von_1_Aufnahmen_2a211364" xml:space="preserve">
+    <value>{0} из {1} фотографий</value>
+  </data>
+  <data name="0_geladen_1_waren_aktuell_2_fehlgeschlagen_8862aa70" xml:space="preserve">
+    <value>Загружено {0}, актуальных {1}, с ошибкой {2}</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Indexeintr_ge_entfernt_757d7c4c" xml:space="preserve">
+    <value>Удалено записей каталога: {0}, записей индекса: {1}</value>
+  </data>
 </root>

@@ -7926,4 +7926,34 @@
   <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
     <value>บันทึกไฟล์ไม่สำเร็จ รายละเอียดอยู่ในแถบสถานะหรือบันทึกการวินิจฉัย</value>
   </data>
+  <data name="XMP_Daten_lesen_29beb159" xml:space="preserve">
+    <value>อ่านข้อมูล XMP</value>
+  </data>
+  <data name="XmpCore_6_1_867049bb" xml:space="preserve">
+    <value>XmpCore 6.1</value>
+  </data>
+  <data name="Adobe_XMP_2167da4f" xml:space="preserve">
+    <value>Adobe XMP</value>
+  </data>
+  <data name="Aufnahmedaten_vollst_ndig_laden_56ba1ac8" xml:space="preserve">
+    <value>โหลดข้อมูลการถ่ายภาพทั้งหมด</value>
+  </data>
+  <data name="Jetzt_laden_13432c80" xml:space="preserve">
+    <value>โหลดตอนนี้</value>
+  </data>
+  <data name="Der_Server_hat_keine_Aufnahmen_genannt_Es_wurde__6f37486f" xml:space="preserve">
+    <value>เซิร์ฟเวอร์ไม่ได้ระบุภาพใดเลย ไม่มีการเปลี่ยนแปลง</value>
+  </data>
+  <data name="Es_l_uft_bereits_ein_Serverdurchlauf_86742ef4" xml:space="preserve">
+    <value>มีการอ่านข้อมูลจากเซิร์ฟเวอร์อยู่แล้ว</value>
+  </data>
+  <data name="0_von_1_Aufnahmen_2a211364" xml:space="preserve">
+    <value>{0} จาก {1} ภาพ</value>
+  </data>
+  <data name="0_geladen_1_waren_aktuell_2_fehlgeschlagen_8862aa70" xml:space="preserve">
+    <value>โหลด {0} รายการ {1} รายการเป็นปัจจุบัน {2} รายการล้มเหลว</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Indexeintr_ge_entfernt_757d7c4c" xml:space="preserve">
+    <value>ลบรายการแคตตาล็อก {0} รายการและรายการดัชนี {1} รายการ</value>
+  </data>
 </root>

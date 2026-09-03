@@ -1049,8 +1049,20 @@ Namespace Services
         ''' zurück.</summary>
         Public Function MoveCatalogEntries(oldPath As String, newPath As String) As Integer
             If String.IsNullOrWhiteSpace(oldPath) OrElse String.IsNullOrWhiteSpace(newPath) Then Return 0
+            ' DIE WURZEL WIRD ABGEWIESEN, und zwar VOR allem anderen. Aus "/" wird beim Abschneiden
+            ' des Trennzeichens eine LEERE Zeichenkette; der Bereich unten hiesse dann "ab / bis 0"
+            ' und faesse jeden absoluten Unix-Pfad im Katalog - substr ab 1 haengte den ganzen alten
+            ' Pfad an das Ziel, und der gesamte Katalog waere unter den neuen Ordner gewandert. Eine
+            ' blosse Leerpruefung reichte nicht: der ROHE Wert "/" ist nicht leer.
+            If PathIdentity.IsFilesystemRoot(oldPath) OrElse PathIdentity.IsFilesystemRoot(newPath) Then
+                DiagnosticLogService.LogAlways("Library.MoveCatalogEntries",
+                                               $"Wurzel abgewiesen: '{oldPath}' -> '{newPath}'")
+                Return 0
+            End If
+
             Dim source = oldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             Dim target = newPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            If source.Length = 0 OrElse target.Length = 0 Then Return 0
             If String.Equals(source, target, StringComparison.Ordinal) Then Return 0
             ' Ein Serverbild hat keinen Ort auf der Platte - sein Pseudo-Pfad wird nie verschoben.
             If IsServerPseudoPath(source) OrElse IsServerPseudoPath(target) Then Return 0
@@ -1106,6 +1118,46 @@ Namespace Services
                 Return 0
             End Try
             Return moved
+        End Function
+
+        ''' <summary>Entfernt die Katalogzeilen ALLER Bilder EINES Servers - Bewertung, Favorit,
+        ''' Farbetikett und Stichwörter, die lokal unter dem Pseudo-Pfad liegen. Gibt die Zahl der
+        ''' entfernten Zeilen zurück.
+        '''
+        ''' NUR AUF ANSAGE, nie als Nebenwirkung eines Laufs. Was hier steht, ist Handarbeit: ein
+        ''' Serverbild trägt sein Farbetikett und seine Sterne ausschließlich hier, der Server kennt
+        ''' beides nicht. Ein Durchlauf, der einen schweigenden Server für einen leeren Bestand hält,
+        ''' hätte damit alles davon weggeräumt - deshalb räumt kein Durchlauf, sondern nur dieser
+        ''' Weg, und den ruft ein Knopf.
+        '''
+        ''' Der Bereich geht wie überall über den Primärschlüssel: das Schema bis zum Schema plus
+        ''' eins fasst genau die Zeilen dieses Servers.</summary>
+        Public Function DeleteServerCatalogData(pseudoScheme As String) As Integer
+            If String.IsNullOrWhiteSpace(pseudoScheme) Then Return 0
+            Dim scheme = pseudoScheme.Trim()
+            Dim upper = scheme.Substring(0, scheme.Length - 1) & ChrW(AscW(scheme(scheme.Length - 1)) + 1)
+            Dim removed = 0
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each table In {"ImageMeta", "Face", "ScannedImage"}
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText = $"DELETE FROM {table} WHERE FilePath >= $from AND FilePath < $to"
+                                cmd.Parameters.AddWithValue("$from", scheme)
+                                cmd.Parameters.AddWithValue("$to", upper)
+                                removed += cmd.ExecuteNonQuery()
+                            End Using
+                        Next
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.DeleteServerCatalogData", ex)
+                Return 0
+            End Try
+            Return removed
         End Function
 
         ''' <summary>Alles, was an einem Pfad hängt, an den neuen Ort mitnehmen: die Katalogzeilen und

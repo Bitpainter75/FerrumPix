@@ -70,6 +70,35 @@ Namespace Services
             Return If(IgnoresCase, result.ToUpperInvariant(), result)
         End Function
 
+        ''' <summary>Ist das die WURZEL eines Dateisystems - "/" unter Unix, "C:\" oder eine
+        ''' UNC-Freigabe unter Windows?
+        '''
+        ''' WOFÜR: Ein Weg, der über einen Pfad-PRÄFIX arbeitet, fasst bei der Wurzel den gesamten
+        ''' Datenträger. Beim Umzug der Katalogeinträge war das kein theoretischer Fall: das
+        ''' abschließende Trennzeichen fällt beim Normalisieren weg, aus "/" wird eine LEERE
+        ''' Zeichenkette, und der Bereich "ab / bis 0" erfasst danach jeden absoluten Unix-Pfad im
+        ''' Katalog - jeder Eintrag wäre unter den neuen Ordner gehängt worden. Solche Wege weisen
+        ''' die Wurzel deshalb ausdrücklich ab, statt sich auf eine Leerprüfung zu verlassen.</summary>
+        Public Shared Function IsFilesystemRoot(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            ' Nach dem Abschneiden des Trennzeichens bleibt von einer Wurzel NICHTS uebrig ("/") oder
+            ' nur die Laufwerksangabe ("C:"). Beides zaehlt.
+            Dim trimmed = path.Trim().TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+            If trimmed.Length = 0 Then Return True
+            Try
+                Dim full = IO.Path.GetFullPath(path)
+                Dim root = IO.Path.GetPathRoot(full)
+                If Not String.IsNullOrEmpty(root) AndAlso
+                   String.Equals(full.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar),
+                                 root.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar),
+                                 Comparison) Then
+                    Return True
+                End If
+            Catch
+            End Try
+            Return False
+        End Function
+
         ''' <summary>Meinen die beiden Pfade dieselbe Datei?</summary>
         Public Shared Function AreSame(a As String, b As String) As Boolean
             Return String.Equals(Normalize(a), Normalize(b), StringComparison.Ordinal)

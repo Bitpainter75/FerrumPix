@@ -7926,4 +7926,34 @@
   <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
     <value>फ़ाइल सहेजी नहीं जा सकी। विवरण स्थिति पट्टी या निदान लॉग में हैं।</value>
   </data>
+  <data name="XMP_Daten_lesen_29beb159" xml:space="preserve">
+    <value>XMP डेटा पढ़ना</value>
+  </data>
+  <data name="XmpCore_6_1_867049bb" xml:space="preserve">
+    <value>XmpCore 6.1</value>
+  </data>
+  <data name="Adobe_XMP_2167da4f" xml:space="preserve">
+    <value>Adobe XMP</value>
+  </data>
+  <data name="Aufnahmedaten_vollst_ndig_laden_56ba1ac8" xml:space="preserve">
+    <value>सभी शूट डेटा लोड करें</value>
+  </data>
+  <data name="Jetzt_laden_13432c80" xml:space="preserve">
+    <value>अभी लोड करें</value>
+  </data>
+  <data name="Der_Server_hat_keine_Aufnahmen_genannt_Es_wurde__6f37486f" xml:space="preserve">
+    <value>सर्वर ने कोई फ़ोटो नहीं बताई। कुछ भी नहीं बदला गया।</value>
+  </data>
+  <data name="Es_l_uft_bereits_ein_Serverdurchlauf_86742ef4" xml:space="preserve">
+    <value>सर्वर प्रक्रिया पहले से चल रही है।</value>
+  </data>
+  <data name="0_von_1_Aufnahmen_2a211364" xml:space="preserve">
+    <value>{1} में से {0} फ़ोटो</value>
+  </data>
+  <data name="0_geladen_1_waren_aktuell_2_fehlgeschlagen_8862aa70" xml:space="preserve">
+    <value>{0} लोड, {1} पहले से अद्यतन, {2} विफल</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Indexeintr_ge_entfernt_757d7c4c" xml:space="preserve">
+    <value>{0} कैटलॉग प्रविष्टियाँ और {1} अनुक्रमणिका प्रविष्टियाँ हटाई गईं</value>
+  </data>
 </root>

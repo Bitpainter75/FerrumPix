@@ -7882,4 +7882,34 @@
   <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
     <value>Impossibile salvare il file. I dettagli sono nella barra di stato o nel registro diagnostico.</value>
   </data>
+  <data name="XMP_Daten_lesen_29beb159" xml:space="preserve">
+    <value>Lettura dei dati XMP</value>
+  </data>
+  <data name="XmpCore_6_1_867049bb" xml:space="preserve">
+    <value>XmpCore 6.1</value>
+  </data>
+  <data name="Adobe_XMP_2167da4f" xml:space="preserve">
+    <value>Adobe XMP</value>
+  </data>
+  <data name="Aufnahmedaten_vollst_ndig_laden_56ba1ac8" xml:space="preserve">
+    <value>Carica tutti i dati di scatto</value>
+  </data>
+  <data name="Jetzt_laden_13432c80" xml:space="preserve">
+    <value>Carica ora</value>
+  </data>
+  <data name="Der_Server_hat_keine_Aufnahmen_genannt_Es_wurde__6f37486f" xml:space="preserve">
+    <value>Il server non ha indicato alcuna foto. Non è stato modificato nulla.</value>
+  </data>
+  <data name="Es_l_uft_bereits_ein_Serverdurchlauf_86742ef4" xml:space="preserve">
+    <value>È già in corso una scansione del server.</value>
+  </data>
+  <data name="0_von_1_Aufnahmen_2a211364" xml:space="preserve">
+    <value>{0} di {1} foto</value>
+  </data>
+  <data name="0_geladen_1_waren_aktuell_2_fehlgeschlagen_8862aa70" xml:space="preserve">
+    <value>{0} caricate, {1} già aggiornate, {2} non riuscite</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Indexeintr_ge_entfernt_757d7c4c" xml:space="preserve">
+    <value>Rimosse {0} voci di catalogo e {1} voci di indice</value>
+  </data>
 </root>

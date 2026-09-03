@@ -2359,6 +2359,104 @@ Namespace ViewModels
 
         Public ReadOnly Property ClearImmichCacheCommand As ICommand
 
+        ' ── Serverdurchlauf und Aufräumen, je Server ─────────────────────────────────────────────
+        '
+        ' HIER und nicht im Katalog-Abschnitt: der Katalog beschreibt, was FerrumPix ueber die
+        ' EIGENEN Ordner weiss. Was ein Server liefert, gehoert zu diesem Server - wer seine
+        ' Zugangsdaten einstellt, findet daneben auch, was davon lokal liegt und wie man es loswird.
+        '
+        ' DER DURCHLAUF LAEUFT NUR AUF ANSAGE und raeumt NICHTS auf; das Aufraeumen ist ein eigener
+        ' Knopf. Warum beides getrennt ist, steht in ServerIndexRunner.
+        Public ReadOnly Property ScanImmichMetadataCommand As ICommand
+        Public ReadOnly Property ScanNextcloudMetadataCommand As ICommand
+        Public ReadOnly Property CancelServerScanCommand As ICommand
+        Public ReadOnly Property CleanImmichCatalogCommand As ICommand
+        Public ReadOnly Property CleanNextcloudCatalogCommand As ICommand
+
+        Private _serverScanCancellation As System.Threading.CancellationTokenSource
+        Private _serverScanMessage As String = ""
+        Private _serverScanRunning As Boolean = False
+
+        ''' <summary>Der Fortschritt des laufenden Serverdurchlaufs, als fertiger Satz. EIN Text fuer
+        ''' beide Server: es laeuft ohnehin immer nur einer.</summary>
+        Public Property ServerScanMessage As String
+            Get
+                Return _serverScanMessage
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_serverScanMessage, If(value, ""))
+            End Set
+        End Property
+
+        Public Property ServerScanRunning As Boolean
+            Get
+                Return _serverScanRunning
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_serverScanRunning, value)
+            End Set
+        End Property
+
+        ''' <summary>Holt die Einzelheiten aller Aufnahmen eines Servers in den lokalen Index.</summary>
+        Private Async Function RunServerScanAsync(immich As Boolean) As Task
+            If ServerScanRunning Then Return
+            ServerScanRunning = True
+            _serverScanCancellation?.Dispose()
+            _serverScanCancellation = New System.Threading.CancellationTokenSource()
+            Dim token = _serverScanCancellation.Token
+            Try
+                ' Gedrosselt gemeldet: der Lauf meldet nach jeder Aufnahme, und bei zehntausenden
+                ' waere das zehntausend Mal ein Wechsel auf den Bedienfaden.
+                Dim last = 0L
+                Dim melder As New Progress(Of ServerIndexProgress)(
+                    Sub(p)
+                        Dim now = Environment.TickCount64
+                        If p.Done < p.Total AndAlso now - last < 100 Then Return
+                        last = now
+                        ServerScanMessage = String.Format(
+                            LocalizationService.T("{0} von {1} Aufnahmen"), p.Done, p.Total)
+                    End Sub)
+
+                Dim result = If(immich,
+                                Await ServerIndexRunner.RunImmichAsync(melder, token),
+                                Await ServerIndexRunner.RunNextcloudAsync(melder, token))
+
+                If result.Cancelled Then
+                    ServerScanMessage = LocalizationService.T("Abgebrochen")
+                ElseIf result.ServerSilent Then
+                    ' AUSDRUECKLICH als eigener Fall. "0 Aufnahmen" saehe aus wie "alles erledigt",
+                    ' und dann wuerde jemand anschliessend beruhigt aufraeumen.
+                    ServerScanMessage = If(String.IsNullOrWhiteSpace(result.ErrorMessage),
+                                           LocalizationService.T("Der Server hat keine Aufnahmen genannt. Es wurde nichts geändert."),
+                                           result.ErrorMessage)
+                Else
+                    ServerScanMessage = String.Format(
+                        LocalizationService.T("{0} geladen, {1} waren aktuell, {2} fehlgeschlagen"),
+                        result.Indexed, result.Unchanged, result.Failed)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.ServerScan", ex)
+                ServerScanMessage = ex.Message
+            Finally
+                ServerScanRunning = False
+            End Try
+        End Function
+
+        ''' <summary>Entfernt die lokalen Katalogdaten der Bilder EINES Servers und leert seinen
+        ''' Metadaten-Index. Bewusst getrennt vom Durchlauf - siehe
+        ''' LibraryService.DeleteServerCatalogData.</summary>
+        Private Sub CleanServerCatalog(immich As Boolean)
+            Dim removed = LibraryService.Instance.DeleteServerCatalogData(
+                If(immich, "immich://", NextcloudService.PseudoScheme))
+            Dim indexEntries = If(immich,
+                                  ImmichIndexService.Instance.Clear(),
+                                  NextcloudIndexService.Instance.Clear())
+            Dim text = String.Format(
+                LocalizationService.T("{0} Katalogeinträge und {1} Indexeinträge entfernt"),
+                removed, indexEntries)
+            If immich Then ImmichCacheMessage = text Else NextcloudCacheMessage = text
+        End Sub
+
         Public Property ImmichIsTesting As Boolean
             Get
                 Return _immichIsTesting
@@ -2964,6 +3062,11 @@ Namespace ViewModels
                     NextcloudCacheMessage = String.Format(LocalizationService.T("{0} Datei(en) entfernt"), n)
                 End Sub)
             ClearImmichCacheCommand = ReactiveCommand.CreateFromTask(Function() ClearImmichCacheAsync())
+            ScanImmichMetadataCommand = ReactiveCommand.CreateFromTask(Function() RunServerScanAsync(immich:=True))
+            ScanNextcloudMetadataCommand = ReactiveCommand.CreateFromTask(Function() RunServerScanAsync(immich:=False))
+            CancelServerScanCommand = ReactiveCommand.Create(Sub() _serverScanCancellation?.Cancel())
+            CleanImmichCatalogCommand = ReactiveCommand.Create(Sub() CleanServerCatalog(immich:=True))
+            CleanNextcloudCatalogCommand = ReactiveCommand.Create(Sub() CleanServerCatalog(immich:=False))
             ApplyTheme(_themeMode, _accentColor)
             FontScaleService.Apply(_fontSizeOffset)
             LocalizationService.LanguageMode = _languageMode

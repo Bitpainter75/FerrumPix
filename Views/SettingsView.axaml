@@ -1606,11 +1606,30 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Immich-Cache leeren" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Löscht die lokal zwischengespeicherten Immich-Vorschaubilder und den Metadaten-Index. Beides wird bei Bedarf neu geladen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Löscht die lokal zwischengespeicherten Immich-Vorschaubilder. Sie werden bei Bedarf neu geladen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding ImmichCacheMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanImmichCatalogCommand}">Katalogdaten entfernen</Button>
                                 <Button Classes="ghost" Padding="12,7" Command="{Binding ClearImmichCacheCommand}">Cache leeren</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <!-- Der Durchlauf steht NUR hier und laeuft NUR auf diesen Knopf: er
+                             erzeugt bei einem grossen Bestand zehntausende Anfragen gegen einen
+                             fremden Server. Er raeumt nichts auf; dafuer sind die Knoepfe darueber
+                             da (siehe ServerIndexRunner). -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Aufnahmedaten vollständig laden" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Holt Kamera, Objektiv, Brennweite, ISO, Blende und Stichwörter für alle Fotos des Servers, damit die Suche sie auch dort findet, wo Sie noch nicht waren. Läuft nur auf diesen Knopf und ändert auf dem Server nichts." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ServerScanMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CancelServerScanCommand}" IsVisible="{Binding ServerScanRunning}">Abbrechen</Button>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ScanImmichMetadataCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt laden</Button>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -1737,7 +1756,23 @@
                                            Foreground="{DynamicResource FP.Text.Secondary}"
                                            FontSize="{DynamicResource FP.Font.Body}"
                                            VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanNextcloudCatalogCommand}">Katalogdaten entfernen</Button>
                                 <Button Classes="ghost" Padding="12,7" Command="{Binding ClearNextcloudCacheCommand}">Cache leeren</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <!-- Derselbe Durchlauf wie bei Immich, mit denselben Regeln. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Aufnahmedaten vollständig laden" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Holt Stichwörter, Größe und Aufnahmezeit für alle Fotos des Servers, damit die Suche sie auch dort findet, wo Sie noch nicht waren. Läuft nur auf diesen Knopf und ändert auf dem Server nichts." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ServerScanMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CancelServerScanCommand}" IsVisible="{Binding ServerScanRunning}">Abbrechen</Button>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ScanNextcloudMetadataCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt laden</Button>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
