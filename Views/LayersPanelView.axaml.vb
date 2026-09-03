@@ -126,6 +126,10 @@ Namespace Views
             If vm Is Nothing OrElse vm.HasSelectedAnnotation OrElse vm.HasSelectedAdjustmentLayer OrElse
                vm.IsEditingLayerMask OrElse vm.HasActiveSelection OrElse
                Not String.IsNullOrEmpty(vm.PendingInsertKind) Then Return
+            ' Beim Abwählen im Ebenenpanel bleibt ein aktives Bild-Geometriewerkzeug aktiv.
+            ' Andernfalls wechselte ein Leerraumklick unaufgefordert in die Objekt-Auswahl.
+            If vm.CurrentTool = EditorTool.Transform OrElse vm.CurrentTool = EditorTool.Resize OrElse
+               vm.CurrentTool = EditorTool.Warp Then Return
             vm.CurrentTool = EditorTool.Selection
             vm.SelectionMode = "Move"
         End Sub

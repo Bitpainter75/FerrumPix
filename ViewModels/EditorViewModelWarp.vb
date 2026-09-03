@@ -2475,6 +2475,7 @@ Namespace ViewModels
             If Not HasDocument Then Return
 
             PushUndo(CombineHistoryLabel("Verzerren", "Verformen"))
+            FinalizeEditableTransformBeforeNextGeometry()
             ' Die OBJEKTE gehen mit: sie bekommen die Verzerrung als eigene Angabe und bleiben damit
             ' aenderbar - Text laesst sich weiter tippen. Das Bild darunter braucht das nicht mehr,
             ' seine Verzerrung steht ab jetzt im Rezept.

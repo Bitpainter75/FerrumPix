@@ -358,6 +358,11 @@ Namespace ViewModels
         Private _straightenExpandCanvas As Boolean = False
         Private _flipH As Boolean = False
         Private _flipV As Boolean = False
+        ' Der letzte Transform-Schritt eines geladenen FPX kann wieder direkt im Drehwerkzeug
+        ' bearbeitet werden. Er bleibt bis zum Anwenden in der Liste, wird für Vorschau und Speichern
+        ' aber durch die Reglerwerte ersetzt. So ist „zurück auf 0“ eine Ersetzung, keine zweite
+        ' Drehung mit nochmals interpolierten bzw. transparenten Ecken.
+        Private _editingCommittedTransformTail As Boolean = False
         Private _cropLeft As Double = 0
         Private _cropTop As Double = 0
         Private _cropRight As Double = 0
@@ -10975,6 +10980,79 @@ Namespace ViewModels
 
         Private Sub ResetCommittedTransform()
             RemoveGeometryOperations("transform")
+            _editingCommittedTransformTail = False
+        End Sub
+
+        ''' <summary>Stellt den letzten, noch nicht von einer anderen Geometrie gefolgten
+        ''' Transform-Schritt eines Rezepts als editierbare Drehung wieder her.</summary>
+        Private Sub RestoreEditableTransformTail()
+            _editingCommittedTransformTail = False
+            If _geometryOperations.Count = 0 Then Return
+            Dim tail = _geometryOperations(_geometryOperations.Count - 1)
+            If tail?.Adjustments Is Nothing OrElse
+               Not String.Equals(tail.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Return
+
+            Dim transform = tail.Adjustments
+            _rotationDegrees = transform.RotationDegrees
+            _straightenDegrees = transform.StraightenDegrees
+            _straightenExpandCanvas = transform.StraightenExpandCanvas
+            _flipH = transform.FlipHorizontal
+            _flipV = transform.FlipVertical
+            _appliedRotationDegrees = _rotationDegrees
+            _appliedStraightenDegrees = _straightenDegrees
+            _appliedStraightenExpandCanvas = _straightenExpandCanvas
+            _appliedFlipH = _flipH
+            _appliedFlipV = _flipV
+            _editingCommittedTransformTail = True
+        End Sub
+
+        ''' <summary>Entfernt aus einer Rezeptkopie den Schritt, den die offenen Regler gerade
+        ''' ersetzen. Der gespeicherte Stapel selbst bleibt bis „Anwenden“ unverändert.</summary>
+        Private Sub RemoveEditableTransformTail(result As List(Of GeometryOperation))
+            If Not _editingCommittedTransformTail OrElse result Is Nothing OrElse result.Count = 0 Then Return
+            Dim tail = result(result.Count - 1)
+            If String.Equals(tail?.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then result.RemoveAt(result.Count - 1)
+        End Sub
+
+        ''' <summary>Übernimmt die aktuelle Drehbedienung. Bei einem geladenen Transform ersetzt
+        ''' sie dessen letzten Schritt statt eine zweite Bilddrehung dahinterzuhängen.</summary>
+        Private Sub CommitOpenTransform()
+            If _editingCommittedTransformTail AndAlso _geometryOperations.Count > 0 AndAlso
+               String.Equals(_geometryOperations(_geometryOperations.Count - 1)?.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then
+                _geometryOperations.RemoveAt(_geometryOperations.Count - 1)
+            End If
+            _editingCommittedTransformTail = False
+            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse _flipH OrElse _flipV Then
+                _geometryOperations.Add(New GeometryOperation With {
+                    .Kind = "transform",
+                    .Adjustments = New ImageAdjustments With {
+                        .RotationDegrees = _rotationDegrees,
+                        .StraightenDegrees = CSng(_straightenDegrees),
+                        .StraightenExpandCanvas = _straightenExpandCanvas,
+                        .FlipHorizontal = _flipH,
+                        .FlipVertical = _flipV}})
+            End If
+            _rotationDegrees = 0 : _straightenDegrees = 0
+            _flipH = False : _flipV = False
+            _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
+            _appliedFlipH = False : _appliedFlipV = False
+        End Sub
+
+        ''' <summary>Schließt die beim FPX-Laden wieder editierbar gemachte Enddrehung, bevor ein
+        ''' anderer Geometrieschritt dahinterkommt. Unverändert bleibt ihr vorhandener Schritt
+        ''' stehen; verändert ersetzt <see cref="CommitOpenTransform"/> ihn. In beiden Fällen dürfen
+        ''' die Regler danach nicht zusätzlich als offener Schritt angehängt werden.</summary>
+        Private Sub FinalizeEditableTransformBeforeNextGeometry()
+            If Not _editingCommittedTransformTail Then Return
+            If HasRotateChanges Then
+                CommitOpenTransform()
+                Return
+            End If
+            _editingCommittedTransformTail = False
+            _rotationDegrees = 0 : _straightenDegrees = 0
+            _flipH = False : _flipV = False
+            _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
+            _appliedFlipH = False : _appliedFlipV = False
         End Sub
 
         Private Function HasCommittedPerspective() As Boolean
@@ -11026,6 +11104,7 @@ Namespace ViewModels
             ' Laden verworfen (FpxService.DropRecipeGeometryFields), es gibt also nichts mehr, was
             ' doppelt zaehlen koennte - und ohne das Anhaengen hing die Vorschau eines frischen
             ' Bildes am schrittlosen Feldweg, den es nicht mehr geben soll.
+            RemoveEditableTransformTail(result)
             AppendOpenGeometryOperations(result)
             Return result
         End Function
@@ -11071,6 +11150,7 @@ Namespace ViewModels
         ''' Basisbild unter dem Rahmen zu sehen ist.</summary>
         Private Function GeometryOperationsForFpxSave() As List(Of GeometryOperation)
             Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
+            RemoveEditableTransformTail(result)
             AppendOpenGeometryOperations(result)
             Return result
         End Function
@@ -16233,6 +16313,7 @@ Namespace ViewModels
             If Not HasCropChanges Then Return
             PushUndo(LocalizationService.T("Zugeschnitten"))
             ClearActiveSelectionForGeometry()
+            FinalizeEditableTransformBeforeNextGeometry()
 
             ' Der Rahmen liegt auf der aktuellen Vorschau. Enthält diese noch eine offene
             ' Drehung/Begradigung, muss sie VOR dem neuen Crop-Schritt Teil der Kette werden:
@@ -16242,19 +16323,8 @@ Namespace ViewModels
             ' bezeichneten dann unterschiedliche Bildbereiche. Das Übernehmen gehört bewusst zum
             ' selben Undo-Schritt wie das Zuschneiden.
             If HasRotateChanges Then
-                _geometryOperations.Add(New GeometryOperation With {
-                    .Kind = "transform",
-                    .Adjustments = New ImageAdjustments With {
-                        .RotationDegrees = _rotationDegrees,
-                        .StraightenDegrees = CSng(_straightenDegrees),
-                        .StraightenExpandCanvas = _straightenExpandCanvas,
-                        .FlipHorizontal = _flipH,
-                        .FlipVertical = _flipV}})
+                CommitOpenTransform()
                 ' Der Haken bleibt stehen - siehe ApplyRotateAsync.
-                _rotationDegrees = 0 : _straightenDegrees = 0
-                _flipH = False : _flipV = False
-                _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
-                _appliedFlipH = False : _appliedFlipV = False
                 Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             End If
 
@@ -16339,6 +16409,7 @@ Namespace ViewModels
             If Not HasImageResizeChanges Then Return
             PushUndo(LocalizationService.T("Bildgröße geändert"))
             ClearActiveSelectionForGeometry()
+            FinalizeEditableTransformBeforeNextGeometry()
             _geometryOperations.Add(New GeometryOperation With {.Kind = "resize", .Adjustments = New ImageAdjustments With {
                 .ResizeWidth = _resizeWidth, .ResizeHeight = _resizeHeight,
                 .LockResizeAspect = _lockResizeAspect, .ResizeInterpolation = _resizeInterpolation}})
@@ -16354,6 +16425,7 @@ Namespace ViewModels
             If Not HasCanvasSizeChanges Then Return
             PushUndo(LocalizationService.T("Leinwandgröße geändert"))
             ClearActiveSelectionForGeometry()
+            FinalizeEditableTransformBeforeNextGeometry()
             _geometryOperations.Add(New GeometryOperation With {.Kind = "canvas", .Adjustments = New ImageAdjustments With {
                 .CanvasWidth = _canvasWidth, .CanvasHeight = _canvasHeight, .CanvasAnchor = _canvasAnchor,
                 .CanvasBackgroundColor = _canvasBackgroundColor}})
@@ -16375,23 +16447,10 @@ Namespace ViewModels
             If Not HasRotateChanges Then Return
             PushUndo(LocalizationService.T("Drehen"))
             ClearActiveSelectionForGeometry()
-            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
-               _flipH OrElse _flipV Then
-                _geometryOperations.Add(New GeometryOperation With {
-                    .Kind = "transform",
-                    .Adjustments = New ImageAdjustments With {
-                    .RotationDegrees = _rotationDegrees,
-                    .StraightenDegrees = CSng(_straightenDegrees),
-                    .StraightenExpandCanvas = _straightenExpandCanvas,
-                    .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
-            End If
+            CommitOpenTransform()
             ' Der Winkel ist verbraucht, der HAKEN NICHT: er sagt, WIE gedreht wird, und gilt
             ' weiter fuer die naechste Drehung. Ihn hier zu leeren war der eigentliche Fehler -
             ' wer ihn setzte und zweimal drehte, drehte beim zweiten Mal ohne ihn.
-            _rotationDegrees = 0 : _straightenDegrees = 0
-            _flipH = False : _flipV = False
-            _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
-            _appliedFlipH = False : _appliedFlipV = False
             Me.RaisePropertyChanged(NameOf(StraightenDegrees))
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
@@ -16410,6 +16469,7 @@ Namespace ViewModels
             If Not HasPerspectiveChanges Then Return
             PushUndo(LocalizationService.T("Perspektive"))
             ClearActiveSelectionForGeometry()
+            FinalizeEditableTransformBeforeNextGeometry()
             ' OBJEKTE GEHEN MIT. Die Perspektive ist projektiv und laesst sich nicht als Rechteck
             ' mit Drehwinkel schreiben - anders als Beschnitt, Vierteldrehung und Ausrichten, denen
             ' die Objektabbildung direkt folgt. Sie wird deshalb beim Bestaetigen in das EIGENE
@@ -18638,6 +18698,7 @@ Namespace ViewModels
             _appliedStraightenExpandCanvas = adj.StraightenExpandCanvas
             _appliedFlipH = adj.FlipHorizontal
             _appliedFlipV = adj.FlipVertical
+            RestoreEditableTransformTail()
             ' Ein geladener Beschnitt ist IMMER ein bestaetigter - er stand ja schon im Rezept. Der
             ' Rahmen startet leer; wo das ganze Bild sichtbar bleibt, legt ihn das Betreten des
             ' Werkzeugs auf den bestaetigten Ausschnitt (SyncCropFrameToApplied).
@@ -19025,6 +19086,7 @@ Namespace ViewModels
             ' SCHRITT statt in den Pixeln - ohne das Leeren der Liste ueberlebte sie ein
             ' "Zuruecksetzen" und wanderte beim Oeffnen des naechsten Bildes sogar mit.
             _geometryOperations.Clear()
+            _editingCommittedTransformTail = False
             RaiseImageWarpChanged()
             _whiteBalance = "Wie Aufnahme"
             _calibrationRedHue = 0
@@ -19918,6 +19980,8 @@ Namespace ViewModels
             Dim x = Math.Max(-width + 1, Math.Min(100 - 1, xPercent))
             Dim y = Math.Max(-height + 1, Math.Min(100 - 1, yPercent))
             Dim storedRect = DisplayAnnotationRectToStoredPercent("Image", x, y, width, height)
+            ' Ein neu eingefügtes Bild startet immer neutral. Insbesondere darf ein zuvor
+            ' gedrehtes Objekt seinen Winkel nicht als Einfüge-Vorgabe hinterlassen.
             Dim annotation = New ImageAnnotation With {
                 .Kind = "Image",
                 .Text = "",
@@ -19934,9 +19998,9 @@ Namespace ViewModels
                 .Opacity = CSng(_annotationOpacity),
                 .BlendMode = _annotationBlendMode,
                 .BlendIncludesStroke = _annotationBlendIncludesStroke,
-                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("Image", _annotationRotation)),
-                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(_annotationFlipH),
-                .FlipVertical = DisplayAnnotationFlipVerticalToStored(_annotationFlipV),
+                .RotationDegrees = CSng(DisplayAnnotationRotationToStored("Image", 0)),
+                .FlipHorizontal = DisplayAnnotationFlipHorizontalToStored(False),
+                .FlipVertical = DisplayAnnotationFlipVerticalToStored(False),
                 .IsVisible = _annotationIsVisible
             }
             HardenAnnotationBuffersForNewObject()

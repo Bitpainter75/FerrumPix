@@ -2576,6 +2576,11 @@ Namespace Views
             If vm Is Nothing OrElse vm.HasSelectedAnnotation OrElse vm.HasSelectedAdjustmentLayer OrElse
                vm.IsEditingLayerMask OrElse vm.HasActiveSelection OrElse
                Not String.IsNullOrEmpty(vm.PendingInsertKind) Then Return
+            ' Diese Werkzeuge bearbeiten das BILD, nicht die gerade markierte Ebene. Ein Klick ins
+            ' Leere beendet daher nur die Ebenenauswahl; der Arbeitskontext (Crop/Drehen,
+            ' Bildgröße oder Verzerren) muss sichtbar und bedienbar bleiben.
+            If vm.CurrentTool = EditorTool.Transform OrElse vm.CurrentTool = EditorTool.Resize OrElse
+               vm.CurrentTool = EditorTool.Warp Then Return
             vm.CurrentTool = EditorTool.Selection
             vm.SelectionMode = "Move"
         End Sub
