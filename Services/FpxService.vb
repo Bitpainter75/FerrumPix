@@ -113,7 +113,11 @@ Namespace Services
                 Case "warp" : names = warp
                 Case "resize" : names = resize
                 Case "canvas" : names = canvas
-                Case Else : names = String.Join("|", {crop, transform, perspective, warp, resize, canvas})
+                Case Else
+                    ' Unbekannte Art: lieber alle Geometriefelder mitschreiben als still welche zu
+                    ' verlieren. Ein Sammelschritt "legacy" kommt hier nicht mehr vor, die Zeile ist
+                    ' nur noch die Vorsicht gegenueber einer Art, die dieser Stand nicht kennt.
+                    names = String.Join("|", {crop, transform, perspective, warp, resize, canvas})
             End Select
             Return names.Split("|"c)
         End Function

@@ -122,20 +122,9 @@ Namespace Services
                 Case "canvas"
                     result.CanvasWidth = source.CanvasWidth : result.CanvasHeight = source.CanvasHeight
                     result.CanvasAnchor = source.CanvasAnchor : result.CanvasBackgroundColor = source.CanvasBackgroundColor
-                Case Else ' legacy: die frühere feste Kette braucht alle Geometriefelder, aber sonst nichts.
-                    result.CropLeftPercent = source.CropLeftPercent : result.CropTopPercent = source.CropTopPercent
-                    result.CropRightPercent = source.CropRightPercent : result.CropBottomPercent = source.CropBottomPercent
-                    result.RotationDegrees = source.RotationDegrees : result.StraightenDegrees = source.StraightenDegrees
-                    result.StraightenExpandCanvas = source.StraightenExpandCanvas
-                    result.FlipHorizontal = source.FlipHorizontal : result.FlipVertical = source.FlipVertical
-                    CopyPerspective(source, result)
-                    result.ImageWarp = source.ImageWarp?.Clone()
-                    result.ResizeWidth = source.ResizeWidth : result.ResizeHeight = source.ResizeHeight
-                    result.ResizeScalePercent = source.ResizeScalePercent : result.ResizeFitInsideBox = source.ResizeFitInsideBox
-                    result.LockResizeAspect = source.LockResizeAspect : result.NoResizeUpscale = source.NoResizeUpscale
-                    result.ResizeInterpolation = source.ResizeInterpolation
-                    result.CanvasWidth = source.CanvasWidth : result.CanvasHeight = source.CanvasHeight
-                    result.CanvasAnchor = source.CanvasAnchor : result.CanvasBackgroundColor = source.CanvasBackgroundColor
+                    ' Eine unbekannte Art bekommt kein einziges Feld. Hier stand frueher der
+                    ' Sammelfall "legacy", der alle Geometriefelder auf einmal mitnahm; ein Schritt
+                    ' traegt heute genau eine Sache.
             End Select
             Return result
         End Function

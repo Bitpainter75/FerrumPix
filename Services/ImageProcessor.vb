@@ -3301,8 +3301,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End Function))
         End Function
 
-        ' Persistierte Schritte. Alte Feld-Rezepte werden beim Laden im Editor in eine explizite
-        ' "legacy"-Stufe überführt; ohne diese Liste bleibt der historische feste Pfad aktiv.
+        ' Persistierte Schritte - die EINZIGE Quelle der Geometrie. Eine leere Liste heisst keine
+        ' Geometrie; die alten oberen Felder werden von keiner Stufe mehr gelesen.
         ' Leere Liste EINMAL statt je Aufruf: die Punktabbildung fragt hier fuer JEDEN Punkt an, und
         ' bei einer projizierten Maske sind das Millionen. Eine neue Liste je Punkt war reiner
         ' Speicherdurchsatz - der haeufigste Fall (kein einziger Schritt) kommt jetzt ohne aus.
@@ -4302,9 +4302,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' mitmachen muessen, und ein verankertes Wasserzeichen speichert in X/Y ueberhaupt
         ''' keinen Ort, sondern den Abstand zu seinem Anker. All das steht bereits in
         ''' <see cref="TransformAnnotationThroughGeometryFields"/>; sie je Schritt aufzurufen
-        ''' spart die zweite Fassung derselben Regeln - und ein migriertes Alt-Rezept
-        ''' (ein einziger Schritt der Art "legacy") laeuft damit ueber genau denselben Code wie
-        ''' vor der Schrittfolge.</summary>
+        ''' spart die zweite Fassung derselben Regeln. Ohne Schritte laeuft sie durch, ohne etwas
+        ''' zu tun.</summary>
         Private Shared Function TransformAnnotationThroughGeometryPipeline(annotation As ImageAnnotation, adj As ImageAdjustments,
                                                                             outputWidth As Integer, outputHeight As Integer) As ImageAnnotation
             Dim steps = GeometrySteps(adj)

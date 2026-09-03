@@ -10925,8 +10925,7 @@ Namespace ViewModels
                 .ResizeWidth = _resizeWidth, .ResizeHeight = _resizeHeight,
                 .CanvasWidth = _canvasWidth, .CanvasHeight = _canvasHeight,
                 .CanvasAnchor = _canvasAnchor,
-                .GeometryOperations = GeometryOperationsForRender(forPreview:=True),
-                .ImageWarp = _imageWarp
+                .GeometryOperations = GeometryOperationsForRender(forPreview:=True)
             }
         End Function
 
@@ -10937,17 +10936,7 @@ Namespace ViewModels
             Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
             If _currentTool = EditorTool.Transform AndAlso ShowsFullImageWhileCropping Then
                 Dim cropIndex = LastCropBearingGeometryOperationIndex()
-                If cropIndex >= 0 Then
-                    If String.Equals(result(cropIndex).Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then
-                        ' Ein migriertes Alt-Rezept ist eine zusammenhängende feste Kette. Für die
-                        ' Bearbeitung des Crops wird darin nur dessen Anteil neutralisiert.
-                        Dim crop = result(cropIndex).Adjustments
-                        crop.CropLeftPercent = 0 : crop.CropTopPercent = 0
-                        crop.CropRightPercent = 0 : crop.CropBottomPercent = 0
-                    Else
-                        result.RemoveAt(cropIndex)
-                    End If
-                End If
+                If cropIndex >= 0 Then result.RemoveAt(cropIndex)
             End If
             Return result
         End Function
@@ -10976,82 +10965,40 @@ Namespace ViewModels
             Return LastGeometryOperationIndex(kind) >= 0
         End Function
 
+        ' Jede Art wird durch das Entfernen ihrer Schritte zurueckgenommen - ein Schritt traegt genau
+        ' eine Sache. Frueher musste zusaetzlich in einem Sammelschritt der Art "legacy" das
+        ' passende Feld genullt werden; den gibt es nicht mehr.
+
         Private Sub ResetCommittedCrop()
             RemoveGeometryOperations("crop")
-            For Each operation In _geometryOperations
-                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
-                    operation.Adjustments.CropLeftPercent = 0 : operation.Adjustments.CropTopPercent = 0
-                    operation.Adjustments.CropRightPercent = 0 : operation.Adjustments.CropBottomPercent = 0
-                End If
-            Next
         End Sub
 
         Private Sub ResetCommittedTransform()
             RemoveGeometryOperations("transform")
-            For Each operation In _geometryOperations
-                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
-                    Dim a = operation.Adjustments
-                    a.RotationDegrees = 0 : a.StraightenDegrees = 0 : a.StraightenExpandCanvas = False
-                    a.FlipHorizontal = False : a.FlipVertical = False
-                End If
-            Next
         End Sub
 
         Private Function HasCommittedPerspective() As Boolean
-            Return HasGeometryOperation("perspective") OrElse _geometryOperations.Any(
-                Function(operation) String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso
-                                    operation.Adjustments IsNot Nothing AndAlso
-                                    (Math.Abs(operation.Adjustments.PerspectiveHorizontal) > 0.0001 OrElse
-                                     Math.Abs(operation.Adjustments.PerspectiveVertical) > 0.0001 OrElse
-                                     Math.Abs(operation.Adjustments.PerspectiveAspect) > 0.0001 OrElse
-                                     Math.Abs(operation.Adjustments.PerspectiveScale) > 0.0001 OrElse
-                                     operation.Adjustments.PerspectiveCorner0X <> 0 OrElse operation.Adjustments.PerspectiveCorner0Y <> 0 OrElse
-                                     operation.Adjustments.PerspectiveCorner1X <> 0 OrElse operation.Adjustments.PerspectiveCorner1Y <> 0 OrElse
-                                     operation.Adjustments.PerspectiveCorner2X <> 0 OrElse operation.Adjustments.PerspectiveCorner2Y <> 0 OrElse
-                                     operation.Adjustments.PerspectiveCorner3X <> 0 OrElse operation.Adjustments.PerspectiveCorner3Y <> 0))
+            Return HasGeometryOperation("perspective")
         End Function
 
         Private Sub ResetCommittedPerspective()
             RemoveGeometryOperations("perspective")
-            For Each operation In _geometryOperations
-                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
-                    Dim a = operation.Adjustments
-                    a.PerspectiveHorizontal = 0 : a.PerspectiveVertical = 0 : a.PerspectiveAspect = 0 : a.PerspectiveScale = 0
-                    a.PerspectiveCorner0X = 0 : a.PerspectiveCorner0Y = 0 : a.PerspectiveCorner1X = 0 : a.PerspectiveCorner1Y = 0
-                    a.PerspectiveCorner2X = 0 : a.PerspectiveCorner2Y = 0 : a.PerspectiveCorner3X = 0 : a.PerspectiveCorner3Y = 0
-                End If
-            Next
         End Sub
 
         Private Function HasCommittedImageWarp() As Boolean
-            Return HasGeometryOperation("warp") OrElse _geometryOperations.Any(
-                Function(operation) String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso
-                                    operation.Adjustments?.ImageWarp IsNot Nothing AndAlso Not operation.Adjustments.ImageWarp.IsEmpty)
+            Return HasGeometryOperation("warp")
         End Function
 
         Private Sub ResetCommittedImageWarp()
             RemoveGeometryOperations("warp")
-            For Each operation In _geometryOperations
-                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then operation.Adjustments.ImageWarp = Nothing
-            Next
         End Sub
 
         Private Sub ResetCommittedResize()
             RemoveGeometryOperations("resize")
-            For Each operation In _geometryOperations
-                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
-                    operation.Adjustments.ResizeWidth = 0 : operation.Adjustments.ResizeHeight = 0 : operation.Adjustments.ResizeScalePercent = 0
-                End If
-            Next
         End Sub
 
         Private Sub ResetCommittedCanvas()
             RemoveGeometryOperations("canvas")
-            For Each operation In _geometryOperations
-                If String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) AndAlso operation.Adjustments IsNot Nothing Then
-                    operation.Adjustments.CanvasWidth = 0 : operation.Adjustments.CanvasHeight = 0
-                End If
-            Next
         End Sub
 
         Private Function AppliedCropValues() As (Left As Double, Top As Double, Right As Double, Bottom As Double)
@@ -11064,12 +11011,7 @@ Namespace ViewModels
         End Function
 
         Private Function LastCropBearingGeometryOperationIndex() As Integer
-            For index = _geometryOperations.Count - 1 To 0 Step -1
-                Dim operation = _geometryOperations(index)
-                If String.Equals(operation?.Kind, "crop", StringComparison.OrdinalIgnoreCase) OrElse
-                   String.Equals(operation?.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Return index
-            Next
-            Return -1
+            Return LastGeometryOperationIndex("crop")
         End Function
 
         ''' <summary>Bestätigte Schritte plus den momentan offenen Transform-Schritt für die
@@ -11224,8 +11166,7 @@ Namespace ViewModels
             End If
             For Each operation In steps
                 If operation?.Adjustments Is Nothing Then Continue For
-                If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
-                   Not String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Continue For
+                If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
                 Dim a = operation.Adjustments
                 Dim mirrored = flipH Xor flipV
                 rotation += If(mirrored, -a.RotationDegrees, a.RotationDegrees)
@@ -16348,15 +16289,7 @@ Namespace ViewModels
             If existingCropIndex >= 0 Then
                 ' Der Rahmen bearbeitet im Bündel den bestehenden Schritt, statt einen zweiten
                 ' Zuschnitt hinter ihn zu hängen. Genau dadurch bleibt der Ausschnitt aufziehbar.
-                If String.Equals(_geometryOperations(existingCropIndex).Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then
-                    Dim legacy = _geometryOperations(existingCropIndex).Adjustments
-                    legacy.CropLeftPercent = cropOperation.Adjustments.CropLeftPercent
-                    legacy.CropTopPercent = cropOperation.Adjustments.CropTopPercent
-                    legacy.CropRightPercent = cropOperation.Adjustments.CropRightPercent
-                    legacy.CropBottomPercent = cropOperation.Adjustments.CropBottomPercent
-                Else
-                    _geometryOperations(existingCropIndex) = cropOperation
-                End If
+                _geometryOperations(existingCropIndex) = cropOperation
             Else
                 _geometryOperations.Add(cropOperation)
             End If
@@ -17477,7 +17410,6 @@ Namespace ViewModels
                 .PerspectiveCorner2X = CSng(_perspectiveCorners(4)), .PerspectiveCorner2Y = CSng(_perspectiveCorners(5)),
                 .PerspectiveCorner3X = CSng(_perspectiveCorners(6)), .PerspectiveCorner3Y = CSng(_perspectiveCorners(7)),
                 .PerspectiveScale = CSng(_perspectiveScale),
-                .ImageWarp = _imageWarp?.Clone(),
                 .LensModel = _lensModel,
                 .LensDistortionAmount = CSng(_lensDistortionAmount),
                 .LensTcaAmount = CSng(_lensTcaAmount),
@@ -18678,7 +18610,7 @@ Namespace ViewModels
             _perspectiveCorners(2) = adj.PerspectiveCorner1X : _perspectiveCorners(3) = adj.PerspectiveCorner1Y
             _perspectiveCorners(4) = adj.PerspectiveCorner2X : _perspectiveCorners(5) = adj.PerspectiveCorner2Y
             _perspectiveCorners(6) = adj.PerspectiveCorner3X : _perspectiveCorners(7) = adj.PerspectiveCorner3Y
-            _imageWarp = NormalizeImageWarpSteps(adj.ImageWarp?.Clone())
+            ' Die Verzerrung des Bildes steht in Schritten; ein oberes Feld gibt es nicht mehr.
             RaiseImageWarpChanged()
             _straightenDegrees = adj.StraightenDegrees
             _straightenExpandCanvas = adj.StraightenExpandCanvas
@@ -19072,10 +19004,9 @@ Namespace ViewModels
             _perspectiveAspect = 0
             _perspectiveScale = 0
             Array.Clear(_perspectiveCorners, 0, _perspectiveCorners.Length)
-            ' Die Rasterverzerrung gehoert genauso dazu. Sie steht seit dem Rezept-Umbau in einem
-            ' EIGENEN Feld statt in den Pixeln - ohne diese Zeile ueberlebte sie ein
+            ' Die Rasterverzerrung gehoert genauso dazu. Sie steht seit dem Rezept-Umbau als eigener
+            ' SCHRITT statt in den Pixeln - ohne das Leeren der Liste ueberlebte sie ein
             ' "Zuruecksetzen" und wanderte beim Oeffnen des naechsten Bildes sogar mit.
-            _imageWarp = Nothing
             _geometryOperations.Clear()
             RaiseImageWarpChanged()
             _whiteBalance = "Wie Aufnahme"
@@ -22615,7 +22546,6 @@ Namespace ViewModels
                     ' Transformieren-Werkzeug und duerfen hier nicht angefasst werden.
                     ResetCommittedImageWarp()
                     ResetCommittedPerspective()
-                    _imageWarp = Nothing
                     RaiseImageWarpChanged()
                     DisposeGridPreview()
                     DisposeLinePreview()

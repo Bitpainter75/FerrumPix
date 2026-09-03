@@ -240,13 +240,13 @@ Namespace Services
                 ' vor ihm eine ungerade Zahl von Spiegelungen steht. Blosses Aufsummieren gab
                 ' "spiegeln, dann 90 Grad" dieselbe Zahl wie "90 Grad, dann spiegeln", und die
                 ' Kachel lag danach quer.
-                degrees = adjustments.RotationDegrees
-                Dim flipH = adjustments.FlipHorizontal, flipV = adjustments.FlipVertical
+                ' Die oberen Felder zaehlen nicht mehr mit: sie werden beim Laden geraeumt
+                ' (FpxService), die Drehung steht ausschliesslich in den Schritten.
+                Dim flipH = False, flipV = False
                 If adjustments.GeometryOperations IsNot Nothing Then
                     For Each operation In adjustments.GeometryOperations
                         If operation Is Nothing OrElse operation.Adjustments Is Nothing Then Continue For
-                        If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) AndAlso
-                           Not String.Equals(operation.Kind, "legacy", StringComparison.OrdinalIgnoreCase) Then Continue For
+                        If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
                         Dim a = operation.Adjustments
                         degrees += If(flipH Xor flipV, -a.RotationDegrees, a.RotationDegrees)
                         flipH = flipH Xor a.FlipHorizontal

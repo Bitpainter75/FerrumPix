@@ -2513,30 +2513,22 @@ Namespace ViewModels
         ' das neue Feld. Mit drei getrennten Arten muesste man fuer jede Paarung ueberlegen, was ihre
         ' Verkettung ist.
 
-        Private _imageWarp As ObjectWarp = Nothing
-
-        ''' <summary>Traegt das Bild ein VERZERRUNGSRASTER im Rezept (Gitter, Linien, Verformen)?</summary>
-        Public ReadOnly Property HasImageWarp As Boolean
-            Get
-                Return _imageWarp IsNot Nothing AndAlso Not _imageWarp.IsEmpty
-            End Get
-        End Property
-
         ''' <summary>Traegt das Bild IRGENDEINE Verzerrung - Raster ODER Perspektive?
         '''
         ''' Der Knopf zum Zuruecknehmen haengt daran und nicht am Raster allein. Die Perspektive war
         ''' sonst nur ueber den kleinen Knopf in IHRER Gruppe erreichbar, und die ist ausgeblendet,
         ''' sobald ein anderer Modus gewaehlt ist: eine gekippte Perspektive liess sich damit nicht
-        ''' mehr zuruecknehmen, ohne erst wieder in den Perspektive-Modus zu wechseln.</summary>
+        ''' mehr zuruecknehmen, ohne erst wieder in den Perspektive-Modus zu wechseln.
+        '''
+        ''' Ein oberes Feld gibt es nicht mehr: eine bestaetigte Verzerrung ist ein Schritt, eine
+        ''' offene steht in den Perspektivreglern.</summary>
         Public ReadOnly Property HasAnyImageWarp As Boolean
             Get
-                Return HasImageWarp OrElse HasPerspectiveChanges OrElse
-                       HasCommittedImageWarp() OrElse HasCommittedPerspective()
+                Return HasPerspectiveChanges OrElse HasCommittedImageWarp() OrElse HasCommittedPerspective()
             End Get
         End Property
 
         Private Sub RaiseImageWarpChanged()
-            Me.RaisePropertyChanged(NameOf(HasImageWarp))
             Me.RaisePropertyChanged(NameOf(HasAnyImageWarp))
         End Sub
 
@@ -2596,32 +2588,6 @@ Namespace ViewModels
                 .Kind = "Gitter", .Columns = steps, .Rows = steps, .Nodes = node}
         End Function
 
-        ''' <summary>Hebt ältere Rezept-Meshes beim Öffnen auf die einheitliche 48×48-Auflösung.
-        ''' Die Stützstellen werden über dieselbe Dreiecksabbildung ermittelt; bei Teilern von 48
-        ''' (insbesondere den früheren 4, 12 und 24) bleibt die bestehende Verformung dabei exakt
-        ''' erhalten, der Export wertet sie anschließend aber überall gleich fein aus.</summary>
-        Private Shared Function NormalizeImageWarpSteps(warp As ObjectWarp) As ObjectWarp
-            If warp Is Nothing OrElse warp.IsEmpty OrElse warp.Kind <> "Gitter" OrElse
-               (warp.Columns = MaxImageWarpSteps AndAlso warp.Rows = MaxImageWarpSteps) Then Return warp
-
-            Dim normalized = warp.Clone()
-            normalized.Columns = MaxImageWarpSteps
-            normalized.Rows = MaxImageWarpSteps
-            Dim node((MaxImageWarpSteps + 1) * (MaxImageWarpSteps + 1) * 2 - 1) As Double
-            For rowIdx = 0 To MaxImageWarpSteps
-                For colIdx = 0 To MaxImageWarpSteps
-                    Dim i = (rowIdx * (MaxImageWarpSteps + 1) + colIdx) * 2
-                    Dim p = ExistingWarp(warp,
-                                         colIdx / CDbl(MaxImageWarpSteps) * 100.0,
-                                         rowIdx / CDbl(MaxImageWarpSteps) * 100.0)
-                    node(i) = p.X
-                    node(i + 1) = p.Y
-                Next
-            Next
-            normalized.Nodes = node
-            Return normalized
-        End Function
-
         ''' <summary>Obergrenze der Rasterfeinheit im Rezept. Die Linienverzerrung wertet ihr Feld
         ''' mit 48 Schritten aus; so fein gespeichert kostet jede Ruecksuche (Overlays, Pinsel,
         ''' Retusche) das Vierfache, ohne dass man den Unterschied saehe.</summary>
@@ -2638,7 +2604,6 @@ Namespace ViewModels
             PushUndo(ResetHistoryLabel("Verzerren"))
             ResetCommittedImageWarp()
             ResetCommittedPerspective()
-            _imageWarp = Nothing
             RaiseImageWarpChanged()
             ' Eine stehende Vorschau MUSS mit weg. Sie liegt ueber dem Bild und zeigte sonst den
             ' alten Stand weiter, waehrend das Bild darunter ausgeblendet ist - "zurueckgenommen"
