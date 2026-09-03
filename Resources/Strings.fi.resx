@@ -7907,4 +7907,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>Ottaa käyttöön kosketuslevyeleet: zoomaa katselimessa kahdella sormella, selaa pyyhkäisemällä vaakasuunnassa ja panoroi suurennettua kuvaa vetämällä. Katselimessa SHIFT+veto valitsee rajauksen. Hiiren käyttö pysyy ennallaan, kun tila ei ole käytössä.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>Tämän kansion uusi sijainti</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>Tämän kansion uusi sijainti</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>{0} luettelomerkintää ja {1} pienoiskuvaa siirretty</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>Tallennettavaa kuvaa ei ole avattu.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>Tiedostoa ei voitu tallentaa. Tiedot ovat tilarivillä tai diagnostiikkalokissa.</value>
+  </data>
 </root>

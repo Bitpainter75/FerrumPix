@@ -7907,4 +7907,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>Zapne gesta touchpadu: přiblížení dvěma prsty v prohlížeči, vodorovné přejetí pro procházení a tažení pro posun zvětšeného obrázku. V prohlížeči SHIFT+tažení vybere ořez. Ovládání myší zůstává při vypnutém režimu beze změny.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>Nové umístění této složky</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>Nové umístění této složky</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>Přesunuto {0} položek katalogu a {1} náhledů</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>Není otevřen žádný obrázek k uložení.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>Soubor se nepodařilo uložit. Podrobnosti najdete ve stavovém řádku nebo v diagnostickém protokolu.</value>
+  </data>
 </root>

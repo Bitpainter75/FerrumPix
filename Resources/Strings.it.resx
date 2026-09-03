@@ -7867,4 +7867,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Nel visualizzatore, SHIFT+trascina seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>Nuova posizione di questa cartella</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>Nuova posizione di questa cartella</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>{0} voci di catalogo e {1} anteprime spostate</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>Nessuna immagine aperta da salvare.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>Impossibile salvare il file. I dettagli sono nella barra di stato o nel registro diagnostico.</value>
+  </data>
 </root>

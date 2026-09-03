@@ -7907,4 +7907,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>Schakelt trackpadgebaren in: zoomen met twee vingers in de viewer, horizontaal vegen om te bladeren en slepen om een ingezoomde afbeelding te pannen. In de viewer selecteert SHIFT+slepen een uitsnede. De muisbediening blijft ongewijzigd zolang deze modus uit staat.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>Nieuwe locatie van deze map</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>Nieuwe locatie van deze map</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>{0} catalogusvermeldingen en {1} miniaturen verplaatst</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>Er is geen afbeelding geopend om op te slaan.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>Het bestand kon niet worden opgeslagen. Details staan in de statusbalk of het diagnoselogboek.</value>
+  </data>
 </root>

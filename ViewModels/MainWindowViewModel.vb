@@ -4723,6 +4723,10 @@ Namespace ViewModels
                 Else
                     IO.Directory.Move(itemPath, target)
                 End If
+                ' Katalog und Kacheln hängen am PFAD. Ohne diesen Schritt verlor jedes Umbenennen
+                ' Bewertung, Etikett, Stichwörter und Personen, und der ganze Ordner wurde neu
+                ' gerechnet - siehe LibraryService.MoveEverythingForPath.
+                LibraryService.Instance.MoveEverythingForPath(itemPath, target)
                 afterRename?.Invoke(target)
             Catch ex As Exception
                 errorMessage = ex.Message

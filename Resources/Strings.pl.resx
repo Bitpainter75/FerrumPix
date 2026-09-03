@@ -7907,4 +7907,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>Włącza gesty gładzika: powiększanie dwoma palcami w przeglądarce, przesuwanie poziome do przeglądania i przeciąganie do panoramowania powiększonego obrazu. W przeglądarce SHIFT+przeciąganie wybiera kadrowanie. Sterowanie myszą pozostaje bez zmian, gdy ten tryb jest wyłączony.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>Nowa lokalizacja tego folderu</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>Nowa lokalizacja tego folderu</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>Przeniesiono {0} wpisów katalogu i {1} miniatur</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>Nie otwarto żadnego obrazu do zapisania.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>Nie udało się zapisać pliku. Szczegóły znajdują się na pasku stanu lub w dzienniku diagnostycznym.</value>
+  </data>
 </root>

@@ -1023,6 +1023,106 @@ Namespace Services
             Return QueryImageMeta("")
         End Function
 
+        ''' <summary>Schreibt alle Katalogzeilen von einem Pfad auf einen anderen um - eine EINZELNE
+        ''' Datei oder einen ganzen Ordnerbaum. Gibt die Zahl der umgeschriebenen Zeilen zurück.
+        '''
+        ''' WOFÜR: Der Pfad ist der Schlüssel des Katalogs. Ohne diesen Weg verlor jedes Umbenennen
+        ''' und jedes Verschieben alles, was Handarbeit war - Bewertung, Favorit, Farbetikett,
+        ''' Stichwörter und die Personenzuordnungen. Die Aufnahmedaten kamen beim nächsten Scan aus
+        ''' der Datei zurück, der Rest war weg, und die alten Zeilen blieben als Karteileichen stehen.
+        ''' Gerettet hatte sich nur, was neben dem Bild liegt (.fpxmp bei RAW und PSD, eine
+        ''' XMP-Beistelldatei) - bei einem JPEG ohne Beistelldatei gar nichts.
+        '''
+        ''' DREI TABELLEN, nicht eine: <c>ImageMeta</c> trägt die Katalogdaten, <c>Face</c> die
+        ''' Gesichter samt Personenzuordnung und <c>ScannedImage</c> den Vermerk, dass die
+        ''' Gesichtssuche über dieses Bild gelaufen ist. Bliebe eine davon zurück, wäre das Ergebnis
+        ''' schlimmer als gar nichts umzuschreiben: die Bewertung zöge um und die Gesichter nicht.
+        '''
+        ''' DER BEREICH GEHT ÜBER DEN PRIMÄRSCHLÜSSEL, wie bei GetMetaForFolder: Trennzeichen bis
+        ''' Trennzeichen plus eins fasst genau die Kinder des Ordners. Der exakte Treffer daneben
+        ''' deckt den Fall ab, dass eine einzelne DATEI umbenannt wurde. Kein LIKE - damit verlöre
+        ''' SQLite den Index und ginge über den ganzen Katalog.
+        '''
+        ''' WAS AM ZIEL LIEGT, WEICHT. Nach einem Verschieben ist der Zielpfad von unseren Bildern
+        ''' belegt; eine Zeile, die dort noch steht, beschreibt etwas, das es nicht mehr gibt. Ohne
+        ''' das Wegräumen bräche der Umzug am Primärschlüssel ab und ließe die Hälfte umgeschrieben
+        ''' zurück.</summary>
+        Public Function MoveCatalogEntries(oldPath As String, newPath As String) As Integer
+            If String.IsNullOrWhiteSpace(oldPath) OrElse String.IsNullOrWhiteSpace(newPath) Then Return 0
+            Dim source = oldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            Dim target = newPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            If String.Equals(source, target, StringComparison.Ordinal) Then Return 0
+            ' Ein Serverbild hat keinen Ort auf der Platte - sein Pseudo-Pfad wird nie verschoben.
+            If IsServerPseudoPath(source) OrElse IsServerPseudoPath(target) Then Return 0
+
+            Dim prefix = source & Path.DirectorySeparatorChar
+            Dim upperBound = source & ChrW(AscW(Path.DirectorySeparatorChar) + 1)
+            Dim moved = 0
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each table In {"ImageMeta", "Face", "ScannedImage"}
+                            ' Erst das Ziel freiräumen, dann umschreiben. Beides in DERSELBEN
+                            ' Transaktion: ein Abbruch dazwischen ließe gelöschte Zielzeilen ohne
+                            ' die Quellzeilen zurück, die sie ersetzen sollten.
+                            Using del = conn.CreateCommand()
+                                del.Transaction = tx
+                                del.CommandText =
+                                    $"DELETE FROM {table} WHERE FilePath = $newExact " &
+                                    "OR (FilePath >= $newPrefix AND FilePath < $newUpper)"
+                                del.Parameters.AddWithValue("$newExact", target)
+                                del.Parameters.AddWithValue("$newPrefix", target & Path.DirectorySeparatorChar)
+                                del.Parameters.AddWithValue("$newUpper", target & ChrW(AscW(Path.DirectorySeparatorChar) + 1))
+                                del.ExecuteNonQuery()
+                            End Using
+                            Using upd = conn.CreateCommand()
+                                upd.Transaction = tx
+                                ' substr ab der Länge des alten Pfades plus eins hängt den Rest an
+                                ' den neuen an - so wandert der ganze Baum mit, nicht nur die
+                                ' oberste Ebene.
+                                upd.CommandText =
+                                    $"UPDATE {table} SET FilePath = $target || substr(FilePath, $cut) " &
+                                    "WHERE FilePath >= $prefix AND FilePath < $upper"
+                                upd.Parameters.AddWithValue("$target", target)
+                                upd.Parameters.AddWithValue("$cut", source.Length + 1)
+                                upd.Parameters.AddWithValue("$prefix", prefix)
+                                upd.Parameters.AddWithValue("$upper", upperBound)
+                                moved += upd.ExecuteNonQuery()
+                            End Using
+                            Using exact = conn.CreateCommand()
+                                exact.Transaction = tx
+                                exact.CommandText = $"UPDATE {table} SET FilePath = $target WHERE FilePath = $source"
+                                exact.Parameters.AddWithValue("$target", target)
+                                exact.Parameters.AddWithValue("$source", source)
+                                moved += exact.ExecuteNonQuery()
+                            End Using
+                        Next
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.MoveCatalogEntries", ex)
+                Return 0
+            End Try
+            Return moved
+        End Function
+
+        ''' <summary>Alles, was an einem Pfad hängt, an den neuen Ort mitnehmen: die Katalogzeilen und
+        ''' die abgelegten Kacheln. EIN Aufruf für jeden Weg, der etwas verschiebt oder umbenennt -
+        ''' eine Datei, einen ganzen Ordner, von innen oder von außen angestoßen.
+        '''
+        ''' Zusammengefasst, weil die beiden nie einzeln richtig sind: ohne die Katalogzeilen ist die
+        ''' Handarbeit weg, ohne die Kacheln rechnet der nächste Blick den ganzen Ordner neu und die
+        ''' alten Bilder bleiben als Müll liegen. Wer einen neuen Verschiebeweg baut, ruft diese eine
+        ''' Stelle und muss an keine zwei denken.</summary>
+        ''' <returns>Umgeschriebene Katalogzeilen und umbenannte Kacheln.</returns>
+        Public Function MoveEverythingForPath(oldPath As String, newPath As String) As (CatalogRows As Integer, Thumbnails As Integer)
+            Dim rows = MoveCatalogEntries(oldPath, newPath)
+            Dim thumbs = ThumbnailCacheService.MoveCachedThumbnails(oldPath, newPath)
+            Return (rows, thumbs)
+        End Function
+
         ''' <summary>True fuer den Pseudo-Pfad eines Serverbildes ("nextcloud://…", "immich://…").
         ''' Solche Eintraege haben keine Datei auf der Platte; jede Pruefung mit File.Exists muss sie
         ''' ausnehmen.</summary>

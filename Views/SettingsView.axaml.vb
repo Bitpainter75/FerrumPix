@@ -115,6 +115,34 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Trägt einen Ordner samt allem, was FerrumPix über ihn weiß, auf einen neuen Ort
+        ''' um - für den Fall, dass er AUSSERHALB der Anwendung umbenannt oder verschoben wurde.
+        ''' Der Ordnerwähler hängt am TopLevel, deshalb hier und nicht im ViewModel.</summary>
+        Private Async Sub OnRelocateCatalogFolderClick(sender As Object, e As RoutedEventArgs)
+            e.Handled = True
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            Dim oldPath = TryCast(TryCast(sender, MenuItem)?.Tag, String)
+            If vm Is Nothing OrElse String.IsNullOrWhiteSpace(oldPath) Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                    .Title = LocalizationService.T("Neuer Ort dieses Ordners"),
+                    .AllowMultiple = False
+                })
+                Dim newPath = folders?.FirstOrDefault()?.Path?.LocalPath
+                If String.IsNullOrWhiteSpace(newPath) Then Return
+                Dim moved = vm.RelocateCatalogFolder(oldPath, newPath)
+                ' Gesagt wird, WAS umgezogen ist. "Fertig" allein liesse offen, ob der gewaehlte
+                ' Ordner ueberhaupt der richtige war - bei null Zeilen war er es meistens nicht.
+                vm.CleanupResultMessage = String.Format(
+                    LocalizationService.T("{0} Katalogeinträge und {1} Vorschaubilder umgezogen"),
+                    moved.CatalogRows, moved.Thumbnails)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.RelocateCatalogFolder", ex)
+            End Try
+        End Sub
+
         Public Sub OnSectionNavClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             Dim targetName = TryCast(button?.Tag, String)

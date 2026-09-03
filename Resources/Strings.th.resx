@@ -7911,4 +7911,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>เปิดท่าทางบนแทร็กแพด: ซูมด้วยสองนิ้วในตัวแสดงภาพ ปัดตามแนวนอนเพื่อเลื่อนดู และลากเพื่อเลื่อนภาพที่ซูมอยู่ ในตัวแสดงภาพ ให้กด SHIFT ค้างไว้ขณะลากเพื่อเลือกพื้นที่ครอบตัด การควบคุมด้วยเมาส์ยังคงเดิมเมื่อโหมดนี้ปิดอยู่</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>ตำแหน่งใหม่ของโฟลเดอร์นี้</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>ตำแหน่งใหม่ของโฟลเดอร์นี้</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>ย้ายรายการแคตตาล็อก {0} รายการและภาพย่อ {1} ภาพแล้ว</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>ไม่มีภาพที่เปิดอยู่ให้บันทึก</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>บันทึกไฟล์ไม่สำเร็จ รายละเอียดอยู่ในแถบสถานะหรือบันทึกการวินิจฉัย</value>
+  </data>
 </root>

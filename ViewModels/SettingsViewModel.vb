@@ -2687,6 +2687,35 @@ Namespace ViewModels
             ReplaceCatalogWatchFolders(wanted)
         End Sub
 
+        ''' <summary>Trägt alles, was FerrumPix zu einem Ordner weiß, auf einen neuen Ort um -
+        ''' Katalogzeilen, Kacheln und, wenn er überwacht wird, den Eintrag in der Ordnerliste.
+        '''
+        ''' WOFÜR: Wer einen Ordner AUSSERHALB von FerrumPix umbenennt oder auf eine andere Platte
+        ''' verschiebt, verlor bisher alles daran - Bewertung, Etikett, Stichwörter und die
+        ''' Personenzuordnungen hängen am Pfad. Innerhalb der Anwendung zieht das Umbenennen die
+        ''' Daten inzwischen selbst mit (siehe LibraryService.MoveEverythingForPath); von außen
+        ''' angestoßen braucht es diesen Weg, weil niemand sonst weiß, welcher neue Ordner der alte
+        ''' ist. Beide gehen durch dieselbe Stelle.</summary>
+        ''' <returns>Umgeschriebene Katalogzeilen und umbenannte Kacheln.</returns>
+        Public Function RelocateCatalogFolder(oldPath As String, newPath As String) As (CatalogRows As Integer, Thumbnails As Integer)
+            If String.IsNullOrWhiteSpace(oldPath) OrElse String.IsNullOrWhiteSpace(newPath) Then Return (0, 0)
+            If PathIdentity.AreSame(oldPath, newPath) Then Return (0, 0)
+
+            Dim moved = LibraryService.Instance.MoveEverythingForPath(oldPath, newPath)
+
+            ' War der alte Ordner überwacht, wandert auch sein Eintrag mit. Sonst liefe der Index
+            ' weiter gegen einen Ordner, den es nicht mehr gibt, und der neue bliebe unbeachtet.
+            If CatalogWatchFolders.Any(Function(f) PathIdentity.AreSame(f, oldPath)) Then
+                ReplaceCatalogWatchFolders(AppSettingsService.NormalizeCatalogWatchFolders(
+                    CatalogWatchFolders.
+                        Where(Function(f) Not PathIdentity.AreSame(f, oldPath)).
+                        Concat({newPath}).ToList()))
+            End If
+
+            RebuildFolderRows()
+            Return moved
+        End Function
+
         Public Sub RemoveCatalogWatchFolder(folderPath As String)
             If String.IsNullOrEmpty(folderPath) Then Return
             ReplaceCatalogWatchFolders(CatalogWatchFolders.

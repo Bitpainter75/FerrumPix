@@ -7911,4 +7911,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>Mengaktifkan gerakan trackpad: zoom dua jari di penampil, usap mendatar untuk menelusuri, dan seret untuk menggeser gambar yang diperbesar. Di penampil, tahan SHIFT sambil menyeret untuk memilih pangkasan. Kendali tetikus tetap sama selama mode ini mati.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>Lokasi baru folder ini</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>Lokasi baru folder ini</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>{0} entri katalog dan {1} gambar mini dipindahkan</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>Tidak ada gambar yang terbuka untuk disimpan.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>File tidak dapat disimpan. Detailnya ada di bilah status atau log diagnostik.</value>
+  </data>
 </root>

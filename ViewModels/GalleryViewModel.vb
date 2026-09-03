@@ -9392,6 +9392,8 @@ Namespace ViewModels
                     ElseIf Directory.Exists(mapping.SourcePath) Then
                         Directory.Move(mapping.SourcePath, mapping.TargetPath)
                     End If
+                    ' Wie beim einzelnen Umbenennen: Katalog und Kacheln wandern mit.
+                    LibraryService.Instance.MoveEverythingForPath(mapping.SourcePath, mapping.TargetPath)
                 Next
 
                 ClearSelection()
@@ -11591,6 +11593,10 @@ Namespace ViewModels
                                        CopyDirectory(source, target)
                                    End If
                                End If
+                               ' NUR beim Verschieben. Eine Kopie ist ein NEUES Bild: sie bekommt
+                               ' ihre eigenen Katalogzeilen und ihre eigene Kachel, und die des
+                               ' Originals müssen dort bleiben, wo sie sind.
+                               If movePath Then LibraryService.Instance.MoveEverythingForPath(source, target)
                            End Sub)
             Return True
         End Function

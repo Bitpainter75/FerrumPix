@@ -7907,4 +7907,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>トラックパッドのジェスチャーを有効にします。ビューアーでは二本指でズーム、横方向のスワイプで移動、ドラッグで拡大画像をパンできます。ビューアーでは SHIFT+ドラッグで切り抜きを選択します。このモードがオフの間はマウス操作は変わりません。</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>このフォルダーの新しい場所</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>このフォルダーの新しい場所</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>カタログ項目 {0} 件とサムネイル {1} 件を移動しました</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>保存する画像が開かれていません。</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>ファイルを保存できませんでした。詳細はステータスバーまたは診断ログをご覧ください。</value>
+  </data>
 </root>

@@ -7911,4 +7911,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>ट्रैकपैड के इशारे चालू करता है: दर्शक में दो उँगलियों से ज़ूम, आगे-पीछे देखने के लिए आड़ा स्वाइप, और ज़ूम की गई छवि खिसकाने के लिए खींचना। दर्शक में खींचते समय SHIFT दबाए रखने से क्रॉप चुना जाता है। यह मोड बंद रहते हुए माउस के नियंत्रण अपरिवर्तित रहते हैं।</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>इस फ़ोल्डर का नया स्थान</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>इस फ़ोल्डर का नया स्थान</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>{0} कैटलॉग प्रविष्टियाँ और {1} थंबनेल स्थानांतरित किए गए</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>सहेजने के लिए कोई चित्र खुला नहीं है।</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>फ़ाइल सहेजी नहीं जा सकी। विवरण स्थिति पट्टी या निदान लॉग में हैं।</value>
+  </data>
 </root>

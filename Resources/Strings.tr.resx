@@ -7911,4 +7911,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>Dokunmatik yüzey hareketlerini açar: izleyicide iki parmakla yakınlaştırma, gezinmek için yatay kaydırma ve yakınlaştırılmış bir görüntüyü sürükleyerek kaydırma. İzleyicide sürüklerken SHIFT tuşunu basılı tutmak bir kırpma seçer. Bu kip kapalıyken fare denetimleri değişmeden kalır.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>Bu klasörün yeni konumu</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>Bu klasörün yeni konumu</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>{0} katalog girdisi ve {1} küçük resim taşındı</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>Kaydedilecek açık bir resim yok.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>Dosya kaydedilemedi. Ayrıntılar durum çubuğunda veya tanılama günlüğünde.</value>
+  </data>
 </root>

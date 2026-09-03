@@ -7911,4 +7911,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>트랙패드 제스처를 켭니다. 뷰어에서 두 손가락으로 확대하고, 옆으로 밀어 넘기고, 확대한 이미지를 끌어서 이동합니다. 뷰어에서 SHIFT를 누른 채 끌면 자를 영역을 잡습니다. 이 모드를 꺼두면 마우스 조작은 그대로입니다.</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>이 폴더의 새 위치</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>이 폴더의 새 위치</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>카탈로그 항목 {0}개와 축소판 {1}개를 옮겼습니다</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>저장할 이미지가 열려 있지 않습니다.</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>파일을 저장하지 못했습니다. 자세한 내용은 상태 표시줄이나 진단 로그에 있습니다.</value>
+  </data>
 </root>

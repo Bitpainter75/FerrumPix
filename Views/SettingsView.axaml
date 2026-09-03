@@ -2188,6 +2188,13 @@
                                                                           CommandParameter="{Binding}"
                                                                           IsEnabled="{Binding Actions.FaceIndex.CanStart}"/>
                                                                 <Separator/>
+                                                                <!-- Der Ordnerwähler haengt am TopLevel und ist nur von der
+                                                                     View aus erreichbar - deshalb ein Click-Ereignis statt
+                                                                     eines Kommandos, wie beim Hinzufuegen eines Ordners. -->
+                                                                <MenuItem Header="Neuer Ort für diesen Ordner"
+                                                                          Tag="{Binding Path}"
+                                                                          Click="OnRelocateCatalogFolderClick"/>
+                                                                <Separator/>
                                                                 <MenuItem Header="Katalogdaten entfernen"
                                                                           IsEnabled="{Binding HasAnything}"
                                                                           Command="{Binding Actions.CleanRowCatalogCommand}"
@@ -2917,6 +2924,18 @@
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/metadata-extractor-dotnet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="XmpCore 6.1" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="XMP-Daten lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/xmp-core-dotnet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/xmp-core-dotnet/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Adobe XMP" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">

@@ -1170,6 +1170,148 @@ Namespace Services
                 Return String.Concat(bytes.Select(Function(b) b.ToString("x2")))
             End Using
         End Function
+
+        ''' <summary>Nimmt die abgelegten Kacheln mit, wenn eine Datei oder ein ganzer Ordner an einen
+        ''' anderen Ort gewandert ist. Gibt zurück, wie viele Kacheln umbenannt wurden.
+        '''
+        ''' WARUM ÜBERHAUPT: Im Namen jeder Kachel steckt der Hash des vollen QUELLPFADES
+        ''' (<see cref="HashText"/> über den normalisierten Pfad), und der Ordner darüber trägt den
+        ''' Hash des Ordnerpfades. Ein Umzug macht damit jede Kachel des Baumes unauffindbar: sie
+        ''' würden alle neu gerechnet und die alten blieben als Müll liegen. Bei einem großen Ordner
+        ''' sind das Minuten Arbeit und hunderte Megabyte für nichts.
+        '''
+        ''' GEGANGEN WIRD ÜBER DIE ECHTEN DATEIEN AM ZIEL, nicht über den Zwischenspeicher. Aus dem
+        ''' Namen einer Kachel lässt sich der Pfad nicht zurückrechnen - ein Hash ist einwegig. Für
+        ''' jede Datei, die jetzt am Ziel liegt, ist der alte Pfad dagegen bekannt: Zielpfad mit
+        ''' zurückgetauschtem Präfix. Nebenbei zieht so nur um, was es wirklich gibt.
+        '''
+        ''' UNTERORDNER HABEN EIGENE VERZEICHNISSE, je eines je Ordnerpfad. Deshalb steigt der Weg
+        ''' rekursiv und behandelt jeden Ordner für sich - ein einzelnes Umbenennen des obersten
+        ''' Verzeichnisses ließe alles darunter zurück.</summary>
+        Public Shared Function MoveCachedThumbnails(oldPath As String, newPath As String) As Integer
+            If String.IsNullOrWhiteSpace(oldPath) OrElse String.IsNullOrWhiteSpace(newPath) Then Return 0
+            Dim source = oldPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+            Dim target = newPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+            If String.Equals(source, target, StringComparison.Ordinal) Then Return 0
+
+            Try
+                If File.Exists(target) Then Return MoveOneFolderCache(IO.Path.GetDirectoryName(source),
+                                                                      IO.Path.GetDirectoryName(target),
+                                                                      {target})
+                If Not Directory.Exists(target) Then Return 0
+
+                Dim moved = 0
+                For Each targetFolder In EnumerateFoldersForCacheMove(target)
+                    ' Der alte Ordnerpfad zu diesem Zielordner: Praefix zuruecktauschen.
+                    Dim rest = targetFolder.Substring(target.Length).TrimStart(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+                    Dim sourceFolder = If(rest.Length = 0, source, IO.Path.Combine(source, rest))
+                    Dim files As String()
+                    Try
+                        files = Directory.GetFiles(targetFolder)
+                    Catch
+                        Continue For
+                    End Try
+                    moved += MoveOneFolderCache(sourceFolder, targetFolder, files)
+                Next
+                Return moved
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Thumbnails.Umzug", ex)
+                Return 0
+            End Try
+        End Function
+
+        ''' <summary>Die Zielordner eines Umzugs: der Ordner selbst und alles darunter. Selbst
+        ''' gestiegen und nicht über AllDirectories - ein einziger unlesbarer Unterordner bräche den
+        ''' ganzen Umzug ab, und dann wäre die Hälfte umgezogen (siehe CatalogIndexRunner).</summary>
+        Private Shared Iterator Function EnumerateFoldersForCacheMove(root As String) As IEnumerable(Of String)
+            Dim pending As New Queue(Of String)()
+            pending.Enqueue(root)
+            While pending.Count > 0
+                Dim current = pending.Dequeue()
+                Yield current
+                Dim children As String()
+                Try
+                    children = Directory.GetDirectories(current)
+                Catch
+                    Continue While
+                End Try
+                For Each child In children
+                    pending.Enqueue(child)
+                Next
+            End While
+        End Function
+
+        ''' <summary>Der Umzug EINES Ordners: jede Kachel auf ihren neuen Namen, danach das
+        ''' Verzeichnis selbst auf seine neue Kennung.</summary>
+        Private Shared Function MoveOneFolderCache(sourceFolder As String, targetFolder As String,
+                                                   targetFiles As IEnumerable(Of String)) As Integer
+            If String.IsNullOrEmpty(sourceFolder) OrElse String.IsNullOrEmpty(targetFolder) Then Return 0
+            Dim oldFolderId = GetFolderCacheId(sourceFolder)
+            Dim newFolderId = GetFolderCacheId(targetFolder)
+            Dim oldCacheDir = GetFolderCachePathById(oldFolderId)
+            If Not Directory.Exists(oldCacheDir) Then Return 0
+            Dim newCacheDir = GetFolderCachePathById(newFolderId)
+
+            ' ZUERST das Verzeichnis, dann die Dateien darin: andersherum lägen die neu benannten
+            ' Kacheln kurzzeitig im alten Verzeichnis, und ein Abbruch dazwischen liesse sie dort
+            ' unauffindbar zurück.
+            Try
+                If Directory.Exists(newCacheDir) Then
+                    ' Am Ziel liegt schon ein Zwischenspeicher. Zusammenlegen statt ersetzen: was
+                    ' dort steht, gehoert zu Dateien, die es am Ziel gab, bevor unsere kamen.
+                    For Each cached In Directory.GetFiles(oldCacheDir)
+                        Dim ziel = IO.Path.Combine(newCacheDir, IO.Path.GetFileName(cached))
+                        Try
+                            File.Move(cached, ziel, overwrite:=True)
+                        Catch
+                        End Try
+                    Next
+                    Try
+                        Directory.Delete(oldCacheDir, recursive:=True)
+                    Catch
+                    End Try
+                Else
+                    Directory.Move(oldCacheDir, newCacheDir)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Thumbnails.UmzugVerzeichnis", ex)
+                Return 0
+            End Try
+
+            Dim moved = 0
+            For Each targetFile In If(targetFiles, Enumerable.Empty(Of String)())
+                Dim fileName = IO.Path.GetFileName(targetFile)
+                If String.IsNullOrEmpty(fileName) Then Continue For
+                Dim oldFilePath = IO.Path.Combine(sourceFolder, fileName)
+                Dim oldHash = HashText(NormalizePath(oldFilePath))
+                Dim newHash = HashText(NormalizePath(targetFile))
+                If String.Equals(oldHash, newHash, StringComparison.Ordinal) Then Continue For
+                Dim treffer As String()
+                Try
+                    treffer = Directory.GetFiles(newCacheDir, oldHash & "_*")
+                Catch
+                    Continue For
+                End Try
+                For Each cached In treffer
+                    Try
+                        Dim renamed = newHash & IO.Path.GetFileName(cached).Substring(oldHash.Length)
+                        File.Move(cached, IO.Path.Combine(newCacheDir, renamed), overwrite:=True)
+                        moved += 1
+                    Catch
+                    End Try
+                Next
+            Next
+
+            ' Der Wurzelindex fuehrt Kennung und Anzeigepfad, der Datei-Index je Ordner liegt nur im
+            ' Speicher - der wird verworfen, nicht umgeschrieben.
+            RegisterFolder(newFolderId, targetFolder)
+            RemoveFolderFromRootIndex(oldFolderId)
+            _registeredFolderIds.TryRemove(oldFolderId, Nothing)
+            _folderFileIndexes.TryRemove(oldFolderId, Nothing)
+            _folderFileIndexes.TryRemove(newFolderId, Nothing)
+            Return moved
+        End Function
+
     End Class
 
 End Namespace

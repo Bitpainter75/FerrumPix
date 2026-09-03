@@ -7865,4 +7865,19 @@
   <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
     <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
   </data>
+  <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
+    <value>此文件夹的新位置</value>
+  </data>
+  <data name="Neuer_Ort_dieses_Ordners_d1dc96aa" xml:space="preserve">
+    <value>此文件夹的新位置</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_umgezogen_d28472db" xml:space="preserve">
+    <value>已移动 {0} 条目录条目和 {1} 个缩略图</value>
+  </data>
+  <data name="Es_ist_kein_Bild_zum_Speichern_ge_ffnet_c8b31371" xml:space="preserve">
+    <value>没有打开可保存的图片。</value>
+  </data>
+  <data name="Die_Datei_konnte_nicht_gespeichert_werden_Detail_40175664" xml:space="preserve">
+    <value>无法保存文件。详细信息见状态栏或诊断日志。</value>
+  </data>
 </root>
