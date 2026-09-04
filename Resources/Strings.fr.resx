@@ -1620,9 +1620,6 @@
   <data name="Ansicht_5c388792" xml:space="preserve">
     <value>Affichage</value>
   </data>
-  <data name="Ausschnitt_anwenden_Eingabetaste_fb55b886" xml:space="preserve">
-    <value>Appliquer le recadrage (Entrée)</value>
-  </data>
   <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>Modèle de fichier ou tags</value>
   </data>
@@ -1718,6 +1715,12 @@
   </data>
   <data name="Zuschneiden_anwenden_4868e7ab" xml:space="preserve">
     <value>Appliquer le recadrage</value>
+  </data>
+  <data name="Ausschnitt_und_Lage_anwenden_Eingabetaste_d8f4e448" xml:space="preserve">
+    <value>Appliquer le recadrage et l'orientation (Entrée)</value>
+  </data>
+  <data name="Transformieren_anwenden_188003c5" xml:space="preserve">
+    <value>Appliquer la transformation</value>
   </data>
 
   <data name="Bedingung_hinzuf_gen_0c64f68a" xml:space="preserve">
@@ -2014,8 +2017,8 @@
   <data name="VHS_d1f8be8f" xml:space="preserve">
     <value>VHS</value>
   </data>
-  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_212f0168" xml:space="preserve">
-    <value>Agrandit le canevas lors du redressement afin qu'aucun coin de l'image ne soit rogné, au lieu de zoomer dans l'image pour compenser.</value>
+  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_fbd496bb" xml:space="preserve">
+    <value>Agrandit la zone de travail lors du redressement afin qu'aucun coin de l'image ne soit coupé</value>
   </data>
   <data name="Verlauf_35bec7db" xml:space="preserve">
     <value>Dégradé</value>

@@ -1184,12 +1184,13 @@ Namespace Views
             End If
 
             ' EIN AUFGEZOGENER RAHMEN wird mit der Eingabetaste bestaetigt, genau wie ueber den Knopf
-            ' "Zuschneiden anwenden". Auch das gehoert in den Tunnel: nach einem Klick auf ein
+            ' "Transformieren anwenden" - und mit ihm die offene Drehung, denn beides haengt
+            ' aneinander. Auch das gehoert in den Tunnel: nach einem Klick auf ein
             ' Seitenverhaeltnis im Panel liegt der Fokus auf diesem Knopf, und der schluckt die Taste.
             If tunnelVm IsNot Nothing AndAlso e.Key = Key.Enter AndAlso
-               tunnelVm.CurrentTool = EditorTool.Transform AndAlso tunnelVm.HasCropChanges AndAlso
+               tunnelVm.CurrentTool = EditorTool.Transform AndAlso tunnelVm.CanApplyTransform AndAlso
                Not _isCropDragging AndAlso Not TypeOf e.Source Is TextBox Then
-                tunnelVm.ApplyCropCommand.Execute(Nothing)
+                tunnelVm.ApplyTransformCommand.Execute(Nothing)
                 e.Handled = True
                 Return
             End If
@@ -3541,6 +3542,14 @@ Namespace Views
                     Dim shade = Me.FindControl(Of Border)(shadeName)
                     If shade IsNot Nothing Then shade.IsVisible = False
                 Next
+                ' DIE KONTUR DES BESTAETIGTEN AUSSCHNITTS GEHOERT INS WERKZEUG und muss hier mit
+                ' verschwinden: PositionCropOverlayFromViewModel steigt ausserhalb des Werkzeugs
+                ' sofort aus und kaeme gar nicht mehr dazu, sie auszublenden - sie blieb im
+                ' naechsten Werkzeug stehen (Nutzerbefund 2026-09-04).
+                For Each outlineName As String In {"AppliedCropOutline", "AppliedCropOutlineShadow"}
+                    Dim outline = Me.FindControl(Of Avalonia.Controls.Shapes.Polygon)(outlineName)
+                    If outline IsNot Nothing Then outline.IsVisible = False
+                Next
             End If
             UpdateSliderLayout()
         End Sub
@@ -4882,9 +4891,7 @@ Namespace Views
             Dim overlay = Me.FindControl(Of Border)("CropOverlay")
             Dim vm = TryCast(DataContext, EditorViewModel)
             If overlay Is Nothing OrElse vm Is Nothing OrElse vm.CurrentTool <> EditorTool.Transform Then Return
-            ' Gegenstück zu SetCropPercentagesFromDisplay: die gespeicherten Source-Ränder für das
-            ' gedrehte/gespiegelte Anzeigebild permutieren, sonst zeigt das Overlay-Rechteck eine
-            ' andere Region, als tatsächlich fällt.
+            ' Der Rahmen liegt in Prozent des ANGEZEIGTEN Bildes - genau so wird er auch gehalten.
             Dim margins = vm.GetPendingCropDisplayMargins()
             Dim left = ix + iw * margins.Left / 100.0
             Dim top = iy + ih * margins.Top / 100.0
@@ -4899,6 +4906,58 @@ Namespace Views
             Dim cropRect = New Avalonia.Rect(left, top, right - left, bottom - top)
             UpdateCropDiscardShade(imageRect, cropRect, vm)
             UpdateCropSizeBadge(cropRect, imageRect, vm)
+            UpdateAppliedCropOutline(imageRect, cropRect, vm)
+        End Sub
+
+        ''' <summary>Zeichnet die Kontur des BESTAETIGTEN Ausschnitts auf das Anzeigebild.
+        '''
+        ''' Im Werkzeug ist das ganze Bild zu sehen; sobald der Rahmen gezogen wird, waere sonst
+        ''' nicht mehr zu erkennen, was das Bild gerade IST. Ein Viereck, kein Rechteck: steht der
+        ''' Zuschnitt in der Kette vor einer Drehung, liegt er im Anzeigebild gekippt.
+        '''
+        ''' DECKT SIE SICH MIT DEM RAHMEN, bleibt sie weg - dann waere sie nur eine zweite Linie auf
+        ''' derselben Kante, und das ist beim Betreten des Werkzeugs der Normalfall.</summary>
+        Private Sub UpdateAppliedCropOutline(imageRect As Avalonia.Rect, cropRect As Avalonia.Rect, vm As EditorViewModel)
+            Dim shape = Me.FindControl(Of Avalonia.Controls.Shapes.Polygon)("AppliedCropOutline")
+            Dim shadow = Me.FindControl(Of Avalonia.Controls.Shapes.Polygon)("AppliedCropOutlineShadow")
+            If shape Is Nothing Then Return
+
+            Dim outline As Double() = Nothing
+            If vm IsNot Nothing AndAlso vm.CurrentTool = EditorTool.Transform AndAlso
+               imageRect.Width > 0 AndAlso imageRect.Height > 0 Then
+                outline = vm.AppliedCropDisplayOutline()
+            End If
+            If outline Is Nothing OrElse outline.Length < 8 Then
+                shape.IsVisible = False
+                If shadow IsNot Nothing Then shadow.IsVisible = False
+                Return
+            End If
+
+            Dim points As New List(Of Avalonia.Point)()
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+            For index = 0 To 3
+                Dim px = imageRect.Left + imageRect.Width * outline(index * 2) / 100.0
+                Dim py = imageRect.Top + imageRect.Height * outline(index * 2 + 1) / 100.0
+                points.Add(New Avalonia.Point(px, py))
+                minX = Math.Min(minX, px) : maxX = Math.Max(maxX, px)
+                minY = Math.Min(minY, py) : maxY = Math.Max(maxY, py)
+            Next
+
+            ' Eine halbe Linienbreite Toleranz: darunter liegt sie ohnehin unter dem Rahmen.
+            If Math.Abs(minX - cropRect.Left) < 1.0 AndAlso Math.Abs(minY - cropRect.Top) < 1.0 AndAlso
+               Math.Abs(maxX - cropRect.Right) < 1.0 AndAlso Math.Abs(maxY - cropRect.Bottom) < 1.0 Then
+                shape.IsVisible = False
+                If shadow IsNot Nothing Then shadow.IsVisible = False
+                Return
+            End If
+
+            shape.Points = points
+            shape.IsVisible = True
+            If shadow IsNot Nothing Then
+                shadow.Points = New List(Of Avalonia.Point)(points)
+                shadow.IsVisible = True
+            End If
         End Sub
 
         ''' <summary>Legt eine deutliche, aber klickdurchlässige Abdunklung über die Bildteile, die

@@ -2767,6 +2767,43 @@ Namespace Services
             Return size
         End Function
 
+        ''' <summary>Die Hülle eines um <paramref name="degrees"/> gedrehten Rechtecks - die Maße,
+        ''' die eine Begradigung MIT erweiterter Leinwand bekommt.
+        '''
+        ''' MIT DEM BETRAG DES KOSINUS. Über 90 Grad ist er negativ, und ohne Betrag wurde die
+        ''' Leinwand KLEINER statt größer: bei 102 Grad schrumpfte sie von 1088 auf 827, das
+        ''' gedrehte Bild ragte weit darüber hinaus und man sah nur noch dessen Mitte; bei 180
+        ''' Grad blieb rechnerisch eine Kante von einem Pixel. Nutzerbefund vom 4. September
+        ''' 2026, zwei Bildschirmaufnahmen mit und ohne Haken. Der Sinus ist über den Betrag des
+        ''' Winkels ohnehin nie negativ, steht hier aber der Symmetrie halber genauso.
+        '''
+        ''' EINE Stelle für alle: Ausgabemaße, Renderer, Punktabbildung hin und zurück und die
+        ''' Objektabbildung rechneten dieselbe Formel siebenmal nach. Laufen sie auseinander,
+        ''' sitzen Anfasser und Objekte neben dem Bild.</summary>
+        Friend Shared Function StraightenExpandedSize(width As Double, height As Double, degrees As Double) As (Width As Double, Height As Double)
+            Dim radians = Math.Abs(degrees) * Math.PI / 180.0
+            Dim cosPart = Math.Abs(Math.Cos(radians))
+            Dim sinPart = Math.Abs(Math.Sin(radians))
+            Return (Math.Max(1.0, Math.Ceiling(width * cosPart + height * sinPart)),
+                    Math.Max(1.0, Math.Ceiling(width * sinPart + height * cosPart)))
+        End Function
+
+        ''' <summary>Der Faktor, mit dem eine Begradigung OHNE erweiterte Leinwand zeichnet.
+        '''
+        ''' Er ist nie kleiner als 1: die Leinwand bleibt, wie sie ist, und was aus ihr
+        ''' herauskippt, faellt weg. Verkleinert wird nicht - sonst schrumpfte das Bild bei jedem
+        ''' Ausrichten.
+        '''
+        ''' HEUTE IST ER IMMER GENAU 1, denn die Huelle eines gedrehten Rechtecks ist nie kleiner
+        ''' als das Rechteck. Die Rechnung steht trotzdem hier und nicht als Konstante in den
+        ''' Aufrufern: sie ist die Stelle, an der ein Hineinzoomen einzubauen waere, und sie haelt
+        ''' Pixelweg und Punktabbildung zusammen, falls es je dazu kommt.</summary>
+        Friend Shared Function StraightenFillScale(width As Double, height As Double, degrees As Double) As Double
+            Dim expanded = StraightenExpandedSize(width, height, degrees)
+            If expanded.Width <= 0 OrElse expanded.Height <= 0 Then Return 1.0
+            Return Math.Max(1.0, Math.Max(width / expanded.Width, height / expanded.Height))
+        End Function
+
         Private Shared Function ComputeGeometryOperationOutputSize(width As Integer, height As Integer,
                                                                     operation As GeometryOperation) As SKSizeI
             If operation?.Adjustments Is Nothing Then Return New SKSizeI(width, height)
@@ -2782,10 +2819,9 @@ Namespace Services
                         Dim swap = w : w = h : h = swap
                     End If
                     If Math.Abs(a.StraightenDegrees) >= 0.01F AndAlso a.StraightenExpandCanvas Then
-                        Dim radians = Math.Abs(a.StraightenDegrees) * Math.PI / 180.0
-                        Dim oldW = w, oldH = h
-                        w = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Cos(radians) + oldH * Math.Sin(radians))))
-                        h = Math.Max(1, CInt(Math.Ceiling(oldW * Math.Sin(radians) + oldH * Math.Cos(radians))))
+                        Dim expanded = StraightenExpandedSize(w, h, a.StraightenDegrees)
+                        w = Math.Max(1, CInt(expanded.Width))
+                        h = Math.Max(1, CInt(expanded.Height))
                     End If
                     Return New SKSizeI(w, h)
                 Case "resize"
@@ -2969,12 +3005,10 @@ Namespace Services
                 Dim absRadians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
                 Dim outW = w, outH = h, scale = 1.0
                 If adj.StraightenExpandCanvas Then
-                    outW = Math.Max(1, Math.Ceiling(w * Math.Cos(absRadians) + h * Math.Sin(absRadians)))
-                    outH = Math.Max(1, Math.Ceiling(w * Math.Sin(absRadians) + h * Math.Cos(absRadians)))
+                    Dim expanded = StraightenExpandedSize(w, h, adj.StraightenDegrees)
+                    outW = expanded.Width : outH = expanded.Height
                 Else
-                    scale = Math.Max(w / (w * Math.Cos(absRadians) + h * Math.Sin(absRadians)),
-                                     h / (w * Math.Sin(absRadians) + h * Math.Cos(absRadians)))
-                    scale = Math.Max(1.0, scale)
+                    scale = StraightenFillScale(w, h, adj.StraightenDegrees)
                 End If
                 Dim dx = x - w / 2.0, dy = y - h / 2.0
                 Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
@@ -3089,12 +3123,10 @@ Namespace Services
             If hasStraighten Then
                 Dim absRadians = Math.Abs(adj.StraightenDegrees) * Math.PI / 180.0
                 If adj.StraightenExpandCanvas Then
-                    outW = Math.Max(1, Math.Ceiling(rotW * Math.Cos(absRadians) + rotH * Math.Sin(absRadians)))
-                    outH = Math.Max(1, Math.Ceiling(rotW * Math.Sin(absRadians) + rotH * Math.Cos(absRadians)))
+                    Dim expanded = StraightenExpandedSize(rotW, rotH, adj.StraightenDegrees)
+                    outW = expanded.Width : outH = expanded.Height
                 Else
-                    scale = Math.Max(rotW / (rotW * Math.Cos(absRadians) + rotH * Math.Sin(absRadians)),
-                                     rotH / (rotW * Math.Sin(absRadians) + rotH * Math.Cos(absRadians)))
-                    scale = Math.Max(1.0, scale)
+                    scale = StraightenFillScale(rotW, rotH, adj.StraightenDegrees)
                 End If
             End If
 
@@ -4239,9 +4271,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function StraightenOutputSize(width As Double, height As Double,
                                                      degrees As Single, expandCanvas As Boolean) As SKSizeI
             If Not expandCanvas Then Return New SKSizeI(CInt(Math.Round(width)), CInt(Math.Round(height)))
-            Dim radians = Math.Abs(degrees) * Math.PI / 180.0
-            Return New SKSizeI(Math.Max(1, CInt(Math.Ceiling(width * Math.Cos(radians) + height * Math.Sin(radians)))),
-                               Math.Max(1, CInt(Math.Ceiling(width * Math.Sin(radians) + height * Math.Cos(radians)))))
+            Dim expanded = StraightenExpandedSize(width, height, degrees)
+            Return New SKSizeI(Math.Max(1, CInt(expanded.Width)), Math.Max(1, CInt(expanded.Height)))
         End Function
 
         ''' <summary>Dreht ein Objekt mit der Begradigung des Bildes: sein Mittelpunkt wandert um
@@ -4260,15 +4291,12 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If kind = "watermark" AndAlso Not String.IsNullOrWhiteSpace(annotation.Anchor) Then Return annotation
 
             Dim radians = degrees * Math.PI / 180.0
-            Dim absRadians = Math.Abs(degrees) * Math.PI / 180.0
             Dim outWidth = width, outHeight = height, scale = 1.0
             If expandCanvas Then
                 Dim size = StraightenOutputSize(width, height, degrees, True)
                 outWidth = size.Width : outHeight = size.Height
             Else
-                scale = Math.Max(width / (width * Math.Cos(absRadians) + height * Math.Sin(absRadians)),
-                                 height / (width * Math.Sin(absRadians) + height * Math.Cos(absRadians)))
-                scale = Math.Max(1.0, scale)
+                scale = StraightenFillScale(width, height, degrees)
             End If
             Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
             Dim MapPoint = Function(px As Double, py As Double) As (X As Double, Y As Double)
@@ -5038,8 +5066,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim radians = Math.Abs(degrees) * Math.PI / 180.0
 
             If adj.StraightenExpandCanvas Then
-                Dim expandedWidth = Math.Max(1, CInt(Math.Ceiling(source.Width * Math.Cos(radians) + source.Height * Math.Sin(radians))))
-                Dim expandedHeight = Math.Max(1, CInt(Math.Ceiling(source.Width * Math.Sin(radians) + source.Height * Math.Cos(radians))))
+                Dim expandedSize = StraightenExpandedSize(source.Width, source.Height, degrees)
+                Dim expandedWidth = Math.Max(1, CInt(expandedSize.Width))
+                Dim expandedHeight = Math.Max(1, CInt(expandedSize.Height))
 
                 Dim expanded = New SKBitmap(expandedWidth, expandedHeight, source.ColorType, source.AlphaType)
                 Using canvas = New SKCanvas(expanded)
@@ -5054,10 +5083,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Return expanded
             End If
 
-            Dim scale = Math.Max(
-                source.Width / (source.Width * Math.Cos(radians) + source.Height * Math.Sin(radians)),
-                source.Height / (source.Width * Math.Sin(radians) + source.Height * Math.Cos(radians)))
-            scale = Math.Max(1.0, scale)
+            Dim scale = StraightenFillScale(source.Width, source.Height, degrees)
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)

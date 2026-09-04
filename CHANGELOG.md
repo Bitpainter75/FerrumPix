@@ -1,95 +1,71 @@
-## FerrumPix 0.9.36
+## FerrumPix 0.9.37
 
 ### What's new
 
-- **Geometry is now a sequence of editable steps.** Crop, rotate, straighten, perspective,
-  grid and line warps, resize and canvas size keep the order in which you used them. You can
-  return to an earlier crop in RAW, PSD and `.fpx` projects, pull its frame out again, and keep
-  working instead of relying on history alone. Geometry recipes are also much smaller: each step
-  stores only what it needs.
+- **A crop stays adjustable in every format.** JPEG and PNG now behave like RAW, PSD and projects:
+  the crop tool shows the whole picture, the frame can always be pulled open again, and the cut
+  reaches the file only when you save. Until now a crop that was applied to a JPEG could not be
+  widened again, although the file itself was still untouched.
 
-- **Crop, rotate and straighten now live together under Transform.** Perspective, grid, lines
-  and envelope distortion have their own Warp tool. Each group has an explicit Apply action where
-  needed, so an unfinished adjustment cannot quietly become part of the recipe.
+- **The crop tool shows what the picture currently is.** A red dashed outline marks the confirmed
+  crop while you pull the frame, so you can always see what you are changing it from. On a picture
+  that was straightened after being cropped the outline is tilted, because that is how the
+  confirmed area really lies.
 
-- **A path can become a mask layer or a text layer.** Turn a selected path directly into a new,
-  independent mask layer, or turn it into editable text on that path without leaving a duplicate
-  path layer behind. Text can also be inverted to the other side of any path, including free paths
-  and text watermarks.
-
-- **Fullscreen from the editor shows your current work.** It now opens a safe snapshot of the
-  rendered editor scene, including unsaved adjustments, rather than reopening the original file.
-
-- **Keywords stored inside your photos can be searched.** FerrumPix now reads the keywords written
-  into a picture itself, not only those in a sidecar file, so an archive tagged in Photoshop, Bridge
-  or Lightroom can be searched by keyword straight away. The background scan picks up both kinds, so
-  keywords are found across your whole collection instead of only in folders you have opened. An
-  existing catalogue takes them in the next time that scan runs over it.
-
-- **You can load all shot data from a server in one go.** Immich and Nextcloud have a new button in
-  their own settings section that fetches camera, lens, focal length, ISO, aperture and keywords for
-  every photo on the server, so search finds them even where you have never scrolled. It only ever
-  runs on that button, never on startup, and it never removes anything. Clearing the catalogue data
-  or the thumbnails of a server is a separate button next to it.
-
-- **The accent colour can be toned down.** Settings has a colour strength next to the colour
-  choice, in five steps from 100 to 0 per cent. At 0 the highlight is still there, just without
-  colour: it turns into a grey of the same brightness, so nothing loses its contrast.
-
-- **Five more interface languages.** Korean, Indonesian, Turkish, Thai and Hindi are available
-  in Settings. Text rendering also asks the operating system for a suitable fallback font when a
-  chosen font does not contain a character.
+- **Turning a selection into a mask layer shows its progress.** On a big picture this takes a
+  moment, and it now runs in the background with a progress bar instead of holding up the window.
 
 ### Fixes
 
-- **Renaming or moving keeps your ratings, labels and keywords.** They are tied to the path, and
-  until now renaming a folder or a file quietly lost all of them, along with the people you had
-  named. Thumbnails move along too, so a renamed folder no longer has to be rendered again. If you
-  renamed or moved a folder outside FerrumPix, Settings now has "New location for this folder" on
-  the folder itself to bring everything across.
+- **A rotation from a saved project can be corrected instead of repeated.** Opening a project and
+  turning the picture again now replaces the rotation that is already there. Before, it was added
+  on top, so the picture went through a second turn and its corners with it.
 
-- **Enlarge canvas automatically stays on for the next rotation.** The setting was used up by the
-  first Apply, so a second rotation ran without it and cut off the corners.
+- **Masks open without the long wait.** Reopening a large mask on a picture whose geometry has not
+  changed no longer rebuilds it point by point.
 
-- **Immich photos can be searched by focal length, lens and shutter speed.** Those values were
-  already in what the server sends, but FerrumPix did not keep them, so a condition on focal length
-  never matched an Immich photo.
+- **Painting a mask stays quick on large pictures.** Masks and selections are now kept ready to use
+  while you work, instead of being packed and unpacked again for every single brush stroke.
 
-- **Nextcloud remembers what it has already looked up.** Keywords, size and capture time of a photo
-  were fetched again in every session, one request per picture. They are now kept locally like the
-  Immich ones and are there the moment you open the gallery.
+- **A local correction costs far less than the whole picture.** A mask over a small part of a
+  large photo used to take as long as one covering the whole frame, and every further mask layer
+  added the same again. Now the work follows the area the mask actually reaches.
 
-- **A keyword added later in another program now arrives.** For RAW and Photoshop files, keywords
-  from a sidecar could stop coming through once FerrumPix had taken them in once, so anything you
-  added afterwards in Lightroom or Bridge never showed up.
+- **Painting on a mask no longer redevelops the whole photo.** Everything above the mask stays as
+  it was while you paint, so each stroke shows up several times quicker on a large picture.
 
-- **Confirmed geometry can be reset again.** Resetting Crop, Transform, Perspective, Warp, Image
-  size or Canvas size now changes the confirmed recipe steps as well as the visible controls.
+- **Clicking empty space in the layers panel keeps your tool.** Transform, image size and warp stay
+  open; only the layer selection ends.
 
-- **A straightened picture stays straight.** Applying a later crop, perspective correction,
-  resize or canvas change no longer drops an earlier straighten setting or its expanded canvas.
+- **Working with masks no longer slows down with every picture.** Building the key that decides
+  whether a picture has to be redrawn no longer unpacks each mask first. On a project loaded from
+  file that happened over and over, including while dragging an object.
 
-- **Path handles outside the picture can be grabbed.** They used to be cleared as if you had
-  clicked beside the stage, or were clamped back to the image edge before hit testing.
+- **A crop in a project keeps showing what was cut away.** In a project whose base picture is a JPEG
+  or PNG, the crop tool could fall back to showing only the remaining cut-out, so the frame could
+  not be pulled open again. The picture itself was never cut.
 
-- **The catalogue cleanup count avoids redundant network checks.** A completed index run now
-  reuses the files it has already confirmed instead of querying their metadata location again.
+- **What the crop frame surrounds is what you get.** On a picture that was straightened after being
+  cropped, the frame and the result meant different parts of the picture. The crop now always
+  applies to what you see under the frame.
 
-- **Video playback no longer blocks the application while stopping.** libmpv stop, load and quit
-  requests are queued asynchronously, and its native cleanup runs away from the UI thread. This
-  covers local videos as well as Immich and Nextcloud downloads, particularly on macOS.
+- **Straightening no longer takes a part of the picture for good.** The crop tool now shows what a
+  straightened picture loses at its corners, so you can pull the frame open again and get it back.
+  Until now only a crop could be undone this way.
 
-- **macOS also finds a Homebrew libmpv when started from Finder.** Both Apple Silicon and Intel
-  Homebrew library locations are checked explicitly.
+- **One Apply for the whole Transform tool.** Crop and orientation belong together — turning the
+  picture moves the frame with it — so there is now a single "Apply transform" button below both
+  sections instead of two that switched each other on. Enter still does the same.
 
-- **A few buttons and hints stayed German.** The path buttons for a mask layer and for text, their
-  hints, the trackpad hint in Settings and three of the filter names now follow the chosen language.
+- **The crop numbers belong to the picture you see.** On a picture the recipe has turned by a
+  quarter, the Left slider moved the top edge and width and height were swapped against the size
+  shown on the frame. Sliders, pixel fields and aspect presets now all measure along the axes of
+  the picture in front of you.
 
-- **A new watermark appears where its frame is.** Placing a text or image watermark read its
-  anchor distances as if they were a position, so watermark and selection frame sat in different
-  places until the first drag pulled them together.
+- **The angle stays on the slider after applying.** You can correct it or take it back to zero,
+  and it keeps replacing the same rotation instead of adding a second one. Before, the slider
+  jumped to zero and the rotation you had just applied was only reachable through Undo.
 
-- **Objects stay on the picture when you straighten or correct perspective.** A text, shape or
-  drawing placed on a detail used to stay put while the picture under it tilted. It now turns with
-  the picture, and perspective is carried into the object as well. Anchored watermarks and the
-  frame keep sitting where they are, as before.
+- **Enlarge canvas only does what the checkbox says.** While you drag the straighten slider the
+  canvas no longer grows on its own, and the crop keeps its size. What is already applied still
+  shows what it cut away, so the frame can pull it back.

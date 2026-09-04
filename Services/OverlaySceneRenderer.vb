@@ -199,6 +199,40 @@ Namespace Services
         '''
         ''' NUR auf dem UI-Thread aufrufen - der Cache entsorgt Bitmaps bei Invalidierung sofort,
         ''' und genau dieser Thread ist der einzige, der invalidiert (Vertrag des Caches).</summary>
+        ''' <summary>Was der Kompositor WIRKLICH zeichnet - das Gegenstueck zu "Editor.ObjektLage".
+        ''' Beide Zeilen zusammen sagen, ob eine Abweichung am Zeichnen oder an der Ansicht liegt:
+        ''' Rechteck und Drehung stammen hier aus derselben Objektabbildung, die auch der
+        ''' Auswahlrahmen benutzt.
+        '''
+        ''' NUR BEI AENDERUNG. Diese Schleife laeuft bei jeder Mausbewegung; eine Zeile je Zug waere
+        ''' eine Flut, in der nichts mehr zu finden ist.</summary>
+        Private Shared ReadOnly _lastDrawnLayout As New Dictionary(Of String, String)()
+
+        Private Shared Sub LogDrawnAnnotationLayout(annotation As ImageAnnotation, rect As SKRect,
+                                                    sceneWidth As Integer, sceneHeight As Integer)
+            Try
+                If annotation Is Nothing Then Return
+                Dim line = $"art={If(annotation.Kind, "")} " &
+                           $"rechteck={rect.Left / sceneWidth * 100.0:F1}%,{rect.Top / sceneHeight * 100.0:F1}% " &
+                           $"{rect.Width / sceneWidth * 100.0:F1}x{rect.Height / sceneHeight * 100.0:F1}% " &
+                           $"dreh={annotation.RotationDegrees:F1} " &
+                           $"spiegel={If(annotation.FlipHorizontal, "H", "-")}{If(annotation.FlipVertical, "V", "-")} " &
+                           $"szene={sceneWidth}x{sceneHeight}"
+                Dim key = If(annotation.Id, "")
+                SyncLock _lastDrawnLayout
+                    Dim previous As String = Nothing
+                    If _lastDrawnLayout.TryGetValue(key, previous) AndAlso String.Equals(previous, line, StringComparison.Ordinal) Then Return
+                    ' Der Merker haelt nur den letzten Stand je Objekt; bei sehr vielen Objekten
+                    ' faengt er von vorn an, statt unbegrenzt zu wachsen.
+                    If _lastDrawnLayout.Count > 64 Then _lastDrawnLayout.Clear()
+                    _lastDrawnLayout(key) = line
+                End SyncLock
+                DiagnosticLogService.LogAlways("Editor.ObjektGezeichnet", line)
+            Catch
+                ' Eine Diagnosezeile darf das Zeichnen nie stoeren.
+            End Try
+        End Sub
+
         Public Shared Function DrawCachedAnnotations(canvas As SKCanvas, adj As ImageAdjustments,
                                                      sceneWidth As Integer, sceneHeight As Integer,
                                                      cache As AnnotationBitmapCache,
@@ -228,6 +262,7 @@ Namespace Services
                 ' Modul-Funktion (gleiches Namespace): loest auch den Anker eines Wasserzeichens auf.
                 Dim rect = ComputeAnnotationRect(sceneWidth, sceneHeight, kind, renderAnnotation)
                 If rect.Width <= 0 OrElse rect.Height <= 0 Then Continue For
+                LogDrawnAnnotationLayout(renderAnnotation, rect, sceneWidth, sceneHeight)
 
                 Dim targetW = Math.Max(1, CInt(Math.Round(rect.Width)))
                 Dim targetH = Math.Max(1, CInt(Math.Round(rect.Height)))

@@ -750,6 +750,23 @@
                         <Border x:Name="CropDiscardShadeBottom" Background="#990B1018" IsHitTestVisible="False" IsVisible="False" />
                         <Border x:Name="CropDiscardShadeLeft" Background="#990B1018" IsHitTestVisible="False" IsVisible="False" />
                         <Border x:Name="CropDiscardShadeRight" Background="#990B1018" IsHitTestVisible="False" IsVisible="False" />
+                        <!-- DER BESTAETIGTE AUSSCHNITT als Kontur: im Werkzeug ist das ganze Bild
+                             zu sehen, und sobald man den Rahmen zieht, waere sonst nicht mehr zu
+                             erkennen, was das Bild GERADE ist. Ein VIERECK und kein Rechteck -
+                             steht der Zuschnitt in der Kette vor einer Drehung, liegt er im
+                             Anzeigebild gekippt. Nur eine Linie, keine Flaeche: eine Flaeche
+                             verdeckt genau das Motiv, nach dem man den Ausschnitt waehlt. -->
+                        <Polygon x:Name="AppliedCropOutlineShadow"
+                                 Stroke="#99000000"
+                                 StrokeThickness="3"
+                                 IsHitTestVisible="False"
+                                 IsVisible="False" />
+                        <Polygon x:Name="AppliedCropOutline"
+                                 Stroke="#FFE05252"
+                                 StrokeThickness="1.5"
+                                 StrokeDashArray="4,3"
+                                 IsHitTestVisible="False"
+                                 IsVisible="False" />
                         <Border x:Name="CropOverlay"
                                 BorderThickness="0"
                                 Background="Transparent"
@@ -1168,6 +1185,28 @@
                                  Rahmen im Panel selbst, deshalb hier keiner. -->
                             <panels:RotatePanel Margin="0,7,0,0"
                                                 IsVisible="{Binding ShowRotateAdjustments}" />
+
+                            <!-- EIN Anwenden fuer das ganze Werkzeug: Ausschnitt UND Lage. Beide
+                                 haengen aneinander - der Rahmen liegt auf dem angezeigten Bild,
+                                 eine Drehung versetzt ihn also -, und zwei Knoepfe, von denen einer
+                                 beim Drehen mit aktiv wurde, sagten dasselbe. Er steht bewusst
+                                 AUSSERHALB der beiden Gruppen: so bleibt er erreichbar, auch wenn
+                                 eine davon zugeklappt ist. -->
+                            <Button Classes="accent" Margin="0,7,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="10,6"
+                                    IsVisible="{Binding ShowCropAdjustments}"
+                                    IsEnabled="{Binding CanApplyTransform}"
+                                    Command="{Binding ApplyTransformCommand}"
+                                    ToolTip.Tip="Ausschnitt und Lage anwenden (Eingabetaste)">
+                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                            HorizontalAlignment="Center">
+                                    <icons:SvgIcon
+                                        Source="avares://FerrumPix/Assets/Icons/outline/crop.svg"
+                                        Width="16" Height="16" />
+                                    <TextBlock Text="Transformieren anwenden" />
+                                </StackPanel>
+                            </Button>
 
                             <panels:ResizePanel Margin="0,7,0,0"
                                                 IsVisible="{Binding ShowResizeAdjustments}" />

@@ -1620,9 +1620,6 @@
   <data name="Ansicht_5c388792" xml:space="preserve">
     <value>보기</value>
   </data>
-  <data name="Ausschnitt_anwenden_Eingabetaste_fb55b886" xml:space="preserve">
-    <value>자르기 적용 (ENTER)</value>
-  </data>
   <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>파일 패턴 또는 태그</value>
   </data>
@@ -1718,6 +1715,12 @@
   </data>
   <data name="Zuschneiden_anwenden_4868e7ab" xml:space="preserve">
     <value>자르기 적용</value>
+  </data>
+  <data name="Ausschnitt_und_Lage_anwenden_Eingabetaste_d8f4e448" xml:space="preserve">
+    <value>자르기와 방향 적용 (Enter)</value>
+  </data>
+  <data name="Transformieren_anwenden_188003c5" xml:space="preserve">
+    <value>변형 적용</value>
   </data>
   <data name="Bedingung_hinzuf_gen_0c64f68a" xml:space="preserve">
     <value>+ 조건 추가</value>
@@ -2013,8 +2016,8 @@
   <data name="VHS_d1f8be8f" xml:space="preserve">
     <value>VHS</value>
   </data>
-  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_212f0168" xml:space="preserve">
-    <value>수평을 맞출 때 이미지를 확대해 메우는 대신 캔버스를 넓혀 이미지 모서리가 잘리지 않게 합니다.</value>
+  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_fbd496bb" xml:space="preserve">
+    <value>수평 보정 시 캔버스를 넓혀 이미지 모서리가 잘리지 않게 합니다</value>
   </data>
   <data name="Verlauf_35bec7db" xml:space="preserve">
     <value>그레이디언트</value>

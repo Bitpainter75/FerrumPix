@@ -358,11 +358,16 @@ Namespace ViewModels
         Private _straightenExpandCanvas As Boolean = False
         Private _flipH As Boolean = False
         Private _flipV As Boolean = False
-        ' Der letzte Transform-Schritt eines geladenen FPX kann wieder direkt im Drehwerkzeug
-        ' bearbeitet werden. Er bleibt bis zum Anwenden in der Liste, wird für Vorschau und Speichern
-        ' aber durch die Reglerwerte ersetzt. So ist „zurück auf 0“ eine Ersetzung, keine zweite
-        ' Drehung mit nochmals interpolierten bzw. transparenten Ecken.
-        Private _editingCommittedTransformTail As Boolean = False
+        ' DER SCHRITT, DEN DIE DREHREGLER GERADE VERTRETEN. Er bleibt bis zum Anwenden in der Liste,
+        ' wird für Vorschau und Speichern aber durch die Reglerwerte ersetzt - AN SEINER STELLE. So
+        ' ist „zurück auf 0“ eine Ersetzung, keine zweite Drehung mit nochmals interpolierten bzw.
+        ' transparenten Ecken, und ein Zuschnitt DAHINTER stört nicht: gemerkt wird der Schritt
+        ' selbst, nicht seine Position (Referenz, deshalb übersteht sie jedes Umsortieren).
+        '
+        ' Er bleibt auch nach dem Anwenden vertreten: der Winkel steht danach weiter am Regler und
+        ' lässt sich nachziehen oder auf null stellen (Nutzerbefund 2026-09-04, vorher sprang der
+        ' Regler beim Übernehmen auf 0 und der Schritt war nur noch über Rückgängig erreichbar).
+        Private _editingCommittedTransform As GeometryOperation = Nothing
         Private _cropLeft As Double = 0
         Private _cropTop As Double = 0
         Private _cropRight As Double = 0
@@ -7440,7 +7445,7 @@ Namespace ViewModels
                 Return _cropLeft
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropRight, MaxCropEdgePercent(EffectiveImageWidthPixels))
+                Dim clamped = ClampCropEdge(value, _cropRight, MaxCropEdgePercent(EffectiveDisplayImageWidthPixels))
                 If Math.Abs(_cropLeft - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropLeft, clamped)
                 AfterCropChanged()
@@ -7453,7 +7458,7 @@ Namespace ViewModels
                 Return _cropTop
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropBottom, MaxCropEdgePercent(EffectiveImageHeightPixels))
+                Dim clamped = ClampCropEdge(value, _cropBottom, MaxCropEdgePercent(EffectiveDisplayImageHeightPixels))
                 If Math.Abs(_cropTop - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropTop, clamped)
                 AfterCropChanged()
@@ -7466,7 +7471,7 @@ Namespace ViewModels
                 Return _cropRight
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropLeft, MaxCropEdgePercent(EffectiveImageWidthPixels))
+                Dim clamped = ClampCropEdge(value, _cropLeft, MaxCropEdgePercent(EffectiveDisplayImageWidthPixels))
                 If Math.Abs(_cropRight - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropRight, clamped)
                 AfterCropChanged()
@@ -7479,7 +7484,7 @@ Namespace ViewModels
                 Return _cropBottom
             End Get
             Set(value As Double)
-                Dim clamped = ClampCropEdge(value, _cropTop, MaxCropEdgePercent(EffectiveImageHeightPixels))
+                Dim clamped = ClampCropEdge(value, _cropTop, MaxCropEdgePercent(EffectiveDisplayImageHeightPixels))
                 If Math.Abs(_cropBottom - clamped) < 0.0001 Then Return
                 Me.RaiseAndSetIfChanged(_cropBottom, clamped)
                 AfterCropChanged()
@@ -7492,10 +7497,10 @@ Namespace ViewModels
         ''' gespeicherten Adjustments auflösungsunabhängig sein müssen.</summary>
         Public Property CropLeftPixels As Integer
             Get
-                Return PercentToPixels(_cropLeft, EffectiveImageWidthPixels)
+                Return PercentToPixels(_cropLeft, EffectiveDisplayImageWidthPixels)
             End Get
             Set(value As Integer)
-                Dim basePixels = EffectiveImageWidthPixels
+                Dim basePixels = EffectiveDisplayImageWidthPixels
                 If basePixels <= 0 Then Return
                 CropLeft = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropLeftPixels))
@@ -7504,10 +7509,10 @@ Namespace ViewModels
 
         Public Property CropTopPixels As Integer
             Get
-                Return PercentToPixels(_cropTop, EffectiveImageHeightPixels)
+                Return PercentToPixels(_cropTop, EffectiveDisplayImageHeightPixels)
             End Get
             Set(value As Integer)
-                Dim basePixels = EffectiveImageHeightPixels
+                Dim basePixels = EffectiveDisplayImageHeightPixels
                 If basePixels <= 0 Then Return
                 CropTop = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropTopPixels))
@@ -7516,10 +7521,10 @@ Namespace ViewModels
 
         Public Property CropRightPixels As Integer
             Get
-                Return PercentToPixels(_cropRight, EffectiveImageWidthPixels)
+                Return PercentToPixels(_cropRight, EffectiveDisplayImageWidthPixels)
             End Get
             Set(value As Integer)
-                Dim basePixels = EffectiveImageWidthPixels
+                Dim basePixels = EffectiveDisplayImageWidthPixels
                 If basePixels <= 0 Then Return
                 CropRight = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropRightPixels))
@@ -7528,10 +7533,10 @@ Namespace ViewModels
 
         Public Property CropBottomPixels As Integer
             Get
-                Return PercentToPixels(_cropBottom, EffectiveImageHeightPixels)
+                Return PercentToPixels(_cropBottom, EffectiveDisplayImageHeightPixels)
             End Get
             Set(value As Integer)
-                Dim basePixels = EffectiveImageHeightPixels
+                Dim basePixels = EffectiveDisplayImageHeightPixels
                 If basePixels <= 0 Then Return
                 CropBottom = PixelsToPercent(value, basePixels)
                 Me.RaisePropertyChanged(NameOf(CropBottomPixels))
@@ -7542,13 +7547,13 @@ Namespace ViewModels
         ''' Grenze gegen die Gegenkante zieht der Setter, wie schon bei den Prozentwerten.
         Public ReadOnly Property CropMaxHorizontalPixels As Integer
             Get
-                Return Math.Max(1, EffectiveImageWidthPixels - 1)
+                Return Math.Max(1, EffectiveDisplayImageWidthPixels - 1)
             End Get
         End Property
 
         Public ReadOnly Property CropMaxVerticalPixels As Integer
             Get
-                Return Math.Max(1, EffectiveImageHeightPixels - 1)
+                Return Math.Max(1, EffectiveDisplayImageHeightPixels - 1)
             End Get
         End Property
 
@@ -10958,17 +10963,74 @@ Namespace ViewModels
             }
         End Function
 
-        ''' <summary>Im Zuschneide-Werkzeug eines Bündels bleibt der zuletzt bestätigte Crop
-        ''' vorübergehend aus der Anzeige-Pipeline heraus. So steht wieder das volle Bild unter
-        ''' dem Rahmen, ohne das gespeicherte Rezept zu verändern.</summary>
-        Private Function GeometryOperationsForDisplay() As List(Of GeometryOperation)
+        ''' <summary>Die Kette, auf der der ZUSCHNITT-RAHMEN liegt: ohne den bestätigten Zuschnitt
+        ''' und mit erweiterter Leinwand. So steht das volle Bild unter dem Rahmen, ohne dass das
+        ''' gespeicherte Rezept sich ändert.
+        '''
+        ''' Sie wird auch dann gebraucht, wenn das Werkzeug gerade NICHT offen ist: der Rahmen wird
+        ''' beim Bestätigen und beim Verlassen nachgezogen, und er misst immer an dieser Kette.
+        ''' Gegen die gewöhnliche Vorschau gerechnet käme dort das ganze Bild heraus - der
+        ''' bestätigte Ausschnitt sähe aus, als wäre er weg.</summary>
+        Private Function GeometryOperationsForCropFrame() As List(Of GeometryOperation)
             Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
-            If _currentTool = EditorTool.Transform AndAlso ShowsFullImageWhileCropping Then
-                Dim cropIndex = LastCropBearingGeometryOperationIndex()
-                If cropIndex >= 0 Then result.RemoveAt(cropIndex)
-            End If
-            Return result
+            ' ERST DIE REGLER EINSETZEN, DANN ERWEITERN - nicht umgekehrt: der eingesetzte Stand
+            ' würde die Erweiterung sonst gleich wieder wegnehmen, und die Ecken einer geladenen
+            ' Begradigung blieben verloren.
+            Dim placedIndex = ApplyOpenTransformInPlace(result, EditableTransformIndex())
+            ExpandStraightenCanvasForCropTool(result, ExpandSkipIndexForCropTool(placedIndex))
+            ' ALLE Zuschnitte, nicht nur der letzte: ein Rezept kann mehrere tragen (zweimal
+            ' zugeschnitten und dann als Bündel gespeichert). Blieb einer stehen, zeigte das
+            ' Werkzeug nicht das ganze Basisbild, und genau dieser Teil liess sich nie wieder
+            ' aufziehen.
+            RemoveAllOfKind(result, "crop")
+            AppendOpenGeometryOperationsWithoutTransform(result)
+            Return NormalizeGeometryOperations(result)
         End Function
+
+        ''' <summary>Welcher Schritt von der erweiterten Leinwand AUSGENOMMEN bleibt: der von den
+        ''' Reglern vertretene, aber NUR solange sie ihn gerade verändern.
+        '''
+        ''' Zwei Regeln treffen sich in einem Schritt, und sie widersprechen sich, wenn man den
+        ''' Schritt allein ansieht: was BESTÄTIGT ist, zeigt im Werkzeug seinen Verschnitt; was man
+        ''' in der HAND hat, folgt seinem Haken. Ein geladenes Projekt macht seinen letzten
+        ''' Drehschritt bedienbar - er ist damit beides. Entschieden wird deshalb an
+        ''' <see cref="HasRotateChanges"/>: unberührt ist er ein bestätigter Schritt und wird
+        ''' erweitert (sonst blieben die Ecken einer gespeicherten Begradigung nach dem
+        ''' Wiederöffnen verloren), am Regler bewegt zeigt er, was der Haken sagt.</summary>
+        Private Function ExpandSkipIndexForCropTool(editableIndex As Integer) As Integer
+            Return If(HasRotateChanges, editableIndex, -1)
+        End Function
+
+        ''' <summary>Jede Begradigung der Kette auf ERWEITERTE LEINWAND stellen.
+        '''
+        ''' Im Zuschneide-Werkzeug eines Bündels ist der Verschnitt sichtbar, sonst liesse sich ein
+        ''' Ausschnitt nie wieder aufziehen. Das galt bisher nur für den Zuschnitt-Schritt - eine
+        ''' Begradigung ohne erweiterte Leinwand nimmt aber genauso Bild weg: sie zoomt hinein, bis
+        ''' die gekippten Ecken wieder im Rahmen liegen. Dieser Verschnitt war im Werkzeug nicht zu
+        ''' sehen und nicht zurückzuholen (Nutzerbefund: um 90,7 Grad ausgerichtet, danach eine
+        ''' Vierteldrehung - vom Hochformat blieb ein Querformat, und das Werkzeug zeigte nur noch
+        ''' dieses).
+        '''
+        ''' Nur die Anzeige und das Übernehmen eines Zuschnitts rufen das; das gespeicherte Rezept
+        ''' bleibt sonst unberührt.
+        '''
+        ''' <paramref name="skipIndex"/> ist der Schritt, den die Drehregler gerade vertreten: der
+        ''' bleibt AUSSEN VOR. Was man in der Hand hat, folgt seinem eigenen Haken - sonst wüchse
+        ''' die Leinwand schon beim Ziehen am Regler, obwohl er nicht gesetzt ist.</summary>
+        Private Shared Sub ExpandStraightenCanvasForCropTool(operations As List(Of GeometryOperation),
+                                                             Optional skipIndex As Integer = -1)
+            If operations Is Nothing Then Return
+            For index = 0 To operations.Count - 1
+                If index = skipIndex Then Continue For
+                Dim operation = operations(index)
+                Dim a = operation?.Adjustments
+                If a Is Nothing Then Continue For
+                If Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
+                ' Ohne Winkel vergrössert der Haken nichts und stünde nur als Altlast im Rezept.
+                If Math.Abs(a.StraightenDegrees) < 0.0001 Then Continue For
+                a.StraightenExpandCanvas = True
+            Next
+        End Sub
 
         Private Function LastGeometryOperationIndex(kind As String) As Integer
             For index = _geometryOperations.Count - 1 To 0 Step -1
@@ -11004,19 +11066,50 @@ Namespace ViewModels
 
         Private Sub ResetCommittedTransform()
             RemoveGeometryOperations("transform")
-            _editingCommittedTransformTail = False
+            _editingCommittedTransform = Nothing
         End Sub
 
-        ''' <summary>Stellt den letzten, noch nicht von einer anderen Geometrie gefolgten
-        ''' Transform-Schritt eines Rezepts als editierbare Drehung wieder her.</summary>
-        Private Sub RestoreEditableTransformTail()
-            _editingCommittedTransformTail = False
-            If _geometryOperations.Count = 0 Then Return
-            Dim tail = _geometryOperations(_geometryOperations.Count - 1)
-            If tail?.Adjustments Is Nothing OrElse
-               Not String.Equals(tail.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Return
+        ''' <summary>Wo der von den Reglern vertretene Schritt in der Kette steht - oder -1.
+        '''
+        ''' Gesucht wird die REFERENZ, nicht eine gemerkte Position: hinter den Schritt kann ein
+        ''' Zuschnitt gerückt sein, und ein Rückgängig baut die Liste ganz neu auf. Findet sie sich
+        ''' nicht mehr, vertreten die Regler nichts, und ihr Stand hängt wie eine frische Drehung
+        ''' hinten an.</summary>
+        Private Function EditableTransformIndex() As Integer
+            If _editingCommittedTransform Is Nothing Then Return -1
+            For index = 0 To _geometryOperations.Count - 1
+                If ReferenceEquals(_geometryOperations(index), _editingCommittedTransform) Then Return index
+            Next
+            Return -1
+        End Function
 
-            Dim transform = tail.Adjustments
+        ''' <summary>Der Stand der Drehregler als Schritt - oder Nothing, wenn sie nichts drehen.
+        ''' Der Haken allein ergibt KEINEN Schritt (siehe HasRotateChanges): ein Schritt aus 0 Grad
+        ''' und Haken vergrößert nichts und stünde nur als Altlast im Rezept.</summary>
+        Private Function OpenTransformOperation() As GeometryOperation
+            If _rotationDegrees = 0 AndAlso Math.Abs(_straightenDegrees) < 0.0001 AndAlso
+               Not _flipH AndAlso Not _flipV Then Return Nothing
+            Return New GeometryOperation With {
+                .Kind = "transform",
+                .Adjustments = New ImageAdjustments With {
+                    .RotationDegrees = _rotationDegrees,
+                    .StraightenDegrees = CSng(_straightenDegrees),
+                    .StraightenExpandCanvas = _straightenExpandCanvas,
+                    .FlipHorizontal = _flipH,
+                    .FlipVertical = _flipV}}
+        End Function
+
+        ''' <summary>Stellt den letzten Transform-Schritt eines Rezepts als editierbare Drehung
+        ''' wieder her - auch dann, wenn hinter ihm noch ein Zuschnitt steht. Genau dort steht er
+        ''' seit der Regel „ein bestätigter Zuschnitt kommt ans Ende der Kette".</summary>
+        Private Sub RestoreEditableTransformTail()
+            _editingCommittedTransform = Nothing
+            Dim index = LastGeometryOperationIndex("transform")
+            If index < 0 Then Return
+            Dim step_ = _geometryOperations(index)
+            If step_?.Adjustments Is Nothing Then Return
+
+            Dim transform = step_.Adjustments
             _rotationDegrees = transform.RotationDegrees
             _straightenDegrees = transform.StraightenDegrees
             _straightenExpandCanvas = transform.StraightenExpandCanvas
@@ -11027,39 +11120,75 @@ Namespace ViewModels
             _appliedStraightenExpandCanvas = _straightenExpandCanvas
             _appliedFlipH = _flipH
             _appliedFlipV = _flipV
-            _editingCommittedTransformTail = True
+            _editingCommittedTransform = step_
         End Sub
 
-        ''' <summary>Entfernt aus einer Rezeptkopie den Schritt, den die offenen Regler gerade
-        ''' ersetzen. Der gespeicherte Stapel selbst bleibt bis „Anwenden“ unverändert.</summary>
-        Private Sub RemoveEditableTransformTail(result As List(Of GeometryOperation))
-            If Not _editingCommittedTransformTail OrElse result Is Nothing OrElse result.Count = 0 Then Return
-            Dim tail = result(result.Count - 1)
-            If String.Equals(tail?.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then result.RemoveAt(result.Count - 1)
+        ''' <summary>Setzt in eine Rezeptkopie den Stand der Drehregler ein: ERSETZT den vertretenen
+        ''' Schritt an seiner Stelle (oder entfernt ihn, wenn die Regler nichts mehr drehen), sonst
+        ''' hängt er hinten an.
+        '''
+        ''' AN SEINER STELLE ist der Punkt: früher wurde der LETZTE Schritt entfernt und der
+        ''' Reglerstand ans Ende gehängt. Sobald ein Zuschnitt dahinter stand, traf das den
+        ''' Falschen - die Drehung zählte doppelt, und die Reihenfolge stimmte nicht mehr.</summary>
+        ''' <returns>Der Index des eingesetzten Schrittes, oder -1, wenn keiner steht. Wer danach
+        ''' noch etwas an genau diesem Schritt zu tun hat, darf NICHT mit dem alten Index weiter
+        ''' rechnen: ein Zurückdrehen auf null entfernt ihn, und alles dahinter rückt auf.</returns>
+        Private Function ApplyOpenTransformInPlace(result As List(Of GeometryOperation), editableIndex As Integer) As Integer
+            If result Is Nothing Then Return -1
+            Dim open = OpenTransformOperation()
+            If editableIndex < 0 OrElse editableIndex >= result.Count Then
+                If open Is Nothing Then Return -1
+                result.Add(open)
+                Return result.Count - 1
+            End If
+            If open Is Nothing Then
+                result.RemoveAt(editableIndex)
+                Return -1
+            End If
+            result(editableIndex) = open
+            Return editableIndex
+        End Function
+
+        ''' <summary>Entfernt aus einer Rezeptkopie ALLE Schritte einer Art.</summary>
+        Private Shared Sub RemoveAllOfKind(operations As List(Of GeometryOperation), kind As String)
+            If operations Is Nothing Then Return
+            For index = operations.Count - 1 To 0 Step -1
+                If String.Equals(operations(index)?.Kind, kind, StringComparison.OrdinalIgnoreCase) Then operations.RemoveAt(index)
+            Next
         End Sub
 
-        ''' <summary>Übernimmt die aktuelle Drehbedienung. Bei einem geladenen Transform ersetzt
-        ''' sie dessen letzten Schritt statt eine zweite Bilddrehung dahinterzuhängen.</summary>
+        Private Shared Function LastIndexOfKind(operations As List(Of GeometryOperation), kind As String) As Integer
+            If operations Is Nothing Then Return -1
+            For index = operations.Count - 1 To 0 Step -1
+                If String.Equals(operations(index)?.Kind, kind, StringComparison.OrdinalIgnoreCase) Then Return index
+            Next
+            Return -1
+        End Function
+
+        ''' <summary>Übernimmt die aktuelle Drehbedienung als Schritt - an der Stelle des
+        ''' vertretenen, sonst am Ende.
+        '''
+        ''' DIE REGLER BEHALTEN IHREN WERT und vertreten danach den neuen Schritt. Vorher wurden sie
+        ''' geleert: der Winkel war weg, und der eben bestätigte Schritt liess sich weder nachziehen
+        ''' noch auf null stellen (Nutzerbefund 2026-09-04). Der Haken bleibt ohnehin stehen - er
+        ''' sagt, WIE gedreht wird, nicht WIE WEIT.</summary>
         Private Sub CommitOpenTransform()
-            If _editingCommittedTransformTail AndAlso _geometryOperations.Count > 0 AndAlso
-               String.Equals(_geometryOperations(_geometryOperations.Count - 1)?.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then
-                _geometryOperations.RemoveAt(_geometryOperations.Count - 1)
+            Dim index = EditableTransformIndex()
+            Dim open = OpenTransformOperation()
+            If index >= 0 Then
+                If open Is Nothing Then
+                    _geometryOperations.RemoveAt(index)
+                Else
+                    _geometryOperations(index) = open
+                End If
+            ElseIf open IsNot Nothing Then
+                _geometryOperations.Add(open)
             End If
-            _editingCommittedTransformTail = False
-            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse _flipH OrElse _flipV Then
-                _geometryOperations.Add(New GeometryOperation With {
-                    .Kind = "transform",
-                    .Adjustments = New ImageAdjustments With {
-                        .RotationDegrees = _rotationDegrees,
-                        .StraightenDegrees = CSng(_straightenDegrees),
-                        .StraightenExpandCanvas = _straightenExpandCanvas,
-                        .FlipHorizontal = _flipH,
-                        .FlipVertical = _flipV}})
-            End If
-            _rotationDegrees = 0 : _straightenDegrees = 0
-            _flipH = False : _flipV = False
-            _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
-            _appliedFlipH = False : _appliedFlipV = False
+            _editingCommittedTransform = open
+            _appliedRotationDegrees = _rotationDegrees
+            _appliedStraightenDegrees = _straightenDegrees
+            _appliedFlipH = _flipH
+            _appliedFlipV = _flipV
         End Sub
 
         ''' <summary>Die Bedienelemente des Drehwerkzeugs nachziehen, nachdem die Felder ohne
@@ -11069,27 +11198,20 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            Me.RaisePropertyChanged(NameOf(CanApplyTransform))
         End Sub
 
-        ''' <summary>Schließt die beim FPX-Laden wieder editierbar gemachte Enddrehung, bevor ein
-        ''' anderer Geometrieschritt dahinterkommt. Unverändert bleibt ihr vorhandener Schritt
-        ''' stehen; verändert ersetzt <see cref="CommitOpenTransform"/> ihn. In beiden Fällen dürfen
-        ''' die Regler danach nicht zusätzlich als offener Schritt angehängt werden.</summary>
+        ''' <summary>Übernimmt eine geänderte Drehbedienung, bevor ein anderer Geometrieschritt
+        ''' dazukommt - damit sie in der Kette VOR ihm steht, so wie sie bedient wurde.
+        '''
+        ''' SIE WIRD DABEI NICHT GESCHLOSSEN. Der Schritt bleibt von den Reglern vertreten, der
+        ''' Winkel steht also weiter da und lässt sich nachziehen. Dass er trotzdem nur einmal
+        ''' zählt, hängt nicht mehr an diesem Aufruf, sondern an der Bauart:
+        ''' <see cref="ApplyOpenTransformInPlace"/> ERSETZT den vertretenen Schritt an seiner
+        ''' Stelle, statt den letzten zu entfernen und hinten anzuhängen.</summary>
         Private Sub FinalizeEditableTransformBeforeNextGeometry()
-            If Not _editingCommittedTransformTail Then Return
-            If HasRotateChanges Then
-                CommitOpenTransform()
-                RaiseRotateFieldsChanged()
-                Return
-            End If
-            _editingCommittedTransformTail = False
-            _rotationDegrees = 0 : _straightenDegrees = 0
-            _flipH = False : _flipV = False
-            _appliedRotationDegrees = 0 : _appliedStraightenDegrees = 0
-            _appliedFlipH = False : _appliedFlipV = False
-            ' DIE ANZEIGE MUSS MIT. Die Regler standen bis eben auf den Werten des wieder
-            ' geoeffneten Schritts; ohne diese Meldung zeigte das Werkzeug danach weiter einen
-            ' Winkel, den das Modell nicht mehr kennt.
+            If Not HasRotateChanges Then Return
+            CommitOpenTransform()
             RaiseRotateFieldsChanged()
         End Sub
 
@@ -11130,20 +11252,225 @@ Namespace ViewModels
             Return LastGeometryOperationIndex("crop")
         End Function
 
+        ''' <summary>Wo das AKTUELLE Bild im Anzeigebild des Zuschneide-Werkzeugs liegt - als
+        ''' Ränder in Prozent. Das ist der Stand, auf den der Rahmen sich beim Betreten legt.
+        '''
+        ''' Im Werkzeug zeigt die Vorschau MEHR als das fertige Bild: den bestätigten Zuschnitt und
+        ''' den Verschnitt jeder Begradigung. Die Frage "welcher Teil davon ist mein jetziges Bild"
+        ''' beantwortet keine Formel, sondern die Punktabbildung: die vier Ecken des Ergebnisses
+        ''' zurück in den Quellraum und von dort vorwärts in den Anzeigeraum. Damit gilt die Antwort
+        ''' für JEDE Kette - Zuschnitt, Begradigung, Vierteldrehung, Perspektive, Leinwand - statt
+        ''' nur für den Zuschnitt-Schritt.
+        '''
+        ''' Ein gekipptes Rechteck ist im Anzeigebild nicht achsenparallel darstellbar; genommen
+        ''' wird die HÜLLE. Sie ist die einzige ehrliche Antwort, und weil der Rahmen erst mit
+        ''' "Anwenden" wirkt, ändert sie von sich aus nichts.
+        '''
+        ''' Findet eine Ecke keinen Quellpunkt (leere Ecke einer erweiterten Leinwand), bleibt der
+        ''' Weg über den Zuschnitt-Schritt.</summary>
+        Private Function AppliedCropDisplayMargins() As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            Dim outline = AppliedCropDisplayOutline()
+            If outline Is Nothing Then Return AppliedCropDisplayMarginsFromCropStep()
+
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+            For index = 0 To 3
+                minX = Math.Min(minX, outline(index * 2)) : maxX = Math.Max(maxX, outline(index * 2))
+                minY = Math.Min(minY, outline(index * 2 + 1)) : maxY = Math.Max(maxY, outline(index * 2 + 1))
+            Next
+            minX = Math.Max(0, Math.Min(minX, 100.0))
+            maxX = Math.Max(minX, Math.Min(maxX, 100.0))
+            minY = Math.Max(0, Math.Min(minY, 100.0))
+            maxY = Math.Max(minY, Math.Min(maxY, 100.0))
+            Return (minX, minY, 100.0 - maxX, 100.0 - maxY)
+        End Function
+
+        ''' <summary>Die VIER ECKEN des jetzigen Bildes im Anzeigebild des Zuschneide-Werkzeugs, in
+        ''' Prozent (x0,y0,x1,y1,x2,y2,x3,y3 im Uhrzeigersinn ab links oben) - oder Nothing.
+        '''
+        ''' Ein Viereck und kein Rechteck: steht der Zuschnitt in der Kette VOR einer Drehung, liegt
+        ''' der bestätigte Ausschnitt im Anzeigebild GEKIPPT. Das Werkzeug zeichnet daraus die
+        ''' Kontur, an der man sieht, was das Bild gerade ist, während man den Rahmen zieht; die
+        ''' Ränder oben nehmen davon die Hülle.</summary>
+        Public Function AppliedCropDisplayOutline() As Double()
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return Nothing
+
+            Dim outputAdjustments = New ImageAdjustments With {.GeometryOperations = GeometryOperationsForRender(forPreview:=False)}
+            Dim displayAdjustments = New ImageAdjustments With {.GeometryOperations = GeometryOperationsForCropFrame()}
+            Dim outputSize = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight, outputAdjustments)
+            Dim displaySize = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight, displayAdjustments)
+            If outputSize.Width <= 0 OrElse outputSize.Height <= 0 OrElse
+               displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return Nothing
+
+            ' DIE ABBILDUNG WIRD AM HINWEG ABGELESEN, nicht rückwärts gerechnet: die Ecken des
+            ' Ergebnisses liegen bei einer Begradigung ohne erweiterte Leinwand im LEEREN, dort hat
+            ' der Rückweg keinen Quellpunkt und stiege aus. Beide Ketten unterscheiden sich aber nur
+            ' um einen Zuschnitt und eine Leinwand, und das ist eine affine Abbildung - drei
+            ' Probepunkte legen sie fest, ein vierter prüft sie nach.
+            Dim probeX = New Double() {0, baseWidth, 0, baseWidth}
+            Dim probeY = New Double() {0, 0, baseHeight, baseHeight}
+            Dim outX(3) As Double, outY(3) As Double, dispX(3) As Double, dispY(3) As Double
+            For index = 0 To 3
+                Dim inOutput As SKPoint, inDisplay As SKPoint
+                ' UNGEKLEMMT: die Probepunkte sind Bildecken und liegen damit auf der Kante -
+                ' geklemmt fiele dort jeder zweite heraus.
+                If Not ImageProcessor.TrySourcePointToGeometryOutputUnclipped(probeX(index), probeY(index),
+                                                                             baseWidth, baseHeight,
+                                                                             outputAdjustments, inOutput) OrElse
+                   Not ImageProcessor.TrySourcePointToGeometryOutputUnclipped(probeX(index), probeY(index),
+                                                                             baseWidth, baseHeight,
+                                                                             displayAdjustments, inDisplay) Then Return Nothing
+                If Single.IsNaN(inOutput.X) OrElse Single.IsNaN(inOutput.Y) OrElse
+                   Single.IsNaN(inDisplay.X) OrElse Single.IsNaN(inDisplay.Y) Then Return Nothing
+                outX(index) = inOutput.X : outY(index) = inOutput.Y
+                dispX(index) = inDisplay.X : dispY(index) = inDisplay.Y
+            Next
+
+            Dim mapping As (A As Double, B As Double, C As Double, D As Double, E As Double, F As Double)
+            If Not TryAffineMapping(outX, outY, dispX, dispY, mapping) Then Return Nothing
+
+            Dim cornerX = New Double() {0, outputSize.Width, outputSize.Width, 0}
+            Dim cornerY = New Double() {0, 0, outputSize.Height, outputSize.Height}
+            Dim result(7) As Double
+            For index = 0 To 3
+                Dim x = mapping.A * cornerX(index) + mapping.B * cornerY(index) + mapping.C
+                Dim y = mapping.D * cornerX(index) + mapping.E * cornerY(index) + mapping.F
+                result(index * 2) = x / displaySize.Width * 100.0
+                result(index * 2 + 1) = y / displaySize.Height * 100.0
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Die affine Abbildung durch DREI Punktpaare - der vierte prüft sie nach.
+        '''
+        ''' Die Probe ist keine Zierde: sind die beiden Ketten nicht affin zueinander (eine
+        ''' Perspektive oder eine Rasterverzerrung DAHINTER), stimmt die Abbildung nur an den drei
+        ''' Stützstellen, und der Rahmen läge daneben. Dann ist ein Fehlschlag die richtige Antwort,
+        ''' und der Aufrufer nimmt den Rückfallweg.</summary>
+        Private Shared Function TryAffineMapping(fromX As Double(), fromY As Double(),
+                                                 toX As Double(), toY As Double(),
+                                                 ByRef mapping As (A As Double, B As Double, C As Double,
+                                                                   D As Double, E As Double, F As Double)) As Boolean
+            Dim x1 = fromX(0), y1 = fromY(0), x2 = fromX(1), y2 = fromY(1), x3 = fromX(2), y3 = fromY(2)
+            Dim determinant = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)
+            If Math.Abs(determinant) < 0.000001 Then Return False
+
+            Dim u1 = toX(0), u2 = toX(1), u3 = toX(2)
+            Dim v1 = toY(0), v2 = toY(1), v3 = toY(2)
+            Dim a = ((u2 - u1) * (y3 - y1) - (u3 - u1) * (y2 - y1)) / determinant
+            Dim b = ((x2 - x1) * (u3 - u1) - (x3 - x1) * (u2 - u1)) / determinant
+            Dim c = u1 - a * x1 - b * y1
+            Dim d = ((v2 - v1) * (y3 - y1) - (v3 - v1) * (y2 - y1)) / determinant
+            Dim e = ((x2 - x1) * (v3 - v1) - (x3 - x1) * (v2 - v1)) / determinant
+            Dim f = v1 - d * x1 - e * y1
+
+            Dim testX = a * fromX(3) + b * fromY(3) + c
+            Dim testY = d * fromX(3) + e * fromY(3) + f
+            If Math.Abs(testX - toX(3)) > 1.0 OrElse Math.Abs(testY - toY(3)) > 1.0 Then Return False
+
+            mapping = (a, b, c, d, e, f)
+            Return True
+        End Function
+
+        ''' <summary>Der Rückfallweg: der bestätigte Zuschnitt-Schritt, durch die Kette HINTER ihm
+        ''' in den Anzeigeraum gerechnet. Er kennt nur den Zuschnitt, kommt aber ohne die
+        ''' Rückabbildung aus und trägt damit die Fälle, in denen das Ergebnis leere Ecken hat.
+        '''
+        ''' Ohne Restkette bleiben die Werte unverändert: dann IST der Anzeigeraum der Eingangsraum
+        ''' des Schrittes.</summary>
+        Private Function AppliedCropDisplayMarginsFromCropStep() As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            Dim crop = AppliedCropValues()
+            Dim cropIndex = LastCropBearingGeometryOperationIndex()
+            If cropIndex < 0 Then Return crop
+
+            ' Die Kette HINTER dem Zuschnitt - bestätigte Schritte und, weil sie am Ende der Kette
+            ' laufen, auch die offenen Regler.
+            Dim rest As New List(Of GeometryOperation)()
+            For index = cropIndex + 1 To _geometryOperations.Count - 1
+                rest.Add(_geometryOperations(index).Clone())
+            Next
+            ' Der vertretene Drehschritt kann in dieser Teilkette liegen; sein Index verschiebt
+            ' sich dabei um den abgeschnittenen Anfang.
+            ApplyOpenTransformInPlace(rest, EditableTransformIndex() - (cropIndex + 1))
+            AppendOpenGeometryOperationsWithoutTransform(rest)
+            rest = NormalizeGeometryOperations(rest)
+            If rest.Count = 0 Then Return crop
+
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return crop
+
+            ' Eingangsmaße des Zuschnitts: die Ausgabe der Schritte VOR ihm.
+            Dim prefix As New List(Of GeometryOperation)()
+            For index = 0 To cropIndex - 1
+                prefix.Add(_geometryOperations(index).Clone())
+            Next
+            Dim inSize = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight,
+                New ImageAdjustments With {.GeometryOperations = prefix})
+            If inSize.Width <= 0 OrElse inSize.Height <= 0 Then Return crop
+
+            Dim restAdjustments = New ImageAdjustments With {.GeometryOperations = rest}
+            Dim outSize = ImageProcessor.ComputeGeometryOutputSize(inSize.Width, inSize.Height, restAdjustments)
+            If outSize.Width <= 0 OrElse outSize.Height <= 0 Then Return crop
+
+            Dim rect = ImageProcessor.ComputeGeometryCropRect(inSize.Width, inSize.Height,
+                New ImageAdjustments With {
+                    .CropLeftPercent = CSng(crop.Left), .CropTopPercent = CSng(crop.Top),
+                    .CropRightPercent = CSng(crop.Right), .CropBottomPercent = CSng(crop.Bottom)})
+
+            Dim cornerX = New Double() {rect.Left, rect.Right, rect.Right, rect.Left}
+            Dim cornerY = New Double() {rect.Top, rect.Top, rect.Bottom, rect.Bottom}
+            Dim minX = Double.MaxValue, minY = Double.MaxValue
+            Dim maxX = Double.MinValue, maxY = Double.MinValue
+            For index = 0 To 3
+                Dim mapped As SKPoint
+                ' UNGEKLEMMT: die Ecken liegen auf der Schnittkante, und geklemmt fiele genau dort
+                ' jede zweite heraus - aus der Hülle würde ein Strich.
+                If Not ImageProcessor.TrySourcePointToGeometryOutputUnclipped(cornerX(index), cornerY(index),
+                                                                             inSize.Width, inSize.Height,
+                                                                             restAdjustments, mapped) Then Return crop
+                If Single.IsNaN(mapped.X) OrElse Single.IsNaN(mapped.Y) Then Return crop
+                minX = Math.Min(minX, mapped.X) : maxX = Math.Max(maxX, mapped.X)
+                minY = Math.Min(minY, mapped.Y) : maxY = Math.Max(maxY, mapped.Y)
+            Next
+
+            minX = Math.Max(0, Math.Min(minX, outSize.Width))
+            maxX = Math.Max(minX, Math.Min(maxX, outSize.Width))
+            minY = Math.Max(0, Math.Min(minY, outSize.Height))
+            maxY = Math.Max(minY, Math.Min(maxY, outSize.Height))
+
+            Return (minX / outSize.Width * 100.0, minY / outSize.Height * 100.0,
+                    (outSize.Width - maxX) / outSize.Width * 100.0,
+                    (outSize.Height - maxY) / outSize.Height * 100.0)
+        End Function
+
+        ''' <summary>Der bestätigte Ausschnitt in der Darstellung des offenen Rahmens. Beide liegen
+        ''' im ANZEIGE-Raum, es ist also dieselbe Zahl - die Funktion bleibt als EINE Stelle stehen,
+        ''' an der Rahmen setzen (<see cref="SyncCropFrameToApplied"/>) und Rahmen vergleichen
+        ''' (<see cref="HasCropChanges"/>) sich treffen.</summary>
+        Private Function AppliedCropFrameValues() As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            Return AppliedCropDisplayMargins()
+        End Function
+
         ''' <summary>Bestätigte Schritte plus den momentan offenen Transform-Schritt für die
         ''' Vorschau. Der offene Crop bleibt bewusst ein Overlay und wird erst mit Anwenden Teil
         ''' des Rezepts.</summary>
         Private Function GeometryOperationsForRender(forPreview As Boolean) As List(Of GeometryOperation)
-            Dim result = If(forPreview, GeometryOperationsForDisplay(), _geometryOperations.Select(Function(operation) operation.Clone()).ToList())
+            ' IM OFFENEN ZUSCHNEIDE-WERKZEUG IST DIE VORSCHAU DIE RAHMEN-KETTE. Beides muss dasselbe
+            ' Bild sein: der Rahmen wird auf der Vorschau gezogen.
+            If forPreview AndAlso _currentTool = EditorTool.Transform AndAlso ShowsFullImageWhileCropping Then
+                Return GeometryOperationsForCropFrame()
+            End If
+            Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
             If Not forPreview Then
                 ' EIN WIEDER GEOEFFNETER TRANSFORM-SCHRITT IST KEINE OFFENE GEOMETRIE. Er ist ein
-                ' bestaetigter Schritt in Bearbeitung, und die Regler ERSETZEN ihn - in der
-                ' Vorschau wie in der Ausgabe. Ohne das zeigte die Vorschau die zurueckgedrehte
-                ' Fassung, waehrend Export und Stapel weiter die alte Drehung rechneten.
-                If _editingCommittedTransformTail Then
-                    RemoveEditableTransformTail(result)
-                    AppendOpenTransformOperation(result)
-                End If
+                ' bestaetigter Schritt in Bearbeitung, und die Regler ERSETZEN ihn AN SEINER STELLE -
+                ' in der Vorschau wie in der Ausgabe. Ohne das zeigte die Vorschau die
+                ' zurueckgedrehte Fassung, waehrend Export und Stapel weiter die alte Drehung
+                ' rechneten.
+                ApplyOpenTransformInPlace(result, EditableTransformIndex())
                 Return NormalizeGeometryOperations(result)
             End If
             ' AUCH BEI LEERER LISTE. Frueher stieg die Routine hier aus: ein altes Rezept hatte noch
@@ -11152,8 +11479,8 @@ Namespace ViewModels
             ' Laden verworfen (FpxService.DropRecipeGeometryFields), es gibt also nichts mehr, was
             ' doppelt zaehlen koennte - und ohne das Anhaengen hing die Vorschau eines frischen
             ' Bildes am schrittlosen Feldweg, den es nicht mehr geben soll.
-            RemoveEditableTransformTail(result)
-            AppendOpenGeometryOperations(result)
+            ApplyOpenTransformInPlace(result, EditableTransformIndex())
+            AppendOpenGeometryOperationsWithoutTransform(result)
             Return NormalizeGeometryOperations(result)
         End Function
 
@@ -11163,7 +11490,14 @@ Namespace ViewModels
         ''' sichtbare Bearbeitungen und müssen beim FPX-Speichern erhalten bleiben.</summary>
         Private Sub AppendOpenGeometryOperations(result As List(Of GeometryOperation))
             If result Is Nothing Then Return
-            AppendOpenTransformOperation(result)
+            ApplyOpenTransformInPlace(result, EditableTransformIndex())
+            AppendOpenGeometryOperationsWithoutTransform(result)
+        End Sub
+
+        ''' <summary>Der Teil ohne die Drehung - fuer die Wege, die sie selbst schon an ihre Stelle
+        ''' gesetzt haben (<see cref="ApplyOpenTransformInPlace"/>).</summary>
+        Private Sub AppendOpenGeometryOperationsWithoutTransform(result As List(Of GeometryOperation))
+            If result Is Nothing Then Return
             If HasPerspectiveChanges Then
                 result.Add(New GeometryOperation With {.Kind = "perspective", .Adjustments = New ImageAdjustments With {
                     .PerspectiveHorizontal = CSng(_perspectiveHorizontal), .PerspectiveVertical = CSng(_perspectiveVertical),
@@ -11185,29 +11519,14 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' <summary>Die offene Drehbedienung als Schritt - der Teil von
-        ''' <see cref="AppendOpenGeometryOperations"/>, den auch die Ausgabe braucht, wenn die
-        ''' Regler einen wieder geöffneten Schritt ersetzen.</summary>
-        Private Sub AppendOpenTransformOperation(result As List(Of GeometryOperation))
-            If result Is Nothing Then Return
-            ' Der Haken allein ergibt KEINEN Schritt - siehe HasRotateChanges. Ein Schritt aus
-            ' 0 Grad und Haken vergroessert nichts und stuende nur als Altlast im Rezept.
-            If _rotationDegrees <> 0 OrElse Math.Abs(_straightenDegrees) >= 0.0001 OrElse
-               _flipH OrElse _flipV Then
-                result.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
-                    .RotationDegrees = _rotationDegrees, .StraightenDegrees = CSng(_straightenDegrees),
-                    .StraightenExpandCanvas = _straightenExpandCanvas, .FlipHorizontal = _flipH, .FlipVertical = _flipV}})
-            End If
-        End Sub
-
         ''' <summary>Das FPX-Rezept braucht die bestätigten Schritte UND sichtbar offene
         ''' Geometrie-Regler. Die Vorschau-Variante darf hier nicht verwendet werden: im
         ''' Zuschneide-Werkzeug blendet sie den bestätigten Crop absichtlich aus, damit das volle
         ''' Basisbild unter dem Rahmen zu sehen ist.</summary>
         Private Function GeometryOperationsForFpxSave() As List(Of GeometryOperation)
             Dim result = _geometryOperations.Select(Function(operation) operation.Clone()).ToList()
-            RemoveEditableTransformTail(result)
-            AppendOpenGeometryOperations(result)
+            ApplyOpenTransformInPlace(result, EditableTransformIndex())
+            AppendOpenGeometryOperationsWithoutTransform(result)
             Return NormalizeGeometryOperations(result)
         End Function
 
@@ -11415,35 +11734,45 @@ Namespace ViewModels
 
         ''' <summary>Der Drehwinkel, unter dem ein gespeichertes Objekt auf dem Bildschirm steht.
         '''
-        ''' DAS AUSRICHTEN GEHOERT IN DIE DREHUNG, NICHT DAHINTER. Es ist Teil derselben Lage wie
-        ''' die Vierteldrehung: <c>AppliedTransformState</c> setzt beide zu EINER Drehung zusammen,
-        ''' und eine einzelne Spiegelung kehrt sie gemeinsam um. Wer die Begradigung erst hinter der
-        ''' Umkehrung addiert, laesst ihr Vorzeichen stehen, waehrend das der Objektdrehung kippt.
-        '''
-        ''' Gemessen an einem echten Rezept mit den Schritten "begradigen um 29,7 Grad",
-        ''' "beschneiden", "waagerecht spiegeln": der Renderer zeichnet das Objekt auf
-        ''' -(eigene + 29,7), der Editor las -(eigene) + 29,7 - der Auswahlrahmen lag um 59,4 Grad
-        ''' neben seinem Objekt, und zwar sichtbar erst, wenn Begradigung UND Spiegelung
-        ''' zusammenkamen.</summary>
+        ''' Die Transform-Schritte werden EINZELN und in Renderer-Reihenfolge durchlaufen. Innerhalb
+        ''' eines Schritts dreht/spiegelt <c>ApplyGeometryTransforms</c> zuerst, danach addiert
+        ''' <c>ApplyStraighten</c> den Ausrichtwinkel. Ein zusammengefasster Lagezustand verliert
+        ''' diese Reihenfolge: bei "horizontal spiegeln + um 33 Grad ausrichten" entstand aus 0 Grad
+        ''' faelschlich -33 Grad fuer den Rahmen, waehrend der Renderer korrekt +33 Grad zeichnet.</summary>
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0.0
-            Dim state = AppliedTransformState()
-            Return NormalizeAnnotationRotation(
-                ImageGeometryMapper.SourceObjectRotationToDisplay(annotation.RotationDegrees + state.Straighten,
-                                                                  state.Rotation,
-                                                                  state.FlipHorizontal,
-                                                                  state.FlipVertical))
+            Dim rotation = CDbl(annotation.RotationDegrees)
+            For Each operation In GeometryOperationsForRender(forPreview:=True)
+                Dim transform = operation?.Adjustments
+                If transform Is Nothing OrElse
+                   Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
+                rotation = ImageGeometryMapper.SourceObjectRotationToDisplay(rotation,
+                                                                              transform.RotationDegrees,
+                                                                              transform.FlipHorizontal,
+                                                                              transform.FlipVertical)
+                rotation = NormalizeAnnotationRotation(rotation + transform.StraightenDegrees)
+            Next
+            Return NormalizeAnnotationRotation(rotation)
         End Function
 
-        ''' <summary>Gegenstueck zu <see cref="StoredAnnotationRotationToDisplay"/>: erst die
-        ''' Permutation zuruecknehmen, DANN das Ausrichten abziehen - genau die Gegenrichtung.</summary>
+        ''' <summary>Gegenstueck zu <see cref="StoredAnnotationRotationToDisplay"/>. Die Schritte
+        ''' laufen rueckwaerts: erst den nach der Spiegelung aufgebrachten Ausrichtwinkel abziehen,
+        ''' dann Vierteldrehung und Spiegelung umkehren.</summary>
         Private Function DisplayAnnotationRotationToStored(kind As String, degrees As Double) As Double
-            Dim state = AppliedTransformState()
-            Return NormalizeAnnotationRotation(
-                ImageGeometryMapper.DisplayObjectRotationToSource(NormalizeAnnotationRotation(degrees),
-                                                                  state.Rotation,
-                                                                  state.FlipHorizontal,
-                                                                  state.FlipVertical) - state.Straighten)
+            Dim rotation = NormalizeAnnotationRotation(degrees)
+            Dim operations = GeometryOperationsForRender(forPreview:=True)
+            For index = operations.Count - 1 To 0 Step -1
+                Dim operation = operations(index)
+                Dim transform = operation?.Adjustments
+                If transform Is Nothing OrElse
+                   Not String.Equals(operation.Kind, "transform", StringComparison.OrdinalIgnoreCase) Then Continue For
+                rotation = NormalizeAnnotationRotation(rotation - transform.StraightenDegrees)
+                rotation = ImageGeometryMapper.DisplayObjectRotationToSource(rotation,
+                                                                              transform.RotationDegrees,
+                                                                              transform.FlipHorizontal,
+                                                                              transform.FlipVertical)
+            Next
+            Return NormalizeAnnotationRotation(rotation)
         End Function
 
         Private Function DisplayAnnotationFlipHorizontalToStored(displayFlip As Boolean) As Boolean
@@ -12427,17 +12756,22 @@ Namespace ViewModels
         ''' _cropLeft.._cropBottom sind der noch nicht angewendete Beschnitt, gemessen am aktuell
         ''' ANGEZEIGTEN (also bereits beschnittenen) Bild. Ein offener Beschnitt liegt genau dann vor,
         ''' wenn eine der vier Kanten von Null abweicht.
-        ' ===================== ZUSCHNEIDEN: LIVE oder BESTAETIGT =====================
-        ' JPG/PNG & Co. werden beim Speichern NEU GESCHRIEBEN - der Zuschnitt ist dort ein Schritt,
-        ' den man bewusst anwendet ("Zuschneiden anwenden") und der danach im Bild steckt.
-        ' RAW und PSD koennen wir nicht schreiben; ihre Bearbeitung lebt im .fpxmp-Sidecar und wird
-        ' bei JEDER Anzeige neu gerechnet. Dort ist ein "Anwenden" sinnlos: der Ausschnitt ist ein
-        ' Rezeptwert wie jeder Regler und bleibt beliebig oft aenderbar.
+        ' ===================== ZUSCHNEIDEN: EIN REZEPTWERT, IN JEDEM FORMAT =====================
+        ' Der Zuschnitt ist ein Schritt im Rezept, kein Schnitt in Pixeln - das gilt fuer JEDES
+        ' Format. Das dekodierte Basisbild liegt unbeschnitten im Speicher, geschnitten wird beim
+        ' Rendern, und in die DATEI kommt der Schnitt erst beim Speichern.
         '
         ' Daraus folgt die Darstellung, die man von RAW-Entwicklern kennt: IM Zuschneide-Werkzeug
         ' bleibt das ganze Bild sichtbar (sonst koennte man den Ausschnitt nie wieder vergroessern,
         ' weil das Weggeschnittene gar nicht mehr auf dem Schirm ist), in JEDEM ANDEREN Werkzeug
         ' zeigt die Vorschau nur noch den Ausschnitt.
+        '
+        ' FRUEHER GALT DAS NUR FUER RAW, PSD UND .fpx - also fuer Dokumente, die ihr Rezept neben
+        ' dem unbeschnittenen Ursprungsbild aufbewahren. Bei JPG und PNG zeigte das Werkzeug den
+        ' bereits bestaetigten Ausschnitt, und der Rahmen schnitt von dort aus weiter; ein zu eng
+        ' gezogener Ausschnitt war damit fuer den Rest der Sitzung verloren, obwohl die Datei noch
+        ' unangetastet war. Patricks Entscheidung vom 4. September 2026: dasselbe Verhalten fuer
+        ' alle Formate, erst das Speichern macht den Schnitt.
 
         ''' <summary>Ein .fpx-Buendel ist offen - erkannt am Pfad des Buendels, an der Endung des
         ''' Dokuments ODER am ausgepackten Ordner.
@@ -12460,19 +12794,16 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>True = im Zuschneide-Werkzeug ist das GANZE Bild zu sehen, der Rahmen liegt
-        ''' darauf und laesst sich jederzeit wieder aufziehen.
+        ''' <summary>Im Zuschneide-Werkzeug ist das GANZE Bild zu sehen, der Rahmen liegt darauf und
+        ''' laesst sich jederzeit wieder aufziehen - in JEDEM Format.
         '''
-        ''' Gilt fuer Dokumente, die ihr Rezept neben dem unbeschnittenen Ursprungsbild aufbewahren:
-        ''' RAW und PSD ueber die .fpxmp-Begleitdatei, .fpx ueber das Buendel selbst. Dort ist der
-        ''' Ausschnitt eine Zahl im Rezept und kein Schnitt in Pixeln - das ganze Bild ist immer noch
-        ''' da, also wird es im Werkzeug auch gezeigt.
-        '''
-        ''' Bei schreibbaren Formaten zeigt das Werkzeug dagegen den bereits bestaetigten Ausschnitt;
-        ''' der Rahmen schneidet von dort aus weiter.</summary>
+        ''' Der Ausschnitt ist ueberall eine Zahl im Rezept: das dekodierte Basisbild liegt
+        ''' unbeschnitten im Speicher, und in die Datei kommt der Schnitt erst beim Speichern. Die
+        ''' Eigenschaft bleibt als benannte Stelle stehen, damit die Regel dort steht, wo sie gilt,
+        ''' und nicht als verstreutes True in den Aufrufern.</summary>
         Public ReadOnly Property ShowsFullImageWhileCropping As Boolean
             Get
-                Return IsCurrentImageSidecarFormat OrElse IsCurrentDocumentFpx
+                Return True
             End Get
         End Property
 
@@ -12498,14 +12829,22 @@ Namespace ViewModels
         ''' Zoom muessen das mitbekommen, sonst bliebe ein Bild in der alten Groesse stehen.</summary>
         Private Sub NotifyCropDisplayChanged()
             If Not ShowsFullImageWhileCropping Then Return
-            ' DER BESTAETIGTE ZUSCHNITT STEHT IM REZEPT, nicht mehr in den Feldern: die stehen
-            ' seit der Schrittfolge auf null. Gegen sie geprueft fiel diese Meldung immer aus, und
-            ' das Betreten wie das Verlassen des Werkzeugs plante keine Vorschau mehr - die Buehne
-            ' blieb beim ganzen Bild stehen, waehrend Auswahlbox und Treffertest schon im
-            ' Ausschnitt rechneten.
-            Dim applied = AppliedCropValues()
-            If Math.Abs(applied.Left) < 0.0001 AndAlso Math.Abs(applied.Top) < 0.0001 AndAlso
-               Math.Abs(applied.Right) < 0.0001 AndAlso Math.Abs(applied.Bottom) < 0.0001 Then Return
+            ' GEMESSEN, NICHT AUFGEZAEHLT: das Werkzeug zeigt ein anderes Bild, wenn seine Kette eine
+            ' andere Ausgabegroesse hat. Das kann am Zuschnitt liegen - oder an der erweiterten
+            ' Leinwand einer bestaetigten Begradigung, und genau die fiel durch, solange hier nur
+            ' der Zuschnitt geprueft wurde: beim Verlassen des Werkzeugs blieb die Buehne auf dem
+            ' vollen Bild stehen (Nutzerbefund 2026-09-04).
+            '
+            ' Vorher stand hier der Blick in die alten oberen Felder - die stehen seit der
+            ' Schrittfolge auf null, und die Meldung fiel IMMER aus.
+            Dim baseWidth = GetBaseWidth()
+            Dim baseHeight = GetBaseHeight()
+            If baseWidth <= 0 OrElse baseHeight <= 0 Then Return
+            Dim inTool = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight,
+                New ImageAdjustments With {.GeometryOperations = GeometryOperationsForCropFrame()})
+            Dim outside = ImageProcessor.ComputeGeometryOutputSize(baseWidth, baseHeight,
+                New ImageAdjustments With {.GeometryOperations = GeometryOperationsForRender(forPreview:=False)})
+            If inTool.Width = outside.Width AndAlso inTool.Height = outside.Height Then Return
             RaiseDisplayImageGeometryProperties()
             SchedulePreviewUpdate(markDirty:=False)
             RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
@@ -12517,7 +12856,7 @@ Namespace ViewModels
         '''
         ''' Ohne Klemmen: beide Seiten messen hier am ganzen Bild, es gibt nichts zu begrenzen.</summary>
         Private Sub SyncCropFrameToApplied()
-            Dim crop = AppliedCropValues()
+            Dim crop = AppliedCropFrameValues()
             _cropLeft = crop.Left
             _cropTop = crop.Top
             _cropRight = crop.Right
@@ -12537,7 +12876,9 @@ Namespace ViewModels
         Public ReadOnly Property HasCropChanges As Boolean
             Get
                 If ShowsFullImageWhileCropping Then
-                    Dim applied = AppliedCropValues()
+                    ' Verglichen wird gegen DENSELBEN Stand, den SyncCropFrameToApplied setzt -
+                    ' sonst gaebe es beim Betreten des Werkzeugs schon etwas zu bestaetigen.
+                    Dim applied = AppliedCropFrameValues()
                     Return Math.Abs(_cropLeft - applied.Left) > 0.0001 OrElse
                            Math.Abs(_cropTop - applied.Top) > 0.0001 OrElse
                            Math.Abs(_cropRight - applied.Right) > 0.0001 OrElse
@@ -12615,6 +12956,19 @@ Namespace ViewModels
         Public ReadOnly Property HasTransformChanges As Boolean
             Get
                 Return HasRotateChanges OrElse HasPerspectiveChanges
+            End Get
+        End Property
+
+        ''' <summary>Es gibt im Transformieren-Werkzeug etwas zu übernehmen: Ausschnitt oder Lage.
+        '''
+        ''' BEIDES HÄNGT ANEINANDER, deshalb gibt es dafür EINEN Knopf. Der Rahmen liegt auf dem
+        ''' angezeigten Bild; dreht man daran, bezeichnet er eine andere Bildregion als der
+        ''' bestätigte Ausschnitt - der Zuschnitt-Knopf wurde also von einer Drehung mit aktiv, und
+        ''' zwei Knöpfe sagten dasselbe. Wer die Lage übernimmt, übernimmt auch den Rahmen darauf
+        ''' (Nutzerbefund 2026-09-04).</summary>
+        Public ReadOnly Property CanApplyTransform As Boolean
+            Get
+                Return HasCropChanges OrElse HasRotateChanges
             End Get
         End Property
 
@@ -12830,6 +13184,8 @@ Namespace ViewModels
         End Sub
 
         Public ReadOnly Property ApplyCropCommand As ICommand
+        ''' <summary>Der EINE Knopf des Werkzeugs: Ausschnitt und Lage zusammen.</summary>
+        Public ReadOnly Property ApplyTransformCommand As ICommand
         Public ReadOnly Property ApplyResizeCommand As ICommand
         Public ReadOnly Property ApplyCanvasCommand As ICommand
         Public ReadOnly Property ApplyRotateCommand As ICommand
@@ -13151,6 +13507,9 @@ Namespace ViewModels
             ApplyCropCommand = ReactiveCommand.Create(Async Function() As Task
                                                           Await ApplyCropAsync()
                                                       End Function)
+            ApplyTransformCommand = ReactiveCommand.Create(Async Function() As Task
+                                                               Await ApplyTransformAsync()
+                                                           End Function)
             ApplyResizeCommand = ReactiveCommand.Create(Async Function() As Task
                                                             Await ApplyResizeAsync()
                                                         End Function)
@@ -16453,7 +16812,16 @@ Namespace ViewModels
             If Not HasCropChanges Then Return
             PushUndo(LocalizationService.T("Zugeschnitten"))
             ClearActiveSelectionForGeometry()
-            FinalizeEditableTransformBeforeNextGeometry()
+
+            ' DIE MASSE DES BILDES, AUF DEM DER RAHMEN LIEGT - noch VOR jeder Änderung an der Kette.
+            ' Das Übernehmen der Drehung macht aus ihr einen bestätigten Schritt, und ein
+            ' bestätigter wird im Werkzeug mit erweiterter Leinwand gezeigt; danach gemessen wäre
+            ' die Bezugsgröße eine andere als die, auf der gezogen wurde.
+            Dim replacesAppliedCrop = ShowsFullImageWhileCropping
+            Dim sourceWidth = GetBaseWidth()
+            Dim sourceHeight = GetBaseHeight()
+            Dim currentSize = ImageProcessor.ComputeGeometryOutputSize(sourceWidth, sourceHeight, BuildAppliedGeometryAdjustments())
+            Dim pending = GetPendingCropDisplayMargins()
 
             ' Der Rahmen liegt auf der aktuellen Vorschau. Enthält diese noch eine offene
             ' Drehung/Begradigung, muss sie VOR dem neuen Crop-Schritt Teil der Kette werden:
@@ -16462,17 +16830,28 @@ Namespace ViewModels
             ' sichtbare Rahmen (besonders bei "Leinwand automatisch vergrößern") und das Ergebnis
             ' bezeichneten dann unterschiedliche Bildbereiche. Das Übernehmen gehört bewusst zum
             ' selben Undo-Schritt wie das Zuschneiden.
-            If HasRotateChanges Then
-                CommitOpenTransform()
-                ' Der Haken bleibt stehen - siehe ApplyRotateAsync.
-                Me.RaisePropertyChanged(NameOf(StraightenDegrees))
-            End If
+            Dim rotateWasChanged = HasRotateChanges
+            FinalizeEditableTransformBeforeNextGeometry()
 
-            Dim replacesAppliedCrop = ShowsFullImageWhileCropping
-            Dim sourceWidth = GetBaseWidth()
-            Dim sourceHeight = GetBaseHeight()
-            Dim currentGeometry = BuildAppliedGeometryAdjustments()
-            Dim currentSize = ImageProcessor.ComputeGeometryOutputSize(sourceWidth, sourceHeight, currentGeometry)
+            ' DIE ERWEITERTE LEINWAND FÜR GENAU DIE SCHRITTE, die auch die Vorschau erweitert hat.
+            ' Der Rahmen lag auf diesem Bild, also muss das Rezept es hergeben - sonst schnitte die
+            ' Kette den Verschnitt der Begradigung weiterhin weg und das Ergebnis wäre kleiner als
+            ' der Rahmen. Ausgenommen bleibt nur, was gerade am Regler VERÄNDERT wurde: das folgte
+            ' auch in der Vorschau seinem eigenen Haken.
+            If replacesAppliedCrop Then
+                Dim editableIndex = EditableTransformIndex()
+                Dim skipIndex = If(rotateWasChanged, editableIndex, -1)
+                ExpandStraightenCanvasForCropTool(_geometryOperations, skipIndex)
+                ' WURDE DER VERTRETENE SCHRITT MIT ERWEITERT, zieht der Haken am Regler mit: er
+                ' vertritt diesen Schritt weiter, und beim nächsten Einsetzen nähme sein alter Stand
+                ' die Erweiterung wieder weg. Der Haken zeigt danach, was die Leinwand wirklich tut.
+                If editableIndex >= 0 AndAlso skipIndex < 0 AndAlso Not _straightenExpandCanvas AndAlso
+                   Math.Abs(_straightenDegrees) >= 0.0001 Then
+                    _straightenExpandCanvas = True
+                    _appliedStraightenExpandCanvas = True
+                    Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
+                End If
+            End If
             Dim baseWidth = currentSize.Width
             Dim baseHeight = currentSize.Height
             If baseWidth > 0 AndAlso baseHeight > 0 Then
@@ -16483,8 +16862,7 @@ Namespace ViewModels
                 ' hier noch die ungedrehten Quellkanten: "Rahmen ziehen -> drehen -> Anwenden"
                 ' schnitt damit eine andere Bildregion aus. Die Anzeige-Ränder sind die einzige
                 ' Darstellung, die sowohl zum sichtbaren Rahmen als auch zu dieser Pipeline-Stufe
-                ' passt.
-                Dim pending = GetPendingCropDisplayMargins()
+                ' passt. Gelesen wurden sie oben, VOR dem Übernehmen der Drehung.
                 Dim leftPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropLeft, baseWidth)) +
                              PercentToPixels(pending.Left, baseWidth)
                 Dim rightPx = If(replacesAppliedCrop, 0, PercentToPixels(_appliedCropRight, baseWidth)) +
@@ -16511,12 +16889,25 @@ Namespace ViewModels
                     .CropRightPercent = CSng(_appliedCropRight), .CropBottomPercent = CSng(_appliedCropBottom)}}
             Dim existingCropIndex = If(replacesAppliedCrop, LastCropBearingGeometryOperationIndex(), -1)
             If existingCropIndex >= 0 Then
-                ' Der Rahmen bearbeitet im Bündel den bestehenden Schritt, statt einen zweiten
-                ' Zuschnitt hinter ihn zu hängen. Genau dadurch bleibt der Ausschnitt aufziehbar.
-                _geometryOperations(existingCropIndex) = cropOperation
-            Else
-                _geometryOperations.Add(cropOperation)
+                ' Der Rahmen ERSETZT im Bündel den bestehenden Zuschnitt, statt einen zweiten
+                ' hinter ihn zu hängen. Genau dadurch bleibt der Ausschnitt aufziehbar.
+                '
+                ' UND ZWAR ALLE: ein Rezept kann mehrere Zuschnitte tragen (zweimal zugeschnitten
+                ' und dann als Bündel gespeichert). Blieb einer stehen, zeigte das Werkzeug nicht
+                ' das ganze Basisbild - der Rahmen ist oben aber genau daran gemessen, und dieser
+                ' Teil liess sich nie wieder aufziehen.
+                '
+                ' DER NEUE WANDERT ANS ENDE DER KETTE, und das ist keine Feinheit: die Kanten oben
+                ' sind am ANGEZEIGTEN Bild gemessen, also an der Kette OHNE Zuschnitt. Blieb er
+                ' an seinem alten Platz und lief danach noch eine Begradigung, eine Perspektive oder
+                ' eine Leinwand, bezeichneten Rahmen und Ergebnis verschiedene Bildregionen
+                ' (Nutzerbefund: .fpx, erst zugeschnitten, dann um 50 Grad ausgerichtet). Es ist
+                ' dieselbe Regel, aus der weiter oben schon die offene Drehung vorher bestätigt
+                ' wird: ein achsenparalleler Zuschnitt NACH einer Drehung ist kein Zuschnitt VOR
+                ' ihr.
+                RemoveAllOfKind(_geometryOperations, "crop")
             End If
+            _geometryOperations.Add(cropOperation)
             _appliedCropLeft = 0 : _appliedCropTop = 0 : _appliedCropRight = 0 : _appliedCropBottom = 0
 
             ' Im Bündelmodus bleibt der Rahmen auf dem gerade ersetzten Crop-Schritt liegen; dort
@@ -16543,6 +16934,19 @@ Namespace ViewModels
             ' Das Bild hat eine neue Größe - Zoom und Schwenk müssen sich neu einpassen, sonst bleibt
             ' der Ausschnitt im Maßstab des alten Bildes stehen.
             RaiseEvent ImageGeometryChanged(Me, EventArgs.Empty)
+        End Function
+
+        ''' <summary>Der EINE Knopf des Transformieren-Werkzeugs: Ausschnitt und Lage zusammen.
+        '''
+        ''' Der Zuschnitt nimmt die offene Drehung ohnehin mit (siehe <see cref="ApplyCropAsync"/>),
+        ''' er allein genügt also, sobald ein Rahmen offen ist. Ohne Rahmen bleibt die Drehung für
+        ''' sich.</summary>
+        Private Async Function ApplyTransformAsync() As Task
+            If HasCropChanges Then
+                Await ApplyCropAsync()
+            ElseIf HasRotateChanges Then
+                Await ApplyRotateAsync()
+            End If
         End Function
 
         Private Async Function ApplyResizeAsync() As Task
@@ -16595,6 +16999,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(StraightenExpandCanvas))
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            Me.RaisePropertyChanged(NameOf(CanApplyTransform))
             _hasChanges = True
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
@@ -17915,6 +18320,7 @@ Namespace ViewModels
 
         Private Sub RaiseResetButtonStateChanged()
             Me.RaisePropertyChanged(NameOf(HasCropChanges))
+            Me.RaisePropertyChanged(NameOf(CanApplyTransform))
             Me.RaisePropertyChanged(NameOf(HasImageResizeChanges))
             Me.RaisePropertyChanged(NameOf(HasCanvasSizeChanges))
             Me.RaisePropertyChanged(NameOf(HasColorChanges))
@@ -18853,10 +19259,18 @@ Namespace ViewModels
             If _currentTool = EditorTool.Transform AndAlso ShowsFullImageWhileCropping Then
                 ' Rueckgaengig, Vorgabe, Rezeptwechsel BEI OFFENEM Werkzeug: der Rahmen muss dem
                 ' neuen Stand folgen, sonst zeigte er den vorigen Ausschnitt als "unbestaetigt".
-                _cropLeft = _appliedCropLeft
-                _cropTop = _appliedCropTop
-                _cropRight = _appliedCropRight
-                _cropBottom = _appliedCropBottom
+                '
+                ' ER KOMMT AUS DER KETTE, nicht aus den oberen Feldern: die stehen seit der
+                ' Schrittfolge auf null, und der Rahmen fiel damit leer aus, waehrend
+                ' HasCropChanges ihn gegen den ECHTEN Ausschnitt verglich - ein Rueckgaengig im
+                ' offenen Werkzeug meldete also eine unbestaetigte Aenderung, die niemand gemacht
+                ' hatte. Die Schrittliste steht hier bereits (siehe oben), AppliedCropFrameValues
+                ' rechnet also gegen den wiederhergestellten Stand.
+                Dim frame = AppliedCropFrameValues()
+                _cropLeft = frame.Left
+                _cropTop = frame.Top
+                _cropRight = frame.Right
+                _cropBottom = frame.Bottom
             Else
                 _cropLeft = 0
                 _cropTop = 0
@@ -19082,6 +19496,7 @@ Namespace ViewModels
             ActiveZoomPreset = ZoomPresetMode.Fit
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            Me.RaisePropertyChanged(NameOf(CanApplyTransform))
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
@@ -19114,6 +19529,7 @@ Namespace ViewModels
             _flipH = Not _flipH
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            Me.RaisePropertyChanged(NameOf(CanApplyTransform))
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
@@ -19130,6 +19546,7 @@ Namespace ViewModels
             _flipV = Not _flipV
             Me.RaisePropertyChanged(NameOf(HasRotateChanges))
             Me.RaisePropertyChanged(NameOf(HasTransformChanges))
+            Me.RaisePropertyChanged(NameOf(CanApplyTransform))
             RaiseResetButtonStateChanged()
             RaiseDisplayImageGeometryProperties()
             Await UpdatePreviewAsync()
@@ -19230,7 +19647,7 @@ Namespace ViewModels
             ' SCHRITT statt in den Pixeln - ohne das Leeren der Liste ueberlebte sie ein
             ' "Zuruecksetzen" und wanderte beim Oeffnen des naechsten Bildes sogar mit.
             _geometryOperations.Clear()
-            _editingCommittedTransformTail = False
+            _editingCommittedTransform = Nothing
             RaiseImageWarpChanged()
             _whiteBalance = "Wie Aufnahme"
             _calibrationRedHue = 0
@@ -19607,6 +20024,7 @@ Namespace ViewModels
             ' Der Rahmen allein macht das Dokument NICHT ungespeichert: er ist erst eine Absicht.
             ' Zur Aenderung wird er mit dem Bestaetigen (ApplyCropAsync).
             Me.RaisePropertyChanged(NameOf(HasCropChanges))
+            Me.RaisePropertyChanged(NameOf(CanApplyTransform))
         End Sub
 
         Private Sub RaiseCropPropertiesChanged()
@@ -19789,13 +20207,13 @@ Namespace ViewModels
         ''' Der offene Beschnitt liegt im selben Pixelraster wie das angezeigte Bild (zwischen angewendetem
         ''' und offenem Beschnitt wird nicht neu abgetastet), also ist das reine Ganzzahl-Arithmetik.
         Private Function GetCroppedWidth() As Integer
-            Dim width = EffectiveImageWidthPixels
+            Dim width = EffectiveDisplayImageWidthPixels
             If width <= 0 Then Return 0
             Return Math.Max(1, width - CropLeftPixels - CropRightPixels)
         End Function
 
         Private Function GetCroppedHeight() As Integer
-            Dim height = EffectiveImageHeightPixels
+            Dim height = EffectiveDisplayImageHeightPixels
             If height <= 0 Then Return 0
             Return Math.Max(1, height - CropTopPixels - CropBottomPixels)
         End Function
@@ -19814,8 +20232,8 @@ Namespace ViewModels
         End Function
 
         Private Sub SetCropValues(left As Double, top As Double, right As Double, bottom As Double)
-            Dim maxHorizontal = MaxCropEdgePercent(EffectiveImageWidthPixels)
-            Dim maxVertical = MaxCropEdgePercent(EffectiveImageHeightPixels)
+            Dim maxHorizontal = MaxCropEdgePercent(EffectiveDisplayImageWidthPixels)
+            Dim maxVertical = MaxCropEdgePercent(EffectiveDisplayImageHeightPixels)
             _cropLeft = ClampCropEdge(left, 0, maxHorizontal)
             _cropRight = ClampCropEdge(right, _cropLeft, maxHorizontal)
             _cropTop = ClampCropEdge(top, 0, maxVertical)
@@ -19832,8 +20250,8 @@ Namespace ViewModels
         ''' auf das Original - sonst könnte man nach einem Beschnitt eine Breite eintippen, die größer
         ''' als das sichtbare Bild ist.
         Private Sub SetCropSizePixels(widthPixels As Integer, heightPixels As Integer)
-            Dim baseWidth = EffectiveImageWidthPixels
-            Dim baseHeight = EffectiveImageHeightPixels
+            Dim baseWidth = EffectiveDisplayImageWidthPixels
+            Dim baseHeight = EffectiveDisplayImageHeightPixels
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return
 
             Dim leftPx = CropLeftPixels
@@ -19850,7 +20268,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub ApplyCropPreset(preset As String)
-            If EffectiveImageWidthPixels <= 0 OrElse EffectiveImageHeightPixels <= 0 Then Return
+            If EffectiveDisplayImageWidthPixels <= 0 OrElse EffectiveDisplayImageHeightPixels <= 0 Then Return
 
             Select Case If(preset, "").Trim()
                 Case "Original", "Frei"
@@ -19872,17 +20290,14 @@ Namespace ViewModels
         ''' ersten Beschnitt hat das Original ein anderes Seitenverhältnis). Der Rest wird in ganzen
         ''' Pixeln aufgeteilt; bei ungerader Differenz bekommt die rechte/untere Kante das Pixel mehr.
         Private Sub ApplyCenteredAspectCrop(targetAspect As Double)
-            Dim width = EffectiveImageWidthPixels
-            Dim height = EffectiveImageHeightPixels
+            Dim width = EffectiveDisplayImageWidthPixels
+            Dim height = EffectiveDisplayImageHeightPixels
             If width <= 0 OrElse height <= 0 OrElse targetAspect <= 0 Then Return
 
-            ' Die Vorgabe ("16:9") meint das ANGEZEIGTE Seitenverhältnis. Gerechnet wird hier aber im
-            ' Source-Raster, dessen Achsen bei 90°/270° vertauscht sind - dort mit dem Kehrwert
-            ' rechnen, sonst ergab "16:9" auf gedrehten Bildern 9:16 am Bildschirm.
-            ' Mittig bleibt mittig: die zentrierten Ränder überstehen jede Dreh-/Spiegel-Permutation.
-            Dim q = AppliedRotationDegrees
-            If q = 90 OrElse q = 270 Then targetAspect = 1.0 / targetAspect
-
+            ' Die Vorgabe ("16:9") meint das ANGEZEIGTE Seitenverhältnis, und genau darin wird
+            ' gerechnet: der Rahmen liegt seit der Umstellung in Anzeige-Achsen. Der frühere
+            ' Kehrwert bei 90/270 Grad gehörte zum Source-Raster und würde das Verhältnis heute
+            ' verdrehen.
             Dim targetWidth = width
             Dim targetHeight = height
             If width / CDbl(height) > targetAspect Then
@@ -22188,6 +22603,45 @@ Namespace ViewModels
             Finally
                 _isLoadingAnnotation = False
             End Try
+            LogSelectedAnnotationLayout()
+        End Sub
+
+        ''' <summary>Schreibt die LAGE des markierten Objekts ins Diagnoselog - alle drei Sichten in
+        ''' EINER Zeile, damit sich eine Abweichung zuordnen laesst:
+        ''' <list type="bullet">
+        ''' <item>gespeichert: was im Rezept steht (Quellraum),</item>
+        ''' <item>abgebildet: was <c>TransformAnnotationForGeometry</c> daraus macht - die gemeinsame
+        ''' Quelle von Auswahlrahmen UND Kompositor,</item>
+        ''' <item>Rahmen: was die Ansicht daraus zeichnet (Rechteck plus
+        ''' <see cref="AnnotationRotation"/>, gedreht um die Mitte),</item>
+        ''' <item>Bild: die Geometrie, gegen die gerechnet wird.</item>
+        ''' </list>
+        ''' Laeuft nur beim Nachladen der Objektpuffer, nicht je Mausbewegung - eine Zeile je
+        ''' Auswahl und je Geometrieaenderung.</summary>
+        Private Sub LogSelectedAnnotationLayout()
+            Try
+                If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
+                Dim stored = _annotations(_selectedAnnotationIndex)
+                If stored Is Nothing Then Return
+                Dim displaySize = GetAnnotationDisplayPixelSize()
+                If displaySize.Width <= 0 OrElse displaySize.Height <= 0 Then Return
+                Dim mapped = TransformAnnotationToDisplayGeometry(stored, displaySize.Width, displaySize.Height)
+                Dim frame = GetSelectedAnnotationDisplayRectPercent()
+                Dim state = AppliedTransformState()
+                DiagnosticLogService.LogAlways("Editor.ObjektLage",
+                    $"art={NormalizeAnnotationKind(stored.Kind)} " &
+                    $"gespeichert={stored.XPixels:F0},{stored.YPixels:F0} {stored.WidthPixels:F0}x{stored.HeightPixels:F0} " &
+                    $"dreh={stored.RotationDegrees:F1} spiegel={If(stored.FlipHorizontal, "H", "-")}{If(stored.FlipVertical, "V", "-")} | " &
+                    $"abgebildet={If(mapped Is Nothing, "-", $"{mapped.XPixels:F0},{mapped.YPixels:F0} {mapped.WidthPixels:F0}x{mapped.HeightPixels:F0} dreh={mapped.RotationDegrees:F1} spiegel={If(mapped.FlipHorizontal, "H", "-")}{If(mapped.FlipVertical, "V", "-")}")} | " &
+                    $"rahmen={frame.X:F1}%,{frame.Y:F1}% {frame.Width:F1}x{frame.Height:F1}% dreh={AnnotationRotation:F1} " &
+                    $"spiegel={If(AnnotationDisplayFlipHorizontal, "H", "-")}{If(AnnotationDisplayFlipVertical, "V", "-")} | " &
+                    $"bild={displaySize.Width}x{displaySize.Height} quarter={state.Rotation} ausrichten={state.Straighten:F1} " &
+                    $"bildspiegel={If(state.FlipHorizontal, "H", "-")}{If(state.FlipVertical, "V", "-")} " &
+                    $"werkzeug={_currentTool}")
+            Catch ex As Exception
+                ' Eine Diagnosezeile darf das Nachladen der Objektpuffer nie stoeren.
+                DiagnosticLogService.LogException("Editor.ObjektLage", ex)
+            End Try
         End Sub
 
         ''' <param name="propertyName">Wird vom Compiler mit dem Namen der aufrufenden Eigenschaft
@@ -22478,59 +22932,23 @@ Namespace ViewModels
             RaiseResetButtonStateChanged()
         End Sub
 
-        ''' <summary>Offene Beschnitt-Ränder vom ANZEIGE-Raum (per Rezept gedrehtes/gespiegeltes Bild)
-        ''' in den SOURCE-Raum umrechnen, in dem die Pipeline den Crop anwendet (ApplyCrop läuft VOR
-        ''' ApplyGeometryTransforms). Reihenfolge wie der Renderer: erst Vierteldrehung, dann Flips -
-        ''' rückwärts also erst die Flips ablösen, dann die Rand-Permutation der Drehung.
-        ''' Prozent-Ränder überstehen den Achsentausch verlustfrei (Anzeige-Breite = Source-Höhe bei
-        ''' 90°/270°). OHNE diese Umrechnung entfernte der Beschnitt auf gedrehten Bildern die
-        ''' falsche Bildregion (Anzeige-links = Source-unten bei 90° im UZS).</summary>
-        Private Function DisplayCropMarginsToSource(left As Double, top As Double,
-                                                    right As Double, bottom As Double) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
-            If AppliedFlipHorizontal Then
-                Dim swapH = left : left = right : right = swapH
-            End If
-            If AppliedFlipVertical Then
-                Dim swapV = top : top = bottom : bottom = swapV
-            End If
-            Select Case AppliedRotationDegrees
-                Case 90 : Return (top, right, bottom, left)
-                Case 180 : Return (right, bottom, left, top)
-                Case 270 : Return (bottom, left, top, right)
-                Case Else : Return (left, top, right, bottom)
-            End Select
-        End Function
-
-        ''' <summary>Umkehrung von <see cref="DisplayCropMarginsToSource"/>: Source-Ränder für die
-        ''' Anzeige (Overlay-Rechteck) permutieren - erst Drehung vorwärts, dann Flips.</summary>
-        Private Function SourceCropMarginsToDisplay(left As Double, top As Double,
-                                                    right As Double, bottom As Double) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
-            Dim l = left, t = top, r = right, b = bottom
-            Select Case AppliedRotationDegrees
-                Case 90 : l = bottom : t = left : r = top : b = right
-                Case 180 : l = right : t = bottom : r = left : b = top
-                Case 270 : l = top : t = right : r = bottom : b = left
-            End Select
-            If AppliedFlipHorizontal Then
-                Dim swapH = l : l = r : r = swapH
-            End If
-            If AppliedFlipVertical Then
-                Dim swapV = t : t = b : b = swapV
-            End If
-            Return (l, t, r, b)
-        End Function
-
-        ''' <summary>Einstieg für die View: der gezogene Crop-Rahmen liegt in Prozent des ANGEZEIGTEN
-        ''' Bildes und wird hier in den Source-Raum übersetzt, bevor er gespeichert wird.</summary>
+        ''' <summary>Einstieg für die View: der gezogene Crop-Rahmen liegt in Prozent des
+        ''' ANGEZEIGTEN Bildes - und genau so wird er gehalten.
+        '''
+        ''' FRÜHER WURDE ER IN SOURCE-ACHSEN PERMUTIERT, weil der Beschnitt in der festen Kette VOR
+        ''' der Drehung lief. Seit der bestätigte Zuschnitt am ENDE der Kette steht, ist der
+        ''' Anzeigeraum sein Raum; die Permutation drehte die Werte nur noch gegen das, was man
+        ''' sieht. Sichtbar an einem Bild mit Vierteldrehung im Rezept: der Regler "Links" rückte
+        ''' die OBERE Kante, und Breite und Höhe im Panel standen vertauscht zur Größenplakette am
+        ''' Rahmen (Nutzerbefund 2026-09-04).</summary>
         Public Sub SetCropPercentagesFromDisplay(left As Double, top As Double, right As Double, bottom As Double)
-            Dim m = DisplayCropMarginsToSource(left, top, right, bottom)
-            SetCropPercentages(m.Left, m.Top, m.Right, m.Bottom)
+            SetCropPercentages(left, top, right, bottom)
         End Sub
 
-        ''' <summary>Der offene Beschnitt (Source-Raum) als Anzeige-Ränder - daraus zeichnet die View
-        ''' das Overlay-Rechteck auf dem gedrehten/gespiegelten Bild.</summary>
+        ''' <summary>Der offene Beschnitt als Anzeige-Ränder - daraus zeichnet die View das
+        ''' Overlay-Rechteck. Gehalten wird er bereits in diesem Raum.</summary>
         Public Function GetPendingCropDisplayMargins() As (Left As Double, Top As Double, Right As Double, Bottom As Double)
-            Return SourceCropMarginsToDisplay(_cropLeft, _cropTop, _cropRight, _cropBottom)
+            Return (_cropLeft, _cropTop, _cropRight, _cropBottom)
         End Function
 
         ''' <summary>Effektive Maße entlang der ANZEIGE-Achsen (bei 90°/270° getauscht) - Bezugsgröße
@@ -22553,8 +22971,8 @@ Namespace ViewModels
         ''' geschnitten werden ohnehin nur ganze Pixel, und der Rahmen wird aus genau diesen Prozentwerten
         ''' gezeichnet - ohne Einrasten stünde er bei hohem Zoom neben der Kante, die tatsächlich fällt.</summary>
         Public Sub SetCropPercentages(left As Double, top As Double, right As Double, bottom As Double)
-            Dim width = EffectiveImageWidthPixels
-            Dim height = EffectiveImageHeightPixels
+            Dim width = EffectiveDisplayImageWidthPixels
+            Dim height = EffectiveDisplayImageHeightPixels
             If width > 0 AndAlso height > 0 Then
                 left = PixelsToPercent(PercentToPixels(left, width), width)
                 right = PixelsToPercent(PercentToPixels(right, width), width)

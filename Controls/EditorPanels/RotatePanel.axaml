@@ -77,13 +77,11 @@
                 <CheckBox Content="Leinwand automatisch vergrößern"
                           IsChecked="{Binding StraightenExpandCanvas}"
                           FontSize="{DynamicResource FP.Font.Small}"
-                          ToolTip.Tip="Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden, statt das Bild zum Ausgleich hineinzuzoomen" />
-                <Button Classes="accent" HorizontalAlignment="Stretch" Padding="10,5"
-                        IsEnabled="{Binding HasRotateChanges}"
-                        Command="{Binding ApplyRotateCommand}">
-                    <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
-                               HorizontalAlignment="Center"/>
-                </Button>
+                          ToolTip.Tip="Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden" />
+                <!-- KEIN EIGENER ANWENDEN-KNOPF MEHR: Ausschnitt und Lage haengen aneinander (eine
+                     Drehung versetzt den Rahmen) und werden von EINEM Knopf unter beiden Gruppen
+                     uebernommen - siehe EditorView, direkt unter diesem Panel. -->
+
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                     <Button Classes="ghost" Height="44" Padding="8,6"
                             HorizontalAlignment="Stretch"

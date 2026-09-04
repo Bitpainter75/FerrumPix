@@ -126,22 +126,9 @@
                     <TextBlock Text="9:16" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
             </WrapPanel>
-            <!-- Der einzige Weg, auf dem ein Zuschnitt wirksam wird - für jedes Format, neben der
-                 Eingabetaste. Ein Rahmen allein schneidet nie. -->
-            <Button Classes="accent"
-                    HorizontalAlignment="Stretch"
-                    Padding="10,6"
-                    Command="{Binding ApplyCropCommand}"
-                    IsEnabled="{Binding HasCropChanges}"
-                    ToolTip.Tip="Ausschnitt anwenden (Eingabetaste)">
-                <StackPanel Orientation="Horizontal" Spacing="6"
-                            HorizontalAlignment="Center">
-                    <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/crop.svg"
-                        Width="16" Height="16" />
-                    <TextBlock Text="Zuschneiden anwenden" />
-                </StackPanel>
-            </Button>
+            <!-- KEIN EIGENER ANWENDEN-KNOPF MEHR. Ausschnitt und Lage haengen aneinander und
+                 werden von EINEM Knopf unter beiden Gruppen uebernommen (EditorView, unter dem
+                 Dreh-Panel). Ein Rahmen allein schneidet weiterhin nie. -->
         </StackPanel>
     </Expander>
 </UserControl>

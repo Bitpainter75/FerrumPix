@@ -1620,9 +1620,6 @@
   <data name="Ansicht_5c388792" xml:space="preserve">
     <value>दृश्य</value>
   </data>
-  <data name="Ausschnitt_anwenden_Eingabetaste_fb55b886" xml:space="preserve">
-    <value>क्रॉप लागू करें (ENTER)</value>
-  </data>
   <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>फ़ाइल पैटर्न या टैग</value>
   </data>
@@ -1718,6 +1715,12 @@
   </data>
   <data name="Zuschneiden_anwenden_4868e7ab" xml:space="preserve">
     <value>क्रॉप लागू करें</value>
+  </data>
+  <data name="Ausschnitt_und_Lage_anwenden_Eingabetaste_d8f4e448" xml:space="preserve">
+    <value>कटाव और दिशा लागू करें (Enter)</value>
+  </data>
+  <data name="Transformieren_anwenden_188003c5" xml:space="preserve">
+    <value>रूपांतरण लागू करें</value>
   </data>
   <data name="Bedingung_hinzuf_gen_0c64f68a" xml:space="preserve">
     <value>+ शर्त जोड़ें</value>
@@ -2013,8 +2016,8 @@
   <data name="VHS_d1f8be8f" xml:space="preserve">
     <value>VHS</value>
   </data>
-  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_212f0168" xml:space="preserve">
-    <value>सीधा करते समय कैनवास बड़ा कर देता है ताकि छवि के कोने न कटें, बजाय इसके कि भरपाई के लिए छवि में ज़ूम किया जाए।</value>
+  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_fbd496bb" xml:space="preserve">
+    <value>सीधा करते समय कैनवास बड़ा करता है ताकि चित्र के कोने न कटें</value>
   </data>
   <data name="Verlauf_35bec7db" xml:space="preserve">
     <value>प्रवणता</value>

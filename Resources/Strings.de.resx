@@ -1620,9 +1620,6 @@
   <data name="Ansicht_5c388792" xml:space="preserve">
     <value>Ansicht</value>
   </data>
-  <data name="Ausschnitt_anwenden_Eingabetaste_fb55b886" xml:space="preserve">
-    <value>Ausschnitt anwenden (Eingabetaste)</value>
-  </data>
   <data name="Dateimuster_oder_Stichw_rter_d453597c" xml:space="preserve">
     <value>Dateimuster oder Stichwörter</value>
   </data>
@@ -1718,6 +1715,12 @@
   </data>
   <data name="Zuschneiden_anwenden_4868e7ab" xml:space="preserve">
     <value>Zuschneiden anwenden</value>
+  </data>
+  <data name="Ausschnitt_und_Lage_anwenden_Eingabetaste_d8f4e448" xml:space="preserve">
+    <value>Ausschnitt und Lage anwenden (Eingabetaste)</value>
+  </data>
+  <data name="Transformieren_anwenden_188003c5" xml:space="preserve">
+    <value>Transformieren anwenden</value>
   </data>
 
   <data name="Bedingung_hinzuf_gen_0c64f68a" xml:space="preserve">
@@ -2014,8 +2017,8 @@
   <data name="VHS_d1f8be8f" xml:space="preserve">
     <value>VHS</value>
   </data>
-  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_212f0168" xml:space="preserve">
-    <value>Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden, statt das Bild zum Ausgleich hineinzuzoomen</value>
+  <data name="Vergr_ert_die_Leinwand_beim_Ausrichten_so_dass_k_fbd496bb" xml:space="preserve">
+    <value>Vergrößert die Leinwand beim Ausrichten so, dass keine Bildecken abgeschnitten werden</value>
   </data>
   <data name="Verlauf_35bec7db" xml:space="preserve">
     <value>Verlauf</value>
