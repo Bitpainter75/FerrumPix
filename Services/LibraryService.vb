@@ -567,6 +567,32 @@ Namespace Services
                           Select(Function(p) (p.Key, p.Value)).ToList()
         End Function
 
+        ''' <summary>Gibt die Katalogpfade mit mindestens einem der gewünschten manuellen
+        ''' Stichwörter zurück. Tags liegen bewusst als Liste in einer Spalte; daher wird exakt
+        ''' nach dem Einlesen verglichen, statt ein unsicheres SQL-LIKE zu verwenden.</summary>
+        Public Function GetPathsForTags(tags As IEnumerable(Of String)) As List(Of String)
+            Dim wanted As New HashSet(Of String)(If(tags, Enumerable.Empty(Of String)()).
+                                                 Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+                                                 Select(Function(t) t.Trim()), StringComparer.OrdinalIgnoreCase)
+            Dim result As New List(Of String)()
+            If wanted.Count = 0 Then Return result
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT FilePath,Tags FROM ImageMeta WHERE Tags<>''"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.IsDBNull(0) OrElse reader.IsDBNull(1) Then Continue While
+                            If ParseTags(reader.GetString(1)).Any(Function(tag) wanted.Contains(tag)) Then
+                                result.Add(reader.GetString(0))
+                            End If
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
         Public Sub SetTags(filePath As String, tags As IEnumerable(Of String), Optional syncToXmp As Boolean = False)
             If Not IsCatalogWritable(filePath) Then Return
             Using conn = New SqliteConnection(_connectionString)

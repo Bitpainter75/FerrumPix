@@ -522,6 +522,63 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Ermittelt die Assets, die mindestens eines der gewählten KI-Stichwörter
+        ''' tragen. Die Abfrage wird pro Suche einmal ausgeführt, nicht pro Bild.</summary>
+        Public Function GetAssetIdsForAiTags(tags As IEnumerable(Of String)) As HashSet(Of String)
+            Dim wanted = If(tags, Enumerable.Empty(Of String)()).
+                Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+                Select(Function(t) t.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            Dim result As New HashSet(Of String)(StringComparer.Ordinal)
+            If wanted.Count = 0 Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim parameters As New List(Of String)()
+                        For index = 0 To wanted.Count - 1
+                            Dim parameter = "$t" & index.ToString(CultureInfo.InvariantCulture)
+                            parameters.Add(parameter)
+                            cmd.Parameters.AddWithValue(parameter, wanted(index))
+                        Next
+                        cmd.CommandText = "SELECT DISTINCT AssetId FROM AiAssetTag WHERE ServerKey=$s AND Canonical IN (" & String.Join(",", parameters) & ")"
+                        cmd.Parameters.AddWithValue("$s", ImmichService.ServerKey)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If Not reader.IsDBNull(0) Then result.Add(reader.GetString(0))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.FindAiTags", ex)
+            End Try
+            Return result
+        End Function
+
+        Public Function GetTagCounts() As List(Of (Name As String, Count As Integer))
+            Dim counts As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Tags FROM AssetMeta WHERE ServerKey=$s AND Tags<>''"
+                        cmd.Parameters.AddWithValue("$s", ImmichService.ServerKey)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If reader.IsDBNull(0) Then Continue While
+                                For Each tag In SplitTags(reader.GetString(0)).Distinct(StringComparer.OrdinalIgnoreCase)
+                                    counts(tag) = If(counts.ContainsKey(tag), counts(tag) + 1, 1)
+                                Next
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.StichwortZahlen", ex)
+            End Try
+            Return counts.OrderBy(Function(x) x.Key, StringComparer.OrdinalIgnoreCase).Select(Function(x) (x.Key, x.Value)).ToList()
+        End Function
+
         Public Function GetAssetUpdatedAt(serverKey As String, assetId As String) As String
             If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(assetId) Then Return ""
             Try

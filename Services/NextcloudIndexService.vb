@@ -146,6 +146,52 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Der lokal gespeicherte Nextcloud-Photos-Katalog. Anders als Memories liefert
+        ''' Photos keine Cluster für Filter; diese Datenbank ist deshalb die maßgebliche Quelle für
+        ''' die Galerie-Suche, auch wenn Memories deaktiviert ist.</summary>
+        Public Function GetCachedMetas(serverKey As String) As List(Of LibraryImageMeta)
+            Dim result As New List(Of LibraryImageMeta)()
+            If String.IsNullOrWhiteSpace(serverKey) Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT FileId,FilePath,Tags,DateTaken,Camera,Iso,Aperture,Lens,FocalLengthMm,ShutterSpeed,GpsLatitude,GpsLongitude,Width,Height " &
+                                          "FROM PhotoMeta WHERE ServerKey=$s"
+                        cmd.Parameters.AddWithValue("$s", serverKey)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If reader.IsDBNull(0) Then Continue While
+                                Dim fileId = reader.GetString(0)
+                                Dim filePath = If(reader.IsDBNull(1), "", reader.GetString(1))
+                                Dim fileName = Path.GetFileName(filePath)
+                                If String.IsNullOrWhiteSpace(fileName) Then fileName = fileId
+                                result.Add(New LibraryImageMeta With {
+                                    .FilePath = NextcloudService.MakePseudoPath(fileId, fileName),
+                                    .Tags = SplitTags(If(reader.IsDBNull(2), "", reader.GetString(2))),
+                                    .DateTaken = If(reader.IsDBNull(3), "", reader.GetString(3)),
+                                    .Camera = If(reader.IsDBNull(4), "", reader.GetString(4)),
+                                    .Iso = If(reader.IsDBNull(5), Nothing, reader.GetInt32(5)),
+                                    .Aperture = If(reader.IsDBNull(6), Nothing, reader.GetDouble(6)),
+                                    .Lens = If(reader.IsDBNull(7), "", reader.GetString(7)),
+                                    .FocalLengthMm = If(reader.IsDBNull(8), Nothing, reader.GetDouble(8)),
+                                    .ShutterSpeed = If(reader.IsDBNull(9), "", reader.GetString(9)),
+                                    .GpsLatitude = If(reader.IsDBNull(10), Nothing, reader.GetDouble(10)),
+                                    .GpsLongitude = If(reader.IsDBNull(11), Nothing, reader.GetDouble(11)),
+                                    .ImageWidth = If(reader.IsDBNull(12), Nothing, reader.GetInt32(12)),
+                                    .ImageHeight = If(reader.IsDBNull(13), Nothing, reader.GetInt32(13))
+                                })
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NextcloudIndex.GetCachedMetas", ex)
+                result.Clear()
+            End Try
+            Return result
+        End Function
+
         ''' <summary>Speichert die Einzelheiten einer Aufnahme unter ihrem Etag.</summary>
         Public Sub Put(serverKey As String, fileId As String, etag As String, photo As NextcloudService.NextcloudPhoto)
             If String.IsNullOrEmpty(serverKey) OrElse String.IsNullOrEmpty(fileId) OrElse photo Is Nothing Then Return
@@ -254,6 +300,30 @@ Namespace Services
             Return result
         End Function
 
+        Public Function GetTagCounts() As List(Of (Name As String, Count As Integer))
+            Dim counts As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Tags FROM PhotoMeta WHERE ServerKey=$s AND Tags<>''"
+                        cmd.Parameters.AddWithValue("$s", NextcloudService.ServerKey)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If reader.IsDBNull(0) Then Continue While
+                                For Each tag In reader.GetString(0).Split(vbLf).Where(Function(t) Not String.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase)
+                                    counts(tag) = If(counts.ContainsKey(tag), counts(tag) + 1, 1)
+                                Next
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NextcloudIndex.StichwortZahlen", ex)
+            End Try
+            Return counts.OrderBy(Function(x) x.Key, StringComparer.OrdinalIgnoreCase).Select(Function(x) (x.Key, x.Value)).ToList()
+        End Function
+
         Public Function GetAiTagCounts() As List(Of (Canonical As String, Count As Integer))
             Dim result As New List(Of (Canonical As String, Count As Integer))()
             Try
@@ -269,6 +339,40 @@ Namespace Services
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("NextcloudIndex.KIStichwortZahlen", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Ermittelt die Dateien, die mindestens eines der gewählten KI-Stichwörter
+        ''' tragen. KI-Stichwörter sind lokal erkannt und daher nicht als Memories-Cluster beim
+        ''' Nextcloud-Server verfügbar.</summary>
+        Public Function GetFileIdsForAiTags(tags As IEnumerable(Of String)) As HashSet(Of String)
+            Dim wanted = If(tags, Enumerable.Empty(Of String)()).
+                Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+                Select(Function(t) t.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            Dim result As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            If wanted.Count = 0 Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim parameters As New List(Of String)()
+                        For index = 0 To wanted.Count - 1
+                            Dim parameter = "$t" & index.ToString(CultureInfo.InvariantCulture)
+                            parameters.Add(parameter)
+                            cmd.Parameters.AddWithValue(parameter, wanted(index))
+                        Next
+                        cmd.CommandText = "SELECT DISTINCT FileId FROM AiPhotoTag WHERE ServerKey=$s AND Canonical IN (" & String.Join(",", parameters) & ")"
+                        cmd.Parameters.AddWithValue("$s", NextcloudService.ServerKey)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If Not reader.IsDBNull(0) Then result.Add(reader.GetString(0))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NextcloudIndex.FindAiTags", ex)
             End Try
             Return result
         End Function

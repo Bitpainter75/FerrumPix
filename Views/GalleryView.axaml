@@ -385,40 +385,7 @@
                                     <!-- ItemsControl erzeugt beim Öffnen JEDE Zeile. Das ist bei tausend
                                          Personen sichtbar langsamer als die Abfrage. ItemsRepeater
                                          virtualisiert die lange Liste im ScrollViewer. -->
-                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
-                                        <ItemsRepeater ItemsSource="{Binding PersonFilterOptions}">
-                                            <ItemsRepeater.Layout><StackLayout Orientation="Vertical"/></ItemsRepeater.Layout>
-                                            <ItemsRepeater.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type models:PersonFilterOption}">
-                                                    <!-- Click statt Command, gleicher Grund wie bei den
-                                                         Stichwörtern: der Inhalt eines Aufklappfensters hängt
-                                                         nicht im Baum der Ansicht. -->
-                                                    <StackPanel>
-                                                        <!-- Zwischenüberschrift vor dem ersten Eintrag je
-                                                             Serverquelle. Die Bestände lassen sich nicht
-                                                             verunden - ohne die Trennung sähe die Liste aus,
-                                                             als ginge das. Der Servername ist ein Eigenname
-                                                             und wird nicht übersetzt. -->
-                                                        <TextBlock Text="{Binding ServerSource}" Classes="no-translate"
-                                                                   IsVisible="{Binding ShowsServerHeader}"
-                                                                   Foreground="{DynamicResource FP.Text.Muted}"
-                                                                   FontSize="{DynamicResource FP.Font.Small}"
-                                                                   Margin="10,8,10,2"/>
-                                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                                Click="OnPersonFilterItemClick">
-                                                            <Grid ColumnDefinitions="*,20">
-                                                                <TextBlock Text="{Binding Label}" Classes="no-translate"
-                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
-                                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                                            </Grid>
-                                                        </Button>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsRepeater.ItemTemplate>
-                                        </ItemsRepeater>
-                                    </ScrollViewer>
+                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto"><ItemsRepeater ItemsSource="{Binding PersonFilterOptions}"><ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:PersonFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnPersonFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater></ScrollViewer>
 
                                     <!-- Namenlose Gruppen stehen nicht in dieser Liste, deshalb ist sie
                                          nach einer frischen Erkennung noch leer. Der zweite Satz sagt,
@@ -505,35 +472,7 @@
                                         </Grid>
                                     </Border>
 
-                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
-                                        <ItemsRepeater ItemsSource="{Binding PlaceFilterOptions}">
-                                            <ItemsRepeater.Layout><StackLayout Orientation="Vertical"/></ItemsRepeater.Layout>
-                                            <ItemsRepeater.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type models:PlaceFilterOption}">
-                                                    <!-- Click statt Command, gleicher Grund wie bei den
-                                                         Stichwörtern und Personen: der Inhalt eines
-                                                         Aufklappfensters hängt nicht im Baum der Ansicht. -->
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding ServerSource}" Classes="no-translate"
-                                                                   IsVisible="{Binding ShowsServerHeader}"
-                                                                   Foreground="{DynamicResource FP.Text.Muted}"
-                                                                   FontSize="{DynamicResource FP.Font.Small}"
-                                                                   Margin="10,8,10,2"/>
-                                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                                Click="OnPlaceFilterItemClick">
-                                                            <Grid ColumnDefinitions="*,20">
-                                                                <TextBlock Text="{Binding Label}" Classes="no-translate"
-                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
-                                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                                            </Grid>
-                                                        </Button>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsRepeater.ItemTemplate>
-                                        </ItemsRepeater>
-                                    </ScrollViewer>
+                                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto"><ItemsRepeater ItemsSource="{Binding PlaceFilterOptions}"><ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:PlaceFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnPlaceFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate></ItemsRepeater></ScrollViewer>
 
                                     <TextBlock Text="Noch keine Orte bekannt"
                                                IsVisible="{Binding !PlaceFilterOptions.Count}"
@@ -620,41 +559,7 @@
                                     <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto">
                                         <ItemsRepeater ItemsSource="{Binding TagFilterOptions}">
                                             <ItemsRepeater.Layout><StackLayout Orientation="Vertical"/></ItemsRepeater.Layout>
-                                            <ItemsRepeater.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type models:TagFilterOption}">
-                                                    <!-- Click statt Command: der Inhalt eines Aufklappfensters haengt
-                                                         NICHT im Baum der Ansicht, eine Bindung ueber den Vorfahren
-                                                         findet dort nichts und die Schaltflaeche bleibt tot. -->
-                                                    <StackPanel>
-                                                        <!-- Zwischenüberschrift vor dem ersten Eintrag einer
-                                                             Serverquelle. Der Servername ist ein Eigenname und
-                                                             wird nicht übersetzt. -->
-                                                        <TextBlock Text="{Binding ServerSource}" Classes="no-translate"
-                                                                   IsVisible="{Binding ShowsServerHeader}"
-                                                                   Foreground="{DynamicResource FP.Text.Muted}"
-                                                                   FontSize="{DynamicResource FP.Font.Small}"
-                                                                   Margin="10,8,10,2"/>
-                                                        <!-- Zwischenüberschrift vor dem ersten erkannten
-                                                             Stichwort. Anders als der Servername ist sie
-                                                             übersetzbarer Text. -->
-                                                        <TextBlock Text="KI-Stichwörter"
-                                                                   IsVisible="{Binding ShowsAiHeader}"
-                                                                   Foreground="{DynamicResource FP.Text.Muted}"
-                                                                   FontSize="{DynamicResource FP.Font.Small}"
-                                                                   Margin="10,8,10,2"/>
-                                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                                Click="OnTagFilterItemClick">
-                                                            <Grid ColumnDefinitions="*,20">
-                                                                <TextBlock Text="{Binding Label}" Classes="no-translate"
-                                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
-                                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
-                                                            </Grid>
-                                                        </Button>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ItemsRepeater.ItemTemplate>
+                                            <ItemsRepeater.ItemTemplate><DataTemplate DataType="{x:Type models:TagFilterOption}"><Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="10,8" Click="OnTagFilterItemClick"><Grid ColumnDefinitions="*,20"><TextBlock Text="{Binding Label}" Classes="no-translate" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}" Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/></Grid></Button></DataTemplate></ItemsRepeater.ItemTemplate>
                                         </ItemsRepeater>
                                     </ScrollViewer>
 
@@ -940,6 +845,22 @@
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
                                         </Button>
+                                        <ItemsRepeater ItemsSource="{Binding FileTypeFilterOptions}">
+                                            <ItemsRepeater.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type models:FileTypeFilterOption}">
+                                                    <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                            Tag="{Binding Extension}"
+                                                            Click="OnFileTypeFilterItemClick">
+                                                        <Grid ColumnDefinitions="*,20">
+                                                            <TextBlock Text="{Binding Label}" Classes="no-translate" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                       Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsRepeater.ItemTemplate>
+                                        </ItemsRepeater>
 
                                         <!-- Zurücksetzen -->
                                         <Separator Margin="4,6" IsVisible="{Binding HasActiveFilter}"/>

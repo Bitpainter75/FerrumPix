@@ -139,9 +139,20 @@ Namespace Views
         Private Sub OnFilterButtonPointerPressed(sender As Object, e As PointerPressedEventArgs)
             Dim button = TryCast(sender, Button)
             If button Is Nothing Then Return
-            If Not e.GetCurrentPoint(button).Properties.IsMiddleButtonPressed Then Return
             Dim vm = GetVm()
             If vm Is Nothing Then Return
+            ' Der Flyout misst seine Wunschbreite BEIM Öffnen. Click käme dafür zu spät,
+            ' weil der Button das Flyout im selben Ereignis öffnet. Die Quellenliste wird
+            ' deshalb schon beim linken Druck aktualisiert.
+            If e.GetCurrentPoint(button).Properties.IsLeftButtonPressed Then
+                Select Case TryCast(button.Tag, String)
+                    Case "Person" : vm.RefreshPersonFilterOptions()
+                    Case "Place" : vm.RefreshPlaceFilterOptions()
+                    Case "Tag" : vm.RefreshTagFilterOptions()
+                End Select
+                Return
+            End If
+            If Not e.GetCurrentPoint(button).Properties.IsMiddleButtonPressed Then Return
             Select Case TryCast(button.Tag, String)
                 Case "Person" : vm.ClearPersonFilter()
                 Case "Place" : vm.ClearPlaceFilter()
@@ -161,6 +172,18 @@ Namespace Views
             ' Den EINTRAG durchreichen, nicht nur seinen Namen: nur er weiss, ob das Stichwort vom
             ' Server kommt und welche Kennung es dort hat.
             GetVm()?.ToggleTagFilter(entry)
+        End Sub
+
+        ''' <summary>Dateityp-Zeilen liegen im Flyout außerhalb des normalen Vorfahrenbaums.
+        ''' Der direkte Klickweg ist deshalb zuverlässiger als eine Command-Bindung zum ViewModel.</summary>
+        Private Sub OnFileTypeFilterItemClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim extension = TryCast(button?.Tag, String)
+            If String.IsNullOrWhiteSpace(extension) Then
+                extension = TryCast(button?.DataContext, FileTypeFilterOption)?.Extension
+            End If
+            If String.IsNullOrWhiteSpace(extension) Then Return
+            GetVm()?.SetFileTypeExtensionFilter(extension)
         End Sub
 
         Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)

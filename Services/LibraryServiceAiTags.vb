@@ -187,7 +187,8 @@ Namespace Services
             Return result
         End Function
 
-        Public Function GetAiTagCounts() As List(Of (Canonical As String, Count As Integer))
+        ''' <summary>Nur KI-Stichwörter lokaler Dateien, ohne die getrennten Server-Indizes.</summary>
+        Public Function GetLocalAiTagCounts() As List(Of (Canonical As String, Count As Integer))
             Dim result As New List(Of (Canonical As String, Count As Integer))()
             Try
                 Using conn = New SqliteConnection(_connectionString)
@@ -204,6 +205,12 @@ Namespace Services
             Catch ex As Exception
                 DiagnosticLogService.LogException("Bibliothek.KIStichwortZahlen", ex)
             End Try
+            Return result.OrderBy(Function(x) x.Canonical, StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        ''' <summary>Alle KI-Stichwörter, für bestehende globale Auswertungen inklusive Server.</summary>
+        Public Function GetAiTagCounts() As List(Of (Canonical As String, Count As Integer))
+            Dim result = GetLocalAiTagCounts()
             For Each serverCount In ImmichIndexService.Instance.GetAiTagCounts().Concat(NextcloudIndexService.Instance.GetAiTagCounts())
                 Dim existing = result.FindIndex(Function(x) String.Equals(x.Canonical, serverCount.Canonical, StringComparison.OrdinalIgnoreCase))
                 If existing >= 0 Then result(existing) = (result(existing).Canonical, result(existing).Count + serverCount.Count) Else result.Add(serverCount)
@@ -246,6 +253,38 @@ Namespace Services
             Catch
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Die Pfade lokaler Bilder mit mindestens einem KI-Stichwort. Dieser Weg wird
+        ''' für die Filterleiste genutzt, damit ein Klick nicht erst jede Katalogdatei prüfen muss.</summary>
+        Public Function GetPathsForAiTags(queries As IEnumerable(Of String)) As List(Of String)
+            Dim wanted = If(queries, Enumerable.Empty(Of String)()).
+                         SelectMany(Function(query) AiTagLocalizationService.CanonicalsForQuery(query)).
+                         Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            Dim result As New List(Of String)()
+            If wanted.Count = 0 Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim slots As New List(Of String)()
+                        For index = 0 To wanted.Count - 1
+                            Dim parameter = "$c" & index.ToString(CultureInfo.InvariantCulture)
+                            slots.Add(parameter)
+                            cmd.Parameters.AddWithValue(parameter, wanted(index))
+                        Next
+                        cmd.CommandText = "SELECT DISTINCT FilePath FROM AiImageTag WHERE Canonical IN (" & String.Join(",", slots) & ")"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If Not reader.IsDBNull(0) Then result.Add(reader.GetString(0))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Bibliothek.KiStichwortPfade", ex)
+            End Try
+            Return result
         End Function
 
         ''' <summary>Nimmt die Stichwoerter heraus, die auf diesem Bild von uns selbst stammen.

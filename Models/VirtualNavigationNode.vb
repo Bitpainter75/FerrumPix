@@ -25,6 +25,17 @@ Namespace Models
         ''' Stichwortsuchen entstehen im Vorbeigehen.</summary>
         Public Property TagQueries As New List(Of String)()
 
+        ''' <summary>Eindeutige Nextcloud-Clusterkennungen der aus dem Filter-Popup gewählten
+        ''' Stichwörter. Der Anzeigename bleibt in <see cref="TagQueries"/> für den lokalen
+        ''' Katalog; nur die Kennung kann den passenden Memories-/Photos-Cluster exakt laden.</summary>
+        Public Property NextcloudTagIds As New List(Of String)()
+
+        ''' <summary>Eindeutige Nextcloud-Ortscluster des Filter-Popups.</summary>
+        Public Property NextcloudPlaceIds As New List(Of String)()
+
+        ''' <summary>Eindeutige Nextcloud-Personencluster des Filter-Popups.</summary>
+        Public Property NextcloudPersonIds As New List(Of String)()
+
         ''' <summary>Genau diese Personen, ueber ihren Namen. Mehrere wirken als UND: gezeigt wird,
         ''' wer GEMEINSAM auf einem Bild steht - so ist die Frage gemeint, wenn jemand zwei Namen
         ''' anklickt.
@@ -42,6 +53,9 @@ Namespace Models
         Public Property PlaceQueries As New List(Of String)()
         Public Property RootFolder As String
         Public Property IncludeSubfolders As Boolean = True
+        ''' <summary>Lokale Suchlisten bleiben standardmäßig lokal. Nur ein ausdrücklich
+        ''' angeforderter Mischlauf darf weitere Serverquellen einbeziehen.</summary>
+        Public Property IncludeServerSources As Boolean = False
         Public Property FavoriteMode As String = "Any"
         Public Property RatingMin As Integer = -1
         Public Property Ratings As New List(Of Integer)()

@@ -1780,6 +1780,12 @@ Namespace Services
         Public Shared Function NormalizeGalleryFilterFileType(value As String) As String
             If String.Equals(value, "Raw", StringComparison.OrdinalIgnoreCase) Then Return "Raw"
             If String.Equals(value, "NonRaw", StringComparison.OrdinalIgnoreCase) Then Return "NonRaw"
+            Dim trimmed = If(value, "").Trim()
+            Const extensionPrefix = "Extension:"
+            If trimmed.StartsWith(extensionPrefix, StringComparison.OrdinalIgnoreCase) Then
+                Dim extension = trimmed.Substring(extensionPrefix.Length).Trim()
+                If extension.Length > 0 Then Return extensionPrefix & extension
+            End If
             Return "All"
         End Function
 

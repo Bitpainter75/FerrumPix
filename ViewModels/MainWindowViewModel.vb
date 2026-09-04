@@ -668,7 +668,13 @@ Namespace ViewModels
                     If Not Await ConfirmViewerLeaveAsync("die Einstellungen öffnest") Then Return
                 End If
                 If CurrentMode <> AppMode.Settings Then
-                    _previousModeBeforeSettings = CurrentMode
+                    ' Personenverwaltung und Einstellungen sind Geschwister mit demselben
+                    ' Rückweg. Beim Sprung People -> Settings darf der ursprüngliche Modus
+                    ' (z.B. Galerie) nicht durch People überschrieben werden, sonst führt
+                    ' "Fertig" wieder in die Personenverwaltung zurück.
+                    If CurrentMode <> AppMode.People Then
+                        _previousModeBeforeSettings = CurrentMode
+                    End If
                     Settings?.BeginEditSession()
                 End If
                 Settings?.RefreshThumbnailCacheFolders()
@@ -766,7 +772,11 @@ Namespace ViewModels
                 End If
 
                 If Not String.IsNullOrEmpty(sourcePath) Then
-                    If Gallery IsNot Nothing AndAlso Gallery.IsVirtualFolder AndAlso Gallery.SelectImageInCurrentView(sourcePath) Then
+                    ' Nicht nur gespeicherte Suchen, auch ein normaler Ordner kann aktuell durch
+                    ' Favoriten-, Bewertungs- oder Dateitypfilter eingeschränkt sein. Ist das Bild
+                    ' bereits in dieser Ansicht, darf der Rückweg den Ordner nicht neu öffnen -
+                    ' das wäre eine Navigation und würde die gerade aktive Filterauswahl löschen.
+                    If Gallery IsNot Nothing AndAlso Gallery.SelectImageInCurrentView(sourcePath) Then
                         CurrentMode = AppMode.Gallery
                         Return
                     End If

@@ -28,6 +28,7 @@
                      Grid.Column="1"
                      Grid.ColumnSpan="2"
                      Text="{Binding DialogSearchText, Mode=TwoWay}"
+                     PlaceholderText="Beispiel: *.jpg *.png oder Meer Strand"
                      MinHeight="36"/>
             <TextBlock Grid.Row="2" Text="Startordner (optional)" VerticalAlignment="Center"
                        IsVisible="{Binding IsDialogSourceLocal}"
