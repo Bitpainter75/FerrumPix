@@ -8128,4 +8128,10 @@
     <value>감시</value>
   </data>
   <data name="Beispiel_jpg_png_oder_Meer_Strand_3958482f" xml:space="preserve"><value>예시: *.jpg *.png 또는 바다 해변</value></data>
+  <data name="Durchsuche_lokalen_Katalog_5a6b1159" xml:space="preserve">
+    <value>로컬 카탈로그에서 검색하는 중…</value>
+  </data>
+  <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
+    <value>결과 {0}개 (로컬 카탈로그)</value>
+  </data>
 </root>

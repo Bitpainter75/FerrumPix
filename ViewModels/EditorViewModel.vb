@@ -13353,6 +13353,7 @@ Namespace ViewModels
         Public ReadOnly Property SetPlaceCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
+        Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
 
@@ -13906,6 +13907,7 @@ Namespace ViewModels
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
+            ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(
                 Function() WithCurrentImageAsync(Async Function(g, i2)
@@ -14067,6 +14069,14 @@ Namespace ViewModels
             RefreshContextActions()
         End Function
 
+        Private Async Function ReanalyzeAiTagsCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.ReanalyzeAiTagsForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
         Private Async Function RemovePlaceCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
                                             Await g.RemovePlaceFromImageItemsAsync(i)
@@ -14108,6 +14118,7 @@ Namespace ViewModels
                                                     .SetPlace = SetPlaceCommand,
                                                     .SetCopyright = SetCopyrightCommand,
                                                     .SetCaptureDate = SetCaptureDateCommand,
+                                                    .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,

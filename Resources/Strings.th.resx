@@ -8128,4 +8128,10 @@
     <value>เฝ้าดู</value>
   </data>
   <data name="Beispiel_jpg_png_oder_Meer_Strand_3958482f" xml:space="preserve"><value>ตัวอย่าง: *.jpg *.png หรือ ทะเล ชายหาด</value></data>
+  <data name="Durchsuche_lokalen_Katalog_5a6b1159" xml:space="preserve">
+    <value>กำลังค้นหาในแค็ตตาล็อกภายในเครื่อง…</value>
+  </data>
+  <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
+    <value>{0} ผลลัพธ์ (แค็ตตาล็อกภายในเครื่อง)</value>
+  </data>
 </root>

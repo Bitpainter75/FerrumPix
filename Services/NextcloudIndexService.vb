@@ -166,20 +166,25 @@ Namespace Services
                                 Dim filePath = If(reader.IsDBNull(1), "", reader.GetString(1))
                                 Dim fileName = Path.GetFileName(filePath)
                                 If String.IsNullOrWhiteSpace(fileName) Then fileName = fileId
+                                ' CTYPE BEI JEDER NULLSPALTE. Ohne die ausdrueckliche Umwandlung
+                                ' bestimmt der andere Zweig den Typ, und Nothing wird zur 0: ein Bild
+                                ' ohne Koordinate bekaeme den Ort 0/0, ein Bild ohne ISO die ISO 0,
+                                ' und jede Suchbedingung ueber diese Felder traefe Zeilen, die den
+                                ' Wert gar nicht haben.
                                 result.Add(New LibraryImageMeta With {
                                     .FilePath = NextcloudService.MakePseudoPath(fileId, fileName),
                                     .Tags = SplitTags(If(reader.IsDBNull(2), "", reader.GetString(2))),
                                     .DateTaken = If(reader.IsDBNull(3), "", reader.GetString(3)),
                                     .Camera = If(reader.IsDBNull(4), "", reader.GetString(4)),
-                                    .Iso = If(reader.IsDBNull(5), Nothing, reader.GetInt32(5)),
-                                    .Aperture = If(reader.IsDBNull(6), Nothing, reader.GetDouble(6)),
+                                    .Iso = If(reader.IsDBNull(5), CType(Nothing, Integer?), reader.GetInt32(5)),
+                                    .Aperture = If(reader.IsDBNull(6), CType(Nothing, Double?), reader.GetDouble(6)),
                                     .Lens = If(reader.IsDBNull(7), "", reader.GetString(7)),
-                                    .FocalLengthMm = If(reader.IsDBNull(8), Nothing, reader.GetDouble(8)),
+                                    .FocalLengthMm = If(reader.IsDBNull(8), CType(Nothing, Double?), reader.GetDouble(8)),
                                     .ShutterSpeed = If(reader.IsDBNull(9), "", reader.GetString(9)),
-                                    .GpsLatitude = If(reader.IsDBNull(10), Nothing, reader.GetDouble(10)),
-                                    .GpsLongitude = If(reader.IsDBNull(11), Nothing, reader.GetDouble(11)),
-                                    .ImageWidth = If(reader.IsDBNull(12), Nothing, reader.GetInt32(12)),
-                                    .ImageHeight = If(reader.IsDBNull(13), Nothing, reader.GetInt32(13))
+                                    .GpsLatitude = If(reader.IsDBNull(10), CType(Nothing, Double?), reader.GetDouble(10)),
+                                    .GpsLongitude = If(reader.IsDBNull(11), CType(Nothing, Double?), reader.GetDouble(11)),
+                                    .ImageWidth = If(reader.IsDBNull(12), CType(Nothing, Integer?), reader.GetInt32(12)),
+                                    .ImageHeight = If(reader.IsDBNull(13), CType(Nothing, Integer?), reader.GetInt32(13))
                                 })
                             End While
                         End Using

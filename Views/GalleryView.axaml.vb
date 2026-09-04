@@ -52,6 +52,17 @@ Namespace Views
         Private _pendingFolderScrollReset As String
         Private ReadOnly _thumbnailTracker As New ViewportThumbnailTracker()
 
+        ''' <summary>Aussenmass EINER Zeile der Listenansicht: Grid-Hoehe 72, dazu BorderThickness 2
+        ''' oben und unten und Margin="5,3" mit 3 oben und unten (Border.thumb-card.list-row).
+        '''
+        ''' EINE Zahl fuer alle vier Rechnungen - Sichtfenster, Sprung zu einem Eintrag,
+        ''' Fenstergroesse und Zeilenzahl fuer BILD AUF/BILD AB. Als sie an einer Stelle stehenblieb,
+        ''' rollte die Ansicht mit 82 und blaetterte mit 78; das faellt nicht als Fehler auf, sondern
+        ''' nur als Sprung, der ein paar Zeilen zu weit geht. Und die virtuelle Hoehe muss dem
+        ''' GERENDERTEN Aussenmass entsprechen: mit der blossen Grid-Hoehe endet der Rollbereich vor
+        ''' dem unteren Rand des letzten Eintrags.</summary>
+        Private Const ListItemSlotHeight As Double = 82
+
         ' Die gemessene Zeilenhoehe wird festgehalten, statt sie bei jedem Scroll-Tick neu zu
         ' uebernehmen. Sie ist eine Eigenschaft der Kachelvorlage und aendert sich nur mit der
         ' Kachelgroesse oder der Schrift, nicht mit der Scrollposition.
@@ -109,6 +120,7 @@ Namespace Views
             Dim entry = TryCast(TryCast(sender, Button)?.DataContext, PersonFilterOption)
             If entry Is Nothing Then Return
             GetVm()?.TogglePersonFilter(entry.Id)
+            ScrollFilterListToTop(sender)
         End Sub
 
         ''' <summary>Die Ortsliste entsteht beim Oeffnen neu - nach einem Einlesen sind neue Orte
@@ -125,6 +137,7 @@ Namespace Views
             Dim entry = TryCast(TryCast(sender, Button)?.DataContext, PlaceFilterOption)
             If entry Is Nothing Then Return
             GetVm()?.TogglePlaceFilter(entry)
+            ScrollFilterListToTop(sender)
         End Sub
 
         ''' <summary>Mausradklick auf einen Filter- oder Sortierknopf setzt ihn auf den Standard
@@ -172,7 +185,57 @@ Namespace Views
             ' Den EINTRAG durchreichen, nicht nur seinen Namen: nur er weiss, ob das Stichwort vom
             ' Server kommt und welche Kennung es dort hat.
             GetVm()?.ToggleTagFilter(entry)
+            ScrollFilterListToTop(sender)
         End Sub
+
+        ''' <summary>Nach oben rollen, nachdem eine Zeile an- oder abgewaehlt wurde.
+        '''
+        ''' Das Angewaehlte wandert in der Liste nach oben. Wer weit unten geklickt hat, sieht danach
+        ''' nur, dass seine Zeile verschwunden ist - dass sie an den Anfang gesprungen ist, steht
+        ''' ausserhalb des sichtbaren Ausschnitts.
+        '''
+        ''' Der Bildlauf wird NACHGESTELLT: das Umsortieren laeuft im Klick selbst, und der
+        ''' ScrollViewer kennt seinen neuen Inhalt erst danach. Und er wird ueber den Vorfahrenpfad
+        ''' des Angeklickten gesucht, weil der Inhalt eines Aufklappfensters nicht im Baum der
+        ''' Ansicht haengt und ueber den Namen nicht zu finden ist.</summary>
+        Private Shared Sub ScrollFilterListToTop(sender As Object)
+            Dim scrollViewer = FindFilterListScrollViewer(TryCast(sender, Control))
+            If scrollViewer Is Nothing Then Return
+            Dispatcher.UIThread.Post(Sub()
+                                         Try
+                                             scrollViewer.Offset = New Avalonia.Vector(scrollViewer.Offset.X, 0)
+                                         Catch ex As Exception
+                                             DiagnosticLogService.LogException("Galerie.FilterlisteNachOben", ex)
+                                         End Try
+                                     End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Der ScrollViewer, in dem die angeklickte Zeile liegt - oder NICHTS.
+        '''
+        ''' DER WEG ENDET AM AUFKLAPPFENSTER. Der logische Elternpfad eines Flyout-Inhalts fuehrt
+        ''' weiter zu dem Knopf, der es geoeffnet hat, und damit mitten in die Galerie hinein. Ohne
+        ''' diese Grenze faende die Dateityp-Liste - die gar keinen eigenen ScrollViewer hat - den
+        ''' der KACHELFLAECHE und rollte beim Klick die ganze Galerie nach oben.</summary>
+        Private Shared Function FindFilterListScrollViewer(start As Control) As ScrollViewer
+            Dim current = start
+            Dim depth = 0
+            While current IsNot Nothing
+                Dim found = TryCast(current, ScrollViewer)
+                If found IsNot Nothing Then Return found
+                If TypeOf current Is Avalonia.Controls.FlyoutPresenter OrElse
+                   TypeOf current Is Avalonia.Controls.Primitives.Popup OrElse
+                   TypeOf current Is Avalonia.Controls.Primitives.PopupRoot Then Return Nothing
+                ' Harte Grenze wie beim Ziel-Elternpfad: ein Ring im Baum liesse den Anzeigefaden
+                ' sonst nicht mehr zurueckkehren, und weil auch die Zeitgeber auf ihm laufen, meldet
+                ' sich nicht einmal ein Zeitablauf.
+                depth += 1
+                If depth > 64 Then Return Nothing
+                Dim nextParent = If(TryCast(current.Parent, Control), current.GetVisualParent(Of Control)())
+                If Object.ReferenceEquals(nextParent, current) Then Return Nothing
+                current = nextParent
+            End While
+            Return Nothing
+        End Function
 
         ''' <summary>Dateityp-Zeilen liegen im Flyout außerhalb des normalen Vorfahrenbaums.
         ''' Der direkte Klickweg ist deshalb zuverlässiger als eine Command-Bindung zum ViewModel.</summary>
@@ -184,6 +247,7 @@ Namespace Views
             End If
             If String.IsNullOrWhiteSpace(extension) Then Return
             GetVm()?.SetFileTypeExtensionFilter(extension)
+            ScrollFilterListToTop(sender)
         End Sub
 
         Private Sub OnLocalizedFlyoutOpened(sender As Object, e As EventArgs)
@@ -819,10 +883,7 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                ' Grid-Hoehe 72 + BorderThickness 2 oben/unten + Margin 3 oben/unten.
-                ' Die virtuelle Hoehe muss dem gerenderten Aussenmass entsprechen, sonst endet
-                ' der Scrollbereich vor dem unteren Rand des letzten Listeneintrags.
-                Const itemSlotHeight As Double = 82
+                Const itemSlotHeight As Double = ListItemSlotHeight
                 Dim firstIndex = Math.Max(0, CInt(Math.Floor(Math.Max(0.0, scrollViewer.Offset.Y - 12.0) / itemSlotHeight)) - 4)
                 Dim lastIndex = CInt(Math.Ceiling((scrollViewer.Offset.Y + scrollViewer.Bounds.Height - 12.0) / itemSlotHeight)) + 4
                 If scrollViewer.Offset.Y + scrollViewer.Bounds.Height >= scrollViewer.Extent.Height - 1.0 Then
@@ -926,8 +987,7 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                ' Height=72 + BorderThickness=2 oben/unten + Margin="5,3" (3+3).
-                Const itemSlotHeight As Double = 82
+                Const itemSlotHeight As Double = ListItemSlotHeight
                 Dim itemTop = 12.0 + idx * itemSlotHeight
                 Dim itemBottom = itemTop + itemSlotHeight
 
@@ -3152,7 +3212,10 @@ Namespace Views
             Dim viewportHeight = If(scrollViewer IsNot Nothing AndAlso scrollViewer.Viewport.Height > 0,
                                     scrollViewer.Viewport.Height,
                                     Bounds.Height)
-            Dim itemHeight = 78.0
+            ' Die Zeilenhoehe der LISTE, dieselbe Zahl wie in RefreshViewport und beim Sprung zu
+            ' einem Eintrag. Weicht sie ab, rollt die Ansicht mit der einen und blaettert mit der
+            ' anderen - sichtbar wird das erst als zu weiter Sprung bei BILD AUF und BILD AB.
+            Dim itemHeight = ListItemSlotHeight
             If vm.IsTileView Then
                 Dim cols = 1
                 GetGridLayoutMetrics(scrollViewer, vm, cols, itemHeight, forGroupView:=vm.IsGroupView)
@@ -3246,8 +3309,7 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                ' Muss mit der virtuellen Listenzeilenhoehe in RefreshViewport uebereinstimmen.
-                Const itemSlotHeight As Double = 82
+                Const itemSlotHeight As Double = ListItemSlotHeight
                 Dim viewHeight = scrollViewer.Bounds.Height
                 Dim windowItems = CInt(Math.Ceiling(viewHeight / itemSlotHeight)) + 8
 

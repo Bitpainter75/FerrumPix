@@ -17,13 +17,20 @@ Namespace Models
 
         Public Sub New(tag As String, count As Integer, isSelected As Boolean,
                        Optional serverSource As String = "", Optional serverId As String = "",
-                       Optional displayTag As String = "", Optional isAiTag As Boolean = False)
+                       Optional displayTag As String = "", Optional isAiTag As Boolean = False,
+                       Optional filterTags As IEnumerable(Of String) = Nothing)
             Me.Tag = If(tag, "")
             Me.DisplayTag = If(String.IsNullOrWhiteSpace(displayTag), Me.Tag, displayTag)
             Me.Count = count
             Me.ServerSource = If(serverSource, "")
             Me.ServerId = If(serverId, "")
             Me.IsAiTag = isAiTag
+            Dim merged = If(filterTags, Enumerable.Empty(Of String)()).
+                         Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+                         Select(Function(t) t.Trim()).
+                         Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            If merged.Count = 0 AndAlso Me.Tag.Length > 0 Then merged.Add(Me.Tag)
+            Me.FilterTags = merged
             _isSelected = isSelected
         End Sub
 
@@ -31,20 +38,27 @@ Namespace Models
         ''' englische Modellbegriff, nicht das, was danebensteht (siehe <see cref="DisplayTag"/>).</summary>
         Public ReadOnly Property Tag As String
 
+        ''' <summary>ALLE Filterwerte dieser Zeile. Meist genau einer, naemlich <see cref="Tag"/>.
+        '''
+        ''' Mehrere stehen dort, wo eine Zeile mehrere Begriffe zusammenfasst, die gleich heissen:
+        ''' "road" und "street" lesen sich beide als "Strasse", und ein von Hand vergebenes Wort kann
+        ''' genauso lauten wie ein erkanntes. Zwei gleich beschriftete Zeilen mit verschiedenen Zahlen
+        ''' waeren fuer den Benutzer ein Raetsel, deshalb steht dort EINE Zeile - und ein Klick darauf
+        ''' meint jeden der zusammengefassten Begriffe.</summary>
+        Public ReadOnly Property FilterTags As IReadOnlyList(Of String)
+
         ''' <summary>Was der Benutzer liest. Weicht nur bei erkannten Stichwoertern vom Filterwert
         ''' ab: die bleiben in der Datenbank englisch, damit ein Bild den Sprachwechsel ueberlebt.</summary>
         Public ReadOnly Property DisplayTag As String
         Public ReadOnly Property Count As Integer
 
-        ''' <summary>Vom Modell erkannt statt von Hand vergeben. Steht unter eigener Ueberschrift,
-        ''' weil dieselbe Zahl sonst zweierlei heissen kann.</summary>
+        ''' <summary>Vom Modell erkannt statt von Hand vergeben. Wahr nur, wenn ALLE in dieser Zeile
+        ''' zusammengefassten Begriffe erkannt sind.</summary>
         Public ReadOnly Property IsAiTag As Boolean
 
         ''' <summary>Von welchem Server dieses Stichwort kommt; leer heisst aus dem lokalen Katalog.
-        ''' Gleiche Regel wie bei Personen und Orten: allein waehlbar, oeffnet die Server-Ansicht.
-        '''
-        ''' Nur EIN Server kann hier stehen, und das ist kein Zufall: Nextcloud fuehrt Stichwoerter
-        ''' als Cluster und kann danach filtern, Immichs Suche kennt keinen Stichwortfilter.</summary>
+        ''' Der NAME der Quelle steht hier, kein Ja/Nein: er entscheidet, welche Eintraege in der
+        ''' Liste der gerade sichtbaren Quelle stehenbleiben.</summary>
         Public ReadOnly Property ServerSource As String
 
         ''' <summary>Kennung des Stichworts auf dem Server - der Filter laeuft ueber sie, nicht ueber
@@ -56,15 +70,6 @@ Namespace Models
                 Return ServerSource.Length > 0
             End Get
         End Property
-
-        ''' <summary>Traegt die Zwischenueberschrift mit dem Servernamen - beim ERSTEN Eintrag je
-        ''' Server.</summary>
-        Public Property ShowsServerHeader As Boolean
-
-        ''' <summary>Traegt die Zwischenueberschrift ueber dem ERSTEN erkannten Stichwort. Eigene
-        ''' Eigenschaft statt <see cref="ShowsServerHeader"/>: der Servername ist ein Eigenname und
-        ''' wird nicht uebersetzt, diese Ueberschrift schon.</summary>
-        Public Property ShowsAiHeader As Boolean
 
         ''' <summary>Beschriftung mit der Anzahl in Klammern, etwa "urlaub (42)". OHNE Anzahl, wo es
         ''' keine gibt - "(0)" hinter einem Stichwort liest sich wie "keine Bilder".</summary>

@@ -567,6 +567,42 @@ Namespace Services
                           Select(Function(p) (p.Key, p.Value)).ToList()
         End Function
 
+        ''' <summary>Zu jedem gewünschten Stichwort die Pfade, die es tragen - in EINER Abfrage.
+        '''
+        ''' Gebraucht dort, wo mehrere Stichwörter EINZELN auseinandergehalten werden müssen und
+        ''' <see cref="GetPathsForTags"/> mit seiner Vereinigungsmenge nicht genügt: die Zahl an
+        ''' einer zusammengefassten Zeile der Filterliste. Ein Aufruf je Stichwort wäre ein
+        ''' Tabellendurchlauf je Stichwort, und die Liste wird bei jedem Tastendruck neu gebaut.</summary>
+        Public Function GetPathsByTag(tags As IEnumerable(Of String)) As Dictionary(Of String, HashSet(Of String))
+            Dim result As New Dictionary(Of String, HashSet(Of String))(StringComparer.OrdinalIgnoreCase)
+            For Each tag In If(tags, Enumerable.Empty(Of String)()).
+                            Where(Function(t) Not String.IsNullOrWhiteSpace(t)).Select(Function(t) t.Trim())
+                If Not result.ContainsKey(tag) Then result(tag) = New HashSet(Of String)(StringComparer.Ordinal)
+            Next
+            If result.Count = 0 Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT FilePath,Tags FROM ImageMeta WHERE Tags<>''"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If reader.IsDBNull(0) OrElse reader.IsDBNull(1) Then Continue While
+                                Dim path = reader.GetString(0)
+                                For Each tag In ParseTags(reader.GetString(1))
+                                    Dim paths As HashSet(Of String) = Nothing
+                                    If result.TryGetValue(tag, paths) Then paths.Add(path)
+                                Next
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Bibliothek.StichwortPfade", ex)
+            End Try
+            Return result
+        End Function
+
         ''' <summary>Gibt die Katalogpfade mit mindestens einem der gewünschten manuellen
         ''' Stichwörter zurück. Tags liegen bewusst als Liste in einer Spalte; daher wird exakt
         ''' nach dem Einlesen verglichen, statt ein unsicheres SQL-LIKE zu verwenden.</summary>

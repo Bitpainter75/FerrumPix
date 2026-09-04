@@ -8082,4 +8082,10 @@
     <value>监视</value>
   </data>
   <data name="Beispiel_jpg_png_oder_Meer_Strand_3958482f" xml:space="preserve"><value>示例：*.jpg *.png 或 海 海滩</value></data>
+  <data name="Durchsuche_lokalen_Katalog_5a6b1159" xml:space="preserve">
+    <value>正在搜索本地目录…</value>
+  </data>
+  <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
+    <value>{0} 个结果（本地目录）</value>
+  </data>
 </root>

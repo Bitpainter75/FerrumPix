@@ -52,11 +52,6 @@ Namespace Models
             End Get
         End Property
 
-        ''' <summary>Traegt dieser Eintrag die Zwischenueberschrift mit dem Servernamen? Gesetzt wird
-        ''' sie beim ERSTEN Eintrag je Server. Eine eigene Gruppierung der Liste waere dafuer zu viel
-        ''' Maschinerie - die Ueberschrift gehoert zu genau einer Zeile.</summary>
-        Public Property ShowsServerHeader As Boolean
-
         ''' <summary>Hat die Gruppe schon einen Namen? Direkt nach der Erkennung hat sie keinen -
         ''' die Gruppierung entsteht von selbst, der Name kommt vom Benutzer. In die Filterliste
         ''' kommen nur benannte Gruppen (siehe GalleryViewModel.RefreshPersonFilterOptions); benannt

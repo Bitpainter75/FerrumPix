@@ -8124,4 +8124,10 @@
     <value>Bewaken</value>
   </data>
   <data name="Beispiel_jpg_png_oder_Meer_Strand_3958482f" xml:space="preserve"><value>Voorbeeld: *.jpg *.png of zee strand</value></data>
+  <data name="Durchsuche_lokalen_Katalog_5a6b1159" xml:space="preserve">
+    <value>Zoeken in de lokale catalogus…</value>
+  </data>
+  <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
+    <value>{0} resultaten (lokale catalogus)</value>
+  </data>
 </root>

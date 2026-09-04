@@ -154,6 +154,78 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Zu jedem gewünschten kanonischen Begriff die Pfade, die ihn tragen - in EINER
+        ''' Abfrage. Das Gegenstück zu <see cref="GetPathsByTag"/> für die erkannten Stichwörter;
+        ''' gebraucht für die Zahl an einer zusammengefassten Zeile der Filterliste.</summary>
+        Public Function GetPathsByCanonical(canonicals As IEnumerable(Of String)) As Dictionary(Of String, HashSet(Of String))
+            Dim result As New Dictionary(Of String, HashSet(Of String))(StringComparer.OrdinalIgnoreCase)
+            Dim wanted = If(canonicals, Enumerable.Empty(Of String)()).
+                         Where(Function(c) Not String.IsNullOrWhiteSpace(c)).
+                         Select(Function(c) c.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            For Each canonical In wanted
+                result(canonical) = New HashSet(Of String)(StringComparer.Ordinal)
+            Next
+            If wanted.Count = 0 Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim slots As New List(Of String)()
+                        For index = 0 To wanted.Count - 1
+                            Dim parameter = "$c" & index.ToString(CultureInfo.InvariantCulture)
+                            slots.Add(parameter)
+                            cmd.Parameters.AddWithValue(parameter, wanted(index))
+                        Next
+                        cmd.CommandText = "SELECT Canonical,FilePath FROM AiImageTag WHERE Canonical IN (" & String.Join(",", slots) & ")"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If reader.IsDBNull(0) OrElse reader.IsDBNull(1) Then Continue While
+                                Dim paths As HashSet(Of String) = Nothing
+                                If result.TryGetValue(reader.GetString(0), paths) Then paths.Add(reader.GetString(1))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Bibliothek.KiStichwortPfadeJeBegriff", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Zu jedem Bildpfad seine kanonischen KI-Begriffe, in EINER Abfrage.
+        '''
+        ''' Fuer den Suchdurchlauf, aus demselben Grund wie <see cref="GetPersonNamesByPath"/>: der
+        ''' freie Suchtext vergleicht gegen Dateiname, manuelle UND erkannte Stichwoerter, und eine
+        ''' eigene Abfrage je Bild liesse bei zehntausenden Fotos die Oberflaeche stehen. Bei leerer
+        ''' Tabelle kostet der Weg gar nichts - dann gibt es auch nichts zu vergleichen.</summary>
+        Public Function GetAiTagsByPath() As Dictionary(Of String, List(Of String))
+            Dim result As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
+            If Not HasAnyAiTags() Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT FilePath,Canonical FROM AiImageTag"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If reader.IsDBNull(0) OrElse reader.IsDBNull(1) Then Continue While
+                                Dim path = reader.GetString(0)
+                                Dim canonicals As List(Of String) = Nothing
+                                If Not result.TryGetValue(path, canonicals) Then
+                                    canonicals = New List(Of String)()
+                                    result(path) = canonicals
+                                End If
+                                canonicals.Add(reader.GetString(1))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Bibliothek.KIStichwörterJePfad", ex)
+            End Try
+            Return result
+        End Function
+
         Public Function GetAiTags(filePath As String) As List(Of AiImageTag)
             Dim result As New List(Of AiImageTag)()
             If String.IsNullOrWhiteSpace(filePath) Then Return result

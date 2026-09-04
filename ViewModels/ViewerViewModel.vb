@@ -703,6 +703,7 @@ Namespace ViewModels
                                                     .SetPlace = SetPlaceCommand,
                                                     .SetCopyright = SetCopyrightCommand,
                                                     .SetCaptureDate = SetCaptureDateCommand,
+                                                    .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
@@ -730,6 +731,7 @@ Namespace ViewModels
         Public ReadOnly Property SetPlaceCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
+        Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
@@ -804,6 +806,7 @@ Namespace ViewModels
             SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceCurrentAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
+            ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
@@ -3242,6 +3245,14 @@ Namespace ViewModels
         Private Async Function SetCaptureDateCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
                                             Await g.SetCaptureDateForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        Private Async Function ReanalyzeAiTagsCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.ReanalyzeAiTagsForImageItemsAsync(i)
                                         End Function)
             InfoPanel.Refresh()
             RefreshContextActions()

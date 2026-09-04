@@ -46,10 +46,6 @@ Namespace Models
             End Get
         End Property
 
-        ''' <summary>Traegt die Zwischenueberschrift mit dem Servernamen - beim ERSTEN Eintrag je
-        ''' Server.</summary>
-        Public Property ShowsServerHeader As Boolean
-
         ''' <summary>Das Laenderkuerzel. Der ANGEZEIGTE Landesname kommt daraus in der Sprache der
         ''' Oberflaeche; gefiltert wird weiter ueber den gespeicherten Ortsnamen, der sich nicht mit
         ''' der Sprache aendert.</summary>

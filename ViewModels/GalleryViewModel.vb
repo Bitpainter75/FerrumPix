@@ -4344,21 +4344,25 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' <summary>Ein Stichwort aus der aktuellen Quelle dazunehmen oder abwählen.</summary>
+        ''' <summary>Ein Stichwort aus der aktuellen Quelle dazunehmen oder abwählen.
+        '''
+        ''' Eine Zeile kann mehrere Begriffe zusammenfassen, die gleich heissen - ein von Hand
+        ''' vergebenes Wort und das gleichlautende erkannte, oder zwei kanonische Begriffe mit
+        ''' derselben Uebersetzung. Der Klick nimmt sie alle, denn gemeint ist das WORT und nicht
+        ''' die Herkunft; mehrere Stichwoerter wirken ohnehin als ODER.</summary>
         Public Sub ToggleTagFilter(entry As TagFilterOption)
             If entry Is Nothing Then Return
-            Dim wanted = If(entry.Tag, "").Trim()
-            If String.IsNullOrEmpty(wanted) Then Return
+            Dim wanted = If(entry.FilterTags, Nothing)
+            If wanted Is Nothing OrElse wanted.Count = 0 Then Return
             Dim nextTags = _activeTagFilters.ToList()
             Dim nextIds = _activeNextcloudTagIds.ToList()
-            Dim existing = nextTags.FirstOrDefault(Function(t) String.Equals(t, wanted, StringComparison.OrdinalIgnoreCase))
-            If existing IsNot Nothing Then
-                nextTags.Remove(existing)
+            If wanted.Any(AddressOf IsTagFilterSelected) Then
+                nextTags.RemoveAll(Function(t) wanted.Any(Function(w) String.Equals(t, w, StringComparison.OrdinalIgnoreCase)))
                 If String.Equals(entry.ServerSource, NextcloudSourceName, StringComparison.OrdinalIgnoreCase) Then
                     nextIds.RemoveAll(Function(id) String.Equals(id, entry.ServerId, StringComparison.OrdinalIgnoreCase))
                 End If
             Else
-                nextTags.Add(wanted)
+                nextTags.AddRange(wanted)
                 If String.Equals(entry.ServerSource, NextcloudSourceName, StringComparison.OrdinalIgnoreCase) AndAlso
                    Not String.IsNullOrWhiteSpace(entry.ServerId) Then
                     nextIds.Add(entry.ServerId)
@@ -4404,112 +4408,181 @@ Namespace ViewModels
 
         Public Sub RefreshTagFilterOptions()
             TagFilterOptions.Clear()
-            LocalTagFilterOptions.Clear()
-            LocalAiTagFilterOptions.Clear()
-            ImmichTagFilterOptions.Clear()
-            ImmichAiTagFilterOptions.Clear()
-            NextcloudTagFilterOptions.Clear()
-            NextcloudAiTagFilterOptions.Clear()
             Try
                 Dim search = If(_tagFilterSearch, "").Trim()
-                ' Wofuer es schon ein eigenes Stichwort gibt, braucht keine zweite Zeile: beide
-                ' filterten nach demselben Wort, und MatchesTagQuery nimmt die erkannten ohnehin
-                ' mit. Zwei gleich beschriftete Zeilen mit verschiedenen Zahlen waeren nur ein
-                ' Raetsel.
-                Dim ownTags As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                ' Von Hand vergebene und erkannte Stichwoerter stehen NEBENEINANDER in derselben
+                ' Liste, alphabetisch gemischt und ohne Zwischenueberschrift. Was gleich heisst,
+                ' fasst MergeTagOptionsByLabel danach zu einer Zeile zusammen - eine Zeile hier
+                ' wegzulassen waere das falsche Mittel: in einer uebersetzten Oberflaeche heisst das
+                ' erkannte "dog" naemlich "Hund" und ist gar nicht dieselbe Beschriftung.
                 For Each entry In LibraryService.Instance.GetTagCounts()
                     ' Ein ausgewaehltes Stichwort bleibt IMMER sichtbar, auch wenn es nicht zur
                     ' Suche passt - sonst verschwindet es beim Tippen und laesst sich nicht mehr
                     ' abwaehlen.
-                    ownTags.Add(entry.Tag)
                     Dim matches = search.Length = 0 OrElse
                                   entry.Tag.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
                                   IsTagFilterSelected(entry.Tag)
                     If Not matches Then Continue For
-                    Dim option_ = New TagFilterOption(entry.Tag, entry.Count, IsTagFilterSelected(entry.Tag))
-                    TagFilterOptions.Add(option_)
-                    LocalTagFilterOptions.Add(option_)
+                    TagFilterOptions.Add(New TagFilterOption(entry.Tag, entry.Count, IsTagFilterSelected(entry.Tag)))
                 Next
-                Dim firstAiTag = True
                 For Each entry In LibraryService.Instance.GetLocalAiTagCounts()
-                    If ownTags.Contains(entry.Canonical) Then Continue For
                     Dim display = AiTagLocalizationService.Display(entry.Canonical)
                     Dim matches = search.Length = 0 OrElse
                                   display.IndexOf(search, StringComparison.CurrentCultureIgnoreCase) >= 0 OrElse
                                   entry.Canonical.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
                                   IsTagFilterSelected(entry.Canonical)
                     If Not matches Then Continue For
-                    ' Mit Zwischenueberschrift, wie bei den Serverstichwoertern: "Hund" von Hand und
-                    ' "Hund" aus der Erkennung stehen sonst gleich beschriftet untereinander, und
-                    ' die zwei Zahlen daneben zaehlen zweierlei.
-                    Dim option_ = New TagFilterOption(entry.Canonical, entry.Count,
-                                                      IsTagFilterSelected(entry.Canonical),
-                                                      displayTag:=display, isAiTag:=True)
-                    option_.ShowsAiHeader = firstAiTag
-                    firstAiTag = False
-                    TagFilterOptions.Add(option_)
-                    LocalAiTagFilterOptions.Add(option_)
+                    TagFilterOptions.Add(New TagFilterOption(entry.Canonical, entry.Count,
+                                                             IsTagFilterSelected(entry.Canonical),
+                                                             displayTag:=display, isAiTag:=True))
                 Next
-                ' Und die Stichwoerter des Nextcloud-Servers, hinter den lokalen und unter eigener
-                ' Ueberschrift. NUR diese Serverquelle steht hier: Nextcloud fuehrt Stichwoerter als
-                ' Cluster und kann danach filtern, Immichs Suche kennt keinen Stichwortfilter - ein
-                ' Eintrag dafuer waere ein Knopf, der nichts findet.
-                Dim firstNextcloudTag = True
+                ' Die Stichwoerter des Nextcloud-Servers. Sie tragen ihre CLUSTER-Kennung mit: der
+                ' Server laedt einen Cluster ueber sie, nicht ueber den Namen.
                 For Each stichwort In _nextcloudTags
                     If stichwort Is Nothing OrElse String.IsNullOrEmpty(stichwort.Id) Then Continue For
                     Dim anzeige = If(String.IsNullOrWhiteSpace(stichwort.Name), stichwort.Id, stichwort.Name)
                     If search.Length > 0 AndAlso anzeige.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                    Dim option_ = New TagFilterOption(anzeige, stichwort.Count, False,
-                                                       serverSource:=NextcloudSourceName,
-                                                       serverId:=stichwort.Id) With {
-                        .ShowsServerHeader = firstNextcloudTag
-                    }
-                    TagFilterOptions.Add(option_)
-                    NextcloudTagFilterOptions.Add(option_)
-                    firstNextcloudTag = False
+                    TagFilterOptions.Add(New TagFilterOption(anzeige, stichwort.Count, IsTagFilterSelected(anzeige),
+                                                             serverSource:=NextcloudSourceName,
+                                                             serverId:=stichwort.Id))
                 Next
-                AddServerTagOptions(ImmichIndexService.Instance.GetTagCounts(), ImmichSourceName, ImmichTagFilterOptions, search)
-                AddServerAiTagOptions(ImmichIndexService.Instance.GetAiTagCounts(), ImmichSourceName, ImmichAiTagFilterOptions, search)
-                AddServerAiTagOptions(NextcloudIndexService.Instance.GetAiTagCounts(), NextcloudSourceName, NextcloudAiTagFilterOptions, search)
+                AddServerTagOptions(ImmichIndexService.Instance.GetTagCounts(), ImmichSourceName, search)
+                AddServerAiTagOptions(ImmichIndexService.Instance.GetAiTagCounts(), ImmichSourceName, search)
+                AddServerAiTagOptions(NextcloudIndexService.Instance.GetAiTagCounts(), NextcloudSourceName, search)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshTagFilterOptions", ex)
             End Try
-            Select Case ActiveFilterSource()
-                Case "Immich"
-                    LocalTagFilterOptions.Clear() : LocalAiTagFilterOptions.Clear()
-                    NextcloudTagFilterOptions.Clear() : NextcloudAiTagFilterOptions.Clear()
-                Case "Nextcloud"
-                    LocalTagFilterOptions.Clear() : LocalAiTagFilterOptions.Clear()
-                    ImmichTagFilterOptions.Clear() : ImmichAiTagFilterOptions.Clear()
-                Case Else
-                    ImmichTagFilterOptions.Clear() : ImmichAiTagFilterOptions.Clear()
-                    NextcloudTagFilterOptions.Clear() : NextcloudAiTagFilterOptions.Clear()
-            End Select
             KeepOnlyActiveSource(TagFilterOptions, Function(o) o.ServerSource)
+            MergeTagOptionsByLabel()
             RefreshTagFilterState()
         End Sub
 
+        ''' <summary>Fasst gleich beschriftete Zeilen zu EINER zusammen.
+        '''
+        ''' Dieselbe Beschriftung entsteht auf zwei Wegen: ein von Hand vergebenes Wort kann genauso
+        ''' lauten wie ein erkanntes ("Hund" und das erkannte "dog"), und zwei kanonische Begriffe
+        ''' koennen dieselbe Uebersetzung haben ("road" und "street" sind beide die Strasse). Zwei
+        ''' gleich beschriftete Zeilen mit verschiedenen Zahlen sind fuer den Benutzer ein Raetsel.
+        '''
+        ''' Der Klick auf die zusammengefasste Zeile meint JEDEN der Begriffe - manuelle wie erkannte,
+        ''' und die wirken ohnehin als ODER.
+        '''
+        ''' DIE ZAHL IST DIE VEREINIGUNGSMENGE, weder die Summe noch die groesste. Dasselbe Bild kann
+        ''' das Wort von Hand UND aus der Erkennung tragen; eine Summe zaehlte es doppelt, die
+        ''' groesste liesse Bilder unter den Tisch fallen. Gezaehlt wird deshalb ueber die Pfade,
+        ''' und zwar in ZWEI Abfragen fuer alle zusammengefassten Zeilen zusammen - die Liste wird
+        ''' bei jedem Tastendruck im Suchfeld neu gebaut, eine Abfrage je Zeile waere dort zu viel.
+        ''' Nur wo es keinen bezahlbaren Weg zu den Pfaden gibt (gemischte Serverzeilen), bleibt es
+        ''' bei der groessten Zahl.</summary>
+        Private Sub MergeTagOptionsByLabel()
+            If TagFilterOptions.Count < 2 Then Return
+            Dim merged As New List(Of TagFilterOption)()
+            Dim byLabel As New Dictionary(Of String, Integer)(StringComparer.CurrentCultureIgnoreCase)
+            Dim groups As New List(Of List(Of TagFilterOption))()
+            For Each entry In TagFilterOptions
+                Dim label = If(entry.DisplayTag, "").Trim()
+                Dim index As Integer
+                If label.Length > 0 AndAlso byLabel.TryGetValue(label, index) Then
+                    groups(index).Add(entry)
+                Else
+                    If label.Length > 0 Then byLabel(label) = groups.Count
+                    groups.Add(New List(Of TagFilterOption) From {entry})
+                End If
+            Next
+            If groups.Count = TagFilterOptions.Count Then Return
+
+            Dim doppelte = groups.Where(Function(g) g.Count > 1).ToList()
+            Dim pfadeJeStichwort = LibraryService.Instance.GetPathsByTag(
+                doppelte.SelectMany(Function(g) g.Where(Function(o) Not o.IsFromServer AndAlso Not o.IsAiTag)).
+                         SelectMany(Function(o) o.FilterTags))
+            Dim pfadeJeBegriff = LibraryService.Instance.GetPathsByCanonical(
+                doppelte.SelectMany(Function(g) g.Where(Function(o) Not o.IsFromServer AndAlso o.IsAiTag)).
+                         SelectMany(Function(o) o.FilterTags))
+
+            For Each group In groups
+                If group.Count = 1 Then
+                    merged.Add(group(0))
+                    Continue For
+                End If
+                ' Die erste Zeile gibt Herkunft und Kennung vor: die Reihenfolge ist lokal, dann
+                ' Server, und ein Servereintrag ohne seine Kennung liesse sich nicht mehr laden.
+                Dim leader = If(group.FirstOrDefault(Function(o) Not String.IsNullOrEmpty(o.ServerId)), group(0))
+                Dim filterTags = group.SelectMany(Function(o) o.FilterTags).
+                                 Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                merged.Add(New TagFilterOption(leader.Tag, MergedTagCount(group, pfadeJeStichwort, pfadeJeBegriff),
+                                               filterTags.Any(AddressOf IsTagFilterSelected),
+                                               serverSource:=leader.ServerSource,
+                                               serverId:=leader.ServerId,
+                                               displayTag:=leader.DisplayTag,
+                                               isAiTag:=group.All(Function(o) o.IsAiTag),
+                                               filterTags:=filterTags))
+            Next
+
+            TagFilterOptions.Clear()
+            For Each entry In merged
+                TagFilterOptions.Add(entry)
+            Next
+        End Sub
+
+        ''' <summary>Wie viele Bilder tragen mindestens einen der Begriffe dieser Zeile?
+        '''
+        ''' Lokale Zeilen und reine KI-Zeilen einer Serverquelle lassen sich ueber ihre Pfade bzw.
+        ''' Kennungen genau zaehlen. Fuer eine gemischte Serverzeile gaebe es dazu keinen Weg ohne
+        ''' einen Durchlauf durch die Stichwortspalte des Serverindex; dort bleibt es bei der
+        ''' groessten Einzelzahl, und die ist wenigstens keine Uebertreibung.</summary>
+        Private Shared Function MergedTagCount(group As List(Of TagFilterOption),
+                                               pfadeJeStichwort As Dictionary(Of String, HashSet(Of String)),
+                                               pfadeJeBegriff As Dictionary(Of String, HashSet(Of String))) As Integer
+            Dim groesste = group.Max(Function(o) o.Count)
+            Try
+                If group.All(Function(o) Not o.IsFromServer) Then
+                    Dim pfade As New HashSet(Of String)(StringComparer.Ordinal)
+                    For Each entry In group
+                        Dim quelle = If(entry.IsAiTag, pfadeJeBegriff, pfadeJeStichwort)
+                        For Each tag In entry.FilterTags
+                            Dim treffer As HashSet(Of String) = Nothing
+                            If quelle.TryGetValue(tag, treffer) Then pfade.UnionWith(treffer)
+                        Next
+                    Next
+                    Return If(pfade.Count > 0, pfade.Count, groesste)
+                End If
+
+                If group.All(Function(o) o.IsAiTag) Then
+                    Dim begriffe = group.SelectMany(Function(o) o.FilterTags).ToList()
+                    Dim quelle = group(0).ServerSource
+                    Dim kennungen As HashSet(Of String) = Nothing
+                    If String.Equals(quelle, ImmichSourceName, StringComparison.OrdinalIgnoreCase) Then
+                        kennungen = ImmichIndexService.Instance.GetAssetIdsForAiTags(begriffe)
+                    ElseIf String.Equals(quelle, NextcloudSourceName, StringComparison.OrdinalIgnoreCase) Then
+                        kennungen = NextcloudIndexService.Instance.GetFileIdsForAiTags(begriffe)
+                    End If
+                    If kennungen IsNot Nothing AndAlso kennungen.Count > 0 Then Return kennungen.Count
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.MergedTagCount", ex)
+            End Try
+            Return groesste
+        End Function
+
         Private Sub AddServerTagOptions(entries As IEnumerable(Of (Name As String, Count As Integer)), source As String,
-                                        target As ObservableCollection(Of TagFilterOption), search As String)
+                                        search As String)
             For Each entry In If(entries, Enumerable.Empty(Of (Name As String, Count As Integer))())
                 If String.IsNullOrWhiteSpace(entry.Name) Then Continue For
                 If search.Length > 0 AndAlso entry.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                Dim option_ = New TagFilterOption(entry.Name, entry.Count, False, serverSource:=source)
-                TagFilterOptions.Add(option_)
-                target.Add(option_)
+                TagFilterOptions.Add(New TagFilterOption(entry.Name, entry.Count, IsTagFilterSelected(entry.Name),
+                                                         serverSource:=source))
             Next
         End Sub
 
         Private Sub AddServerAiTagOptions(entries As IEnumerable(Of (Canonical As String, Count As Integer)), source As String,
-                                          target As ObservableCollection(Of TagFilterOption), search As String)
+                                          search As String)
             For Each entry In If(entries, Enumerable.Empty(Of (Canonical As String, Count As Integer))())
                 If String.IsNullOrWhiteSpace(entry.Canonical) Then Continue For
                 Dim display = AiTagLocalizationService.Display(entry.Canonical)
                 If search.Length > 0 AndAlso display.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 AndAlso entry.Canonical.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                Dim option_ = New TagFilterOption(entry.Canonical, entry.Count, False,
-                                                   serverSource:=source, displayTag:=display, isAiTag:=True)
-                TagFilterOptions.Add(option_)
-                target.Add(option_)
+                TagFilterOptions.Add(New TagFilterOption(entry.Canonical, entry.Count,
+                                                         IsTagFilterSelected(entry.Canonical),
+                                                         serverSource:=source, displayTag:=display, isAiTag:=True))
             Next
         End Sub
 
@@ -4528,20 +4601,11 @@ Namespace ViewModels
         Public ReadOnly Property TagFilterOptions As New ObservableCollection(Of TagFilterOption)()
         ' Eigene Collections pro Spalte. Die Optionen selbst sind mit der Gesamtliste identisch,
         ' damit Auswahlmarkierung und die bestehende Klicklogik an einer Stelle bleiben.
-        Public ReadOnly Property LocalTagFilterOptions As New ObservableCollection(Of TagFilterOption)()
-        Public ReadOnly Property LocalAiTagFilterOptions As New ObservableCollection(Of TagFilterOption)()
-        Public ReadOnly Property ImmichTagFilterOptions As New ObservableCollection(Of TagFilterOption)()
-        Public ReadOnly Property ImmichAiTagFilterOptions As New ObservableCollection(Of TagFilterOption)()
-        Public ReadOnly Property NextcloudTagFilterOptions As New ObservableCollection(Of TagFilterOption)()
-        Public ReadOnly Property NextcloudAiTagFilterOptions As New ObservableCollection(Of TagFilterOption)()
         ' ── Personen ─────────────────────────────────────────────────────────────
 
         Private _activePersonFilters As New List(Of String)()
 
         Public ReadOnly Property PersonFilterOptions As New ObservableCollection(Of PersonFilterOption)()
-        Public ReadOnly Property LocalPersonFilterOptions As New ObservableCollection(Of PersonFilterOption)()
-        Public ReadOnly Property ImmichPersonFilterOptions As New ObservableCollection(Of PersonFilterOption)()
-        Public ReadOnly Property NextcloudPersonFilterOptions As New ObservableCollection(Of PersonFilterOption)()
 
 
         ''' <summary>Steht der Knopf ueberhaupt zur Verfuegung? Nur mit eingeschalteter Erkennung UND
@@ -4590,9 +4654,6 @@ Namespace ViewModels
 
         Public Sub RefreshPersonFilterOptions()
             PersonFilterOptions.Clear()
-            LocalPersonFilterOptions.Clear()
-            ImmichPersonFilterOptions.Clear()
-            NextcloudPersonFilterOptions.Clear()
             Try
                 Dim search = If(_personFilterSearch, "").Trim()
                 For Each entry In LibraryService.Instance.GetPeople()
@@ -4607,53 +4668,35 @@ Namespace ViewModels
                     Dim option_ = New PersonFilterOption(entry.Id, entry.Name, entry.ImageCount,
                                                          IsPersonFilterSelected(entry.Id))
                     PersonFilterOptions.Add(option_)
-                    LocalPersonFilterOptions.Add(option_)
                 Next
                 ' Und die Personen des Immich-Servers. Sie stehen HINTER den lokalen und tragen den
                 ' Vermerk ihrer Herkunft: verunden lassen sich die beiden Beststaende nicht (der
                 ' Server filtert nach genau einer Person, und ein Immich-Element steht in keiner
                 ' lokalen Tabelle), und eine Liste, die das verschweigt, verspricht etwas Falsches.
-                Dim firstImmichPerson = True
                 For Each person In _immichPeople
                     If person Is Nothing OrElse String.IsNullOrWhiteSpace(person.Name) Then Continue For
                     Dim matchesImmich = search.Length = 0 OrElse
                                         person.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                     If Not matchesImmich Then Continue For
-                    Dim option_ = New PersonFilterOption(person.Id, person.Name, 0, False,
-                                                         serverSource:=ImmichSourceName) With {
-                        .ShowsServerHeader = firstImmichPerson
-                    }
-                    PersonFilterOptions.Add(option_)
-                    ImmichPersonFilterOptions.Add(option_)
-                    firstImmichPerson = False
+                    PersonFilterOptions.Add(New PersonFilterOption(person.Id, person.Name, 0, False,
+                                                                   serverSource:=ImmichSourceName))
                 Next
                 ' Und dieselbe Reihe fuer die zweite Serverquelle. Der Knopf baute seine Suche bisher
                 ' allein aus dem lokalen Katalog - und zu einem Nextcloud-Element steht dort nichts,
                 ' der Knopf lief also ins Leere, waehrend dieselben Personen als Zweig in der
                 ' Seitenleiste standen.
-                Dim firstNextcloudPerson = True
                 For Each person In _nextcloudPeople
                     If person Is Nothing OrElse String.IsNullOrEmpty(person.Id) Then Continue For
                     ' Nur benannte Gruppen, wie im Baum und wie bei Immich.
                     If Not person.IsNamed Then Continue For
                     Dim anzeige = If(String.IsNullOrWhiteSpace(person.Name), person.Id, person.Name)
                     If search.Length > 0 AndAlso anzeige.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                    Dim option_ = New PersonFilterOption(person.Id, anzeige, person.Count, False,
-                                                         serverSource:=NextcloudSourceName) With {
-                        .ShowsServerHeader = firstNextcloudPerson
-                    }
-                    PersonFilterOptions.Add(option_)
-                    NextcloudPersonFilterOptions.Add(option_)
-                    firstNextcloudPerson = False
+                    PersonFilterOptions.Add(New PersonFilterOption(person.Id, anzeige, person.Count, False,
+                                                                   serverSource:=NextcloudSourceName))
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshPersonFilterOptions", ex)
             End Try
-            Select Case ActiveFilterSource()
-                Case "Immich" : LocalPersonFilterOptions.Clear() : NextcloudPersonFilterOptions.Clear()
-                Case "Nextcloud" : LocalPersonFilterOptions.Clear() : ImmichPersonFilterOptions.Clear()
-                Case Else : ImmichPersonFilterOptions.Clear() : NextcloudPersonFilterOptions.Clear()
-            End Select
             KeepOnlyActiveSource(PersonFilterOptions, Function(o) o.ServerSource)
             RefreshPersonFilterState()
             Me.RaisePropertyChanged(NameOf(HasPersonFeature))
@@ -4736,9 +4779,6 @@ Namespace ViewModels
         Private _activePlaceFilters As New List(Of String)()
 
         Public ReadOnly Property PlaceFilterOptions As New ObservableCollection(Of PlaceFilterOption)()
-        Public ReadOnly Property LocalPlaceFilterOptions As New ObservableCollection(Of PlaceFilterOption)()
-        Public ReadOnly Property ImmichPlaceFilterOptions As New ObservableCollection(Of PlaceFilterOption)()
-        Public ReadOnly Property NextcloudPlaceFilterOptions As New ObservableCollection(Of PlaceFilterOption)()
 
 
         ''' <summary>Steht der Knopf zur Verfuegung? Nur mit vorhandener UND eingeschalteter
@@ -4780,9 +4820,6 @@ Namespace ViewModels
         ''' bliebe diese Liste auf einem gewachsenen Bestand dauerhaft leer.</summary>
         Public Sub RefreshPlaceFilterOptions()
             PlaceFilterOptions.Clear()
-            LocalPlaceFilterOptions.Clear()
-            ImmichPlaceFilterOptions.Clear()
-            NextcloudPlaceFilterOptions.Clear()
             Try
                 Dim search = If(_placeFilterSearch, "").Trim()
                 For Each entry In LibraryService.Instance.GetPlaceCounts()
@@ -4800,48 +4837,30 @@ Namespace ViewModels
                     Dim option_ = New PlaceFilterOption(entry.City, entry.Country, entry.Count,
                                                         IsPlaceFilterSelected(entry.City), entry.CountryCode)
                     PlaceFilterOptions.Add(option_)
-                    LocalPlaceFilterOptions.Add(option_)
                 Next
                 ' Und die Staedte des Immich-Servers, hinter den lokalen und mit dem Vermerk ihrer
                 ' Herkunft - dieselbe Regel wie bei den Personen. Der Server kennt nur die STADT,
                 ' kein Land: das Feld bleibt leer, und die Beschriftung faellt entsprechend kuerzer aus.
-                Dim firstImmichPlace = True
                 For Each city In _immichPlaces
                     If String.IsNullOrWhiteSpace(city) Then Continue For
                     Dim matchesImmich = search.Length = 0 OrElse
                                         city.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0
                     If Not matchesImmich Then Continue For
-                    Dim option_ = New PlaceFilterOption(city, "", 0, False, "", serverSource:=ImmichSourceName) With {
-                        .ShowsServerHeader = firstImmichPlace
-                    }
-                    PlaceFilterOptions.Add(option_)
-                    ImmichPlaceFilterOptions.Add(option_)
-                    firstImmichPlace = False
+                    PlaceFilterOptions.Add(New PlaceFilterOption(city, "", 0, False, "", serverSource:=ImmichSourceName))
                 Next
                 ' Die Orte der zweiten Serverquelle. Sie kommen als Cluster und tragen - anders als
                 ' die Staedte von Immich - eine Anzahl.
-                Dim firstNextcloudPlace = True
                 For Each ort In _nextcloudPlaces
                     If ort Is Nothing OrElse String.IsNullOrEmpty(ort.Id) Then Continue For
                     Dim anzeige = If(String.IsNullOrWhiteSpace(ort.Name), ort.Id, ort.Name)
                     If search.Length > 0 AndAlso anzeige.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                    Dim option_ = New PlaceFilterOption(anzeige, "", ort.Count, False, "",
-                                                        serverSource:=NextcloudSourceName,
-                                                        serverId:=ort.Id) With {
-                        .ShowsServerHeader = firstNextcloudPlace
-                    }
-                    PlaceFilterOptions.Add(option_)
-                    NextcloudPlaceFilterOptions.Add(option_)
-                    firstNextcloudPlace = False
+                    PlaceFilterOptions.Add(New PlaceFilterOption(anzeige, "", ort.Count, False, "",
+                                                                 serverSource:=NextcloudSourceName,
+                                                                 serverId:=ort.Id))
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshPlaceFilterOptions", ex)
             End Try
-            Select Case ActiveFilterSource()
-                Case "Immich" : LocalPlaceFilterOptions.Clear() : NextcloudPlaceFilterOptions.Clear()
-                Case "Nextcloud" : LocalPlaceFilterOptions.Clear() : ImmichPlaceFilterOptions.Clear()
-                Case Else : ImmichPlaceFilterOptions.Clear() : NextcloudPlaceFilterOptions.Clear()
-            End Select
             KeepOnlyActiveSource(PlaceFilterOptions, Function(o) o.ServerSource)
             RefreshPlaceFilterState()
             Me.RaisePropertyChanged(NameOf(HasPlaceFeature))
@@ -4917,9 +4936,6 @@ Namespace ViewModels
                 entry.IsSelected = IsPlaceFilterSelected(entry.City)
             Next
             SortFilterColumn(PlaceFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
-            SortFilterColumn(LocalPlaceFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
-            SortFilterColumn(ImmichPlaceFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
-            SortFilterColumn(NextcloudPlaceFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
         End Sub
 
         ''' <summary>Zieht Ortsnamen fuer aeltere Bibliothekseintraege nach, einmal je Sitzung.
@@ -5041,10 +5057,18 @@ Namespace ViewModels
         ''' landet im Katalog und optional in XMP, das eines Serverbildes ausschließlich im lokalen
         ''' Index seiner Serverquelle (siehe <see cref="ServerAiTagRunner"/>). Auf dem Server selbst
         ''' wird nichts geändert.</summary>
-        Private Async Function ReanalyzeAiTagsAsync() As Task
+        Private Function ReanalyzeAiTagsAsync() As Task
+            Return ReanalyzeAiTagsForImageItemsAsync(GetSelectedImageItems())
+        End Function
+
+        ''' <summary>Analysiert die uebergebenen Bilder neu. Betrachter und Editor rufen denselben
+        ''' Weg mit ihrem einen Bild, damit Regel und Rueckmeldung ueberall dieselben sind - der
+        ''' Menueeintrag hing sonst allein an der Galerie und fehlte in den beiden anderen Ansichten
+        ''' wortlos.</summary>
+        Public Async Function ReanalyzeAiTagsForImageItemsAsync(source As IEnumerable(Of ImageItem)) As Task
             If _aiTaggingRunning OrElse Not ImageTaggingService.Available Then Return
 
-            Dim items = GetSelectedImageItems().
+            Dim items = If(source, Enumerable.Empty(Of ImageItem)()).
                 Where(Function(i) i IsNot Nothing AndAlso (i.IsRemoteAsset OrElse (Not String.IsNullOrWhiteSpace(i.FilePath) AndAlso File.Exists(i.FilePath)))).ToList()
             If items.Count = 0 Then Return
 
@@ -5110,24 +5134,17 @@ Namespace ViewModels
                 entry.IsSelected = IsPersonFilterSelected(entry.Id)
             Next
             SortFilterColumn(PersonFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
-            SortFilterColumn(LocalPersonFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
-            SortFilterColumn(ImmichPersonFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
-            SortFilterColumn(NextcloudPersonFilterOptions, Function(o) o.IsSelected, Function(o) o.Label)
         End Sub
 
         Private Sub RefreshTagFilterState()
             Me.RaisePropertyChanged(NameOf(HasTagFilter))
             ' NICHT "option" als Schleifenvariable: Option ist ein VB-Schluesselwort.
             For Each entry In TagFilterOptions
-                entry.IsSelected = IsTagFilterSelected(entry.Tag)
+                ' Ueber ALLE zusammengefassten Begriffe: der Haken gehoert an die Zeile, sobald
+                ' einer von ihnen ausgewaehlt ist.
+                entry.IsSelected = entry.FilterTags.Any(AddressOf IsTagFilterSelected)
             Next
             SortFilterColumn(TagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
-            SortFilterColumn(LocalTagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
-            SortFilterColumn(LocalAiTagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
-            SortFilterColumn(ImmichTagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
-            SortFilterColumn(ImmichAiTagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
-            SortFilterColumn(NextcloudTagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
-            SortFilterColumn(NextcloudAiTagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
         End Sub
 
         ''' <summary>Eine Filterliste zeigt ausschließlich die Quelle der aktuellen Ansicht.
@@ -5176,312 +5193,22 @@ Namespace ViewModels
         ''' <summary>Führt eine Suchliste auf einem der beiden Server aus - Immich und Nextcloud
         ''' laufen denselben Weg.
         '''
-        ''' ZWEI QUELLEN, ein Ergebnis. Der Server liefert Kandidaten, so weit seine Suche reicht:
-        ''' Immich sucht semantisch und filtert Favorit und Bewertung gleich mit, Nextcloud sucht im
-        ''' Dateinamen und kann sonst nichts. Alles Weitere beantwortet der eigene Katalog - er hält
-        ''' Bewertung, Favorit, Stichwörter, Personen und Orte zu jedem Bild, das schon einmal
-        ''' geöffnet oder bewertet wurde, auch zu Serverbildern (sie stehen dort unter ihrem
-        ''' Pseudo-Pfad). Deshalb kommt der Katalog zusätzlich als eigene Trefferquelle dazu: ein
-        ''' Bild, dessen STICHWORT passt, fände der Server nie.
+        ''' DER LOKALE KATALOG ZUERST, und zwar allein. Er hält zu jedem Serverbild, das schon einmal
+        ''' eingelesen wurde, Bewertung, Favorit, Stichwörter, Personen und Orte unter dessen
+        ''' Pseudo-Pfad; die Antwort kostet damit keine einzige Anfrage. Das ist die Bedingung dafür,
+        ''' dass ein Klick im Filter-Popup dieselbe Ansicht öffnen darf wie ein Knoten im Baum: eine
+        ''' vollständige Serversuche je Klick wären tausende Netzabrufe.
         '''
-        ''' Was weder Server noch Katalog wissen, bleibt offen. Eine Bedingung wie „Bildhöhe > 500"
-        ''' kann bei einem nie geöffneten Serverbild niemand beantworten, ohne es zu holen - solche
-        ''' Bilder fallen heraus, und die Statuszeile sagt, wie viele es waren. Bei einer Ordnersuche
-        ''' ist das anders: dort liest der Suchlauf notfalls die Datei selbst.</summary>
+        ''' Der Server ergänzt danach im Hintergrund, aber nur dort, wo er die Frage ohne einen Abruf
+        ''' je Bild beantworten kann (siehe <see cref="SupplementCachedServerSearchAsync"/>). Er
+        ''' hängt seine Treffer an die bereits sichtbare Liste an und leert sie nie.
+        '''
+        ''' Was der Katalog zu einem nie eingelesenen Serverbild nicht weiß, bleibt offen: eine
+        ''' Bedingung wie „Bildhöhe > 500" kann dort niemand beantworten, ohne das Bild zu holen.
+        ''' Bei einer Ordnersuche ist das anders - dort liest der Suchlauf notfalls die Datei
+        ''' selbst.</summary>
         Private Async Sub StartServerSearch(node As VirtualNavigationNode)
-            ' Filterabfragen laufen ausschließlich gegen den lokalen Katalog. Die Serveransicht
-            ' selbst darf später weiter abgeglichen werden; ein Klick im Filter-Popup darf aber
-            ' niemals eine vollständige Remote-Suche und damit tausende Netzabrufe auslösen.
             Await StartCachedServerSearchAsync(node)
-            Return
-
-            Dim isImmich = String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase)
-            Dim pathPrefix = If(isImmich, "immich://", "nextcloud://")
-            Dim textQuery = If(node.TextQuery, "").Trim()
-            Dim favoriteMode = AppSettingsService.NormalizeSearchFavoriteMode(node.FavoriteMode)
-            Dim ratings = NormalizeRatings(node.Ratings)
-            Dim conditions = If(node.Conditions, New List(Of SearchCondition)())
-            ' Immich filtert auf genau eine Bewertung - bei mehreren nehmen wir die höchste.
-            Dim rating = If(ratings.Count > 0, ratings.Max(), 0)
-            Dim favoriteOnly = String.Equals(favoriteMode, "Only", StringComparison.OrdinalIgnoreCase)
-
-            ' DER SERVER ZUERST. Personen, Orte und Stichwörter kennen beide Server selbst; was hier
-            ' herausgezogen wird, beantwortet die API und NICHT der Katalog. Übrig bleiben die
-            ' Bedingungen, die kein Server führt (Kamera, ISO, Maße, Datum).
-            Dim personNames = WantedNames(node, "Person", node.PersonQueries)
-            Dim placeNames = WantedNames(node, "Place", node.PlaceQueries)
-            Dim tagNames = If(node.TagQueries, New List(Of String)()).
-                           Where(Function(t) Not String.IsNullOrWhiteSpace(t)).ToList()
-            Dim catalogConditions = conditions.Where(
-                Function(c) Not String.Equals(c.Field, "Person", StringComparison.OrdinalIgnoreCase) AndAlso
-                            Not String.Equals(c.Field, "Place", StringComparison.OrdinalIgnoreCase)).ToList()
-            ' Fragt überhaupt etwas den Server? Wenn nicht (also nur Bewertung, Etikett oder
-            ' Aufnahmedaten), trägt der Katalog die Treffer - er ist dann die einzige Quelle, die
-            ' diese Angaben hat, und damit vollständig.
-            Dim hasServerCriterion = textQuery.Length > 0 OrElse personNames.Count > 0 OrElse
-                                     placeNames.Count > 0 OrElse tagNames.Count > 0 OrElse
-                                     Not String.Equals(favoriteMode, "Any", StringComparison.OrdinalIgnoreCase) OrElse
-                                     ratings.Count > 0
-
-            Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
-            _activeSearchCts = New CancellationTokenSource()
-            Dim token = _activeSearchCts.Token
-            SelectedImmichNode = Nothing
-            SelectedNextcloudNode = Nothing
-            IsLoading = True
-            Dim runRow = BeginSearchRun()
-            StatusText = LocalizationService.T("Suche auf dem Server…")
-
-            Const SafetyCap As Integer = 5000
-            Dim seenPaths As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-            Dim totalPublished As Integer = 0
-            Dim skippedUnanswerable As Integer = 0
-            Dim lastSortTick = Environment.TickCount64
-            Dim immichAiTagAssetIds As HashSet(Of String) = Nothing
-
-            ' Spielt eine Portion Kandidaten ein: erst durch den Katalogfilter, dann in die Ansicht.
-            Dim publishBatch =
-                Async Function(candidates As List(Of ImageItem), serverMeta As Dictionary(Of String, LibraryImageMeta)) As Task
-                    Dim fresh = candidates.Where(Function(i) i IsNot Nothing AndAlso
-                                                     Not String.IsNullOrEmpty(i.FilePath) AndAlso
-                                                     seenPaths.Add(i.FilePath)).ToList()
-                    If fresh.Count = 0 Then Return
-                    Dim catalogMeta = LibraryService.Instance.GetMetaForPaths(fresh.Select(Function(i) i.FilePath))
-                    Dim kept As New List(Of ImageItem)()
-                    For Each item In fresh
-                        Dim fromServer As LibraryImageMeta = Nothing
-                        serverMeta.TryGetValue(item.FilePath, fromServer)
-                        Dim fromCatalog As LibraryImageMeta = Nothing
-                        catalogMeta.TryGetValue(item.FilePath, fromCatalog)
-                        Dim meta = MergeServerMeta(item.FilePath, fromServer, fromCatalog)
-                        If ServerConditionUnanswerable(meta, catalogConditions) Then
-                            skippedUnanswerable += 1
-                            Continue For
-                        End If
-                        ' Immichs allgemeine Suche liefert ohne Text alle Assets. Personen wurden
-                        ' oben bereits über ihre Asset-IDs geschnitten, Stichwörter und Orte aber
-                        ' nicht. Diese beiden Kriterien müssen daher gegen die Index-Metadaten
-                        ' geprüft werden, bevor ein Bild in die Ergebnisliste gelangt.
-                        If isImmich AndAlso node.TagQueries IsNot Nothing AndAlso node.TagQueries.Count > 0 Then
-                            Dim hasAiTag = False
-                            Dim assetId As String = Nothing
-                            Dim ignoredName As String = Nothing
-                            If immichAiTagAssetIds IsNot Nothing AndAlso
-                               ImmichService.TryParsePseudoPath(meta.FilePath, assetId, ignoredName) Then
-                                hasAiTag = immichAiTagAssetIds.Contains(assetId)
-                            End If
-                            If Not hasAiTag AndAlso Not MatchesTagQuery(meta.FilePath, meta.Tags, node.TagQueries) Then Continue For
-                        End If
-                        If isImmich AndAlso Not MatchesPlaceQuery(meta, placeNames) Then Continue For
-                        ' Suchtext, Personen, Orte, Stichwörter und Favoriten hat der Server schon
-                        ' beantwortet (bei Immich der Text sogar semantisch, also OHNE Namensbezug).
-                        ' Hier bleibt, was nur der Katalog weiß.
-                        If Not Await MatchesServerCriteriaAsync(meta, catalogConditions, node.ConditionCombinator,
-                                                                "", "Any", ratings) Then Continue For
-                        kept.Add(item)
-                    Next
-                    If kept.Count = 0 Then Return
-                    Dim isFirstBatch = (totalPublished = 0)
-                    AddPrebuiltItemsToVirtualFolder(kept, sortNow:=False)
-                    totalPublished += kept.Count
-                    ' Zwischensortierungen bewusst selten (das Neuaufbauen der Liste läuft auf dem
-                    ' UI-Thread und konkurriert sonst mit den Viewport-Benachrichtigungen).
-                    If isFirstBatch OrElse Environment.TickCount64 - lastSortTick > 1500 Then
-                        FilterAndSort()
-                        lastSortTick = Environment.TickCount64
-                    End If
-                End Function
-
-            Try
-                ' ── 1. Kandidaten vom Server ─────────────────────────────────────────────
-                If isImmich Then
-                    Dim serverKey = ImmichService.ServerKey
-                    ' Einmaliger Indexzugriff für alle KI-Stichwörter dieser Suche. Ein Abruf
-                    ' pro Bild würde bei großen Bibliotheken wieder den gesamten Katalog rattern.
-                    If tagNames.Count > 0 Then
-                        immichAiTagAssetIds = ImmichIndexService.Instance.GetAssetIdsForAiTags(tagNames)
-                    End If
-                    ' Personen kennt NUR der Server: die Assetliste im Index traegt keine Gesichter.
-                    ' Ohne diesen Abruf blieb eine Suche nach einer Person bei Immich wirkungslos.
-                    Dim allowedAssetIds = Await ResolveImmichPersonAssetIdsAsync(personNames, thumbnailToken)
-                    Dim page As Integer = 1
-                    Do
-                        Dim result = Await ImmichService.SearchAsync(textQuery, favoriteOnly, rating, page, thumbnailToken)
-                        If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
-                        If result.Items.Count > 0 Then
-                            Dim serverMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
-                            Dim items As New List(Of ImageItem)()
-                            For Each asset In result.Items
-                                If allowedAssetIds IsNot Nothing AndAlso Not allowedAssetIds.Contains(asset.Id) Then Continue For
-                                Dim item = ImageItem.CreateImmichItem(asset, thumbnailToken)
-                                items.Add(item)
-                                ' Immichs eigener Index trägt Kamera, ISO, Blende, Ort und
-                                ' Stichwörter - dieselbe Quelle wie in der Ordnersuche.
-                                serverMeta(item.FilePath) = If(BuildSearchMetaFromImmichAsset(serverKey, asset),
-                                                               MetaFromImmichAsset(item.FilePath, asset))
-                            Next
-                            Await publishBatch(items, serverMeta)
-                        End If
-                        If result.NextPage <= 0 OrElse totalPublished >= SafetyCap Then Exit Do
-                        page = result.NextPage
-                    Loop
-
-                    ' Der lokale Immich-Index als zweiter Durchgang. Er liegt ohnehin auf der Platte,
-                    ' kostet keine Anfrage und traegt Stichwoerter, Ort, Kamera und Bewertung zu
-                    ' JEDEM Asset - auch zu denen, die Immichs Suche nicht ausgeworfen hat. Ohne ihn
-                    ' fand eine Suche nach einem STICHWORT nichts: die semantische Suche sucht im
-                    ' Bildinhalt, nicht in den eigenen Stichwoertern.
-                    If totalPublished < SafetyCap Then
-                        Dim indexedAssets = Await Task.Run(Of List(Of ImmichAsset))(
-                            Function() ImmichIndexService.Instance.GetAssetList(serverKey))
-                        If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
-                        Dim indexMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
-                        Dim indexItems As New List(Of ImageItem)()
-                        For Each asset In If(indexedAssets, New List(Of ImmichAsset)())
-                            token.ThrowIfCancellationRequested()
-                            Dim meta = BuildSearchMetaFromImmichAsset(serverKey, asset)
-                            If meta Is Nothing Then Continue For
-                            If seenPaths.Contains(meta.FilePath) Then Continue For
-                            ' Hier gilt der Suchtext wieder: dieser Durchgang sucht in Name und
-                            ' Stichwoertern, waehrend die Serversuche den Bildinhalt abgedeckt hat.
-                            If allowedAssetIds IsNot Nothing AndAlso Not allowedAssetIds.Contains(asset.Id) Then Continue For
-                            If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Continue For
-                            If Not MatchesTagQuery(meta.FilePath, meta.Tags, node.TagQueries) Then Continue For
-                            If Not MatchesPlaceQuery(meta, placeNames) Then Continue For
-                            ' In diesem Durchgang hat KEIN Server vorgefiltert - Favorit und
-                            ' Bewertung gelten deshalb hier.
-                            If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Continue For
-                            If favoriteMode = "Not" AndAlso meta.IsFavorite Then Continue For
-                            If ratings.Count > 0 AndAlso Not ratings.Contains(meta.Rating) Then Continue For
-                            Dim item = ImageItem.CreateImmichItem(asset, thumbnailToken)
-                            If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) Then Continue For
-                            indexItems.Add(item)
-                            indexMeta(item.FilePath) = meta
-                        Next
-                        If indexItems.Count > 0 Then Await publishBatch(indexItems, indexMeta)
-                    End If
-                Else
-                    ' NEXTCLOUD. Der Server beantwortet, was er kann, und zwar ALLES davon: den
-                    ' Dateinamen über seine Suche, Personen, Orte und Stichwörter über ihre Cluster,
-                    ' Favoriten über die WebDAV-Eigenschaft. Mehrere Kriterien wirken als UND,
-                    ' deshalb werden die Kennungsmengen geschnitten. Der Katalog kommt erst danach
-                    ' und nur für das, was der Server nicht führt: Bewertung, Farbetikett und die
-                    ' Aufnahmedaten.
-                    Dim allowedFileIds As HashSet(Of String) = Nothing
-                    Dim intersectWith = Sub(more As HashSet(Of String))
-                                            If more Is Nothing Then Return
-                                            If allowedFileIds Is Nothing Then
-                                                allowedFileIds = more
-                                            Else
-                                                allowedFileIds.IntersectWith(more)
-                                            End If
-                                        End Sub
-
-                    Dim hits As List(Of NextcloudService.NextcloudSearchHit) = Nothing
-                    If textQuery.Length > 0 Then
-                        ' Der Suchtext meint Dateiname ODER Stichwort - genau wie bei einer
-                        ' Ordnersuche, wo beides im selben Feld gesucht wird. Die Dateisuche des
-                        ' Servers kennt nur den Namen, die Stichwoerter stehen in seinen System-Tags:
-                        ' beide Mengen werden VEREINIGT, nicht geschnitten.
-                        hits = Await NextcloudService.SearchFilesAsync(textQuery, cancellationToken:=thumbnailToken)
-                        Dim byName As New HashSet(Of String)(hits.Select(Function(h) h.FileId), StringComparer.OrdinalIgnoreCase)
-                        Dim byTag = Await NextcloudClusterFileIdsAsync("tags", {textQuery}, thumbnailToken)
-                        If byTag IsNot Nothing Then byName.UnionWith(byTag)
-                        intersectWith(byName)
-                    End If
-                    intersectWith(Await NextcloudClusterFileIdsAsync("recognize", personNames, thumbnailToken))
-                    ' Orte und Stichwörter sind jeweils eine ODER-Auswahl. Personen bleiben
-                    ' dagegen eine UND-Auswahl (zwei Personen auf demselben Bild).
-                    intersectWith(Await NextcloudClusterFileIdsAsync("places", placeNames, thumbnailToken, requireAll:=False))
-                    Dim filesWithTag = Await NextcloudClusterFileIdsAsync("tags", tagNames, thumbnailToken, requireAll:=False)
-                    If tagNames.Count > 0 Then
-                        If filesWithTag Is Nothing Then filesWithTag = New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-                        ' KI-Stichwörter sind keine Memories-Cluster. Sie liegen im lokalen
-                        ' Nextcloud-Index und werden mit den manuellen Tags vereinigt.
-                        filesWithTag.UnionWith(NextcloudIndexService.Instance.GetFileIdsForAiTags(tagNames))
-                        intersectWith(filesWithTag)
-                    End If
-                    If String.Equals(favoriteMode, "Only", StringComparison.OrdinalIgnoreCase) Then
-                        intersectWith(Await NextcloudService.GetFavoriteFileIdsAsync(thumbnailToken))
-                    End If
-                    If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
-
-                    If allowedFileIds IsNot Nothing Then
-                        ' Der Suchtreffer trägt Name und Pfad gleich mit; kam die Kennung aus einem
-                        ' Cluster, reicht sie allein - das Übrige kommt mit den Einzelheiten nach.
-                        Dim hitById = If(hits, New List(Of NextcloudService.NextcloudSearchHit)()).
-                                      Where(Function(h) h IsNot Nothing AndAlso Not String.IsNullOrEmpty(h.FileId)).
-                                      GroupBy(Function(h) h.FileId, StringComparer.OrdinalIgnoreCase).
-                                      ToDictionary(Function(g) g.Key, Function(g) g.First(), StringComparer.OrdinalIgnoreCase)
-                        Dim serverMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
-                        Dim items As New List(Of ImageItem)()
-                        For Each id In allowedFileIds
-                            Dim hit As NextcloudService.NextcloudSearchHit = Nothing
-                            If Not hitById.TryGetValue(id, hit) Then
-                                hit = New NextcloudService.NextcloudSearchHit With {.FileId = id}
-                            End If
-                            ' Die Suche kennt alle Dateien, nicht nur Bilder. Ein Name ohne
-                            ' Bildendung fliegt raus; eine Kennung ohne Namen bleibt drin, denn
-                            ' aus einem Cluster kommen ohnehin nur Aufnahmen.
-                            If Not String.IsNullOrEmpty(hit.FileName) AndAlso
-                               Not _imageExtensions.Contains(IO.Path.GetExtension(hit.FileName).ToLowerInvariant()) Then Continue For
-                            Dim item = ImageItem.CreateNextcloudSearchItem(hit, thumbnailToken)
-                            If String.IsNullOrEmpty(item.FilePath) Then Continue For
-                            items.Add(item)
-                            serverMeta(item.FilePath) = New LibraryImageMeta With {.FilePath = item.FilePath}
-                        Next
-                        Await publishBatch(items, serverMeta)
-                    End If
-                End If
-
-                ' ── 2. Der Katalog als RÜCKFALL ─────────────────────────────────────────
-                ' Nur wenn den Server nichts gefragt hat. Eine Suche allein nach Bewertung oder
-                ' Farbetikett kann er nicht beantworten - diese Angaben stehen ausschliesslich im
-                ' Katalog, und dort ist die Menge dann auch vollstaendig: was keine Bewertung hat,
-                ' steht auch in keiner Suche danach.
-                If Not hasServerCriterion Then
-                    Dim catalogHits = Await Task.Run(Of List(Of LibraryImageMeta))(
-                        Function() LibraryService.Instance.GetImagesWithPathPrefix(pathPrefix))
-                    If token.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
-                    Dim catalogItems As New List(Of ImageItem)()
-                    Dim catalogItemMeta As New Dictionary(Of String, LibraryImageMeta)(StringComparer.OrdinalIgnoreCase)
-                    For Each meta In catalogHits
-                        If meta Is Nothing OrElse String.IsNullOrEmpty(meta.FilePath) Then Continue For
-                        If seenPaths.Contains(meta.FilePath) Then Continue For
-                        If ServerConditionUnanswerable(meta, catalogConditions) Then
-                            skippedUnanswerable += 1
-                            Continue For
-                        End If
-                        If Not Await MatchesServerCriteriaAsync(meta, catalogConditions, node.ConditionCombinator,
-                                                                textQuery, favoriteMode, ratings) Then Continue For
-                        Dim item = CreateServerItemFromPseudoPath(meta.FilePath, isImmich, thumbnailToken)
-                        If item Is Nothing Then Continue For
-                        catalogItems.Add(item)
-                        catalogItemMeta(item.FilePath) = meta
-                    Next
-                    If catalogItems.Count > 0 Then Await publishBatch(catalogItems, catalogItemMeta)
-                End If
-
-                FilterAndSort()
-                If totalPublished = 0 Then
-                    Dim serverError = If(isImmich, ImmichService.LastError, NextcloudService.LastError)
-                    StatusText = If(Not String.IsNullOrEmpty(serverError), serverError, LocalizationService.T("Keine Treffer"))
-                ElseIf skippedUnanswerable > 0 Then
-                    ' Ehrlich sagen, was nicht geprüft werden konnte - sonst sieht die Liste
-                    ' vollständig aus, obwohl Bilder ohne Katalogeintrag herausgefallen sind.
-                    StatusText = String.Format(LocalizationService.T("{0} Treffer, {1} ohne Angaben im Katalog übergangen"),
-                                               totalPublished, skippedUnanswerable)
-                Else
-                    StatusText = String.Format(LocalizationService.T("{0} Treffer"), totalPublished)
-                End If
-            Catch ex As OperationCanceledException
-            Catch ex As Exception
-                DiagnosticLogService.LogException(If(isImmich, "Immich.Search", "Nextcloud.Search"), ex)
-                StatusText = LocalizationService.T("Die Suche ist fehlgeschlagen")
-            Finally
-                EndSearchRun(runRow)
-                If Not thumbnailToken.IsCancellationRequested Then IsLoading = False
-            End Try
         End Sub
 
         ''' <summary>Filtert den bereits gespeicherten Serverkatalog ohne Netzwerkzugriff.
@@ -5595,6 +5322,13 @@ Namespace ViewModels
                 Dim textQuery = If(node.TextQuery, "").Trim()
                 Dim isImmich = String.Equals(node.Source, "Immich", StringComparison.OrdinalIgnoreCase)
                 If isImmich Then
+                    ' NUR MIT SUCHTEXT. Ohne Text beantwortet Immich die Suche mit dem GESAMTEN
+                    ' Bestand (search/smart braucht einen Text, search/metadata liefert sonst alles),
+                    ' und die Schleife unten blättert bis zur letzten Seite: die Bremse zählt nur
+                    ' NEUE Pfade, und bei einem Filterklick sind fast alle schon bekannt. Ein Klick
+                    ' im Filter-Popup startete damit genau die vollständige Serversuche, die dieser
+                    ' Weg vermeiden soll.
+                    If textQuery.Length = 0 Then Return
                     ' Personen brauchen beim Server einen separaten Asset-Abruf je Person. Der
                     ' bleibt bewusst dem lokalen Katalog vorbehalten, damit ein Filter-Klick nicht
                     ' unbemerkt eine große Zahl Anfragen startet.
@@ -5707,10 +5441,8 @@ Namespace ViewModels
         ''' <summary>Sucht Namen in Nextcloud-Clustern. Mehrere frei eingegebene Wörter sind wie
         ''' bei der lokalen Suche eine ODER-Auswahl; Wildcards gelten dagegen nur für Dateinamen.</summary>
         Private Shared Function GetClusterSearchTerms(textQuery As String) As List(Of String)
-            Return Regex.Matches(If(textQuery, "").Trim(), """[^""]*""|\S+").
-                Cast(Of Match)().Select(Function(match) match.Value.Trim(""""c)).
-                Where(Function(term) Not String.IsNullOrWhiteSpace(term) AndAlso
-                                    Not String.Equals(term, "OR", StringComparison.OrdinalIgnoreCase) AndAlso
+            Return SplitSearchTerms(textQuery).
+                Where(Function(term) Not String.Equals(term, "OR", StringComparison.OrdinalIgnoreCase) AndAlso
                                     Not String.Equals(term, "ODER", StringComparison.OrdinalIgnoreCase) AndAlso
                                     term.IndexOfAny(New Char() {"*"c, "?"c}) < 0).
                 Distinct(StringComparer.OrdinalIgnoreCase).ToList()
@@ -5769,142 +5501,6 @@ Namespace ViewModels
             Return If(matched, New Dictionary(Of String, ImageItem)(StringComparer.OrdinalIgnoreCase)).
                    Where(Function(entry) knownPaths.Add(entry.Key)).
                    Select(Function(entry) entry.Value).ToList()
-        End Function
-
-        ''' <summary>Prüft die Kriterien gegen die Metadaten EINES Serverbildes. Übergeben wird nur,
-        ''' was der Server nicht schon beantwortet hat - Personen, Orte und Stichwörter kennt er
-        ''' selbst, sie kommen hier nicht mehr an.</summary>
-        Private Shared Function MatchesServerCriteriaAsync(meta As LibraryImageMeta,
-                                                           conditions As List(Of SearchCondition),
-                                                           combinator As String,
-                                                           textQuery As String,
-                                                           favoriteMode As String,
-                                                           selectedRatings As HashSet(Of Integer)) As Task(Of Boolean)
-            If meta Is Nothing Then Return Task.FromResult(False)
-            If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Return Task.FromResult(False)
-            If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Return Task.FromResult(False)
-            If favoriteMode = "Not" AndAlso meta.IsFavorite Then Return Task.FromResult(False)
-            ' Die Bewertung führt KEIN Server: Immich kennt zwar Sterne, aber das Etikett und die
-            ' Feinheiten kommen aus dem Katalog, und Nextcloud hat gar keine. Deshalb wird sie hier
-            ' geprüft, auch wenn die Immich-Suche schon vorgefiltert hat.
-            If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
-                If Not selectedRatings.Contains(meta.Rating) Then Return Task.FromResult(False)
-            End If
-            If conditions Is Nothing OrElse conditions.Count = 0 Then Return Task.FromResult(True)
-            Dim isAnd = Not String.Equals(combinator, "OR", StringComparison.OrdinalIgnoreCase)
-            For Each condition In conditions
-                Dim isMatch = EvaluateSingleCondition(meta, condition)
-                If isAnd AndAlso Not isMatch Then Return Task.FromResult(False)
-                If Not isAnd AndAlso isMatch Then Return Task.FromResult(True)
-            Next
-            Return Task.FromResult(isAnd)
-        End Function
-
-        ''' <summary>Die Namen, die eine Suchliste für ein Bedingungsfeld verlangt - aus den
-        ''' Bedingungen und (beim Sprung aus dem Infopanel) aus den Direktabfragen des Knotens.</summary>
-        Private Shared Function WantedNames(node As VirtualNavigationNode, field As String,
-                                            directQueries As IList(Of String)) As List(Of String)
-            Dim names As New List(Of String)()
-            names.AddRange(If(directQueries, New List(Of String)()).Where(Function(n) Not String.IsNullOrWhiteSpace(n)))
-            For Each c In If(node.Conditions, New List(Of SearchCondition)())
-                If String.Equals(c.Field, field, StringComparison.OrdinalIgnoreCase) AndAlso
-                   Not String.IsNullOrWhiteSpace(c.Value) Then names.Add(c.Value.Trim())
-            Next
-            Return names.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-        End Function
-
-        ''' <summary>Die Dateikennungen aller Aufnahmen eines Nextcloud-Clusters (Person, Ort,
-        ''' Stichwort). Der Weg führt über die Zeitachse mit Clusterfilter - Memories hat keinen
-        ''' Endpunkt, der die Dateien eines Clusters in einem Zug liefert.</summary>
-        Private Shared Async Function NextcloudClusterFileIdsAsync(backend As String,
-                                                                   names As IList(Of String),
-                                                                   token As CancellationToken,
-                                                                   Optional requireAll As Boolean = True) As Task(Of HashSet(Of String))
-            If names Is Nothing OrElse names.Count = 0 Then Return Nothing
-            Dim cluster = Await NextcloudService.GetClustersAsync(backend, token)
-            Dim matched As HashSet(Of String) = Nothing
-            ' Mehrere Namen wirken als UND - wer zwei Personen sucht, meint beide auf einem Bild.
-            For Each name In names
-                token.ThrowIfCancellationRequested()
-                Dim matching = cluster.Where(Function(c) c IsNot Nothing AndAlso
-                                                (String.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase) OrElse
-                                                 c.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0)).ToList()
-                Dim forThisName As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-                For Each c In matching
-                    ' NICHT "day" als Schleifenvariable: Day ist eine VB-Funktion (Day(DateValue)).
-                    For Each dayEntry In Await NextcloudService.GetDaysAsync(token, c.Id, backend)
-                        token.ThrowIfCancellationRequested()
-                        For Each photo In Await NextcloudService.GetDayAsync(dayEntry.DayId, token, c.Id, backend)
-                            forThisName.Add(photo.FileId.ToString(Globalization.CultureInfo.InvariantCulture))
-                        Next
-                    Next
-                Next
-                If matched Is Nothing Then
-                    matched = forThisName
-                ElseIf requireAll Then
-                    matched.IntersectWith(forThisName)
-                Else
-                    matched.UnionWith(forThisName)
-                End If
-                If matched.Count = 0 Then Exit For
-            Next
-            Return matched
-        End Function
-
-        ''' <summary>True, wenn eine der Bedingungen ein Feld braucht, das zu diesem Serverbild
-        ''' niemand kennt. Bei der Ordnersuche wird die Datei dann gelesen; hier läge sie auf dem
-        ''' Server, und ein Download je Kandidat wäre nicht vertretbar.</summary>
-        Private Shared Function ServerConditionUnanswerable(meta As LibraryImageMeta,
-                                                            conditions As List(Of SearchCondition)) As Boolean
-            If conditions Is Nothing OrElse conditions.Count = 0 Then Return False
-            Return conditions.Any(Function(c) Not MetaHasField(meta, c.Field))
-        End Function
-
-        ''' <summary>Legt die Angaben des Servers und die des Katalogs übereinander. Der KATALOG hat
-        ''' Vorrang: was dort steht, hat jemand bewusst gesetzt.</summary>
-        Private Shared Function MergeServerMeta(filePath As String,
-                                                vomServer As LibraryImageMeta,
-                                                ausKatalog As LibraryImageMeta) As LibraryImageMeta
-            If ausKatalog Is Nothing Then
-                Return If(vomServer, New LibraryImageMeta With {.FilePath = filePath})
-            End If
-            If vomServer Is Nothing Then Return ausKatalog
-            If Not ausKatalog.ImageWidth.HasValue Then ausKatalog.ImageWidth = vomServer.ImageWidth
-            If Not ausKatalog.ImageHeight.HasValue Then ausKatalog.ImageHeight = vomServer.ImageHeight
-            If Not ausKatalog.Iso.HasValue Then ausKatalog.Iso = vomServer.Iso
-            If Not ausKatalog.Aperture.HasValue Then ausKatalog.Aperture = vomServer.Aperture
-            If String.IsNullOrWhiteSpace(ausKatalog.Camera) Then ausKatalog.Camera = vomServer.Camera
-            If String.IsNullOrWhiteSpace(ausKatalog.DateTaken) Then ausKatalog.DateTaken = vomServer.DateTaken
-            If String.IsNullOrWhiteSpace(ausKatalog.City) Then ausKatalog.City = vomServer.City
-            If String.IsNullOrWhiteSpace(ausKatalog.Country) Then ausKatalog.Country = vomServer.Country
-            If (ausKatalog.Tags Is Nothing OrElse ausKatalog.Tags.Count = 0) AndAlso vomServer.Tags IsNot Nothing Then
-                ausKatalog.Tags = vomServer.Tags
-            End If
-            Return ausKatalog
-        End Function
-
-        ''' <summary>Was Immich selbst über ein Bild weiß, in der Form des Katalogs. Immich führt
-        ''' einen eigenen EXIF-Index; damit lassen sich Bedingungen wie Kamera, ISO oder Bildgröße
-        ''' auch für Bilder beantworten, die FerrumPix noch nie geöffnet hat.</summary>
-        Private Shared Function MetaFromImmichAsset(filePath As String, asset As ImmichAsset) As LibraryImageMeta
-            Dim meta As New LibraryImageMeta With {.FilePath = filePath}
-            If asset Is Nothing Then Return meta
-            If asset.Width > 0 Then meta.ImageWidth = asset.Width
-            If asset.Height > 0 Then meta.ImageHeight = asset.Height
-            meta.Camera = If(asset.Camera, "")
-            meta.Iso = asset.Iso
-            meta.Aperture = asset.Aperture
-            meta.IsFavorite = asset.IsFavorite
-            meta.Rating = asset.Rating
-            meta.City = If(asset.City, "")
-            meta.Country = If(asset.Country, "")
-            If asset.Tags IsNot Nothing Then meta.Tags = asset.Tags
-            If asset.ExifDateTaken.HasValue Then
-                meta.DateTaken = asset.ExifDateTaken.Value.ToString("yyyy-MM-dd HH:mm:ss", Globalization.CultureInfo.InvariantCulture)
-            ElseIf asset.FileCreatedAt.HasValue Then
-                meta.DateTaken = asset.FileCreatedAt.Value.ToString("yyyy-MM-dd HH:mm:ss", Globalization.CultureInfo.InvariantCulture)
-            End If
-            Return meta
         End Function
 
         ''' <summary>Baut aus dem Pseudo-Pfad eines Katalogeintrags wieder ein Serverelement. Kennung
@@ -6209,8 +5805,10 @@ Namespace ViewModels
                                                                  token As CancellationToken,
                                                                  Optional node As VirtualNavigationNode = Nothing) As IEnumerable(Of LibraryImageMeta)
             Dim root = If(rootFolder, "").Trim()
-            ' Vor dem Durchlauf leeren: eine gerade vergebene Benennung soll sofort greifen.
+            ' Vor dem Durchlauf leeren: eine gerade vergebene Benennung und eine gerade gelaufene
+            ' Analyse sollen sofort greifen.
             ResetPersonNameCache()
+            ResetAiTagCache()
 
             ' Laesst sich die Menge vorab eingrenzen, dann nur diese Eintraege - sonst alle.
             Dim narrowed = NarrowSearchMetas(node)
@@ -6930,19 +6528,21 @@ Namespace ViewModels
             Return New List(Of String)()
         End Function
 
-        ''' <summary>Mehrere reine Dateimuster sind eine ODER-Auswahl: <c>*.jpg *.png</c>
-        ''' bedeutet also JPG oder PNG. Andere Suchbegriffe bleiben von dieser Sonderregel
-        ''' unberührt und werden weiterhin als Stichwörter behandelt.</summary>
+        ''' <summary>Die Eingabe als reine Dateimusterliste, oder leer.
+        '''
+        ''' Sie gilt NUR, wenn jedes Wort ein Muster ist. Mehrere wirken dann als ODER:
+        ''' <c>*.jpg *.png</c> heisst JPG oder PNG. Ein einzelnes Muster gehoert genauso dazu - es
+        ''' fiel hier einmal heraus, und damit verlor <c>*.jpg</c> die gezielte Dateiauswahl: der
+        ''' Suchlauf zaehlte danach jeden Bildpfad auf und schickte jeden davon durch die
+        ''' vollstaendige Bedingungspruefung samt Katalogzugriff.
+        '''
+        ''' Ein Mischtext wie "urlaub *.jpg" faellt nicht hierunter; fuer ihn gilt die gewoehnliche
+        ''' Regel, nach der mehrere freie Woerter eine ODER-Auswahl bilden.</summary>
         Private Shared Function GetWildcardPatterns(textQuery As String) As List(Of String)
-            Dim terms = Regex.Matches(If(textQuery, "").Trim(), """[^""]*""|\S+").
-                Cast(Of Match)().Select(Function(match) match.Value.Trim(""""c)).
-                Where(Function(term) term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0).ToList()
-            ' Ein Mischtext wie "urlaub *.jpg" bleibt eine normale UND-Suche. Nur mehrere
-            ' Dateimuster bilden die bequeme Erweiterungs-ODER-Liste.
-            If terms.Count < 2 OrElse terms.Count <> Regex.Matches(If(textQuery, "").Trim(), """[^""]*""|\S+").Count Then
-                Return New List(Of String)()
-            End If
-            Return terms
+            Dim alle = SplitSearchTerms(textQuery)
+            Dim muster = alle.Where(Function(term) term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0).ToList()
+            If muster.Count = 0 OrElse muster.Count <> alle.Count Then Return New List(Of String)()
+            Return muster
         End Function
 
         Private Function GetImageWildcardEnumerationPatterns(pattern As String) As List(Of String)
@@ -7027,6 +6627,45 @@ Namespace ViewModels
                                           String.Equals(meta.Country, w, StringComparison.OrdinalIgnoreCase))
         End Function
 
+        ''' <summary>Die kanonischen KI-Begriffe je Bildpfad, EINMAL je Durchlauf geholt.
+        '''
+        ''' Dieselbe Ueberlegung wie bei <see cref="_personNamesByPath"/>: der freie Suchtext laeuft
+        ''' ueber jedes Bild des durchsuchten Bestands, und eine eigene Abfrage je Bild liess bei
+        ''' zehntausenden Fotos die Oberflaeche stehen. Der Zwischenspeicher gilt fuer einen
+        ''' Durchlauf, nicht laenger - danach kann eine neue Analyse ihn ueberholt haben.</summary>
+        Private Shared _aiTagsByPath As Dictionary(Of String, List(Of String))
+
+        Private Shared Function AiSearchTermsFor(filePath As String) As IEnumerable(Of String)
+            If String.IsNullOrWhiteSpace(filePath) Then Return Enumerable.Empty(Of String)()
+            ' Serverbilder tragen einen Pseudo-Pfad und stehen in einem eigenen Index; fuer sie
+            ' bleibt es beim gezielten Einzelzugriff, der den richtigen Katalog waehlt.
+            If _aiTagsByPath Is Nothing AndAlso Not IsServerPseudoSearchPath(filePath) Then
+                _aiTagsByPath = LibraryService.Instance.GetAiTagsByPath()
+            End If
+            Dim canonicals As List(Of String) = Nothing
+            If _aiTagsByPath IsNot Nothing AndAlso Not IsServerPseudoSearchPath(filePath) Then
+                If Not _aiTagsByPath.TryGetValue(filePath, canonicals) OrElse canonicals Is Nothing Then
+                    Return Enumerable.Empty(Of String)()
+                End If
+            Else
+                canonicals = LibraryService.Instance.GetAiTags(filePath).Select(Function(t) t.Canonical).ToList()
+            End If
+            Return canonicals.
+                SelectMany(Function(canonical) New String() {canonical, AiTagLocalizationService.Display(canonical)}).
+                Where(Function(term) Not String.IsNullOrWhiteSpace(term)).
+                Distinct(StringComparer.OrdinalIgnoreCase)
+        End Function
+
+        Private Shared Function IsServerPseudoSearchPath(filePath As String) As Boolean
+            Return filePath.StartsWith("immich://", StringComparison.OrdinalIgnoreCase) OrElse
+                   filePath.StartsWith("nextcloud://", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Vor jedem Durchlauf leeren, damit eine frische Analyse sofort greift.</summary>
+        Private Shared Sub ResetAiTagCache()
+            _aiTagsByPath = Nothing
+        End Sub
+
         ''' <summary>Prüft den freien Text einer gespeicherten Suche gegen Dateiname, manuelle und
         ''' KI-Stichwörter. KI-Tags liegen absichtlich nicht in <c>ImageMeta.Tags</c>, damit ihre
         ''' Herkunft im Infopanel erhalten bleibt; für die Suche gehören sie aber in denselben
@@ -7035,12 +6674,8 @@ Namespace ViewModels
         Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String), textQuery As String) As Boolean
             If String.IsNullOrWhiteSpace(textQuery) Then Return True
             Dim fileName = IO.Path.GetFileName(filePath)
-            Dim aiTerms = LibraryService.Instance.GetAiTags(filePath).
-                SelectMany(Function(tag) New String() {tag.Canonical, AiTagLocalizationService.Display(tag.Canonical)}).
-                Where(Function(term) Not String.IsNullOrWhiteSpace(term)).
-                Distinct(StringComparer.OrdinalIgnoreCase)
             Dim haystack = fileName & " " & String.Join(" ", If(tags, Enumerable.Empty(Of String)())) &
-                           " " & String.Join(" ", aiTerms)
+                           " " & String.Join(" ", AiSearchTermsFor(filePath))
 
             Dim wildcardPatterns = GetWildcardPatterns(textQuery)
             If wildcardPatterns.Count > 0 Then
@@ -7062,21 +6697,25 @@ Namespace ViewModels
             Return False
         End Function
 
-        Private Shared Function GetImplicitOrSearchTerms(textQuery As String) As List(Of String)
-            If Regex.IsMatch(If(textQuery, ""), "\s+(?:OR|ODER)\s+", RegexOptions.IgnoreCase) Then
-                Return New List(Of String)()
-            End If
+        ''' <summary>Zerlegt eine Eingabe in ihre Suchbegriffe. Ein Ausdruck in Anfuehrungszeichen
+        ''' bleibt zusammen, sonst trennen Leerzeichen. EINE Stelle fuer alle Aufrufer: mit einer
+        ''' eigenen Fassung je Stelle zerfaellt derselbe Text irgendwann verschieden, und dann findet
+        ''' die Vorauswahl der Dateien etwas anderes als der Vergleich je Bild.</summary>
+        Private Shared Function SplitSearchTerms(textQuery As String) As List(Of String)
             Return Regex.Matches(If(textQuery, "").Trim(), """[^""]*""|\S+").
                 Cast(Of Match)().Select(Function(match) match.Value.Trim(""""c)).
                 Where(Function(term) Not String.IsNullOrWhiteSpace(term)).ToList()
         End Function
 
+        Private Shared Function GetImplicitOrSearchTerms(textQuery As String) As List(Of String)
+            If Regex.IsMatch(If(textQuery, ""), "\s+(?:OR|ODER)\s+", RegexOptions.IgnoreCase) Then
+                Return New List(Of String)()
+            End If
+            Return SplitSearchTerms(textQuery)
+        End Function
+
         Private Shared Function MatchesAllSearchTerms(group As String, fileName As String, haystack As String) As Boolean
-            Dim terms = Regex.Matches(group.Trim(), """[^""]*""|\S+").
-                Cast(Of Match)().
-                Select(Function(m) m.Value.Trim(""""c)).
-                Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
-                ToList()
+            Dim terms = SplitSearchTerms(group)
             If terms.Count = 0 Then Return True
 
             For Each term In terms

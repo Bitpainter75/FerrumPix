@@ -126,7 +126,13 @@ Namespace Services
                 Using source = DecodeGate.Run(Function() DecodeUpright(filePath))
                     If source Is Nothing OrElse source.Width < 1 OrElse source.Height < 1 Then Return New List(Of AiImageTag)()
                     If cancel.IsCancellationRequested Then Return Nothing
-                    Return Run(session, source, cancel)
+                    Dim scored = Run(session, source, cancel)
+                    ' UND NOCH EINMAL DANACH. Ein Abbruch mitten im Lauf verlaesst Run mit einer
+                    ' LEEREN Liste, und die heisst "gelaufen, nichts erkannt" - der Aufrufer schriebe
+                    ' sie mit dem aktuellen Serverstempel weg, und das Bild waere dauerhaft als
+                    ' analysiert vermerkt, ohne je analysiert worden zu sein.
+                    If cancel.IsCancellationRequested Then Return Nothing
+                    Return scored
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("KIStichwörter.ServerAnalysieren", ex)
