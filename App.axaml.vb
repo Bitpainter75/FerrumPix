@@ -100,10 +100,13 @@ Public Class App
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 
             Dim initialImagePath As String = Nothing
+            Dim initialFolderPath As String = Nothing
             Dim args = desktop.Args
             If args IsNot Nothing AndAlso args.Length > 0 Then
                 If IO.File.Exists(args(0)) Then
                     initialImagePath = args(0)
+                ElseIf IO.Directory.Exists(args(0)) Then
+                    initialFolderPath = args(0)
                 End If
             End If
 
@@ -115,7 +118,7 @@ Public Class App
             ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
             ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.
             AiModelService.CheckInventory()
-            Dim vm = New MainWindowViewModel(initialImagePath)
+            Dim vm = New MainWindowViewModel(initialImagePath, initialFolderPath)
             Dim win = New MainWindow()
             win.DataContext = vm
             desktop.MainWindow = win

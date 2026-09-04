@@ -477,7 +477,7 @@ Namespace ViewModels
         ''' laesst (siehe <see cref="CanCancelBusyOverlay"/>).</summary>
         Public ReadOnly Property CancelBusyOverlayCommand As ICommand
 
-        Public Sub New(Optional initialImagePath As String = Nothing)
+        Public Sub New(Optional initialImagePath As String = Nothing, Optional initialFolderPath As String = Nothing)
             Settings = New SettingsViewModel(Me)
             People = New PeopleViewModel(Me)
             Gallery = New GalleryViewModel(Me)
@@ -512,6 +512,8 @@ Namespace ViewModels
 
             If Not String.IsNullOrEmpty(initialImagePath) Then
                 OpenInitialImage(initialImagePath)
+            ElseIf Not String.IsNullOrEmpty(initialFolderPath) Then
+                OpenInitialFolder(initialFolderPath)
             Else
                 OpenStartupWithoutImage()
             End If
@@ -882,6 +884,21 @@ Namespace ViewModels
                     Viewer.OpenImage(imagePath, deferFolderContext:=True)
                     CurrentMode = AppMode.Viewer
             End Select
+        End Sub
+
+        ''' <summary>Startet die Galerie unmittelbar in einem Ordner, der der Anwendung als
+        ''' Kommandozeilenargument übergeben wurde. Anders als ein bildloser Start richtet sich
+        ''' dieser Weg nicht nach der eingestellten Startansicht: der Ordner ist ein eindeutiger
+        ''' Navigationswunsch.</summary>
+        Private Sub OpenInitialFolder(folderPath As String)
+            If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then
+                OpenStartupWithoutImage()
+                Return
+            End If
+
+            Gallery.SetInitialFolderNodeForPath(folderPath)
+            Gallery.NavigateToFolder(folderPath)
+            CurrentMode = AppMode.Gallery
         End Sub
 
         ''' <summary>Sorgt dafür, dass die Galerie auf einem ECHTEN Ordner steht, und zeigt sie an.
