@@ -4402,60 +4402,82 @@ Namespace ViewModels
             Set(value As String)
                 If String.Equals(_tagFilterSearch, value, StringComparison.Ordinal) Then Return
                 Me.RaiseAndSetIfChanged(_tagFilterSearch, value)
-                RefreshTagFilterOptions()
+                ' NUR sieben, nicht neu lesen. Der Aufbau geht zweimal durch die Stichwortspalte des
+                ' Katalogs, und dieser Setter feuert bei jedem Tastendruck.
+                ApplyTagFilterSearch()
             End Set
         End Property
 
+        ''' <summary>Alle Zeilen des Stichwortmenues, zusammengefasst und OHNE Suchtext. Der
+        ''' Suchtext siebt daraus nur noch aus (siehe <see cref="ApplyTagFilterSearch"/>).
+        '''
+        ''' ZWEI GRUENDE fuer die Trennung. Der Aufbau liest die Stichwortspalte des Katalogs
+        ''' vollstaendig, und das darf nicht an jedem Tastendruck haengen. Und das Zusammenfassen
+        ''' gleich beschrifteter Zeilen muss den GANZEN Bestand sehen: siebte der Suchtext vorher,
+        ''' dann faellt die eine Haelfte eines Paares heraus, die andere bleibt stehen, und an ihr
+        ''' steht die Einzelzahl statt der gemeinsamen.</summary>
+        Private _allTagFilterOptions As New List(Of TagFilterOption)()
+
         Public Sub RefreshTagFilterOptions()
-            TagFilterOptions.Clear()
+            Dim built As New List(Of TagFilterOption)()
             Try
-                Dim search = If(_tagFilterSearch, "").Trim()
                 ' Von Hand vergebene und erkannte Stichwoerter stehen NEBENEINANDER in derselben
                 ' Liste, alphabetisch gemischt und ohne Zwischenueberschrift. Was gleich heisst,
                 ' fasst MergeTagOptionsByLabel danach zu einer Zeile zusammen - eine Zeile hier
                 ' wegzulassen waere das falsche Mittel: in einer uebersetzten Oberflaeche heisst das
                 ' erkannte "dog" naemlich "Hund" und ist gar nicht dieselbe Beschriftung.
                 For Each entry In LibraryService.Instance.GetTagCounts()
-                    ' Ein ausgewaehltes Stichwort bleibt IMMER sichtbar, auch wenn es nicht zur
-                    ' Suche passt - sonst verschwindet es beim Tippen und laesst sich nicht mehr
-                    ' abwaehlen.
-                    Dim matches = search.Length = 0 OrElse
-                                  entry.Tag.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
-                                  IsTagFilterSelected(entry.Tag)
-                    If Not matches Then Continue For
-                    TagFilterOptions.Add(New TagFilterOption(entry.Tag, entry.Count, IsTagFilterSelected(entry.Tag)))
+                    built.Add(New TagFilterOption(entry.Tag, entry.Count, IsTagFilterSelected(entry.Tag)))
                 Next
                 For Each entry In LibraryService.Instance.GetLocalAiTagCounts()
-                    Dim display = AiTagLocalizationService.Display(entry.Canonical)
-                    Dim matches = search.Length = 0 OrElse
-                                  display.IndexOf(search, StringComparison.CurrentCultureIgnoreCase) >= 0 OrElse
-                                  entry.Canonical.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
-                                  IsTagFilterSelected(entry.Canonical)
-                    If Not matches Then Continue For
-                    TagFilterOptions.Add(New TagFilterOption(entry.Canonical, entry.Count,
-                                                             IsTagFilterSelected(entry.Canonical),
-                                                             displayTag:=display, isAiTag:=True))
+                    built.Add(New TagFilterOption(entry.Canonical, entry.Count,
+                                                  IsTagFilterSelected(entry.Canonical),
+                                                  displayTag:=AiTagLocalizationService.Display(entry.Canonical),
+                                                  isAiTag:=True))
                 Next
                 ' Die Stichwoerter des Nextcloud-Servers. Sie tragen ihre CLUSTER-Kennung mit: der
                 ' Server laedt einen Cluster ueber sie, nicht ueber den Namen.
-                For Each stichwort In _nextcloudTags
-                    If stichwort Is Nothing OrElse String.IsNullOrEmpty(stichwort.Id) Then Continue For
-                    Dim anzeige = If(String.IsNullOrWhiteSpace(stichwort.Name), stichwort.Id, stichwort.Name)
-                    If search.Length > 0 AndAlso anzeige.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                    TagFilterOptions.Add(New TagFilterOption(anzeige, stichwort.Count, IsTagFilterSelected(anzeige),
-                                                             serverSource:=NextcloudSourceName,
-                                                             serverId:=stichwort.Id))
+                For Each serverTag In _nextcloudTags
+                    If serverTag Is Nothing OrElse String.IsNullOrEmpty(serverTag.Id) Then Continue For
+                    Dim label = If(String.IsNullOrWhiteSpace(serverTag.Name), serverTag.Id, serverTag.Name)
+                    built.Add(New TagFilterOption(label, serverTag.Count, IsTagFilterSelected(label),
+                                                  serverSource:=NextcloudSourceName,
+                                                  serverId:=serverTag.Id))
                 Next
-                AddServerTagOptions(ImmichIndexService.Instance.GetTagCounts(), ImmichSourceName, search)
-                AddServerAiTagOptions(ImmichIndexService.Instance.GetAiTagCounts(), ImmichSourceName, search)
-                AddServerAiTagOptions(NextcloudIndexService.Instance.GetAiTagCounts(), NextcloudSourceName, search)
+                AddServerTagOptions(ImmichIndexService.Instance.GetTagCounts(), ImmichSourceName, built)
+                AddServerAiTagOptions(ImmichIndexService.Instance.GetAiTagCounts(), ImmichSourceName, built)
+                AddServerAiTagOptions(NextcloudIndexService.Instance.GetAiTagCounts(), NextcloudSourceName, built)
+                KeepOnlyActiveSource(built, Function(o) o.ServerSource)
+                _allTagFilterOptions = MergeTagOptionsByLabel(built)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshTagFilterOptions", ex)
+                _allTagFilterOptions = built
             End Try
-            KeepOnlyActiveSource(TagFilterOptions, Function(o) o.ServerSource)
-            MergeTagOptionsByLabel()
+            ApplyTagFilterSearch()
+        End Sub
+
+        ''' <summary>Siebt den Suchtext aus der fertigen Liste in die angezeigte.</summary>
+        Private Sub ApplyTagFilterSearch()
+            Dim search = If(_tagFilterSearch, "").Trim()
+            TagFilterOptions.Clear()
+            For Each entry In _allTagFilterOptions
+                If search.Length > 0 AndAlso Not MatchesTagFilterSearch(entry, search) Then Continue For
+                TagFilterOptions.Add(entry)
+            Next
             RefreshTagFilterState()
         End Sub
+
+        ''' <summary>Passt die Zeile zum Suchtext?
+        '''
+        ''' Gesucht wird in der BESCHRIFTUNG und in jedem zusammengefassten Filterwert: der Benutzer
+        ''' liest "Hund", in der Datenbank steht "dog", und beide Schreibweisen sollen die Zeile
+        ''' finden. Ein AUSGEWAEHLTES Stichwort bleibt immer stehen, auch wenn es nicht passt - sonst
+        ''' verschwindet es beim Tippen und laesst sich nicht mehr abwaehlen.</summary>
+        Private Function MatchesTagFilterSearch(entry As TagFilterOption, search As String) As Boolean
+            If entry.FilterTags.Any(AddressOf IsTagFilterSelected) Then Return True
+            If If(entry.DisplayTag, "").IndexOf(search, StringComparison.CurrentCultureIgnoreCase) >= 0 Then Return True
+            Return entry.FilterTags.Any(Function(t) t.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+        End Function
 
         ''' <summary>Fasst gleich beschriftete Zeilen zu EINER zusammen.
         '''
@@ -4474,12 +4496,12 @@ Namespace ViewModels
         ''' bei jedem Tastendruck im Suchfeld neu gebaut, eine Abfrage je Zeile waere dort zu viel.
         ''' Nur wo es keinen bezahlbaren Weg zu den Pfaden gibt (gemischte Serverzeilen), bleibt es
         ''' bei der groessten Zahl.</summary>
-        Private Sub MergeTagOptionsByLabel()
-            If TagFilterOptions.Count < 2 Then Return
+        Private Function MergeTagOptionsByLabel(entries As List(Of TagFilterOption)) As List(Of TagFilterOption)
+            If entries.Count < 2 Then Return entries
             Dim merged As New List(Of TagFilterOption)()
             Dim byLabel As New Dictionary(Of String, Integer)(StringComparer.CurrentCultureIgnoreCase)
             Dim groups As New List(Of List(Of TagFilterOption))()
-            For Each entry In TagFilterOptions
+            For Each entry In entries
                 Dim label = If(entry.DisplayTag, "").Trim()
                 Dim index As Integer
                 If label.Length > 0 AndAlso byLabel.TryGetValue(label, index) Then
@@ -4489,27 +4511,27 @@ Namespace ViewModels
                     groups.Add(New List(Of TagFilterOption) From {entry})
                 End If
             Next
-            If groups.Count = TagFilterOptions.Count Then Return
+            If groups.Count = entries.Count Then Return entries
 
-            Dim doppelte = groups.Where(Function(g) g.Count > 1).ToList()
-            Dim pfadeJeStichwort = LibraryService.Instance.GetPathsByTag(
-                doppelte.SelectMany(Function(g) g.Where(Function(o) Not o.IsFromServer AndAlso Not o.IsAiTag)).
-                         SelectMany(Function(o) o.FilterTags))
-            Dim pfadeJeBegriff = LibraryService.Instance.GetPathsByCanonical(
-                doppelte.SelectMany(Function(g) g.Where(Function(o) Not o.IsFromServer AndAlso o.IsAiTag)).
-                         SelectMany(Function(o) o.FilterTags))
+            Dim duplicates = groups.Where(Function(g) g.Count > 1).ToList()
+            Dim pathsByTag = LibraryService.Instance.GetPathsByTag(
+                duplicates.SelectMany(Function(g) g.Where(Function(o) Not o.IsFromServer AndAlso Not o.IsAiTag)).
+                           SelectMany(Function(o) o.FilterTags))
+            Dim pathsByCanonical = LibraryService.Instance.GetPathsByCanonical(
+                duplicates.SelectMany(Function(g) g.Where(Function(o) Not o.IsFromServer AndAlso o.IsAiTag)).
+                           SelectMany(Function(o) o.FilterTags))
 
             For Each group In groups
                 If group.Count = 1 Then
                     merged.Add(group(0))
                     Continue For
                 End If
-                ' Die erste Zeile gibt Herkunft und Kennung vor: die Reihenfolge ist lokal, dann
-                ' Server, und ein Servereintrag ohne seine Kennung liesse sich nicht mehr laden.
+                ' Herkunft und Kennung kommen von der Zeile MIT Kennung, sonst von der ersten: ein
+                ' Servereintrag ohne seine Kennung liesse sich nicht mehr laden.
                 Dim leader = If(group.FirstOrDefault(Function(o) Not String.IsNullOrEmpty(o.ServerId)), group(0))
                 Dim filterTags = group.SelectMany(Function(o) o.FilterTags).
                                  Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-                merged.Add(New TagFilterOption(leader.Tag, MergedTagCount(group, pfadeJeStichwort, pfadeJeBegriff),
+                merged.Add(New TagFilterOption(leader.Tag, MergedTagCount(group, pathsByTag, pathsByCanonical),
                                                filterTags.Any(AddressOf IsTagFilterSelected),
                                                serverSource:=leader.ServerSource,
                                                serverId:=leader.ServerId,
@@ -4517,12 +4539,8 @@ Namespace ViewModels
                                                isAiTag:=group.All(Function(o) o.IsAiTag),
                                                filterTags:=filterTags))
             Next
-
-            TagFilterOptions.Clear()
-            For Each entry In merged
-                TagFilterOptions.Add(entry)
-            Next
-        End Sub
+            Return merged
+        End Function
 
         ''' <summary>Wie viele Bilder tragen mindestens einen der Begriffe dieser Zeile?
         '''
@@ -4531,58 +4549,57 @@ Namespace ViewModels
         ''' einen Durchlauf durch die Stichwortspalte des Serverindex; dort bleibt es bei der
         ''' groessten Einzelzahl, und die ist wenigstens keine Uebertreibung.</summary>
         Private Shared Function MergedTagCount(group As List(Of TagFilterOption),
-                                               pfadeJeStichwort As Dictionary(Of String, HashSet(Of String)),
-                                               pfadeJeBegriff As Dictionary(Of String, HashSet(Of String))) As Integer
-            Dim groesste = group.Max(Function(o) o.Count)
+                                               pathsByTag As Dictionary(Of String, HashSet(Of String)),
+                                               pathsByCanonical As Dictionary(Of String, HashSet(Of String))) As Integer
+            Dim largest = group.Max(Function(o) o.Count)
             Try
                 If group.All(Function(o) Not o.IsFromServer) Then
-                    Dim pfade As New HashSet(Of String)(StringComparer.Ordinal)
+                    Dim paths As New HashSet(Of String)(StringComparer.Ordinal)
                     For Each entry In group
-                        Dim quelle = If(entry.IsAiTag, pfadeJeBegriff, pfadeJeStichwort)
+                        Dim lookup = If(entry.IsAiTag, pathsByCanonical, pathsByTag)
                         For Each tag In entry.FilterTags
-                            Dim treffer As HashSet(Of String) = Nothing
-                            If quelle.TryGetValue(tag, treffer) Then pfade.UnionWith(treffer)
+                            Dim hits As HashSet(Of String) = Nothing
+                            If lookup.TryGetValue(tag, hits) Then paths.UnionWith(hits)
                         Next
                     Next
-                    Return If(pfade.Count > 0, pfade.Count, groesste)
+                    Return If(paths.Count > 0, paths.Count, largest)
                 End If
 
                 If group.All(Function(o) o.IsAiTag) Then
-                    Dim begriffe = group.SelectMany(Function(o) o.FilterTags).ToList()
-                    Dim quelle = group(0).ServerSource
-                    Dim kennungen As HashSet(Of String) = Nothing
-                    If String.Equals(quelle, ImmichSourceName, StringComparison.OrdinalIgnoreCase) Then
-                        kennungen = ImmichIndexService.Instance.GetAssetIdsForAiTags(begriffe)
-                    ElseIf String.Equals(quelle, NextcloudSourceName, StringComparison.OrdinalIgnoreCase) Then
-                        kennungen = NextcloudIndexService.Instance.GetFileIdsForAiTags(begriffe)
+                    Dim canonicals = group.SelectMany(Function(o) o.FilterTags).ToList()
+                    Dim source = group(0).ServerSource
+                    Dim ids As HashSet(Of String) = Nothing
+                    If String.Equals(source, ImmichSourceName, StringComparison.OrdinalIgnoreCase) Then
+                        ids = ImmichIndexService.Instance.GetAssetIdsForAiTags(canonicals)
+                    ElseIf String.Equals(source, NextcloudSourceName, StringComparison.OrdinalIgnoreCase) Then
+                        ids = NextcloudIndexService.Instance.GetFileIdsForAiTags(canonicals)
                     End If
-                    If kennungen IsNot Nothing AndAlso kennungen.Count > 0 Then Return kennungen.Count
+                    If ids IsNot Nothing AndAlso ids.Count > 0 Then Return ids.Count
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.MergedTagCount", ex)
             End Try
-            Return groesste
+            Return largest
         End Function
 
         Private Sub AddServerTagOptions(entries As IEnumerable(Of (Name As String, Count As Integer)), source As String,
-                                        search As String)
+                                        target As List(Of TagFilterOption))
             For Each entry In If(entries, Enumerable.Empty(Of (Name As String, Count As Integer))())
                 If String.IsNullOrWhiteSpace(entry.Name) Then Continue For
-                If search.Length > 0 AndAlso entry.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                TagFilterOptions.Add(New TagFilterOption(entry.Name, entry.Count, IsTagFilterSelected(entry.Name),
-                                                         serverSource:=source))
+                target.Add(New TagFilterOption(entry.Name, entry.Count, IsTagFilterSelected(entry.Name),
+                                               serverSource:=source))
             Next
         End Sub
 
         Private Sub AddServerAiTagOptions(entries As IEnumerable(Of (Canonical As String, Count As Integer)), source As String,
-                                          search As String)
+                                          target As List(Of TagFilterOption))
             For Each entry In If(entries, Enumerable.Empty(Of (Canonical As String, Count As Integer))())
                 If String.IsNullOrWhiteSpace(entry.Canonical) Then Continue For
-                Dim display = AiTagLocalizationService.Display(entry.Canonical)
-                If search.Length > 0 AndAlso display.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 AndAlso entry.Canonical.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0 Then Continue For
-                TagFilterOptions.Add(New TagFilterOption(entry.Canonical, entry.Count,
-                                                         IsTagFilterSelected(entry.Canonical),
-                                                         serverSource:=source, displayTag:=display, isAiTag:=True))
+                target.Add(New TagFilterOption(entry.Canonical, entry.Count,
+                                               IsTagFilterSelected(entry.Canonical),
+                                               serverSource:=source,
+                                               displayTag:=AiTagLocalizationService.Display(entry.Canonical),
+                                               isAiTag:=True))
             Next
         End Sub
 
@@ -5149,7 +5166,7 @@ Namespace ViewModels
 
         ''' <summary>Eine Filterliste zeigt ausschließlich die Quelle der aktuellen Ansicht.
         ''' Leere Herkunft ist der lokale Ordnerkatalog.</summary>
-        Private Sub KeepOnlyActiveSource(Of T)(entries As ObservableCollection(Of T), sourceOf As Func(Of T, String))
+        Private Sub KeepOnlyActiveSource(Of T)(entries As IList(Of T), sourceOf As Func(Of T, String))
             Dim activeSource = ActiveFilterSource()
             For index = entries.Count - 1 To 0 Step -1
                 Dim source = If(sourceOf(entries(index)), "")
@@ -5797,6 +5814,13 @@ Namespace ViewModels
                     _activeSearchCts.Dispose()
                     _activeSearchCts = Nothing
                     IsLoading = False
+                    ' Und die Zwischenspeicher des Laufs wieder hergeben. Sie halten je eine ganze
+                    ' Tabelle - Personennamen und erkannte Begriffe zu JEDEM Bild des Katalogs -,
+                    ' und ohne dieses Loslassen blieben sie nach der letzten Suche fuer den Rest der
+                    ' Sitzung liegen. NUR wenn dieser Lauf noch der aktuelle ist: sonst raeumte ein
+                    ' gerade abgebrochener Lauf dem nachfolgenden den Speicher unter den Fuessen weg.
+                    ResetPersonNameCache()
+                    ResetAiTagCache()
                 End If
             End Try
         End Sub
@@ -6539,10 +6563,10 @@ Namespace ViewModels
         ''' Ein Mischtext wie "urlaub *.jpg" faellt nicht hierunter; fuer ihn gilt die gewoehnliche
         ''' Regel, nach der mehrere freie Woerter eine ODER-Auswahl bilden.</summary>
         Private Shared Function GetWildcardPatterns(textQuery As String) As List(Of String)
-            Dim alle = SplitSearchTerms(textQuery)
-            Dim muster = alle.Where(Function(term) term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0).ToList()
-            If muster.Count = 0 OrElse muster.Count <> alle.Count Then Return New List(Of String)()
-            Return muster
+            Dim terms = SplitSearchTerms(textQuery)
+            Dim patterns = terms.Where(Function(term) term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0).ToList()
+            If patterns.Count = 0 OrElse patterns.Count <> terms.Count Then Return New List(Of String)()
+            Return patterns
         End Function
 
         Private Function GetImageWildcardEnumerationPatterns(pattern As String) As List(Of String)
