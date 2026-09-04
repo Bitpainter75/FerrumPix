@@ -46,6 +46,10 @@ Namespace Views
         Private _scrollHandlersAttached As Boolean = False
         Private _isAttached As Boolean = False
         Private _suppressNextGalleryContextMenu As Boolean = False
+        ' Der Ordnerwechsel leert DisplayItems, bevor sein asynchroner Ladevorgang die neuen Zeilen
+        ' liefert. Der Versatz muss deshalb ein zweites Mal gesetzt werden, sobald dieses erste
+        ' Anzeigefenster wirklich besteht (siehe OnDisplayItemsCollectionChanged).
+        Private _pendingFolderScrollReset As String
         Private ReadOnly _thumbnailTracker As New ViewportThumbnailTracker()
 
         ' Die gemessene Zeilenhoehe wird festgehalten, statt sie bei jedem Scroll-Tick neu zu
@@ -367,8 +371,22 @@ Namespace Views
         ''' abweichen und damit ohnehin eine neue Messung auslösen.
         Private Sub OnDisplayItemsCollectionChanged(sender As Object, e As NotifyCollectionChangedEventArgs)
             If e.Action <> NotifyCollectionChangedAction.Reset Then Return
+            Dim vm = GetVm()
+            Dim resetAfterItemsArrive = vm IsNot Nothing AndAlso
+                                         vm.DisplayItems IsNot Nothing AndAlso
+                                         vm.DisplayItems.Count > 0 AndAlso
+                                         Not String.IsNullOrEmpty(_pendingFolderScrollReset) AndAlso
+                                         String.Equals(_pendingFolderScrollReset, vm.CurrentFolder, StringComparison.OrdinalIgnoreCase)
             Dispatcher.UIThread.Post(
                 Sub()
+                    ' Beim Umschalten von einem weit unten stehenden Ordner ist der erste Reset
+                    ' gegen die noch leere Liste moeglicherweise wirkungslos. Jetzt hat der
+                    ' ScrollViewer einen echten Inhalt und kann den Versatz verlaesslich auf null
+                    ' setzen, bevor das virtuelle Sichtfenster berechnet wird.
+                    If resetAfterItemsArrive Then
+                        ResetGalleryScroll()
+                        _pendingFolderScrollReset = Nothing
+                    End If
                     InvalidateGalleryItemsLayout()
                     ' Erst nach dem Layout steht die tatsächliche Zahl sichtbarer Kacheln fest.
                     ' Das ist der erste Bild-Ladeimpuls beim Ordnerwechsel und richtet sich damit
@@ -455,6 +473,9 @@ Namespace Views
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             If e.PropertyName = NameOf(GalleryViewModel.CurrentFolder) Then
+                ' Das Laden ist asynchron. Den Ordner merken, damit OnDisplayItemsCollectionChanged
+                ' den Scrollversatz nochmals setzt, sobald die neue virtuelle Liste Inhalt hat.
+                _pendingFolderScrollReset = GetVm()?.CurrentFolder
                 Dispatcher.UIThread.Post(Sub()
                                              Dim vm = GetVm()
                                              If vm IsNot Nothing AndAlso Not vm.IsVirtualFolder Then SelectFolderInTree(vm.CurrentFolder)
@@ -775,7 +796,10 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Const itemSlotHeight As Double = 78
+                ' Grid-Hoehe 72 + BorderThickness 2 oben/unten + Margin 3 oben/unten.
+                ' Die virtuelle Hoehe muss dem gerenderten Aussenmass entsprechen, sonst endet
+                ' der Scrollbereich vor dem unteren Rand des letzten Listeneintrags.
+                Const itemSlotHeight As Double = 82
                 Dim firstIndex = Math.Max(0, CInt(Math.Floor(Math.Max(0.0, scrollViewer.Offset.Y - 12.0) / itemSlotHeight)) - 4)
                 Dim lastIndex = CInt(Math.Ceiling((scrollViewer.Offset.Y + scrollViewer.Bounds.Height - 12.0) / itemSlotHeight)) + 4
                 If scrollViewer.Offset.Y + scrollViewer.Bounds.Height >= scrollViewer.Extent.Height - 1.0 Then
@@ -879,7 +903,8 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Const itemSlotHeight As Double = 78  ' Height=72 + Margin="5,3" (3+3)
+                ' Height=72 + BorderThickness=2 oben/unten + Margin="5,3" (3+3).
+                Const itemSlotHeight As Double = 82
                 Dim itemTop = 12.0 + idx * itemSlotHeight
                 Dim itemBottom = itemTop + itemSlotHeight
 
@@ -3197,7 +3222,8 @@ Namespace Views
                 Dim scrollViewer = Me.FindControl(Of ScrollViewer)("GalleryListScrollViewer")
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Const itemSlotHeight As Double = 78
+                ' Muss mit der virtuellen Listenzeilenhoehe in RefreshViewport uebereinstimmen.
+                Const itemSlotHeight As Double = 82
                 Dim viewHeight = scrollViewer.Bounds.Height
                 Dim windowItems = CInt(Math.Ceiling(viewHeight / itemSlotHeight)) + 8
 

@@ -2330,7 +2330,7 @@
                               Margin="0,0,8,0">
                     <!-- VerticalAlignment=Top: siehe Kommentar an der Raster-Ansicht (explizite Höhe
                          + Stretch-Default = vertikal zentriert bei kurzem Inhalt). -->
-                    <StackPanel Margin="12,12,18,150"
+                    <StackPanel Margin="12,12,18,20"
                                 VerticalAlignment="Top"
                                 Height="{Binding ContentHeight}">
                         <Border Height="{Binding TopSpacerHeight}"/>
