@@ -7992,4 +7992,139 @@
   <data name="Ebenenmaske_konnte_nicht_erstellt_werden_90dcbf29" xml:space="preserve">
     <value>Katman maskesi oluşturulamadı</value>
   </data>
+  <data name="Automatische_KI_Stichw_rter_234bbc33" xml:space="preserve">
+    <value>Otomatik yapay zeka anahtar kelimeleri</value>
+  </data>
+  <data name="Analysiert_Bildinhalte_ausschlie_lich_lokal_beim_f5d8c747" xml:space="preserve">
+    <value>Katalog dizinlemesi sırasında resim içeriğini yalnızca bu cihazda çözümler. Modelin Modeller bölümünde yüklü olması gerekir; model yoksa işlev kapalı kalır.</value>
+  </data>
+  <data name="Bildinhalte_beim_Indizieren_erkennen_6e50a977" xml:space="preserve">
+    <value>Dizinleme sırasında resim içeriğini tanı</value>
+  </data>
+  <data name="Aus_Der_Katalog_liest_nur_Metadaten_An_Neue_oder_57bb83b3" xml:space="preserve">
+    <value>Kapalı: katalog yalnızca üstveriyi okur. Açık: yeni veya değişmiş resimler bu cihazda yapay zeka anahtar kelimeleri alır.</value>
+  </data>
+  <data name="Maximale_Stichw_rter_je_Bild_e16a79c4" xml:space="preserve">
+    <value>Resim başına en fazla anahtar kelime</value>
+  </data>
+  <data name="Die_besten_Treffer_bleiben_erhalten_modellspezif_62729c52" xml:space="preserve">
+    <value>En iyi eşleşmeler korunur; modelin kendi alt sınır değerleri de ayrıca geçerlidir.</value>
+  </data>
+  <data name="Mindestwahrscheinlichkeit_bf1de783" xml:space="preserve">
+    <value>En düşük olasılık</value>
+  </data>
+  <data name="H_here_Werte_vermeiden_fragliche_Treffer_die_ind_6fc7f1cd" xml:space="preserve">
+    <value>Daha yüksek değerler kuşkulu eşleşmeleri önler; modelin kendi alt sınırlarının altına hiç inilmez.</value>
+  </data>
+  <data name="KI_Stichw_rter_in_XMP_schreiben_cfd20305" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimelerini XMP'ye yaz</value>
+  </data>
+  <data name="Aus_Ergebnisse_bleiben_nur_in_FerrumPix_An_Die_k_8f8d9a42" xml:space="preserve">
+    <value>Kapalı: sonuçlar yalnızca FerrumPix içinde kalır. Açık: standart terimler ayrıca XMP'ye de yazılır; yeni sidecar dosyaları yalnızca yukarıda Üstveri bölümünde izin verilmişse oluşturulur.</value>
+  </data>
+  <data name="Lokales_Modell_f_r_automatische_Bild_Stichw_rter_0c4598b6" xml:space="preserve">
+    <value>Otomatik resim anahtar kelimeleri için yerel model</value>
+  </data>
+  <data name="KI_Stichw_rter_aktualisieren_67a9d3e3" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimelerini güncelle</value>
+  </data>
+  <data name="KI_Stichw_rter_8aa26ec6" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimeleri</value>
+  </data>
+  <data name="KI_Stichw_rter_neu_analysieren_bb28a041" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimelerini yeniden çözümle</value>
+  </data>
+  <data name="Neu_analysieren_51168f8f" xml:space="preserve">
+    <value>Yeniden çözümle</value>
+  </data>
+  <data name="Lokal_erkannt_nicht_von_Hand_vergeben_b94b98ed" xml:space="preserve">
+    <value>Bu cihazda tanındı; elle verilmedi.</value>
+  </data>
+  <data name="KI_Modell_ist_noch_nicht_installiert_Es_l_sst_si_90d2bb22" xml:space="preserve">
+    <value>Yapay zeka modeli henüz kurulu değil. Ayarlarda Modeller bölümünden indirilebilir.</value>
+  </data>
+  <data name="Noch_keine_KI_Stichw_rter_8679ecc9" xml:space="preserve">
+    <value>Henüz yapay zeka anahtar kelimesi yok.</value>
+  </data>
+  <data name="Dieses_Bild_erneut_lokal_analysieren_0c1e3019" xml:space="preserve">
+    <value>Bu resmi bu cihazda yeniden çözümle</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_KI_Stichwort_zeigen_42f72085" xml:space="preserve">
+    <value>Bu yapay zeka anahtar kelimesine sahip tüm resimleri göster</value>
+  </data>
+  <data name="0_KI_analysiert_4f439014" xml:space="preserve">
+    <value>{0} yapay zeka ile çözümlendi</value>
+  </data>
+  <data name="Bild_wird_lokal_analysiert_fe8b0ee2" xml:space="preserve">
+    <value>Resim bu cihazda çözümleniyor…</value>
+  </data>
+  <data name="KI_Analyse_konnte_nicht_abgeschlossen_werden_bb23f260" xml:space="preserve">
+    <value>Yapay zeka çözümlemesi tamamlanamadı.</value>
+  </data>
+  <data name="Keine_KI_Stichw_rter_erkannt_3c825dc7" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimesi tanınmadı.</value>
+  </data>
+  <data name="0_KI_Stichw_rter_aktualisiert_05987fec" xml:space="preserve">
+    <value>{0} yapay zeka anahtar kelimesi güncellendi.</value>
+  </data>
+  <data name="Erkennt_lokale_Bildinhalte_und_speichert_sie_get_eac1fe75" xml:space="preserve">
+    <value>Resim içeriğini bu cihazda tanır ve kendi anahtar kelimelerinizden ayrı tutar. Model tümüyle bu cihazda çalıştığı için indirilecek dosya büyüktür.</value>
+  </data>
+  <data name="Automatische_Stichw_rter_f1319619" xml:space="preserve">
+    <value>Otomatik anahtar kelimeler</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_analysiert_0_von_1_bcf12e0c" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimeleri çözümleniyor: {1} içinden {0}</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_6d6b6611" xml:space="preserve">
+    <value>{0} resmin yapay zeka anahtar kelimeleri güncellendi</value>
+  </data>
+  <data name="KI_Stichw_rter_konnten_nicht_aktualisiert_werden_5c6ab65b" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimeleri güncellenemedi</value>
+  </data>
+  <data name="RAM_65616b13" xml:space="preserve">
+    <value>RAM++</value>
+  </data>
+  <data name="KI_Stichw_rter_indizieren_4798b1c6" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimelerini dizinle</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_e5efa4bf" xml:space="preserve">
+    <value>Her resmi bir kez geçici kopya olarak indirir, içeriğini bu cihazda tanır ve sonuçları yalnızca yerel Immich dizininde saklar.</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_923ab3a2" xml:space="preserve">
+    <value>Her resmi bir kez geçici kopya olarak indirir, içeriğini bu cihazda tanır ve sonuçları yalnızca yerel Nextcloud dizininde saklar.</value>
+  </data>
+  <data name="Katalogdaten_als_XMP_Sidecars_ablegen_8a3a29ff" xml:space="preserve">
+    <value>Katalog verilerini XMP sidecar dosyaları olarak sakla</value>
+  </data>
+  <data name="Erh_lt_vorhandene_xmp_Dateien_erg_nzt_Bewertung__9e2b5a49" xml:space="preserve">
+    <value>Var olan .xmp dosyalarını korur; puanı, renk etiketini, elle verilen ve yapay zeka anahtar kelimelerini ekler ve eksik sidecar dosyalarını Nextcloud'daki resimlerin yanında oluşturur.</value>
+  </data>
+  <data name="KI_Stichw_rter_0_von_1_Bildern_9da4c3a9" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimeleri: {1} resimden {0} tanesi</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_1_fehl_fb10f853" xml:space="preserve">
+    <value>{0} resmin yapay zeka anahtar kelimeleri güncellendi, {1} başarısız</value>
+  </data>
+  <data name="XMP_Sidecars_0_von_1_418268c1" xml:space="preserve">
+    <value>XMP sidecar dosyaları: {1} içinden {0}</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_9d1cc73c" xml:space="preserve">
+    <value>{0} XMP sidecar dosyası eşitlendi</value>
+  </data>
+  <data name="Abgebrochen_0_Bilder_mit_KI_Stichw_rtern_aktuali_3126a91e" xml:space="preserve">
+    <value>İptal edildi, {0} resmin yapay zeka anahtar kelimeleri güncellendi</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_in_XMP_geschrieben_d0bb7242" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimeleri XMP'ye yazılıyor…</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_in_XMP_synchronisie_56661768" xml:space="preserve">
+    <value>Yapay zeka anahtar kelimeli {0} resim XMP'ye eşitlendi</value>
+  </data>
+  <data name="Jetzt_synchronisieren_8a663dc2" xml:space="preserve">
+    <value>Şimdi eşitle</value>
+  </data>
+  <data name="berwachen_91d3d644" xml:space="preserve">
+    <value>İzle</value>
+  </data>
 </root>

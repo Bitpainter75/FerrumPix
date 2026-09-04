@@ -799,7 +799,14 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function OpenThumbnailSource(filePath As String) As Stream
+        ''' <summary>Ein dekodierbarer Strom fuer JEDE Datei, die die Anwendung anzeigt - RAW ueber
+        ''' die eingebettete Vorschau, dazu SVG, ICO, PSD, HEIF, TIFF, .fpx und Videos.
+        '''
+        ''' FRIEND, nicht privat: die Kachel ist nicht der einzige Weg, der Bildpunkte aus einer
+        ''' beliebigen Datei braucht (siehe <see cref="ImageTaggingService"/>). Ein zweiter Auszug
+        ''' dieser Fallunterscheidung wuerde von dieser hier abdriften - derselbe Grund, aus dem die
+        ''' Endungen in <see cref="MediaFileTypes"/> nur einmal stehen.</summary>
+        Friend Shared Function OpenThumbnailSource(filePath As String) As Stream
             If RawPreviewService.IsSupportedRaw(filePath) Then
                 Return OpenRawThumbnailSource(filePath)
             End If

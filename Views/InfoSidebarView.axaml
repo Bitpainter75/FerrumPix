@@ -540,6 +540,49 @@
                             </Grid>
                         </StackPanel>
 
+                        <StackPanel Spacing="8" IsVisible="{Binding ShowAiTagsSection}">
+                            <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                                <TextBlock Grid.Column="0" Text="KI-Stichwörter" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"/>
+                                <Button Grid.Column="1" Classes="ghost" Padding="8,4"
+                                        Command="{Binding AnalyzeAiTagsCommand}"
+                                        IsEnabled="{Binding CanAnalyzeAiTags}"
+                                        ToolTip.Tip="Dieses Bild erneut lokal analysieren">
+                                    <TextBlock Text="Neu analysieren" FontSize="{DynamicResource FP.Font.Small}"/>
+                                </Button>
+                                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="Lokal erkannt; nicht von Hand vergeben."
+                                           Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}"/>
+                            </Grid>
+                            <TextBlock Text="KI-Modell ist noch nicht installiert. Es lässt sich in den Einstellungen im Abschnitt Modelle laden."
+                                       IsVisible="{Binding !AiTaggingAvailable}"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding AiTaggingStatus}" IsVisible="{Binding HasAiTaggingStatus}"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}"/>
+                            <TextBlock Text="Noch keine KI-Stichwörter."
+                                       IsVisible="{Binding !HasAiTags}" Foreground="{DynamicResource FP.Text.Muted}"
+                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                            <ItemsControl ItemsSource="{Binding AiTags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="ghost" Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1"
+                                                CornerRadius="12" Padding="8,4" Margin="0,0,6,6"
+                                                Command="{Binding DataContext.OpenAiTagSearchCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="Alle Bilder mit diesem KI-Stichwort zeigen">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <TextBlock Text="{Binding DisplayText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                <TextBlock Text="{Binding ScoreText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                     </StackPanel>
 
                     <!-- PERSONEN als eigener Reiter. Sie sind das einzige in dieser Leiste, was

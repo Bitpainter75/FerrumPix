@@ -1,5 +1,6 @@
 Imports System
 Imports System.Collections.Generic
+Imports System.Globalization
 Imports System.IO
 Imports System.Linq
 Imports System.Text.RegularExpressions
@@ -124,6 +125,7 @@ Namespace Services
                 EnsureExifColumns(conn)
                 EnsurePeopleTables(conn)
                 EnsureFaceColumns(conn)
+                EnsureAiTagTables(conn)
             End Using
         End Sub
 
@@ -1074,7 +1076,10 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using tx = conn.BeginTransaction()
-                        For Each table In {"ImageMeta", "Face", "ScannedImage"}
+                        ' AI-Stichwörter und ihr Analyse-Stempel hängen ebenso am Dateipfad wie
+                        ' Katalog- und Gesichtsdaten. Fehlen sie hier, verliert ein umbenanntes
+                        ' Bild seine Treffer und die alten Pfade bleiben in den Filtern zurück.
+                        For Each table In {"ImageMeta", "Face", "ScannedImage", "AiImageTag", "AiTagScan"}
                             ' Erst das Ziel freiräumen, dann umschreiben. Beides in DERSELBEN
                             ' Transaktion: ein Abbruch dazwischen ließe gelöschte Zielzeilen ohne
                             ' die Quellzeilen zurück, die sie ersetzen sollten.
@@ -1117,6 +1122,7 @@ Namespace Services
                 DiagnosticLogService.LogException("Library.MoveCatalogEntries", ex)
                 Return 0
             End Try
+            InvalidateAiTagPresence()
             Return moved
         End Function
 
@@ -1274,7 +1280,16 @@ Namespace Services
                 Using cmd = conn.CreateCommand()
                     Dim whereParts As New List(Of String)()
                     If Not String.IsNullOrWhiteSpace(criteria.TextQuery) Then
-                        whereParts.Add("(FilePath LIKE $q OR Tags LIKE $q OR Camera LIKE $q OR Lens LIKE $q)")
+                        Dim aiParts As New List(Of String)()
+                        Dim index = 0
+                        For Each canonical In AiTagLocalizationService.CanonicalsForQuery(criteria.TextQuery)
+                            Dim parameter = "$ai" & index.ToString(CultureInfo.InvariantCulture)
+                            aiParts.Add("Canonical LIKE " & parameter)
+                            cmd.Parameters.AddWithValue(parameter, "%" & canonical & "%")
+                            index += 1
+                        Next
+                        Dim aiMatch = If(aiParts.Count = 0, "", " OR EXISTS (SELECT 1 FROM AiImageTag WHERE AiImageTag.FilePath=ImageMeta.FilePath AND (" & String.Join(" OR ", aiParts) & "))")
+                        whereParts.Add("(FilePath LIKE $q OR Tags LIKE $q OR Camera LIKE $q OR Lens LIKE $q" & aiMatch & ")")
                         cmd.Parameters.AddWithValue("$q", "%" & criteria.TextQuery & "%")
                     End If
                     If criteria.Rating.HasValue Then
@@ -1549,6 +1564,13 @@ Namespace Services
                     End Using
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
+                        cmd.CommandText = "DELETE FROM AiImageTag WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          "; DELETE FROM AiTagScan WHERE FilePath LIKE $p" & LikeEscapeClause
+                        cmd.Parameters.AddWithValue("$p", prefix)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd = conn.CreateCommand()
+                        cmd.Transaction = tx
                         cmd.CommandText = "DELETE FROM ImageMeta WHERE FilePath LIKE $p" & LikeEscapeClause
                         cmd.Parameters.AddWithValue("$p", prefix)
                         removed = cmd.ExecuteNonQuery()
@@ -1563,6 +1585,7 @@ Namespace Services
                     tx.Commit()
                 End Using
             End Using
+            InvalidateAiTagPresence()
             Return removed
         End Function
 
@@ -1594,7 +1617,8 @@ Namespace Services
                 Using tx = conn.BeginTransaction()
                     Using cmd = conn.CreateCommand()
                         cmd.Transaction = tx
-                        cmd.CommandText = "DELETE FROM Face; DELETE FROM Person; DELETE FROM ScannedImage;"
+                        cmd.CommandText = "DELETE FROM Face; DELETE FROM Person; DELETE FROM ScannedImage;" &
+                                          "DELETE FROM AiImageTag; DELETE FROM AiTagScan;"
                         cmd.ExecuteNonQuery()
                     End Using
                     Using cmd = conn.CreateCommand()
@@ -1605,6 +1629,7 @@ Namespace Services
                     tx.Commit()
                 End Using
             End Using
+            InvalidateAiTagPresence()
             Return removed
         End Function
 
@@ -1643,11 +1668,14 @@ Namespace Services
                     Dim prefix = EscapeLikeValue(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) &
                                                  Path.DirectorySeparatorChar) & "%"
                     Using cmd = conn.CreateCommand()
-                        ' Dieselben drei Tabellen wie beim Aufraeumen: ein Bild, ueber das nur die
-                        ' Gesichtssuche gelaufen ist, hat keine Zeile in ImageMeta.
+                        ' Dieselben Tabellen wie beim Aufraeumen: ein Bild kann nur einen
+                        ' Gesichtsscan ODER nur eine KI-Analyse haben und dann keine Zeile in
+                        ' ImageMeta besitzen.
                         cmd.CommandText = "SELECT FilePath FROM ImageMeta WHERE FilePath LIKE $p" & LikeEscapeClause &
                                           " UNION SELECT FilePath FROM Face WHERE FilePath LIKE $p" & LikeEscapeClause &
-                                          " UNION SELECT FilePath FROM ScannedImage WHERE FilePath LIKE $p" & LikeEscapeClause
+                                          " UNION SELECT FilePath FROM ScannedImage WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM AiImageTag WHERE FilePath LIKE $p" & LikeEscapeClause &
+                                          " UNION SELECT FilePath FROM AiTagScan WHERE FilePath LIKE $p" & LikeEscapeClause
                         cmd.Parameters.AddWithValue("$p", prefix)
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
@@ -1673,14 +1701,14 @@ Namespace Services
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
-                    ' AUS ALLEN DREI TABELLEN, die auf einen Pfad zeigen. Ein Bild, ueber das nur
-                    ' die Gesichtssuche gelaufen ist, steht in Face und ScannedImage, aber nicht in
-                    ' ImageMeta - ohne Bewertung, Etikett oder Stichwort gibt es dort keine Zeile.
-                    ' Ueber ImageMeta allein waere es unauffindbar gewesen und seine Gesichter waeren
-                    ' fuer immer stehen geblieben.
+                    ' AUS ALLEN Tabellen, die auf einen Pfad zeigen. Ein Bild, ueber das nur die
+                    ' Gesichtssuche oder nur die KI-Analyse gelaufen ist, steht nicht zwingend in
+                    ' ImageMeta. Ueber diese Tabelle allein blieben seine Nebendaten für immer.
                     cmd.CommandText = "SELECT FilePath FROM ImageMeta " &
                                       "UNION SELECT FilePath FROM Face " &
-                                      "UNION SELECT FilePath FROM ScannedImage"
+                                      "UNION SELECT FilePath FROM ScannedImage " &
+                                      "UNION SELECT FilePath FROM AiImageTag " &
+                                      "UNION SELECT FilePath FROM AiTagScan"
                     Using reader = cmd.ExecuteReader()
                         While reader.Read()
                             Dim p = reader.GetString(0)
@@ -1704,7 +1732,7 @@ Namespace Services
                 End Using
                 If orphans.Count > 0 Then
                     Using transaction = conn.BeginTransaction()
-                        ' ALLE DREI TABELLEN, die auf den Pfad zeigen - dieselbe Reihenfolge wie in
+                        ' ALLE Tabellen, die auf den Pfad zeigen - dieselbe Reihenfolge wie in
                         ' DeleteFolderCatalogDataLocked. Frueher stand hier nur ImageMeta: die
                         ' Gesichter eines geloeschten Bildes blieben stehen, und weil
                         ' GetPersonImageCount ueber die Face-Tabelle zaehlt, zeigte die Personenwand
@@ -1715,6 +1743,8 @@ Namespace Services
                             cmd.Transaction = transaction
                             cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p;" &
                                               "DELETE FROM ScannedImage WHERE FilePath=$p;" &
+                                              "DELETE FROM AiImageTag WHERE FilePath=$p;" &
+                                              "DELETE FROM AiTagScan WHERE FilePath=$p;" &
                                               "DELETE FROM ImageMeta WHERE FilePath=$p"
                             Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
                             For Each p In orphans
@@ -1724,6 +1754,7 @@ Namespace Services
                         End Using
                         transaction.Commit()
                     End Using
+                    InvalidateAiTagPresence()
                 End If
 
                 ' Gruppen ohne ein einziges Gesicht. Sie entstehen im Betrieb: beim Verschmelzen

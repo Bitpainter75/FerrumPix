@@ -1590,6 +1590,40 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Lädt ein Original für einen kurzlebigen Hintergrundjob. Anders als der Viewer-
+        ''' Cachepfad wird hier niemals eine vorhandene Datei wiederverwendet oder überschrieben:
+        ''' der Aufrufer besitzt diese Kopie allein und muss sie nach der Arbeit entfernen.</summary>
+        Public Shared Async Function DownloadOriginalToWorkTempAsync(assetId As String, originalFileName As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of String)
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) Then Return Nothing
+            Dim workPath As String = Nothing
+            Try
+                Dim workDir = ImageTaggingService.WorkFolder
+                Directory.CreateDirectory(workDir)
+                Dim ext = IO.Path.GetExtension(If(originalFileName, "")).ToLowerInvariant()
+                workPath = IO.Path.Combine(workDir, SafeFileStem(assetId) & "_" & Guid.NewGuid().ToString("N") & ext)
+                Using response = Await GetClient().GetAsync(ApiUrl($"assets/{Uri.EscapeDataString(assetId)}/original"), HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(False)
+                    If Not response.IsSuccessStatusCode Then Return Nothing
+                    Using stream = File.Create(workPath)
+                        Await response.Content.CopyToAsync(stream, cancellationToken).ConfigureAwait(False)
+                    End Using
+                End Using
+                Return workPath
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Try
+                    If workPath IsNot Nothing AndAlso File.Exists(workPath) Then File.Delete(workPath)
+                Catch
+                End Try
+                Throw
+            Catch ex As Exception
+                Try
+                    If workPath IsNot Nothing AndAlso File.Exists(workPath) Then File.Delete(workPath)
+                Catch
+                End Try
+                DiagnosticLogService.LogException("Immich.DownloadOriginalWork", ex)
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Setzt den Favoriten-Status eines Assets auf dem Server (Rückrichtung) und hält den
         ''' lokalen Index konsistent.</summary>
         Public Shared Async Function SetFavoriteAsync(assetId As String, isFavorite As Boolean, Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)

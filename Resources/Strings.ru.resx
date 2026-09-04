@@ -7988,4 +7988,139 @@
   <data name="Ebenenmaske_konnte_nicht_erstellt_werden_90dcbf29" xml:space="preserve">
     <value>Не удалось создать маску слоя</value>
   </data>
+  <data name="Automatische_KI_Stichw_rter_234bbc33" xml:space="preserve">
+    <value>Автоматические ИИ-ключевые слова</value>
+  </data>
+  <data name="Analysiert_Bildinhalte_ausschlie_lich_lokal_beim_f5d8c747" xml:space="preserve">
+    <value>Анализирует содержимое снимков исключительно локально при индексации каталога. Модель должна быть загружена в разделе Модели; без неё функция остаётся выключенной.</value>
+  </data>
+  <data name="Bildinhalte_beim_Indizieren_erkennen_6e50a977" xml:space="preserve">
+    <value>Распознавать содержимое снимков при индексации</value>
+  </data>
+  <data name="Aus_Der_Katalog_liest_nur_Metadaten_An_Neue_oder_57bb83b3" xml:space="preserve">
+    <value>Выкл.: каталог читает только метаданные. Вкл.: новые или изменённые снимки получают локальные ИИ-ключевые слова.</value>
+  </data>
+  <data name="Maximale_Stichw_rter_je_Bild_e16a79c4" xml:space="preserve">
+    <value>Максимум ключевых слов на снимок</value>
+  </data>
+  <data name="Die_besten_Treffer_bleiben_erhalten_modellspezif_62729c52" xml:space="preserve">
+    <value>Сохраняются самые точные совпадения; дополнительно действуют собственные минимальные значения модели.</value>
+  </data>
+  <data name="Mindestwahrscheinlichkeit_bf1de783" xml:space="preserve">
+    <value>Минимальная вероятность</value>
+  </data>
+  <data name="H_here_Werte_vermeiden_fragliche_Treffer_die_ind_6fc7f1cd" xml:space="preserve">
+    <value>Более высокие значения отсекают сомнительные совпадения; собственные пороги модели никогда не занижаются.</value>
+  </data>
+  <data name="KI_Stichw_rter_in_XMP_schreiben_cfd20305" xml:space="preserve">
+    <value>Записывать ИИ-ключевые слова в XMP</value>
+  </data>
+  <data name="Aus_Ergebnisse_bleiben_nur_in_FerrumPix_An_Die_k_8f8d9a42" xml:space="preserve">
+    <value>Выкл.: результаты остаются только в FerrumPix. Вкл.: канонические термины дополнительно записываются в XMP; новые файлы sidecar создаются, только если это разрешено выше в разделе метаданных.</value>
+  </data>
+  <data name="Lokales_Modell_f_r_automatische_Bild_Stichw_rter_0c4598b6" xml:space="preserve">
+    <value>Локальная модель для автоматических ключевых слов снимков</value>
+  </data>
+  <data name="KI_Stichw_rter_aktualisieren_67a9d3e3" xml:space="preserve">
+    <value>Обновить ИИ-ключевые слова</value>
+  </data>
+  <data name="KI_Stichw_rter_8aa26ec6" xml:space="preserve">
+    <value>ИИ-ключевые слова</value>
+  </data>
+  <data name="KI_Stichw_rter_neu_analysieren_bb28a041" xml:space="preserve">
+    <value>Заново проанализировать ИИ-ключевые слова</value>
+  </data>
+  <data name="Neu_analysieren_51168f8f" xml:space="preserve">
+    <value>Проанализировать заново</value>
+  </data>
+  <data name="Lokal_erkannt_nicht_von_Hand_vergeben_b94b98ed" xml:space="preserve">
+    <value>Распознано локально; не задано вручную.</value>
+  </data>
+  <data name="KI_Modell_ist_noch_nicht_installiert_Es_l_sst_si_90d2bb22" xml:space="preserve">
+    <value>Модель ИИ ещё не установлена. Её можно загрузить в настройках в разделе Модели.</value>
+  </data>
+  <data name="Noch_keine_KI_Stichw_rter_8679ecc9" xml:space="preserve">
+    <value>Пока нет ИИ-ключевых слов.</value>
+  </data>
+  <data name="Dieses_Bild_erneut_lokal_analysieren_0c1e3019" xml:space="preserve">
+    <value>Заново проанализировать этот снимок локально</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_KI_Stichwort_zeigen_42f72085" xml:space="preserve">
+    <value>Показать все снимки с этим ИИ-ключевым словом</value>
+  </data>
+  <data name="0_KI_analysiert_4f439014" xml:space="preserve">
+    <value>{0} проанализировано ИИ</value>
+  </data>
+  <data name="Bild_wird_lokal_analysiert_fe8b0ee2" xml:space="preserve">
+    <value>Снимок анализируется локально…</value>
+  </data>
+  <data name="KI_Analyse_konnte_nicht_abgeschlossen_werden_bb23f260" xml:space="preserve">
+    <value>Не удалось завершить анализ ИИ.</value>
+  </data>
+  <data name="Keine_KI_Stichw_rter_erkannt_3c825dc7" xml:space="preserve">
+    <value>ИИ-ключевые слова не распознаны.</value>
+  </data>
+  <data name="0_KI_Stichw_rter_aktualisiert_05987fec" xml:space="preserve">
+    <value>Обновлено ИИ-ключевых слов: {0}.</value>
+  </data>
+  <data name="Erkennt_lokale_Bildinhalte_und_speichert_sie_get_eac1fe75" xml:space="preserve">
+    <value>Распознаёт содержимое снимков локально и хранит его отдельно от собственных ключевых слов. Загрузка большая, потому что модель целиком работает на этом устройстве.</value>
+  </data>
+  <data name="Automatische_Stichw_rter_f1319619" xml:space="preserve">
+    <value>Автоматические ключевые слова</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_analysiert_0_von_1_bcf12e0c" xml:space="preserve">
+    <value>Анализ ИИ-ключевых слов: {0} из {1}</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_6d6b6611" xml:space="preserve">
+    <value>Обновлены ИИ-ключевые слова у {0} снимков</value>
+  </data>
+  <data name="KI_Stichw_rter_konnten_nicht_aktualisiert_werden_5c6ab65b" xml:space="preserve">
+    <value>Не удалось обновить ИИ-ключевые слова</value>
+  </data>
+  <data name="RAM_65616b13" xml:space="preserve">
+    <value>RAM++</value>
+  </data>
+  <data name="KI_Stichw_rter_indizieren_4798b1c6" xml:space="preserve">
+    <value>Индексировать ИИ-ключевые слова</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_e5efa4bf" xml:space="preserve">
+    <value>Загружает каждый снимок один раз как временную копию, распознаёт содержимое локально и сохраняет результаты только в локальном индексе Immich.</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_923ab3a2" xml:space="preserve">
+    <value>Загружает каждый снимок один раз как временную копию, распознаёт содержимое локально и сохраняет результаты только в локальном индексе Nextcloud.</value>
+  </data>
+  <data name="Katalogdaten_als_XMP_Sidecars_ablegen_8a3a29ff" xml:space="preserve">
+    <value>Сохранять данные каталога в виде файлов XMP sidecar</value>
+  </data>
+  <data name="Erh_lt_vorhandene_xmp_Dateien_erg_nzt_Bewertung__9e2b5a49" xml:space="preserve">
+    <value>Сохраняет существующие файлы .xmp, добавляет оценку, цветную метку, а также ручные и ИИ-ключевые слова, и создаёт недостающие файлы sidecar рядом со снимками в Nextcloud.</value>
+  </data>
+  <data name="KI_Stichw_rter_0_von_1_Bildern_9da4c3a9" xml:space="preserve">
+    <value>ИИ-ключевые слова: {0} из {1} снимков</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_1_fehl_fb10f853" xml:space="preserve">
+    <value>Обновлены ИИ-ключевые слова у {0} снимков, {1} не удалось</value>
+  </data>
+  <data name="XMP_Sidecars_0_von_1_418268c1" xml:space="preserve">
+    <value>Файлы XMP sidecar: {0} из {1}</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_9d1cc73c" xml:space="preserve">
+    <value>Синхронизировано файлов XMP sidecar: {0}</value>
+  </data>
+  <data name="Abgebrochen_0_Bilder_mit_KI_Stichw_rtern_aktuali_3126a91e" xml:space="preserve">
+    <value>Отменено, обновлены ИИ-ключевые слова у {0} снимков</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_in_XMP_geschrieben_d0bb7242" xml:space="preserve">
+    <value>ИИ-ключевые слова записываются в XMP…</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_in_XMP_synchronisie_56661768" xml:space="preserve">
+    <value>Синхронизировано с XMP снимков с ИИ-ключевыми словами: {0}</value>
+  </data>
+  <data name="Jetzt_synchronisieren_8a663dc2" xml:space="preserve">
+    <value>Синхронизировать сейчас</value>
+  </data>
+  <data name="berwachen_91d3d644" xml:space="preserve">
+    <value>Наблюдать</value>
+  </data>
 </root>

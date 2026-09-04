@@ -86,6 +86,22 @@ Namespace Services
                         ")"
                     cmd.ExecuteNonQuery()
                 End Using
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "CREATE TABLE IF NOT EXISTS AiPhotoScan (ServerKey TEXT NOT NULL, FileId TEXT NOT NULL, SourceVersion TEXT NOT NULL DEFAULT '', ModelKey TEXT NOT NULL DEFAULT '', ModelVersion TEXT NOT NULL DEFAULT '', PRIMARY KEY(ServerKey,FileId))"
+                    cmd.ExecuteNonQuery()
+                End Using
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "CREATE TABLE IF NOT EXISTS XmpSidecarSync (ServerKey TEXT NOT NULL, FileId TEXT NOT NULL, SourceSignature TEXT NOT NULL DEFAULT '', PRIMARY KEY(ServerKey,FileId))"
+                    cmd.ExecuteNonQuery()
+                End Using
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "CREATE TABLE IF NOT EXISTS AiPhotoTag (" &
+                        " ServerKey TEXT NOT NULL, FileId TEXT NOT NULL, Canonical TEXT NOT NULL COLLATE NOCASE," &
+                        " Score REAL NOT NULL, ModelKey TEXT NOT NULL DEFAULT '', ModelVersion TEXT NOT NULL DEFAULT ''," &
+                        " SourceVersion TEXT NOT NULL DEFAULT '', PRIMARY KEY(ServerKey,FileId,Canonical))"
+                    cmd.ExecuteNonQuery()
+                End Using
             End Using
         End Sub
 
@@ -204,7 +220,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "DELETE FROM PhotoMeta WHERE ServerKey=$s AND FileId=$f"
+                        cmd.CommandText = "DELETE FROM PhotoMeta WHERE ServerKey=$s AND FileId=$f; DELETE FROM AiPhotoTag WHERE ServerKey=$s AND FileId=$f; DELETE FROM AiPhotoScan WHERE ServerKey=$s AND FileId=$f; DELETE FROM XmpSidecarSync WHERE ServerKey=$s AND FileId=$f"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$f", fileId)
                         cmd.ExecuteNonQuery()
@@ -212,6 +228,138 @@ Namespace Services
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("NextcloudIndex.Remove", ex)
+            End Try
+        End Sub
+
+        Public Function GetAiTags(serverKey As String, fileId As String) As List(Of AiImageTag)
+            Dim result As New List(Of AiImageTag)()
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(fileId) Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Canonical,Score,ModelKey,ModelVersion FROM AiPhotoTag WHERE ServerKey=$s AND FileId=$f ORDER BY Score DESC,Canonical"
+                        cmd.Parameters.AddWithValue("$s", serverKey) : cmd.Parameters.AddWithValue("$f", fileId)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                result.Add(New AiImageTag With {.Canonical = reader.GetString(0), .Score = CSng(reader.GetDouble(1)),
+                                                               .ModelKey = reader.GetString(2), .ModelVersion = reader.GetString(3)})
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NextcloudIndex.GetAiTags", ex)
+            End Try
+            Return result
+        End Function
+
+        Public Function GetAiTagCounts() As List(Of (Canonical As String, Count As Integer))
+            Dim result As New List(Of (Canonical As String, Count As Integer))()
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Canonical,COUNT(DISTINCT FileId) FROM AiPhotoTag WHERE ServerKey=$s GROUP BY Canonical"
+                        cmd.Parameters.AddWithValue("$s", NextcloudService.ServerKey)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read() : result.Add((reader.GetString(0), reader.GetInt32(1))) : End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NextcloudIndex.KIStichwortZahlen", ex)
+            End Try
+            Return result
+        End Function
+
+        Public Sub ReplaceAiTags(serverKey As String, fileId As String, sourceVersion As String, tags As IEnumerable(Of AiImageTag))
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(fileId) Then Return
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        Using deleteCmd = conn.CreateCommand()
+                            deleteCmd.Transaction = tx
+                            deleteCmd.CommandText = "DELETE FROM AiPhotoTag WHERE ServerKey=$s AND FileId=$f"
+                            deleteCmd.Parameters.AddWithValue("$s", serverKey) : deleteCmd.Parameters.AddWithValue("$f", fileId)
+                            deleteCmd.ExecuteNonQuery()
+                        End Using
+                        For Each tag In If(tags, Enumerable.Empty(Of AiImageTag)()).Where(Function(t) t IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(t.Canonical))
+                            Using insert = conn.CreateCommand()
+                                insert.Transaction = tx
+                                insert.CommandText = "INSERT INTO AiPhotoTag(ServerKey,FileId,Canonical,Score,ModelKey,ModelVersion,SourceVersion) VALUES($s,$f,$c,$score,$k,$v,$source)"
+                                insert.Parameters.AddWithValue("$s", serverKey) : insert.Parameters.AddWithValue("$f", fileId)
+                                insert.Parameters.AddWithValue("$c", tag.Canonical.Trim()) : insert.Parameters.AddWithValue("$score", tag.Score)
+                                insert.Parameters.AddWithValue("$k", If(tag.ModelKey, "")) : insert.Parameters.AddWithValue("$v", If(tag.ModelVersion, ""))
+                                insert.Parameters.AddWithValue("$source", If(sourceVersion, ""))
+                                insert.ExecuteNonQuery()
+                            End Using
+                        Next
+                        Using scan = conn.CreateCommand()
+                            scan.Transaction = tx
+                            scan.CommandText = "INSERT INTO AiPhotoScan(ServerKey,FileId,SourceVersion,ModelKey,ModelVersion) VALUES($s,$f,$source,$k,$v) ON CONFLICT(ServerKey,FileId) DO UPDATE SET SourceVersion=$source,ModelKey=$k,ModelVersion=$v"
+                            scan.Parameters.AddWithValue("$s", serverKey) : scan.Parameters.AddWithValue("$f", fileId)
+                            scan.Parameters.AddWithValue("$source", If(sourceVersion, ""))
+                            scan.Parameters.AddWithValue("$k", ImageTaggingService.ModelKey) : scan.Parameters.AddWithValue("$v", ImageTaggingService.AnalysisVersion)
+                            scan.ExecuteNonQuery()
+                        End Using
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NextcloudIndex.ReplaceAiTags", ex)
+            End Try
+        End Sub
+
+        Public Function AiTagsNeedRefresh(serverKey As String, fileId As String, sourceVersion As String) As Boolean
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(fileId) Then Return False
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT SourceVersion,ModelKey,ModelVersion FROM AiPhotoScan WHERE ServerKey=$s AND FileId=$f"
+                        cmd.Parameters.AddWithValue("$s", serverKey) : cmd.Parameters.AddWithValue("$f", fileId)
+                        Using r = cmd.ExecuteReader()
+                            Return Not r.Read() OrElse Not String.Equals(If(r.IsDBNull(0), "", r.GetString(0)), If(sourceVersion, ""), StringComparison.Ordinal) OrElse Not String.Equals(If(r.IsDBNull(1), "", r.GetString(1)), ImageTaggingService.ModelKey, StringComparison.Ordinal) OrElse Not String.Equals(If(r.IsDBNull(2), "", r.GetString(2)), ImageTaggingService.AnalysisVersion, StringComparison.Ordinal)
+                        End Using
+                    End Using
+                End Using
+            Catch
+                Return True
+            End Try
+        End Function
+
+        Public Function XmpSidecarNeedsSync(serverKey As String, fileId As String, sourceSignature As String) As Boolean
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(fileId) Then Return False
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT SourceSignature FROM XmpSidecarSync WHERE ServerKey=$s AND FileId=$f"
+                        cmd.Parameters.AddWithValue("$s", serverKey) : cmd.Parameters.AddWithValue("$f", fileId)
+                        Dim value = cmd.ExecuteScalar()
+                        Return value Is Nothing OrElse value Is DBNull.Value OrElse Not String.Equals(Convert.ToString(value, CultureInfo.InvariantCulture), If(sourceSignature, ""), StringComparison.Ordinal)
+                    End Using
+                End Using
+            Catch
+                Return True
+            End Try
+        End Function
+
+        Public Sub MarkXmpSidecarSynced(serverKey As String, fileId As String, sourceSignature As String)
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(fileId) Then Return
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "INSERT INTO XmpSidecarSync(ServerKey,FileId,SourceSignature) VALUES($s,$f,$v) ON CONFLICT(ServerKey,FileId) DO UPDATE SET SourceSignature=$v"
+                        cmd.Parameters.AddWithValue("$s", serverKey) : cmd.Parameters.AddWithValue("$f", fileId) : cmd.Parameters.AddWithValue("$v", If(sourceSignature, ""))
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("NextcloudIndex.XmpSync", ex)
             End Try
         End Sub
 
@@ -244,7 +392,7 @@ Namespace Services
                         removed = Convert.ToInt32(countCmd.ExecuteScalar())
                     End Using
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "DELETE FROM PhotoMeta"
+                        cmd.CommandText = "DELETE FROM PhotoMeta; DELETE FROM AiPhotoTag; DELETE FROM AiPhotoScan; DELETE FROM XmpSidecarSync"
                         cmd.ExecuteNonQuery()
                     End Using
                 End Using

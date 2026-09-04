@@ -50,6 +50,10 @@ Namespace ViewModels
         Public Property CreateCollage As ICommand
         Public Property Print As ICommand
 
+        ''' <summary>Ersetzt die automatisch ermittelten Stichwörter der betroffenen lokalen
+        ''' Bilder durch einen neuen Lauf des installierten KI-Modells.</summary>
+        Public Property ReanalyzeAiTags As ICommand
+
         ' Bild drehen (Betrachter und Editor)
         Public Property RotateLeft As ICommand
         Public Property RotateRight As ICommand

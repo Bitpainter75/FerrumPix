@@ -1319,6 +1319,7 @@ Namespace ViewModels
         Public ReadOnly Property ClearPersonFilterCommand As ICommand
         Public ReadOnly Property ClearPlaceFilterCommand As ICommand
         Public ReadOnly Property ScanFacesCommand As ICommand
+        Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property SetSelectedColorLabelCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
@@ -1654,6 +1655,7 @@ Namespace ViewModels
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
             ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
             ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesAsync())
+            ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsAsync())
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
             ' Das Panel kennt nur ImageItem und koennte lokale Bilder nicht von Immich-Assets
             ' trennen. Die Wege stellt deshalb die Galerie - dieselbe Teilung wie im Sternemenue.
@@ -4312,16 +4314,41 @@ Namespace ViewModels
             TagFilterOptions.Clear()
             Try
                 Dim search = If(_tagFilterSearch, "").Trim()
+                ' Wofuer es schon ein eigenes Stichwort gibt, braucht keine zweite Zeile: beide
+                ' filterten nach demselben Wort, und MatchesTagQuery nimmt die erkannten ohnehin
+                ' mit. Zwei gleich beschriftete Zeilen mit verschiedenen Zahlen waeren nur ein
+                ' Raetsel.
+                Dim ownTags As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
                 For Each entry In LibraryService.Instance.GetTagCounts()
                     ' Ein ausgewaehltes Stichwort bleibt IMMER sichtbar, auch wenn es nicht zur
                     ' Suche passt - sonst verschwindet es beim Tippen und laesst sich nicht mehr
                     ' abwaehlen.
+                    ownTags.Add(entry.Tag)
                     Dim matches = search.Length = 0 OrElse
                                   entry.Tag.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
                                   IsTagFilterSelected(entry.Tag)
                     If Not matches Then Continue For
                     TagFilterOptions.Add(New TagFilterOption(entry.Tag, entry.Count,
                                                              IsTagFilterSelected(entry.Tag)))
+                Next
+                Dim firstAiTag = True
+                For Each entry In LibraryService.Instance.GetAiTagCounts()
+                    If ownTags.Contains(entry.Canonical) Then Continue For
+                    Dim display = AiTagLocalizationService.Display(entry.Canonical)
+                    Dim matches = search.Length = 0 OrElse
+                                  display.IndexOf(search, StringComparison.CurrentCultureIgnoreCase) >= 0 OrElse
+                                  entry.Canonical.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                  IsTagFilterSelected(entry.Canonical)
+                    If Not matches Then Continue For
+                    ' Mit Zwischenueberschrift, wie bei den Serverstichwoertern: "Hund" von Hand und
+                    ' "Hund" aus der Erkennung stehen sonst gleich beschriftet untereinander, und
+                    ' die zwei Zahlen daneben zaehlen zweierlei.
+                    Dim option_ = New TagFilterOption(entry.Canonical, entry.Count,
+                                                      IsTagFilterSelected(entry.Canonical),
+                                                      displayTag:=display, isAiTag:=True)
+                    option_.ShowsAiHeader = firstAiTag
+                    firstAiTag = False
+                    TagFilterOptions.Add(option_)
                 Next
                 ' Und die Stichwoerter des Nextcloud-Servers, hinter den lokalen und unter eigener
                 ' Ueberschrift. NUR diese Serverquelle steht hier: Nextcloud fuehrt Stichwoerter als
@@ -4830,6 +4857,76 @@ Namespace ViewModels
         Private _faceScanRunning As Boolean
         Private _faceScanCancellation As CancellationTokenSource
 
+        ''' <summary>Analysiert die gerade markierten Bilder erneut. Anders als der
+        ''' Kataloglauf ist dies eine ausdrückliche Benutzeraktion und daher auch dann möglich,
+        ''' wenn die automatische Analyse in den Katalog-Einstellungen ausgeschaltet ist.
+        '''
+        ''' Lokale Bilder und Serverbilder gehen dabei getrennte Wege: das Ergebnis eines lokalen
+        ''' landet im Katalog und optional in XMP, das eines Serverbildes ausschließlich im lokalen
+        ''' Index seiner Serverquelle (siehe <see cref="ServerAiTagRunner"/>). Auf dem Server selbst
+        ''' wird nichts geändert.</summary>
+        Private Async Function ReanalyzeAiTagsAsync() As Task
+            If _aiTaggingRunning OrElse Not ImageTaggingService.Available Then Return
+
+            Dim items = GetSelectedImageItems().
+                Where(Function(i) i IsNot Nothing AndAlso (i.IsRemoteAsset OrElse (Not String.IsNullOrWhiteSpace(i.FilePath) AndAlso File.Exists(i.FilePath)))).ToList()
+            If items.Count = 0 Then Return
+
+            _aiTaggingRunning = True
+            _aiTaggingCancellation?.Dispose()
+            _aiTaggingCancellation = New CancellationTokenSource()
+            Dim runRow = BeginGalleryRun(AddressOf CancelAiTagging)
+            runRow.HasProgress = True
+            runRow.Percent = 0
+            Dim updated = 0
+            Try
+                For index = 0 To items.Count - 1
+                    If _aiTaggingCancellation.IsCancellationRequested Then Exit For
+                    runRow.Text = String.Format(LocalizationService.T("KI-Stichwörter werden analysiert: {0} von {1}"),
+                                                index + 1, items.Count)
+                    ' Die Schleifenvariable nicht in die Lambda-Aufgabe schließen: sie könnte
+                    ' bereits weitergezählt sein, bevor der Hintergrundthread sie ausliest.
+                    Dim currentItem = items(index)
+                    ' NOTHING heisst, dass die Analyse gar nicht gelaufen ist (siehe
+                    ' ImageTaggingService.TagFile) - das darf die Schlussmeldung nicht mitzaehlen.
+                    Dim completed As Boolean
+                    If currentItem.IsRemoteAsset Then
+                        completed = Await ServerAiTagRunner.AnalyzeItemAsync(currentItem, _aiTaggingCancellation.Token) IsNot Nothing
+                    Else
+                        completed = Await Task.Run(Function() ImageTaggingService.TagFile(currentItem.FilePath, _aiTaggingCancellation.Token)) IsNot Nothing
+                    End If
+                    If completed Then updated += 1
+                    runRow.Percent = (index + 1) * 100.0 / items.Count
+                Next
+
+                runRow.Text = If(_aiTaggingCancellation.IsCancellationRequested,
+                                 String.Format(LocalizationService.T("Abgebrochen, {0} Bilder mit KI-Stichwörtern aktualisiert"), updated),
+                                 String.Format(LocalizationService.T("{0} Bilder mit KI-Stichwörtern aktualisiert"), updated))
+                StatusText = runRow.Text
+                RefreshTagFilterOptions()
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ReanalyzeAiTags", ex)
+                StatusText = LocalizationService.T("KI-Stichwörter konnten nicht aktualisiert werden")
+            Finally
+                _aiTaggingRunning = False
+                _aiTaggingCancellation?.Dispose()
+                _aiTaggingCancellation = Nothing
+                EndGalleryRun(runRow)
+            End Try
+        End Function
+
+        Private _aiTaggingRunning As Boolean
+        Private _aiTaggingCancellation As CancellationTokenSource
+
+        Private Sub CancelAiTagging()
+            Try
+                _aiTaggingCancellation?.Cancel()
+            Catch ex As ObjectDisposedException
+            End Try
+        End Sub
+
         Private Sub RefreshPersonFilterState()
             Me.RaisePropertyChanged(NameOf(HasPersonFilter))
             ' "Option" ist in VB ein Schluesselwort (Option Strict) und taugt nicht als Name.
@@ -5010,7 +5107,7 @@ Namespace ViewModels
                             ' Stichwoertern, waehrend die Serversuche den Bildinhalt abgedeckt hat.
                             If allowedAssetIds IsNot Nothing AndAlso Not allowedAssetIds.Contains(asset.Id) Then Continue For
                             If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Continue For
-                            If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Continue For
+                            If Not MatchesTagQuery(meta.FilePath, meta.Tags, node.TagQueries) Then Continue For
                             If Not MatchesPlaceQuery(meta, placeNames) Then Continue For
                             ' In diesem Durchgang hat KEIN Server vorgefiltert - Favorit und
                             ' Bewertung gelten deshalb hier.
@@ -5732,7 +5829,7 @@ Namespace ViewModels
                                                        Optional skipPersonQuery As Boolean = False) As Task(Of Boolean)
             If meta Is Nothing Then Return False
             If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Return False
-            If Not MatchesTagQuery(meta.Tags, node.TagQueries) Then Return False
+            If Not MatchesTagQuery(meta.FilePath, meta.Tags, node.TagQueries) Then Return False
             If Not skipPersonQuery AndAlso Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Return False
             If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Return False
             If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Return False
@@ -6319,13 +6416,13 @@ Namespace ViewModels
         ''' <summary>Traegt das Bild mindestens eines dieser Stichwoerter? Leere Liste heisst: keine
         ''' Einschraenkung. Verglichen wird das ganze Stichwort, nicht ein Teil davon - "urlaub"
         ''' soll nicht auch "urlaub2019" mitbringen.</summary>
-        Private Shared Function MatchesTagQuery(tags As IEnumerable(Of String), tagQueries As IList(Of String)) As Boolean
+        Private Shared Function MatchesTagQuery(filePath As String, tags As IEnumerable(Of String), tagQueries As IList(Of String)) As Boolean
             If tagQueries Is Nothing OrElse tagQueries.Count = 0 Then Return True
-            If tags Is Nothing Then Return False
-            Dim own = tags.Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+            Dim own = If(tags, Enumerable.Empty(Of String)()).Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
                            Select(Function(t) t.Trim()).ToList()
-            Return tagQueries.Any(Function(wanted) own.Any(
-                Function(t) String.Equals(t, wanted.Trim(), StringComparison.OrdinalIgnoreCase)))
+            If tagQueries.Any(Function(wanted) own.Any(
+                Function(t) String.Equals(t, wanted.Trim(), StringComparison.OrdinalIgnoreCase))) Then Return True
+            Return LibraryService.Instance.MatchesAiTagQuery(filePath, tagQueries)
         End Function
 
         ''' <summary>Stehen ALLE diese Personen auf dem Bild? Mehrere wirken als UND - wer zwei Namen
@@ -6361,10 +6458,20 @@ Namespace ViewModels
                                           String.Equals(meta.Country, w, StringComparison.OrdinalIgnoreCase))
         End Function
 
+        ''' <summary>Prüft den freien Text einer gespeicherten Suche gegen Dateiname, manuelle und
+        ''' KI-Stichwörter. KI-Tags liegen absichtlich nicht in <c>ImageMeta.Tags</c>, damit ihre
+        ''' Herkunft im Infopanel erhalten bleibt; für die Suche gehören sie aber in denselben
+        ''' Wortvorrat. Neben dem kanonischen englischen Modellbegriff kommt die Anzeigeform dazu,
+        ''' damit beispielsweise sowohl "dog" als auch "Hund" denselben Treffer finden.</summary>
         Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String), textQuery As String) As Boolean
             If String.IsNullOrWhiteSpace(textQuery) Then Return True
             Dim fileName = IO.Path.GetFileName(filePath)
-            Dim haystack = fileName & " " & String.Join(" ", If(tags, Enumerable.Empty(Of String)()))
+            Dim aiTerms = LibraryService.Instance.GetAiTags(filePath).
+                SelectMany(Function(tag) New String() {tag.Canonical, AiTagLocalizationService.Display(tag.Canonical)}).
+                Where(Function(term) Not String.IsNullOrWhiteSpace(term)).
+                Distinct(StringComparer.OrdinalIgnoreCase)
+            Dim haystack = fileName & " " & String.Join(" ", If(tags, Enumerable.Empty(Of String)())) &
+                           " " & String.Join(" ", aiTerms)
 
             Dim groups = Regex.Split(textQuery.Trim(), "\s+(?:OR|ODER)\s+", RegexOptions.IgnoreCase)
             For Each group In groups

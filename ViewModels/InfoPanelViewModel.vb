@@ -49,6 +49,8 @@ Namespace ViewModels
         Private _isVisible As Boolean
         Private _isOwnerViewActive As Boolean = True
         Private _placeholderText As String = ""
+        Private _isAiTagging As Boolean
+        Private _aiTaggingStatus As String = ""
 
         ''' <summary>Wartezeit vor dem Histogramm. Lang genug, dass Durchblaettern und das Aufbauen
         ''' einer Mehrfachauswahl keinen einzigen Decode ausloesen, kurz genug, dass es beim
@@ -57,6 +59,7 @@ Namespace ViewModels
 
         Public Sub New()
             Tags = New ObservableCollection(Of String)()
+            AiTags = New ObservableCollection(Of AiImageTag)()
             TagSuggestions = New ObservableCollection(Of String)()
 
             SetInfoTabCommand = ReactiveCommand.Create(Of String)(AddressOf SetInfoTab)
@@ -72,12 +75,22 @@ Namespace ViewModels
             AddTagCommand = ReactiveCommand.Create(AddressOf AddTag)
             RemoveTagCommand = ReactiveCommand.Create(Of String)(AddressOf RemoveTag)
             OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) OpenTagSearch?.Invoke(tag))
+            OpenAiTagSearchCommand = ReactiveCommand.Create(Of AiImageTag)(
+                Sub(tag) OpenTagSearch?.Invoke(If(tag?.Canonical, "")))
+            AnalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(AddressOf AnalyzeAiTagsAsync)
 
             ' Die Zeilenauswahl gilt anwendungsweit, und es gibt drei Leisten. Ohne dieses Abo
             ' zeigte nur die Ansicht, die beim Umschalten auf dem Schirm stand, den neuen Stand -
             ' die anderen beiden erst beim naechsten Bildwechsel. Kein Abmelden: es gibt genau
             ' drei Instanzen, alle so langlebig wie das Fenster (siehe InfoPanelRowSettings).
             AddHandler InfoPanelRowSettings.Changed, AddressOf RaiseRowVisibility
+            AddHandler LocalizationService.LanguageChanged, AddressOf OnLanguageChanged
+        End Sub
+
+        Private Sub OnLanguageChanged(sender As Object, e As EventArgs)
+            ' DisplayText der Modelltreffer hängt an der UI-Sprache, die gespeicherten kanonischen
+            ' Begriffe aber nicht. Die Liste neu zu bauen aktualisiert beides ohne neue Analyse.
+            LoadAiTags()
         End Sub
 
         ''' <summary>Was beim Klick auf ein Stichwort geschehen soll. Die Galerie haengt sich hier
@@ -183,6 +196,7 @@ Namespace ViewModels
             Dim wanted = If(path, "")
             If String.Equals(_path, wanted, StringComparison.OrdinalIgnoreCase) Then Return
             _path = wanted
+            ClearAiTaggingStatus()
             RaiseStateChanged()
         End Sub
 
@@ -204,6 +218,10 @@ Namespace ViewModels
             For Each tag In wanted
                 Tags.Add(tag)
             Next
+            ' Viewer und Editor liefern ihre normalen Stichwörter selbst. Die KI-Tags liegen aber
+            ' bewusst nur in der lokalen Bibliothek; daher hier nachziehen, damit der getrennte
+            ' Bereich in allen drei Info-Leisten gleich erscheint.
+            LoadAiTags()
             RefreshTagSuggestions()
         End Sub
 
@@ -289,6 +307,8 @@ Namespace ViewModels
             ' markierten Bildes weiter da, und der gilt dann fuer keines der markierten.
             _placeText = ""
             Tags.Clear()
+            AiTags.Clear()
+            ClearAiTaggingStatus()
             SummaryFacts.Clear()
             ApplyRatingState(0, False, "")
             Return token
@@ -682,8 +702,78 @@ Namespace ViewModels
             For Each tag In loadedTags
                 Tags.Add(tag)
             Next
+            LoadAiTags()
             RefreshTagSuggestions()
         End Sub
+
+        Private Sub LoadAiTags()
+            AiTags.Clear()
+            If String.IsNullOrWhiteSpace(_path) Then
+                Me.RaisePropertyChanged(NameOf(HasAiTags))
+                Me.RaisePropertyChanged(NameOf(ShowAiTagsSection))
+                Return
+            End If
+            Try
+                For Each tag In LibraryService.Instance.GetAiTags(_path)
+                    AiTags.Add(tag)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("InfoPanel.KIStichwörter", ex)
+            End Try
+            Me.RaisePropertyChanged(NameOf(HasAiTags))
+            Me.RaisePropertyChanged(NameOf(ShowAiTagsSection))
+        End Sub
+
+        ''' <summary>Die Abschlussmeldung gehört zu genau dem Bild, das analysiert wurde. Beim
+        ''' Wechsel darf sie nicht am neuen, eventuell noch unanalysierten Bild stehen bleiben.</summary>
+        Private Sub ClearAiTaggingStatus()
+            If String.IsNullOrEmpty(_aiTaggingStatus) Then Return
+            _aiTaggingStatus = ""
+            Me.RaisePropertyChanged(NameOf(AiTaggingStatus))
+            Me.RaisePropertyChanged(NameOf(HasAiTaggingStatus))
+        End Sub
+
+        ''' <summary>Startet eine bewusste Einzelanalyse. Sie ist absichtlich nicht an die
+        ''' Katalog-Automatik gebunden: jene Einstellung steuert nur Hintergrundläufe beim
+        ''' Indexieren, der Benutzer darf ein einzelnes Bild jederzeit neu prüfen.</summary>
+        Private Async Function AnalyzeAiTagsAsync() As Task
+            Dim target = _path
+            If _isSummary OrElse String.IsNullOrWhiteSpace(target) OrElse Not ImageTaggingService.Available Then Return
+
+            _isAiTagging = True
+            _aiTaggingStatus = LocalizationService.T("Bild wird lokal analysiert…")
+            Me.RaisePropertyChanged(NameOf(IsAiTagging))
+            Me.RaisePropertyChanged(NameOf(AiTaggingStatus))
+            Me.RaisePropertyChanged(NameOf(CanAnalyzeAiTags))
+            Try
+                Dim found As List(Of AiImageTag)
+                If _item IsNot Nothing AndAlso _item.IsRemoteAsset Then
+                    found = Await ServerAiTagRunner.AnalyzeItemAsync(_item, CancellationToken.None)
+                Else
+                    found = Await Task.Run(Function() ImageTaggingService.TagFile(target))
+                End If
+                If String.Equals(_path, target, StringComparison.OrdinalIgnoreCase) Then
+                    LoadAiTags()
+                    ' NOTHING heisst, dass die Analyse gar nicht gelaufen ist - eine leere Liste
+                    ' heisst, dass sie lief und nichts erkannt hat (siehe ImageTaggingService).
+                    If found Is Nothing Then
+                        _aiTaggingStatus = LocalizationService.T("KI-Analyse konnte nicht abgeschlossen werden.")
+                    ElseIf found.Count = 0 Then
+                        _aiTaggingStatus = LocalizationService.T("Keine KI-Stichwörter erkannt.")
+                    Else
+                        _aiTaggingStatus = String.Format(LocalizationService.T("{0} KI-Stichwörter aktualisiert."), found.Count)
+                    End If
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("InfoPanel.KIStichwörterNeuAnalysieren", ex)
+                _aiTaggingStatus = LocalizationService.T("KI-Analyse konnte nicht abgeschlossen werden.")
+            Finally
+                _isAiTagging = False
+                Me.RaisePropertyChanged(NameOf(IsAiTagging))
+                Me.RaisePropertyChanged(NameOf(AiTaggingStatus))
+                Me.RaisePropertyChanged(NameOf(CanAnalyzeAiTags))
+            End Try
+        End Function
 
         ''' <summary>Alles, was Arbeit kostet, laeuft NUR bei offener Info-Leiste in der Ansicht, die
         ''' gerade auf dem Schirm steht.
@@ -999,6 +1089,44 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowAiTagsSection As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.AiTags) AndAlso
+                       Not _isSummary AndAlso Not String.IsNullOrWhiteSpace(_path)
+            End Get
+        End Property
+
+        Public ReadOnly Property AiTaggingAvailable As Boolean
+            Get
+                Return ImageTaggingService.Available
+            End Get
+        End Property
+
+        Public ReadOnly Property CanAnalyzeAiTags As Boolean
+            Get
+                Return AiTaggingAvailable AndAlso Not IsAiTagging AndAlso Not _isSummary AndAlso
+                       Not String.IsNullOrWhiteSpace(_path)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsAiTagging As Boolean
+            Get
+                Return _isAiTagging
+            End Get
+        End Property
+
+        Public ReadOnly Property AiTaggingStatus As String
+            Get
+                Return _aiTaggingStatus
+            End Get
+        End Property
+
+        Public ReadOnly Property HasAiTaggingStatus As Boolean
+            Get
+                Return Not String.IsNullOrWhiteSpace(_aiTaggingStatus)
+            End Get
+        End Property
+
         ''' <summary>Der Block um Sterne und Farben. Er faellt erst weg, wenn BEIDE aus sind.</summary>
         Public ReadOnly Property ShowRatingOrColorLabelSection As Boolean
             Get
@@ -1061,6 +1189,10 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowRatingSection))
             Me.RaisePropertyChanged(NameOf(ShowColorLabelSection))
             Me.RaisePropertyChanged(NameOf(ShowTagsSection))
+            Me.RaisePropertyChanged(NameOf(ShowAiTagsSection))
+            Me.RaisePropertyChanged(NameOf(AiTaggingAvailable))
+            Me.RaisePropertyChanged(NameOf(CanAnalyzeAiTags))
+            Me.RaisePropertyChanged(NameOf(HasAiTaggingStatus))
             Me.RaisePropertyChanged(NameOf(ShowRatingOrColorLabelSection))
             Me.RaisePropertyChanged(NameOf(ShowRatingAndColorLabelHeading))
             Me.RaisePropertyChanged(NameOf(ShowRatingOnlyHeading))
@@ -1220,6 +1352,14 @@ Namespace ViewModels
         End Property
 
         Public ReadOnly Property Tags As ObservableCollection(Of String)
+        ''' <summary>Vom lokalen Modell erkannte Bildinhalte. Sie sind nicht bearbeitbar und bleiben
+        ''' getrennt von manuellen bzw. importierten Stichwörtern.</summary>
+        Public ReadOnly Property AiTags As ObservableCollection(Of AiImageTag)
+        Public ReadOnly Property HasAiTags As Boolean
+            Get
+                Return AiTags IsNot Nothing AndAlso AiTags.Count > 0
+            End Get
+        End Property
         Public ReadOnly Property TagSuggestions As ObservableCollection(Of String)
 
         Public Property NewTagText As String
@@ -1361,6 +1501,8 @@ Namespace ViewModels
         Public ReadOnly Property AddTagCommand As ICommand
         Public ReadOnly Property RemoveTagCommand As ICommand
         Public ReadOnly Property OpenTagSearchCommand As ICommand
+        Public ReadOnly Property OpenAiTagSearchCommand As ICommand
+        Public ReadOnly Property AnalyzeAiTagsCommand As ICommand
 
     End Class
 

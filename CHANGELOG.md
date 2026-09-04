@@ -2,6 +2,33 @@
 
 ### What's new
 
+- **Pictures can now receive private, local AI keywords.** RAM++ recognises image content on the
+  computer and stores canonical keywords in the catalogue; nothing from the picture or its result
+  is sent to a service. The model is installed on request in *Settings → Models*, and automatic
+  tagging has to be enabled explicitly for each catalogue.
+
+- **AI keywords work like the rest of the library.** They have their own clearly separated section
+  in the information panel, can be hidden there if desired, and are included in keyword searches
+  and filters. A picture or a selection can be analysed again from the information panel or the
+  *Metadata* menu, including Immich and Nextcloud pictures; their results stay in the corresponding
+  local server index. Long selected runs can be cancelled.
+
+- **Server collections can be indexed locally too.** Immich and Nextcloud each offer a targeted
+  AI-keyword indexing action in their settings. The index remembers the source revision and the
+  complete analysis configuration, so subsequent runs skip unchanged pictures but reliably revisit
+  results after a model, pipeline or confidence-setting change. Nextcloud can also export catalogue
+  rating, colour label, manual keywords and AI keywords as XMP sidecars, preserving an existing
+  sidecar and creating one where needed.
+
+- **Tagging can be adjusted to the catalogue.** The settings offer sliders for the maximum number
+  of keywords and the minimum confidence. A folder action updates only the chosen folders, so
+  existing pictures can be tagged without running a whole-catalogue pass. Existing local AI
+  keywords can also be written to XMP afterwards without analysing the pictures again.
+
+- **FerrumPix opens a folder passed on the command line.** Opening a folder with FerrumPix now
+  takes you straight to that folder in the gallery, instead of falling back to the usual start
+  view.
+
 - **A crop stays adjustable in every format.** JPEG and PNG now behave like RAW, PSD and projects:
   the crop tool shows the whole picture, the frame can always be pulled open again, and the cut
   reaches the file only when you save. Until now a crop that was applied to a JPEG could not be
@@ -16,6 +43,19 @@
   moment, and it now runs in the background with a progress bar instead of holding up the window.
 
 ### Fixes
+
+- **Long people, places and keyword menus open without building every row at once.** Their lists
+  are virtualised, so a catalogue with many entries no longer makes the filter pop-up pause before
+  it appears.
+
+- **The gallery list reaches its actual last entry.** Its virtual row height now matches the
+  rendered rows, and changing from a scrolled-down folder resets the new folder reliably to the
+  top.
+
+- **AI keywords remain tied to their picture.** Renaming, moving or cleaning local catalogue data
+  now moves or removes the corresponding AI results too, so old paths cannot stay in keyword
+  filters. A completed AI-analysis message also clears as soon as the information panel changes to
+  another picture.
 
 - **A rotation from a saved project can be corrected instead of repeated.** Opening a project and
   turning the picture again now replaces the rotation that is already there. Before, it was added

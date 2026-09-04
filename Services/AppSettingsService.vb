@@ -183,6 +183,9 @@ Namespace Services
         Public Property InfoPanelShowRating As Boolean = True
         Public Property InfoPanelShowColorLabel As Boolean = True
         Public Property InfoPanelShowTags As Boolean = True
+        ''' <summary>Den getrennten Bereich fuer automatisch erkannte Bildinhalte zeigen. Die
+        ''' Erkennung selbst und ihre Speicherung bleiben davon unberuehrt.</summary>
+        Public Property InfoPanelShowAiTags As Boolean = True
         Public Property GallerySortMode As String = AppSettingsService.DefaultGallerySortMode
         Public Property GallerySortAscending As Boolean = AppSettingsService.DefaultGallerySortAscending
         ''' <summary>Feinheit der Gruppen in der Gruppenansicht, solange nach einem Datum sortiert wird:
@@ -268,6 +271,18 @@ Namespace Services
         ''' belegt. Wer ihn will, schaltet ihn ein; wer ihn einmalig will, nimmt "Jetzt indizieren".
         ''' Ohne eingetragene Ordner tut der Schalter ohnehin nichts.</summary>
         Public Property CatalogIndexOnStartup As Boolean = False
+        ''' <summary>Bildinhalte beim Katalogindex lokal erkennen. Standard AUS: ein grosser Bestand
+        ''' wird dadurch merklich laenger indiziert und niemand soll Bildanalyse ungefragt erhalten.</summary>
+        Public Property AiTaggingEnabled As Boolean = False
+        ''' <summary>Wie viele Treffer das Tagging hoechstens je Bild behaelt. Der Wert ist zusaetzlich
+        ''' zu den individuellen RAM++-Schwellen eine Schutzschranke gegen Stichwortwolken.</summary>
+        Public Property AiTaggingMaximumTags As Integer = 15
+        ''' <summary>Zusätzliche Mindestwahrscheinlichkeit in Prozent. Die individuelle Schwelle des
+        ''' Modells bleibt immer wirksam; der Benutzer kann sie hier nur strenger machen.</summary>
+        Public Property AiTaggingMinimumConfidence As Integer = 70
+        ''' <summary>KI-Stichwörter zusätzlich in vorhandene bzw. erlaubte neue XMP-Sidecars schreiben.
+        ''' Standard AUS: KI-Ergebnisse bleiben sonst ausschließlich in der lokalen Bibliothek.</summary>
+        Public Property WriteAiTagsToXmp As Boolean = False
         ''' <summary>500 seit 2026-08-27 (vorher 250, Patrick): in einem Ordner mittlerer Groesse
         ''' reicht das fuer den ganzen Bestand, und Hin- und Herrollen loest dann keinen einzigen
         ''' neuen Decode mehr aus. Die Obergrenze liegt bei 10.000.</summary>

@@ -125,6 +125,10 @@ Namespace ViewModels
             Return Build("Drucken", "printer", c)
         End Function
 
+        Public Shared Function ReanalyzeAiTags(c As ICommand) As AppAction
+            Return Build("KI-Stichwörter neu analysieren", "photo-scan", c)
+        End Function
+
         Public Shared Function RotateLeft(c As ICommand) As AppAction
             Return Build("Nach links drehen", "rotate-2", c)
         End Function

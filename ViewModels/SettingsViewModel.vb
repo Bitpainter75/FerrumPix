@@ -4,6 +4,7 @@ Imports System.Threading.Tasks
 Imports System.Globalization
 Imports System.Linq
 Imports System.Reflection
+Imports System.IO
 Imports System.Windows.Input
 Imports Avalonia
 Imports Avalonia.Media
@@ -172,6 +173,10 @@ Namespace ViewModels
         Private _savedGalleryTimelineMode As String = "All"
         Private _savedGalleryStartupCustomFolder As String = ""
         Private _catalogIndexOnStartup As Boolean = False
+        Private _aiTaggingEnabled As Boolean = False
+        Private _aiTaggingMaximumTags As Integer = 15
+        Private _aiTaggingMinimumConfidence As Integer = 70
+        Private _writeAiTagsToXmp As Boolean = False
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedFilmstripItemBadgesVisible As Boolean = False
         Private _savedGalleryShowFooter As Boolean = True
@@ -1727,6 +1732,7 @@ Namespace ViewModels
                 ' liesse eine Zeile mit einem einzigen Knopf uebrig.
                 Case InfoPanelRow.Rating : Return LocalizationService.T("Bewertung und Favorit")
                 Case InfoPanelRow.ColorLabel : Return LocalizationService.T("Etikett")
+                Case InfoPanelRow.AiTags : Return LocalizationService.T("KI-Stichwörter")
                 Case Else : Return LocalizationService.T("Stichwörter")
             End Select
         End Function
@@ -2428,6 +2434,10 @@ Namespace ViewModels
         ' Knopf. Warum beides getrennt ist, steht in ServerIndexRunner.
         Public ReadOnly Property ScanImmichMetadataCommand As ICommand
         Public ReadOnly Property ScanNextcloudMetadataCommand As ICommand
+        Public ReadOnly Property ScanImmichAiTagsCommand As ICommand
+        Public ReadOnly Property ScanNextcloudAiTagsCommand As ICommand
+        Public ReadOnly Property SyncNextcloudCatalogToXmpCommand As ICommand
+        Public ReadOnly Property SyncLocalAiTagsToXmpCommand As ICommand
         Public ReadOnly Property CancelServerScanCommand As ICommand
         Public ReadOnly Property CleanImmichCatalogCommand As ICommand
         Public ReadOnly Property CleanNextcloudCatalogCommand As ICommand
@@ -2453,6 +2463,7 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_serverScanRunning, value)
+                Me.RaisePropertyChanged(NameOf(CanSyncLocalAiTagsToXmp))
             End Set
         End Property
 
@@ -2495,6 +2506,115 @@ Namespace ViewModels
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("Settings.ServerScan", ex)
+                ServerScanMessage = ex.Message
+            Finally
+                ServerScanRunning = False
+            End Try
+        End Function
+
+        Private Async Function RunServerAiTaggingAsync(immich As Boolean) As Task
+            If ServerScanRunning OrElse Not ImageTaggingService.Available Then Return
+            ServerScanRunning = True
+            _serverScanCancellation?.Dispose()
+            _serverScanCancellation = New System.Threading.CancellationTokenSource()
+            Try
+                Dim progress As New Progress(Of ServerIndexProgress)(Sub(p)
+                                                                          ServerScanMessage = String.Format(LocalizationService.T("KI-Stichwörter: {0} von {1} Bildern"), p.Done, p.Total)
+                                                                      End Sub)
+                Dim result = If(immich,
+                                Await ServerAiTagRunner.RunImmichAsync(progress, _serverScanCancellation.Token),
+                                Await ServerAiTagRunner.RunNextcloudAsync(progress, _serverScanCancellation.Token))
+                ServerScanMessage = If(result.Cancelled, LocalizationService.T("Abgebrochen"),
+                                       String.Format(LocalizationService.T("{0} Bilder mit KI-Stichwörtern aktualisiert, {1} fehlgeschlagen"), result.Indexed, result.Failed))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.ServerAiTags", ex)
+                ServerScanMessage = ex.Message
+            Finally
+                ServerScanRunning = False
+            End Try
+        End Function
+
+        ''' <summary>Schreibt bewusst den FerrumPix-Katalog nach Nextcloud-XMP. Anders als der
+        ''' normale Katalogsync läuft das nie nebenbei: jede Datei bedeutet einen Download und einen
+        ''' WebDAV-Upload. Vorhandenes XMP wird zuerst geholt und von ExifService nur ergänzt.</summary>
+        Private Async Function SyncNextcloudCatalogToXmpAsync() As Task
+            If ServerScanRunning OrElse Not NextcloudService.IsConfigured Then Return
+            ImageTaggingService.ClearAbandonedWorkCopies()
+            ServerScanRunning = True
+            _serverScanCancellation?.Dispose()
+            _serverScanCancellation = New System.Threading.CancellationTokenSource()
+            Dim token = _serverScanCancellation.Token
+            Try
+                Dim photos As New List(Of NextcloudService.NextcloudPhoto)()
+                Dim seen As New HashSet(Of Long)()
+                For Each dayEntry In Await NextcloudService.GetDaysAsync(token)
+                    For Each photo In Await NextcloudService.GetDayAsync(dayEntry.DayId, token)
+                        If photo IsNot Nothing AndAlso seen.Add(photo.FileId) Then photos.Add(photo)
+                    Next
+                Next
+                Dim done = 0, written = 0
+                For Each photo In photos
+                    token.ThrowIfCancellationRequested()
+                    done += 1
+                    ServerScanMessage = String.Format(LocalizationService.T("XMP-Sidecars: {0} von {1}"), done, photos.Count)
+                    Dim remotePath = photo.FileName
+                    If String.IsNullOrWhiteSpace(remotePath) Then Continue For
+                    Dim pseudoPath = NextcloudService.MakePseudoPath(photo.FileId.ToString(CultureInfo.InvariantCulture), photo.DisplayName)
+                    Dim keywords = LibraryService.Instance.GetTags(pseudoPath).Concat(LibraryService.Instance.GetAiTags(pseudoPath).Select(Function(t) t.Canonical)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(Function(t) t, StringComparer.OrdinalIgnoreCase).ToList()
+                    Dim sourceSignature = String.Join("|", {photo.ETag, LibraryService.Instance.GetRating(pseudoPath).ToString(CultureInfo.InvariantCulture), LibraryService.Instance.GetColorLabel(pseudoPath), String.Join(",", keywords)})
+                    If Not NextcloudIndexService.Instance.XmpSidecarNeedsSync(NextcloudService.ServerKey, photo.FileId.ToString(CultureInfo.InvariantCulture), sourceSignature) Then Continue For
+                    Dim localPath As String = Nothing
+                    Try
+                        localPath = Await NextcloudService.DownloadOriginalToWorkTempAsync(photo.FileId.ToString(CultureInfo.InvariantCulture), photo.DisplayName, token)
+                        If String.IsNullOrWhiteSpace(localPath) Then Continue For
+                        Dim localXmp = localPath & ".xmp"
+                        Dim hadXmp = Await NextcloudService.TryDownloadXmpSidecarAsync(remotePath, localXmp, token)
+                        Dim appendXmpExtension = hadXmp AndAlso Await NextcloudService.XmpSidecarUsesAppendedNameAsync(remotePath, token)
+                        Dim createIfMissing = AppSettingsService.Load().CreateXmpSidecarIfMissing
+                        If Not ExifService.WriteXmpCatalogSidecar(localPath, LibraryService.Instance.GetRating(pseudoPath), XmpSidecarService.LabelToXmpWord(LibraryService.Instance.GetColorLabel(pseudoPath)), keywords, createIfMissing:=createIfMissing) Then Continue For
+                        Dim xmpPath = XmpSidecarService.FindSidecar(localPath)
+                        If Not String.IsNullOrWhiteSpace(xmpPath) AndAlso Await NextcloudService.UploadXmpSidecarAsync(xmpPath, remotePath, token, appendExtension:=appendXmpExtension) Then
+                            NextcloudIndexService.Instance.MarkXmpSidecarSynced(NextcloudService.ServerKey, photo.FileId.ToString(CultureInfo.InvariantCulture), sourceSignature)
+                            written += 1
+                        End If
+                    Finally
+                        Try
+                            If Not String.IsNullOrWhiteSpace(localPath) AndAlso File.Exists(localPath) Then File.Delete(localPath)
+                            If Not String.IsNullOrWhiteSpace(localPath) AndAlso File.Exists(localPath & ".xmp") Then File.Delete(localPath & ".xmp")
+                            If Not String.IsNullOrWhiteSpace(localPath) AndAlso File.Exists(Path.ChangeExtension(localPath, ".xmp")) Then File.Delete(Path.ChangeExtension(localPath, ".xmp"))
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("Settings.NextcloudXmpTempAufräumen", ex)
+                        End Try
+                    End Try
+                Next
+                ServerScanMessage = String.Format(LocalizationService.T("{0} XMP-Sidecars synchronisiert"), written)
+            Catch ex As OperationCanceledException
+                ServerScanMessage = LocalizationService.T("Abgebrochen")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.NextcloudXmp", ex)
+                ServerScanMessage = ex.Message
+            Finally
+                ServerScanRunning = False
+            End Try
+        End Function
+
+        ''' <summary>Schreibt bereits vorliegende lokale KI-Tags nach XMP, ohne das Modell erneut
+        ''' zu starten. Der Knopf ist das Gegenstück zum Nextcloud-Sync für den Fall, dass die
+        ''' XMP-Option erst nach einem Kataloglauf eingeschaltet wurde.</summary>
+        Private Async Function SyncLocalAiTagsToXmpAsync() As Task
+            If ServerScanRunning OrElse Not WriteAiTagsToXmp Then Return
+            ServerScanRunning = True
+            _serverScanCancellation?.Dispose()
+            _serverScanCancellation = New System.Threading.CancellationTokenSource()
+            Try
+                ServerScanMessage = LocalizationService.T("KI-Stichwörter werden in XMP geschrieben…")
+                Dim synced = Await Task.Run(Function() LibraryService.Instance.SyncAllAiTagsToXmp(_serverScanCancellation.Token),
+                                            _serverScanCancellation.Token)
+                ServerScanMessage = String.Format(LocalizationService.T("{0} Bilder mit KI-Stichwörtern in XMP synchronisiert"), synced)
+            Catch ex As OperationCanceledException
+                ServerScanMessage = LocalizationService.T("Abgebrochen")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.LocalAiTagsXmp", ex)
                 ServerScanMessage = ex.Message
             Finally
                 ServerScanRunning = False
@@ -2570,6 +2690,7 @@ Namespace ViewModels
 
         ''' <summary>Gesichter suchen - fuer eine Zeile und fuer die gefilterte Menge.</summary>
         Public ReadOnly Property ScanFacesRowCommand As ICommand
+        Public ReadOnly Property RunAiTaggingRowCommand As ICommand
         Public ReadOnly Property ScanFacesFilteredCommand As ICommand
 
         Public Property ThumbnailCacheFolders As ObservableCollection(Of ThumbnailCacheFolderInfo)
@@ -2810,9 +2931,26 @@ Namespace ViewModels
         ''' Fortschritt und Knoepfe haengen daran.</summary>
         Public ReadOnly Property CatalogIndex As CatalogIndexViewModel
             Get
-                Return _mainVm?.CatalogIndex
+                Dim index = _mainVm?.CatalogIndex
+                ' Beim ERSTEN Zugriff anhaengen, nicht im Konstruktor: dieses ViewModel entsteht als
+                ' erstes im Hauptfenster, der Katalogindex erst danach. Ohne das Abo bliebe der
+                ' Menueeintrag fuer die Ordner-Nachanalyse waehrend eines laufenden Index klickbar
+                ' (siehe CanRunAiTagging).
+                If index IsNot Nothing AndAlso Not _catalogIndexObserved Then
+                    _catalogIndexObserved = True
+                    AddHandler index.PropertyChanged, AddressOf OnCatalogIndexChanged
+                End If
+                Return index
             End Get
         End Property
+
+        Private _catalogIndexObserved As Boolean
+
+        Private Sub OnCatalogIndexChanged(sender As Object, e As ComponentModel.PropertyChangedEventArgs)
+            If e.PropertyName = NameOf(CatalogIndexViewModel.IsRunning) Then
+                Me.RaisePropertyChanged(NameOf(CanRunAiTagging))
+            End If
+        End Sub
 
         ''' <summary>Die Gesichtssuche ueber dieselben Ordner - eigener Lauf, eigene Knoepfe.</summary>
         Public ReadOnly Property FaceIndex As FaceIndexViewModel
@@ -2834,6 +2972,71 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_catalogIndexOnStartup, value)
                 SaveCatalogIndexSettings()
             End Set
+        End Property
+
+        ''' <summary>Schaltet die lokale Bildanalyse für den Katalog ein. Das Modell allein reicht
+        ''' nicht: der Bestand wird erst auf diese ausdrückliche Entscheidung hin analysiert.</summary>
+        Public Property AiTaggingEnabled As Boolean
+            Get
+                Return _aiTaggingEnabled
+            End Get
+            Set(value As Boolean)
+                If _aiTaggingEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_aiTaggingEnabled, value)
+                Me.RaisePropertyChanged(NameOf(CanRunAiTagging))
+                SaveCatalogIndexSettings()
+            End Set
+        End Property
+
+        ''' <summary>Gezieltes Nachholen läuft nur, wenn die automatische Bildanalyse wirklich
+        ''' aktiviert und das Modell installiert ist. Sonst wäre der Menüeintrag ein Knopf ohne
+        ''' Ergebnis.</summary>
+        Public ReadOnly Property CanRunAiTagging As Boolean
+            Get
+                Return ImageTaggingService.Enabled AndAlso CatalogIndex IsNot Nothing AndAlso Not CatalogIndex.IsRunning
+            End Get
+        End Property
+
+        Public Property AiTaggingMaximumTags As Integer
+            Get
+                Return _aiTaggingMaximumTags
+            End Get
+            Set(value As Integer)
+                value = Math.Max(1, Math.Min(50, value))
+                If _aiTaggingMaximumTags = value Then Return
+                Me.RaiseAndSetIfChanged(_aiTaggingMaximumTags, value)
+                SaveCatalogIndexSettings()
+            End Set
+        End Property
+
+        Public Property AiTaggingMinimumConfidence As Integer
+            Get
+                Return _aiTaggingMinimumConfidence
+            End Get
+            Set(value As Integer)
+                value = Math.Max(0, Math.Min(100, value))
+                If _aiTaggingMinimumConfidence = value Then Return
+                Me.RaiseAndSetIfChanged(_aiTaggingMinimumConfidence, value)
+                SaveCatalogIndexSettings()
+            End Set
+        End Property
+
+        Public Property WriteAiTagsToXmp As Boolean
+            Get
+                Return _writeAiTagsToXmp
+            End Get
+            Set(value As Boolean)
+                If _writeAiTagsToXmp = value Then Return
+                Me.RaiseAndSetIfChanged(_writeAiTagsToXmp, value)
+                Me.RaisePropertyChanged(NameOf(CanSyncLocalAiTagsToXmp))
+                SaveCatalogIndexSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property CanSyncLocalAiTagsToXmp As Boolean
+            Get
+                Return WriteAiTagsToXmp AndAlso Not ServerScanRunning
+            End Get
         End Property
 
         ''' <summary>Nimmt einen Ordner in die Liste. Doppelte und solche, die bereits unter einem
@@ -2900,6 +3103,10 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s)
                                           s.CatalogWatchFolders = CatalogWatchFolders.ToList()
                                           s.CatalogIndexOnStartup = _catalogIndexOnStartup
+                                          s.AiTaggingEnabled = _aiTaggingEnabled
+                                          s.AiTaggingMaximumTags = _aiTaggingMaximumTags
+                                          s.AiTaggingMinimumConfidence = _aiTaggingMinimumConfidence
+                                          s.WriteAiTagsToXmp = _writeAiTagsToXmp
                                       End Sub)
         End Sub
 
@@ -2910,6 +3117,10 @@ Namespace ViewModels
             CatalogWatchFolders = New ObservableCollection(Of String)(
                 AppSettingsService.NormalizeCatalogWatchFolders(_appSettings.CatalogWatchFolders))
             _catalogIndexOnStartup = _appSettings.CatalogIndexOnStartup
+            _aiTaggingEnabled = _appSettings.AiTaggingEnabled
+            _aiTaggingMaximumTags = Math.Max(1, Math.Min(50, _appSettings.AiTaggingMaximumTags))
+            _aiTaggingMinimumConfidence = Math.Max(0, Math.Min(100, _appSettings.AiTaggingMinimumConfidence))
+            _writeAiTagsToXmp = _appSettings.WriteAiTagsToXmp
             _themeMode = _appSettings.ThemeMode
             _accentColor = _appSettings.AccentColor
             _accentStrength = AppSettingsService.NormalizeAccentStrength(_appSettings.AccentStrength)
@@ -3107,6 +3318,8 @@ Namespace ViewModels
             CleanRowCatalogCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(Function(r) CleanFolderRowAsync(r, catalog:=True, thumbnails:=False))
             CleanRowThumbnailsCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(Function(r) CleanFolderRowAsync(r, catalog:=False, thumbnails:=True))
             CleanRowBothCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(Function(r) CleanFolderRowAsync(r, catalog:=True, thumbnails:=True))
+            RunAiTaggingRowCommand = ReactiveCommand.CreateFromTask(Of CatalogFolderRow)(
+                Function(r) RunAiTaggingForFoldersAsync(FolderPathsOf(r)))
             ToggleFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) ToggleFolderRow(r))
             WatchFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) AddCatalogWatchFolder(If(r?.Path, "")))
             UnwatchFolderRowCommand = ReactiveCommand.Create(Of CatalogFolderRow)(Sub(r) RemoveCatalogWatchFolder(If(r?.Path, "")))
@@ -3132,6 +3345,10 @@ Namespace ViewModels
             ClearImmichCacheCommand = ReactiveCommand.CreateFromTask(Function() ClearImmichCacheAsync())
             ScanImmichMetadataCommand = ReactiveCommand.CreateFromTask(Function() RunServerScanAsync(immich:=True))
             ScanNextcloudMetadataCommand = ReactiveCommand.CreateFromTask(Function() RunServerScanAsync(immich:=False))
+            ScanImmichAiTagsCommand = ReactiveCommand.CreateFromTask(Function() RunServerAiTaggingAsync(immich:=True))
+            ScanNextcloudAiTagsCommand = ReactiveCommand.CreateFromTask(Function() RunServerAiTaggingAsync(immich:=False))
+            SyncNextcloudCatalogToXmpCommand = ReactiveCommand.CreateFromTask(Function() SyncNextcloudCatalogToXmpAsync())
+            SyncLocalAiTagsToXmpCommand = ReactiveCommand.CreateFromTask(Function() SyncLocalAiTagsToXmpAsync())
             CancelServerScanCommand = ReactiveCommand.Create(Sub() _serverScanCancellation?.Cancel())
             CleanImmichCatalogCommand = ReactiveCommand.Create(Sub() CleanServerCatalog(immich:=True))
             CleanNextcloudCatalogCommand = ReactiveCommand.Create(Sub() CleanServerCatalog(immich:=False))
@@ -3850,6 +4067,15 @@ Namespace ViewModels
             Return FaceIndex.StartForFoldersAsync(list)
         End Function
 
+        ''' <summary>Nur die gewählte Wurzel (bei Gruppenköpfen deren zusammengefasste Ordner)
+        ''' durchgehen. Der Kataloglauf erkennt unveränderte Dateien und führt darauf lediglich
+        ''' die fehlende KI-Analyse aus, statt Metadaten unnötig neu einzulesen.</summary>
+        Private Function RunAiTaggingForFoldersAsync(folders As IList(Of String)) As Task
+            Dim list = If(folders, New List(Of String)()).Where(Function(f) Not String.IsNullOrWhiteSpace(f)).ToList()
+            If list.Count = 0 OrElse Not ImageTaggingService.Enabled OrElse CatalogIndex Is Nothing Then Return Task.CompletedTask
+            Return CatalogIndex.StartForFoldersAsync(list)
+        End Function
+
         ''' <summary>Raeumt eine Zeile auf - bei einer Wurzel samt allem, was sie zusammenfasst.
         '''
         ''' MIT RUECKFRAGE, genau wie die Sammelaktion. Eine Zeile sieht nach "diesem einen Ordner"
@@ -4476,6 +4702,8 @@ Namespace ViewModels
                         description = LocalizationService.T("Rauschen aus hohen ISO-Werten entfernen, mit erhaltener Feinstruktur. Zwei Wege: gründlich und zügig.")
                     Case "Hochskalieren"
                         description = LocalizationService.T("Ein Foto zwei- oder vierfach vergrößern, mit neu gesetzten Kanten statt gemittelter Bildpunkte. Fünf Modelle für Fotos und Zeichnungen.")
+                    Case "Automatische Stichwörter"
+                        description = LocalizationService.T("Erkennt lokale Bildinhalte und speichert sie getrennt von eigenen Stichwörtern. Der Download ist groß, weil das Modell vollständig auf diesem Gerät läuft.")
                     Case Else
                         description = LocalizationService.T("Objekt im Bild anklicken, Maske entsteht von selbst")
                 End Select
@@ -4487,6 +4715,7 @@ Namespace ViewModels
                     Case "Orte" : anzeigeName = LocalizationService.T("Orte")
                     Case "Entrauschen" : anzeigeName = LocalizationService.T("Entrauschen")
                     Case "Hochskalieren" : anzeigeName = LocalizationService.T("Hochskalieren")
+                    Case "Automatische Stichwörter" : anzeigeName = LocalizationService.T("Automatische Stichwörter")
                     Case "Objektauswahl" : anzeigeName = LocalizationService.T("Objektauswahl")
                     Case Else : anzeigeName = name
                 End Select

@@ -2258,6 +2258,7 @@ Namespace Views
                 .RemoveMetadata = vm.RemoveMetadataSelectedCommand,
                 .CreateCollage = New DelegateCommand(Sub() OnContextCreateCollage(Nothing, Nothing)),
                 .Print = vm.PrintSelectedCommand,
+                .ReanalyzeAiTags = vm.ReanalyzeAiTagsCommand,
                 .Favorite = vm.ToggleSelectedFavoriteCommand,
                 .Rating = vm.SetSelectedRatingCommand,
                 .ColorLabel = New DelegateCommand(Sub(color) ApplyColorLabel(vm, color)),

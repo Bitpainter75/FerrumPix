@@ -56,6 +56,14 @@ Namespace ViewModels
         ''' <summary>Startet einen Lauf und haelt die Anzeige nach. Laeuft schon einer, geschieht
         ''' nichts - der Dienst laesst ohnehin nur einen zu, und hier faengt es der Knopf ab.</summary>
         Public Overrides Async Function StartAsync() As Task
+            Await StartForFoldersAsync(Nothing).ConfigureAwait(False)
+        End Function
+
+        ''' <summary>Startet denselben sicheren Kataloglauf für ausdrücklich gewählte Wurzeln.
+        ''' Der Ordner-Aktionsweg nutzt dies für KI-Stichwörter: auch unveränderte Dateien werden
+        ''' dabei auf fehlende bzw. veraltete KI-Ergebnisse geprüft, normale Metadaten bleiben
+        ''' unangetastet, solange sie frisch sind.</summary>
+        Public Async Function StartForFoldersAsync(folders As IReadOnlyList(Of String)) As Task
             If CatalogIndexRunner.IsRunning Then Return
 
             ' Der Riegel VOR jeder Anzeige - siehe BackgroundRunViewModel.TryEnterRun. Hier greift
@@ -78,7 +86,7 @@ Namespace ViewModels
                     Sub(p) ReportThrottled(
                         String.Format(LocalizationService.T("Indiziere {0} von {1}"), p.Done, p.Total),
                         p.Done, p.Total))
-                result = Await CatalogIndexRunner.RunAsync(progress:=progress).ConfigureAwait(False)
+                result = Await CatalogIndexRunner.RunAsync(folders:=folders, progress:=progress).ConfigureAwait(False)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Katalogindex.Lauf", ex)
             End Try
@@ -126,6 +134,9 @@ Namespace ViewModels
             End If
             If result.PlacesResolved > 0 Then
                 text &= ", " & String.Format(LocalizationService.T("{0} Aufnahmeorte"), result.PlacesResolved)
+            End If
+            If result.AiTagged > 0 Then
+                text &= ", " & String.Format(LocalizationService.T("{0} KI-analysiert"), result.AiTagged)
             End If
             ' WAS INS LEERE ZEIGT, wird hier gesagt und nicht still weggeraeumt: Bewertungen,
             ' Stichwoerter und Personen sind Handarbeit. Wegraeumen kann man sie in den Einstellungen

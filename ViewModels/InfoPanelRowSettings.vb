@@ -28,6 +28,7 @@ Namespace ViewModels
         Rating = 17
         ColorLabel = 18
         Tags = 19
+        AiTags = 20
     End Enum
 
     ''' <summary>
@@ -80,7 +81,7 @@ Namespace ViewModels
         ''' weil sie etwas anderes sind: nicht Angaben ueber das Bild, sondern Bedienung - und sie
         ''' gelten auch bei mehreren markierten Bildern, wo es den Reiter gar nicht gibt.</summary>
         Public Shared ReadOnly Property AllSections As IReadOnlyList(Of InfoPanelRow) =
-            New InfoPanelRow() {InfoPanelRow.Rating, InfoPanelRow.ColorLabel, InfoPanelRow.Tags}
+            New InfoPanelRow() {InfoPanelRow.Rating, InfoPanelRow.ColorLabel, InfoPanelRow.Tags, InfoPanelRow.AiTags}
 
         ''' <summary>Zeilen und Bereiche zusammen - fuer alles, was den ganzen Bestand braucht.</summary>
         Public Shared ReadOnly Property AllEntries As IReadOnlyList(Of InfoPanelRow) =
@@ -122,6 +123,7 @@ Namespace ViewModels
             _visible(InfoPanelRow.Rating) = settings.InfoPanelShowRating
             _visible(InfoPanelRow.ColorLabel) = settings.InfoPanelShowColorLabel
             _visible(InfoPanelRow.Tags) = settings.InfoPanelShowTags
+            _visible(InfoPanelRow.AiTags) = settings.InfoPanelShowAiTags
         End Sub
 
         Private Shared Sub WriteTo(settings As AppSettings, row As InfoPanelRow, visible As Boolean)
@@ -147,6 +149,7 @@ Namespace ViewModels
                 Case InfoPanelRow.Rating : settings.InfoPanelShowRating = visible
                 Case InfoPanelRow.ColorLabel : settings.InfoPanelShowColorLabel = visible
                 Case InfoPanelRow.Tags : settings.InfoPanelShowTags = visible
+                Case InfoPanelRow.AiTags : settings.InfoPanelShowAiTags = visible
             End Select
         End Sub
 

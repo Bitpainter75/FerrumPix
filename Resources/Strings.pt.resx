@@ -7947,4 +7947,139 @@
   <data name="Ebenenmaske_konnte_nicht_erstellt_werden_90dcbf29" xml:space="preserve">
     <value>Não foi possível criar a máscara de camada</value>
   </data>
+  <data name="Automatische_KI_Stichw_rter_234bbc33" xml:space="preserve">
+    <value>Palavras-chave de IA automáticas</value>
+  </data>
+  <data name="Analysiert_Bildinhalte_ausschlie_lich_lokal_beim_f5d8c747" xml:space="preserve">
+    <value>Analisa o conteúdo das imagens apenas localmente durante a indexação do catálogo. O modelo tem de estar carregado na secção Modelos; sem ele a função permanece desligada.</value>
+  </data>
+  <data name="Bildinhalte_beim_Indizieren_erkennen_6e50a977" xml:space="preserve">
+    <value>Reconhecer o conteúdo das imagens ao indexar</value>
+  </data>
+  <data name="Aus_Der_Katalog_liest_nur_Metadaten_An_Neue_oder_57bb83b3" xml:space="preserve">
+    <value>Desligado: o catálogo lê apenas metadados. Ligado: as imagens novas ou alteradas recebem palavras-chave de IA locais.</value>
+  </data>
+  <data name="Maximale_Stichw_rter_je_Bild_e16a79c4" xml:space="preserve">
+    <value>Máximo de palavras-chave por imagem</value>
+  </data>
+  <data name="Die_besten_Treffer_bleiben_erhalten_modellspezif_62729c52" xml:space="preserve">
+    <value>As melhores correspondências são mantidas; os valores mínimos do próprio modelo aplicam-se também.</value>
+  </data>
+  <data name="Mindestwahrscheinlichkeit_bf1de783" xml:space="preserve">
+    <value>Probabilidade mínima</value>
+  </data>
+  <data name="H_here_Werte_vermeiden_fragliche_Treffer_die_ind_6fc7f1cd" xml:space="preserve">
+    <value>Valores mais altos evitam correspondências duvidosas; os limites do próprio modelo nunca são ultrapassados para baixo.</value>
+  </data>
+  <data name="KI_Stichw_rter_in_XMP_schreiben_cfd20305" xml:space="preserve">
+    <value>Escrever as palavras-chave de IA em XMP</value>
+  </data>
+  <data name="Aus_Ergebnisse_bleiben_nur_in_FerrumPix_An_Die_k_8f8d9a42" xml:space="preserve">
+    <value>Desligado: os resultados ficam apenas no FerrumPix. Ligado: os termos canónicos são também escritos em XMP; novos ficheiros sidecar só são criados se isso for permitido acima em Metadados.</value>
+  </data>
+  <data name="Lokales_Modell_f_r_automatische_Bild_Stichw_rter_0c4598b6" xml:space="preserve">
+    <value>Modelo local para palavras-chave automáticas de imagens</value>
+  </data>
+  <data name="KI_Stichw_rter_aktualisieren_67a9d3e3" xml:space="preserve">
+    <value>Atualizar as palavras-chave de IA</value>
+  </data>
+  <data name="KI_Stichw_rter_8aa26ec6" xml:space="preserve">
+    <value>Palavras-chave de IA</value>
+  </data>
+  <data name="KI_Stichw_rter_neu_analysieren_bb28a041" xml:space="preserve">
+    <value>Analisar de novo as palavras-chave de IA</value>
+  </data>
+  <data name="Neu_analysieren_51168f8f" xml:space="preserve">
+    <value>Analisar de novo</value>
+  </data>
+  <data name="Lokal_erkannt_nicht_von_Hand_vergeben_b94b98ed" xml:space="preserve">
+    <value>Reconhecidas localmente; não atribuídas à mão.</value>
+  </data>
+  <data name="KI_Modell_ist_noch_nicht_installiert_Es_l_sst_si_90d2bb22" xml:space="preserve">
+    <value>O modelo de IA ainda não está instalado. Pode ser transferido nas definições, na secção Modelos.</value>
+  </data>
+  <data name="Noch_keine_KI_Stichw_rter_8679ecc9" xml:space="preserve">
+    <value>Ainda sem palavras-chave de IA.</value>
+  </data>
+  <data name="Dieses_Bild_erneut_lokal_analysieren_0c1e3019" xml:space="preserve">
+    <value>Analisar de novo esta imagem localmente</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_KI_Stichwort_zeigen_42f72085" xml:space="preserve">
+    <value>Mostrar todas as imagens com esta palavra-chave de IA</value>
+  </data>
+  <data name="0_KI_analysiert_4f439014" xml:space="preserve">
+    <value>{0} analisadas por IA</value>
+  </data>
+  <data name="Bild_wird_lokal_analysiert_fe8b0ee2" xml:space="preserve">
+    <value>A analisar a imagem localmente…</value>
+  </data>
+  <data name="KI_Analyse_konnte_nicht_abgeschlossen_werden_bb23f260" xml:space="preserve">
+    <value>Não foi possível concluir a análise de IA.</value>
+  </data>
+  <data name="Keine_KI_Stichw_rter_erkannt_3c825dc7" xml:space="preserve">
+    <value>Nenhuma palavra-chave de IA reconhecida.</value>
+  </data>
+  <data name="0_KI_Stichw_rter_aktualisiert_05987fec" xml:space="preserve">
+    <value>{0} palavras-chave de IA atualizadas.</value>
+  </data>
+  <data name="Erkennt_lokale_Bildinhalte_und_speichert_sie_get_eac1fe75" xml:space="preserve">
+    <value>Reconhece o conteúdo das imagens localmente e guarda-o separado das suas próprias palavras-chave. A transferência é grande porque o modelo corre inteiramente neste dispositivo.</value>
+  </data>
+  <data name="Automatische_Stichw_rter_f1319619" xml:space="preserve">
+    <value>Palavras-chave automáticas</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_analysiert_0_von_1_bcf12e0c" xml:space="preserve">
+    <value>A analisar palavras-chave de IA: {0} de {1}</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_6d6b6611" xml:space="preserve">
+    <value>{0} imagens atualizadas com palavras-chave de IA</value>
+  </data>
+  <data name="KI_Stichw_rter_konnten_nicht_aktualisiert_werden_5c6ab65b" xml:space="preserve">
+    <value>Não foi possível atualizar as palavras-chave de IA</value>
+  </data>
+  <data name="RAM_65616b13" xml:space="preserve">
+    <value>RAM++</value>
+  </data>
+  <data name="KI_Stichw_rter_indizieren_4798b1c6" xml:space="preserve">
+    <value>Indexar as palavras-chave de IA</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_e5efa4bf" xml:space="preserve">
+    <value>Transfere cada imagem uma vez como cópia temporária, reconhece o conteúdo localmente e guarda os resultados apenas no índice local do Immich.</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_923ab3a2" xml:space="preserve">
+    <value>Transfere cada imagem uma vez como cópia temporária, reconhece o conteúdo localmente e guarda os resultados apenas no índice local do Nextcloud.</value>
+  </data>
+  <data name="Katalogdaten_als_XMP_Sidecars_ablegen_8a3a29ff" xml:space="preserve">
+    <value>Guardar os dados do catálogo como ficheiros XMP sidecar</value>
+  </data>
+  <data name="Erh_lt_vorhandene_xmp_Dateien_erg_nzt_Bewertung__9e2b5a49" xml:space="preserve">
+    <value>Mantém os ficheiros .xmp existentes, acrescenta a classificação, a etiqueta de cor e as palavras-chave manuais e de IA, e cria os sidecars em falta junto das imagens no Nextcloud.</value>
+  </data>
+  <data name="KI_Stichw_rter_0_von_1_Bildern_9da4c3a9" xml:space="preserve">
+    <value>Palavras-chave de IA: {0} de {1} imagens</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_1_fehl_fb10f853" xml:space="preserve">
+    <value>{0} imagens atualizadas com palavras-chave de IA, {1} falharam</value>
+  </data>
+  <data name="XMP_Sidecars_0_von_1_418268c1" xml:space="preserve">
+    <value>Ficheiros XMP sidecar: {0} de {1}</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_9d1cc73c" xml:space="preserve">
+    <value>{0} ficheiros XMP sidecar sincronizados</value>
+  </data>
+  <data name="Abgebrochen_0_Bilder_mit_KI_Stichw_rtern_aktuali_3126a91e" xml:space="preserve">
+    <value>Cancelado, {0} imagens atualizadas com palavras-chave de IA</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_in_XMP_geschrieben_d0bb7242" xml:space="preserve">
+    <value>A escrever as palavras-chave de IA em XMP…</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_in_XMP_synchronisie_56661768" xml:space="preserve">
+    <value>{0} imagens com palavras-chave de IA sincronizadas para XMP</value>
+  </data>
+  <data name="Jetzt_synchronisieren_8a663dc2" xml:space="preserve">
+    <value>Sincronizar agora</value>
+  </data>
+  <data name="berwachen_91d3d644" xml:space="preserve">
+    <value>Vigiar</value>
+  </data>
 </root>

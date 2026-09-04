@@ -7988,4 +7988,139 @@
   <data name="Ebenenmaske_konnte_nicht_erstellt_werden_90dcbf29" xml:space="preserve">
     <value>Lagermasken kunde inte skapas</value>
   </data>
+  <data name="Automatische_KI_Stichw_rter_234bbc33" xml:space="preserve">
+    <value>Automatiska AI-nyckelord</value>
+  </data>
+  <data name="Analysiert_Bildinhalte_ausschlie_lich_lokal_beim_f5d8c747" xml:space="preserve">
+    <value>Analyserar bildinnehåll uteslutande lokalt under katalogindexeringen. Modellen måste vara hämtad i avsnittet Modeller; utan den förblir funktionen avstängd.</value>
+  </data>
+  <data name="Bildinhalte_beim_Indizieren_erkennen_6e50a977" xml:space="preserve">
+    <value>Känn igen bildinnehåll vid indexering</value>
+  </data>
+  <data name="Aus_Der_Katalog_liest_nur_Metadaten_An_Neue_oder_57bb83b3" xml:space="preserve">
+    <value>Av: katalogen läser bara metadata. På: nya eller ändrade bilder får lokala AI-nyckelord.</value>
+  </data>
+  <data name="Maximale_Stichw_rter_je_Bild_e16a79c4" xml:space="preserve">
+    <value>Högsta antal nyckelord per bild</value>
+  </data>
+  <data name="Die_besten_Treffer_bleiben_erhalten_modellspezif_62729c52" xml:space="preserve">
+    <value>De bästa träffarna behålls; modellens egna minimivärden gäller dessutom.</value>
+  </data>
+  <data name="Mindestwahrscheinlichkeit_bf1de783" xml:space="preserve">
+    <value>Lägsta sannolikhet</value>
+  </data>
+  <data name="H_here_Werte_vermeiden_fragliche_Treffer_die_ind_6fc7f1cd" xml:space="preserve">
+    <value>Högre värden undviker tveksamma träffar; modellens egna gränser underskrids aldrig.</value>
+  </data>
+  <data name="KI_Stichw_rter_in_XMP_schreiben_cfd20305" xml:space="preserve">
+    <value>Skriv AI-nyckelord till XMP</value>
+  </data>
+  <data name="Aus_Ergebnisse_bleiben_nur_in_FerrumPix_An_Die_k_8f8d9a42" xml:space="preserve">
+    <value>Av: resultaten stannar bara i FerrumPix. På: de kanoniska begreppen skrivs också till XMP; nya sidecar-filer skapas bara om det tillåts ovan under Metadata.</value>
+  </data>
+  <data name="Lokales_Modell_f_r_automatische_Bild_Stichw_rter_0c4598b6" xml:space="preserve">
+    <value>Lokal modell för automatiska bildnyckelord</value>
+  </data>
+  <data name="KI_Stichw_rter_aktualisieren_67a9d3e3" xml:space="preserve">
+    <value>Uppdatera AI-nyckelord</value>
+  </data>
+  <data name="KI_Stichw_rter_8aa26ec6" xml:space="preserve">
+    <value>AI-nyckelord</value>
+  </data>
+  <data name="KI_Stichw_rter_neu_analysieren_bb28a041" xml:space="preserve">
+    <value>Analysera AI-nyckelord på nytt</value>
+  </data>
+  <data name="Neu_analysieren_51168f8f" xml:space="preserve">
+    <value>Analysera på nytt</value>
+  </data>
+  <data name="Lokal_erkannt_nicht_von_Hand_vergeben_b94b98ed" xml:space="preserve">
+    <value>Igenkänt lokalt; inte satt för hand.</value>
+  </data>
+  <data name="KI_Modell_ist_noch_nicht_installiert_Es_l_sst_si_90d2bb22" xml:space="preserve">
+    <value>AI-modellen är inte installerad än. Den kan hämtas i inställningarna under Modeller.</value>
+  </data>
+  <data name="Noch_keine_KI_Stichw_rter_8679ecc9" xml:space="preserve">
+    <value>Inga AI-nyckelord ännu.</value>
+  </data>
+  <data name="Dieses_Bild_erneut_lokal_analysieren_0c1e3019" xml:space="preserve">
+    <value>Analysera den här bilden lokalt på nytt</value>
+  </data>
+  <data name="Alle_Bilder_mit_diesem_KI_Stichwort_zeigen_42f72085" xml:space="preserve">
+    <value>Visa alla bilder med detta AI-nyckelord</value>
+  </data>
+  <data name="0_KI_analysiert_4f439014" xml:space="preserve">
+    <value>{0} analyserade av AI</value>
+  </data>
+  <data name="Bild_wird_lokal_analysiert_fe8b0ee2" xml:space="preserve">
+    <value>Bilden analyseras lokalt…</value>
+  </data>
+  <data name="KI_Analyse_konnte_nicht_abgeschlossen_werden_bb23f260" xml:space="preserve">
+    <value>AI-analysen kunde inte slutföras.</value>
+  </data>
+  <data name="Keine_KI_Stichw_rter_erkannt_3c825dc7" xml:space="preserve">
+    <value>Inga AI-nyckelord igenkända.</value>
+  </data>
+  <data name="0_KI_Stichw_rter_aktualisiert_05987fec" xml:space="preserve">
+    <value>{0} AI-nyckelord uppdaterade.</value>
+  </data>
+  <data name="Erkennt_lokale_Bildinhalte_und_speichert_sie_get_eac1fe75" xml:space="preserve">
+    <value>Känner igen bildinnehåll lokalt och sparar det åtskilt från dina egna nyckelord. Nedladdningen är stor eftersom modellen körs helt på den här maskinen.</value>
+  </data>
+  <data name="Automatische_Stichw_rter_f1319619" xml:space="preserve">
+    <value>Automatiska nyckelord</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_analysiert_0_von_1_bcf12e0c" xml:space="preserve">
+    <value>AI-nyckelord analyseras: {0} av {1}</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_6d6b6611" xml:space="preserve">
+    <value>{0} bilder uppdaterade med AI-nyckelord</value>
+  </data>
+  <data name="KI_Stichw_rter_konnten_nicht_aktualisiert_werden_5c6ab65b" xml:space="preserve">
+    <value>AI-nyckelorden kunde inte uppdateras</value>
+  </data>
+  <data name="RAM_65616b13" xml:space="preserve">
+    <value>RAM++</value>
+  </data>
+  <data name="KI_Stichw_rter_indizieren_4798b1c6" xml:space="preserve">
+    <value>Indexera AI-nyckelord</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_e5efa4bf" xml:space="preserve">
+    <value>Hämtar varje bild en gång som en tillfällig kopia, känner igen innehållet lokalt och sparar resultaten bara i det lokala Immich-indexet.</value>
+  </data>
+  <data name="L_dt_jedes_Bild_einmal_als_tempor_re_Kopie_erken_923ab3a2" xml:space="preserve">
+    <value>Hämtar varje bild en gång som en tillfällig kopia, känner igen innehållet lokalt och sparar resultaten bara i det lokala Nextcloud-indexet.</value>
+  </data>
+  <data name="Katalogdaten_als_XMP_Sidecars_ablegen_8a3a29ff" xml:space="preserve">
+    <value>Spara katalogdata som XMP-sidecar-filer</value>
+  </data>
+  <data name="Erh_lt_vorhandene_xmp_Dateien_erg_nzt_Bewertung__9e2b5a49" xml:space="preserve">
+    <value>Behåller befintliga .xmp-filer, lägger till betyg, färgetikett samt manuella och AI-nyckelord, och skapar saknade sidecar-filer bredvid bilderna på Nextcloud.</value>
+  </data>
+  <data name="KI_Stichw_rter_0_von_1_Bildern_9da4c3a9" xml:space="preserve">
+    <value>AI-nyckelord: {0} av {1} bilder</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_aktualisiert_1_fehl_fb10f853" xml:space="preserve">
+    <value>{0} bilder uppdaterade med AI-nyckelord, {1} misslyckades</value>
+  </data>
+  <data name="XMP_Sidecars_0_von_1_418268c1" xml:space="preserve">
+    <value>XMP-sidecar-filer: {0} av {1}</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_9d1cc73c" xml:space="preserve">
+    <value>{0} XMP-sidecar-filer synkroniserade</value>
+  </data>
+  <data name="Abgebrochen_0_Bilder_mit_KI_Stichw_rtern_aktuali_3126a91e" xml:space="preserve">
+    <value>Avbrutet, {0} bilder uppdaterade med AI-nyckelord</value>
+  </data>
+  <data name="KI_Stichw_rter_werden_in_XMP_geschrieben_d0bb7242" xml:space="preserve">
+    <value>AI-nyckelord skrivs till XMP…</value>
+  </data>
+  <data name="0_Bilder_mit_KI_Stichw_rtern_in_XMP_synchronisie_56661768" xml:space="preserve">
+    <value>{0} bilder med AI-nyckelord synkroniserade till XMP</value>
+  </data>
+  <data name="Jetzt_synchronisieren_8a663dc2" xml:space="preserve">
+    <value>Synkronisera nu</value>
+  </data>
+  <data name="berwachen_91d3d644" xml:space="preserve">
+    <value>Bevaka</value>
+  </data>
 </root>

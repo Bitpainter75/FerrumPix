@@ -925,6 +925,44 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Lädt ein Adobe-XMP-Sidecar neben einer Serverdatei. Das ist bewusst nicht der
+        ''' .fpxmp-Weg: XMP trägt austauschbare Katalogdaten, .fpxmp das FerrumPix-Rezept.</summary>
+        Public Shared Async Function TryDownloadXmpSidecarAsync(filePathInTree As String, localTargetPath As String,
+                                                                Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return False
+            Try
+                ' Beide XMP-Konventionen sind im Umlauf: foto.jpg.xmp und foto.xmp. Die zuerst
+                ' gefundene Form wird lokal unter dem gewünschten Zielnamen abgelegt.
+                For Each candidate In {filePathInTree & ".xmp", IO.Path.ChangeExtension(filePathInTree, ".xmp")}.Distinct(StringComparer.OrdinalIgnoreCase)
+                    Using response = Await GetClient().GetAsync(FileUrl(candidate), cancellationToken).ConfigureAwait(False)
+                        If response.StatusCode = HttpStatusCode.NotFound Then Continue For
+                        If Not response.IsSuccessStatusCode Then Return False
+                        Dim bytes = Await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(False)
+                        If bytes Is Nothing OrElse bytes.Length = 0 Then Return False
+                        Await File.WriteAllBytesAsync(localTargetPath, bytes, cancellationToken).ConfigureAwait(False)
+                        Return True
+                    End Using
+                Next
+                Return False
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Prüft, ob das vorhandene XMP die angehängte Namensform nutzt. Diese Information
+        ''' bewahrt der Synchronisationsweg, damit nicht zwei konkurrierende Sidecars entstehen.</summary>
+        Public Shared Async Function XmpSidecarUsesAppendedNameAsync(filePathInTree As String,
+                                                                      Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return False
+            Try
+                Using response = Await GetClient().SendAsync(New HttpRequestMessage(HttpMethod.Head, FileUrl(filePathInTree & ".xmp")), cancellationToken).ConfigureAwait(False)
+                    Return response.IsSuccessStatusCode
+                End Using
+            Catch
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Loescht eine Datei im Dateibaum. Sie landet im Nextcloud-Papierkorb, ist also
         ''' vom Nutzer wiederherstellbar - anders als bei Immich braucht es dafuer keinen zweiten
         ''' Schalter. Die Begleitdatei wird MITGENOMMEN, sonst bliebe ein Rezept ohne Bild liegen.</summary>
@@ -997,6 +1035,13 @@ Namespace Services
                                                   Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
             If String.IsNullOrWhiteSpace(filePathInTree) Then Return Task.FromResult(False)
             Return UploadFileAsync(localSidecarPath, filePathInTree & RawSidecarService.Extension, cancellationToken)
+        End Function
+
+        Public Shared Function UploadXmpSidecarAsync(localXmpPath As String, filePathInTree As String,
+                                                     Optional cancellationToken As CancellationToken = Nothing,
+                                                     Optional appendExtension As Boolean = False) As Task(Of Boolean)
+            If String.IsNullOrWhiteSpace(filePathInTree) Then Return Task.FromResult(False)
+            Return UploadFileAsync(localXmpPath, If(appendExtension, filePathInTree & ".xmp", IO.Path.ChangeExtension(filePathInTree, ".xmp")), cancellationToken)
         End Function
 
         ' ── Favorit ─────────────────────────────────────────────────────────────
@@ -2029,6 +2074,59 @@ Namespace Services
                 LastError = ex.Message
                 DiagnosticLogService.LogException("Nextcloud", ex)
                 Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Lädt ein Original für einen kurzlebigen Hintergrundjob in eine eindeutige
+        ''' Arbeitskopie. Der Viewer-Download hat absichtlich einen stabilen Namen und wird am
+        ''' Element zwischengespeichert; ein KI- oder XMP-Lauf darf diese Datei weder überschreiben
+        ''' noch im Finally löschen.</summary>
+        Public Shared Async Function DownloadOriginalToWorkTempAsync(fileId As String, fileName As String,
+                                                                      Optional cancellationToken As CancellationToken = Nothing) As Task(Of String)
+            LastError = ""
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(fileId) Then Return Nothing
+            Dim workPath As String = Nothing
+            Dim completed = False
+            Try
+                Dim sourceUrl As String
+                If Await EnsureModeAsync(cancellationToken).ConfigureAwait(False) = ServerMode.Photos Then
+                    Dim remotePath = Await ResolvePathAsync(fileId, cancellationToken).ConfigureAwait(False)
+                    If String.IsNullOrWhiteSpace(remotePath) Then
+                        If String.IsNullOrEmpty(LastError) Then LastError = LocalizationService.T("Die Datei ist auf dem Server nicht auffindbar")
+                        Return Nothing
+                    End If
+                    sourceUrl = FileUrl(TreePath(remotePath))
+                Else
+                    sourceUrl = ApiUrl("stream/" & Uri.EscapeDataString(fileId))
+                End If
+
+                Directory.CreateDirectory(ImageTaggingService.WorkFolder)
+                Dim extension = Path.GetExtension(If(fileName, ""))
+                workPath = Path.Combine(ImageTaggingService.WorkFolder,
+                                        fileId & "_" & Guid.NewGuid().ToString("N") & extension)
+                Using response = Await GetTransferClient().GetAsync(sourceUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(False)
+                    If Not response.IsSuccessStatusCode Then
+                        LastError = String.Format(LocalizationService.T("Nextcloud antwortet mit {0}"), CInt(response.StatusCode))
+                        Return Nothing
+                    End If
+                    Using stream = Await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(False)
+                        Using file = New FileStream(workPath, FileMode.Create, FileAccess.Write, FileShare.None)
+                            Await stream.CopyToAsync(file, cancellationToken).ConfigureAwait(False)
+                        End Using
+                    End Using
+                End Using
+                completed = True
+                Return workPath
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Nextcloud.DownloadOriginalWork", ex)
+                Return Nothing
+            Finally
+                If Not completed AndAlso workPath IsNot Nothing Then
+                    Try : File.Delete(workPath) : Catch : End Try
+                End If
             End Try
         End Function
 

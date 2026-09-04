@@ -20,6 +20,10 @@ Namespace Services
         Public Property Failed As Integer
         ''' <summary>Wie viele Katalogeintraege einen Ortsnamen bekommen haben.</summary>
         Public Property PlacesResolved As Integer
+        ''' <summary>Wie viele Bilder in diesem Durchlauf tatsächlich eine lokale KI-Analyse
+        ''' erhielten. Auch ein leeres Ergebnis zählt: es verhindert, dass ein Motiv ohne Treffer
+        ''' bei jedem nächsten Index erneut gerechnet wird.</summary>
+        Public Property AiTagged As Integer
 
         ''' <summary>Wie viele Katalogeintraege unter den durchsuchten Ordnern auf eine Datei zeigen,
         ''' die es nicht mehr gibt. NUR GEZAEHLT: geloescht wird auf Ansage ueber "Datenbank
@@ -339,10 +343,12 @@ Namespace Services
                         ' Das Vorschaubild trotzdem sicherstellen: der Katalogeintrag kann von einem
                         ' frueheren Lauf stammen, waehrend die Kachel nie gebraucht wurde.
                         If EnsureThumbnail(filePath, info, token) Then result.ThumbnailsCreated += 1
+                        TagIfNeeded(filePath, info, result, token)
                         Continue For
                     End If
 
                     IndexOne(filePath, result, token)
+                    TagIfNeeded(filePath, info, result, token)
                 Catch ex As OperationCanceledException
                     result.Cancelled = True
                     Return Nothing
@@ -391,6 +397,19 @@ Namespace Services
 
             result.Indexed += 1
             If EnsureThumbnail(filePath, info, token) Then result.ThumbnailsCreated += 1
+        End Sub
+
+        ''' <summary>Die KI ist ein eigener, bewusst aktivierter Schritt des Katalogs. Er steht
+        ''' NACH Metadaten und Thumbnail, damit ein fehlendes Modell oder ein einzelner Modellfehler
+        ''' nie die normale Indizierung verhindert. Bei unveränderten Bildern fragt er seinen
+        ''' eigenen Stempel ab - erst so wird ein bereits vorhandener Bestand nach Aktivierung der
+        ''' Einstellung einmal vollständig ergänzt.</summary>
+        Private Shared Sub TagIfNeeded(filePath As String, info As FileInfo, result As CatalogIndexResult,
+                                       token As CancellationToken)
+            If token.IsCancellationRequested OrElse Not ImageTaggingService.NeedsAnalysis(filePath, info.LastWriteTime) Then Return
+            ' NOTHING heisst "gar nicht gelaufen" (siehe ImageTaggingService.TagFile). Das mitzu-
+            ' zaehlen meldete am Ende Bilder als verschlagwortet, an denen nichts geschehen ist.
+            If ImageTaggingService.TagFile(filePath, token) IsNot Nothing Then result.AiTagged += 1
         End Sub
 
         ''' <summary>Die Kachel bereitlegen. DURCH DIE DECODE-SCHLEUSE: es laeuft immer nur einer in

@@ -1647,6 +1647,14 @@
                                 <Button Classes="ghost" Padding="12,7" Command="{Binding ScanImmichMetadataCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt laden</Button>
                             </StackPanel>
                         </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="KI-Stichwörter indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Lädt jedes Bild einmal als temporäre Kopie, erkennt Inhalte lokal und speichert die Ergebnisse nur im lokalen Immich-Index." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Command="{Binding ScanImmichAiTagsCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt indizieren</Button>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -1789,6 +1797,22 @@
                                 <Button Classes="ghost" Padding="12,7" Command="{Binding CancelServerScanCommand}" IsVisible="{Binding ServerScanRunning}">Abbrechen</Button>
                                 <Button Classes="ghost" Padding="12,7" Command="{Binding ScanNextcloudMetadataCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt laden</Button>
                             </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="KI-Stichwörter indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Lädt jedes Bild einmal als temporäre Kopie, erkennt Inhalte lokal und speichert die Ergebnisse nur im lokalen Nextcloud-Index." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Command="{Binding ScanNextcloudAiTagsCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt indizieren</Button>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Katalogdaten als XMP-Sidecars ablegen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Erhält vorhandene .xmp-Dateien, ergänzt Bewertung, Farb-Label sowie manuelle und KI-Stichwörter und legt fehlende Sidecars neben den Bildern auf Nextcloud an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Command="{Binding SyncNextcloudCatalogToXmpCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt synchronisieren</Button>
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -2237,6 +2261,10 @@
                                                                           Command="{Binding Actions.ScanFacesRowCommand}"
                                                                           CommandParameter="{Binding}"
                                                                           IsEnabled="{Binding Actions.FaceIndex.CanStart}"/>
+                                                                <MenuItem Header="KI-Stichwörter aktualisieren"
+                                                                          Command="{Binding Actions.RunAiTaggingRowCommand}"
+                                                                          CommandParameter="{Binding}"
+                                                                          IsEnabled="{Binding Actions.CanRunAiTagging}"/>
                                                                 <Separator/>
                                                                 <!-- Der Ordnerwähler haengt am TopLevel und ist nur von der
                                                                      View aus erreichbar - deshalb ein Click-Ereignis statt
@@ -2310,6 +2338,73 @@
                                             Command="{Binding CatalogIndex.StopCommand}">Stoppen</Button>
                                 </StackPanel>
                             </Grid>
+
+                            <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                            <StackPanel Spacing="10" IsEnabled="{Binding ModelRuntimeAvailable}">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                    <TextBlock Text="Automatische KI-Stichwörter" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Analysiert Bildinhalte ausschließlich lokal beim Katalogindex. Dafür muss das Modell im Abschnitt Modelle geladen sein; ohne es bleibt die Funktion aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Bildinhalte beim Indizieren erkennen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Aus: Der Katalog liest nur Metadaten. An: Neue oder geänderte Bilder erhalten lokale KI-Stichwörter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding AiTaggingEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AiTaggingEnabled}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Maximale Stichwörter je Bild" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Die besten Treffer bleiben erhalten; modellspezifische Mindestwerte gelten zusätzlich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <!-- Gleicher Regler wie Skalierung und Gesichtsmindestgröße:
+                                             Ziehen/Klicken für den Wert, Mausrad in Einer-Schritten,
+                                             Doppelklick setzt den praxistauglichen Standard zurück. -->
+                                        <icons:RoundSlider Width="150"
+                                                           Minimum="1"
+                                                           Maximum="50"
+                                                           DefaultValue="15"
+                                                           DragIncrement="1"
+                                                           WheelIncrement="1"
+                                                           Value="{Binding AiTaggingMaximumTags}"/>
+                                        <TextBlock Text="{Binding AiTaggingMaximumTags}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                   Width="42" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AiTaggingEnabled}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Mindestwahrscheinlichkeit" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Höhere Werte vermeiden fragliche Treffer; die individuellen Modellsperren werden nie unterschritten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <icons:RoundSlider Width="150"
+                                                           Minimum="0"
+                                                           Maximum="100"
+                                                           DefaultValue="70"
+                                                           DragIncrement="1"
+                                                           WheelIncrement="1"
+                                                           Value="{Binding AiTaggingMinimumConfidence}"/>
+                                        <TextBlock Text="{Binding AiTaggingMinimumConfidence, StringFormat={}{0}%}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                   Width="42" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AiTaggingEnabled}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="KI-Stichwörter in XMP schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Aus: Ergebnisse bleiben nur in FerrumPix. An: Die kanonischen Begriffe werden zusätzlich in XMP geschrieben; neue Sidecars entstehen nur, wenn das oben bei Metadaten erlaubt ist." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <ToggleSwitch IsChecked="{Binding WriteAiTagsToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                        <Button Classes="ghost" Padding="12,7" Command="{Binding SyncLocalAiTagsToXmpCommand}" IsEnabled="{Binding CanSyncLocalAiTagsToXmp}">Jetzt synchronisieren</Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
 
                         </StackPanel>
 
@@ -3022,6 +3117,18 @@
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="RAM++" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Lokales Modell für automatische Bild-Stichwörter" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/xinyu1205/recognize-anything" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/xinyu1205/recognize-anything/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">

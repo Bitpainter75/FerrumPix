@@ -45,7 +45,10 @@ Namespace Services
             ' behaelt die Vereinigung den ERSTEN Eintrag.
             If sidecarKeywords IsNot Nothing Then all.AddRange(sidecarKeywords)
             If embeddedKeywords IsNot Nothing Then all.AddRange(embeddedKeywords)
-            If all.Count = 0 Then Return Nothing
+            ' Eigene, optional nach XMP geschriebene KI-Tags bleiben getrennt von Handarbeit
+            ' (siehe LibraryService.WithoutOwnAiTags).
+            all = LibraryService.Instance.WithoutOwnAiTags(filePath, all)
+            If all Is Nothing OrElse all.Count = 0 Then Return Nothing
             Return LibraryService.Instance.ImportFileKeywords(filePath, all)
         End Function
 

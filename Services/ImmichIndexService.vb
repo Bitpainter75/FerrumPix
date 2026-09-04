@@ -94,6 +94,18 @@ Namespace Services
                         ")"
                     cmd.ExecuteNonQuery()
                 End Using
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText =
+                        "CREATE TABLE IF NOT EXISTS AiAssetTag (" &
+                        " ServerKey TEXT NOT NULL, AssetId TEXT NOT NULL, Canonical TEXT NOT NULL COLLATE NOCASE," &
+                        " Score REAL NOT NULL, ModelKey TEXT NOT NULL DEFAULT '', ModelVersion TEXT NOT NULL DEFAULT ''," &
+                        " SourceVersion TEXT NOT NULL DEFAULT '', PRIMARY KEY(ServerKey,AssetId,Canonical))"
+                    cmd.ExecuteNonQuery()
+                End Using
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "CREATE TABLE IF NOT EXISTS AiAssetScan (ServerKey TEXT NOT NULL, AssetId TEXT NOT NULL, SourceVersion TEXT NOT NULL DEFAULT '', ModelKey TEXT NOT NULL DEFAULT '', ModelVersion TEXT NOT NULL DEFAULT '', PRIMARY KEY(ServerKey,AssetId))"
+                    cmd.ExecuteNonQuery()
+                End Using
                 EnsureColumn(conn, "AssetMeta", "FileCreatedAt", "TEXT")
                 EnsureColumn(conn, "AssetMeta", "FileModifiedAt", "TEXT")
                 EnsureColumn(conn, "AssetMeta", "DateModified", "TEXT")
@@ -456,7 +468,7 @@ Namespace Services
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "DELETE FROM AssetMeta WHERE ServerKey=$s AND AssetId=$a"
+                        cmd.CommandText = "DELETE FROM AssetMeta WHERE ServerKey=$s AND AssetId=$a; DELETE FROM AiAssetTag WHERE ServerKey=$s AND AssetId=$a; DELETE FROM AiAssetScan WHERE ServerKey=$s AND AssetId=$a"
                         cmd.Parameters.AddWithValue("$s", serverKey)
                         cmd.Parameters.AddWithValue("$a", assetId)
                         cmd.ExecuteNonQuery()
@@ -466,6 +478,124 @@ Namespace Services
                 DiagnosticLogService.LogException("ImmichIndex.Remove", ex)
             End Try
         End Sub
+
+        Public Function GetAiTags(serverKey As String, assetId As String) As List(Of AiImageTag)
+            Dim result As New List(Of AiImageTag)()
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(assetId) Then Return result
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Canonical,Score,ModelKey,ModelVersion FROM AiAssetTag WHERE ServerKey=$s AND AssetId=$a ORDER BY Score DESC,Canonical"
+                        cmd.Parameters.AddWithValue("$s", serverKey)
+                        cmd.Parameters.AddWithValue("$a", assetId)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                result.Add(New AiImageTag With {.Canonical = reader.GetString(0), .Score = CSng(reader.GetDouble(1)),
+                                                               .ModelKey = reader.GetString(2), .ModelVersion = reader.GetString(3)})
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.GetAiTags", ex)
+            End Try
+            Return result
+        End Function
+
+        Public Function GetAiTagCounts() As List(Of (Canonical As String, Count As Integer))
+            Dim result As New List(Of (Canonical As String, Count As Integer))()
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Canonical,COUNT(DISTINCT AssetId) FROM AiAssetTag WHERE ServerKey=$s GROUP BY Canonical"
+                        cmd.Parameters.AddWithValue("$s", ImmichService.ServerKey)
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read() : result.Add((reader.GetString(0), reader.GetInt32(1))) : End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.KIStichwortZahlen", ex)
+            End Try
+            Return result
+        End Function
+
+        Public Function GetAssetUpdatedAt(serverKey As String, assetId As String) As String
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(assetId) Then Return ""
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT UpdatedAt FROM AssetList WHERE ServerKey=$s AND AssetId=$a LIMIT 1"
+                        cmd.Parameters.AddWithValue("$s", serverKey) : cmd.Parameters.AddWithValue("$a", assetId)
+                        Dim value = cmd.ExecuteScalar()
+                        Return If(value Is Nothing OrElse value Is DBNull.Value, "", Convert.ToString(value, CultureInfo.InvariantCulture))
+                    End Using
+                End Using
+            Catch
+                Return ""
+            End Try
+        End Function
+
+        Public Sub ReplaceAiTags(serverKey As String, assetId As String, sourceVersion As String, tags As IEnumerable(Of AiImageTag))
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(assetId) Then Return
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        Using deleteCmd = conn.CreateCommand()
+                            deleteCmd.Transaction = tx
+                            deleteCmd.CommandText = "DELETE FROM AiAssetTag WHERE ServerKey=$s AND AssetId=$a"
+                            deleteCmd.Parameters.AddWithValue("$s", serverKey)
+                            deleteCmd.Parameters.AddWithValue("$a", assetId)
+                            deleteCmd.ExecuteNonQuery()
+                        End Using
+                        For Each tag In If(tags, Enumerable.Empty(Of AiImageTag)()).Where(Function(t) t IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(t.Canonical))
+                            Using insert = conn.CreateCommand()
+                                insert.Transaction = tx
+                                insert.CommandText = "INSERT INTO AiAssetTag(ServerKey,AssetId,Canonical,Score,ModelKey,ModelVersion,SourceVersion) VALUES($s,$a,$c,$score,$k,$v,$source)"
+                                insert.Parameters.AddWithValue("$s", serverKey) : insert.Parameters.AddWithValue("$a", assetId)
+                                insert.Parameters.AddWithValue("$c", tag.Canonical.Trim()) : insert.Parameters.AddWithValue("$score", tag.Score)
+                                insert.Parameters.AddWithValue("$k", If(tag.ModelKey, "")) : insert.Parameters.AddWithValue("$v", If(tag.ModelVersion, ""))
+                                insert.Parameters.AddWithValue("$source", If(sourceVersion, ""))
+                                insert.ExecuteNonQuery()
+                            End Using
+                        Next
+                        Using scan = conn.CreateCommand()
+                            scan.Transaction = tx
+                            scan.CommandText = "INSERT INTO AiAssetScan(ServerKey,AssetId,SourceVersion,ModelKey,ModelVersion) VALUES($s,$a,$source,$k,$v) ON CONFLICT(ServerKey,AssetId) DO UPDATE SET SourceVersion=$source,ModelKey=$k,ModelVersion=$v"
+                            scan.Parameters.AddWithValue("$s", serverKey) : scan.Parameters.AddWithValue("$a", assetId)
+                            scan.Parameters.AddWithValue("$source", If(sourceVersion, ""))
+                            scan.Parameters.AddWithValue("$k", ImageTaggingService.ModelKey) : scan.Parameters.AddWithValue("$v", ImageTaggingService.AnalysisVersion)
+                            scan.ExecuteNonQuery()
+                        End Using
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImmichIndex.ReplaceAiTags", ex)
+            End Try
+        End Sub
+
+        Public Function AiTagsNeedRefresh(serverKey As String, assetId As String, sourceVersion As String) As Boolean
+            If String.IsNullOrWhiteSpace(serverKey) OrElse String.IsNullOrWhiteSpace(assetId) Then Return False
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT SourceVersion,ModelKey,ModelVersion FROM AiAssetScan WHERE ServerKey=$s AND AssetId=$a"
+                        cmd.Parameters.AddWithValue("$s", serverKey) : cmd.Parameters.AddWithValue("$a", assetId)
+                        Using r = cmd.ExecuteReader()
+                            Return Not r.Read() OrElse Not String.Equals(If(r.IsDBNull(0), "", r.GetString(0)), If(sourceVersion, ""), StringComparison.Ordinal) OrElse Not String.Equals(If(r.IsDBNull(1), "", r.GetString(1)), ImageTaggingService.ModelKey, StringComparison.Ordinal) OrElse Not String.Equals(If(r.IsDBNull(2), "", r.GetString(2)), ImageTaggingService.AnalysisVersion, StringComparison.Ordinal)
+                        End Using
+                    End Using
+                End Using
+            Catch
+                Return True
+            End Try
+        End Function
 
         ''' <summary>Anzahl gecachter Einträge und ungefähre Dateigröße der Index-DB (für die Einstellungen).</summary>
         Public Function GetInfo() As (Count As Integer, SizeBytes As Long)
@@ -496,7 +626,7 @@ Namespace Services
                         removed = Convert.ToInt32(countCmd.ExecuteScalar())
                     End Using
                     Using cmd = conn.CreateCommand()
-                        cmd.CommandText = "DELETE FROM AssetMeta"
+                        cmd.CommandText = "DELETE FROM AssetMeta; DELETE FROM AiAssetTag; DELETE FROM AiAssetScan"
                         cmd.ExecuteNonQuery()
                     End Using
                     Using vac = conn.CreateCommand()

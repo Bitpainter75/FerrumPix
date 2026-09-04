@@ -250,6 +250,24 @@ Namespace ViewModels
                 children.Add(FooterMenuCatalog.Divider())
                 AddIfOffered(children, commands.SetCopyright, FooterMenuCatalog.SetCopyright(commands.SetCopyright))
                 AddIfOffered(children, commands.SetCaptureDate, FooterMenuCatalog.SetCaptureDate(commands.SetCaptureDate))
+
+                ' Eine bewusste Neu-Analyse ersetzt nur unsere Katalogtags; sie braucht weder die
+                ' aktivierte Katalog-Automatik noch Schreibzugriff auf XMP. Der Eintrag steht bei
+                ' den übrigen Aufnahmeangaben, weil das Ergebnis optional als XMP-Metadatum
+                ' zurückgeschrieben wird.
+                If ImageTaggingService.Available Then
+                    children.Add(FooterMenuCatalog.Divider())
+                    AddIfOffered(children, commands.ReanalyzeAiTags,
+                                 FooterMenuCatalog.ReanalyzeAiTags(commands.ReanalyzeAiTags))
+                End If
+            End If
+
+            ' Auch reine Serverauswahlen haben eine bewusste Neu-Analyse. Sie schreibt nur in den
+            ' lokalen Serverindex; XMP ist dafür weder Voraussetzung noch Nebenwirkung.
+            If imageBatch AndAlso localImages.Count = 0 AndAlso ImageTaggingService.Available Then
+                If children.Count > 0 Then children.Add(FooterMenuCatalog.Divider())
+                AddIfOffered(children, commands.ReanalyzeAiTags,
+                             FooterMenuCatalog.ReanalyzeAiTags(commands.ReanalyzeAiTags))
             End If
 
             ' Metadaten entfernen schreibt die DATEI neu. Ein Serverbild hat keine, die wir
