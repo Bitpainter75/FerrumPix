@@ -383,6 +383,38 @@ Namespace Services
             Return (treffer / total + treffer2 / gesamt2) / 2.0
         End Function
 
+        ''' <summary>Objektivhersteller, die KEINE Kameras zu diesem Bajonett bauen und deren Namen
+        ''' die Kamera deshalb ins EXIF schreibt, wenn sie sie liest.</summary>
+        Private Shared ReadOnly _fremdhersteller As String() =
+            {"sigma", "tamron", "tokina", "samyang", "voigtlander", "zeiss", "laowa",
+             "meike", "viltrox", "yongnuo", "irix", "lensbaby"}
+
+        ''' <summary>Sperrt einen Kandidaten, der den Namen eines FREMDEN Objektivherstellers traegt,
+        ''' den der gesuchte Name nicht nennt.
+        '''
+        ''' Der Grund ist gemessen: Bestandteile mit Ziffern zaehlen dreifach, und damit reichen
+        ''' gleiche Brennweite und Lichtstaerke aus, um ueber die Schwelle zu kommen. Ein Sony
+        ''' "FE 24-70mm F2.8 GM" gewann so an einer Canon gegen "Sigma 24-70mm F2.8 DG OS HSM" -
+        ''' ein anderes Objektiv, dessen Kennlinie das Bild sichtbar verbogen haette. Der Anschluss
+        ''' faengt das nicht ab, weil dieses Sigma per Adapter zulaessig IST.
+        '''
+        ''' Traegt die Kamera denselben Namen (ein Sigma-Objektiv an einer Sigma-Kamera), greift die
+        ''' Sperre nicht. Gemessen ueber vier Kameras und 1476 Kandidaten kostet sie KEINEN einzigen
+        ''' richtigen Treffer; sie nimmt nur falsche weg.</summary>
+        Private Shared Function FremdherstellerPasst(gesucht As String, kandidat As String,
+                                                     camera As CameraEntry) As Boolean
+            Dim tk = NormalizedForName(kandidat).Split(" "c)
+            If tk.Length = 0 Then Return True
+            Dim tg = NormalizedForName(gesucht).Split(" "c)
+            Dim kameraMarke = NormalizedForName(If(camera Is Nothing, "", camera.Maker))
+            For Each marke In _fremdhersteller
+                If Not tk.Contains(marke) Then Continue For
+                If marke = kameraMarke Then Continue For
+                If Not tg.Contains(marke) Then Return False
+            Next
+            Return True
+        End Function
+
         ''' <summary>Unterhalb dieser Aehnlichkeit gilt ein Objektiv als NICHT gefunden. Lieber gar
         ''' keine Korrektur als die eines anderen Objektivs: eine falsche Kennlinie verbiegt das Bild
         ''' sichtbar, eine fehlende laesst es wie bisher.</summary>
@@ -732,6 +764,7 @@ Namespace Services
                 If Not PasstAnschluss(o, camera) Then Continue For
                 Dim g As Double = 0
                 For Each n In o.Namen
+                    If Not FremdherstellerPasst(objektivName, n, camera) Then Continue For
                     g = Math.Max(g, Similarity(objektivName, n))
                 Next
                 If g <= 0 Then Continue For

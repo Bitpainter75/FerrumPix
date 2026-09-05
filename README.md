@@ -17,7 +17,7 @@ Project website: [FerrumPix.app](https://ferrumpix.app/)
 - Browse local photo folders with fast thumbnails, ratings, favourites, keywords and saved searches.
 - View photos and videos fullscreen, compare two side by side, and check metadata and histogram.
 - Edit: crop, resize, rotate and distort, exposure and colour, curves, filters, masks, retouching, text and shapes, layers.
-- Develop RAW files from the sensor data, with lens correction from measured data for some 1300 lenses.
+- Develop RAW files from the sensor data, with lens correction from measured data for some 1550 lenses.
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
 - Open JPEG, PNG, WEBP, BMP, GIF and RAW, plus HEIC/HEIF/AVIF and TIFF read-only, and Photoshop files with their layers.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine.
@@ -90,7 +90,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 RAW files are developed from the actual sensor data: a photo keeps the exposure it was taken with, colours land close to what other raw developers show, and coloured speckle is cleaned up along the way.
 
-Lens defects are corrected from measured data covering some 1300 lenses: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed.
+Lens defects are corrected from measured data covering some 1550 lenses: distortion, coloured fringes and the darkening towards the edges. Lens and camera are recognised from the shot data, and where there is nothing for your lens, nothing is changed.
 
 Save a RAW and your edits go into a small sidecar next to it; the RAW itself is never modified, and opening the photo again brings the edits back. Save it as a JPEG or a PNG instead and you get that one file, with the edits baked in and no sidecar. A Lightroom sidecar with develop settings is converted once, so a photo edited elsewhere opens the way you left it.
 
