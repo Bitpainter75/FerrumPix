@@ -8164,4 +8164,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Son deneme</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Ekran başına uygulama ölçeği</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Bir sonraki başlatmada tüm arayüzü ölçekler. Her ekranın kendi değeri vardır, böylece ince ve kaba bir ekran yan yana ikisi de doğru görünür.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>Bağlı değil: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Bir sonraki başlatmada tüm arayüzü ölçekler. Her ekran kendi değerini alır, böylece arayüz yüksek çözünürlüklü bir ekranda yanındakinden daha küçük kalmaz.</value>
+  </data>
 </root>

@@ -614,70 +614,46 @@
                         </StackPanel>
 
                         <!-- Anwendungsskalierung wirkt nur auf Avalonias X11-Backend, siehe
-                             IsApplicationScaleSupported - unter Windows skaliert das OS selbst. -->
+                             IsApplicationScaleSupported - unter Windows und macOS skaliert das
+                             System selbst pro Monitor. Eine Zeile je Bildschirm: Avalonia nimmt
+                             mehrere Faktoren entgegen und ordnet sie ueber den Anzeigenamen zu. -->
                         <StackPanel Spacing="14" IsVisible="{Binding IsApplicationScaleSupported}">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Anwendungsskalierung" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Skaliert die komplette Oberfläche beim nächsten Start." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                    <icons:RoundSlider Width="150"
-                                                       Minimum="100"
-                                                       Maximum="250"
-                                                       DefaultValue="100"
-                                                       Value="{Binding ApplicationScalePercent}"/>
-                                    <TextBlock Text="{Binding ApplicationScaleText}"
-                                               Foreground="{DynamicResource FP.Text.Secondary}"
-                                               FontSize="{DynamicResource FP.Font.Body}"
-                                               Width="42"
-                                               TextAlignment="Right"
-                                               VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Grid>
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Anwendungsskalierung je Bildschirm" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Skaliert die komplette Oberfläche beim nächsten Start. Jeder Bildschirm bekommt seinen eigenen Wert, damit die Oberfläche auf einem hochauflösenden Bildschirm nicht kleiner ausfällt als auf dem daneben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ApplicationScaleScreenStatusText}"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
 
-                            <Grid ColumnDefinitions="*,220">
-                                <StackPanel Spacing="2">
-                                    <TextBlock Text="Bildschirm für Skalierung" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Legt fest, auf welchem Bildschirm die gewählte Skalierung angewendet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                                </StackPanel>
-                                <Button Grid.Column="1"
-                                        x:Name="ScaleScreenDropDownButton"
-                                        Classes="dropdown-btn"
-                                        Width="220"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Stretch">
-                                    <Button.Flyout>
-                                        <Flyout Opened="OnLocalizedFlyoutOpened" Placement="BottomEdgeAlignedLeft" VerticalOffset="2">
-                                            <ItemsControl ItemsSource="{Binding ApplicationScaleScreens}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Button Classes="dropdown-item"
-                                                                MinWidth="220"
-                                                                HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Stretch"
-                                                                Padding="10,8"
-                                                                Click="OnScaleScreenOptionClick">
-                                                            <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                                                        </Button>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="{Binding ApplicationScaleScreen}"
-                                                   VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <icons:SvgIcon Grid.Column="1"
-                                                       Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
-                                                       Width="16"
-                                                       Height="16"
-                                                       Margin="10,0,0,0"
-                                                       VerticalAlignment="Center"/>
-                                    </Grid>
-                                </Button>
-                            </Grid>
+                            <ItemsControl ItemsSource="{Binding ApplicationScaleItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                                            <TextBlock Text="{Binding ScreenName}"
+                                                       Classes="no-translate"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                <icons:RoundSlider Width="150"
+                                                                   Minimum="100"
+                                                                   Maximum="250"
+                                                                   DefaultValue="100"
+                                                                   Value="{Binding ScalePercent, Mode=TwoWay}"/>
+                                                <TextBlock Text="{Binding ScaleText}"
+                                                           Classes="no-translate"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                                           FontSize="{DynamicResource FP.Font.Body}"
+                                                           Width="42"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
                             <TextBlock Text="Änderung wird nach einem Neustart aktiv."
                                        Foreground="{DynamicResource FP.Accent}"

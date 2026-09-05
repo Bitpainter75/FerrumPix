@@ -8120,4 +8120,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Letzter Versuch</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Anwendungsskalierung je Bildschirm</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Skaliert die komplette Oberfläche beim nächsten Start. Jeder Bildschirm hat seinen eigenen Wert, damit ein feiner und ein grober Bildschirm nebeneinander beide passen.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>Nicht angeschlossen: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Skaliert die komplette Oberfläche beim nächsten Start. Jeder Bildschirm bekommt seinen eigenen Wert, damit die Oberfläche auf einem hochauflösenden Bildschirm nicht kleiner ausfällt als auf dem daneben.</value>
+  </data>
 </root>

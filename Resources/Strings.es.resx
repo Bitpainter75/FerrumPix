@@ -8120,4 +8120,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Último intento</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Escala de la aplicación por pantalla</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Escala toda la interfaz en el siguiente inicio. Cada pantalla tiene su propio valor, de modo que una pantalla fina y una gruesa, una al lado de la otra, queden bien las dos.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>No conectada: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Escala toda la interfaz en el siguiente inicio. Cada pantalla recibe su propio valor, de modo que la interfaz no quede más pequeña en una pantalla de alta resolución que en la de al lado.</value>
+  </data>
 </root>

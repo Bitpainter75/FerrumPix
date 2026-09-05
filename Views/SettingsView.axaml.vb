@@ -35,8 +35,6 @@ Namespace Views
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             AddHandler Me.AttachedToVisualTree, AddressOf OnAttachedFocus
-            ' Ausklappliste nie schmaler als der Knopf (siehe FlyoutHelpers).
-            MatchFlyoutWidthToButton(Me.FindControl(Of Button)("ScaleScreenDropDownButton"))
             AddHandler Loaded, AddressOf HandleLoaded
         End Sub
 
@@ -54,18 +52,6 @@ Namespace Views
             End If
             vm?.RefreshApplicationScaleScreens(screens)
 
-        End Sub
-
-        Private Sub OnScaleScreenOptionClick(sender As Object, e As RoutedEventArgs)
-            Dim button = TryCast(sender, Button)
-            Dim vm = TryCast(DataContext, SettingsViewModel)
-            If button Is Nothing OrElse vm Is Nothing Then Return
-            Dim selected = TryCast(button.DataContext, String)
-            If Not String.IsNullOrEmpty(selected) Then
-                vm.ApplicationScaleScreen = selected
-            End If
-            FlyoutHelpers.CloseContainingFlyout(button)
-            e.Handled = True
         End Sub
 
         Private Async Sub OnBrowseGalleryStartupFolderClick(sender As Object, e As RoutedEventArgs)

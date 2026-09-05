@@ -8164,4 +8164,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>पिछला प्रयास</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>प्रति स्क्रीन एप्लिकेशन स्केलिंग</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>अगली बार शुरू करने पर पूरे इंटरफ़ेस का आकार बदलता है। हर स्क्रीन का अपना मान होता है, ताकि पास-पास रखी बारीक और मोटी स्क्रीन दोनों सही दिखें।</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>जुड़ा नहीं: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>अगली बार शुरू करने पर पूरे इंटरफ़ेस का आकार बदलता है। हर स्क्रीन को अपना मान मिलता है, ताकि उच्च रिज़ॉल्यूशन वाली स्क्रीन पर इंटरफ़ेस बगल वाली स्क्रीन से छोटा न पड़े।</value>
+  </data>
 </root>

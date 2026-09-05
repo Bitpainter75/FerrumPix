@@ -8164,4 +8164,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>마지막 시도</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>화면별 응용 프로그램 배율</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>다음 시작 때 전체 화면을 확대하거나 축소합니다. 화면마다 값이 따로 있어 정밀한 화면과 거친 화면을 나란히 두어도 둘 다 알맞게 보입니다.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>연결되지 않음: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>다음 시작 때 전체 화면을 확대하거나 축소합니다. 화면마다 값을 따로 두어 고해상도 화면에서 옆 화면보다 작게 보이지 않습니다.</value>
+  </data>
 </root>

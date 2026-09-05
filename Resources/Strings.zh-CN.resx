@@ -8118,4 +8118,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>上次尝试</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>按显示器设置界面缩放</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>下次启动时缩放整个界面。每台显示器都有各自的数值，这样精细和粗糙的两台显示器并排使用时都合适。</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>未连接：{0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>下次启动时缩放整个界面。每台显示器都有各自的数值，这样界面在高分辨率显示器上不会比旁边那台显得更小。</value>
+  </data>
 </root>

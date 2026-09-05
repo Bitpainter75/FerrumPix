@@ -81,6 +81,14 @@ Namespace Services
         Public Property Modell As String = ""
     End Class
 
+    ''' <summary>Ein Skalierungsfaktor fuer EINEN Bildschirm. Der Name ist der Anzeigename, unter
+    ''' dem der Bildschirm auch in der Liste der Einstellungen steht - Avalonia vergleicht genau
+    ''' diesen, wenn es die Faktoren aus der Umgebung liest.</summary>
+    Public Class ScreenScaleSetting
+        Public Property ScreenName As String = ""
+        Public Property Scale As Double = 1.0
+    End Class
+
     Public Class XmpPresetSettings
         Implements INotifyPropertyChanged
 
@@ -389,8 +397,18 @@ Namespace Services
         Public Property GalleryInfoSidebarExpanded As Boolean = False
         ''' Ganzzahliger Versatz auf alle Text-Schriftgrößen (siehe FontScaleService). 0 = Auslieferung.
         Public Property FontSizeOffset As Integer = 0
+        ''' <summary>Die alte Fassung: EIN Faktor fuer EINEN Bildschirm. Bleibt stehen, weil eine
+        ''' vorhandene Einstellung sonst beim ersten Start verschwaende - beim Laden wandert sie
+        ''' nach <see cref="ApplicationScaleFactors"/> und wird danach nicht mehr gelesen.</summary>
         Public Property ApplicationScale As Double = 1.0
         Public Property ApplicationScaleScreen As String = "HDMI-A-1"
+
+        ''' <summary>Ein Faktor je Bildschirm. Avalonias X11-Weg sieht genau das vor: die Variable
+        ''' AVALONIA_SCREEN_SCALE_FACTORS nimmt mehrere Paare, durch Semikolon getrennt, und
+        ''' vergleicht den Namen mit dem Anzeigenamen des Bildschirms - demselben, den die
+        ''' Einstellungen auflisten. Wer zwei Bildschirme mit verschiedener Punktdichte hat, brauchte
+        ''' bisher einen Kompromiss fuer beide.</summary>
+        Public Property ApplicationScaleFactors As New List(Of ScreenScaleSetting)()
         Public Property MainWindowLeft As Integer = -1
         Public Property MainWindowTop As Integer = -1
         Public Property MainWindowWidth As Double = 1536
@@ -762,6 +780,7 @@ Namespace Services
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
                 settings.ApplicationScaleScreen = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen)
+                settings.ApplicationScaleFactors = NormalizeScreenScaleFactors(settings)
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
                 settings.CatalogWatchFolders = NormalizeCatalogWatchFolders(settings.CatalogWatchFolders)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
@@ -997,6 +1016,7 @@ Namespace Services
                 settings.FontSizeOffset = NormalizeFontSizeOffset(settings.FontSizeOffset)
                 settings.ApplicationScale = NormalizeApplicationScale(settings.ApplicationScale)
                 settings.ApplicationScaleScreen = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen)
+                settings.ApplicationScaleFactors = NormalizeScreenScaleFactors(settings)
                 settings.SavedSearches = NormalizeSavedSearches(settings.SavedSearches)
                 settings.CatalogWatchFolders = NormalizeCatalogWatchFolders(settings.CatalogWatchFolders)
                 settings.TransparencyBackgroundMode = NormalizeTransparencyBackgroundMode(settings.TransparencyBackgroundMode)
@@ -1324,21 +1344,62 @@ Namespace Services
             Return value.Replace(";"c, "_"c).Replace("="c, "_"c)
         End Function
 
+        ''' <summary>Raeumt die Faktorenliste auf und uebernimmt dabei EINMALIG die alte Einstellung.
+        '''
+        ''' Die Uebernahme greift nur, wenn noch keine Liste da ist und der alte Faktor ueber 1,0
+        ''' stand: sonst haette jemand, der frueher 125 Prozent auf einem Bildschirm eingestellt
+        ''' hatte, beim ersten Start nach der Aenderung wieder die Werksgroesse - ohne zu wissen,
+        ''' warum. Doppelte Namen fallen weg, der erste gewinnt.</summary>
+        Public Shared Function NormalizeScreenScaleFactors(settings As AppSettings) As List(Of ScreenScaleSetting)
+            Dim list = If(settings.ApplicationScaleFactors, New List(Of ScreenScaleSetting)())
+            Dim cleaned = list.
+                Where(Function(f) f IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(f.ScreenName)).
+                GroupBy(Function(f) NormalizeApplicationScaleScreen(f.ScreenName), StringComparer.Ordinal).
+                Select(Function(g) New ScreenScaleSetting With {
+                    .ScreenName = g.Key,
+                    .Scale = NormalizeApplicationScale(g.First().Scale)}).
+                ToList()
+
+            If cleaned.Count = 0 Then
+                Dim old = NormalizeApplicationScale(settings.ApplicationScale)
+                If old > 1.0001 Then
+                    cleaned.Add(New ScreenScaleSetting With {
+                        .ScreenName = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen),
+                        .Scale = old})
+                End If
+            End If
+            Return cleaned
+        End Function
+
+        ''' <summary>Bringt die Faktoren in die Form, die Avalonias X11-Weg erwartet:
+        ''' <c>Name=Faktor</c>, mehrere durch Semikolon getrennt. Bildschirme auf 1,0 bleiben weg -
+        ''' sie sind der Normalfall, und ein leerer Eintrag waere nur Ballast.</summary>
+        Public Shared Function BuildScreenScaleFactors(factors As IEnumerable(Of ScreenScaleSetting)) As String
+            If factors Is Nothing Then Return ""
+            Dim parts = factors.
+                Where(Function(f) f IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(f.ScreenName)).
+                Select(Function(f) New With {
+                    .Name = NormalizeApplicationScaleScreen(f.ScreenName),
+                    .Scale = NormalizeApplicationScale(f.Scale)}).
+                Where(Function(f) f.Scale > 1.0001).
+                GroupBy(Function(f) f.Name, StringComparer.Ordinal).
+                Select(Function(g) $"{g.Key}={g.First().Scale.ToString("0.##", CultureInfo.InvariantCulture)}").
+                ToList()
+            Return String.Join(";", parts)
+        End Function
+
         Public Shared Sub ApplyApplicationScaleEnvironment()
             ' AVALONIA_SCREEN_SCALE_FACTORS wirkt nur auf Avalonias X11-Backend. Unter Windows und
             ' macOS skaliert Avalonia nativ pro Monitor, die Einstellung wäre dort wirkungslos.
             If Not OperatingSystem.IsLinux() Then Return
 
             Dim settings = Load()
-            Dim scale = NormalizeApplicationScale(settings.ApplicationScale)
-            If scale <= 1.0001 Then
-                Environment.SetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS", Nothing)
-                Return
-            End If
-
-            Dim screen = NormalizeApplicationScaleScreen(settings.ApplicationScaleScreen)
-            Dim scaleText = scale.ToString("0.##", CultureInfo.InvariantCulture)
-            Environment.SetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS", $"{screen}={scaleText}")
+            Dim value = BuildScreenScaleFactors(settings.ApplicationScaleFactors)
+            ' Kein Eintrag ueber 1,0: die Variable ganz weglassen statt leer setzen. Eine leere
+            ' Variable ist fuer Avalonia nicht dasselbe wie keine - sie wuerde die eigene Erkennung
+            ' verdraengen und ueberall den Faktor 1 erzwingen.
+            Environment.SetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS",
+                                               If(value.Length > 0, value, Nothing))
         End Sub
 
         ''' <summary>Zeitleiste am rechten Rand: nur noch AN oder AUS.

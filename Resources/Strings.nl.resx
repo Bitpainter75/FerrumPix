@@ -8160,4 +8160,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Laatste poging</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Schaal van de toepassing per scherm</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Schaalt de hele interface bij de volgende start. Elk scherm heeft zijn eigen waarde, zodat een fijn en een grof scherm naast elkaar allebei kloppen.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>Niet aangesloten: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Schaalt de hele interface bij de volgende start. Elk scherm krijgt zijn eigen waarde, zodat de interface op een scherm met hoge resolutie niet kleiner uitvalt dan op het scherm ernaast.</value>
+  </data>
 </root>

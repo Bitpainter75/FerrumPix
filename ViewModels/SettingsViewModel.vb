@@ -1,4 +1,5 @@
 Imports System.Collections.Generic
+Imports System.ComponentModel
 Imports System.Collections.ObjectModel
 Imports System.Threading.Tasks
 Imports System.Globalization
@@ -78,11 +79,10 @@ Namespace ViewModels
         Private _startupNoImageMode As String = "Gallery"
         Private _languageMode As String = "System"
         Private _fontSizeOffset As Integer = 0
-        Private _applicationScale As Double = 1.0
-        Private _applicationScaleScreen As String = "HDMI-A-1"
-        Private _runningApplicationScale As Double = 1.0
-        Private _runningApplicationScaleScreen As String = "HDMI-A-1"
-        Private ReadOnly _applicationScaleScreens As New ObservableCollection(Of String)()
+        ''' <summary>Was beim Start tatsaechlich galt - der rohe Inhalt der Umgebungsvariable.
+        ''' Damit laesst sich sagen, ob eine Aenderung einen Neustart braucht.</summary>
+        Private _runningScaleFactors As String = ""
+        Private ReadOnly _applicationScaleItems As New ObservableCollection(Of ScreenScaleItem)()
         Private _availableVersion As String = ""
         Private _updateCheckDone As Boolean = False
         Private _updateCheckRunning As Boolean = False
@@ -197,8 +197,8 @@ Namespace ViewModels
         Private _savedStartupNoImageMode As String = "Gallery"
         Private _savedLanguageMode As String = "System"
         Private _savedFontSizeOffset As Integer = 0
-        Private _savedApplicationScale As Double = 1.0
-        Private _savedApplicationScaleScreen As String = "HDMI-A-1"
+        ''' <summary>Die Faktoren beim Oeffnen des Dialogs - fuer Abbrechen.</summary>
+        Private _savedScaleFactors As New List(Of ScreenScaleSetting)()
         Private _savedVideoHardwareAcceleration As Boolean = False
         ' Ohne Merker fuer das Abbrechen: diese Schalter werden beim Umlegen sofort geschrieben und
         ' vom Abbrechen bewusst nicht mehr zurueckgedreht (siehe RestoreSnapshot).
@@ -881,7 +881,7 @@ Namespace ViewModels
 
         ''' <summary>Verschiebt alle Text-Schriftgrößen der Oberfläche um ganze Stufen. Wirkt sofort und
         ''' ohne Neustart, weil FontScaleService die FP.Font.*-Ressourcen zur Laufzeit austauscht - anders
-        ''' als ApplicationScalePercent, das die gesamte Oberfläche skaliert und ein X11-Backend sowie
+        ''' als die Anwendungsskalierung je Bildschirm, die die gesamte Oberfläche skaliert und ein X11-Backend sowie
         ''' einen Neustart braucht.</summary>
         Public Property FontSizeOffset As Integer
             Get
@@ -987,38 +987,14 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public Property ApplicationScalePercent As Double
+        ''' <summary>Ein Eintrag je Bildschirm, jeder mit eigenem Regler.
+        '''
+        ''' Vorher gab es EINEN Faktor und daneben die Auswahl, fuer welchen Bildschirm er gelten
+        ''' soll. Wer zwei Bildschirme mit verschiedener Punktdichte hatte, musste sich fuer einen
+        ''' entscheiden; auf dem anderen war die Oberflaeche dann zu klein oder zu gross.</summary>
+        Public ReadOnly Property ApplicationScaleItems As ObservableCollection(Of ScreenScaleItem)
             Get
-                Return _applicationScale * 100.0
-            End Get
-            Set(value As Double)
-                Dim scale = AppSettingsService.NormalizeApplicationScale(value / 100.0)
-                If Math.Abs(_applicationScale - scale) < 0.001 Then Return
-                Me.RaiseAndSetIfChanged(_applicationScale, scale)
-                Me.RaisePropertyChanged(NameOf(ApplicationScaleText))
-                Me.RaisePropertyChanged(NameOf(IsApplicationScaleRestartRequired))
-                SaveApplicationScaleSettings()
-            End Set
-        End Property
-
-        Public Property ApplicationScaleScreen As String
-            Get
-                Return _applicationScaleScreen
-            End Get
-            Set(value As String)
-                value = AppSettingsService.NormalizeApplicationScaleScreen(value)
-                If _applicationScaleScreen = value Then Return
-                Me.RaiseAndSetIfChanged(_applicationScaleScreen, value)
-                Me.RaisePropertyChanged(NameOf(IsApplicationScaleRestartRequired))
-                Me.RaisePropertyChanged(NameOf(IsApplicationScaleScreenKnown))
-                Me.RaisePropertyChanged(NameOf(ApplicationScaleScreenStatusText))
-                SaveApplicationScaleSettings()
-            End Set
-        End Property
-
-        Public ReadOnly Property ApplicationScaleScreens As ObservableCollection(Of String)
-            Get
-                Return _applicationScaleScreens
+                Return _applicationScaleItems
             End Get
         End Property
 
@@ -1031,39 +1007,33 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property ApplicationScaleText As String
-            Get
-                Return $"{CInt(Math.Round(_applicationScale * 100.0))}%"
-            End Get
-        End Property
-
-        Public ReadOnly Property IsApplicationScaleScreenKnown As Boolean
-            Get
-                Return _applicationScaleScreens IsNot Nothing AndAlso
-                       _applicationScaleScreens.Contains(_applicationScaleScreen)
-            End Get
-        End Property
-
         Public ReadOnly Property ApplicationScaleScreenStatusText As String
             Get
-                If _applicationScaleScreens Is Nothing OrElse _applicationScaleScreens.Count = 0 Then
+                If _applicationScaleItems Is Nothing OrElse _applicationScaleItems.Count = 0 Then
                     Return LocalizationService.T("Keine Bildschirme erkannt.")
                 End If
-
-                If IsApplicationScaleScreenKnown Then
-                    Return String.Format(LocalizationService.T("Verfügbar: {0}"), _applicationScaleScreen)
-                End If
-
-                Return String.Format(LocalizationService.T("Der gespeicherte Bildschirm '{0}' wurde nicht gefunden."), _applicationScaleScreen)
+                Dim missing = _applicationScaleItems.Where(Function(i) Not i.IsConnected).ToList()
+                If missing.Count = 0 Then Return ""
+                Return String.Format(LocalizationService.T("Nicht angeschlossen: {0}"),
+                                     String.Join(", ", missing.Select(Function(i) i.ScreenName)))
             End Get
         End Property
 
+        ''' <summary>Vergleicht, was die Einstellung ERGEBEN wuerde, mit dem, was beim Start
+        ''' tatsaechlich galt. Frueher wurden Faktor und Bildschirmname einzeln verglichen; mit
+        ''' mehreren Bildschirmen ist die fertige Zeichenkette der ehrlichere Massstab - sie ist
+        ''' genau das, was Avalonia beim naechsten Start liest.</summary>
         Public ReadOnly Property IsApplicationScaleRestartRequired As Boolean
             Get
-                Return Math.Abs(_applicationScale - _runningApplicationScale) > 0.001 OrElse
-                       Not String.Equals(_applicationScaleScreen, _runningApplicationScaleScreen, StringComparison.Ordinal)
+                Return Not String.Equals(CurrentScaleFactors(), _runningScaleFactors, StringComparison.Ordinal)
             End Get
         End Property
+
+        Private Function CurrentScaleFactors() As String
+            Return AppSettingsService.BuildScreenScaleFactors(
+                _applicationScaleItems.Select(Function(i) New ScreenScaleSetting With {
+                    .ScreenName = i.ScreenName, .Scale = i.Scale}))
+        End Function
 
         ' Fuer die Sprache gibt es KEINE Eigenschaft je Sprache mehr. Die Auswahl haengt an
         ' LanguageOptions; eine solche Liste haette bei jeder neuen Sprache ergaenzt werden
@@ -3219,9 +3189,7 @@ Namespace ViewModels
             _startupNoImageMode = _appSettings.StartupNoImageMode
             _languageMode = _appSettings.LanguageMode
             _fontSizeOffset = AppSettingsService.NormalizeFontSizeOffset(_appSettings.FontSizeOffset)
-            _applicationScale = _appSettings.ApplicationScale
-            _applicationScaleScreen = _appSettings.ApplicationScaleScreen
-            ParseRunningApplicationScale(_runningApplicationScale, _runningApplicationScaleScreen)
+            _runningScaleFactors = ReadRunningScaleFactors()
             _syncCatalogToXmp = _appSettings.SyncCatalogToXmp
             _createXmpSidecarIfMissing = _appSettings.CreateXmpSidecarIfMissing
             _developRawThumbnails = _appSettings.DevelopRawThumbnails
@@ -3629,8 +3597,9 @@ Namespace ViewModels
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
             _savedTransparencyBackgroundColor = _transparencyBackgroundColor
             _savedFontSizeOffset = _fontSizeOffset
-            _savedApplicationScale = _applicationScale
-            _savedApplicationScaleScreen = _applicationScaleScreen
+            _savedScaleFactors = _applicationScaleItems.
+                Select(Function(i) New ScreenScaleSetting With {
+                    .ScreenName = i.ScreenName, .Scale = i.Scale}).ToList()
         End Sub
 
         Private Sub RestoreSnapshot()
@@ -3715,28 +3684,42 @@ Namespace ViewModels
             TransparencyBackgroundMode = _savedTransparencyBackgroundMode
             TransparencyBackgroundColor = _savedTransparencyBackgroundColor
             FontSizeOffset = _savedFontSizeOffset
-            ApplicationScalePercent = _savedApplicationScale * 100.0
-            ApplicationScaleScreen = _savedApplicationScaleScreen
+            ' Die Skalierung Zeile fuer Zeile zurueck: der Regler jeder Zeile speichert selbst,
+            ' deshalb genuegt es, die Werte zu setzen.
+            For Each item In _applicationScaleItems
+                Dim stored = _savedScaleFactors.FirstOrDefault(
+                    Function(f) String.Equals(f.ScreenName, item.ScreenName, StringComparison.Ordinal))
+                item.ScalePercent = If(stored Is Nothing, 100.0, Math.Round(stored.Scale * 100.0))
+            Next
         End Sub
 
+        ''' <summary>Baut die Liste aus den GERADE angeschlossenen Bildschirmen und den gespeicherten
+        ''' Faktoren. Ein gespeicherter Bildschirm, der nicht angeschlossen ist, bleibt in der Liste
+        ''' und ist als solcher gekennzeichnet: sein Faktor soll beim naechsten Anstecken noch da
+        ''' sein, statt still verloren zu gehen.</summary>
         Public Sub RefreshApplicationScaleScreens(screenNames As IEnumerable(Of String))
-            _applicationScaleScreens.Clear()
-            If screenNames IsNot Nothing Then
-                For Each screenName In screenNames.
-                    Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
-                    Distinct(StringComparer.OrdinalIgnoreCase).
-                    OrderBy(Function(s) s, StringComparer.OrdinalIgnoreCase)
-                    _applicationScaleScreens.Add(screenName)
-                Next
-            End If
+            Dim connected = If(screenNames, Enumerable.Empty(Of String)()).
+                Where(Function(s) Not String.IsNullOrWhiteSpace(s)).
+                Select(Function(s) AppSettingsService.NormalizeApplicationScaleScreen(s)).
+                Distinct(StringComparer.Ordinal).
+                OrderBy(Function(s) s, StringComparer.OrdinalIgnoreCase).
+                ToList()
 
-            If Not String.IsNullOrWhiteSpace(_applicationScaleScreen) AndAlso
-               Not _applicationScaleScreens.Contains(_applicationScaleScreen) Then
-                _applicationScaleScreens.Insert(0, _applicationScaleScreen)
-            End If
+            Dim saved = AppSettingsService.NormalizeScreenScaleFactors(AppSettingsService.Load())
+            Dim names = connected.Concat(saved.Select(Function(f) f.ScreenName)).
+                Distinct(StringComparer.Ordinal).ToList()
 
-            Me.RaisePropertyChanged(NameOf(IsApplicationScaleScreenKnown))
+            _applicationScaleItems.Clear()
+            For Each name In names
+                Dim stored = saved.FirstOrDefault(Function(f) String.Equals(f.ScreenName, name, StringComparison.Ordinal))
+                Dim percent = If(stored Is Nothing, 100.0, Math.Round(stored.Scale * 100.0))
+                _applicationScaleItems.Add(New ScreenScaleItem(name, percent,
+                                                               connected.Contains(name, StringComparer.Ordinal),
+                                                               AddressOf SaveApplicationScaleSettings))
+            Next
+
             Me.RaisePropertyChanged(NameOf(ApplicationScaleScreenStatusText))
+            Me.RaisePropertyChanged(NameOf(IsApplicationScaleRestartRequired))
         End Sub
 
         Private Sub ResetToDefaults()
@@ -3815,8 +3798,10 @@ Namespace ViewModels
             TransparencyBackgroundMode = "Checkerboard"
             TransparencyBackgroundColor = "#FFFFFFFF"
             FontSizeOffset = 0
-            ApplicationScalePercent = 100.0
-            ApplicationScaleScreen = "HDMI-A-1"
+            ' Zuruecksetzen heisst hier: jeder Bildschirm wieder auf 100 Prozent.
+            For Each item In _applicationScaleItems
+                item.ScalePercent = 100.0
+            Next
         End Sub
 
         Private Sub SaveAppearanceSettings()
@@ -3992,10 +3977,12 @@ Namespace ViewModels
         End Sub
 
         Private Sub SaveApplicationScaleSettings()
-            AppSettingsService.Update(Sub(s)
-                                          s.ApplicationScale = _applicationScale
-                                          s.ApplicationScaleScreen = _applicationScaleScreen
-                                      End Sub)
+            Dim factors = _applicationScaleItems.
+                Select(Function(i) New ScreenScaleSetting With {
+                    .ScreenName = i.ScreenName, .Scale = i.Scale}).
+                ToList()
+            AppSettingsService.Update(Sub(s) s.ApplicationScaleFactors = factors)
+            Me.RaisePropertyChanged(NameOf(IsApplicationScaleRestartRequired))
         End Sub
 
         Private Sub SaveStartupSettings()
@@ -4312,25 +4299,26 @@ Namespace ViewModels
             Return $"{mb / 1024.0:N1} GB"
         End Function
 
-        Private Shared Sub ParseRunningApplicationScale(ByRef scale As Double, ByRef screen As String)
-            scale = 1.0
-            screen = "HDMI-A-1"
-
+        ''' <summary>Was beim Start galt. Gelesen wird die Umgebungsvariable und danach durch
+        ''' dieselbe Aufbereitung geschickt wie die Einstellung selbst - sonst verglichen sich
+        ''' "HDMI-A-1=1.25" und "HDMI-A-1=1,25" als verschieden, und die Anwendung verlangte einen
+        ''' Neustart, der nichts aendern wuerde.</summary>
+        Private Shared Function ReadRunningScaleFactors() As String
             Dim value = Environment.GetEnvironmentVariable("AVALONIA_SCREEN_SCALE_FACTORS")
-            If String.IsNullOrWhiteSpace(value) Then Return
+            If String.IsNullOrWhiteSpace(value) Then Return ""
 
-            Dim firstEntry = value.Split(";"c).FirstOrDefault()
-            If String.IsNullOrWhiteSpace(firstEntry) Then Return
-
-            Dim parts = firstEntry.Split({"="c}, 2)
-            If parts.Length <> 2 Then Return
-
-            screen = AppSettingsService.NormalizeApplicationScaleScreen(parts(0))
-            Dim parsed As Double
-            If Double.TryParse(parts(1), NumberStyles.Float, CultureInfo.InvariantCulture, parsed) Then
-                scale = AppSettingsService.NormalizeApplicationScale(parsed)
-            End If
-        End Sub
+            Dim parsed As New List(Of ScreenScaleSetting)()
+            For Each entry In value.Split(";"c)
+                If String.IsNullOrWhiteSpace(entry) Then Continue For
+                Dim parts = entry.Split({"="c}, 2)
+                If parts.Length <> 2 Then Continue For
+                Dim scale As Double
+                If Not Double.TryParse(parts(1), NumberStyles.Float, CultureInfo.InvariantCulture, scale) Then Continue For
+                parsed.Add(New ScreenScaleSetting With {
+                    .ScreenName = parts(0), .Scale = scale})
+            Next
+            Return AppSettingsService.BuildScreenScaleFactors(parsed)
+        End Function
 
         Private Sub RaiseStartupImageModeProperties()
             Me.RaisePropertyChanged(NameOf(IsStartupGalleryMode))
@@ -4904,6 +4892,61 @@ Namespace ViewModels
         Public Overrides Function ToString() As String
             Return Name
         End Function
+    End Class
+
+    ''' <summary>Ein Bildschirm mit seinem Skalierungsfaktor - eine Zeile in den Einstellungen.
+    '''
+    ''' Eigene Klasse mit eigener Benachrichtigung, weil die Zeilen aus einer Liste kommen: ein
+    ''' Regler je Bildschirm, und jeder muss seinen Wert selbst melden. Gespeichert wird ueber den
+    ''' Rueckruf, damit das ViewModel entscheidet, WIE gespeichert wird, und die Zeile nur weiss,
+    ''' DASS sich etwas geaendert hat.</summary>
+    Public Class ScreenScaleItem
+        Implements INotifyPropertyChanged
+
+        Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+
+        Private ReadOnly _onChanged As Action
+        Private _scalePercent As Double = 100
+
+        Public Sub New(screenName As String, scalePercent As Double, connected As Boolean, onChanged As Action)
+            Me.ScreenName = screenName
+            _scalePercent = scalePercent
+            Me.IsConnected = connected
+            _onChanged = onChanged
+        End Sub
+
+        Public ReadOnly Property ScreenName As String
+
+        ''' <summary>Ob dieser Bildschirm gerade angeschlossen ist. Ein gespeicherter Faktor fuer
+        ''' einen abgezogenen Bildschirm bleibt sichtbar statt zu verschwinden - sonst waere er
+        ''' beim naechsten Anstecken weg, ohne dass jemand ihn geloescht haette.</summary>
+        Public ReadOnly Property IsConnected As Boolean
+
+        Public Property ScalePercent As Double
+            Get
+                Return _scalePercent
+            End Get
+            Set(value As Double)
+                Dim rounded = Math.Round(Math.Max(100, Math.Min(250, value)))
+                If Math.Abs(_scalePercent - rounded) < 0.001 Then Return
+                _scalePercent = rounded
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(ScalePercent)))
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(ScaleText)))
+                _onChanged?.Invoke()
+            End Set
+        End Property
+
+        Public ReadOnly Property ScaleText As String
+            Get
+                Return $"{CInt(Math.Round(_scalePercent))}%"
+            End Get
+        End Property
+
+        Public ReadOnly Property Scale As Double
+            Get
+                Return _scalePercent / 100.0
+            End Get
+        End Property
     End Class
 
     ''' <summary>Ein Demosaic-Verfahren in der Auswahlliste. Der Schluessel wird gespeichert, der

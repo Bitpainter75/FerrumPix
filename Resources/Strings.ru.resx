@@ -8160,4 +8160,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Последняя попытка</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Масштаб приложения для каждого экрана</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Масштабирует весь интерфейс при следующем запуске. У каждого экрана своё значение, чтобы мелкий и крупный экраны рядом друг с другом оба выглядели правильно.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>Не подключён: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Масштабирует весь интерфейс при следующем запуске. У каждого экрана своё значение, чтобы интерфейс не оказался мельче на экране с высоким разрешением, чем на соседнем.</value>
+  </data>
 </root>

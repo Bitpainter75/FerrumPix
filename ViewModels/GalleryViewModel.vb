@@ -5234,8 +5234,20 @@ Namespace ViewModels
         ''' Bedingung wie „Bildhöhe > 500" kann dort niemand beantworten, ohne das Bild zu holen.
         ''' Bei einer Ordnersuche ist das anders - dort liest der Suchlauf notfalls die Datei
         ''' selbst.</summary>
+        ''' <summary>Startet die Serversuche und faengt dabei ALLES ab.
+        '''
+        ''' Ein Async Sub hat keinen Aufrufer, der eine Ausnahme noch sehen koennte: sie landet auf
+        ''' dem Synchronisationskontext und beendet die Anwendung. Der aufgerufene Ablauf hat zwar
+        ''' ein eigenes Try, aber es beginnt erst nach dem Anlegen des Suchlaufs - und ein Server,
+        ''' der beim Ermitteln seines Modus abbricht, wirft davor.</summary>
         Private Async Sub StartServerSearch(node As VirtualNavigationNode)
-            Await StartCachedServerSearchAsync(node)
+            Try
+                Await StartCachedServerSearchAsync(node)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Galerie.Serversuche", ex)
+                StatusText = LocalizationService.T("Die Suche konnte nicht ausgeführt werden.")
+                IsLoading = False
+            End Try
         End Sub
 
         ''' <summary>Filtert den bereits gespeicherten Serverkatalog ohne Netzwerkzugriff.

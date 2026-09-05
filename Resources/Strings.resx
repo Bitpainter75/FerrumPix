@@ -8121,4 +8121,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Last attempt</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Application scaling per display</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Scales the whole interface at the next start. Each display has its own value, so a fine and a coarse display side by side both come out right.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>Not connected: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Scales the whole interface at the next start. Each display gets its own value, so the interface does not end up smaller on a high-resolution display than on the one next to it.</value>
+  </data>
 </root>

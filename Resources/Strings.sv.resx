@@ -8160,4 +8160,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Senaste försöket</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Programskalning per skärm</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Skalar hela gränssnittet vid nästa start. Varje skärm har sitt eget värde, så att en fin och en grov skärm bredvid varandra båda blir rätt.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>Inte ansluten: {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Skalar hela gränssnittet vid nästa start. Varje skärm får sitt eget värde, så att gränssnittet inte blir mindre på en högupplöst skärm än på den bredvid.</value>
+  </data>
 </root>

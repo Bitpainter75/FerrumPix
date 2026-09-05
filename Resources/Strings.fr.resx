@@ -8120,4 +8120,16 @@
   <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
     <value>Dernière tentative</value>
   </data>
+  <data name="Anwendungsskalierung_je_Bildschirm_5d71037e" xml:space="preserve">
+    <value>Mise à l'échelle par écran</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__b5330452" xml:space="preserve">
+    <value>Met à l'échelle toute l'interface au prochain démarrage. Chaque écran a sa propre valeur, afin qu'un écran fin et un écran grossier côte à côte conviennent tous les deux.</value>
+  </data>
+  <data name="Nicht_angeschlossen_0_0f8df1ab" xml:space="preserve">
+    <value>Non connecté : {0}</value>
+  </data>
+  <data name="Skaliert_die_komplette_Oberfl_che_beim_n_chsten__142c773d" xml:space="preserve">
+    <value>Met à l'échelle toute l'interface au prochain démarrage. Chaque écran reçoit sa propre valeur, afin que l'interface ne soit pas plus petite sur un écran haute résolution que sur celui d'à côté.</value>
+  </data>
 </root>

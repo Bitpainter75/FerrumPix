@@ -21,6 +21,12 @@
   depends on the drawing path underneath, so it is off by default, and the settings show what the
   last attempt did. Takes effect after a restart.
 
+- **Application scaling is set per display.** On Linux, where the system does not scale each
+  monitor by itself, every connected display now has its own slider instead of one value plus a
+  choice of which display it applies to, so the interface does not end up smaller on a
+  high-resolution display than on the one next to it. A value for a display that is currently
+  unplugged is kept and marked as such, so it is still there when you plug it back in.
+
 - **Gallery filters survive a folder change.** Rating, favourite, file type and colour label stay as
   you set them while you walk through folders, so a series can be gone through with the same
   selection in view. They still reset when you change source, to Immich, Nextcloud or a search,
