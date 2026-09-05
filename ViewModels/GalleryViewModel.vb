@@ -17,6 +17,9 @@ Namespace ViewModels
 
     Public Class GalleryViewModel
         Inherits ViewModelBase
+        ' Die Gruppenansicht ordnet sich ueber eine eigene virtualisierende Anordnung an
+        ' (Controls.GalleryGroupLayout); sie holt sich die Zeilentabelle ueber diese Schnittstelle.
+        Implements IGalleryGroupRowSource
 
         ''' Betrifft den Brotkrümelpfad, der mit langen Ordnernamen als Erstes in die
         ''' Suchleiste läuft.
@@ -150,6 +153,10 @@ Namespace ViewModels
         Public Property NextcloudTree As ObservableCollection(Of VirtualNavigationNode)
         Public Property Items As BulkObservableCollection(Of ImageItem)
         Public Property DisplayItems As BulkObservableCollection(Of ImageItem)
+        ''' <summary>Die Anzeigereihenfolge der Gruppenansicht: die Elemente aus <see cref="Items"/> mit
+        ''' den Kopfzeilen ihrer Gruppen dazwischen. Daran haengt der Repeater der Gruppenansicht - er
+        ''' virtualisiert selbst, ein Anzeigefenster gibt es dort so wenig wie im Raster.</summary>
+        Public Property GroupEntries As BulkObservableCollection(Of ImageItem)
         Public Property SelectedItems As ObservableCollection(Of ImageItem)
         Public ReadOnly Property CollageFormatOptions As ObservableCollection(Of String) = New ObservableCollection(Of String) From {"JPG", "PNG", "WEBP", "PDF", "FPX"}
 
@@ -323,9 +330,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(ThumbnailImageHeight))
                 Me.RaisePropertyChanged(NameOf(GridItemSlotHeight))
                 Me.RaisePropertyChanged(NameOf(GridColumnPitch))
-                ' Die Kopfzeile der Gruppenansicht ist genau eine Kachelzeile breit. Bleibt die
-                ' Spaltenzahl gleich und aendert sich nur die Kachelgroesse, meldet das sonst niemand.
-                Me.RaisePropertyChanged(NameOf(GroupHeaderWidth))
                 Me.RaisePropertyChanged(NameOf(TileHasRoomForDetails))
                 AppSettingsService.SaveGalleryThumbnailSize(value)
             End Set
@@ -1211,10 +1215,11 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsGroupDateStepVisible))
                 AppSettingsService.SaveGalleryViewMode(value)
                 _mainVm?.Settings?.SyncGalleryViewMode(value)
-                ' Das Anzeigefenster zaehlt in der Gruppenansicht Layout-Eintraege (Kopfzeilen
-                ' eingerechnet), in den anderen beiden Bilder. Ohne diesen Neuaufbau stuenden nach dem
-                ' Umschalten die Grenzen der alten Zaehlung im Fenster.
+                ' Die Eintragsliste der Gruppenansicht gehoert nur ihr. Beim Hineinwechseln wird sie
+                ' gebaut, beim Hinauswechseln geleert - sonst haelt sie den ganzen Bestand ein zweites
+                ' Mal fest, ohne dass jemand hinsieht.
                 InvalidateGroupLayout()
+                PublishGroupEntries()
                 _displayWindowFirst = -1
                 _displayWindowLast = -1
                 RefreshDisplayWindow()
@@ -1529,20 +1534,17 @@ Namespace ViewModels
         Private _displayWindowFirst As Integer = -1
         Private _displayWindowLast As Integer = -1
 
-        ' Gruppenansicht: die Anzeigereihenfolge einschliesslich der Kopfzeilen, je Eintrag der Index in
-        ' Items (-1 bei einer Kopfzeile), der Rueckweg von Items in diese Liste und die Zeilentabelle.
-        ' In der Gruppenansicht zaehlen _displayWindowFirst/-Last Eintraege dieser Liste, in Raster und
-        ' Liste Elemente aus Items - die Ansichten laufen nie gleichzeitig.
-        Private ReadOnly _groupLayout As New List(Of ImageItem)()
+        ' Gruppenansicht: je Eintrag der Index in Items (-1 bei einer Kopfzeile), der Rueckweg von Items
+        ' in die Eintragsliste und die Zeilentabelle. Die Eintragsliste selbst ist GroupEntries - an ihr
+        ' haengt der Repeater der Ansicht.
         Private ReadOnly _groupLayoutItemIndex As New List(Of Integer)()
-        Private ReadOnly _groupRows As New List(Of GroupLayoutRow)()
+        Private ReadOnly _groupRows As New List(Of GalleryGroupRow)()
         Private _itemToGroupEntry As Integer() = Array.Empty(Of Integer)()
         Private _groupLayoutColumns As Integer = 0
         Private _groupLayoutSlotHeight As Double = 0
         Private _groupContentHeight As Double = 0
         Private _groupEntriesDirty As Boolean = True
-        Private _lastGroupOffsetY As Double = 0
-        Private _lastGroupViewportHeight As Double = 0
+        Private _groupEntryPublishQueued As Boolean = False
 
         Private _topSpacerHeight As Double
         Private _bottomSpacerHeight As Double
@@ -1627,6 +1629,7 @@ Namespace ViewModels
             ' selbst. Der Neuaufbau passiert erst beim naechsten Zeichnen, das Ereignis kostet nichts.
             AddHandler Items.CollectionChanged, Sub(sender As Object, e As Specialized.NotifyCollectionChangedEventArgs) InvalidateGroupLayout()
             DisplayItems = New BulkObservableCollection(Of ImageItem)()
+            GroupEntries = New BulkObservableCollection(Of ImageItem)()
             WatchBackgroundRuns()
             SelectedItems = New ObservableCollection(Of ImageItem)()
             FolderTree = New ObservableCollection(Of FolderNode)()
@@ -8581,11 +8584,11 @@ Namespace ViewModels
         Private Sub RefreshDisplayWindow()
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
 
-            ' DAS RASTER HAT KEIN ANZEIGEFENSTER MEHR. Dort haengt der Repeater direkt an Items und
-            ' virtualisiert selbst (siehe GalleryView.axaml). DisplayItems bleibt hier leer - es zu
-            ' fuellen kostete bei jedem Filter- und Sortierlauf, ohne dass es je jemand ansieht.
-            ' Liste und Gruppenansicht brauchen das Fenster weiterhin.
-            If IsGridView Then
+            ' RASTER UND GRUPPENANSICHT HABEN KEIN ANZEIGEFENSTER MEHR. Dort haengt je ein Repeater
+            ' direkt an der Liste (Items bzw. GroupEntries) und virtualisiert selbst, siehe
+            ' GalleryView.axaml. DisplayItems bleibt hier leer - es zu fuellen kostete bei jedem
+            ' Filter- und Sortierlauf, ohne dass es je jemand ansieht. Nur die Liste braucht es noch.
+            If IsGridView OrElse IsGroupView Then
                 If DisplayItems.Count > 0 Then DisplayItems.Clear()
                 _displayWindowFirst = -1
                 _displayWindowLast = -1
@@ -8597,16 +8600,6 @@ Namespace ViewModels
                 Return
             End If
 
-            If IsGroupView Then
-                ' Vor der ersten Messung steht keine Fenstergeometrie zur Verfuegung; dann gilt dasselbe
-                ' wie im Raster - das Anfangsfenster stellen und auf die erste Meldung der Ansicht warten.
-                If _lastGroupViewportHeight <= 0 OrElse _groupLayoutColumns <= 0 Then
-                    ResetDisplayWindow()
-                Else
-                    SetGroupDisplayWindow(_lastGroupOffsetY, _lastGroupViewportHeight, _groupLayoutSlotHeight, _groupLayoutColumns)
-                End If
-                Return
-            End If
             ' Vor dem ersten Layout gibt es keine Fenstergeometrie - dann steht im Anzeigefenster das
             ' Anfangsfenster (ResetDisplayWindow), und genau das muss hier nachgezogen werden. Sonst
             ' bliebe eine geloeschte Kachel stehen, solange die Ansicht noch nie gescrollt wurde.
@@ -8626,22 +8619,12 @@ Namespace ViewModels
             ContentHeight = 0
             If Items Is Nothing OrElse DisplayItems Is Nothing Then Return
 
-            ' Auch hier: das Raster hat kein Anzeigefenster mehr (siehe RefreshDisplayWindow). Der
-            ' Riegel muss an BEIDEN Stellen stehen - FilterAndSort ruft bei leerem Fenster nicht
-            ' RefreshDisplayWindow, sondern genau diese Methode, und die haette es sofort wieder
-            ' gefuellt.
-            If IsGridView Then
+            ' Auch hier: Raster und Gruppenansicht haben kein Anzeigefenster mehr (siehe
+            ' RefreshDisplayWindow). Der Riegel muss an BEIDEN Stellen stehen - FilterAndSort ruft bei
+            ' leerem Fenster nicht RefreshDisplayWindow, sondern genau diese Methode, und die haette es
+            ' sofort wieder gefuellt.
+            If IsGridView OrElse IsGroupView Then
                 If DisplayItems.Count > 0 Then DisplayItems.Clear()
-                Return
-            End If
-
-            If IsGroupView Then
-                EnsureGroupEntries()
-                DisplayItems.ReplaceAll(_groupLayout.Take(Math.Min(120, _groupLayout.Count)))
-                If DisplayItems.Count > 0 Then
-                    _displayWindowFirst = 0
-                    _displayWindowLast = DisplayItems.Count - 1
-                End If
                 Return
             End If
 
@@ -8821,36 +8804,23 @@ Namespace ViewModels
         '
         ' Raster und Liste rechnen mit EINER festen Zeilenhoehe: Zeile = Index geteilt durch Spaltenzahl,
         ' Gesamthoehe = Zeilen mal Slothoehe. Mit Kopfzeilen dazwischen stimmt diese Formel nicht mehr,
-        ' deshalb fuehrt die Gruppenansicht eine Zeilentabelle: je Zeile ihre Lage und ihre Hoehe. Die
-        ' Ansicht meldet nur noch Scrollversatz und Sichthoehe, das Uebersetzen in ein Anzeigefenster
-        ' passiert hier.
+        ' deshalb fuehrt die Gruppenansicht eine Zeilentabelle: je Zeile ihre Lage und ihre Hoehe.
+        '
+        ' Die Tabelle ist die EINZIGE Quelle fuer die Geometrie dieser Ansicht. Ihre virtualisierende
+        ' Anordnung (Controls.GalleryGroupLayout) ordnet danach an und meldet daraus den Rollbereich;
+        ' der Sprung zu einem Bild, das Blaettern und der sichtbare Bereich fuer die Vorschaubilder
+        ' lesen dieselbe Tabelle. Spaltenzahl und Kachelhoehe kommen umgekehrt von der Anordnung - sie
+        ' hat beides an einer wirklich gebauten Kachel gemessen.
         '
         ' Items bleibt dabei unberuehrt und enthaelt weiterhin ausschliesslich echte Eintraege. Die
-        ' Kopfzeilen stehen nur in _groupLayout und damit im Anzeigefenster; alles, was mit Auswahl,
-        ' Loeschen oder dem Betrachter zu tun hat, sieht sie nie.
+        ' Kopfzeilen stehen nur in GroupEntries; alles, was mit Auswahl, Loeschen oder dem Betrachter
+        ' zu tun hat, sieht sie nie.
         ' ---------------------------------------------------------------------------------------------
-
-        ''' <summary>Eine Zeile der Gruppenansicht: entweder eine Kopfzeile oder eine Zeile Kacheln.
-        ''' First und Count zeigen in _groupLayout, Top und Height sind Bildpunkte im Inhalt.</summary>
-        Private Structure GroupLayoutRow
-            Public First As Integer
-            Public Count As Integer
-            Public Top As Double
-            Public Height As Double
-        End Structure
 
         ''' <summary>Hoehe einer Kopfzeile. Muss mit der Hoehe im XAML uebereinstimmen (Height am Border
         ''' der Kopfzeile, ohne senkrechten Rand) - sonst driftet die Scrollrechnung mit der Scrolltiefe,
         ''' genau wie es bei der Slothoehe der Kacheln schon einmal passiert ist.</summary>
         Public Const GroupHeaderRowHeight As Double = 48
-
-        ''' <summary>Breite einer Kopfzeile: genau eine volle Kachelzeile. Damit belegt sie im WrapPanel
-        ''' immer eine eigene Zeile, ohne dass die Ansicht ihre Breite zurueckmelden muss.</summary>
-        Public ReadOnly Property GroupHeaderWidth As Double
-            Get
-                Return Math.Max(1, _groupLayoutColumns) * GridColumnPitch
-            End Get
-        End Property
 
         ''' <summary>Merkt vor, dass Gruppen und Zeilentabelle neu gebaut werden muessen. Wird bei jeder
         ''' Aenderung an Items gerufen (ueber das Ereignis der Sammlung), bei einem Sortierwechsel und
@@ -8858,18 +8828,38 @@ Namespace ViewModels
         Public Sub InvalidateGroupLayout()
             _groupEntriesDirty = True
             _groupRows.Clear()
-            ' Das Anzeigefenster zeigt mit Zahlen in die Layoutliste. Wird die neu gebaut, stehen an
-            ' denselben Stellen ANDERE Eintraege - das naechste Fenster darf dann nicht ueber die
-            ' Delta-Fassung entstehen, die nur Raender abschneidet und anfuegt. Sonst blieben
-            ' Kopfzeilen von vorhin stehen (gemessen beim Umstellen von Tag auf Monat: die Ansicht
-            ' zeigte weiter zwei Kopfzeilen statt einer). Raster und Liste bleiben aussen vor: dort
-            ' haelt FilterAndSort dieselbe Regel schon selbst, und ein Ruecksetzen bei JEDER Aenderung
-            ' an Items wuerde beim Einlesen eines Ordners jeden Stapel zu einem vollen Neuaufbau der
-            ' sichtbaren Kacheln machen.
-            If IsGroupView Then
-                _displayWindowFirst = -1
-                _displayWindowLast = -1
+            QueueGroupEntryPublish()
+        End Sub
+
+        ''' <summary>Stoesst den Neuaufbau der Eintragsliste an - aber nicht sofort.
+        '''
+        ''' <para>DAS IST DIE WICHTIGE STELLE. An <see cref="GroupEntries"/> haengt der Repeater der
+        ''' Gruppenansicht, und eine Sammlung darf sich nicht mitten in einem Layoutdurchgang aendern
+        ''' (der Repeater wirft dort ausdruecklich). Die Anordnung fragt die Zeilentabelle WAEHREND
+        ''' ihrer Messung ab - also wird die Liste nie dort gebaut, sondern immer davor oder danach,
+        ''' ueber den Anzeigefaden.</para>
+        '''
+        ''' <para>Mehrere Aenderungen kurz hintereinander (ein Ordner liest stapelweise ein) ergeben
+        ''' EINEN Neuaufbau: der Merkposten laesst nur einen Auftrag in der Schlange stehen.</para></summary>
+        Private Sub QueueGroupEntryPublish()
+            If Not IsGroupView OrElse _groupEntryPublishQueued Then Return
+            _groupEntryPublishQueued = True
+            Dispatcher.UIThread.Post(
+                Sub()
+                    _groupEntryPublishQueued = False
+                    PublishGroupEntries()
+                End Sub, DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Die Eintragsliste der Gruppenansicht neu bauen und veroeffentlichen. Nur von
+        ''' ausserhalb eines Layoutdurchgangs rufen (siehe <see cref="QueueGroupEntryPublish"/>).</summary>
+        Public Sub PublishGroupEntries()
+            If GroupEntries Is Nothing Then Return
+            If Not IsGroupView Then
+                If GroupEntries.Count > 0 Then GroupEntries.Clear()
+                Return
             End If
+            EnsureGroupEntries()
         End Sub
 
         ''' <summary>True, wenn die aktuelle Sortierung sinnvolle Gruppen hergibt. Bei Groesse, ISO,
@@ -8971,20 +8961,31 @@ Namespace ViewModels
         Private Sub EnsureGroupEntries()
             If Not _groupEntriesDirty Then Return
             _groupEntriesDirty = False
-            _groupLayout.Clear()
             _groupLayoutItemIndex.Clear()
             _itemToGroupEntry = Array.Empty(Of Integer)()
-            If Items Is Nothing OrElse Items.Count = 0 Then Return
+            ' Die Zeilentabelle zeigt mit Zahlen in die Eintragsliste. Wird die neu gebaut, stehen an
+            ' denselben Stellen ANDERE Eintraege - die Tabelle gehoert deshalb mit erneuert.
+            _groupRows.Clear()
+
+            ' In eine eigene Liste bauen und am Ende in EINEM Zug uebergeben: GroupEntries meldet
+            ' sonst je Eintrag eine Aenderung, und der Repeater der Ansicht arbeitete jede davon ab.
+            Dim entries As New List(Of ImageItem)()
+
+            If Items Is Nothing OrElse Items.Count = 0 Then
+                If GroupEntries.Count > 0 Then GroupEntries.Clear()
+                Return
+            End If
 
             Dim entryOfItem(Items.Count - 1) As Integer
 
             If Not GroupingIsAvailable() Then
                 For i = 0 To Items.Count - 1
-                    entryOfItem(i) = _groupLayout.Count
-                    _groupLayout.Add(Items(i))
+                    entryOfItem(i) = entries.Count
+                    entries.Add(Items(i))
                     _groupLayoutItemIndex.Add(i)
                 Next
                 _itemToGroupEntry = entryOfItem
+                GroupEntries.ReplaceAll(entries)
                 Return
             End If
 
@@ -9007,17 +9008,18 @@ Namespace ViewModels
                     If Items(i).IsSelectableEntry Then countable += 1
                 Next
 
-                _groupLayout.Add(ImageItem.CreateGroupHeader(GroupTitleFor(Items(groupStart)),
-                                                             GroupCountText(Items(groupStart).IsFolder, countable)))
+                entries.Add(ImageItem.CreateGroupHeader(GroupTitleFor(Items(groupStart)),
+                                                        GroupCountText(Items(groupStart).IsFolder, countable)))
                 _groupLayoutItemIndex.Add(-1)
                 For i = groupStart To groupEnd
-                    entryOfItem(i) = _groupLayout.Count
-                    _groupLayout.Add(Items(i))
+                    entryOfItem(i) = entries.Count
+                    entries.Add(Items(i))
                     _groupLayoutItemIndex.Add(i)
                 Next
                 groupStart = groupEnd + 1
             End While
             _itemToGroupEntry = entryOfItem
+            GroupEntries.ReplaceAll(entries)
             ' Die Kopfzeilen sind frisch und wissen nichts von der bestehenden Auswahl - sie ueberlebt
             ' zum Beispiel einen Filterwechsel.
             RefreshGroupHeaderSelection()
@@ -9032,57 +9034,93 @@ Namespace ViewModels
             Return count & " " & LocalizationService.T("Bilder")
         End Function
 
-        ''' <summary>Baut die Zeilentabelle zur gemeldeten Spaltenzahl und Slothoehe. Die Spaltenzahl
-        ''' aendert sich mit der Fensterbreite und mit der Kachelgroesse, deshalb haengt die Tabelle an
-        ''' beiden und wird bei einer Aenderung neu aufgebaut.</summary>
-        Private Sub EnsureGroupRows(columns As Integer, itemSlotHeight As Double)
+        ''' <summary>Baut die Zeilentabelle zur gemeldeten Spaltenzahl und Kachelhoehe. Beides kommt aus
+        ''' der Anordnung der Ansicht und ist dort GEMESSEN, nicht gerechnet; die Tabelle haengt an
+        ''' beidem und wird bei einer Aenderung neu aufgebaut.
+        '''
+        ''' <para>Ruft bewusst NICHT <see cref="EnsureGroupEntries"/>: dieser Weg laeuft mitten im
+        ''' Layoutdurchgang der Ansicht, und dort darf sich die Eintragsliste nicht aendern (siehe
+        ''' <see cref="QueueGroupEntryPublish"/>). Steht ein Neuaufbau an, ist die Tabelle hier noch die
+        ''' zur alten Liste - und die Ansicht zeigt genau die, bis der Neuaufbau durch ist.</para></summary>
+        Public Sub UpdateGroupRows(columns As Integer, itemSlotHeight As Double) Implements IGalleryGroupRowSource.UpdateGroupRows
             columns = Math.Max(1, columns)
             itemSlotHeight = Math.Max(1, itemSlotHeight)
-            EnsureGroupEntries()
 
             If _groupRows.Count > 0 AndAlso _groupLayoutColumns = columns AndAlso
-               Math.Abs(_groupLayoutSlotHeight - itemSlotHeight) < 0.01 Then
-                ' Die Gesamthoehe gehoert zur Tabelle und wird hier mitgefuehrt. Sie steht sonst noch
-                ' auf dem Wert, den das Anfangsfenster gesetzt hat (0) - der untere Platzhalter
-                ' rechnete damit gegen eine leere Flaeche.
-                ContentHeight = _groupContentHeight
-                Return
-            End If
+               Math.Abs(_groupLayoutSlotHeight - itemSlotHeight) < 0.01 Then Return
 
-            Dim columnsChanged = _groupLayoutColumns <> columns
             _groupLayoutColumns = columns
             _groupLayoutSlotHeight = itemSlotHeight
             _groupRows.Clear()
-            If columnsChanged Then Me.RaisePropertyChanged(NameOf(GroupHeaderWidth))
-            If _groupLayout.Count = 0 Then
+            If GroupEntries Is Nothing OrElse GroupEntries.Count = 0 Then
                 _groupContentHeight = 0
-                ContentHeight = 0
                 Return
             End If
 
             Dim top = 0.0
             Dim i = 0
-            While i < _groupLayout.Count
-                If _groupLayout(i).IsGroupHeader Then
-                    _groupRows.Add(New GroupLayoutRow With {.First = i, .Count = 1, .Top = top, .Height = GroupHeaderRowHeight})
+            While i < GroupEntries.Count
+                If GroupEntries(i).IsGroupHeader Then
+                    _groupRows.Add(New GalleryGroupRow With {.First = i, .Count = 1, .Top = top, .Height = GroupHeaderRowHeight})
                     top += GroupHeaderRowHeight
                     i += 1
                 Else
                     Dim runEnd = i
-                    While runEnd < _groupLayout.Count AndAlso Not _groupLayout(runEnd).IsGroupHeader
+                    While runEnd < GroupEntries.Count AndAlso Not GroupEntries(runEnd).IsGroupHeader
                         runEnd += 1
                     End While
                     While i < runEnd
                         Dim count = Math.Min(columns, runEnd - i)
-                        _groupRows.Add(New GroupLayoutRow With {.First = i, .Count = count, .Top = top, .Height = itemSlotHeight})
+                        _groupRows.Add(New GalleryGroupRow With {.First = i, .Count = count, .Top = top, .Height = itemSlotHeight})
                         top += itemSlotHeight
                         i += count
                     End While
                 End If
             End While
             _groupContentHeight = top
-            ContentHeight = top
         End Sub
+
+        Public ReadOnly Property GroupRows As IReadOnlyList(Of GalleryGroupRow) Implements IGalleryGroupRowSource.GroupRows
+            Get
+                Return _groupRows
+            End Get
+        End Property
+
+        ''' <summary>Die Gesamthoehe des Inhalts der Gruppenansicht. Anders als im Raster ist sie keine
+        ''' Multiplikation: die Kopfzeilen sind niedriger als eine Kachelzeile, und wie viele es sind,
+        ''' weiss nur die Tabelle.</summary>
+        Public ReadOnly Property GroupContentHeight As Double Implements IGalleryGroupRowSource.GroupContentHeight
+            Get
+                Return _groupContentHeight
+            End Get
+        End Property
+
+        Public ReadOnly Property GroupTileWidthEstimate As Double Implements IGalleryGroupRowSource.GroupTileWidthEstimate
+            Get
+                Return GridColumnPitch
+            End Get
+        End Property
+
+        Public ReadOnly Property GroupTileHeightEstimate As Double Implements IGalleryGroupRowSource.GroupTileHeightEstimate
+            Get
+                Return GridItemSlotHeight
+            End Get
+        End Property
+
+        ''' <summary>Spaltenzahl und Zeilenhoehe, mit denen die Tabelle gebaut ist. Die Ansicht braucht
+        ''' beides fuers Blaettern und darf es NICHT selbst ausrechnen - eine zweite Rechnung liefe an
+        ''' der Anordnung vorbei.</summary>
+        Public ReadOnly Property GroupColumns As Integer
+            Get
+                Return Math.Max(1, _groupLayoutColumns)
+            End Get
+        End Property
+
+        Public ReadOnly Property GroupRowSlotHeight As Double
+            Get
+                Return If(_groupLayoutSlotHeight > 0, _groupLayoutSlotHeight, GridItemSlotHeight)
+            End Get
+        End Property
 
         ''' <summary>Die Zeile, in der ein Bildpunkt des Inhalts liegt. Binaersuche, damit auch 30000
         ''' Elemente je Scroll-Tick nichts kosten.</summary>
@@ -9102,38 +9140,6 @@ Namespace ViewModels
             Return low
         End Function
 
-        ''' <summary>Anzeigefenster der Gruppenansicht setzen. Anders als <see cref="SetDisplayWindow"/>
-        ''' bekommt es den Scrollversatz statt fertiger Grenzen: welche Zeilen dort stehen, weiss nur die
-        ''' Zeilentabelle.</summary>
-        Public Sub SetGroupDisplayWindow(contentOffsetY As Double, viewportHeight As Double, itemSlotHeight As Double, columns As Integer)
-            EnsureGroupRows(columns, itemSlotHeight)
-            _lastGroupOffsetY = contentOffsetY
-            _lastGroupViewportHeight = viewportHeight
-
-            If _groupRows.Count = 0 Then
-                If DisplayItems.Count > 0 Then DisplayItems.Clear()
-                _displayWindowFirst = -1
-                _displayWindowLast = -1
-                TopSpacerHeight = 0
-                BottomSpacerHeight = 0
-                ContentHeight = 0
-                Return
-            End If
-
-            Dim firstRow = FindGroupRowAt(contentOffsetY)
-            Dim lastRow = FindGroupRowAt(contentOffsetY + Math.Max(1.0, viewportHeight))
-            ' Vorhaltepuffer wie im Raster: das Doppelte des Sichtbereichs nach oben und unten, damit
-            ' gewoehnliches Scrollen keine Kachel erst im Moment des Erscheinens bauen muss.
-            Dim visibleRows = Math.Max(1, lastRow - firstRow + 1)
-            firstRow = Math.Max(0, firstRow - visibleRows * 2)
-            lastRow = Math.Min(_groupRows.Count - 1, lastRow + visibleRows * 2)
-
-            TopSpacerHeight = _groupRows(firstRow).Top
-            BottomSpacerHeight = Math.Max(0.0, ContentHeight - (_groupRows(lastRow).Top + _groupRows(lastRow).Height))
-            ApplyDisplayWindow(_groupLayout, _groupRows(firstRow).First,
-                               _groupRows(lastRow).First + _groupRows(lastRow).Count - 1)
-        End Sub
-
         ''' <summary>Der Bereich in ITEMS, der im Sichtbereich steht - die Ansicht fordert damit ihre
         ''' Vorschaubilder an. Die Gruppen sind zusammenhaengend, der Bereich ist es damit auch.</summary>
         Public Sub GetGroupVisibleItemRange(contentOffsetY As Double, viewportHeight As Double,
@@ -9145,7 +9151,7 @@ Namespace ViewModels
             Dim firstRow = FindGroupRowAt(contentOffsetY)
             Dim lastRow = FindGroupRowAt(contentOffsetY + Math.Max(1.0, viewportHeight))
             Dim firstEntry = _groupRows(firstRow).First
-            Dim lastEntry = Math.Min(_groupLayout.Count - 1, _groupRows(lastRow).First + _groupRows(lastRow).Count - 1)
+            Dim lastEntry = Math.Min(GroupEntries.Count - 1, _groupRows(lastRow).First + _groupRows(lastRow).Count - 1)
             For i = firstEntry To lastEntry
                 Dim itemIndex = _groupLayoutItemIndex(i)
                 If itemIndex < 0 Then Continue For
@@ -9155,12 +9161,13 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Die Lage eines Elements in der Gruppenansicht: Oberkante seiner Zeile und deren
-        ''' Hoehe. Damit holt die Ansicht ein Element in den Blick, ohne selbst zu rechnen.</summary>
-        Public Function TryGetGroupItemPosition(itemIndex As Integer, columns As Integer, itemSlotHeight As Double,
+        ''' Hoehe. Damit holt die Ansicht ein Element in den Blick, ohne selbst zu rechnen. Gelesen wird
+        ''' die Tabelle, wie die Anordnung sie gebaut hat - vor dem ersten Durchgang gibt es sie nicht,
+        ''' dann meldet der Aufruf False.</summary>
+        Public Function TryGetGroupItemPosition(itemIndex As Integer,
                                                 ByRef rowTop As Double, ByRef rowHeight As Double) As Boolean
             rowTop = 0
-            rowHeight = itemSlotHeight
-            EnsureGroupRows(columns, itemSlotHeight)
+            rowHeight = GroupRowSlotHeight
             Dim entry = GroupEntryForItem(itemIndex)
             If entry < 0 Then Return False
             Dim row = FindGroupRowForEntry(entry)
@@ -9169,14 +9176,6 @@ Namespace ViewModels
             rowHeight = _groupRows(row).Height
             Return True
         End Function
-
-        ''' <summary>Fenster um eine Zeile herum aufziehen, bevor der Scrollversatz gesetzt wird - sonst
-        ''' klemmt der ScrollViewer den Versatz gegen seine noch veraltete Gesamthoehe. Dieselbe Regel
-        ''' gilt im Raster, nur mit einer Formel statt der Tabelle.</summary>
-        Public Sub SetGroupDisplayWindowAround(contentTop As Double, viewportHeight As Double,
-                                               itemSlotHeight As Double, columns As Integer)
-            SetGroupDisplayWindow(Math.Max(0.0, contentTop - viewportHeight), viewportHeight * 3, itemSlotHeight, columns)
-        End Sub
 
         Private Function GroupEntryForItem(itemIndex As Integer) As Integer
             If itemIndex < 0 OrElse itemIndex >= _itemToGroupEntry.Length Then Return -1
@@ -9204,11 +9203,11 @@ Namespace ViewModels
         Private Function GroupItemsFor(header As ImageItem) As List(Of ImageItem)
             Dim result As New List(Of ImageItem)()
             If header Is Nothing OrElse Not header.IsGroupHeader Then Return result
-            Dim start = _groupLayout.IndexOf(header)
+            Dim start = GroupEntries.IndexOf(header)
             If start < 0 Then Return result
-            For i = start + 1 To _groupLayout.Count - 1
-                If _groupLayout(i).IsGroupHeader Then Exit For
-                If _groupLayout(i).IsSelectableEntry Then result.Add(_groupLayout(i))
+            For i = start + 1 To GroupEntries.Count - 1
+                If GroupEntries(i).IsGroupHeader Then Exit For
+                If GroupEntries(i).IsSelectableEntry Then result.Add(GroupEntries(i))
             Next
             Return result
         End Function
@@ -9250,12 +9249,12 @@ Namespace ViewModels
             ' Ausserhalb der Gruppenansicht gibt es keine Kopfzeilen zu zeichnen, und solange die
             ' Layoutliste als veraltet vermerkt ist, stuenden dort ohnehin die Eintraege von vorhin.
             ' Nach einem Neuaufbau holt EnsureGroupEntries den Durchlauf selbst nach.
-            If Not IsGroupView OrElse _groupEntriesDirty OrElse _groupLayout.Count = 0 Then Return
+            If Not IsGroupView OrElse _groupEntriesDirty OrElse GroupEntries.Count = 0 Then Return
             Dim header As ImageItem = Nothing
             Dim members = 0
             Dim selected = 0
-            For i = 0 To _groupLayout.Count
-                Dim entry = If(i < _groupLayout.Count, _groupLayout(i), Nothing)
+            For i = 0 To GroupEntries.Count
+                Dim entry = If(i < GroupEntries.Count, GroupEntries(i), Nothing)
                 If entry Is Nothing OrElse entry.IsGroupHeader Then
                     If header IsNot Nothing Then header.IsSelected = members > 0 AndAlso selected = members
                     header = entry
@@ -9271,10 +9270,8 @@ Namespace ViewModels
         ''' <summary>Versatz in ITEMS-Indizes fuer eine Bewegung um ganze Zeilen. Am Gruppenende ist das
         ''' NICHT die Spaltenzahl: die letzte Zeile einer Gruppe ist meist nur teilweise gefuellt, und
         ''' dazwischen liegt eine Kopfzeile, auf der nichts stehen kann.</summary>
-        Public Function GroupRowNavigationOffset(currentItemIndex As Integer, rowDelta As Integer,
-                                                 columns As Integer, itemSlotHeight As Double) As Integer
+        Public Function GroupRowNavigationOffset(currentItemIndex As Integer, rowDelta As Integer) As Integer
             If rowDelta = 0 Then Return 0
-            EnsureGroupRows(columns, itemSlotHeight)
             Dim entry = GroupEntryForItem(currentItemIndex)
             If entry < 0 Then Return rowDelta
             Dim row = FindGroupRowForEntry(entry)
@@ -9290,10 +9287,10 @@ Namespace ViewModels
                 targetRow = nextRow
                 ' Eine Kopfzeile ueberspringen, ohne sie als Zeile zu zaehlen: die Bewegung soll von
                 ' Bild zu Bild gehen, nicht auf einer Beschriftung landen.
-                If Not _groupLayout(_groupRows(targetRow).First).IsGroupHeader Then remaining -= 1
+                If Not GroupEntries(_groupRows(targetRow).First).IsGroupHeader Then remaining -= 1
             End While
             While targetRow >= 0 AndAlso targetRow <= _groupRows.Count - 1 AndAlso
-                  _groupLayout(_groupRows(targetRow).First).IsGroupHeader
+                  GroupEntries(_groupRows(targetRow).First).IsGroupHeader
                 targetRow += direction
             End While
             If targetRow < 0 OrElse targetRow > _groupRows.Count - 1 Then Return rowDelta

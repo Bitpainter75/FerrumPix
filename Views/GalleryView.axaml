@@ -18,13 +18,13 @@
              unsichtbar zu bleiben. Der ContentControl in der Kachel fuellt sie erst, wenn das
              Element wirklich eine Kopfzeile ist.
              Die Hoehe ist fest und muss mit GalleryViewModel.GroupHeaderRowHeight uebereinstimmen,
-             sonst driftet die Scrollrechnung mit der Scrolltiefe. Die Breite ist genau eine volle
-             Kachelzeile, damit das WrapPanel die Kopfzeile immer allein in eine Zeile setzt.
+             sonst driftet die Scrollrechnung mit der Scrolltiefe. Eine Breite steht hier NICHT:
+             GalleryGroupLayout gibt der Kopfzeile die ganze Kachelzeile, und eine zweite Rechnung
+             dafuer liefe an ihr vorbei.
              no-translate ist Pflicht: der Uebersetzungsdurchlauf schreibt sonst Text zu und bricht
              die Bindung. -->
         <DataTemplate x:Key="GalleryGroupHeaderTemplate" DataType="{x:Type models:ImageItem}">
             <Border Height="48"
-                    Width="{Binding DataContext.GroupHeaderWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     Padding="5,0,5,0">
                 <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,6" VerticalAlignment="Bottom">
                     <!-- Derselbe Kreis wie auf der Kachel, nur eine Ebene hoeher: er markiert die
@@ -1777,12 +1777,16 @@
                     <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- DIE GRUPPENANSICHT BLEIBT EIN WrapPanel. Sie schiebt Kopfzeilen mit voller
-                     Sonderbreite zwischen die Kacheln, und diese gemischten Breiten virtualisiert
-                     WrapLayout im ItemsRepeater nicht zuverlaessig - es verlor beim Rollen seine
-                     Zeilenhoehe. Das reine Raster hat dieses Problem nicht und laeuft deshalb
-                     ueber einen eigenen Repeater darunter; die Kachel selbst teilen sich beide
-                     (GalleryTileTemplate). -->
+                <!-- DIE GRUPPENANSICHT VIRTUALISIERT WIE DAS RASTER, nur ueber eine eigene
+                     Anordnung: sie schiebt Kopfzeilen mit voller Zeilenbreite zwischen die Kacheln,
+                     und mit gemischten Breiten kommt keine der mitgelieferten Anordnungen zurecht
+                     (UniformGridLayout kennt nur ein Mass, WrapLayout verliert beim Rollen seine
+                     Zeilenhoehe, StackLayout ueber fertige Zeilen SCHAETZT den Rollbereich aus dem
+                     Sichtbaren). GalleryGroupLayout rechnet ihn stattdessen aus der Zeilentabelle im
+                     ViewModel - dieselben Zahlen, mit denen auch der Sprung zu einem Bild, das
+                     Blaettern und der sichtbare Bereich fuer die Vorschaubilder arbeiten.
+                     Das Anzeigefenster ist damit auch hier entfallen; die Kachelvorlage teilen sich
+                     beide Ansichten weiterhin (GalleryTileTemplate). -->
                 <ScrollViewer x:Name="GalleryGroupScrollViewer"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
@@ -1792,32 +1796,27 @@
                               DragDrop.DragOver="OnGalleryAreaDragOver"
                               DragDrop.Drop="OnGalleryAreaDrop"
                               Margin="0,0,8,0">
-                    <!-- VerticalAlignment=Top ist Pflicht: mit EXPLIZITER Höhe (ContentHeight-Virtualisierung)
-                         zentriert das Standard-Alignment (Stretch) das Panel im größeren Viewport - bei
-                         wenigen Bildern rutschte das ganze Raster in die vertikale Mitte. -->
-                    <StackPanel Margin="12,12,18,20"
-                                VerticalAlignment="Top"
-                                Height="{Binding ContentHeight}">
-                        <Border Height="{Binding TopSpacerHeight}"/>
-                        <ItemsControl ItemsSource="{Binding DisplayItems}">
-                            <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
+                    <!-- Als eigener Inhalt des ScrollViewers, nicht in einem Panel mit fester Hoehe:
+                         ein Repeater holt sich sein Sichtfenster von der umgebenden Flaeche, und in
+                         einem leer gestarteten Panel bliebe er null hoch (siehe den Kommentar am
+                         Raster darunter). -->
+                    <ItemsRepeater x:Name="GalleryGroupRepeater"
+                                   ItemsSource="{Binding GroupEntries}"
+                                   Margin="12,12,18,20"
+                                   VerticalAlignment="Top">
+                        <ItemsRepeater.Layout>
+                            <icons:GalleryGroupLayout/>
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:ImageItem}">
-                              <!-- Zwei Gestalten in EINER Vorlage: eine Kachel oder, in der
-                                   Gruppenansicht, die Kopfzeile einer Gruppe. Immer genau eine davon
-                                   ist sichtbar; die unsichtbare wird nicht vermessen, das Panel ist
-                                   damit so breit wie die sichtbare. Im Raster kommt eine Kopfzeile
-                                   nie vor - dort stehen im Anzeigefenster nur echte Elemente. -->
+                              <!-- Zwei Gestalten in EINER Vorlage: eine Kachel oder die Kopfzeile
+                                   einer Gruppe. Immer genau eine davon hat Inhalt; die andere bleibt
+                                   leer und kostet nichts. -->
                               <Panel>
                                 <!-- Kopfzeile einer Gruppe. Die Hoehe ist fest und muss mit
                                      GalleryViewModel.GroupHeaderRowHeight uebereinstimmen, sonst
-                                     driftet die Scrollrechnung mit der Scrolltiefe. Die Breite ist
-                                     genau eine volle Kachelzeile, damit das WrapPanel die Kopfzeile
-                                     immer allein in eine Zeile setzt.
+                                     driftet die Scrollrechnung mit der Scrolltiefe. Die Breite gibt
+                                     die Anordnung vor: eine Kopfzeile bekommt die ganze Zeile.
                                      no-translate ist Pflicht: der Uebersetzungsdurchlauf schreibt
                                      sonst Text zu und bricht die Bindung. -->
                                 <!-- WEIL SIE IM RASTER NIE VORKOMMT, wird sie dort auch nicht mehr
@@ -1836,10 +1835,8 @@
                                                 ContentTemplate="{StaticResource GalleryTileTemplate}"/>
                               </Panel>
                             </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Border Height="{Binding BottomSpacerHeight}"/>
-                    </StackPanel>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
                 </ScrollViewer>
                 <!-- DIE KACHEL STEHT EINMAL, und beide Ansichten holen sie sich von hier: das
                      Raster als ItemTemplate seines Repeaters, die Gruppenansicht als

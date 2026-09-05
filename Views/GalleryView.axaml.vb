@@ -80,7 +80,6 @@ Namespace Views
         Private _cachedMetricsThumbnailSize As Double = -1
         Private _cachedMetricsViewportWidth As Double = -1
         Private _cachedMetricsFontOffset As Integer = Integer.MinValue
-        Private _cachedMetricsForGroupView As Boolean
         Private _cachedMetricsColumns As Integer
         Private _cachedMetricsSlotHeight As Double
 
@@ -437,6 +436,12 @@ Namespace Views
             AddHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
             If _observedVm.Items IsNot Nothing Then AddHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
             If _observedVm.DisplayItems IsNot Nothing Then AddHandler _observedVm.DisplayItems.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
+            If _observedVm.GroupEntries IsNot Nothing Then AddHandler _observedVm.GroupEntries.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
+            ' Die Anordnung der Gruppenansicht holt sich ihre Zeilentabelle beim ViewModel. Sie kann sie
+            ' nicht selbst binden - eine Layout-Instanz haengt an keinem Datenkontext.
+            Dim groupRepeater = Me.FindControl(Of ItemsRepeater)("GalleryGroupRepeater")
+            Dim groupLayout = TryCast(groupRepeater?.Layout, GalleryGroupLayout)
+            If groupLayout IsNot Nothing Then groupLayout.RowSource = _observedVm
             ' Die neue View-Instanz startet ohne Zeitleisten-Daten - vom (langlebigen) VM-Stand aufbauen.
             RebuildTimelineSegments()
         End Sub
@@ -447,6 +452,7 @@ Namespace Views
             RemoveHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
             If _observedVm.Items IsNot Nothing Then RemoveHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
             If _observedVm.DisplayItems IsNot Nothing Then RemoveHandler _observedVm.DisplayItems.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
+            If _observedVm.GroupEntries IsNot Nothing Then RemoveHandler _observedVm.GroupEntries.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
             _observedVm = Nothing
         End Sub
 
@@ -459,9 +465,12 @@ Namespace Views
         Private Sub OnDisplayItemsCollectionChanged(sender As Object, e As NotifyCollectionChangedEventArgs)
             If e.Action <> NotifyCollectionChangedAction.Reset Then Return
             Dim vm = GetVm()
+            ' Die Liste meldet ueber DisplayItems, die Gruppenansicht ueber GroupEntries - massgeblich
+            ' ist die Sammlung, die gerade gemeldet hat.
+            Dim reported = TryCast(sender, ICollection)
             Dim resetAfterItemsArrive = vm IsNot Nothing AndAlso
-                                         vm.DisplayItems IsNot Nothing AndAlso
-                                         vm.DisplayItems.Count > 0 AndAlso
+                                         reported IsNot Nothing AndAlso
+                                         reported.Count > 0 AndAlso
                                          Not String.IsNullOrEmpty(_pendingFolderScrollReset) AndAlso
                                          String.Equals(_pendingFolderScrollReset, vm.CurrentFolder, StringComparison.OrdinalIgnoreCase)
             Dispatcher.UIThread.Post(
@@ -815,18 +824,16 @@ Namespace Views
             If vm Is Nothing OrElse vm.Items Is Nothing OrElse vm.Items.Count = 0 Then Return
 
             If vm.IsGroupView Then
-                ' Die Gruppenansicht teilt sich die Flaeche mit dem Raster, rechnet aber anders: die
-                ' Zeilen sind unterschiedlich hoch, deshalb bekommt das ViewModel den Scrollversatz und
-                ' schlaegt in seiner Zeilentabelle nach, was dort steht.
+                ' Die Gruppenansicht rechnet anders als das Raster: ihre Zeilen sind unterschiedlich
+                ' hoch, deshalb bekommt das ViewModel den Scrollversatz und schlaegt in seiner
+                ' Zeilentabelle nach, was dort steht. Ein Anzeigefenster gibt es hier nicht mehr - der
+                ' Repeater baut selbst, was er braucht; zu klaeren bleibt nur, fuer welche Bilder ein
+                ' Vorschaubild geholt werden soll.
                 Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Dim cols = 1
-                Dim itemSlotHeight = 0.0
-                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
                 Dim contentOffset = Math.Max(0.0, scrollViewer.Offset.Y - 12.0)
                 Dim viewHeight = scrollViewer.Bounds.Height
-                vm.SetGroupDisplayWindow(contentOffset, viewHeight, itemSlotHeight, cols)
 
                 Dim firstIndex = -1
                 Dim lastIndex = -1
@@ -932,23 +939,20 @@ Namespace Views
                 Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Dim cols = 1
-                Dim itemSlotHeight = 0.0
-                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
-
                 Dim rowTop = 0.0
-                Dim rowHeight = itemSlotHeight
-                If Not vm.TryGetGroupItemPosition(idx, cols, itemSlotHeight, rowTop, rowHeight) Then Return
+                Dim rowHeight = 0.0
+                If Not vm.TryGetGroupItemPosition(idx, rowTop, rowHeight) Then Return
 
                 Dim itemTop = 12.0 + rowTop
                 Dim itemBottom = itemTop + rowHeight
                 Dim viewHeight = scrollViewer.Bounds.Height
                 If itemTop >= scrollViewer.Offset.Y AndAlso itemBottom <= scrollViewer.Offset.Y + viewHeight Then Return
 
+                ' Kein Aufziehen eines Fensters mehr noetig: die Anordnung meldet von Anfang an die
+                ' ENDGUELTIGE Gesamthoehe (sie kommt aus der Zeilentabelle, nicht aus dem Sichtbaren),
+                ' der ScrollViewer klemmt den Versatz also gegen den richtigen Hoechstwert. Nur ein
+                ' noch offener Messdurchgang gehoert abgewartet.
                 Dim targetOffset = Math.Max(0.0, itemTop + rowHeight / 2 - viewHeight / 2)
-                ' Erst das Fenster um die Zielzeile aufziehen, dann den Versatz setzen - sonst klemmt
-                ' der ScrollViewer ihn gegen seine noch veraltete Gesamthoehe.
-                vm.SetGroupDisplayWindowAround(rowTop, viewHeight, itemSlotHeight, cols)
                 scrollViewer.UpdateLayout()
                 Dim maxOffset = Math.Max(0.0, scrollViewer.Extent.Height - viewHeight)
                 scrollViewer.Offset = New Avalonia.Vector(0, Math.Min(targetOffset, maxOffset))
@@ -3031,26 +3035,23 @@ Namespace Views
             If vm Is Nothing OrElse vm.SelectedItem Is Nothing Then Return rowDelta
             Dim idx = vm.Items.IndexOf(vm.SelectedItem)
             If idx < 0 Then Return rowDelta
-
-            Dim scrollViewer = TileScrollViewer()
-            Dim cols = 1
-            Dim itemSlotHeight = 0.0
-            GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
-            Return vm.GroupRowNavigationOffset(idx, rowDelta, cols, itemSlotHeight)
+            Return vm.GroupRowNavigationOffset(idx, rowDelta)
         End Function
 
         Private Function GetGridColumnCount() As Integer
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsTileView Then Return 1
+            ' In der Gruppenansicht kommt die Spaltenzahl aus der Anordnung selbst - sie hat sie an
+            ' einer wirklich gebauten Kachel gemessen. Eine zweite Rechnung liefe an ihr vorbei.
+            If vm.IsGroupView Then Return vm.GroupColumns
             Dim scrollViewer = TileScrollViewer()
             Dim cols = 1
             Dim itemSlotHeight = 0.0
-            GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=vm.IsGroupView)
+            GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight)
             Return cols
         End Function
 
-        Private Sub GetGridLayoutMetrics(scrollViewer As ScrollViewer, vm As GalleryViewModel, ByRef columns As Integer, ByRef itemSlotHeight As Double,
-                                         Optional forGroupView As Boolean = False)
+        Private Sub GetGridLayoutMetrics(scrollViewer As ScrollViewer, vm As GalleryViewModel, ByRef columns As Integer, ByRef itemSlotHeight As Double)
             columns = 1
             itemSlotHeight = If(vm IsNot Nothing, Math.Max(1, vm.GridItemSlotHeight), 1)
             If vm Is Nothing Then Return
@@ -3060,7 +3061,6 @@ Namespace Views
             If _cachedMetricsColumns > 0 AndAlso
                _cachedMetricsThumbnailSize = vm.ThumbnailSize AndAlso
                _cachedMetricsFontOffset = FontScaleService.CurrentOffset AndAlso
-               _cachedMetricsForGroupView = forGroupView AndAlso
                Math.Abs(_cachedMetricsViewportWidth - viewportWidth) < 1.0 Then
                 columns = _cachedMetricsColumns
                 itemSlotHeight = _cachedMetricsSlotHeight
@@ -3069,11 +3069,11 @@ Namespace Views
 
             Dim measuredColumns = 0
             Dim measuredSlotHeight = 0.0
-            Dim measured = TryGetRenderedGridMetrics(scrollViewer, measuredColumns, measuredSlotHeight, forGroupView)
+            Dim measured = TryGetRenderedGridMetrics(scrollViewer, measuredColumns, measuredSlotHeight)
             itemSlotHeight = LatchSlotHeight(vm, If(measured, measuredSlotHeight, 0.0))
-            If measured AndAlso Not forGroupView Then
+            If measured Then
                 columns = Math.Max(1, measuredColumns)
-                CacheGridLayoutMetrics(vm, viewportWidth, forGroupView, columns, itemSlotHeight)
+                CacheGridLayoutMetrics(vm, viewportWidth, columns, itemSlotHeight)
                 Return
             End If
 
@@ -3088,22 +3088,14 @@ Namespace Views
             availableWidth = Math.Max(1, availableWidth)
             Dim itemWidth = Math.Max(1, vm.GridColumnPitch)
             columns = Math.Max(1, CInt(Math.Floor(availableWidth / itemWidth)))
-            CacheGridLayoutMetrics(vm, viewportWidth, forGroupView, columns, itemSlotHeight)
-
-            ' In der Gruppenansicht kommt die Spaltenzahl IMMER aus der Breite, nie aus dem Gezeichneten:
-            ' dort kann jede sichtbare Zeile eine teilweise gefuellte letzte Zeile einer Gruppe sein, und
-            ' eine zu klein gemessene Spaltenzahl braecht die Zeilentabelle. Die Rechnung ist dieselbe,
-            ' die auch das WrapPanel anstellt (ganze Kachelbreiten in die Zeilenbreite), also exakt.
-            ' Die Zeilenhoehe steht bereits fest (LatchSlotHeight).
+            CacheGridLayoutMetrics(vm, viewportWidth, columns, itemSlotHeight)
         End Sub
 
         Private Sub CacheGridLayoutMetrics(vm As GalleryViewModel, viewportWidth As Double,
-                                           forGroupView As Boolean, columns As Integer,
-                                           itemSlotHeight As Double)
+                                           columns As Integer, itemSlotHeight As Double)
             _cachedMetricsThumbnailSize = vm.ThumbnailSize
             _cachedMetricsViewportWidth = viewportWidth
             _cachedMetricsFontOffset = FontScaleService.CurrentOffset
-            _cachedMetricsForGroupView = forGroupView
             _cachedMetricsColumns = columns
             _cachedMetricsSlotHeight = itemSlotHeight
         End Sub
@@ -3136,13 +3128,10 @@ Namespace Views
             Return If(_latchedSlotHeight > 0, Math.Max(1, _latchedSlotHeight), estimate)
         End Function
 
-        ''' <summary>Spaltenzahl und Zeilenhoehe aus dem, was wirklich gezeichnet ist.
-        ''' In der Gruppenansicht darf dabei NICHT die erste Zeile allein zaehlen: die letzte Zeile einer
-        ''' Gruppe ist meist nur teilweise gefuellt (zu wenige Spalten). Dort gilt deshalb die BREITESTE
-        ''' Zeile, und die Zeilenhoehe kommt aus der Kachel selbst statt aus einem Zeilenabstand - der
-        ''' fuehrt dort in die Irre, sobald eine Kopfzeile dazwischen steht.</summary>
-        Private Function TryGetRenderedGridMetrics(scrollViewer As ScrollViewer, ByRef columns As Integer, ByRef itemSlotHeight As Double,
-                                                   Optional forGroupView As Boolean = False) As Boolean
+        ''' <summary>Spaltenzahl und Zeilenhoehe des RASTERS aus dem, was wirklich gezeichnet ist.
+        ''' Die Gruppenansicht kommt hier nicht mehr vor: dort misst ihre eigene Anordnung, und dieser
+        ''' Weg fuehrte sie in die Irre, sobald eine Kopfzeile zwischen zwei Kachelzeilen stand.</summary>
+        Private Function TryGetRenderedGridMetrics(scrollViewer As ScrollViewer, ByRef columns As Integer, ByRef itemSlotHeight As Double) As Boolean
             columns = 0
             itemSlotHeight = 0
             If scrollViewer Is Nothing Then Return False
@@ -3168,30 +3157,6 @@ Namespace Views
             Const tolerance As Double = 2.0
             Dim firstRowY = thumbBorders(0).Y
 
-            If forGroupView Then
-                Dim rowCounts As New Dictionary(Of Integer, Integer)()
-                For Each entry In thumbBorders
-                    Dim bucket = CInt(Math.Round(entry.Y / tolerance))
-                    Dim seen = 0
-                    rowCounts(bucket) = If(rowCounts.TryGetValue(bucket, seen), seen + 1, 1)
-                Next
-                columns = Math.Max(1, rowCounts.Values.Max())
-
-                ' Die Zeilenhoehe kommt aus der KACHEL selbst - Hoehe des Rahmens plus sein
-                ' Aussenabstand -, nicht aus dem Abstand zwischen zwei gezeichneten Zeilen. Der
-                ' Abstand taeuscht: stehen im Anzeigefenster keine zwei Kachelzeilen DERSELBEN Gruppe
-                ' untereinander (kleine Gruppen, oder ganz unten ein kurzes Fenster), liegt zwischen
-                ' je zwei Kachelzeilen eine Kopfzeile, und jeder Abstand ist um deren 48 px zu gross.
-                ' Die Gesamthoehe des Inhalts sprang dadurch je nach Fensterinhalt hin und her, der
-                ' Scrollbereich mit ihr, und die Ansicht flackerte unten dauerhaft zwischen zwei
-                ' Staenden (Mitschrift 2026-08-12: 227,98 gegen 276,19 px - genau eine Kopfzeile).
-                Dim slotFromTile = thumbBorders.
-                    Select(Function(x) x.Border.Bounds.Height + x.Border.Margin.Top + x.Border.Margin.Bottom).
-                    Min()
-                itemSlotHeight = slotFromTile
-                Return itemSlotHeight > 0
-            End If
-
             Dim firstRow = thumbBorders.Where(Function(x) Math.Abs(x.Y - firstRowY) <= tolerance).ToList()
             columns = Math.Max(1, firstRow.Count)
 
@@ -3216,9 +3181,13 @@ Namespace Views
             ' einem Eintrag. Weicht sie ab, rollt die Ansicht mit der einen und blaettert mit der
             ' anderen - sichtbar wird das erst als zu weiter Sprung bei BILD AUF und BILD AB.
             Dim itemHeight = ListItemSlotHeight
-            If vm.IsTileView Then
+            If vm.IsGroupView Then
+                ' Die Zeilenhoehe der Gruppenansicht steht in ihrer Zeilentabelle - gemessen von der
+                ' eigenen Anordnung, nicht hier ausgerechnet.
+                itemHeight = vm.GroupRowSlotHeight
+            ElseIf vm.IsTileView Then
                 Dim cols = 1
-                GetGridLayoutMetrics(scrollViewer, vm, cols, itemHeight, forGroupView:=vm.IsGroupView)
+                GetGridLayoutMetrics(scrollViewer, vm, cols, itemHeight)
             End If
             Return Math.Max(1, CInt(Math.Floor(viewportHeight / itemHeight)))
         End Function
@@ -3271,14 +3240,9 @@ Namespace Views
                 Dim scrollViewer = TileScrollViewer()
                 If scrollViewer Is Nothing OrElse scrollViewer.Bounds.Height <= 0 Then Return
 
-                Dim cols = 1
-                Dim itemSlotHeight = 0.0
-                GetGridLayoutMetrics(scrollViewer, vm, cols, itemSlotHeight, forGroupView:=True)
                 Dim viewHeight = scrollViewer.Bounds.Height
-                ' Erst die Zeilentabelle bauen lassen, dann die Gesamthoehe lesen: vor dem ersten
-                ' Aufbau steht sie auf 0, und der Sprung ans Ende landete im Nichts.
-                vm.SetGroupDisplayWindow(0.0, viewHeight, itemSlotHeight, cols)
-                If toEnd Then vm.SetGroupDisplayWindow(Math.Max(0.0, vm.ContentHeight - viewHeight), viewHeight, itemSlotHeight, cols)
+                ' Die Gesamthoehe steht in der Zeilentabelle und ist von Anfang an die endgueltige;
+                ' es reicht, einen noch offenen Messdurchgang abzuwarten.
                 scrollViewer.UpdateLayout()
                 Dim targetY = If(toEnd, Math.Max(0.0, scrollViewer.Extent.Height - viewHeight), 0.0)
                 scrollViewer.Offset = New Avalonia.Vector(0, targetY)
