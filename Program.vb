@@ -6,6 +6,11 @@ Imports ReactiveUI.Avalonia
 Module Program
     <STAThread>
     Function Main(args As String()) As Integer
+        ' GANZ ZUERST, vor allem anderen: der Riegel gegen die Telemetrie der Modelllaufzeit. Er
+        ' wirkt nur, solange noch keine ORT-Umgebung entstanden ist, deshalb steht er hier und
+        ' nicht dort, wo die Laufzeit zum ersten Mal gebraucht wird. Begruendung und Messung
+        ' stehen bei AiModelService.SuppressRuntimeTelemetry.
+        AiModelService.SuppressRuntimeTelemetry()
         AppSettingsService.ApplyApplicationScaleEnvironment()
         ' Build-Marker (ungated): beim Auswerten von Logs/Stacktraces muss zweifelsfrei erkennbar
         ' sein, WELCHER Build lief - mehrere Meldungen stammten unbemerkt aus einem

@@ -50,6 +50,7 @@ Namespace Services
         Private Shared _runtimeReady As Boolean = False
         Private Shared _runtimeError As String = ""
         Private Shared _telemetryOff As Boolean = False
+        Private Shared _telemetryEnvSet As Boolean = False
 
         ''' <summary>Der Ordner des NUTZERS. Was hier liegt, gewinnt: wer ein Modell selbst
         ''' exportiert oder gegen ein neueres tauscht, soll das ohne Schreibrechte im System
@@ -104,17 +105,56 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Setzt eine Umgebungsvariable so, dass die NATIVE Bibliothek sie sieht.
+        '''
+        ''' Noetig, weil .NET unter Unix eine eigene Kopie der Umgebung fuehrt:
+        ''' <c>Environment.SetEnvironmentVariable</c> aendert nur diese Kopie, ein <c>getenv</c> aus
+        ''' nativem Code sieht davon NICHTS. Nachgemessen, in beide Richtungen - was ueber
+        ''' <c>setenv</c> gesetzt wird, sieht umgekehrt .NET nicht.</summary>
+        <Runtime.InteropServices.DllImport("libc", EntryPoint:="setenv", SetLastError:=True)>
+        Private Shared Function NativeSetEnv(name As String, value As String, overwrite As Integer) As Integer
+        End Function
+
+        ''' <summary>Die Telemetrie der Laufzeit vollstaendig unterbinden, BEVOR sie entsteht.
+        '''
+        ''' Seit ONNX Runtime 1.29 bringen auch die Linux- und macOS-Bibliotheken einen
+        ''' Telemetrie-Uploader mit (nachgemessen: in 1.28 kommt die Sammeladresse in
+        ''' libonnxruntime.so nicht vor, in 1.29 mehrfach). Er entsteht im Konstruktor der
+        ''' ORT-Umgebung, legt eine dauerhafte Geraetekennung unter <c>~/.cache</c> an und
+        ''' sammelt Ereignisse in einer eigenen Datenbank.
+        '''
+        ''' <c>DisableTelemetryEvents</c> allein reicht dagegen NICHT, und zwar bauartbedingt: den
+        ''' Aufruf gibt es erst, wenn die Umgebung schon steht, also nach Kennung und Uploader.
+        ''' Nachgemessen wurden 231 abgelegte Ereignisse aus Laeufen, die genau so vorgingen.
+        ''' Vollstaendig unterbunden wird es allein ueber die Umgebungsvariable, die die Laufzeit
+        ''' beim Hochfahren einmal liest und dann festhaelt.
+        '''
+        ''' Unter Windows laeuft die Telemetrie ueber den Ereignisdienst des Betriebssystems und
+        ''' hoert auf die Variable ausdruecklich nicht - dort wirkt weiterhin der Aufruf unten.
+        ''' Was ein Nutzer mit seinen Fotos tut, geht niemanden ausser ihm etwas an.</summary>
+        Public Shared Sub SuppressRuntimeTelemetry()
+            If _telemetryEnvSet Then Return
+            _telemetryEnvSet = True
+            Try
+                Environment.SetEnvironmentVariable("ORT_DISABLE_TELEMETRY", "1")
+                If Not OperatingSystem.IsWindows() Then NativeSetEnv("ORT_DISABLE_TELEMETRY", "1", 1)
+            Catch
+                ' Fehlt libc unter diesem Namen, bleibt es beim Aufruf in CheckRuntime. Ein
+                ' Fehlschlag hier darf den Start nicht aufhalten.
+            End Try
+        End Sub
+
         Private Shared Sub CheckRuntime()
             SyncLock _lock
                 If _runtimeChecked Then Return
                 _runtimeChecked = True
                 Try
                     ' TELEMETRIE AUS, und zwar als ERSTES - bevor irgendetwas anderes die Laufzeit
-                    ' benutzt. Die Laufzeit meldet unter Windows ueber den Ereignisdienst des
-                    ' Betriebssystems an ihren Hersteller; unter Linux und macOS tut sie es nicht,
-                    ' aber die Abschaltung steht trotzdem plattformunabhaengig hier, damit sie nicht
-                    ' davon abhaengt, wo gebaut wird. Was ein Nutzer mit seinen Fotos tut, geht
-                    ' niemanden ausser ihm etwas an.
+                    ' benutzt. Der Riegel davor (die Umgebungsvariable) gehoert an den Programmstart
+                    ' und steht in Program.vb; hier steht er ein zweites Mal, weil der Pruefstand
+                    ' diese Klasse ohne den Programmstart benutzt. Beide Aufrufe sind harmlos, wenn
+                    ' der andere schon gewirkt hat.
+                    SuppressRuntimeTelemetry()
                     OrtEnv.Instance().DisableTelemetryEvents()
                     _telemetryOff = True
 
@@ -209,11 +249,27 @@ Namespace Services
             ''' Ausschlussliste: ein neues Modell, das noch niemand gemessen hat, darf nicht von
             ''' selbst auf die Karte geraten.
             '''
-            ''' OBJEKT ENTFERNEN, GESICHTER FINDEN und GESICHTER VERGLEICHEN laufen auf der Karte
-            ''' LANGSAMER als auf dem Prozessor - bei den beiden kleinen Modellen, weil die Fahrt
-            ''' zur Karte und zurueck mehr kostet als die Rechnung selbst, beim Fuellmodell auch bei
-            ''' voller Groesse (1024 Punkte: 7,3 Sekunden auf dem Prozessor gegen 11,3 auf der
-            ''' Karte). Sie hier einzutragen waere kein Gewinn, sondern ein Verlust.</summary>
+            ''' GESICHTER FINDEN (YuNet) bleibt draussen, weil die Fahrt zur Karte und zurueck mehr
+            ''' kostet als die Rechnung selbst: 2 ms auf dem Prozessor gegen 14 auf der Karte.
+            '''
+            ''' DIE LISTE HAENGT AN DER LAUFZEIT, nicht nur am Modell. Mit ONNX Runtime 1.29 sind
+            ''' DFT und PRelu im WebGPU-Weg dazugekommen, und genau die Modelle, die darauf bauen,
+            ''' kippen damit die Seite (Kachelgroessen wie im Betrieb, Median aus drei Laeufen):
+            '''
+            ''' <list type="bullet">
+            ''' <item>OBJEKT ENTFERNEN (Fourier-Faltung, also DFT): auf der Karte 3302 ms unter
+            ''' 1.28, 125 ms unter 1.29. Gegen 1655 ms auf dem Prozessor war es vorher ein Verlust
+            ''' und ist jetzt ein Gewinn um das Dreizehnfache.</item>
+            ''' <item>HOCHSKALIEREN, ZUEGIG (33 PRelu-Knoten): 749 ms unter 1.28, 18 ms unter 1.29,
+            ''' gegen 96 ms auf dem Prozessor. Dasselbe gilt fuer die entrauschende Fassung.</item>
+            ''' <item>GESICHTER VERGLEICHEN (50 PRelu-Knoten): 97 ms unter 1.28, 15 ms unter 1.29,
+            ''' gegen 28 ms auf dem Prozessor. Das Laden kostet auf der Karte rund 170 ms mehr, es
+            ''' lohnt also erst ab etwa vierzehn Gesichtern je Sitzung - ein Durchlauf durch eine
+            ''' Sammlung liegt weit darueber.</item>
+            ''' </list>
+            '''
+            ''' Wer die Laufzeit wechselt, misst diese Liste also neu. Der Messstand dafuer steht in
+            ''' packaging/Diagnostics/Modellmessung.</summary>
             Public Property GpuAllowed As Boolean = False
 
             ''' <summary>Eigene Adresse, falls dieses Modell nicht bei den anderen liegt. Leer heisst:
@@ -298,7 +354,7 @@ Namespace Services
                                         .Sha256 = "007d73146ac82eb424d7306fb2e9d15fb4d2702d5129040d9e68adeb28bc384e"},
                 New ModelEntry With {.Key = "lama",
                                         .FileName = "lama-v1.onnx", .Group = "Objekt entfernen",
-                                        .Purpose = "Lücken füllen", .Bytes = 110513159,
+                                        .Purpose = "Lücken füllen", .Bytes = 110513159, .GpuAllowed = True,
                                         .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"},
                 New ModelEntry With {.Key = "scunet",
                                         .FileName = "scunet-v1.onnx", .Group = "Entrauschen",
@@ -318,11 +374,11 @@ Namespace Services
                                         .Sha256 = "c37a9de8d7b92e4fb3705b5d305080d10a2ada8fd2dd8ce25e37c26cf9d89042"},
                 New ModelEntry With {.Key = "realesrgan-fast-x4",
                                         .FileName = "realesrgan-fast-x4-v1.onnx", .Group = "Hochskalieren",
-                                        .Purpose = "Vierfach, zügig", .Bytes = 4866420,
+                                        .Purpose = "Vierfach, zügig", .Bytes = 4866420, .GpuAllowed = True,
                                         .Sha256 = "d92d4628a6f570a8686fa9f8b0180c712fa36b04209ce0752949fac3cd760242"},
                 New ModelEntry With {.Key = "realesrgan-fast-wdn-x4",
                                         .FileName = "realesrgan-fast-wdn-x4-v1.onnx", .Group = "Hochskalieren",
-                                        .Purpose = "Vierfach, zügig und entrauschend", .Bytes = 4866420,
+                                        .Purpose = "Vierfach, zügig und entrauschend", .Bytes = 4866420, .GpuAllowed = True,
                                         .Sha256 = "abc25fa980e4cc60ddef472f37e61b5e788831f01a8087cc4af596b4c73d5a40"},
                 New ModelEntry With {.Key = "realesrgan-anime-x4",
                                         .FileName = "realesrgan-anime-x4-v1.onnx", .Group = "Hochskalieren",
@@ -334,7 +390,7 @@ Namespace Services
                                         .Sha256 = "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"},
                 New ModelEntry With {.Key = "arcface",
                                         .FileName = "arcface-r100-v1.onnx", .Group = "Personen",
-                                        .Purpose = "Gesichter vergleichen", .Bytes = 261036388,
+                                        .Purpose = "Gesichter vergleichen", .Bytes = 261036388, .GpuAllowed = True,
                                         .Herkunft = "https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8/resolve/main/arcfaceresnet100-8.onnx",
                                         .NonCommercialOnly = True,
                                         .Sha256 = "f3a6bc281e72f88862f5748b53be3d76b3b48f8f1ab1f4a537941bdc4e1b01da"},
