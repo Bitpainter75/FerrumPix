@@ -227,6 +227,15 @@ Namespace Services
 
             For Each name In namen
                 Yield name
+                ' Unter macOS zusaetzlich die beiden Homebrew-Verzeichnisse mit vollem Pfad. Eine
+                ' aus dem Finder gestartete .app erbt keinen Homebrew-Pfad, und dyld sucht einen
+                ' Namen ohne Schraegstrich nur in $HOME/lib, /usr/local/lib und /usr/lib - auf Apple
+                ' Silicon liegt Homebrew aber unter /opt/homebrew/lib. Dieselbe Stelle gibt es bei
+                ' libmpv und libraw; hier fehlte sie.
+                If OperatingSystem.IsMacOS() Then
+                    Yield IO.Path.Combine("/opt/homebrew/lib", name)
+                    Yield IO.Path.Combine("/usr/local/lib", name)
+                End If
                 Yield IO.Path.Combine(baseDir, name)
                 If rid.Length > 0 Then Yield IO.Path.Combine(baseDir, "runtimes", rid, "native", name)
             Next

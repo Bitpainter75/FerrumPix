@@ -594,6 +594,25 @@
                             </ItemsControl>
                         </Grid>
 
+                        <!-- Nur macOS: dort rechnet das System selbst um, sobald die Zeichenflaeche
+                             einen Farbraum traegt. Warum das anderswo nicht hilft, steht am
+                             ViewModel. Ausdruecklich als Versuch beschriftet - ob die Ebene den
+                             Farbraum annimmt, konnte hier niemand pruefen. -->
+                        <StackPanel Spacing="14" IsVisible="{Binding IsWindowColorSpaceFixSupported}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Farben an Bildschirme mit weitem Farbumfang anpassen (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Auf Bildschirmen mit weitem Farbumfang, etwa Display P3, wirken Fotos und Oberfläche zu kräftig. Eingeschaltet sagt FerrumPix dem System, dass es in sRGB zeichnet, damit es selbst umrechnet. Ob das greift, hängt vom verwendeten Zeichenweg ab; deshalb ist es ein Versuch und kein Versprechen. Wirkt nach einem Neustart." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding WindowColorSpaceStatusText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding MacTagWindowColorSpace}"
+                                              OnContent=""
+                                              OffContent=""
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+
                         <!-- Anwendungsskalierung wirkt nur auf Avalonias X11-Backend, siehe
                              IsApplicationScaleSupported - unter Windows skaliert das OS selbst. -->
                         <StackPanel Spacing="14" IsVisible="{Binding IsApplicationScaleSupported}">
@@ -1509,6 +1528,28 @@
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>
+                        </Grid>
+                        <!-- Die Abkuerzungen bleiben unuebersetzt (Klasse no-translate): AHD, DCB
+                             und PPG sind die Namen der Verfahren, nicht Beschreibungen. Was sie
+                             bedeuten, steht in der Zeile darunter. -->
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Verfahren zum Entwickeln der Sensordaten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ein Sensor misst je Bildpunkt nur eine Farbe; das Verfahren rechnet daraus das vollständige Bild. Vorschaubilder werden nach einer Änderung neu erzeugt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding RawDemosaicDescription}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding RawDemosaicOptions}"
+                                      SelectedItem="{Binding SelectedRawDemosaic, Mode=TwoWay}"
+                                      MinWidth="140"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                         </Grid>
                     </StackPanel>
                 </Border>

@@ -8134,4 +8134,34 @@
   <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
     <value>결과 {0}개 (로컬 카탈로그)</value>
   </data>
+  <data name="Verfahren_zum_Entwickeln_der_Sensordaten_5cd7d7bd" xml:space="preserve">
+    <value>센서 데이터를 현상하는 방식</value>
+  </data>
+  <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
+    <value>센서는 화소마다 한 가지 색만 측정하며, 이 방식이 그로부터 완전한 이미지를 계산합니다. 변경 후에는 미리보기가 다시 만들어집니다.</value>
+  </data>
+  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
+    <value>묘사가 더 섬세하지만 색 노이즈가 늘고 사진 한 장당 약 2.5배의 시간이 걸립니다.</value>
+  </data>
+  <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
+    <value>기본값보다 약 5분의 1 빠릅니다.</value>
+  </data>
+  <data name="Die_Vorgabe_ausgewogen_zwischen_Zeichnung_und_Ze_200461b4" xml:space="preserve">
+    <value>기본값: 묘사와 시간의 균형.</value>
+  </data>
+  <data name="Farben_an_Bildschirme_mit_weitem_Farbumfang_anpa_6cedefa0" xml:space="preserve">
+    <value>넓은 색영역 화면에 맞게 색 보정 (실험)</value>
+  </data>
+  <data name="Auf_Bildschirmen_mit_weitem_Farbumfang_etwa_Disp_15cf8d1c" xml:space="preserve">
+    <value>Display P3 같은 넓은 색영역 화면에서는 사진과 화면이 지나치게 진하게 보입니다. 켜면 FerrumPix가 sRGB로 그린다고 시스템에 알려 시스템이 직접 변환하게 합니다. 효과가 있을지는 사용 중인 그리기 경로에 달려 있어 약속이 아니라 시도입니다. 다시 시작한 뒤에 적용됩니다.</value>
+  </data>
+  <data name="Wirkt_nach_einem_Neustart_034a8a6c" xml:space="preserve">
+    <value>다시 시작한 뒤에 적용됩니다.</value>
+  </data>
+  <data name="Aus_7ae85294" xml:space="preserve">
+    <value>꺼짐.</value>
+  </data>
+  <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
+    <value>마지막 시도</value>
+  </data>
 </root>

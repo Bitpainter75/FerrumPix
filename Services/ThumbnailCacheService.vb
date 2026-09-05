@@ -334,7 +334,8 @@ Namespace Services
                                                    quality As Integer) As String
             Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
             Return $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}" &
-                   $"{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}_v{CacheFormatVersion}.jpg"
+                   $"{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}" &
+                   $"{DemosaicSuffix(filePath)}_v{CacheFormatVersion}.jpg"
         End Function
 
         ''' <summary>Was ein Lauf von <see cref="EnsureCached"/> ergeben hat.</summary>
@@ -918,6 +919,26 @@ Namespace Services
         Private Shared Function SidecarRotationSuffix(filePath As String) As String
             Dim rotation = SidecarRotationFor(filePath)
             Return If(rotation = 0, "", $"_r{rotation}")
+        End Function
+
+        ''' <summary>Teil des Cache-Dateinamens fuer das gewaehlte Demosaic-Verfahren, und zwar NUR
+        ''' bei RAW-Dateien und NUR abweichend von der Vorgabe.
+        '''
+        ''' Die Wahl aendert die Pixel, ohne die Datei anzufassen - ohne sie im Namen bliebe eine
+        ''' Kachel auf dem alten Verfahren stehen, waehrend das Bild daneben im Editor anders
+        ''' aussieht. Dieselbe Ueberlegung wie bei der Drehung aus der Beistelldatei: bei der
+        ''' Vorgabe bleibt der Name unveraendert, damit kein vorhandener Cache-Bestand entwertet
+        ''' wird. Ein JPEG hat kein Demosaic, dort waere das Suffix nur Ballast.</summary>
+        Private Shared Function DemosaicSuffix(filePath As String) As String
+            If Not RawPreviewService.IsSupportedRaw(filePath) Then Return ""
+            Dim algorithm As String
+            Try
+                algorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(
+                    AppSettingsService.Load().RawDemosaicAlgorithm)
+            Catch
+                Return ""
+            End Try
+            Return If(algorithm = AppSettingsService.RawDemosaicDefault, "", $"_d{algorithm}")
         End Function
 
         Private Shared Function DecodeDirect(filePath As String, cancellationToken As CancellationToken) As Bitmap

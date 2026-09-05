@@ -154,7 +154,7 @@ Theme, accent colour, language, interface and font scale, thumbnail and export q
 
 The interface speaks German, English, Dutch, Swedish, Danish, Norwegian, Finnish, Spanish, French, Italian, Portuguese, Polish, Czech, Russian, Chinese and Japanese. By default it follows your system; anything else it does not know falls back to English.
 
-Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, and which adjustment groups you want to see at all. Two switches concern RAW development, the base brightness per camera model and the lens correction.
+Gallery and editor can be set up to match how you work: what a double-click opens, which tool the editor starts with, the order of the tool bar, which side the adjustment panel sits on, whether the bottom bar is shown in gallery, viewer and editor, a default format for saving, and which adjustment groups you want to see at all. RAW development has its own settings: the base brightness per camera model, the lens correction, and which method turns the sensor data into a full picture (AHD, DCB or PPG).
 
 A drawing tablet setting makes buttons and menu entries act the moment the pen touches down instead of when it lifts, for pens that can drag a slider but press nothing.
 
@@ -247,7 +247,7 @@ dotnet run --project FerrumPix.vbproj
 
 ## Licence
 
-FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), [Tabler Icons](https://github.com/tabler/tabler-icons) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe.
+FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), [Tabler Icons](https://github.com/tabler/tabler-icons) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe.
 
 
 [Share your FerrumPix experience](https://github.com/Bitpainter75/FerrumPix/discussions/29)

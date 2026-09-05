@@ -42,6 +42,10 @@ Namespace Views
             ' sich beim Rollen als hakende Bildlaufleiste zeigt.
             AddHandler Loaded, Sub(s, e) Services.PerformanceTraceService.StartUiThreadWatchdog()
             AddHandler Opened, Sub(s, e) RestoreWindowPlacement()
+            ' Erst wenn das Fenster offen ist, gibt es eine Zeichenflaeche, an der ein Farbraum
+            ' haengen koennte. Der Aufruf prueft die Einstellung selbst und tut ausserhalb von
+            ' macOS nichts.
+            AddHandler Opened, Sub(s, e) ApplyWindowColorSpace()
             AddHandler Closing, AddressOf HandleWindowClosing
             AddHandler PositionChanged, Sub(s, e) OnWindowPlacementChanged()
             AddHandler SizeChanged, Sub(s, e) OnWindowPlacementChanged()
@@ -146,6 +150,24 @@ Namespace Views
                    e.PropertyName = NameOf(MainWindowViewModel.CurrentMode) Then
                 ApplyLocalization()
             End If
+        End Sub
+
+        ''' <summary>Setzt den Farbraum der Zeichenflaeche, wenn die Einstellung es verlangt.
+        '''
+        ''' Nur macOS und nur auf ausdruecklichen Wunsch: der Weg ist experimentell, weil er davon
+        ''' abhaengt, welche Art Ebene das Toolkit anlegt (siehe MacWindowColorSpaceService). Ohne
+        ''' Geraet mit weitem Farbumfang laesst er sich hier nicht pruefen, deshalb entscheidet der
+        ''' Nutzer und nicht wir.</summary>
+        Private Sub ApplyWindowColorSpace()
+            If Not OperatingSystem.IsMacOS() Then Return
+            Try
+                If Not Services.AppSettingsService.Load().MacTagWindowColorSpace Then Return
+                Dim platformHandle = TryGetPlatformHandle()
+                If platformHandle Is Nothing Then Return
+                Services.MacWindowColorSpaceService.Apply(platformHandle.Handle, platformHandle.HandleDescriptor)
+            Catch ex As Exception
+                Services.DiagnosticLogService.LogException("Farbraum.Fenster", ex)
+            End Try
         End Sub
 
         Private Sub RestoreWindowPlacement()

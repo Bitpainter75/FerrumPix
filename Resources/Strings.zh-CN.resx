@@ -8088,4 +8088,34 @@
   <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
     <value>{0} 个结果（本地目录）</value>
   </data>
+  <data name="Verfahren_zum_Entwickeln_der_Sensordaten_5cd7d7bd" xml:space="preserve">
+    <value>传感器数据的解算方法</value>
+  </data>
+  <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
+    <value>传感器每个像素只测量一种颜色，该方法据此计算出完整图像。更改后会重新生成缩略图。</value>
+  </data>
+  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
+    <value>细节更细腻，但色彩噪点更多，每张照片耗时约为两倍半。</value>
+  </data>
+  <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
+    <value>比默认方法快约五分之一。</value>
+  </data>
+  <data name="Die_Vorgabe_ausgewogen_zwischen_Zeichnung_und_Ze_200461b4" xml:space="preserve">
+    <value>默认方法：在细节与速度之间取得平衡。</value>
+  </data>
+  <data name="Farben_an_Bildschirme_mit_weitem_Farbumfang_anpa_6cedefa0" xml:space="preserve">
+    <value>为广色域显示器调整颜色（试验）</value>
+  </data>
+  <data name="Auf_Bildschirmen_mit_weitem_Farbumfang_etwa_Disp_15cf8d1c" xml:space="preserve">
+    <value>在 Display P3 等广色域显示器上，照片和界面显得过于浓艳。开启后，FerrumPix 会告知系统自己以 sRGB 绘制，由系统负责转换。是否生效取决于所用的绘制路径，因此这是一次试验而非承诺。重启后生效。</value>
+  </data>
+  <data name="Wirkt_nach_einem_Neustart_034a8a6c" xml:space="preserve">
+    <value>重启后生效。</value>
+  </data>
+  <data name="Aus_7ae85294" xml:space="preserve">
+    <value>已关闭。</value>
+  </data>
+  <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
+    <value>上次尝试</value>
+  </data>
 </root>

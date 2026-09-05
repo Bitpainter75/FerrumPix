@@ -3998,7 +3998,11 @@ Namespace ViewModels
             CancelActiveSearch()
             ' Ein Wechsel im Baum beendet JEDE Knopfauswahl - die Knoepfe verlieren die
             ' Akzentfarbe, sonst behaupteten sie einen Filter, der gar nicht mehr gilt.
-            ClearButtonFiltersSilently()
+            '
+            ' Die allgemeine Filterleiste bleibt dabei stehen, SOLANGE wir im Ordnerbereich sind:
+            ' von Ordner zu Ordner ist kein Bereichswechsel. Kommen wir dagegen von einem virtuellen
+            ' Ziel (Suche, Immich, Nextcloud), ist es einer, und sie geht mit.
+            ClearButtonFiltersSilently(scopeChanged:=_isVirtualFolder)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) AndAlso _currentFolder <> folderPath Then
                 _historyBack.Push(_currentFolder)
                 _historyForward.Clear()
@@ -4303,7 +4307,13 @@ Namespace ViewModels
         '''
         ''' Fuer den Ordnerwechsel: danach gilt keiner der Filter mehr, und ein Knopf, der noch die
         ''' Akzentfarbe traegt, behauptet etwas Falsches.</summary>
-        Private Sub ClearButtonFiltersSilently()
+        ''' <param name="scopeChanged">Aus, wenn der Wechsel INNERHALB der Ordner bleibt. Stichwort,
+        ''' Person und Ort gehen trotzdem weg - sie gehoeren zu genau einer Ansicht. Die allgemeine
+        ''' Leiste (Favorit, Sterne, Dateityp, Farbmarkierung) bleibt dagegen stehen: wer eine Serie
+        ''' ordnerweise durchgeht, will dabei dieselbe Auswahl sehen und nicht in jedem Ordner neu
+        ''' filtern (Nutzerbefund und Entscheidung am 2026-09-05). Beim Wechsel der QUELLE bleibt es
+        ''' beim Zuruecksetzen, dort haette sie fuer die neue Ansicht nie jemand gewaehlt.</param>
+        Private Sub ClearButtonFiltersSilently(Optional scopeChanged As Boolean = True)
             ' Der Text im Suchfeld ist ebenfalls ein Filter auf die gerade sichtbare Menge.
             If Not String.IsNullOrEmpty(_searchText) Then SearchText = ""
             _activeTagFilters = New List(Of String)()
@@ -4316,10 +4326,10 @@ Namespace ViewModels
             RefreshPersonFilterState()
             RefreshPlaceFilterState()
             ReturnToFilterOrigin(navigate:=False)
-            ' Die allgemeine Leiste (Favorit, Sterne, Dateityp, Farbmarkierung) ist ebenfalls
-            ' ein Bereichsfilter. Beim Quellenwechsel darf sie nicht heimlich die neue Ansicht
-            ' einschränken; zuvor wurden hier nur die drei Popup-Filter zurückgesetzt.
-            If HasActiveFilter Then ClearFilters()
+            ' Die allgemeine Leiste (Favorit, Sterne, Dateityp, Farbmarkierung) gilt fuer den
+            ' BEREICH, nicht fuer den einzelnen Ordner. Beim Quellenwechsel darf sie nicht heimlich
+            ' die neue Ansicht einschränken; von Ordner zu Ordner bleibt sie stehen.
+            If scopeChanged AndAlso HasActiveFilter Then ClearFilters()
         End Sub
 
         ''' <summary>Zurueck dorthin, wo die Auswahl begonnen hat - in den Ordner oder auf den Knoten.

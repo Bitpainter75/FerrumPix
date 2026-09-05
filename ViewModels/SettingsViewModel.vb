@@ -555,6 +555,96 @@ Namespace ViewModels
         End Property
         Private _lensCorrectionEnabled As Boolean
 
+        ''' <summary>Nur unter macOS sichtbar, und der Grund ist NICHT, dass es das Problem
+        ''' anderswo nicht gäbe.
+        '''
+        ''' Übersättigt wird eine sRGB-Ausgabe auf jedem Bildschirm mit weitem Farbumfang, auch
+        ''' unter Windows und Linux. Verschieden ist, was das System daraus macht: macOS rechnet
+        ''' selbst um, sobald die Zeichenfläche einen Farbraum trägt - deshalb genügt dort das
+        ''' Aufprägen. Windows rechnet für gewöhnliche Fenster gar nicht um (erst Windows 11 tut es
+        ''' mit eingeschalteter automatischer Farbverwaltung), und unter X11 gibt es nichts
+        ''' dergleichen. Dort hülfe kein Farbraum an der Fläche, sondern nur eine eigene Umrechnung
+        ''' auf das Bildschirmprofil - eine andere Baustelle, siehe OFFENE_PUNKTE.</summary>
+        Public ReadOnly Property IsWindowColorSpaceFixSupported As Boolean
+            Get
+                Return OperatingSystem.IsMacOS()
+            End Get
+        End Property
+
+        ''' <summary>Der Zeichenfläche den Farbraum sRGB aufprägen. Wirkt erst nach einem
+        ''' Neustart, weil er beim Öffnen des Fensters gesetzt wird.</summary>
+        Public Property MacTagWindowColorSpace As Boolean
+            Get
+                Return _macTagWindowColorSpace
+            End Get
+            Set(value As Boolean)
+                If _macTagWindowColorSpace = value Then Return
+                Me.RaiseAndSetIfChanged(_macTagWindowColorSpace, value)
+                AppSettingsService.Update(Sub(s) s.MacTagWindowColorSpace = value)
+                Me.RaisePropertyChanged(NameOf(WindowColorSpaceStatusText))
+            End Set
+        End Property
+        Private _macTagWindowColorSpace As Boolean
+
+        ''' <summary>Was der letzte Versuch ergeben hat. Ohne diese Zeile bliebe dem Nutzer nur
+        ''' "es sieht anders aus" oder "es sieht gleich aus" - und uns bei einer Rückfrage nichts,
+        ''' woran wir erkennen könnten, ob die Ebene den Farbraum überhaupt angenommen hat.</summary>
+        Public ReadOnly Property WindowColorSpaceStatusText As String
+            Get
+                If Not OperatingSystem.IsMacOS() Then Return ""
+                Dim result = MacWindowColorSpaceService.LastResult
+                If String.IsNullOrWhiteSpace(result) Then
+                    Return If(_macTagWindowColorSpace,
+                              LocalizationService.T("Wirkt nach einem Neustart."),
+                              LocalizationService.T("Aus."))
+                End If
+                Return LocalizationService.T("Letzter Versuch") & ": " & result
+            End Get
+        End Property
+
+        ''' <summary>Die Verfahren, mit denen aus den Sensordaten ein Farbbild wird.</summary>
+        Public ReadOnly Property RawDemosaicOptions As New ObservableCollection(Of RawDemosaicOption)(
+            AppSettingsService.RawDemosaicChoices.Select(
+                Function(k) New RawDemosaicOption With {.Key = k, .Name = k}))
+
+        ''' <summary>Das gewaehlte Verfahren. Es wirkt auf JEDEN neuen Decode; bereits gebaute
+        ''' Kacheln tragen die Wahl in ihrem Namen und werden dadurch von selbst neu erzeugt.</summary>
+        Public Property SelectedRawDemosaic As RawDemosaicOption
+            Get
+                Dim key = AppSettingsService.NormalizeRawDemosaicAlgorithm(_rawDemosaicAlgorithm)
+                Return If(RawDemosaicOptions.FirstOrDefault(Function(o) o.Key = key),
+                          RawDemosaicOptions.FirstOrDefault())
+            End Get
+            Set(value As RawDemosaicOption)
+                If value Is Nothing Then Return
+                Dim key = AppSettingsService.NormalizeRawDemosaicAlgorithm(value.Key)
+                If _rawDemosaicAlgorithm = key Then Return
+                _rawDemosaicAlgorithm = key
+                AppSettingsService.Update(Sub(s) s.RawDemosaicAlgorithm = key)
+                Me.RaisePropertyChanged(NameOf(SelectedRawDemosaic))
+                Me.RaisePropertyChanged(NameOf(RawDemosaicDescription))
+            End Set
+        End Property
+        Private _rawDemosaicAlgorithm As String = AppSettingsService.RawDemosaicDefault
+
+        ''' <summary>Was das gewaehlte Verfahren ausmacht - die Zeile unter der Auswahl. Die Angaben
+        ''' sind gemessen, nicht aus der Literatur uebernommen.</summary>
+        Public ReadOnly Property RawDemosaicDescription As String
+            Get
+                ' EIN Literal je Aufruf, bewusst nicht ueber "&" verkettet: das Lokalisierungs-Audit
+                ' sammelt die Texte aus dem Quelltext, und ein zusammengesetzter Text faellt dort
+                ' durch - er waere zur Laufzeit ein anderer Schluessel als der gefundene.
+                Select Case AppSettingsService.NormalizeRawDemosaicAlgorithm(_rawDemosaicAlgorithm)
+                    Case "DCB"
+                        Return LocalizationService.T("Feinere Zeichnung, dafür mehr Farbrauschen und etwa zweieinhalbmal so lange je Bild.")
+                    Case "PPG"
+                        Return LocalizationService.T("Etwa ein Fünftel schneller als die Vorgabe.")
+                    Case Else
+                        Return LocalizationService.T("Die Vorgabe: ausgewogen zwischen Zeichnung und Zeit.")
+                End Select
+            End Get
+        End Property
+
         ''' <summary>Wie viele Objektive die mitgelieferte Sammlung kennt - fuer den Beschreibungstext
         ''' unter dem Schalter.</summary>
         Public ReadOnly Property LensDatabaseInfo As String
@@ -3139,6 +3229,8 @@ Namespace ViewModels
             _developRawInBatch = _appSettings.DevelopRawInBatch
             _useCameraBaselineTable = _appSettings.UseCameraBaselineTable
             _lensCorrectionEnabled = _appSettings.LensCorrectionEnabled
+            _rawDemosaicAlgorithm = AppSettingsService.NormalizeRawDemosaicAlgorithm(_appSettings.RawDemosaicAlgorithm)
+            _macTagWindowColorSpace = _appSettings.MacTagWindowColorSpace
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)
@@ -4807,6 +4899,17 @@ Namespace ViewModels
     ''' <summary>Ein Eintrag in der Auswahl der Grafikkarten. Der leere Schlüssel ist die
     ''' Vorauswahl: dann sucht die Anwendung selbst eine aus.</summary>
     Public Class GpuDeviceOption
+        Public Property Key As String = ""
+        Public Property Name As String = ""
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
+    ''' <summary>Ein Demosaic-Verfahren in der Auswahlliste. Der Schluessel wird gespeichert, der
+    ''' Name steht im Feld - er traegt die Abkuerzung, weil genau die in der Fachwelt gebraucht
+    ''' wird; die Erklaerung steht in der Zeile darunter.</summary>
+    Public Class RawDemosaicOption
         Public Property Key As String = ""
         Public Property Name As String = ""
         Public Overrides Function ToString() As String

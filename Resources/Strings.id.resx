@@ -8134,4 +8134,34 @@
   <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
     <value>{0} hasil (katalog lokal)</value>
   </data>
+  <data name="Verfahren_zum_Entwickeln_der_Sensordaten_5cd7d7bd" xml:space="preserve">
+    <value>Metode untuk mengembangkan data sensor</value>
+  </data>
+  <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
+    <value>Sensor hanya mengukur satu warna per piksel; metode ini menghitung gambar utuh dari data itu. Gambar mini dibuat ulang setelah perubahan.</value>
+  </data>
+  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
+    <value>Detail lebih halus, tetapi derau warna lebih banyak dan sekitar dua setengah kali lebih lama per foto.</value>
+  </data>
+  <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
+    <value>Sekitar seperlima lebih cepat daripada bawaan.</value>
+  </data>
+  <data name="Die_Vorgabe_ausgewogen_zwischen_Zeichnung_und_Ze_200461b4" xml:space="preserve">
+    <value>Bawaan: seimbang antara detail dan waktu.</value>
+  </data>
+  <data name="Farben_an_Bildschirme_mit_weitem_Farbumfang_anpa_6cedefa0" xml:space="preserve">
+    <value>Sesuaikan warna untuk layar gamut lebar (percobaan)</value>
+  </data>
+  <data name="Auf_Bildschirmen_mit_weitem_Farbumfang_etwa_Disp_15cf8d1c" xml:space="preserve">
+    <value>Pada layar bergamut lebar seperti Display P3, foto dan antarmuka tampak terlalu pekat. Saat dinyalakan, FerrumPix memberi tahu sistem bahwa ia menggambar dalam sRGB, sehingga sistem yang mengonversi. Berhasil atau tidak bergantung pada jalur penggambaran yang dipakai; karena itu ini percobaan, bukan janji. Berlaku setelah dimulai ulang.</value>
+  </data>
+  <data name="Wirkt_nach_einem_Neustart_034a8a6c" xml:space="preserve">
+    <value>Berlaku setelah dimulai ulang.</value>
+  </data>
+  <data name="Aus_7ae85294" xml:space="preserve">
+    <value>Mati.</value>
+  </data>
+  <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
+    <value>Percobaan terakhir</value>
+  </data>
 </root>

@@ -505,6 +505,20 @@ Namespace Services
         Public Property LensCorrectionEnabled As Boolean = True
         Public Property LensAssignments As New List(Of LensAssignment)()
 
+        ''' <summary>Nur macOS: der Zeichenflaeche des Fensters den Farbraum sRGB aufpraegen.
+        '''
+        ''' Ab Werk AUS, weil der Weg experimentell ist - ob die Ebene den Farbraum annimmt, haengt
+        ''' am Toolkit, und hier gibt es kein Geraet mit weitem Farbumfang, an dem sich das pruefen
+        ''' liesse. Was er soll und warum er nichts umrechnet, steht in
+        ''' <see cref="MacWindowColorSpaceService"/>.</summary>
+        Public Property MacTagWindowColorSpace As Boolean = False
+
+        ''' <summary>Das Verfahren, mit dem aus den Sensordaten ein Farbbild wird (Demosaic).
+        ''' Gespeichert wird der NAME, nicht LibRaws Nummer: die Nummern gehoeren einer fremden
+        ''' Bibliothek und koennen sich zwischen ihren Staenden verschieben, der Name nicht.
+        ''' Unbekanntes faellt beim Laden auf die Vorgabe zurueck.</summary>
+        Public Property RawDemosaicAlgorithm As String = AppSettingsService.RawDemosaicDefault
+
         Public Property LightroomPresets As New List(Of XmpPresetSettings)()
         Public Property LutPresets As New List(Of LutPresetSettings)()
 
@@ -733,6 +747,7 @@ Namespace Services
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
+                settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
@@ -967,6 +982,7 @@ Namespace Services
                 settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
+                settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
@@ -1787,6 +1803,29 @@ Namespace Services
                 If extension.Length > 0 Then Return extensionPrefix & extension
             End If
             Return "All"
+        End Function
+
+        ''' <summary>Das voreingestellte Demosaic-Verfahren. AHD ist auch LibRaws eigene Vorgabe
+        ''' (nachgemessen: ein Decode ohne gesetztes Verfahren liefert dieselben Bilddaten wie
+        ''' AHD).</summary>
+        Public Const RawDemosaicDefault As String = "AHD"
+
+        ''' <summary>Die anwaehlbaren Verfahren, in der Reihenfolge der Auswahlliste.
+        '''
+        ''' VNG und die lineare Interpolation stehen bewusst NICHT darin. Gemessen an einer 20-MP-CR3
+        ''' und einer 12-MP-NEF (Median aus drei Laeufen, ganzer Decode): PPG 652/504 ms, AHD
+        ''' 792/575 ms, linear 778/573 ms, VNG 1836/1211 ms, DCB 2015/1330 ms. VNG kostet also das
+        ''' 2,3-fache von AHD, ohne dafuer etwas zu bieten, und linear ist bei gleicher Zeit das
+        ''' schwaechste Verfahren - beide waeren nur eine Falle in einer Auswahlliste.</summary>
+        Public Shared ReadOnly RawDemosaicChoices As String() = {"AHD", "DCB", "PPG"}
+
+        Public Shared Function NormalizeRawDemosaicAlgorithm(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return RawDemosaicDefault
+            Dim trimmed = value.Trim()
+            For Each choice In RawDemosaicChoices
+                If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
+            Next
+            Return RawDemosaicDefault
         End Function
 
         Public Shared Function NormalizeGalleryFilterRatings(value As List(Of Integer)) As List(Of Integer)

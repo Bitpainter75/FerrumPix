@@ -8130,4 +8130,34 @@
   <data name="0_Treffer_lokaler_Katalog_3545b497" xml:space="preserve">
     <value>{0} osumaa (paikallinen luettelo)</value>
   </data>
+  <data name="Verfahren_zum_Entwickeln_der_Sensordaten_5cd7d7bd" xml:space="preserve">
+    <value>Menetelmä kennodatan kehittämiseen</value>
+  </data>
+  <data name="Ein_Sensor_misst_je_Bildpunkt_nur_eine_Farbe_das_deddea65" xml:space="preserve">
+    <value>Kenno mittaa vain yhden värin kuvapistettä kohden; menetelmä laskee siitä koko kuvan. Esikatselukuvat luodaan uudelleen muutoksen jälkeen.</value>
+  </data>
+  <data name="Feinere_Zeichnung_daf_r_mehr_Farbrauschen_und_et_f187bdb8" xml:space="preserve">
+    <value>Hienompi piirto, mutta enemmän värikohinaa ja noin kaksi ja puoli kertaa pidempi aika kuvaa kohden.</value>
+  </data>
+  <data name="Etwa_ein_F_nftel_schneller_als_die_Vorgabe_67a1755c" xml:space="preserve">
+    <value>Noin viidenneksen nopeampi kuin oletus.</value>
+  </data>
+  <data name="Die_Vorgabe_ausgewogen_zwischen_Zeichnung_und_Ze_200461b4" xml:space="preserve">
+    <value>Oletus: tasapaino piirron ja ajan välillä.</value>
+  </data>
+  <data name="Farben_an_Bildschirme_mit_weitem_Farbumfang_anpa_6cedefa0" xml:space="preserve">
+    <value>Sovita värit laajan väriavaruuden näytöille (kokeilu)</value>
+  </data>
+  <data name="Auf_Bildschirmen_mit_weitem_Farbumfang_etwa_Disp_15cf8d1c" xml:space="preserve">
+    <value>Laajan väriavaruuden näytöillä, kuten Display P3, valokuvat ja käyttöliittymä näyttävät liian voimakkailta. Käytössä FerrumPix kertoo järjestelmälle piirtävänsä sRGB-avaruudessa, jotta järjestelmä muuntaa itse. Toimiiko se, riippuu käytetystä piirtotavasta; siksi tämä on kokeilu eikä lupaus. Vaikuttaa uudelleenkäynnistyksen jälkeen.</value>
+  </data>
+  <data name="Wirkt_nach_einem_Neustart_034a8a6c" xml:space="preserve">
+    <value>Vaikuttaa uudelleenkäynnistyksen jälkeen.</value>
+  </data>
+  <data name="Aus_7ae85294" xml:space="preserve">
+    <value>Pois.</value>
+  </data>
+  <data name="Letzter_Versuch_b7bdc20f" xml:space="preserve">
+    <value>Viimeisin yritys</value>
+  </data>
 </root>

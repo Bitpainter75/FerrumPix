@@ -113,6 +113,18 @@ Namespace Services
 
         ''' <summary>Die Pfade, unter denen eine mitgelieferte LibRaw liegen kann: direkt neben der
         ''' Anwendung oder unter runtimes/&lt;rid&gt;/native, wohin packaging/package.sh sie kopiert.</summary>
+        ''' <summary>Dieselben Namen in den beiden Homebrew-Verzeichnissen, mit vollem Pfad.
+        ''' Ausserhalb von macOS leer - dort gibt es Homebrew nicht, und der Suchpfad des Systems
+        ''' findet die Bibliothek ohnehin.</summary>
+        Private Shared Iterator Function HomebrewCandidates(namen As String()) As IEnumerable(Of String)
+            If Not OperatingSystem.IsMacOS() Then Return
+            For Each prefix In {"/opt/homebrew/lib", "/usr/local/lib"}
+                For Each name In namen
+                    Yield Path.Combine(prefix, name)
+                Next
+            Next
+        End Function
+
         Private Shared Iterator Function BundledCandidates(namen As String()) As IEnumerable(Of String)
             Dim baseDir = AppContext.BaseDirectory
 
@@ -141,7 +153,11 @@ Namespace Services
                 If OperatingSystem.IsWindows() Then
                     candidates = {"libraw.dll", "raw.dll", "libraw-23.dll"}
                 ElseIf OperatingSystem.IsMacOS() Then
-                    candidates = {"libraw.dylib", "libraw.23.dylib", "libraw.22.dylib"}
+                    ' Sonamen wie unter Linux (25 = LibRaw 0.22, 23 = 0.21); der nackte Name
+                    ' existiert nur mit Entwicklungspaket. Die 25 fehlte hier, waehrend die
+                    ' Linux-Liste sie laengst fuehrt.
+                    candidates = {"libraw.dylib", "libraw.25.dylib", "libraw.24.dylib",
+                                  "libraw.23.dylib", "libraw.22.dylib"}
                 Else
                     ' Sonamen der verbreiteten Versionen (25 = LibRaw 0.22, 23 = 0.21); das nackte
                     ' libraw.so existiert nur mit Dev-Paket.
@@ -167,6 +183,23 @@ Namespace Services
                     End If
                     handle = IntPtr.Zero
                 Next
+
+                ' DANN, unter macOS, dieselben Namen mit vollem Pfad in den Homebrew-Verzeichnissen.
+                ' Der Grund steht bei libmpv genauso: eine aus dem Finder gestartete .app erbt weder
+                ' die Shell-Umgebung noch einen Homebrew-Pfad, und dyld sucht einen Namen ohne
+                ' Schrägstrich nur in $HOME/lib, /usr/local/lib und /usr/lib. Auf Apple Silicon liegt
+                ' Homebrew unter /opt/homebrew/lib - dort fand FerrumPix eine vorhandene LibRaw also
+                ' nie und blieb wortlos bei der eingebetteten Vorschau. Diese Pfade gehoeren noch zur
+                ' SYSTEMbibliothek und stehen deshalb vor der mitgelieferten.
+                If handle = IntPtr.Zero Then
+                    For Each filePath In HomebrewCandidates(candidates)
+                        If NativeLibrary.TryLoad(filePath, handle) Then
+                            geladen = filePath
+                            Exit For
+                        End If
+                        handle = IntPtr.Zero
+                    Next
+                End If
 
                 ' DANN die mitgelieferte: Windows und die portablen Pakete haben keine System-
                 ' bibliothek. Sie liegt neben der Anwendung bzw. unter runtimes/<rid>/native -
@@ -356,6 +389,10 @@ Namespace Services
         ''' alte Decode veraltet, obwohl Pfad und Aenderungszeit gleich bleiben.</summary>
         Private Shared _cachedGrundbelichtung As Double = Double.NaN
         Private Shared _cachedObjektiv As String = ""
+        ''' <summary>Das Demosaic-Verfahren des zwischengespeicherten Decodes. Es gehoert aus
+        ''' demselben Grund in den Schluessel wie die Grundbelichtung: die Wahl aendert die Pixel,
+        ''' waehrend Pfad und Aenderungszeit gleich bleiben.</summary>
+        Private Shared _cachedDemosaic As Integer = -1
         Private Shared _cachedBitmap As SKBitmap
 
         ''' <summary>Voll aufgelöster, fertig entwickelter Decode (Besitz beim Aufrufer) oder Nothing.
@@ -416,11 +453,13 @@ Namespace Services
                 ' Ein- und Ausschalten den ganzen Decode weg und liess libraw erneut laufen -
                 ' Sekunden fuer eine Umrechnung, die selbst Millisekunden braucht.
                 Dim objKey = LensKey(lens)
+                Dim demosaic = ConfiguredDemosaic()
                 SyncLock _cacheLock
                     If _cachedBitmap IsNot Nothing AndAlso
                        String.Equals(_cachedPath, path, StringComparison.Ordinal) AndAlso
                        _cachedWriteTimeUtc = writeTime AndAlso
                        _cachedGrundbelichtung = baseEv AndAlso
+                       _cachedDemosaic = demosaic AndAlso
                        String.Equals(_cachedObjektiv, objKey, StringComparison.Ordinal) Then
                         Return WithDistortion(_cachedBitmap.Copy(), lens)
                     End If
@@ -444,6 +483,7 @@ Namespace Services
                     _cachedPath = path
                     _cachedGrundbelichtung = baseEv
                     _cachedObjektiv = objKey
+                    _cachedDemosaic = demosaic
                     _cachedWriteTimeUtc = writeTime
                     Return WithDistortion(_cachedBitmap.Copy(), lens)
                 End SyncLock
@@ -625,6 +665,34 @@ Namespace Services
         ''' ist genau diese eine Zahl.</summary>
         Private Const DecodeOutputBits As Integer = 16
 
+        ''' <summary>LibRaws Nummer fuer das voreingestellte Verfahren. NACHGEMESSEN, nicht
+        ''' angenommen: ein Decode ohne gesetztes Verfahren liefert bitgleich dieselben Bilddaten
+        ''' wie <c>libraw_set_demosaic(3)</c>, also AHD. Die 0 daneben ist die lineare
+        ''' Interpolation und waere ein sichtbarer Rueckschritt.</summary>
+        Private Const DefaultDemosaic As Integer = 3
+
+        ''' <summary>Der Name aus den Einstellungen als LibRaw-Nummer. Die Zuordnung steht NUR hier;
+        ''' gespeichert wird der Name, damit eine verschobene Nummer in einer anderen
+        ''' LibRaw-Fassung nicht stillschweigend ein anderes Verfahren waehlt.</summary>
+        Private Shared Function DemosaicNumber(name As String) As Integer
+            Select Case AppSettingsService.NormalizeRawDemosaicAlgorithm(name)
+                Case "VNG" : Return 1
+                Case "PPG" : Return 2
+                Case "DCB" : Return 4
+                Case Else : Return DefaultDemosaic ' AHD
+            End Select
+        End Function
+
+        ''' <summary>Das eingestellte Verfahren, oder die Vorgabe, wenn die Einstellungen nicht
+        ''' lesbar sind. Der Decode darf daran nicht scheitern.</summary>
+        Private Shared Function ConfiguredDemosaic() As Integer
+            Try
+                Return DemosaicNumber(AppSettingsService.Load().RawDemosaicAlgorithm)
+            Catch
+                Return DefaultDemosaic
+            End Try
+        End Function
+
         ' Offsets INNERHALB libraw_output_params_t. Die Basis dieses Feldes in libraw_data_t ist
         ' absichtlich nicht fest verdrahtet: sie liegt z.B. bei 5024 (LibRaw 0.21.4) bzw. 5232
         ' (0.22.2) und kann sich bei jeder Systembibliothek wieder verschieben.
@@ -670,12 +738,17 @@ Namespace Services
                 Return False
             Finally
                 ' DecodeCore setzt Bittiefe/Farbraum anschliessend ohnehin verbindlich. user_qual
-                ' muss hier aber wieder auf LibRaws Vorgabe zurueck, weil FerrumPix keinen eigenen
-                ' Demosaic-Algorithmus erzwingt.
+                ' muss hier dagegen selbst zurueckgestellt werden, und zwar auf das EINGESTELLTE
+                ' Verfahren.
+                ' Hier stand eine 0, mit dem Kommentar, das sei LibRaws Vorgabe. Nachgemessen ist
+                ' sie es nicht: ohne gesetztes Verfahren entwickelt LibRaw mit AHD (3), waehrend 0
+                ' die lineare Interpolation ist. Wo die Suche nach der Feldbasis scheiterte und
+                ' danach ein VOLLER Decode lief, wurde er also mit dem schwaechsten Verfahren
+                ' gerechnet.
                 Try
                     _setOutputColor(handle, 1)
                     _setOutputBps(handle, DecodeOutputBits)
-                    _setDemosaic(handle, 0)
+                    _setDemosaic(handle, ConfiguredDemosaic())
                 Catch
                 End Try
             End Try
@@ -739,6 +812,9 @@ Namespace Services
                 ' LEICHT (1), nicht VOLL (2): voll ist beim Farbrauschen gemessen SCHLECHTER
                 ' (1,74 gegen 1,31) - hier gilt nicht "mehr ist besser".
                 If _setFbdd IsNot Nothing Then _setFbdd(handle, FbddRauschminderung)
+                ' Das gewaehlte Demosaic-Verfahren. Fehlt der Setter (aeltere libraw), bleibt es bei
+                ' LibRaws Vorgabe - die Auswahl ist dann wirkungslos, aber nichts geht kaputt.
+                If _setDemosaic IsNot Nothing Then _setDemosaic(handle, ConfiguredDemosaic())
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
                 Dim mul0 = _getCamMul(handle, 0)
